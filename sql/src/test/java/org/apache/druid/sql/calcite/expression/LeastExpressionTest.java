@@ -28,8 +28,9 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.builtin.LeastOperatorConversion;
-import org.junit.Before;
-import org.junit.Test;
+import org.apache.druid.sql.calcite.util.CalciteTestBase;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.util.Arrays;
@@ -37,7 +38,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-public class LeastExpressionTest extends ExpressionTestBase
+public class LeastExpressionTest extends CalciteTestBase
 {
   private static final String DOUBLE_KEY = "d";
   private static final double DOUBLE_VALUE = 3.1;
@@ -60,7 +61,7 @@ public class LeastExpressionTest extends ExpressionTestBase
   private LeastOperatorConversion target;
   private ExpressionTestHelper testHelper;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     target = new LeastOperatorConversion();
@@ -213,7 +214,7 @@ public class LeastExpressionTest extends ExpressionTestBase
   }
 
   @Test
-  public void testDecimalWithNullShouldReturnString()
+  public void testDecimalWithNullShouldNotReturnString()
   {
     testExpression(
         Arrays.asList(
@@ -226,7 +227,7 @@ public class LeastExpressionTest extends ExpressionTestBase
             3.4,
             null
         ),
-        "1.2"
+        1.2
     );
   }
 

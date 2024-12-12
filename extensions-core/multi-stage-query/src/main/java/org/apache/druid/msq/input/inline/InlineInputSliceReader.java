@@ -27,9 +27,10 @@ import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSliceReader;
 import org.apache.druid.msq.input.ReadableInput;
 import org.apache.druid.msq.input.ReadableInputs;
+import org.apache.druid.msq.input.table.RichSegmentDescriptor;
 import org.apache.druid.msq.input.table.SegmentWithDescriptor;
 import org.apache.druid.query.InlineDataSource;
-import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.segment.CompleteSegment;
 import org.apache.druid.segment.InlineSegmentWrangler;
 import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.timeline.SegmentId;
@@ -43,7 +44,8 @@ import java.util.function.Consumer;
 public class InlineInputSliceReader implements InputSliceReader
 {
   public static final String SEGMENT_ID = "__inline";
-  private static final SegmentDescriptor DUMMY_SEGMENT_DESCRIPTOR = SegmentId.dummy(SEGMENT_ID).toDescriptor();
+  private static final RichSegmentDescriptor DUMMY_SEGMENT_DESCRIPTOR
+      = new RichSegmentDescriptor(SegmentId.dummy(SEGMENT_ID).toDescriptor(), null);
 
   private final SegmentWrangler segmentWrangler;
 
@@ -73,7 +75,7 @@ public class InlineInputSliceReader implements InputSliceReader
             segmentWrangler.getSegmentsForIntervals(dataSource, Intervals.ONLY_ETERNITY),
             segment -> ReadableInput.segment(
                 new SegmentWithDescriptor(
-                    () -> ResourceHolder.fromCloseable(segment),
+                    () -> ResourceHolder.fromCloseable(new CompleteSegment(null, segment)),
                     DUMMY_SEGMENT_DESCRIPTOR
                 )
             )

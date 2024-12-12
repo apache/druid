@@ -51,7 +51,8 @@ public class V3CompressedVSizeColumnarMultiIntsSerializer extends ColumnarMultiI
             filenameBase,
             CompressedColumnarIntsSupplier.MAX_INTS_IN_BUFFER,
             IndexIO.BYTE_ORDER,
-            compression
+            compression,
+            segmentWriteOutMedium.getCloser()
         ),
         new CompressedVSizeColumnarIntsSerializer(
             columnName,
@@ -60,7 +61,8 @@ public class V3CompressedVSizeColumnarMultiIntsSerializer extends ColumnarMultiI
             maxValue,
             CompressedVSizeColumnarIntsSupplier.maxIntsInBufferForValue(maxValue),
             IndexIO.BYTE_ORDER,
-            compression
+            compression,
+            segmentWriteOutMedium.getCloser()
         )
     );
   }

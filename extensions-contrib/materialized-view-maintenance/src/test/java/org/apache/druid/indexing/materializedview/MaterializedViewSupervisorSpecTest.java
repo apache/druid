@@ -40,8 +40,8 @@ import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.expression.LookupEnabledTestExprMacroTable;
 import org.apache.druid.segment.TestHelper;
-import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
-import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
+import org.apache.druid.segment.realtime.ChatHandlerProvider;
+import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.easymock.EasyMock;
 import org.hamcrest.CoreMatchers;
@@ -52,7 +52,6 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import java.io.IOException;
-import java.util.concurrent.Callable;
 
 public class MaterializedViewSupervisorSpecTest
 {
@@ -202,29 +201,6 @@ public class MaterializedViewSupervisorSpecTest
 
       SupervisorTaskAutoScaler autoscaler = spec.createAutoscaler(supervisor);
       Assert.assertNull(autoscaler);
-
-      try {
-        supervisor.computeLagStats();
-      }
-      catch (Exception e) {
-        Assert.assertTrue(e instanceof UnsupportedOperationException);
-      }
-
-      try {
-        int count = supervisor.getActiveTaskGroupsCount();
-      }
-      catch (Exception e) {
-        Assert.assertTrue(e instanceof UnsupportedOperationException);
-      }
-
-      Callable<Integer> noop = new Callable<Integer>() {
-        @Override
-        public Integer call()
-        {
-          return -1;
-        }
-      };
-
     }
     catch (Exception e) {
       ex = e;

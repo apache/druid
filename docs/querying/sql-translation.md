@@ -23,8 +23,10 @@ sidebar_label: "SQL query translation"
   ~ under the License.
   -->
 
-> Apache Druid supports two query languages: Druid SQL and [native queries](querying.md).
-> This document describes the Druid SQL language.
+:::info
+ Apache Druid supports two query languages: Druid SQL and [native queries](querying.md).
+ This document describes the Druid SQL language.
+:::
 
 Druid uses [Apache Calcite](https://calcite.apache.org/) to parse and plan SQL queries.
 Druid translates SQL statements into its [native JSON-based query language](querying.md).
@@ -278,10 +280,7 @@ The above EXPLAIN PLAN returns the following result:
             ]
           },
           "inputFormat": {
-            "type": "json",
-            "keepNullColumns": false,
-            "assumeNewlineDelimited": false,
-            "useJsonNodeReader": false
+            "type": "json"
           },
           "signature": [
             {
@@ -343,7 +342,6 @@ The above EXPLAIN PLAN returns the following result:
           "regionName",
           "v0"
         ],
-        "legacy": false,
         "context": {
           "finalizeAggregations": false,
           "forceExpressionVirtualColumns": true,
@@ -501,10 +499,7 @@ The above EXPLAIN PLAN query returns the following result:
             ]
           },
           "inputFormat": {
-            "type": "json",
-            "keepNullColumns": false,
-            "assumeNewlineDelimited": false,
-            "useJsonNodeReader": false
+            "type": "json"
           },
           "signature": [
             {
@@ -566,7 +561,6 @@ The above EXPLAIN PLAN query returns the following result:
           "regionName",
           "v0"
         ],
-        "legacy": false,
         "context": {
           "finalizeAggregations": false,
           "groupByEnableMultiValueUnnesting": false,
@@ -782,7 +776,9 @@ Refer to the [Query execution](query-execution.md#join) page for information abo
 Subqueries in SQL are generally translated to native query datasources. Refer to the
 [Query execution](query-execution.md#query) page for information about how subqueries are executed.
 
-> Note: Subqueries in the WHERE clause, like `WHERE col1 IN (SELECT foo FROM ...)` are translated to inner joins.
+:::info
+ Note: Subqueries in the WHERE clause, like `WHERE col1 IN (SELECT foo FROM ...)` are translated to inner joins.
+:::
 
 ## Approximations
 
@@ -818,7 +814,6 @@ Druid does not support all SQL features. In particular, the following features a
 - JOIN conditions that are not an equality between expressions from the left- and right-hand sides.
 - JOIN conditions containing a constant value inside the condition.
 - JOIN conditions on a column which contains a multi-value dimension.
-- OVER clauses, and analytic functions such as `LAG` and `LEAD`.
 - ORDER BY for a non-aggregating query, except for `ORDER BY __time` or `ORDER BY __time DESC`, which are supported.
   This restriction only applies to non-aggregating queries; you can ORDER BY any column in an aggregating query.
 - DDL and DML.

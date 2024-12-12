@@ -47,6 +47,9 @@ import java.nio.ByteBuffer;
 import java.util.Objects;
 import java.util.Set;
 
+/**
+ * Recommended to use {@link RangeFilter} instead
+ */
 public class BoundDimFilter extends AbstractOptimizableDimFilter implements DimFilter
 {
   private final String dimension;
@@ -100,7 +103,8 @@ public class BoundDimFilter extends AbstractOptimizableDimFilter implements DimF
         boolean orderingIsAlphanumeric = this.ordering.equals(StringComparators.ALPHANUMERIC);
         Preconditions.checkState(
             alphaNumeric == orderingIsAlphanumeric,
-            "mismatch between alphanumeric and ordering property");
+            "mismatch between alphanumeric and ordering property"
+        );
       }
     }
     this.extractionFn = extractionFn;
@@ -249,12 +253,6 @@ public class BoundDimFilter extends AbstractOptimizableDimFilter implements DimF
         .put(DimFilterUtils.STRING_SEPARATOR)
         .put(orderingBytes);
     return boundCacheBuffer.array();
-  }
-
-  @Override
-  public DimFilter optimize()
-  {
-    return this;
   }
 
   @Override
@@ -439,7 +437,7 @@ public class BoundDimFilter extends AbstractOptimizableDimFilter implements DimF
       }
 
       if (matchesNothing) {
-        return DruidLongPredicate.ALWAYS_FALSE;
+        return DruidLongPredicate.ALWAYS_FALSE_WITH_NULL_UNKNOWN;
       } else {
         final RangeFilter.RangeType rangeType = RangeFilter.RangeType.of(
             hasLowerLongBound,
@@ -496,7 +494,7 @@ public class BoundDimFilter extends AbstractOptimizableDimFilter implements DimF
 
 
       if (matchesNothing) {
-        return DruidFloatPredicate.ALWAYS_FALSE;
+        return DruidFloatPredicate.ALWAYS_FALSE_WITH_NULL_UNKNOWN;
       } else {
 
         final RangeFilter.RangeType rangeType = RangeFilter.RangeType.of(
@@ -558,7 +556,7 @@ public class BoundDimFilter extends AbstractOptimizableDimFilter implements DimF
       }
 
       if (matchesNothing) {
-        return DruidDoublePredicate.ALWAYS_FALSE;
+        return DruidDoublePredicate.ALWAYS_FALSE_WITH_NULL_UNKNOWN;
       } else {
         final RangeFilter.RangeType rangeType = RangeFilter.RangeType.of(
             hasLowerBound,

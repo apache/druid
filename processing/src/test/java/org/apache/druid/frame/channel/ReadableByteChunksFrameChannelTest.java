@@ -30,13 +30,12 @@ import org.apache.druid.frame.testutil.FrameTestUtil;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.segment.TestIndex;
-import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
+import org.apache.druid.segment.incremental.IncrementalIndexCursorFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.experimental.runners.Enclosed;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
@@ -52,7 +51,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-@RunWith(Enclosed.class)
 public class ReadableByteChunksFrameChannelTest
 {
   /**
@@ -121,16 +119,29 @@ public class ReadableByteChunksFrameChannelTest
     }
 
     @Test
+    public void testAddChunkAfterDoneWriting()
+    {
+      try (final ReadableByteChunksFrameChannel channel = ReadableByteChunksFrameChannel.create("test", false)) {
+        channel.doneWriting();
+
+        Assert.assertThrows(
+            ChannelClosedForWritesException.class,
+            () -> channel.addChunk(new byte[]{})
+        );
+      }
+    }
+
+    @Test
     public void testTruncatedFrameFile() throws IOException
     {
       final int allocatorSize = 64000;
       final int truncatedSize = 30000; // Holds two full columnar frames + one partial frame, after compression.
 
-      final IncrementalIndexStorageAdapter adapter =
-          new IncrementalIndexStorageAdapter(TestIndex.getIncrementalTestIndex());
+      final IncrementalIndexCursorFactory cursorFactory =
+          new IncrementalIndexCursorFactory(TestIndex.getIncrementalTestIndex());
 
       final File file = FrameTestUtil.writeFrameFile(
-          FrameSequenceBuilder.fromAdapter(adapter)
+          FrameSequenceBuilder.fromCursorFactory(cursorFactory)
                               .allocator(ArenaMemoryAllocator.create(ByteBuffer.allocate(allocatorSize)))
                               .frameType(FrameType.COLUMNAR) // No particular reason to test with both frame types
                               .frames(),
@@ -173,11 +184,11 @@ public class ReadableByteChunksFrameChannelTest
       final int allocatorSize = 64000;
       final int errorAtBytePosition = 30000; // Holds two full frames + one partial frame, after compression.
 
-      final IncrementalIndexStorageAdapter adapter =
-          new IncrementalIndexStorageAdapter(TestIndex.getIncrementalTestIndex());
+      final IncrementalIndexCursorFactory cursorFactory =
+          new IncrementalIndexCursorFactory(TestIndex.getIncrementalTestIndex());
 
       final File file = FrameTestUtil.writeFrameFile(
-          FrameSequenceBuilder.fromAdapter(adapter)
+          FrameSequenceBuilder.fromCursorFactory(cursorFactory)
                               .allocator(ArenaMemoryAllocator.create(ByteBuffer.allocate(allocatorSize)))
                               .frameType(FrameType.COLUMNAR) // No particular reason to test with both frame types
                               .frames(),
@@ -241,11 +252,11 @@ public class ReadableByteChunksFrameChannelTest
     public void testWriteFullyThenRead() throws IOException
     {
       // Create a frame file.
-      final IncrementalIndexStorageAdapter adapter =
-          new IncrementalIndexStorageAdapter(TestIndex.getIncrementalTestIndex());
+      final IncrementalIndexCursorFactory cursorFactory =
+          new IncrementalIndexCursorFactory(TestIndex.getIncrementalTestIndex());
 
       final File file = FrameTestUtil.writeFrameFile(
-          FrameSequenceBuilder.fromAdapter(adapter)
+          FrameSequenceBuilder.fromCursorFactory(cursorFactory)
                               .maxRowsPerFrame(maxRowsPerFrame)
                               .frameType(frameType)
                               .frames(),
@@ -287,8 +298,8 @@ public class ReadableByteChunksFrameChannelTest
       }
 
       FrameTestUtil.assertRowsEqual(
-          FrameTestUtil.readRowsFromAdapter(adapter, null, false),
-          FrameTestUtil.readRowsFromFrameChannel(channel, FrameReader.create(adapter.getRowSignature()))
+          FrameTestUtil.readRowsFromCursorFactory(cursorFactory),
+          FrameTestUtil.readRowsFromFrameChannel(channel, FrameReader.create(cursorFactory.getRowSignature()))
       );
     }
 
@@ -296,11 +307,11 @@ public class ReadableByteChunksFrameChannelTest
     public void testWriteReadInterleaved() throws IOException
     {
       // Create a frame file.
-      final IncrementalIndexStorageAdapter adapter =
-          new IncrementalIndexStorageAdapter(TestIndex.getIncrementalTestIndex());
+      final IncrementalIndexCursorFactory cursorFactory =
+          new IncrementalIndexCursorFactory(TestIndex.getIncrementalTestIndex());
 
       final File file = FrameTestUtil.writeFrameFile(
-          FrameSequenceBuilder.fromAdapter(adapter)
+          FrameSequenceBuilder.fromCursorFactory(cursorFactory)
                               .maxRowsPerFrame(maxRowsPerFrame)
                               .frameType(frameType)
                               .frames(),
@@ -366,8 +377,8 @@ public class ReadableByteChunksFrameChannelTest
       }
 
       FrameTestUtil.assertRowsEqual(
-          FrameTestUtil.readRowsFromAdapter(adapter, null, false),
-          FrameTestUtil.readRowsFromFrameChannel(outChannel.readable(), FrameReader.create(adapter.getRowSignature()))
+          FrameTestUtil.readRowsFromCursorFactory(cursorFactory),
+          FrameTestUtil.readRowsFromFrameChannel(outChannel.readable(), FrameReader.create(cursorFactory.getRowSignature()))
       );
     }
 

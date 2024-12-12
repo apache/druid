@@ -32,7 +32,7 @@ import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.jclouds.ContextBuilder;
 import org.jclouds.logging.slf4j.config.SLF4JLoggingModule;
-import org.jclouds.openstack.v2_0.config.InternalUrlModule;
+import org.jclouds.openstack.keystone.catalog.config.InternalUrlModule;
 import org.jclouds.osgi.ProviderRegistry;
 import org.jclouds.rackspace.cloudfiles.uk.CloudFilesUKProviderMetadata;
 import org.jclouds.rackspace.cloudfiles.us.CloudFilesUSProviderMetadata;

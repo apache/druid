@@ -43,13 +43,14 @@ public class TopNColumnAggregatesProcessorFactory
   @Override
   public TopNColumnAggregatesProcessor<?> makeColumnSelectorStrategy(
       ColumnCapabilities capabilities,
-      ColumnValueSelector selector
+      ColumnValueSelector selector,
+      String dimension
   )
   {
     if (capabilities.is(ValueType.STRING)) {
       return new StringTopNColumnAggregatesProcessor(capabilities, dimensionType);
     } else if (capabilities.isNumeric()) {
-      final Function<Object, Comparable<?>> converter;
+      final Function<Object, Object> converter;
       final ColumnType strategyType;
       // When the selector is numeric, we want to use NumericTopNColumnSelectorStrategy. It aggregates using
       // a numeric type and then converts to the desired output type after aggregating. We must be careful not to
@@ -77,5 +78,11 @@ public class TopNColumnAggregatesProcessorFactory
     }
 
     throw new IAE("Cannot create query type helper from invalid type [%s]", capabilities.asTypeString());
+  }
+
+  @Override
+  public boolean supportsComplexTypes()
+  {
+    return false;
   }
 }

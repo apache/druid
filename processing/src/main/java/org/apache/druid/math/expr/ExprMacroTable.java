@@ -24,15 +24,16 @@ import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.math.expr.vector.ExprVectorProcessor;
+import org.apache.druid.math.expr.vector.FallbackVectorProcessor;
+import org.apache.druid.query.expression.TimestampFloorExprMacro;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -43,10 +44,20 @@ import java.util.stream.Collectors;
  */
 public class ExprMacroTable
 {
+  private static final BuiltInExprMacros.ComplexDecodeBase64ExprMacro COMPLEX_DECODE_BASE_64_EXPR_MACRO = new BuiltInExprMacros.ComplexDecodeBase64ExprMacro();
   private static final List<ExprMacro> BUILT_IN = ImmutableList.of(
-      new BuiltInExprMacros.ComplexDecodeBase64ExprMacro()
+      COMPLEX_DECODE_BASE_64_EXPR_MACRO,
+      new AliasExprMacro(
+          COMPLEX_DECODE_BASE_64_EXPR_MACRO,
+          BuiltInExprMacros.ComplexDecodeBase64ExprMacro.ALIAS
+      ),
+      new BuiltInExprMacros.StringDecodeBase64UTFExprMacro()
   );
   private static final ExprMacroTable NIL = new ExprMacroTable(Collections.emptyList());
+
+  private static final ExprMacroTable TIME_FLOOR_MACRO_TABLE = new ExprMacroTable(
+      Collections.singletonList(new TimestampFloorExprMacro())
+  );
 
   private final Map<String, ExprMacro> macroMap;
 
@@ -60,6 +71,16 @@ public class ExprMacroTable
   public static ExprMacroTable nil()
   {
     return NIL;
+  }
+
+  /**
+   * Specialized {@link ExprMacroTable} that only knows about {@link TimestampFloorExprMacro}, intended for use
+   * parsing generated expressions which translate {@link org.apache.druid.java.util.common.granularity.Granularity}
+   * into {@link Expr}
+   */
+  public static ExprMacroTable granularity()
+  {
+    return TIME_FLOOR_MACRO_TABLE;
   }
 
   public List<ExprMacro> getMacros()
@@ -101,89 +122,26 @@ public class ExprMacroTable
   }
 
   /**
-   * Base class for single argument {@link ExprMacro} function {@link Expr}
+   * Base class for {@link Expr} from {@link ExprMacro}.
    */
-  public abstract static class BaseScalarUnivariateMacroFunctionExpr implements ExprMacroFunctionExpr
+  public abstract static class BaseMacroFunctionExpr implements ExprMacroFunctionExpr
   {
-    protected final String name;
-    protected final Expr arg;
-
-    // Use Supplier to memoize values as ExpressionSelectors#makeExprEvalSelector() can make repeated calls for them
-    private final Supplier<BindingAnalysis> analyzeInputsSupplier;
-
-    public BaseScalarUnivariateMacroFunctionExpr(String name, Expr arg)
-    {
-      this.name = name;
-      this.arg = arg;
-      analyzeInputsSupplier = Suppliers.memoize(this::supplyAnalyzeInputs);
-    }
-
-    @Override
-    public List<Expr> getArgs()
-    {
-      return Collections.singletonList(arg);
-    }
-
-    @Override
-    public BindingAnalysis analyzeInputs()
-    {
-      return analyzeInputsSupplier.get();
-    }
-
-    @Override
-    public String stringify()
-    {
-      return StringUtils.format("%s(%s)", name, arg.stringify());
-    }
-
-    @Override
-    public boolean equals(Object o)
-    {
-      if (this == o) {
-        return true;
-      }
-      if (o == null || getClass() != o.getClass()) {
-        return false;
-      }
-      BaseScalarUnivariateMacroFunctionExpr that = (BaseScalarUnivariateMacroFunctionExpr) o;
-      return Objects.equals(name, that.name) &&
-             Objects.equals(arg, that.arg);
-    }
-
-    @Override
-    public int hashCode()
-    {
-      return Objects.hash(name, arg);
-    }
-
-    private BindingAnalysis supplyAnalyzeInputs()
-    {
-      return arg.analyzeInputs().withScalarArguments(ImmutableSet.of(arg));
-    }
-
-
-    @Override
-    public String toString()
-    {
-      return StringUtils.format("(%s %s)", name, getArgs());
-    }
-  }
-
-  /**
-   * Base class for multi-argument {@link ExprMacro} function {@link Expr}
-   */
-  public abstract static class BaseScalarMacroFunctionExpr implements ExprMacroFunctionExpr
-  {
-    protected final String name;
+    protected final ExprMacro macro;
     protected final List<Expr> args;
 
     // Use Supplier to memoize values as ExpressionSelectors#makeExprEvalSelector() can make repeated calls for them
     private final Supplier<BindingAnalysis> analyzeInputsSupplier;
 
-    public BaseScalarMacroFunctionExpr(String name, final List<Expr> args)
+    /**
+     * Constructor for subclasses.
+     *
+     * @param macro     macro that created this expr
+     * @param macroArgs original args to the macro (not the ones this will be evaled with)
+     */
+    protected BaseMacroFunctionExpr(final ExprMacro macro, final List<Expr> macroArgs)
     {
-      this.name = name;
-      this.args = args;
+      this.macro = macro;
+      this.args = macroArgs;
       analyzeInputsSupplier = Suppliers.memoize(this::supplyAnalyzeInputs);
     }
 
@@ -198,9 +156,17 @@ public class ExprMacroTable
     {
       return StringUtils.format(
           "%s(%s)",
-          name,
-          Expr.ARG_JOINER.join(args.stream().map(Expr::stringify).iterator())
+          macro.name(),
+          args.size() == 1
+          ? args.get(0).stringify()
+          : Expr.ARG_JOINER.join(args.stream().map(Expr::stringify).iterator())
       );
+    }
+
+    @Override
+    public Expr visit(Shuttle shuttle)
+    {
+      return shuttle.visit(macro.apply(shuttle.visitAll(args)));
     }
 
     @Override
@@ -208,6 +174,23 @@ public class ExprMacroTable
     {
       return analyzeInputsSupplier.get();
     }
+
+    @Override
+    public boolean canVectorize(InputBindingInspector inspector)
+    {
+      return canFallbackVectorize(inspector, args);
+    }
+
+    @Override
+    public <T> ExprVectorProcessor<T> asVectorProcessor(VectorInputBindingInspector inspector)
+    {
+      return FallbackVectorProcessor.create(macro, args, inspector);
+    }
+
+    /**
+     * Implemented by subclasses to provide the value for {@link #analyzeInputs()}, which uses a memoized supplier.
+     */
+    protected abstract BindingAnalysis supplyAnalyzeInputs();
 
     @Override
     public boolean equals(Object o)
@@ -218,32 +201,67 @@ public class ExprMacroTable
       if (o == null || getClass() != o.getClass()) {
         return false;
       }
-      BaseScalarMacroFunctionExpr that = (BaseScalarMacroFunctionExpr) o;
-      return Objects.equals(name, that.name) &&
+      BaseMacroFunctionExpr that = (BaseMacroFunctionExpr) o;
+      return Objects.equals(macro, that.macro) &&
              Objects.equals(args, that.args);
     }
 
     @Override
     public int hashCode()
     {
-      return Objects.hash(name, args);
-    }
-
-    private BindingAnalysis supplyAnalyzeInputs()
-    {
-      final Set<Expr> argSet = Sets.newHashSetWithExpectedSize(args.size());
-      BindingAnalysis accumulator = new BindingAnalysis();
-      for (Expr arg : args) {
-        accumulator = accumulator.with(arg);
-        argSet.add(arg);
-      }
-      return accumulator.withScalarArguments(argSet);
+      return Objects.hash(macro, args);
     }
 
     @Override
     public String toString()
     {
-      return StringUtils.format("(%s %s)", name, getArgs());
+      return StringUtils.format("(%s %s)", macro.name(), getArgs());
+    }
+  }
+
+  /**
+   * Base class for {@link Expr} from {@link ExprMacro} that accepts all-scalar arguments.
+   */
+  public abstract static class BaseScalarMacroFunctionExpr extends BaseMacroFunctionExpr
+  {
+    public BaseScalarMacroFunctionExpr(final ExprMacro macro, final List<Expr> macroArgs)
+    {
+      super(macro, macroArgs);
+    }
+
+    @Override
+    protected BindingAnalysis supplyAnalyzeInputs()
+    {
+      return Exprs.analyzeBindings(args)
+                  .withScalarArguments(ImmutableSet.copyOf(args));
+    }
+  }
+
+  /***
+   * Alias Expression macro to create an alias and delegate operations to the same base macro.
+   * The Expr spit out by the apply method should use name() in all the places instead of an internal constant so that things like error messages behave correctly.
+   */
+  static class AliasExprMacro implements ExprMacroTable.ExprMacro
+  {
+    private final ExprMacroTable.ExprMacro exprMacro;
+    private final String alias;
+
+    public AliasExprMacro(final ExprMacroTable.ExprMacro baseExprMacro, final String alias)
+    {
+      this.exprMacro = baseExprMacro;
+      this.alias = alias;
+    }
+
+    @Override
+    public Expr apply(List<Expr> args)
+    {
+      return exprMacro.apply(args);
+    }
+
+    @Override
+    public String name()
+    {
+      return alias;
     }
   }
 }

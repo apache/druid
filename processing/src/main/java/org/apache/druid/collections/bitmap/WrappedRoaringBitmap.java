@@ -257,6 +257,16 @@ public class WrappedRoaringBitmap implements MutableBitmap
   }
 
   @Override
+  public ImmutableBitmap union(ImmutableBitmap otherBitmap)
+  {
+    initializeWriterIfNeeded();
+    WrappedRoaringBitmap other = (WrappedRoaringBitmap) otherBitmap;
+    other.initializeWriterIfNeeded();
+    MutableRoaringBitmap unwrappedOtherBitmap = other.writer.get();
+    return new WrappedImmutableRoaringBitmap(MutableRoaringBitmap.or(writer.get(), unwrappedOtherBitmap));
+  }
+
+  @Override
   public boolean get(int value)
   {
     if (value < 0) {

@@ -34,6 +34,8 @@ export * from './retention-dialog/retention-dialog';
 export * from './snitch-dialog/snitch-dialog';
 export * from './spec-dialog/spec-dialog';
 export * from './string-input-dialog/string-input-dialog';
+export * from './supervisor-reset-offsets-dialog/supervisor-reset-offsets-dialog';
 export * from './supervisor-table-action-dialog/supervisor-table-action-dialog';
 export * from './table-action-dialog/table-action-dialog';
+export * from './task-group-handoff-dialog/task-group-handoff-dialog';
 export * from './task-table-action-dialog/task-table-action-dialog';

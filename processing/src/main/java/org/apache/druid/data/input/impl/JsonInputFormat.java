@@ -26,6 +26,7 @@ import com.fasterxml.jackson.core.JsonParser.Feature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputEntityReader;
+import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
@@ -43,7 +44,7 @@ public class JsonInputFormat extends NestedInputFormat
   public static final String TYPE_KEY = "json";
   private final Map<String, Boolean> featureSpec;
   private final ObjectMapper objectMapper;
-  private final boolean keepNullColumns;
+  private final Boolean keepNullColumns;
 
   /**
    * Indicates whether or not the given InputEntity should be split by lines before parsing it.
@@ -97,11 +98,7 @@ public class JsonInputFormat extends NestedInputFormat
     super(flattenSpec);
     this.featureSpec = featureSpec == null ? Collections.emptyMap() : featureSpec;
     this.objectMapper = new ObjectMapper();
-    if (keepNullColumns != null) {
-      this.keepNullColumns = keepNullColumns;
-    } else {
-      this.keepNullColumns = flattenSpec != null && flattenSpec.isUseFieldDiscovery();
-    }
+    this.keepNullColumns = keepNullColumns;
     for (Entry<String, Boolean> entry : this.featureSpec.entrySet()) {
       Feature feature = Feature.valueOf(entry.getKey());
       objectMapper.configure(feature, entry.getValue());
@@ -121,19 +118,36 @@ public class JsonInputFormat extends NestedInputFormat
     return featureSpec;
   }
 
-  @JsonProperty // No @JsonInclude, since default is variable, so we can't assume false is default
+  boolean isLineSplittable()
+  {
+    return lineSplittable;
+  }
+
   public boolean isKeepNullColumns()
+  {
+    if (keepNullColumns != null) {
+      return keepNullColumns;
+    } else {
+      return getFlattenSpec() != null && getFlattenSpec().isUseFieldDiscovery();
+    }
+  }
+
+  @JsonProperty("keepNullColumns")
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  private Boolean getKeepNullColumnsConfigured()
   {
     return keepNullColumns;
   }
 
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_DEFAULT)
   public boolean isAssumeNewlineDelimited()
   {
     return assumeNewlineDelimited;
   }
 
   @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_DEFAULT)
   public boolean isUseJsonNodeReader()
   {
     return useJsonNodeReader;
@@ -149,11 +163,11 @@ public class JsonInputFormat extends NestedInputFormat
   public InputEntityReader createReader(InputRowSchema inputRowSchema, InputEntity source, File temporaryDirectory)
   {
     if (this.lineSplittable || this.assumeNewlineDelimited) {
-      return new JsonLineReader(inputRowSchema, source, getFlattenSpec(), objectMapper, keepNullColumns);
+      return new JsonLineReader(inputRowSchema, source, getFlattenSpec(), objectMapper, isKeepNullColumns());
     } else if (this.useJsonNodeReader) {
-      return new JsonNodeReader(inputRowSchema, source, getFlattenSpec(), objectMapper, keepNullColumns);
+      return new JsonNodeReader(inputRowSchema, source, getFlattenSpec(), objectMapper, isKeepNullColumns());
     } else {
-      return new JsonReader(inputRowSchema, source, getFlattenSpec(), objectMapper, keepNullColumns);
+      return new JsonReader(inputRowSchema, source, getFlattenSpec(), objectMapper, isKeepNullColumns());
     }
   }
 
@@ -174,12 +188,13 @@ public class JsonInputFormat extends NestedInputFormat
    */
   public JsonInputFormat withLineSplittable(boolean lineSplittable)
   {
-    return new JsonInputFormat(this.getFlattenSpec(),
-                               this.getFeatureSpec(),
-                               this.keepNullColumns,
-                               lineSplittable,
-                               assumeNewlineDelimited,
-                               useJsonNodeReader
+    return new JsonInputFormat(
+        this.getFlattenSpec(),
+        this.getFeatureSpec(),
+        keepNullColumns,
+        lineSplittable,
+        assumeNewlineDelimited,
+        useJsonNodeReader
     );
   }
 
@@ -196,11 +211,11 @@ public class JsonInputFormat extends NestedInputFormat
       return false;
     }
     JsonInputFormat that = (JsonInputFormat) o;
-    return keepNullColumns == that.keepNullColumns
-           && lineSplittable == that.lineSplittable
+    return lineSplittable == that.lineSplittable
            && assumeNewlineDelimited == that.assumeNewlineDelimited
            && useJsonNodeReader == that.useJsonNodeReader
-           && Objects.equals(featureSpec, that.featureSpec);
+           && Objects.equals(featureSpec, that.featureSpec)
+           && Objects.equals(keepNullColumns, that.keepNullColumns);
   }
 
   @Override
@@ -214,5 +229,32 @@ public class JsonInputFormat extends NestedInputFormat
         assumeNewlineDelimited,
         useJsonNodeReader
     );
+  }
+
+  @Override
+  public String toString()
+  {
+    return "JsonInputFormat{" +
+           "featureSpec=" + featureSpec +
+           ", keepNullColumns=" + isKeepNullColumns() +
+           ", lineSplittable=" + lineSplittable +
+           ", assumeNewlineDelimited=" + assumeNewlineDelimited +
+           ", useJsonNodeReader=" + useJsonNodeReader +
+           '}';
+  }
+
+  /**
+   * If the provided format is {@link JsonInputFormat}, return a version with {@link #withLineSplittable(boolean)}
+   * called. Otherwise return the provided format itself. This is a hack in order to get the same "json" input format
+   * to use {@link JsonReader} by default for streaming ingestion, and {@link JsonLineReader} by default for batch
+   * file-based ingestion.
+   */
+  public static InputFormat withLineSplittable(InputFormat format, boolean lineSplittable)
+  {
+    if (format instanceof JsonInputFormat) {
+      return ((JsonInputFormat) format).withLineSplittable(lineSplittable);
+    } else {
+      return format;
+    }
   }
 }

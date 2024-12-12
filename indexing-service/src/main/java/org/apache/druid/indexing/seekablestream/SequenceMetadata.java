@@ -25,13 +25,18 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.Committer;
+import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskToolbox;
+import org.apache.druid.indexing.common.actions.SegmentTransactionalAppendAction;
 import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
+import org.apache.druid.indexing.common.actions.TaskAction;
+import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
 import org.apache.druid.timeline.DataSegment;
@@ -54,6 +59,7 @@ public class SequenceMetadata<PartitionIdType, SequenceOffsetType>
   private final String sequenceName;
   private final Set<PartitionIdType> exclusiveStartPartitions;
   private final Set<PartitionIdType> assignments;
+  private final TaskLockType taskLockType;
   private final boolean sentinel;
   /**
    * Lock for accessing {@link #endOffsets} and {@link #checkpointed}. This lock is required because
@@ -73,7 +79,8 @@ public class SequenceMetadata<PartitionIdType, SequenceOffsetType>
       @JsonProperty("startOffsets") Map<PartitionIdType, SequenceOffsetType> startOffsets,
       @JsonProperty("endOffsets") Map<PartitionIdType, SequenceOffsetType> endOffsets,
       @JsonProperty("checkpointed") boolean checkpointed,
-      @JsonProperty("exclusiveStartPartitions") Set<PartitionIdType> exclusiveStartPartitions
+      @JsonProperty("exclusiveStartPartitions") Set<PartitionIdType> exclusiveStartPartitions,
+      @JsonProperty("taskLockType") @Nullable TaskLockType taskLockType
   )
   {
     Preconditions.checkNotNull(sequenceName);
@@ -86,6 +93,7 @@ public class SequenceMetadata<PartitionIdType, SequenceOffsetType>
     this.assignments = new HashSet<>(startOffsets.keySet());
     this.checkpointed = checkpointed;
     this.sentinel = false;
+    this.taskLockType = taskLockType;
     this.exclusiveStartPartitions = exclusiveStartPartitions == null
                                     ? Collections.emptySet()
                                     : exclusiveStartPartitions;
@@ -137,6 +145,12 @@ public class SequenceMetadata<PartitionIdType, SequenceOffsetType>
     finally {
       lock.unlock();
     }
+  }
+
+  @JsonProperty
+  public TaskLockType getTaskLockType()
+  {
+    return taskLockType;
   }
 
   @JsonProperty
@@ -337,9 +351,9 @@ public class SequenceMetadata<PartitionIdType, SequenceOffsetType>
     @Override
     public SegmentPublishResult publishAnnotatedSegments(
         @Nullable Set<DataSegment> mustBeNullOrEmptyOverwriteSegments,
-        @Nullable Set<DataSegment> mustBeNullOrEmptyDropSegments,
         Set<DataSegment> segmentsToPush,
-        @Nullable Object commitMetadata
+        @Nullable Object commitMetadata,
+        SegmentSchemaMapping segmentSchemaMapping
     ) throws IOException
     {
       if (mustBeNullOrEmptyOverwriteSegments != null && !mustBeNullOrEmptyOverwriteSegments.isEmpty()) {
@@ -348,13 +362,7 @@ public class SequenceMetadata<PartitionIdType, SequenceOffsetType>
             SegmentUtils.commaSeparatedIdentifiers(mustBeNullOrEmptyOverwriteSegments)
         );
       }
-      if (mustBeNullOrEmptyDropSegments != null && !mustBeNullOrEmptyDropSegments.isEmpty()) {
-        throw new ISE(
-            "Stream ingestion task unexpectedly attempted to drop segments: %s",
-            SegmentUtils.commaSeparatedIdentifiers(mustBeNullOrEmptyDropSegments)
-        );
-      }
-      final Map commitMetaMap = (Map) Preconditions.checkNotNull(commitMetadata, "commitMetadata");
+      final Map<?, ?> commitMetaMap = (Map<?, ?>) Preconditions.checkNotNull(commitMetadata, "commitMetadata");
       final SeekableStreamEndSequenceNumbers<PartitionIdType, SequenceOffsetType> finalPartitions =
           runner.deserializePartitionsFromMetadata(
               toolbox.getJsonMapper(),
@@ -370,7 +378,7 @@ public class SequenceMetadata<PartitionIdType, SequenceOffsetType>
         );
       }
 
-      final SegmentTransactionalInsertAction action;
+      final TaskAction<SegmentPublishResult> action;
 
       if (segmentsToPush.isEmpty()) {
         // If a task ingested no data but made progress reading through its assigned partitions,
@@ -385,15 +393,13 @@ public class SequenceMetadata<PartitionIdType, SequenceOffsetType>
           // if we created no segments and didn't change any offsets, just do nothing and return.
           log.info(
               "With empty segment set, start offsets [%s] and end offsets [%s] are the same, skipping metadata commit.",
-              startPartitions,
-              finalPartitions
+              startPartitions, finalPartitions
           );
           return SegmentPublishResult.ok(segmentsToPush);
         } else {
           log.info(
               "With empty segment set, start offsets [%s] and end offsets [%s] changed, committing new metadata.",
-              startPartitions,
-              finalPartitions
+              startPartitions, finalPartitions
           );
           action = SegmentTransactionalInsertAction.commitMetadataOnlyAction(
               runner.getAppenderator().getDataSource(),
@@ -402,19 +408,23 @@ public class SequenceMetadata<PartitionIdType, SequenceOffsetType>
           );
         }
       } else if (useTransaction) {
-        action = SegmentTransactionalInsertAction.appendAction(
-            segmentsToPush,
-            runner.createDataSourceMetadata(
-                new SeekableStreamStartSequenceNumbers<>(
-                    finalPartitions.getStream(),
-                    getStartOffsets(),
-                    exclusiveStartPartitions
-                )
-            ),
-            runner.createDataSourceMetadata(finalPartitions)
+        final DataSourceMetadata startMetadata = runner.createDataSourceMetadata(
+            new SeekableStreamStartSequenceNumbers<>(
+                finalPartitions.getStream(),
+                getStartOffsets(),
+                exclusiveStartPartitions
+            )
         );
+        final DataSourceMetadata endMetadata = runner.createDataSourceMetadata(finalPartitions);
+        action = taskLockType == TaskLockType.APPEND
+                 ? SegmentTransactionalAppendAction
+                     .forSegmentsAndMetadata(segmentsToPush, startMetadata, endMetadata, segmentSchemaMapping)
+                 : SegmentTransactionalInsertAction
+                     .appendAction(segmentsToPush, startMetadata, endMetadata, segmentSchemaMapping);
       } else {
-        action = SegmentTransactionalInsertAction.appendAction(segmentsToPush, null, null);
+        action = taskLockType == TaskLockType.APPEND
+                 ? SegmentTransactionalAppendAction.forSegments(segmentsToPush, segmentSchemaMapping)
+                 : SegmentTransactionalInsertAction.appendAction(segmentsToPush, null, null, segmentSchemaMapping);
       }
 
       return toolbox.getTaskActionClient().submit(action);

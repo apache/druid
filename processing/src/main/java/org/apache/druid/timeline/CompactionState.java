@@ -27,6 +27,9 @@ import org.apache.druid.indexer.partitions.PartitionsSpec;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * This class describes what compaction task spec was used to create a given segment.
@@ -146,4 +149,29 @@ public class CompactionState
            ", metricsSpec=" + metricsSpec +
            '}';
   }
+
+  public static Function<Set<DataSegment>, Set<DataSegment>> addCompactionStateToSegments(
+      PartitionsSpec partitionsSpec,
+      DimensionsSpec dimensionsSpec,
+      List<Object> metricsSpec,
+      Map<String, Object> transformSpec,
+      Map<String, Object> indexSpec,
+      Map<String, Object> granularitySpec
+  )
+  {
+    CompactionState compactionState = new CompactionState(
+        partitionsSpec,
+        dimensionsSpec,
+        metricsSpec,
+        transformSpec,
+        indexSpec,
+        granularitySpec
+    );
+
+    return segments -> segments
+        .stream()
+        .map(s -> s.withLastCompactionState(compactionState))
+        .collect(Collectors.toSet());
+  }
+
 }

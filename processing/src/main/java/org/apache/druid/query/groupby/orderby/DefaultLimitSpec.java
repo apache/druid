@@ -37,6 +37,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.TopNSequence;
+import org.apache.druid.query.DimensionComparisonUtils;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
@@ -48,9 +49,8 @@ import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.TypeSignature;
 import org.apache.druid.segment.column.ValueType;
-import org.apache.druid.segment.data.ComparableList;
-import org.apache.druid.segment.data.ComparableStringArray;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -181,8 +181,12 @@ public class DefaultLimitSpec implements LimitSpec
   {
     final List<DimensionSpec> dimensions = query.getDimensions();
 
-    // Can avoid re-sorting if the natural ordering is good enough.
-    boolean sortingNeeded = dimensions.size() < columns.size();
+    // Can avoid re-sorting if the natural ordering is good enough. Set sortingNeeded to true if we definitely must
+    // sort, due to query dimensions list being shorter than the sort columns list, or due to having subtotalsSpec
+    // (when subtotalsSpec is set, dimensions are not naturally sorted).
+    //
+    // If sortingNeeded is false here, we may set it to true later on in this method. False is just a starting point.
+    boolean sortingNeeded = dimensions.size() < columns.size() || query.getSubtotalsSpec() != null;
 
     final Set<String> aggAndPostAggNames = new HashSet<>();
     for (AggregatorFactory agg : query.getAggregatorSpecs()) {
@@ -278,12 +282,6 @@ public class DefaultLimitSpec implements LimitSpec
     } else {
       return sortAndLimitFn;
     }
-  }
-
-  @Override
-  public LimitSpec merge(LimitSpec other)
-  {
-    return this;
   }
 
   private ColumnType getOrderByType(final OrderByColumnSpec columnSpec, final List<DimensionSpec> dimensions)
@@ -438,38 +436,75 @@ public class DefaultLimitSpec implements LimitSpec
   private Ordering<ResultRow> dimensionOrdering(
       final int column,
       final ColumnType columnType,
-      final StringComparator comparator
+      final StringComparator stringComparator
   )
   {
     Comparator arrayComparator = null;
     if (columnType.isArray()) {
-      final ValueType elementType = columnType.getElementType().getType();
+      final TypeSignature<ValueType> elementType = columnType.getElementType();
       if (columnType.getElementType().isNumeric()) {
-        arrayComparator = (Comparator<Object>) (o1, o2) -> ComparableList.compareWithComparator(
-            comparator,
-            DimensionHandlerUtils.convertToList(o1, elementType),
-            DimensionHandlerUtils.convertToList(o2, elementType)
-        );
+        arrayComparator = (o1, o2) -> {
+          if (stringComparator == null
+              || StringComparators.NUMERIC.equals(stringComparator)
+              || StringComparators.NATURAL.equals(stringComparator)) {
+            return columnType.getNullableStrategy().compare(
+                DimensionHandlerUtils.convertToArray(o1, elementType),
+                DimensionHandlerUtils.convertToArray(o2, elementType)
+            );
+          }
+          return new DimensionComparisonUtils.ArrayComparatorForUnnaturalStringComparator(stringComparator)
+              .compare(
+                  DimensionHandlerUtils.convertToArray(o1, elementType),
+                  DimensionHandlerUtils.convertToArray(o2, elementType)
+              );
+        };
       } else if (columnType.getElementType().equals(ColumnType.STRING)) {
-        arrayComparator = (Comparator<Object>) (o1, o2) -> ComparableStringArray.compareWithComparator(
-            comparator,
-            DimensionHandlerUtils.convertToComparableStringArray(o1),
-            DimensionHandlerUtils.convertToComparableStringArray(o2)
-        );
+        arrayComparator = (o1, o2) -> {
+          if (stringComparator == null
+              || StringComparators.NATURAL.equals(stringComparator)
+              || StringComparators.LEXICOGRAPHIC.equals(stringComparator)) {
+            return columnType.getNullableStrategy().compare(
+                DimensionHandlerUtils.coerceToStringArray(o1),
+                DimensionHandlerUtils.coerceToStringArray(o2)
+            );
+          }
+          return new DimensionComparisonUtils.ArrayComparator<String>(stringComparator)
+              .compare(
+                  DimensionHandlerUtils.coerceToStringArray(o1),
+                  DimensionHandlerUtils.coerceToStringArray(o2)
+              );
+        };
       } else {
         throw new ISE("Cannot create comparator for array type %s.", columnType.toString());
       }
     }
+    final Comparator comparatorToUse;
+    if (arrayComparator != null) {
+      comparatorToUse = arrayComparator;
+    } else {
+      comparatorToUse = DimensionComparisonUtils.isNaturalComparator(columnType.getType(), stringComparator)
+                        ? columnType.getNullableStrategy()
+                        : stringComparator;
+    }
+
     return Ordering.from(
         Comparator.comparing(
             (ResultRow row) -> {
               if (columnType.isArray()) {
+                // Arrays have a specialized comparator, that applies the ordering per element. That will handle the casting
+                // and the comparison
+                return row.get(column);
+              } else if (DimensionComparisonUtils.isNaturalComparator(columnType.getType(), stringComparator)) {
+                // If the natural comparator is used, we can directly extract the dimension value, and the type strategy's comparison
+                // function will handle it, without casting
                 return row.get(column);
               } else {
+                // If the comparator is not natural, we will be using the string comparator, and we need to cast the dimension to string
+                // before comparison
                 return getDimensionValue(row, column);
               }
             },
-            Comparator.nullsFirst(arrayComparator == null ? comparator : arrayComparator)
+            Comparator.nullsFirst(comparatorToUse)
         )
     );
   }

@@ -36,7 +36,8 @@ public class NestedPathFinderTest
       "y", ImmutableMap.of("a", "hello", "b", "world"),
       "z", "foo",
       "[sneaky]", "bar",
-      "[also_sneaky]", ImmutableList.of(ImmutableMap.of("a", "x"), ImmutableMap.of("b", "y", "c", "z"))
+      "[also_sneaky]", ImmutableList.of(ImmutableMap.of("a", "x"), ImmutableMap.of("b", "y", "c", "z")),
+      "objarray", new Object[]{"a", "b", "c"}
   );
 
   @Test
@@ -434,6 +435,19 @@ public class NestedPathFinderTest
     Assert.assertEquals("b", NestedPathFinder.find(NESTER, pathParts));
 
     pathParts = NestedPathFinder.parseJqPath(".x[-4]");
+    Assert.assertNull(NestedPathFinder.find(NESTER, pathParts));
+
+    // object array
+    pathParts = NestedPathFinder.parseJqPath(".objarray[1]");
+    Assert.assertEquals("b", NestedPathFinder.find(NESTER, pathParts));
+
+    pathParts = NestedPathFinder.parseJqPath(".objarray[-1]");
+    Assert.assertEquals("c", NestedPathFinder.find(NESTER, pathParts));
+
+    pathParts = NestedPathFinder.parseJqPath(".objarray[-2]");
+    Assert.assertEquals("b", NestedPathFinder.find(NESTER, pathParts));
+
+    pathParts = NestedPathFinder.parseJqPath(".objarray[-4]");
     Assert.assertNull(NestedPathFinder.find(NESTER, pathParts));
 
     // nonexistent

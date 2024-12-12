@@ -25,8 +25,8 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.msq.sql.SqlTaskStatus;
 import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.query.http.SqlTaskStatus;
 import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
 import org.apache.druid.testing.utils.DataLoaderHelper;
 import org.apache.druid.testing.utils.ITRetryUtil;
@@ -99,7 +99,7 @@ public class ITMultiStageQueryWorkerFaultTolerance
             + "  regionIsoCode\n"
             + "FROM TABLE(\n"
             + "  EXTERN(\n"
-            + "    '{\"type\":\"local\",\"files\":[\"/resources/data/batch_index/json/wikipedia_index_data1.json\",\"/resources/data/batch_index/json/wikipedia_index_data1.json\"]}',\n"
+            + "    '{\"type\":\"local\",\"files\":[\"/resources/data/batch_index/json/wikipedia_index_data1.json\",\"/resources/data/batch_index/json/wikipedia_index_data1.json\",\"/resources/data/batch_index/json/wikipedia_index_data1.json\",\"/resources/data/batch_index/json/wikipedia_index_data1.json\"]}',\n"
             + "    '{\"type\":\"json\"}',\n"
             + "    '[{\"type\":\"string\",\"name\":\"timestamp\"},{\"type\":\"string\",\"name\":\"isRobot\"},{\"type\":\"string\",\"name\":\"diffUrl\"},{\"type\":\"long\",\"name\":\"added\"},{\"type\":\"string\",\"name\":\"countryIsoCode\"},{\"type\":\"string\",\"name\":\"regionName\"},{\"type\":\"string\",\"name\":\"channel\"},{\"type\":\"string\",\"name\":\"flags\"},{\"type\":\"long\",\"name\":\"delta\"},{\"type\":\"string\",\"name\":\"isUnpatrolled\"},{\"type\":\"string\",\"name\":\"isNew\"},{\"type\":\"double\",\"name\":\"deltaBucket\"},{\"type\":\"string\",\"name\":\"isMinor\"},{\"type\":\"string\",\"name\":\"isAnonymous\"},{\"type\":\"long\",\"name\":\"deleted\"},{\"type\":\"string\",\"name\":\"cityName\"},{\"type\":\"long\",\"name\":\"metroCode\"},{\"type\":\"string\",\"name\":\"namespace\"},{\"type\":\"string\",\"name\":\"comment\"},{\"type\":\"string\",\"name\":\"page\"},{\"type\":\"long\",\"name\":\"commentLength\"},{\"type\":\"string\",\"name\":\"countryName\"},{\"type\":\"string\",\"name\":\"user\"},{\"type\":\"string\",\"name\":\"regionIsoCode\"}]'\n"
             + "  )\n"
@@ -110,7 +110,7 @@ public class ITMultiStageQueryWorkerFaultTolerance
         );
 
     // Submit the task and wait for the datasource to get loaded
-    SqlTaskStatus sqlTaskStatus = msqHelper.submitMsqTask(
+    SqlTaskStatus sqlTaskStatus = msqHelper.submitMsqTaskSuccesfully(
         queryLocal,
         ImmutableMap.of(
             MultiStageQueryContext.CTX_FAULT_TOLERANCE,
@@ -139,7 +139,6 @@ public class ITMultiStageQueryWorkerFaultTolerance
 
   private void killTaskAbruptly(String taskIdToKill)
   {
-
     String command = "jps -mlv | grep -i peon | grep -i " + taskIdToKill + " |awk  '{print  $1}'";
 
     ITRetryUtil.retryUntil(() -> {
@@ -158,21 +157,17 @@ public class ITMultiStageQueryWorkerFaultTolerance
       }
       String pidToKill = stdOut.lhs.trim();
       if (pidToKill.length() != 0) {
-        LOG.info("Found PID to kill %s", pidToKill);
-        // kill worker after 5 seconds
-        Thread.sleep(5000);
         LOG.info("Killing pid %s", pidToKill);
-        druidClusterAdminClient.runCommandInMiddleManagerContainer(
+        final Pair<String, String> killResult = druidClusterAdminClient.runCommandInMiddleManagerContainer(
             "/bin/bash",
             "-c",
             "kill -9 " + pidToKill
         );
+        LOG.info(StringUtils.format("Kill command stdout: %s, stderr: %s", killResult.lhs, killResult.rhs));
         return true;
       } else {
         return false;
       }
-    }, true, 6000, 50, StringUtils.format("Figuring out PID for task[%s] to kill abruptly", taskIdToKill));
-
-
+    }, true, 2000, 100, StringUtils.format("Figuring out PID for task[%s] to kill abruptly", taskIdToKill));
   }
 }

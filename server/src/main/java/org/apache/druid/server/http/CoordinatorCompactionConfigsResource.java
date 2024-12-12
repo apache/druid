@@ -19,8 +19,7 @@
 
 package org.apache.druid.server.http;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
@@ -29,25 +28,25 @@ import org.apache.druid.audit.AuditEntry;
 import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.common.config.ConfigManager.SetResult;
-import org.apache.druid.common.config.JacksonConfigManager;
-import org.apache.druid.common.utils.ServletResourceUtils;
-import org.apache.druid.guice.annotations.JsonNonNull;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InvalidInput;
+import org.apache.druid.error.NotFound;
+import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.metadata.MetadataStorageConnector;
-import org.apache.druid.metadata.MetadataStorageTablesConfig;
-import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
+import org.apache.druid.server.coordinator.ClusterCompactionConfig;
+import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfigHistory;
+import org.apache.druid.server.coordinator.DruidCompactionConfig;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
+import org.apache.druid.server.security.AuthorizationUtils;
 import org.joda.time.Interval;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
-import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
-import javax.ws.rs.HeaderParam;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -56,15 +55,12 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.function.Function;
-import java.util.stream.Collectors;
+import java.util.function.UnaryOperator;
 
 @Path("/druid/coordinator/v1/config/compaction")
 @ResourceFilters(ConfigResourceFilter.class)
@@ -72,122 +68,98 @@ public class CoordinatorCompactionConfigsResource
 {
   private static final Logger LOG = new Logger(CoordinatorCompactionConfigsResource.class);
   private static final long UPDATE_RETRY_DELAY = 1000;
-  static final int UPDATE_NUM_RETRY = 5;
+  static final int MAX_UPDATE_RETRIES = 5;
 
-  private final JacksonConfigManager manager;
-  private final MetadataStorageConnector connector;
-  private final MetadataStorageTablesConfig connectorConfig;
+  private final CoordinatorConfigManager configManager;
   private final AuditManager auditManager;
-  private final ObjectMapper jsonMapperOnlyNonNullValue;
 
   @Inject
   public CoordinatorCompactionConfigsResource(
-      JacksonConfigManager manager,
-      MetadataStorageConnector connector,
-      MetadataStorageTablesConfig connectorConfig,
-      AuditManager auditManager,
-      @JsonNonNull ObjectMapper jsonMapperOnlyNonNullValue
+      CoordinatorConfigManager configManager,
+      AuditManager auditManager
   )
   {
-    this.manager = manager;
-    this.connector = connector;
-    this.connectorConfig = connectorConfig;
+    this.configManager = configManager;
     this.auditManager = auditManager;
-    this.jsonMapperOnlyNonNullValue = jsonMapperOnlyNonNullValue;
   }
 
   @GET
   @Produces(MediaType.APPLICATION_JSON)
   public Response getCompactionConfig()
   {
-    return Response.ok(CoordinatorCompactionConfig.current(manager)).build();
+    return Response.ok(configManager.getCurrentCompactionConfig()).build();
   }
 
   @POST
+  @Path("/cluster")
+  @Consumes(MediaType.APPLICATION_JSON)
+  public Response updateClusterCompactionConfig(
+      ClusterCompactionConfig updatePayload,
+      @Context HttpServletRequest req
+  )
+  {
+    UnaryOperator<DruidCompactionConfig> operator = current -> current.withClusterConfig(updatePayload);
+    return updateConfigHelper(operator, AuthorizationUtils.buildAuditInfo(req));
+  }
+
+  /**
+   * @deprecated in favor of {@link #updateClusterCompactionConfig}.
+   */
+  @POST
+  @Deprecated
   @Path("/taskslots")
   @Consumes(MediaType.APPLICATION_JSON)
   public Response setCompactionTaskLimit(
       @QueryParam("ratio") Double compactionTaskSlotRatio,
       @QueryParam("max") Integer maxCompactionTaskSlots,
       @QueryParam("useAutoScaleSlots") Boolean useAutoScaleSlots,
-      @HeaderParam(AuditManager.X_DRUID_AUTHOR) @DefaultValue("") final String author,
-      @HeaderParam(AuditManager.X_DRUID_COMMENT) @DefaultValue("") final String comment,
       @Context HttpServletRequest req
   )
   {
-    Callable<SetResult> callable = () -> {
-      final byte[] currentBytes = getCurrentConfigInByteFromDb();
-      final CoordinatorCompactionConfig current = CoordinatorCompactionConfig.convertByteToConfig(
-          manager,
-          currentBytes
-      );
-      final CoordinatorCompactionConfig newCompactionConfig = CoordinatorCompactionConfig.from(
-          current,
-          compactionTaskSlotRatio,
-          maxCompactionTaskSlots,
-          useAutoScaleSlots
-      );
-
-      return manager.set(
-          CoordinatorCompactionConfig.CONFIG_KEY,
-          currentBytes,
-          newCompactionConfig,
-          new AuditInfo(author, comment, req.getRemoteAddr())
-      );
-    };
-    return updateConfigHelper(callable);
+    return updateClusterCompactionConfig(
+        new ClusterCompactionConfig(
+            compactionTaskSlotRatio,
+            maxCompactionTaskSlots,
+            useAutoScaleSlots,
+            null
+        ),
+        req
+    );
   }
 
   @POST
   @Consumes(MediaType.APPLICATION_JSON)
-  public Response addOrUpdateCompactionConfig(
+  public Response addOrUpdateDatasourceCompactionConfig(
       final DataSourceCompactionConfig newConfig,
-      @HeaderParam(AuditManager.X_DRUID_AUTHOR) @DefaultValue("") final String author,
-      @HeaderParam(AuditManager.X_DRUID_COMMENT) @DefaultValue("") final String comment,
       @Context HttpServletRequest req
   )
   {
-    Callable<SetResult> callable = () -> {
-      final byte[] currentBytes = getCurrentConfigInByteFromDb();
-      final CoordinatorCompactionConfig current = CoordinatorCompactionConfig.convertByteToConfig(
-          manager,
-          currentBytes
-      );
-      final CoordinatorCompactionConfig newCompactionConfig;
-      final Map<String, DataSourceCompactionConfig> newConfigs = current
-          .getCompactionConfigs()
-          .stream()
-          .collect(Collectors.toMap(DataSourceCompactionConfig::getDataSource, Function.identity()));
-      newConfigs.put(newConfig.getDataSource(), newConfig);
-      newCompactionConfig = CoordinatorCompactionConfig.from(current, ImmutableList.copyOf(newConfigs.values()));
-
-      return manager.set(
-          CoordinatorCompactionConfig.CONFIG_KEY,
-          currentBytes,
-          newCompactionConfig,
-          new AuditInfo(author, comment, req.getRemoteAddr())
-      );
+    UnaryOperator<DruidCompactionConfig> callable = current -> {
+      if (newConfig.getEngine() == CompactionEngine.MSQ) {
+        throw InvalidInput.exception(
+            "MSQ engine in compaction config only supported with supervisor-based compaction on the Overlord.");
+      } else {
+        return current.withDatasourceConfig(newConfig);
+      }
     };
-    return updateConfigHelper(callable);
+    return updateConfigHelper(
+        callable,
+        AuthorizationUtils.buildAuditInfo(req)
+    );
   }
 
   @GET
   @Path("/{dataSource}")
   @Produces(MediaType.APPLICATION_JSON)
-  public Response getCompactionConfig(@PathParam("dataSource") String dataSource)
+  public Response getDatasourceCompactionConfig(@PathParam("dataSource") String dataSource)
   {
-    final CoordinatorCompactionConfig current = CoordinatorCompactionConfig.current(manager);
-    final Map<String, DataSourceCompactionConfig> configs = current
-        .getCompactionConfigs()
-        .stream()
-        .collect(Collectors.toMap(DataSourceCompactionConfig::getDataSource, Function.identity()));
-
-    final DataSourceCompactionConfig config = configs.get(dataSource);
-    if (config == null) {
+    final DruidCompactionConfig current = configManager.getCurrentCompactionConfig();
+    final Optional<DataSourceCompactionConfig> config = current.findConfigForDatasource(dataSource);
+    if (config.isPresent()) {
+      return Response.ok().entity(config.get()).build();
+    } else {
       return Response.status(Response.Status.NOT_FOUND).build();
     }
-
-    return Response.ok().entity(config).build();
   }
 
   @GET
@@ -204,26 +176,25 @@ public class CoordinatorCompactionConfigsResource
       List<AuditEntry> auditEntries;
       if (theInterval == null && count != null) {
         auditEntries = auditManager.fetchAuditHistory(
-            CoordinatorCompactionConfig.CONFIG_KEY,
-            CoordinatorCompactionConfig.CONFIG_KEY,
+            DruidCompactionConfig.CONFIG_KEY,
+            DruidCompactionConfig.CONFIG_KEY,
             count
         );
       } else {
         auditEntries = auditManager.fetchAuditHistory(
-            CoordinatorCompactionConfig.CONFIG_KEY,
-            CoordinatorCompactionConfig.CONFIG_KEY,
+            DruidCompactionConfig.CONFIG_KEY,
+            DruidCompactionConfig.CONFIG_KEY,
             theInterval
         );
       }
       DataSourceCompactionConfigHistory history = new DataSourceCompactionConfigHistory(dataSource);
       for (AuditEntry audit : auditEntries) {
-        CoordinatorCompactionConfig coordinatorCompactionConfig = CoordinatorCompactionConfig.convertByteToConfig(
-            manager,
-            audit.getPayload().getBytes(StandardCharsets.UTF_8)
+        DruidCompactionConfig compactionConfig = configManager.convertBytesToCompactionConfig(
+            audit.getPayload().serialized().getBytes(StandardCharsets.UTF_8)
         );
-        history.add(coordinatorCompactionConfig, audit.getAuditInfo(), audit.getAuditTime());
+        history.add(compactionConfig, audit.getAuditInfo(), audit.getAuditTime());
       }
-      return Response.ok(history.getHistory()).build();
+      return Response.ok(history.getEntries()).build();
     }
     catch (IllegalArgumentException e) {
       return Response.status(Response.Status.BAD_REQUEST)
@@ -237,51 +208,40 @@ public class CoordinatorCompactionConfigsResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response deleteCompactionConfig(
       @PathParam("dataSource") String dataSource,
-      @HeaderParam(AuditManager.X_DRUID_AUTHOR) @DefaultValue("") final String author,
-      @HeaderParam(AuditManager.X_DRUID_COMMENT) @DefaultValue("") final String comment,
       @Context HttpServletRequest req
   )
   {
-    Callable<SetResult> callable = () -> {
-      final byte[] currentBytes = getCurrentConfigInByteFromDb();
-      final CoordinatorCompactionConfig current = CoordinatorCompactionConfig.convertByteToConfig(
-          manager,
-          currentBytes
-      );
-      final Map<String, DataSourceCompactionConfig> configs = current
-          .getCompactionConfigs()
-          .stream()
-          .collect(Collectors.toMap(DataSourceCompactionConfig::getDataSource, Function.identity()));
-
+    UnaryOperator<DruidCompactionConfig> callable = current -> {
+      final Map<String, DataSourceCompactionConfig> configs = current.dataSourceToCompactionConfigMap();
       final DataSourceCompactionConfig config = configs.remove(dataSource);
       if (config == null) {
-        return SetResult.fail(new NoSuchElementException("datasource not found"), false);
+        throw NotFound.exception("datasource not found");
       }
 
-      return manager.set(
-          CoordinatorCompactionConfig.CONFIG_KEY,
-          currentBytes,
-          CoordinatorCompactionConfig.from(current, ImmutableList.copyOf(configs.values())),
-          new AuditInfo(author, comment, req.getRemoteAddr())
-      );
+      return current.withDatasourceConfigs(ImmutableList.copyOf(configs.values()));
     };
-    return updateConfigHelper(callable);
+    return updateConfigHelper(callable, AuthorizationUtils.buildAuditInfo(req));
   }
 
-  @VisibleForTesting
-  Response updateConfigHelper(Callable<SetResult> updateMethod)
+  private Response updateConfigHelper(
+      UnaryOperator<DruidCompactionConfig> configOperator,
+      AuditInfo auditInfo
+  )
   {
     int attemps = 0;
     SetResult setResult = null;
     try {
-      while (attemps < UPDATE_NUM_RETRY) {
-        setResult = updateMethod.call();
+      while (attemps < MAX_UPDATE_RETRIES) {
+        setResult = configManager.getAndUpdateCompactionConfig(configOperator, auditInfo);
         if (setResult.isOk() || !setResult.isRetryable()) {
           break;
         }
         attemps++;
         updateRetryDelay();
       }
+    }
+    catch (DruidException e) {
+      return ServletResourceUtils.buildErrorResponseFrom(e);
     }
     catch (Exception e) {
       LOG.warn(e, "Update compaction config failed");
@@ -311,11 +271,6 @@ public class CoordinatorCompactionConfigsResource
     catch (InterruptedException ie) {
       throw new RuntimeException(ie);
     }
-  }
-
-  private byte[] getCurrentConfigInByteFromDb()
-  {
-    return CoordinatorCompactionConfig.getConfigInByteFromDb(connector, connectorConfig);
   }
 
   private String createErrorMessage(Exception e)

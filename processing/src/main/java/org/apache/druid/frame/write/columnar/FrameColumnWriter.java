@@ -23,14 +23,34 @@ import org.apache.datasketches.memory.WritableMemory;
 
 import java.io.Closeable;
 
+/**
+ * Represent writers for the columnar frames.
+ *
+ * The class objects must be provided with information on what values to write, usually provided as a
+ * {@link org.apache.druid.segment.ColumnValueSelector} and where to write to, usually temporary growable memory
+ * {@link #addSelection()} will be called repeatedly, as the current value to write gets updated. For the final write,
+ * call {@link #writeTo}, which will copy the values we have added so far to the destination memory.
+ */
 public interface FrameColumnWriter extends Closeable
 {
+  /**
+   * Adds the current value to the writer
+   */
   boolean addSelection();
 
+  /**
+   * Reverts the last added value. Undo calls cannot be called in successsion
+   */
   void undo();
 
+  /**
+   * Size (in bytes) of the column data that will get written when {@link #writeTo} will be called
+   */
   long size();
 
+  /**
+   * Writes the value of the column to the provided memory at the given position
+   */
   long writeTo(WritableMemory memory, long position);
 
   @Override

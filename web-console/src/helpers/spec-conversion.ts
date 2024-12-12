@@ -18,28 +18,36 @@
 
 import {
   C,
+  dedupe,
   L,
   RefName,
   SqlColumnDeclaration,
   SqlExpression,
   SqlType,
   T,
-} from '@druid-toolkit/query';
+} from 'druid-query-toolkit';
 import * as JSONBig from 'json-bigint-native';
 
 import type {
   DimensionSpec,
   IngestionSpec,
   MetricSpec,
+  QueryContext,
   QueryWithContext,
   TimestampSpec,
   Transform,
 } from '../druid-models';
-import { inflateDimensionSpec, TIME_COLUMN, upgradeSpec } from '../druid-models';
+import {
+  getArrayMode,
+  inflateDimensionSpec,
+  NO_SUCH_COLUMN,
+  TIME_COLUMN,
+  upgradeSpec,
+} from '../druid-models';
 import { deepGet, filterMap, nonEmptyArray, oneOf } from '../utils';
 
-export function getSpecDatasourceName(spec: Partial<IngestionSpec>): string {
-  return deepGet(spec, 'spec.dataSchema.dataSource') || 'unknown_datasource';
+export function getSpecDatasourceName(spec: Partial<IngestionSpec>): string | undefined {
+  return deepGet(spec, 'spec.dataSchema.dataSource');
 }
 
 function convertFilter(filter: any): SqlExpression {
@@ -72,10 +80,19 @@ export function convertSpecToSql(spec: any): QueryWithContext {
   }
   spec = upgradeSpec(spec, true);
 
-  const context: Record<string, any> = {
-    finalizeAggregations: false,
-    groupByEnableMultiValueUnnesting: false,
-  };
+  const context: QueryContext = {};
+
+  if (getArrayMode(spec, 'multi-values') === 'arrays') {
+    context.arrayIngestMode = 'array';
+  }
+
+  const forceSegmentSortByTime = deepGet(
+    spec,
+    'spec.dataSchema.dimensionsSpec.forceSegmentSortByTime',
+  );
+  if (typeof forceSegmentSortByTime !== 'undefined') {
+    context.forceSegmentSortByTime = forceSegmentSortByTime;
+  }
 
   const indexSpec = deepGet(spec, 'spec.tuningConfig.indexSpec');
   if (indexSpec) {
@@ -93,17 +110,17 @@ export function convertSpecToSql(spec: any): QueryWithContext {
   const timestampSpec: TimestampSpec = deepGet(spec, 'spec.dataSchema.timestampSpec');
   if (!timestampSpec) throw new Error(`spec.dataSchema.timestampSpec is not defined`);
 
-  let dimensions = deepGet(spec, 'spec.dataSchema.dimensionsSpec.dimensions');
-  if (!Array.isArray(dimensions)) {
+  const specDimensions: (string | DimensionSpec)[] = deepGet(
+    spec,
+    'spec.dataSchema.dimensionsSpec.dimensions',
+  );
+  if (!Array.isArray(specDimensions)) {
     throw new Error(`spec.dataSchema.dimensionsSpec.dimensions must be an array`);
   }
-  dimensions = dimensions.map(inflateDimensionSpec);
+  const dimensions = specDimensions.map(inflateDimensionSpec);
 
-  let columnDeclarations: SqlColumnDeclaration[] = dimensions.map((d: DimensionSpec) =>
-    SqlColumnDeclaration.create(
-      d.name,
-      SqlType.fromNativeType(dimensionSpecTypeToNativeDataType(d.type)),
-    ),
+  let columnDeclarations: SqlColumnDeclaration[] = dimensions.map(d =>
+    SqlColumnDeclaration.create(d.name, dimensionSpecToSqlType(d)),
   );
 
   const metricsSpec = deepGet(spec, 'spec.dataSchema.metricsSpec');
@@ -120,6 +137,8 @@ export function convertSpecToSql(spec: any): QueryWithContext {
     );
   }
 
+  columnDeclarations = dedupe(columnDeclarations, d => d.getColumnName());
+
   const transforms: Transform[] = deepGet(spec, 'spec.dataSchema.transformSpec.transforms') || [];
   if (!Array.isArray(transforms)) {
     throw new Error(`spec.dataSchema.transformSpec.transforms is not an array`);
@@ -127,65 +146,71 @@ export function convertSpecToSql(spec: any): QueryWithContext {
 
   let timeExpression: string;
   const timestampColumnName = timestampSpec.column || 'timestamp';
-  const timestampColumn = C(timestampColumnName);
-  const format = timestampSpec.format || 'auto';
   const timeTransform = transforms.find(t => t.name === TIME_COLUMN);
-  if (timeTransform) {
-    timeExpression = `REWRITE_[${timeTransform.expression}]_TO_SQL`;
-  } else if (timestampColumnName === TIME_COLUMN) {
-    timeExpression = String(timestampColumn);
-    columnDeclarations.unshift(SqlColumnDeclaration.create(timestampColumnName, SqlType.BIGINT));
+  if (timestampColumnName === NO_SUCH_COLUMN) {
+    timeExpression = timestampSpec.missingValue
+      ? `TIME_PARSE(${L(timestampSpec.missingValue)})`
+      : `TIMESTAMP '1970-01-01'`;
   } else {
-    let timestampColumnType: SqlType;
-    switch (format) {
-      case 'auto':
-        timestampColumnType = SqlType.VARCHAR;
-        timeExpression = `CASE WHEN CAST(${timestampColumn} AS BIGINT) > 0 THEN MILLIS_TO_TIMESTAMP(CAST(${timestampColumn} AS BIGINT)) ELSE TIME_PARSE(TRIM(${timestampColumn})) END`;
-        break;
+    const timestampColumn = C(timestampColumnName);
+    const format = timestampSpec.format || 'auto';
+    if (timeTransform) {
+      timeExpression = `REWRITE_[${timeTransform.expression}]_TO_SQL`;
+    } else if (timestampColumnName === TIME_COLUMN) {
+      timeExpression = String(timestampColumn);
+      columnDeclarations.unshift(SqlColumnDeclaration.create(timestampColumnName, SqlType.BIGINT));
+    } else {
+      let timestampColumnType: SqlType;
+      switch (format) {
+        case 'auto':
+          timestampColumnType = SqlType.VARCHAR;
+          timeExpression = `CASE WHEN CAST(${timestampColumn} AS BIGINT) > 0 THEN MILLIS_TO_TIMESTAMP(CAST(${timestampColumn} AS BIGINT)) ELSE TIME_PARSE(TRIM(${timestampColumn})) END`;
+          break;
 
-      case 'iso':
-        timestampColumnType = SqlType.VARCHAR;
-        timeExpression = `TIME_PARSE(${timestampColumn})`;
-        break;
+        case 'iso':
+          timestampColumnType = SqlType.VARCHAR;
+          timeExpression = `TIME_PARSE(${timestampColumn})`;
+          break;
 
-      case 'posix':
-        timestampColumnType = SqlType.BIGINT;
-        timeExpression = `MILLIS_TO_TIMESTAMP(${timestampColumn} * 1000)`;
-        break;
+        case 'posix':
+          timestampColumnType = SqlType.BIGINT;
+          timeExpression = `MILLIS_TO_TIMESTAMP(${timestampColumn} * 1000)`;
+          break;
 
-      case 'millis':
-        timestampColumnType = SqlType.BIGINT;
-        timeExpression = `MILLIS_TO_TIMESTAMP(${timestampColumn})`;
-        break;
+        case 'millis':
+          timestampColumnType = SqlType.BIGINT;
+          timeExpression = `MILLIS_TO_TIMESTAMP(${timestampColumn})`;
+          break;
 
-      case 'micro':
-        timestampColumnType = SqlType.BIGINT;
-        timeExpression = `MILLIS_TO_TIMESTAMP(${timestampColumn} / 1000)`;
-        break;
+        case 'micro':
+          timestampColumnType = SqlType.BIGINT;
+          timeExpression = `MILLIS_TO_TIMESTAMP(${timestampColumn} / 1000)`;
+          break;
 
-      case 'nano':
-        timestampColumnType = SqlType.BIGINT;
-        timeExpression = `MILLIS_TO_TIMESTAMP(${timestampColumn} / 1000000)`;
-        break;
+        case 'nano':
+          timestampColumnType = SqlType.BIGINT;
+          timeExpression = `MILLIS_TO_TIMESTAMP(${timestampColumn} / 1000000)`;
+          break;
 
-      default:
-        timestampColumnType = SqlType.VARCHAR;
-        timeExpression = `TIME_PARSE(${timestampColumn}, ${L(format)})`;
-        break;
+        default:
+          timestampColumnType = SqlType.VARCHAR;
+          timeExpression = `TIME_PARSE(${timestampColumn}, ${L(format)})`;
+          break;
+      }
+      columnDeclarations.unshift(
+        SqlColumnDeclaration.create(timestampColumnName, timestampColumnType),
+      );
     }
-    columnDeclarations.unshift(
-      SqlColumnDeclaration.create(timestampColumnName, timestampColumnType),
+
+    if (timestampSpec.missingValue) {
+      timeExpression = `COALESCE(${timeExpression}, TIME_PARSE(${L(timestampSpec.missingValue)}))`;
+    }
+
+    timeExpression = convertQueryGranularity(
+      timeExpression,
+      deepGet(spec, 'spec.dataSchema.granularitySpec.queryGranularity'),
     );
   }
-
-  if (timestampSpec.missingValue) {
-    timeExpression = `COALESCE(${timeExpression}, TIME_PARSE(${L(timestampSpec.missingValue)}))`;
-  }
-
-  timeExpression = convertQueryGranularity(
-    timeExpression,
-    deepGet(spec, 'spec.dataSchema.granularitySpec.queryGranularity'),
-  );
 
   lines.push(`-- This SQL query was auto generated from an ingestion spec`);
 
@@ -346,14 +371,14 @@ export function convertSpecToSql(spec: any): QueryWithContext {
 
 function convertQueryGranularity(
   timeExpression: string,
-  queryGranularity: { type: string } | string | undefined,
+  queryGranularity: { type: unknown } | string | undefined,
 ) {
   if (!queryGranularity) return timeExpression;
 
   const effectiveQueryGranularity =
     typeof queryGranularity === 'string'
       ? queryGranularity
-      : typeof queryGranularity.type === 'string'
+      : typeof queryGranularity?.type === 'string'
       ? queryGranularity.type
       : undefined;
 
@@ -382,13 +407,20 @@ const QUERY_GRANULARITY_MAP: Record<string, string> = {
   year: `TIME_FLOOR(?, 'P1Y')`,
 };
 
-function dimensionSpecTypeToNativeDataType(dimensionSpecType: string): string {
-  switch (dimensionSpecType) {
+function dimensionSpecToSqlType(dimensionSpec: DimensionSpec): SqlType {
+  switch (dimensionSpec.type) {
+    case 'auto':
+      if (dimensionSpec.castToType) {
+        return SqlType.fromNativeType(dimensionSpec.castToType);
+      } else {
+        return SqlType.VARCHAR;
+      }
+
     case 'json':
-      return 'COMPLEX<json>';
+      return SqlType.fromNativeType('COMPLEX<json>');
 
     default:
-      return dimensionSpecType;
+      return SqlType.fromNativeType(dimensionSpec.type);
   }
 }
 

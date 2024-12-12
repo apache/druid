@@ -23,7 +23,8 @@ import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.query.BitmapResultFactory;
 
 /**
- * {@link SimpleBitmapColumnIndex} which wraps a single {@link ImmutableBitmap}
+ * {@link SimpleBitmapColumnIndex} which wraps a single {@link ImmutableBitmap} with no 'unknowns', e.g.
+ * {@link #computeBitmapResult(BitmapResultFactory, boolean)} ignores the 'includeUnknown' argument.
  */
 public final class SimpleImmutableBitmapIndex extends SimpleBitmapColumnIndex
 {
@@ -35,13 +36,13 @@ public final class SimpleImmutableBitmapIndex extends SimpleBitmapColumnIndex
   }
 
   @Override
-  public double estimateSelectivity(int totalRows)
+  public int estimatedComputeCost()
   {
-    return Math.min(1, (double) bitmap.size() / totalRows);
+    return 0;
   }
 
   @Override
-  public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory)
+  public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
   {
     return bitmapResultFactory.wrapDimensionValue(bitmap);
   }

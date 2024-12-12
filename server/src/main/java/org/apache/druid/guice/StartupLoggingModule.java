@@ -20,7 +20,10 @@
 package org.apache.druid.guice;
 
 import com.google.inject.Binder;
+import com.google.inject.Key;
 import com.google.inject.Module;
+import org.apache.druid.audit.AuditManager;
+import org.apache.druid.server.audit.LoggingAuditManager;
 import org.apache.druid.server.log.StartupLoggingConfig;
 
 public class StartupLoggingModule implements Module
@@ -29,5 +32,10 @@ public class StartupLoggingModule implements Module
   public void configure(Binder binder)
   {
     JsonConfigProvider.bind(binder, "druid.startup.logging", StartupLoggingConfig.class);
+
+    PolyBind.optionBinder(binder, Key.get(AuditManager.class))
+            .addBinding("log")
+            .to(LoggingAuditManager.class)
+            .in(LazySingleton.class);
   }
 }

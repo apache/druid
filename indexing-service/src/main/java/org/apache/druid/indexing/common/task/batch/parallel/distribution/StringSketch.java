@@ -33,6 +33,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.datasketches.memory.Memory;
 import org.apache.datasketches.quantiles.ItemsSketch;
+import org.apache.datasketches.quantilescommon.QuantileSearchCriteria;
 import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.timeline.partition.PartitionBoundaries;
 
@@ -128,7 +129,7 @@ public class StringSketch implements StringDistribution
     if (delegate.isEmpty()) {
       return new PartitionBoundaries(new StringTuple[0]);
     }
-    return new PartitionBoundaries((delegate.getPartitionBoundaries(evenPartitionCount)).boundaries);
+    return new PartitionBoundaries((delegate.getPartitionBoundaries(evenPartitionCount, QuantileSearchCriteria.EXCLUSIVE)).boundaries);
   }
 
   @Override

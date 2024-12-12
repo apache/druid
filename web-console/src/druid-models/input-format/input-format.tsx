@@ -17,12 +17,11 @@
  */
 
 import { Code } from '@blueprintjs/core';
-import React from 'react';
 
 import type { Field } from '../../components';
 import { AutoForm, ExternalLink } from '../../components';
 import { getLink } from '../../links';
-import { compact, deepGet, deepSet, oneOf, typeIs, typeIsKnown } from '../../utils';
+import { compact, deepGet, deepSet, oneOf, oneOfKnown, typeIsKnown } from '../../utils';
 import type { FlattenSpec } from '../flatten-spec/flatten-spec';
 
 export interface InputFormat {
@@ -42,6 +41,7 @@ export interface InputFormat {
 
   // type: kafka
   readonly timestampColumnName?: string;
+  readonly topicColumnName?: string;
   readonly headerFormat?: { type: 'string'; encoding?: string };
   readonly headerColumnPrefix?: string;
   readonly keyFormat?: InputFormat;
@@ -57,24 +57,38 @@ const KNOWN_TYPES = [
   'orc',
   'avro_ocf',
   'avro_stream',
+  'protobuf',
   'regex',
-  'kafka',
   'javascript',
+  'kafka',
+  'kinesis',
 ];
+
 function generateInputFormatFields(streaming: boolean) {
   return compact([
     {
       name: 'type',
       label: 'Input format',
       type: 'string',
-      suggestions: KNOWN_TYPES,
+      suggestions: [
+        'json',
+        'csv',
+        'tsv',
+        'parquet',
+        'orc',
+        'avro_ocf',
+        'avro_stream',
+        'protobuf',
+        'regex',
+        'javascript',
+      ],
       required: true,
       info: (
         <>
           <p>The parser used to parse the data.</p>
           <p>
             For more information see{' '}
-            <ExternalLink href={`${getLink('DOCS')}/ingestion/data-formats.html`}>
+            <ExternalLink href={`${getLink('DOCS')}/ingestion/data-formats`}>
               the documentation
             </ExternalLink>
             .
@@ -230,6 +244,44 @@ function generateInputFormatFields(streaming: boolean) {
       info: <>A custom delimiter for multi-value dimensions.</>,
     },
     {
+      name: 'avroBytesDecoder',
+      type: 'json',
+      defined: typeIsKnown(KNOWN_TYPES, 'avro_stream'),
+      required: true,
+      placeholder: `{ type: "schema_repo", ... }`,
+      info: (
+        <>
+          <p>Specifies how to decode bytes to Avro record.</p>
+          <p>
+            For more details refer to the{' '}
+            <ExternalLink href={`${getLink('DOCS')}/ingestion/data-formats/#avro-bytes-decoder`}>
+              documentation
+            </ExternalLink>
+            .
+          </p>
+        </>
+      ),
+    },
+    {
+      name: 'schema',
+      type: 'json',
+      defined: typeIsKnown(KNOWN_TYPES, 'avro_ocf'),
+      info: (
+        <>
+          Define a reader schema to be used when parsing Avro records. This is useful when parsing
+          multiple versions of Avro OCF file data.
+        </>
+      ),
+    },
+    {
+      name: 'protoBytesDecoder',
+      type: 'json',
+      defined: typeIsKnown(KNOWN_TYPES, 'protobuf'),
+      required: true,
+      placeholder: `{ ... }`,
+      info: <>Specifies how to decode bytes to Protobuf record.</>,
+    },
+    {
       name: 'binaryAsString',
       type: 'boolean',
       defaultValue: false,
@@ -253,7 +305,15 @@ export const KAFKA_METADATA_INPUT_FORMAT_FIELDS: Field<InputFormat>[] = [
     type: 'string',
     defaultValue: 'kafka.timestamp',
     defined: typeIsKnown(KNOWN_TYPES, 'kafka'),
-    info: `Name of the column for the kafka record's timestamp.`,
+    info: `Name of the column for the Kafka record's timestamp.`,
+  },
+  {
+    name: 'topicColumnName',
+    label: 'Kafka topic column name',
+    type: 'string',
+    defaultValue: 'kafka.topic',
+    defined: typeIsKnown(KNOWN_TYPES, 'kafka'),
+    info: `Name of the column for the topic from which the Kafka record came.`,
   },
 
   // -----------------------------------------------------
@@ -281,7 +341,7 @@ export const KAFKA_METADATA_INPUT_FORMAT_FIELDS: Field<InputFormat>[] = [
         <p>The parser used to parse the key of the Kafka message.</p>
         <p>
           For more information see{' '}
-          <ExternalLink href={`${getLink('DOCS')}/ingestion/data-formats.html`}>
+          <ExternalLink href={`${getLink('DOCS')}/ingestion/data-formats`}>
             the documentation
           </ExternalLink>
           .
@@ -311,7 +371,7 @@ export const KAFKA_METADATA_INPUT_FORMAT_FIELDS: Field<InputFormat>[] = [
     name: 'keyFormat.featureSpec',
     label: 'Kafka key JSON parser features',
     type: 'json',
-    defined: inputFormat => deepGet(inputFormat, 'keyFormat.type') === 'json',
+    defined: inputFormat => oneOfKnown(deepGet(inputFormat, 'keyFormat.type'), KNOWN_TYPES, 'json'),
     hideInMore: true,
     info: (
       <>
@@ -333,7 +393,7 @@ export const KAFKA_METADATA_INPUT_FORMAT_FIELDS: Field<InputFormat>[] = [
     name: 'keyFormat.assumeNewlineDelimited',
     label: 'Kafka key assume newline delimited',
     type: 'boolean',
-    defined: inputFormat => deepGet(inputFormat, 'keyFormat.type') === 'json',
+    defined: inputFormat => oneOfKnown(deepGet(inputFormat, 'keyFormat.type'), KNOWN_TYPES, 'json'),
     disabled: inputFormat => Boolean(inputFormat.useJsonNodeReader),
     defaultValue: false,
     hideInMore: true,
@@ -361,7 +421,7 @@ export const KAFKA_METADATA_INPUT_FORMAT_FIELDS: Field<InputFormat>[] = [
     name: 'keyFormat.useJsonNodeReader',
     label: 'Kafka key use JSON node reader',
     type: 'boolean',
-    defined: inputFormat => deepGet(inputFormat, 'keyFormat.type') === 'json',
+    defined: inputFormat => oneOfKnown(deepGet(inputFormat, 'keyFormat.type'), KNOWN_TYPES, 'json'),
     disabled: inputFormat => Boolean(inputFormat.assumeNewlineDelimited),
     defaultValue: false,
     hideInMore: true,
@@ -391,14 +451,15 @@ export const KAFKA_METADATA_INPUT_FORMAT_FIELDS: Field<InputFormat>[] = [
     type: 'string',
     defaultValue: '\t',
     suggestions: ['\t', ';', '|', '#'],
-    defined: inputFormat => deepGet(inputFormat, 'keyFormat.type') === 'tsv',
+    defined: inputFormat => oneOfKnown(deepGet(inputFormat, 'keyFormat.type'), KNOWN_TYPES, 'tsv'),
     info: <>A custom delimiter for data values.</>,
   },
   {
     name: 'keyFormat.pattern',
     label: 'Kafka key pattern',
     type: 'string',
-    defined: inputFormat => deepGet(inputFormat, 'keyFormat.type') === 'regex',
+    defined: inputFormat =>
+      oneOfKnown(deepGet(inputFormat, 'keyFormat.type'), KNOWN_TYPES, 'regex'),
     required: true,
   },
   {
@@ -406,7 +467,8 @@ export const KAFKA_METADATA_INPUT_FORMAT_FIELDS: Field<InputFormat>[] = [
     label: 'Kafka key skip header rows',
     type: 'number',
     defaultValue: 0,
-    defined: inputFormat => oneOf(deepGet(inputFormat, 'keyFormat.type'), 'csv', 'tsv'),
+    defined: inputFormat =>
+      oneOfKnown(deepGet(inputFormat, 'keyFormat.type'), KNOWN_TYPES, 'csv', 'tsv'),
     min: 0,
     info: (
       <>
@@ -418,7 +480,8 @@ export const KAFKA_METADATA_INPUT_FORMAT_FIELDS: Field<InputFormat>[] = [
     name: 'keyFormat.findColumnsFromHeader',
     label: 'Kafka key find columns from header',
     type: 'boolean',
-    defined: inputFormat => oneOf(deepGet(inputFormat, 'keyFormat.type'), 'csv', 'tsv'),
+    defined: inputFormat =>
+      oneOfKnown(deepGet(inputFormat, 'keyFormat.type'), KNOWN_TYPES, 'csv', 'tsv'),
     required: true,
     hideInMore: true,
     info: (
@@ -454,12 +517,57 @@ export const KAFKA_METADATA_INPUT_FORMAT_FIELDS: Field<InputFormat>[] = [
     type: 'string',
     defaultValue: '\x01',
     suggestions: ['\x01', '\x00'],
-    defined: inputFormat => oneOf(deepGet(inputFormat, 'keyFormat.type'), 'csv', 'tsv', 'regex'),
+    defined: inputFormat =>
+      oneOfKnown(deepGet(inputFormat, 'keyFormat.type'), KNOWN_TYPES, 'csv', 'tsv', 'regex'),
     info: <>A custom delimiter for multi-value dimensions.</>,
   },
   {
+    name: 'keyFormat.avroBytesDecoder',
+    label: 'Kafka key Avro bytes decoder',
+    type: 'json',
+    defined: inputFormat =>
+      oneOfKnown(deepGet(inputFormat, 'keyFormat.type'), KNOWN_TYPES, 'avro_stream'),
+    required: true,
+    placeholder: `{ type: "schema_repo", ... }`,
+    info: (
+      <>
+        <p>Specifies how to decode bytes to Avro record.</p>
+        <p>
+          For more details refer to the{' '}
+          <ExternalLink href={`${getLink('DOCS')}/ingestion/data-formats/#avro-bytes-decoder`}>
+            documentation
+          </ExternalLink>
+          .
+        </p>
+      </>
+    ),
+  },
+  {
+    name: 'keyFormat.schema',
+    label: 'Key format schema',
+    type: 'json',
+    defined: inputFormat =>
+      oneOfKnown(deepGet(inputFormat, 'keyFormat.type'), KNOWN_TYPES, 'avro_ocf'),
+    info: (
+      <>
+        Define a reader schema to be used when parsing Avro records. This is useful when parsing
+        multiple versions of Avro OCF file data.
+      </>
+    ),
+  },
+  {
+    name: 'keyFormat.protoBytesDecoder',
+    label: 'Kafka key proto bytes decoder',
+    type: 'json',
+    defined: inputFormat =>
+      oneOfKnown(deepGet(inputFormat, 'keyFormat.type'), KNOWN_TYPES, 'protobuf'),
+    required: true,
+    placeholder: `{ ... }`,
+    info: <>Specifies how to decode bytes to Protobuf record.</>,
+  },
+  {
     name: 'keyFormat.binaryAsString',
-    label: 'Kafka key list binary as string',
+    label: 'Kafka key binary as string',
     type: 'boolean',
     defaultValue: false,
     defined: inputFormat =>
@@ -489,7 +597,7 @@ export const KAFKA_METADATA_INPUT_FORMAT_FIELDS: Field<InputFormat>[] = [
     label: 'Kafka header format type',
     type: 'string',
     defined: typeIsKnown(KNOWN_TYPES, 'kafka'),
-    placeholder: `(don't parse Kafka herders)`,
+    placeholder: `(don't parse Kafka headers)`,
     suggestions: [undefined, 'string'],
   },
   {
@@ -510,14 +618,38 @@ export const KAFKA_METADATA_INPUT_FORMAT_FIELDS: Field<InputFormat>[] = [
   },
 ];
 
+export const KINESIS_METADATA_INPUT_FORMAT_FIELDS: Field<InputFormat>[] = [
+  {
+    name: 'timestampColumnName',
+    label: 'Kinesis timestamp column name',
+    type: 'string',
+    defaultValue: 'kinesis.timestamp',
+    defined: typeIsKnown(KNOWN_TYPES, 'kinesis'),
+    info: `The name of the column for the Kinesis timestamp.`,
+  },
+  {
+    name: 'partitionKeyColumnName',
+    label: 'Kinesis partition key column name',
+    type: 'string',
+    defaultValue: 'kinesis.partitionKey',
+    defined: typeIsKnown(KNOWN_TYPES, 'kinesis'),
+    info: `The name of the column for the Kinesis partition key. This field is useful when ingesting data from multiple partitions into the same datasource.`,
+  },
+];
+
 export function issueWithInputFormat(inputFormat: InputFormat | undefined): string | undefined {
   return AutoForm.issueWithModel(inputFormat, BATCH_INPUT_FORMAT_FIELDS);
 }
 
-export const inputFormatCanProduceNestedData: (inputFormat: InputFormat) => boolean = typeIs(
-  'json',
-  'parquet',
-  'orc',
-  'avro_ocf',
-  'avro_stream',
-);
+export function isKafkaOrKinesis(type: string | undefined): type is 'kafka' | 'kinesis' {
+  return type === 'kafka' || type === 'kinesis';
+}
+
+export function inputFormatCanProduceNestedData(inputFormat: InputFormat): boolean {
+  if (isKafkaOrKinesis(inputFormat.type)) {
+    return Boolean(
+      inputFormat.valueFormat && inputFormatCanProduceNestedData(inputFormat.valueFormat),
+    );
+  }
+  return oneOf(inputFormat.type, 'json', 'parquet', 'orc', 'avro_ocf', 'avro_stream', 'protobuf');
+}

@@ -30,6 +30,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Binder;
+import com.google.inject.Injector;
 import org.apache.druid.data.input.AbstractInputSource;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSplit;
@@ -48,10 +49,12 @@ import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.SqlQueryPlus;
+import org.apache.druid.sql.calcite.CalciteIngestionDmlTest.IngestionDmlComponentSupplier;
 import org.apache.druid.sql.calcite.external.ExternalDataSource;
 import org.apache.druid.sql.calcite.external.ExternalOperatorConversion;
 import org.apache.druid.sql.calcite.external.HttpOperatorConversion;
@@ -60,15 +63,16 @@ import org.apache.druid.sql.calcite.external.LocalOperatorConversion;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
+import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.apache.druid.sql.guice.SqlBindings;
 import org.apache.druid.sql.http.SqlParameter;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.Matcher;
-import org.hamcrest.MatcherAssert;
-import org.junit.After;
 import org.junit.Assert;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
+import org.junit.jupiter.api.AfterEach;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -82,6 +86,9 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Stream;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+
+@SqlTestFrameworkConfig.ComponentSupplier(IngestionDmlComponentSupplier.class)
 public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
 {
   protected static final Map<String, Object> DEFAULT_CONTEXT =
@@ -109,7 +116,7 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
 
   protected final ExternalDataSource externalDataSource = new ExternalDataSource(
       new InlineInputSource("a,b,1\nc,d,2\n"),
-      new CsvInputFormat(ImmutableList.of("x", "y", "z"), null, false, false, 0),
+      new CsvInputFormat(ImmutableList.of("x", "y", "z"), null, false, false, 0, null),
       RowSignature.builder()
                   .add("x", ColumnType.STRING)
                   .add("y", ColumnType.STRING)
@@ -119,69 +126,78 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
 
   protected boolean didTest = false;
 
-  public CalciteIngestionDmlTest()
+  static class IngestionDmlComponentSupplier extends StandardComponentSupplier
   {
-    super(IngestionTestSqlEngine.INSTANCE);
+    public IngestionDmlComponentSupplier(TempDirProducer tempFolderProducer)
+    {
+      super(tempFolderProducer);
+    }
+
+    @Override
+    public SqlEngine createEngine(QueryLifecycleFactory qlf, ObjectMapper queryJsonMapper, Injector injector)
+    {
+      return IngestionTestSqlEngine.INSTANCE;
+    }
+
+    @Override
+    public void configureGuice(DruidInjectorBuilder builder)
+    {
+      super.configureGuice(builder);
+
+      builder.addModule(new DruidModule() {
+
+        // Clone of MSQExternalDataSourceModule since it is not
+        // visible here.
+        @Override
+        public List<? extends Module> getJacksonModules()
+        {
+          return Collections.singletonList(
+              new SimpleModule(getClass().getSimpleName())
+                  .registerSubtypes(ExternalDataSource.class)
+          );
+        }
+
+        @Override
+        public void configure(Binder binder)
+        {
+          // Nothing to do.
+        }
+      });
+
+      builder.addModule(new DruidModule() {
+
+        // Partial clone of MsqSqlModule, since that module is not
+        // visible to this one.
+
+        @Override
+        public List<? extends Module> getJacksonModules()
+        {
+          // We want this module to bring input sources along for the ride.
+          List<Module> modules = new ArrayList<>(new InputSourceModule().getJacksonModules());
+          modules.add(new SimpleModule("test-module").registerSubtypes(TestFileInputSource.class));
+          return modules;
+        }
+
+        @Override
+        public void configure(Binder binder)
+        {
+          // We want this module to bring InputSourceModule along for the ride.
+          binder.install(new InputSourceModule());
+
+          // Set up the EXTERN macro.
+          SqlBindings.addOperatorConversion(binder, ExternalOperatorConversion.class);
+
+          // Enable the extended table functions for testing even though these
+          // are not enabled in production in Druid 26.
+          SqlBindings.addOperatorConversion(binder, HttpOperatorConversion.class);
+          SqlBindings.addOperatorConversion(binder, InlineOperatorConversion.class);
+          SqlBindings.addOperatorConversion(binder, LocalOperatorConversion.class);
+        }
+      });
+    }
   }
 
-  @Override
-  public void configureGuice(DruidInjectorBuilder builder)
-  {
-    super.configureGuice(builder);
-
-    builder.addModule(new DruidModule() {
-
-      // Clone of MSQExternalDataSourceModule since it is not
-      // visible here.
-      @Override
-      public List<? extends Module> getJacksonModules()
-      {
-        return Collections.singletonList(
-            new SimpleModule(getClass().getSimpleName())
-                .registerSubtypes(ExternalDataSource.class)
-        );
-      }
-
-      @Override
-      public void configure(Binder binder)
-      {
-        // Nothing to do.
-      }
-    });
-
-    builder.addModule(new DruidModule() {
-
-      // Partial clone of MsqSqlModule, since that module is not
-      // visible to this one.
-
-      @Override
-      public List<? extends Module> getJacksonModules()
-      {
-        // We want this module to bring input sources along for the ride.
-        List<Module> modules = new ArrayList<>(new InputSourceModule().getJacksonModules());
-        modules.add(new SimpleModule("test-module").registerSubtypes(TestFileInputSource.class));
-        return modules;
-      }
-
-      @Override
-      public void configure(Binder binder)
-      {
-        // We want this module to bring InputSourceModule along for the ride.
-        binder.install(new InputSourceModule());
-
-        // Set up the EXTERN macro.
-        SqlBindings.addOperatorConversion(binder, ExternalOperatorConversion.class);
-
-        // Enable the extended table functions for testing even though these
-        // are not enabled in production in Druid 26.
-        SqlBindings.addOperatorConversion(binder, HttpOperatorConversion.class);
-        SqlBindings.addOperatorConversion(binder, InlineOperatorConversion.class);
-        SqlBindings.addOperatorConversion(binder, LocalOperatorConversion.class);
-      }
-    });
-  }
-
-  @After
+  @AfterEach
   public void tearDown()
   {
     // Catch situations where tests forgot to call "verify" on their tester.
@@ -378,7 +394,6 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
         throw new ISE("Test must not have expectedQuery");
       }
 
-      queryLogHook.clearRecordedQueries();
       final Throwable e = Assert.assertThrows(
           Throwable.class,
           () -> {
@@ -386,8 +401,7 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
           }
       );
 
-      MatcherAssert.assertThat(e, validationErrorMatcher);
-      Assert.assertTrue(queryLogHook.getRecordedQueries().isEmpty());
+      assertThat(e, validationErrorMatcher);
     }
 
     private void verifySuccess()

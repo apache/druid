@@ -27,13 +27,17 @@ import org.apache.druid.segment.index.BitmapColumnIndex;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+/**
+ * Construct a {@link BitmapColumnIndex} for a specific value which might be present in the column.
+ */
 public interface ValueIndexes
 {
 
   /**
-   * Get the {@link ImmutableBitmap} corresponding to rows matching the supplied value.  Generates an empty bitmap when
-   * passed a value that doesn't exist. May return null if a value index cannot be computed for the supplied value type.
-   *
+   * Get a {@link BitmapColumnIndex} which can compute the {@link ImmutableBitmap} corresponding to rows matching the
+   * supplied value.  Generates an empty bitmap when passed a value that doesn't exist. May return null if a value
+   * index cannot be computed for the supplied value type.
+   * <p>
    * Does not match null, use {@link NullValueIndex} for matching nulls.
    *
    * @param value       value to match

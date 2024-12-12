@@ -18,7 +18,15 @@
 
 import * as JSONBig from 'json-bigint-native';
 
-import { deepDelete, deepExtend, deepGet, deepSet, makePath, parsePath } from './object-change';
+import {
+  allowKeys,
+  deepDelete,
+  deepExtend,
+  deepGet,
+  deepSet,
+  makePath,
+  parsePath,
+} from './object-change';
 
 describe('object-change', () => {
   describe('parsePath', () => {
@@ -33,6 +41,17 @@ describe('object-change', () => {
     it('works', () => {
       expect(makePath(['hello', 'wow', '0'])).toEqual('hello.wow.0');
       expect(makePath(['hello', 'wow.moon', '0'])).toEqual('hello.{wow.moon}.0');
+    });
+  });
+
+  describe('allowKeys', () => {
+    it('works with bad objects', () => {
+      expect(allowKeys(null, ['a', 'b', 'c'] as any)).toEqual(null);
+      expect(allowKeys(undefined as any, ['a', 'b', 'c'] as any)).toEqual(undefined);
+    });
+
+    it('works in a normal case', () => {
+      expect(allowKeys({ a: 1, z: 4 }, ['a', 'b', 'c'] as any)).toEqual({ a: 1 });
     });
   });
 

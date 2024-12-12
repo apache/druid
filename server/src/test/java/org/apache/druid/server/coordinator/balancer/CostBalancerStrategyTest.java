@@ -26,13 +26,12 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
+import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.loading.TestLoadQueuePeon;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
-import org.apache.druid.server.coordinator.stats.Dimension;
-import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
 import org.junit.After;
@@ -53,9 +52,7 @@ import java.util.stream.IntStream;
 public class CostBalancerStrategyTest
 {
   private static final double DELTA = 1e-6;
-  private static final String DS_WIKI = "wiki";
 
-  private StubServiceEmitter serviceEmitter;
   private ExecutorService balancerExecutor;
   private CostBalancerStrategy strategy;
   private int uniqueServerId;
@@ -66,7 +63,7 @@ public class CostBalancerStrategyTest
     balancerExecutor = Execs.singleThreaded("test-balance-exec-%d");
     strategy = new CostBalancerStrategy(MoreExecutors.listeningDecorator(balancerExecutor));
 
-    serviceEmitter = new StubServiceEmitter("test-service", "host");
+    StubServiceEmitter serviceEmitter = new StubServiceEmitter("test-service", "host");
     EmittingLogger.registerEmitter(serviceEmitter);
   }
 
@@ -156,11 +153,11 @@ public class CostBalancerStrategyTest
   @Test
   public void testJointSegmentsCostSymmetry()
   {
-    final DataSegment segmentA = CreateDataSegments.ofDatasource(DS_WIKI)
+    final DataSegment segmentA = CreateDataSegments.ofDatasource(TestDataSource.WIKI)
                                                    .forIntervals(1, Granularities.DAY)
                                                    .startingAt("2010-01-01")
                                                    .eachOfSizeInMb(100).get(0);
-    final DataSegment segmentB = CreateDataSegments.ofDatasource(DS_WIKI)
+    final DataSegment segmentB = CreateDataSegments.ofDatasource(TestDataSource.WIKI)
                                                    .forIntervals(1, Granularities.MONTH)
                                                    .startingAt("2010-01-01")
                                                    .eachOfSizeInMb(100).get(0);
@@ -175,7 +172,7 @@ public class CostBalancerStrategyTest
   @Test
   public void testJointSegmentsCostMultipleDatasources()
   {
-    final DataSegment wikiSegment = CreateDataSegments.ofDatasource(DS_WIKI)
+    final DataSegment wikiSegment = CreateDataSegments.ofDatasource(TestDataSource.WIKI)
                                                       .forIntervals(1, Granularities.DAY)
                                                       .startingAt("2010-01-01")
                                                       .eachOfSizeInMb(100).get(0);
@@ -247,21 +244,21 @@ public class CostBalancerStrategyTest
   {
     // Create segments for different granularities
     final List<DataSegment> daySegments =
-        CreateDataSegments.ofDatasource(DS_WIKI)
+        CreateDataSegments.ofDatasource(TestDataSource.WIKI)
                           .forIntervals(10, Granularities.DAY)
                           .startingAt("2022-01-01")
                           .withNumPartitions(10)
                           .eachOfSizeInMb(100);
 
     final List<DataSegment> monthSegments =
-        CreateDataSegments.ofDatasource(DS_WIKI)
+        CreateDataSegments.ofDatasource(TestDataSource.WIKI)
                           .forIntervals(10, Granularities.MONTH)
                           .startingAt("2022-03-01")
                           .withNumPartitions(10)
                           .eachOfSizeInMb(100);
 
     final List<DataSegment> yearSegments =
-        CreateDataSegments.ofDatasource(DS_WIKI)
+        CreateDataSegments.ofDatasource(TestDataSource.WIKI)
                           .forIntervals(1, Granularities.YEAR)
                           .startingAt("2023-01-01")
                           .withNumPartitions(30)
@@ -308,7 +305,7 @@ public class CostBalancerStrategyTest
 
     // Verify costs for an ALL granularity segment
     final DataSegment allGranularitySegment =
-        CreateDataSegments.ofDatasource(DS_WIKI)
+        CreateDataSegments.ofDatasource(TestDataSource.WIKI)
                           .forIntervals(1, Granularities.ALL)
                           .eachOfSizeInMb(100).get(0);
     verifyPlacementCost(allGranularitySegment, serverA, 1.1534173737329768e7);
@@ -317,7 +314,7 @@ public class CostBalancerStrategyTest
   }
 
   @Test
-  public void testGetAndResetStats()
+  public void testGetStats()
   {
     final ServerHolder serverA = new ServerHolder(
         createHistorical().toImmutableDruidServer(),
@@ -328,30 +325,23 @@ public class CostBalancerStrategyTest
         new TestLoadQueuePeon()
     );
 
-    final DataSegment segment = CreateDataSegments.ofDatasource(DS_WIKI).eachOfSizeInMb(100).get(0);
+    final DataSegment segment = CreateDataSegments.ofDatasource(TestDataSource.WIKI).eachOfSizeInMb(100).get(0);
 
     // Verify that computation stats have been tracked
     strategy.findServersToLoadSegment(segment, Arrays.asList(serverA, serverB));
-    CoordinatorRunStats computeStats = strategy.getAndResetStats();
+    CoordinatorRunStats computeStats = strategy.getStats();
 
-    final RowKey rowKey = RowKey.with(Dimension.DATASOURCE, DS_WIKI)
-                                .with(Dimension.DESCRIPTION, "LOAD")
-                                .and(Dimension.TIER, "hot");
-    Assert.assertEquals(1L, computeStats.get(Stats.Balancer.COMPUTATION_COUNT, rowKey));
+    Assert.assertEquals(1L, computeStats.get(Stats.Balancer.COMPUTATION_COUNT));
 
-    long computeTime = computeStats.get(Stats.Balancer.COMPUTATION_TIME, rowKey);
+    long computeTime = computeStats.get(Stats.Balancer.COMPUTATION_TIME);
     Assert.assertTrue(computeTime >= 0 && computeTime <= 100);
     Assert.assertFalse(computeStats.hasStat(Stats.Balancer.COMPUTATION_ERRORS));
-
-    // Verify that stats have been reset
-    computeStats = strategy.getAndResetStats();
-    Assert.assertEquals(0, computeStats.rowCount());
   }
 
   @Test
   public void testFindServerAfterExecutorShutdownThrowsException()
   {
-    DataSegment segment = CreateDataSegments.ofDatasource(DS_WIKI)
+    DataSegment segment = CreateDataSegments.ofDatasource(TestDataSource.WIKI)
                                             .forIntervals(1, Granularities.DAY)
                                             .startingAt("2012-10-24")
                                             .eachOfSizeInMb(100).get(0);
@@ -395,14 +385,14 @@ public class CostBalancerStrategyTest
   )
   {
     final DataSegment segmentX =
-        CreateDataSegments.ofDatasource(DS_WIKI)
+        CreateDataSegments.ofDatasource(TestDataSource.WIKI)
                           .forIntervals(1, granularityX.getDefaultGranularity())
                           .startingAt("2012-10-24")
                           .eachOfSizeInMb(100).get(0);
 
     long startTimeY = segmentX.getInterval().getStartMillis() + startGapMillis;
     final DataSegment segmentY =
-        CreateDataSegments.ofDatasource(DS_WIKI)
+        CreateDataSegments.ofDatasource(TestDataSource.WIKI)
                           .forIntervals(1, granularityY.getDefaultGranularity())
                           .startingAt(startTimeY)
                           .eachOfSizeInMb(100).get(0);

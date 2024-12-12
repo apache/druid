@@ -159,18 +159,19 @@ export function deepExtend<T extends Record<string, any>>(target: T, diff: Recor
   return newValue;
 }
 
-export function allowKeys(obj: Record<string, any>, keys: string[]): Record<string, any> {
-  const newObj: Record<string, any> = {};
+export function allowKeys<T>(obj: T, keys: (keyof T)[]): T {
+  if (!obj || typeof obj !== 'object') return obj;
+  const newObj = {} as T;
   for (const key of keys) {
-    if (Object.prototype.hasOwnProperty.call(obj, key)) {
+    if (Object.hasOwn(obj, key)) {
       newObj[key] = obj[key];
     }
   }
   return newObj;
 }
 
-export function deleteKeys(obj: Record<string, any>, keys: string[]): Record<string, any> {
-  const newObj: Record<string, any> = { ...obj };
+export function deleteKeys<T>(obj: T, keys: (keyof T)[]): T {
+  const newObj: T = { ...obj };
   for (const key of keys) {
     delete newObj[key];
   }

@@ -25,10 +25,10 @@ import org.apache.druid.data.input.InputSource;
 import org.apache.druid.indexer.IngestionState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
-import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
-import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReportData;
-import org.apache.druid.indexing.common.TaskReport;
+import org.apache.druid.indexer.report.TaskReport;
+import org.apache.druid.indexing.common.TaskRealtimeMetricsMonitorBuilder;
 import org.apache.druid.indexing.common.TaskToolbox;
+import org.apache.druid.indexing.common.stats.TaskRealtimeMetricsMonitor;
 import org.apache.druid.indexing.common.task.BatchAppenderators;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.InputSourceProcessor;
@@ -37,16 +37,16 @@ import org.apache.druid.indexing.common.task.SequenceNameFunction;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.common.task.batch.parallel.iterator.IndexTaskInputRowIteratorBuilder;
+import org.apache.druid.indexing.input.DruidInputSource;
+import org.apache.druid.indexing.input.WindowedSegmentId;
 import org.apache.druid.indexing.worker.shuffle.ShuffleDataSegmentPusher;
-import org.apache.druid.query.DruidMetrics;
+import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.indexing.RealtimeIOConfig;
-import org.apache.druid.segment.realtime.FireDepartment;
-import org.apache.druid.segment.realtime.FireDepartmentMetrics;
-import org.apache.druid.segment.realtime.RealtimeMetricsMonitor;
+import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.appenderator.BatchAppenderatorDriver;
 import org.apache.druid.segment.realtime.appenderator.SegmentAllocator;
@@ -94,7 +94,8 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
         taskResource,
         ingestionSchema.getDataSchema(),
         ingestionSchema.getTuningConfig(),
-        context
+        context,
+        supervisorTaskId
     );
 
     Preconditions.checkArgument(
@@ -124,7 +125,7 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
         toolbox.getIndexingTmpDir()
     );
 
-    Map<String, TaskReport> taskReport = getTaskCompletionReports();
+    TaskReport.ReportMap taskReport = getTaskCompletionReports(getNumSegmentsRead(inputSource));
 
     taskClient.report(createGeneratedPartitionsReport(toolbox, segments, taskReport));
 
@@ -145,8 +146,20 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
   abstract T createGeneratedPartitionsReport(
       TaskToolbox toolbox,
       List<DataSegment> segments,
-      Map<String, TaskReport> taskReport
+      TaskReport.ReportMap taskReport
   );
+
+  private Long getNumSegmentsRead(InputSource inputSource)
+  {
+    if (inputSource instanceof DruidInputSource) {
+      List<WindowedSegmentId> segments = ((DruidInputSource) inputSource).getSegmentIds();
+      if (segments != null) {
+        return (long) segments.size();
+      }
+    }
+
+    return null;
+  }
 
   private List<DataSegment> generateSegments(
       final TaskToolbox toolbox,
@@ -156,18 +169,10 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
   ) throws IOException, InterruptedException, ExecutionException, TimeoutException
   {
     final DataSchema dataSchema = ingestionSchema.getDataSchema();
-    final FireDepartment fireDepartmentForMetrics = new FireDepartment(
-        dataSchema,
-        new RealtimeIOConfig(null, null),
-        null
-    );
-    final FireDepartmentMetrics fireDepartmentMetrics = fireDepartmentForMetrics.getMetrics();
+    final SegmentGenerationMetrics segmentGenerationMetrics = new SegmentGenerationMetrics();
     buildSegmentsMeters = toolbox.getRowIngestionMetersFactory().createRowIngestionMeters();
-
-    RealtimeMetricsMonitor metricsMonitor = new RealtimeMetricsMonitor(
-        Collections.singletonList(fireDepartmentForMetrics),
-        Collections.singletonMap(DruidMetrics.TASK_ID, new String[]{getId()})
-    );
+    final TaskRealtimeMetricsMonitor metricsMonitor =
+        TaskRealtimeMetricsMonitorBuilder.build(this, segmentGenerationMetrics, buildSegmentsMeters);
     toolbox.addMonitor(metricsMonitor);
 
     final ParallelIndexTuningConfig tuningConfig = ingestionSchema.getTuningConfig();
@@ -190,7 +195,7 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
     final Appenderator appenderator = BatchAppenderators.newAppenderator(
         getId(),
         toolbox.getAppenderatorsManager(),
-        fireDepartmentMetrics,
+        segmentGenerationMetrics,
         toolbox,
         dataSchema,
         tuningConfig,
@@ -203,7 +208,7 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
     try (final BatchAppenderatorDriver driver = BatchAppenderators.newDriver(appenderator, toolbox, segmentAllocator)) {
       driver.startJob();
 
-      final SegmentsAndCommitMetadata pushed = InputSourceProcessor.process(
+      final Pair<SegmentsAndCommitMetadata, SegmentSchemaMapping> pushed = InputSourceProcessor.process(
           dataSchema,
           driver,
           partitionsSpec,
@@ -216,7 +221,7 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
           parseExceptionHandler,
           pushTimeout
       );
-      return pushed.getSegments();
+      return pushed.lhs.getSegments();
     }
     catch (Exception e) {
       exceptionOccurred = true;
@@ -235,24 +240,18 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
   /**
    * Generate an IngestionStatsAndErrorsTaskReport for the task.
    */
-  private Map<String, TaskReport> getTaskCompletionReports()
+  private TaskReport.ReportMap getTaskCompletionReports(Long segmentsRead)
   {
-    return TaskReport.buildTaskReports(
-        new IngestionStatsAndErrorsTaskReport(
-            getId(),
-            new IngestionStatsAndErrorsTaskReportData(
-                IngestionState.COMPLETED,
-                getTaskCompletionUnparseableEvents(),
-                getTaskCompletionRowStats(),
-                "",
-                false, // not applicable for parallel subtask
-                segmentAvailabilityWaitTimeMs
-            )
-        )
+    return buildIngestionStatsReport(
+        IngestionState.COMPLETED,
+        "",
+        segmentsRead,
+        null
     );
   }
 
-  private Map<String, Object> getTaskCompletionUnparseableEvents()
+  @Override
+  protected Map<String, Object> getTaskCompletionUnparseableEvents()
   {
     Map<String, Object> unparseableEventsMap = new HashMap<>();
     List<ParseExceptionReport> parseExceptionMessages = IndexTaskUtils.getReportListFromSavedParseExceptions(
@@ -268,13 +267,12 @@ abstract class PartialSegmentGenerateTask<T extends GeneratedPartitionsReport> e
     return unparseableEventsMap;
   }
 
-  private Map<String, Object> getTaskCompletionRowStats()
+  @Override
+  protected Map<String, Object> getTaskCompletionRowStats()
   {
-    Map<String, Object> metrics = new HashMap<>();
-    metrics.put(
+    return Collections.singletonMap(
         RowIngestionMeters.BUILD_SEGMENTS,
         buildSegmentsMeters.getTotals()
     );
-    return metrics;
   }
 }

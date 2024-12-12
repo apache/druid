@@ -1,0 +1,231 @@
+# testMultipleExactCountDistinctWithGroupingAndOtherAggregatorsUsingJoin@NullHandling=default case-crc:65809f91
+# quidem testcase reason: AGG_COL_EXCHANGE
+!set debug true
+!set defaultTimeout 300000
+!set maxScatterGatherBytes 9223372036854775807
+!set plannerStrategy DECOUPLED
+!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
+!set sqlQueryId dummy
+!set useApproximateCountDistinct false
+!set outputformat mysql
+!use druidtest:///
+SELECT dim2, COUNT(*), COUNT(distinct dim1), COUNT(distinct cnt) FROM druid.foo GROUP BY dim2;
++------+--------+--------+--------+
+| dim2 | EXPR$1 | EXPR$2 | EXPR$3 |
++------+--------+--------+--------+
+|      |      3 |      3 |      1 |
+| a    |      2 |      1 |      1 |
+| abc  |      1 |      1 |      1 |
++------+--------+--------+--------+
+(3 rows)
+
+!ok
+LogicalProject(dim2=[$0], EXPR$1=[$1], EXPR$2=[$3], EXPR$3=[$5])
+  LogicalJoin(condition=[IS NOT DISTINCT FROM($0, $4)], joinType=[inner])
+    LogicalJoin(condition=[IS NOT DISTINCT FROM($0, $2)], joinType=[inner])
+      LogicalAggregate(group=[{2}], EXPR$1=[COUNT()])
+        LogicalTableScan(table=[[druid, foo]])
+      LogicalAggregate(group=[{1}], EXPR$2=[COUNT($0)])
+        LogicalAggregate(group=[{1, 2}])
+          LogicalTableScan(table=[[druid, foo]])
+    LogicalAggregate(group=[{0}], EXPR$3=[COUNT($1)])
+      LogicalAggregate(group=[{2, 4}])
+        LogicalTableScan(table=[[druid, foo]])
+
+!logicalPlan
+DruidProject(dim2=[$0], EXPR$1=[$1], EXPR$2=[$3], EXPR$3=[$5], druid=[logical])
+  DruidJoin(condition=[IS NOT DISTINCT FROM($0, $4)], joinType=[inner])
+    DruidJoin(condition=[IS NOT DISTINCT FROM($0, $2)], joinType=[inner])
+      DruidAggregate(group=[{2}], EXPR$1=[COUNT()], druid=[logical])
+        DruidTableScan(table=[[druid, foo]], druid=[logical])
+      DruidAggregate(group=[{1}], EXPR$2=[COUNT($0)], druid=[logical])
+        DruidAggregate(group=[{1, 2}], druid=[logical])
+          DruidTableScan(table=[[druid, foo]], druid=[logical])
+    DruidAggregate(group=[{0}], EXPR$3=[COUNT($1)], druid=[logical])
+      DruidAggregate(group=[{2, 4}], druid=[logical])
+        DruidTableScan(table=[[druid, foo]], druid=[logical])
+
+!druidPlan
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "join",
+    "left" : {
+      "type" : "join",
+      "left" : {
+        "type" : "query",
+        "query" : {
+          "queryType" : "groupBy",
+          "dataSource" : {
+            "type" : "table",
+            "name" : "foo"
+          },
+          "intervals" : {
+            "type" : "intervals",
+            "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+          },
+          "granularity" : {
+            "type" : "all"
+          },
+          "dimensions" : [ {
+            "type" : "default",
+            "dimension" : "dim2",
+            "outputName" : "d0",
+            "outputType" : "STRING"
+          } ],
+          "aggregations" : [ {
+            "type" : "count",
+            "name" : "a0"
+          } ],
+          "limitSpec" : {
+            "type" : "NoopLimitSpec"
+          }
+        }
+      },
+      "right" : {
+        "type" : "query",
+        "query" : {
+          "queryType" : "groupBy",
+          "dataSource" : {
+            "type" : "query",
+            "query" : {
+              "queryType" : "groupBy",
+              "dataSource" : {
+                "type" : "table",
+                "name" : "foo"
+              },
+              "intervals" : {
+                "type" : "intervals",
+                "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+              },
+              "granularity" : {
+                "type" : "all"
+              },
+              "dimensions" : [ {
+                "type" : "default",
+                "dimension" : "dim1",
+                "outputName" : "d0",
+                "outputType" : "STRING"
+              }, {
+                "type" : "default",
+                "dimension" : "dim2",
+                "outputName" : "d1",
+                "outputType" : "STRING"
+              } ],
+              "limitSpec" : {
+                "type" : "NoopLimitSpec"
+              }
+            }
+          },
+          "intervals" : {
+            "type" : "intervals",
+            "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+          },
+          "granularity" : {
+            "type" : "all"
+          },
+          "dimensions" : [ {
+            "type" : "default",
+            "dimension" : "d1",
+            "outputName" : "_d0",
+            "outputType" : "STRING"
+          } ],
+          "aggregations" : [ {
+            "type" : "filtered",
+            "aggregator" : {
+              "type" : "count",
+              "name" : "a0"
+            },
+            "filter" : {
+              "type" : "not",
+              "field" : {
+                "type" : "selector",
+                "dimension" : "d0",
+                "value" : null
+              }
+            },
+            "name" : "a0"
+          } ],
+          "limitSpec" : {
+            "type" : "NoopLimitSpec"
+          }
+        }
+      },
+      "rightPrefix" : "j0.",
+      "condition" : "notdistinctfrom(\"d0\",\"j0._d0\")",
+      "joinType" : "INNER"
+    },
+    "right" : {
+      "type" : "query",
+      "query" : {
+        "queryType" : "groupBy",
+        "dataSource" : {
+          "type" : "query",
+          "query" : {
+            "queryType" : "groupBy",
+            "dataSource" : {
+              "type" : "table",
+              "name" : "foo"
+            },
+            "intervals" : {
+              "type" : "intervals",
+              "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+            },
+            "granularity" : {
+              "type" : "all"
+            },
+            "dimensions" : [ {
+              "type" : "default",
+              "dimension" : "dim2",
+              "outputName" : "d0",
+              "outputType" : "STRING"
+            }, {
+              "type" : "default",
+              "dimension" : "cnt",
+              "outputName" : "d1",
+              "outputType" : "LONG"
+            } ],
+            "limitSpec" : {
+              "type" : "NoopLimitSpec"
+            }
+          }
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "granularity" : {
+          "type" : "all"
+        },
+        "dimensions" : [ {
+          "type" : "default",
+          "dimension" : "d0",
+          "outputName" : "_d0",
+          "outputType" : "STRING"
+        } ],
+        "aggregations" : [ {
+          "type" : "count",
+          "name" : "a0"
+        } ],
+        "limitSpec" : {
+          "type" : "NoopLimitSpec"
+        }
+      }
+    },
+    "rightPrefix" : "_j0.",
+    "condition" : "notdistinctfrom(\"d0\",\"_j0._d0\")",
+    "joinType" : "INNER"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "resultFormat" : "compactedList",
+  "columns" : [ "d0", "a0", "j0.a0", "_j0.a0" ],
+  "columnTypes" : [ "STRING", "LONG", "LONG", "LONG" ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "legacy" : false
+}
+!nativePlan

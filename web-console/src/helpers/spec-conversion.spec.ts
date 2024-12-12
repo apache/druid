@@ -123,9 +123,7 @@ describe('spec conversion', () => {
     expect(converted.queryString).toMatchSnapshot();
 
     expect(converted.queryContext).toEqual({
-      groupByEnableMultiValueUnnesting: false,
       maxParseExceptions: 3,
-      finalizeAggregations: false,
       maxNumTasks: 5,
       indexSpec: {
         dimensionCompression: 'lzf',
@@ -193,6 +191,11 @@ describe('spec conversion', () => {
               fieldName: 'commentLength',
             },
             {
+              name: 'max_commentLength',
+              type: 'longMax',
+              fieldName: 'commentLength',
+            },
+            {
               name: 'sum_delta',
               type: 'longSum',
               fieldName: 'delta',
@@ -226,10 +229,7 @@ describe('spec conversion', () => {
 
     expect(converted.queryString).toMatchSnapshot();
 
-    expect(converted.queryContext).toEqual({
-      groupByEnableMultiValueUnnesting: false,
-      finalizeAggregations: false,
-    });
+    expect(converted.queryContext).toEqual({});
   });
 
   it('converts index_hadoop spec (with rollup)', () => {
@@ -350,10 +350,7 @@ describe('spec conversion', () => {
 
     expect(converted.queryString).toMatchSnapshot();
 
-    expect(converted.queryContext).toEqual({
-      groupByEnableMultiValueUnnesting: false,
-      finalizeAggregations: false,
-    });
+    expect(converted.queryContext).toEqual({});
   });
 
   it('converts with issue when there is a __time transform', () => {
@@ -579,5 +576,85 @@ describe('spec conversion', () => {
     });
 
     expect(converted.queryString).toMatchSnapshot();
+  });
+
+  it('works with ARRAY mode', () => {
+    const converted = convertSpecToSql({
+      type: 'index_parallel',
+      spec: {
+        ioConfig: {
+          type: 'index_parallel',
+          inputSource: {
+            type: 'inline',
+            data: '{"s":"X", "l":10, "f":10.1, "array_s":["A", "B"], "array_l":[1,2], "array_f":[1.1,2.2], "mix1":[1, "lol"], "mix2":[1.1, 77]}\n{"s":"Y", "l":11, "f":11.1, "array_s":["C", "D"], "array_l":[3,4], "array_f":[3.3,4.4], "mix1":[2, "zoz"], "mix2":[1.2, 88]}',
+          },
+          inputFormat: {
+            type: 'json',
+          },
+        },
+        tuningConfig: {
+          type: 'index_parallel',
+          partitionsSpec: {
+            type: 'dynamic',
+          },
+        },
+        dataSchema: {
+          dataSource: 'lol',
+          timestampSpec: {
+            column: '!!!_no_such_column_!!!',
+            missingValue: '2010-01-01T00:00:00Z',
+          },
+          dimensionsSpec: {
+            dimensions: [
+              's',
+              {
+                type: 'long',
+                name: 'l',
+              },
+              {
+                type: 'double',
+                name: 'f',
+              },
+              {
+                type: 'auto',
+                name: 'array_s',
+                castToType: 'ARRAY<STRING>',
+              },
+              {
+                type: 'auto',
+                name: 'array_l',
+                castToType: 'ARRAY<LONG>',
+              },
+              {
+                type: 'auto',
+                name: 'array_f',
+                castToType: 'ARRAY<DOUBLE>',
+              },
+              {
+                type: 'auto',
+                name: 'mix1',
+                castToType: 'ARRAY<STRING>',
+              },
+              {
+                type: 'auto',
+                name: 'mix2',
+                castToType: 'ARRAY<DOUBLE>',
+              },
+            ],
+          },
+          granularitySpec: {
+            queryGranularity: 'none',
+            rollup: false,
+            segmentGranularity: 'day',
+          },
+        },
+      },
+    });
+
+    expect(converted.queryString).toMatchSnapshot();
+
+    expect(converted.queryContext).toEqual({
+      arrayIngestMode: 'array',
+    });
   });
 });

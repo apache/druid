@@ -23,9 +23,10 @@ import {
   SqlPartitionedByClause,
   SqlQuery,
   SqlReplaceClause,
+  SqlTable,
   SqlWithPart,
   T,
-} from '@druid-toolkit/query';
+} from 'druid-query-toolkit';
 
 import { filterMap, oneOf } from '../../utils';
 import type { ExternalConfig } from '../external-config/external-config';
@@ -34,16 +35,16 @@ import {
   externalConfigToTableExpression,
   fitExternalConfigPattern,
 } from '../external-config/external-config';
+import type { ArrayMode } from '../ingestion-spec/ingestion-spec';
 import { guessDataSourceNameFromInputSource } from '../ingestion-spec/ingestion-spec';
 
 export type IngestMode = 'insert' | 'replace';
 
-function removeMvToArray(dimension: SqlExpression): SqlExpression {
-  return dimension.walk(ex =>
-    ex instanceof SqlFunction && ex.getEffectiveFunctionName() === 'MV_TO_ARRAY'
-      ? ex.getArg(0)
-      : ex,
-  ) as SqlExpression;
+function removeTopLevelArrayToMvOrUndefined(dimension: SqlExpression): SqlExpression | undefined {
+  const ex = dimension.getUnderlyingExpression();
+  return ex instanceof SqlFunction && ex.getEffectiveFunctionName() === 'ARRAY_TO_MV'
+    ? ex.getArg(0)
+    : undefined;
 }
 
 export interface IngestQueryPattern {
@@ -61,9 +62,9 @@ export interface IngestQueryPattern {
 
 export function externalConfigToIngestQueryPattern(
   config: ExternalConfig,
-  isArrays: boolean[],
   timeExpression: SqlExpression | undefined,
   partitionedByHint: string | undefined,
+  arrayMode: ArrayMode,
 ): IngestQueryPattern {
   return {
     destinationTableName: guessDataSourceNameFromInputSource(config.inputSource) || 'data',
@@ -71,7 +72,7 @@ export function externalConfigToIngestQueryPattern(
     mainExternalName: 'ext',
     mainExternalConfig: config,
     filters: [],
-    dimensions: externalConfigToInitDimensions(config, isArrays, timeExpression),
+    dimensions: externalConfigToInitDimensions(config, timeExpression, arrayMode),
     partitionedBy: partitionedByHint || (timeExpression ? 'day' : 'all'),
     clusteredBy: [],
   };
@@ -150,11 +151,15 @@ export function fitIngestQueryPattern(query: SqlQuery): IngestQueryPattern {
   let mode: IngestMode;
   let overwriteWhere: SqlExpression | undefined;
   if (query.insertClause) {
+    const { table } = query.insertClause;
+    if (!(table instanceof SqlTable)) throw new Error('Have to insert into a table');
     mode = 'insert';
-    destinationTableName = query.insertClause.table.getName();
+    destinationTableName = table.getName();
   } else if (query.replaceClause) {
+    const { table } = query.replaceClause;
+    if (!(table instanceof SqlTable)) throw new Error('Have to replace into a table');
     mode = 'replace';
-    destinationTableName = query.replaceClause.table.getName();
+    destinationTableName = table.getName();
     overwriteWhere = query.replaceClause.whereClause?.expression;
   } else {
     throw new Error(`Must have an INSERT or REPLACE clause`);
@@ -268,7 +273,12 @@ export function ingestQueryPatternToQuery(
       ),
     ])
     .applyForEach(dimensions, (query, ex) =>
-      query.addSelect(preview ? removeMvToArray(ex) : ex, metrics ? { addToGroupBy: 'end' } : {}),
+      query.addSelect(
+        ex,
+        metrics
+          ? { addToGroupBy: 'end', groupByExpression: removeTopLevelArrayToMvOrUndefined(ex) }
+          : {},
+      ),
     )
     .applyForEach(metrics || [], (query, ex) => query.addSelect(ex))
     .applyIf(filters.length, query => query.changeWhereExpression(SqlExpression.and(...filters)))

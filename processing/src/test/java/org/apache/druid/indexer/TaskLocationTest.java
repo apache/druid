@@ -20,6 +20,7 @@
 package org.apache.druid.indexer;
 
 
+import com.google.common.net.HostAndPort;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.junit.Assert;
 import org.junit.Test;
@@ -74,5 +75,47 @@ public class TaskLocationTest
   public void testEqualsAndHashCode()
   {
     EqualsVerifier.forClass(TaskLocation.class).usingGetClass().verify();
+  }
+
+  @Test
+  public void testGetLocationWithK8sPodNameShouldReturnK8sPodName()
+  {
+    TaskLocation taskLocation = TaskLocation.create("foo", 1, 2, false, "job-name");
+    Assert.assertEquals("job-name", taskLocation.getLocation());
+  }
+
+  @Test
+  public void testGetLocationWithK8sPodNameAndTlsShouldReturnK8sPodName()
+  {
+    TaskLocation taskLocation = TaskLocation.create("foo", 1, 2, true, "job-name");
+    Assert.assertEquals("job-name", taskLocation.getLocation());
+  }
+
+  @Test
+  public void testGetLocationWithK8sPodNameAndNoHostShouldReturnK8sPodName()
+  {
+    TaskLocation taskLocation = TaskLocation.create(null, 1, 2, true, "job-name");
+    Assert.assertEquals("job-name", taskLocation.getLocation());
+  }
+
+  @Test
+  public void testGetLocationWithoutK8sPodNameAndHostShouldReturnNull()
+  {
+    TaskLocation taskLocation = TaskLocation.create(null, 1, 2, false);
+    Assert.assertNull(taskLocation.getLocation());
+  }
+
+  @Test
+  public void testGetLocationWithoutK8sPodNameAndNoTlsPortShouldReturnLocation()
+  {
+    TaskLocation taskLocation = TaskLocation.create("foo", 1, -1, false);
+    Assert.assertEquals(HostAndPort.fromParts("foo", 1).toString(), taskLocation.getLocation());
+  }
+
+  @Test
+  public void testGetLocationWithoutK8sPodNameAndNonZeroTlsPortShouldReturnLocation()
+  {
+    TaskLocation taskLocation = TaskLocation.create("foo", 1, 2, true);
+    Assert.assertEquals(HostAndPort.fromParts("foo", 2).toString(), taskLocation.getLocation());
   }
 }

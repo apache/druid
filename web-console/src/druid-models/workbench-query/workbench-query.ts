@@ -17,36 +17,39 @@
  */
 
 import type {
+  QueryParameter,
+  QueryPayload,
   SqlClusteredByClause,
   SqlExpression,
   SqlPartitionedByClause,
-  SqlQuery,
-} from '@druid-toolkit/query';
+} from 'druid-query-toolkit';
 import {
   C,
   F,
   SqlLiteral,
   SqlOrderByClause,
   SqlOrderByExpression,
-  SqlTable,
-} from '@druid-toolkit/query';
+  SqlQuery,
+} from 'druid-query-toolkit';
 import Hjson from 'hjson';
 import * as JSONBig from 'json-bigint-native';
 import { v4 as uuidv4 } from 'uuid';
 
-import type { ColumnMetadata, RowColumn } from '../../utils';
-import { deleteKeys, generate8HexId } from '../../utils';
+import type { RowColumn } from '../../utils';
+import { caseInsensitiveEquals, deleteKeys } from '../../utils';
 import type { DruidEngine } from '../druid-engine/druid-engine';
 import { validDruidEngine } from '../druid-engine/druid-engine';
 import type { LastExecution } from '../execution/execution';
+import { validateLastExecution } from '../execution/execution';
 import type { ExternalConfig } from '../external-config/external-config';
 import {
   externalConfigToIngestQueryPattern,
   ingestQueryPatternToQuery,
 } from '../ingest-query-pattern/ingest-query-pattern';
+import type { ArrayMode } from '../ingestion-spec/ingestion-spec';
 import type { QueryContext } from '../query-context/query-context';
 
-import { WorkbenchQueryPart } from './workbench-query-part';
+const ISSUE_MARKER = '--:ISSUE:';
 
 export interface TabEntry {
   id: string;
@@ -64,10 +67,16 @@ interface IngestionLines {
 // -----------------------------
 
 export interface WorkbenchQueryValue {
-  queryParts: WorkbenchQueryPart[];
+  queryString: string;
   queryContext: QueryContext;
+  queryParameters?: QueryParameter[];
   engine?: DruidEngine;
+  lastExecution?: LastExecution;
   unlimited?: boolean;
+  prefixLines?: number;
+
+  // Legacy
+  queryParts?: any[];
 }
 
 export class WorkbenchQuery {
@@ -75,31 +84,29 @@ export class WorkbenchQuery {
 
   static blank(): WorkbenchQuery {
     return new WorkbenchQuery({
+      queryString: '',
       queryContext: {},
-      queryParts: [WorkbenchQueryPart.blank()],
     });
   }
 
   static fromInitExternalConfig(
     externalConfig: ExternalConfig,
-    isArrays: boolean[],
     timeExpression: SqlExpression | undefined,
     partitionedByHint: string | undefined,
+    arrayMode: ArrayMode,
   ): WorkbenchQuery {
+    const queryContext: QueryContext = {};
+    if (arrayMode === 'arrays') queryContext.arrayIngestMode = 'array';
     return new WorkbenchQuery({
-      queryContext: {},
-      queryParts: [
-        WorkbenchQueryPart.fromQueryString(
-          ingestQueryPatternToQuery(
-            externalConfigToIngestQueryPattern(
-              externalConfig,
-              isArrays,
-              timeExpression,
-              partitionedByHint,
-            ),
-          ).toString(),
+      queryString: ingestQueryPatternToQuery(
+        externalConfigToIngestQueryPattern(
+          externalConfig,
+          timeExpression,
+          partitionedByHint,
+          arrayMode,
         ),
-      ],
+      ).toString(),
+      queryContext,
     });
   }
 
@@ -108,7 +115,7 @@ export class WorkbenchQuery {
     const headers: string[] = [];
     const bodies: string[] = [];
     for (const part of parts) {
-      const m = part.match(/^===== (Helper:.+|Query|Context) =====$/);
+      const m = /^===== (Helper:.+|Query|Context) =====$/.exec(part);
       if (m) {
         headers.push(m[1]);
       } else {
@@ -118,39 +125,21 @@ export class WorkbenchQuery {
       }
     }
 
-    const queryParts: WorkbenchQueryPart[] = [];
+    let queryString = '';
     let queryContext: QueryContext = {};
     for (let i = 0; i < headers.length; i++) {
       const header = headers[i];
       const body = bodies[i];
       if (header === 'Context') {
         queryContext = JSONBig.parse(body);
-      } else if (header.startsWith('Helper:')) {
-        queryParts.push(
-          new WorkbenchQueryPart({
-            id: generate8HexId(),
-            queryName: header.replace(/^Helper:/, '').trim(),
-            queryString: body,
-            collapsed: true,
-          }),
-        );
       } else {
-        queryParts.push(
-          new WorkbenchQueryPart({
-            id: generate8HexId(),
-            queryString: body,
-          }),
-        );
+        queryString = body;
       }
     }
 
-    if (!queryParts.length) {
-      queryParts.push(WorkbenchQueryPart.blank());
-    }
-
     return new WorkbenchQuery({
+      queryString,
       queryContext,
-      queryParts,
     });
   }
 
@@ -162,15 +151,16 @@ export class WorkbenchQuery {
     return WorkbenchQuery.enabledQueryEngines;
   }
 
-  static fromEffectiveQueryAndContext(queryString: string, context: QueryContext): WorkbenchQuery {
+  static fromTaskQueryAndContext(queryString: string, context: QueryContext): WorkbenchQuery {
     const noSqlOuterLimit = typeof context['sqlOuterLimit'] === 'undefined';
-    const cleanContext = deleteKeys(context, ['sqlOuterLimit']);
+    const cleanContext = deleteKeys(context, ['sqlOuterLimit', '__resultFormat']);
 
     let retQuery = WorkbenchQuery.blank()
+      .changeEngine('sql-msq-task')
       .changeQueryString(queryString)
       .changeQueryContext(cleanContext);
 
-    if (noSqlOuterLimit && !retQuery.getIngestDatasource()) {
+    if (noSqlOuterLimit && !retQuery.isIngestQuery()) {
       retQuery = retQuery.changeUnlimited(true);
     }
 
@@ -224,26 +214,35 @@ export class WorkbenchQuery {
   }
 
   static getRowColumnFromIssue(issue: string): RowColumn | undefined {
-    const m = issue.match(/at line (\d+),(\d+)/);
+    const m = /at line (\d+),(\d+)/.exec(issue);
     if (!m) return;
     return { row: Number(m[1]) - 1, column: Number(m[2]) - 1 };
   }
 
-  public readonly queryParts: WorkbenchQueryPart[];
+  static isTaskEngineNeeded(queryString: string): boolean {
+    return /EXTERN\s*\(|(?:INSERT|REPLACE)\s+INTO/im.test(queryString);
+  }
+
+  public readonly queryString: string;
   public readonly queryContext: QueryContext;
+  public readonly queryParameters?: QueryParameter[];
   public readonly engine?: DruidEngine;
+  public readonly lastExecution?: LastExecution;
   public readonly unlimited?: boolean;
+  public readonly prefixLines?: number;
+
+  public readonly parsedQuery?: SqlQuery;
 
   constructor(value: WorkbenchQueryValue) {
-    let queryParts = value.queryParts;
-    if (!Array.isArray(queryParts) || !queryParts.length) {
-      queryParts = [WorkbenchQueryPart.blank()];
+    let queryString = value.queryString;
+    // Back compat to read legacy workbench query
+    if (typeof queryString === 'undefined' && Array.isArray(value.queryParts)) {
+      const lastQueryPart = value.queryParts[value.queryParts.length - 1];
+      queryString = lastQueryPart.queryString || '';
     }
-    if (!(queryParts instanceof WorkbenchQueryPart)) {
-      queryParts = queryParts.map(p => new WorkbenchQueryPart(p));
-    }
-    this.queryParts = queryParts;
+    this.queryString = queryString;
     this.queryContext = value.queryContext;
+    this.queryParameters = value.queryParameters;
 
     // Start back compat code for the engine names that might be coming from local storage
     let possibleEngine: string | undefined = value.engine;
@@ -255,59 +254,72 @@ export class WorkbenchQuery {
     // End bac compat code
 
     this.engine = validDruidEngine(possibleEngine) ? possibleEngine : undefined;
+    this.lastExecution = validateLastExecution(value.lastExecution);
 
     if (value.unlimited) this.unlimited = true;
+    this.prefixLines = value.prefixLines;
+
+    this.parsedQuery = SqlQuery.maybeParse(this.queryString);
   }
 
   public valueOf(): WorkbenchQueryValue {
     return {
-      queryParts: this.queryParts,
+      queryString: this.queryString,
       queryContext: this.queryContext,
+      queryParameters: this.queryParameters,
       engine: this.engine,
       unlimited: this.unlimited,
     };
   }
 
   public toString(): string {
-    const { queryParts, queryContext } = this;
-    return queryParts
-      .slice(0, queryParts.length - 1)
-      .flatMap(part => [`===== Helper: ${part.queryName} =====`, part.queryString])
-      .concat([
-        `===== Query =====`,
-        this.getLastPart().queryString,
-        `===== Context =====`,
-        JSONBig.stringify(queryContext, undefined, 2),
-      ])
-      .join('\n\n');
+    const { queryString, queryContext } = this;
+    return [
+      `===== Query =====`,
+      queryString,
+      `===== Context =====`,
+      JSONBig.stringify(queryContext, undefined, 2),
+    ].join('\n\n');
   }
 
-  public changeQueryParts(queryParts: WorkbenchQueryPart[]): WorkbenchQuery {
-    return new WorkbenchQuery({ ...this.valueOf(), queryParts });
+  public changeQueryString(queryString: string): WorkbenchQuery {
+    return new WorkbenchQuery({ ...this.valueOf(), queryString });
   }
 
   public changeQueryContext(queryContext: QueryContext): WorkbenchQuery {
     return new WorkbenchQuery({ ...this.valueOf(), queryContext });
   }
 
+  public changeQueryParameters(queryParameters: QueryParameter[] | undefined): WorkbenchQuery {
+    return new WorkbenchQuery({ ...this.valueOf(), queryParameters });
+  }
+
   public changeEngine(engine: DruidEngine | undefined): WorkbenchQuery {
     return new WorkbenchQuery({ ...this.valueOf(), engine });
+  }
+
+  public changeLastExecution(lastExecution: LastExecution | undefined): WorkbenchQuery {
+    return new WorkbenchQuery({ ...this.valueOf(), lastExecution });
   }
 
   public changeUnlimited(unlimited: boolean): WorkbenchQuery {
     return new WorkbenchQuery({ ...this.valueOf(), unlimited });
   }
 
+  public changePrefixLines(prefixLines: number): WorkbenchQuery {
+    return new WorkbenchQuery({ ...this.valueOf(), prefixLines });
+  }
+
   public isTaskEngineNeeded(): boolean {
-    return this.queryParts.some(part => part.isTaskEngineNeeded());
+    return WorkbenchQuery.isTaskEngineNeeded(this.queryString);
   }
 
   public getEffectiveEngine(): DruidEngine {
     const { engine } = this;
     if (engine) return engine;
     const enabledEngines = WorkbenchQuery.getQueryEngines();
-    if (this.getLastPart().isJsonLike()) {
-      if (this.getLastPart().isSqlInJson()) {
+    if (this.isJsonLike()) {
+      if (this.isSqlInJson()) {
         if (enabledEngines.includes('sql-native')) return 'sql-native';
       } else {
         if (enabledEngines.includes('native')) return 'native';
@@ -318,102 +330,81 @@ export class WorkbenchQuery {
     return enabledEngines[0] || 'sql-native';
   }
 
-  private getLastPart(): WorkbenchQueryPart {
-    const { queryParts } = this;
-    return queryParts[queryParts.length - 1];
-  }
-
-  public getId(): string {
-    return this.getLastPart().id;
-  }
-
-  public getIds(): string[] {
-    return this.queryParts.map(queryPart => queryPart.id);
-  }
-
-  public getQueryName(): string {
-    return this.getLastPart().queryName || '';
-  }
-
   public getQueryString(): string {
-    return this.getLastPart().queryString;
-  }
-
-  public getCollapsed(): boolean {
-    return this.getLastPart().collapsed;
+    return this.queryString;
   }
 
   public getLastExecution(): LastExecution | undefined {
-    return this.getLastPart().lastExecution;
+    return this.lastExecution;
   }
 
   public getParsedQuery(): SqlQuery | undefined {
-    return this.getLastPart().parsedQuery;
+    return this.parsedQuery;
   }
 
   public isEmptyQuery(): boolean {
-    return this.getLastPart().isEmptyQuery();
+    return this.queryString.trim() === '';
   }
 
   public getIssue(): string | undefined {
-    const lastPart = this.getLastPart();
-    if (lastPart.isJsonLike()) {
-      return lastPart.issueWithJson();
+    if (this.isJsonLike()) {
+      return this.issueWithJson();
     }
     return;
   }
 
+  public isJsonLike(): boolean {
+    return this.queryString.trim().startsWith('{');
+  }
+
+  public issueWithJson(): string | undefined {
+    try {
+      Hjson.parse(this.queryString);
+    } catch (e) {
+      return e.message;
+    }
+    return;
+  }
+
+  public isSqlInJson(): boolean {
+    try {
+      const query = Hjson.parse(this.queryString);
+      return typeof query.query === 'string';
+    } catch {
+      return false;
+    }
+  }
+
   public canPrettify(): boolean {
-    const lastPart = this.getLastPart();
-    return lastPart.isJsonLike();
+    return Boolean(this.isJsonLike() || this.parsedQuery);
   }
 
   public prettify(): WorkbenchQuery {
-    const lastPart = this.getLastPart();
-    let parsed;
-    try {
-      parsed = Hjson.parse(lastPart.queryString);
-    } catch {
-      return this;
+    const { queryString, parsedQuery } = this;
+    if (parsedQuery) {
+      return this.changeQueryString(parsedQuery.prettify().toString());
+    } else {
+      let parsedJson;
+      try {
+        parsedJson = Hjson.parse(queryString);
+      } catch {
+        return this;
+      }
+      return this.changeQueryString(JSONBig.stringify(parsedJson, undefined, 2));
     }
-    return this.changeQueryString(JSONBig.stringify(parsed, undefined, 2));
-  }
-
-  public getIngestDatasource(): string | undefined {
-    if (this.getEffectiveEngine() !== 'sql-msq-task') return;
-    return this.getLastPart().getIngestDatasource();
   }
 
   public isIngestQuery(): boolean {
-    return Boolean(this.getIngestDatasource());
-  }
+    if (this.getEffectiveEngine() !== 'sql-msq-task') return false;
 
-  private changeLastQueryPart(lastQueryPart: WorkbenchQueryPart): WorkbenchQuery {
-    const { queryParts } = this;
-    return this.changeQueryParts(queryParts.slice(0, queryParts.length - 1).concat(lastQueryPart));
-  }
+    const { queryString, parsedQuery } = this;
+    if (parsedQuery) {
+      return Boolean(parsedQuery.getIngestTable());
+    }
 
-  public changeQueryName(queryName: string): WorkbenchQuery {
-    return this.changeLastQueryPart(this.getLastPart().changeQueryName(queryName));
-  }
+    if (this.isJsonLike()) return false;
 
-  public changeQueryString(queryString: string): WorkbenchQuery {
-    return this.changeLastQueryPart(this.getLastPart().changeQueryString(queryString));
-  }
-
-  public changeCollapsed(collapsed: boolean): WorkbenchQuery {
-    return this.changeLastQueryPart(this.getLastPart().changeCollapsed(collapsed));
-  }
-
-  public changeLastExecution(lastExecution: LastExecution | undefined): WorkbenchQuery {
-    return this.changeLastQueryPart(this.getLastPart().changeLastExecution(lastExecution));
-  }
-
-  public clear(): WorkbenchQuery {
-    return new WorkbenchQuery({
-      queryParts: [],
-      queryContext: {},
-    });
+    return /(?:INSERT|REPLACE)\s+INTO/i.test(queryString);
   }
 
   public toggleUnlimited(): WorkbenchQuery {
@@ -421,67 +412,23 @@ export class WorkbenchQuery {
     return this.changeUnlimited(!unlimited);
   }
 
-  public hasHelperQueries(): boolean {
-    return this.queryParts.length > 1;
-  }
-
-  public materializeHelpers(): WorkbenchQuery {
-    if (!this.hasHelperQueries()) return this;
-    const { query } = this.getApiQuery();
-    const queryString = query.query;
-    if (typeof queryString !== 'string') return this;
-    const lastPart = this.getLastPart();
-    return this.changeQueryParts([
-      new WorkbenchQueryPart({
-        id: lastPart.id,
-        queryName: lastPart.queryName,
-        queryString,
-      }),
-    ]);
-  }
-
-  public extractCteHelpers(): WorkbenchQuery {
-    const { queryParts } = this;
-
-    let changed = false;
-    const newParts = queryParts.flatMap(queryPart => {
-      const helpers = queryPart.extractCteHelpers();
-      if (helpers) changed = true;
-      return helpers || [queryPart];
-    });
-    return changed ? this.changeQueryParts(newParts) : this;
-  }
-
   public makePreview(): WorkbenchQuery {
     if (!this.isIngestQuery()) return this;
 
     let ret: WorkbenchQuery = this;
 
-    // Limit all the helper queries
-    const parsedQuery = this.getParsedQuery();
-    if (parsedQuery) {
-      const fromExpression = parsedQuery.getFirstFromExpression();
-      if (fromExpression instanceof SqlTable) {
-        const firstTable = fromExpression.getName();
-        ret = ret.changeQueryParts(
-          this.queryParts.map(queryPart =>
-            queryPart.queryName === firstTable ? queryPart.addPreviewLimit() : queryPart,
-          ),
-        );
-      }
-    }
-
     // Explicitly select MSQ, adjust the context, set maxNumTasks to the lowest possible and add in ingest mode flags
+    const { queryContext } = this;
     ret = ret.changeEngine('sql-msq-task').changeQueryContext({
-      ...this.queryContext,
+      ...queryContext,
       maxNumTasks: 2,
-      finalizeAggregations: false,
-      groupByEnableMultiValueUnnesting: false,
+      finalizeAggregations: queryContext.finalizeAggregations ?? false,
+      groupByEnableMultiValueUnnesting: queryContext.groupByEnableMultiValueUnnesting ?? false,
     });
 
     // Remove everything pertaining to INSERT INTO / REPLACE INTO from the query string
-    const newQueryString = parsedQuery
-      ? parsedQuery
+    const newQueryString = this.parsedQuery
+      ? this.parsedQuery
           .changeInsertClause(undefined)
           .changeReplaceClause(undefined)
           .changePartitionedByClause(undefined)
@@ -501,19 +448,17 @@ export class WorkbenchQuery {
 
   public getApiQuery(makeQueryId: () => string = uuidv4): {
     engine: DruidEngine;
-    query: Record<string, any>;
-    sqlPrefixLines?: number;
+    query: QueryPayload;
+    prefixLines: number;
     cancelQueryId?: string;
   } {
-    const { queryParts, queryContext, unlimited } = this;
-    if (!queryParts.length) throw new Error(`should not get here`);
+    const { queryString, queryContext, queryParameters, unlimited, prefixLines } = this;
     const engine = this.getEffectiveEngine();
 
-    const lastQueryPart = this.getLastPart();
     if (engine === 'native') {
       let query: any;
       try {
-        query = Hjson.parse(lastQueryPart.queryString);
+        query = Hjson.parse(queryString);
       } catch (e) {
         throw new Error(
           `You have selected the 'native' engine but the query you entered could not be parsed as JSON: ${e.message}`,
@@ -530,24 +475,21 @@ export class WorkbenchQuery {
       return {
         engine,
         query,
+        prefixLines: prefixLines || 0,
         cancelQueryId,
       };
     }
 
-    const prefixParts = queryParts
-      .slice(0, queryParts.length - 1)
-      .filter(part => !part.getIngestDatasource());
-
-    let apiQuery: Record<string, any> = {};
-    if (lastQueryPart.isJsonLike()) {
+    let apiQuery: QueryPayload;
+    if (this.isJsonLike()) {
       try {
-        apiQuery = Hjson.parse(lastQueryPart.queryString);
+        apiQuery = Hjson.parse(queryString);
       } catch (e) {
         throw new Error(`The query you entered could not be parsed as JSON: ${e.message}`);
       }
     } else {
       apiQuery = {
-        query: lastQueryPart.queryString,
+        query: queryString,
         resultFormat: 'array',
         header: true,
         typesHeader: true,
@@ -555,42 +497,13 @@ export class WorkbenchQuery {
       };
     }
 
-    let queryPrepend = '';
-    let queryAppend = '';
-
-    if (prefixParts.length) {
-      const { insertReplaceLine, overwriteLine, partitionedByLine, clusteredByLine } =
-        WorkbenchQuery.getIngestionLines(apiQuery.query);
-      if (insertReplaceLine) {
-        queryPrepend += insertReplaceLine + '\n';
-        if (overwriteLine) {
-          queryPrepend += overwriteLine + '\n';
-        }
-
-        apiQuery.query = WorkbenchQuery.commentOutIngestParts(apiQuery.query);
-
-        if (clusteredByLine) {
-          queryAppend = '\n' + clusteredByLine + queryAppend;
-        }
-        if (partitionedByLine) {
-          queryAppend = '\n' + partitionedByLine + queryAppend;
-        }
-      }
-
-      queryPrepend += 'WITH\n' + prefixParts.map(p => p.toWithPart()).join(',\n') + '\n(\n';
-      queryAppend = '\n)' + queryAppend;
-    }
-
-    let prefixLines = 0;
-    if (queryPrepend) {
-      prefixLines = queryPrepend.split('\n').length - 1;
-      apiQuery.query = queryPrepend + apiQuery.query + queryAppend;
-    }
-
-    const m = /--:ISSUE:(.+)(?:\n|$)/.exec(apiQuery.query);
-    if (m) {
+    const issueIndex = String(apiQuery.query).indexOf(ISSUE_MARKER);
+    if (issueIndex !== -1) {
+      const issueComment = String(apiQuery.query)
+        .slice(issueIndex + ISSUE_MARKER.length)
+        .split('\n')[0];
       throw new Error(
-        `This query contains an ISSUE comment: ${m[1]
+        `This query contains an ISSUE comment: ${issueComment
           .trim()
           .replace(
             /\.$/,
@@ -600,7 +513,11 @@ export class WorkbenchQuery {
     }
 
     const ingestQuery = this.isIngestQuery();
-    if (!unlimited && !ingestQuery && queryContext.selectDestination !== 'durableStorage') {
+    if (
+      !unlimited &&
+      !ingestQuery &&
+      !caseInsensitiveEquals(queryContext.selectDestination, 'durableStorage')
+    ) {
       apiQuery.context ||= {};
       apiQuery.context.sqlOuterLimit = 1001;
     }
@@ -611,7 +528,7 @@ export class WorkbenchQuery {
     };
 
     let cancelQueryId: string | undefined;
-    if (engine === 'sql-native') {
+    if (engine === 'sql-native' || engine === 'sql-msq-dart') {
       cancelQueryId = apiQuery.context.sqlQueryId;
       if (!cancelQueryId) {
         // If the sqlQueryId is not explicitly set on the context generate one, so it is possible to cancel the query.
@@ -621,62 +538,31 @@ export class WorkbenchQuery {
 
     if (engine === 'sql-msq-task') {
       apiQuery.context.executionMode ??= 'async';
-      apiQuery.context.finalizeAggregations ??= !ingestQuery;
-      apiQuery.context.groupByEnableMultiValueUnnesting ??= !ingestQuery;
+      if (ingestQuery) {
+        // Alter these defaults for ingest queries if unset
+        apiQuery.context.finalizeAggregations ??= false;
+        apiQuery.context.groupByEnableMultiValueUnnesting ??= false;
+        apiQuery.context.waitUntilSegmentsLoad ??= true;
+      }
+    }
+
+    if (engine === 'sql-native' || engine === 'sql-msq-task') {
+      apiQuery.context.sqlStringifyArrays ??= false;
+    }
+
+    if (engine === 'sql-msq-dart') {
+      apiQuery.context.fullReport ??= true;
+    }
+
+    if (Array.isArray(queryParameters) && queryParameters.length) {
+      apiQuery.parameters = queryParameters;
     }
 
     return {
       engine,
       query: apiQuery,
-      sqlPrefixLines: prefixLines,
+      prefixLines: prefixLines || 0,
       cancelQueryId,
     };
-  }
-
-  public getInlineMetadata(): ColumnMetadata[] {
-    const { queryParts } = this;
-    if (!queryParts.length) return [];
-    return queryParts.slice(0, queryParts.length - 1).flatMap(p => p.getInlineMetadata());
-  }
-
-  public getPrefix(index: number): WorkbenchQuery {
-    return this.changeQueryParts(this.queryParts.slice(0, index + 1));
-  }
-
-  public getPrefixQueries(): WorkbenchQuery[] {
-    return this.queryParts.slice(0, this.queryParts.length - 1).map((_, i) => this.getPrefix(i));
-  }
-
-  public applyUpdate(newQuery: WorkbenchQuery, index: number): WorkbenchQuery {
-    return newQuery.changeQueryParts(newQuery.queryParts.concat(this.queryParts.slice(index + 1)));
-  }
-
-  public duplicate(): WorkbenchQuery {
-    return this.changeQueryParts(this.queryParts.map(part => part.duplicate()));
-  }
-
-  public duplicateLast(): WorkbenchQuery {
-    const { queryParts } = this;
-    const last = this.getLastPart();
-    return this.changeQueryParts(queryParts.concat(last.duplicate()));
-  }
-
-  public addBlank(): WorkbenchQuery {
-    const { queryParts } = this;
-    const last = this.getLastPart();
-    return this.changeQueryParts(
-      queryParts.slice(0, queryParts.length - 1).concat(
-        last
-          .changeQueryName(last.queryName || 'q')
-          .changeCollapsed(true)
-          .changeLastExecution(undefined),
-        WorkbenchQueryPart.blank(),
-      ),
-    );
-  }
-
-  public remove(index: number): WorkbenchQuery {
-    const { queryParts } = this;
-    return this.changeQueryParts(queryParts.filter((_, i) => i !== index));
   }
 }

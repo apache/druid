@@ -21,6 +21,8 @@ package org.apache.druid.client.cache;
 
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.fppt.jedismock.RedisServer;
+import com.github.fppt.jedismock.server.ServiceOptions;
 import org.apache.druid.java.util.common.IAE;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
@@ -114,17 +116,23 @@ public class RedisCacheConfigTest
   @Test
   public void testClusterPriority() throws IOException
   {
+    ServiceOptions options = ServiceOptions.defaultOptions().withClusterModeEnabled();
+    RedisServer server = RedisServer.newRedisServer().setOptions(options).start();
+
     ObjectMapper mapper = new ObjectMapper();
     RedisCacheConfig fromJson = mapper.readValue("{\"expiration\": 1000,"
                                                  + "\"cluster\": {"
-                                                 + "\"nodes\": \"127.0.0.1:6379\""
+                                                 + "\"nodes\": \"" + server.getHost() + ":" + server.getBindPort() + "\""
                                                  + "},"
-                                                 + "\"host\": \"127.0.0.1\","
-                                                 + "\"port\": 6379"
+                                                 + "\"host\": \"" + server.getHost() + "\","
+                                                 + "\"port\": " + server.getBindPort()
                                                  + "}", RedisCacheConfig.class);
 
     try (Cache cache = RedisCacheFactory.create(fromJson)) {
       Assert.assertTrue(cache instanceof RedisClusterCache);
+    }
+    finally {
+      server.stop();
     }
   }
 

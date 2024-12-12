@@ -115,7 +115,7 @@ public class ITPerfectRollupParallelIndexTest extends AbstractITBatchIndexTest
 
       );
 
-      // with DruidInputSource instead of IngestSegmentFirehose
+      // with DruidInputSource
       doReindexTest(
           INDEX_DATASOURCE,
           INDEX_DRUID_INPUT_SOURCE_DATASOURCE,

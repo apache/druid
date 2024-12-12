@@ -19,6 +19,8 @@
 
 package org.apache.druid.indexing.overlord;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
@@ -31,6 +33,10 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.annotations.SuppressFBWarnings;
 import org.apache.druid.common.utils.IdUtils;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.EntryAlreadyExists;
+import org.apache.druid.error.InvalidInput;
+import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.Counters;
@@ -38,6 +44,7 @@ import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.indexing.common.task.TaskContextEnricher;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.common.task.batch.MaxAllowedLocksExceededException;
 import org.apache.druid.indexing.common.task.batch.parallel.SinglePhaseParallelIndexTaskRunner;
@@ -53,7 +60,8 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
-import org.apache.druid.metadata.EntryExistsException;
+import org.apache.druid.metadata.PasswordProvider;
+import org.apache.druid.metadata.PasswordProviderRedactionMixIn;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.utils.CollectionUtils;
 
@@ -67,7 +75,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -92,6 +99,9 @@ public class TaskQueue
   private static final long MANAGEMENT_WAIT_TIMEOUT_NANOS = TimeUnit.SECONDS.toNanos(60);
   private static final long MIN_WAIT_TIME_MS = 100;
 
+  // 60 MB warning threshold since 64 MB is the default max_allowed_packet size in MySQL 8+
+  private static final long TASK_SIZE_WARNING_THRESHOLD = 1024 * 1024 * 60;
+
   // Task ID -> Task, for tasks that are active in some way (submitted, running, or finished and to-be-cleaned-up).
   @GuardedBy("giant")
   private final LinkedHashMap<String, Task> tasks = new LinkedHashMap<>();
@@ -115,6 +125,8 @@ public class TaskQueue
   private final TaskActionClientFactory taskActionClientFactory;
   private final TaskLockbox taskLockbox;
   private final ServiceEmitter emitter;
+  private final ObjectMapper passwordRedactingMapper;
+  private final TaskContextEnricher taskContextEnricher;
 
   private final ReentrantLock giant = new ReentrantLock(true);
   @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
@@ -158,7 +170,9 @@ public class TaskQueue
       TaskRunner taskRunner,
       TaskActionClientFactory taskActionClientFactory,
       TaskLockbox taskLockbox,
-      ServiceEmitter emitter
+      ServiceEmitter emitter,
+      ObjectMapper mapper,
+      TaskContextEnricher taskContextEnricher
   )
   {
     this.lockConfig = Preconditions.checkNotNull(lockConfig, "lockConfig");
@@ -173,12 +187,15 @@ public class TaskQueue
         config.getTaskCompleteHandlerNumThreads(),
         "TaskQueue-OnComplete-%d"
     );
+    this.passwordRedactingMapper = mapper.copy()
+                                         .addMixIn(PasswordProvider.class, PasswordProviderRedactionMixIn.class);
+    this.taskContextEnricher = Preconditions.checkNotNull(taskContextEnricher, "taskContextEnricher");
   }
 
   @VisibleForTesting
-  void setActive(boolean active)
+  void setActive()
   {
-    this.active = active;
+    this.active = true;
   }
 
   /**
@@ -201,30 +218,25 @@ public class TaskQueue
                  "Shutting down forcefully as task failed to reacquire lock while becoming leader");
       }
       managerExec.submit(
-          new Runnable()
-          {
-            @Override
-            public void run()
-            {
-              while (true) {
+          () -> {
+            while (true) {
+              try {
+                manage();
+                break;
+              }
+              catch (InterruptedException e) {
+                log.info("Interrupted, exiting!");
+                break;
+              }
+              catch (Exception e) {
+                final long restartDelay = config.getRestartDelay().getMillis();
+                log.makeAlert(e, "Failed to manage").addData("restartDelay", restartDelay).emit();
                 try {
-                  manage();
-                  break;
+                  Thread.sleep(restartDelay);
                 }
-                catch (InterruptedException e) {
+                catch (InterruptedException e2) {
                   log.info("Interrupted, exiting!");
                   break;
-                }
-                catch (Exception e) {
-                  final long restartDelay = config.getRestartDelay().getMillis();
-                  log.makeAlert(e, "Failed to manage").addData("restartDelay", restartDelay).emit();
-                  try {
-                    Thread.sleep(restartDelay);
-                  }
-                  catch (InterruptedException e2) {
-                    log.info("Interrupted, exiting!");
-                    break;
-                  }
                 }
               }
             }
@@ -233,24 +245,19 @@ public class TaskQueue
       ScheduledExecutors.scheduleAtFixedRate(
           storageSyncExec,
           config.getStorageSyncRate(),
-          new Callable<ScheduledExecutors.Signal>()
-          {
-            @Override
-            public ScheduledExecutors.Signal call()
-            {
-              try {
-                syncFromStorage();
-              }
-              catch (Exception e) {
-                if (active) {
-                  log.makeAlert(e, "Failed to sync with storage").emit();
-                }
-              }
+          () -> {
+            try {
+              syncFromStorage();
+            }
+            catch (Exception e) {
               if (active) {
-                return ScheduledExecutors.Signal.REPEAT;
-              } else {
-                return ScheduledExecutors.Signal.STOP;
+                log.makeAlert(e, "Failed to sync with storage").emit();
               }
+            }
+            if (active) {
+              return ScheduledExecutors.Signal.REPEAT;
+            } else {
+              return ScheduledExecutors.Signal.STOP;
             }
           }
       );
@@ -421,13 +428,16 @@ public class TaskQueue
           catch (Exception e) {
             log.warn(e, "Exception thrown during isReady for task: %s", task.getId());
             final String errorMessage;
-            if (e instanceof MaxAllowedLocksExceededException) {
+            if (e instanceof MaxAllowedLocksExceededException || e instanceof DruidException) {
               errorMessage = e.getMessage();
             } else {
-              errorMessage = "Failed while waiting for the task to be ready to run. "
-                                          + "See overlord logs for more details.";
+              errorMessage = StringUtils.format(
+                  "Encountered error[%s] while waiting for task to be ready. See Overlord logs for more details.",
+                  e.getMessage()
+              );
             }
-            notifyStatus(task, TaskStatus.failure(task.getId(), errorMessage), errorMessage);
+            TaskStatus taskStatus = TaskStatus.failure(task.getId(), errorMessage);
+            notifyStatus(task, taskStatus, taskStatus.getErrorMsg());
             continue;
           }
           if (taskIsReady) {
@@ -493,17 +503,16 @@ public class TaskQueue
    * @param task task to add
    *
    * @return true
-   *
-   * @throws EntryExistsException if the task already exists
    */
-  public boolean add(final Task task) throws EntryExistsException
+  public boolean add(final Task task)
   {
     // Before adding the task, validate the ID, so it can be safely used in file paths, znodes, etc.
     IdUtils.validateId("Task ID", task.getId());
 
     if (taskStorage.getTask(task.getId()).isPresent()) {
-      throw new EntryExistsException("Task", task.getId());
+      throw EntryAlreadyExists.exception("Task[%s] already exists", task.getId());
     }
+    validateTaskPayload(task);
 
     // Set forceTimeChunkLock before adding task spec to taskStorage, so that we can see always consistent task spec.
     task.addToContextIfAbsent(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, lockConfig.isForceTimeChunkLock());
@@ -515,12 +524,22 @@ public class TaskQueue
         SinglePhaseParallelIndexTaskRunner.DEFAULT_USE_LINEAGE_BASED_SEGMENT_ALLOCATION
     );
 
+    taskContextEnricher.enrichContext(task);
+
     giant.lock();
 
     try {
       Preconditions.checkState(active, "Queue is not active!");
       Preconditions.checkNotNull(task, "task");
-      Preconditions.checkState(tasks.size() < config.getMaxSize(), "Too many tasks (max = %s)", config.getMaxSize());
+      if (tasks.size() >= config.getMaxSize()) {
+        throw DruidException.forPersona(DruidException.Persona.ADMIN)
+                            .ofCategory(DruidException.Category.CAPACITY_EXCEEDED)
+                            .build(
+                                "Task queue already contains [%d] tasks."
+                                + " Retry later or increase 'druid.indexer.queue.maxSize'[%d].",
+                                tasks.size(), config.getMaxSize()
+                            );
+      }
 
       // If this throws with any sort of exception, including TaskExistsException, we don't want to
       // insert the task into our queue. So don't catch it.
@@ -659,6 +678,8 @@ public class TaskQueue
     // Save status to metadata store first, so if we crash while doing the rest of the shutdown, our successor
     // remembers that this task has completed.
     try {
+      //The code block is only called when a task completes,
+      //and we need to check to make sure the metadata store has the correct status stored.
       final Optional<TaskStatus> previousStatus = taskStorage.getStatus(task.getId());
       if (!previousStatus.isPresent() || !previousStatus.get().isRunnable()) {
         log.makeAlert("Ignoring notification for already-complete task").addData("task", task.getId()).emit();
@@ -761,7 +782,7 @@ public class TaskQueue
               // Emit event and log, if the task is done
               if (status.isComplete()) {
                 IndexTaskUtils.setTaskStatusDimensions(metricBuilder, status);
-                emitter.emit(metricBuilder.build("task/run/time", status.getDuration()));
+                emitter.emit(metricBuilder.setMetric("task/run/time", status.getDuration()));
 
                 log.info(
                     "Completed task[%s] with status[%s] in [%d]ms.",
@@ -933,6 +954,20 @@ public class TaskQueue
     }
   }
 
+  /**
+   * Gets the current status of this task either from the {@link TaskRunner}
+   * or from the {@link TaskStorage} (if not available with the TaskRunner).
+   */
+  public Optional<TaskStatus> getTaskStatus(final String taskId)
+  {
+    RunnerTaskState runnerTaskState = taskRunner.getRunnerTaskState(taskId);
+    if (runnerTaskState != null && runnerTaskState != RunnerTaskState.NONE) {
+      return Optional.of(TaskStatus.running(taskId).withLocation(taskRunner.getTaskLocation(taskId)));
+    } else {
+      return taskStorage.getStatus(taskId);
+    }
+  }
+
   public CoordinatorRunStats getQueueStats()
   {
     final int queuedUpdates = statusUpdatesInQueue.get();
@@ -947,6 +982,36 @@ public class TaskQueue
     return stats;
   }
 
+  /**
+   * Returns an optional containing the task payload after successfully redacting credentials.
+   * Returns an absent optional if there is no task payload corresponding to the taskId in memory.
+   * Throws DruidException if password could not be redacted due to serialization / deserialization failure
+   */
+  public Optional<Task> getActiveTask(String id)
+  {
+    Task task;
+    giant.lock();
+    try {
+      task = tasks.get(id);
+    }
+    finally {
+      giant.unlock();
+    }
+    if (task != null) {
+      try {
+        // Write and read the value using a mapper with password redaction mixin.
+        task = passwordRedactingMapper.readValue(passwordRedactingMapper.writeValueAsString(task), Task.class);
+      }
+      catch (JsonProcessingException e) {
+        log.error(e, "Failed to serialize or deserialize task with id [%s].", task.getId());
+        throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                            .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                            .build(e, "Failed to serialize or deserialize task[%s].", task.getId());
+      }
+    }
+    return Optional.fromNullable(task);
+  }
+
   @VisibleForTesting
   List<Task> getTasks()
   {
@@ -956,6 +1021,36 @@ public class TaskQueue
     }
     finally {
       giant.unlock();
+    }
+  }
+
+  private void validateTaskPayload(Task task)
+  {
+    try {
+      String payload = passwordRedactingMapper.writeValueAsString(task);
+      if (config.getMaxTaskPayloadSize() != null && config.getMaxTaskPayloadSize().getBytesInInt() < payload.length()) {
+        throw InvalidInput.exception(
+                "Task[%s] has payload of size[%d] but max allowed size is [%d]. " +
+                    "Reduce the size of the task payload or increase 'druid.indexer.queue.maxTaskPayloadSize'.",
+                task.getId(), payload.length(), config.getMaxTaskPayloadSize()
+            );
+      } else if (payload.length() > TASK_SIZE_WARNING_THRESHOLD) {
+        log.warn(
+            "Task[%s] of datasource[%s] has payload size[%d] larger than the recommended maximum[%d]. " +
+                "Large task payloads may cause stability issues in the Overlord and may fail while persisting to the metadata store." +
+                "Such tasks may be rejected by the Overlord in future Druid versions.",
+            task.getId(),
+            task.getDataSource(),
+            payload.length(),
+            TASK_SIZE_WARNING_THRESHOLD
+        );
+      }
+    }
+    catch (JsonProcessingException e) {
+      log.error(e, "Failed to parse task payload for validation");
+      throw DruidException.defensive(
+          "Failed to parse task payload for validation"
+      );
     }
   }
 }

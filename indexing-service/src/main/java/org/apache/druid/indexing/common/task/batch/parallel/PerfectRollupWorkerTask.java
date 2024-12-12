@@ -49,10 +49,11 @@ abstract class PerfectRollupWorkerTask extends AbstractBatchSubtask
       @Nullable TaskResource taskResource,
       DataSchema dataSchema,
       ParallelIndexTuningConfig tuningConfig,
-      @Nullable Map<String, Object> context
+      @Nullable Map<String, Object> context,
+      String supervisorTaskId
   )
   {
-    super(id, groupId, taskResource, dataSchema.getDataSource(), context, IngestionMode.NONE);
+    super(id, groupId, taskResource, dataSchema.getDataSource(), context, IngestionMode.NONE, supervisorTaskId);
 
     Preconditions.checkArgument(
         tuningConfig.isForceGuaranteedRollup(),

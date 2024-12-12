@@ -4,14 +4,26 @@ exports[`HomeView matches snapshot (coordinator) 1`] = `
 <div
   className="home-view app-view"
 >
-  <Memo(StatusCard) />
+  <Memo(StatusCard)
+    capabilities={
+      Capabilities {
+        "coordinator": true,
+        "maxTaskSlots": undefined,
+        "multiStageQueryDart": false,
+        "multiStageQueryTask": false,
+        "overlord": false,
+        "queryType": "none",
+      }
+    }
+  />
   <React.Fragment>
     <Memo(DatasourcesCard)
       capabilities={
         Capabilities {
-          "clusterCapacity": undefined,
           "coordinator": true,
-          "multiStageQuery": false,
+          "maxTaskSlots": undefined,
+          "multiStageQueryDart": false,
+          "multiStageQueryTask": false,
           "overlord": false,
           "queryType": "none",
         }
@@ -20,9 +32,10 @@ exports[`HomeView matches snapshot (coordinator) 1`] = `
     <Memo(SegmentsCard)
       capabilities={
         Capabilities {
-          "clusterCapacity": undefined,
           "coordinator": true,
-          "multiStageQuery": false,
+          "maxTaskSlots": undefined,
+          "multiStageQueryDart": false,
+          "multiStageQueryTask": false,
           "overlord": false,
           "queryType": "none",
         }
@@ -32,9 +45,10 @@ exports[`HomeView matches snapshot (coordinator) 1`] = `
   <Memo(ServicesCard)
     capabilities={
       Capabilities {
-        "clusterCapacity": undefined,
         "coordinator": true,
-        "multiStageQuery": false,
+        "maxTaskSlots": undefined,
+        "multiStageQueryDart": false,
+        "multiStageQueryTask": false,
         "overlord": false,
         "queryType": "none",
       }
@@ -43,9 +57,10 @@ exports[`HomeView matches snapshot (coordinator) 1`] = `
   <Memo(LookupsCard)
     capabilities={
       Capabilities {
-        "clusterCapacity": undefined,
         "coordinator": true,
-        "multiStageQuery": false,
+        "maxTaskSlots": undefined,
+        "multiStageQueryDart": false,
+        "multiStageQueryTask": false,
         "overlord": false,
         "queryType": "none",
       }
@@ -58,14 +73,26 @@ exports[`HomeView matches snapshot (full) 1`] = `
 <div
   className="home-view app-view"
 >
-  <Memo(StatusCard) />
+  <Memo(StatusCard)
+    capabilities={
+      Capabilities {
+        "coordinator": true,
+        "maxTaskSlots": undefined,
+        "multiStageQueryDart": true,
+        "multiStageQueryTask": true,
+        "overlord": true,
+        "queryType": "nativeAndSql",
+      }
+    }
+  />
   <React.Fragment>
     <Memo(DatasourcesCard)
       capabilities={
         Capabilities {
-          "clusterCapacity": undefined,
           "coordinator": true,
-          "multiStageQuery": true,
+          "maxTaskSlots": undefined,
+          "multiStageQueryDart": true,
+          "multiStageQueryTask": true,
           "overlord": true,
           "queryType": "nativeAndSql",
         }
@@ -74,9 +101,10 @@ exports[`HomeView matches snapshot (full) 1`] = `
     <Memo(SegmentsCard)
       capabilities={
         Capabilities {
-          "clusterCapacity": undefined,
           "coordinator": true,
-          "multiStageQuery": true,
+          "maxTaskSlots": undefined,
+          "multiStageQueryDart": true,
+          "multiStageQueryTask": true,
           "overlord": true,
           "queryType": "nativeAndSql",
         }
@@ -87,9 +115,10 @@ exports[`HomeView matches snapshot (full) 1`] = `
     <Memo(SupervisorsCard)
       capabilities={
         Capabilities {
-          "clusterCapacity": undefined,
           "coordinator": true,
-          "multiStageQuery": true,
+          "maxTaskSlots": undefined,
+          "multiStageQueryDart": true,
+          "multiStageQueryTask": true,
           "overlord": true,
           "queryType": "nativeAndSql",
         }
@@ -98,9 +127,10 @@ exports[`HomeView matches snapshot (full) 1`] = `
     <Memo(TasksCard)
       capabilities={
         Capabilities {
-          "clusterCapacity": undefined,
           "coordinator": true,
-          "multiStageQuery": true,
+          "maxTaskSlots": undefined,
+          "multiStageQueryDart": true,
+          "multiStageQueryTask": true,
           "overlord": true,
           "queryType": "nativeAndSql",
         }
@@ -110,9 +140,10 @@ exports[`HomeView matches snapshot (full) 1`] = `
   <Memo(ServicesCard)
     capabilities={
       Capabilities {
-        "clusterCapacity": undefined,
         "coordinator": true,
-        "multiStageQuery": true,
+        "maxTaskSlots": undefined,
+        "multiStageQueryDart": true,
+        "multiStageQueryTask": true,
         "overlord": true,
         "queryType": "nativeAndSql",
       }
@@ -121,9 +152,10 @@ exports[`HomeView matches snapshot (full) 1`] = `
   <Memo(LookupsCard)
     capabilities={
       Capabilities {
-        "clusterCapacity": undefined,
         "coordinator": true,
-        "multiStageQuery": true,
+        "maxTaskSlots": undefined,
+        "multiStageQueryDart": true,
+        "multiStageQueryTask": true,
         "overlord": true,
         "queryType": "nativeAndSql",
       }
@@ -136,14 +168,26 @@ exports[`HomeView matches snapshot (overlord) 1`] = `
 <div
   className="home-view app-view"
 >
-  <Memo(StatusCard) />
+  <Memo(StatusCard)
+    capabilities={
+      Capabilities {
+        "coordinator": false,
+        "maxTaskSlots": undefined,
+        "multiStageQueryDart": false,
+        "multiStageQueryTask": false,
+        "overlord": true,
+        "queryType": "none",
+      }
+    }
+  />
   <React.Fragment>
     <Memo(SupervisorsCard)
       capabilities={
         Capabilities {
-          "clusterCapacity": undefined,
           "coordinator": false,
-          "multiStageQuery": false,
+          "maxTaskSlots": undefined,
+          "multiStageQueryDart": false,
+          "multiStageQueryTask": false,
           "overlord": true,
           "queryType": "none",
         }
@@ -152,9 +196,10 @@ exports[`HomeView matches snapshot (overlord) 1`] = `
     <Memo(TasksCard)
       capabilities={
         Capabilities {
-          "clusterCapacity": undefined,
           "coordinator": false,
-          "multiStageQuery": false,
+          "maxTaskSlots": undefined,
+          "multiStageQueryDart": false,
+          "multiStageQueryTask": false,
           "overlord": true,
           "queryType": "none",
         }

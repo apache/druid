@@ -23,14 +23,17 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
+import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.column.StringEncodingStrategies;
 import org.apache.druid.segment.column.StringUtf8DictionaryEncodedColumn;
+import org.apache.druid.segment.serde.ColumnSerializerUtils;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
 import javax.annotation.Nullable;
+import java.io.File;
 import java.io.IOException;
 
 /**
@@ -46,7 +49,7 @@ public class ScalarStringColumnSerializer extends ScalarNestedCommonFormatColumn
       Closer closer
   )
   {
-    super(name, STRING_DICTIONARY_FILE_NAME, indexSpec, segmentWriteOutMedium, closer);
+    super(name, indexSpec, segmentWriteOutMedium, closer);
   }
 
   @Override
@@ -59,7 +62,7 @@ public class ScalarStringColumnSerializer extends ScalarNestedCommonFormatColumn
   }
 
   @Override
-  public void openDictionaryWriter() throws IOException
+  public void openDictionaryWriter(File segmentBaseDir) throws IOException
   {
     dictionaryWriter = StringEncodingStrategies.getStringDictionaryWriter(
         indexSpec.getStringDictionaryEncoding(),
@@ -67,6 +70,16 @@ public class ScalarStringColumnSerializer extends ScalarNestedCommonFormatColumn
         name
     );
     dictionaryWriter.open();
+    dictionaryIdLookup = closer.register(
+        new DictionaryIdLookup(
+            name,
+            segmentBaseDir,
+            dictionaryWriter,
+            null,
+            null,
+            null
+        )
+    );
   }
 
   @Override
@@ -89,7 +102,6 @@ public class ScalarStringColumnSerializer extends ScalarNestedCommonFormatColumn
 
     // null is always 0
     dictionaryWriter.write(null);
-    dictionaryIdLookup.addString(null);
     for (String value : strings) {
       value = NullHandling.emptyToNullIfNeeded(value);
       if (value == null) {
@@ -97,7 +109,6 @@ public class ScalarStringColumnSerializer extends ScalarNestedCommonFormatColumn
       }
 
       dictionaryWriter.write(value);
-      dictionaryIdLookup.addString(value);
     }
     dictionarySerialized = true;
   }
@@ -106,5 +117,27 @@ public class ScalarStringColumnSerializer extends ScalarNestedCommonFormatColumn
   protected void writeValueColumn(FileSmoosher smoosher)
   {
     // no extra value column for strings
+  }
+
+  @Override
+  protected void writeDictionaryFile(FileSmoosher smoosher) throws IOException
+  {
+    if (dictionaryIdLookup.getStringBufferMapper() != null) {
+      SmooshedFileMapper fileMapper = dictionaryIdLookup.getStringBufferMapper();
+      for (String name : fileMapper.getInternalFilenames()) {
+        smoosher.add(name, fileMapper.mapFile(name));
+      }
+    } else {
+      writeInternal(smoosher, dictionaryWriter, ColumnSerializerUtils.STRING_DICTIONARY_FILE_NAME);
+    }
+  }
+
+  @Override
+  public int getCardinality()
+  {
+    if (writeDictionary) {
+      return dictionaryWriter.getCardinality();
+    }
+    return dictionaryIdLookup.getStringCardinality();
   }
 }

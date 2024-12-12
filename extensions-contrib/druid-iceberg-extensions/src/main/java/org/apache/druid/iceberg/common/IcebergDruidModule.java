@@ -25,9 +25,11 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.inject.Binder;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.iceberg.guice.HiveConf;
+import org.apache.druid.iceberg.input.GlueIcebergCatalog;
 import org.apache.druid.iceberg.input.HiveIcebergCatalog;
 import org.apache.druid.iceberg.input.IcebergInputSource;
 import org.apache.druid.iceberg.input.LocalCatalog;
+import org.apache.druid.iceberg.input.RestIcebergCatalog;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -45,8 +47,9 @@ public class IcebergDruidModule implements DruidModule
             .registerSubtypes(
                 new NamedType(HiveIcebergCatalog.class, HiveIcebergCatalog.TYPE_KEY),
                 new NamedType(LocalCatalog.class, LocalCatalog.TYPE_KEY),
-                new NamedType(IcebergInputSource.class, IcebergInputSource.TYPE_KEY)
-
+                new NamedType(RestIcebergCatalog.class, RestIcebergCatalog.TYPE_KEY),
+                new NamedType(IcebergInputSource.class, IcebergInputSource.TYPE_KEY),
+                new NamedType(GlueIcebergCatalog.class, GlueIcebergCatalog.TYPE_KEY)
             )
     );
   }

@@ -35,15 +35,21 @@ import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatusPlus;
+import org.apache.druid.indexer.report.KillTaskReport;
+import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
+import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.rpc.MockServiceClient;
 import org.apache.druid.rpc.RequestBuilder;
+import org.apache.druid.server.compaction.CompactionProgressResponse;
+import org.apache.druid.server.compaction.CompactionStatusResponse;
+import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
@@ -60,6 +66,7 @@ import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -219,13 +226,15 @@ public class OverlordClientImplTest
   @Test
   public void test_findLockedIntervals() throws Exception
   {
-    final Map<String, Integer> priorityMap = ImmutableMap.of("foo", 3);
     final Map<String, List<Interval>> lockMap =
         ImmutableMap.of("foo", Collections.singletonList(Intervals.of("2000/2001")));
+    final List<LockFilterPolicy> requests = ImmutableList.of(
+        new LockFilterPolicy("foo", 3, null, null)
+    );
 
     serviceClient.expectAndRespond(
-        new RequestBuilder(HttpMethod.POST, "/druid/indexer/v1/lockedIntervals")
-            .jsonContent(jsonMapper, priorityMap),
+        new RequestBuilder(HttpMethod.POST, "/druid/indexer/v1/lockedIntervals/v2")
+            .jsonContent(jsonMapper, requests),
         HttpResponseStatus.OK,
         ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
         jsonMapper.writeValueAsBytes(lockMap)
@@ -233,18 +242,20 @@ public class OverlordClientImplTest
 
     Assert.assertEquals(
         lockMap,
-        overlordClient.findLockedIntervals(priorityMap).get()
+        overlordClient.findLockedIntervals(requests).get()
     );
   }
 
   @Test
   public void test_findLockedIntervals_nullReturn() throws Exception
   {
-    final Map<String, Integer> priorityMap = ImmutableMap.of("foo", 3);
+    final List<LockFilterPolicy> requests = ImmutableList.of(
+        new LockFilterPolicy("foo", 3, null, null)
+    );
 
     serviceClient.expectAndRespond(
-        new RequestBuilder(HttpMethod.POST, "/druid/indexer/v1/lockedIntervals")
-            .jsonContent(jsonMapper, priorityMap),
+        new RequestBuilder(HttpMethod.POST, "/druid/indexer/v1/lockedIntervals/v2")
+            .jsonContent(jsonMapper, requests),
         HttpResponseStatus.OK,
         ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
         jsonMapper.writeValueAsBytes(null)
@@ -252,7 +263,7 @@ public class OverlordClientImplTest
 
     Assert.assertEquals(
         Collections.emptyMap(),
-        overlordClient.findLockedIntervals(priorityMap).get()
+        overlordClient.findLockedIntervals(requests).get()
     );
   }
 
@@ -284,7 +295,7 @@ public class OverlordClientImplTest
   public void test_taskReportAsMap() throws Exception
   {
     final String taskId = "testTaskId";
-    final Map<String, Object> response = ImmutableMap.of("test", "value");
+    final TaskReport.ReportMap response = TaskReport.buildTaskReports(new KillTaskReport("taskId", null));
 
     serviceClient.expectAndRespond(
         new RequestBuilder(HttpMethod.GET, "/druid/indexer/v1/task/testTaskId/reports"),
@@ -293,7 +304,7 @@ public class OverlordClientImplTest
         jsonMapper.writeValueAsBytes(response)
     );
 
-    final ListenableFuture<Map<String, Object>> future = overlordClient.taskReportAsMap(taskId);
+    final ListenableFuture<TaskReport.ReportMap> future = overlordClient.taskReportAsMap(taskId);
     Assert.assertEquals(response, future.get());
   }
 
@@ -314,7 +325,7 @@ public class OverlordClientImplTest
         )
     );
 
-    final ListenableFuture<Map<String, Object>> future = overlordClient.taskReportAsMap(taskId);
+    final ListenableFuture<TaskReport.ReportMap> future = overlordClient.taskReportAsMap(taskId);
 
     final ExecutionException e = Assert.assertThrows(
         ExecutionException.class,
@@ -340,7 +351,7 @@ public class OverlordClientImplTest
         StringUtils.toUtf8("{}")
     );
 
-    final Map<String, Object> actualResponse =
+    final TaskReport.ReportMap actualResponse =
         FutureUtils.getUnchecked(overlordClient.taskReportAsMap(taskID), true);
     Assert.assertEquals(Collections.emptyMap(), actualResponse);
   }
@@ -428,6 +439,7 @@ public class OverlordClientImplTest
         null,
         null,
         null,
+        null,
         null
     );
 
@@ -441,6 +453,82 @@ public class OverlordClientImplTest
     Assert.assertEquals(
         clientTaskQuery,
         overlordClient.taskPayload(taskID).get().getPayload()
+    );
+  }
+
+  @Test
+  public void test_isCompactionSupervisorEnabled()
+      throws JsonProcessingException, ExecutionException, InterruptedException
+  {
+    serviceClient.expectAndRespond(
+        new RequestBuilder(HttpMethod.GET, "/druid/indexer/v1/compaction/isSupervisorEnabled"),
+        HttpResponseStatus.OK,
+        Collections.emptyMap(),
+        DefaultObjectMapper.INSTANCE.writeValueAsBytes(false)
+    );
+
+    Assert.assertFalse(overlordClient.isCompactionSupervisorEnabled().get());
+  }
+
+  @Test
+  public void test_getCompactionSnapshots_nullDataSource()
+      throws JsonProcessingException, ExecutionException, InterruptedException
+  {
+    final List<AutoCompactionSnapshot> compactionSnapshots = Arrays.asList(
+        AutoCompactionSnapshot.builder("ds1")
+                              .withStatus(AutoCompactionSnapshot.AutoCompactionScheduleStatus.RUNNING)
+                              .build(),
+        AutoCompactionSnapshot.builder("ds2")
+                              .withStatus(AutoCompactionSnapshot.AutoCompactionScheduleStatus.NOT_ENABLED)
+                              .build()
+    );
+    serviceClient.expectAndRespond(
+        new RequestBuilder(HttpMethod.GET, "/druid/indexer/v1/compaction/status"),
+        HttpResponseStatus.OK,
+        Collections.emptyMap(),
+        DefaultObjectMapper.INSTANCE.writeValueAsBytes(new CompactionStatusResponse(compactionSnapshots))
+    );
+
+    Assert.assertEquals(
+        new CompactionStatusResponse(compactionSnapshots),
+        overlordClient.getCompactionSnapshots(null).get()
+    );
+  }
+
+  @Test
+  public void test_getCompactionSnapshots_nonNullDataSource()
+      throws JsonProcessingException, ExecutionException, InterruptedException
+  {
+    final List<AutoCompactionSnapshot> compactionSnapshots = Collections.singletonList(
+        AutoCompactionSnapshot.builder("ds1").build()
+    );
+    serviceClient.expectAndRespond(
+        new RequestBuilder(HttpMethod.GET, "/druid/indexer/v1/compaction/status?dataSource=ds1"),
+        HttpResponseStatus.OK,
+        Collections.emptyMap(),
+        DefaultObjectMapper.INSTANCE.writeValueAsBytes(new CompactionStatusResponse(compactionSnapshots))
+    );
+
+    Assert.assertEquals(
+        new CompactionStatusResponse(compactionSnapshots),
+        overlordClient.getCompactionSnapshots("ds1").get()
+    );
+  }
+
+  @Test
+  public void test_getBytesAwaitingCompaction()
+      throws JsonProcessingException, ExecutionException, InterruptedException
+  {
+    serviceClient.expectAndRespond(
+        new RequestBuilder(HttpMethod.GET, "/druid/indexer/v1/compaction/progress?dataSource=ds1"),
+        HttpResponseStatus.OK,
+        Collections.emptyMap(),
+        DefaultObjectMapper.INSTANCE.writeValueAsBytes(new CompactionProgressResponse(100_000L))
+    );
+
+    Assert.assertEquals(
+        new CompactionProgressResponse(100_000L),
+        overlordClient.getBytesAwaitingCompaction("ds1").get()
     );
   }
 }

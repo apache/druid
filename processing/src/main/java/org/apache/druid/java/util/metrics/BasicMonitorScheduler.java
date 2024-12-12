@@ -34,7 +34,7 @@ public class BasicMonitorScheduler extends MonitorScheduler
   private final ScheduledExecutorService exec;
 
   public BasicMonitorScheduler(
-      MonitorSchedulerConfig config,
+      DruidMonitorSchedulerConfig config,
       ServiceEmitter emitter,
       List<Monitor> monitors,
       ScheduledExecutorService exec
@@ -50,7 +50,7 @@ public class BasicMonitorScheduler extends MonitorScheduler
     monitor.start();
     ScheduledExecutors.scheduleAtFixedRate(
         exec,
-        getConfig().getEmitterPeriod(),
+        getConfig().getEmissionDuration(),
         () -> {
           if (hasMonitor(monitor) && monitor.monitor(getEmitter())) {
             return Signal.REPEAT;

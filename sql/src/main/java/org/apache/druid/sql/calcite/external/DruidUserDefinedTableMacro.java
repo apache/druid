@@ -57,7 +57,6 @@ public class DruidUserDefinedTableMacro extends SchemaAwareUserDefinedTableMacro
         // Use our own definition of variadic since Calcite's doesn't allow
         // optional parameters.
         Externals.variadic(macro.parameters),
-        Externals.dataTypes(macro.parameters),
         macro
     );
   }

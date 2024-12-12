@@ -33,6 +33,7 @@ import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.config.TaskStorageConfig;
 import org.apache.druid.indexing.common.task.NoopTask;
+import org.apache.druid.indexing.common.task.NoopTaskContextEnricher;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.autoscaling.ScalingStats;
 import org.apache.druid.indexing.overlord.config.DefaultTaskConfig;
@@ -47,6 +48,8 @@ import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.metadata.TaskLookup;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
+import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.joda.time.Duration;
 import org.joda.time.Period;
@@ -84,6 +87,7 @@ public class TaskQueueScaleTest
   private TaskStorage taskStorage;
   private TestTaskRunner taskRunner;
   private Closer closer;
+  private SegmentSchemaManager segmentSchemaManager;
 
   @Before
   public void setUp()
@@ -97,11 +101,13 @@ public class TaskQueueScaleTest
     taskRunner = new TestTaskRunner();
     closer.register(taskRunner::stop);
     final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
-
+    segmentSchemaManager = new SegmentSchemaManager(derbyConnectorRule.metadataTablesConfigSupplier().get(), jsonMapper, derbyConnectorRule.getConnector());
     final IndexerSQLMetadataStorageCoordinator storageCoordinator = new IndexerSQLMetadataStorageCoordinator(
         jsonMapper,
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
-        derbyConnectorRule.getConnector()
+        derbyConnectorRule.getConnector(),
+        segmentSchemaManager,
+        CentralizedDatasourceSchemaConfig.create()
     );
 
     final TaskActionClientFactory unsupportedTaskActionFactory =
@@ -116,13 +122,15 @@ public class TaskQueueScaleTest
 
     taskQueue = new TaskQueue(
         new TaskLockConfig(),
-        new TaskQueueConfig(null, Period.millis(1), null, null, null),
+        new TaskQueueConfig(null, Period.millis(1), null, null, null, null),
         new DefaultTaskConfig(),
         taskStorage,
         taskRunner,
         unsupportedTaskActionFactory, // Not used for anything serious
         new TaskLockbox(taskStorage, storageCoordinator),
-        new NoopServiceEmitter()
+        new NoopServiceEmitter(),
+        jsonMapper,
+        new NoopTaskContextEnricher()
     );
 
     taskQueue.start();
@@ -144,7 +152,7 @@ public class TaskQueueScaleTest
 
     // Add all tasks.
     for (int i = 0; i < numTasks; i++) {
-      final TestTask testTask = new TestTask(i, 2000L /* runtime millis */);
+      final NoopTask testTask = createTestTask(2000L);
       taskQueue.add(testTask);
     }
 
@@ -182,8 +190,7 @@ public class TaskQueueScaleTest
     // Add all tasks.
     final List<String> taskIds = new ArrayList<>();
     for (int i = 0; i < numTasks; i++) {
-      final TestTask testTask = new TestTask(
-          i,
+      final NoopTask testTask = createTestTask(
           Duration.standardHours(1).getMillis() /* very long runtime millis, so we can do a shutdown */
       );
       taskQueue.add(testTask);
@@ -215,27 +222,9 @@ public class TaskQueueScaleTest
     Assert.assertEquals("all tasks should have completed", numTasks, completed);
   }
 
-  private static class TestTask extends NoopTask
+  private NoopTask createTestTask(long runtimeMillis)
   {
-    private final int number;
-    private final long runtime;
-
-    public TestTask(int number, long runtime)
-    {
-      super(null, null, DATASOURCE, 0, 0, null, null, Collections.emptyMap());
-      this.number = number;
-      this.runtime = runtime;
-    }
-
-    public int getNumber()
-    {
-      return number;
-    }
-
-    public long getRuntimeMillis()
-    {
-      return runtime;
-    }
+    return new NoopTask(null, null, DATASOURCE, runtimeMillis, 0, Collections.emptyMap());
   }
 
   private static class TestTaskRunner implements TaskRunner
@@ -289,7 +278,7 @@ public class TaskQueueScaleTest
                         log.error(e, "Error in scheduled executor");
                       }
                     },
-                    ((TestTask) task).getRuntimeMillis(),
+                    ((NoopTask) task).getRunTime(),
                     TimeUnit.MILLISECONDS
                 );
               }

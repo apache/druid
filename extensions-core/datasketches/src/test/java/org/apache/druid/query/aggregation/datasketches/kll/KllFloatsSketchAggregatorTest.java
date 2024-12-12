@@ -31,7 +31,6 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.ResultRow;
-import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.After;
 import org.junit.Assert;
@@ -541,92 +540,47 @@ public class KllFloatsSketchAggregatorTest extends InitializedNullHandlingTest
   @Test
   public void testSuccessWhenMaxStreamLengthHit() throws Exception
   {
-    if (GroupByStrategySelector.STRATEGY_V1.equals(config.getDefaultStrategy())) {
-      helper.createIndexAndRunQueryOnSegment(
-          new File(this.getClass().getClassLoader().getResource("kll/kll_floats_sketch_build_data.tsv").getFile()),
-          String.join(
-              "\n",
-              "{",
-              "  \"type\": \"string\",",
-              "  \"parseSpec\": {",
-              "    \"format\": \"tsv\",",
-              "    \"timestampSpec\": {\"column\": \"timestamp\", \"format\": \"yyyyMMddHH\"},",
-              "    \"dimensionsSpec\": {",
-              "      \"dimensions\": [\"sequenceNumber\", \"product\"],",
-              "      \"dimensionExclusions\": [],",
-              "      \"spatialDimensions\": []",
-              "    },",
-              "    \"columns\": [\"timestamp\", \"sequenceNumber\", \"product\", \"value\"]",
-              "  }",
-              "}"
-          ),
-          "[{\"type\": \"doubleSum\", \"name\": \"value\", \"fieldName\": \"value\"}]",
-          0, // minTimestamp
-          Granularities.NONE,
-          10, // maxRowCount
-          String.join(
-              "\n",
-              "{",
-              "  \"queryType\": \"groupBy\",",
-              "  \"dataSource\": \"test_datasource\",",
-              "  \"granularity\": \"ALL\",",
-              "  \"dimensions\": [],",
-              "  \"aggregations\": [",
-              "    {\"type\": \"KllFloatsSketch\", \"name\": \"sketch\", \"fieldName\": \"value\", \"k\": 200, \"maxStreamLength\": 10}",
-              "  ],",
-              "  \"postAggregations\": [",
-              "    {\"type\": \"KllFloatsSketchToQuantile\", \"name\": \"quantile\", \"fraction\": 0.5, \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}},",
-              "    {\"type\": \"KllFloatsSketchToQuantiles\", \"name\": \"quantiles\", \"fractions\": [0, 0.5, 1], \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}},",
-              "    {\"type\": \"KllFloatsSketchToHistogram\", \"name\": \"histogram\", \"splitPoints\": [0.25, 0.5, 0.75], \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}}",
-              "  ],",
-              "  \"intervals\": [\"2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z\"]",
-              "}"
-          )
-      );
-    } else {
-      Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
-          new File(this.getClass().getClassLoader().getResource("kll/kll_floats_sketch_build_data.tsv").getFile()),
-          String.join(
-              "\n",
-              "{",
-              "  \"type\": \"string\",",
-              "  \"parseSpec\": {",
-              "    \"format\": \"tsv\",",
-              "    \"timestampSpec\": {\"column\": \"timestamp\", \"format\": \"yyyyMMddHH\"},",
-              "    \"dimensionsSpec\": {",
-              "      \"dimensions\": [\"sequenceNumber\", \"product\"],",
-              "      \"dimensionExclusions\": [],",
-              "      \"spatialDimensions\": []",
-              "    },",
-              "    \"columns\": [\"timestamp\", \"sequenceNumber\", \"product\", \"value\"]",
-              "  }",
-              "}"
-          ),
-          "[{\"type\": \"doubleSum\", \"name\": \"value\", \"fieldName\": \"value\"}]",
-          0, // minTimestamp
-          Granularities.NONE,
-          10, // maxRowCount
-          String.join(
-              "\n",
-              "{",
-              "  \"queryType\": \"groupBy\",",
-              "  \"dataSource\": \"test_datasource\",",
-              "  \"granularity\": \"ALL\",",
-              "  \"dimensions\": [],",
-              "  \"aggregations\": [",
-              "    {\"type\": \"KllFloatsSketch\", \"name\": \"sketch\", \"fieldName\": \"value\", \"k\": 200, \"maxStreamLength\": 10}",
-              "  ],",
-              "  \"postAggregations\": [",
-              "    {\"type\": \"KllFloatsSketchToQuantile\", \"name\": \"quantile\", \"fraction\": 0.5, \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}},",
-              "    {\"type\": \"KllFloatsSketchToQuantiles\", \"name\": \"quantiles\", \"fractions\": [0, 0.5, 1], \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}},",
-              "    {\"type\": \"KllFloatsSketchToHistogram\", \"name\": \"histogram\", \"splitPoints\": [0.25, 0.5, 0.75], \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}}",
-              "  ],",
-              "  \"intervals\": [\"2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z\"]",
-              "}"
-          )
-      );
-      seq.toList();
-    }
+    Sequence<ResultRow> seq = helper.createIndexAndRunQueryOnSegment(
+        new File(this.getClass().getClassLoader().getResource("kll/kll_floats_sketch_build_data.tsv").getFile()),
+        String.join(
+            "\n",
+            "{",
+            "  \"type\": \"string\",",
+            "  \"parseSpec\": {",
+            "    \"format\": \"tsv\",",
+            "    \"timestampSpec\": {\"column\": \"timestamp\", \"format\": \"yyyyMMddHH\"},",
+            "    \"dimensionsSpec\": {",
+            "      \"dimensions\": [\"sequenceNumber\", \"product\"],",
+            "      \"dimensionExclusions\": [],",
+            "      \"spatialDimensions\": []",
+            "    },",
+            "    \"columns\": [\"timestamp\", \"sequenceNumber\", \"product\", \"value\"]",
+            "  }",
+            "}"
+        ),
+        "[{\"type\": \"doubleSum\", \"name\": \"value\", \"fieldName\": \"value\"}]",
+        0, // minTimestamp
+        Granularities.NONE,
+        10, // maxRowCount
+        String.join(
+            "\n",
+            "{",
+            "  \"queryType\": \"groupBy\",",
+            "  \"dataSource\": \"test_datasource\",",
+            "  \"granularity\": \"ALL\",",
+            "  \"dimensions\": [],",
+            "  \"aggregations\": [",
+            "    {\"type\": \"KllFloatsSketch\", \"name\": \"sketch\", \"fieldName\": \"value\", \"k\": 200, \"maxStreamLength\": 10}",
+            "  ],",
+            "  \"postAggregations\": [",
+            "    {\"type\": \"KllFloatsSketchToQuantile\", \"name\": \"quantile\", \"fraction\": 0.5, \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}},",
+            "    {\"type\": \"KllFloatsSketchToQuantiles\", \"name\": \"quantiles\", \"fractions\": [0, 0.5, 1], \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}},",
+            "    {\"type\": \"KllFloatsSketchToHistogram\", \"name\": \"histogram\", \"splitPoints\": [0.25, 0.5, 0.75], \"field\": {\"type\": \"fieldAccess\", \"fieldName\": \"sketch\"}}",
+            "  ],",
+            "  \"intervals\": [\"2016-01-01T00:00:00.000Z/2016-01-31T00:00:00.000Z\"]",
+            "}"
+        )
+    );
+    seq.toList();
   }
-
 }

@@ -19,7 +19,7 @@
 
 package org.apache.druid.segment.selector.settable;
 
-import com.google.common.base.Predicate;
+import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
@@ -66,7 +66,7 @@ public class SettableDimensionValueSelector implements DimensionSelector, Settab
   }
 
   @Override
-  public ValueMatcher makeValueMatcher(Predicate<String> predicate)
+  public ValueMatcher makeValueMatcher(DruidPredicateFactory predicateFactory)
   {
     throw new UnsupportedOperationException();
   }

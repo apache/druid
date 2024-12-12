@@ -55,6 +55,7 @@ import org.apache.druid.server.coordination.DataSegmentChangeRequest;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.SegmentChangeRequestDrop;
 import org.apache.druid.server.coordination.SegmentChangeRequestLoad;
+import org.apache.druid.server.coordination.SegmentSchemasChangeRequest;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
@@ -184,6 +185,12 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
                 if (!initialized.getAndSet(true)) {
                   inventorySyncExecutor.execute(HttpServerInventoryView.this::serverInventoryInitialized);
                 }
+              }
+
+              @Override
+              public void nodeViewInitializedTimedOut()
+              {
+                nodeViewInitialized();
               }
 
               private DruidServer toDruidServer(DiscoveryDruidNode node)
@@ -495,12 +502,12 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
 
         final boolean isSynced = serverHolder.syncer.isSyncedSuccessfully();
         serviceEmitter.emit(
-            eventBuilder.build("serverview/sync/healthy", isSynced ? 1 : 0)
+            eventBuilder.setMetric("serverview/sync/healthy", isSynced ? 1 : 0)
         );
         final long unstableTimeMillis = serverHolder.syncer.getUnstableTimeMillis();
         if (unstableTimeMillis > 0) {
           serviceEmitter.emit(
-              eventBuilder.build("serverview/sync/unstableTime", unstableTimeMillis)
+              eventBuilder.setMetric("serverview/sync/unstableTime", unstableTimeMillis)
           );
         }
       });
@@ -540,7 +547,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
             smileMapper,
             httpClient,
             inventorySyncExecutor,
-            new URL(druidServer.getScheme(), hostAndPort.getHostText(), hostAndPort.getPort(), "/"),
+            new URL(druidServer.getScheme(), hostAndPort.getHost(), hostAndPort.getPort(), "/"),
             "/druid-internal/v1/segments",
             SEGMENT_LIST_RESP_TYPE_REF,
             config.getServerTimeout(),
@@ -589,6 +596,8 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
               DataSegment segment = ((SegmentChangeRequestLoad) request).getSegment();
               toRemove.remove(segment.getId());
               addSegment(segment, true);
+            } else if (request instanceof SegmentSchemasChangeRequest) {
+              runSegmentCallbacks(input -> input.segmentSchemasAnnounced(((SegmentSchemasChangeRequest) request).getSegmentSchemas()));
             } else {
               log.error(
                   "Server[%s] gave a non-load dataSegmentChangeRequest[%s]., Ignored.",
@@ -611,6 +620,8 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
               addSegment(((SegmentChangeRequestLoad) request).getSegment(), false);
             } else if (request instanceof SegmentChangeRequestDrop) {
               removeSegment(((SegmentChangeRequestDrop) request).getSegment(), false);
+            } else if (request instanceof SegmentSchemasChangeRequest) {
+              runSegmentCallbacks(input -> input.segmentSchemasAnnounced(((SegmentSchemasChangeRequest) request).getSegmentSchemas()));
             } else {
               log.error(
                   "Server[%s] gave a non load/drop dataSegmentChangeRequest[%s], Ignored.",

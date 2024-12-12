@@ -26,13 +26,14 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Strings;
+import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.guice.annotations.PublicApi;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.DimensionHandler;
 import org.apache.druid.segment.DimensionHandlerUtils;
-import org.apache.druid.segment.NestedDataDimensionSchema;
+import org.apache.druid.segment.NestedDataColumnSchema;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.TypeSignature;
 import org.apache.druid.segment.column.ValueType;
@@ -51,7 +52,7 @@ import java.util.Objects;
     @JsonSubTypes.Type(name = DimensionSchema.FLOAT_TYPE_NAME, value = FloatDimensionSchema.class),
     @JsonSubTypes.Type(name = DimensionSchema.DOUBLE_TYPE_NAME, value = DoubleDimensionSchema.class),
     @JsonSubTypes.Type(name = DimensionSchema.SPATIAL_TYPE_NAME, value = NewSpatialDimensionSchema.class),
-    @JsonSubTypes.Type(name = NestedDataComplexTypeSerde.TYPE_NAME, value = NestedDataDimensionSchema.class),
+    @JsonSubTypes.Type(name = NestedDataComplexTypeSerde.TYPE_NAME, value = NestedDataColumnSchema.class),
     @JsonSubTypes.Type(name = AutoTypeColumnSchema.TYPE, value = AutoTypeColumnSchema.class)
 })
 public abstract class DimensionSchema
@@ -69,7 +70,7 @@ public abstract class DimensionSchema
         return new DoubleDimensionSchema(name);
       default:
         // the auto column indexer can handle any type
-        return new AutoTypeColumnSchema(name);
+        return new AutoTypeColumnSchema(name, null);
     }
   }
 
@@ -110,10 +111,9 @@ public abstract class DimensionSchema
       return name == null ? ofDefault() : valueOf(StringUtils.toUpperCase(name));
     }
 
-    // this can be system configuration
     public static MultiValueHandling ofDefault()
     {
-      return SORTED_ARRAY;
+      return BuiltInTypesModule.getStringMultiValueHandlingMode();
     }
   }
 

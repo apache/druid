@@ -31,7 +31,6 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.DruidProcessingConfig;
-import org.apache.druid.query.QueryCapacityExceededException;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryRunner;
@@ -40,11 +39,11 @@ import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
-import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
-import org.apache.druid.query.groupby.strategy.GroupByStrategyV1;
-import org.apache.druid.query.groupby.strategy.GroupByStrategyV2;
 import org.apache.druid.segment.TestHelper;
+import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -98,26 +97,21 @@ public class GroupByQueryRunnerFailureTest
   )
   {
     final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
-
-    final GroupByStrategySelector strategySelector = new GroupByStrategySelector(
+    final GroupByStatsProvider groupByStatsProvider = new GroupByStatsProvider();
+    final GroupByResourcesReservationPool groupByResourcesReservationPool =
+        new GroupByResourcesReservationPool(MERGE_BUFFER_POOL, config);
+    final GroupingEngine groupingEngine = new GroupingEngine(
+        DEFAULT_PROCESSING_CONFIG,
         configSupplier,
-        new GroupByStrategyV1(
-            configSupplier,
-            new GroupByQueryEngine(configSupplier, BUFFER_POOL),
-            QueryRunnerTestHelper.NOOP_QUERYWATCHER
-        ),
-        new GroupByStrategyV2(
-            DEFAULT_PROCESSING_CONFIG,
-            configSupplier,
-            BUFFER_POOL,
-            MERGE_BUFFER_POOL,
-            TestHelper.makeJsonMapper(),
-            mapper,
-            QueryRunnerTestHelper.NOOP_QUERYWATCHER
-        )
+        groupByResourcesReservationPool,
+        TestHelper.makeJsonMapper(),
+        mapper,
+        QueryRunnerTestHelper.NOOP_QUERYWATCHER,
+        groupByStatsProvider
     );
-    final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(strategySelector);
-    return new GroupByQueryRunnerFactory(strategySelector, toolChest);
+    final GroupByQueryQueryToolChest toolChest =
+        new GroupByQueryQueryToolChest(groupingEngine, groupByResourcesReservationPool);
+    return new GroupByQueryRunnerFactory(groupingEngine, toolChest, BUFFER_POOL);
   }
 
   private static final CloseableStupidPool<ByteBuffer> BUFFER_POOL = new CloseableStupidPool<>(
@@ -133,15 +127,30 @@ public class GroupByQueryRunnerFailureTest
       GroupByQueryRunnerTest.DEFAULT_MAPPER,
       new GroupByQueryConfig()
       {
-        @Override
-        public String getDefaultStrategy()
-        {
-          return "v2";
-        }
       }
   );
 
   private QueryRunner<ResultRow> runner;
+
+  @Before
+  public void setUp()
+  {
+    Assert.assertEquals(
+        "MERGE_BUFFER_POOL size, pre-test",
+        MERGE_BUFFER_POOL.maxSize(),
+        MERGE_BUFFER_POOL.getPoolSize()
+    );
+  }
+
+  @After
+  public void tearDown()
+  {
+    Assert.assertEquals(
+        "MERGE_BUFFER_POOL size, post-test",
+        MERGE_BUFFER_POOL.maxSize(),
+        MERGE_BUFFER_POOL.getPoolSize()
+    );
+  }
 
   @AfterClass
   public static void teardownClass()
@@ -154,7 +163,7 @@ public class GroupByQueryRunnerFailureTest
   public static Collection<Object[]> constructorFeeder()
   {
     final List<Object[]> args = new ArrayList<>();
-    for (QueryRunner<ResultRow> runner : QueryRunnerTestHelper.makeQueryRunners(FACTORY)) {
+    for (QueryRunner<ResultRow> runner : QueryRunnerTestHelper.makeQueryRunners(FACTORY, true)) {
       args.add(new Object[]{runner});
     }
     return args;
@@ -168,8 +177,8 @@ public class GroupByQueryRunnerFailureTest
   @Test(timeout = 60_000L)
   public void testNotEnoughMergeBuffersOnQueryable()
   {
-    expectedException.expect(QueryTimeoutException.class);
-    expectedException.expectMessage("Cannot acquire enough merge buffers");
+    expectedException.expect(ResourceLimitExceededException.class);
+    expectedException.expectMessage("Query needs 2 merge buffers, but only 1 merge buffers were configured");
 
     final GroupByQuery query = GroupByQuery
         .builder()
@@ -256,8 +265,8 @@ public class GroupByQueryRunnerFailureTest
     List<ReferenceCountingResourceHolder<ByteBuffer>> holder = null;
     try {
       holder = MERGE_BUFFER_POOL.takeBatch(1, 10);
-      expectedException.expect(QueryCapacityExceededException.class);
-      expectedException.expectMessage("Cannot acquire 1 merge buffers. Try again after current running queries are finished.");
+      expectedException.expect(ResourceLimitExceededException.class);
+      expectedException.expectMessage("Query needs 2 merge buffers, but only 1 merge buffers were configured");
       GroupByQueryRunnerTestHelper.runQuery(FACTORY, runner, query);
     }
     finally {
@@ -270,15 +279,13 @@ public class GroupByQueryRunnerFailureTest
   @Test(timeout = 60_000L)
   public void testTimeoutExceptionOnQueryable()
   {
-    expectedException.expect(QueryTimeoutException.class);
-
     final GroupByQuery query = GroupByQuery
         .builder()
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
         .setDimensions(new DefaultDimensionSpec("quality", "alias"))
         .setAggregatorSpecs(new LongSumAggregatorFactory("rows", "rows"))
-        .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
+        .setGranularity(Granularities.ALL)
         .overrideContext(ImmutableMap.of(QueryContexts.TIMEOUT_KEY, 1))
         .build();
 
@@ -286,11 +293,6 @@ public class GroupByQueryRunnerFailureTest
         GroupByQueryRunnerTest.DEFAULT_MAPPER,
         new GroupByQueryConfig()
         {
-          @Override
-          public String getDefaultStrategy()
-          {
-            return "v2";
-          }
 
           @Override
           public boolean isSingleThreaded()
@@ -310,6 +312,10 @@ public class GroupByQueryRunnerFailureTest
     };
 
     QueryRunner<ResultRow> mergeRunners = factory.mergeRunners(Execs.directExecutor(), ImmutableList.of(runner, mockRunner));
-    GroupByQueryRunnerTestHelper.runQuery(factory, mergeRunners, query);
+
+    Assert.assertThrows(
+        QueryTimeoutException.class,
+        () -> GroupByQueryRunnerTestHelper.runQuery(factory, mergeRunners, query)
+    );
   }
 }

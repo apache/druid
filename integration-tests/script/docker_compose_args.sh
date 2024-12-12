@@ -16,7 +16,7 @@
 
 set -e
 
-# picks appropriate docker-compose argments to use when bringing up and down integration test clusters
+# picks appropriate docker-compose arguments to use when bringing up and down integration test clusters
 # for a given test group
 getComposeArgs()
 {
@@ -71,6 +71,18 @@ getComposeArgs()
       then
         # default + with override config + schema registry container
         echo "-f ${DOCKERDIR}/docker-compose.yml -f ${DOCKERDIR}/docker-compose.schema-registry.yml"
+  elif [ "$DRUID_INTEGRATION_TEST_GROUP" = "centralized-datasource-schema" ]
+      then
+        # cluster with overriden properties for broker and coordinator
+        echo "-f ${DOCKERDIR}/docker-compose.centralized-datasource-schema.yml"
+  elif [ "$DRUID_INTEGRATION_TEST_GROUP" = "cds-task-schema-publish-disabled" ]
+      then
+        # cluster with overriden properties for broker and coordinator
+        echo "-f ${DOCKERDIR}/docker-compose.cds-task-schema-publish-disabled.yml"
+  elif [ "$DRUID_INTEGRATION_TEST_GROUP" = "cds-coordinator-metadata-query-disabled" ]
+      then
+        # cluster with overriden properties for broker and coordinator
+        echo "-f ${DOCKERDIR}/docker-compose.cds-coordinator-metadata-query-disabled.yml"
   else
     # default
     echo "-f ${DOCKERDIR}/docker-compose.yml"

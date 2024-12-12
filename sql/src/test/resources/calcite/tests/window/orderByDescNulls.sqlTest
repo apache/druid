@@ -1,0 +1,45 @@
+type: "operatorValidation"
+
+sql: |
+    SELECT
+      cityName,
+      __time,
+      ROW_NUMBER() OVER (ORDER BY cityName desc nulls last, __time ) windowedDelta,
+      ROW_NUMBER() OVER (ORDER BY cityName nulls first, __time ) windowedDelta
+    FROM wikipedia
+    where page < '0' and channel like '#en%'
+
+expectedOperators:
+  - type: "naiveSort"
+    columns:
+      - column: "cityName"
+        direction: "DESC"
+      - column: "__time"
+        direction: "ASC"
+  - type: "naivePartition"
+    partitionColumns: [ ]
+  - type: "window"
+    processor:
+      type: "rowNumber"
+      outputColumn: "w0"
+  - type: "naiveSort"
+    columns:
+      - column: "cityName"
+        direction: "ASC"
+      - column: "__time"
+        direction: "ASC"
+  - type: "naivePartition"
+    partitionColumns: [ ]
+  - type: "window"
+    processor:
+      type: "rowNumber"
+      outputColumn: "w1"
+expectedResults:
+  - [null,1442019358364,3,1]
+  - [null,1442021099146,4,2]
+  - [null,1442033539153,5,3]
+  - [null,1442095704125,6,4]
+  - [null,1442096110867,7,5]
+  - [null,1442100368226,8,6]
+  - ["Crescent City",1442035449448,2,7]
+  - ["Vinnytsya",1442100940306,1,8]

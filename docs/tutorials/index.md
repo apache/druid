@@ -1,7 +1,7 @@
 ---
 id: index
-title: "Quickstart (local)"
-sidebar_label: Quickstart (local)
+title: "Local quickstart"
+sidebar_label: Local quickstart
 ---
 
 <!--
@@ -40,7 +40,7 @@ You can follow these steps on a relatively modest machine, such as a workstation
 The software requirements for the installation machine are:
 
 * Linux, Mac OS X, or other Unix-like OS. (Windows is not supported)
-* [Java 8u92+, 11, or 17](../operations/java.md)
+* [Java 11 or 17](../operations/java.md)
 * Python 3 (preferred) or Python 2
 * Perl 5
 
@@ -53,7 +53,7 @@ dedicated user account for running Druid.
 
 ## Install Druid
 
-Download the [{{DRUIDVERSION}} release](https://www.apache.org/dyn/closer.cgi?path=/druid/{{DRUIDVERSION}}/apache-druid-{{DRUIDVERSION}}-bin.tar.gz) from Apache Druid. 
+Download the [{{DRUIDVERSION}} release](https://druid.apache.org/downloads/) from Apache Druid. 
 
 In your terminal, extract the file and change directories to the distribution directory:
 

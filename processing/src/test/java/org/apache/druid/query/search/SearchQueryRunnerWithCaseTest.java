@@ -62,8 +62,9 @@ public class SearchQueryRunnerWithCaseTest extends InitializedNullHandlingTest
     configs[0].setSearchStrategy(UseIndexesStrategy.NAME);
     configs[1] = new SearchQueryConfig();
     configs[1].setSearchStrategy(CursorOnlyStrategy.NAME);
+    // test auto to ensure that it doesn't explode
     configs[2] = new SearchQueryConfig();
-    configs[2].setSearchStrategy(AutoStrategy.NAME);
+    configs[2].setSearchStrategy("auto");
 
     CharSource input = CharSource.wrap(
         "2011-01-12T00:00:00.000Z\tspot\tAutoMotive\t1000\t10000.0\t10000.0\t100000\t10\t10.0\t10.0\tPREFERRED\ta\u0001preferred\t100.000000\n" +
@@ -72,11 +73,11 @@ public class SearchQueryRunnerWithCaseTest extends InitializedNullHandlingTest
         "2011-01-13T00:00:00.000Z\tspot\tautomotive\t1000\t10000.0\t10000.0\t100000\t10\t10.0\t10.0\tpreferred\ta\u0001preferred\t94.874713"
     );
 
-    IncrementalIndex index1 = TestIndex.makeRealtimeIndex(input);
-    IncrementalIndex index2 = TestIndex.makeRealtimeIndex(input);
+    IncrementalIndex index1 = TestIndex.makeIncrementalIndexFromTsvCharSource(input);
+    IncrementalIndex index2 = TestIndex.makeIncrementalIndexFromTsvCharSource(input);
 
-    QueryableIndex index3 = TestIndex.persistRealtimeAndLoadMMapped(index1);
-    QueryableIndex index4 = TestIndex.persistRealtimeAndLoadMMapped(index2);
+    QueryableIndex index3 = TestIndex.persistAndMemoryMap(index1);
+    QueryableIndex index4 = TestIndex.persistAndMemoryMap(index2);
 
     final List<QueryRunner<Result<SearchResultValue>>> runners = new ArrayList<>();
     for (SearchQueryConfig config : configs) {

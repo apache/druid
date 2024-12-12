@@ -1,0 +1,4 @@
+{
+  "runnerStrategy.type": "worker",
+  "runnerStrategy.workerType": "remote"
+}

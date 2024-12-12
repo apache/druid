@@ -20,6 +20,8 @@
 package org.apache.druid.data.input;
 
 import org.apache.druid.data.input.impl.InputEntityIteratingReader;
+import org.apache.druid.data.input.impl.systemfield.SystemFieldDecoratorFactory;
+import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.utils.CompressionUtils;
 
 import javax.annotation.Nullable;
@@ -72,7 +74,10 @@ public class ResourceInputSource extends AbstractInputSource
     return new InputEntityIteratingReader(
         inputRowSchema,
         inputFormat,
-        Collections.singletonList(new ResourceStreamEntity(classLoader, resourceFile)).iterator(),
+        CloseableIterators.withEmptyBaggage(
+            Collections.singletonList(new ResourceStreamEntity(classLoader, resourceFile)).iterator()
+        ),
+        SystemFieldDecoratorFactory.NONE,
         temporaryDirectory
     );
   }

@@ -1,0 +1,70 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`ExecutionSubmitDialog matches snapshot 1`] = `
+<Blueprint5.Dialog
+  backdropProps={
+    {
+      "onDragLeave": [Function],
+      "onDragOver": [Function],
+      "onDrop": [Function],
+    }
+  }
+  canOutsideClickClose={false}
+  className="execution-submit-dialog"
+  isOpen={true}
+  onClose={[Function]}
+  title="Load query detail archive"
+>
+  <div
+    className="bp5-dialog-body"
+  >
+    <p>
+      You can load query detail archive files from other Druid clusters to render the query detail here.
+    </p>
+    <p>
+      To download the query detail archive for a query, click on the query in the
+       
+      <ForwardRef>
+        Recent query tasks
+      </ForwardRef>
+       panel in the query view.
+    </p>
+    <Blueprint5.FormGroup
+      label="Select query detail archive file"
+    >
+      <Blueprint5.FileInput
+        fill={true}
+        hasSelection={false}
+        inputProps={
+          {
+            "accept": ".json",
+          }
+        }
+        onInputChange={[Function]}
+        text="Choose file..."
+      />
+    </Blueprint5.FormGroup>
+    <p>
+      Alternatively, drag a file directly onto this dialog.
+    </p>
+  </div>
+  <div
+    className="bp5-dialog-footer"
+  >
+    <div
+      className="bp5-dialog-footer-actions"
+    >
+      <Blueprint5.Button
+        onClick={[Function]}
+        text="Close"
+      />
+      <Blueprint5.Button
+        disabled={true}
+        intent="primary"
+        onClick={[Function]}
+        text="Submit"
+      />
+    </div>
+  </div>
+</Blueprint5.Dialog>
+`;

@@ -16,8 +16,6 @@
  * limitations under the License.
  */
 
-import React from 'react';
-
 import type { Field } from '../../components';
 import { ExternalLink } from '../../components';
 import { getLink } from '../../links';
@@ -57,7 +55,10 @@ export const FLATTEN_FIELD_FIELDS: Field<FlattenField>[] = [
     info: (
       <>
         Specify a flatten{' '}
-        <ExternalLink href={`${getLink('DOCS')}/ingestion/flatten-json`}>expression</ExternalLink>.
+        <ExternalLink href={`${getLink('DOCS')}/ingestion/data-formats#flattenspec`}>
+          expression
+        </ExternalLink>
+        .
       </>
     ),
   },

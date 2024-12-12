@@ -19,9 +19,9 @@
 
 package org.apache.druid.query.dimension;
 
-import com.google.common.base.Predicate;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
+import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.AbstractDimensionSelector;
@@ -108,9 +108,9 @@ public class StringDimensionSelectorForTest extends AbstractDimensionSelector
   }
 
   @Override
-  public ValueMatcher makeValueMatcher(Predicate<String> predicate)
+  public ValueMatcher makeValueMatcher(DruidPredicateFactory predicateFactory)
   {
-    return DimensionSelectorUtils.makeValueMatcherGeneric(this, predicate);
+    return DimensionSelectorUtils.makeValueMatcherGeneric(this, predicateFactory);
   }
 
   @Override

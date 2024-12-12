@@ -26,6 +26,7 @@ import org.apache.druid.segment.column.ComplexColumn;
 import org.apache.druid.segment.serde.cell.ByteBufferProvider;
 import org.apache.druid.segment.serde.cell.CellReader;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -64,6 +65,7 @@ public class SerializablePairLongStringComplexColumn implements ComplexColumn
 
   @SuppressWarnings("ConstantConditions")
   @Override
+  @Nullable
   public Object getRowValue(int rowNum)
   {
     // This can return nulls, meaning that it is expected that anything reading from this does
@@ -101,7 +103,7 @@ public class SerializablePairLongStringComplexColumn implements ComplexColumn
       serializedSize = masterByteBuffer.remaining();
 
       SerializablePairLongStringColumnHeader columnHeader =
-          SerializablePairLongStringColumnHeader.fromBuffer(masterByteBuffer);
+          (SerializablePairLongStringColumnHeader) AbstractSerializablePairLongObjectColumnHeader.fromBuffer(masterByteBuffer, SerializablePairLongString.class);
 
       Preconditions.checkArgument(
           columnHeader.getVersion() == SerializablePairLongStringComplexMetricSerde.EXPECTED_VERSION,

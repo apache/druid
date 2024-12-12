@@ -30,7 +30,7 @@ mvn -B -ff -q dependency:go-offline \
       install \
       -Pdist,bundle-contrib-exts \
       -Pskip-static-checks,skip-tests \
-      -Dmaven.javadoc.skip=true
+      -Dmaven.javadoc.skip=true -T1C
 
 DOCKER_BUILDKIT=1 docker build --build-arg BUILD_FROM_SOURCE=0 -t druid/base:v1 -f distribution/docker/Dockerfile .
 DOCKER_BUILDKIT=1 docker build --build-arg BASE_IMAGE=druid/base:v1 -t druid/cluster:v1 -f distribution/docker/DockerfileBuildTarAdvanced .

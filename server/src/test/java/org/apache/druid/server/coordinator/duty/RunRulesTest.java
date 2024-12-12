@@ -33,7 +33,6 @@ import org.apache.druid.java.util.emitter.core.EventMap;
 import org.apache.druid.java.util.emitter.service.AlertEvent;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.metadata.MetadataRuleManager;
-import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
@@ -83,7 +82,6 @@ public class RunRulesTest
   private RunRules ruleRunner;
   private StubServiceEmitter emitter;
   private MetadataRuleManager databaseRuleManager;
-  private SegmentsMetadataManager segmentsMetadataManager;
   private SegmentLoadQueueManager loadQueueManager;
   private final List<DataSegment> usedSegments =
       CreateDataSegments.ofDatasource(DATASOURCE)
@@ -101,9 +99,8 @@ public class RunRulesTest
     emitter = new StubServiceEmitter("coordinator", "host");
     EmittingLogger.registerEmitter(emitter);
     databaseRuleManager = EasyMock.createMock(MetadataRuleManager.class);
-    segmentsMetadataManager = EasyMock.createNiceMock(SegmentsMetadataManager.class);
-    ruleRunner = new RunRules(Set::size);
-    loadQueueManager = new SegmentLoadQueueManager(null, segmentsMetadataManager, null);
+    ruleRunner = new RunRules(Set::size, databaseRuleManager::getRulesWithDefault);
+    loadQueueManager = new SegmentLoadQueueManager(null, null);
     balancerExecutor = MoreExecutors.listeningDecorator(Execs.multiThreaded(1, "RunRulesTest-%d"));
   }
 
@@ -117,7 +114,7 @@ public class RunRulesTest
   /**
    * Nodes:
    * normal - 2 replicants
-   * maxNonPrimaryReplicantsToLoad - 10
+   * replicationThrottleLimit - 10
    * Expect only 34 segments to be loaded despite there being 48 primary + non-primary replicants to load!
    */
   @Test
@@ -155,7 +152,7 @@ public class RunRulesTest
         .withDynamicConfigs(
             CoordinatorDynamicConfig
                 .builder()
-                .withMaxNonPrimaryReplicantsToLoad(10)
+                .withReplicationThrottleLimit(10)
                 .withSmartSegmentLoading(false)
                 .build()
         )
@@ -174,7 +171,7 @@ public class RunRulesTest
    * Nodes:
    * normal - 2 replicants
    * hot - 2 replicants
-   * maxNonPrimaryReplicantsToLoad - 48
+   * replicationThrottleLimit - 48
    * Expect only 72 segments to be loaded despite there being 96 primary + non-primary replicants to load!
    */
   @Test
@@ -219,7 +216,7 @@ public class RunRulesTest
         .withBalancerStrategy(new CostBalancerStrategy(balancerExecutor))
         .withDynamicConfigs(
             CoordinatorDynamicConfig.builder()
-                                    .withMaxNonPrimaryReplicantsToLoad(10)
+                                    .withReplicationThrottleLimit(10)
                                     .withSmartSegmentLoading(false)
                                     .build()
         )
@@ -228,7 +225,6 @@ public class RunRulesTest
 
     CoordinatorRunStats stats = runDutyAndGetStats(params);
 
-    // maxNonPrimaryReplicantsToLoad takes effect on hot tier, but not normal tier
     Assert.assertEquals(10L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "hot", DATASOURCE));
     Assert.assertEquals(48L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "normal", DATASOURCE));
 
@@ -338,10 +334,9 @@ public class RunRulesTest
   )
   {
     return DruidCoordinatorRuntimeParams
-        .newBuilder(DateTimes.nowUtc().minusDays(1))
+        .builder()
         .withDruidCluster(druidCluster)
-        .withUsedSegmentsInTest(dataSegments)
-        .withDatabaseRuleManager(databaseRuleManager);
+        .withUsedSegments(dataSegments);
   }
 
   /**
@@ -535,10 +530,6 @@ public class RunRulesTest
     EasyMock.expectLastCall().atLeastOnce();
     mockEmptyPeon();
 
-    EasyMock.expect(segmentsMetadataManager.markSegmentAsUnused(EasyMock.anyObject()))
-            .andReturn(true).anyTimes();
-    EasyMock.replay(segmentsMetadataManager);
-
     EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.anyObject())).andReturn(
         Lists.newArrayList(
             new IntervalLoadRule(
@@ -587,7 +578,7 @@ public class RunRulesTest
             new IntervalDropRule(Intervals.of("2012-01-01T00:00:00.000Z/2012-01-02T00:00:00.000Z"))
         )
     ).atLeastOnce();
-    EasyMock.replay(databaseRuleManager, segmentsMetadataManager);
+    EasyMock.replay(databaseRuleManager);
 
     DruidServer server1 = createHistorical("serverNorm", "normal");
     server1.addDataSegment(usedSegments.get(0));
@@ -644,7 +635,7 @@ public class RunRulesTest
             new IntervalDropRule(Intervals.of("2012-01-01T00:00:00.000Z/2012-01-02T00:00:00.000Z"))
         )
     ).atLeastOnce();
-    EasyMock.replay(databaseRuleManager, segmentsMetadataManager);
+    EasyMock.replay(databaseRuleManager);
 
     DruidServer server1 = createHistorical("server1", "hot");
     server1.addDataSegment(usedSegments.get(0));
@@ -688,7 +679,7 @@ public class RunRulesTest
             new IntervalDropRule(Intervals.of("2012-01-01T00:00:00.000Z/2012-01-02T00:00:00.000Z"))
         )
     ).atLeastOnce();
-    EasyMock.replay(databaseRuleManager, segmentsMetadataManager);
+    EasyMock.replay(databaseRuleManager);
 
     DruidServer server1 = createHistorical("server1", "hot");
     DruidServer server2 = createHistorical("serverNorm2", "normal");
@@ -837,7 +828,7 @@ public class RunRulesTest
 
     stats = runDutyAndGetStats(
         createCoordinatorRuntimeParams(druidCluster)
-            .withUsedSegmentsInTest(overFlowSegment)
+            .withUsedSegments(overFlowSegment)
             .withBalancerStrategy(balancerStrategy)
             .withSegmentAssignerUsing(loadQueueManager)
             .build()
@@ -856,9 +847,6 @@ public class RunRulesTest
   @Test
   public void testReplicantThrottleAcrossTiers()
   {
-    EasyMock.expect(segmentsMetadataManager.markSegmentAsUnused(EasyMock.anyObject()))
-            .andReturn(true).anyTimes();
-    EasyMock.replay(segmentsMetadataManager);
     mockPeon.loadSegment(EasyMock.anyObject(), EasyMock.anyObject(), EasyMock.anyObject());
     EasyMock.expectLastCall().atLeastOnce();
     mockEmptyPeon();
@@ -960,7 +948,7 @@ public class RunRulesTest
                     .build();
 
     DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
-        .withUsedSegmentsInTest(longerUsedSegments)
+        .withUsedSegments(longerUsedSegments)
         .withBalancerStrategy(new CostBalancerStrategy(balancerExecutor))
         .withSegmentAssignerUsing(loadQueueManager)
         .build();
@@ -1014,7 +1002,7 @@ public class RunRulesTest
     ).build();
 
     DruidCoordinatorRuntimeParams params = createCoordinatorRuntimeParams(druidCluster)
-        .withUsedSegmentsInTest(usedSegments)
+        .withUsedSegments(usedSegments)
         .withBalancerStrategy(new CostBalancerStrategy(balancerExecutor))
         .withDynamicConfigs(CoordinatorDynamicConfig.builder().withMaxSegmentsToMove(5).build())
         .withSegmentAssignerUsing(loadQueueManager)
@@ -1025,7 +1013,7 @@ public class RunRulesTest
     Assert.assertFalse(stats.hasStat(Stats.Segments.DROPPED));
 
     Assert.assertEquals(2, usedSegments.size());
-    Assert.assertEquals(usedSegments, params.getUsedSegments());
+    Assert.assertEquals(usedSegments, params.getUsedSegmentsNewestFirst());
 
     EasyMock.verify(mockPeon);
   }

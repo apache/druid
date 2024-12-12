@@ -403,9 +403,9 @@ class OvershadowableManager<T extends Overshadowable<T>>
       TreeMap<RootPartitionRange, Short2ObjectSortedMap<AtomicUpdateGroup<T>>> stateMap
   )
   {
-    final RootPartitionRange lowFench = new RootPartitionRange((short) 0, (short) 0);
+    final RootPartitionRange lowFence = new RootPartitionRange((short) 0, (short) 0);
     final RootPartitionRange highFence = new RootPartitionRange(partitionId, partitionId);
-    return stateMap.subMap(lowFench, false, highFence, false).descendingMap().entrySet().iterator();
+    return stateMap.subMap(lowFence, false, highFence, false).descendingMap().entrySet().iterator();
   }
 
   /**
@@ -418,9 +418,14 @@ class OvershadowableManager<T extends Overshadowable<T>>
       TreeMap<RootPartitionRange, Short2ObjectSortedMap<AtomicUpdateGroup<T>>> stateMap
   )
   {
-    final RootPartitionRange lowFench = new RootPartitionRange(partitionId, partitionId);
+    final RootPartitionRange lowFence = new RootPartitionRange(partitionId, partitionId);
     final RootPartitionRange highFence = new RootPartitionRange(Short.MAX_VALUE, Short.MAX_VALUE);
-    return stateMap.subMap(lowFench, false, highFence, false).entrySet().iterator();
+    if (lowFence.compareTo(highFence) > 0) {
+      throw new ISE("PartitionId[%d] must be in the range [0, 32767]. "
+                    + "Try compacting the interval to reduce the segment count.", Short.toUnsignedInt(partitionId));
+    } else {
+      return stateMap.subMap(lowFence, false, highFence, false).entrySet().iterator();
+    }
   }
 
   /**

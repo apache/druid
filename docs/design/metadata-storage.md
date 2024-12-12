@@ -38,22 +38,16 @@ Derby is the default metadata store for Druid, however, it is not suitable for p
 [MySQL](../development/extensions-core/mysql.md) and [PostgreSQL](../development/extensions-core/postgresql.md) are more production suitable metadata stores.
 See [Metadata storage configuration](../configuration/index.md#metadata-storage) for the default configuration settings.
 
-> We also recommend you set up a high availability environment because there is no way to restore lost metadata.
+:::info
+ We also recommend you set up a high availability environment because there is no way to restore lost metadata.
+:::
 
 ## Available metadata stores
 
-Druid supports Derby, MySQL, and PostgreSQL for storing metadata. 
+Druid supports Derby, MySQL, and PostgreSQL for storing metadata. Note that your metadata store must be ACID-compliant. If it isn't ACID-compliant, you can encounter issues, such as tasks failing sporadically.
 
-### Derby
-
-> For production clusters, consider using MySQL or PostgreSQL instead of Derby.
-
-Configure metadata storage with Derby by setting the following properties in your Druid configuration.
-
-```properties
-druid.metadata.storage.type=derby
-druid.metadata.storage.connector.connectURI=jdbc:derby://localhost:1527//opt/var/druid_state/derby;create=true
-```
+To avoid issues with upgrades that require schema changes to a large metadata table, consider a metadata store version that supports instant ADD COLUMN semantics.
+See the database-specific docs for guidance on versions.
 
 ### MySQL
 
@@ -62,6 +56,20 @@ See [mysql-metadata-storage extension documentation](../development/extensions-c
 ### PostgreSQL
 
 See [postgresql-metadata-storage](../development/extensions-core/postgresql.md).
+
+
+### Derby
+
+:::info
+ For production clusters, consider using MySQL or PostgreSQL instead of Derby.
+:::
+
+Configure metadata storage with Derby by setting the following properties in your Druid configuration.
+
+```properties
+druid.metadata.storage.type=derby
+druid.metadata.storage.connector.connectURI=jdbc:derby://localhost:1527//opt/var/druid_state/derby;create=true
+```
 
 ## Adding custom DBCP properties
 
@@ -99,7 +107,9 @@ system. The table has two main functional columns, the other columns are for ind
 Value 1 in the `used` column means that the segment should be "used" by the cluster (i.e., it should be loaded and
 available for requests). Value 0 means that the segment should not be loaded into the cluster. We do this as a means of
 unloading segments from the cluster without actually removing their metadata (which allows for simpler rolling back if
-that is ever an issue).
+that is ever an issue). The `used` column has a corresponding `used_status_last_updated` column which denotes the time
+when the `used` status of the segment was last updated. This information can be used by the Coordinator to determine if
+a segment is a candidate for deletion (if automated segment killing is enabled).
 
 The `payload` column stores a JSON blob that has all of the metadata for the segment.
 Some of the data in the `payload` column intentionally duplicates data from other columns in the segments table.
@@ -139,7 +149,7 @@ parameters across the cluster at runtime.
 
 ### Task-related tables
 
-Task-related tables are created and used by the [Overlord](../design/overlord.md) and [MiddleManager](../design/middlemanager.md) when managing tasks.
+Task-related tables are created and used by the [Overlord](../design/overlord.md) and [Middle Manager](../design/middlemanager.md) when managing tasks.
 
 ### Audit table
 

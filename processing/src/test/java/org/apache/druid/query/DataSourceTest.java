@@ -89,7 +89,7 @@ public class DataSourceTest
     Assert.assertTrue(dataSource instanceof UnionDataSource);
     Assert.assertEquals(
         Lists.newArrayList(new TableDataSource("ds1"), new TableDataSource("ds2")),
-        Lists.newArrayList(((UnionDataSource) dataSource).getDataSources())
+        Lists.newArrayList(((UnionDataSource) dataSource).getDataSourcesAsTableDataSources())
     );
     Assert.assertEquals(
         ImmutableSet.of("ds1", "ds2"),

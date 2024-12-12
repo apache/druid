@@ -213,22 +213,6 @@ public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public List<AggregatorFactory> getRequiredColumns()
-  {
-    return Collections.singletonList(
-        new ApproximateHistogramAggregatorFactory(
-            fieldName,
-            fieldName,
-            resolution,
-            numBuckets,
-            lowerLimit,
-            upperLimit,
-            finalizeAsBase64Binary
-        )
-    );
-  }
-
-  @Override
   public Object deserialize(Object object)
   {
     if (object instanceof byte[]) {

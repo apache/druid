@@ -28,6 +28,7 @@ import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
+import org.apache.druid.query.aggregation.FloatSumAggregator;
 import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.BaseFloatColumnValueSelector;
@@ -47,8 +48,6 @@ import java.util.Objects;
 
 public class FloatAnyAggregatorFactory extends AggregatorFactory
 {
-  private static final Comparator<Float> VALUE_COMPARATOR = Comparator.nullsFirst(Float::compare);
-
   private static final Aggregator NIL_AGGREGATOR = new FloatAnyAggregator(
       NilColumnValueSelector.instance()
   )
@@ -120,7 +119,7 @@ public class FloatAnyAggregatorFactory extends AggregatorFactory
     if (capabilities == null || capabilities.isNumeric()) {
       return new FloatAnyVectorAggregator(selectorFactory.makeValueSelector(fieldName));
     } else {
-      return NumericNilVectorAggregator.floatNilVectorAggregator();
+      return NilVectorAggregator.floatNilVectorAggregator();
     }
   }
 
@@ -133,7 +132,7 @@ public class FloatAnyAggregatorFactory extends AggregatorFactory
   @Override
   public Comparator getComparator()
   {
-    return VALUE_COMPARATOR;
+    return FloatSumAggregator.COMPARATOR;
   }
 
   @Override
@@ -154,12 +153,6 @@ public class FloatAnyAggregatorFactory extends AggregatorFactory
   public AggregatorFactory getCombiningFactory()
   {
     return new FloatAnyAggregatorFactory(name, name);
-  }
-
-  @Override
-  public List<AggregatorFactory> getRequiredColumns()
-  {
-    return Collections.singletonList(new FloatAnyAggregatorFactory(fieldName, fieldName));
   }
 
   @Override

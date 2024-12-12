@@ -22,6 +22,7 @@ package org.apache.druid.msq.util;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.common.guava.FutureUtils;
 
 import javax.annotation.Nullable;
@@ -61,7 +62,8 @@ public class MSQFutureUtils
                 inputFuture.cancel(true);
               }
             }
-          }
+          },
+          MoreExecutors.directExecutor()
       );
     }
 

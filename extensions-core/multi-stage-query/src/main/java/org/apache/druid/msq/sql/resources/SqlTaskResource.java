@@ -26,15 +26,15 @@ import com.google.inject.Inject;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.ErrorResponse;
 import org.apache.druid.error.QueryExceptionCompat;
-import org.apache.druid.guice.annotations.MSQ;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.msq.guice.MultiStageQuery;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
-import org.apache.druid.msq.sql.SqlTaskStatus;
 import org.apache.druid.query.QueryException;
+import org.apache.druid.query.http.SqlTaskStatus;
 import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.security.Access;
@@ -60,7 +60,6 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.StreamingOutput;
 import java.io.IOException;
-import java.util.Collections;
 
 /**
  * Endpoint for SQL execution using MSQ tasks.
@@ -87,7 +86,7 @@ public class SqlTaskResource
 
   @Inject
   public SqlTaskResource(
-      final @MSQ SqlStatementFactory sqlStatementFactory,
+      final @MultiStageQuery SqlStatementFactory sqlStatementFactory,
       final ServerConfig serverConfig,
       final AuthorizerMapper authorizerMapper,
       final ObjectMapper jsonMapper
@@ -108,17 +107,7 @@ public class SqlTaskResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response doGetEnabled(@Context final HttpServletRequest request)
   {
-    // All authenticated users are authorized for this API: check an empty resource list.
-    final Access authResult = AuthorizationUtils.authorizeAllResourceActions(
-        request,
-        Collections.emptyList(),
-        authorizerMapper
-    );
-
-    if (!authResult.isAllowed()) {
-      throw new ForbiddenException(authResult.toString());
-    }
-
+    AuthorizationUtils.setRequestAuthorizationAttributeIfNeeded(request);
     return Response.ok(ImmutableMap.of("enabled", true)).build();
   }
 
@@ -181,7 +170,7 @@ public class SqlTaskResource
           sqlQueryId,
           DruidException.forPersona(DruidException.Persona.DEVELOPER)
                         .ofCategory(DruidException.Category.UNCATEGORIZED)
-                        .build(e.getMessage())
+                        .build("%s", e.getMessage())
       );
     }
     finally {

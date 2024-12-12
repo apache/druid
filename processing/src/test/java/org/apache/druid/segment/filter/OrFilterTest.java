@@ -38,8 +38,8 @@ import org.apache.druid.query.filter.NotDimFilter;
 import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.filter.TrueDimFilter;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.IndexBuilder;
-import org.apache.druid.segment.StorageAdapter;
 import org.junit.AfterClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -73,7 +73,7 @@ public class OrFilterTest extends BaseFilterTest
   public OrFilterTest(
       String testName,
       IndexBuilder indexBuilder,
-      Function<IndexBuilder, Pair<StorageAdapter, Closeable>> finisher,
+      Function<IndexBuilder, Pair<CursorFactory, Closeable>> finisher,
       boolean cnf,
       boolean optimize
   )
@@ -259,7 +259,7 @@ public class OrFilterTest extends BaseFilterTest
   @Test
   public void testEquals()
   {
-    EqualsVerifier.forClass(OrDimFilter.class).usingGetClass().withIgnoredFields("cachedOptimizedFilter").verify();
+    EqualsVerifier.forClass(OrDimFilter.class).usingGetClass().withIgnoredFields("optimizedFilterIncludeUnknown", "optimizedFilterNoIncludeUnknown").verify();
     EqualsVerifier.forClass(OrFilter.class).usingGetClass().withNonnullFields("filters").verify();
   }
 }

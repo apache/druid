@@ -1,7 +1,7 @@
 ---
 id: tutorial-jdbc
 title: Use the JDBC driver to query Druid
-sidebar_label: JDBC connector
+sidebar_label: JDBC connector tutorial
 ---
 
 <!--

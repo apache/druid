@@ -21,12 +21,20 @@ package org.apache.druid.frame.field;
 
 import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.frame.key.KeyOrder;
+import org.apache.druid.frame.write.FrameWriterTestData;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.extraction.SubstringDimExtractionFn;
+import org.apache.druid.query.filter.DruidObjectPredicate;
+import org.apache.druid.query.filter.StringPredicateDruidPredicateFactory;
+import org.apache.druid.query.rowsandcols.MapOfColumnsRowsAndColumns;
+import org.apache.druid.query.rowsandcols.column.ColumnAccessor;
+import org.apache.druid.query.rowsandcols.concrete.RowBasedFrameRowsAndColumnsTest;
 import org.apache.druid.segment.BaseDoubleColumnValueSelector;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.DimensionSelector;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.After;
@@ -40,6 +48,7 @@ import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 import org.mockito.quality.Strictness;
 
+import java.util.List;
 import java.util.Objects;
 
 public class DoubleFieldReaderTest extends InitializedNullHandlingTest
@@ -59,7 +68,7 @@ public class DoubleFieldReaderTest extends InitializedNullHandlingTest
   public void setUp()
   {
     memory = WritableMemory.allocate(1000);
-    fieldWriter = new DoubleFieldWriter(writeSelector);
+    fieldWriter = DoubleFieldWriter.forPrimitive(writeSelector);
   }
 
   @After
@@ -72,14 +81,14 @@ public class DoubleFieldReaderTest extends InitializedNullHandlingTest
   public void test_isNull_defaultOrNull()
   {
     writeToMemory(NullHandling.defaultDoubleValue());
-    Assert.assertEquals(NullHandling.sqlCompatible(), new DoubleFieldReader().isNull(memory, MEMORY_POSITION));
+    Assert.assertEquals(NullHandling.sqlCompatible(), DoubleFieldReader.forPrimitive().isNull(memory, MEMORY_POSITION));
   }
 
   @Test
   public void test_isNull_aValue()
   {
     writeToMemory(5.1d);
-    Assert.assertFalse(new DoubleFieldReader().isNull(memory, MEMORY_POSITION));
+    Assert.assertFalse(DoubleFieldReader.forPrimitive().isNull(memory, MEMORY_POSITION));
   }
 
   @Test
@@ -88,7 +97,7 @@ public class DoubleFieldReaderTest extends InitializedNullHandlingTest
     writeToMemory(NullHandling.defaultDoubleValue());
 
     final ColumnValueSelector<?> readSelector =
-        new DoubleFieldReader().makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION));
+        DoubleFieldReader.forPrimitive().makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION, -1));
 
     Assert.assertEquals(!NullHandling.replaceWithDefault(), readSelector.isNull());
 
@@ -103,7 +112,7 @@ public class DoubleFieldReaderTest extends InitializedNullHandlingTest
     writeToMemory(5.1d);
 
     final ColumnValueSelector<?> readSelector =
-        new DoubleFieldReader().makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION));
+        DoubleFieldReader.forPrimitive().makeColumnValueSelector(memory, new ConstantFieldPointer(MEMORY_POSITION, -1));
 
     Assert.assertEquals(5.1d, readSelector.getObject());
   }
@@ -114,7 +123,8 @@ public class DoubleFieldReaderTest extends InitializedNullHandlingTest
     writeToMemory(NullHandling.defaultDoubleValue());
 
     final DimensionSelector readSelector =
-        new DoubleFieldReader().makeDimensionSelector(memory, new ConstantFieldPointer(MEMORY_POSITION), null);
+        DoubleFieldReader.forPrimitive()
+                         .makeDimensionSelector(memory, new ConstantFieldPointer(MEMORY_POSITION, -1), null);
 
     // Data retrieval tests.
     final IndexedInts row = readSelector.getRow();
@@ -130,15 +140,36 @@ public class DoubleFieldReaderTest extends InitializedNullHandlingTest
 
     // Value matcher tests.
     if (NullHandling.replaceWithDefault()) {
-      Assert.assertTrue(readSelector.makeValueMatcher("0.0").matches());
-      Assert.assertFalse(readSelector.makeValueMatcher((String) null).matches());
-      Assert.assertTrue(readSelector.makeValueMatcher("0.0"::equals).matches());
-      Assert.assertFalse(readSelector.makeValueMatcher(Objects::isNull).matches());
+      Assert.assertTrue(readSelector.makeValueMatcher("0.0").matches(false));
+      Assert.assertFalse(readSelector.makeValueMatcher((String) null).matches(false));
+      Assert.assertTrue(readSelector.makeValueMatcher(StringPredicateDruidPredicateFactory.equalTo("0.0")).matches(false));
+      Assert.assertFalse(readSelector.makeValueMatcher(StringPredicateDruidPredicateFactory.of(DruidObjectPredicate.isNull())).matches(false));
     } else {
-      Assert.assertFalse(readSelector.makeValueMatcher("0.0").matches());
-      Assert.assertTrue(readSelector.makeValueMatcher((String) null).matches());
-      Assert.assertFalse(readSelector.makeValueMatcher("0.0"::equals).matches());
-      Assert.assertTrue(readSelector.makeValueMatcher(Objects::isNull).matches());
+      Assert.assertFalse(readSelector.makeValueMatcher("0.0").matches(false));
+      Assert.assertTrue(readSelector.makeValueMatcher((String) null).matches(false));
+      Assert.assertFalse(readSelector.makeValueMatcher(StringPredicateDruidPredicateFactory.equalTo("0.0")).matches(false));
+      Assert.assertTrue(readSelector.makeValueMatcher(StringPredicateDruidPredicateFactory.of(DruidObjectPredicate.isNull())).matches(false));
+    }
+  }
+
+  @Test
+  public void testCompareRows()
+  {
+    final List<Double> rows = FrameWriterTestData.TEST_DOUBLES.getData(KeyOrder.ASCENDING);
+
+    final ColumnAccessor accessor =
+        RowBasedFrameRowsAndColumnsTest.MAKER.apply(
+            MapOfColumnsRowsAndColumns.builder()
+                                      .add("dim1", rows.toArray(), ColumnType.DOUBLE)
+                                      .build()
+        ).findColumn("dim1").toAccessor();
+
+    for (int i = 1; i < rows.size(); i++) {
+      if (Objects.equals(accessor.getObject(i - 1), accessor.getObject(i))) {
+        Assert.assertEquals(0, accessor.compareRows(i - 1, i));
+      } else {
+        Assert.assertTrue(accessor.compareRows(i - 1, i) < 0);
+      }
     }
   }
 
@@ -148,7 +179,8 @@ public class DoubleFieldReaderTest extends InitializedNullHandlingTest
     writeToMemory(5.1d);
 
     final DimensionSelector readSelector =
-        new DoubleFieldReader().makeDimensionSelector(memory, new ConstantFieldPointer(MEMORY_POSITION), null);
+        DoubleFieldReader.forPrimitive()
+                         .makeDimensionSelector(memory, new ConstantFieldPointer(MEMORY_POSITION, -1), null);
 
     // Data retrieval tests.
     final IndexedInts row = readSelector.getRow();
@@ -163,10 +195,10 @@ public class DoubleFieldReaderTest extends InitializedNullHandlingTest
     Assert.assertNull(readSelector.idLookup());
 
     // Value matcher tests.
-    Assert.assertTrue(readSelector.makeValueMatcher("5.1").matches());
-    Assert.assertFalse(readSelector.makeValueMatcher("5").matches());
-    Assert.assertTrue(readSelector.makeValueMatcher("5.1"::equals).matches());
-    Assert.assertFalse(readSelector.makeValueMatcher("5"::equals).matches());
+    Assert.assertTrue(readSelector.makeValueMatcher("5.1").matches(false));
+    Assert.assertFalse(readSelector.makeValueMatcher("5").matches(false));
+    Assert.assertTrue(readSelector.makeValueMatcher(StringPredicateDruidPredicateFactory.equalTo("5.1")).matches(false));
+    Assert.assertFalse(readSelector.makeValueMatcher(StringPredicateDruidPredicateFactory.equalTo("5")).matches(false));
   }
 
   @Test
@@ -175,9 +207,9 @@ public class DoubleFieldReaderTest extends InitializedNullHandlingTest
     writeToMemory(20.5d);
 
     final DimensionSelector readSelector =
-        new DoubleFieldReader().makeDimensionSelector(
+        DoubleFieldReader.forPrimitive().makeDimensionSelector(
             memory,
-            new ConstantFieldPointer(MEMORY_POSITION),
+            new ConstantFieldPointer(MEMORY_POSITION, -1),
             new SubstringDimExtractionFn(1, null)
         );
 
@@ -194,10 +226,10 @@ public class DoubleFieldReaderTest extends InitializedNullHandlingTest
     Assert.assertNull(readSelector.idLookup());
 
     // Value matcher tests.
-    Assert.assertTrue(readSelector.makeValueMatcher("0.5").matches());
-    Assert.assertFalse(readSelector.makeValueMatcher("2").matches());
-    Assert.assertTrue(readSelector.makeValueMatcher("0.5"::equals).matches());
-    Assert.assertFalse(readSelector.makeValueMatcher("2"::equals).matches());
+    Assert.assertTrue(readSelector.makeValueMatcher("0.5").matches(false));
+    Assert.assertFalse(readSelector.makeValueMatcher("2").matches(false));
+    Assert.assertTrue(readSelector.makeValueMatcher(StringPredicateDruidPredicateFactory.equalTo("0.5")).matches(false));
+    Assert.assertFalse(readSelector.makeValueMatcher(StringPredicateDruidPredicateFactory.equalTo("2")).matches(false));
   }
 
   private void writeToMemory(final Double value)

@@ -29,7 +29,6 @@ import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.segment.QueryableIndex;
@@ -38,6 +37,7 @@ import org.apache.druid.segment.generator.GeneratorSchemaInfo;
 import org.apache.druid.segment.generator.SegmentGenerator;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.QueryStackTests;
+import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
@@ -49,7 +49,7 @@ import org.apache.druid.sql.calcite.planner.PlannerResult;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.util.CalciteTests;
-import org.apache.druid.sql.calcite.util.SpecificSegmentsQuerySegmentWalker;
+import org.apache.druid.sql.hook.DruidHookDispatcher;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
@@ -113,7 +113,6 @@ public class SqlVectorizedExpressionSanityTest extends InitializedNullHandlingTe
   @BeforeClass
   public static void setupClass()
   {
-    ExpressionProcessing.initializeForStrictBooleansTests(true);
     CLOSER = Closer.create();
 
     final GeneratorSchemaInfo schemaInfo = GeneratorBasicSchemas.SCHEMA_MAP.get("expression-testbench");
@@ -132,7 +131,7 @@ public class SqlVectorizedExpressionSanityTest extends InitializedNullHandlingTe
     );
     CONGLOMERATE = QueryStackTests.createQueryRunnerFactoryConglomerate(CLOSER);
 
-    WALKER = new SpecificSegmentsQuerySegmentWalker(CONGLOMERATE).add(
+    WALKER = SpecificSegmentsQuerySegmentWalker.createWalker(CONGLOMERATE).add(
         dataSegment,
         INDEX
     );
@@ -154,7 +153,8 @@ public class SqlVectorizedExpressionSanityTest extends InitializedNullHandlingTe
         new CalciteRulesManager(ImmutableSet.of()),
         joinableFactoryWrapper,
         CatalogResolver.NULL_RESOLVER,
-        new AuthConfig()
+        new AuthConfig(),
+        new DruidHookDispatcher()
     );
   }
 
@@ -162,7 +162,6 @@ public class SqlVectorizedExpressionSanityTest extends InitializedNullHandlingTe
   public static void teardownClass() throws IOException
   {
     CLOSER.close();
-    ExpressionProcessing.initializeForTests();
   }
 
   @Parameterized.Parameters(name = "query = {0}")
@@ -181,10 +180,10 @@ public class SqlVectorizedExpressionSanityTest extends InitializedNullHandlingTe
   @Test
   public void testQuery()
   {
-    sanityTestVectorizedSqlQueries(PLANNER_FACTORY, query);
+    sanityTestVectorizedSqlQueries(ENGINE, PLANNER_FACTORY, query);
   }
 
-  public static void sanityTestVectorizedSqlQueries(PlannerFactory plannerFactory, String query)
+  public static void sanityTestVectorizedSqlQueries(SqlEngine engine, PlannerFactory plannerFactory, String query)
   {
     final Map<String, Object> vector = ImmutableMap.of(
             QueryContexts.VECTORIZE_KEY, "force",
@@ -196,8 +195,8 @@ public class SqlVectorizedExpressionSanityTest extends InitializedNullHandlingTe
     );
 
     try (
-        final DruidPlanner vectorPlanner = plannerFactory.createPlannerForTesting(ENGINE, query, vector);
-        final DruidPlanner nonVectorPlanner = plannerFactory.createPlannerForTesting(ENGINE, query, nonvector)
+        final DruidPlanner vectorPlanner = plannerFactory.createPlannerForTesting(engine, query, vector);
+        final DruidPlanner nonVectorPlanner = plannerFactory.createPlannerForTesting(engine, query, nonvector)
     ) {
       final PlannerResult vectorPlan = vectorPlanner.plan();
       final PlannerResult nonVectorPlan = nonVectorPlanner.plan();

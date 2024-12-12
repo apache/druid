@@ -25,8 +25,13 @@ import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.dsl.LogWatch;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.indexing.common.task.IndexTaskUtils;
+import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 
 import java.io.InputStream;
 import java.sql.Timestamp;
@@ -42,15 +47,22 @@ public class KubernetesPeonClient
   private final KubernetesClientApi clientApi;
   private final String namespace;
   private final boolean debugJobs;
+  private final ServiceEmitter emitter;
 
-  public KubernetesPeonClient(KubernetesClientApi clientApi, String namespace, boolean debugJobs)
+  public KubernetesPeonClient(
+      KubernetesClientApi clientApi,
+      String namespace,
+      boolean debugJobs,
+      ServiceEmitter emitter
+  )
   {
     this.clientApi = clientApi;
     this.namespace = namespace;
     this.debugJobs = debugJobs;
+    this.emitter = emitter;
   }
 
-  public Pod launchPeonJobAndWaitForStart(Job job, long howLong, TimeUnit timeUnit)
+  public Pod launchPeonJobAndWaitForStart(Job job, Task task, long howLong, TimeUnit timeUnit) throws IllegalStateException
   {
     long start = System.currentTimeMillis();
     // launch job
@@ -63,12 +75,16 @@ public class KubernetesPeonClient
       Pod result = client.pods().inNamespace(namespace).withName(mainPod.getMetadata().getName())
                          .waitUntilCondition(pod -> {
                            if (pod == null) {
-                             return false;
+                             return true;
                            }
                            return pod.getStatus() != null && pod.getStatus().getPodIP() != null;
                          }, howLong, timeUnit);
+      
+      if (result == null) {
+        throw new IllegalStateException("K8s pod for the task [%s] appeared and disappeared. It can happen if the task was canceled");
+      }
       long duration = System.currentTimeMillis() - start;
-      log.info("Took task %s %d ms for pod to startup", jobName, duration);
+      emitK8sPodMetrics(task, "k8s/peon/startup/time", duration);
       return result;
     });
   }
@@ -109,13 +125,13 @@ public class KubernetesPeonClient
                                                                  .withName(taskId.getK8sJobName())
                                                                  .delete().isEmpty());
       if (result) {
-        log.info("Cleaned up k8s task: %s", taskId);
+        log.info("Cleaned up k8s job: %s", taskId);
       } else {
-        log.info("K8s task does not exist: %s", taskId);
+        log.info("K8s job does not exist: %s", taskId);
       }
       return result;
     } else {
-      log.info("Not cleaning up task %s due to flag: debugJobs=true", taskId);
+      log.info("Not cleaning up job %s due to flag: debugJobs=true", taskId);
       return true;
     }
   }
@@ -251,7 +267,14 @@ public class KubernetesPeonClient
       );
     }
     catch (Exception e) {
-      throw new KubernetesResourceNotFoundException("K8s pod with label: job-name=" + jobName + " not found");
+      throw DruidException.defensive(e, "Error when looking for K8s pod with label: job-name=%s", jobName);
     }
+  }
+
+  private void emitK8sPodMetrics(Task task, String metric, long durationMs)
+  {
+    ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
+    IndexTaskUtils.setTaskDimensions(metricBuilder, task);
+    emitter.emit(metricBuilder.setMetric(metric, durationMs));
   }
 }

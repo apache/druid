@@ -29,10 +29,7 @@ import org.joda.time.Duration;
 import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Test;
-import org.junit.experimental.runners.Enclosed;
-import org.junit.runner.RunWith;
 
-@RunWith(Enclosed.class)
 public class TaskLookupTest
 {
   public static class CompleteTaskLookupTest
@@ -133,7 +130,7 @@ public class TaskLookupTest
     @Test
     public void testGetType()
     {
-      Assert.assertEquals(TaskLookupType.ACTIVE, ActiveTaskLookup.getInstance().getType());
+      Assert.assertEquals(TaskLookupType.ACTIVE, TaskLookup.activeTasksOnly().getType());
     }
   }
 }

@@ -20,12 +20,12 @@
 package org.apache.druid.query.timeseries;
 
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.apache.druid.query.CachingEmitter;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.query.DefaultQueryMetricsTest;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryRunnerTestHelper;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
@@ -34,7 +34,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-public class DefaultTimeseriesQueryMetricsTest
+public class DefaultTimeseriesQueryMetricsTest extends InitializedNullHandlingTest
 {
 
   /**
@@ -44,8 +44,7 @@ public class DefaultTimeseriesQueryMetricsTest
   @Test
   public void testDefaultTimeseriesQueryMetricsQuery()
   {
-    CachingEmitter cachingEmitter = new CachingEmitter();
-    ServiceEmitter serviceEmitter = new ServiceEmitter("", "", cachingEmitter);
+    final StubServiceEmitter serviceEmitter = new StubServiceEmitter("", "");
     DefaultTimeseriesQueryMetrics queryMetrics = new DefaultTimeseriesQueryMetrics();
     TimeseriesQuery query = Druids
         .newTimeseriesQueryBuilder()
@@ -60,7 +59,7 @@ public class DefaultTimeseriesQueryMetricsTest
     queryMetrics.query(query);
 
     queryMetrics.reportQueryTime(0).emit(serviceEmitter);
-    Map<String, Object> actualEvent = cachingEmitter.getLastEmittedEvent().toMap();
+    Map<String, Object> actualEvent = serviceEmitter.getEvents().get(0).toMap();
     Assert.assertEquals(16, actualEvent.size());
     Assert.assertTrue(actualEvent.containsKey("feed"));
     Assert.assertTrue(actualEvent.containsKey("timestamp"));
@@ -89,9 +88,7 @@ public class DefaultTimeseriesQueryMetricsTest
   @Test
   public void testDefaultTimeseriesQueryMetricsMetricNamesAndUnits()
   {
-    CachingEmitter cachingEmitter = new CachingEmitter();
-    ServiceEmitter serviceEmitter = new ServiceEmitter("", "", cachingEmitter);
     DefaultTimeseriesQueryMetrics queryMetrics = new DefaultTimeseriesQueryMetrics();
-    DefaultQueryMetricsTest.testQueryMetricsDefaultMetricNamesAndUnits(cachingEmitter, serviceEmitter, queryMetrics);
+    DefaultQueryMetricsTest.testQueryMetricsDefaultMetricNamesAndUnits(queryMetrics);
   }
 }

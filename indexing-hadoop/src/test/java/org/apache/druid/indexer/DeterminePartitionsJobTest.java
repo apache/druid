@@ -29,7 +29,6 @@ import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
@@ -280,33 +279,36 @@ public class DeterminePartitionsJobTest
 
     config = new HadoopDruidIndexerConfig(
         new HadoopIngestionSpec(
-            new DataSchema(
-                "website",
-                HadoopDruidIndexerConfig.JSON_MAPPER.convertValue(
-                    new StringInputRowParser(
-                        new CSVParseSpec(
-                            new TimestampSpec("timestamp", "yyyyMMddHH", null),
-                            new DimensionsSpec(
-                                DimensionsSpec.getDefaultSchemas(ImmutableList.of("host", "country"))
-                            ),
-                            null,
-                            ImmutableList.of("timestamp", "host", "country", "visited_num"),
-                            false,
-                            0
-                        ),
-                        null
-                    ),
-                    Map.class
-                ),
-                new AggregatorFactory[]{new LongSumAggregatorFactory("visited_num", "visited_num")},
-                new UniformGranularitySpec(
-                    Granularities.DAY,
-                    Granularities.NONE,
-                    ImmutableList.of(Intervals.of(interval))
-                ),
-                null,
-                HadoopDruidIndexerConfig.JSON_MAPPER
-            ),
+            DataSchema.builder()
+                      .withDataSource("website")
+                      .withParserMap(
+                          HadoopDruidIndexerConfig.JSON_MAPPER.convertValue(
+                              new StringInputRowParser(
+                                  new CSVParseSpec(
+                                      new TimestampSpec("timestamp", "yyyyMMddHH", null),
+                                      new DimensionsSpec(
+                                          DimensionsSpec.getDefaultSchemas(ImmutableList.of("host", "country"))
+                                      ),
+                                      null,
+                                      ImmutableList.of("timestamp", "host", "country", "visited_num"),
+                                      false,
+                                      0
+                                  ),
+                                  null
+                              ),
+                              Map.class
+                          )
+                      )
+                      .withAggregators(new LongSumAggregatorFactory("visited_num", "visited_num"))
+                      .withGranularity(
+                          new UniformGranularitySpec(
+                              Granularities.DAY,
+                              Granularities.NONE,
+                              ImmutableList.of(Intervals.of(interval))
+                          )
+                      )
+                      .withObjectMapper(HadoopDruidIndexerConfig.JSON_MAPPER)
+                      .build(),
             new HadoopIOConfig(
                 ImmutableMap.of(
                     "paths",
@@ -331,6 +333,7 @@ public class DeterminePartitionsJobTest
                 false,
                 false,
                 false,
+                false,
                 null,
                 false,
                 false,
@@ -342,7 +345,8 @@ public class DeterminePartitionsJobTest
                 null,
                 null,
                 null,
-                null
+                null,
+                1
             )
         )
     );

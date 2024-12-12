@@ -56,7 +56,8 @@ public class BlockLayoutColumnarDoublesSerializer implements ColumnarDoublesSeri
       SegmentWriteOutMedium segmentWriteOutMedium,
       String filenameBase,
       ByteOrder byteOrder,
-      CompressionStrategy compression
+      CompressionStrategy compression,
+      Closer closer
   )
   {
     this.columnName = columnName;
@@ -64,11 +65,11 @@ public class BlockLayoutColumnarDoublesSerializer implements ColumnarDoublesSeri
         segmentWriteOutMedium,
         filenameBase,
         compression,
-        CompressedPools.BUFFER_SIZE
+        CompressedPools.BUFFER_SIZE,
+        closer
     );
     this.compression = compression;
     CompressionStrategy.Compressor compressor = compression.getCompressor();
-    Closer closer = segmentWriteOutMedium.getCloser();
     this.endBuffer = compressor.allocateInBuffer(CompressedPools.BUFFER_SIZE, closer).order(byteOrder);
   }
 

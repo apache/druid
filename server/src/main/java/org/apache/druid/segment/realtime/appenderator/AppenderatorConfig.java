@@ -28,11 +28,19 @@ import java.io.File;
 
 public interface AppenderatorConfig extends TuningConfig
 {
+
+  int DEFAULT_NUM_PERSIST_THREADS = 1;
+
   boolean isReportParseExceptions();
 
   int getMaxPendingPersists();
 
   boolean isSkipBytesInMemoryOverheadCheck();
+
+  default int getNumPersistThreads()
+  {
+    return DEFAULT_NUM_PERSIST_THREADS;
+  }
 
   /**
    * Maximum number of rows in a single segment before pushing to deep storage

@@ -36,6 +36,7 @@ import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
@@ -88,6 +89,13 @@ public class ExtractionDimFilterTest extends InitializedNullHandlingTest
 
   private final ColumnIndexSelector BITMAP_INDEX_SELECTOR = new ColumnIndexSelector()
   {
+    @Nullable
+    @Override
+    public ColumnHolder getColumnHolder(String columnName)
+    {
+      return null;
+    }
+
     @Nullable
     @Override
     public ColumnCapabilities getColumnCapabilities(String column)

@@ -117,7 +117,7 @@ service:
 Run otel-collector and zipkin.
 
 ```bash
-docker-compose up
+docker compose up
 ```
 
 ### Part 2: Run Druid

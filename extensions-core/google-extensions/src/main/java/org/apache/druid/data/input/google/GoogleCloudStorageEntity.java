@@ -69,4 +69,9 @@ public class GoogleCloudStorageEntity extends RetryingInputEntity
   {
     return GoogleUtils.GOOGLE_RETRY;
   }
+
+  CloudObjectLocation getLocation()
+  {
+    return location;
+  }
 }

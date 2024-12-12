@@ -21,6 +21,8 @@ package org.apache.druid.query.groupby;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
+import org.apache.druid.collections.NonBlockingPool;
+import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.Query;
@@ -30,50 +32,53 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.context.ResponseContext;
-import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.Segment;
-import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.TimeBoundaryInspector;
+
+import javax.annotation.Nullable;
+
+import java.nio.ByteBuffer;
 
 /**
  *
  */
 public class GroupByQueryRunnerFactory implements QueryRunnerFactory<ResultRow, GroupByQuery>
 {
-  private final GroupByStrategySelector strategySelector;
+  private final GroupingEngine groupingEngine;
   private final GroupByQueryQueryToolChest toolChest;
+  private final NonBlockingPool<ByteBuffer> processingBufferPool;
 
   @Inject
   public GroupByQueryRunnerFactory(
-      GroupByStrategySelector strategySelector,
-      GroupByQueryQueryToolChest toolChest
+      GroupingEngine groupingEngine,
+      GroupByQueryQueryToolChest toolChest,
+      @Global NonBlockingPool<ByteBuffer> processingBufferPool
   )
   {
-    this.strategySelector = strategySelector;
+    this.groupingEngine = groupingEngine;
     this.toolChest = toolChest;
+    this.processingBufferPool = processingBufferPool;
   }
 
   @Override
   public QueryRunner<ResultRow> createRunner(final Segment segment)
   {
-    return new GroupByQueryRunner(segment, strategySelector);
+    return new GroupByQueryRunner(segment, groupingEngine, processingBufferPool);
   }
 
+  /**
+   * @see GroupingEngine#mergeRunners(QueryProcessingPool, Iterable)
+   */
   @Override
   public QueryRunner<ResultRow> mergeRunners(
       final QueryProcessingPool queryProcessingPool,
       final Iterable<QueryRunner<ResultRow>> queryRunners
   )
   {
-    return new QueryRunner<ResultRow>()
-    {
-      @Override
-      public Sequence<ResultRow> run(QueryPlus<ResultRow> queryPlus, ResponseContext responseContext)
-      {
-        QueryRunner<ResultRow> rowQueryRunner = strategySelector
-            .strategize((GroupByQuery) queryPlus.getQuery())
-            .mergeRunners(queryProcessingPool, queryRunners);
-        return rowQueryRunner.run(queryPlus, responseContext);
-      }
+    return (queryPlus, responseContext) -> {
+      QueryRunner<ResultRow> rowQueryRunner = groupingEngine.mergeRunners(queryProcessingPool, queryRunners);
+      return rowQueryRunner.run(queryPlus, responseContext);
     };
   }
 
@@ -85,13 +90,22 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<ResultRow, 
 
   private static class GroupByQueryRunner implements QueryRunner<ResultRow>
   {
-    private final StorageAdapter adapter;
-    private final GroupByStrategySelector strategySelector;
+    private final CursorFactory cursorFactory;
+    @Nullable
+    private final TimeBoundaryInspector timeBoundaryInspector;
+    private final GroupingEngine groupingEngine;
+    private final NonBlockingPool<ByteBuffer> processingBufferPool;
 
-    public GroupByQueryRunner(Segment segment, final GroupByStrategySelector strategySelector)
+    public GroupByQueryRunner(
+        Segment segment,
+        final GroupingEngine groupingEngine,
+        final NonBlockingPool<ByteBuffer> processingBufferPool
+    )
     {
-      this.adapter = segment.asStorageAdapter();
-      this.strategySelector = strategySelector;
+      this.cursorFactory = segment.asCursorFactory();
+      this.timeBoundaryInspector = segment.as(TimeBoundaryInspector.class);
+      this.groupingEngine = groupingEngine;
+      this.processingBufferPool = processingBufferPool;
     }
 
     @Override
@@ -102,15 +116,19 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<ResultRow, 
         throw new ISE("Got a [%s] which isn't a %s", query.getClass(), GroupByQuery.class);
       }
 
-      return strategySelector
-          .strategize((GroupByQuery) query)
-          .process((GroupByQuery) query, adapter, (GroupByQueryMetrics) queryPlus.getQueryMetrics());
+      return groupingEngine.process(
+          (GroupByQuery) query,
+          cursorFactory,
+          timeBoundaryInspector,
+          processingBufferPool,
+          (GroupByQueryMetrics) queryPlus.getQueryMetrics()
+      );
     }
   }
 
   @VisibleForTesting
-  public GroupByStrategySelector getStrategySelector()
+  public GroupingEngine getGroupingEngine()
   {
-    return strategySelector;
+    return groupingEngine;
   }
 }

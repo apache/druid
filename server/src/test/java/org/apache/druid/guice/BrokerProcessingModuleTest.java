@@ -28,7 +28,10 @@ import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulator;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.initialization.Initialization;
+import org.apache.druid.java.util.common.config.Config;
+import org.apache.druid.query.BrokerParallelMergeConfig;
 import org.apache.druid.query.DruidProcessingConfig;
+import org.apache.druid.query.LegacyBrokerParallelMergeConfig;
 import org.apache.druid.utils.JvmUtils;
 import org.junit.Assert;
 import org.junit.Assume;
@@ -37,14 +40,14 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
+import org.skife.config.ConfigurationObjectFactory;
+
+import java.util.Properties;
 
 
 @RunWith(MockitoJUnitRunner.class)
 public class BrokerProcessingModuleTest
 {
-  private static final boolean INJECT_SERVER_TYPE_CONFIG = true;
-  @Mock
-  private DruidProcessingConfig druidProcessingConfig;
   private Injector injector;
   private BrokerProcessingModule target;
   @Mock
@@ -56,12 +59,13 @@ public class BrokerProcessingModuleTest
   public void setUp()
   {
     target = new BrokerProcessingModule();
-    injector = makeInjector(INJECT_SERVER_TYPE_CONFIG);
+    injector = makeInjector(new Properties());
   }
 
   @Test
   public void testIntermediateResultsPool()
   {
+    DruidProcessingConfig druidProcessingConfig = injector.getInstance(DruidProcessingConfig.class);
     target.getIntermediateResultsPool(druidProcessingConfig);
   }
 
@@ -69,23 +73,30 @@ public class BrokerProcessingModuleTest
   @Test
   public void testMergeBufferPool()
   {
+    DruidProcessingConfig druidProcessingConfig = injector.getInstance(DruidProcessingConfig.class);
     target.getMergeBufferPool(druidProcessingConfig);
   }
 
   @Test
   public void testMergeProcessingPool()
   {
-    DruidProcessingConfig config = new DruidProcessingConfig()
-    {
-      @Override
-      public String getFormatString()
-      {
-        return "processing-test-%s";
-      }
-    };
-    DruidProcessingModule module = new DruidProcessingModule();
+    BrokerParallelMergeConfig config = injector.getInstance(BrokerParallelMergeConfig.class);
+    BrokerProcessingModule module = new BrokerProcessingModule();
     module.getMergeProcessingPoolProvider(config);
-    config.getNumInitalBuffersForIntermediatePool();
+  }
+
+  @Test
+  public void testMergeProcessingPoolLegacyConfigs()
+  {
+    Properties props = new Properties();
+    props.put("druid.processing.merge.pool.parallelism", "10");
+    props.put("druid.processing.merge.pool.defaultMaxQueryParallelism", "10");
+    props.put("druid.processing.merge.task.targetRunTimeMillis", "1000");
+    Injector gadget = makeInjector(props);
+    BrokerParallelMergeConfig config = gadget.getInstance(BrokerParallelMergeConfig.class);
+    Assert.assertEquals(10, config.getParallelism());
+    Assert.assertEquals(10, config.getDefaultMaxQueryParallelism());
+    Assert.assertEquals(1000, config.getTargetRunTimeMillis());
   }
 
   @Test
@@ -93,7 +104,6 @@ public class BrokerProcessingModuleTest
   {
     CachePopulator cachePopulator = injector.getInstance(CachePopulator.class);
     Assert.assertNotNull(cachePopulator);
-
   }
 
   @Test(expected = ProvisionException.class)
@@ -107,43 +117,40 @@ public class BrokerProcessingModuleTest
     catch (UnsupportedOperationException e) {
       Assume.assumeNoException(e);
     }
+    Properties props = new Properties();
+    props.setProperty("druid.processing.buffer.sizeBytes", "3GiB");
+    Injector injector1 = makeInjector(props);
 
+    DruidProcessingConfig processingBufferConfig = injector1.getInstance(DruidProcessingConfig.class);
     BrokerProcessingModule module = new BrokerProcessingModule();
-    module.getMergeBufferPool(new DruidProcessingConfig()
-    {
-      @Override
-      public String getFormatString()
-      {
-        return "test";
-      }
-
-      @Override
-      public int intermediateComputeSizeBytes()
-      {
-        return Integer.MAX_VALUE;
-      }
-    });
+    module.getMergeBufferPool(processingBufferConfig);
   }
 
-  private Injector makeInjector(boolean withServerTypeConfig)
+  private Injector makeInjector(Properties props)
   {
-    return Initialization.makeInjectorWithModules(
-        GuiceInjectors.makeStartupInjector(), (ImmutableList.of(Modules.override(
-            (binder) -> {
-              binder.bindConstant().annotatedWith(Names.named("serviceName")).to("test");
-              binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
-              binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
-              binder.bind(DruidProcessingConfig.class).toInstance(druidProcessingConfig);
-            },
-            target
-        ).with(
-            (binder) -> {
+
+    Injector injector = Initialization.makeInjectorWithModules(
+        GuiceInjectors.makeStartupInjector(),
+        ImmutableList.of(
+            Modules.override(
+                (binder) -> {
+                  binder.bindConstant().annotatedWith(Names.named("serviceName")).to("test");
+                  binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
+                  binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
+                  binder.bind(Properties.class).toInstance(props);
+                  ConfigurationObjectFactory factory = Config.createFactory(props);
+                  LegacyBrokerParallelMergeConfig legacyConfig = factory.build(LegacyBrokerParallelMergeConfig.class);
+                  binder.bind(ConfigurationObjectFactory.class).toInstance(factory);
+                  binder.bind(LegacyBrokerParallelMergeConfig.class).toInstance(legacyConfig);
+                },
+                target
+            ).with((binder) -> {
               binder.bind(CachePopulatorStats.class).toInstance(cachePopulatorStats);
               binder.bind(CacheConfig.class).toInstance(cacheConfig);
-            }
+            })
         )
-        )));
+    );
+    return injector;
   }
-
 }
 

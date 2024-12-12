@@ -24,6 +24,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.join.NoopDataSource;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -60,6 +62,17 @@ public class UnionDataSourceTest
 
     //noinspection ResultOfObjectAllocationIgnored
     new UnionDataSource(Collections.emptyList());
+  }
+
+  @Test
+  public void test_isCompatible()
+  {
+    TableDataSource tableDataSource = new TableDataSource("foo");
+    InlineDataSource inlineDataSource = InlineDataSource.fromIterable(Collections.emptyList(), RowSignature.empty());
+
+    Assert.assertTrue(UnionDataSource.isCompatibleDataSource(tableDataSource));
+    Assert.assertTrue(UnionDataSource.isCompatibleDataSource(inlineDataSource));
+    Assert.assertFalse(UnionDataSource.isCompatibleDataSource(new NoopDataSource()));
   }
 
   @Test
@@ -123,7 +136,7 @@ public class UnionDataSourceTest
   @Test
   public void test_withChildren_sameNumber()
   {
-    final List<TableDataSource> newDataSources = ImmutableList.of(
+    final List<DataSource> newDataSources = ImmutableList.of(
         new TableDataSource("baz"),
         new TableDataSource("qux")
     );
@@ -131,7 +144,7 @@ public class UnionDataSourceTest
     //noinspection unchecked
     Assert.assertEquals(
         new UnionDataSource(newDataSources),
-        unionDataSource.withChildren((List) newDataSources)
+        unionDataSource.withChildren(newDataSources)
     );
   }
 

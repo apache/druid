@@ -16,7 +16,10 @@
  * limitations under the License.
  */
 
-import { deepDelete, deepSet } from '../../utils';
+export type SelectDestination = 'taskReport' | 'durableStorage';
+export type ArrayIngestMode = 'array' | 'mvd';
+export type TaskAssignment = 'auto' | 'max';
+export type SqlJoinAlgorithm = 'broadcast' | 'sortMerge';
 
 export interface QueryContext {
   useCache?: boolean;
@@ -28,13 +31,43 @@ export interface QueryContext {
   // Multi-stage query
   maxNumTasks?: number;
   finalizeAggregations?: boolean;
-  selectDestination?: string;
+  selectDestination?: SelectDestination;
   durableShuffleStorage?: boolean;
   maxParseExceptions?: number;
   groupByEnableMultiValueUnnesting?: boolean;
+  arrayIngestMode?: ArrayIngestMode;
+  taskAssignment?: TaskAssignment;
+  sqlJoinAlgorithm?: SqlJoinAlgorithm;
+  failOnEmptyInsert?: boolean;
+  waitUntilSegmentsLoad?: boolean;
+  useConcurrentLocks?: boolean;
+  forceSegmentSortByTime?: boolean;
+  includeAllCounters?: boolean;
 
   [key: string]: any;
 }
+
+export const DEFAULT_SERVER_QUERY_CONTEXT: QueryContext = {
+  useCache: true,
+  populateCache: true,
+  useApproximateCountDistinct: true,
+  useApproximateTopN: true,
+  sqlTimeZone: 'Etc/UTC',
+
+  // Multi-stage query
+  finalizeAggregations: true,
+  selectDestination: 'taskReport',
+  durableShuffleStorage: false,
+  maxParseExceptions: 0,
+  groupByEnableMultiValueUnnesting: true,
+  taskAssignment: 'max',
+  sqlJoinAlgorithm: 'broadcast',
+  failOnEmptyInsert: false,
+  waitUntilSegmentsLoad: false,
+  useConcurrentLocks: false,
+  forceSegmentSortByTime: true,
+  includeAllCounters: false,
+};
 
 export interface QueryWithContext {
   queryString: string;
@@ -46,172 +79,10 @@ export function isEmptyContext(context: QueryContext | undefined): boolean {
   return !context || Object.keys(context).length === 0;
 }
 
-// -----------------------------
-
-export function getUseCache(context: QueryContext): boolean {
-  const { useCache } = context;
-  return typeof useCache === 'boolean' ? useCache : true;
-}
-
-export function changeUseCache(context: QueryContext, useCache: boolean): QueryContext {
-  let newContext = context;
-  if (useCache) {
-    newContext = deepDelete(newContext, 'useCache');
-    newContext = deepDelete(newContext, 'populateCache');
-  } else {
-    newContext = deepSet(newContext, 'useCache', false);
-    newContext = deepSet(newContext, 'populateCache', false);
-  }
-  return newContext;
-}
-
-// -----------------------------
-
-export function getUseApproximateCountDistinct(context: QueryContext): boolean {
-  const { useApproximateCountDistinct } = context;
-  return typeof useApproximateCountDistinct === 'boolean' ? useApproximateCountDistinct : true;
-}
-
-export function changeUseApproximateCountDistinct(
+export function getQueryContextKey(
+  key: keyof QueryContext,
   context: QueryContext,
-  useApproximateCountDistinct: boolean,
-): QueryContext {
-  if (useApproximateCountDistinct) {
-    return deepDelete(context, 'useApproximateCountDistinct');
-  } else {
-    return deepSet(context, 'useApproximateCountDistinct', false);
-  }
-}
-
-// -----------------------------
-
-export function getUseApproximateTopN(context: QueryContext): boolean {
-  const { useApproximateTopN } = context;
-  return typeof useApproximateTopN === 'boolean' ? useApproximateTopN : true;
-}
-
-export function changeUseApproximateTopN(
-  context: QueryContext,
-  useApproximateTopN: boolean,
-): QueryContext {
-  if (useApproximateTopN) {
-    return deepDelete(context, 'useApproximateTopN');
-  } else {
-    return deepSet(context, 'useApproximateTopN', false);
-  }
-}
-
-// sqlTimeZone
-
-export function getTimezone(context: QueryContext): string | undefined {
-  return context.sqlTimeZone;
-}
-
-export function changeTimezone(context: QueryContext, timezone: string | undefined): QueryContext {
-  if (timezone) {
-    return deepSet(context, 'sqlTimeZone', timezone);
-  } else {
-    return deepDelete(context, 'sqlTimeZone');
-  }
-}
-
-// maxNumTasks
-
-export function getMaxNumTasks(context: QueryContext): number | undefined {
-  return context.maxNumTasks;
-}
-
-export function changeMaxNumTasks(
-  context: QueryContext,
-  maxNumTasks: number | undefined,
-): QueryContext {
-  return typeof maxNumTasks === 'number'
-    ? deepSet(context, 'maxNumTasks', maxNumTasks)
-    : deepDelete(context, 'maxNumTasks');
-}
-
-// taskAssignment
-
-export function getTaskAssigment(context: QueryContext): string {
-  const { taskAssignment } = context;
-  return taskAssignment ?? 'max';
-}
-
-export function changeTaskAssigment(
-  context: QueryContext,
-  taskAssignment: string | undefined,
-): QueryContext {
-  return typeof taskAssignment === 'string'
-    ? deepSet(context, 'taskAssignment', taskAssignment)
-    : deepDelete(context, 'taskAssignment');
-}
-
-// finalizeAggregations
-
-export function getFinalizeAggregations(context: QueryContext): boolean | undefined {
-  const { finalizeAggregations } = context;
-  return typeof finalizeAggregations === 'boolean' ? finalizeAggregations : undefined;
-}
-
-export function changeFinalizeAggregations(
-  context: QueryContext,
-  finalizeAggregations: boolean | undefined,
-): QueryContext {
-  return typeof finalizeAggregations === 'boolean'
-    ? deepSet(context, 'finalizeAggregations', finalizeAggregations)
-    : deepDelete(context, 'finalizeAggregations');
-}
-
-// groupByEnableMultiValueUnnesting
-
-export function getGroupByEnableMultiValueUnnesting(context: QueryContext): boolean | undefined {
-  const { groupByEnableMultiValueUnnesting } = context;
-  return typeof groupByEnableMultiValueUnnesting === 'boolean'
-    ? groupByEnableMultiValueUnnesting
-    : undefined;
-}
-
-export function changeGroupByEnableMultiValueUnnesting(
-  context: QueryContext,
-  groupByEnableMultiValueUnnesting: boolean | undefined,
-): QueryContext {
-  return typeof groupByEnableMultiValueUnnesting === 'boolean'
-    ? deepSet(context, 'groupByEnableMultiValueUnnesting', groupByEnableMultiValueUnnesting)
-    : deepDelete(context, 'groupByEnableMultiValueUnnesting');
-}
-
-// durableShuffleStorage
-
-export function getDurableShuffleStorage(context: QueryContext): boolean {
-  const { durableShuffleStorage } = context;
-  return Boolean(durableShuffleStorage);
-}
-
-export function changeDurableShuffleStorage(
-  context: QueryContext,
-  durableShuffleStorage: boolean,
-): QueryContext {
-  if (durableShuffleStorage) {
-    return deepSet(context, 'durableShuffleStorage', true);
-  } else {
-    return deepDelete(context, 'durableShuffleStorage');
-  }
-}
-
-// maxParseExceptions
-
-export function getMaxParseExceptions(context: QueryContext): number {
-  const { maxParseExceptions } = context;
-  return Number(maxParseExceptions) || 0;
-}
-
-export function changeMaxParseExceptions(
-  context: QueryContext,
-  maxParseExceptions: number,
-): QueryContext {
-  if (maxParseExceptions !== 0) {
-    return deepSet(context, 'maxParseExceptions', maxParseExceptions);
-  } else {
-    return deepDelete(context, 'maxParseExceptions');
-  }
+  defaultContext: QueryContext,
+): any {
+  return typeof context[key] !== 'undefined' ? context[key] : defaultContext[key];
 }

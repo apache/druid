@@ -71,7 +71,7 @@ public class KafkaConsumerMonitor extends AbstractMonitor
         if (newValue != priorValue) {
           final ServiceMetricEvent.Builder builder =
               new ServiceMetricEvent.Builder().setDimension(TOPIC_TAG, topic);
-          emitter.emit(builder.build(METRICS.get(metricName.name()), newValue - priorValue));
+          emitter.emit(builder.setMetric(METRICS.get(metricName.name()), newValue - priorValue));
         }
       }
     }

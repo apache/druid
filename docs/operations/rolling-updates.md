@@ -27,15 +27,15 @@ For rolling Apache Druid cluster updates with no downtime, we recommend updating
 following order:
 
 1. Historical
-2. \*Overlord (if any)
-3. \*Middle Manager/Indexers (if any)
-4. Standalone Real-time (if any)
-5. Broker
+2. Middle Manager and Indexer (if any)
+3. Broker
+4. Router
+5. Overlord (Note that you can upgrade the Overlord before any Middle Manager processes if you use [autoscaling-based replacement](#autoscaling-based-replacement).)
 6. Coordinator ( or merged Coordinator+Overlord )
 
-For information about the latest release, see [Druid releases](https://github.com/apache/druid/releases).
+If you need to do a rolling downgrade, reverse the order and start with the Coordinator processes.
 
-\* In 0.12.0, there are protocol changes between the Kafka supervisor and Kafka Indexing task and also some changes to the metadata formats persisted on disk. Therefore, to support rolling upgrade, all the Middle Managers will need to be upgraded first before the Overlord. Note that this ordering is different from the standard order of upgrade, also note that this ordering is only necessary when using the Kafka Indexing Service. If one is not using Kafka Indexing Service or can handle down time for Kafka Supervisor then one can upgrade in any order.
+For information about the latest release, see [Druid releases](https://github.com/apache/druid/releases).
 
 ## Historical
 
@@ -70,14 +70,14 @@ Middle Managers can be gracefully terminated using the "disable" API. This works
 even tasks that are not restorable.
 
 To prepare a Middle Manager for update, send a POST request to
-`<MiddleManager_IP:PORT>/druid/worker/v1/disable`. The Overlord will now no longer send tasks to
+`<Middle_Manager_IP:PORT>/druid/worker/v1/disable`. The Overlord will now no longer send tasks to
 this Middle Manager. Tasks that have already started will run to completion. Current state can be checked
-using `<MiddleManager_IP:PORT>/druid/worker/v1/enabled` .
+using `<Middle_Manager_IP:PORT>/druid/worker/v1/enabled` .
 
-To view all existing tasks, send a GET request to `<MiddleManager_IP:PORT>/druid/worker/v1/tasks`.
+To view all existing tasks, send a GET request to `<Middle_Manager_IP:PORT>/druid/worker/v1/tasks`.
 When this list is empty, you can safely update the Middle Manager. After the Middle Manager starts
 back up, it is automatically enabled again. You can also manually enable Middle Managers by POSTing
-to `<MiddleManager_IP:PORT>/druid/worker/v1/enable`.
+to `<Middle_Manager_IP:PORT>/druid/worker/v1/enable`.
 
 ### Autoscaling-based replacement
 

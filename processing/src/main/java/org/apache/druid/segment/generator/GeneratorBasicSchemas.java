@@ -35,12 +35,27 @@ import org.joda.time.Interval;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
 public class GeneratorBasicSchemas
 {
   private static final ImmutableMap.Builder<String, GeneratorSchemaInfo> SCHEMA_INFO_BUILDER = ImmutableMap.builder();
+
+  public static final String BASIC_SCHEMA = "basic";
+  public static final String BASIC_SCHEMA_EXPRESSION = "expression";
+  public static final String SIMPLE_SCHEMA = "simple";
+  public static final String SIMPLE_LONG_SCHEMA = "simpleLong";
+  public static final String SIMPLE_FLOAT_SCHEMA = "simpleFloat";
+  public static final String SIMPLE_NULLS_SCHEMA = "nulls";
+  public static final String ROLLUP_SCHEMA = "rollo";
+  public static final String NULLABLE_TEST_SCHEMA = "nullable";
+  public static final String EXPRESSION_TESTBENCH_SCHEMA = "expression-testbench";
+  public static final String NESTED_TESTBENCH_SCHEMA = "nested";
+  public static final String GROUPBY_TESTBENCH_SCHEMA = "groupBy-testbench";
+  public static final String IN_TESTBENCH_SCHEMA = "in-testbench";
+  public static final String WIDE_SCHEMA = "wide";
 
   static {
     // basic schema
@@ -121,8 +136,8 @@ public class GeneratorBasicSchemas
         true
     );
 
-    SCHEMA_INFO_BUILDER.put("basic", basicSchema);
-    SCHEMA_INFO_BUILDER.put("expression", basicSchemaExpression);
+    SCHEMA_INFO_BUILDER.put(BASIC_SCHEMA, basicSchema);
+    SCHEMA_INFO_BUILDER.put(BASIC_SCHEMA_EXPRESSION, basicSchemaExpression);
   }
 
   static { // simple single string column and count agg schema, no rollup
@@ -142,7 +157,7 @@ public class GeneratorBasicSchemas
         basicSchemaDataInterval,
         false
     );
-    SCHEMA_INFO_BUILDER.put("simple", basicSchema);
+    SCHEMA_INFO_BUILDER.put(SIMPLE_SCHEMA, basicSchema);
   }
 
   static {
@@ -164,7 +179,7 @@ public class GeneratorBasicSchemas
         basicSchemaDataInterval,
         false
     );
-    SCHEMA_INFO_BUILDER.put("simpleLong", basicSchema);
+    SCHEMA_INFO_BUILDER.put(SIMPLE_LONG_SCHEMA, basicSchema);
   }
 
   static {
@@ -186,7 +201,7 @@ public class GeneratorBasicSchemas
         basicSchemaDataInterval,
         false
     );
-    SCHEMA_INFO_BUILDER.put("simpleFloat", basicSchema);
+    SCHEMA_INFO_BUILDER.put(SIMPLE_FLOAT_SCHEMA, basicSchema);
   }
 
   static {
@@ -237,7 +252,7 @@ public class GeneratorBasicSchemas
         basicSchemaDataInterval,
         true
     );
-    SCHEMA_INFO_BUILDER.put("rollo", rolloSchema);
+    SCHEMA_INFO_BUILDER.put(ROLLUP_SCHEMA, rolloSchema);
   }
 
   static {
@@ -267,7 +282,7 @@ public class GeneratorBasicSchemas
         false
     );
 
-    SCHEMA_INFO_BUILDER.put("nulls", nullsSchema);
+    SCHEMA_INFO_BUILDER.put(SIMPLE_NULLS_SCHEMA, nullsSchema);
   }
 
   static {
@@ -308,7 +323,7 @@ public class GeneratorBasicSchemas
         false
     );
 
-    SCHEMA_INFO_BUILDER.put("nulls-and-non-nulls", nullsSchema);
+    SCHEMA_INFO_BUILDER.put(NULLABLE_TEST_SCHEMA, nullsSchema);
   }
 
   static {
@@ -361,7 +376,73 @@ public class GeneratorBasicSchemas
         false
     );
 
-    SCHEMA_INFO_BUILDER.put("expression-testbench", expressionsTestsSchema);
+    SCHEMA_INFO_BUILDER.put(EXPRESSION_TESTBENCH_SCHEMA, expressionsTestsSchema);
+    SCHEMA_INFO_BUILDER.put(NESTED_TESTBENCH_SCHEMA, expressionsTestsSchema);
+  }
+
+  static {
+    // schema for benchmarking group-by
+    List<GeneratorColumnSchema> expressionsTestsSchemaColumns = ImmutableList.of(
+        // string dims
+        GeneratorColumnSchema.makeSequential("string-Sequential-100_000", ValueType.STRING, false, 1, null, 0, 100_000),
+        GeneratorColumnSchema.makeSequential("string-Sequential-10_000_000", ValueType.STRING, false, 1, null, 0, 10_000_000),
+        // GeneratorColumnSchema.makeSequential("string-Sequential-1_000_000_000", ValueType.STRING, false, 1, null, 0, 1_000_000_000),
+        GeneratorColumnSchema.makeLazyZipf("string-ZipF-1_000_000", ValueType.STRING, false, 1, 0.1, 0, 1_000_000, 2.0),
+        GeneratorColumnSchema.makeLazyDiscreteUniform("string-Uniform-1_000_000", ValueType.STRING, false, 1, 0.3, 0, 1_000_000),
+
+        // multi string dims
+        GeneratorColumnSchema.makeSequential("multi-string-Sequential-100_000", ValueType.STRING, false, 8, null, 0, 100_000),
+        GeneratorColumnSchema.makeSequential("multi-string-Sequential-10_000_000", ValueType.STRING, false, 8, null, 0, 10_000_000),
+        // GeneratorColumnSchema.makeSequential("multi-string-Sequential-1_000_000_000", ValueType.STRING, false, 8, null, 0, 1_000_000_000),
+        GeneratorColumnSchema.makeLazyZipf("multi-string-ZipF-1_000_000", ValueType.STRING, false, 16, 0.1, 0, 1_000_000, 2.0),
+        GeneratorColumnSchema.makeLazyDiscreteUniform("multi-string-Uniform-1_000_000", ValueType.STRING, false, 4, null, 0, 1_000_000),
+
+        // numeric dims
+        GeneratorColumnSchema.makeSequential("long-Sequential-100_000", ValueType.LONG, false, 1, null, 0, 100_000),
+        GeneratorColumnSchema.makeSequential("long-Sequential-10_000_000", ValueType.LONG, false, 1, null, 0, 10_000_000),
+        // GeneratorColumnSchema.makeSequential("long-Sequential-1_000_000_000", ValueType.LONG, false, 1, null, 0, 1_000_000_000),
+        GeneratorColumnSchema.makeLazyZipf("long-ZipF-1_000_000", ValueType.LONG, false, 1, 0.1, 0, 1_000_000, 2.0),
+        GeneratorColumnSchema.makeLazyDiscreteUniform("long-Uniform-1_000_000", ValueType.LONG, false, 1, 0.3, 0, 1_000_000),
+
+        GeneratorColumnSchema.makeLazyZipf("double-ZipF-1_000_000", ValueType.DOUBLE, false, 1, 0.1, 0, 1_000_000, 2.0),
+        GeneratorColumnSchema.makeContinuousUniform("double-Uniform-1_000_000", ValueType.DOUBLE, false, 1, null, 0.0, 1_000_000.0),
+
+        GeneratorColumnSchema.makeLazyZipf("float-ZipF-1_000_000", ValueType.FLOAT, false, 1, 0.1, 0, 1_000_000, 2.0),
+        GeneratorColumnSchema.makeContinuousUniform("float-Uniform-1_000_000", ValueType.FLOAT, false, 1, null, 0.0, 1_000_000.0)
+        // Generate the array dims, and the complex value dims by wrapping the pre-existing primitive dims within simple expressions
+    );
+
+    Interval interval = Intervals.of("2000-01-01/P1D");
+
+    GeneratorSchemaInfo groupByTestsSchema = new GeneratorSchemaInfo(
+        expressionsTestsSchemaColumns,
+        Collections.emptyList(),
+        interval,
+        false
+    );
+
+    SCHEMA_INFO_BUILDER.put(GROUPBY_TESTBENCH_SCHEMA, groupByTestsSchema);
+  }
+
+  static {
+    List<GeneratorColumnSchema> inTestsSchemaColumns = ImmutableList.of(
+        GeneratorColumnSchema.makeSequential("long1", ValueType.LONG, false, 1, null, 0, 40000),
+        GeneratorColumnSchema.makeSequential("string1", ValueType.STRING, false, 1, null, 0, 40000)
+    );
+
+    List<AggregatorFactory> aggs = new ArrayList<>();
+
+    Interval interval = Intervals.of("2000-01-01/P1D");
+
+    GeneratorSchemaInfo expressionsTestsSchema = new GeneratorSchemaInfo(
+        inTestsSchemaColumns,
+        aggs,
+        interval,
+        false
+    );
+
+    SCHEMA_INFO_BUILDER.put(IN_TESTBENCH_SCHEMA, expressionsTestsSchema);
+
   }
 
   static {
@@ -466,7 +547,7 @@ public class GeneratorBasicSchemas
         false
     );
 
-    SCHEMA_INFO_BUILDER.put("wide", nullsSchema);
+    SCHEMA_INFO_BUILDER.put(WIDE_SCHEMA, nullsSchema);
   }
 
   public static final Map<String, GeneratorSchemaInfo> SCHEMA_MAP = SCHEMA_INFO_BUILDER.build();

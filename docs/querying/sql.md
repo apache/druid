@@ -23,8 +23,10 @@ sidebar_label: "Overview and syntax"
   ~ under the License.
   -->
 
-> Apache Druid supports two query languages: Druid SQL and [native queries](querying.md).
-> This document describes the SQL language.
+:::info
+ Apache Druid supports two query languages: Druid SQL and [native queries](querying.md).
+ This document describes the SQL language.
+:::
 
 You can query data in Druid datasources using Druid SQL. Druid translates SQL queries into its [native query language](querying.md). To learn about translation and how to get the best performance from Druid SQL, see [SQL query translation](sql-translation.md).
 
@@ -55,7 +57,9 @@ Druid SQL supports SELECT queries with the following structure:
 [ WITH tableName [ ( column1, column2, ... ) ] AS ( query ) ]
 SELECT [ ALL | DISTINCT ] { * | exprs }
 FROM { <table> | (<subquery>) | <o1> [ INNER | LEFT ] JOIN <o2> ON condition }
-[, UNNEST(source_expression) as table_alias_name(column_alias_name) ]
+[PIVOT (aggregation_function(column_to_aggregate) FOR column_with_values_to_pivot IN (pivoted_column1 [, pivoted_column2 ...]))]
+[UNPIVOT (values_column FOR names_column IN (unpivoted_column1 [, unpivoted_column2 ... ]))]
+[ CROSS JOIN UNNEST(source_expression) as table_alias_name(column_alias_name) ]
 [ WHERE expr ]
 [ GROUP BY [ exprs | GROUPING SETS ( (exprs), ... ) | ROLLUP (exprs) | CUBE (exprs) ] ]
 [ HAVING expr ]
@@ -83,32 +87,146 @@ FROM clause, metadata tables are not considered datasources. They exist only in 
 For more information about table, lookup, query, and join datasources, refer to the [Datasources](datasource.md)
 documentation.
 
+## PIVOT
+
+:::info
+The PIVOT operator is an [experimental feature](../development/experimental.md).
+:::
+
+The PIVOT operator carries out an aggregation and transforms rows into columns in the output.
+
+The following is the general syntax for the PIVOT operator. Note that the PIVOT operator is enclosed in parentheses and forms part of the FROM clause of the query.
+
+```sql
+PIVOT (aggregation_function(column_to_aggregate)
+  FOR column_with_values_to_pivot
+  IN (pivoted_column1 [, pivoted_column2 ...])
+)
+```
+
+PIVOT syntax parameters:
+
+* `aggregation_function`: An aggregation function, such as SUM, COUNT, MIN, MAX, or AVG.
+* `column_to_aggregate`: The source column to be aggregated.
+* `column_with_values_to_pivot`: The column that contains values for the pivoted column names.
+* `pivoted_columnN`: The list of values to pivot into headers in the output.
+
+The following example demonstrates how to transform `cityName` values into column headers `ba_sum_deleted` and `ny_sum_deleted`:
+
+```sql
+SELECT user, channel, ba_sum_deleted, ny_sum_deleted
+FROM "wikipedia"
+PIVOT (SUM(deleted) AS "sum_deleted" FOR "cityName" IN ( 'Buenos Aires' AS ba, 'New York' AS ny))
+WHERE ba_sum_deleted IS NOT NULL OR ny_sum_deleted IS NOT NULL
+LIMIT 15
+```
+
+<details>
+<summary> View results </summary>
+
+|`user`|`channel`|`ba_sum_deleted`|`ny_sum_deleted`|
+|------|---------|----------------|----------------|
+|181.230.118.178|`#en.wikipedia`|0|null|
+|181.230.118.178|`#en.wikipedia`|0|null|
+|69.86.6.150|`#en.wikipedia`|null|1|
+|190.123.145.147|`#es.wikipedia`|0|null|
+|181.230.118.178|`#en.wikipedia`|16|null|
+|181.230.118.178|`#en.wikipedia`|0|null|
+|181.230.118.178|`#en.wikipedia`|0|null|
+|181.230.118.178|`#en.wikipedia`|0|null|
+|181.230.118.178|`#en.wikipedia`|0|null|
+|181.230.118.178|`#en.wikipedia`|0|null|
+|181.230.118.178|`#en.wikipedia`|0|null|
+|190.192.179.192|`#en.wikipedia`|0|null|
+|181.230.118.178|`#en.wikipedia`|0|null|
+|181.230.118.178|`#en.wikipedia`|0|null|
+|181.230.118.178|`#en.wikipedia`|0|null|
+
+</details>
+
+## UNPIVOT
+
+:::info
+The UNPIVOT operator is an [experimental feature](../development/experimental.md).
+:::
+
+The UNPIVOT operator transforms existing column values into rows.
+Note that UNPIVOT isn't the exact reverse operation of PIVOT. The PIVOT operator carries out an aggregation and merges rows as needed. UNPIVOT doesn't reproduce the original rows that have been merged.
+
+The following is the general syntax for the UNPIVOT operator. Note that the UNPIVOT operator is enclosed in parentheses and forms part of the FROM clause of the query.
+
+```sql
+UNPIVOT (values_column 
+  FOR names_column
+  IN (unpivoted_column1 [, unpivoted_column2 ... ])
+)
+```
+
+UNPIVOT syntax parameters:
+
+* `values_column`: The column that contains the values of the unpivoted columns.
+* `names_column`: The column that contains the names of the unpivoted columns.
+* `unpivoted_columnN`: The list of columns to transform into rows in the output.
+
+The following example demonstrates how to transform the columns `added` and `deleted` into row values that correspond to a particular `channel`:
+
+```sql
+SELECT channel, user, action, SUM(changes) AS total_changes
+FROM "wikipedia" 
+UNPIVOT ( changes FOR action IN ("added", "deleted") )
+WHERE channel LIKE '#ar%'
+GROUP BY channel, user, action
+LIMIT 15
+```
+
+<details>
+<summary> View results </summary>
+
+|`channel`|`user`|`action`|`total_changes`|
+|---------|------|--------|---------------|
+|`#ar.wikipedia`|156.202.189.223|added|0|
+|`#ar.wikipedia`|156.202.189.223|deleted|30|
+|`#ar.wikipedia`|156.202.76.160|added|0|
+|`#ar.wikipedia`|156.202.76.160|deleted|0|
+|`#ar.wikipedia`|156.212.124.165|added|451|
+|`#ar.wikipedia`|156.212.124.165|deleted|0|
+|`#ar.wikipedia`|160.166.147.167|added|1|
+|`#ar.wikipedia`|160.166.147.167|deleted|0|
+|`#ar.wikipedia`|185.99.32.50|added|1|
+|`#ar.wikipedia`|185.99.32.50|deleted|0|
+|`#ar.wikipedia`|197.18.109.148|added|0|
+|`#ar.wikipedia`|197.18.109.148|deleted|24|
+|`#ar.wikipedia`|`2001:16A2:3C7:6C00:917E:AD28:FAD3:FD5C`|added|1|
+|`#ar.wikipedia`|`2001:16A2:3C7:6C00:917E:AD28:FAD3:FD5C`|deleted|0|
+|`#ar.wikipedia`|41.108.33.83|added|0|
+
+</details>
+
 ## UNNEST
 
-> The UNNEST SQL function is [experimental](../development/experimental.md). Its API and behavior are subject
-> to change in future releases. It is not recommended to use this feature in production at this time.
-
-The UNNEST clause unnests array values. It's the SQL equivalent to the [unnest datasource](./datasource.md#unnest). The source for UNNEST can be an array or an input that's been transformed into an array, such as with helper functions like MV_TO_ARRAY or ARRAY.
+The UNNEST clause unnests ARRAY typed values. The source for UNNEST can be an array type column, or an input that's been transformed into an array, such as with helper functions like [`MV_TO_ARRAY`](./sql-multivalue-string-functions.md) or [`ARRAY`](./sql-array-functions.md).
 
 The following is the general syntax for UNNEST, specifically a query that returns the column that gets unnested:
 
 ```sql
-SELECT column_alias_name FROM datasource, UNNEST(source_expression1) AS table_alias_name1(column_alias_name1), UNNEST(source_expression2) AS table_alias_name2(column_alias_name2), ...
+SELECT column_alias_name
+FROM datasource
+CROSS JOIN UNNEST(source_expression1) AS table_alias_name1(column_alias_name1)
+CROSS JOIN UNNEST(source_expression2) AS table_alias_name2(column_alias_name2) ...
 ```
 
 * The `datasource` for UNNEST can be any Druid datasource, such as the following:
   * A table, such as  `FROM a_table`.
   * A subset of a table based on a query, a filter, or a JOIN. For example, `FROM (SELECT columnA,columnB,columnC from a_table)`.
-* The `source_expression` for the UNNEST function must be an array and can come from any expression. If the dimension you are unnesting is a multi-value dimension, you have to specify `MV_TO_ARRAY(dimension)` to convert it to an implicit ARRAY type. You can also specify any expression that has an SQL array datatype. For example, you can call UNNEST on the following:
+* The `source_expression` for the UNNEST function must be an array and can come from any expression. UNNEST works directly on Druid ARRAY typed columns. If the column you are unnesting is a multi-value VARCHAR, you must specify `MV_TO_ARRAY(dimension)` to convert it to an ARRAY type. You can also specify any expression that has an SQL array datatype. For example, you can call UNNEST on the following:
   * `ARRAY[dim1,dim2]` if you want to make an array out of two dimensions. 
   * `ARRAY_CONCAT(dim1,dim2)` if you want to concatenate two multi-value dimensions. 
 * The `AS table_alias_name(column_alias_name)` clause  is not required but is highly recommended. Use it to specify the output, which can be an existing column or a new one. Replace `table_alias_name` and `column_alias_name` with a table and column name you want to alias the unnested results to. If you don't provide this, Druid uses a nondescriptive name, such as `EXPR$0`.
 
 Keep the following things in mind when writing your query:
 
-- You must include the context parameter `"enableUnnest": true`.
 - You can unnest multiple source expressions in a single query.
-- Notice the comma between the datasource and the UNNEST function. This is needed in most cases of the UNNEST function. Specifically, it is not needed when you're unnesting an inline array since the array itself is the datasource.
+- Notice the CROSS JOIN between the datasource and the UNNEST function. This is needed in most cases of the UNNEST function. Specifically, it is not needed when you're unnesting an inline array since the array itself is the datasource.
 - If you view the native explanation of a SQL UNNEST, you'll notice that Druid uses `j0.unnest` as a virtual column to perform the unnest. An underscore is added for each unnest, so you may notice virtual columns named `_j0.unnest` or `__j0.unnest`.
 - UNNEST preserves the ordering of the source array that is being unnested.
 
@@ -117,8 +235,9 @@ For examples, see the [Unnest arrays tutorial](../tutorials/tutorial-unnest-arra
 The UNNEST function has the following limitations:
 
 - The function does not remove any duplicates or nulls in an array. Nulls will be treated as any other value in an array. If there are multiple nulls within the array, a record corresponding to each of the nulls gets created.
-- Arrays inside complex JSON types are not supported.
-- You cannot perform an UNNEST at ingestion time, including SQL-based ingestion using the MSQ task engine.
+- Arrays of complex objects inside complex JSON types are not supported.
+  
+UNNEST is the SQL equivalent of the [unnest datasource](./datasource.md#unnest).
 
 ## WHERE
 
@@ -139,7 +258,6 @@ WHERE stringDim IN ('1', '2', '3')
 ```
 
 Note that explicit type casting does not lead to significant performance improvement when comparing strings and numbers involving numeric dimensions since numeric dimensions are not indexed.
-
 
 ## GROUP BY
 
@@ -220,7 +338,7 @@ UNION ALL
 SELECT COUNT(*) FROM tbl WHERE my_column = 'value2'
 ```
 
-> With top-level queries, you can't apply GROUP BY, ORDER BY, or any other operator to the results of a UNION ALL.
+Certain limitations apply when you use a top-level UNION ALL. For all top-level UNION ALL queries, you can't apply a GROUP BY, ORDER BY, or any other operator to the results of the query. For any top-level UNION ALL that uses the MSQ task engine, the SQL planner attempts to plan the top-level UNION ALL as a table-level UNION ALL. Because of this, UNION ALL queries that use the MSQ task engine always behave the same as table-level UNION ALL queries. They have the same characteristics and limitations. If the planner can't plan the query as a table-level UNION ALL, the query fails.
 
 ### Table-level
 
@@ -244,14 +362,22 @@ GROUP BY col1
 
 With table-level UNION ALL, the rows from the unioned tables are not guaranteed to process in any particular order. They may process in an interleaved fashion. If you need a particular result ordering, use [ORDER BY](#order-by) on the outer query.
 
+To reference such unions a [TABLE(APPEND())](datasource.md#dynamic-table-append) datasource could also be used:
+```sql
+SELECT col1, COUNT(*) from TABLE(APPEND('tbl1', 'tbl2'))
+```
+
+
 ## EXPLAIN PLAN
 
 Add "EXPLAIN PLAN FOR" to the beginning of any query to get information about how it will be translated. In this case,
 the query will not actually be executed. Refer to the [Query translation](sql-translation.md#interpreting-explain-plan-output)
 documentation for more information on the output of EXPLAIN PLAN.
 
-> For the legacy plan, be careful when interpreting EXPLAIN PLAN output, and use [request logging](../configuration/index.md#request-logging) if in doubt.
+:::info
+ For the legacy plan, be careful when interpreting EXPLAIN PLAN output, and use [request logging](../configuration/index.md#request-logging) if in doubt.
 Request logs show the exact native query that will be run. Alternatively, to see the native query plan, set `useNativeQueryExplain` to true in the query context.
+:::
 
 ## Identifiers and literals
 
@@ -272,6 +398,21 @@ at execution time. To use dynamic parameters, replace any literal in the query w
 corresponding parameter value when you execute the query. Parameters are bound to the placeholders in the order in
 which they are passed. Parameters are supported in both the [HTTP POST](../api-reference/sql-api.md) and [JDBC](../api-reference/sql-jdbc.md) APIs.
 
+Druid supports double and null values in arrays for dynamic queries.
+The following example query uses the [ARRAY_CONTAINS](./sql-functions.md#array_contains) function to return `doubleArrayColumn` when the reference array `[-25.7, null, 36.85]` contains all elements of the value of `doubleArrayColumn`:
+
+```sql
+{
+   "query": "SELECT doubleArrayColumn from druid.table where ARRAY_CONTAINS(?, doubleArrayColumn)",
+   "parameters": [
+      {
+        "type": "ARRAY",
+        "value": [-25.7, null, 36.85]
+      }
+   ]
+}
+```
+
 In certain cases, using dynamic parameters in expressions can cause type inference issues which cause your query to fail, for example:
 
 ```sql
@@ -280,11 +421,33 @@ SELECT * FROM druid.foo WHERE dim1 like CONCAT('%', ?, '%')
 
 To solve this issue, explicitly provide the type of the dynamic parameter using the `CAST` keyword. Consider the fix for the preceding example:
 
-```
+```sql
 SELECT * FROM druid.foo WHERE dim1 like CONCAT('%', CAST (? AS VARCHAR), '%')
 ```
 
+Dynamic parameters can even replace arrays, reducing the parsing time. Refer to the parameters in the [API request body](../api-reference/sql-api.md#request-body) for usage.
 
+```sql
+SELECT arrayColumn from druid.table where ARRAY_CONTAINS(?, arrayColumn)
+```
 
+With this, an IN filter being supplied with a lot of values, can be replaced by a dynamic parameter passed inside [SCALAR_IN_ARRAY](sql-functions.md#scalar_in_array)
 
+```sql
+SELECT count(city) from druid.table where SCALAR_IN_ARRAY(city, ?)
+```
 
+sample java code using dynamic parameters is provided [here](../api-reference/sql-jdbc.md#dynamic-parameters).
+
+## Reserved keywords
+
+Druid SQL reserves certain keywords which are used in its query language. Apache Druid inherits all of the reserved keywords from [Apache Calcite](https://calcite.apache.org/docs/reference.html#keywords). In addition to these, the following reserved keywords are unique to Apache Druid:
+
+* **CLUSTERED**
+* **PARTITIONED**
+
+To use the reserved keywords in queries, enclose them in double quotation marks. For example, the reserved keyword **PARTITIONED** can be used in a query if and only if it is correctly quoted:
+
+```sql
+SELECT "PARTITIONED" from druid.table
+```

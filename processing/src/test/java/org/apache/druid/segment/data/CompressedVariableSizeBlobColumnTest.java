@@ -88,11 +88,12 @@ public class CompressedVariableSizeBlobColumnTest
         fileNameBase,
         base,
         ByteOrder.nativeOrder(),
+        ByteOrder.nativeOrder(),
         fileMapper
     ).get();
     for (int row = 0; row < numWritten; row++) {
       ByteBuffer value = column.get(row);
-      byte[] bytes = new byte[value.limit()];
+      byte[] bytes = new byte[value.remaining()];
       value.get(bytes);
       Assert.assertArrayEquals("Row " + row, values.get(row), bytes);
     }
@@ -151,6 +152,7 @@ public class CompressedVariableSizeBlobColumnTest
         fileNameBase,
         base,
         ByteOrder.nativeOrder(),
+        ByteOrder.nativeOrder(),
         fileMapper
     ).get();
     for (int row = 0; row < numWritten; row++) {
@@ -165,6 +167,68 @@ public class CompressedVariableSizeBlobColumnTest
       byte[] bytes = new byte[value.remaining()];
       value.get(bytes);
       Assert.assertArrayEquals("Row " + row, values.get(row), bytes);
+    }
+    column.close();
+    fileMapper.close();
+  }
+
+  @Test
+  public void testSomeValuesByteBuffersBigEndian() throws IOException
+  {
+    final File tmpFile = tempFolder.newFolder();
+    final FileSmoosher smoosher = new FileSmoosher(tmpFile);
+
+    final File tmpFile2 = tempFolder.newFolder();
+    final SegmentWriteOutMedium writeOutMedium =
+        TmpFileSegmentWriteOutMediumFactory.instance().makeSegmentWriteOutMedium(tmpFile2);
+
+    final String fileNameBase = "test";
+
+    final CompressionStrategy compressionStrategy = CompressionStrategy.LZ4;
+    CompressedVariableSizedBlobColumnSerializer serializer = new CompressedVariableSizedBlobColumnSerializer(
+        fileNameBase,
+        writeOutMedium,
+        compressionStrategy
+    );
+    serializer.open();
+
+    int numWritten = 0;
+    final Random r = ThreadLocalRandom.current();
+    final List<Long> values = new ArrayList<>();
+    final ByteBuffer longValueConverter = ByteBuffer.allocate(Long.BYTES).order(ByteOrder.BIG_ENDIAN);
+    for (int i = 0, offset = 0; offset < CompressedPools.BUFFER_SIZE * 4; i++, offset = 1 << i) {
+      final long l = r.nextLong();
+      values.add(l);
+      longValueConverter.clear();
+      longValueConverter.putLong(l);
+      longValueConverter.rewind();
+      serializer.addValue(longValueConverter.array());
+      numWritten++;
+    }
+
+    SmooshedWriter writer = smoosher.addWithSmooshedWriter(fileNameBase, serializer.getSerializedSize());
+    serializer.writeTo(writer, smoosher);
+    writer.close();
+    smoosher.close();
+    SmooshedFileMapper fileMapper = SmooshedFileMapper.load(tmpFile);
+
+    ByteBuffer base = fileMapper.mapFile(fileNameBase);
+
+    CompressedVariableSizedBlobColumn column = CompressedVariableSizedBlobColumnSupplier.fromByteBuffer(
+        fileNameBase,
+        base,
+        ByteOrder.nativeOrder(),
+        ByteOrder.BIG_ENDIAN,
+        fileMapper
+    ).get();
+    for (int row = 0; row < numWritten; row++) {
+      ByteBuffer value = column.get(row);
+      Assert.assertEquals("Row " + row, values.get(row).longValue(), value.getLong());
+    }
+    for (int rando = 0; rando < numWritten; rando++) {
+      int row = ThreadLocalRandom.current().nextInt(0, numWritten - 1);
+      ByteBuffer value = column.get(row);
+      Assert.assertEquals("Row " + row, values.get(row).longValue(), value.getLong());
     }
     column.close();
     fileMapper.close();
@@ -186,7 +250,8 @@ public class CompressedVariableSizeBlobColumnTest
     final CompressionStrategy compressionStrategy = CompressionStrategy.LZ4;
     CompressedLongsSerializer serializer = new CompressedLongsSerializer(
         writeOutMedium,
-        compressionStrategy
+        compressionStrategy,
+        writeOutMedium.getCloser()
     );
     serializer.open();
 
@@ -204,6 +269,7 @@ public class CompressedVariableSizeBlobColumnTest
     serializer.writeTo(writer, smoosher);
     writer.close();
     smoosher.close();
+    writeOutMedium.close();
     SmooshedFileMapper fileMapper = SmooshedFileMapper.load(tmpFile);
 
     ByteBuffer base = fileMapper.mapFile(fileNameBase);

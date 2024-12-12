@@ -45,7 +45,7 @@ public interface DataSegmentPusher
   String getPathForHadoop();
 
   /**
-   * Pushes index files and segment descriptor to deep storage.
+   * Pushes index files and segment descriptor to deep storage. Expected to perform its own retries, if appropriate.
    * @param file directory containing index files
    * @param segment segment descriptor
    * @param useUniquePath if true, pushes to a unique file path. This prevents situations where task failures or replica

@@ -73,7 +73,6 @@ public class ReportTimelineMissingSegmentQueryRunnerTest
       super(
           new TableDataSource("datasource"),
           new MultipleSpecificSegmentSpec(Collections.emptyList()),
-          false,
           new HashMap<>()
       );
     }

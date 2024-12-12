@@ -21,12 +21,20 @@ package org.apache.druid.math.expr;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import org.apache.druid.annotations.SubclassesMustOverrideEqualsAndHashCode;
 import org.apache.druid.java.util.common.Cacheable;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.query.filter.ColumnIndexSelector;
+import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnIndexSupplier;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.index.semantic.DictionaryEncodedValueIndex;
+import org.apache.druid.segment.serde.NoIndexesColumnIndexSupplier;
+import org.apache.druid.segment.virtual.ExpressionSelectors;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -174,6 +182,23 @@ public interface Expr extends Cacheable
     return false;
   }
 
+
+  default boolean canFallbackVectorize(InputBindingInspector inspector, List<Expr> args)
+  {
+    return ExpressionProcessing.allowVectorizeFallback() &&
+           getOutputType(inspector) != null &&
+           inspector.canVectorize(args);
+  }
+  /**
+   * Possibly convert the {@link Expr} into an optimized, possibly not thread-safe {@link Expr}. Does not convert
+   * child {@link Expr}. Most callers should use {@link Expr#singleThreaded(Expr, InputBindingInspector)} to convert
+   * an entire tree, which delegates to this method to translate individual nodes.
+   */
+  default Expr asSingleThreaded(InputBindingInspector inspector)
+  {
+    return this;
+  }
+
   /**
    * Builds a 'vectorized' expression processor, that can operate on batches of input values for use in vectorized
    * query engines.
@@ -183,6 +208,58 @@ public interface Expr extends Cacheable
   default <T> ExprVectorProcessor<T> asVectorProcessor(VectorInputBindingInspector inspector)
   {
     throw Exprs.cannotVectorize(this);
+  }
+
+  @Nullable
+  default ColumnIndexSupplier asColumnIndexSupplier(
+      ColumnIndexSelector columnIndexSelector,
+      @Nullable ColumnType outputType
+  )
+  {
+    final Expr.BindingAnalysis details = analyzeInputs();
+    if (details.getRequiredBindings().size() == 1) {
+      // Single-column expression. We can use bitmap indexes if this column has an index and the expression can
+      // map over the values of the index.
+      final String column = Iterables.getOnlyElement(details.getRequiredBindings());
+
+      final ColumnIndexSupplier delegateIndexSupplier = columnIndexSelector.getIndexSupplier(column);
+      if (delegateIndexSupplier == null) {
+        // if the column doesn't exist, check to see if the expression evaluates to a non-null result... if so, we might
+        // need to make a value matcher anyway
+        if (eval(InputBindings.nilBindings()).valueOrDefault() != null) {
+          return NoIndexesColumnIndexSupplier.getInstance();
+        }
+        return null;
+      }
+      final DictionaryEncodedValueIndex<?> delegateRawIndex = delegateIndexSupplier.as(
+          DictionaryEncodedValueIndex.class
+      );
+
+      final ColumnCapabilities capabilities = columnIndexSelector.getColumnCapabilities(column);
+      if (!ExpressionSelectors.canMapOverDictionary(details, capabilities)) {
+        // for mvds, expression might need to evaluate entire row, but we don't have those handy, so fall back to
+        // not using indexes
+        return NoIndexesColumnIndexSupplier.getInstance();
+      }
+      final ExpressionType inputType = ExpressionType.fromColumnTypeStrict(capabilities);
+      final ColumnType outType;
+      if (outputType == null) {
+        outType = ExpressionType.toColumnType(getOutputType(InputBindings.inspectorForColumn(column, inputType)));
+      } else {
+        outType = outputType;
+      }
+
+      if (delegateRawIndex != null && outputType != null) {
+        return new ExpressionPredicateIndexSupplier(
+            this,
+            column,
+            inputType,
+            outType,
+            delegateRawIndex
+        );
+      }
+    }
+    return NoIndexesColumnIndexSupplier.getInstance();
   }
 
 
@@ -460,8 +537,8 @@ public interface Expr extends Cacheable
    * @see Parser#applyUnappliedBindings
    * @see Parser#applyUnapplied
    * @see Parser#liftApplyLambda
-   * @see org.apache.druid.segment.virtual.ExpressionSelectors#makeDimensionSelector
-   * @see org.apache.druid.segment.virtual.ExpressionSelectors#makeColumnValueSelector
+   * @see ExpressionSelectors#makeDimensionSelector
+   * @see ExpressionSelectors#makeColumnValueSelector
    */
   @SuppressWarnings("JavadocReference")
   class BindingAnalysis
@@ -629,7 +706,7 @@ public interface Expr extends Cacheable
      * Add set of arguments as {@link BindingAnalysis#arrayVariables} that are *directly* {@link IdentifierExpr},
      * else they are ignored.
      */
-    BindingAnalysis withArrayArguments(Set<Expr> arrayArguments)
+    public BindingAnalysis withArrayArguments(Set<Expr> arrayArguments)
     {
       Set<IdentifierExpr> arrayIdentifiers = new HashSet<>();
       for (Expr expr : arrayArguments) {
@@ -650,7 +727,7 @@ public interface Expr extends Cacheable
     /**
      * Copy, setting if an expression has array inputs
      */
-    BindingAnalysis withArrayInputs(boolean hasArrays)
+    public BindingAnalysis withArrayInputs(boolean hasArrays)
     {
       return new BindingAnalysis(
           freeVariables,
@@ -664,7 +741,7 @@ public interface Expr extends Cacheable
     /**
      * Copy, setting if an expression produces an array output
      */
-    BindingAnalysis withArrayOutput(boolean isOutputArray)
+    public BindingAnalysis withArrayOutput(boolean isOutputArray)
     {
       return new BindingAnalysis(
           freeVariables,
@@ -702,5 +779,16 @@ public interface Expr extends Cacheable
       }
       return results;
     }
+  }
+
+
+  /**
+   * Returns the single-threaded version of the given expression tree.
+   *
+   * Nested expressions in the subtree are also optimized.
+   */
+  static Expr singleThreaded(Expr expr, InputBindingInspector inspector)
+  {
+    return expr.visit(node -> node.asSingleThreaded(inspector));
   }
 }

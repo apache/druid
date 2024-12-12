@@ -21,10 +21,15 @@ package org.apache.druid.msq.exec;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import org.apache.calcite.avatica.ColumnMetaData;
+import org.apache.calcite.avatica.remote.TypedValue;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.CsvInputFormat;
+import org.apache.druid.data.input.impl.InlineInputSource;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LocalInputSource;
+import org.apache.druid.data.input.impl.systemfield.SystemFields;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.frame.util.DurableStorageUtils;
@@ -34,7 +39,6 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExprEval;
-import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.indexing.destination.DurableStorageMSQDestination;
@@ -44,22 +48,24 @@ import org.apache.druid.msq.indexing.report.MSQResultsReport;
 import org.apache.druid.msq.querykit.common.SortMergeJoinFrameProcessorFactory;
 import org.apache.druid.msq.test.CounterSnapshotMatcher;
 import org.apache.druid.msq.test.MSQTestBase;
-import org.apache.druid.msq.test.MSQTestFileUtils;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.LookupDataSource;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
+import org.apache.druid.query.UnionDataSource;
+import org.apache.druid.query.UnnestDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
-import org.apache.druid.query.aggregation.post.ExpressionPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
+import org.apache.druid.query.filter.LikeDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
@@ -69,6 +75,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
+import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.external.ExternalDataSource;
 import org.apache.druid.sql.calcite.filtration.Filtration;
@@ -79,14 +86,12 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
-import org.junit.Test;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
-import javax.annotation.Nonnull;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -95,10 +100,8 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 
-@RunWith(Parameterized.class)
 public class MSQSelectTest extends MSQTestBase
 {
 
@@ -109,9 +112,10 @@ public class MSQSelectTest extends MSQTestBase
   public static final Map<String, Object> QUERY_RESULTS_WITH_DURABLE_STORAGE_CONTEXT =
       ImmutableMap.<String, Object>builder()
                   .putAll(DURABLE_STORAGE_MSQ_CONTEXT)
+                  .put(MultiStageQueryContext.CTX_ROWS_PER_PAGE, 2)
                   .put(
                       MultiStageQueryContext.CTX_SELECT_DESTINATION,
-                      MSQSelectDestination.DURABLESTORAGE.getName().toLowerCase(Locale.ENGLISH)
+                      StringUtils.toLowerCase(MSQSelectDestination.DURABLESTORAGE.getName())
                   )
                   .build();
 
@@ -121,11 +125,10 @@ public class MSQSelectTest extends MSQTestBase
                   .putAll(DEFAULT_MSQ_CONTEXT)
                   .put(
                       MultiStageQueryContext.CTX_SELECT_DESTINATION,
-                      MSQSelectDestination.DURABLESTORAGE.getName().toLowerCase(Locale.ENGLISH)
+                      StringUtils.toLowerCase(MSQSelectDestination.DURABLESTORAGE.getName())
                   )
                   .build();
 
-  @Parameterized.Parameters(name = "{index}:with context {0}")
   public static Collection<Object[]> data()
   {
     Object[][] data = new Object[][]{
@@ -136,17 +139,12 @@ public class MSQSelectTest extends MSQTestBase
         {QUERY_RESULTS_WITH_DURABLE_STORAGE, QUERY_RESULTS_WITH_DURABLE_STORAGE_CONTEXT},
         {QUERY_RESULTS_WITH_DEFAULT, QUERY_RESULTS_WITH_DEFAULT_CONTEXT}
     };
+
     return Arrays.asList(data);
   }
-
-  @Parameterized.Parameter(0)
-  public String contextName;
-
-  @Parameterized.Parameter(1)
-  public Map<String, Object> context;
-
-  @Test
-  public void testCalculator()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testCalculator(String contextName, Map<String, Object> context)
   {
     RowSignature resultSignature = RowSignature.builder()
                                                .add("EXPR$0", ColumnType.LONG)
@@ -166,12 +164,13 @@ public class MSQSelectTest extends MSQTestBase
                            )
                            .intervals(querySegmentSpec(Filtration.eternity()))
                            .columns("EXPR$0")
+                           .columnTypes(ColumnType.LONG)
                            .context(defaultScanQueryContext(context, resultSignature))
                            .build()
                    )
                    .columnMappings(ColumnMappings.identity(resultSignature))
                    .tuningConfig(MSQTuningConfig.defaultConfig())
-                   .destination(isDurableStorageDestination()
+                   .destination(isDurableStorageDestination(contextName, context)
                                 ? DurableStorageMSQDestination.INSTANCE
                                 : TaskReportMSQDestination.INSTANCE)
                    .build()
@@ -181,8 +180,9 @@ public class MSQSelectTest extends MSQTestBase
         .setExpectedResultRows(ImmutableList.of(new Object[]{2})).verifyResults();
   }
 
-  @Test
-  public void testSelectOnFoo()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testSelectOnFoo(String contextName, Map<String, Object> context)
   {
     RowSignature resultSignature = RowSignature.builder()
                                                .add("cnt", ColumnType.LONG)
@@ -198,12 +198,13 @@ public class MSQSelectTest extends MSQTestBase
                            .dataSource(CalciteTests.DATASOURCE1)
                            .intervals(querySegmentSpec(Filtration.eternity()))
                            .columns("cnt", "dim1")
+                           .columnTypes(ColumnType.LONG, ColumnType.STRING)
                            .context(defaultScanQueryContext(context, resultSignature))
                            .build()
                    )
                    .columnMappings(ColumnMappings.identity(resultSignature))
                    .tuningConfig(MSQTuningConfig.defaultConfig())
-                   .destination(isDurableStorageDestination()
+                   .destination(isDurableStorageDestination(contextName, context)
                                 ? DurableStorageMSQDestination.INSTANCE
                                 : TaskReportMSQDestination.INSTANCE)
                    .build()
@@ -222,7 +223,9 @@ public class MSQSelectTest extends MSQTestBase
         )
         .setExpectedCountersForStageWorkerChannel(
             CounterSnapshotMatcher
-                .with().rows(6).frames(1),
+                .with()
+                .rows(isPageSizeLimited(contextName) ? new long[]{2, 2, 2} : new long[]{6})
+                .frames(isPageSizeLimited(contextName) ? new long[]{1, 1, 1} : new long[]{1}),
             0, 0, "shuffle"
         )
         .setExpectedResultRows(ImmutableList.of(
@@ -232,11 +235,14 @@ public class MSQSelectTest extends MSQTestBase
             new Object[]{1L, "1"},
             new Object[]{1L, "def"},
             new Object[]{1L, "abc"}
-        )).verifyResults();
+        ))
+        .setExpectedLookupLoadingSpec(LookupLoadingSpec.NONE)
+        .verifyResults();
   }
 
-  @Test
-  public void testSelectOnFoo2()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testSelectOnFoo2(String contextName, Map<String, Object> context)
   {
     RowSignature resultSignature = RowSignature.builder()
                                                .add("m1", ColumnType.LONG)
@@ -250,18 +256,19 @@ public class MSQSelectTest extends MSQTestBase
                    .query(newScanQueryBuilder()
                               .dataSource(CalciteTests.DATASOURCE2)
                               .intervals(querySegmentSpec(Filtration.eternity()))
-                              .columns("dim2", "m1")
+                              .columns("m1", "dim2")
+                              .columnTypes(ColumnType.LONG, ColumnType.STRING)
                               .context(defaultScanQueryContext(
                                   context,
                                   RowSignature.builder()
-                                              .add("dim2", ColumnType.STRING)
                                               .add("m1", ColumnType.LONG)
+                                              .add("dim2", ColumnType.STRING)
                                               .build()
                               ))
                               .build())
                    .columnMappings(ColumnMappings.identity(resultSignature))
                    .tuningConfig(MSQTuningConfig.defaultConfig())
-                   .destination(isDurableStorageDestination()
+                   .destination(isDurableStorageDestination(contextName, context)
                                 ? DurableStorageMSQDestination.INSTANCE
                                 : TaskReportMSQDestination.INSTANCE)
                    .build()
@@ -285,14 +292,17 @@ public class MSQSelectTest extends MSQTestBase
         )
         .setExpectedCountersForStageWorkerChannel(
             CounterSnapshotMatcher
-                .with().rows(3).frames(1),
+                .with()
+                .rows(isPageSizeLimited(contextName) ? new long[]{1L, 2L} : new long[]{3L})
+                .frames(isPageSizeLimited(contextName) ? new long[]{1L, 1L} : new long[]{1L}),
             0, 0, "shuffle"
         )
         .verifyResults();
   }
 
-  @Test
-  public void testSelectOnFooDuplicateColumnNames()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testSelectOnFooDuplicateColumnNames(String contextName, Map<String, Object> context)
   {
     // Duplicate column names are OK in SELECT statements.
 
@@ -324,12 +334,13 @@ public class MSQSelectTest extends MSQTestBase
                            .dataSource(CalciteTests.DATASOURCE1)
                            .intervals(querySegmentSpec(Filtration.eternity()))
                            .columns("cnt", "dim1")
+                           .columnTypes(ColumnType.LONG, ColumnType.STRING)
                            .context(defaultScanQueryContext(context, expectedScanSignature))
                            .build()
                    )
                    .columnMappings(expectedColumnMappings)
                    .tuningConfig(MSQTuningConfig.defaultConfig())
-                   .destination(isDurableStorageDestination()
+                   .destination(isDurableStorageDestination(contextName, context)
                                 ? DurableStorageMSQDestination.INSTANCE
                                 : TaskReportMSQDestination.INSTANCE)
                    .build()
@@ -340,15 +351,16 @@ public class MSQSelectTest extends MSQTestBase
             CounterSnapshotMatcher
                 .with().totalFiles(1),
             0, 0, "input0"
-        )
-        .setExpectedCountersForStageWorkerChannel(
+        ).setExpectedCountersForStageWorkerChannel(
             CounterSnapshotMatcher
                 .with().rows(6).frames(1),
             0, 0, "output"
         )
         .setExpectedCountersForStageWorkerChannel(
             CounterSnapshotMatcher
-                .with().rows(6).frames(1),
+                .with()
+                .rows(isPageSizeLimited(contextName) ? new long[]{2, 2, 2} : new long[]{6})
+                .frames(isPageSizeLimited(contextName) ? new long[]{1, 1, 1} : new long[]{1}),
             0, 0, "shuffle"
         )
         .setExpectedResultRows(ImmutableList.of(
@@ -361,8 +373,9 @@ public class MSQSelectTest extends MSQTestBase
         )).verifyResults();
   }
 
-  @Test
-  public void testSelectOnFooWhereMatchesNoSegments()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testSelectOnFooWhereMatchesNoSegments(String contextName, Map<String, Object> context)
   {
     RowSignature resultSignature = RowSignature.builder()
                                                .add("cnt", ColumnType.LONG)
@@ -386,12 +399,13 @@ public class MSQSelectTest extends MSQTestBase
                                )
                            )
                            .columns("cnt", "dim1")
+                           .columnTypes(ColumnType.LONG, ColumnType.STRING)
                            .context(defaultScanQueryContext(context, resultSignature))
                            .build()
                    )
                    .columnMappings(ColumnMappings.identity(resultSignature))
                    .tuningConfig(MSQTuningConfig.defaultConfig())
-                   .destination(isDurableStorageDestination()
+                   .destination(isDurableStorageDestination(contextName, context)
                                 ? DurableStorageMSQDestination.INSTANCE
                                 : TaskReportMSQDestination.INSTANCE)
                    .build()
@@ -402,8 +416,57 @@ public class MSQSelectTest extends MSQTestBase
         .verifyResults();
   }
 
-  @Test
-  public void testSelectOnFooWhereMatchesNoData()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testSelectWithDynamicParameters(String contextName, Map<String, Object> context)
+  {
+    RowSignature resultSignature = RowSignature.builder()
+                                               .add("cnt", ColumnType.LONG)
+                                               .add("dim1", ColumnType.STRING)
+                                               .build();
+
+    // Filter [__time >= timestamp '3000-01-01 00:00:00'] matches no segments at all.
+    testSelectQuery()
+        .setSql("select cnt,dim1 from foo where __time >= ?")
+        .setExpectedMSQSpec(
+            MSQSpec.builder()
+                   .query(
+                       newScanQueryBuilder()
+                           .dataSource(CalciteTests.DATASOURCE1)
+                           .intervals(
+                               querySegmentSpec(
+                                   Intervals.utc(
+                                       DateTimes.of("3000").getMillis(),
+                                       Intervals.ETERNITY.getEndMillis()
+                                   )
+                               )
+                           )
+                           .columns("cnt", "dim1")
+                           .columnTypes(ColumnType.LONG, ColumnType.STRING)
+                           .context(defaultScanQueryContext(context, resultSignature))
+                           .build()
+                   )
+                   .columnMappings(ColumnMappings.identity(resultSignature))
+                   .tuningConfig(MSQTuningConfig.defaultConfig())
+                   .destination(isDurableStorageDestination(contextName, context)
+                                ? DurableStorageMSQDestination.INSTANCE
+                                : TaskReportMSQDestination.INSTANCE)
+                   .build()
+        )
+        .setDynamicParameters(
+            ImmutableList.of(
+                TypedValue.ofLocal(ColumnMetaData.Rep.JAVA_SQL_TIMESTAMP, DateTimes.of("3000-01-01").getMillis())
+            )
+        )
+        .setQueryContext(context)
+        .setExpectedRowSignature(resultSignature)
+        .setExpectedResultRows(ImmutableList.of())
+        .verifyResults();
+  }
+
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testSelectOnFooWhereMatchesNoData(String contextName, Map<String, Object> context)
   {
     RowSignature resultSignature = RowSignature.builder()
                                                .add("cnt", ColumnType.LONG)
@@ -419,13 +482,14 @@ public class MSQSelectTest extends MSQTestBase
                            .dataSource(CalciteTests.DATASOURCE1)
                            .intervals(querySegmentSpec(Intervals.ETERNITY))
                            .columns("cnt", "dim1")
+                           .columnTypes(ColumnType.LONG, ColumnType.STRING)
                            .filters(equality("dim2", "nonexistent", ColumnType.STRING))
                            .context(defaultScanQueryContext(context, resultSignature))
                            .build()
                    )
                    .columnMappings(ColumnMappings.identity(resultSignature))
                    .tuningConfig(MSQTuningConfig.defaultConfig())
-                   .destination(isDurableStorageDestination()
+                   .destination(isDurableStorageDestination(contextName, context)
                                 ? DurableStorageMSQDestination.INSTANCE
                                 : TaskReportMSQDestination.INSTANCE)
                    .build()
@@ -436,8 +500,9 @@ public class MSQSelectTest extends MSQTestBase
         .verifyResults();
   }
 
-  @Test
-  public void testSelectAndOrderByOnFooWhereMatchesNoData()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testSelectAndOrderByOnFooWhereMatchesNoData(String contextName, Map<String, Object> context)
   {
     RowSignature resultSignature = RowSignature.builder()
                                                .add("cnt", ColumnType.LONG)
@@ -453,14 +518,15 @@ public class MSQSelectTest extends MSQTestBase
                            .dataSource(CalciteTests.DATASOURCE1)
                            .intervals(querySegmentSpec(Intervals.ETERNITY))
                            .columns("cnt", "dim1")
+                           .columnTypes(ColumnType.LONG, ColumnType.STRING)
                            .filters(equality("dim2", "nonexistent", ColumnType.STRING))
                            .context(defaultScanQueryContext(context, resultSignature))
-                           .orderBy(ImmutableList.of(new ScanQuery.OrderBy("dim1", ScanQuery.Order.ASCENDING)))
+                           .orderBy(ImmutableList.of(OrderBy.ascending("dim1")))
                            .build()
                    )
                    .columnMappings(ColumnMappings.identity(resultSignature))
                    .tuningConfig(MSQTuningConfig.defaultConfig())
-                   .destination(isDurableStorageDestination()
+                   .destination(isDurableStorageDestination(contextName, context)
                                 ? DurableStorageMSQDestination.INSTANCE
                                 : TaskReportMSQDestination.INSTANCE)
                    .build()
@@ -471,8 +537,9 @@ public class MSQSelectTest extends MSQTestBase
         .verifyResults();
   }
 
-  @Test
-  public void testGroupByOnFoo()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testGroupByOnFoo(String contextName, Map<String, Object> context)
   {
     RowSignature rowSignature = RowSignature.builder()
                                             .add("cnt", ColumnType.LONG)
@@ -505,7 +572,7 @@ public class MSQSelectTest extends MSQTestBase
                                        )
                                        ))
                                    .tuningConfig(MSQTuningConfig.defaultConfig())
-                                   .destination(isDurableStorageDestination()
+                                   .destination(isDurableStorageDestination(contextName, context)
                                                 ? DurableStorageMSQDestination.INSTANCE
                                                 : TaskReportMSQDestination.INSTANCE)
                                    .build())
@@ -530,8 +597,9 @@ public class MSQSelectTest extends MSQTestBase
         .verifyResults();
   }
 
-  @Test
-  public void testGroupByOrderByDimension()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testGroupByOrderByDimension(String contextName, Map<String, Object> context)
   {
     RowSignature rowSignature = RowSignature.builder()
                                             .add("m1", ColumnType.FLOAT)
@@ -572,7 +640,7 @@ public class MSQSelectTest extends MSQTestBase
                        )
                        ))
                    .tuningConfig(MSQTuningConfig.defaultConfig())
-                   .destination(isDurableStorageDestination()
+                   .destination(isDurableStorageDestination(contextName, context)
                                 ? DurableStorageMSQDestination.INSTANCE
                                 : TaskReportMSQDestination.INSTANCE)
                    .build())
@@ -606,16 +674,26 @@ public class MSQSelectTest extends MSQTestBase
         .verifyResults();
   }
 
-  @Test
-  public void testSelectWithLimit()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testSelectWithLimit(String contextName, Map<String, Object> context)
   {
     RowSignature resultSignature = RowSignature.builder()
                                                .add("cnt", ColumnType.LONG)
                                                .add("dim1", ColumnType.STRING)
                                                .build();
 
+    final ImmutableList<Object[]> expectedResults = ImmutableList.of(
+        new Object[]{1L, ""},
+        new Object[]{1L, "10.1"},
+        new Object[]{1L, "2"},
+        new Object[]{1L, "1"},
+        new Object[]{1L, "def"},
+        new Object[]{1L, "abc"}
+    );
+
     testSelectQuery()
-        .setSql("select cnt,dim1 from foo limit 10")
+        .setSql("select cnt, dim1 from foo limit 10")
         .setExpectedMSQSpec(
             MSQSpec.builder()
                    .query(
@@ -623,19 +701,21 @@ public class MSQSelectTest extends MSQTestBase
                            .dataSource(CalciteTests.DATASOURCE1)
                            .intervals(querySegmentSpec(Filtration.eternity()))
                            .columns("cnt", "dim1")
+                           .columnTypes(ColumnType.LONG, ColumnType.STRING)
                            .context(defaultScanQueryContext(context, resultSignature))
                            .limit(10)
                            .build()
                    )
                    .columnMappings(ColumnMappings.identity(resultSignature))
                    .tuningConfig(MSQTuningConfig.defaultConfig())
-                   .destination(isDurableStorageDestination()
+                   .destination(isDurableStorageDestination(contextName, context)
                                 ? DurableStorageMSQDestination.INSTANCE
                                 : TaskReportMSQDestination.INSTANCE)
                    .build()
         )
         .setQueryContext(context)
         .setExpectedRowSignature(resultSignature)
+        .setExpectedResultRows(expectedResults)
         .setExpectedCountersForStageWorkerChannel(
             CounterSnapshotMatcher
                 .with().totalFiles(1),
@@ -643,26 +723,36 @@ public class MSQSelectTest extends MSQTestBase
         )
         .setExpectedCountersForStageWorkerChannel(
             CounterSnapshotMatcher
-                .with().rows(6).frames(1),
+                .with().rows(6),
             0, 0, "output"
         )
         .setExpectedCountersForStageWorkerChannel(
             CounterSnapshotMatcher
-                .with().rows(6).frames(1),
+                .with().rows(6),
             0, 0, "shuffle"
         )
-        .setExpectedResultRows(ImmutableList.of(
-            new Object[]{1L, ""},
-            new Object[]{1L, "10.1"},
-            new Object[]{1L, "2"},
-            new Object[]{1L, "1"},
-            new Object[]{1L, "def"},
-            new Object[]{1L, "abc"}
-        )).verifyResults();
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(6),
+            1, 0, "input0"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(6),
+            1, 0, "output"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(!context.containsKey(MultiStageQueryContext.CTX_ROWS_PER_PAGE) ? new long[] {6} : new long[] {2, 2, 2}),
+            1, 0, "shuffle"
+        )
+        .setExpectedResultRows(expectedResults)
+        .verifyResults();
   }
 
-  @Test
-  public void testSelectWithGroupByLimit()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testSelectWithGroupByLimit(String contextName, Map<String, Object> context)
   {
     RowSignature rowSignature = RowSignature.builder()
                                             .add("cnt", ColumnType.LONG)
@@ -698,7 +788,7 @@ public class MSQSelectTest extends MSQTestBase
                                        )
                                        ))
                                    .tuningConfig(MSQTuningConfig.defaultConfig())
-                                   .destination(isDurableStorageDestination()
+                                   .destination(isDurableStorageDestination(contextName, context)
                                                 ? DurableStorageMSQDestination.INSTANCE
                                                 : TaskReportMSQDestination.INSTANCE)
                                    .build())
@@ -708,8 +798,9 @@ public class MSQSelectTest extends MSQTestBase
 
   }
 
-  @Test
-  public void testSelectLookup()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testSelectLookup(String contextName, Map<String, Object> context)
   {
     final RowSignature rowSignature = RowSignature.builder().add("EXPR$0", ColumnType.LONG).build();
 
@@ -728,17 +819,19 @@ public class MSQSelectTest extends MSQTestBase
                                    .build())
                    .columnMappings(new ColumnMappings(ImmutableList.of(new ColumnMapping("a0", "EXPR$0"))))
                    .tuningConfig(MSQTuningConfig.defaultConfig())
-                   .destination(isDurableStorageDestination()
+                   .destination(isDurableStorageDestination(contextName, context)
                                 ? DurableStorageMSQDestination.INSTANCE
                                 : TaskReportMSQDestination.INSTANCE)
                    .build())
         .setExpectedRowSignature(rowSignature)
         .setExpectedResultRows(ImmutableList.of(new Object[]{4L}))
+        .setExpectedLookupLoadingSpec(LookupLoadingSpec.loadOnly(ImmutableSet.of("lookyloo")))
         .verifyResults();
   }
 
-  @Test
-  public void testJoinWithLookup()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testJoinWithLookup(String contextName, Map<String, Object> context)
   {
     final RowSignature rowSignature =
         RowSignature.builder()
@@ -765,7 +858,7 @@ public class MSQSelectTest extends MSQTestBase
                                                DruidExpression.ofColumn(ColumnType.STRING, "dim2"),
                                                DruidExpression.ofColumn(ColumnType.STRING, "j0.k")
                                            ),
-                                           JoinType.LEFT
+                                           NullHandling.sqlCompatible() ? JoinType.INNER : JoinType.LEFT
                                        )
                                    )
                                    .setInterval(querySegmentSpec(Filtration.eternity()))
@@ -784,22 +877,28 @@ public class MSQSelectTest extends MSQTestBase
                        )
                    )
                    .tuningConfig(MSQTuningConfig.defaultConfig())
-                   .destination(isDurableStorageDestination()
+                   .destination(isDurableStorageDestination(contextName, context)
                                 ? DurableStorageMSQDestination.INSTANCE
                                 : TaskReportMSQDestination.INSTANCE)
                    .build())
         .setExpectedRowSignature(rowSignature)
         .setExpectedResultRows(
-            ImmutableList.of(
+            NullHandling.sqlCompatible()
+            ? ImmutableList.of(
+                new Object[]{"xabc", 1L}
+            )
+            : ImmutableList.of(
                 new Object[]{NullHandling.defaultStringValue(), 3L},
                 new Object[]{"xabc", 1L}
             )
         )
+        .setExpectedLookupLoadingSpec(LookupLoadingSpec.loadOnly(ImmutableSet.of("lookyloo")))
         .verifyResults();
   }
 
-  @Test
-  public void testSubquery()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testSubquery(String contextName, Map<String, Object> context)
   {
     RowSignature resultSignature = RowSignature.builder()
                                                .add("cnt", ColumnType.LONG)
@@ -829,7 +928,7 @@ public class MSQSelectTest extends MSQTestBase
                    .query(query)
                    .columnMappings(new ColumnMappings(ImmutableList.of(new ColumnMapping("a0", "cnt"))))
                    .tuningConfig(MSQTuningConfig.defaultConfig())
-                   .destination(isDurableStorageDestination()
+                   .destination(isDurableStorageDestination(contextName, context)
                                 ? DurableStorageMSQDestination.INSTANCE
                                 : TaskReportMSQDestination.INSTANCE)
                    .build()
@@ -855,19 +954,21 @@ public class MSQSelectTest extends MSQTestBase
         .verifyResults();
   }
 
-  @Test
-  public void testBroadcastJoin()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testBroadcastJoin(String contextName, Map<String, Object> context)
   {
-    testJoin(JoinAlgorithm.BROADCAST);
+    testJoin(contextName, context, JoinAlgorithm.BROADCAST);
   }
 
-  @Test
-  public void testSortMergeJoin()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testSortMergeJoin(String contextName, Map<String, Object> context)
   {
-    testJoin(JoinAlgorithm.SORT_MERGE);
+    testJoin(contextName, context, JoinAlgorithm.SORT_MERGE);
   }
 
-  private void testJoin(final JoinAlgorithm joinAlgorithm)
+  private void testJoin(String contextName, Map<String, Object> context, final JoinAlgorithm joinAlgorithm)
   {
     final Map<String, Object> queryContext =
         ImmutableMap.<String, Object>builder()
@@ -906,6 +1007,7 @@ public class MSQSelectTest extends MSQTestBase
                                     .dataSource(CalciteTests.DATASOURCE1)
                                     .intervals(querySegmentSpec(Filtration.eternity()))
                                     .columns("dim2", "m1", "m2")
+                                    .columnTypes(ColumnType.STRING, ColumnType.FLOAT, ColumnType.DOUBLE)
                                     .context(
                                         defaultScanQueryContext(
                                             queryContext,
@@ -924,7 +1026,8 @@ public class MSQSelectTest extends MSQTestBase
                                 newScanQueryBuilder()
                                     .dataSource(CalciteTests.DATASOURCE1)
                                     .intervals(querySegmentSpec(Filtration.eternity()))
-                                    .columns(ImmutableList.of("m1"))
+                                    .columns("m1")
+                                    .columnTypes(ColumnType.FLOAT)
                                     .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                                     .context(
                                         defaultScanQueryContext(
@@ -1000,7 +1103,7 @@ public class MSQSelectTest extends MSQTestBase
                        )
                    )
                    .tuningConfig(MSQTuningConfig.defaultConfig())
-                   .destination(isDurableStorageDestination()
+                   .destination(isDurableStorageDestination(contextName, context)
                                 ? DurableStorageMSQDestination.INSTANCE
                                 : TaskReportMSQDestination.INSTANCE)
                    .build()
@@ -1014,8 +1117,9 @@ public class MSQSelectTest extends MSQTestBase
         .verifyResults();
   }
 
-  @Test
-  public void testGroupByOrderByAggregation()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testGroupByOrderByAggregation(String contextName, Map<String, Object> context)
   {
     RowSignature rowSignature = RowSignature.builder()
                                             .add("m1", ColumnType.FLOAT)
@@ -1058,7 +1162,7 @@ public class MSQSelectTest extends MSQTestBase
                        )
                    )
                    .tuningConfig(MSQTuningConfig.defaultConfig())
-                   .destination(isDurableStorageDestination()
+                   .destination(isDurableStorageDestination(contextName, context)
                                 ? DurableStorageMSQDestination.INSTANCE
                                 : TaskReportMSQDestination.INSTANCE)
                    .build()
@@ -1093,8 +1197,9 @@ public class MSQSelectTest extends MSQTestBase
         .verifyResults();
   }
 
-  @Test
-  public void testGroupByOrderByAggregationWithLimit()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testGroupByOrderByAggregationWithLimit(String contextName, Map<String, Object> context)
   {
     RowSignature rowSignature = RowSignature.builder()
                                             .add("m1", ColumnType.FLOAT)
@@ -1137,7 +1242,7 @@ public class MSQSelectTest extends MSQTestBase
                        )
                    )
                    .tuningConfig(MSQTuningConfig.defaultConfig())
-                   .destination(isDurableStorageDestination()
+                   .destination(isDurableStorageDestination(contextName, context)
                                 ? DurableStorageMSQDestination.INSTANCE
                                 : TaskReportMSQDestination.INSTANCE)
                    .build()
@@ -1169,8 +1274,9 @@ public class MSQSelectTest extends MSQTestBase
         .verifyResults();
   }
 
-  @Test
-  public void testGroupByOrderByAggregationWithLimitAndOffset()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testGroupByOrderByAggregationWithLimitAndOffset(String contextName, Map<String, Object> context)
   {
     RowSignature rowSignature = RowSignature.builder()
                                             .add("m1", ColumnType.FLOAT)
@@ -1214,7 +1320,7 @@ public class MSQSelectTest extends MSQTestBase
                        )
                    )
                    .tuningConfig(MSQTuningConfig.defaultConfig())
-                   .destination(isDurableStorageDestination()
+                   .destination(isDurableStorageDestination(contextName, context)
                                 ? DurableStorageMSQDestination.INSTANCE
                                 : TaskReportMSQDestination.INSTANCE)
                    .build()
@@ -1245,10 +1351,11 @@ public class MSQSelectTest extends MSQTestBase
         .verifyResults();
   }
 
-  @Test
-  public void testExternSelect1() throws IOException
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testExternGroupBy(String contextName, Map<String, Object> context) throws IOException
   {
-    final File toRead = MSQTestFileUtils.getResourceAsTemporaryFile(temporaryFolder, this, "/wikipedia-sampled.json");
+    final File toRead = getResourceAsTemporaryFile("/wikipedia-sampled.json");
     final String toReadAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
 
     RowSignature rowSignature = RowSignature.builder()
@@ -1260,7 +1367,12 @@ public class MSQSelectTest extends MSQTestBase
         GroupByQuery.builder()
                     .setDataSource(
                         new ExternalDataSource(
-                            new LocalInputSource(null, null, ImmutableList.of(toRead.getAbsoluteFile())),
+                            new LocalInputSource(
+                                null,
+                                null,
+                                ImmutableList.of(toRead.getAbsoluteFile()),
+                                SystemFields.none()
+                            ),
                             new JsonInputFormat(null, null, null, null, null),
                             RowSignature.builder()
                                         .add("timestamp", ColumnType.STRING)
@@ -1309,7 +1421,7 @@ public class MSQSelectTest extends MSQTestBase
                     )
                 ))
                 .tuningConfig(MSQTuningConfig.defaultConfig())
-                .destination(isDurableStorageDestination()
+                .destination(isDurableStorageDestination(contextName, context)
                              ? DurableStorageMSQDestination.INSTANCE
                              : TaskReportMSQDestination.INSTANCE)
                 .build()
@@ -1332,8 +1444,162 @@ public class MSQSelectTest extends MSQTestBase
         .verifyResults();
   }
 
-  @Test
-  public void testIncorrectSelectQuery()
+
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testExternSelectWithMultipleWorkers(String contextName, Map<String, Object> context) throws IOException
+  {
+    Map<String, Object> multipleWorkerContext = new HashMap<>(context);
+    multipleWorkerContext.put(MultiStageQueryContext.CTX_MAX_NUM_TASKS, 3);
+
+    final File toRead = getResourceAsTemporaryFile("/wikipedia-sampled.json");
+    final String toReadAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
+
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .add("user", ColumnType.STRING)
+                                            .build();
+
+    final ScanQuery expectedQuery =
+        newScanQueryBuilder().dataSource(
+                                 new ExternalDataSource(
+                                     new LocalInputSource(
+                                         null,
+                                         null,
+                                         ImmutableList.of(
+                                             toRead.getAbsoluteFile(),
+                                             toRead.getAbsoluteFile()
+                                         ),
+                                         SystemFields.none()
+                                     ),
+                                     new JsonInputFormat(null, null, null, null, null),
+                                     RowSignature.builder()
+                                                 .add("timestamp", ColumnType.STRING)
+                                                 .add("page", ColumnType.STRING)
+                                                 .add("user", ColumnType.STRING)
+                                                 .build()
+                                 )
+                             ).eternityInterval().virtualColumns(
+                                 new ExpressionVirtualColumn(
+                                     "v0",
+                                     "timestamp_floor(timestamp_parse(\"timestamp\",null,'UTC'),'P1D',null,'UTC')",
+                                     ColumnType.LONG,
+                                     CalciteTests.createExprMacroTable()
+                                 )
+                             )
+                             .columns("v0", "user")
+                             .columnTypes(ColumnType.LONG, ColumnType.STRING)
+                             .filters(new LikeDimFilter("user", "%ot%", null, null))
+                             .context(defaultScanQueryContext(
+                                 multipleWorkerContext,
+                                 RowSignature.builder()
+                                     .add("v0", ColumnType.LONG)
+                                     .add("user", ColumnType.STRING)
+                                     .build()
+                             ))
+                             .build();
+
+    SelectTester selectTester = testSelectQuery()
+        .setSql("SELECT\n"
+                + "  floor(TIME_PARSE(\"timestamp\") to day) AS __time,\n"
+                + "  user\n"
+                + "FROM TABLE(\n"
+                + "  EXTERN(\n"
+                + "    '{ \"files\": [" + toReadAsJson + "," + toReadAsJson + "],\"type\":\"local\"}',\n"
+                + "    '{\"type\": \"json\"}',\n"
+                + "    '[{\"name\": \"timestamp\", \"type\": \"string\"}, {\"name\": \"page\", \"type\": \"string\"}, {\"name\": \"user\", \"type\": \"string\"}]'\n"
+                + "  )\n"
+                + ") where user like '%ot%'")
+        .setExpectedRowSignature(rowSignature)
+        .setQueryContext(multipleWorkerContext)
+        .setExpectedResultRows(ImmutableList.of(
+            new Object[]{1466985600000L, "Lsjbot"},
+            new Object[]{1466985600000L, "Lsjbot"},
+            new Object[]{1466985600000L, "Beau.bot"},
+            new Object[]{1466985600000L, "Beau.bot"},
+            new Object[]{1466985600000L, "Lsjbot"},
+            new Object[]{1466985600000L, "Lsjbot"},
+            new Object[]{1466985600000L, "TaxonBot"},
+            new Object[]{1466985600000L, "TaxonBot"},
+            new Object[]{1466985600000L, "GiftBot"},
+            new Object[]{1466985600000L, "GiftBot"}
+        ))
+        .setExpectedMSQSpec(
+            MSQSpec
+                .builder()
+                .query(expectedQuery)
+                .columnMappings(new ColumnMappings(
+                    ImmutableList.of(
+                        new ColumnMapping("v0", "__time"),
+                        new ColumnMapping("user", "user")
+                    )
+                ))
+                .tuningConfig(MSQTuningConfig.defaultConfig())
+                .destination(isDurableStorageDestination(contextName, context)
+                             ? DurableStorageMSQDestination.INSTANCE
+                             : TaskReportMSQDestination.INSTANCE)
+                .build()
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(20).bytes(toRead.length()).files(1).totalFiles(1),
+            0, 0, "input0"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(5).frames(1),
+            0, 0, "output"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with()
+                .rows(isPageSizeLimited(contextName) ? new long[]{1L, 1L, 1L, 1L, 1L} : new long[]{5L})
+                .frames(isPageSizeLimited(contextName) ? new long[]{1L, 1L, 1L, 1L, 1L} : new long[]{1L}),
+            0, 0, "shuffle"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(20).bytes(toRead.length()).files(1).totalFiles(1),
+            0, 1, "input0"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(5).frames(1),
+            0, 1, "output"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with()
+                .rows(isPageSizeLimited(contextName) ? new long[]{1L, 1L, 1L, 1L, 1L} : new long[]{5L})
+                .frames(isPageSizeLimited(contextName) ? new long[]{1L, 1L, 1L, 1L, 1L} : new long[]{1L}),
+            0, 1, "shuffle"
+        );
+    // adding result stage counter checks
+    if (isPageSizeLimited(contextName)) {
+      selectTester.setExpectedCountersForStageWorkerChannel(
+          CounterSnapshotMatcher
+              .with().rows(2, 0, 2, 0, 2),
+          1, 0, "input0"
+      ).setExpectedCountersForStageWorkerChannel(
+          CounterSnapshotMatcher
+              .with().rows(2, 0, 2, 0, 2),
+          1, 0, "output"
+      ).setExpectedCountersForStageWorkerChannel(
+          CounterSnapshotMatcher
+              .with().rows(0, 2, 0, 2),
+          1, 1, "input0"
+      ).setExpectedCountersForStageWorkerChannel(
+          CounterSnapshotMatcher
+              .with().rows(0, 2, 0, 2),
+          1, 1, "output"
+      );
+    }
+    selectTester.verifyResults();
+  }
+
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testIncorrectSelectQuery(String contextName, Map<String, Object> context)
   {
     testSelectQuery()
         .setSql("select a from ")
@@ -1344,8 +1610,9 @@ public class MSQSelectTest extends MSQTestBase
         .verifyPlanningErrors();
   }
 
-  @Test
-  public void testSelectOnInformationSchemaSource()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testSelectOnInformationSchemaSource(String contextName, Map<String, Object> context)
   {
     testSelectQuery()
         .setSql("SELECT * FROM INFORMATION_SCHEMA.SCHEMATA")
@@ -1356,8 +1623,9 @@ public class MSQSelectTest extends MSQTestBase
         .verifyPlanningErrors();
   }
 
-  @Test
-  public void testSelectOnSysSource()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testSelectOnSysSource(String contextName, Map<String, Object> context)
   {
     testSelectQuery()
         .setSql("SELECT * FROM sys.segments")
@@ -1368,8 +1636,9 @@ public class MSQSelectTest extends MSQTestBase
         .verifyPlanningErrors();
   }
 
-  @Test
-  public void testSelectOnSysSourceWithJoin()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testSelectOnSysSourceWithJoin(String contextName, Map<String, Object> context)
   {
     testSelectQuery()
         .setSql("select s.segment_id, s.num_rows, f.dim1 from sys.segments as s, foo as f")
@@ -1380,8 +1649,9 @@ public class MSQSelectTest extends MSQTestBase
         .verifyPlanningErrors();
   }
 
-  @Test
-  public void testSelectOnSysSourceContainingWith()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testSelectOnSysSourceContainingWith(String contextName, Map<String, Object> context)
   {
     testSelectQuery()
         .setSql("with segment_source as (SELECT * FROM sys.segments) "
@@ -1393,8 +1663,9 @@ public class MSQSelectTest extends MSQTestBase
         .verifyPlanningErrors();
   }
 
-  @Test
-  public void testSelectOnUserDefinedSourceContainingWith()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testSelectOnUserDefinedSourceContainingWith(String contextName, Map<String, Object> context)
   {
     RowSignature resultSignature = RowSignature.builder()
                                                .add("m1", ColumnType.LONG)
@@ -1410,19 +1681,20 @@ public class MSQSelectTest extends MSQTestBase
                        newScanQueryBuilder()
                            .dataSource(CalciteTests.DATASOURCE2)
                            .intervals(querySegmentSpec(Filtration.eternity()))
-                           .columns("dim2", "m1")
+                           .columns("m1", "dim2")
+                           .columnTypes(ColumnType.LONG, ColumnType.STRING)
                            .context(defaultScanQueryContext(
                                context,
                                RowSignature.builder()
-                                           .add("dim2", ColumnType.STRING)
                                            .add("m1", ColumnType.LONG)
+                                           .add("dim2", ColumnType.STRING)
                                            .build()
                            ))
                            .build()
                    )
                    .columnMappings(ColumnMappings.identity(resultSignature))
                    .tuningConfig(MSQTuningConfig.defaultConfig())
-                   .destination(isDurableStorageDestination()
+                   .destination(isDurableStorageDestination(contextName, context)
                                 ? DurableStorageMSQDestination.INSTANCE
                                 : TaskReportMSQDestination.INSTANCE)
                    .build()
@@ -1446,14 +1718,17 @@ public class MSQSelectTest extends MSQTestBase
         )
         .setExpectedCountersForStageWorkerChannel(
             CounterSnapshotMatcher
-                .with().rows(3).frames(1),
+                .with()
+                .rows(isPageSizeLimited(contextName) ? new long[]{1, 2} : new long[]{3})
+                .frames(isPageSizeLimited(contextName) ? new long[]{1, 1} : new long[]{1}),
             0, 0, "shuffle"
         )
         .verifyResults();
   }
 
-  @Test
-  public void testScanWithMultiValueSelectQuery()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testScanWithMultiValueSelectQuery(String contextName, Map<String, Object> context)
   {
     RowSignature expectedScanSignature = RowSignature.builder()
                                                      .add("dim3", ColumnType.STRING)
@@ -1479,6 +1754,7 @@ public class MSQSelectTest extends MSQTestBase
                                                   )
                                               )
                                               .columns("dim3", "v0")
+                                              .columnTypes(ColumnType.STRING, ColumnType.STRING_ARRAY)
                                               .context(defaultScanQueryContext(context, expectedScanSignature))
                                               .build())
                                    .columnMappings(
@@ -1490,7 +1766,7 @@ public class MSQSelectTest extends MSQTestBase
                                        )
                                    )
                                    .tuningConfig(MSQTuningConfig.defaultConfig())
-                                   .destination(isDurableStorageDestination()
+                                   .destination(isDurableStorageDestination(contextName, context)
                                                 ? DurableStorageMSQDestination.INSTANCE
                                                 : TaskReportMSQDestination.INSTANCE)
                                    .build())
@@ -1506,8 +1782,169 @@ public class MSQSelectTest extends MSQTestBase
         )).verifyResults();
   }
 
-  @Test
-  public void testHavingOnApproximateCountDistinct()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testGroupByWithLimit(String contextName, Map<String, Object> context)
+  {
+    RowSignature expectedResultSignature = RowSignature.builder()
+                                                       .add("dim1", ColumnType.STRING)
+                                                       .add("cnt", ColumnType.LONG)
+                                                       .build();
+
+    GroupByQuery query = GroupByQuery.builder()
+                                     .setDataSource(CalciteTests.DATASOURCE1)
+                                     .setInterval(querySegmentSpec(Filtration.eternity()))
+                                     .setGranularity(Granularities.ALL)
+                                     .setDimensions(dimensions(new DefaultDimensionSpec("dim1", "d0")))
+                                     .setAggregatorSpecs(
+                                         aggregators(
+                                             new CountAggregatorFactory(
+                                                 "a0"
+                                             )
+                                         )
+                                     )
+                                     .setDimFilter(not(equality("dim1", "", ColumnType.STRING)))
+                                     .setLimit(1)
+                                     .setContext(context)
+                                     .build();
+
+    testSelectQuery()
+        .setSql("SELECT dim1, cnt FROM (SELECT dim1, COUNT(*) AS cnt FROM foo GROUP BY dim1 HAVING dim1 != '' LIMIT 1) LIMIT 20")
+        .setExpectedMSQSpec(MSQSpec.builder()
+                                   .query(query)
+                                   .columnMappings(new ColumnMappings(ImmutableList.of(
+                                       new ColumnMapping("d0", "dim1"),
+                                       new ColumnMapping("a0", "cnt")
+                                   )))
+                                   .tuningConfig(MSQTuningConfig.defaultConfig())
+                                   .destination(isDurableStorageDestination(contextName, context)
+                                                ? DurableStorageMSQDestination.INSTANCE
+                                                : TaskReportMSQDestination.INSTANCE)
+                                   .build())
+        .setExpectedRowSignature(expectedResultSignature)
+        .setQueryContext(context)
+        .setExpectedResultRows(ImmutableList.of(
+            new Object[]{"1", 1L}
+        )).verifyResults();
+  }
+
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testGroupByWithLimitAndOrdering(String contextName, Map<String, Object> context)
+  {
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("dim1", ColumnType.STRING)
+                                            .add("count", ColumnType.LONG)
+                                            .build();
+
+    GroupByQuery query = GroupByQuery.builder()
+                                     .setDataSource(
+                                         new ExternalDataSource(
+                                             new InlineInputSource("dim1\nabc\nxyz\ndef\nxyz\nabc\nxyz\nabc\nxyz\ndef\nbbb\naaa"),
+                                             new CsvInputFormat(null, null, null, true, 0, null),
+                                             RowSignature.builder().add("dim1", ColumnType.STRING).build()
+                                         )
+                                     )
+                                     .setInterval(querySegmentSpec(Filtration.eternity()))
+                                     .setGranularity(Granularities.ALL)
+                                     .addOrderByColumn(new OrderByColumnSpec("a0", OrderByColumnSpec.Direction.DESCENDING, StringComparators.NUMERIC))
+                                     .addOrderByColumn(new OrderByColumnSpec("d0", OrderByColumnSpec.Direction.ASCENDING, StringComparators.LEXICOGRAPHIC))
+                                     .setDimensions(dimensions(new DefaultDimensionSpec("dim1", "d0")))
+                                     .setAggregatorSpecs(
+                                         aggregators(
+                                             new CountAggregatorFactory(
+                                                 "a0"
+                                             )
+                                         )
+                                     )
+                                     .setLimit(4)
+                                     .setContext(context)
+                                     .build();
+
+    List<Object[]> expectedRows = ImmutableList.of(
+        new Object[]{"xyz", 4L},
+        new Object[]{"abc", 3L},
+        new Object[]{"def", 2L},
+        new Object[]{"aaa", 1L}
+    );
+
+    testSelectQuery()
+        .setSql("WITH \"ext\" AS (\n"
+                + "  SELECT *\n"
+                + "  FROM TABLE(\n"
+                + "    EXTERN(\n"
+                + "      '{\"type\":\"inline\",\"data\":\"dim1\\nabc\\nxyz\\ndef\\nxyz\\nabc\\nxyz\\nabc\\nxyz\\ndef\\nbbb\\naaa\"}',\n"
+                + "      '{\"type\":\"csv\",\"findColumnsFromHeader\":true}'\n"
+                + "    )\n"
+                + "  ) EXTEND (\"dim1\" VARCHAR)\n"
+                + ")\n"
+                + "SELECT\n"
+                + "  \"dim1\",\n"
+                + "  COUNT(*) AS \"count\"\n"
+                + "FROM \"ext\"\n"
+                + "GROUP BY 1\n"
+                + "ORDER BY 2 DESC, 1\n"
+                + "LIMIT 4\n")
+        .setExpectedMSQSpec(MSQSpec.builder()
+                                   .query(query)
+                                   .columnMappings(new ColumnMappings(ImmutableList.of(
+                                       new ColumnMapping("d0", "dim1"),
+                                       new ColumnMapping("a0", "count")
+                                   )))
+                                   .tuningConfig(MSQTuningConfig.defaultConfig())
+                                   .destination(isDurableStorageDestination(contextName, context)
+                                                ? DurableStorageMSQDestination.INSTANCE
+                                                : TaskReportMSQDestination.INSTANCE)
+                                   .build())
+        .setExpectedRowSignature(rowSignature)
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().totalFiles(1),
+            0, 0, "input0"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(5),
+            0, 0, "output"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(4),
+            1, 0, "shuffle"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(5),
+            1, 0, "input0"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(5),
+            1, 0, "output"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(4),
+            2, 0, "input0"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(4),
+            2, 0, "output"
+        )
+        .setExpectedCountersForStageWorkerChannel(
+            CounterSnapshotMatcher
+                .with().rows(!context.containsKey(MultiStageQueryContext.CTX_ROWS_PER_PAGE) ? new long[] {4} : new long[] {2, 2}),
+            2, 0, "shuffle"
+        )
+        .setQueryContext(context)
+        .setExpectedResultRows(expectedRows)
+        .verifyResults();
+  }
+
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testHavingOnApproximateCountDistinct(String contextName, Map<String, Object> context)
   {
     RowSignature resultSignature = RowSignature.builder()
                                                .add("dim2", ColumnType.STRING)
@@ -1560,7 +1997,7 @@ public class MSQSelectTest extends MSQTestBase
                                        new ColumnMapping("a0", "col")
                                    )))
                                    .tuningConfig(MSQTuningConfig.defaultConfig())
-                                   .destination(isDurableStorageDestination()
+                                   .destination(isDurableStorageDestination(contextName, context)
                                                 ? DurableStorageMSQDestination.INSTANCE
                                                 : TaskReportMSQDestination.INSTANCE)
                                    .build())
@@ -1575,8 +2012,9 @@ public class MSQSelectTest extends MSQTestBase
         .verifyResults();
   }
 
-  @Test
-  public void testGroupByWithMultiValue()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testGroupByWithMultiValue(String contextName, Map<String, Object> context)
   {
     Map<String, Object> localContext = enableMultiValueUnnesting(context, true);
     RowSignature rowSignature = RowSignature.builder()
@@ -1614,7 +2052,7 @@ public class MSQSelectTest extends MSQTestBase
                        )
                        ))
                    .tuningConfig(MSQTuningConfig.defaultConfig())
-                   .destination(isDurableStorageDestination()
+                   .destination(isDurableStorageDestination(contextName, context)
                                 ? DurableStorageMSQDestination.INSTANCE
                                 : TaskReportMSQDestination.INSTANCE)
                    .build())
@@ -1624,8 +2062,9 @@ public class MSQSelectTest extends MSQTestBase
   }
 
 
-  @Test
-  public void testGroupByWithMultiValueWithoutGroupByEnable()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testGroupByWithMultiValueWithoutGroupByEnable(String contextName, Map<String, Object> context)
   {
     Map<String, Object> localContext = enableMultiValueUnnesting(context, false);
 
@@ -1641,8 +2080,9 @@ public class MSQSelectTest extends MSQTestBase
         .verifyExecutionError();
   }
 
-  @Test
-  public void testGroupByWithMultiValueMvToArray()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testGroupByWithMultiValueMvToArray(String contextName, Map<String, Object> context)
   {
     Map<String, Object> localContext = enableMultiValueUnnesting(context, true);
 
@@ -1667,14 +2107,14 @@ public class MSQSelectTest extends MSQTestBase
                                                               )
                                                           )
                                                       )
-                                                      .setAggregatorSpecs(aggregators(new CountAggregatorFactory(
-                                                          "a0")))
+                                                      .setAggregatorSpecs(
+                                                          aggregators(new CountAggregatorFactory("a0"))
+                                                      )
                                                       .setPostAggregatorSpecs(
-                                                          ImmutableList.of(new ExpressionPostAggregator(
-                                                                               "p0",
-                                                                               "mv_to_array(\"d0\")",
-                                                                               null, ExprMacroTable.nil()
-                                                                           )
+                                                          expressionPostAgg(
+                                                              "p0",
+                                                              "mv_to_array(\"d0\")",
+                                                              ColumnType.STRING_ARRAY
                                                           )
                                                       )
                                                       .setContext(localContext)
@@ -1687,7 +2127,7 @@ public class MSQSelectTest extends MSQTestBase
                                        )
                                        ))
                                    .tuningConfig(MSQTuningConfig.defaultConfig())
-                                   .destination(isDurableStorageDestination()
+                                   .destination(isDurableStorageDestination(contextName, context)
                                                 ? DurableStorageMSQDestination.INSTANCE
                                                 : TaskReportMSQDestination.INSTANCE)
                                    .build())
@@ -1698,8 +2138,9 @@ public class MSQSelectTest extends MSQTestBase
         .verifyResults();
   }
 
-  @Test
-  public void testGroupByArrayWithMultiValueMvToArray()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testGroupByArrayWithMultiValueMvToArray(String contextName, Map<String, Object> context)
   {
     Map<String, Object> localContext = enableMultiValueUnnesting(context, true);
 
@@ -1757,7 +2198,7 @@ public class MSQSelectTest extends MSQTestBase
                                        )
                                    )
                                    .tuningConfig(MSQTuningConfig.defaultConfig())
-                                   .destination(isDurableStorageDestination()
+                                   .destination(isDurableStorageDestination(contextName, context)
                                                 ? DurableStorageMSQDestination.INSTANCE
                                                 : TaskReportMSQDestination.INSTANCE)
                                    .build())
@@ -1766,10 +2207,11 @@ public class MSQSelectTest extends MSQTestBase
         .verifyResults();
   }
 
-  @Test
-  public void testTimeColumnAggregationFromExtern() throws IOException
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testTimeColumnAggregationFromExtern(String contextName, Map<String, Object> context) throws IOException
   {
-    final File toRead = MSQTestFileUtils.getResourceAsTemporaryFile(temporaryFolder, this, "/wikipedia-sampled.json");
+    final File toRead = getResourceAsTemporaryFile("/wikipedia-sampled.json");
     final String toReadAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
 
     RowSignature rowSignature = RowSignature.builder()
@@ -1796,7 +2238,7 @@ public class MSQSelectTest extends MSQTestBase
         .setExpectedValidationErrorMatcher(
             new DruidExceptionMatcher(DruidException.Persona.ADMIN, DruidException.Category.INVALID_INPUT, "general")
                 .expectMessageIs(
-                    "Query planning failed for unknown reason, our best guess is this "
+                    "Query could not be planned. A possible reason is "
                     + "[LATEST and EARLIEST aggregators implicitly depend on the __time column, "
                     + "but the table queried doesn't contain a __time column.  "
                     + "Please use LATEST_BY or EARLIEST_BY and specify the column explicitly.]"
@@ -1806,8 +2248,9 @@ public class MSQSelectTest extends MSQTestBase
         .verifyPlanningErrors();
   }
 
-  @Test
-  public void testGroupByWithMultiValueMvToArrayWithoutGroupByEnable()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testGroupByWithMultiValueMvToArrayWithoutGroupByEnable(String contextName, Map<String, Object> context)
   {
     Map<String, Object> localContext = enableMultiValueUnnesting(context, false);
 
@@ -1824,8 +2267,9 @@ public class MSQSelectTest extends MSQTestBase
         .verifyExecutionError();
   }
 
-  @Test
-  public void testGroupByWithComplexColumnThrowsUnsupportedException()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testGroupByWithComplexColumnThrowsUnsupportedException(String contextName, Map<String, Object> context)
   {
     testSelectQuery()
         .setSql("select unique_dim1 from foo2 group by unique_dim1")
@@ -1833,13 +2277,14 @@ public class MSQSelectTest extends MSQTestBase
         .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
             CoreMatchers.instanceOf(DruidException.class),
             ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString(
-                "SQL requires a group-by on a column of type COMPLEX<hyperUnique> that is unsupported"))
+                "SQL requires a group-by on a column with type [COMPLEX<hyperUnique>] that is unsupported."))
         ))
         .verifyExecutionError();
   }
 
-  @Test
-  public void testGroupByMultiValueMeasureQuery()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testGroupByMultiValueMeasureQuery(String contextName, Map<String, Object> context)
   {
     final RowSignature rowSignature = RowSignature.builder()
                                                   .add("__time", ColumnType.LONG)
@@ -1876,7 +2321,7 @@ public class MSQSelectTest extends MSQTestBase
                                        )
                                        ))
                                    .tuningConfig(MSQTuningConfig.defaultConfig())
-                                   .destination(isDurableStorageDestination()
+                                   .destination(isDurableStorageDestination(contextName, context)
                                                 ? DurableStorageMSQDestination.INSTANCE
                                                 : TaskReportMSQDestination.INSTANCE)
                                    .build())
@@ -1894,8 +2339,9 @@ public class MSQSelectTest extends MSQTestBase
         .verifyResults();
   }
 
-  @Test
-  public void testGroupByOnFooWithDurableStoragePathAssertions() throws IOException
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testGroupByOnFooWithDurableStoragePathAssertions(String contextName, Map<String, Object> context) throws IOException
   {
     RowSignature rowSignature = RowSignature.builder()
                                             .add("cnt", ColumnType.LONG)
@@ -1927,10 +2373,10 @@ public class MSQSelectTest extends MSQTestBase
                                        new ColumnMappings(ImmutableList.of(
                                            new ColumnMapping("d0", "cnt"),
                                            new ColumnMapping("a0", "cnt1")
-                                       )
                                        ))
+                                   )
                                    .tuningConfig(MSQTuningConfig.defaultConfig())
-                                   .destination(isDurableStorageDestination()
+                                   .destination(isDurableStorageDestination(contextName, context)
                                                 ? DurableStorageMSQDestination.INSTANCE
                                                 : TaskReportMSQDestination.INSTANCE)
                                    .build())
@@ -1940,7 +2386,7 @@ public class MSQSelectTest extends MSQTestBase
     if (DURABLE_STORAGE.equals(contextName) || FAULT_TOLERANCE.equals(contextName)) {
       new File(
           localFileStorageDir,
-          DurableStorageUtils.getWorkerOutputSuccessFilePath("query-test-query", 0, 0)
+          DurableStorageUtils.getWorkerOutputSuccessFilePath(TEST_CONTROLLER_TASK_ID, 0, 0)
       );
 
       Mockito.verify(localFileStorageConnector, Mockito.times(2))
@@ -1948,14 +2394,15 @@ public class MSQSelectTest extends MSQTestBase
     }
   }
 
-  @Test
-  public void testSelectRowsGetUntruncatedByDefault() throws IOException
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testSelectRowsGetUntruncatedByDefault(String contextName, Map<String, Object> context) throws IOException
   {
     RowSignature dummyRowSignature = RowSignature.builder().add("timestamp", ColumnType.LONG).build();
 
     final int numFiles = 200;
 
-    final File toRead = MSQTestFileUtils.getResourceAsTemporaryFile(temporaryFolder, this, "/wikipedia-sampled.json");
+    final File toRead = getResourceAsTemporaryFile("/wikipedia-sampled.json");
     final String toReadFileNameAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
 
     String externalFiles = String.join(", ", Collections.nCopies(numFiles, toReadFileNameAsJson));
@@ -1985,12 +2432,18 @@ public class MSQSelectTest extends MSQTestBase
                 .builder()
                 .query(newScanQueryBuilder()
                            .dataSource(new ExternalDataSource(
-                               new LocalInputSource(null, null, Collections.nCopies(numFiles, toRead)),
-                               new CsvInputFormat(null, null, null, true, 0),
+                               new LocalInputSource(
+                                   null,
+                                   null,
+                                   Collections.nCopies(numFiles, toRead),
+                                   SystemFields.none()
+                               ),
+                               new CsvInputFormat(null, null, null, true, 0, null),
                                RowSignature.builder().add("timestamp", ColumnType.STRING).build()
                            ))
                            .intervals(querySegmentSpec(Filtration.eternity()))
                            .columns("v0")
+                           .columnTypes(ColumnType.LONG)
                            .virtualColumns(new ExpressionVirtualColumn("v0", ExprEval.of(1L).toExpr(), ColumnType.LONG))
                            .context(defaultScanQueryContext(
                                context,
@@ -2004,7 +2457,7 @@ public class MSQSelectTest extends MSQTestBase
                     )
                 ))
                 .tuningConfig(MSQTuningConfig.defaultConfig())
-                .destination(isDurableStorageDestination()
+                .destination(isDurableStorageDestination(contextName, context)
                              ? DurableStorageMSQDestination.INSTANCE
                              : TaskReportMSQDestination.INSTANCE)
                 .build())
@@ -2013,11 +2466,11 @@ public class MSQSelectTest extends MSQTestBase
         .verifyResults();
   }
 
-  @Test
-  public void testJoinUsesDifferentAlgorithm()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testJoinUsesDifferentAlgorithm(String contextName, Map<String, Object> context)
   {
-
-    // This test asserts that the join algorithnm used is a different one from that supplied. In sqlCompatible() mode
+    // This test asserts that the join algorithm used is a different one from that supplied. In sqlCompatible() mode
     // the query gets planned differently, therefore we do use the sortMerge processor. Instead of having separate
     // handling, a similar test has been described in CalciteJoinQueryMSQTest, therefore we don't want to repeat that
     // here, hence ignoring in sqlCompatible() mode
@@ -2041,6 +2494,7 @@ public class MSQSelectTest extends MSQTestBase
                         .dataSource("foo")
                         .virtualColumns(expressionVirtualColumn("v0", "0", ColumnType.LONG))
                         .columns("v0")
+                        .columnTypes(ColumnType.LONG)
                         .context(defaultScanQueryContext(
                             queryContext,
                             RowSignature.builder().add("v0", ColumnType.LONG).build()
@@ -2051,26 +2505,31 @@ public class MSQSelectTest extends MSQTestBase
                 new QueryDataSource(
                     GroupByQuery.builder()
                                 .setDataSource("foo")
-                                .setVirtualColumns(expressionVirtualColumn("v0", "1", ColumnType.LONG))
                                 .setDimensions(
-                                    new DefaultDimensionSpec("m1", "d0", ColumnType.FLOAT),
-                                    new DefaultDimensionSpec("v0", "d1", ColumnType.LONG)
+                                    new DefaultDimensionSpec("m1", "d0", ColumnType.FLOAT)
                                 )
                                 .setContext(queryContext)
                                 .setQuerySegmentSpec(querySegmentSpec(Intervals.ETERNITY))
                                 .setGranularity(Granularities.ALL)
+                                .setPostAggregatorSpecs(
+                                    expressionPostAgg(
+                                        "a0",
+                                        "1",
+                                        ColumnType.LONG
+                                    )
+                                )
                                 .build()
 
                 ),
                 "j0.",
-                "(floor(100) == \"j0.d0\")",
+                "(CAST(floor(100), 'DOUBLE') == \"j0.d0\")",
                 JoinType.LEFT
             )
         )
         .setAggregatorSpecs(
             new FilteredAggregatorFactory(
                 new CountAggregatorFactory("a0"),
-                isNull("j0.d1"),
+                isNull("j0.a0"),
                 "a0"
             )
         )
@@ -2094,7 +2553,7 @@ public class MSQSelectTest extends MSQTestBase
                         new ColumnMapping("a0", "cnt")
                     )
                 ))
-                .destination(isDurableStorageDestination()
+                .destination(isDurableStorageDestination(contextName, context)
                              ? DurableStorageMSQDestination.INSTANCE
                              : TaskReportMSQDestination.INSTANCE)
                 .tuningConfig(MSQTuningConfig.defaultConfig())
@@ -2113,7 +2572,270 @@ public class MSQSelectTest extends MSQTestBase
         .verifyResults();
   }
 
-  @Nonnull
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testSelectUnnestOnInlineFoo(String contextName, Map<String, Object> context)
+  {
+    RowSignature resultSignature = RowSignature.builder()
+                                               .add("EXPR$0", ColumnType.LONG)
+                                               .build();
+    RowSignature outputSignature = RowSignature.builder()
+                                               .add("d", ColumnType.LONG)
+                                               .build();
+
+    final ColumnMappings expectedColumnMappings = new ColumnMappings(
+        ImmutableList.of(
+            new ColumnMapping("EXPR$0", "d")
+        )
+    );
+
+    testSelectQuery()
+        .setSql("select d from UNNEST(ARRAY[1,2,3]) as unnested(d)")
+        .setExpectedMSQSpec(
+            MSQSpec.builder()
+                   .query(newScanQueryBuilder()
+                              .dataSource(
+                                  InlineDataSource.fromIterable(
+                                      ImmutableList.of(
+                                          new Object[]{1L},
+                                          new Object[]{2L},
+                                          new Object[]{3L}
+                                      ),
+                                      resultSignature
+                                  )
+                              )
+                              .intervals(querySegmentSpec(Filtration.eternity()))
+                              .columns("EXPR$0")
+                              .columnTypes(ColumnType.LONG)
+                              .context(defaultScanQueryContext(
+                                  context,
+                                  resultSignature
+                              ))
+                              .build())
+                   .columnMappings(expectedColumnMappings)
+                   .tuningConfig(MSQTuningConfig.defaultConfig())
+                   .destination(isDurableStorageDestination(contextName, context)
+                                ? DurableStorageMSQDestination.INSTANCE
+                                : TaskReportMSQDestination.INSTANCE)
+                   .build()
+        )
+        .setExpectedRowSignature(outputSignature)
+        .setQueryContext(context)
+        .setExpectedResultRows(ImmutableList.of(
+            new Object[]{1},
+            new Object[]{2},
+            new Object[]{3}
+        ))
+        .verifyResults();
+  }
+
+
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testSelectUnnestOnFoo(String contextName, Map<String, Object> context)
+  {
+    RowSignature resultSignature = RowSignature.builder()
+                                               .add("j0.unnest", ColumnType.STRING)
+                                               .build();
+
+    RowSignature outputSignature = RowSignature.builder()
+                                               .add("d3", ColumnType.STRING)
+                                               .build();
+
+    final ColumnMappings expectedColumnMappings = new ColumnMappings(
+        ImmutableList.of(
+            new ColumnMapping("j0.unnest", "d3")
+        )
+    );
+
+    testSelectQuery()
+        .setSql("SELECT d3 FROM foo, UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3)")
+        .setExpectedMSQSpec(
+            MSQSpec.builder()
+                   .query(newScanQueryBuilder()
+                              .dataSource(UnnestDataSource.create(
+                                  new TableDataSource(CalciteTests.DATASOURCE1),
+                                  expressionVirtualColumn("j0.unnest", "\"dim3\"", ColumnType.STRING),
+                                  null
+                              ))
+                              .intervals(querySegmentSpec(Filtration.eternity()))
+                              .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                              .context(defaultScanQueryContext(
+                                  context,
+                                  resultSignature
+                              ))
+                              .columns("j0.unnest")
+                              .columnTypes(ColumnType.STRING)
+                              .build())
+                   .columnMappings(expectedColumnMappings)
+                   .tuningConfig(MSQTuningConfig.defaultConfig())
+                   .destination(isDurableStorageDestination(contextName, context)
+                                ? DurableStorageMSQDestination.INSTANCE
+                                : TaskReportMSQDestination.INSTANCE)
+                   .build()
+        )
+        .setExpectedRowSignature(outputSignature)
+        .setQueryContext(context)
+        .setExpectedResultRows(
+            useDefault ? ImmutableList.of(
+                new Object[]{"a"},
+                new Object[]{"b"},
+                new Object[]{"b"},
+                new Object[]{"c"},
+                new Object[]{"d"},
+                new Object[]{""},
+                new Object[]{""},
+                new Object[]{""}
+            ) : ImmutableList.of(
+                new Object[]{"a"},
+                new Object[]{"b"},
+                new Object[]{"b"},
+                new Object[]{"c"},
+                new Object[]{"d"},
+                new Object[]{""},
+                new Object[]{null},
+                new Object[]{null}
+            ))
+        .verifyResults();
+  }
+
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testSelectUnnestOnQueryFoo(String contextName, Map<String, Object> context)
+  {
+    RowSignature resultSignature = RowSignature.builder()
+                                               .add("j0.unnest", ColumnType.STRING)
+                                               .build();
+
+    RowSignature resultSignature1 = RowSignature.builder()
+                                                .add("dim3", ColumnType.STRING)
+                                                .build();
+
+    RowSignature outputSignature = RowSignature.builder()
+                                               .add("d3", ColumnType.STRING)
+                                               .build();
+
+    final ColumnMappings expectedColumnMappings = new ColumnMappings(
+        ImmutableList.of(
+            new ColumnMapping("j0.unnest", "d3")
+        )
+    );
+
+    testSelectQuery()
+        .setSql("SELECT d3 FROM (select * from druid.foo where dim2='a' LIMIT 10), UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3)")
+        .setExpectedMSQSpec(
+            MSQSpec.builder()
+                   .query(newScanQueryBuilder()
+                              .dataSource(UnnestDataSource.create(
+                                  new QueryDataSource(
+                                      newScanQueryBuilder()
+                                          .dataSource(
+                                              new TableDataSource(CalciteTests.DATASOURCE1)
+                                          )
+                                          .intervals(querySegmentSpec(Filtration.eternity()))
+                                          .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                                          .filters(equality("dim2", "a", ColumnType.STRING))
+                                          .columns("dim3")
+                                          .columnTypes(ColumnType.STRING)
+                                          .context(defaultScanQueryContext(
+                                              context,
+                                              resultSignature1
+                                          ))
+                                          .limit(10)
+                                          .build()
+                                  ),
+                                  expressionVirtualColumn("j0.unnest", "\"dim3\"", ColumnType.STRING),
+                                  null
+                              ))
+                              .intervals(querySegmentSpec(Filtration.eternity()))
+                              .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                              .context(defaultScanQueryContext(
+                                  context,
+                                  resultSignature
+                              ))
+                              .columns("j0.unnest")
+                              .columnTypes(ColumnType.STRING)
+                              .build())
+                   .columnMappings(expectedColumnMappings)
+                   .tuningConfig(MSQTuningConfig.defaultConfig())
+                   .destination(isDurableStorageDestination(contextName, context)
+                                ? DurableStorageMSQDestination.INSTANCE
+                                : TaskReportMSQDestination.INSTANCE)
+                   .build()
+        )
+        .setExpectedRowSignature(outputSignature)
+        .setQueryContext(context)
+        .setExpectedResultRows(
+            useDefault ? ImmutableList.of(
+                new Object[]{"a"},
+                new Object[]{"b"}
+            ) : ImmutableList.of(
+                new Object[]{"a"},
+                new Object[]{"b"},
+                new Object[]{""}
+            ))
+        .verifyResults();
+  }
+
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testUnionAllUsingUnionDataSource(String contextName, Map<String, Object> context)
+  {
+
+    final RowSignature rowSignature = RowSignature.builder()
+                                                  .add("__time", ColumnType.LONG)
+                                                  .add("dim1", ColumnType.STRING)
+                                                  .build();
+
+    final List<Object[]> results = ImmutableList.of(
+        new Object[]{946684800000L, ""},
+        new Object[]{946684800000L, ""},
+        new Object[]{946771200000L, "10.1"},
+        new Object[]{946771200000L, "10.1"},
+        new Object[]{946857600000L, "2"},
+        new Object[]{946857600000L, "2"},
+        new Object[]{978307200000L, "1"},
+        new Object[]{978307200000L, "1"},
+        new Object[]{978393600000L, "def"},
+        new Object[]{978393600000L, "def"},
+        new Object[]{978480000000L, "abc"},
+        new Object[]{978480000000L, "abc"}
+    );
+    // This plans the query using DruidUnionDataSourceRule since the DruidUnionDataSourceRule#isCompatible
+    // returns true (column names, types match, and it is a union on the table data sources).
+    // It gets planned correctly, however MSQ engine cannot plan the query correctly
+    testSelectQuery()
+        .setSql("SELECT __time, dim1 FROM foo\n"
+                + "UNION ALL\n"
+                + "SELECT __time, dim1 FROM foo\n")
+        .setExpectedRowSignature(rowSignature)
+        .setExpectedMSQSpec(
+            MSQSpec.builder()
+                   .query(newScanQueryBuilder()
+                              .dataSource(new UnionDataSource(
+                                  ImmutableList.of(new TableDataSource("foo"), new TableDataSource("foo"))
+                              ))
+                              .intervals(querySegmentSpec(Filtration.eternity()))
+                              .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+                              .context(defaultScanQueryContext(
+                                  context,
+                                  rowSignature
+                              ))
+                              .columns("__time", "dim1")
+                              .columnTypes(ColumnType.LONG, ColumnType.STRING)
+                              .build())
+                   .columnMappings(ColumnMappings.identity(rowSignature))
+                   .tuningConfig(MSQTuningConfig.defaultConfig())
+                   .destination(isDurableStorageDestination(contextName, context)
+                                ? DurableStorageMSQDestination.INSTANCE
+                                : TaskReportMSQDestination.INSTANCE)
+                   .build()
+        )
+        .setQueryContext(context)
+        .setExpectedResultRows(results)
+        .verifyResults();
+  }
+
   private List<Object[]> expectedMultiValueFooRowsGroup()
   {
     ArrayList<Object[]> expected = new ArrayList<>();
@@ -2132,7 +2854,6 @@ public class MSQSelectTest extends MSQTestBase
     return expected;
   }
 
-  @Nonnull
   private List<Object[]> expectedMultiValueFooRowsGroupByList()
   {
     ArrayList<Object[]> expected = new ArrayList<>();
@@ -2158,8 +2879,13 @@ public class MSQSelectTest extends MSQTestBase
     return localContext;
   }
 
-  public boolean isDurableStorageDestination()
+  private boolean isDurableStorageDestination(String contextName, Map<String, Object> context)
   {
     return QUERY_RESULTS_WITH_DURABLE_STORAGE.equals(contextName) || QUERY_RESULTS_WITH_DEFAULT_CONTEXT.equals(context);
+  }
+
+  public boolean isPageSizeLimited(String contextName)
+  {
+    return QUERY_RESULTS_WITH_DURABLE_STORAGE.equals(contextName);
   }
 }

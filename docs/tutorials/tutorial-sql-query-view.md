@@ -26,7 +26,7 @@ sidebar_label: Get to know Query view
 
 This tutorial demonstrates some useful features built into Query view in Apache Druid.
 
-Query view lets you run [Druid SQL queries](../querying/sql.md) and [native (JSON-based) queries](../querying/querying.md) against ingested data. Try out the [Introduction to Druid SQL](./tutorial-jupyter-index.md#tutorials) tutorial to learn more about Druid SQL.
+Query view lets you run [Druid SQL queries](../querying/sql.md) and [native (JSON-based) queries](../querying/querying.md) against ingested data.
 
 You can use Query view to test and tune queries before you use them in API requests&mdash;for example, to perform [SQL-based ingestion](../api-reference/sql-ingestion-api.md). You can also ingest data directly in Query view.
 
@@ -100,9 +100,9 @@ In this section you run some queries using aggregate functions and perform some 
 
    ![aggregate-query](../assets/tutorial-sql-aggregate-query.png)
 
-7. Click **Engine: auto (sql-native)** to display the engine options&mdash;**native** for native (JSON-based) queries, **sql-native** for Druid SQL queries, and **sql-msq-task** for SQL-based ingestion. 
+7. Click **Engine: Auto (SQL native)** to display the engine options&mdash;**Native** for native (JSON-based) queries, **SQL native** for Druid SQL queries, and **SQL MSQ-task** for SQL-based ingestion. 
 
-   Select **auto** to let Druid select the most efficient engine based on your query input.
+   Select **Auto** to let Druid select the most efficient engine based on your query input.
 
 8. From the engine menu you can also edit the query context and turn off some query defaults. 
 
@@ -193,3 +193,5 @@ For more information on ingestion and querying data, see the following topics:
 - [Ingestion](../ingestion/index.md) for an overview of ingestion and the ingestion methods available in Druid.
 - [SQL-based ingestion](../multi-stage-query/index.md) for an overview of SQL-based ingestion.
 - [SQL-based ingestion query examples](../multi-stage-query/examples.md) for examples of SQL-based ingestion for various use cases.
+- [Introduction to Druid SQL](https://github.com/implydata/learn-druid/tree/main/notebooks) to learn more about Druid SQL.
+

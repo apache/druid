@@ -49,12 +49,6 @@ public class TrueDimFilter extends AbstractOptimizableDimFilter implements DimFi
   }
 
   @Override
-  public DimFilter optimize()
-  {
-    return this;
-  }
-
-  @Override
   public Filter toFilter()
   {
     return TrueFilter.instance();

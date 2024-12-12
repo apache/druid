@@ -22,7 +22,6 @@ package org.apache.druid.java.util.common.guava;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
-
 import java.io.Closeable;
 import java.util.Arrays;
 import java.util.Collections;
@@ -49,6 +48,7 @@ public class Sequences
     return (Sequence<T>) EMPTY_SEQUENCE;
   }
 
+  @SafeVarargs
   public static <T> Sequence<T> concat(Sequence<T>... sequences)
   {
     return concat(Arrays.asList(sequences));
@@ -145,5 +145,10 @@ public class Sequences
     {
       return Yielders.done(initValue, null);
     }
+  }
+
+  public static <T> Sequence<T> of(T... values)
+  {
+    return simple(Arrays.asList(values));
   }
 }

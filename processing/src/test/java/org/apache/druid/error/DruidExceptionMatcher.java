@@ -40,9 +40,27 @@ public class DruidExceptionMatcher extends DiagnosingMatcher<Throwable>
     );
   }
 
+  public static DruidExceptionMatcher notFound()
+  {
+    return new DruidExceptionMatcher(
+        DruidException.Persona.USER,
+        DruidException.Category.NOT_FOUND,
+        "notFound"
+    );
+  }
+
   public static DruidExceptionMatcher invalidSqlInput()
   {
     return invalidInput().expectContext("sourceType", "sql");
+  }
+
+  public static DruidExceptionMatcher defensive()
+  {
+    return new DruidExceptionMatcher(
+        DruidException.Persona.DEVELOPER,
+        DruidException.Category.DEFENSIVE,
+        "general"
+    );
   }
 
   private final AllOf<DruidException> delegate;
@@ -64,7 +82,7 @@ public class DruidExceptionMatcher extends DiagnosingMatcher<Throwable>
 
   public DruidExceptionMatcher expectContext(String key, String value)
   {
-    matcherList.add(DruidMatchers.fn("context", DruidException::getContext, Matchers.hasEntry(key, value)));
+    matcherList.add(0, DruidMatchers.fn("context", DruidException::getContext, Matchers.hasEntry(key, value)));
     return this;
   }
 
@@ -80,13 +98,13 @@ public class DruidExceptionMatcher extends DiagnosingMatcher<Throwable>
 
   public DruidExceptionMatcher expectMessage(Matcher<String> messageMatcher)
   {
-    matcherList.add(DruidMatchers.fn("message", DruidException::getMessage, messageMatcher));
+    matcherList.add(0, DruidMatchers.fn("message", DruidException::getMessage, messageMatcher));
     return this;
   }
 
   public DruidExceptionMatcher expectException(Matcher<Throwable> causeMatcher)
   {
-    matcherList.add(DruidMatchers.fn("cause", DruidException::getCause, causeMatcher));
+    matcherList.add(0, DruidMatchers.fn("cause", DruidException::getCause, causeMatcher));
     return this;
   }
 

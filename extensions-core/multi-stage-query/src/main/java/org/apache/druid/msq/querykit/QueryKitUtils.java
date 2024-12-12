@@ -34,7 +34,7 @@ import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.msq.indexing.error.ColumnNameRestrictedFault;
 import org.apache.druid.msq.indexing.error.MSQException;
-import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.expression.TimestampFloorExprMacro;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ColumnType;
@@ -60,8 +60,9 @@ import java.util.stream.Collectors;
 public class QueryKitUtils
 {
   /**
-   * Field in frames that stores the partition "boosting" value. Typically used as the last element of a partitioning
-   * key when generating segments. This is an incrementing number that helps split up otherwise too-large partitions.
+   * Field in frames that stores the partition "boosting" value. Typically, it is used as the last element of a
+   * partitioning key when generating segments. This is an incrementing number that helps split up otherwise too-large
+   * partitions.
    */
   public static final String PARTITION_BOOST_COLUMN = "__boost";
 
@@ -190,11 +191,11 @@ public class QueryKitUtils
    * @throws IllegalArgumentException if the provided granularity is not supported
    */
   @Nullable
-  public static VirtualColumn makeSegmentGranularityVirtualColumn(final ObjectMapper jsonMapper, final Query<?> query)
+  public static VirtualColumn makeSegmentGranularityVirtualColumn(final ObjectMapper jsonMapper, final QueryContext queryContext)
   {
     final Granularity segmentGranularity =
-        QueryKitUtils.getSegmentGranularityFromContext(jsonMapper, query.getContext());
-    final String timeColumnName = query.context().getString(QueryKitUtils.CTX_TIME_COLUMN_NAME);
+        QueryKitUtils.getSegmentGranularityFromContext(jsonMapper, queryContext.asMap());
+    final String timeColumnName = queryContext.getString(QueryKitUtils.CTX_TIME_COLUMN_NAME);
 
     if (timeColumnName == null || Granularities.ALL.equals(segmentGranularity)) {
       return null;

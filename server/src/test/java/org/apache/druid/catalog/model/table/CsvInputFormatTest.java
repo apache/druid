@@ -48,7 +48,7 @@ public class CsvInputFormatTest extends BaseExternTableTest
     TableMetadata table = TableBuilder.external("foo")
         .inputSource(toMap(new InlineInputSource("a\n")))
         .inputFormat(CSV_FORMAT)
-        .column("a", Columns.VARCHAR)
+        .column("a", Columns.STRING)
         .build();
     ResolvedTable resolved = registry.resolve(table.spec());
     resolved.validate();
@@ -66,12 +66,12 @@ public class CsvInputFormatTest extends BaseExternTableTest
   public void testConversion()
   {
     CsvInputFormat format = new CsvInputFormat(
-        Collections.singletonList("a"), ";", false, false, 1);
+        Collections.singletonList("a"), ";", false, false, 1, null);
     TableMetadata table = TableBuilder.external("foo")
         .inputSource(toMap(new InlineInputSource("a\n")))
         .inputFormat(formatToMap(format))
-        .column("a", Columns.VARCHAR)
-        .column("b", Columns.BIGINT)
+        .column("a", Columns.STRING)
+        .column("b", Columns.LONG)
         .build();
     ResolvedTable resolved = registry.resolve(table.spec());
     resolved.validate();

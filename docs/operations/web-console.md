@@ -26,7 +26,7 @@ Druid includes a web console for loading data, managing datasources and tasks, a
 You can also run SQL and native Druid queries in the console.
 
 Enable the following cluster settings to use the web console. Note that these settings are enabled by default.
-- Enable the Router's [management proxy](../design/router.md#enabling-the-management-proxy).
+- Enable the Router's [management proxy](../design/router.md#enable-the-management-proxy).
 - Enable [Druid SQL](../configuration/index.md#sql) for the Broker processes in the cluster.
 
 The [Router](../design/router.md) service hosts the web console.
@@ -35,10 +35,12 @@ Access the web console at the following address:
 http://<ROUTER_IP>:<ROUTER_PORT>
 ```
 
-> **Security note:** Without [Druid user permissions](../operations/security-overview.md) configured, any user of the
+:::info
+ **Security note:** Without [Druid user permissions](../operations/security-overview.md) configured, any user of the
 API or web console has effectively the same level of access to local files and network services as the user under which
 Druid runs. It is a best practice to avoid running Druid as the root user, and to use Druid permissions or network
 firewalls to restrict which users have access to potentially sensitive resources.
+:::
 
 This topic presents the high-level features and functionality of the web console.
 
@@ -85,7 +87,7 @@ It is equivalent to the **Task** view in the **Ingestion** view with the filter 
 9. The **Preview** button appears when you enter an INSERT/REPLACE query. It runs the query inline without the INSERT/REPLACE clause and with an added LIMIT to give you a preview of the data that would be ingested if you click **Run**.
 The added LIMIT makes the query run faster but provides incomplete results.
 10. The engine selector lets you choose which engine (API endpoint) to send a query to. By default, it automatically picks which endpoint to use based on an analysis of the query, but you can select a specific engine explicitly. You can also configure the engine specific context parameters from this menu.
-11. The **Max tasks** picker appears when you have the **sql-msq-task** engine selected. It lets you configure the degree of parallelism.
+11. The **Max tasks** picker appears when you have the **SQL MSQ-task** engine selected. It lets you configure the degree of parallelism.
 12. The More menu (**...**) contains the following helpful tools:
 - **Explain SQL query** shows you the logical plan returned by `EXPLAIN PLAN FOR` for a SQL query.
 - **Query history** shows you previously executed queries.

@@ -28,14 +28,17 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.AbstractMonitor;
 import org.apache.druid.query.DruidMetrics;
 
+import java.util.Map;
 import java.util.Set;
 
 public class WorkerTaskCountStatsMonitor extends AbstractMonitor
 {
   private final WorkerTaskCountStatsProvider statsProvider;
+  private final IndexerTaskCountStatsProvider indexerStatsProvider;
   private final String workerCategory;
   private final String workerVersion;
   private final boolean isMiddleManager;
+  private final boolean isIndexer;
 
   @Inject
   public WorkerTaskCountStatsMonitor(
@@ -44,11 +47,19 @@ public class WorkerTaskCountStatsMonitor extends AbstractMonitor
   )
   {
     this.isMiddleManager = nodeRoles.contains(NodeRole.MIDDLE_MANAGER);
+    this.isIndexer = nodeRoles.contains(NodeRole.INDEXER);
     if (isMiddleManager) {
       this.statsProvider = injector.getInstance(WorkerTaskCountStatsProvider.class);
+      this.indexerStatsProvider = null;
       this.workerCategory = statsProvider.getWorkerCategory();
       this.workerVersion = statsProvider.getWorkerVersion();
+    } else if (isIndexer) {
+      this.indexerStatsProvider = injector.getInstance(IndexerTaskCountStatsProvider.class);
+      this.statsProvider = null;
+      this.workerCategory = null;
+      this.workerVersion = null;
     } else {
+      this.indexerStatsProvider = null;
       this.statsProvider = null;
       this.workerCategory = null;
       this.workerVersion = null;
@@ -64,6 +75,12 @@ public class WorkerTaskCountStatsMonitor extends AbstractMonitor
       emit(emitter, "worker/taskSlot/idle/count", statsProvider.getWorkerIdleTaskSlotCount());
       emit(emitter, "worker/taskSlot/total/count", statsProvider.getWorkerTotalTaskSlotCount());
       emit(emitter, "worker/taskSlot/used/count", statsProvider.getWorkerUsedTaskSlotCount());
+    } else if (isIndexer) {
+      emit(emitter, "worker/task/running/count", indexerStatsProvider.getWorkerRunningTasks());
+      emit(emitter, "worker/task/assigned/count", indexerStatsProvider.getWorkerAssignedTasks());
+      emit(emitter, "worker/task/completed/count", indexerStatsProvider.getWorkerCompletedTasks());
+      emit(emitter, "worker/task/failed/count", indexerStatsProvider.getWorkerFailedTasks());
+      emit(emitter, "worker/task/success/count", indexerStatsProvider.getWorkerSuccessfulTasks());
     }
     return true;
   }
@@ -74,7 +91,18 @@ public class WorkerTaskCountStatsMonitor extends AbstractMonitor
       final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
       builder.setDimension(DruidMetrics.CATEGORY, workerCategory);
       builder.setDimension(DruidMetrics.WORKER_VERSION, workerVersion);
-      emitter.emit(builder.build(metricName, value));
+      emitter.emit(builder.setMetric(metricName, value));
+    }
+  }
+
+  public void emit(ServiceEmitter emitter, String metricName, Map<String, Long> dataSourceTaskMap)
+  {
+    for (Map.Entry<String, Long> dataSourceTaskCount : dataSourceTaskMap.entrySet()) {
+      if (dataSourceTaskCount.getValue() != null) {
+        ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
+        builder.setDimension(DruidMetrics.DATASOURCE, dataSourceTaskCount.getKey());
+        emitter.emit(builder.setMetric(metricName, dataSourceTaskCount.getValue()));
+      }
     }
   }
 }

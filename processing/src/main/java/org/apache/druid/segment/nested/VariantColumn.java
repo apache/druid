@@ -19,20 +19,23 @@
 
 package org.apache.druid.segment.nested;
 
-import com.google.common.base.Predicate;
-import com.google.common.base.Predicates;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Floats;
 import it.unimi.dsi.fastutil.ints.IntArraySet;
 import it.unimi.dsi.fastutil.ints.IntSet;
+import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.common.guava.GuavaUtils;
+import org.apache.druid.common.semantic.SemanticUtils;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.extraction.ExtractionFn;
+import org.apache.druid.query.filter.DruidObjectPredicate;
+import org.apache.druid.query.filter.DruidPredicateFactory;
+import org.apache.druid.query.filter.StringPredicateDruidPredicateFactory;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.AbstractDimensionSelector;
@@ -52,7 +55,6 @@ import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.ReadableOffset;
 import org.apache.druid.segment.data.SingleIndexedInt;
-import org.apache.druid.segment.filter.BooleanValueMatcher;
 import org.apache.druid.segment.historical.SingleValueHistoricalDimensionSelector;
 import org.apache.druid.segment.vector.BaseDoubleVectorValueSelector;
 import org.apache.druid.segment.vector.MultiValueDimensionVectorSelector;
@@ -69,8 +71,10 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.BitSet;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.function.Function;
 
 /**
  * {@link NestedCommonFormatColumn} for single type array columns, and mixed type columns. If {@link #variantTypes}
@@ -80,6 +84,9 @@ import java.util.TreeMap;
 public class VariantColumn<TStringDictionary extends Indexed<ByteBuffer>>
     implements DictionaryEncodedColumn<String>, NestedCommonFormatColumn
 {
+  private static final Map<Class<?>, Function<VariantColumn, ?>> AS_MAP =
+      SemanticUtils.makeAsMap(VariantColumn.class);
+
   private final TStringDictionary stringDictionary;
   private final FixedIndexed<Long> longDictionary;
   private final FixedIndexed<Double> doubleDictionary;
@@ -90,6 +97,7 @@ public class VariantColumn<TStringDictionary extends Indexed<ByteBuffer>>
   private final ExpressionType logicalExpressionType;
   @Nullable
   private final FieldTypeInfo.TypeSet variantTypes;
+  private final BitmapFactory bitmapFactory;
   private final int adjustLongId;
   private final int adjustDoubleId;
   private final int adjustArrayId;
@@ -102,7 +110,8 @@ public class VariantColumn<TStringDictionary extends Indexed<ByteBuffer>>
       ColumnarInts encodedValueColumn,
       ImmutableBitmap nullValueBitmap,
       ColumnType logicalType,
-      @Nullable Byte variantTypeSetByte
+      @Nullable Byte variantTypeSetByte,
+      BitmapFactory bitmapFactory
   )
   {
     this.stringDictionary = stringDictionary;
@@ -113,6 +122,7 @@ public class VariantColumn<TStringDictionary extends Indexed<ByteBuffer>>
     this.nullValueBitmap = nullValueBitmap;
     this.logicalExpressionType = ExpressionType.fromColumnTypeStrict(logicalType);
     this.variantTypes = variantTypeSetByte == null ? null : new FieldTypeInfo.TypeSet(variantTypeSetByte);
+    this.bitmapFactory = bitmapFactory;
     // use the variant type bytes if set, in current code the logical type should have been computed via this same means
     // however older versions of the code had a bug which could incorrectly classify mixed types as nested data
     if (variantTypeSetByte != null) {
@@ -477,9 +487,11 @@ public class VariantColumn<TStringDictionary extends Indexed<ByteBuffer>>
             return new ValueMatcher()
             {
               @Override
-              public boolean matches()
+              public boolean matches(boolean includeUnknown)
               {
-                return valueIds.contains(getRowValue());
+                final int rowId = getRowValue();
+                // null is always 0
+                return (includeUnknown && rowId == 0) || valueIds.contains(getRowValue());
               }
 
               @Override
@@ -489,32 +501,47 @@ public class VariantColumn<TStringDictionary extends Indexed<ByteBuffer>>
               }
             };
           } else {
-            return BooleanValueMatcher.of(false);
+            return new ValueMatcher()
+            {
+              @Override
+              public boolean matches(boolean includeUnknown)
+              {
+                // null is always 0
+                return includeUnknown && getRowValue() == 0;
+              }
+
+              @Override
+              public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+              {
+                inspector.visit("column", VariantColumn.this);
+              }
+            };
           }
         } else {
           // Employ caching BitSet optimization
-          return makeValueMatcher(Predicates.equalTo(value));
+          return makeValueMatcher(StringPredicateDruidPredicateFactory.equalTo(value));
         }
       }
 
       @Override
-      public ValueMatcher makeValueMatcher(final Predicate<String> predicate)
+      public ValueMatcher makeValueMatcher(final DruidPredicateFactory predicateFactory)
       {
         final BitSet checkedIds = new BitSet(getCardinality());
         final BitSet matchingIds = new BitSet(getCardinality());
+        final DruidObjectPredicate<String> predicate = predicateFactory.makeStringPredicate();
 
         // Lazy matcher; only check an id if matches() is called.
         return new ValueMatcher()
         {
           @Override
-          public boolean matches()
+          public boolean matches(boolean includeUnknown)
           {
             final int id = getRowValue();
 
             if (checkedIds.get(id)) {
               return matchingIds.get(id);
             } else {
-              final boolean matches = predicate.apply(lookupName(id));
+              final boolean matches = predicate.apply(lookupName(id)).matches(includeUnknown);
               checkedIds.set(id);
               if (matches) {
                 matchingIds.set(id);
@@ -990,5 +1017,14 @@ public class VariantColumn<TStringDictionary extends Indexed<ByteBuffer>>
     {
       return offset.getCurrentVectorSize();
     }
+  }
+
+  @SuppressWarnings("unchecked")
+  @Nullable
+  @Override
+  public <T> T as(Class<? extends T> clazz)
+  {
+    //noinspection ReturnOfNull
+    return (T) AS_MAP.getOrDefault(clazz, arg -> null).apply(this);
   }
 }

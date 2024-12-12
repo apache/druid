@@ -1,0 +1,185 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
+package org.apache.druid.indexer.report;
+
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.indexer.IngestionState;
+
+import javax.annotation.Nullable;
+import java.util.Map;
+import java.util.Objects;
+
+public class IngestionStatsAndErrors
+{
+  private final IngestionState ingestionState;
+  private final Map<String, Object> unparseableEvents;
+  private final Map<String, Object> rowStats;
+  private final String errorMsg;
+  private final boolean segmentAvailabilityConfirmed;
+  private final long segmentAvailabilityWaitTimeMs;
+  private final Map<String, Long> recordsProcessed;
+  private final Long segmentsRead;
+  private final Long segmentsPublished;
+
+  public IngestionStatsAndErrors(
+      @JsonProperty("ingestionState") IngestionState ingestionState,
+      @JsonProperty("unparseableEvents") Map<String, Object> unparseableEvents,
+      @JsonProperty("rowStats") Map<String, Object> rowStats,
+      @JsonProperty("errorMsg") @Nullable String errorMsg,
+      @JsonProperty("segmentAvailabilityConfirmed") boolean segmentAvailabilityConfirmed,
+      @JsonProperty("segmentAvailabilityWaitTimeMs") long segmentAvailabilityWaitTimeMs,
+      @JsonProperty("recordsProcessed") Map<String, Long> recordsProcessed,
+      @Nullable @JsonProperty("segmentsRead") Long segmentsRead,
+      @Nullable @JsonProperty("segmentsPublished") Long segmentsPublished
+  )
+  {
+    this.ingestionState = ingestionState;
+    this.unparseableEvents = unparseableEvents;
+    this.rowStats = rowStats;
+    this.errorMsg = errorMsg;
+    this.segmentAvailabilityConfirmed = segmentAvailabilityConfirmed;
+    this.segmentAvailabilityWaitTimeMs = segmentAvailabilityWaitTimeMs;
+    this.recordsProcessed = recordsProcessed;
+    this.segmentsRead = segmentsRead;
+    this.segmentsPublished = segmentsPublished;
+  }
+
+  @JsonProperty
+  public IngestionState getIngestionState()
+  {
+    return ingestionState;
+  }
+
+  @JsonProperty
+  public Map<String, Object> getUnparseableEvents()
+  {
+    return unparseableEvents;
+  }
+
+  @JsonProperty
+  public Map<String, Object> getRowStats()
+  {
+    return rowStats;
+  }
+
+  @JsonProperty
+  @Nullable
+  public String getErrorMsg()
+  {
+    return errorMsg;
+  }
+
+  @JsonProperty
+  public boolean isSegmentAvailabilityConfirmed()
+  {
+    return segmentAvailabilityConfirmed;
+  }
+
+  @JsonProperty
+  public long getSegmentAvailabilityWaitTimeMs()
+  {
+    return segmentAvailabilityWaitTimeMs;
+  }
+
+  @JsonProperty
+  @Nullable
+  public Map<String, Long> getRecordsProcessed()
+  {
+    return recordsProcessed;
+  }
+
+  @JsonProperty
+  @Nullable
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public Long getSegmentsRead()
+  {
+    return segmentsRead;
+  }
+
+  @JsonProperty
+  @Nullable
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public Long getSegmentsPublished()
+  {
+    return segmentsPublished;
+  }
+
+  public static IngestionStatsAndErrors getPayloadFromTaskReports(
+      Map<String, TaskReport> taskReports
+  )
+  {
+    return (IngestionStatsAndErrors) taskReports.get(IngestionStatsAndErrorsTaskReport.REPORT_KEY)
+                                                .getPayload();
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    IngestionStatsAndErrors that = (IngestionStatsAndErrors) o;
+    return getIngestionState() == that.getIngestionState() &&
+           Objects.equals(getUnparseableEvents(), that.getUnparseableEvents()) &&
+           Objects.equals(getRowStats(), that.getRowStats()) &&
+           Objects.equals(getErrorMsg(), that.getErrorMsg()) &&
+           Objects.equals(isSegmentAvailabilityConfirmed(), that.isSegmentAvailabilityConfirmed()) &&
+           Objects.equals(getSegmentAvailabilityWaitTimeMs(), that.getSegmentAvailabilityWaitTimeMs()) &&
+           Objects.equals(getRecordsProcessed(), that.getRecordsProcessed()) &&
+           Objects.equals(getSegmentsRead(), that.getSegmentsRead()) &&
+           Objects.equals(getSegmentsPublished(), that.getSegmentsPublished());
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(
+        getIngestionState(),
+        getUnparseableEvents(),
+        getRowStats(),
+        getErrorMsg(),
+        isSegmentAvailabilityConfirmed(),
+        getSegmentAvailabilityWaitTimeMs(),
+        getRecordsProcessed(),
+        getSegmentsRead(),
+        getSegmentsPublished()
+    );
+  }
+
+  @Override
+  public String toString()
+  {
+    return "IngestionStatsAndErrorsTaskReportData{" +
+           "ingestionState=" + ingestionState +
+           ", unparseableEvents=" + unparseableEvents +
+           ", rowStats=" + rowStats +
+           ", errorMsg='" + errorMsg + '\'' +
+           ", segmentAvailabilityConfoirmed=" + segmentAvailabilityConfirmed +
+           ", segmentAvailabilityWaitTimeMs=" + segmentAvailabilityWaitTimeMs +
+           ", recordsProcessed=" + recordsProcessed +
+           ", segmentsRead=" + segmentsRead +
+           ", segmentsPublished=" + segmentsPublished +
+           '}';
+  }
+}

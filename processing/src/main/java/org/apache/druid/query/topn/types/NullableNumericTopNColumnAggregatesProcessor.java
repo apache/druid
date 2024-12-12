@@ -20,14 +20,15 @@
 package org.apache.druid.query.topn.types;
 
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.query.CursorGranularizer;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.topn.BaseTopNAlgorithm;
+import org.apache.druid.query.topn.TopNCursorInspector;
 import org.apache.druid.query.topn.TopNParams;
 import org.apache.druid.query.topn.TopNQuery;
 import org.apache.druid.query.topn.TopNResultBuilder;
 import org.apache.druid.segment.BaseNullableColumnValueSelector;
 import org.apache.druid.segment.Cursor;
-import org.apache.druid.segment.StorageAdapter;
 
 import java.util.Map;
 import java.util.function.Function;
@@ -45,10 +46,10 @@ public abstract class NullableNumericTopNColumnAggregatesProcessor<Selector exte
     implements TopNColumnAggregatesProcessor<Selector>
 {
   private final boolean hasNulls = !NullHandling.replaceWithDefault();
-  final Function<Object, Comparable<?>> converter;
+  final Function<Object, Object> converter;
   Aggregator[] nullValueAggregates;
 
-  protected NullableNumericTopNColumnAggregatesProcessor(Function<Object, Comparable<?>> converter)
+  protected NullableNumericTopNColumnAggregatesProcessor(Function<Object, Object> converter)
   {
     this.converter = converter;
   }
@@ -67,8 +68,9 @@ public abstract class NullableNumericTopNColumnAggregatesProcessor<Selector exte
   /**
    * Method to convert primitive numeric value keys used by {@link #getAggregatesStore} into the correct representation
    * for the {@link TopNResultBuilder}, called by {@link #updateResults}
+   * @return
    */
-  abstract Comparable<?> convertAggregatorStoreKeyToColumnValue(Object aggregatorStoreKey);
+  abstract Object convertAggregatorStoreKeyToColumnValue(Object aggregatorStoreKey);
 
   @Override
   public int getCardinality(Selector selector)
@@ -77,7 +79,7 @@ public abstract class NullableNumericTopNColumnAggregatesProcessor<Selector exte
   }
 
   @Override
-  public Aggregator[][] getRowSelector(TopNQuery query, TopNParams params, StorageAdapter storageAdapter)
+  public Aggregator[][] getRowSelector(TopNQuery query, TopNParams params, TopNCursorInspector cursorInspector)
   {
     return null;
   }
@@ -87,6 +89,7 @@ public abstract class NullableNumericTopNColumnAggregatesProcessor<Selector exte
       TopNQuery query,
       Selector selector,
       Cursor cursor,
+      CursorGranularizer granularizer,
       Aggregator[][] rowSelector
   )
   {
@@ -105,8 +108,10 @@ public abstract class NullableNumericTopNColumnAggregatesProcessor<Selector exte
           aggregator.aggregate();
         }
       }
-      cursor.advance();
       processedRows++;
+      if (!granularizer.advanceCursorWithinBucket()) {
+        break;
+      }
     }
     return processedRows;
   }
@@ -123,7 +128,7 @@ public abstract class NullableNumericTopNColumnAggregatesProcessor<Selector exte
           vals[i] = aggs[i].get();
         }
 
-        final Comparable<?> key = convertAggregatorStoreKeyToColumnValue(entry.getKey());
+        final Object key = convertAggregatorStoreKeyToColumnValue(entry.getKey());
         resultBuilder.addEntry(key, key, vals);
       }
     }

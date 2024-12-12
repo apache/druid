@@ -73,14 +73,12 @@ public class KinesisSamplerSpec extends SeekableStreamSamplerSpec
             ioConfig.getAwsAssumedRoleArn(),
             ioConfig.getAwsExternalId()
         ),
-        ioConfig.getRecordsPerFetch() != null ? ioConfig.getRecordsPerFetch() : DEFAULT_RECORDS_PER_FETCH,
         ioConfig.getFetchDelayMillis(),
         1,
-        ioConfig.isDeaggregate(),
-        tuningConfig.getRecordBufferSizeOrDefault(Runtime.getRuntime().maxMemory(), ioConfig.isDeaggregate()),
+        tuningConfig.getRecordBufferSizeBytesOrDefault(Runtime.getRuntime().maxMemory()),
         tuningConfig.getRecordBufferOfferTimeout(),
         tuningConfig.getRecordBufferFullWait(),
-        tuningConfig.getMaxRecordsPerPollOrDefault(ioConfig.isDeaggregate()),
+        tuningConfig.getMaxBytesPerPollOrDefault(),
         ioConfig.isUseEarliestSequenceNumber(),
         tuningConfig.isUseListShards()
     );

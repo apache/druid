@@ -42,6 +42,9 @@ import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.IndexMergerV9;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.PhysicalSegmentInspector;
+import org.apache.druid.segment.QueryableIndex;
+import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.SegmentLazyLoadFailCallback;
 import org.apache.druid.segment.SimpleAscendingOffset;
@@ -115,7 +118,7 @@ public class BroadcastSegmentIndexedTableTest extends InitializedNullHandlingTes
     final IndexMerger indexMerger =
         new IndexMergerV9(mapper, indexIO, OffHeapMemorySegmentWriteOutMediumFactory.instance());
     Interval testInterval = Intervals.of("2011-01-12T00:00:00.000Z/2011-05-01T00:00:00.000Z");
-    IncrementalIndex data = TestIndex.makeRealtimeIndex("druid.sample.numeric.tsv");
+    IncrementalIndex data = TestIndex.makeSampleNumericIncrementalIndex();
     File segment = new File(temporaryFolder.newFolder(), "segment");
     File persisted = indexMerger.persist(
         data,
@@ -141,9 +144,8 @@ public class BroadcastSegmentIndexedTableTest extends InitializedNullHandlingTes
         segment.getTotalSpace()
     );
     backingSegment = (QueryableIndexSegment) factory.factorize(dataSegment, segment, false, SegmentLazyLoadFailCallback.NOOP);
-
-    columnNames = ImmutableList.<String>builder().add(ColumnHolder.TIME_COLUMN_NAME)
-                                                 .addAll(backingSegment.asQueryableIndex().getColumnNames()).build();
+    columnNames = new QueryableIndexCursorFactory(backingSegment.as(QueryableIndex.class)).getRowSignature()
+                                                                                          .getColumnNames();
     broadcastTable = new BroadcastSegmentIndexedTable(backingSegment, keyColumns, dataSegment.getVersion());
   }
 
@@ -266,14 +268,10 @@ public class BroadcastSegmentIndexedTableTest extends InitializedNullHandlingTes
       // lets try a few values out
       for (Object val : vals) {
         final IntSortedSet valIndex = valueIndex.find(val);
-        if (val == null) {
-          Assert.assertEquals(0, valIndex.size());
-        } else {
-          Assert.assertTrue(valIndex.size() > 0);
-          final IntBidirectionalIterator rowIterator = valIndex.iterator();
-          while (rowIterator.hasNext()) {
-            Assert.assertEquals(val, reader.read(rowIterator.nextInt()));
-          }
+        Assert.assertTrue(valIndex.size() > 0);
+        final IntBidirectionalIterator rowIterator = valIndex.iterator();
+        while (rowIterator.hasNext()) {
+          Assert.assertEquals(val, reader.read(rowIterator.nextInt()));
         }
       }
       for (Object val : nonmatchingVals) {
@@ -291,11 +289,11 @@ public class BroadcastSegmentIndexedTableTest extends InitializedNullHandlingTes
     checkColumnSelectorFactory(columnName);
     try (final Closer closer = Closer.create()) {
       final int columnIndex = columnNames.indexOf(columnName);
-      final int numRows = backingSegment.asStorageAdapter().getNumRows();
+      final int numRows = backingSegment.as(PhysicalSegmentInspector.class).getNumRows();
       final IndexedTable.Reader reader = broadcastTable.columnReader(columnIndex);
       closer.register(reader);
       final SimpleAscendingOffset offset = new SimpleAscendingOffset(numRows);
-      final BaseColumn theColumn = backingSegment.asQueryableIndex()
+      final BaseColumn theColumn = backingSegment.as(QueryableIndex.class)
                                                  .getColumnHolder(columnName)
                                                  .getColumn();
       closer.register(theColumn);
@@ -321,16 +319,16 @@ public class BroadcastSegmentIndexedTableTest extends InitializedNullHandlingTes
   private void checkColumnSelectorFactory(String columnName)
   {
     try (final Closer closer = Closer.create()) {
-      final int numRows = backingSegment.asStorageAdapter().getNumRows();
+      final int numRows = backingSegment.as(PhysicalSegmentInspector.class).getNumRows();
 
       final SimpleAscendingOffset offset = new SimpleAscendingOffset(numRows);
-      final BaseColumn theColumn = backingSegment.asQueryableIndex()
+      final BaseColumn theColumn = backingSegment.as(QueryableIndex.class)
                                                  .getColumnHolder(columnName)
                                                  .getColumn();
       closer.register(theColumn);
       final BaseObjectColumnValueSelector<?> selector = theColumn.makeColumnValueSelector(offset);
 
-      ColumnSelectorFactory tableFactory = broadcastTable.makeColumnSelectorFactory(offset, false, closer);
+      ColumnSelectorFactory tableFactory = broadcastTable.makeColumnSelectorFactory(offset, closer);
       final BaseObjectColumnValueSelector<?> tableSelector = tableFactory.makeColumnValueSelector(columnName);
 
       // compare with base segment selector to make sure tables selector can read correct values

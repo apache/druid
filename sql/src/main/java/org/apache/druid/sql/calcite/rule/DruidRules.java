@@ -29,7 +29,7 @@ import org.apache.calcite.rel.core.Filter;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.core.Sort;
 import org.apache.calcite.rel.core.Window;
-import org.apache.calcite.rel.rules.ProjectCorrelateTransposeRule;
+import org.apache.calcite.rel.rules.CoreRules;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.DruidOuterQueryRel;
@@ -95,12 +95,15 @@ public class DruidRules
             DruidOuterQueryRule.WHERE_FILTER,
             DruidOuterQueryRule.SELECT_PROJECT,
             DruidOuterQueryRule.SORT,
-            new DruidUnionRule(plannerContext),
+            new DruidUnionRule(plannerContext), // Add top level union rule since it helps in constructing a cleaner error message for the user
             new DruidUnionDataSourceRule(plannerContext),
-            DruidSortUnionRule.instance(),
             DruidJoinRule.instance(plannerContext)
         )
     );
+
+    if (plannerContext.featureAvailable(EngineFeature.ALLOW_TOP_LEVEL_UNION_ALL)) {
+      retVal.add(DruidSortUnionRule.instance());
+    }
 
     if (plannerContext.featureAvailable(EngineFeature.WINDOW_FUNCTIONS)) {
       retVal.add(new DruidQueryRule<>(Window.class, PartialDruidQuery.Stage.WINDOW, PartialDruidQuery::withWindow));
@@ -115,11 +118,11 @@ public class DruidRules
       retVal.add(DruidOuterQueryRule.WINDOW);
     }
 
+    // Adding unnest specific rules
     if (plannerContext.featureAvailable(EngineFeature.UNNEST)) {
       retVal.add(new DruidUnnestRule(plannerContext));
       retVal.add(new DruidCorrelateUnnestRule(plannerContext));
-      retVal.add(ProjectCorrelateTransposeRule.INSTANCE);
-      retVal.add(CorrelateFilterLTransposeRule.instance());
+      retVal.add(CoreRules.PROJECT_CORRELATE_TRANSPOSE);
       retVal.add(DruidFilterUnnestRule.instance());
       retVal.add(DruidFilterUnnestRule.DruidProjectOnUnnestRule.instance());
     }
@@ -197,7 +200,7 @@ public class DruidRules
 
         final DruidOuterQueryRel outerQueryRel = DruidOuterQueryRel.create(
             druidRel,
-            PartialDruidQuery.createOuterQuery(druidRel.getPartialDruidQuery())
+            PartialDruidQuery.createOuterQuery(druidRel.getPartialDruidQuery(), druidRel.getPlannerContext())
                              .withAggregate(aggregate)
         );
         if (outerQueryRel.isValidDruidQuery()) {
@@ -220,7 +223,7 @@ public class DruidRules
 
         final DruidOuterQueryRel outerQueryRel = DruidOuterQueryRel.create(
             druidRel,
-            PartialDruidQuery.createOuterQuery(druidRel.getPartialDruidQuery())
+            PartialDruidQuery.createOuterQuery(druidRel.getPartialDruidQuery(), druidRel.getPlannerContext())
                              .withWhereFilter(filter)
         );
         if (outerQueryRel.isValidDruidQuery()) {
@@ -243,7 +246,7 @@ public class DruidRules
 
         final DruidOuterQueryRel outerQueryRel = DruidOuterQueryRel.create(
             druidRel,
-            PartialDruidQuery.createOuterQuery(druidRel.getPartialDruidQuery())
+            PartialDruidQuery.createOuterQuery(druidRel.getPartialDruidQuery(), druidRel.getPlannerContext())
                              .withSelectProject(filter)
         );
         if (outerQueryRel.isValidDruidQuery()) {
@@ -266,7 +269,7 @@ public class DruidRules
 
         final DruidOuterQueryRel outerQueryRel = DruidOuterQueryRel.create(
             druidRel,
-            PartialDruidQuery.createOuterQuery(druidRel.getPartialDruidQuery())
+            PartialDruidQuery.createOuterQuery(druidRel.getPartialDruidQuery(), druidRel.getPlannerContext())
                              .withSort(sort)
         );
         if (outerQueryRel.isValidDruidQuery()) {
@@ -289,7 +292,7 @@ public class DruidRules
 
         final DruidOuterQueryRel outerQueryRel = DruidOuterQueryRel.create(
             druidRel,
-            PartialDruidQuery.createOuterQuery(druidRel.getPartialDruidQuery())
+            PartialDruidQuery.createOuterQuery(druidRel.getPartialDruidQuery(), druidRel.getPlannerContext())
                              .withWindow(window)
         );
         if (outerQueryRel.isValidDruidQuery()) {

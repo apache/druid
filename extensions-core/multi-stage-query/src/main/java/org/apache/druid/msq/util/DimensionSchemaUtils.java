@@ -24,7 +24,11 @@ import org.apache.druid.data.input.impl.DoubleDimensionSchema;
 import org.apache.druid.data.input.impl.FloatDimensionSchema;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.java.util.emitter.service.AlertEvent;
 import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -40,49 +44,126 @@ import javax.annotation.Nullable;
  */
 public class DimensionSchemaUtils
 {
+  private static final EmittingLogger LOG = new EmittingLogger(DimensionSchemaUtils.class);
+
+  /**
+   * Creates a dimension schema for creating {@link org.apache.druid.data.input.InputSourceReader}.
+   */
+  public static DimensionSchema createDimensionSchemaForExtern(final String column, @Nullable final ColumnType type)
+  {
+    return createDimensionSchema(
+        column,
+        type,
+        false,
+        // Least restrictive mode since we do not have any type restrictions while reading the extern files.
+        ArrayIngestMode.ARRAY
+    );
+  }
+
+  /**
+   * Create a dimension schema for a dimension column, given the type that it was assigned in the query, and the
+   * current values of {@link MultiStageQueryContext#CTX_USE_AUTO_SCHEMAS} and
+   * {@link MultiStageQueryContext#CTX_ARRAY_INGEST_MODE}.
+   *
+   * @param column          column name
+   * @param queryType       type of the column from the query
+   * @param useAutoType     active value of {@link MultiStageQueryContext#CTX_USE_AUTO_SCHEMAS}
+   * @param arrayIngestMode active value of {@link MultiStageQueryContext#CTX_ARRAY_INGEST_MODE}
+   */
   public static DimensionSchema createDimensionSchema(
       final String column,
-      @Nullable final ColumnType type,
-      boolean useAutoType
+      @Nullable final ColumnType queryType,
+      boolean useAutoType,
+      ArrayIngestMode arrayIngestMode
   )
   {
     if (useAutoType) {
       // for complex types that are not COMPLEX<json>, we still want to use the handler since 'auto' typing
-      // only works for the 'standard' built-in typesg
-      if (type != null && type.is(ValueType.COMPLEX) && !ColumnType.NESTED_DATA.equals(type)) {
-        final ColumnCapabilities capabilities = ColumnCapabilitiesImpl.createDefault().setType(type);
+      // only works for the 'standard' built-in types
+      if (queryType != null && queryType.is(ValueType.COMPLEX) && !ColumnType.NESTED_DATA.equals(queryType)) {
+        final ColumnCapabilities capabilities = ColumnCapabilitiesImpl.createDefault().setType(queryType);
         return DimensionHandlerUtils.getHandlerFromCapabilities(column, capabilities, null)
                                     .getDimensionSchema(capabilities);
       }
 
-      return new AutoTypeColumnSchema(column);
+      if (queryType != null && (queryType.isPrimitive() || queryType.isPrimitiveArray())) {
+        return new AutoTypeColumnSchema(column, queryType);
+      }
+      return new AutoTypeColumnSchema(column, null);
     } else {
-      // if schema information not available, create a string dimension
-      if (type == null) {
-        return new StringDimensionSchema(column);
-      }
+      // dimensionType may not be identical to queryType, depending on arrayIngestMode.
+      final ColumnType dimensionType = getDimensionType(column, queryType, arrayIngestMode);
 
-      switch (type.getType()) {
-        case STRING:
-          return new StringDimensionSchema(column);
-        case LONG:
-          return new LongDimensionSchema(column);
-        case FLOAT:
-          return new FloatDimensionSchema(column);
-        case DOUBLE:
-          return new DoubleDimensionSchema(column);
-        case ARRAY:
-          switch (type.getElementType().getType()) {
-            case STRING:
-              return new StringDimensionSchema(column, DimensionSchema.MultiValueHandling.ARRAY, null);
-            default:
-              throw new ISE("Cannot create dimension for type [%s]", type.toString());
-          }
-        default:
-          final ColumnCapabilities capabilities = ColumnCapabilitiesImpl.createDefault().setType(type);
-          return DimensionHandlerUtils.getHandlerFromCapabilities(column, capabilities, null)
-                                      .getDimensionSchema(capabilities);
+      if (dimensionType.getType() == ValueType.STRING) {
+        return new StringDimensionSchema(
+            column,
+            queryType != null && queryType.isArray()
+            ? DimensionSchema.MultiValueHandling.ARRAY
+            : DimensionSchema.MultiValueHandling.SORTED_ARRAY,
+            null
+        );
+      } else if (dimensionType.getType() == ValueType.LONG) {
+        return new LongDimensionSchema(column);
+      } else if (dimensionType.getType() == ValueType.FLOAT) {
+        return new FloatDimensionSchema(column);
+      } else if (dimensionType.getType() == ValueType.DOUBLE) {
+        return new DoubleDimensionSchema(column);
+      } else if (dimensionType.getType() == ValueType.ARRAY) {
+        return new AutoTypeColumnSchema(column, dimensionType);
+      } else {
+        final ColumnCapabilities capabilities = ColumnCapabilitiesImpl.createDefault().setType(dimensionType);
+        return DimensionHandlerUtils.getHandlerFromCapabilities(column, capabilities, null)
+                                    .getDimensionSchema(capabilities);
       }
+    }
+  }
+
+  /**
+   * Based on a type from a query result, get the type of dimension we should write.
+   *
+   * @throws org.apache.druid.error.DruidException if there is some problem
+   */
+  public static ColumnType getDimensionType(
+      final String columnName,
+      @Nullable final ColumnType queryType,
+      final ArrayIngestMode arrayIngestMode
+  )
+  {
+    if (queryType == null) {
+      // if schema information is not available, create a string dimension
+      return ColumnType.STRING;
+    } else if (queryType.getType() == ValueType.ARRAY) {
+      ValueType elementType = queryType.getElementType().getType();
+      if (elementType == ValueType.STRING) {
+        if (arrayIngestMode == ArrayIngestMode.MVD) {
+          final String msgFormat = "Inserting a multi-value string column[%s] relying on deprecated"
+                                   + " ArrayIngestMode.MVD. This query should be rewritten to use the ARRAY_TO_MV"
+                                   + " operator to insert ARRAY types as multi-value strings.";
+          LOG.makeWarningAlert(msgFormat, columnName)
+             .severity(AlertEvent.Severity.DEPRECATED)
+             .addData("feature", "ArrayIngestMode.MVD")
+             .emit();
+          return ColumnType.STRING;
+        } else {
+          return queryType;
+        }
+      } else if (elementType.isNumeric()) {
+        // ValueType == LONG || ValueType == FLOAT || ValueType == DOUBLE
+        if (arrayIngestMode == ArrayIngestMode.ARRAY) {
+          return queryType;
+        } else {
+          throw InvalidInput.exception(
+              "Numeric arrays can only be ingested when '%s' is set to 'array'. "
+              + "Current value of the parameter is[%s]",
+              MultiStageQueryContext.CTX_ARRAY_INGEST_MODE,
+              StringUtils.toLowerCase(arrayIngestMode.name())
+          );
+        }
+      } else {
+        throw new ISE("Cannot create dimension for type[%s]", queryType.toString());
+      }
+    } else {
+      return queryType;
     }
   }
 }

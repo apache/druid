@@ -18,11 +18,11 @@
 
 import {
   Button,
-  ButtonGroup,
   FormGroup,
   InputGroup,
   Intent,
   NumericInput,
+  SegmentedControl,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import type { JSX } from 'react';
@@ -57,7 +57,7 @@ export interface Field<M> {
     | 'json'
     | 'interval'
     | 'custom';
-  defaultValue?: any;
+  defaultValue?: Functor<M, any>;
   emptyValue?: any;
   suggestions?: Functor<M, Suggestion[]>;
   placeholder?: Functor<M, string>;
@@ -84,6 +84,7 @@ export interface Field<M> {
 }
 
 function toNumberOrUndefined(n: unknown): number | undefined {
+  if (n == null) return;
   const r = Number(n);
   return isNaN(r) ? undefined : r;
 }
@@ -130,7 +131,9 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
     const required = AutoForm.evaluateFunctor(field.required, model, false);
     return {
       required,
-      defaultValue: required ? undefined : field.defaultValue,
+      defaultValue: required
+        ? undefined
+        : AutoForm.evaluateFunctor(field.defaultValue, model as any, undefined),
       modelValue: deepGet(model as any, field.name),
     };
   }
@@ -366,6 +369,7 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
         disabled={AutoForm.evaluateFunctor(field.disabled, model, false)}
         intent={required && modelValue == null ? AutoForm.REQUIRED_INTENT : undefined}
         multiline={AutoForm.evaluateFunctor(field.multiline, model, false)}
+        height={field.height}
       />
     );
   }
@@ -378,30 +382,19 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
     const intent = required && modelValue == null ? AutoForm.REQUIRED_INTENT : undefined;
 
     return (
-      <ButtonGroup large={large}>
-        <Button
-          intent={intent}
-          disabled={disabled}
-          active={shownValue === false}
-          onClick={() => {
-            this.fieldChange(field, false);
-            if (onFinalize) onFinalize();
-          }}
-        >
-          False
-        </Button>
-        <Button
-          intent={intent}
-          disabled={disabled}
-          active={shownValue === true}
-          onClick={() => {
-            this.fieldChange(field, true);
-            if (onFinalize) onFinalize();
-          }}
-        >
-          True
-        </Button>
-      </ButtonGroup>
+      <SegmentedControl
+        value={String(shownValue)}
+        onValueChange={v => {
+          this.fieldChange(field, v === 'true');
+          if (onFinalize) onFinalize();
+        }}
+        options={[
+          { value: 'false', label: 'False', disabled },
+          { value: 'true', label: 'True', disabled },
+        ]}
+        intent={intent}
+        small={!large}
+      />
     );
   }
 
@@ -546,7 +539,6 @@ export class AutoForm<T extends Record<string, any>> extends React.PureComponent
           text={showMore ? 'Show less' : 'Show more'}
           rightIcon={showMore ? IconNames.CHEVRON_UP : IconNames.CHEVRON_DOWN}
           minimal
-          fill
           onClick={() => {
             this.setState(({ showMore }) => ({ showMore: !showMore }));
           }}

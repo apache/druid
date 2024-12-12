@@ -22,10 +22,7 @@ package org.apache.druid.query.aggregation;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
-
-import java.util.List;
 
 public class TimestampMinAggregatorFactory extends TimestampAggregatorFactory
 {
@@ -44,14 +41,6 @@ public class TimestampMinAggregatorFactory extends TimestampAggregatorFactory
   public AggregatorFactory getCombiningFactory()
   {
     return new TimestampMinAggregatorFactory(name, name, timeFormat);
-  }
-
-  @Override
-  public List<AggregatorFactory> getRequiredColumns()
-  {
-    return ImmutableList.of(
-        new TimestampMinAggregatorFactory(name, fieldName, timeFormat)
-    );
   }
 
   @Override

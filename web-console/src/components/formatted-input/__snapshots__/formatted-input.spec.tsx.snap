@@ -5,10 +5,10 @@ exports[`FormattedInput matches snapshot on undefined value 1`] = `
   class="formatted-input"
 >
   <div
-    class="bp4-input-group"
+    class="bp5-input-group"
   >
     <input
-      class="bp4-input"
+      class="bp5-input"
       type="text"
       value=""
     />
@@ -21,12 +21,12 @@ exports[`FormattedInput matches snapshot with escaped value 1`] = `
   class="formatted-input"
 >
   <div
-    class="bp4-input-group"
+    class="bp5-input-group"
   >
     <input
-      class="bp4-input"
+      class="bp5-input"
       type="text"
-      value="Here are some chars \\\\t\\\\r\\\\n lol"
+      value="Here are some chars \\t\\r\\n lol"
     />
   </div>
 </div>
@@ -37,7 +37,7 @@ exports[`FormattedInput matches works with multiline 1`] = `
   class="formatted-input"
 >
   <textarea
-    class="bp4-input"
+    class="bp5-input bp5-text-area"
   >
     Here are some chars \\t\\r\\n lol
   </textarea>

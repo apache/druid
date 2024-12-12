@@ -22,10 +22,12 @@ title: "Aggregations"
   ~ under the License.
   -->
 
-> Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
-> This document describes the native
-> language. For information about aggregators available in SQL, refer to the
-> [SQL documentation](sql-aggregations.md).
+:::info
+Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
+This document describes the native
+language. For information about aggregators available in SQL, refer to the
+[SQL documentation](sql-aggregations.md).
+:::
 
 You can use aggregations:
 -  in the ingestion spec during ingestion to summarize data before it enters Apache Druid.
@@ -175,10 +177,9 @@ Example:
 
 The first and last aggregators determine the metric values that respectively correspond to the earliest and latest values of a time column.
 
-Do not use first and last aggregators for the double, float, and long types in an ingestion spec. They are only supported for queries.
-The string-typed aggregators, `stringFirst` and `stringLast`, are supported for both ingestion and querying.
-
-Queries with first or last aggregators on a segment created with rollup return the rolled up value, not the first or last value from the raw ingested data.
+Queries with first or last aggregators on a segment created with rollup return the rolled up value, not the first or last value from the 
+raw ingested data. The `timeColumn` will get ignored in such cases, and the aggregation will use the original value of the time column
+stored at the time the segment was created.
 
 #### Numeric first and last aggregators
 
@@ -370,6 +371,7 @@ Example:
 | `name` | Output name for the value. | Yes |
 | `fieldName` | Name of the input column to compute the value over. | Yes |
 | `maxStringBytes` | Maximum size of string values to accumulate when computing the first or last value per group. Values longer than this will be truncated. | No. Defaults to 1024. |
+| `aggregateMultipleValues` | `aggregateMultipleValues` is an optional boolean flag controls the behavior of aggregating a [multi-value dimension](./multi-value-dimensions.md). `aggregateMultipleValues` is set as true by default and returns the stringified array in case of a multi-value dimension. By setting it to false, function will return first value instead. | No. Defaults to true. |
 
 Example:
 ```json
@@ -399,8 +401,10 @@ Compared to the Theta sketch, the HLL sketch does not support set operations and
 
 #### Cardinality, hyperUnique
 
-> For new use cases, we recommend evaluating [DataSketches Theta Sketch](../development/extensions-core/datasketches-theta.md) or [DataSketches HLL Sketch](../development/extensions-core/datasketches-hll.md) instead.
-> The DataSketches aggregators are generally able to offer more flexibility and better accuracy than the classic Druid `cardinality` and `hyperUnique` aggregators.
+:::info
+For new use cases, we recommend evaluating [DataSketches Theta Sketch](../development/extensions-core/datasketches-theta.md) or [DataSketches HLL Sketch](../development/extensions-core/datasketches-hll.md) instead.
+The DataSketches aggregators are generally able to offer more flexibility and better accuracy than the classic Druid `cardinality` and `hyperUnique` aggregators.
+:::
 
 The [Cardinality and HyperUnique](../querying/hll-old.md) aggregators are older aggregator implementations available by default in Druid that also provide distinct count estimates using the HyperLogLog algorithm. The newer DataSketches Theta and HLL extension-provided aggregators described above have superior accuracy and performance and are recommended instead.
 
@@ -442,9 +446,11 @@ We do not recommend the fixed buckets histogram for general use, as its usefulne
 
 #### Approximate Histogram (deprecated)
 
-> The Approximate Histogram aggregator is deprecated.
-> There are a number of other quantile estimation algorithms that offer better performance, accuracy, and memory footprint.
-> We recommend using [DataSketches Quantiles](../development/extensions-core/datasketches-quantiles.md) instead.
+:::info
+The Approximate Histogram aggregator is deprecated.
+There are a number of other quantile estimation algorithms that offer better performance, accuracy, and memory footprint.
+We recommend using [DataSketches Quantiles](../development/extensions-core/datasketches-quantiles.md) instead.
+:::
 
 The [Approximate Histogram](../development/extensions-core/approximate-histograms.md) extension-provided aggregator also provides quantile estimates and histogram approximations, based on [http://jmlr.org/papers/volume11/ben-haim10a/ben-haim10a.pdf](http://jmlr.org/papers/volume11/ben-haim10a/ben-haim10a.pdf).
 
@@ -568,7 +574,9 @@ JavaScript functions are expected to return floating-point values.
 }
 ```
 
-> JavaScript functionality is disabled by default. Refer to the Druid [JavaScript programming guide](../development/javascript.md) for guidelines about using Druid's JavaScript functionality, including instructions on how to enable it.
+:::info
+JavaScript-based functionality is disabled by default. Refer to the Druid [JavaScript programming guide](../development/javascript.md) for guidelines about using Druid's JavaScript functionality, including instructions on how to enable it.
+:::
 
 
 ## Miscellaneous aggregations
@@ -637,4 +645,3 @@ possible output of the aggregator is:
 
 As the example illustrates, you can think of the output number as an unsigned _n_ bit number where _n_ is the number of dimensions passed to the aggregator. 
 Druid sets the bit at position X for the number to 0 if the sub-grouping includes a dimension at position X in the aggregator input. Otherwise, Druid sets this bit to 1.
-

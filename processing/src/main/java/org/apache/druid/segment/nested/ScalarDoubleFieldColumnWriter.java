@@ -33,7 +33,7 @@ import java.nio.ByteOrder;
 import java.nio.channels.WritableByteChannel;
 
 /**
- * Nested field writer for double type columns of {@link NestedDataColumnSerializerV4}. In addition to the normal
+ * Nested field writer for double type columns of {@link NestedDataColumnSerializer}. In addition to the normal
  * dictionary encoded column, this writer also writes an additional double value column with {@link #doublesSerializer},
  * which is written to during {@link #addValue}.
  */
@@ -59,20 +59,6 @@ public final class ScalarDoubleFieldColumnWriter extends GlobalDictionaryEncoded
   }
 
   @Override
-  public void open() throws IOException
-  {
-    super.open();
-    doublesSerializer = CompressionFactory.getDoubleSerializer(
-        fieldName,
-        segmentWriteOutMedium,
-        StringUtils.format("%s.double_column", fieldName),
-        ByteOrder.nativeOrder(),
-        indexSpec.getDimensionCompression()
-    );
-    doublesSerializer.open();
-  }
-
-  @Override
   void writeValue(@Nullable Double value) throws IOException
   {
     if (value == null) {
@@ -80,6 +66,21 @@ public final class ScalarDoubleFieldColumnWriter extends GlobalDictionaryEncoded
     } else {
       doublesSerializer.add(value);
     }
+  }
+
+  @Override
+  public void openColumnSerializer(SegmentWriteOutMedium medium, int maxId) throws IOException
+  {
+    super.openColumnSerializer(medium, maxId);
+    doublesSerializer = CompressionFactory.getDoubleSerializer(
+        fieldName,
+        medium,
+        StringUtils.format("%s.double_column", fieldName),
+        ByteOrder.nativeOrder(),
+        indexSpec.getDimensionCompression(),
+        fieldResourceCloser
+    );
+    doublesSerializer.open();
   }
 
   @Override

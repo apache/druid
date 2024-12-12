@@ -19,11 +19,11 @@
 
 package org.apache.druid.segment.index.semantic;
 
-import org.apache.druid.collections.spatial.ImmutableRTree;
+import org.apache.druid.collections.spatial.BaseImmutableRTee;
 
 /**
  */
 public interface SpatialIndex
 {
-  ImmutableRTree getRTree();
+  BaseImmutableRTee getRTree();
 }

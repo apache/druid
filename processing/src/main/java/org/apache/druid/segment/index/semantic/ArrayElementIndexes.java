@@ -26,6 +26,10 @@ import org.apache.druid.segment.index.BitmapColumnIndex;
 
 import javax.annotation.Nullable;
 
+/**
+ * Construct a {@link BitmapColumnIndex} for any array element which might be present in an array contained in the
+ * column.
+ */
 public interface ArrayElementIndexes
 {
   /**

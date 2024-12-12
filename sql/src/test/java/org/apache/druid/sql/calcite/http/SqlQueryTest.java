@@ -19,25 +19,29 @@
 
 package org.apache.druid.sql.calcite.http;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.calcite.avatica.SqlType;
+import org.apache.druid.query.http.ClientSqlParameter;
+import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.sql.http.SqlParameter;
 import org.apache.druid.sql.http.SqlQuery;
 import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class SqlQueryTest extends CalciteTestBase
 {
+  private static final ObjectMapper JSON_MAPPER = TestHelper.makeJsonMapper();
+
   @Test
   public void testSerde() throws Exception
   {
-    final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
     final SqlQuery query = new SqlQuery(
         "SELECT ?",
         ResultFormat.ARRAY,
@@ -47,7 +51,63 @@ public class SqlQueryTest extends CalciteTestBase
         ImmutableMap.of("useCache", false),
         ImmutableList.of(new SqlParameter(SqlType.INTEGER, 1))
     );
-    Assert.assertEquals(query, jsonMapper.readValue(jsonMapper.writeValueAsString(query), SqlQuery.class));
+    Assert.assertEquals(query, JSON_MAPPER.readValue(JSON_MAPPER.writeValueAsString(query), SqlQuery.class));
+  }
+
+  @Test
+  public void testClientSqlQueryToSqlQueryConversion() throws JsonProcessingException
+  {
+    final ClientSqlQuery givenClientSqlQuery = new ClientSqlQuery(
+        "SELECT ?",
+        "array",
+        true,
+        true,
+        true,
+        ImmutableMap.of("useCache", false),
+        null
+    );
+
+    final SqlQuery expectedSqlQuery = new SqlQuery(
+        "SELECT ?",
+        ResultFormat.ARRAY,
+        true,
+        true,
+        true,
+        ImmutableMap.of("useCache", false),
+        null
+    );
+
+    final SqlQuery observedSqlQuery =
+        JSON_MAPPER.readValue(JSON_MAPPER.writeValueAsString(givenClientSqlQuery), SqlQuery.class);
+    Assert.assertEquals(expectedSqlQuery, observedSqlQuery);
+  }
+
+  @Test
+  public void testClientSqlQueryToSqlQueryConversion2() throws JsonProcessingException
+  {
+    final ClientSqlQuery givenClientSqlQuery = new ClientSqlQuery(
+        "SELECT ?",
+        "arrayLines",
+        false,
+        false,
+        false,
+        ImmutableMap.of("useCache", false),
+        ImmutableList.of(new ClientSqlParameter("INTEGER", 1), new ClientSqlParameter("VARCHAR", "foo"))
+    );
+
+    final SqlQuery expectedSqlQuery = new SqlQuery(
+        "SELECT ?",
+        ResultFormat.ARRAYLINES,
+        false,
+        false,
+        false,
+        ImmutableMap.of("useCache", false),
+        ImmutableList.of(new SqlParameter(SqlType.INTEGER, 1), new SqlParameter(SqlType.VARCHAR, "foo"))
+    );
+
+    final SqlQuery observedSqlQuery =
+        JSON_MAPPER.readValue(JSON_MAPPER.writeValueAsString(givenClientSqlQuery), SqlQuery.class);
+    Assert.assertEquals(expectedSqlQuery, observedSqlQuery);
   }
 
   @Test

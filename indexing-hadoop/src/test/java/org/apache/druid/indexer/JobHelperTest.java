@@ -34,7 +34,6 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
-import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.segment.TestHelper;
@@ -68,27 +67,30 @@ import java.util.Map;
 public class JobHelperTest
 {
   private static final ObjectMapper JSON_MAPPER = TestHelper.makeJsonMapper();
-  private static final DataSchema DATA_SCHEMA = new DataSchema(
-      "test_ds",
-      JSON_MAPPER.convertValue(
-          new HadoopyStringInputRowParser(
-              new JSONParseSpec(
-                  new TimestampSpec("t", "auto", null),
-                  new DimensionsSpec(
-                      DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim1t", "dim2"))
-                  ),
-                  new JSONPathSpec(true, ImmutableList.of()),
-                  ImmutableMap.of(),
-                  null
-              )
-          ),
-          JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
-      ),
-      new AggregatorFactory[]{new CountAggregatorFactory("rows")},
-      new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null),
-      null,
-      JSON_MAPPER
-  );
+
+  private static final DataSchema DATA_SCHEMA =
+      DataSchema.builder()
+                .withDataSource("test_ds")
+                .withParserMap(
+                    JSON_MAPPER.convertValue(
+                        new HadoopyStringInputRowParser(
+                            new JSONParseSpec(
+                                new TimestampSpec("t", "auto", null),
+                                new DimensionsSpec(
+                                    DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim1", "dim1t", "dim2"))
+                                ),
+                                new JSONPathSpec(true, ImmutableList.of()),
+                                ImmutableMap.of(),
+                                null
+                            )
+                        ),
+                        JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
+                    )
+                )
+                .withAggregators(new CountAggregatorFactory("rows"))
+                .withGranularity(new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null))
+                .withObjectMapper(JSON_MAPPER)
+                .build();
 
   private static final HadoopIOConfig IO_CONFIG = new HadoopIOConfig(
       JSON_MAPPER.convertValue(
@@ -123,27 +125,34 @@ public class JobHelperTest
     dataFile = temporaryFolder.newFile();
     config = new HadoopDruidIndexerConfig(
         new HadoopIngestionSpec(
-            new DataSchema(
-                "website",
-                HadoopDruidIndexerConfig.JSON_MAPPER.convertValue(
-                    new StringInputRowParser(
-                        new CSVParseSpec(
-                            new TimestampSpec("timestamp", "yyyyMMddHH", null),
-                            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host"))),
-                            null,
-                            ImmutableList.of("timestamp", "host", "visited_num"),
-                            false,
-                            0
-                        ),
-                        null
-                    ),
-                    Map.class
-                ),
-                new AggregatorFactory[]{new LongSumAggregatorFactory("visited_num", "visited_num")},
-                new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, ImmutableList.of(this.interval)),
-                null,
-                HadoopDruidIndexerConfig.JSON_MAPPER
-            ),
+            DataSchema.builder()
+                      .withDataSource("website")
+                      .withParserMap(
+                          HadoopDruidIndexerConfig.JSON_MAPPER.convertValue(
+                              new StringInputRowParser(
+                                  new CSVParseSpec(
+                                      new TimestampSpec("timestamp", "yyyyMMddHH", null),
+                                      new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host"))),
+                                      null,
+                                      ImmutableList.of("timestamp", "host", "visited_num"),
+                                      false,
+                                      0
+                                  ),
+                                  null
+                              ),
+                              Map.class
+                          )
+                      )
+                      .withAggregators(new LongSumAggregatorFactory("visited_num", "visited_num"))
+                      .withGranularity(
+                          new UniformGranularitySpec(
+                              Granularities.DAY,
+                              Granularities.NONE,
+                              ImmutableList.of(this.interval)
+                          )
+                      )
+                      .withObjectMapper(HadoopDruidIndexerConfig.JSON_MAPPER)
+                      .build(),
             new HadoopIOConfig(
                 ImmutableMap.of(
                     "paths",
@@ -168,6 +177,7 @@ public class JobHelperTest
                 false,
                 false,
                 false,
+                false,
                 //Map of job properties
                 ImmutableMap.of(
                     "fs.s3.impl",
@@ -185,7 +195,8 @@ public class JobHelperTest
                 null,
                 null,
                 null,
-                null
+                null,
+                1
             )
         )
     );

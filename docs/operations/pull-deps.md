@@ -134,6 +134,8 @@ Note that if you specify `--defaultVersion`, you don't have to put version infor
 java -classpath "/my/druid/lib/*" org.apache.druid.cli.Main tools pull-deps --defaultVersion {{DRUIDVERSION}} --clean -c org.apache.druid.extensions:mysql-metadata-storage -h org.apache.hadoop:hadoop-client:2.3.0 -h org.apache.hadoop:hadoop-client:2.4.0
 ```
 
-> Please note to use the pull-deps tool you must know the Maven groupId, artifactId, and version of your extension.
->
-> For Druid community extensions listed [here](../configuration/extensions.md), the groupId is "org.apache.druid.extensions.contrib" and the artifactId is the name of the extension.
+:::info
+ Please note to use the pull-deps tool you must know the Maven groupId, artifactId, and version of your extension.
+
+ For Druid community extensions listed [here](../configuration/extensions.md), the groupId is "org.apache.druid.extensions.contrib" and the artifactId is the name of the extension.
+:::

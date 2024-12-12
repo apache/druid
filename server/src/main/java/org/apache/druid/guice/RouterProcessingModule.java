@@ -28,14 +28,12 @@ import org.apache.druid.collections.DummyNonBlockingPool;
 import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.guice.annotations.Merging;
-import org.apache.druid.java.util.common.concurrent.Execs;
-import org.apache.druid.java.util.common.concurrent.ExecutorServiceConfig;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.DruidProcessingConfig;
-import org.apache.druid.query.ExecutorServiceMonitor;
-import org.apache.druid.query.ForwardingQueryProcessingPool;
+import org.apache.druid.query.NoopQueryProcessingPool;
 import org.apache.druid.query.QueryProcessingPool;
-import org.apache.druid.server.metrics.MetricsModule;
+import org.apache.druid.query.groupby.GroupByQueryConfig;
+import org.apache.druid.query.groupby.GroupByResourcesReservationPool;
 
 import java.nio.ByteBuffer;
 
@@ -45,6 +43,8 @@ import java.nio.ByteBuffer;
  * {@link org.apache.druid.query.QueryToolChest}s, and they couple query type aspects not related to processing and
  * caching, which Router uses, and related to processing and caching, which Router doesn't use, but they inject the
  * resources.
+ *
+ * @see DruidProcessingModule
  */
 public class RouterProcessingModule implements Module
 {
@@ -53,18 +53,17 @@ public class RouterProcessingModule implements Module
   @Override
   public void configure(Binder binder)
   {
-    binder.bind(ExecutorServiceConfig.class).to(DruidProcessingConfig.class);
-    MetricsModule.register(binder, ExecutorServiceMonitor.class);
+    DruidProcessingModule.registerConfigsAndMonitor(binder);
   }
 
   @Provides
   @ManageLifecycle
   public QueryProcessingPool getProcessingExecutorPool(DruidProcessingConfig config)
   {
-    if (config.getNumThreadsConfigured() != ExecutorServiceConfig.DEFAULT_NUM_THREADS) {
-      log.error("numThreads[%d] configured, that is ignored on Router", config.getNumThreadsConfigured());
+    if (config.isNumThreadsConfigured()) {
+      log.warn("numThreads[%d] configured, that is ignored on Router", config.getNumThreads());
     }
-    return new ForwardingQueryProcessingPool(Execs.dummy());
+    return NoopQueryProcessingPool.instance();
   }
 
   @Provides
@@ -80,12 +79,26 @@ public class RouterProcessingModule implements Module
   @Merging
   public BlockingPool<ByteBuffer> getMergeBufferPool(DruidProcessingConfig config)
   {
-    if (config.getNumMergeBuffersConfigured() != DruidProcessingConfig.DEFAULT_NUM_MERGE_BUFFERS) {
-      log.error(
+    if (config.isNumMergeBuffersConfigured()) {
+      log.warn(
           "numMergeBuffers[%d] configured, that is ignored on Router",
-          config.getNumMergeBuffersConfigured()
+          config.getNumMergeBuffers()
       );
     }
     return DummyBlockingPool.instance();
+  }
+
+  /**
+   * Reservation pool injected with a dummy pool
+   */
+  @Provides
+  @LazySingleton
+  @Merging
+  public GroupByResourcesReservationPool getGroupByResourcesReservationPool(
+      @Merging BlockingPool<ByteBuffer> mergeBufferPool,
+      GroupByQueryConfig groupByQueryConfig
+  )
+  {
+    return new GroupByResourcesReservationPool(mergeBufferPool, groupByQueryConfig);
   }
 }

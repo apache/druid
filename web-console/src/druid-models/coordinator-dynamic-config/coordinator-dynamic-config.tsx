@@ -17,7 +17,6 @@
  */
 
 import { Code } from '@blueprintjs/core';
-import React from 'react';
 
 import type { Field } from '../../components';
 import { ExternalLink } from '../../components';
@@ -26,19 +25,16 @@ import { getLink } from '../../links';
 export interface CoordinatorDynamicConfig {
   maxSegmentsToMove?: number;
   balancerComputeThreads?: number;
-  killAllDataSources?: boolean;
   killDataSourceWhitelist?: string[];
+  killTaskSlotRatio?: number;
+  maxKillTaskSlots?: number;
   killPendingSegmentsSkipList?: string[];
   maxSegmentsInNodeLoadingQueue?: number;
-  mergeBytesLimit?: number;
-  mergeSegmentsLimit?: number;
   millisToWaitBeforeDeleting?: number;
   replicantLifetime?: number;
   replicationThrottleLimit?: number;
   decommissioningNodes?: string[];
-  decommissioningMaxPercentOfMaxSegmentsToMove?: number;
   pauseCoordination?: boolean;
-  maxNonPrimaryReplicantsToLoad?: number;
   replicateAfterLoadTimeout?: boolean;
   useRoundRobinSegmentAssignment?: boolean;
   smartSegmentLoading?: boolean;
@@ -144,50 +140,6 @@ export const COORDINATOR_DYNAMIC_CONFIG_FIELDS: Field<CoordinatorDynamicConfig>[
       </>
     ),
   },
-  {
-    name: 'maxNonPrimaryReplicantsToLoad',
-    type: 'number',
-    defaultValue: 2147483647,
-    defined: cdc => (cdc.smartSegmentLoading === false ? true : undefined),
-    info: (
-      <>
-        The maximum number of non-primary replicants to load in a single Coordinator cycle. Once
-        this limit is hit, only primary replicants will be loaded for the remainder of the cycle.
-        Tuning this value lower can help reduce the delay in loading primary segments when the
-        cluster has a very large number of non-primary replicants to load (such as when a single
-        historical drops out of the cluster leaving many under-replicated segments).
-      </>
-    ),
-  },
-  {
-    name: 'decommissioningMaxPercentOfMaxSegmentsToMove',
-    type: 'number',
-    defaultValue: 70,
-    defined: cdc => (cdc.smartSegmentLoading === false ? true : undefined),
-    info: (
-      <>
-        <p>
-          Upper limit of segments the Coordinator can move from decommissioning servers to active
-          non-decommissioning servers during a single run. This value is relative to the total
-          maximum number of segments that can be moved at any given time based upon the value of
-          <Code>maxSegmentsToMove</Code>.
-        </p>
-        <p>
-          If <Code>decommissioningMaxPercentOfMaxSegmentsToMove</Code> is 0, the Coordinator does
-          not move segments to decommissioning servers, effectively putting them in a type of
-          &quot;maintenance&quot; mode. In this case, decommissioning servers do not participate in
-          balancing or assignment by load rules. The Coordinator still considers segments on
-          decommissioning servers as candidates to replicate on active servers.
-        </p>
-        <p>
-          Decommissioning can stall if there are no available active servers to move the segments
-          to. You can use the maximum percent of decommissioning segment movements to prioritize
-          balancing or to decrease commissioning time to prevent active servers from being
-          overloaded. The value must be between 0 and 100.
-        </p>
-      </>
-    ),
-  },
 
   // End "smart" segment loading section
 
@@ -200,7 +152,7 @@ export const COORDINATOR_DYNAMIC_CONFIG_FIELDS: Field<CoordinatorDynamicConfig>[
         List of historical services to &apos;decommission&apos;. Coordinator will not assign new
         segments to &apos;decommissioning&apos; services, and segments will be moved away from them
         to be placed on non-decommissioning services at the maximum rate specified by{' '}
-        <Code>decommissioningMaxPercentOfMaxSegmentsToMove</Code>.
+        <Code>maxSegmentsToMove</Code>.
       </>
     ),
   },
@@ -230,6 +182,32 @@ export const COORDINATOR_DYNAMIC_CONFIG_FIELDS: Field<CoordinatorDynamicConfig>[
     ),
   },
   {
+    name: 'killTaskSlotRatio',
+    type: 'ratio',
+    defaultValue: 1,
+    info: (
+      <>
+        Ratio of total available task slots, including autoscaling if applicable that will be
+        allowed for kill tasks. This limit only applies for kill tasks that are spawned
+        automatically by the Coordinator&apos;s auto kill duty, which is enabled when
+        <Code>druid.coordinator.kill.on</Code> is true.
+      </>
+    ),
+  },
+  {
+    name: 'maxKillTaskSlots',
+    type: 'number',
+    defaultValue: 2147483647,
+    info: (
+      <>
+        Maximum number of tasks that will be allowed for kill tasks. This limit only applies for
+        kill tasks that are spawned automatically by the Coordinator&apos;s auto kill duty, which is
+        enabled when <Code>druid.coordinator.kill.on</Code> is true.
+      </>
+    ),
+    min: 1,
+  },
+  {
     name: 'balancerComputeThreads',
     type: 'number',
     defaultValue: 1,
@@ -239,18 +217,6 @@ export const COORDINATOR_DYNAMIC_CONFIG_FIELDS: Field<CoordinatorDynamicConfig>[
         increasing this if you have a lot of segments and moving segments begins to stall.
       </>
     ),
-  },
-  {
-    name: 'mergeBytesLimit',
-    type: 'size-bytes',
-    defaultValue: 524288000,
-    info: <>The maximum total uncompressed size in bytes of segments to merge.</>,
-  },
-  {
-    name: 'mergeSegmentsLimit',
-    type: 'number',
-    defaultValue: 100,
-    info: <>The maximum number of segments that can be in a single append task.</>,
   },
   {
     name: 'millisToWaitBeforeDeleting',

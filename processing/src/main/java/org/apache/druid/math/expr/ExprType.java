@@ -19,11 +19,13 @@
 
 package org.apache.druid.math.expr;
 
+import com.google.errorprone.annotations.Immutable;
 import org.apache.druid.segment.column.TypeDescriptor;
 
 /**
  * Base 'value' types of Druid expression language, all {@link Expr} must evaluate to one of these types.
  */
+@Immutable
 public enum ExprType implements TypeDescriptor
 {
   DOUBLE,

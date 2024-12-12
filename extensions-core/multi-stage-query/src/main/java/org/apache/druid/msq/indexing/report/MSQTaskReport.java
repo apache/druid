@@ -22,7 +22,7 @@ package org.apache.druid.msq.indexing.report;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import org.apache.druid.indexing.common.TaskReport;
+import org.apache.druid.indexer.report.TaskReport;
 
 @JsonTypeName(MSQTaskReport.REPORT_KEY)
 public class MSQTaskReport implements TaskReport

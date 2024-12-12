@@ -21,7 +21,6 @@ package org.apache.druid.query.aggregation.cardinality;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
-import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
@@ -42,6 +41,7 @@ import org.apache.druid.query.dimension.RegexFilteredDimensionSpec;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.extraction.JavaScriptExtractionFn;
 import org.apache.druid.query.extraction.RegexDimExtractionFn;
+import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.AbstractDimensionSelector;
@@ -147,9 +147,9 @@ public class CardinalityAggregatorTest extends InitializedNullHandlingTest
     }
 
     @Override
-    public ValueMatcher makeValueMatcher(Predicate<String> predicate)
+    public ValueMatcher makeValueMatcher(DruidPredicateFactory predicateFactory)
     {
-      return DimensionSelectorUtils.makeValueMatcherGeneric(this, predicate);
+      return DimensionSelectorUtils.makeValueMatcherGeneric(this, predicateFactory);
     }
 
     @Override

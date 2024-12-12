@@ -133,27 +133,6 @@ public abstract class HllSketchAggregatorFactory extends AggregatorFactory
     return Collections.singletonList(fieldName);
   }
 
-  /**
-   * Used by groupBy v1 to create a "transfer aggregator".
-   *
-   * {@inheritDoc}
-   */
-  @Override
-  public List<AggregatorFactory> getRequiredColumns()
-  {
-    return Collections.singletonList(
-        new HllSketchBuildAggregatorFactory(
-            fieldName,
-            fieldName,
-            lgK,
-            tgtHllType.toString(),
-            stringEncoding,
-            shouldFinalize,
-            round
-        )
-    );
-  }
-
   @Override
   public HllSketchHolder deserialize(final Object object)
   {
@@ -193,8 +172,12 @@ public abstract class HllSketchAggregatorFactory extends AggregatorFactory
       @Override
       public void fold(final ColumnValueSelector selector)
       {
-        final HllSketchHolder sketch = (HllSketchHolder) selector.getObject();
-        union.update(sketch.getSketch());
+        final HllSketchHolder sketchHolder = (HllSketchHolder) selector.getObject();
+        // sketchHolder can be null here, if the sketch is empty. This is an optimisation done by
+        // HllSketchHolderObjectStrategy. If the holder is null, this should be a no-op.
+        if (sketchHolder != null) {
+          union.update(sketchHolder.getSketch());
+        }
       }
 
       @Nullable
@@ -215,15 +198,23 @@ public abstract class HllSketchAggregatorFactory extends AggregatorFactory
   @Override
   public ColumnType getResultType()
   {
-    return round ? ColumnType.LONG : ColumnType.DOUBLE;
+    if (shouldFinalize) {
+      return round ? ColumnType.LONG : ColumnType.DOUBLE;
+    } else {
+      return getIntermediateType();
+    }
   }
 
   @Nullable
   @Override
   public Object finalizeComputation(@Nullable final Object object)
   {
-    if (!shouldFinalize || object == null) {
+    if (!shouldFinalize) {
       return object;
+    }
+
+    if (object == null) {
+      return 0.0D;
     }
 
     final HllSketchHolder sketch = HllSketchHolder.fromObj(object);
@@ -285,6 +276,26 @@ public abstract class HllSketchAggregatorFactory extends AggregatorFactory
            && Objects.equals(fieldName, that.fieldName)
            && tgtHllType == that.tgtHllType
            && stringEncoding == that.stringEncoding;
+  }
+
+  @Nullable
+  @Override
+  public AggregatorFactory substituteCombiningFactory(AggregatorFactory preAggregated)
+  {
+    if (this == preAggregated) {
+      return getCombiningFactory();
+    }
+    if (getClass() != preAggregated.getClass()) {
+      return null;
+    }
+    HllSketchAggregatorFactory that = (HllSketchAggregatorFactory) preAggregated;
+    if (lgK <= that.lgK &&
+        stringEncoding == that.stringEncoding &&
+        Objects.equals(fieldName, that.fieldName)
+    ) {
+      return getCombiningFactory();
+    }
+    return null;
   }
 
   @Override

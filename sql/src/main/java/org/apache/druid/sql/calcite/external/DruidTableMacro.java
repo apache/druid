@@ -23,8 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.calcite.schema.FunctionParameter;
 import org.apache.calcite.schema.TranslatableTable;
 import org.apache.calcite.sql.SqlNodeList;
-import org.apache.druid.catalog.model.ResolvedTable;
-import org.apache.druid.catalog.model.table.ExternalTableDefn;
 import org.apache.druid.catalog.model.table.ExternalTableSpec;
 import org.apache.druid.catalog.model.table.TableFunction;
 import org.apache.druid.sql.calcite.external.SchemaAwareUserDefinedTableMacro.ExtendedTableMacro;
@@ -59,30 +57,18 @@ public class DruidTableMacro implements ExtendedTableMacro
     this.parameters = Externals.convertParameters(fn);
   }
 
-  public DruidTableMacro(
-      final String tableName,
-      final ResolvedTable externalTable
-  )
-  {
-    this.name = tableName;
-    ExternalTableDefn tableDefn = (ExternalTableDefn) externalTable.defn();
-    this.fn = tableDefn.tableFn(externalTable);
-    this.parameters = Externals.convertParameters(fn);
-    this.jsonMapper = externalTable.jsonMapper();
-  }
-
   /**
    * Called when the function is used without an {@code EXTEND} clause.
    * {@code EXTERN} allows this, most others do not.
    */
   @Override
-  public TranslatableTable apply(final List<Object> arguments)
+  public TranslatableTable apply(final List<?> arguments)
   {
     return apply(arguments, null);
   }
 
   @Override
-  public TranslatableTable apply(List<Object> arguments, SqlNodeList schema)
+  public TranslatableTable apply(List<?> arguments, SqlNodeList schema)
   {
     final ExternalTableSpec externSpec = fn.apply(
         name,

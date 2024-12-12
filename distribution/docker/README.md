@@ -43,7 +43,7 @@ To build images on Apple M1/M2, you need to follow the instructions in this sect
 2. Edit `environment` file to suite if necessary.
 3. Run:
     ```bash
-    docker-compose -f distribution/docker/docker-compose.yml up
+    docker compose -f distribution/docker/docker-compose.yml up
     ```
 
 ## MySQL Database Connector

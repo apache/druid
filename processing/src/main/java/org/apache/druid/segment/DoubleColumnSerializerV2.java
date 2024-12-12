@@ -99,7 +99,8 @@ public class DoubleColumnSerializerV2 implements GenericColumnSerializer<Object>
         segmentWriteOutMedium,
         StringUtils.format("%s.double_column", filenameBase),
         byteOrder,
-        compression
+        compression,
+        segmentWriteOutMedium.getCloser()
     );
     writer.open();
     nullValueBitmapWriter = new ByteBufferWriter<>(

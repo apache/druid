@@ -25,7 +25,7 @@ sidebar_label: "Durable storage"
 
 You can use durable storage to improve querying from deep storage and SQL-based ingestion.
 
-> Note that only S3 is supported as a durable storage location.
+> Note that S3, Azure and Google are all supported as durable storage locations.
 
 Durable storage for queries from deep storage provides a location where you can write the results of deep storage queries to. Durable storage for SQL-based ingestion is used to temporarily house intermediate files, which can improve reliability.
 
@@ -39,13 +39,20 @@ To enable durable storage, you need to set the following common service properti
 
 ```
 druid.msq.intermediate.storage.enable=true
-druid.msq.intermediate.storage.type=s3
-druid.msq.intermediate.storage.bucket=YOUR_BUCKET
-druid.msq.intermediate.storage.prefix=YOUR_PREFIX
 druid.msq.intermediate.storage.tempDir=/path/to/your/temp/dir
+
+# Include these configs if you're using S3
+# druid.msq.intermediate.storage.type=s3
+# druid.msq.intermediate.storage.bucket=YOUR_BUCKET
+
+# Include these configs if you're using Azure Blob Storage
+# druid.msq.intermediate.storage.type=azure
+# druid.sq.intermediate.storage.container=YOUR_CONTAINER
+
+druid.msq.intermediate.storage.prefix=YOUR_PREFIX
 ```
 
-For detailed information about the settings related to durable storage, see [Durable storage configurations](../multi-stage-query/reference.md#durable-storage-configurations).
+For detailed information about these and additional settings related to durable storage, see [Durable storage configurations](../multi-stage-query/reference.md#durable-storage-configurations).
 
 
 ## Use durable storage for SQL-based ingestion queries
@@ -60,12 +67,12 @@ Depending on the size of the results you're expecting, saving the final results 
 
 By default, Druid saves the final results for queries from deep storage to task reports. Generally, this is acceptable for smaller result sets but may lead to timeouts for larger result sets. 
 
-When you run a query, include the context parameter `selectDestination` and set it to `DURABLESTORAGE`:
+When you run a query, include the context parameter `selectDestination` and set it to `durableStorage`:
 
 ```json
     "context":{
         ...
-        "selectDestination": "DURABLESTORAGE"
+        "selectDestination": "durableStorage"
     }
 ```
 
@@ -80,7 +87,7 @@ cleaner can be scheduled to clean the directories corresponding to which there i
 the storage connector to work upon the durable storage. The durable storage location should only be utilized to store the output
 for the cluster's MSQ tasks. If the location contains other files or directories, then they will get cleaned up as well.
 
-Use `druid.msq.intermediate.storage.cleaner.enabled` and `druid.msq.intermediate.storage.cleaner.delaySEconds` to configure the cleaner. For more information, see [Durable storage configurations](../multi-stage-query/reference.md#durable-storage-configurations).
+Use `druid.msq.intermediate.storage.cleaner.enabled` and `druid.msq.intermediate.storage.cleaner.delaySeconds` to configure the cleaner. For more information, see [Durable storage configurations](../multi-stage-query/reference.md#durable-storage-configurations).
 
 Note that if you choose to write query results to durable storage,the results are cleaned up when the task is removed from the metadata store.
 

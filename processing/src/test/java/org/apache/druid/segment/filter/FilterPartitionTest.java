@@ -20,7 +20,6 @@
 package org.apache.druid.segment.filter;
 
 import com.google.common.base.Function;
-import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
@@ -34,16 +33,14 @@ import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.DruidDoublePredicate;
 import org.apache.druid.query.filter.DruidFloatPredicate;
 import org.apache.druid.query.filter.DruidLongPredicate;
+import org.apache.druid.query.filter.DruidObjectPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
+import org.apache.druid.query.filter.DruidPredicateMatch;
 import org.apache.druid.query.filter.Filter;
-import org.apache.druid.query.filter.FilterTuning;
 import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
-import org.apache.druid.segment.ColumnSelectorColumnIndexSelector;
-import org.apache.druid.segment.FilterAnalysis;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.IndexBuilder;
-import org.apache.druid.segment.QueryableIndexStorageAdapter;
-import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.filter.cnf.CNFFilterExplosionException;
 import org.apache.druid.segment.index.BitmapColumnIndex;
 import org.junit.AfterClass;
@@ -69,15 +66,6 @@ public class FilterPartitionTest extends BaseFilterTest
     )
     {
       super(dimension, value);
-    }
-
-    public NoBitmapSelectorFilter(
-        String dimension,
-        String value,
-        FilterTuning filterTuning
-    )
-    {
-      super(dimension, value, filterTuning);
     }
 
     @Nullable
@@ -127,27 +115,27 @@ public class FilterPartitionTest extends BaseFilterTest
         final DruidPredicateFactory predicateFactory = new DruidPredicateFactory()
         {
           @Override
-          public Predicate<String> makeStringPredicate()
+          public DruidObjectPredicate<String> makeStringPredicate()
           {
-            return input -> Objects.equals(valueOrNull, input);
+            return valueOrNull == null ? DruidObjectPredicate.isNull() : DruidObjectPredicate.equalTo(valueOrNull);
           }
 
           @Override
           public DruidLongPredicate makeLongPredicate()
           {
-            return input -> Objects.equals(valueOrNull, String.valueOf(input));
+            return input -> DruidPredicateMatch.of(Objects.equals(valueOrNull, String.valueOf(input)));
           }
 
           @Override
           public DruidFloatPredicate makeFloatPredicate()
           {
-            return input -> Objects.equals(valueOrNull, String.valueOf(input));
+            return input -> DruidPredicateMatch.of(Objects.equals(valueOrNull, String.valueOf(input)));
           }
 
           @Override
           public DruidDoublePredicate makeDoublePredicate()
           {
-            return input -> Objects.equals(valueOrNull, String.valueOf(input));
+            return input -> DruidPredicateMatch.of(Objects.equals(valueOrNull, String.valueOf(input)));
           }
 
         };
@@ -163,16 +151,16 @@ public class FilterPartitionTest extends BaseFilterTest
 
   private static final List<InputRow> ROWS = ImmutableList.<InputRow>builder()
       .addAll(DEFAULT_ROWS)
-      .add(makeDefaultSchemaRow("6", "B453B411", ImmutableList.of("c", "d", "e"), null, null, null, null))
-      .add(makeDefaultSchemaRow("7", "HELLO", ImmutableList.of("foo"), null, null, null, null))
-      .add(makeDefaultSchemaRow("8", "abc", ImmutableList.of("bar"), null, null, null, null))
-      .add(makeDefaultSchemaRow("9", "1", ImmutableList.of("foo", "bar"), null, null, null, null))
+      .add(makeDefaultSchemaRow("6", "B453B411", ImmutableList.of("c", "d", "e"), null, null, null, null, null))
+      .add(makeDefaultSchemaRow("7", "HELLO", ImmutableList.of("foo"), null, null, null, null, null))
+      .add(makeDefaultSchemaRow("8", "abc", ImmutableList.of("bar"), null, null, null, null, null))
+      .add(makeDefaultSchemaRow("9", "1", ImmutableList.of("foo", "bar"), null, null, null, null, null))
       .build();
 
   public FilterPartitionTest(
       String testName,
       IndexBuilder indexBuilder,
-      Function<IndexBuilder, Pair<StorageAdapter, Closeable>> finisher,
+      Function<IndexBuilder, Pair<CursorFactory, Closeable>> finisher,
       boolean cnf,
       boolean optimize
   )
@@ -733,87 +721,5 @@ public class FilterPartitionTest extends BaseFilterTest
         dimFilter3,
         ImmutableList.of("2", "3", "4", "6", "7", "9")
     );
-  }
-
-  @Test
-  public void testAnalyze()
-  {
-    if (!(adapter instanceof QueryableIndexStorageAdapter)) {
-      return;
-    }
-    QueryableIndexStorageAdapter storageAdapter = (QueryableIndexStorageAdapter) adapter;
-    final int numRows = adapter.getNumRows();
-
-    final ColumnSelectorColumnIndexSelector bitmapIndexSelector = storageAdapter.makeBitmapIndexSelector(BaseFilterTest.VIRTUAL_COLUMNS);
-
-    // has bitmap index, will use it by default
-    Filter normalFilter = new SelectorFilter("dim1", "HELLO");
-    FilterAnalysis filterAnalysisNormal =
-        FilterAnalysis.analyzeFilter(normalFilter, bitmapIndexSelector, null, numRows);
-    Assert.assertTrue(filterAnalysisNormal.getPreFilterBitmap() != null);
-    Assert.assertTrue(filterAnalysisNormal.getPostFilter() == null);
-
-
-    // no bitmap index, should be a post filter
-    Filter noBitmapFilter = new NoBitmapSelectorFilter("dim1", "HELLO");
-    FilterAnalysis noBitmapFilterAnalysis =
-        FilterAnalysis.analyzeFilter(noBitmapFilter, bitmapIndexSelector, null, numRows);
-    Assert.assertTrue(noBitmapFilterAnalysis.getPreFilterBitmap() == null);
-    Assert.assertTrue(noBitmapFilterAnalysis.getPostFilter() != null);
-
-    // this column has a bitmap index, but is forced to not use it
-    Filter bitmapFilterWithForceNoIndexTuning = new SelectorFilter(
-        "dim1",
-        "HELLO",
-        new FilterTuning(false, null, null)
-    );
-    FilterAnalysis bitmapFilterWithForceNoIndexTuningAnalysis =
-        FilterAnalysis.analyzeFilter(bitmapFilterWithForceNoIndexTuning, bitmapIndexSelector, null, numRows);
-    Assert.assertTrue(bitmapFilterWithForceNoIndexTuningAnalysis.getPreFilterBitmap() == null);
-    Assert.assertTrue(bitmapFilterWithForceNoIndexTuningAnalysis.getPostFilter() != null);
-
-    // this max cardinality is too low to use bitmap index
-    Filter bitmapFilterWithCardinalityMax = new SelectorFilter(
-        "dim1",
-        "HELLO",
-        new FilterTuning(true, 0, 3)
-    );
-    FilterAnalysis bitmapFilterWithCardinalityMaxAnalysis =
-        FilterAnalysis.analyzeFilter(bitmapFilterWithCardinalityMax, bitmapIndexSelector, null, numRows);
-    Assert.assertTrue(bitmapFilterWithCardinalityMaxAnalysis.getPreFilterBitmap() == null);
-    Assert.assertTrue(bitmapFilterWithCardinalityMaxAnalysis.getPostFilter() != null);
-
-    // this max cardinality is high enough that we can still use bitmap index
-    Filter bitmapFilterWithCardinalityMax2 = new SelectorFilter(
-        "dim1",
-        "HELLO",
-        new FilterTuning(true, 0, 1000)
-    );
-    FilterAnalysis bitmapFilterWithCardinalityMax2Analysis =
-        FilterAnalysis.analyzeFilter(bitmapFilterWithCardinalityMax2, bitmapIndexSelector, null, numRows);
-    Assert.assertTrue(bitmapFilterWithCardinalityMax2Analysis.getPreFilterBitmap() != null);
-    Assert.assertTrue(bitmapFilterWithCardinalityMax2Analysis.getPostFilter() == null);
-
-    // this min cardinality is too high, will not use bitmap index
-    Filter bitmapFilterWithCardinalityMin = new SelectorFilter(
-        "dim1",
-        "HELLO",
-        new FilterTuning(true, 1000, null)
-    );
-    FilterAnalysis bitmapFilterWithCardinalityMinAnalysis =
-        FilterAnalysis.analyzeFilter(bitmapFilterWithCardinalityMin, bitmapIndexSelector, null, numRows);
-    Assert.assertTrue(bitmapFilterWithCardinalityMinAnalysis.getPreFilterBitmap() == null);
-    Assert.assertTrue(bitmapFilterWithCardinalityMinAnalysis.getPostFilter() != null);
-
-    // cannot force using bitmap if there are no bitmaps
-    Filter noBitmapFilterWithForceUse = new NoBitmapSelectorFilter(
-        "dim1",
-        "HELLO",
-        new FilterTuning(true, null, null)
-    );
-    FilterAnalysis noBitmapFilterWithForceUseAnalysis =
-        FilterAnalysis.analyzeFilter(noBitmapFilterWithForceUse, bitmapIndexSelector, null, numRows);
-    Assert.assertTrue(noBitmapFilterWithForceUseAnalysis.getPreFilterBitmap() == null);
-    Assert.assertTrue(noBitmapFilterWithForceUseAnalysis.getPostFilter() != null);
   }
 }

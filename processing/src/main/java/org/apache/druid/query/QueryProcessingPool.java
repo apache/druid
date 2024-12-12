@@ -30,7 +30,7 @@ import org.apache.druid.guice.annotations.ExtensionPoint;
  * <p>
  * This interface extends {@link ListeningExecutorService} as well. It has a separate
  * method to submit query execution tasks so that implementations can differentiate those tasks from any regular async
- * tasks. One example is {@link org.apache.druid.query.groupby.strategy.GroupByStrategyV2#mergeRunners(QueryProcessingPool, Iterable)}
+ * tasks. One example is {@link org.apache.druid.query.groupby.GroupingEngine#mergeRunners(QueryProcessingPool, Iterable)}
  * where different kind of tasks are submitted to same processing pool.
  * <p>
  * Query execution task also includes a reference to {@link QueryRunner} so that any state required to decide the priority

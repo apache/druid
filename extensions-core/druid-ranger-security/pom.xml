@@ -30,9 +30,19 @@
     <parent>
         <groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>28.0.0-SNAPSHOT</version>
+        <version>32.0.0-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>com.fasterxml.woodstox</groupId>
+                <artifactId>woodstox-core</artifactId>
+                <version>6.4.0</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <dependencies>
         <dependency>
@@ -133,6 +143,25 @@
                     <groupId>org.apache.hadoop</groupId>
                     <artifactId>hadoop-common</artifactId>
                 </exclusion>
+                <exclusion>
+                    <groupId>org.elasticsearch</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.elasticsearch.client</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.elasticsearch.plugin</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+                <!-- excluding to address CVE-2019-10202, CVE-2019-10172 in jackson-jaxrs 1.9.x
+                     jackson-jaxrs is used by ranger-plugins accessing
+                RangerRESTClient class. This should not be needed in an authorizer -->
+                <exclusion>
+                    <groupId>org.codehaus.jackson</groupId>
+                    <artifactId>jackson-jaxrs</artifactId>
+                </exclusion>
             </exclusions>
         </dependency>
         <dependency>
@@ -144,14 +173,37 @@
                     <groupId>org.apache.hadoop</groupId>
                     <artifactId>hadoop-common</artifactId>
                 </exclusion>
+                <!-- removing the complete bundle sdk to be replaced with only logs-sdk  -->
+                <exclusion>
+                    <groupId>com.amazonaws</groupId>
+                    <artifactId>aws-java-sdk-bundle</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.elasticsearch</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.elasticsearch.client</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.elasticsearch.plugin</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
             </exclusions>
             <scope>compile</scope>
+        </dependency>
+        <!-- This is a transitive dependency of ranger-plugins-audit
+             added here to replace bloated bundle sdk, remove this if /when
+             apache ranger replaces bundle-skd with logs-sdk  -->
+        <dependency>
+            <groupId>com.amazonaws</groupId>
+            <artifactId>aws-java-sdk-logs</artifactId>
+            <version>${aws.sdk.version}</version>
         </dependency>
         <dependency>
             <groupId>com.google.code.gson</groupId>
             <artifactId>gson</artifactId>
-            <version>${apache.ranger.gson.version}</version>
-            <scope>compile</scope>
         </dependency>
 
         <!-- Tests -->
@@ -209,6 +261,10 @@
                         <!-- These are needed for scope: compile -->
                         <dependency>org.apache.ranger:ranger-plugins-audit</dependency>
                     </usedDependencies>
+                    <!-- this is due to replacement of aws-bundle-sdk with aws-logs-sdk  -->
+                    <ignoredDependencies>
+                        <ignoredDependency>com.amazonaws:aws-java-sdk-logs</ignoredDependency>
+                    </ignoredDependencies>
                 </configuration>
             </plugin>
         </plugins>

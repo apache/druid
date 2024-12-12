@@ -23,17 +23,19 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableSortedMap;
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.sql.SqlExplainFormat;
 import org.apache.calcite.sql.SqlExplainLevel;
 import org.apache.calcite.sql.SqlInsert;
-import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.quidem.DruidQTestInfo;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.DirectStatement;
@@ -46,16 +48,19 @@ import org.apache.druid.sql.calcite.planner.PlannerCaptureHook;
 import org.apache.druid.sql.calcite.planner.PrepareResult;
 import org.apache.druid.sql.calcite.table.RowSignatures;
 import org.apache.druid.sql.calcite.util.QueryLogHook;
+import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
-import org.junit.Assume;
-import org.junit.rules.ExpectedException;
+import org.junit.internal.matchers.ThrowableMessageMatcher;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 /**
@@ -86,14 +91,14 @@ public class QueryTestRunner
    */
   public abstract static class QueryRunStep
   {
-    private final QueryTestBuilder builder;
+    protected final QueryTestBuilder builder;
 
     public QueryRunStep(final QueryTestBuilder builder)
     {
       this.builder = builder;
     }
 
-    public QueryTestBuilder builder()
+    public final QueryTestBuilder builder()
     {
       return builder;
     }
@@ -147,6 +152,26 @@ public class QueryTestRunner
     public QueryResults(
         final Map<String, Object> queryContext,
         final String vectorizeOption,
+        final RowSignature rowSignature,
+        final List<Object[]> results,
+        final List<Query<?>> recordedQueries,
+        final PlannerCaptureHook capture
+    )
+    {
+      this.queryContext = queryContext;
+      this.vectorizeOption = vectorizeOption;
+      this.sqlSignature = null;
+      this.signature = rowSignature;
+      this.results = results;
+      this.recordedQueries = recordedQueries;
+      this.resourceActions = null;
+      this.exception = null;
+      this.capture = capture;
+    }
+
+    public QueryResults(
+        final Map<String, Object> queryContext,
+        final String vectorizeOption,
         final RuntimeException exception
     )
     {
@@ -161,9 +186,9 @@ public class QueryTestRunner
       this.sqlSignature = null;
     }
 
-    public QueryResults withResults(List<Object[]> newResults)
+    public QueryResults withSignatureAndResults(final RowSignature rowSignature, final List<Object[]> newResults)
     {
-      return new QueryResults(queryContext, vectorizeOption, sqlSignature, newResults, recordedQueries, capture);
+      return new QueryResults(queryContext, vectorizeOption, rowSignature, newResults, recordedQueries, capture);
     }
   }
 
@@ -207,12 +232,10 @@ public class QueryTestRunner
   public abstract static class BaseExecuteQuery extends QueryRunStep
   {
     protected final List<QueryResults> results = new ArrayList<>();
-    protected final boolean doCapture;
 
     public BaseExecuteQuery(QueryTestBuilder builder)
     {
       super(builder);
-      doCapture = builder.expectedLogicalPlan != null;
     }
 
     public List<QueryResults> results()
@@ -251,10 +274,7 @@ public class QueryTestRunner
         vectorizeValues.add("force");
       }
 
-      final QueryLogHook queryLogHook = builder.config.queryLogHook();
       for (final String vectorize : vectorizeValues) {
-        queryLogHook.clearRecordedQueries();
-
         final Map<String, Object> theQueryContext = new HashMap<>(builder.queryContext);
         theQueryContext.put(QueryContexts.VECTORIZE_KEY, vectorize);
         theQueryContext.put(QueryContexts.VECTORIZE_VIRTUAL_COLUMNS_KEY, vectorize);
@@ -278,16 +298,22 @@ public class QueryTestRunner
     )
     {
       try {
-        final PlannerCaptureHook capture = doCapture ? new PlannerCaptureHook() : null;
+        final PlannerCaptureHook capture = getCaptureHook();
         final DirectStatement stmt = sqlStatementFactory.directStatement(query);
         stmt.setHook(capture);
-        final Sequence<Object[]> results = stmt.execute().getResults();
+        AtomicReference<List<Object[]>> resultListRef = new AtomicReference<>();
+        QueryLogHook queryLogHook = new QueryLogHook(builder().config.jsonMapper());
+        queryLogHook.logQueriesFor(
+            () -> {
+              resultListRef.set(stmt.execute().getResults().toList());
+            }
+        );
         return new QueryResults(
             query.context(),
             vectorize,
             stmt.prepareResult().getReturnedRowType(),
-            results.toList(),
-            builder().config.queryLogHook().getRecordedQueries(),
+            resultListRef.get(),
+            queryLogHook.getRecordedQueries(),
             capture
         );
       }
@@ -298,6 +324,15 @@ public class QueryTestRunner
             e
         );
       }
+    }
+
+    private PlannerCaptureHook getCaptureHook()
+    {
+      if (builder.getQueryContext().containsKey(PlannerCaptureHook.NEED_CAPTURE_HOOK)
+          || builder.expectedLogicalPlan != null) {
+        return new PlannerCaptureHook();
+      }
+      return null;
     }
 
     public static Pair<RowSignature, List<Object[]>> getResults(
@@ -322,7 +357,9 @@ public class QueryTestRunner
   {
     protected final BaseExecuteQuery execStep;
 
-    public VerifyResults(BaseExecuteQuery execStep)
+    public VerifyResults(
+        BaseExecuteQuery execStep
+    )
     {
       this.execStep = execStep;
     }
@@ -347,7 +384,7 @@ public class QueryTestRunner
 
       QueryTestBuilder builder = execStep.builder();
       builder.expectedResultsVerifier.verifyRowSignature(queryResults.signature);
-      builder.expectedResultsVerifier.verify(builder.sql, results);
+      builder.expectedResultsVerifier.verify(builder.sql, queryResults);
     }
   }
 
@@ -406,19 +443,21 @@ public class QueryTestRunner
           recordedQueries.size()
       );
       for (int i = 0; i < expectedQueries.size(); i++) {
+        Query<?> expectedQuery = expectedQueries.get(i);
+        Query<?> actualQuery = recordedQueries.get(i);
         Assert.assertEquals(
             StringUtils.format("query #%d: %s", i + 1, builder.sql),
-            expectedQueries.get(i),
-            recordedQueries.get(i)
+            expectedQuery,
+            actualQuery
         );
 
         try {
           // go through some JSON serde and back, round tripping both queries and comparing them to each other, because
           // Assert.assertEquals(recordedQueries.get(i), stringAndBack) is a failure due to a sorted map being present
           // in the recorded queries, but it is a regular map after deserialization
-          final String recordedString = queryJsonMapper.writeValueAsString(recordedQueries.get(i));
+          final String recordedString = queryJsonMapper.writeValueAsString(actualQuery);
           final Query<?> stringAndBack = queryJsonMapper.readValue(recordedString, Query.class);
-          final String expectedString = queryJsonMapper.writeValueAsString(expectedQueries.get(i));
+          final String expectedString = queryJsonMapper.writeValueAsString(expectedQuery);
           final Query<?> expectedStringAndBack = queryJsonMapper.readValue(expectedString, Query.class);
           Assert.assertEquals(expectedStringAndBack, stringAndBack);
         }
@@ -532,7 +571,8 @@ public class QueryTestRunner
           "",
           hook.relRoot().rel,
           SqlExplainFormat.TEXT,
-          SqlExplainLevel.DIGEST_ATTRIBUTES);
+          SqlExplainLevel.DIGEST_ATTRIBUTES
+      );
       String plan;
       SqlInsert insertNode = hook.insertNode();
       if (insertNode == null) {
@@ -585,26 +625,28 @@ public class QueryTestRunner
       // The builder specifies one exception, but the query can run multiple
       // times. Pick the first failure as that emulates the original code flow
       // where the first exception ended the test.
-      ExpectedException expectedException = builder.config.expectedException();
       for (QueryResults queryResults : execStep.results()) {
-        if (queryResults.exception == null) {
-          continue;
-        }
-
-        // This variation uses JUnit exception validation: we configure the expected
-        // exception, then throw the exception from the run.
-        // If the expected exception is not configured here, then the test may
-        // have done it outside of the test builder.
+        // Delayed exception checking to let other verify steps run before running vectorized checks
         if (builder.queryCannotVectorize && "force".equals(queryResults.vectorizeOption)) {
-          expectedException.expect(RuntimeException.class);
-          expectedException.expectMessage("Cannot vectorize");
-        } else if (builder.expectedExceptionInitializer != null) {
-          builder.expectedExceptionInitializer.accept(expectedException);
+          if (queryResults.exception == null) {
+            Assert.fail(
+                "Expected vectorized execution to fail, but it did not. "
+                + "Please remove cannotVectorize() from this test case."
+            );
+          }
+
+          MatcherAssert.assertThat(
+              queryResults.exception,
+              CoreMatchers.allOf(
+                  CoreMatchers.instanceOf(RuntimeException.class),
+                  ThrowableMessageMatcher.hasMessage(
+                      CoreMatchers.containsString("Cannot vectorize!")
+                  )
+              )
+          );
+        } else if (queryResults.exception != null) {
+          throw queryResults.exception;
         }
-        throw queryResults.exception;
-      }
-      if (builder.expectedExceptionInitializer != null) {
-        throw new ISE("Expected query to throw an exception, but none was thrown.");
       }
     }
   }
@@ -618,13 +660,46 @@ public class QueryTestRunner
   public QueryTestRunner(QueryTestBuilder builder)
   {
     QueryTestConfig config = builder.config;
-    if (config.isRunningMSQ()) {
-      Assume.assumeTrue(builder.msqCompatible);
+    DruidQTestInfo iqTestInfo = config.getQTestInfo();
+    if (iqTestInfo != null) {
+      QTestCase qt = new QTestCase(iqTestInfo);
+      Map<String, Object> queryContext = ImmutableSortedMap.<String, Object>naturalOrder()
+          .putAll(builder.getQueryContext())
+          .putAll(builder.plannerConfig.getNonDefaultAsQueryContext())
+          .build();
+      for (Entry<String, Object> entry : queryContext.entrySet()) {
+        qt.println(StringUtils.format("!set %s %s", entry.getKey(), entry.getValue()));
+      }
+      qt.println("!set outputformat mysql");
+      qt.println("!use " + builder.config.queryFramework().getDruidTestURI());
+
+      qt.println(builder.sql + ";");
+      if (builder.expectedResults != null) {
+        qt.println("!ok");
+      }
+      qt.println("!logicalPlan");
+      qt.println("!druidPlan");
+      if (builder.expectedQueries != null) {
+        qt.println("!nativePlan");
+      }
+      runSteps.add(qt.toRunner());
+      return;
     }
     if (builder.expectedResultsVerifier == null && builder.expectedResults != null) {
       builder.expectedResultsVerifier = config.defaultResultsVerifier(
           builder.expectedResults,
+          builder.expectedResultMatchMode,
           builder.expectedResultSignature
+      );
+    }
+
+    // Validate: don't set both skipVectorize and cannotVectorize.
+    if (builder.skipVectorize && builder.queryCannotVectorize) {
+      throw new IAE(
+          "Do not set both skipVectorize and cannotVectorize. Use cannotVectorize if a query is not currently "
+          + "able to vectorize, but may be able to in the future. Use skipVectorize if a query *can* vectorize, but "
+          + "for some reason we need to skip the test on the vectorized code path. In most situations, cannotVectorize "
+          + "is the one you want."
       );
     }
 
@@ -667,6 +742,8 @@ public class QueryTestRunner
         verifySteps.add(new VerifyNativeQueries(finalExecStep));
       }
       if (builder.expectedResultsVerifier != null) {
+        // Don't verify the row signature when MSQ is running, since the broker receives the task id, and the signature
+        // would be {TASK:STRING} instead of the expected results signature
         verifySteps.add(new VerifyResults(finalExecStep));
       }
 
@@ -697,8 +774,11 @@ public class QueryTestRunner
 
   public QueryResults resultsOnly()
   {
-    ExecuteQuery execStep = (ExecuteQuery) runSteps.get(0);
-    execStep.run();
+    for (QueryRunStep runStep : runSteps) {
+      runStep.run();
+    }
+
+    BaseExecuteQuery execStep = (BaseExecuteQuery) runSteps.get(runSteps.size() - 1);
     return execStep.results().get(0);
   }
 }

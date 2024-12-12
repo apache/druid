@@ -217,19 +217,34 @@ public abstract class DruidNodeDiscoveryProvider
       @Override
       public void nodeViewInitialized()
       {
+        nodeViewInitialized(false);
+      }
+
+      @Override
+      public void nodeViewInitializedTimedOut()
+      {
+        nodeViewInitialized(true);
+      }
+
+      private void nodeViewInitialized(final boolean timedOut)
+      {
         synchronized (lock) {
           if (uninitializedNodeRoles == 0) {
-            log.error("Unexpected call of nodeViewInitialized()");
+            log.error("Unexpected call of nodeViewInitialized(timedOut = %s)", timedOut);
             return;
           }
           uninitializedNodeRoles--;
           if (uninitializedNodeRoles == 0) {
             for (Listener listener : listeners) {
               try {
-                listener.nodeViewInitialized();
+                if (timedOut) {
+                  listener.nodeViewInitializedTimedOut();
+                } else {
+                  listener.nodeViewInitialized();
+                }
               }
               catch (Exception ex) {
-                log.error(ex, "Listener[%s].nodeViewInitialized() threw exception. Ignored.", listener);
+                log.error(ex, "Listener[%s].nodeViewInitialized(%s) threw exception. Ignored.", listener, timedOut);
               }
             }
           }

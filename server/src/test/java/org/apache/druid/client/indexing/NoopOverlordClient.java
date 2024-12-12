@@ -22,10 +22,14 @@ package org.apache.druid.client.indexing;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
+import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
+import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.rpc.ServiceRetryPolicy;
 import org.apache.druid.rpc.indexing.OverlordClient;
+import org.apache.druid.server.compaction.CompactionProgressResponse;
+import org.apache.druid.server.compaction.CompactionStatusResponse;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -83,7 +87,7 @@ public class NoopOverlordClient implements OverlordClient
   }
 
   @Override
-  public ListenableFuture<Map<String, Object>> taskReportAsMap(String taskId)
+  public ListenableFuture<TaskReport.ReportMap> taskReportAsMap(String taskId)
   {
     throw new UnsupportedOperationException();
   }
@@ -95,7 +99,9 @@ public class NoopOverlordClient implements OverlordClient
   }
 
   @Override
-  public ListenableFuture<Map<String, List<Interval>>> findLockedIntervals(Map<String, Integer> minTaskPriority)
+  public ListenableFuture<Map<String, List<Interval>>> findLockedIntervals(
+      List<LockFilterPolicy> lockFilterPolicies
+  )
   {
     throw new UnsupportedOperationException();
   }
@@ -114,6 +120,24 @@ public class NoopOverlordClient implements OverlordClient
 
   @Override
   public ListenableFuture<IndexingTotalWorkerCapacityInfo> getTotalWorkerCapacity()
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public ListenableFuture<CompactionStatusResponse> getCompactionSnapshots(@Nullable String dataSource)
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public ListenableFuture<CompactionProgressResponse> getBytesAwaitingCompaction(String dataSource)
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public ListenableFuture<Boolean> isCompactionSupervisorEnabled()
   {
     throw new UnsupportedOperationException();
   }

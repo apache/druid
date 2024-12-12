@@ -21,13 +21,11 @@ package org.apache.druid.indexing;
 
 import org.apache.druid.indexing.overlord.supervisor.NoopSupervisorSpec;
 import org.apache.druid.indexing.overlord.supervisor.Supervisor;
-import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
 import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAutoScaler;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Collections;
-import java.util.concurrent.Callable;
 
 public class NoopSupervisorSpecTest
 {
@@ -40,24 +38,6 @@ public class NoopSupervisorSpecTest
       Supervisor supervisor = noopSupervisorSpec.createSupervisor();
       SupervisorTaskAutoScaler autoscaler = noopSupervisorSpec.createAutoscaler(supervisor);
       Assert.assertNull(autoscaler);
-      Callable<Integer> noop = new Callable<Integer>() {
-          @Override
-          public Integer call()
-          {
-            return -1;
-          }
-      };
-
-      int count = supervisor.getActiveTaskGroupsCount();
-      Assert.assertEquals(count, -1);
-
-      LagStats lagStats = supervisor.computeLagStats();
-      long totalLag = lagStats.getTotalLag();
-      long avgLag = lagStats.getAvgLag();
-      long maxLag = lagStats.getMaxLag();
-      Assert.assertEquals(totalLag, 0);
-      Assert.assertEquals(avgLag, 0);
-      Assert.assertEquals(maxLag, 0);
     }
     catch (Exception ex) {
       e = ex;

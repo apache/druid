@@ -28,7 +28,7 @@ public class QueryVerification
 
   public interface QueryResultsVerifier
   {
-    void verifyResults(QueryTestRunner.QueryResults results);
+    void verifyResults(QueryTestRunner.QueryResults results) throws Exception;
   }
 
   public static class QueryResultsVerifierFactory implements QueryTestRunner.QueryVerifyStepFactory
@@ -47,7 +47,12 @@ public class QueryVerification
     {
       return () -> {
         for (QueryTestRunner.QueryResults queryResults : execStep.results()) {
-          verifier.verifyResults(queryResults);
+          try {
+            verifier.verifyResults(queryResults);
+          }
+          catch (Exception e) {
+            throw new RuntimeException("Exception during verification!", e);
+          }
         }
       };
     }

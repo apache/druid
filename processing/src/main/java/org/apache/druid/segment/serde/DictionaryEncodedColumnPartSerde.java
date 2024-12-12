@@ -28,11 +28,12 @@ import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.spatial.ImmutableRTree;
 import org.apache.druid.io.Channels;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
+import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnConfig;
-import org.apache.druid.segment.column.StringEncodingStrategy;
+import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.StringEncodingStrategies;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.BitmapSerde;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
@@ -43,8 +44,6 @@ import org.apache.druid.segment.data.ColumnarMultiInts;
 import org.apache.druid.segment.data.CompressedVSizeColumnarIntsSupplier;
 import org.apache.druid.segment.data.CompressedVSizeColumnarMultiIntsSupplier;
 import org.apache.druid.segment.data.DictionaryWriter;
-import org.apache.druid.segment.data.EncodedStringDictionaryWriter;
-import org.apache.druid.segment.data.FrontCodedIndexed;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.GenericIndexedWriter;
 import org.apache.druid.segment.data.ImmutableRTreeObjectStrategy;
@@ -295,7 +294,12 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
     return new Deserializer()
     {
       @Override
-      public void read(ByteBuffer buffer, ColumnBuilder builder, ColumnConfig columnConfig)
+      public void read(
+          ByteBuffer buffer,
+          ColumnBuilder builder,
+          ColumnConfig columnConfig,
+          @Nullable ColumnHolder parent
+      )
       {
         final VERSION rVersion = VERSION.fromByte(buffer.get());
         final int rFlags;
@@ -312,36 +316,16 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
 
         builder.setType(ValueType.STRING);
 
-        final int dictionaryStartPosition = buffer.position();
-        final byte dictionaryVersion = buffer.get();
         final Supplier<? extends Indexed<ByteBuffer>> dictionarySupplier;
-
-        if (dictionaryVersion == EncodedStringDictionaryWriter.VERSION) {
-          final byte encodingId = buffer.get();
-          if (encodingId == StringEncodingStrategy.FRONT_CODED_ID) {
-            dictionarySupplier = FrontCodedIndexed.read(buffer, byteOrder);
-          } else if (encodingId == StringEncodingStrategy.UTF8_ID) {
-            // this cannot happen naturally right now since generic indexed is written in the 'legacy' format, but
-            // this provides backwards compatibility should we switch at some point in the future to always
-            // writing dictionaryVersion
-            dictionarySupplier = GenericIndexed.read(
-                buffer,
-                GenericIndexed.UTF8_STRATEGY,
-                builder.getFileMapper()
-            )::singleThreaded;
-          } else {
-            throw new ISE("impossible, unknown encoding strategy id: %s", encodingId);
-          }
+        if (parent != null) {
+          final Supplier<? extends BaseColumn> parentSupplier = parent.getColumnSupplier();
+          dictionarySupplier = ((StringUtf8DictionaryEncodedColumnSupplier<?>) parentSupplier).getDictionary();
         } else {
-          // legacy format that only supports plain utf8 enoding stored in GenericIndexed and the byte we are reading
-          // as dictionaryVersion is actually also the GenericIndexed version, so we reset start position so the
-          // GenericIndexed version can be correctly read
-          buffer.position(dictionaryStartPosition);
-          dictionarySupplier = GenericIndexed.read(
+          dictionarySupplier = StringEncodingStrategies.getStringDictionarySupplier(
+              builder.getFileMapper(),
               buffer,
-              GenericIndexed.UTF8_STRATEGY,
-              builder.getFileMapper()
-          )::singleThreaded;
+              byteOrder
+          );
         }
 
         final WritableSupplier<ColumnarInts> rSingleValuedColumn;
@@ -360,7 +344,8 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
         final StringUtf8DictionaryEncodedColumnSupplier<?> supplier = new StringUtf8DictionaryEncodedColumnSupplier<>(
             dictionarySupplier,
             rSingleValuedColumn,
-            rMultiValuedColumn
+            rMultiValuedColumn,
+            bitmapSerdeFactory.getBitmapFactory()
         );
         builder.setHasMultipleValues(hasMultipleValues)
                .setHasNulls(hasNulls)

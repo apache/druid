@@ -28,6 +28,7 @@ This document describes the API endpoints to configure, update, retrieve, and ma
 ## Configure lookups
 
 ### Bulk update
+
 Lookups can be updated in bulk by posting a JSON object to `/druid/coordinator/v1/lookups/config`. The format of the json object is as follows:
 
 ```json
@@ -212,27 +213,27 @@ These end points can be used to get the propagation status of configured lookups
 
 ### List load status of all lookups
 
-`GET /druid/coordinator/v1/lookups/status` with optional query parameter `detailed`.
+`GET` `/druid/coordinator/v1/lookups/status` with optional query parameter `detailed`.
 
 ### List load status of lookups in a tier
 
-`GET /druid/coordinator/v1/lookups/status/{tier}` with optional query parameter `detailed`.
+`GET` `/druid/coordinator/v1/lookups/status/{tier}` with optional query parameter `detailed`.
 
 ### List load status of single lookup
 
-`GET /druid/coordinator/v1/lookups/status/{tier}/{lookup}` with optional query parameter `detailed`.
+`GET` `/druid/coordinator/v1/lookups/status/{tier}/{lookup}` with optional query parameter `detailed`.
 
 ### List lookup state of all processes
 
-`GET /druid/coordinator/v1/lookups/nodeStatus` with optional query parameter `discover` to discover tiers advertised by other Druid nodes, or by default, returning all configured lookup tiers. The default response will also include the lookups which are loaded, being loaded, or being dropped on each node, for each tier, including the complete lookup spec. Add the optional query parameter `detailed=false` to only include the 'version' of the lookup instead of the complete spec.
+`GET` `/druid/coordinator/v1/lookups/nodeStatus` with optional query parameter `discover` to discover tiers advertised by other Druid nodes, or by default, returning all configured lookup tiers. The default response will also include the lookups which are loaded, being loaded, or being dropped on each node, for each tier, including the complete lookup spec. Add the optional query parameter `detailed=false` to only include the 'version' of the lookup instead of the complete spec.
 
 ### List lookup state of processes in a tier
 
-`GET /druid/coordinator/v1/lookups/nodeStatus/{tier}`
+`GET` `/druid/coordinator/v1/lookups/nodeStatus/{tier}`
 
 ### List lookup state of single process
 
-`GET /druid/coordinator/v1/lookups/nodeStatus/{tier}/{host:port}`
+`GET` `/druid/coordinator/v1/lookups/nodeStatus/{tier}/{host:port}`
 
 ## Internal API
 

@@ -29,25 +29,31 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.error.NotFound;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.processor.FrameProcessors;
+import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatusPlus;
+import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.counters.CounterSnapshots;
 import org.apache.druid.msq.counters.CounterSnapshotsTree;
 import org.apache.druid.msq.counters.QueryCounterSnapshot;
 import org.apache.druid.msq.counters.SegmentGenerationProgressCounter;
+import org.apache.druid.msq.exec.ResultsContext;
 import org.apache.druid.msq.indexing.MSQControllerTask;
 import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
 import org.apache.druid.msq.indexing.destination.DurableStorageMSQDestination;
 import org.apache.druid.msq.indexing.destination.MSQDestination;
 import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
+import org.apache.druid.msq.indexing.error.MSQErrorReport;
+import org.apache.druid.msq.indexing.error.MSQFault;
 import org.apache.druid.msq.indexing.report.MSQStagesReport;
+import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
-import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.sql.SqlStatementState;
 import org.apache.druid.msq.sql.entity.ColumnNameAndTypes;
 import org.apache.druid.msq.sql.entity.PageInformation;
@@ -66,6 +72,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -143,8 +150,13 @@ public class SqlStatementResourceHelper
    * <ol>
    *   <li>{@link DataSourceMSQDestination} a single page is returned which adds all the counters of {@link SegmentGenerationProgressCounter.Snapshot}</li>
    *   <li>{@link TaskReportMSQDestination} a single page is returned which adds all the counters of {@link ChannelCounters}</li>
-   *   <li>{@link DurableStorageMSQDestination} a page is returned for each worker which has generated output rows. The list is sorted on page Id.
-   *   If the worker generated 0 rows, we do no populated a page for it. {@link PageInformation#id} is equal to the worker number</li>
+   *   <li>{@link DurableStorageMSQDestination} a page is returned for each partition, worker which has generated output rows. The pages are populated in the following order:
+   *   <ul>
+   *     <li>For each partition from 0 to N</li>
+   *     <li>For each worker from 0 to M</li>
+   *     <li>If num rows for that partition,worker combination is 0, create a page</li>
+   *     so that we maintain the record ordering.
+   *   </ul>
    * </ol>
    */
   public static Optional<List<PageInformation>> populatePageList(
@@ -155,9 +167,9 @@ public class SqlStatementResourceHelper
     if (msqTaskReportPayload.getStages() == null || msqTaskReportPayload.getCounters() == null) {
       return Optional.empty();
     }
-    int finalStage = msqTaskReportPayload.getStages().getStages().size() - 1;
+    MSQStagesReport.Stage finalStage = getFinalStage(msqTaskReportPayload);
     CounterSnapshotsTree counterSnapshotsTree = msqTaskReportPayload.getCounters();
-    Map<Integer, CounterSnapshots> workerCounters = counterSnapshotsTree.snapshotForStage(finalStage);
+    Map<Integer, CounterSnapshots> workerCounters = counterSnapshotsTree.snapshotForStage(finalStage.getStageNumber());
     if (workerCounters == null || workerCounters.isEmpty()) {
       return Optional.empty();
     }
@@ -167,51 +179,70 @@ public class SqlStatementResourceHelper
       for (CounterSnapshots counterSnapshots : workerCounters.values()) {
         QueryCounterSnapshot queryCounterSnapshot = counterSnapshots.getMap()
                                                                     .getOrDefault("segmentGenerationProgress", null);
-        if (queryCounterSnapshot != null && queryCounterSnapshot instanceof SegmentGenerationProgressCounter.Snapshot) {
+        if (queryCounterSnapshot instanceof SegmentGenerationProgressCounter.Snapshot) {
           rows += ((SegmentGenerationProgressCounter.Snapshot) queryCounterSnapshot).getRowsPushed();
         }
       }
-      if (rows != 0L) {
-        return Optional.of(ImmutableList.of(new PageInformation(0, rows, null)));
-      } else {
-        return Optional.empty();
-      }
+      return Optional.of(ImmutableList.of(new PageInformation(0, rows, null)));
     } else if (msqDestination instanceof TaskReportMSQDestination) {
       long rows = 0L;
       long size = 0L;
       for (CounterSnapshots counterSnapshots : workerCounters.values()) {
         QueryCounterSnapshot queryCounterSnapshot = counterSnapshots.getMap().getOrDefault("output", null);
-        if (queryCounterSnapshot != null && queryCounterSnapshot instanceof ChannelCounters.Snapshot) {
+        if (queryCounterSnapshot instanceof ChannelCounters.Snapshot) {
           rows += Arrays.stream(((ChannelCounters.Snapshot) queryCounterSnapshot).getRows()).sum();
           size += Arrays.stream(((ChannelCounters.Snapshot) queryCounterSnapshot).getBytes()).sum();
         }
       }
-      if (rows != 0L) {
-        return Optional.of(ImmutableList.of(new PageInformation(0, rows, size)));
-      } else {
-        return Optional.empty();
-      }
-
+      return Optional.of(ImmutableList.of(new PageInformation(0, rows, size)));
     } else if (msqDestination instanceof DurableStorageMSQDestination) {
-      List<PageInformation> pageList = new ArrayList<>();
-      for (Map.Entry<Integer, CounterSnapshots> counterSnapshots : workerCounters.entrySet()) {
-        long rows = 0L;
-        long size = 0L;
-        QueryCounterSnapshot queryCounterSnapshot = counterSnapshots.getValue().getMap().getOrDefault("output", null);
-        if (queryCounterSnapshot != null && queryCounterSnapshot instanceof ChannelCounters.Snapshot) {
-          rows += Arrays.stream(((ChannelCounters.Snapshot) queryCounterSnapshot).getRows()).sum();
-          size += Arrays.stream(((ChannelCounters.Snapshot) queryCounterSnapshot).getBytes()).sum();
-        }
-        // do not populate a page if the worker generated 0 rows.
-        if (rows != 0L) {
-          pageList.add(new PageInformation(counterSnapshots.getKey(), rows, size));
-        }
-      }
-      pageList.sort(PageInformation.getIDComparator());
-      return Optional.of(pageList);
+
+      return populatePagesForDurableStorageDestination(finalStage, workerCounters);
     } else {
       return Optional.empty();
     }
+  }
+
+  private static Optional<List<PageInformation>> populatePagesForDurableStorageDestination(
+      MSQStagesReport.Stage finalStage,
+      Map<Integer, CounterSnapshots> workerCounters
+  )
+  {
+    // figure out number of partitions and number of workers
+    int totalPartitions = finalStage.getPartitionCount();
+    int totalWorkerCount = finalStage.getWorkerCount();
+
+    if (totalPartitions == -1) {
+      throw DruidException.defensive("Expected partition count to be set for stage[%d]", finalStage);
+    }
+    if (totalWorkerCount == -1) {
+      throw DruidException.defensive("Expected worker count to be set for stage[%d]", finalStage);
+    }
+
+    List<PageInformation> pages = new ArrayList<>();
+    for (int partitionNumber = 0; partitionNumber < totalPartitions; partitionNumber++) {
+      for (int workerNumber = 0; workerNumber < totalWorkerCount; workerNumber++) {
+        CounterSnapshots workerCounter = workerCounters.get(workerNumber);
+
+        if (workerCounter != null && workerCounter.getMap() != null) {
+          QueryCounterSnapshot channelCounters = workerCounter.getMap().get("output");
+
+          if (channelCounters instanceof ChannelCounters.Snapshot) {
+            long rows = 0L;
+            long size = 0L;
+
+            if (((ChannelCounters.Snapshot) channelCounters).getRows().length > partitionNumber) {
+              rows += ((ChannelCounters.Snapshot) channelCounters).getRows()[partitionNumber];
+              size += ((ChannelCounters.Snapshot) channelCounters).getBytes()[partitionNumber];
+            }
+            if (rows != 0L) {
+              pages.add(new PageInformation(pages.size(), rows, size, workerNumber, partitionNumber));
+            }
+          }
+        }
+      }
+    }
+    return Optional.of(pages);
   }
 
   public static Optional<SqlStatementResult> getExceptionPayload(
@@ -219,12 +250,14 @@ public class SqlStatementResourceHelper
       TaskStatusResponse taskResponse,
       TaskStatusPlus statusPlus,
       SqlStatementState sqlStatementState,
-      Map<String, Object> msqPayload
+      MSQTaskReportPayload msqTaskReportPayload,
+      ObjectMapper jsonMapper,
+      boolean detail
   )
   {
-    Map<String, Object> exceptionDetails = getQueryExceptionDetails(getPayload(msqPayload));
-    Map<String, Object> exception = getMap(exceptionDetails, "error");
-    if (exceptionDetails == null || exception == null) {
+    final MSQErrorReport exceptionDetails = getQueryExceptionDetails(msqTaskReportPayload);
+    final MSQFault fault = exceptionDetails == null ? null : exceptionDetails.getFault();
+    if (exceptionDetails == null || fault == null) {
       return Optional.of(new SqlStatementResult(
           queryId,
           sqlStatementState,
@@ -234,18 +267,18 @@ public class SqlStatementResourceHelper
           null,
           DruidException.forPersona(DruidException.Persona.DEVELOPER)
                         .ofCategory(DruidException.Category.UNCATEGORIZED)
-                        .build(taskResponse.getStatus().getErrorMsg()).toErrorResponse()
+                        .build("%s", taskResponse.getStatus().getErrorMsg())
+                        .toErrorResponse(),
+          detail ? getQueryStagesReport(msqTaskReportPayload) : null,
+          detail ? getQueryCounters(msqTaskReportPayload) : null,
+          detail ? getQueryWarningDetails(msqTaskReportPayload) : null
       ));
     }
 
-    final String errorMessage = String.valueOf(exception.getOrDefault("errorMessage", statusPlus.getErrorMsg()));
-    exception.remove("errorMessage");
-    String errorCode = String.valueOf(exception.getOrDefault("errorCode", "unknown"));
-    exception.remove("errorCode");
-    Map<String, String> stringException = new HashMap<>();
-    for (Map.Entry<String, Object> exceptionKeys : exception.entrySet()) {
-      stringException.put(exceptionKeys.getKey(), String.valueOf(exceptionKeys.getValue()));
-    }
+    final String errorMessage = fault.getErrorMessage() == null ? statusPlus.getErrorMsg() : fault.getErrorMessage();
+    final String errorCode = fault.getErrorCode() == null ? "unknown" : fault.getErrorCode();
+
+    final Map<String, String> exceptionContext = buildExceptionContext(fault, jsonMapper);
     return Optional.of(new SqlStatementResult(
         queryId,
         sqlStatementState,
@@ -261,33 +294,34 @@ public class SqlStatementResourceHelper
             DruidException ex = bob.forPersona(DruidException.Persona.USER)
                                    .ofCategory(DruidException.Category.UNCATEGORIZED)
                                    .build(errorMessage);
-            ex.withContext(stringException);
+            ex.withContext(exceptionContext);
             return ex;
           }
-        }).toErrorResponse()
+        }).toErrorResponse(),
+        detail ? getQueryStagesReport(msqTaskReportPayload) : null,
+        detail ? getQueryCounters(msqTaskReportPayload) : null,
+        detail ? getQueryWarningDetails(msqTaskReportPayload) : null
     ));
   }
 
   public static Sequence<Object[]> getResultSequence(
-      MSQControllerTask msqControllerTask,
-      StageDefinition finalStage,
-      Frame frame,
-      ObjectMapper jsonMapper
+      final Frame resultsFrame,
+      final FrameReader resultFrameReader,
+      final ColumnMappings resultColumnMappings,
+      final ResultsContext resultsContext,
+      final ObjectMapper jsonMapper
   )
   {
-    final Cursor cursor = FrameProcessors.makeCursor(frame, finalStage.getFrameReader());
-
+    final Cursor cursor = FrameProcessors.makeCursor(resultsFrame, resultFrameReader);
     final ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
-    final ColumnMappings columnMappings = msqControllerTask.getQuerySpec().getColumnMappings();
     @SuppressWarnings("rawtypes")
-    final List<ColumnValueSelector> selectors = columnMappings.getMappings()
-                                                              .stream()
-                                                              .map(mapping -> columnSelectorFactory.makeColumnValueSelector(
-                                                                  mapping.getQueryColumn()))
-                                                              .collect(Collectors.toList());
+    final List<ColumnValueSelector> selectors =
+        resultColumnMappings.getMappings()
+                            .stream()
+                            .map(mapping -> columnSelectorFactory.makeColumnValueSelector(mapping.getQueryColumn()))
+                            .collect(Collectors.toList());
 
-    final List<SqlTypeName> sqlTypeNames = msqControllerTask.getSqlTypeNames();
-    Iterable<Object[]> retVal = () -> new Iterator<Object[]>()
+    final Iterable<Object[]> retVal = () -> new Iterator<Object[]>()
     {
       @Override
       public boolean hasNext()
@@ -298,19 +332,23 @@ public class SqlStatementResourceHelper
       @Override
       public Object[] next()
       {
-        final Object[] row = new Object[columnMappings.size()];
+        if (!hasNext()) {
+          throw new NoSuchElementException();
+        }
+
+        final Object[] row = new Object[resultColumnMappings.size()];
         for (int i = 0; i < row.length; i++) {
           final Object value = selectors.get(i).getObject();
-          if (sqlTypeNames == null || msqControllerTask.getSqlResultsContext() == null) {
+          if (resultsContext.getSqlTypeNames() == null || resultsContext.getSqlResultsContext() == null) {
             // SQL type unknown, or no SQL results context: pass-through as is.
             row[i] = value;
           } else {
             row[i] = SqlResults.coerce(
                 jsonMapper,
-                msqControllerTask.getSqlResultsContext(),
+                resultsContext.getSqlResultsContext(),
                 value,
-                sqlTypeNames.get(i),
-                columnMappings.getOutputColumnName(i)
+                resultsContext.getSqlTypeNames().get(i),
+                resultColumnMappings.getOutputColumnName(i)
             );
           }
         }
@@ -322,7 +360,7 @@ public class SqlStatementResourceHelper
   }
 
   @Nullable
-  public static MSQStagesReport.Stage getFinalStage(MSQTaskReportPayload msqTaskReportPayload)
+  public static MSQStagesReport.Stage getFinalStage(@Nullable MSQTaskReportPayload msqTaskReportPayload)
   {
     if (msqTaskReportPayload == null || msqTaskReportPayload.getStages().getStages() == null) {
       return null;
@@ -336,22 +374,61 @@ public class SqlStatementResourceHelper
     }
     return null;
   }
-  public static Map<String, Object> getQueryExceptionDetails(Map<String, Object> payload)
+
+  @Nullable
+  private static MSQErrorReport getQueryExceptionDetails(@Nullable MSQTaskReportPayload payload)
   {
-    return getMap(getMap(payload, "status"), "errorReport");
+    return payload == null ? null : payload.getStatus().getErrorReport();
   }
 
-  public static Map<String, Object> getMap(Map<String, Object> map, String key)
+  @Nullable
+  public static List<MSQErrorReport> getQueryWarningDetails(@Nullable MSQTaskReportPayload payload)
   {
-    if (map == null) {
+    return payload == null ? null : new ArrayList<>(payload.getStatus().getWarningReports());
+  }
+
+  @Nullable
+  public static MSQStagesReport getQueryStagesReport(@Nullable MSQTaskReportPayload payload)
+  {
+    return payload == null ? null : payload.getStages();
+  }
+
+  @Nullable
+  public static CounterSnapshotsTree getQueryCounters(@Nullable MSQTaskReportPayload payload)
+  {
+    return payload == null ? null : payload.getCounters();
+  }
+
+  @Nullable
+  public static MSQTaskReportPayload getPayload(TaskReport.ReportMap reportMap)
+  {
+    if (reportMap == null) {
       return null;
     }
-    return (Map<String, Object>) map.get(key);
+
+    Optional<MSQTaskReport> report = reportMap.findReport("multiStageQuery");
+    return report.map(MSQTaskReport::getPayload).orElse(null);
   }
 
-  public static Map<String, Object> getPayload(Map<String, Object> results)
+  private static Map<String, String> buildExceptionContext(MSQFault fault, ObjectMapper mapper)
   {
-    Map<String, Object> msqReport = getMap(results, "multiStageQuery");
-    return getMap(msqReport, "payload");
+    try {
+      final Map<String, Object> msqFaultAsMap = new HashMap<>(
+          mapper.readValue(
+              mapper.writeValueAsBytes(fault),
+              JacksonUtils.TYPE_REFERENCE_MAP_STRING_OBJECT
+          )
+      );
+      msqFaultAsMap.remove("errorCode");
+      msqFaultAsMap.remove("errorMessage");
+
+      final Map<String, String> exceptionContext = new HashMap<>();
+      msqFaultAsMap.forEach((key, value) -> exceptionContext.put(key, String.valueOf(value)));
+
+      return exceptionContext;
+    }
+    catch (Exception e) {
+      throw DruidException.defensive("Could not read MSQFault[%s] as a map: [%s]", fault, e.getMessage());
+    }
   }
 }

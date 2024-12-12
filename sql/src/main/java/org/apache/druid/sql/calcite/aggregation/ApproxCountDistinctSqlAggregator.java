@@ -20,18 +20,13 @@
 package org.apache.druid.sql.calcite.aggregation;
 
 import org.apache.calcite.rel.core.AggregateCall;
-import org.apache.calcite.rel.core.Project;
-import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.sql.SqlAggFunction;
-import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlKind;
-import org.apache.calcite.sql.type.InferTypes;
-import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.Optionality;
-import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.rel.InputAccessor;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
@@ -46,61 +41,58 @@ import java.util.List;
  */
 public class ApproxCountDistinctSqlAggregator implements SqlAggregator
 {
-  private static final SqlAggFunction FUNCTION_INSTANCE = new ApproxCountDistinctSqlAggFunction();
   private static final String NAME = "APPROX_COUNT_DISTINCT";
-
+  private final SqlAggFunction delegateFunction;
   private final SqlAggregator delegate;
 
   public ApproxCountDistinctSqlAggregator(final SqlAggregator delegate)
   {
     this.delegate = delegate;
+    this.delegateFunction = new ApproxCountDistinctSqlAggFunction(delegate.calciteFunction());
   }
 
   @Override
   public SqlAggFunction calciteFunction()
   {
-    return FUNCTION_INSTANCE;
+    return delegateFunction;
   }
 
   @Nullable
   @Override
   public Aggregation toDruidAggregation(
       PlannerContext plannerContext,
-      RowSignature rowSignature,
       VirtualColumnRegistry virtualColumnRegistry,
-      RexBuilder rexBuilder,
       String name,
       AggregateCall aggregateCall,
-      Project project,
+      InputAccessor inputAccessor,
       List<Aggregation> existingAggregations,
       boolean finalizeAggregations
   )
   {
     return delegate.toDruidAggregation(
         plannerContext,
-        rowSignature,
         virtualColumnRegistry,
-        rexBuilder,
         name,
         aggregateCall,
-        project,
+        inputAccessor,
         existingAggregations,
         finalizeAggregations
     );
   }
 
+  @NativelySupportsDistinct
   private static class ApproxCountDistinctSqlAggFunction extends SqlAggFunction
   {
-    ApproxCountDistinctSqlAggFunction()
+    ApproxCountDistinctSqlAggFunction(SqlAggFunction delegate)
     {
       super(
           NAME,
           null,
           SqlKind.OTHER_FUNCTION,
           ReturnTypes.explicit(SqlTypeName.BIGINT),
-          InferTypes.VARCHAR_1024,
-          OperandTypes.ANY,
-          SqlFunctionCategory.STRING,
+          delegate.getOperandTypeInference(),
+          delegate.getOperandTypeChecker(),
+          delegate.getFunctionType(),
           false,
           false,
           Optionality.FORBIDDEN

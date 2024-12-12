@@ -3,8 +3,12 @@ id: sql-api
 title: Druid SQL API
 sidebar_label: Druid SQL
 ---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
 <!--
+
+
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
   ~ distributed with this work for additional information
@@ -23,176 +27,386 @@ sidebar_label: Druid SQL
   ~ under the License.
   -->
 
-> Apache Druid supports two query languages: Druid SQL and [native queries](../querying/querying.md).
-> This document describes the SQL language.
+:::info
+ Apache Druid supports two query languages: Druid SQL and [native queries](../querying/querying.md).
+ This document describes the SQL language.
+:::
 
-You can submit and cancel [Druid SQL](../querying/sql.md) queries using the Druid SQL API.
-The Druid SQL API is available at `https://ROUTER:8888/druid/v2/sql`, where `ROUTER` is the IP address of the Druid Router.
+In this topic, `http://ROUTER_IP:ROUTER_PORT` is a placeholder for your Router service address and port. Replace it with the information for your deployment. For example, use `http://localhost:8888` for quickstart deployments.
 
-## Submit a query
+## Query from Historicals
 
-To use the SQL API to make Druid SQL queries, send your query to the Router using the POST method:
-```
-POST https://ROUTER:8888/druid/v2/sql/
-```  
+### Submit a query
 
-Submit your query as the value of a "query" field in the JSON object within the request payload. For example:
-```json
-{"query" : "SELECT COUNT(*) FROM data_source WHERE foo = 'bar'"}
-```
+Submits a SQL-based query in the JSON request body. Returns a JSON object with the query results and optional metadata for the results. You can also use this endpoint to query [metadata tables](../querying/sql-metadata-tables.md).
 
-### Request body
-      
-|Property|Description|Default|
-|--------|----|-----------|
-|`query`|SQL query string.| none (required)|
-|`resultFormat`|Format of query results. See [Responses](#responses) for details.|`"object"`|
-|`header`|Whether or not to include a header row for the query result. See [Responses](#responses) for details.|`false`|
-|`typesHeader`|Whether or not to include type information in the header. Can only be set when `header` is also `true`. See [Responses](#responses) for details.|`false`|
-|`sqlTypesHeader`|Whether or not to include SQL type information in the header. Can only be set when `header` is also `true`. See [Responses](#responses) for details.|`false`|
-|`context`|JSON object containing [SQL query context parameters](../querying/sql-query-context.md).|`{}` (empty)|
-|`parameters`|List of query parameters for parameterized queries. Each parameter in the list should be a JSON object like `{"type": "VARCHAR", "value": "foo"}`. The type should be a SQL type; see [Data types](../querying/sql-data-types.md) for a list of supported SQL types.|`[]` (empty)|
+Each query has an associated SQL query ID. You can set this ID manually using the SQL context parameter `sqlQueryId`. If not set, Druid automatically generates `sqlQueryId` and returns it in the response header for `X-Druid-SQL-Query-Id`. Note that you need the `sqlQueryId` to [cancel a query](#cancel-a-query).
 
-You can use _curl_ to send SQL queries from the command-line:
+#### URL
 
-```bash
-$ cat query.json
-{"query":"SELECT COUNT(*) AS TheCount FROM data_source"}
+`POST` `/druid/v2/sql`
 
-$ curl -XPOST -H'Content-Type: application/json' http://ROUTER:8888/druid/v2/sql/ -d @query.json
-[{"TheCount":24433}]
-```
+#### Request body
 
-There are a variety of [SQL query context parameters](../querying/sql-query-context.md) you can provide by adding a "context" map,
-like:
+The request body takes the following properties:
+
+* `query`: SQL query string.
+
+* `resultFormat`: String that indicates the format to return query results. Select one of the following formats:
+  * `object`: Returns a JSON array of JSON objects with the HTTP response header `Content-Type: application/json`.  
+     Object field names match the columns returned by the SQL query in the same order as the SQL query.
+
+  * `array`: Returns a JSON array of JSON arrays with the HTTP response header `Content-Type: application/json`.  
+     Each inner array has elements matching the columns returned by the SQL query, in order.
+
+  * `objectLines`: Returns newline-delimited JSON objects with the HTTP response header `Content-Type: text/plain`.  
+     Newline separation facilitates parsing the entire response set as a stream if you don't have a streaming JSON parser.
+     This format includes a single trailing newline character so you can detect a truncated response.
+
+  * `arrayLines`: Returns newline-delimited JSON arrays with the HTTP response header `Content-Type: text/plain`.  
+     Newline separation facilitates parsing the entire response set as a stream if you don't have a streaming JSON parser.
+     This format includes a single trailing newline character so you can detect a truncated response.
+
+  * `csv`: Returns comma-separated values with one row per line. Sent with the HTTP response header `Content-Type: text/csv`.  
+     Druid uses double quotes to escape individual field values. For example, a value with a comma returns `"A,B"`.
+     If the field value contains a double quote character, Druid escapes it with a second double quote character.
+     For example, `foo"bar` becomes `foo""bar`.
+      This format includes a single trailing newline character so you can detect a truncated response.
+
+* `header`: Boolean value that determines whether to return information on column names. When set to `true`, Druid returns the column names as the first row of the results. To also get information on the column types, set `typesHeader` or `sqlTypesHeader` to `true`. For a comparative overview of data formats and configurations for the header, see the [Query output format](#query-output-format) table.
+
+* `typesHeader`: Adds Druid runtime type information in the header. Requires `header` to be set to `true`. Complex types, like sketches, will be reported as `COMPLEX<typeName>` if a particular complex type name is known for that field, or as `COMPLEX` if the particular type name is unknown or mixed.
+
+* `sqlTypesHeader`: Adds SQL type information in the header. Requires `header` to be set to `true`.
+
+   For compatibility, Druid returns the HTTP header `X-Druid-SQL-Header-Included: yes` when all of the following conditions are met:
+   * The `header` property is set to true.
+   * The version of Druid supports `typesHeader` and `sqlTypesHeader`, regardless of whether either property is set.
+
+* `context`: JSON object containing optional [SQL query context parameters](../querying/sql-query-context.md), such as to set the query ID, time zone, and whether to use an approximation algorithm for distinct count.
+
+* `parameters`: List of query parameters for parameterized queries. Each parameter in the array should be a JSON object containing the parameter's SQL data type and parameter value. For a list of supported SQL types, see [Data types](../querying/sql-data-types.md).
+
+    For example:
+    ```json
+    "parameters": [
+        {
+            "type": "VARCHAR",
+            "value": "bar"
+        },
+        {
+            "type": "ARRAY",
+            "value": [-25.7, null, 36.85]
+        }
+    ]
+    ```
+
+#### Responses
+
+<Tabs>
+
+<TabItem value="1" label="200 SUCCESS">
+
+
+*Successfully submitted query*
+
+</TabItem>
+<TabItem value="2" label="400 BAD REQUEST">
+
+
+*Error thrown due to bad query. Returns a JSON object detailing the error with the following format:*
 
 ```json
 {
-  "query" : "SELECT COUNT(*) FROM data_source WHERE foo = 'bar' AND __time > TIMESTAMP '2000-01-01 00:00:00'",
-  "context" : {
-    "sqlTimeZone" : "America/Los_Angeles"
-  }
+    "error": "A well-defined error code.",
+    "errorMessage": "A message with additional details about the error.",
+    "errorClass": "Class of exception that caused this error.",
+    "host": "The host on which the error occurred."
 }
 ```
+</TabItem>
+<TabItem value="3" label="500 INTERNAL SERVER ERROR">
 
-Parameterized SQL queries are also supported:
+
+*Request not sent due to unexpected conditions. Returns a JSON object detailing the error with the following format:*
 
 ```json
 {
-  "query" : "SELECT COUNT(*) FROM data_source WHERE foo = ? AND __time > ?",
-  "parameters": [
-    { "type": "VARCHAR", "value": "bar"},
-    { "type": "TIMESTAMP", "value": "2000-01-01 00:00:00" }
-  ]
+    "error": "A well-defined error code.",
+    "errorMessage": "A message with additional details about the error.",
+    "errorClass": "Class of exception that caused this error.",
+    "host": "The host on which the error occurred."
 }
 ```
 
-Metadata is available over HTTP POST by querying [metadata tables](../querying/sql-metadata-tables.md).
+</TabItem>
+</Tabs>
 
-### Responses
+#### Client-side error handling and truncated responses
 
-#### Result formats
+Druid reports errors that occur before the response body is sent as JSON with an HTTP 500 status code. The errors are reported using the same format as [native Druid query errors](../querying/querying.md#query-errors).
+If an error occurs while Druid is sending the response body, the server handling the request stops the response midstream and logs an error.
 
-Druid SQL's HTTP POST API supports a variety of result formats. You can specify these by adding a `resultFormat` parameter, like:
+This means that when you call the SQL API, you must properly handle response truncation.
+For  `object` and `array` formats, truncated responses are invalid JSON.
+For line-oriented formats, Druid includes a newline character as the final character of every complete response. Absence of a final newline character indicates a truncated response.
 
-```json
-{
-  "query" : "SELECT COUNT(*) FROM data_source WHERE foo = 'bar' AND __time > TIMESTAMP '2000-01-01 00:00:00'",
-  "resultFormat" : "array"
-}
-```
+If you detect a truncated response, treat it as an error.
 
-To request a header with information about column names, set `header` to true in your request.
-When you set `header` to true, you can optionally include `typesHeader` and `sqlTypesHeader` as well, which gives
-you information about [Druid runtime and SQL types](../querying/sql-data-types.md) respectively. You can request all these headers
-with a request like:
+---
 
-```json
-{
-  "query" : "SELECT COUNT(*) FROM data_source WHERE foo = 'bar' AND __time > TIMESTAMP '2000-01-01 00:00:00'",
-  "resultFormat" : "array",
-  "header" : true,
-  "typesHeader" : true,
-  "sqlTypesHeader" : true
-}
-```
 
-The following table shows supported result formats:
+#### Sample request
 
-|Format|Description|Header description|Content-Type|
-|------|-----------|------------------|------------|
-|`object`|The default, a JSON array of JSON objects. Each object's field names match the columns returned by the SQL query, and are provided in the same order as the SQL query.|If `header` is true, the first row is an object where the fields are column names. Each field's value is either null (if `typesHeader` and `sqlTypesHeader` are false) or an object that contains the Druid type as `type` (if `typesHeader` is true) and the SQL type as `sqlType` (if `sqlTypesHeader` is true).|application/json|
-|`array`|JSON array of JSON arrays. Each inner array has elements matching the columns returned by the SQL query, in order.|If `header` is true, the first row is an array of column names. If `typesHeader` is true, the next row is an array of Druid types. If `sqlTypesHeader` is true, the next row is an array of SQL types.|application/json|
-|`objectLines`|Like `object`, but the JSON objects are separated by newlines instead of being wrapped in a JSON array. This can make it easier to parse the entire response set as a stream, if you do not have ready access to a streaming JSON parser. To make it possible to detect a truncated response, this format includes a trailer of one blank line.|Same as `object`.|text/plain|
-|`arrayLines`|Like `array`, but the JSON arrays are separated by newlines instead of being wrapped in a JSON array. This can make it easier to parse the entire response set as a stream, if you do not have ready access to a streaming JSON parser. To make it possible to detect a truncated response, this format includes a trailer of one blank line.|Same as `array`, except the rows are separated by newlines.|text/plain|
-|`csv`|Comma-separated values, with one row per line. Individual field values may be escaped by being surrounded in double quotes. If double quotes appear in a field value, they will be escaped by replacing them with double-double-quotes like `""this""`. To make it possible to detect a truncated response, this format includes a trailer of one blank line.|Same as `array`, except the lists are in CSV format.|text/csv|
+The following example retrieves all rows in the `wikipedia` datasource where the `user` is `BlueMoon2662`. The query is assigned the ID `request01` using the `sqlQueryId` context parameter. The optional properties `header`, `typesHeader`, and `sqlTypesHeader` are set to `true` to include type information to the response.
 
-If `typesHeader` is set to true, [Druid type](../querying/sql-data-types.md) information is included in the response. Complex types,
-like sketches, will be reported as `COMPLEX<typeName>` if a particular complex type name is known for that field,
-or as `COMPLEX` if the particular type name is unknown or mixed. If `sqlTypesHeader` is set to true,
-[SQL type](../querying/sql-data-types.md) information is included in the response. It is possible to set both `typesHeader` and
-`sqlTypesHeader` at once. Both parameters require that `header` is also set.
+<Tabs>
 
-To aid in building clients that are compatible with older Druid versions, Druid returns the HTTP header
-`X-Druid-SQL-Header-Included: yes` if `header` was set to true and if the version of Druid the client is connected to
-understands the `typesHeader` and `sqlTypesHeader` parameters. This HTTP response header is present irrespective of
-whether `typesHeader` or `sqlTypesHeader` are set or not.
+<TabItem value="4" label="cURL">
 
-Druid returns the SQL query identifier in the `X-Druid-SQL-Query-Id` HTTP header.
-This query id will be assigned the value of `sqlQueryId` from the [query context parameters](../querying/sql-query-context.md)
-if specified, else Druid will generate a SQL query id for you.
 
-#### Errors
-
-Errors that occur before the response body is sent will be reported in JSON, with an HTTP 500 status code, in the
-same format as [native Druid query errors](../querying/querying.md#query-errors). If an error occurs while the response body is
-being sent, at that point it is too late to change the HTTP status code or report a JSON error, so the response will
-simply end midstream and an error will be logged by the Druid server that was handling your request.
-
-As a caller, it is important that you properly handle response truncation. This is easy for the `object` and `array`
-formats, since truncated responses will be invalid JSON. For the line-oriented formats, you should check the
-trailer they all include: one blank line at the end of the result set. If you detect a truncated response, either
-through a JSON parsing error or through a missing trailing newline, you should assume the response was not fully
-delivered due to an error.
-
-## Cancel a query
-
-You can use the HTTP DELETE method to cancel a SQL query on either the Router or the Broker. When you cancel a query, Druid handles the cancellation in a best-effort manner. It marks the query canceled immediately and aborts the query execution as soon as possible. However, your query may run for a short time after your cancellation request.
-
-Druid SQL's HTTP DELETE method uses the following syntax:
-```
-DELETE https://ROUTER:8888/druid/v2/sql/{sqlQueryId}
-```
-
-The DELETE method requires the `sqlQueryId` path parameter. To predict the query id you must set it in the query context. Druid does not enforce unique `sqlQueryId` in the query context. If you issue a cancel request for a `sqlQueryId` active in more than one query context, Druid cancels all requests that use the query id.
-
-For example if you issue the following query:
-```bash
-curl --request POST 'https://ROUTER:8888/druid/v2/sql' \
+```shell
+curl "http://ROUTER_IP:ROUTER_PORT/druid/v2/sql" \
 --header 'Content-Type: application/json' \
---data-raw '{"query" : "SELECT sleep(CASE WHEN sum_added > 0 THEN 1 ELSE 0 END) FROM wikiticker WHERE sum_added > 0 LIMIT 15",
-"context" : {"sqlQueryId" : "myQuery01"}}'
+--data '{
+    "query": "SELECT * FROM wikipedia WHERE user='\''BlueMoon2662'\''",
+    "context" : {"sqlQueryId" : "request01"},
+    "header" : true,
+    "typesHeader" : true,
+    "sqlTypesHeader" : true
+}'
 ```
-You can cancel the query using the query id `myQuery01` as follows:
-```bash
-curl --request DELETE 'https://ROUTER:8888/druid/v2/sql/myQuery01' \
+
+</TabItem>
+<TabItem value="5" label="HTTP">
+
+
+```HTTP
+POST /druid/v2/sql HTTP/1.1
+Host: http://ROUTER_IP:ROUTER_PORT
+Content-Type: application/json
+Content-Length: 192
+
+{
+    "query": "SELECT * FROM wikipedia WHERE user='BlueMoon2662'",
+    "context" : {"sqlQueryId" : "request01"},
+    "header" : true,
+    "typesHeader" : true,
+    "sqlTypesHeader" : true
+}
 ```
 
-Cancellation requests require READ permission on all resources used in the SQL query. 
+</TabItem>
+</Tabs>
 
-Druid returns an HTTP 202 response for successful deletion requests.
+#### Sample response
 
-Druid returns an HTTP 404 response in the following cases:
-  - `sqlQueryId` is incorrect.
-  - The query completes before your cancellation request is processed.
-  
-Druid returns an HTTP 403 response for authorization failure.
+<details>
+  <summary>View the response</summary>
+
+```json
+[
+    {
+        "__time": {
+            "type": "LONG",
+            "sqlType": "TIMESTAMP"
+        },
+        "channel": {
+            "type": "STRING",
+            "sqlType": "VARCHAR"
+        },
+        "cityName": {
+            "type": "STRING",
+            "sqlType": "VARCHAR"
+        },
+        "comment": {
+            "type": "STRING",
+            "sqlType": "VARCHAR"
+        },
+        "countryIsoCode": {
+            "type": "STRING",
+            "sqlType": "VARCHAR"
+        },
+        "countryName": {
+            "type": "STRING",
+            "sqlType": "VARCHAR"
+        },
+        "isAnonymous": {
+            "type": "LONG",
+            "sqlType": "BIGINT"
+        },
+        "isMinor": {
+            "type": "LONG",
+            "sqlType": "BIGINT"
+        },
+        "isNew": {
+            "type": "LONG",
+            "sqlType": "BIGINT"
+        },
+        "isRobot": {
+            "type": "LONG",
+            "sqlType": "BIGINT"
+        },
+        "isUnpatrolled": {
+            "type": "LONG",
+            "sqlType": "BIGINT"
+        },
+        "metroCode": {
+            "type": "LONG",
+            "sqlType": "BIGINT"
+        },
+        "namespace": {
+            "type": "STRING",
+            "sqlType": "VARCHAR"
+        },
+        "page": {
+            "type": "STRING",
+            "sqlType": "VARCHAR"
+        },
+        "regionIsoCode": {
+            "type": "STRING",
+            "sqlType": "VARCHAR"
+        },
+        "regionName": {
+            "type": "STRING",
+            "sqlType": "VARCHAR"
+        },
+        "user": {
+            "type": "STRING",
+            "sqlType": "VARCHAR"
+        },
+        "delta": {
+            "type": "LONG",
+            "sqlType": "BIGINT"
+        },
+        "added": {
+            "type": "LONG",
+            "sqlType": "BIGINT"
+        },
+        "deleted": {
+            "type": "LONG",
+            "sqlType": "BIGINT"
+        }
+    },
+    {
+        "__time": "2015-09-12T00:47:53.259Z",
+        "channel": "#ja.wikipedia",
+        "cityName": "",
+        "comment": "/* 対戦通算成績と得失点 */",
+        "countryIsoCode": "",
+        "countryName": "",
+        "isAnonymous": 0,
+        "isMinor": 1,
+        "isNew": 0,
+        "isRobot": 0,
+        "isUnpatrolled": 0,
+        "metroCode": 0,
+        "namespace": "Main",
+        "page": "アルビレックス新潟の年度別成績一覧",
+        "regionIsoCode": "",
+        "regionName": "",
+        "user": "BlueMoon2662",
+        "delta": 14,
+        "added": 14,
+        "deleted": 0
+    }
+]
+```
+</details>
+
+### Cancel a query
+
+Cancels a query on the Router or the Broker with the associated `sqlQueryId`. The `sqlQueryId` can be manually set when the query is submitted in the query context parameter, or if not set, Druid will generate one and return it in the response header when the query is successfully submitted. Note that Druid does not enforce a unique `sqlQueryId` in the query context. If you've set the same `sqlQueryId` for multiple queries, Druid cancels all requests with that query ID.
+
+When you cancel a query, Druid handles the cancellation in a best-effort manner. Druid immediately marks the query as canceled and aborts the query execution as soon as possible. However, the query may continue running for a short time after you make the cancellation request.
+
+Cancellation requests require READ permission on all resources used in the SQL query.
+
+#### URL
+
+`DELETE` `/druid/v2/sql/{sqlQueryId}`
+
+#### Responses
+
+<Tabs>
+
+<TabItem value="6" label="202 SUCCESS">
+
+
+*Successfully deleted query*
+
+</TabItem>
+<TabItem value="7" label="403 FORBIDDEN">
+
+
+*Authorization failure*
+
+</TabItem>
+<TabItem value="8" label="404 NOT FOUND">
+
+
+*Invalid `sqlQueryId` or query was completed before cancellation request*
+
+</TabItem>
+</Tabs>
+
+---
+
+#### Sample request
+
+The following example cancels a request with the set query ID `request01`.
+
+<Tabs>
+
+<TabItem value="9" label="cURL">
+
+
+```shell
+curl --request DELETE "http://ROUTER_IP:ROUTER_PORT/druid/v2/sql/request01"
+```
+
+</TabItem>
+<TabItem value="10" label="HTTP">
+
+
+```HTTP
+DELETE /druid/v2/sql/request01 HTTP/1.1
+Host: http://ROUTER_IP:ROUTER_PORT
+```
+
+</TabItem>
+</Tabs>
+
+#### Sample response
+
+A successful response results in an `HTTP 202` message code and an empty response body.
+
+### Query output format
+
+The following table shows examples of how Druid returns the column names and data types based on the result format and the type request.
+In all cases, `header` is true.
+The examples includes the first row of results, where the value of `user` is `BlueMoon2662`.
+
+```
+| Format | typesHeader | sqlTypesHeader | Example output                                                                             |
+|--------|-------------|----------------|--------------------------------------------------------------------------------------------|
+| object | true        | false          | [ { "user" : { "type" : "STRING" } }, { "user" : "BlueMoon2662" } ]                        |
+| object | true        | true           | [ { "user" : { "type" : "STRING", "sqlType" : "VARCHAR" } }, { "user" : "BlueMoon2662" } ] |
+| object | false       | true           | [ { "user" : { "sqlType" : "VARCHAR" } }, { "user" : "BlueMoon2662" } ]                    |
+| object | false       | false          | [ { "user" : null }, { "user" : "BlueMoon2662" } ]                                         |
+| array  | true        | false          | [ [ "user" ], [ "STRING" ], [ "BlueMoon2662" ] ]                                           |
+| array  | true        | true           | [ [ "user" ], [ "STRING" ], [ "VARCHAR" ], [ "BlueMoon2662" ] ]                            |
+| array  | false       | true           | [ [ "user" ], [ "VARCHAR" ], [ "BlueMoon2662" ] ]                                          |
+| array  | false       | false          | [ [ "user" ], [ "BlueMoon2662" ] ]                                                         |
+| csv    | true        | false          | user STRING BlueMoon2662                                                                   |
+| csv    | true        | true           | user STRING VARCHAR BlueMoon2662                                                           |
+| csv    | false       | true           | user VARCHAR BlueMoon2662                                                                  |
+| csv    | false       | false          | user BlueMoon2662                                                                          |
+```
 
 ## Query from deep storage
 
-> Query from deep storage is an [experimental feature](../development/experimental.md).
-
-You can use the `sql/statements` endpoint to query segments that exist only in deep storage and are not loaded onto your Historical processes as determined by your load rules. 
+You can use the `sql/statements` endpoint to query segments that exist only in deep storage and are not loaded onto your Historical processes as determined by your load rules.
 
 Note that at least one segment of a datasource must be available on a Historical process so that the Broker can plan your query. A quick way to check if this is true is whether or not a datasource is visible in the Druid console.
 
@@ -207,32 +421,33 @@ Note that at least part of a datasource must be available on a Historical proces
 
 #### URL
 
-<code class="postAPI">POST</code> <code>/druid/v2/sql/statements</code>
+`POST` `/druid/v2/sql/statements`
 
-#### Request body 
+#### Request body
 
 Generally, the `sql` and `sql/statements` endpoints support the same response body fields with minor differences. For general information about the available fields, see [Submit a query to the `sql` endpoint](#submit-a-query).
 
 Keep the following in mind when submitting queries to the `sql/statements` endpoint:
 
-- There are additional context parameters  for `sql/statements`: 
+- Apart from the context parameters mentioned [here](../multi-stage-query/reference.md#context-parameters) there are additional context parameters for `sql/statements` specifically:
 
    - `executionMode`  determines how query results are fetched. Druid currently only supports `ASYNC`. You must manually retrieve your results after the query completes.
-   - `selectDestination` determines where final results get written. By default, results are written to task reports. Set this parameter to `durableStorage` to instruct Druid to write the results from SELECT queries to durable storage, which allows you to fetch larger result sets. Note that this requires you to have [durable storage for MSQ enabled](../operations/durable-storage.md).
-
-- The only supported value for `resultFormat` is JSON LINES.
+   - `selectDestination` determines where final results get written. By default, results are written to task reports. Set this parameter to `durableStorage` to instruct Druid to write the results from SELECT queries to durable storage, which allows you to fetch larger result sets. For result sets with more than 3000 rows, it is highly recommended to use `durableStorage`. Note that this requires you to have [durable storage for MSQ](../operations/durable-storage.md) enabled.
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="1" label="200 SUCCESS">
 
-*Successfully queried from deep storage* 
 
-<!--400 BAD REQUEST-->
+*Successfully queried from deep storage*
 
-*Error thrown due to bad query. Returns a JSON object detailing the error with the following format:* 
+</TabItem>
+<TabItem value="2" label="400 BAD REQUEST">
+
+
+*Error thrown due to bad query. Returns a JSON object detailing the error with the following format:*
 
 ```json
 {
@@ -241,21 +456,23 @@ Keep the following in mind when submitting queries to the `sql/statements` endpo
     "host": "The host on which the error occurred.",
     "errorCode": "Well-defined error code.",
     "persona": "Role or persona associated with the error.",
-    "category": "Classification of the error.", 
+    "category": "Classification of the error.",
     "errorMessage": "Summary of the encountered issue with expanded information.",
     "context": "Additional context about the error."
 }
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 ---
 
 #### Sample request
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="3" label="cURL">
+
 
 ```shell
 curl "http://ROUTER_IP:ROUTER_PORT/druid/v2/sql/statements" \
@@ -264,11 +481,13 @@ curl "http://ROUTER_IP:ROUTER_PORT/druid/v2/sql/statements" \
     "query": "SELECT * FROM wikipedia WHERE user='\''BlueMoon2662'\''",
     "context": {
         "executionMode":"ASYNC"
-    }  
+    }
 }'
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="4" label="HTTP">
+
 
 ```HTTP
 POST /druid/v2/sql/statements HTTP/1.1
@@ -280,16 +499,17 @@ Content-Length: 134
     "query": "SELECT * FROM wikipedia WHERE user='BlueMoon2662'",
     "context": {
         "executionMode":"ASYNC"
-    }  
+    }
 }
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
 {
@@ -413,60 +633,79 @@ Retrieves information about the query associated with the given query ID. The re
   - `sizeInBytes`: the size of the page.
   - `id`: the page number that you can use to reference a specific page when you get query results.
 
+If the optional query parameter `detail` is supplied, then the response also includes the following:
+- A `stages` object that summarizes information about the different stages being used for query execution, such as stage number, phase, start time, duration, input and output information, processing methods, and partitioning.
+- A `counters` object that provides details on the rows, bytes, and files processed at various stages for each worker across different channels, along with sort progress.
+- A `warnings` object that provides details about any warnings.
+
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/v2/sql/statements/:queryId</code>
+`GET` `/druid/v2/sql/statements/{queryId}`
+
+#### Query parameters
+* `detail` (optional)
+    * Type: Boolean
+    * Default: false
+    * Fetch additional details about the query, which includes the information about different stages, counters for each stage, and any warnings.
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="5" label="200 SUCCESS">
 
-*Successfully retrieved query status* 
 
-<!--400 BAD REQUEST-->
+*Successfully retrieved query status*
 
-*Error thrown due to bad query. Returns a JSON object detailing the error with the following format:* 
+</TabItem>
+<TabItem value="6" label="400 BAD REQUEST">
+
+
+*Error thrown due to bad query. Returns a JSON object detailing the error with the following format:*
 
 ```json
 {
     "error": "Summary of the encountered error.",
     "errorCode": "Well-defined error code.",
     "persona": "Role or persona associated with the error.",
-    "category": "Classification of the error.", 
+    "category": "Classification of the error.",
     "errorMessage": "Summary of the encountered issue with expanded information.",
     "context": "Additional context about the error."
 }
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample request
 
 The following example retrieves the status of a query with specified ID `query-9b93f6f7-ab0e-48f5-986a-3520f84f0804`.
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="7" label="cURL">
+
 
 ```shell
-curl "http://ROUTER_IP:ROUTER_PORT/druid/v2/sql/statements/query-9b93f6f7-ab0e-48f5-986a-3520f84f0804"
+curl "http://ROUTER_IP:ROUTER_PORT/druid/v2/sql/statements/query-9b93f6f7-ab0e-48f5-986a-3520f84f0804?detail=true"
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="8" label="HTTP">
+
 
 ```HTTP
-GET /druid/v2/sql/statements/query-9b93f6f7-ab0e-48f5-986a-3520f84f0804 HTTP/1.1
+GET /druid/v2/sql/statements/query-9b93f6f7-ab0e-48f5-986a-3520f84f0804?detail=true HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
 {
@@ -611,7 +850,421 @@ Host: http://ROUTER_IP:ROUTER_PORT
                 "sizeInBytes": 375
             }
         ]
-    }
+    },
+    "stages": [
+        {
+            "stageNumber": 0,
+            "definition": {
+                "id": "query-9b93f6f7-ab0e-48f5-986a-3520f84f0804_0",
+                "input": [
+                    {
+                        "type": "table",
+                        "dataSource": "wikipedia",
+                        "intervals": [
+                            "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"
+                        ],
+                        "filter": {
+                            "type": "equals",
+                            "column": "user",
+                            "matchValueType": "STRING",
+                            "matchValue": "BlueMoon2662"
+                        },
+                        "filterFields": [
+                            "user"
+                        ]
+                    }
+                ],
+                "processor": {
+                    "type": "scan",
+                    "query": {
+                        "queryType": "scan",
+                        "dataSource": {
+                            "type": "inputNumber",
+                            "inputNumber": 0
+                        },
+                        "intervals": {
+                            "type": "intervals",
+                            "intervals": [
+                                "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z"
+                            ]
+                        },
+                        "virtualColumns": [
+                            {
+                                "type": "expression",
+                                "name": "v0",
+                                "expression": "'BlueMoon2662'",
+                                "outputType": "STRING"
+                            }
+                        ],
+                        "resultFormat": "compactedList",
+                        "limit": 1001,
+                        "filter": {
+                            "type": "equals",
+                            "column": "user",
+                            "matchValueType": "STRING",
+                            "matchValue": "BlueMoon2662"
+                        },
+                        "columns": [
+                            "__time",
+                            "added",
+                            "channel",
+                            "cityName",
+                            "comment",
+                            "commentLength",
+                            "countryIsoCode",
+                            "countryName",
+                            "deleted",
+                            "delta",
+                            "deltaBucket",
+                            "diffUrl",
+                            "flags",
+                            "isAnonymous",
+                            "isMinor",
+                            "isNew",
+                            "isRobot",
+                            "isUnpatrolled",
+                            "metroCode",
+                            "namespace",
+                            "page",
+                            "regionIsoCode",
+                            "regionName",
+                            "v0"
+                        ],
+                        "context": {
+                            "__resultFormat": "array",
+                            "__user": "allowAll",
+                            "executionMode": "async",
+                            "finalize": true,
+                            "maxNumTasks": 2,
+                            "maxParseExceptions": 0,
+                            "queryId": "33b53acb-7533-4880-a81b-51c16c489eab",
+                            "scanSignature": "[{\"name\":\"__time\",\"type\":\"LONG\"},{\"name\":\"added\",\"type\":\"LONG\"},{\"name\":\"channel\",\"type\":\"STRING\"},{\"name\":\"cityName\",\"type\":\"STRING\"},{\"name\":\"comment\",\"type\":\"STRING\"},{\"name\":\"commentLength\",\"type\":\"LONG\"},{\"name\":\"countryIsoCode\",\"type\":\"STRING\"},{\"name\":\"countryName\",\"type\":\"STRING\"},{\"name\":\"deleted\",\"type\":\"LONG\"},{\"name\":\"delta\",\"type\":\"LONG\"},{\"name\":\"deltaBucket\",\"type\":\"LONG\"},{\"name\":\"diffUrl\",\"type\":\"STRING\"},{\"name\":\"flags\",\"type\":\"STRING\"},{\"name\":\"isAnonymous\",\"type\":\"STRING\"},{\"name\":\"isMinor\",\"type\":\"STRING\"},{\"name\":\"isNew\",\"type\":\"STRING\"},{\"name\":\"isRobot\",\"type\":\"STRING\"},{\"name\":\"isUnpatrolled\",\"type\":\"STRING\"},{\"name\":\"metroCode\",\"type\":\"STRING\"},{\"name\":\"namespace\",\"type\":\"STRING\"},{\"name\":\"page\",\"type\":\"STRING\"},{\"name\":\"regionIsoCode\",\"type\":\"STRING\"},{\"name\":\"regionName\",\"type\":\"STRING\"},{\"name\":\"v0\",\"type\":\"STRING\"}]",
+                            "sqlOuterLimit": 1001,
+                            "sqlQueryId": "33b53acb-7533-4880-a81b-51c16c489eab",
+                            "sqlStringifyArrays": false
+                        },
+                        "columnTypes": [
+                            "LONG",
+                            "LONG",
+                            "STRING",
+                            "STRING",
+                            "STRING",
+                            "LONG",
+                            "STRING",
+                            "STRING",
+                            "LONG",
+                            "LONG",
+                            "LONG",
+                            "STRING",
+                            "STRING",
+                            "STRING",
+                            "STRING",
+                            "STRING",
+                            "STRING",
+                            "STRING",
+                            "STRING",
+                            "STRING",
+                            "STRING",
+                            "STRING",
+                            "STRING",
+                            "STRING"
+                        ],
+                        "granularity": {
+                            "type": "all"
+                        },
+                        "legacy": false
+                    }
+                },
+                "signature": [
+                    {
+                        "name": "__boost",
+                        "type": "LONG"
+                    },
+                    {
+                        "name": "__time",
+                        "type": "LONG"
+                    },
+                    {
+                        "name": "added",
+                        "type": "LONG"
+                    },
+                    {
+                        "name": "channel",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "cityName",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "comment",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "commentLength",
+                        "type": "LONG"
+                    },
+                    {
+                        "name": "countryIsoCode",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "countryName",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "deleted",
+                        "type": "LONG"
+                    },
+                    {
+                        "name": "delta",
+                        "type": "LONG"
+                    },
+                    {
+                        "name": "deltaBucket",
+                        "type": "LONG"
+                    },
+                    {
+                        "name": "diffUrl",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "flags",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "isAnonymous",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "isMinor",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "isNew",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "isRobot",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "isUnpatrolled",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "metroCode",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "namespace",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "page",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "regionIsoCode",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "regionName",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "v0",
+                        "type": "STRING"
+                    }
+                ],
+                "shuffleSpec": {
+                    "type": "mix"
+                },
+                "maxWorkerCount": 1
+            },
+            "phase": "FINISHED",
+            "workerCount": 1,
+            "partitionCount": 1,
+            "shuffle": "mix",
+            "output": "localStorage",
+            "startTime": "2024-07-31T15:20:21.255Z",
+            "duration": 103
+        },
+        {
+            "stageNumber": 1,
+            "definition": {
+                "id": "query-9b93f6f7-ab0e-48f5-986a-3520f84f0804_1",
+                "input": [
+                    {
+                        "type": "stage",
+                        "stage": 0
+                    }
+                ],
+                "processor": {
+                    "type": "limit",
+                    "limit": 1001
+                },
+                "signature": [
+                    {
+                        "name": "__boost",
+                        "type": "LONG"
+                    },
+                    {
+                        "name": "__time",
+                        "type": "LONG"
+                    },
+                    {
+                        "name": "added",
+                        "type": "LONG"
+                    },
+                    {
+                        "name": "channel",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "cityName",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "comment",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "commentLength",
+                        "type": "LONG"
+                    },
+                    {
+                        "name": "countryIsoCode",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "countryName",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "deleted",
+                        "type": "LONG"
+                    },
+                    {
+                        "name": "delta",
+                        "type": "LONG"
+                    },
+                    {
+                        "name": "deltaBucket",
+                        "type": "LONG"
+                    },
+                    {
+                        "name": "diffUrl",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "flags",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "isAnonymous",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "isMinor",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "isNew",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "isRobot",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "isUnpatrolled",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "metroCode",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "namespace",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "page",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "regionIsoCode",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "regionName",
+                        "type": "STRING"
+                    },
+                    {
+                        "name": "v0",
+                        "type": "STRING"
+                    }
+                ],
+                "shuffleSpec": {
+                    "type": "maxCount",
+                    "clusterBy": {
+                        "columns": [
+                            {
+                                "columnName": "__boost",
+                                "order": "ASCENDING"
+                            }
+                        ]
+                    },
+                    "partitions": 1
+                },
+                "maxWorkerCount": 1
+            },
+            "phase": "FINISHED",
+            "workerCount": 1,
+            "partitionCount": 1,
+            "shuffle": "globalSort",
+            "output": "localStorage",
+            "startTime": "2024-07-31T15:20:21.355Z",
+            "duration": 10,
+            "sort": true
+        }
+    ],
+    "counters": {
+        "0": {
+            "0": {
+                "input0": {
+                    "type": "channel",
+                    "rows": [
+                        24433
+                    ],
+                    "bytes": [
+                        7393933
+                    ],
+                    "files": [
+                        22
+                    ],
+                    "totalFiles": [
+                        22
+                    ]
+                }
+            }
+        },
+        "1": {
+            "0": {
+                "sortProgress": {
+                    "type": "sortProgress",
+                    "totalMergingLevels": -1,
+                    "levelToTotalBatches": {},
+                    "levelToMergedBatches": {},
+                    "totalMergersForUltimateLevel": -1,
+                    "triviallyComplete": true,
+                    "progressDigest": 1
+                }
+            }
+        }
+    },
+    "warnings": []
 }
   ```
 </details>
@@ -623,63 +1276,71 @@ Retrieves results for completed queries. Results are separated into pages, so yo
 
 If a page number isn't passed, all results are returned sequentially in the same response. If you have large result sets, you may encounter timeouts based on the value configured for `druid.router.http.readTimeout`.
 
-When getting query results, keep the following in mind:
-
-- JSON Lines is the only supported result format.
-- Getting the query results for an ingestion query returns an empty response.
+Getting the query results for an ingestion query returns an empty response.
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/v2/sql/statements/:queryId/results</code>
+`GET` `/druid/v2/sql/statements/{queryId}/results`
 
 #### Query parameters
-* `page`
-    * Int (optional)
-    * Refine paginated results
+* `page` (optional)
+    * Type: Int
+    * Fetch results based on page numbers. If not specified, all results are returned sequentially starting from page 0 to N in the same response.
+* `resultFormat` (optional)
+    * Type: String
+    * Defines the format in which the results are presented. The following options are supported `arrayLines`,`objectLines`,`array`,`object`, and `csv`. The default is `object`.
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="9" label="200 SUCCESS">
 
-*Successfully retrieved query results* 
 
-<!--400 BAD REQUEST-->
+*Successfully retrieved query results*
 
-*Query in progress. Returns a JSON object detailing the error with the following format:* 
+</TabItem>
+<TabItem value="10" label="400 BAD REQUEST">
+
+
+*Query in progress. Returns a JSON object detailing the error with the following format:*
 
 ```json
 {
     "error": "Summary of the encountered error.",
     "errorCode": "Well-defined error code.",
     "persona": "Role or persona associated with the error.",
-    "category": "Classification of the error.", 
+    "category": "Classification of the error.",
     "errorMessage": "Summary of the encountered issue with expanded information.",
     "context": "Additional context about the error."
 }
 ```
 
-<!--404 NOT FOUND-->
+</TabItem>
+<TabItem value="11" label="404 NOT FOUND">
+
 
 *Query not found, failed or canceled*
 
-<!--500 SERVER ERROR-->
+</TabItem>
+<TabItem value="12" label="500 SERVER ERROR">
 
-*Error thrown due to bad query. Returns a JSON object detailing the error with the following format:* 
+
+*Error thrown due to bad query. Returns a JSON object detailing the error with the following format:*
 
 ```json
 {
     "error": "Summary of the encountered error.",
     "errorCode": "Well-defined error code.",
     "persona": "Role or persona associated with the error.",
-    "category": "Classification of the error.", 
+    "category": "Classification of the error.",
     "errorMessage": "Summary of the encountered issue with expanded information.",
     "context": "Additional context about the error."
 }
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 ---
 
@@ -687,27 +1348,31 @@ When getting query results, keep the following in mind:
 
 The following example retrieves the status of a query with specified ID `query-f3bca219-173d-44d4-bdc7-5002e910352f`.
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="13" label="cURL">
+
 
 ```shell
 curl "http://ROUTER_IP:ROUTER_PORT/druid/v2/sql/statements/query-f3bca219-173d-44d4-bdc7-5002e910352f/results"
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="14" label="HTTP">
+
 
 ```HTTP
 GET /druid/v2/sql/statements/query-f3bca219-173d-44d4-bdc7-5002e910352f/results HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
 [
@@ -937,40 +1602,46 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 ### Cancel a query
 
-Cancels a running or accepted query. 
+Cancels a running or accepted query.
 
 #### URL
 
-<code class="deleteAPI">DELETE</code> <code>/druid/v2/sql/statements/:queryId</code>
+`DELETE` `/druid/v2/sql/statements/{queryId}`
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 OK-->
+<TabItem value="15" label="200 OK">
 
-*A no op operation since the query is not in a state to be cancelled* 
 
-<!--202 ACCEPTED-->
+*A no op operation since the query is not in a state to be cancelled*
 
-*Successfully accepted query for cancellation* 
+</TabItem>
+<TabItem value="16" label="202 ACCEPTED">
 
-<!--404 SERVER ERROR-->
 
-*Invalid query ID. Returns a JSON object detailing the error with the following format:* 
+*Successfully accepted query for cancellation*
+
+</TabItem>
+<TabItem value="17" label="404 SERVER ERROR">
+
+
+*Invalid query ID. Returns a JSON object detailing the error with the following format:*
 
 ```json
 {
     "error": "Summary of the encountered error.",
     "errorCode": "Well-defined error code.",
     "persona": "Role or persona associated with the error.",
-    "category": "Classification of the error.", 
+    "category": "Classification of the error.",
     "errorMessage": "Summary of the encountered issue with expanded information.",
     "context": "Additional context about the error."
 }
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 ---
 
@@ -978,23 +1649,27 @@ Cancels a running or accepted query.
 
 The following example cancels a query with specified ID `query-945c9633-2fa2-49ab-80ae-8221c38c024da`.
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="18" label="cURL">
+
 
 ```shell
 curl --request DELETE "http://ROUTER_IP:ROUTER_PORT/druid/v2/sql/statements/query-945c9633-2fa2-49ab-80ae-8221c38c024da"
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="19" label="HTTP">
+
 
 ```HTTP
 DELETE /druid/v2/sql/statements/query-945c9633-2fa2-49ab-80ae-8221c38c024da HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
 
-A successful request returns a `202 ACCEPTED` response and an empty response.
+A successful request returns an HTTP `202 ACCEPTED` message code and an empty response body.

@@ -19,9 +19,9 @@
 
 package org.apache.druid.frame.write.columnar;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.frame.allocation.MemoryAllocator;
 import org.apache.druid.frame.write.UnsupportedColumnTypeException;
+import org.apache.druid.frame.write.cast.TypeCastSelectors;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -42,6 +42,9 @@ public class FrameColumnWriters
   public static final byte TYPE_STRING = 4;
   public static final byte TYPE_COMPLEX = 5;
   public static final byte TYPE_STRING_ARRAY = 6;
+  public static final byte TYPE_LONG_ARRAY = 7;
+  public static final byte TYPE_FLOAT_ARRAY = 8;
+  public static final byte TYPE_DOUBLE_ARRAY = 9;
 
   private FrameColumnWriters()
   {
@@ -77,6 +80,12 @@ public class FrameColumnWriters
         switch (type.getElementType().getType()) {
           case STRING:
             return makeStringArrayWriter(columnSelectorFactory, allocator, column);
+          case LONG:
+            return makeLongArrayWriter(columnSelectorFactory, allocator, column);
+          case FLOAT:
+            return makeFloatArrayWriter(columnSelectorFactory, allocator, column);
+          case DOUBLE:
+            return makeDoubleArrayWriter(columnSelectorFactory, allocator, column);
           default:
             throw new UnsupportedColumnTypeException(column, type);
         }
@@ -94,7 +103,8 @@ public class FrameColumnWriters
   )
   {
     final ColumnCapabilities capabilities = selectorFactory.getColumnCapabilities(columnName);
-    final ColumnValueSelector<?> selector = selectorFactory.makeColumnValueSelector(columnName);
+    final ColumnValueSelector<?> selector =
+        TypeCastSelectors.makeColumnValueSelector(selectorFactory, columnName, ColumnType.LONG);
     return new LongFrameColumnWriter(selector, allocator, hasNullsForNumericWriter(capabilities));
   }
 
@@ -105,7 +115,8 @@ public class FrameColumnWriters
   )
   {
     final ColumnCapabilities capabilities = selectorFactory.getColumnCapabilities(columnName);
-    final ColumnValueSelector<?> selector = selectorFactory.makeColumnValueSelector(columnName);
+    final ColumnValueSelector<?> selector =
+        TypeCastSelectors.makeColumnValueSelector(selectorFactory, columnName, ColumnType.FLOAT);
     return new FloatFrameColumnWriter(selector, allocator, hasNullsForNumericWriter(capabilities));
   }
 
@@ -116,7 +127,8 @@ public class FrameColumnWriters
   )
   {
     final ColumnCapabilities capabilities = selectorFactory.getColumnCapabilities(columnName);
-    final ColumnValueSelector<?> selector = selectorFactory.makeColumnValueSelector(columnName);
+    final ColumnValueSelector<?> selector =
+        TypeCastSelectors.makeColumnValueSelector(selectorFactory, columnName, ColumnType.DOUBLE);
     return new DoubleFrameColumnWriter(selector, allocator, hasNullsForNumericWriter(capabilities));
   }
 
@@ -131,7 +143,7 @@ public class FrameColumnWriters
     return new StringFrameColumnWriterImpl(
         selector,
         allocator,
-        capabilities == null || capabilities.hasMultipleValues().isMaybeTrue()
+        capabilities == null ? ColumnCapabilities.Capable.UNKNOWN : capabilities.hasMultipleValues()
     );
   }
 
@@ -141,8 +153,42 @@ public class FrameColumnWriters
       final String columnName
   )
   {
-    final ColumnValueSelector<?> selector = selectorFactory.makeColumnValueSelector(columnName);
+    final ColumnValueSelector<?> selector =
+        TypeCastSelectors.makeColumnValueSelector(selectorFactory, columnName, ColumnType.STRING_ARRAY);
     return new StringArrayFrameColumnWriterImpl(selector, allocator);
+  }
+
+  private static NumericArrayFrameColumnWriter makeLongArrayWriter(
+      final ColumnSelectorFactory selectorFactory,
+      final MemoryAllocator allocator,
+      final String columnName
+  )
+  {
+    final ColumnValueSelector<?> selector =
+        TypeCastSelectors.makeColumnValueSelector(selectorFactory, columnName, ColumnType.LONG_ARRAY);
+    return new LongArrayFrameColumnWriter(selector, allocator);
+  }
+
+  private static NumericArrayFrameColumnWriter makeFloatArrayWriter(
+      final ColumnSelectorFactory selectorFactory,
+      final MemoryAllocator allocator,
+      final String columnName
+  )
+  {
+    final ColumnValueSelector<?> selector =
+        TypeCastSelectors.makeColumnValueSelector(selectorFactory, columnName, ColumnType.FLOAT_ARRAY);
+    return new FloatArrayFrameColumnWriter(selector, allocator);
+  }
+
+  private static NumericArrayFrameColumnWriter makeDoubleArrayWriter(
+      final ColumnSelectorFactory selectorFactory,
+      final MemoryAllocator allocator,
+      final String columnName
+  )
+  {
+    final ColumnValueSelector<?> selector =
+        TypeCastSelectors.makeColumnValueSelector(selectorFactory, columnName, ColumnType.DOUBLE_ARRAY);
+    return new DoubleArrayFrameColumnWriter(selector, allocator);
   }
 
   private static ComplexFrameColumnWriter makeComplexWriter(
@@ -161,15 +207,14 @@ public class FrameColumnWriters
       throw new ISE("No serde for complexTypeName[%s], cannot write column [%s]", columnTypeName, columnName);
     }
 
-    final ColumnValueSelector<?> selector = selectorFactory.makeColumnValueSelector(columnName);
+    final ColumnValueSelector<?> selector =
+        TypeCastSelectors.makeColumnValueSelector(selectorFactory, columnName, ColumnType.ofComplex(columnTypeName));
     return new ComplexFrameColumnWriter(selector, allocator, serde);
   }
 
   private static boolean hasNullsForNumericWriter(final ColumnCapabilities capabilities)
   {
-    if (NullHandling.replaceWithDefault()) {
-      return false;
-    } else if (capabilities == null) {
+    if (capabilities == null) {
       return true;
     } else if (capabilities.getType().isNumeric()) {
       return capabilities.hasNulls().isMaybeTrue();

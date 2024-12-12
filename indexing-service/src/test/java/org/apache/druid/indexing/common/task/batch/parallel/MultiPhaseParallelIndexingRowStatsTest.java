@@ -27,6 +27,7 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
+import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
@@ -43,7 +44,6 @@ import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.Arrays;
-import java.util.Map;
 
 public class MultiPhaseParallelIndexingRowStatsTest extends AbstractMultiPhaseParallelIndexingTest
 {
@@ -133,8 +133,8 @@ public class MultiPhaseParallelIndexingRowStatsTest extends AbstractMultiPhasePa
         false
     );
 
-    final RowIngestionMetersTotals expectedTotals = RowMeters.with().totalProcessed(200);
-    final Map<String, Object> expectedReports =
+    final RowIngestionMetersTotals expectedTotals = RowMeters.with().bytes(5630).totalProcessed(200);
+    final TaskReport.ReportMap expectedReports =
         maxNumConcurrentSubTasks <= 1
         ? buildExpectedTaskReportSequential(
             task.getId(),
@@ -148,7 +148,7 @@ public class MultiPhaseParallelIndexingRowStatsTest extends AbstractMultiPhasePa
             expectedTotals
         );
 
-    Map<String, Object> actualReports = runTaskAndGetReports(task, TaskState.SUCCESS);
+    TaskReport.ReportMap actualReports = runTaskAndGetReports(task, TaskState.SUCCESS);
     compareTaskReports(expectedReports, actualReports);
   }
 
@@ -169,12 +169,12 @@ public class MultiPhaseParallelIndexingRowStatsTest extends AbstractMultiPhasePa
         false,
         false
     );
-    Map<String, Object> expectedReports = buildExpectedTaskReportParallel(
+    TaskReport.ReportMap expectedReports = buildExpectedTaskReportParallel(
         task.getId(),
         ImmutableList.of(),
-        new RowIngestionMetersTotals(200, 0, 0, 0, 0)
+        new RowIngestionMetersTotals(200, 5630, 0, 0, 0)
     );
-    Map<String, Object> actualReports = runTaskAndGetReports(task, TaskState.SUCCESS);
+    TaskReport.ReportMap actualReports = runTaskAndGetReports(task, TaskState.SUCCESS);
     compareTaskReports(expectedReports, actualReports);
   }
 }

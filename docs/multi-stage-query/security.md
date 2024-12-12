@@ -23,9 +23,11 @@ sidebar_label: Security
   ~ under the License.
   -->
 
-> This page describes SQL-based batch ingestion using the [`druid-multi-stage-query`](../multi-stage-query/index.md)
-> extension, new in Druid 24.0. Refer to the [ingestion methods](../ingestion/index.md#batch) table to determine which
-> ingestion method is right for you.
+:::info
+ This page describes SQL-based batch ingestion using the [`druid-multi-stage-query`](../multi-stage-query/index.md)
+ extension, new in Druid 24.0. Refer to the [ingestion methods](../ingestion/index.md#batch) table to determine which
+ ingestion method is right for you.
+:::
 
 All authenticated users can use the multi-stage query task engine (MSQ task engine) through the UI and API if the
 extension is loaded. However, without additional permissions, users are not able to issue queries that read or write
@@ -46,7 +48,9 @@ users with access to the Overlord API can perform some actions even if they didn
 retrieving status or canceling a query. For more information about the Overlord API and the task API, see [APIs for
 SQL-based ingestion](../api-reference/sql-ingestion-api.md). 
 
-> Keep in mind that any user with access to Overlord APIs can submit `query_controller` tasks with only the WRITE DATASOURCE permission.
+:::info
+ Keep in mind that any user with access to Overlord APIs can submit `query_controller` tasks with only the WRITE DATASOURCE permission.
+:::
 
 Depending on what a user is trying to do, they might also need the following permissions:
 
@@ -56,17 +60,24 @@ Depending on what a user is trying to do, they might also need the following per
 
 
 
-## S3
+## Permissions for durable storage
 
-The MSQ task engine can use S3 to store intermediate files when running queries. This can increase its reliability but requires certain permissions in S3.
-These permissions are required if you configure durable storage. 
+The MSQ task engine can use Amazon S3 or Azure Blob Storage to store intermediate files when running queries. To upload, read, move and delete these intermediate files, the MSQ task engine requires certain permissions specific to the storage provider. 
 
-Permissions for pushing and fetching intermediate stage results to and from S3:
+### S3
 
-- `s3:GetObject`
-- `s3:PutObject`
-- `s3:AbortMultipartUpload`
+The MSQ task engine needs the following permissions for pushing,  fetching, and removing intermediate stage results to and from S3:
 
-Permissions for removing intermediate stage results:
+- `s3:GetObject` to retrieve files. Note that `GetObject` also requires read permission on the object that gets retrieved. 
+- `s3:PutObject` to upload files.
+- `s3:AbortMultipartUpload` to cancel the upload of files
+- `s3:DeleteObject` to delete files when they're no longer needed. 
 
-- `s3:DeleteObject`
+### Azure
+
+The MSQ task engine needs the following permissions for pushing, fetching, and removing intermediate stage results to and from Azure:
+
+- `Microsoft.Storage/storageAccounts/blobServices/containers/blobs/read` to read and list files in durable storage 
+- `Microsoft.Storage/storageAccounts/blobServices/containers/blobs/write` to write files in durable storage.
+- `Microsoft.Storage/storageAccounts/blobServices/containers/blobs/add/action` to create files in durable storage.
+- `Microsoft.Storage/storageAccounts/blobServices/containers/blobs/delete` to delete files when they're no longer needed.

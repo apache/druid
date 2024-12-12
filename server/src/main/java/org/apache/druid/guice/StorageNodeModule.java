@@ -31,6 +31,7 @@ import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.DruidProcessingConfig;
+import org.apache.druid.segment.DefaultColumnFormatConfig;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.StorageLocation;
@@ -55,10 +56,10 @@ public class StorageNodeModule implements Module
   {
     JsonConfigProvider.bind(binder, "druid.server", DruidServerConfig.class);
     JsonConfigProvider.bind(binder, "druid.segmentCache", SegmentLoaderConfig.class);
+    JsonConfigProvider.bind(binder, "druid.indexing.formats", DefaultColumnFormatConfig.class);
     bindLocationSelectorStrategy(binder);
-
     binder.bind(ServerTypeConfig.class).toProvider(Providers.of(null));
-    binder.bind(ColumnConfig.class).to(DruidProcessingConfig.class);
+    binder.bind(ColumnConfig.class).to(DruidProcessingConfig.class).in(LazySingleton.class);
   }
 
   @Provides

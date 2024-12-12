@@ -21,12 +21,12 @@ package org.apache.druid.segment.realtime;
 
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.SegmentReference;
-import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.SegmentId;
@@ -147,6 +147,22 @@ public class FireHydrantTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testGetSegmentForQuerySwappedWithNull()
+  {
+    ReferenceCountingSegment incrementalSegmentReference = hydrant.getHydrantSegment();
+    hydrant.swapSegment(null);
+    ReferenceCountingSegment queryableSegmentReference = hydrant.getHydrantSegment();
+    Assert.assertEquals(0, incrementalSegmentReference.getNumReferences());
+    Assert.assertNull(queryableSegmentReference);
+
+    Optional<Pair<SegmentReference, Closeable>> maybeSegmentAndCloseable = hydrant.getSegmentForQuery(
+        Function.identity()
+    );
+    Assert.assertEquals(0, incrementalSegmentReference.getNumReferences());
+    Assert.assertFalse(maybeSegmentAndCloseable.isPresent());
+  }
+
+  @Test
   public void testGetSegmentForQueryButNotAbleToAcquireReferences()
   {
     ReferenceCountingSegment incrementalSegmentReference = hydrant.getHydrantSegment();
@@ -181,9 +197,9 @@ public class FireHydrantTest extends InitializedNullHandlingTest
           }
 
           @Override
-          public StorageAdapter asStorageAdapter()
+          public CursorFactory asCursorFactory()
           {
-            return incrementalIndexSegment.asStorageAdapter();
+            return incrementalIndexSegment.asCursorFactory();
           }
 
           @Override

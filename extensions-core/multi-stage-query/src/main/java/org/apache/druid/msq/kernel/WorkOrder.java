@@ -23,10 +23,14 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import org.apache.druid.msq.exec.ControllerClient;
+import org.apache.druid.msq.exec.OutputChannelMode;
 import org.apache.druid.msq.input.InputSlice;
+import org.apache.druid.query.QueryContext;
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -46,6 +50,21 @@ public class WorkOrder
   private final List<InputSlice> workerInputs;
   private final ExtraInfoHolder<?> extraInfoHolder;
 
+  @Nullable
+  private final List<String> workerIds;
+
+  /**
+   * Always non-null for newer controllers. This is marked nullable for backwards-compatibility reasons.
+   */
+  @Nullable
+  private final OutputChannelMode outputChannelMode;
+
+  /**
+   * Always non-null for newer controllers. This is marked nullable for backwards-compatibility reasons.
+   */
+  @Nullable
+  private final QueryContext workerContext;
+
   @JsonCreator
   @SuppressWarnings("rawtypes")
   public WorkOrder(
@@ -53,7 +72,10 @@ public class WorkOrder
       @JsonProperty("stage") final int stageNumber,
       @JsonProperty("worker") final int workerNumber,
       @JsonProperty("input") final List<InputSlice> workerInputs,
-      @JsonProperty("extra") @Nullable final ExtraInfoHolder extraInfoHolder
+      @JsonProperty("extra") @Nullable final ExtraInfoHolder extraInfoHolder,
+      @JsonProperty("workers") @Nullable final List<String> workerIds,
+      @JsonProperty("output") @Nullable final OutputChannelMode outputChannelMode,
+      @JsonProperty("context") @Nullable final Map<String, Object> workerContext
   )
   {
     this.queryDefinition = Preconditions.checkNotNull(queryDefinition, "queryDefinition");
@@ -61,6 +83,9 @@ public class WorkOrder
     this.workerNumber = workerNumber;
     this.workerInputs = Preconditions.checkNotNull(workerInputs, "workerInputs");
     this.extraInfoHolder = extraInfoHolder;
+    this.workerIds = workerIds;
+    this.outputChannelMode = outputChannelMode;
+    this.workerContext = workerContext != null ? QueryContext.of(workerContext) : null;
   }
 
   @JsonProperty("query")
@@ -95,6 +120,58 @@ public class WorkOrder
     return extraInfoHolder;
   }
 
+  /**
+   * Worker IDs for this query, if known in advance (at the time the work order is created). May be null, in which
+   * case workers use {@link ControllerClient#getWorkerIds()} to find worker IDs.
+   */
+  @Nullable
+  @JsonProperty("workers")
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public List<String> getWorkerIds()
+  {
+    return workerIds;
+  }
+
+  public boolean hasOutputChannelMode()
+  {
+    return outputChannelMode != null;
+  }
+
+  /**
+   * Retrieves the output channel mode set by the controller. Null means the controller didn't set it, which means
+   * we're dealing with an older controller.
+   */
+  @Nullable
+  @JsonProperty("output")
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public OutputChannelMode getOutputChannelMode()
+  {
+    return outputChannelMode;
+  }
+
+  public boolean hasWorkerContext()
+  {
+    return workerContext != null;
+  }
+
+  /**
+   * Retrieves the query context set by the controller. Null means the controller didn't set it, which means
+   * we're dealing with an older controller.
+   */
+  @Nullable
+  public QueryContext getWorkerContext()
+  {
+    return workerContext;
+  }
+
+  @Nullable
+  @JsonProperty("context")
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public Map<String, Object> getContextForSerialization()
+  {
+    return workerContext != null ? workerContext.asMap() : null;
+  }
+
   @Nullable
   public Object getExtraInfo()
   {
@@ -104,6 +181,42 @@ public class WorkOrder
   public StageDefinition getStageDefinition()
   {
     return queryDefinition.getStageDefinition(stageNumber);
+  }
+
+  public WorkOrder withOutputChannelMode(final OutputChannelMode newOutputChannelMode)
+  {
+    if (newOutputChannelMode == outputChannelMode) {
+      return this;
+    } else {
+      return new WorkOrder(
+          queryDefinition,
+          stageNumber,
+          workerNumber,
+          workerInputs,
+          extraInfoHolder,
+          workerIds,
+          newOutputChannelMode,
+          workerContext != null ? workerContext.asMap() : null
+      );
+    }
+  }
+
+  public WorkOrder withWorkerContext(final QueryContext newContext)
+  {
+    if (Objects.equals(newContext, this.workerContext)) {
+      return this;
+    } else {
+      return new WorkOrder(
+          queryDefinition,
+          stageNumber,
+          workerNumber,
+          workerInputs,
+          extraInfoHolder,
+          workerIds,
+          outputChannelMode,
+          newContext.asMap()
+      );
+    }
   }
 
   @Override
@@ -120,13 +233,25 @@ public class WorkOrder
            && workerNumber == workOrder.workerNumber
            && Objects.equals(queryDefinition, workOrder.queryDefinition)
            && Objects.equals(workerInputs, workOrder.workerInputs)
-           && Objects.equals(extraInfoHolder, workOrder.extraInfoHolder);
+           && Objects.equals(extraInfoHolder, workOrder.extraInfoHolder)
+           && Objects.equals(workerIds, workOrder.workerIds)
+           && Objects.equals(outputChannelMode, workOrder.outputChannelMode)
+           && Objects.equals(workerContext, workOrder.workerContext);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(queryDefinition, stageNumber, workerInputs, workerNumber, extraInfoHolder);
+    return Objects.hash(
+        queryDefinition,
+        stageNumber,
+        workerNumber,
+        workerInputs,
+        extraInfoHolder,
+        workerIds,
+        outputChannelMode,
+        workerContext
+    );
   }
 
   @Override
@@ -138,6 +263,9 @@ public class WorkOrder
            ", workerNumber=" + workerNumber +
            ", workerInputs=" + workerInputs +
            ", extraInfoHolder=" + extraInfoHolder +
+           ", workerIds=" + workerIds +
+           ", outputChannelMode=" + outputChannelMode +
+           ", context=" + workerContext +
            '}';
   }
 }

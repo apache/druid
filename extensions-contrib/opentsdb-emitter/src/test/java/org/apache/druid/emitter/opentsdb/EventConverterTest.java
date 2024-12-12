@@ -60,7 +60,8 @@ public class EventConverterTest
     ServiceMetricEvent configuredEvent = new ServiceMetricEvent.Builder()
         .setDimension("dataSource", "foo:bar")
         .setDimension("type", "groupBy")
-        .build(dateTime, "query/time", 10)
+        .setCreatedTime(dateTime)
+        .setMetric("query/time", 10)
         .build("druid:broker", "127.0.0.1:8080");
 
     Map<String, Object> expectedTags = new HashMap<>();
@@ -78,7 +79,8 @@ public class EventConverterTest
     ServiceMetricEvent notConfiguredEvent = new ServiceMetricEvent.Builder()
         .setDimension("dataSource", "data-source")
         .setDimension("type", "groupBy")
-        .build(dateTime, "foo/bar", 10)
+        .setCreatedTime(dateTime)
+        .setMetric("foo/bar", 10)
         .build("broker", "brokerHost1");
     Assert.assertNull(converterWithNamespacePrefix.convert(notConfiguredEvent));
   }
@@ -90,7 +92,8 @@ public class EventConverterTest
     ServiceMetricEvent configuredEvent = new ServiceMetricEvent.Builder()
         .setDimension("dataSource", "foo:bar")
         .setDimension("type", "groupBy")
-        .build(dateTime, "query/time", 10)
+        .setCreatedTime(dateTime)
+        .setMetric("query/time", 10)
         .build("druid:broker", "127.0.0.1:8080");
 
     Map<String, Object> expectedTags = new HashMap<>();
@@ -108,7 +111,8 @@ public class EventConverterTest
     ServiceMetricEvent notConfiguredEvent = new ServiceMetricEvent.Builder()
         .setDimension("dataSource", "data-source")
         .setDimension("type", "groupBy")
-        .build(dateTime, "foo/bar", 10)
+        .setCreatedTime(dateTime)
+        .setMetric("foo/bar", 10)
         .build("broker", "brokerHost1");
     Assert.assertNull(converterWithNamespacePrefixContainingSpace.convert(notConfiguredEvent));
   }
@@ -120,7 +124,8 @@ public class EventConverterTest
     ServiceMetricEvent configuredEvent = new ServiceMetricEvent.Builder()
         .setDimension("dataSource", "foo:bar")
         .setDimension("type", "groupBy")
-        .build(dateTime, "query/time", 10)
+        .setCreatedTime(dateTime)
+        .setMetric("query/time", 10)
         .build("druid:broker", "127.0.0.1:8080");
 
     Map<String, Object> expectedTags = new HashMap<>();
@@ -138,7 +143,8 @@ public class EventConverterTest
     ServiceMetricEvent notConfiguredEvent = new ServiceMetricEvent.Builder()
         .setDimension("dataSource", "data-source")
         .setDimension("type", "groupBy")
-        .build(dateTime, "foo/bar", 10)
+        .setCreatedTime(dateTime)
+        .setMetric("foo/bar", 10)
         .build("broker", "brokerHost1");
     Assert.assertNull(converterWithoutNamespacePrefix.convert(notConfiguredEvent));
   }

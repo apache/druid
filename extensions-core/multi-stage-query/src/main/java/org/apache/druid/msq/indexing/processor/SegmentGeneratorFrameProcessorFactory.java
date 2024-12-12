@@ -28,6 +28,8 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import org.apache.druid.frame.processor.OutputChannelFactory;
 import org.apache.druid.frame.processor.OutputChannels;
+import org.apache.druid.frame.processor.manager.ConcurrencyLimitedProcessorManager;
+import org.apache.druid.frame.processor.manager.ProcessorManagers;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.java.util.common.Pair;
@@ -56,6 +58,7 @@ import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.TuningConfig;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorConfig;
 import org.apache.druid.segment.realtime.appenderator.Appenderators;
@@ -75,7 +78,7 @@ import java.util.function.Consumer;
 
 @JsonTypeName("segmentGenerator")
 public class SegmentGeneratorFrameProcessorFactory
-    implements FrameProcessorFactory<List<SegmentIdWithShardSpec>, SegmentGeneratorFrameProcessor, DataSegment, Set<DataSegment>>
+    implements FrameProcessorFactory<DataSegment, Set<DataSegment>, List<SegmentIdWithShardSpec>>
 {
   private final DataSchema dataSchema;
   private final ColumnMappings columnMappings;
@@ -112,7 +115,7 @@ public class SegmentGeneratorFrameProcessorFactory
   }
 
   @Override
-  public ProcessorsAndChannels<SegmentGeneratorFrameProcessor, DataSegment> makeProcessors(
+  public ProcessorsAndChannels<DataSegment, Set<DataSegment>> makeProcessors(
       StageDefinition stageDefinition,
       int workerNumber,
       List<InputSlice> inputSlices,
@@ -122,9 +125,18 @@ public class SegmentGeneratorFrameProcessorFactory
       FrameContext frameContext,
       int maxOutstandingProcessors,
       CounterTracker counters,
-      Consumer<Throwable> warningPublisher
+      Consumer<Throwable> warningPublisher,
+      boolean removeNullBytes
   )
   {
+    if (extra == null || extra.isEmpty()) {
+      return new ProcessorsAndChannels<>(
+          ProcessorManagers.of(Sequences.<SegmentGeneratorFrameProcessor>empty())
+                           .withAccumulation(new HashSet<>(), (acc, segment) -> acc),
+          OutputChannels.none()
+      );
+    }
+
     final RowIngestionMeters meters = frameContext.rowIngestionMeters();
 
     final ParseExceptionHandler parseExceptionHandler = new ParseExceptionHandler(
@@ -151,7 +163,8 @@ public class SegmentGeneratorFrameProcessorFactory
             }
         ));
     final SegmentGenerationProgressCounter segmentGenerationProgressCounter = counters.segmentGenerationProgress();
-    final SegmentGeneratorMetricsWrapper segmentGeneratorMetricsWrapper = new SegmentGeneratorMetricsWrapper(segmentGenerationProgressCounter);
+    final SegmentGeneratorMetricsWrapper segmentGeneratorMetricsWrapper =
+        new SegmentGeneratorMetricsWrapper(segmentGenerationProgressCounter);
 
     final Sequence<SegmentGeneratorFrameProcessor> workers = inputSequence.map(
         readableInputPair -> {
@@ -165,9 +178,8 @@ public class SegmentGeneratorFrameProcessorFactory
 
           // Create directly, without using AppenderatorsManager, because we need different memory overrides due to
           // using one Appenderator per processing thread instead of per task.
-          // Note: "createOffline" ignores the batchProcessingMode and always acts like CLOSED_SEGMENTS_SINKS.
           final Appenderator appenderator =
-              Appenderators.createOffline(
+              Appenderators.createBatch(
                   idString,
                   dataSchema,
                   makeAppenderatorConfig(
@@ -182,7 +194,9 @@ public class SegmentGeneratorFrameProcessorFactory
                   frameContext.indexMerger(),
                   meters,
                   parseExceptionHandler,
-                  true
+                  true,
+                  // MSQ doesn't support CentralizedDatasourceSchema feature as of now.
+                  CentralizedDatasourceSchemaConfig.create(false)
               );
 
           return new SegmentGeneratorFrameProcessor(
@@ -196,30 +210,34 @@ public class SegmentGeneratorFrameProcessorFactory
         }
     );
 
-    return new ProcessorsAndChannels<>(workers, OutputChannels.none());
+    return new ProcessorsAndChannels<>(
+        // Run at most one segmentGenerator per work order, since segment generation memory is carved out
+        // per-worker, not per-processor. See WorkerMemoryParameters for how the memory limits are calculated.
+        new ConcurrencyLimitedProcessorManager<>(ProcessorManagers.of(workers), 1)
+            .withAccumulation(
+                new HashSet<>(),
+                (acc, segment) -> {
+                  if (segment != null) {
+                    acc.add(segment);
+                  }
+
+                  return acc;
+                }
+            ),
+        OutputChannels.none()
+    );
   }
 
   @Override
-  public TypeReference<Set<DataSegment>> getAccumulatedResultTypeReference()
+  public boolean usesProcessingBuffers()
+  {
+    return false;
+  }
+
+  @Override
+  public TypeReference<Set<DataSegment>> getResultTypeReference()
   {
     return new TypeReference<Set<DataSegment>>() {};
-  }
-
-  @Override
-  public Set<DataSegment> newAccumulatedResult()
-  {
-    return new HashSet<>();
-  }
-
-  @Nullable
-  @Override
-  public Set<DataSegment> accumulateResult(Set<DataSegment> accumulated, DataSegment current)
-  {
-    if (current != null) {
-      accumulated.add(current);
-    }
-
-    return accumulated;
   }
 
   @Nullable

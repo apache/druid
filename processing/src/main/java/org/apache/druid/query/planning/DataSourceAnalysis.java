@@ -29,8 +29,10 @@ import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.UnnestDataSource;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.spec.QuerySegmentSpec;
+import org.apache.druid.segment.join.JoinPrefixUtils;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -63,7 +65,7 @@ import java.util.Optional;
  * for the base or leaf datasources to include additional joins.
  *
  * The base datasource is the one that will be considered by the core Druid query stack for scanning via
- * {@link org.apache.druid.segment.Segment} and {@link org.apache.druid.segment.StorageAdapter}. The other leaf
+ * {@link org.apache.druid.segment.Segment} and {@link org.apache.druid.segment.CursorFactory}. The other leaf
  * datasources must be joinable onto the base data.
  *
  * The idea here is to keep things simple and dumb. So we focus only on identifying left-leaning join trees, which map
@@ -180,7 +182,7 @@ public class DataSourceAnalysis
    */
   public DataSourceAnalysis maybeWithBaseQuery(Query<?> query)
   {
-    if (!getBaseQuery().isPresent()) {
+    if (!getBaseQuery().isPresent() && query instanceof BaseQuery) {
       return new DataSourceAnalysis(baseDataSource, query, joinBaseTableFilter, preJoinableClauses);
     }
     return this;
@@ -247,6 +249,24 @@ public class DataSourceAnalysis
     return !preJoinableClauses.isEmpty();
   }
 
+  /**
+   * Returns whether "column" on the analyzed datasource refers to a column from the base datasource.
+   */
+  public boolean isBaseColumn(final String column)
+  {
+    if (baseQuery != null) {
+      return false;
+    }
+
+    for (final PreJoinableClause clause : preJoinableClauses) {
+      if (JoinPrefixUtils.isPrefixedBy(column, clause.getPrefix())) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -274,5 +294,18 @@ public class DataSourceAnalysis
            ", baseQuery=" + baseQuery +
            ", preJoinableClauses=" + preJoinableClauses +
            '}';
+  }
+
+  /**
+   * {@link DataSource#isGlobal()}.
+   */
+  public boolean isGlobal()
+  {
+    for (PreJoinableClause preJoinableClause : preJoinableClauses) {
+      if (!preJoinableClause.getDataSource().isGlobal()) {
+        return false;
+      }
+    }
+    return baseDataSource.isGlobal();
   }
 }

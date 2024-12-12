@@ -69,7 +69,7 @@ public class SerializablePairLongStringBufferStoreTest
     bufferStore = new SerializablePairLongStringBufferStore(
         new SerializedStorage<>(
             writeOutMedium.makeWriteOutBytes(),
-            SerializablePairLongStringColumnSerializer.STAGED_SERDE
+            new SerializablePairLongStringSimpleStagedSerde()
         ));
   }
 
@@ -139,7 +139,7 @@ public class SerializablePairLongStringBufferStoreTest
       bufferStore.store(value);
     }
 
-    SerializablePairLongStringColumnHeader columnHeader = bufferStore.createColumnHeader();
+    SerializablePairLongStringColumnHeader columnHeader = (SerializablePairLongStringColumnHeader) bufferStore.createColumnHeader();
     Assert.assertEquals(integerRangeArr[0].lhs.longValue(), columnHeader.getMinValue());
     Assert.assertTrue(columnHeader.isUseIntegerDeltas());
   }
@@ -151,7 +151,7 @@ public class SerializablePairLongStringBufferStoreTest
       bufferStore.store(value);
     }
 
-    SerializablePairLongStringColumnHeader columnHeader = bufferStore.createColumnHeader();
+    SerializablePairLongStringColumnHeader columnHeader = (SerializablePairLongStringColumnHeader) bufferStore.createColumnHeader();
     Assert.assertEquals(MIN_LONG, columnHeader.getMinValue());
     Assert.assertFalse(columnHeader.isUseIntegerDeltas());
   }
@@ -163,7 +163,7 @@ public class SerializablePairLongStringBufferStoreTest
       bufferStore.store(value);
     }
 
-    SerializablePairLongStringColumnHeader columnHeader = bufferStore.createColumnHeader();
+    SerializablePairLongStringColumnHeader columnHeader = (SerializablePairLongStringColumnHeader) bufferStore.createColumnHeader();
 
     HeapByteBufferWriteOutBytes channel = new HeapByteBufferWriteOutBytes();
     try (ResourceHolder<ByteBuffer> resourceHolder = NativeClearedByteBufferProvider.INSTANCE.get()) {
@@ -174,7 +174,7 @@ public class SerializablePairLongStringBufferStoreTest
       byteBuffer.flip();
 
       SerializablePairLongStringColumnHeader deserializedColumnhHeader =
-          SerializablePairLongStringColumnHeader.fromBuffer(byteBuffer);
+          (SerializablePairLongStringColumnHeader) AbstractSerializablePairLongObjectColumnHeader.fromBuffer(byteBuffer, SerializablePairLongString.class);
       Assert.assertEquals(MIN_INTEGER, deserializedColumnhHeader.getMinValue());
       Assert.assertTrue(deserializedColumnhHeader.isUseIntegerDeltas());
     }
@@ -188,7 +188,7 @@ public class SerializablePairLongStringBufferStoreTest
       bufferStore.store(value);
     }
 
-    SerializablePairLongStringColumnHeader columnHeader = bufferStore.createColumnHeader();
+    SerializablePairLongStringColumnHeader columnHeader = (SerializablePairLongStringColumnHeader) bufferStore.createColumnHeader();
 
     HeapByteBufferWriteOutBytes channel = new HeapByteBufferWriteOutBytes();
     try (ResourceHolder<ByteBuffer> resourceHolder = NativeClearedByteBufferProvider.INSTANCE.get()) {
@@ -200,7 +200,7 @@ public class SerializablePairLongStringBufferStoreTest
       byteBuffer.flip();
 
       SerializablePairLongStringColumnHeader deserializedColumnhHeader =
-          SerializablePairLongStringColumnHeader.fromBuffer(byteBuffer);
+          (SerializablePairLongStringColumnHeader) AbstractSerializablePairLongObjectColumnHeader.fromBuffer(byteBuffer, SerializablePairLongString.class);
       Assert.assertEquals(MIN_LONG, deserializedColumnhHeader.getMinValue());
       Assert.assertFalse(deserializedColumnhHeader.isUseIntegerDeltas());
     }
@@ -271,11 +271,11 @@ public class SerializablePairLongStringBufferStoreTest
     bufferStore.store(new SerializablePairLongString(Long.MIN_VALUE, "fuu"));
     bufferStore.store(new SerializablePairLongString(Long.MAX_VALUE, "fuu"));
 
-    SerializablePairLongStringColumnHeader columnHeader = bufferStore.createColumnHeader();
+    SerializablePairLongStringColumnHeader columnHeader = (SerializablePairLongStringColumnHeader) bufferStore.createColumnHeader();
 
     Assert.assertEquals(0, columnHeader.getMinValue());
 
-    SerializablePairLongStringBufferStore.TransferredBuffer transferredBuffer = bufferStore.transferToRowWriter(
+    AbstractSerializablePairLongObjectBufferStore.TransferredBuffer transferredBuffer = bufferStore.transferToRowWriter(
         NativeClearedByteBufferProvider.INSTANCE,
         writeOutMedium
     );
@@ -292,11 +292,11 @@ public class SerializablePairLongStringBufferStoreTest
 
     bufferStore.store(null);
 
-    SerializablePairLongStringColumnHeader columnHeader = bufferStore.createColumnHeader();
+    SerializablePairLongStringColumnHeader columnHeader = (SerializablePairLongStringColumnHeader) bufferStore.createColumnHeader();
 
     Assert.assertEquals(0, columnHeader.getMinValue());
 
-    SerializablePairLongStringBufferStore.TransferredBuffer transferredBuffer = bufferStore.transferToRowWriter(
+    AbstractSerializablePairLongObjectBufferStore.TransferredBuffer transferredBuffer = bufferStore.transferToRowWriter(
         NativeClearedByteBufferProvider.INSTANCE,
         writeOutMedium
     );
@@ -351,7 +351,7 @@ public class SerializablePairLongStringBufferStoreTest
 
   private void assertTransferredValuesEqual(SerializablePairLongString[] input) throws IOException
   {
-    SerializablePairLongStringBufferStore.TransferredBuffer transferredBuffer =
+    AbstractSerializablePairLongObjectBufferStore.TransferredBuffer transferredBuffer =
         bufferStore.transferToRowWriter(NativeClearedByteBufferProvider.INSTANCE, writeOutMedium);
     HeapByteBufferWriteOutBytes resultChannel = new HeapByteBufferWriteOutBytes();
 
@@ -365,7 +365,7 @@ public class SerializablePairLongStringBufferStoreTest
   }
 
   private static SerializablePairLongStringComplexColumn createComplexColumn(
-      SerializablePairLongStringBufferStore.TransferredBuffer transferredBuffer,
+      AbstractSerializablePairLongObjectBufferStore.TransferredBuffer transferredBuffer,
       HeapByteBufferWriteOutBytes resultChannel
   )
   {

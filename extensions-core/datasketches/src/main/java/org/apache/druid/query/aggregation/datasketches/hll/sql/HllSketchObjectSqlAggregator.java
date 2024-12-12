@@ -23,12 +23,13 @@ import org.apache.calcite.sql.SqlAggFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.type.InferTypes;
 import org.apache.calcite.sql.type.SqlTypeFamily;
-import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.hll.HllSketchAggregatorFactory;
+import org.apache.druid.query.aggregation.datasketches.hll.HllSketchModule;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.OperatorConversions;
+import org.apache.druid.sql.calcite.planner.Calcites;
 
 import java.util.Collections;
 
@@ -42,7 +43,9 @@ public class HllSketchObjectSqlAggregator extends HllSketchBaseSqlAggregator imp
                          .operandTypeInference(InferTypes.VARCHAR_1024)
                          .requiredOperandCount(1)
                          .literalOperands(1, 2)
-                         .returnTypeNonNull(SqlTypeName.OTHER)
+                         .returnTypeInference(
+                             Calcites.complexReturnTypeWithNullability(HllSketchModule.TYPE, false)
+                         )
                          .functionCategory(SqlFunctionCategory.USER_DEFINED_FUNCTION)
                          .build();
 

@@ -20,10 +20,9 @@
 package org.apache.druid.sql.calcite.run;
 
 import org.apache.druid.sql.calcite.external.ExternalDataSource;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
 
 /**
- * Arguments to {@link SqlEngine#featureAvailable(EngineFeature, PlannerContext)}.
+ * Arguments to {@link SqlEngine#featureAvailable(EngineFeature)}.
  */
 public enum EngineFeature
 {
@@ -71,7 +70,10 @@ public enum EngineFeature
   /**
    * Scan queries must have {@link org.apache.druid.sql.calcite.rel.DruidQuery#CTX_SCAN_SIGNATURE} set in their
    * query contexts.
+   *
+   * {@link Deprecated} Instead of the context value {@link org.apache.druid.query.scan.ScanQuery#getRowSignature()} can be used.
    */
+  @Deprecated
   SCAN_NEEDS_SIGNATURE,
 
   /**
@@ -91,6 +93,11 @@ public enum EngineFeature
   WINDOW_FUNCTIONS,
 
   /**
+   * Used to ignore leaf operators when planning for MSQ engine
+   */
+  WINDOW_LEAF_OPERATOR,
+
+  /**
    * Queries can use {@link org.apache.calcite.sql.fun.SqlStdOperatorTable#UNNEST}.
    */
   UNNEST,
@@ -102,5 +109,36 @@ public enum EngineFeature
    * that it actually *does* generate correct results in native when the join is processed on the Broker. It is much
    * less likely that MSQ will plan in such a way that generates correct results.
    */
-  ALLOW_BROADCAST_RIGHTY_JOIN;
+  ALLOW_BROADCAST_RIGHTY_JOIN,
+
+  /**
+   * Planner is permitted to use {@link org.apache.druid.sql.calcite.rel.DruidUnionRel} to plan the top level UNION ALL.
+   * This is to dissuade planner from accepting and running the UNION ALL queries that are not supported by engines
+   * (primarily MSQ).
+   *
+   * Due to the nature of the exeuction of the top level UNION ALLs (we run the individual queries and concat the
+   * results), it only makes sense to enable this on engines where the queries return the results synchronously
+   *
+   * Planning queries with top level UNION_ALL leads to undesirable behaviour with asynchronous engines like MSQ.
+   * To enumerate this behaviour for MSQ, the broker attempts to run the individual queries as MSQ queries in succession,
+   * submits the first query correctly, fails on the rest of the queries (due to conflicting taskIds),
+   * and cannot concat the results together (as * the result for broker is the query id). Therefore, we don't get the
+   * correct result back, while the MSQ engine is executing the partial query
+   */
+  ALLOW_TOP_LEVEL_UNION_ALL,
+  /**
+   * Queries can write to an external datasource using {@link org.apache.druid.sql.destination.ExportDestination}
+   */
+  WRITE_EXTERNAL_DATA,
+
+  /**
+   * Whether GROUP BY implies an ORDER BY on the same fields.
+   * There are two reasons we need this:
+   * (1) We may want MSQ to hash-partition for GROUP BY instead of using a global sort, which would mean MSQ would not
+   * implicitly ORDER BY when there is a GROUP BY.
+   * (2) When doing REPLACE with MSQ, CLUSTERED BY is transformed to ORDER BY. We need to retain that ORDER BY, as it
+   * may be a subset of the GROUP BY, and it is important to remember which fields the user wanted to include in
+   * {@link org.apache.druid.timeline.partition.DimensionRangeShardSpec}.
+   */
+  GROUPBY_IMPLICITLY_SORTS
 }

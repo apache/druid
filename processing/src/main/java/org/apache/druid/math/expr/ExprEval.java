@@ -30,6 +30,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.column.NullableTypeStrategy;
 import org.apache.druid.segment.column.TypeStrategies;
 import org.apache.druid.segment.column.TypeStrategy;
+import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.nested.StructuredData;
 
 import javax.annotation.Nullable;
@@ -357,17 +358,17 @@ public abstract class ExprEval<T>
    * instead.
    */
   @Deprecated
-  public static ExprEval ofBoolean(boolean value, ExprType type)
+  public static ExprEval ofBoolean(boolean value, ExpressionType type)
   {
-    switch (type) {
+    switch (type.getType()) {
       case DOUBLE:
         return ExprEval.of(Evals.asDouble(value));
       case LONG:
-        return ExprEval.of(Evals.asLong(value));
+        return ofLongBoolean(value);
       case STRING:
         return ExprEval.of(String.valueOf(value));
       default:
-        throw new IllegalArgumentException("Invalid type, cannot coerce [" + type + "] to boolean");
+        throw new Types.InvalidCastBooleanException(type);
     }
   }
 
@@ -376,7 +377,7 @@ public abstract class ExprEval<T>
    */
   public static ExprEval ofLongBoolean(boolean value)
   {
-    return ExprEval.of(Evals.asLong(value));
+    return value ? LongExprEval.TRUE : LongExprEval.FALSE;
   }
 
   public static ExprEval ofComplex(ExpressionType outputType, @Nullable Object value)
@@ -405,7 +406,7 @@ public abstract class ExprEval<T>
   public static ExprEval bestEffortOf(@Nullable Object val)
   {
     if (val == null) {
-      return new StringExprEval(null);
+      return StringExprEval.OF_NULL;
     }
     if (val instanceof ExprEval) {
       return (ExprEval) val;
@@ -502,7 +503,6 @@ public abstract class ExprEval<T>
       final List<?> theList = val instanceof List ? ((List<?>) val) : Arrays.asList((Object[]) val);
       return bestEffortArray(theList);
     }
-
     // in 'best effort' mode, we couldn't possibly use byte[] as a complex or anything else useful without type
     // knowledge, so lets turn it into a base64 encoded string so at least something downstream can use it by decoding
     // back into bytes
@@ -519,6 +519,12 @@ public abstract class ExprEval<T>
     return ofComplex(ExpressionType.UNKNOWN_COMPLEX, val);
   }
 
+  /**
+   * Create an eval of the provided type. Coerces the provided object to the desired type.
+   *
+   * @param type  type, or null to be equivalent to {@link #bestEffortOf(Object)}
+   * @param value object to be coerced to the type
+   */
   public static ExprEval ofType(@Nullable ExpressionType type, @Nullable Object value)
   {
     if (type == null) {
@@ -561,9 +567,6 @@ public abstract class ExprEval<T>
           return ofDouble((Number) value);
         }
         if (value instanceof Boolean) {
-          if (ExpressionProcessing.useStrictBooleans()) {
-            return ofLongBoolean((Boolean) value);
-          }
           return ofDouble(Evals.asDouble((Boolean) value));
         }
         if (value instanceof String) {
@@ -656,6 +659,13 @@ public abstract class ExprEval<T>
   @Nullable
   public static ExprEval<?> castForEqualityComparison(ExprEval<?> valueToCompare, ExpressionType typeToCompareWith)
   {
+    if (valueToCompare.isArray() && !typeToCompareWith.isArray()) {
+      final Object[] array = valueToCompare.asArray();
+      // cannot cast array to scalar if array length is greater than 1
+      if (array != null && array.length != 1) {
+        return null;
+      }
+    }
     ExprEval<?> cast = valueToCompare.castTo(typeToCompareWith);
     if (ExpressionType.LONG.equals(typeToCompareWith) && valueToCompare.asDouble() != cast.asDouble()) {
       // make sure the DOUBLE value when cast to LONG is the same before and after the cast
@@ -918,6 +928,8 @@ public abstract class ExprEval<T>
 
   private static class LongExprEval extends NumericExprEval
   {
+    private static final LongExprEval TRUE = new LongExprEval(Evals.asLong(true));
+    private static final LongExprEval FALSE = new LongExprEval(Evals.asLong(false));
     private static final LongExprEval OF_NULL = new LongExprEval(null);
 
     private LongExprEval(@Nullable Number value)
@@ -1139,30 +1151,31 @@ public abstract class ExprEval<T>
       switch (castTo.getType()) {
         case DOUBLE:
           return ExprEval.ofDouble(computeNumber());
+
         case LONG:
           return ExprEval.ofLong(computeNumber());
+
         case STRING:
           return this;
+
         case ARRAY:
           if (value == null) {
             return new ArrayExprEval(castTo, null);
           }
-          final Number number = computeNumber();
-          switch (castTo.getElementType().getType()) {
-            case DOUBLE:
-              return ExprEval.ofDoubleArray(
-                  new Object[]{number == null ? null : number.doubleValue()}
-              );
-            case LONG:
-              return ExprEval.ofLongArray(
-                  new Object[]{number == null ? null : number.longValue()}
-              );
-            case STRING:
-              return ExprEval.ofStringArray(new Object[]{value});
-            default:
-              ExpressionType elementType = (ExpressionType) castTo.getElementType();
-              return new ArrayExprEval(castTo, new Object[]{castTo(elementType).value()});
+          ExprType type = castTo.getElementType().getType();
+          if (type == ExprType.DOUBLE) {
+            final Number number = computeNumber();
+            return ExprEval.ofDoubleArray(new Object[]{number == null ? null : number.doubleValue()});
+          } else if (type == ExprType.LONG) {
+            final Number number = computeNumber();
+            return ExprEval.ofLongArray(new Object[]{number == null ? null : number.longValue()});
+          } else if (type == ExprType.STRING) {
+            return ExprEval.ofStringArray(new Object[]{value});
           }
+
+          ExpressionType elementType = (ExpressionType) castTo.getElementType();
+          return new ArrayExprEval(castTo, new Object[]{castTo(elementType).value()});
+
         case COMPLEX:
           if (ExpressionType.NESTED_DATA.equals(castTo)) {
             return new NestedDataExprEval(value);
@@ -1563,8 +1576,8 @@ public abstract class ExprEval<T>
     }
   }
 
-  public static IAE invalidCast(ExpressionType fromType, ExpressionType toType)
+  public static Types.InvalidCastException invalidCast(ExpressionType fromType, ExpressionType toType)
   {
-    return new IAE("Invalid type, cannot cast [" + fromType + "] to [" + toType + "]");
+    return new Types.InvalidCastException(fromType, toType);
   }
 }

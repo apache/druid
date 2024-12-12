@@ -9,6 +9,7 @@
   "query/segment/time" : { "dimensions" : [], "type" : "timer"},
   "query/wait/time" : { "dimensions" : [], "type" : "timer"},
   "segment/scan/pending" : { "dimensions" : [], "type" : "gauge"},
+  "segment/scan/active" : { "dimensions" : [], "type" : "gauge"},
   "query/segmentAndCache/time" : { "dimensions" : [], "type" : "timer" },
   "query/cpu/time" : { "dimensions" : ["dataSource", "type"], "type" : "timer" },
 
@@ -52,11 +53,22 @@
   "ingest/handoff/failed" : { "dimensions" : ["dataSource"], "type" : "count" },
   "ingest/merge/time" : { "dimensions" : ["dataSource"], "type" : "timer" },
   "ingest/merge/cpu" : { "dimensions" : ["dataSource"], "type" : "timer" },
+  "ingest/segments/count" : { "dimensions" : ["dataSource"], "type" : "count" },
 
   "ingest/kafka/lag" : { "dimensions" : ["dataSource", "stream"], "type" : "gauge" },
   "ingest/kafka/maxLag" : { "dimensions" : ["dataSource", "stream"], "type" : "gauge" },
   "ingest/kafka/avgLag" : { "dimensions" : ["dataSource", "stream"], "type" : "gauge" },
   "ingest/kafka/partitionLag" : { "dimensions" : ["dataSource", "stream", "partition"], "type" : "gauge" },
+
+  "ingest/kinesis/lag/time" : { "dimensions" : ["dataSource", "stream"], "type" : "gauge" },
+  "ingest/kinesis/maxLag/time" : { "dimensions" : ["dataSource", "stream"], "type" : "gauge" },
+  "ingest/kinesis/avgLag/time" : { "dimensions" : ["dataSource", "stream"], "type" : "gauge" },
+  "ingest/kinesis/partitionLag/time" : { "dimensions" : ["dataSource", "stream", "partition"], "type" : "gauge" },
+
+  "ingest/notices/time" : { "dimensions" : ["dataSource", "noticeType"], "type" : "timer" },
+  "ingest/notices/queueSize" : { "dimensions" : ["dataSource"], "type" : "gauge" },
+
+  "ingest/pause/time" : { "dimensions" : ["dataSource", "taskId"], "type" : "timer" },
 
   "task/success/count" : { "dimensions" : ["dataSource"], "type" : "count" },
   "task/failed/count" : { "dimensions" : ["dataSource"], "type" : "count" },
@@ -64,8 +76,11 @@
   "task/pending/count" : { "dimensions" : ["dataSource"], "type" : "gauge" },
   "task/waiting/count" : { "dimensions" : ["dataSource"], "type" : "gauge" },
 
-  "worker/task/failed/count" : { "dimensions" : ["category", "workerVersion"], "type" : "count" },
-  "worker/task/success/count" : { "dimensions" : ["category", "workerVersion"], "type" : "count" },
+  "worker/task/assigned/count" : { "dimensions" : ["dataSource"], "type" : "count" },
+  "worker/task/running/count" : { "dimensions" : ["dataSource"], "type" : "count" },
+  "worker/task/completed/count" : { "dimensions" : ["dataSource"], "type" : "count" },
+  "worker/task/failed/count" : { "dimensions" : ["category", "workerVersion", "dataSource"], "type" : "count" },
+  "worker/task/success/count" : { "dimensions" : ["category", "workerVersion", "dataSource"], "type" : "count" },
   "worker/taskSlot/idle/count" : { "dimensions" : ["category", "workerVersion"], "type" : "gauge" },
   "worker/taskSlot/total/count" : { "dimensions" : ["category", "workerVersion"], "type" : "gauge" },
   "worker/taskSlot/used/count" : { "dimensions" : ["category", "workerVersion"], "type" : "gauge" },
@@ -136,8 +151,8 @@
   "sys/storage/used" : { "dimensions" : ["fsDirName"], "type" : "gauge"},
   "sys/cpu" : { "dimensions" : ["cpuName", "cpuTime"], "type" : "gauge"},
 
-  "coordinator-segment/count" : { "dimensions" : ["dataSource"], "type" : "gauge" },
-  "historical-segment/count" : { "dimensions" : ["dataSource", "tier", "priority"], "type" : "gauge" },
+  "druid/coordinator-segment/count" : { "dimensions" : ["dataSource"], "type" : "gauge" },
+  "druid/historical-segment/count" : { "dimensions" : ["dataSource", "tier", "priority"], "type" : "gauge" },
 
   "jetty/numOpenConnections": { "dimensions" : [], "type" : "gauge" },
   "jetty/threadPool/total": { "dimensions" : [], "type" : "gauge" },
@@ -149,7 +164,7 @@
   "jetty/threadPool/queueSize": { "dimensions" : [], "type" : "gauge" },
 
   "coordinator/time" : { "dimensions" : [], "type" : "timer"},
-  "coordinator/global/time" : { "dimensions" : [], "type" : "timer"},
+  "coordinator/global/time" : { "dimensions" : ["dutyGroup"], "type" : "timer"},
 
   "tier/required/capacity" : { "dimensions" : ["tier"], "type" : "gauge" },
   "tier/total/capacity" : { "dimensions" : ["tier"], "type" : "gauge" },
@@ -175,5 +190,9 @@
   "namespace/cache/numEntries" : { "dimensions" : [], "type" : "gauge" },
   "namespace/cache/heapSizeInBytes" : { "dimensions" : [], "type" : "gauge" },
 
-  "service/heartbeat" : { "dimensions" : ["leader"], "type" : "count" }
+  "service/heartbeat" : { "dimensions" : ["leader", "workerVersion", "category", "status", "taskId", "groupId", "dataSource", "taskStatus" ], "type" : "count" },
+
+  "killTask/availableSlot/count" : { "dimensions" : [], "type" : "count" },
+  "killTask/maxSlot/count" : { "dimensions" : [], "type" : "count" },
+  "killTask/task/count" : { "dimensions" : [], "type" : "count" }
 }

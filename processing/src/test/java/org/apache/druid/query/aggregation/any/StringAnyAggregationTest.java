@@ -49,7 +49,7 @@ public class StringAnyAggregationTest
   @Before
   public void setup()
   {
-    stringAnyAggFactory = new StringAnyAggregatorFactory("billy", "nilly", MAX_STRING_SIZE);
+    stringAnyAggFactory = new StringAnyAggregatorFactory("billy", "nilly", MAX_STRING_SIZE, true);
     combiningAggFactory = stringAnyAggFactory.getCombiningFactory();
     valueSelector = new TestObjectColumnSelector<>(strings);
     objectSelector = new TestObjectColumnSelector<>(strings);

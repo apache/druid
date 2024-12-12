@@ -19,9 +19,8 @@
 
 package org.apache.druid.server.coordinator.duty;
 
-import com.google.inject.Inject;
 import org.apache.druid.metadata.MetadataSupervisorManager;
-import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
+import org.apache.druid.server.coordinator.config.MetadataCleanupConfig;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.joda.time.DateTime;
 
@@ -32,20 +31,12 @@ public class KillSupervisors extends MetadataCleanupDuty
 {
   private final MetadataSupervisorManager metadataSupervisorManager;
 
-  @Inject
   public KillSupervisors(
-      DruidCoordinatorConfig config,
+      MetadataCleanupConfig config,
       MetadataSupervisorManager metadataSupervisorManager
   )
   {
-    super(
-        "supervisors",
-        "druid.coordinator.kill.supervisor",
-        config.getCoordinatorSupervisorKillPeriod(),
-        config.getCoordinatorSupervisorKillDurationToRetain(),
-        Stats.Kill.SUPERVISOR_SPECS,
-        config
-    );
+    super("supervisors", config, Stats.Kill.SUPERVISOR_SPECS);
     this.metadataSupervisorManager = metadataSupervisorManager;
   }
 

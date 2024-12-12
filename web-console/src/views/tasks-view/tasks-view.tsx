@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Button, ButtonGroup, Intent, Label, MenuItem } from '@blueprintjs/core';
+import { Button, ButtonGroup, Intent, Label, MenuItem, Tag } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
 import type { Filter } from 'react-table';
@@ -42,8 +42,9 @@ import { SMALL_TABLE_PAGE_SIZE, SMALL_TABLE_PAGE_SIZE_OPTIONS } from '../../reac
 import { Api, AppToaster } from '../../singletons';
 import {
   formatDuration,
+  getApiArray,
   getDruidErrorMessage,
-  hasPopoverOpen,
+  hasOverlayOpen,
   LocalStorageBackedVisibility,
   LocalStorageKeys,
   oneOf,
@@ -52,6 +53,7 @@ import {
   QueryState,
 } from '../../utils';
 import type { BasicAction } from '../../utils/basic-action';
+import { ExecutionDetailsDialog } from '../workbench-view/execution-details-dialog/execution-details-dialog';
 
 import './tasks-view.scss';
 
@@ -64,7 +66,6 @@ const taskTableColumns: string[] = [
   'Created time',
   'Duration',
   'Location',
-  ACTION_COLUMN_LABEL,
 ];
 
 interface TaskQueryResultRow {
@@ -99,9 +100,8 @@ export interface TasksViewState {
   taskSpecDialogOpen: boolean;
   alertErrorMsg?: string;
 
-  taskTableActionDialogId?: string;
-  taskTableActionDialogStatus?: string;
-  taskTableActionDialogActions: BasicAction[];
+  taskTableActionDialogOpen?: { id: string; status: string; actions: BasicAction[] };
+  executionDialogOpen?: string;
   visibleColumns: LocalStorageBackedVisibility;
 }
 
@@ -160,22 +160,34 @@ ORDER BY
 
       taskSpecDialogOpen: Boolean(props.openTaskDialog),
 
-      taskTableActionDialogActions: [],
-
       visibleColumns: new LocalStorageBackedVisibility(
         LocalStorageKeys.TASK_TABLE_COLUMN_SELECTION,
       ),
     };
 
     this.taskQueryManager = new QueryManager({
-      processQuery: async capabilities => {
+      processQuery: async (capabilities, cancelToken) => {
         if (capabilities.hasSql()) {
-          return await queryDruidSql({
-            query: TasksView.TASK_SQL,
-          });
+          return await queryDruidSql(
+            {
+              query: TasksView.TASK_SQL,
+            },
+            cancelToken,
+          );
         } else if (capabilities.hasOverlordAccess()) {
-          const resp = await Api.instance.get(`/druid/indexer/v1/tasks`);
-          return TasksView.parseTasks(resp.data);
+          return (await getApiArray(`/druid/indexer/v1/tasks`, cancelToken)).map(d => {
+            return {
+              task_id: d.id,
+              group_id: d.groupId,
+              type: d.type,
+              created_time: d.createdTime,
+              datasource: d.dataSource,
+              duration: d.duration ? d.duration : 0,
+              error_msg: d.errorMsg,
+              location: d.location.host ? `${d.location.host}:${d.location.port}` : null,
+              status: d.statusCode === 'RUNNING' ? d.runnerStatusCode : d.statusCode,
+            };
+          });
         } else {
           throw new Error(`must have SQL or overlord access`);
         }
@@ -187,22 +199,6 @@ ORDER BY
       },
     });
   }
-
-  static parseTasks = (data: any[]): TaskQueryResultRow[] => {
-    return data.map(d => {
-      return {
-        task_id: d.id,
-        group_id: d.groupId,
-        type: d.type,
-        created_time: d.createdTime,
-        datasource: d.dataSource,
-        duration: d.duration ? d.duration : 0,
-        error_msg: d.errorMsg,
-        location: d.location.host ? `${d.location.host}:${d.location.port}` : null,
-        status: d.statusCode === 'RUNNING' ? d.runnerStatusCode : d.statusCode,
-      };
-    });
-  };
 
   componentDidMount(): void {
     const { capabilities } = this.props;
@@ -243,10 +239,26 @@ ORDER BY
     datasource: string,
     status: string,
     type: string,
+    fromTable?: boolean,
   ): BasicAction[] {
     const { goToDatasource, goToClassicBatchDataLoader } = this.props;
 
     const actions: BasicAction[] = [];
+    if (fromTable) {
+      actions.push({
+        icon: IconNames.SEARCH_TEMPLATE,
+        title: 'View raw details',
+        onAction: () => {
+          this.setState({
+            taskTableActionDialogOpen: {
+              id,
+              status,
+              actions: this.getTaskActions(id, datasource, status, type),
+            },
+          });
+        },
+      });
+    }
     if (datasource && status === 'SUCCESS') {
       actions.push({
         icon: IconNames.MULTI_SELECT,
@@ -296,7 +308,9 @@ ORDER BY
           this.taskQueryManager.rerunLastQuery();
         }}
       >
-        <p>{`Are you sure you want to kill task '${killTaskId}'?`}</p>
+        <p>
+          Are you sure you want to kill task <Tag minimal>{killTaskId}</Tag>?
+        </p>
       </AsyncActionDialog>
     );
   }
@@ -304,6 +318,7 @@ ORDER BY
   private renderTaskFilterableCell(field: string) {
     const { filters, onFiltersChange } = this.props;
 
+    // eslint-disable-next-line react/display-name
     return (row: { value: any }) => (
       <TableFilterableCell
         field={field}
@@ -317,16 +332,19 @@ ORDER BY
   }
 
   private onTaskDetail(task: TaskQueryResultRow) {
-    this.setState({
-      taskTableActionDialogId: task.task_id,
-      taskTableActionDialogStatus: task.status,
-      taskTableActionDialogActions: this.getTaskActions(
-        task.task_id,
-        task.datasource,
-        task.status,
-        task.type,
-      ),
-    });
+    if (task.type === 'query_controller') {
+      this.setState({
+        executionDialogOpen: task.task_id,
+      });
+    } else {
+      this.setState({
+        taskTableActionDialogOpen: {
+          id: task.task_id,
+          status: task.status,
+          actions: this.getTaskActions(task.task_id, task.datasource, task.status, task.type),
+        },
+      });
+    }
   }
 
   private renderTaskTable() {
@@ -354,6 +372,7 @@ ORDER BY
             width: 440,
             Cell: ({ value, original }) => (
               <TableClickableCell
+                tooltip="Show detail"
                 onClick={() => this.onTaskDetail(original)}
                 hoverIcon={IconNames.SEARCH_TEMPLATE}
               >
@@ -396,8 +415,11 @@ ORDER BY
             }),
             Cell: row => {
               if (row.aggregated) return '';
-              const { status } = row.original;
-              const errorMsg = row.original.error_msg;
+              const { status, error_msg } = row.original;
+              const errorMsg =
+                error_msg && !TASK_CANCELED_ERROR_MESSAGES.includes(error_msg)
+                  ? error_msg
+                  : undefined;
               return (
                 <TableFilterableCell
                   field="status"
@@ -405,10 +427,10 @@ ORDER BY
                   filters={filters}
                   onFiltersChange={onFiltersChange}
                 >
-                  <span title={errorMsg}>
+                  <span data-tooltip={errorMsg}>
                     <span style={{ color: statusToColor(status) }}>&#x25cf;&nbsp;</span>
                     {status}
-                    {errorMsg && !TASK_CANCELED_ERROR_MESSAGES.includes(errorMsg) && (
+                    {errorMsg && (
                       <a onClick={() => this.setState({ alertErrorMsg: errorMsg })}>&nbsp;?</a>
                     )}
                   </span>
@@ -477,21 +499,21 @@ ORDER BY
             accessor: 'task_id',
             width: ACTION_COLUMN_WIDTH,
             filterable: false,
+            sortable: false,
             Cell: row => {
               if (row.aggregated) return '';
               const id = row.value;
               const type = row.row.type;
               const { datasource, status } = row.original;
-              const taskActions = this.getTaskActions(id, datasource, status, type);
               return (
                 <ActionCell
                   onDetail={() => this.onTaskDetail(row.original)}
-                  actions={taskActions}
+                  actions={this.getTaskActions(id, datasource, status, type, true)}
+                  menuTitle={id}
                 />
               );
             },
             Aggregated: () => '',
-            show: visibleColumns.shown(ACTION_COLUMN_LABEL),
           },
         ]}
       />
@@ -520,13 +542,13 @@ ORDER BY
   }
 
   render() {
+    const { onFiltersChange } = this.props;
     const {
       groupTasksBy,
       taskSpecDialogOpen,
+      executionDialogOpen,
       alertErrorMsg,
-      taskTableActionDialogId,
-      taskTableActionDialogActions,
-      taskTableActionDialogStatus,
+      taskTableActionDialogOpen,
       visibleColumns,
     } = this.state;
 
@@ -569,7 +591,7 @@ ORDER BY
           <RefreshButton
             localStorageKey={LocalStorageKeys.TASKS_REFRESH_RATE}
             onRefresh={auto => {
-              if (auto && hasPopoverOpen()) return;
+              if (auto && hasOverlayOpen()) return;
               this.taskQueryManager.rerunLastQuery(auto);
             }}
           />
@@ -603,12 +625,22 @@ ORDER BY
         >
           <p>{alertErrorMsg}</p>
         </AlertDialog>
-        {taskTableActionDialogId && taskTableActionDialogStatus && (
+        {taskTableActionDialogOpen && (
           <TaskTableActionDialog
-            status={taskTableActionDialogStatus}
-            taskId={taskTableActionDialogId}
-            actions={taskTableActionDialogActions}
-            onClose={() => this.setState({ taskTableActionDialogId: undefined })}
+            taskId={taskTableActionDialogOpen.id}
+            status={taskTableActionDialogOpen.status}
+            actions={taskTableActionDialogOpen.actions}
+            onClose={() => this.setState({ taskTableActionDialogOpen: undefined })}
+          />
+        )}
+        {executionDialogOpen && (
+          <ExecutionDetailsDialog
+            id={executionDialogOpen}
+            goToTask={taskId => {
+              onFiltersChange([{ id: 'task_id', value: `=${taskId}` }]);
+              this.setState({ executionDialogOpen: undefined });
+            }}
+            onClose={() => this.setState({ executionDialogOpen: undefined })}
           />
         )}
       </div>

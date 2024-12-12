@@ -57,7 +57,7 @@ export APACHE_ARCHIVE_MIRROR_HOST=https://example.com/remote-generic-repo
 This section describes how to start integration tests against Docker containers which will be brought up automatically by following commands.
 If you want to build Docker images and run tests separately, see the next section.
 
-To run all tests from a test group using Docker and Maven run the following command:
+To run all tests from a test group using Docker and Maven run the following command from `integration-tests` directory:
 
 ```bash
 mvn verify -P integration-tests -Dgroups=<test_group>
@@ -68,7 +68,7 @@ The list of test groups can be found at
 
 ### Run a single test
 
-To run only a single test using Maven:
+To run only a single test using Maven, run the following command from `integration-tests` directory:
 
 ```bash
 mvn verify -P integration-tests -Dgroups=<test_group> -Dit.test=<test_name>
@@ -88,8 +88,7 @@ if your test has the annotation: `@Test(groups = TestNGGroup.BATCH_INDEX)` then 
 * Add `-pl :druid-integration-tests` when running integration tests for the second time or later without changing
 the code of core modules in between to skip up-to-date checks for the whole module dependency tree.
 
-* Integration tests can also be run with either Java 8 or Java 11 by adding `-Djvm.runtime=#` to the `mvn` command, where `#`
-can either be 8 or 11.
+* Integration tests can also be run with a specific Java version by adding `-Djvm.runtime=#` to the `mvn` command (where `#` can be 11, for example).
 
 * Druid's configuration (using Docker) can be overridden by providing `-Doverride.config.path=<PATH_TO_FILE>`.
 The file must contain one property per line, the key must start with `druid_` and the format should be snake case.
@@ -132,28 +131,28 @@ Maven to only look locally for snapshot jars.
 
    > **NOTE**: `-Ddocker.build.hadoop=true` is optional if you don't run tests against Hadoop.
 
-2. Choose a docker-compose file to start containers.
+2. Choose a docker compose file to start containers.
 
    There are a few different Docker compose yamls located in "docker" folder that could be used to start containers for different tests.
 
    - To start basic Druid cluster (skip this if running Druid cluster with override configs):
      ```bash
-     docker-compose -f integration-tests/docker/docker-compose.yml up
+     docker compose -f integration-tests/docker/docker-compose.yml up
      ```
 
    - To start Druid cluster with override configs
      ```bash
-     OVERRIDE_ENV=<PATH_TO_ENV> docker-compose -f docker-compose.yml up
+     OVERRIDE_ENV=<PATH_TO_ENV> docker compose -f docker-compose.yml up
      ```
 
    - To start tests against Hadoop
      ```bash
-     docker-compose -f docker-compose.druid-hadoop.yml up
+     docker compose -f docker-compose.druid-hadoop.yml up
      ```
 
    - To start tests againt security group
      ```bash
-     docker-compose -f docker-compose.yml -f docker-compose.security.yml up
+     docker compose -f docker-compose.yml -f docker-compose.security.yml up
      ```
 
 3. Run tests.
@@ -195,9 +194,9 @@ The values shown above are for the default docker compose cluster. For other clu
   Defines a Druid cluster with default configuration that is used for running integration tests.
 
   ```bash
-  docker-compose -f docker-compose.yml up
+  docker compose -f docker-compose.yml up
   # DRUID_INTEGRATION_TEST_GROUP - an environment variable that specifies the integration test group to run.
-  DRUID_INTEGRATION_TEST_GROUP=batch-index docker-compose -f docker-compose.yml up
+  DRUID_INTEGRATION_TEST_GROUP=batch-index docker compose -f docker-compose.yml up
   ```
 
   You can change the default configuration using a custom configuration file. The settings in the file will override
@@ -205,7 +204,7 @@ The values shown above are for the default docker compose cluster. For other clu
 
   ```bash
   # OVERRIDE_ENV - an environment variable that specifies the custom configuration file path.
-  OVERRIDE_ENV=./environment-configs/test-groups/prepopulated-data DRUID_INTEGRATION_TEST_GROUP=query docker-compose -f docker-compose.yml up
+  OVERRIDE_ENV=./environment-configs/test-groups/prepopulated-data DRUID_INTEGRATION_TEST_GROUP=query docker compose -f docker-compose.yml up
   ```
 
 - docker-compose.security.yml
@@ -214,7 +213,7 @@ The values shown above are for the default docker compose cluster. For other clu
   This is meant to be used together with docker-compose.yml and is only needed for the "security" group integration test.
 
   ```bash
-  docker-compose -f docker-compose.yml -f docker-compose.security.yml up
+  docker compose -f docker-compose.yml -f docker-compose.security.yml up
   ```
 
 - docker-compose.druid-hadoop.yml
@@ -222,7 +221,7 @@ The values shown above are for the default docker compose cluster. For other clu
   For starting Apache Hadoop 3.3.6 cluster with the same setup as the Druid tutorial.
 
   ```bash
-  docker-compose -f docker-compose.druid-hadoop.yml up
+  docker compose -f docker-compose.druid-hadoop.yml up
   ```
 
 ## Tips & tricks for debugging and developing integration tests

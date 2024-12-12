@@ -29,6 +29,7 @@ import org.apache.druid.common.aws.AWSEndpointConfig;
 import org.apache.druid.common.aws.AWSProxyConfig;
 import org.apache.druid.data.input.InputSourceFactory;
 import org.apache.druid.data.input.impl.SplittableInputSource;
+import org.apache.druid.data.input.impl.systemfield.SystemFields;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.storage.s3.S3InputDataConfig;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
@@ -92,6 +93,7 @@ public class S3InputSourceFactory implements InputSourceFactory
         null,
         null,
         null,
+        SystemFields.none(),
         s3InputSourceConfig,
         awsProxyConfig,
         awsEndpointConfig,

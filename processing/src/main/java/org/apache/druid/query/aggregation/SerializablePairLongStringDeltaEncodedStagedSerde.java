@@ -22,7 +22,6 @@ package org.apache.druid.query.aggregation;
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Ints;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.segment.serde.cell.StagedSerde;
 import org.apache.druid.segment.serde.cell.StorableBuffer;
 
 import javax.annotation.Nullable;
@@ -36,16 +35,20 @@ import java.nio.ByteOrder;
  *
  * otherwise
  * Long:Integer:bytes
+ *
+ * The StringSize can be following:
+ * -1 : Denotes an empty string
+ * 0  : Denotes a null string
+ * >0 : Denotes a non-empty string
+ *
+ * Mapping of null and empty string is done weirdly to preserve backward compatibility when nulls were returned all the
+ * time, and there was no distinction between empty and null string
  */
-public class SerializablePairLongStringDeltaEncodedStagedSerde implements StagedSerde<SerializablePairLongString>
+public class SerializablePairLongStringDeltaEncodedStagedSerde extends AbstractSerializablePairLongObjectDeltaEncodedStagedSerde<SerializablePairLongString>
 {
-  private final long minValue;
-  private final boolean useIntegerDelta;
-
   public SerializablePairLongStringDeltaEncodedStagedSerde(long minValue, boolean useIntegerDelta)
   {
-    this.minValue = minValue;
-    this.useIntegerDelta = useIntegerDelta;
+    super(minValue, useIntegerDelta, SerializablePairLongString.class);
   }
 
   @Override
@@ -75,7 +78,13 @@ public class SerializablePairLongStringDeltaEncodedStagedSerde implements Staged
           byteBuffer.putLong(delta);
         }
 
-        byteBuffer.putInt(rhsBytes.length);
+        if (rhsString == null) {
+          byteBuffer.putInt(0);
+        } else if (rhsBytes.length == 0) {
+          byteBuffer.putInt(-1);
+        } else {
+          byteBuffer.putInt(rhsBytes.length);
+        }
 
         if (rhsBytes.length > 0) {
           byteBuffer.put(rhsBytes);
@@ -117,6 +126,8 @@ public class SerializablePairLongStringDeltaEncodedStagedSerde implements Staged
 
       readOnlyBuffer.get(stringBytes, 0, stringSize);
       lastString = StringUtils.fromUtf8(stringBytes);
+    } else if (stringSize < 0) {
+      lastString = "";
     }
 
     return new SerializablePairLongString(lhs, lastString);

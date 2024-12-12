@@ -64,7 +64,6 @@ import java.util.function.Function;
  */
 public class DruidPlanner implements Closeable
 {
-
   public static final Joiner SPACE_JOINER = Joiner.on(" ");
   public static final Joiner COMMA_JOINER = Joiner.on(", ");
 
@@ -148,6 +147,8 @@ public class DruidPlanner implements Closeable
     catch (SqlParseException e1) {
       throw translateException(e1);
     }
+    root = rewriteParameters(root);
+    hook.captureSqlNode(root);
     handler = createHandler(root);
     handler.validate();
     plannerContext.setResourceActions(handler.resourceActions());
@@ -157,6 +158,7 @@ public class DruidPlanner implements Closeable
   private SqlStatementHandler createHandler(final SqlNode node)
   {
     SqlNode query = node;
+
     SqlExplain explain = null;
     if (query.getKind() == SqlKind.EXPLAIN) {
       explain = (SqlExplain) query;
@@ -176,6 +178,27 @@ public class DruidPlanner implements Closeable
       return new QueryHandler.SelectHandler(handlerContext, query, explain);
     }
     throw InvalidSqlInput.exception("Unsupported SQL statement [%s]", node.getKind());
+  }
+
+  /**
+   * Uses {@link SqlParameterizerShuttle} to rewrite {@link SqlNode} to swap out any
+   * {@link org.apache.calcite.sql.SqlDynamicParam} early for their {@link org.apache.calcite.sql.SqlLiteral}
+   *  replacement.
+   *
+   * @return a rewritten {@link SqlNode} with any dynamic parameters rewritten in the provided {@code original} node,
+   * if they were present.
+   */
+  private SqlNode rewriteParameters(final SqlNode original)
+  {
+    // Parameter replacement is done only if the client provides parameter values.
+    // If this is a PREPARE-only, then there will be no values even if the statement contains
+    // parameters. If this is a PLAN, then we'll catch later the case that the statement
+    // contains parameters, but no values were provided.
+    if (plannerContext.getParameters().isEmpty()) {
+      return original;
+    } else {
+      return original.accept(new SqlParameterizerShuttle(plannerContext)); // the rewrite happens here.
+    }
   }
 
   /**
@@ -337,56 +360,61 @@ public class DruidPlanner implements Closeable
       if (cause instanceof ParseException) {
         ParseException parseException = (ParseException) cause;
         final SqlParserPos failurePosition = inner.getPos();
-        final String theUnexpectedToken = getUnexpectedTokenString(parseException);
+        // When calcite catches a syntax error at the top level
+        // expected token sequences can be null.
+        // In such a case return the syntax error to the user
+        // wrapped in a DruidException with invalid input
+        if (parseException.expectedTokenSequences == null) {
+          return DruidException.forPersona(DruidException.Persona.USER)
+                               .ofCategory(DruidException.Category.INVALID_INPUT)
+                               .withErrorCode("invalidInput")
+                               .build(inner, "%s", inner.getMessage()).withContext("sourceType", "sql");
+        } else {
+          final String theUnexpectedToken = getUnexpectedTokenString(parseException);
 
-        final String[] tokenDictionary = inner.getTokenImages();
-        final int[][] expectedTokenSequences = inner.getExpectedTokenSequences();
-        final ArrayList<String> expectedTokens = new ArrayList<>(expectedTokenSequences.length);
-        for (int[] expectedTokenSequence : expectedTokenSequences) {
-          String[] strings = new String[expectedTokenSequence.length];
-          for (int i = 0; i < expectedTokenSequence.length; ++i) {
-            strings[i] = tokenDictionary[expectedTokenSequence[i]];
+          final String[] tokenDictionary = inner.getTokenImages();
+          final int[][] expectedTokenSequences = inner.getExpectedTokenSequences();
+          final ArrayList<String> expectedTokens = new ArrayList<>(expectedTokenSequences.length);
+          for (int[] expectedTokenSequence : expectedTokenSequences) {
+            String[] strings = new String[expectedTokenSequence.length];
+            for (int i = 0; i < expectedTokenSequence.length; ++i) {
+              strings[i] = tokenDictionary[expectedTokenSequence[i]];
+            }
+            expectedTokens.add(SPACE_JOINER.join(strings));
           }
-          expectedTokens.add(SPACE_JOINER.join(strings));
+
+          return InvalidSqlInput
+              .exception(
+                  inner,
+                  "Received an unexpected token [%s] (line [%s], column [%s]), acceptable options: [%s]",
+                  theUnexpectedToken,
+                  failurePosition.getLineNum(),
+                  failurePosition.getColumnNum(),
+                  COMMA_JOINER.join(expectedTokens)
+              )
+              .withContext("line", failurePosition.getLineNum())
+              .withContext("column", failurePosition.getColumnNum())
+              .withContext("endLine", failurePosition.getEndLineNum())
+              .withContext("endColumn", failurePosition.getEndColumnNum())
+              .withContext("token", theUnexpectedToken)
+              .withContext("expected", expectedTokens);
+
         }
-
-        return InvalidSqlInput
-            .exception(
-                inner,
-                "Received an unexpected token [%s] (line [%s], column [%s]), acceptable options: [%s]",
-                theUnexpectedToken,
-                failurePosition.getLineNum(),
-                failurePosition.getColumnNum(),
-                COMMA_JOINER.join(expectedTokens)
-            )
-            .withContext("line", failurePosition.getLineNum())
-            .withContext("column", failurePosition.getColumnNum())
-            .withContext("endLine", failurePosition.getEndLineNum())
-            .withContext("endColumn", failurePosition.getEndColumnNum())
-            .withContext("token", theUnexpectedToken)
-            .withContext("expected", expectedTokens);
-
       }
 
-      return DruidException.forPersona(DruidException.Persona.DEVELOPER)
-                           .ofCategory(DruidException.Category.UNCATEGORIZED)
-                           .build(
-                               inner,
-                               "Unable to parse the SQL, unrecognized error from calcite: [%s]",
-                               inner.getMessage()
-                           );
+      return InvalidSqlInput.exception(inner.getMessage());
     }
     catch (RelOptPlanner.CannotPlanException inner) {
       return DruidException.forPersona(DruidException.Persona.USER)
                            .ofCategory(DruidException.Category.INVALID_INPUT)
-                           .build(inner, inner.getMessage());
+                           .build(inner, "%s", inner.getMessage());
     }
     catch (Exception inner) {
       // Anything else. Should not get here. Anything else should already have
       // been translated to a DruidException unless it is an unexpected exception.
       return DruidException.forPersona(DruidException.Persona.ADMIN)
                            .ofCategory(DruidException.Category.UNCATEGORIZED)
-                           .build(inner, inner.getMessage());
+                           .build(inner, "%s", inner.getMessage());
     }
   }
 

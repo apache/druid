@@ -21,23 +21,20 @@ package org.apache.druid.segment.nested;
 
 import com.google.common.base.Supplier;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.segment.column.ColumnBuilder;
-import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
-import org.apache.druid.segment.column.StringEncodingStrategy;
+import org.apache.druid.segment.column.StringEncodingStrategies;
 import org.apache.druid.segment.column.StringUtf8DictionaryEncodedColumn;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.ColumnarInts;
 import org.apache.druid.segment.data.CompressedVSizeColumnarIntsSupplier;
-import org.apache.druid.segment.data.EncodedStringDictionaryWriter;
-import org.apache.druid.segment.data.FrontCodedIndexed;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.VByte;
+import org.apache.druid.segment.serde.ColumnSerializerUtils;
 import org.apache.druid.segment.serde.NestedCommonFormatColumnPartSerde;
 import org.apache.druid.segment.serde.StringUtf8ColumnIndexSupplier;
 
@@ -53,7 +50,7 @@ public class ScalarStringColumnAndIndexSupplier implements Supplier<NestedCommon
       BitmapSerdeFactory bitmapSerdeFactory,
       ByteBuffer bb,
       ColumnBuilder columnBuilder,
-      ColumnConfig columnConfig
+      @Nullable ScalarStringColumnAndIndexSupplier parent
   )
   {
     final byte version = bb.get();
@@ -65,49 +62,26 @@ public class ScalarStringColumnAndIndexSupplier implements Supplier<NestedCommon
         final SmooshedFileMapper mapper = columnBuilder.getFileMapper();
         final Supplier<? extends Indexed<ByteBuffer>> dictionarySupplier;
 
-        final ByteBuffer stringDictionaryBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
-            mapper,
-            columnName,
-            NestedCommonFormatColumnSerializer.STRING_DICTIONARY_FILE_NAME
-        );
-
-        final int dictionaryStartPosition = stringDictionaryBuffer.position();
-        final byte dictionaryVersion = stringDictionaryBuffer.get();
-
-        if (dictionaryVersion == EncodedStringDictionaryWriter.VERSION) {
-          final byte encodingId = stringDictionaryBuffer.get();
-          if (encodingId == StringEncodingStrategy.FRONT_CODED_ID) {
-            dictionarySupplier = FrontCodedIndexed.read(
-                stringDictionaryBuffer,
-                byteOrder
-            );
-          } else if (encodingId == StringEncodingStrategy.UTF8_ID) {
-            // this cannot happen naturally right now since generic indexed is written in the 'legacy' format, but
-            // this provides backwards compatibility should we switch at some point in the future to always
-            // writing dictionaryVersion
-            dictionarySupplier = GenericIndexed.read(
-                stringDictionaryBuffer,
-                GenericIndexed.UTF8_STRATEGY,
-                mapper
-            )::singleThreaded;
-          } else {
-            throw new ISE("impossible, unknown encoding strategy id: %s", encodingId);
-          }
+        if (parent != null) {
+          dictionarySupplier = parent.dictionarySupplier;
         } else {
-          // legacy format that only supports plain utf8 enoding stored in GenericIndexed and the byte we are reading
-          // as dictionaryVersion is actually also the GenericIndexed version, so we reset start position so the
-          // GenericIndexed version can be correctly read
-          stringDictionaryBuffer.position(dictionaryStartPosition);
-          dictionarySupplier = GenericIndexed.read(
+          final ByteBuffer stringDictionaryBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
+              mapper,
+              columnName,
+              ColumnSerializerUtils.STRING_DICTIONARY_FILE_NAME
+          );
+
+          dictionarySupplier = StringEncodingStrategies.getStringDictionarySupplier(
+              mapper,
               stringDictionaryBuffer,
-              GenericIndexed.UTF8_STRATEGY,
-              mapper
-          )::singleThreaded;
+              byteOrder
+          );
         }
+
         final ByteBuffer encodedValueColumn = NestedCommonFormatColumnPartSerde.loadInternalFile(
             mapper,
             columnName,
-            NestedCommonFormatColumnSerializer.ENCODED_VALUE_COLUMN_FILE_NAME
+            ColumnSerializerUtils.ENCODED_VALUE_COLUMN_FILE_NAME
         );
         final CompressedVSizeColumnarIntsSupplier ints = CompressedVSizeColumnarIntsSupplier.fromByteBuffer(
             encodedValueColumn,
@@ -116,24 +90,18 @@ public class ScalarStringColumnAndIndexSupplier implements Supplier<NestedCommon
         final ByteBuffer valueIndexBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
             mapper,
             columnName,
-            NestedCommonFormatColumnSerializer.BITMAP_INDEX_FILE_NAME
+            ColumnSerializerUtils.BITMAP_INDEX_FILE_NAME
         );
         GenericIndexed<ImmutableBitmap> valueIndexes = GenericIndexed.read(
             valueIndexBuffer,
             bitmapSerdeFactory.getObjectStrategy(),
             columnBuilder.getFileMapper()
         );
-        final int size;
-        try (ColumnarInts throwAway = ints.get()) {
-          size = throwAway.size();
-        }
         return new ScalarStringColumnAndIndexSupplier(
             dictionarySupplier,
             ints,
             valueIndexes,
-            bitmapSerdeFactory,
-            columnConfig,
-            size
+            bitmapSerdeFactory
         );
       }
       catch (IOException ex) {
@@ -144,37 +112,41 @@ public class ScalarStringColumnAndIndexSupplier implements Supplier<NestedCommon
     }
   }
 
+
   private final Supplier<? extends Indexed<ByteBuffer>> dictionarySupplier;
   private final Supplier<ColumnarInts> encodedColumnSupplier;
   private final GenericIndexed<ImmutableBitmap> valueIndexes;
   private final ColumnIndexSupplier stringIndexSupplier;
+  private final BitmapSerdeFactory serdeFactory;
 
   private ScalarStringColumnAndIndexSupplier(
       Supplier<? extends Indexed<ByteBuffer>> dictionarySupplier,
       Supplier<ColumnarInts> encodedColumnSupplier,
       GenericIndexed<ImmutableBitmap> valueIndexes,
-      BitmapSerdeFactory serdeFactory,
-      ColumnConfig columnConfig,
-      int numRows
+      BitmapSerdeFactory serdeFactory
   )
   {
     this.dictionarySupplier = dictionarySupplier;
     this.encodedColumnSupplier = encodedColumnSupplier;
     this.valueIndexes = valueIndexes;
+    this.serdeFactory = serdeFactory;
     this.stringIndexSupplier = new StringUtf8ColumnIndexSupplier<>(
         serdeFactory.getBitmapFactory(),
         dictionarySupplier,
         valueIndexes,
-        null,
-        columnConfig,
-        numRows
+        null
     );
   }
 
   @Override
   public NestedCommonFormatColumn get()
   {
-    return new StringUtf8DictionaryEncodedColumn(encodedColumnSupplier.get(), null, dictionarySupplier.get());
+    return new StringUtf8DictionaryEncodedColumn(
+        encodedColumnSupplier.get(),
+        null,
+        dictionarySupplier.get(),
+        serdeFactory.getBitmapFactory()
+    );
   }
 
   @Nullable

@@ -46,6 +46,7 @@ The console relies on [eslint](https://eslint.org) (and various plugins), [sass-
 #### Configuring WebStorm
 
 - **Preferences | Languages & Frameworks | JavaScript | Code Quality Tools | ESLint**
+
   - Select "Automatic ESLint Configuration"
   - Check "Run eslint --fix on save"
 
@@ -55,9 +56,11 @@ The console relies on [eslint](https://eslint.org) (and various plugins), [sass-
   - Check "On save"
 
 #### Configuring VS Code
+
 - Install `dbaeumer.vscode-eslint` extension
 - Install `esbenp.prettier-vscode` extension
-- Open User Settings (JSON) and set the following:
+- Select `Open User Settings (JSON)` from the editor commnads (`Ctrl+Shift+P` or `Comand+Shift+P`) and set the following:
+
   ```json
     "editor.defaultFormatter": "esbenp.prettier-vscode",
     "editor.formatOnSave": true,
@@ -67,10 +70,11 @@ The console relies on [eslint](https://eslint.org) (and various plugins), [sass-
   ```
 
 #### Auto-fixing manually
+
 It is also possible to auto-fix and format code without making IDE changes by running the following script:
 
 - `npm run autofix` &mdash; run code linters and formatter
-  
+
 You could also run fixers individually:
 
 - `npm run eslint-fix` &mdash; run code linter and fix issues

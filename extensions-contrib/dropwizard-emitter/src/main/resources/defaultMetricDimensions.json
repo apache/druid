@@ -42,6 +42,10 @@
     "dimensions": [],
     "type": "gauge"
   },
+  "segment/scan/active": {
+    "dimensions": [],
+    "type": "gauge"
+  },
   "query/segmentAndCache/time": {
     "dimensions": [],
     "type": "timer",

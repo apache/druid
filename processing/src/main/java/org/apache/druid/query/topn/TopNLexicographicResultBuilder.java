@@ -72,7 +72,7 @@ public class TopNLexicographicResultBuilder implements TopNResultBuilder
 
   @Override
   public TopNResultBuilder addEntry(
-      Comparable dimValueObj,
+      Object dimValueObj,
       Object dimValIndex,
       Object[] metricVals
   )

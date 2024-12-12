@@ -68,37 +68,37 @@ describe('utils', () => {
         ],
       ),
     ).toMatchInlineSnapshot(`
-      Object {
-        "samplerConfig": Object {
+      {
+        "samplerConfig": {
           "numRows": 500,
           "timeoutMs": 15000,
         },
-        "spec": Object {
-          "dataSchema": Object {
+        "spec": {
+          "dataSchema": {
             "dataSource": "wikipedia",
-            "dimensionsSpec": Object {},
-            "granularitySpec": Object {
+            "dimensionsSpec": {},
+            "granularitySpec": {
               "queryGranularity": "hour",
               "segmentGranularity": "day",
             },
-            "timestampSpec": Object {
+            "timestampSpec": {
               "column": "timestamp",
               "format": "iso",
             },
           },
-          "ioConfig": Object {
-            "inputFormat": Object {
+          "ioConfig": {
+            "inputFormat": {
               "keepNullColumns": true,
               "type": "json",
             },
-            "inputSource": Object {
-              "data": "{\\"make\\":\\"Honda\\",\\"model\\":\\"Accord\\"}
-      {\\"make\\":\\"Toyota\\",\\"model\\":\\"Prius\\"}",
+            "inputSource": {
+              "data": "{"make":"Honda","model":"Accord"}
+      {"make":"Toyota","model":"Prius"}",
               "type": "inline",
             },
             "type": "index",
           },
-          "tuningConfig": Object {
+          "tuningConfig": {
             "type": "index_parallel",
           },
           "type": "index",

@@ -29,6 +29,7 @@ import org.apache.druid.metadata.MetadataCASUpdate;
 import org.apache.druid.metadata.MetadataStorageConnectorConfig;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.SQLMetadataConnector;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.postgresql.PGProperty;
 import org.postgresql.util.PSQLException;
 import org.skife.jdbi.v2.DBI;
@@ -41,6 +42,7 @@ import java.sql.DatabaseMetaData;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 
 public class PostgreSQLConnector extends SQLMetadataConnector
 {
@@ -64,10 +66,11 @@ public class PostgreSQLConnector extends SQLMetadataConnector
       Supplier<MetadataStorageConnectorConfig> config,
       Supplier<MetadataStorageTablesConfig> dbTables,
       PostgreSQLConnectorConfig connectorConfig,
-      PostgreSQLTablesConfig tablesConfig
+      PostgreSQLTablesConfig tablesConfig,
+      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
-    super(config, dbTables);
+    super(config, dbTables, centralizedDatasourceSchemaConfig);
 
     final BasicDataSource datasource = getDatasource();
     // PostgreSQL driver is classloader isolated as part of the extension
@@ -284,5 +287,25 @@ public class PostgreSQLConnector extends SQLMetadataConnector
       return sqlState != null && (sqlState.startsWith("08") || sqlState.startsWith("53"));
     }
     return false;
+  }
+
+  /**
+   * This method has been overridden to pass lowercase tableName.
+   * This is done because PostgreSQL creates tables with lowercased names unless explicitly enclosed in double quotes.
+   */
+  @Override
+  protected boolean tableHasColumn(String tableName, String columnName)
+  {
+    return super.tableHasColumn(StringUtils.toLowerCase(tableName), columnName);
+  }
+
+  /**
+   * This method has been overridden to pass lowercase tableName.
+   * This is done because PostgreSQL creates tables with lowercased names unless explicitly enclosed in double quotes.
+   */
+  @Override
+  public Set<String> getIndexOnTable(String tableName)
+  {
+    return super.getIndexOnTable(StringUtils.toLowerCase(tableName));
   }
 }

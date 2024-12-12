@@ -25,11 +25,9 @@ import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
-import org.apache.druid.query.filter.Filter;
 import org.joda.time.Interval;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -193,15 +191,9 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   }
 
   @Override
-  public void preFilters(List<Filter> preFilters)
+  public void projection(String projection)
   {
-    // Emit nothing by default.
-  }
-
-  @Override
-  public void postFilters(List<Filter> postFilters)
-  {
-    // Emit nothing by default.
+    setDimension("projection", projection);
   }
 
   @Override
@@ -385,7 +377,7 @@ public class DefaultQueryMetrics<QueryType extends Query<?>> implements QueryMet
   {
     checkModifiedFromOwnerThread();
     for (Map.Entry<String, Number> metric : metrics.entrySet()) {
-      emitter.emit(builder.build(metric.getKey(), metric.getValue()));
+      emitter.emit(builder.setMetric(metric.getKey(), metric.getValue()));
     }
     metrics.clear();
   }

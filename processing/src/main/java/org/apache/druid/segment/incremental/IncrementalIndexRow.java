@@ -42,7 +42,7 @@ public final class IncrementalIndexRow
    * rowIndex is not checked in {@link #equals} and {@link #hashCode} on purpose. IncrementalIndexRow acts as a Map key
    * and "entry" object (rowIndex is the "value") at the same time. This is done to reduce object indirection and
    * improve locality, and avoid boxing of rowIndex as Integer, when stored in JDK collection:
-   * {@link IncrementalIndex.RollupFactsHolder} needs concurrent collections, that are not present in fastutil.
+   * {@link OnheapIncrementalIndex.RollupFactsHolder} needs concurrent collections, that are not present in fastutil.
    */
   private int rowIndex;
   private long dimsKeySize;
@@ -142,8 +142,10 @@ public final class IncrementalIndexRow
           @Override
           public Object apply(@Nullable Object input)
           {
-            if (input == null || Array.getLength(input) == 0) {
+            if (input == null || (input.getClass().isArray() && Array.getLength(input) == 0)) {
               return Collections.singletonList("null");
+            } else if (input instanceof int[]) {
+              return Arrays.toString((int[]) input);
             }
             return Collections.singletonList(input);
           }

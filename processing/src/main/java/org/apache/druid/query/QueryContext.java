@@ -24,7 +24,8 @@ import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.query.QueryContexts.Vectorize;
-import org.apache.druid.segment.QueryableIndexStorageAdapter;
+import org.apache.druid.query.filter.InDimFilter;
+import org.apache.druid.query.filter.TypedInFilter;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -217,6 +218,11 @@ public class QueryContext
     return QueryContexts.getAsHumanReadableBytes(key, get(key), defaultValue);
   }
 
+  public HumanReadableBytes getHumanReadableBytes(final String key, final long defaultBytes)
+  {
+    return QueryContexts.getAsHumanReadableBytes(key, get(key), HumanReadableBytes.valueOf(defaultBytes));
+  }
+
   public <E extends Enum<E>> E getEnum(String key, Class<E> clazz, E defaultValue)
   {
     return QueryContexts.getAsEnum(key, get(key), clazz, defaultValue);
@@ -334,7 +340,7 @@ public class QueryContext
 
   public int getVectorSize()
   {
-    return getVectorSize(QueryableIndexStorageAdapter.DEFAULT_VECTOR_SIZE);
+    return getVectorSize(QueryContexts.DEFAULT_VECTOR_SIZE);
   }
 
   public int getVectorSize(int defaultSize)
@@ -347,14 +353,24 @@ public class QueryContext
     return getInt(QueryContexts.MAX_SUBQUERY_ROWS_KEY, defaultSize);
   }
 
-  public long getMaxSubqueryMemoryBytes(long defaultMemoryBytes)
+  public String getMaxSubqueryMemoryBytes(String defaultMemoryBytes)
   {
-    return getLong(QueryContexts.MAX_SUBQUERY_BYTES_KEY, defaultMemoryBytes);
+    // Generic to allow for both strings and numbers to be passed as values in the query context
+    Object maxSubqueryBytesObject = get(QueryContexts.MAX_SUBQUERY_BYTES_KEY);
+    if (maxSubqueryBytesObject == null) {
+      maxSubqueryBytesObject = defaultMemoryBytes;
+    }
+    return String.valueOf(maxSubqueryBytesObject);
   }
 
   public boolean isUseNestedForUnknownTypeInSubquery(boolean defaultUseNestedForUnkownTypeInSubquery)
   {
     return getBoolean(QueryContexts.USE_NESTED_FOR_UNKNOWN_TYPE_IN_SUBQUERY, defaultUseNestedForUnkownTypeInSubquery);
+  }
+
+  public boolean isUseNestedForUnknownTypeInSubquery()
+  {
+    return isUseNestedForUnknownTypeInSubquery(QueryContexts.DEFAULT_USE_NESTED_FOR_UNKNOWN_TYPE_IN_SUBQUERY);
   }
 
   public int getUncoveredIntervalsLimit()
@@ -564,12 +580,63 @@ public class QueryContext
     );
   }
 
+  /**
+   * At or above this threshold number of values, when planning SQL queries, use the SQL SCALAR_IN_ARRAY operator rather
+   * than a stack of SQL ORs. This speeds up planning for large sets of points because it is opaque to various
+   * expensive optimizations. But, because this does bypass certain optimizations, we only do the transformation above
+   * a certain threshold. The SCALAR_IN_ARRAY operator is still able to convert to {@link InDimFilter} or
+   * {@link TypedInFilter}.
+   */
+  public int getInFunctionThreshold()
+  {
+    return getInt(
+        QueryContexts.IN_FUNCTION_THRESHOLD,
+        QueryContexts.DEFAULT_IN_FUNCTION_THRESHOLD
+    );
+  }
+
+  /**
+   * At or above this threshold, when converting the SEARCH operator to a native expression, use the "scalar_in_array"
+   * function rather than a sequence of equals (==) separated by or (||). This is typically a lower threshold
+   * than {@link #getInFunctionThreshold()}, because it does not prevent any SQL planning optimizations, and it
+   * speeds up query execution.
+   */
+  public int getInFunctionExprThreshold()
+  {
+    return getInt(
+        QueryContexts.IN_FUNCTION_EXPR_THRESHOLD,
+        QueryContexts.DEFAULT_IN_FUNCTION_EXPR_THRESHOLD
+    );
+  }
+
   public boolean isTimeBoundaryPlanningEnabled()
   {
     return getBoolean(
         QueryContexts.TIME_BOUNDARY_PLANNING_KEY,
         QueryContexts.DEFAULT_ENABLE_TIME_BOUNDARY_PLANNING
     );
+  }
+
+  public boolean isCatalogValidationEnabled()
+  {
+    return getBoolean(
+        QueryContexts.CATALOG_VALIDATION_ENABLED,
+        QueryContexts.DEFAULT_CATALOG_VALIDATION_ENABLED
+    );
+  }
+
+  public boolean isExtendedFilteredSumRewrite()
+  {
+    return getBoolean(
+        QueryContexts.EXTENDED_FILTERED_SUM_REWRITE_ENABLED,
+        QueryContexts.DEFAULT_EXTENDED_FILTERED_SUM_REWRITE_ENABLED
+    );
+  }
+
+
+  public QueryResourceId getQueryResourceId()
+  {
+    return new QueryResourceId(getString(QueryContexts.QUERY_RESOURCE_ID));
   }
 
   public String getBrokerServiceName()
@@ -602,5 +669,14 @@ public class QueryContext
     return "QueryContext{" +
            "context=" + context +
            '}';
+  }
+
+  public boolean isDecoupledMode()
+  {
+    String value = getString(
+        QueryContexts.CTX_NATIVE_QUERY_SQL_PLANNING_MODE,
+        QueryContexts.NATIVE_QUERY_SQL_PLANNING_MODE_COUPLED
+    );
+    return QueryContexts.NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED.equals(value);
   }
 }

@@ -23,10 +23,15 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.primitives.Longs;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.ParseException;
+import org.apache.druid.segment.column.ValueType;
 
 import javax.annotation.Nullable;
+import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -58,7 +63,11 @@ public final class Rows
   }
 
   /**
-   * Convert an object to a list of strings.
+   * Convert an object to a list of strings. This function translates single value nulls into an empty list, and any
+   * nulls inside of a list or array into the string "null". Do not use this method if you don't want this behavior,
+   * but note that many implementations of {@link InputRow#getDimension(String)} do use this method, so it is
+   * recommended to use {@link InputRow#getRaw(String)} if you want the actual value without this coercion. For legacy
+   * reasons, some stuff counts on this incorrect behavior, (such as {@link Rows#toGroupKey(long, InputRow)}).
    */
   public static List<String> objectToStrings(final Object inputValue)
   {
@@ -68,11 +77,22 @@ public final class Rows
       // guava's toString function fails on null objects, so please do not use it
       return ((List<?>) inputValue).stream().map(String::valueOf).collect(Collectors.toList());
     } else if (inputValue instanceof byte[]) {
-      // convert byte[] to base64 encoded string
-      return Collections.singletonList(StringUtils.encodeBase64String((byte[]) inputValue));
+      byte[] array = (byte[]) inputValue;
+      return objectToStringsByteA(array);
+    } else if (inputValue instanceof ByteBuffer) {
+      byte[] array = ((ByteBuffer) inputValue).array();
+      return objectToStringsByteA(array);
+    } else if (inputValue instanceof Object[]) {
+      return Arrays.stream((Object[]) inputValue).map(String::valueOf).collect(Collectors.toList());
     } else {
       return Collections.singletonList(String.valueOf(inputValue));
     }
+  }
+
+  private static List<String> objectToStringsByteA(byte[] array)
+  {
+    // convert byte[] to base64 encoded string
+    return Collections.singletonList(StringUtils.encodeBase64String(array));
   }
 
   /**
@@ -83,6 +103,7 @@ public final class Rows
    *
    * @param name                 field name of the object being converted (may be used for exception messages)
    * @param inputValue           the actual object being converted
+   * @param outputType           expected return type, or null if it should be automatically detected
    * @param throwParseExceptions whether this method should throw a {@link ParseException} or use a default/null value
    *                             when {@param inputValue} is not numeric
    *
@@ -91,43 +112,92 @@ public final class Rows
    * @throws ParseException if the input cannot be converted to a number and {@code throwParseExceptions} is true
    */
   @Nullable
-  public static <T extends Number> Number objectToNumber(
+  public static Number objectToNumber(
       final String name,
       final Object inputValue,
+      @Nullable final ValueType outputType,
       final boolean throwParseExceptions
   )
   {
+    if (outputType != null && !outputType.isNumeric()) {
+      throw new IAE("Output type[%s] must be numeric", outputType);
+    }
+
+    final Number asNumber;
+
     if (inputValue == null) {
-      return NullHandling.defaultLongValue();
+      asNumber = (Number) NullHandling.defaultValueForType(outputType != null ? outputType : ValueType.LONG);
     } else if (inputValue instanceof Number) {
-      return (Number) inputValue;
+      asNumber = (Number) inputValue;
     } else if (inputValue instanceof String) {
       try {
         String metricValueString = StringUtils.removeChar(((String) inputValue).trim(), ',');
         // Longs.tryParse() doesn't support leading '+', so we need to trim it ourselves
         metricValueString = trimLeadingPlusOfLongString(metricValueString);
-        Long v = Longs.tryParse(metricValueString);
-        // Do NOT use ternary operator here, because it makes Java to convert Long to Double
-        if (v != null) {
-          return v;
-        } else {
-          return Double.valueOf(metricValueString);
+
+        Number v = null;
+
+        // Try parsing as Long first, since it's significantly faster than Double parsing, and also there are various
+        // integer numbers that can be represented as Long but cannot be represented as Double.
+        if (outputType == null || outputType == ValueType.LONG) {
+          v = Longs.tryParse(metricValueString);
         }
+
+        if (v == null) {
+          v = Double.valueOf(metricValueString);
+        }
+
+        asNumber = v;
       }
       catch (Exception e) {
         if (throwParseExceptions) {
-          throw new ParseException(String.valueOf(inputValue), e, "Unable to parse value[%s] for field[%s]", inputValue, name);
+          throw new ParseException(
+              String.valueOf(inputValue),
+              e,
+              "Unable to parse value[%s] for field[%s]",
+              inputValue,
+              name
+          );
         } else {
-          return NullHandling.defaultLongValue();
+          return (Number) NullHandling.defaultValueForType(outputType != null ? outputType : ValueType.LONG);
         }
       }
     } else {
       if (throwParseExceptions) {
-        throw new ParseException(String.valueOf(inputValue), "Unknown type[%s] for field[%s]", inputValue.getClass(), name);
+        throw new ParseException(
+            String.valueOf(inputValue),
+            "Unknown type[%s] for field[%s]",
+            inputValue.getClass(),
+            name
+        );
       } else {
-        return NullHandling.defaultLongValue();
+        return (Number) NullHandling.defaultValueForType(outputType != null ? outputType : ValueType.LONG);
       }
     }
+
+    if (outputType == null || asNumber == null) {
+      return asNumber;
+    } else if (outputType == ValueType.LONG) {
+      return asNumber.longValue();
+    } else if (outputType == ValueType.FLOAT) {
+      return asNumber.floatValue();
+    } else if (outputType == ValueType.DOUBLE) {
+      return asNumber.doubleValue();
+    } else {
+      throw new ISE("Cannot read number as type[%s]", outputType);
+    }
+  }
+
+  /**
+   * Shorthand for {@link #objectToNumber(String, Object, ValueType, boolean)} with null expectedType.
+   */
+  public static Number objectToNumber(
+      final String name,
+      final Object inputValue,
+      final boolean throwParseExceptions
+  )
+  {
+    return objectToNumber(name, inputValue, null, throwParseExceptions);
   }
 
   private static String trimLeadingPlusOfLongString(String metricValueString)

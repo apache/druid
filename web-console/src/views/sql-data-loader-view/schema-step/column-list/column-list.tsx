@@ -16,11 +16,10 @@
  * limitations under the License.
  */
 
-import { Icon } from '@blueprintjs/core';
+import { Icon, Popover } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { Popover2 } from '@blueprintjs/popover2';
-import type { QueryResult, SqlExpression } from '@druid-toolkit/query';
-import React, { useMemo } from 'react';
+import type { QueryResult, SqlExpression } from 'druid-query-toolkit';
+import { useMemo } from 'react';
 
 import { LearnMore, PopoverText } from '../../../../components';
 import { getLink } from '../../../../links';
@@ -67,7 +66,7 @@ export const ColumnList = function ColumnList(props: ColumnListProps) {
           {metrics ? (
             <>
               {'Dimensions '}
-              <Popover2
+              <Popover
                 className="info-popover"
                 content={
                   <PopoverText>
@@ -76,13 +75,13 @@ export const ColumnList = function ColumnList(props: ColumnListProps) {
                       aggregated at query time. They are always single Strings, arrays of Strings,
                       single Longs, single Doubles or single Floats.
                     </p>
-                    <LearnMore href={`${getLink('DOCS')}/ingestion/schema-design.html`} />
+                    <LearnMore href={`${getLink('DOCS')}/ingestion/schema-design`} />
                   </PopoverText>
                 }
                 position="left-bottom"
               >
                 <Icon icon={IconNames.INFO_SIGN} size={14} />
-              </Popover2>
+              </Popover>
             </>
           ) : (
             'Columns'
@@ -112,7 +111,7 @@ export const ColumnList = function ColumnList(props: ColumnListProps) {
         <div className="list-column">
           <div className="list-label">
             {'Metrics '}
-            <Popover2
+            <Popover
               className="info-popover"
               content={
                 <PopoverText>
@@ -122,13 +121,13 @@ export const ColumnList = function ColumnList(props: ColumnListProps) {
                     (integers or floats) but can also be stored as complex objects like HyperLogLog
                     sketches or approximate quantile sketches.
                   </p>
-                  <LearnMore href={`${getLink('DOCS')}/ingestion/schema-design.html`} />
+                  <LearnMore href={`${getLink('DOCS')}/ingestion/schema-design`} />
                 </PopoverText>
               }
               position="left-bottom"
             >
               <Icon icon={IconNames.INFO_SIGN} size={14} />
-            </Popover2>
+            </Popover>
           </div>
           <div className="list-container">
             {filterMap(metrics, (ex, i) => {

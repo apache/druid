@@ -34,7 +34,7 @@ import java.util.function.ToLongFunction;
 
 /**
  * A {@link org.apache.druid.segment.Segment} that is based on a {@link LookupExtractor}. Allows direct
- * querying of lookups. The lookup must support {@link LookupExtractor#iterable()}.
+ * querying of lookups. The lookup must support {@link LookupExtractor#asMap()}.
  */
 public class LookupSegment extends RowBasedSegment<Map.Entry<String, String>>
 {
@@ -51,11 +51,11 @@ public class LookupSegment extends RowBasedSegment<Map.Entry<String, String>>
         Sequences.simple(() -> {
           final LookupExtractor extractor = lookupExtractorFactory.get();
 
-          if (!extractor.canIterate()) {
-            throw new ISE("Cannot iterate lookup[%s]", lookupExtractorFactory);
+          if (!extractor.supportsAsMap()) {
+            throw new ISE("Cannot retrieve map view from lookup[%s]", lookupExtractorFactory);
           }
 
-          return extractor.iterable().iterator();
+          return extractor.asMap().entrySet().iterator();
         }),
         new RowAdapter<Map.Entry<String, String>>()
         {

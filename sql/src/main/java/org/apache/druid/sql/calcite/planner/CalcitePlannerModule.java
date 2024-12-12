@@ -24,7 +24,9 @@ import com.google.inject.Module;
 import com.google.inject.multibindings.Multibinder;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.sql.calcite.rule.ExtensionCalciteRuleProvider;
+import org.apache.druid.sql.calcite.schema.BrokerSegmentMetadataCacheConfig;
 
 /**
  * The module responsible for provide bindings for the Calcite Planner.
@@ -41,7 +43,8 @@ public class CalcitePlannerModule implements Module
     // It turns out that the order of the arguments above is misleading.
     // We're actually binding the class to the config prefix, not the other way around.
     JsonConfigProvider.bind(binder, CONFIG_BASE, PlannerConfig.class);
-    JsonConfigProvider.bind(binder, CONFIG_BASE, SegmentMetadataCacheConfig.class);
+    JsonConfigProvider.bind(binder, CONFIG_BASE, BrokerSegmentMetadataCacheConfig.class);
+    JsonConfigProvider.bind(binder, CentralizedDatasourceSchemaConfig.PROPERTY_PREFIX, CentralizedDatasourceSchemaConfig.class);
     binder.bind(PlannerFactory.class).in(LazySingleton.class);
     binder.bind(DruidOperatorTable.class).in(LazySingleton.class);
     Multibinder.newSetBinder(binder, ExtensionCalciteRuleProvider.class);

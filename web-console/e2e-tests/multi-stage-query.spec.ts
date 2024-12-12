@@ -44,8 +44,9 @@ describe('Multi-stage query', () => {
   });
 
   it('runs a query that reads external data', async () => {
+    const workbench = new WorkbenchOverview(page, UNIFIED_CONSOLE_URL);
+
     await saveScreenshotIfError('multi-stage-query', page, async () => {
-      const workbench = new WorkbenchOverview(page, UNIFIED_CONSOLE_URL);
       const results = await workbench.runQuery(`WITH ext AS (SELECT *
 FROM TABLE(
   EXTERN(

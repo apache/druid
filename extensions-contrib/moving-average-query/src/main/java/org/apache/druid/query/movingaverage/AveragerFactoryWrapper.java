@@ -109,15 +109,6 @@ public class AveragerFactoryWrapper<T, R> extends AggregatorFactory
    * Not implemented. Throws UnsupportedOperationException.
    */
   @Override
-  public List<AggregatorFactory> getRequiredColumns()
-  {
-    throw new UnsupportedOperationException("Invalid operation for AveragerFactoryWrapper.");
-  }
-
-  /**
-   * Not implemented. Throws UnsupportedOperationException.
-   */
-  @Override
   public Object deserialize(Object object)
   {
     throw new UnsupportedOperationException("Invalid operation for AveragerFactoryWrapper.");

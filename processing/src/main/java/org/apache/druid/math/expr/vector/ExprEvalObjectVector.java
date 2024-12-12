@@ -20,8 +20,10 @@
 package org.apache.druid.math.expr.vector;
 
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.ExprType;
 import org.apache.druid.math.expr.ExpressionType;
 
 import javax.annotation.Nullable;
@@ -36,9 +38,17 @@ public final class ExprEvalObjectVector extends ExprEvalVector<Object[]>
   @Nullable
   private boolean[] numericNulls;
 
-  public ExprEvalObjectVector(Object[] values)
+  private final ExpressionType type;
+
+  public ExprEvalObjectVector(Object[] values, ExpressionType type)
   {
     super(values, null);
+    this.type = type;
+
+    if (type.isNumeric()) {
+      // Cannot use ExprEvalObjectSelector on types that are innately numbers.
+      throw DruidException.defensive("Expression of type[%s] is numeric", type);
+    }
   }
 
   private void computeNumbers()
@@ -47,16 +57,25 @@ public final class ExprEvalObjectVector extends ExprEvalVector<Object[]>
       longs = new long[values.length];
       doubles = new double[values.length];
       numericNulls = new boolean[values.length];
+      boolean isString = type.is(ExprType.STRING);
       for (int i = 0; i < values.length; i++) {
-        Number n = ExprEval.computeNumber(Evals.asString(values[i]));
-        if (n != null) {
-          longs[i] = n.longValue();
-          doubles[i] = n.doubleValue();
-          numericNulls[i] = false;
+        if (isString) {
+          Number n = ExprEval.computeNumber(Evals.asString(values[i]));
+          if (n != null) {
+            longs[i] = n.longValue();
+            doubles[i] = n.doubleValue();
+            numericNulls[i] = false;
+          } else {
+            longs[i] = 0L;
+            doubles[i] = 0.0;
+            numericNulls[i] = NullHandling.sqlCompatible();
+          }
         } else {
-          longs[i] = 0L;
-          doubles[i] = 0.0;
-          numericNulls[i] = NullHandling.sqlCompatible();
+          // ARRAY, COMPLEX
+          final ExprEval<?> valueEval = ExprEval.ofType(type, values[i]).castTo(ExpressionType.DOUBLE);
+          longs[i] = valueEval.asLong();
+          doubles[i] = valueEval.asDouble();
+          numericNulls[i] = valueEval.isNumericNull();
         }
       }
     }
@@ -73,7 +92,7 @@ public final class ExprEvalObjectVector extends ExprEvalVector<Object[]>
   @Override
   public ExpressionType getType()
   {
-    return ExpressionType.STRING;
+    return type;
   }
 
   @Override

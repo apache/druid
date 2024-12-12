@@ -64,6 +64,7 @@ public class QueryContexts
   public static final String REWRITE_JOIN_TO_FILTER_ENABLE_KEY = "enableRewriteJoinToFilter";
   public static final String JOIN_FILTER_REWRITE_MAX_SIZE_KEY = "joinFilterRewriteMaxSize";
   public static final String MAX_NUMERIC_IN_FILTERS = "maxNumericInFilters";
+  public static final String CURSOR_AUTO_ARRANGE_FILTERS = "cursorAutoArrangeFilters";
   // This flag controls whether a SQL join query with left scan should be attempted to be run as direct table access
   // instead of being wrapped inside a query. With direct table access enabled, Druid can push down the join operation to
   // data servers.
@@ -77,6 +78,8 @@ public class QueryContexts
   public static final String BY_SEGMENT_KEY = "bySegment";
   public static final String BROKER_SERVICE_NAME = "brokerService";
   public static final String IN_SUB_QUERY_THRESHOLD_KEY = "inSubQueryThreshold";
+  public static final String IN_FUNCTION_THRESHOLD = "inFunctionThreshold";
+  public static final String IN_FUNCTION_EXPR_THRESHOLD = "inFunctionExprThreshold";
   public static final String TIME_BOUNDARY_PLANNING_KEY = "enableTimeBoundaryPlanning";
   public static final String POPULATE_CACHE_KEY = "populateCache";
   public static final String POPULATE_RESULT_LEVEL_CACHE_KEY = "populateResultLevelCache";
@@ -85,6 +88,32 @@ public class QueryContexts
   public static final String SERIALIZE_DATE_TIME_AS_LONG_INNER_KEY = "serializeDateTimeAsLongInner";
   public static final String UNCOVERED_INTERVALS_LIMIT_KEY = "uncoveredIntervalsLimit";
   public static final String MIN_TOP_N_THRESHOLD = "minTopNThreshold";
+  public static final String CATALOG_VALIDATION_ENABLED = "catalogValidationEnabled";
+  /**
+   * Context parameter to enable/disable the extended filtered sum rewrite logic.
+   *
+   * Controls the rewrite of:
+   * <pre>
+   *    SUM(CASE WHEN COND THEN COL1 ELSE 0 END)
+   * to
+   *    SUM(COL1) FILTER (COND)
+   * </pre>
+   * managed by {@link DruidAggregateCaseToFilterRule}. Defaults to true for performance,
+   * but may produce incorrect results when the condition never matches (expected 0).
+   * This is for testing and can be removed once a correct and high-performance rewrite
+   * is implemented.
+   */
+  public static final String EXTENDED_FILTERED_SUM_REWRITE_ENABLED = "extendedFilteredSumRewrite";
+
+
+  // projection context keys
+  public static final String NO_PROJECTIONS = "noProjections";
+  public static final String FORCE_PROJECTION = "forceProjections";
+  public static final String USE_PROJECTION = "useProjection";
+
+  // Unique identifier for the query, that is used to map the global shared resources (specifically merge buffers) to the
+  // query's runtime
+  public static final String QUERY_RESOURCE_ID = "queryResourceId";
 
   // SQL query context keys
   public static final String CTX_SQL_QUERY_ID = BaseQuery.SQL_QUERY_ID;
@@ -92,6 +121,10 @@ public class QueryContexts
 
   // SQL statement resource specific keys
   public static final String CTX_EXECUTION_MODE = "executionMode";
+
+  public static final String CTX_NATIVE_QUERY_SQL_PLANNING_MODE = "plannerStrategy";
+  public static final String NATIVE_QUERY_SQL_PLANNING_MODE_COUPLED = "COUPLED";
+  public static final String NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED = "DECOUPLED";
 
   // Defaults
   public static final boolean DEFAULT_BY_SEGMENT = false;
@@ -101,6 +134,7 @@ public class QueryContexts
   public static final boolean DEFAULT_USE_RESULTLEVEL_CACHE = true;
   public static final Vectorize DEFAULT_VECTORIZE = Vectorize.TRUE;
   public static final Vectorize DEFAULT_VECTORIZE_VIRTUAL_COLUMN = Vectorize.TRUE;
+  public static final int DEFAULT_VECTOR_SIZE = 512;
   public static final int DEFAULT_PRIORITY = 0;
   public static final int DEFAULT_UNCOVERED_INTERVALS_LIMIT = 0;
   public static final long DEFAULT_TIMEOUT_MILLIS = TimeUnit.MINUTES.toMillis(5);
@@ -116,7 +150,13 @@ public class QueryContexts
   public static final boolean DEFAULT_SECONDARY_PARTITION_PRUNING = true;
   public static final boolean DEFAULT_ENABLE_DEBUG = false;
   public static final int DEFAULT_IN_SUB_QUERY_THRESHOLD = Integer.MAX_VALUE;
+  public static final int DEFAULT_IN_FUNCTION_THRESHOLD = 100;
+  public static final int DEFAULT_IN_FUNCTION_EXPR_THRESHOLD = 2;
   public static final boolean DEFAULT_ENABLE_TIME_BOUNDARY_PLANNING = false;
+  public static final boolean DEFAULT_CATALOG_VALIDATION_ENABLED = true;
+  public static final boolean DEFAULT_USE_NESTED_FOR_UNKNOWN_TYPE_IN_SUBQUERY = false;
+  public static final boolean DEFAULT_EXTENDED_FILTERED_SUM_REWRITE_ENABLED = true;
+
 
   @SuppressWarnings("unused") // Used by Jackson serialization
   public enum Vectorize

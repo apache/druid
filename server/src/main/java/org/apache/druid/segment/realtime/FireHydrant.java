@@ -20,14 +20,15 @@
 package org.apache.druid.segment.realtime;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.Iterables;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.segment.IncrementalIndexSegment;
+import org.apache.druid.segment.Metadata;
+import org.apache.druid.segment.PhysicalSegmentInspector;
+import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.SegmentReference;
-import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
@@ -44,6 +45,7 @@ public class FireHydrant
 {
   private final int count;
   private final AtomicReference<ReferenceCountingSegment> adapter;
+  @Nullable
   private volatile IncrementalIndex index;
 
   public FireHydrant(IncrementalIndex index, int count, SegmentId segmentId)
@@ -62,6 +64,7 @@ public class FireHydrant
     this.count = count;
   }
 
+  @Nullable
   public IncrementalIndex getIndex()
   {
     return index;
@@ -74,10 +77,16 @@ public class FireHydrant
 
   public int getSegmentNumDimensionColumns()
   {
-    final Segment segment = adapter.get().getBaseSegment();
-    if (segment != null) {
-      final StorageAdapter storageAdapter = segment.asStorageAdapter();
-      return storageAdapter.getAvailableDimensions().size();
+    if (hasSwapped()) {
+      final Segment segment = adapter.get().getBaseSegment();
+      if (segment != null) {
+        QueryableIndex queryableIndex = segment.as(QueryableIndex.class);
+        if (queryableIndex != null) {
+          return queryableIndex.getAvailableDimensions().size();
+        }
+      }
+    } else {
+      return index.getDimensions().size();
     }
     return 0;
   }
@@ -86,8 +95,9 @@ public class FireHydrant
   {
     final Segment segment = adapter.get().getBaseSegment();
     if (segment != null) {
-      final StorageAdapter storageAdapter = segment.asStorageAdapter();
-      return Iterables.size(storageAdapter.getAvailableMetrics());
+      final PhysicalSegmentInspector segmentInspector = segment.as(PhysicalSegmentInspector.class);
+      final Metadata metadata = segmentInspector == null ? null : segmentInspector.getMetadata();
+      return metadata != null && metadata.getAggregators() != null ? metadata.getAggregators().length : 0;
     }
     return 0;
   }
@@ -175,6 +185,12 @@ public class FireHydrant
   )
   {
     ReferenceCountingSegment sinkSegment = adapter.get();
+
+    if (sinkSegment == null) {
+      // adapter can be null if this segment is removed (swapped to null) while being queried.
+      return Optional.empty();
+    }
+
     SegmentReference segment = segmentMapFn.apply(sinkSegment);
     while (true) {
       Optional<Closeable> reference = segment.acquireReferences();
@@ -186,7 +202,8 @@ public class FireHydrant
       // segment swap, the new segment should already be visible.
       ReferenceCountingSegment newSinkSegment = adapter.get();
       if (newSinkSegment == null) {
-        throw new ISE("FireHydrant was 'closed' by swapping segment to null while acquiring a segment");
+        // adapter can be null if this segment is removed (swapped to null) while being queried.
+        return Optional.empty();
       }
       if (sinkSegment == newSinkSegment) {
         if (newSinkSegment.isClosed()) {

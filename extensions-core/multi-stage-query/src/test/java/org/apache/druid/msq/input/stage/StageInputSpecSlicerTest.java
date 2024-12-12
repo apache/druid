@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntAVLTreeSet;
+import org.apache.druid.msq.exec.OutputChannelMode;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
@@ -43,12 +44,21 @@ public class StageInputSpecSlicerTest
                       .build()
       );
 
+  private static final Int2ObjectMap<OutputChannelMode> STAGE_OUTPUT_MODE_MAP =
+      new Int2ObjectOpenHashMap<>(
+          ImmutableMap.<Integer, OutputChannelMode>builder()
+                      .put(0, OutputChannelMode.LOCAL_STORAGE)
+                      .put(1, OutputChannelMode.LOCAL_STORAGE)
+                      .put(2, OutputChannelMode.LOCAL_STORAGE)
+                      .build()
+      );
+
   private StageInputSpecSlicer slicer;
 
   @Before
   public void setUp()
   {
-    slicer = new StageInputSpecSlicer(STAGE_PARTITIONS_MAP);
+    slicer = new StageInputSpecSlicer(STAGE_PARTITIONS_MAP, STAGE_OUTPUT_MODE_MAP);
   }
 
   @Test
@@ -64,7 +74,8 @@ public class StageInputSpecSlicerTest
         Collections.singletonList(
             new StageInputSlice(
                 0,
-                ReadablePartitions.striped(0, 2, 2)
+                ReadablePartitions.striped(0, 2, 2),
+                OutputChannelMode.LOCAL_STORAGE
             )
         ),
         slicer.sliceStatic(new StageInputSpec(0), 1)
@@ -78,11 +89,13 @@ public class StageInputSpecSlicerTest
         ImmutableList.of(
             new StageInputSlice(
                 0,
-                new StripedReadablePartitions(0, 2, new IntAVLTreeSet(new int[]{0}))
+                new StripedReadablePartitions(0, 2, new IntAVLTreeSet(new int[]{0})),
+                OutputChannelMode.LOCAL_STORAGE
             ),
             new StageInputSlice(
                 0,
-                new StripedReadablePartitions(0, 2, new IntAVLTreeSet(new int[]{1}))
+                new StripedReadablePartitions(0, 2, new IntAVLTreeSet(new int[]{1})),
+                OutputChannelMode.LOCAL_STORAGE
             )
         ),
         slicer.sliceStatic(new StageInputSpec(0), 2)
@@ -96,11 +109,13 @@ public class StageInputSpecSlicerTest
         ImmutableList.of(
             new StageInputSlice(
                 1,
-                new StripedReadablePartitions(1, 2, new IntAVLTreeSet(new int[]{0, 2}))
+                new StripedReadablePartitions(1, 2, new IntAVLTreeSet(new int[]{0, 2})),
+                OutputChannelMode.LOCAL_STORAGE
             ),
             new StageInputSlice(
                 1,
-                new StripedReadablePartitions(1, 2, new IntAVLTreeSet(new int[]{1, 3}))
+                new StripedReadablePartitions(1, 2, new IntAVLTreeSet(new int[]{1, 3})),
+                OutputChannelMode.LOCAL_STORAGE
             )
         ),
         slicer.sliceStatic(new StageInputSpec(1), 2)
@@ -115,6 +130,6 @@ public class StageInputSpecSlicerTest
         () -> slicer.sliceStatic(new StageInputSpec(3), 1)
     );
 
-    MatcherAssert.assertThat(e.getMessage(), CoreMatchers.equalTo("Stage [3] not available"));
+    MatcherAssert.assertThat(e.getMessage(), CoreMatchers.equalTo("Stage[3] output partitions not available"));
   }
 }

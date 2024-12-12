@@ -28,9 +28,9 @@ public class Stats
   {
     // Decisions taken in a run
     public static final CoordinatorStat ASSIGNED
-        = CoordinatorStat.toLogAndEmit("assigned", "segment/assigned/count", CoordinatorStat.Level.INFO);
+        = CoordinatorStat.toDebugAndEmit("assigned", "segment/assigned/count");
     public static final CoordinatorStat DROPPED
-        = CoordinatorStat.toLogAndEmit("dropped", "segment/dropped/count", CoordinatorStat.Level.INFO);
+        = CoordinatorStat.toDebugAndEmit("dropped", "segment/dropped/count");
     public static final CoordinatorStat DELETED
         = CoordinatorStat.toLogAndEmit("deleted", "segment/deleted/count", CoordinatorStat.Level.INFO);
     public static final CoordinatorStat MOVED
@@ -53,10 +53,18 @@ public class Stats
         = CoordinatorStat.toDebugAndEmit("underreplicated", "segment/underReplicated/count");
     public static final CoordinatorStat UNAVAILABLE
         = CoordinatorStat.toDebugAndEmit("unavailable", "segment/unavailable/count");
+    public static final CoordinatorStat DEEP_STORAGE_ONLY
+            = CoordinatorStat.toDebugAndEmit("deepStorageOnly", "segment/availableDeepStorageOnly/count");
     public static final CoordinatorStat UNNEEDED
         = CoordinatorStat.toDebugAndEmit("unneeded", "segment/unneeded/count");
     public static final CoordinatorStat OVERSHADOWED
         = CoordinatorStat.toDebugAndEmit("overshadowed", "segment/overshadowed/count");
+    public static final CoordinatorStat UNNEEDED_ETERNITY_TOMBSTONE
+        = CoordinatorStat.toDebugAndEmit("unneededEternityTombstone", "segment/unneededEternityTombstone/count");
+
+    // Values computed in a run
+    public static final CoordinatorStat REPLICATION_THROTTLE_LIMIT
+        = CoordinatorStat.toDebugOnly("replicationThrottleLimit");
   }
 
   public static class SegmentQueue
@@ -67,6 +75,8 @@ public class Stats
         = CoordinatorStat.toDebugAndEmit("bytesToLoad", "segment/loadQueue/size");
     public static final CoordinatorStat NUM_TO_DROP
         = CoordinatorStat.toDebugAndEmit("numToDrop", "segment/dropQueue/count");
+    public static final CoordinatorStat LOAD_RATE_KBPS
+        = CoordinatorStat.toDebugAndEmit("loadRateKbps", "segment/loading/rateKbps");
 
     public static final CoordinatorStat ASSIGNED_ACTIONS
         = CoordinatorStat.toDebugAndEmit("assignedActions", "segment/loadQueue/assigned");
@@ -137,10 +147,22 @@ public class Stats
         = CoordinatorStat.toDebugAndEmit("killedSupervisorSpecs", "metadata/kill/supervisor/count");
     public static final CoordinatorStat RULES
         = CoordinatorStat.toDebugAndEmit("killedRules", "metadata/kill/rule/count");
+    public static final CoordinatorStat SEGMENT_SCHEMA
+        = CoordinatorStat.toDebugAndEmit("killSchemas", "metadata/kill/segmentSchema/count");
     public static final CoordinatorStat AUDIT_LOGS
         = CoordinatorStat.toDebugAndEmit("killedAuditLogs", "metadata/kill/audit/count");
     public static final CoordinatorStat DATASOURCES
         = CoordinatorStat.toDebugAndEmit("killedDatasources", "metadata/kill/datasource/count");
+    public static final CoordinatorStat AVAILABLE_SLOTS
+        = CoordinatorStat.toDebugAndEmit("killAvailSlots", "killTask/availableSlot/count");
+    public static final CoordinatorStat MAX_SLOTS
+        = CoordinatorStat.toDebugAndEmit("killMaxSlots", "killTask/maxSlot/count");
+    public static final CoordinatorStat SUBMITTED_TASKS
+        = CoordinatorStat.toDebugAndEmit("killTasks", "kill/task/count");
+    public static final CoordinatorStat ELIGIBLE_UNUSED_SEGMENTS
+        = CoordinatorStat.toDebugAndEmit("killEligibleUnusedSegs", "kill/eligibleUnusedSegments/count");
+    public static final CoordinatorStat PENDING_SEGMENTS
+        = CoordinatorStat.toDebugAndEmit("killPendingSegs", "kill/pendingSegments/count");
   }
 
   public static class Balancer
@@ -152,5 +174,8 @@ public class Stats
     );
     public static final CoordinatorStat COMPUTATION_TIME = CoordinatorStat.toDebugOnly("costComputeTime");
     public static final CoordinatorStat COMPUTATION_COUNT = CoordinatorStat.toDebugOnly("costComputeCount");
+
+    public static final CoordinatorStat COMPUTE_THREADS = CoordinatorStat.toDebugOnly("balancerComputeThreads");
+    public static final CoordinatorStat MAX_TO_MOVE = CoordinatorStat.toDebugOnly("maxToMove");
   }
 }

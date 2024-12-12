@@ -1,0 +1,143 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`RestrictedMode matches snapshot when in auto capability detection mode 1`] = `
+<Blueprint5.Popover
+  boundary="clippingParents"
+  captureDismiss={false}
+  className="restricted-mode"
+  content={
+    <Memo(PopoverText)>
+      <p>
+        The console is running in restricted mode.
+      </p>
+      <p>
+        You are accessing the console on the Coordinator/Overlord shared service. Because this service lacks access to some APIs, the console will operate in a limited mode. You can access the unrestricted version of the console on the Router service.
+      </p>
+      <p>
+        For more info refer to the
+         
+        <Memo(ExternalLink)
+          href="https://druid.apache.org/docs/latest/operations/web-console"
+        >
+          web console documentation
+        </Memo(ExternalLink)>
+        .
+      </p>
+      <React.Fragment>
+        <p>
+          It is possible that the console is experiencing an issue with the capability detection. You can enable the unrestricted console, but certain features might not work if the underlying APIs are not available.
+        </p>
+        <p>
+          <Blueprint5.Button
+            icon="warning-sign"
+            onClick={[Function]}
+            text="Temporarily unrestrict console (with SQL)"
+          />
+        </p>
+      </React.Fragment>
+      <p>
+        <Blueprint5.Button
+          icon="warning-sign"
+          onClick={[Function]}
+          text="Temporarily unrestrict console (without SQL)"
+        />
+      </p>
+    </Memo(PopoverText)>
+  }
+  defaultIsOpen={false}
+  disabled={false}
+  fill={false}
+  hasBackdrop={false}
+  hoverCloseDelay={300}
+  hoverOpenDelay={150}
+  inheritDarkTheme={true}
+  interactionKind="click"
+  matchTargetWidth={false}
+  minimal={false}
+  openOnTargetFocus={true}
+  position="bottom-right"
+  positioningStrategy="absolute"
+  shouldReturnFocusOnClose={false}
+  targetTagName="span"
+  transitionDuration={300}
+  usePortal={true}
+>
+  <Blueprint5.Button
+    icon="warning-sign"
+    intent="warning"
+    minimal={true}
+    text="Coordinator/Overlord mode"
+  />
+</Blueprint5.Popover>
+`;
+
+exports[`RestrictedMode matches snapshot when in manual capability detection mode 1`] = `
+<Blueprint5.Popover
+  boundary="clippingParents"
+  captureDismiss={false}
+  className="restricted-mode"
+  content={
+    <Memo(PopoverText)>
+      <p>
+        The console is running in restricted mode.
+      </p>
+      <p>
+        You are accessing the console on the Coordinator/Overlord shared service. Because this service lacks access to some APIs, the console will operate in a limited mode. You can access the unrestricted version of the console on the Router service.
+      </p>
+      <p>
+        For more info refer to the
+         
+        <Memo(ExternalLink)
+          href="https://druid.apache.org/docs/latest/operations/web-console"
+        >
+          web console documentation
+        </Memo(ExternalLink)>
+        .
+      </p>
+      <React.Fragment>
+        <p>
+          The console did no perform its automatic capability detection because it is running in manual capability detection mode.
+        </p>
+        <p>
+          <Blueprint5.Button
+            intent="primary"
+            onClick={[Function]}
+            text="Use to automatic capability detection"
+          />
+        </p>
+      </React.Fragment>
+      <p>
+        <Blueprint5.Button
+          icon="warning-sign"
+          onClick={[Function]}
+          text="Temporarily unrestrict console (without SQL)"
+        />
+      </p>
+    </Memo(PopoverText)>
+  }
+  defaultIsOpen={false}
+  disabled={false}
+  fill={false}
+  hasBackdrop={false}
+  hoverCloseDelay={300}
+  hoverOpenDelay={150}
+  inheritDarkTheme={true}
+  interactionKind="click"
+  matchTargetWidth={false}
+  minimal={false}
+  openOnTargetFocus={true}
+  position="bottom-right"
+  positioningStrategy="absolute"
+  shouldReturnFocusOnClose={false}
+  targetTagName="span"
+  transitionDuration={300}
+  usePortal={true}
+>
+  <Blueprint5.Button
+    icon="warning-sign"
+    intent="warning"
+    minimal={true}
+    text="Coordinator/Overlord mode"
+  />
+</Blueprint5.Popover>
+`;

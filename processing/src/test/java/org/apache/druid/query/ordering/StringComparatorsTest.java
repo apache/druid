@@ -22,6 +22,7 @@ package org.apache.druid.query.ordering;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.junit.Assert;
 import org.junit.Test;
@@ -33,6 +34,8 @@ import java.util.List;
 
 public class StringComparatorsTest
 {
+  private static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
+  
   private void commonTest(StringComparator comparator)
   {
     // equality test
@@ -157,64 +160,82 @@ public class StringComparatorsTest
   }
 
   @Test
+  public void testNaturalComparator()
+  {
+    Assert.assertThrows(DruidException.class, () -> StringComparators.NATURAL.compare("str1", "str2"));
+  }
+
+  @Test
   public void testLexicographicComparatorSerdeTest() throws IOException
   {
-    ObjectMapper jsonMapper = new DefaultObjectMapper();
     String expectJsonSpec = "{\"type\":\"lexicographic\"}";
 
-    String jsonSpec = jsonMapper.writeValueAsString(StringComparators.LEXICOGRAPHIC);
+    String jsonSpec = JSON_MAPPER.writeValueAsString(StringComparators.LEXICOGRAPHIC);
     Assert.assertEquals(expectJsonSpec, jsonSpec);
-    Assert.assertEquals(StringComparators.LEXICOGRAPHIC, jsonMapper.readValue(expectJsonSpec, StringComparator.class));
+    Assert.assertEquals(StringComparators.LEXICOGRAPHIC, JSON_MAPPER.readValue(expectJsonSpec, StringComparator.class));
 
     String makeFromJsonSpec = "\"lexicographic\"";
     Assert.assertEquals(
         StringComparators.LEXICOGRAPHIC,
-        jsonMapper.readValue(makeFromJsonSpec, StringComparator.class)
+        JSON_MAPPER.readValue(makeFromJsonSpec, StringComparator.class)
     );
   }
   
   @Test
   public void testAlphanumericComparatorSerdeTest() throws IOException
   {
-    ObjectMapper jsonMapper = new DefaultObjectMapper();
     String expectJsonSpec = "{\"type\":\"alphanumeric\"}";
 
-    String jsonSpec = jsonMapper.writeValueAsString(StringComparators.ALPHANUMERIC);
+    String jsonSpec = JSON_MAPPER.writeValueAsString(StringComparators.ALPHANUMERIC);
     Assert.assertEquals(expectJsonSpec, jsonSpec);
-    Assert.assertEquals(StringComparators.ALPHANUMERIC, jsonMapper.readValue(expectJsonSpec, StringComparator.class));
+    Assert.assertEquals(StringComparators.ALPHANUMERIC, JSON_MAPPER.readValue(expectJsonSpec, StringComparator.class));
 
     String makeFromJsonSpec = "\"alphanumeric\"";
-    Assert.assertEquals(StringComparators.ALPHANUMERIC, jsonMapper.readValue(makeFromJsonSpec, StringComparator.class));
+    Assert.assertEquals(StringComparators.ALPHANUMERIC, JSON_MAPPER.readValue(makeFromJsonSpec, StringComparator.class));
   }
   
   @Test
   public void testStrlenComparatorSerdeTest() throws IOException
   {
-    ObjectMapper jsonMapper = new DefaultObjectMapper();
     String expectJsonSpec = "{\"type\":\"strlen\"}";
     
-    String jsonSpec = jsonMapper.writeValueAsString(StringComparators.STRLEN);
+    String jsonSpec = JSON_MAPPER.writeValueAsString(StringComparators.STRLEN);
     Assert.assertEquals(expectJsonSpec, jsonSpec);
-    Assert.assertEquals(StringComparators.STRLEN, jsonMapper.readValue(expectJsonSpec, StringComparator.class));
+    Assert.assertEquals(StringComparators.STRLEN, JSON_MAPPER.readValue(expectJsonSpec, StringComparator.class));
 
     String makeFromJsonSpec = "\"strlen\"";
-    Assert.assertEquals(StringComparators.STRLEN, jsonMapper.readValue(makeFromJsonSpec, StringComparator.class));
+    Assert.assertEquals(StringComparators.STRLEN, JSON_MAPPER.readValue(makeFromJsonSpec, StringComparator.class));
   }
 
   @Test
   public void testNumericComparatorSerdeTest() throws IOException
   {
-    ObjectMapper jsonMapper = new DefaultObjectMapper();
     String expectJsonSpec = "{\"type\":\"numeric\"}";
 
-    String jsonSpec = jsonMapper.writeValueAsString(StringComparators.NUMERIC);
+    String jsonSpec = JSON_MAPPER.writeValueAsString(StringComparators.NUMERIC);
     Assert.assertEquals(expectJsonSpec, jsonSpec);
-    Assert.assertEquals(StringComparators.NUMERIC, jsonMapper.readValue(expectJsonSpec, StringComparator.class));
+    Assert.assertEquals(StringComparators.NUMERIC, JSON_MAPPER.readValue(expectJsonSpec, StringComparator.class));
 
     String makeFromJsonSpec = "\"numeric\"";
-    Assert.assertEquals(StringComparators.NUMERIC, jsonMapper.readValue(makeFromJsonSpec, StringComparator.class));
+    Assert.assertEquals(StringComparators.NUMERIC, JSON_MAPPER.readValue(makeFromJsonSpec, StringComparator.class));
 
     makeFromJsonSpec = "\"NuMeRiC\"";
-    Assert.assertEquals(StringComparators.NUMERIC, jsonMapper.readValue(makeFromJsonSpec, StringComparator.class));
+    Assert.assertEquals(StringComparators.NUMERIC, JSON_MAPPER.readValue(makeFromJsonSpec, StringComparator.class));
+  }
+  
+  @Test
+  public void testNaturalComparatorSerdeTest() throws IOException
+  {
+    String expectJsonSpec = "{\"type\":\"natural\"}";
+
+    String jsonSpec = JSON_MAPPER.writeValueAsString(StringComparators.NATURAL);
+    Assert.assertEquals(expectJsonSpec, jsonSpec);
+    Assert.assertEquals(StringComparators.NATURAL, JSON_MAPPER.readValue(expectJsonSpec, StringComparator.class));
+
+    String makeFromJsonSpec = "\"natural\"";
+    Assert.assertEquals(StringComparators.NATURAL, JSON_MAPPER.readValue(makeFromJsonSpec, StringComparator.class));
+
+    makeFromJsonSpec = "\"NaTuRaL\"";
+    Assert.assertEquals(StringComparators.NATURAL, JSON_MAPPER.readValue(makeFromJsonSpec, StringComparator.class));
   }
 }

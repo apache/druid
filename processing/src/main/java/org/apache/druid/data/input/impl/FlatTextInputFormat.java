@@ -23,7 +23,15 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.data.input.InputFormat;
+import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.data.input.ListBasedInputRow;
+import org.apache.druid.data.input.ListBasedInputRowAdapter;
+import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.segment.RowAdapter;
+import org.apache.druid.segment.RowAdapters;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.utils.CompressionUtils;
 
 import javax.annotation.Nullable;
@@ -38,6 +46,7 @@ public abstract class FlatTextInputFormat implements InputFormat
   private final String delimiter;
   private final boolean findColumnsFromHeader;
   private final int skipHeaderRows;
+  private final boolean tryParseNumbers;
 
   FlatTextInputFormat(
       @Nullable List<String> columns,
@@ -45,7 +54,8 @@ public abstract class FlatTextInputFormat implements InputFormat
       String delimiter,
       @Nullable Boolean hasHeaderRow,
       @Nullable Boolean findColumnsFromHeader,
-      int skipHeaderRows
+      int skipHeaderRows,
+      @Nullable Boolean tryParseNumbers
   )
   {
     this.columns = columns == null ? Collections.emptyList() : columns;
@@ -71,6 +81,8 @@ public abstract class FlatTextInputFormat implements InputFormat
         "Cannot have same delimiter and list delimiter of [%s]",
         delimiter
     );
+    this.tryParseNumbers = tryParseNumbers == null ? false : tryParseNumbers;
+
     if (!this.columns.isEmpty()) {
       for (String column : this.columns) {
         Preconditions.checkArgument(
@@ -123,6 +135,37 @@ public abstract class FlatTextInputFormat implements InputFormat
     return skipHeaderRows;
   }
 
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+  public boolean shouldTryParseNumbers()
+  {
+    return tryParseNumbers;
+  }
+
+  @Override
+  public long getWeightedSize(String path, long size)
+  {
+    CompressionUtils.Format compressionFormat = CompressionUtils.Format.fromFileName(path);
+    if (CompressionUtils.Format.GZ == compressionFormat) {
+      return size * CompressionUtils.COMPRESSED_TEXT_WEIGHT_FACTOR;
+    }
+    return size;
+  }
+
+  @Override
+  public RowAdapter<InputRow> createRowAdapter(InputRowSchema inputRowSchema)
+  {
+    if (useListBasedInputRows()) {
+      final RowSignature.Builder builder = RowSignature.builder();
+      for (final String column : columns) {
+        builder.add(column, null);
+      }
+      return new ListBasedInputRowAdapter(builder.build());
+    } else {
+      return RowAdapters.standardRow();
+    }
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -141,30 +184,29 @@ public abstract class FlatTextInputFormat implements InputFormat
   }
 
   @Override
-  public long getWeightedSize(String path, long size)
-  {
-    CompressionUtils.Format compressionFormat = CompressionUtils.Format.fromFileName(path);
-    if (CompressionUtils.Format.GZ == compressionFormat) {
-      return size * CompressionUtils.COMPRESSED_TEXT_WEIGHT_FACTOR;
-    }
-    return size;
-  }
-
-  @Override
   public int hashCode()
   {
     return Objects.hash(listDelimiter, columns, findColumnsFromHeader, skipHeaderRows, delimiter);
   }
 
+  /**
+   * Whether this format can use {@link ListBasedInputRow}, which are preferred over {@link MapBasedInputRow} when
+   * possible. Subclasses pass this to {@link DelimitedValueReader}.
+   */
+  protected boolean useListBasedInputRows()
+  {
+    return !columns.isEmpty() && !findColumnsFromHeader;
+  }
+
   protected String fieldsToString()
   {
     return "FlatTextInputFormat{"
-        + "delimiter=\"" + delimiter
-        + "\"listDelimiter="
-        + listDelimiter == null ? "null" : "\"" + listDelimiter + "\""
-        + ", findColumnsFromHeader=" + findColumnsFromHeader
-        + ", skipHeaderRows=" + skipHeaderRows
-        + ", columns=" + columns
-        + "}";
+           + "delimiter=\"" + delimiter
+           + "\"listDelimiter="
+           + (listDelimiter == null ? "null" : "\"" + listDelimiter + "\"")
+           + ", findColumnsFromHeader=" + findColumnsFromHeader
+           + ", skipHeaderRows=" + skipHeaderRows
+           + ", columns=" + columns
+           + "}";
   }
 }

@@ -16,11 +16,14 @@
  * limitations under the License.
  */
 
-import type { QueryResult } from '@druid-toolkit/query';
+import type { QueryResult } from 'druid-query-toolkit';
 import FileSaver from 'file-saver';
 import * as JSONBig from 'json-bigint-native';
 
-import { stringifyValue } from './general';
+import { copyAndAlert, stringifyValue } from './general';
+import { queryResultToValuesQuery } from './values-query';
+
+export type Format = 'csv' | 'tsv' | 'json' | 'sql';
 
 export function downloadUrl(url: string, filename: string) {
   // Create a link and set the URL using `createObjectURL`
@@ -40,6 +43,8 @@ export function downloadUrl(url: string, filename: string) {
 }
 
 export function formatForFormat(s: null | string | number | Date, format: 'csv' | 'tsv'): string {
+  if (s == null) return '';
+
   // stringify and remove line break
   const str = stringifyValue(s).replace(/(?:\r\n|\r|\n)/g, ' ');
 
@@ -74,36 +79,43 @@ export function downloadFile(text: string, type: string, filename: string): void
   FileSaver.saveAs(blob, filename);
 }
 
+function queryResultsToString(queryResult: QueryResult, format: Format): string {
+  const { header, rows } = queryResult;
+
+  switch (format) {
+    case 'csv':
+    case 'tsv': {
+      const separator = format === 'csv' ? ',' : '\t';
+      return [
+        header.map(column => formatForFormat(column.name, format)).join(separator),
+        ...rows.map(r => r.map(cell => formatForFormat(cell, format)).join(separator)),
+      ].join('\n');
+    }
+
+    case 'sql':
+      return queryResultToValuesQuery(queryResult).toString();
+
+    case 'json':
+      return queryResult
+        .toObjectArray()
+        .map(r => JSONBig.stringify(r))
+        .join('\n');
+
+    default:
+      throw new Error(`unknown format: ${format}`);
+  }
+}
+
 export function downloadQueryResults(
   queryResult: QueryResult,
   filename: string,
-  format: string,
+  format: Format,
 ): void {
-  let lines: string[] = [];
-  let separator = '';
+  const resultString: string = queryResultsToString(queryResult, format);
+  downloadFile(resultString, format, filename);
+}
 
-  if (format === 'csv' || format === 'tsv') {
-    separator = format === 'csv' ? ',' : '\t';
-    lines.push(
-      queryResult.header.map(column => formatForFormat(column.name, format)).join(separator),
-    );
-    lines = lines.concat(
-      queryResult.rows.map(r => r.map(cell => formatForFormat(cell, format)).join(separator)),
-    );
-  } else {
-    // json
-    lines = queryResult.rows.map(r => {
-      const outputObject: Record<string, any> = {};
-      for (let k = 0; k < r.length; k++) {
-        const newName = queryResult.header[k];
-        if (newName) {
-          outputObject[newName.name] = r[k];
-        }
-      }
-      return JSONBig.stringify(outputObject);
-    });
-  }
-
-  const lineBreak = '\n';
-  downloadFile(lines.join(lineBreak), format, filename);
+export function copyQueryResultsToClipboard(queryResult: QueryResult, format: Format): void {
+  const resultString: string = queryResultsToString(queryResult, format);
+  copyAndAlert(resultString, 'Query results copied to clipboard');
 }

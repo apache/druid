@@ -39,7 +39,7 @@ import java.util.Objects;
  * Hack that allows "passing through" arbitrary complex types into
  * {@link org.apache.druid.segment.incremental.IncrementalIndex}.
  *
- * Used by {@link org.apache.druid.msq.exec.ControllerImpl#makeDimensionsAndAggregatorsForIngestion}.
+ * Used by {@link org.apache.druid.msq.indexing.destination.SegmentGenerationUtils#makeDimensionsAndAggregatorsForIngestion}.
  *
  * To move away from this, it would need to be possible to create complex columns in segments only knowing the complex
  * type; in particular, without knowing the type of an aggregator factory or dimension schema that corresponds to
@@ -66,15 +66,19 @@ public class PassthroughAggregatorFactory extends AggregatorFactory
     this.complexTypeName = complexTypeName;
   }
 
-  @JsonProperty
+  @JsonProperty("columnName")
   public String getColumnName()
   {
     return columnName;
   }
 
-  @Override
-  @JsonProperty
-  public String getComplexTypeName()
+  /**
+   * The getter for this variable is named differently because the 'getComplexTypeName' is a deprecated method present
+   * in the super class {@link AggregatorFactory}, and can be removed discriminately here, leading to incorrect serde of
+   * the aggregator factory over the wire
+   */
+  @JsonProperty("complexTypeName")
+  public String getComplexName()
   {
     return complexTypeName;
   }
@@ -115,12 +119,6 @@ public class PassthroughAggregatorFactory extends AggregatorFactory
   public AggregatorFactory getCombiningFactory()
   {
     return this;
-  }
-
-  @Override
-  public List<AggregatorFactory> getRequiredColumns()
-  {
-    throw new UnsupportedOperationException();
   }
 
   @Override

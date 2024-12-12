@@ -28,4 +28,6 @@ package org.apache.druid.catalog.sync;
 public interface CatalogUpdateListener
 {
   void updated(UpdateEvent event);
+  void flush();
+  void resync();
 }

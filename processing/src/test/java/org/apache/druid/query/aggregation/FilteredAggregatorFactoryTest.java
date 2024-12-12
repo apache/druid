@@ -49,6 +49,26 @@ public class FilteredAggregatorFactoryTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testNameOfCombiningFactory()
+  {
+    Assert.assertEquals("overrideName", new FilteredAggregatorFactory(
+        new CountAggregatorFactory("foo"),
+        TrueDimFilter.instance(),
+        "overrideName"
+    ).getCombiningFactory().getName());
+    Assert.assertEquals("delegateName", new FilteredAggregatorFactory(
+        new CountAggregatorFactory("delegateName"),
+        TrueDimFilter.instance(),
+        ""
+    ).getCombiningFactory().getName());
+    Assert.assertEquals("delegateName", new FilteredAggregatorFactory(
+        new CountAggregatorFactory("delegateName"),
+        TrueDimFilter.instance(),
+        null
+    ).getCombiningFactory().getName());
+  }
+
+  @Test
   public void testRequiredFields()
   {
     Assert.assertEquals(

@@ -20,10 +20,11 @@
 package org.apache.druid.server.coordinator.simulate;
 
 import com.google.common.base.Optional;
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.metadata.SegmentsMetadataManager;
+import org.apache.druid.metadata.SortOrder;
+import org.apache.druid.server.http.DataSegmentPlus;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.Partitions;
 import org.apache.druid.timeline.SegmentId;
@@ -37,24 +38,26 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.stream.Collectors;
 
 public class TestSegmentsMetadataManager implements SegmentsMetadataManager
 {
-  private final ConcurrentMap<String, DataSegment> segments = new ConcurrentHashMap<>();
+  private final ConcurrentMap<String, DataSegment> allSegments = new ConcurrentHashMap<>();
   private final ConcurrentMap<String, DataSegment> usedSegments = new ConcurrentHashMap<>();
 
   private volatile DataSourcesSnapshot snapshot;
+  private volatile boolean pollingStarted;
 
   public void addSegment(DataSegment segment)
   {
-    segments.put(segment.getId().toString(), segment);
+    allSegments.put(segment.getId().toString(), segment);
     usedSegments.put(segment.getId().toString(), segment);
     snapshot = null;
   }
 
   public void removeSegment(DataSegment segment)
   {
-    segments.remove(segment.getId().toString());
+    allSegments.remove(segment.getId().toString());
     usedSegments.remove(segment.getId().toString());
     snapshot = null;
   }
@@ -62,19 +65,19 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
   @Override
   public void startPollingDatabasePeriodically()
   {
-
+    this.pollingStarted = true;
   }
 
   @Override
   public void stopPollingDatabasePeriodically()
   {
-
+    this.pollingStarted = false;
   }
 
   @Override
   public boolean isPollingDatabasePeriodically()
   {
-    return true;
+    return pollingStarted;
   }
 
   @Override
@@ -84,7 +87,7 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
   }
 
   @Override
-  public int markAsUsedNonOvershadowedSegmentsInInterval(String dataSource, Interval interval)
+  public int markAsUsedNonOvershadowedSegmentsInInterval(String dataSource, Interval interval, @Nullable List<String> versions)
   {
     return 0;
   }
@@ -98,11 +101,11 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
   @Override
   public boolean markSegmentAsUsed(String segmentId)
   {
-    if (!segments.containsKey(segmentId)) {
+    if (!allSegments.containsKey(segmentId)) {
       return false;
     }
 
-    usedSegments.put(segmentId, segments.get(segmentId));
+    usedSegments.put(segmentId, allSegments.get(segmentId));
     return true;
   }
 
@@ -113,7 +116,7 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
   }
 
   @Override
-  public int markAsUnusedSegmentsInInterval(String dataSource, Interval interval)
+  public int markAsUnusedSegmentsInInterval(String dataSource, Interval interval, @Nullable List<String> versions)
   {
     return 0;
   }
@@ -122,8 +125,10 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
   public int markSegmentsAsUnused(Set<SegmentId> segmentIds)
   {
     int numModifiedSegments = 0;
+
     for (SegmentId segmentId : segmentIds) {
-      if (usedSegments.remove(segmentId.toString()) != null) {
+      if (allSegments.containsKey(segmentId.toString())) {
+        usedSegments.remove(segmentId.toString());
         ++numModifiedSegments;
       }
     }
@@ -165,7 +170,7 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
   public DataSourcesSnapshot getSnapshotOfDataSourcesWithAllUsedSegments()
   {
     if (snapshot == null) {
-      snapshot = DataSourcesSnapshot.fromUsedSegments(usedSegments.values(), ImmutableMap.of());
+      snapshot = DataSourcesSnapshot.fromUsedSegments(usedSegments.values());
     }
     return snapshot;
   }
@@ -193,20 +198,42 @@ public class TestSegmentsMetadataManager implements SegmentsMetadataManager
   }
 
   @Override
+  public Iterable<DataSegmentPlus> iterateAllUnusedSegmentsForDatasource(
+      String datasource,
+      @Nullable Interval interval,
+      @Nullable Integer limit,
+      @Nullable String lastSegmentId,
+      @Nullable SortOrder sortOrder
+  )
+  {
+    return null;
+  }
+
+  @Override
   public Set<String> retrieveAllDataSourceNames()
   {
-    return null;
+    return allSegments.values().stream().map(DataSegment::getDataSource).collect(Collectors.toSet());
   }
 
   @Override
-  public List<Interval> getUnusedSegmentIntervals(String dataSource, DateTime maxEndTime, int limit)
+  public List<Interval> getUnusedSegmentIntervals(
+      final String dataSource,
+      @Nullable final DateTime minStartTime,
+      final DateTime maxEndTime,
+      final int limit,
+      final DateTime maxUsedStatusLastUpdatedTime
+  )
   {
     return null;
   }
 
   @Override
-  public void poll()
+  public void populateUsedFlagLastUpdatedAsync()
   {
+  }
 
+  @Override
+  public void stopAsyncUsedFlagLastUpdatedUpdate()
+  {
   }
 }

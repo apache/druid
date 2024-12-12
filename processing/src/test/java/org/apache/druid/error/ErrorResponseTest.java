@@ -107,4 +107,32 @@ public class ErrorResponseTest
             .expectMessageIs("Query did not complete within configured timeout period. You can increase query timeout or tune the performance of query.")
     );
   }
+  @Test
+  public void testQueryExceptionCompatWithNullMessage()
+  {
+    ErrorResponse response = new ErrorResponse(DruidException.fromFailure(new QueryExceptionCompat(new QueryTimeoutException(
+        null,
+        "hostname"
+    ))));
+    final Map<String, Object> asMap = response.getAsMap();
+    MatcherAssert.assertThat(
+        asMap,
+        DruidMatchers.mapMatcher(
+            "error",
+            "Query timeout",
+
+            "errorCode",
+            "legacyQueryException",
+
+            "persona",
+            "OPERATOR",
+
+            "category",
+            "TIMEOUT",
+
+            "errorMessage",
+            "null"
+        )
+    );
+  }
 }

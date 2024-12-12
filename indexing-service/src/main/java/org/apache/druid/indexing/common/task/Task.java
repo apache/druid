@@ -41,10 +41,15 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
+import org.apache.druid.server.coordination.BroadcastDatasourceLoadingSpec;
+import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
+import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
+import org.apache.druid.server.security.ResourceType;
 
 import javax.annotation.Nonnull;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -62,10 +67,10 @@ import java.util.Set;
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
     @Type(name = KillUnusedSegmentsTask.TYPE, value = KillUnusedSegmentsTask.class),
-    @Type(name = "move", value = MoveTask.class),
-    @Type(name = "archive", value = ArchiveTask.class),
-    @Type(name = "restore", value = RestoreTask.class),
-    @Type(name = "index", value = IndexTask.class),
+    @Type(name = MoveTask.TYPE, value = MoveTask.class),
+    @Type(name = ArchiveTask.TYPE, value = ArchiveTask.class),
+    @Type(name = RestoreTask.TYPE, value = RestoreTask.class),
+    @Type(name = IndexTask.TYPE, value = IndexTask.class),
     @Type(name = ParallelIndexSupervisorTask.TYPE, value = ParallelIndexSupervisorTask.class),
     @Type(name = SinglePhaseSubTask.TYPE, value = SinglePhaseSubTask.class),
     // for backward compatibility
@@ -75,11 +80,9 @@ import java.util.Set;
     @Type(name = PartialRangeSegmentGenerateTask.TYPE, value = PartialRangeSegmentGenerateTask.class),
     @Type(name = PartialDimensionDistributionTask.TYPE, value = PartialDimensionDistributionTask.class),
     @Type(name = PartialGenericSegmentMergeTask.TYPE, value = PartialGenericSegmentMergeTask.class),
-    @Type(name = "index_hadoop", value = HadoopIndexTask.class),
-    @Type(name = "index_realtime", value = RealtimeIndexTask.class),
-    @Type(name = "index_realtime_appenderator", value = AppenderatorDriverRealtimeIndexTask.class),
-    @Type(name = "noop", value = NoopTask.class),
-    @Type(name = "compact", value = CompactionTask.class)
+    @Type(name = HadoopIndexTask.TYPE, value = HadoopIndexTask.class),
+    @Type(name = NoopTask.TYPE, value = NoopTask.class),
+    @Type(name = CompactionTask.TYPE, value = CompactionTask.class)
 })
 public interface Task
 {
@@ -149,8 +152,7 @@ public interface Task
    * the task does not use any. Users can be given permission to access particular types of
    * input sources but not others, using the
    * {@link org.apache.druid.server.security.AuthConfig#enableInputSourceSecurity} config.
-   * @throws UnsupportedOperationException if the given task type does not suppoert input source based security. Such
-   * would be the case, if the task uses firehose.
+   * @throws UnsupportedOperationException if the given task type does not suppoert input source based security
    */
   @JsonIgnore
   @Nonnull
@@ -158,15 +160,6 @@ public interface Task
   {
     throw new UOE(StringUtils.format(
         "Task type [%s], does not support input source based security",
-        getType()
-    ));
-  }
-
-  default UOE getInputSecurityOnFirehoseUnsupportedError()
-  {
-    throw new UOE(StringUtils.format(
-        "Input source based security cannot be performed '%s' task because it uses firehose."
-        + " Change the tasks configuration, or disable `isEnableInputSourceSecurity`",
         getType()
     ));
   }
@@ -183,7 +176,9 @@ public interface Task
 
   /**
    * True if this task type embeds a query stack, and therefore should preload resources (like broadcast tables)
-   * that may be needed by queries.
+   * that may be needed by queries. Tasks supporting queries are also allocated processing buffers, processing threads
+   * and merge buffers. Those which do not should not assume that these resources are present and must explicitly allocate
+   * any direct buffers or processing pools if required.
    *
    * If true, {@link #getQueryRunner(Query)} does not necessarily return nonnull query runners. For example,
    * MSQWorkerTask returns true from this method (because it embeds a query stack for running multi-stage queries)
@@ -257,6 +252,32 @@ public interface Task
    */
   TaskStatus run(TaskToolbox toolbox) throws Exception;
 
+  /**
+   * Performs cleanup operations after the task execution.
+   * This method is intended to be overridden by tasks that need to perform
+   * specific cleanup actions upon task completion or termination.
+   *
+   * @param toolbox Toolbox for this task
+   * @param taskStatus Provides the final status of the task, indicating if the task
+   *                   was successful, failed, or was killed.
+   * @throws Exception If any error occurs during the cleanup process.
+   */
+  default void cleanUp(TaskToolbox toolbox, TaskStatus taskStatus) throws Exception
+  {
+  }
+
+  /**
+   * Waits for the cleanup operations to finish.
+   * This method can be overridden by tasks that need to ensure that certain cleanup
+   * operations have completed before proceeding further.
+   *
+   * @return true if the cleanup completed successfully, false otherwise.
+   */
+  default boolean waitForCleanupToFinish()
+  {
+    return true;
+  }
+
   default Map<String, Object> addToContext(String key, Object val)
   {
     getContext().put(key, val);
@@ -270,6 +291,11 @@ public interface Task
   }
 
   Map<String, Object> getContext();
+
+  default Optional<Resource> getDestinationResource()
+  {
+    return Optional.of(new Resource(getDataSource(), ResourceType.DATASOURCE));
+  }
 
   default <ContextValueType> ContextValueType getContextValue(String key)
   {
@@ -296,5 +322,25 @@ public interface Task
         taskInfo.getDataSource(),
         taskInfo.getTask().getMetadata()
     );
+  }
+
+  /**
+   * Specifies the list of lookups to load for this task. Tasks load ALL lookups by default.
+   * This behaviour can be overridden by passing parameters {@link LookupLoadingSpec#CTX_LOOKUP_LOADING_MODE}
+   * and {@link LookupLoadingSpec#CTX_LOOKUPS_TO_LOAD} in the task context.
+   */
+  default LookupLoadingSpec getLookupLoadingSpec()
+  {
+    return LookupLoadingSpec.createFromContext(getContext(), LookupLoadingSpec.ALL);
+  }
+
+  /**
+   * Specifies the list of broadcast datasources to load for this task. Tasks load ALL broadcast datasources by default.
+   * This behavior can be overridden by passing parameters {@link BroadcastDatasourceLoadingSpec#CTX_BROADCAST_DATASOURCE_LOADING_MODE}
+   * and {@link BroadcastDatasourceLoadingSpec#CTX_BROADCAST_DATASOURCES_TO_LOAD} in the task context.
+   */
+  default BroadcastDatasourceLoadingSpec getBroadcastDatasourceLoadingSpec()
+  {
+    return BroadcastDatasourceLoadingSpec.createFromContext(getContext(), BroadcastDatasourceLoadingSpec.ALL);
   }
 }

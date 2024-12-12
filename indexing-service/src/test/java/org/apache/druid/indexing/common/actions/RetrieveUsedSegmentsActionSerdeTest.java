@@ -28,6 +28,7 @@ import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -42,7 +43,7 @@ public class RetrieveUsedSegmentsActionSerdeTest
     Interval interval = Intervals.of("2014/2015");
 
     RetrieveUsedSegmentsAction expected =
-        new RetrieveUsedSegmentsAction("dataSource", interval, null, Segments.ONLY_VISIBLE);
+        new RetrieveUsedSegmentsAction("dataSource", Collections.singletonList(interval), Segments.ONLY_VISIBLE);
 
     RetrieveUsedSegmentsAction actual =
         MAPPER.readValue(MAPPER.writeValueAsString(expected), RetrieveUsedSegmentsAction.class);
@@ -56,9 +57,7 @@ public class RetrieveUsedSegmentsActionSerdeTest
     List<Interval> intervals = ImmutableList.of(Intervals.of("2014/2015"), Intervals.of("2016/2017"));
     RetrieveUsedSegmentsAction expected = new RetrieveUsedSegmentsAction(
         "dataSource",
-        null,
-        intervals,
-        Segments.ONLY_VISIBLE
+        intervals
     );
 
     RetrieveUsedSegmentsAction actual =
@@ -70,11 +69,15 @@ public class RetrieveUsedSegmentsActionSerdeTest
   @Test
   public void testOldJsonDeserialization() throws Exception
   {
-    String jsonStr = "{\"type\": \"segmentListUsed\", \"dataSource\": \"test\", \"interval\": \"2014/2015\"}";
+    String jsonStr = "{\"type\": \"segmentListUsed\", \"dataSource\": \"test\", \"intervals\": [\"2014/2015\"]}";
     RetrieveUsedSegmentsAction actual = (RetrieveUsedSegmentsAction) MAPPER.readValue(jsonStr, TaskAction.class);
 
     Assert.assertEquals(
-        new RetrieveUsedSegmentsAction("test", Intervals.of("2014/2015"), null, Segments.ONLY_VISIBLE),
+        new RetrieveUsedSegmentsAction(
+            "test",
+            Collections.singletonList(Intervals.of("2014/2015")),
+            Segments.ONLY_VISIBLE
+        ),
         actual
     );
   }

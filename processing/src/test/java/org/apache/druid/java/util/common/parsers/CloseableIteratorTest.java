@@ -120,6 +120,47 @@ public class CloseableIteratorTest
     }
   }
 
+  @Test
+  public void testFlatMapInnerClose() throws IOException
+  {
+    List<CloseTrackingCloseableIterator<Integer>> innerIterators = new ArrayList<>();
+    // the nested iterators is : [ [], [0], [0, 1] ]
+    try (final CloseTrackingCloseableIterator<Integer> actual = new CloseTrackingCloseableIterator<>(
+        generateTestIterator(3)
+            .flatMap(list -> {
+              CloseTrackingCloseableIterator<Integer> inner =
+                  new CloseTrackingCloseableIterator<>(CloseableIterators.withEmptyBaggage(list.iterator()));
+              innerIterators.add(inner);
+              return inner;
+            })
+    )) {
+      final Iterator<Integer> expected = IntStream
+          .range(0, 3)
+          .flatMap(i -> IntStream.range(0, i))
+          .iterator();
+
+      int iterCount = 0, innerIteratorIdx = 0;
+      while (actual.hasNext()) {
+        iterCount++;
+        if (iterCount == 1) {
+          Assert.assertEquals(2, innerIterators.size()); //empty iterator and single element iterator
+          innerIteratorIdx++;
+        } else if (iterCount == 2) {
+          Assert.assertEquals(3, innerIterators.size()); //empty iterator + single element iterator + double element iterator
+          innerIteratorIdx++;
+        }
+        Assert.assertEquals(expected.next(), actual.next()); // assert expected value to the iterator's value
+        for (int i = 0; i < innerIteratorIdx; i++) {
+          Assert.assertEquals(1, innerIterators.get(i).closeCount); // expect all previous iterators to be closed
+        }
+        // never expect the current iterator to be closed, even after doing the last next call on it
+        Assert.assertEquals(0, innerIterators.get(innerIteratorIdx).closeCount);
+      }
+    }
+    // check the last inner iterator is closed
+    Assert.assertEquals(1, innerIterators.get(2).closeCount);
+  }
+
   private static CloseableIterator<List<Integer>> generateTestIterator(int numIterates)
   {
     return new CloseableIterator<List<Integer>>()

@@ -26,7 +26,7 @@ exports[`ExecutionStagesPane matches snapshot 1`] = `
   collapseOnPageChange={true}
   collapseOnSortingChange={true}
   column={
-    Object {
+    {
       "Aggregated": undefined,
       "Cell": undefined,
       "Expander": undefined,
@@ -42,24 +42,33 @@ exports[`ExecutionStagesPane matches snapshot 1`] = `
       "filterMethod": undefined,
       "filterable": undefined,
       "footerClassName": "",
-      "footerStyle": Object {},
+      "footerStyle": {},
       "getFooterProps": [Function],
       "getHeaderProps": [Function],
       "getProps": [Function],
       "headerClassName": "",
-      "headerStyle": Object {},
+      "headerStyle": {},
       "minResizeWidth": 11,
       "minWidth": 100,
       "resizable": undefined,
       "show": true,
       "sortMethod": undefined,
       "sortable": undefined,
-      "style": Object {},
+      "style": {},
     }
   }
   columns={
-    Array [
-      Object {
+    [
+      {
+        "Cell": [Function],
+        "accessor": "stageNumber",
+        "className": "graph-cell",
+        "id": "graph",
+        "minWidth": 20,
+        "show": false,
+        "width": 20,
+      },
+      {
         "Cell": [Function],
         "Header": <React.Fragment>
           Stage
@@ -71,9 +80,9 @@ exports[`ExecutionStagesPane matches snapshot 1`] = `
         "accessor": "stageNumber",
         "className": "padded",
         "id": "stage",
-        "width": 140,
+        "width": 160,
       },
-      Object {
+      {
         "Cell": [Function],
         "Header": "Counter",
         "accessor": "stageNumber",
@@ -81,7 +90,7 @@ exports[`ExecutionStagesPane matches snapshot 1`] = `
         "id": "counter",
         "width": 150,
       },
-      Object {
+      {
         "Cell": [Function],
         "Header": <React.Fragment>
           Rows processed
@@ -93,9 +102,9 @@ exports[`ExecutionStagesPane matches snapshot 1`] = `
         "accessor": [Function],
         "className": "padded",
         "id": "rows_processed",
-        "width": 160,
+        "width": 200,
       },
-      Object {
+      {
         "Cell": [Function],
         "Header": <React.Fragment>
           Processing rate
@@ -109,22 +118,38 @@ exports[`ExecutionStagesPane matches snapshot 1`] = `
         "id": "processing_rate",
         "width": 150,
       },
-      Object {
-        "Header": "Phase",
-        "accessor": [Function],
-        "className": "padded",
-        "id": "phase",
-        "width": 130,
-      },
-      Object {
+      {
         "Cell": [Function],
         "Header": "Timing",
         "accessor": [Function],
-        "className": "padded",
         "id": "timing",
         "width": 170,
       },
-      Object {
+      {
+        "Cell": [Function],
+        "Header": <React.Fragment>
+          CPU utilization
+          <br />
+          <i>
+            <span
+              className="cpu-label"
+            >
+              Counter
+            </span>
+            <span
+              className="cpu-counter"
+            >
+              Wall time
+            </span>
+          </i>
+        </React.Fragment>,
+        "accessor": [Function],
+        "className": "padded",
+        "id": "cpu",
+        "show": false,
+        "width": 240,
+      },
+      {
         "Header": <React.Fragment>
           Num
           <br />
@@ -134,51 +159,40 @@ exports[`ExecutionStagesPane matches snapshot 1`] = `
         "className": "padded",
         "width": 75,
       },
-      Object {
-        "Header": <React.Fragment>
-          Output
-          <br />
-          partitions
-        </React.Fragment>,
+      {
+        "Cell": [Function],
+        "Header": "Output",
         "accessor": "partitionCount",
         "className": "padded",
-        "width": 75,
-      },
-      Object {
-        "Cell": [Function],
-        "Header": "Cluster by",
-        "accessor": [Function],
-        "className": "padded",
-        "id": "clusterBy",
-        "minWidth": 400,
+        "width": 120,
       },
     ]
   }
   data={
-    Array [
-      Object {
-        "definition": Object {
-          "id": "ad318360-2ccf-4afc-b221-27c8704bf4fe_0",
-          "input": Array [
-            Object {
-              "inputFormat": Object {
+    [
+      {
+        "definition": {
+          "id": "7f62fa91-f49a-4053-adec-5aa09c251ee3_0",
+          "input": [
+            {
+              "inputFormat": {
                 "assumeNewlineDelimited": false,
                 "keepNullColumns": false,
                 "type": "json",
                 "useJsonNodeReader": false,
               },
-              "inputSource": Object {
+              "inputSource": {
                 "type": "http",
-                "uris": Array [
+                "uris": [
                   "https://static.imply.io/example-data/kttm-v2/kttm-v2-2019-08-25.json.gz",
                 ],
               },
-              "signature": Array [
-                Object {
+              "signature": [
+                {
                   "name": "timestamp",
                   "type": "STRING",
                 },
-                Object {
+                {
                   "name": "agent_type",
                   "type": "STRING",
                 },
@@ -187,13 +201,14 @@ exports[`ExecutionStagesPane matches snapshot 1`] = `
             },
           ],
           "maxWorkerCount": 1,
-          "processor": Object {
-            "query": Object {
-              "columns": Array [
+          "processor": {
+            "query": {
+              "columns": [
                 "agent_type",
                 "v0",
               ],
-              "context": Object {
+              "context": {
+                "__resultFormat": "array",
                 "__timeColumn": "v0",
                 "__user": "allowAll",
                 "executionMode": "async",
@@ -202,52 +217,52 @@ exports[`ExecutionStagesPane matches snapshot 1`] = `
                 "groupByEnableMultiValueUnnesting": false,
                 "maxNumTasks": 2,
                 "maxParseExceptions": 0,
-                "queryId": "93a855fa-c35a-48df-b596-6bc98eed1101",
-                "scanSignature": "[{\\"name\\":\\"agent_type\\",\\"type\\":\\"STRING\\"},{\\"name\\":\\"v0\\",\\"type\\":\\"LONG\\"}]",
-                "sqlInsertSegmentGranularity": "{\\"type\\":\\"all\\"}",
-                "sqlQueryId": "93a855fa-c35a-48df-b596-6bc98eed1101",
+                "queryId": "346b9ac6-4912-46e4-9b98-75f11071af87",
+                "scanSignature": "[{"name":"agent_type","type":"STRING"},{"name":"v0","type":"LONG"}]",
+                "sqlInsertSegmentGranularity": "{"type":"all"}",
+                "sqlQueryId": "346b9ac6-4912-46e4-9b98-75f11071af87",
                 "sqlReplaceTimeChunks": "all",
+                "waitUntilSegmentsLoad": true,
               },
-              "dataSource": Object {
-                "inputFormat": Object {
+              "dataSource": {
+                "inputFormat": {
                   "assumeNewlineDelimited": false,
                   "keepNullColumns": false,
                   "type": "json",
                   "useJsonNodeReader": false,
                 },
-                "inputSource": Object {
+                "inputSource": {
                   "type": "http",
-                  "uris": Array [
+                  "uris": [
                     "https://static.imply.io/example-data/kttm-v2/kttm-v2-2019-08-25.json.gz",
                   ],
                 },
-                "signature": Array [
-                  Object {
+                "signature": [
+                  {
                     "name": "timestamp",
                     "type": "STRING",
                   },
-                  Object {
+                  {
                     "name": "agent_type",
                     "type": "STRING",
                   },
                 ],
                 "type": "external",
               },
-              "granularity": Object {
+              "granularity": {
                 "type": "all",
               },
-              "intervals": Object {
-                "intervals": Array [
+              "intervals": {
+                "intervals": [
                   "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z",
                 ],
                 "type": "intervals",
               },
-              "legacy": false,
               "queryType": "scan",
               "resultFormat": "compactedList",
-              "virtualColumns": Array [
-                Object {
-                  "expression": "timestamp_parse(\\"timestamp\\",null,'UTC')",
+              "virtualColumns": [
+                {
+                  "expression": "timestamp_parse("timestamp",null,'UTC')",
                   "name": "v0",
                   "outputType": "LONG",
                   "type": "expression",
@@ -257,10 +272,10 @@ exports[`ExecutionStagesPane matches snapshot 1`] = `
             "type": "scan",
           },
           "shuffleCheckHasMultipleValues": true,
-          "shuffleSpec": Object {
-            "clusterBy": Object {
-              "columns": Array [
-                Object {
+          "shuffleSpec": {
+            "clusterBy": {
+              "columns": [
+                {
                   "columnName": "__boost",
                   "order": "ASCENDING",
                 },
@@ -269,58 +284,58 @@ exports[`ExecutionStagesPane matches snapshot 1`] = `
             "targetSize": 3000000,
             "type": "targetSize",
           },
-          "signature": Array [
-            Object {
+          "signature": [
+            {
               "name": "__boost",
               "type": "LONG",
             },
-            Object {
+            {
               "name": "agent_type",
               "type": "STRING",
             },
-            Object {
+            {
               "name": "v0",
               "type": "LONG",
             },
           ],
         },
-        "duration": 21324,
+        "duration": 6884,
         "partitionCount": 1,
         "phase": "FINISHED",
         "sort": true,
         "stageNumber": 0,
-        "startTime": "2023-08-01T03:12:59.865Z",
+        "startTime": "2024-01-23T19:45:43.302Z",
         "workerCount": 1,
       },
-      Object {
-        "definition": Object {
-          "id": "ad318360-2ccf-4afc-b221-27c8704bf4fe_1",
-          "input": Array [
-            Object {
+      {
+        "definition": {
+          "id": "7f62fa91-f49a-4053-adec-5aa09c251ee3_1",
+          "input": [
+            {
               "stage": 0,
               "type": "stage",
             },
           ],
           "maxWorkerCount": 1,
-          "processor": Object {
-            "columnMappings": Array [
-              Object {
+          "processor": {
+            "columnMappings": [
+              {
                 "outputColumn": "__time",
                 "queryColumn": "v0",
               },
-              Object {
+              {
                 "outputColumn": "agent_type",
                 "queryColumn": "agent_type",
               },
             ],
-            "dataSchema": Object {
+            "dataSchema": {
               "dataSource": "kttm_simple",
-              "dimensionsSpec": Object {
-                "dimensionExclusions": Array [
+              "dimensionsSpec": {
+                "dimensionExclusions": [
                   "__time",
                 ],
-                "dimensions": Array [
-                  Object {
+                "dimensions": [
+                  {
                     "createBitmapIndex": true,
                     "multiValueHandling": "SORTED_ARRAY",
                     "name": "agent_type",
@@ -330,56 +345,56 @@ exports[`ExecutionStagesPane matches snapshot 1`] = `
                 "includeAllDimensions": false,
                 "useSchemaDiscovery": false,
               },
-              "granularitySpec": Object {
-                "intervals": Array [
+              "granularitySpec": {
+                "intervals": [
                   "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z",
                 ],
-                "queryGranularity": Object {
+                "queryGranularity": {
                   "type": "none",
                 },
                 "rollup": false,
                 "type": "arbitrary",
               },
-              "metricsSpec": Array [],
-              "timestampSpec": Object {
+              "metricsSpec": [],
+              "timestampSpec": {
                 "column": "__time",
                 "format": "millis",
                 "missingValue": null,
               },
-              "transformSpec": Object {
+              "transformSpec": {
                 "filter": null,
-                "transforms": Array [],
+                "transforms": [],
               },
             },
-            "tuningConfig": Object {
+            "tuningConfig": {
               "maxNumWorkers": 1,
               "maxRowsInMemory": 100000,
               "rowsPerSegment": 3000000,
             },
             "type": "segmentGenerator",
           },
-          "signature": Array [],
+          "signature": [],
         },
-        "duration": 2070,
+        "duration": 1263,
         "partitionCount": 1,
         "phase": "FINISHED",
         "stageNumber": 1,
-        "startTime": "2023-08-01T03:13:21.156Z",
+        "startTime": "2024-01-23T19:45:50.170Z",
         "workerCount": 1,
       },
     ]
   }
-  defaultExpanded={Object {}}
+  defaultExpanded={{}}
   defaultFilterMethod={[Function]}
-  defaultFiltered={Array []}
+  defaultFiltered={[]}
   defaultPage={0}
   defaultPageSize={7}
-  defaultResized={Array []}
+  defaultResized={[]}
   defaultSortDesc={false}
   defaultSortMethod={[Function]}
-  defaultSorted={Array []}
+  defaultSorted={[]}
   expanderDefaults={
-    Object {
+    {
       "filterable": false,
       "resizable": false,
       "sortable": false,
@@ -423,7 +438,7 @@ exports[`ExecutionStagesPane matches snapshot 1`] = `
   originalKey="_original"
   pageJumpText="jump to page"
   pageSizeOptions={
-    Array [
+    [
       5,
       10,
       20,
@@ -433,7 +448,7 @@ exports[`ExecutionStagesPane matches snapshot 1`] = `
     ]
   }
   pageText="Page"
-  pivotDefaults={Object {}}
+  pivotDefaults={{}}
   pivotIDKey="_pivotID"
   pivotValKey="_pivotVal"
   previousText="Previous"
@@ -447,7 +462,7 @@ exports[`ExecutionStagesPane matches snapshot 1`] = `
   showPaginationBottom={true}
   showPaginationTop={false}
   sortable={false}
-  style={Object {}}
+  style={{}}
   subRowsKey="_subRows"
 />
 `;

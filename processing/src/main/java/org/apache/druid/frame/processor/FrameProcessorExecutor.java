@@ -28,16 +28,17 @@ import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.WritableFrameChannel;
+import org.apache.druid.frame.processor.manager.ProcessorManager;
 import org.apache.druid.java.util.common.Either;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
-import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.logger.Logger;
 
 import javax.annotation.Nullable;
@@ -45,14 +46,15 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CancellationException;
+import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
-import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
 /**
@@ -68,6 +70,10 @@ public class FrameProcessorExecutor
   private final ListeningExecutorService exec;
 
   private final Object lock = new Object();
+
+  // Currently-active cancellationIds.
+  @GuardedBy("lock")
+  private final Set<String> activeCancellationIds = new HashSet<>();
 
   // Futures that are active and therefore cancelable.
   // Does not include return futures: those are in cancelableReturnFutures.
@@ -96,24 +102,22 @@ public class FrameProcessorExecutor
   }
 
   /**
-   * Returns the underlying executor service used by this executor.
-   */
-  public ListeningExecutorService getExecutorService()
-  {
-    return exec;
-  }
-
-  /**
    * Runs a processor until it is done, and returns a future that resolves when execution is complete.
    *
-   * If "cancellationId" is provided, it can be used with the {@link #cancel(String)} method to cancel all processors
-   * currently running with the same cancellationId.
+   * If "cancellationId" is provided, it must have previously been registered with {@link #registerCancellationId}.
+   * Then, it can be used with the {@link #cancel(String)} method to cancel all processors with that
+   * same cancellationId.
    */
   public <T> ListenableFuture<T> runFully(final FrameProcessor<T> processor, @Nullable final String cancellationId)
   {
     final List<ReadableFrameChannel> inputChannels = processor.inputChannels();
     final List<WritableFrameChannel> outputChannels = processor.outputChannels();
     final SettableFuture<T> finished = registerCancelableFuture(SettableFuture.create(), true, cancellationId);
+
+    if (finished.isDone()) {
+      // Possibly due to starting life out being canceled.
+      return finished;
+    }
 
     class ExecutorRunnable implements Runnable
     {
@@ -151,7 +155,7 @@ public class FrameProcessorExecutor
             final IntSet await = result.awaitSet();
 
             if (await.isEmpty()) {
-              exec.submit(ExecutorRunnable.this);
+              exec.execute(ExecutorRunnable.this);
             } else if (result.isAwaitAll() || await.size() == 1) {
               final List<ListenableFuture<?>> readabilityFutures = new ArrayList<>();
 
@@ -163,7 +167,7 @@ public class FrameProcessorExecutor
               }
 
               if (readabilityFutures.isEmpty()) {
-                exec.submit(ExecutorRunnable.this);
+                exec.execute(ExecutorRunnable.this);
               } else {
                 runProcessorAfterFutureResolves(Futures.allAsList(readabilityFutures));
               }
@@ -218,12 +222,18 @@ public class FrameProcessorExecutor
           }
         }
 
+        final String threadName = Thread.currentThread().getName();
         boolean canceled = false;
         Either<Throwable, ReturnOrAwait<T>> retVal;
 
         try {
           if (Thread.interrupted()) {
             throw new InterruptedException();
+          }
+
+          if (cancellationId != null) {
+            // Set the thread name to something involving the cancellationId, to make thread dumps more useful.
+            Thread.currentThread().setName(threadName + "-" + cancellationId);
           }
 
           retVal = Either.value(processor.runIncrementally(readableInputs));
@@ -249,6 +259,9 @@ public class FrameProcessorExecutor
                 canceled = true;
               }
             }
+
+            // Restore original thread name.
+            Thread.currentThread().setName(threadName);
           }
         }
 
@@ -271,7 +284,7 @@ public class FrameProcessorExecutor
               public void onSuccess(final V ignored)
               {
                 try {
-                  exec.submit(ExecutorRunnable.this);
+                  exec.execute(ExecutorRunnable.this);
                 }
                 catch (Throwable e) {
                   fail(e);
@@ -286,7 +299,8 @@ public class FrameProcessorExecutor
                   fail(t);
                 }
               }
-            }
+            },
+            MoreExecutors.directExecutor()
         );
       }
 
@@ -388,7 +402,7 @@ public class FrameProcessorExecutor
 
     logProcessorStatusString(processor, finished, null);
     registerCancelableProcessor(processor, cancellationId);
-    exec.submit(runnable);
+    exec.execute(runnable);
     return finished;
   }
 
@@ -396,21 +410,15 @@ public class FrameProcessorExecutor
    * Runs a sequence of processors and returns a future that resolves when execution is complete. Returns a value
    * accumulated using the provided {@code accumulateFn}.
    *
-   * @param processors               sequence of processors to run
-   * @param initialResult            initial value for result accumulation. If there are no processors at all, this
-   *                                 is returned.
-   * @param accumulateFn             result accumulator. Applied in a critical section, so it should be something
-   *                                 that executes quickly. It gets {@code initialResult} for the initial accumulation.
+   * @param processorManager         processors to run
    * @param maxOutstandingProcessors maximum number of processors to run at once
    * @param bouncer                  additional limiter on outstanding processors, beyond maxOutstandingProcessors.
    *                                 Useful when there is some finite resource being shared against multiple different
    *                                 calls to this method.
    * @param cancellationId           optional cancellation id for {@link #runFully}.
    */
-  public <T, ResultType> ListenableFuture<ResultType> runAllFully(
-      final Sequence<? extends FrameProcessor<T>> processors,
-      final ResultType initialResult,
-      final BiFunction<ResultType, T, ResultType> accumulateFn,
+  public <T, R> ListenableFuture<R> runAllFully(
+      final ProcessorManager<T, R> processorManager,
       final int maxOutstandingProcessors,
       final Bouncer bouncer,
       @Nullable final String cancellationId
@@ -418,10 +426,8 @@ public class FrameProcessorExecutor
   {
     // Logic resides in a separate class in order to keep this one simpler.
     return new RunAllFullyWidget<>(
-        processors,
+        processorManager,
         this,
-        initialResult,
-        accumulateFn,
         maxOutstandingProcessors,
         bouncer,
         cancellationId
@@ -429,8 +435,20 @@ public class FrameProcessorExecutor
   }
 
   /**
-   * Cancels all processors associated with a given cancellationId. Waits for the processors to exit before
-   * returning.
+   * Registers a cancellationId, so it can be provided to {@link #runFully} or {@link #runAllFully}. To avoid the
+   * set of active cancellationIds growing without bound, callers must also call {@link #cancel(String)} on the
+   * same cancellationId when done using it.
+   */
+  public void registerCancellationId(final String cancellationId)
+  {
+    synchronized (lock) {
+      activeCancellationIds.add(cancellationId);
+    }
+  }
+
+  /**
+   * Deregisters a cancellationId and cancels any currently-running processors associated with that cancellationId.
+   * Waits for any canceled processors to exit before returning.
    */
   public void cancel(final String cancellationId) throws InterruptedException
   {
@@ -441,6 +459,7 @@ public class FrameProcessorExecutor
     final Set<ListenableFuture<?>> returnFuturesToCancel;
 
     synchronized (lock) {
+      activeCancellationIds.remove(cancellationId);
       futuresToCancel = cancelableFutures.removeAll(cancellationId);
       processorsToCancel = cancelableProcessors.removeAll(cancellationId);
       returnFuturesToCancel = cancelableReturnFutures.removeAll(cancellationId);
@@ -464,6 +483,33 @@ public class FrameProcessorExecutor
   }
 
   /**
+   * Returns an {@link Executor} that executes using the same underlying service, and that is also connected to
+   * cancellation through {@link #cancel(String)}.
+   *
+   * @param cancellationId cancellation ID for the executor
+   */
+  public Executor asExecutor(@Nullable final String cancellationId)
+  {
+    return command -> runFully(new RunnableFrameProcessor(command), cancellationId);
+  }
+
+  /**
+   * Shuts down the underlying executor service immediately.
+   */
+  public void shutdownNow()
+  {
+    exec.shutdownNow();
+  }
+
+  /**
+   * Returns the underlying executor service used by this executor.
+   */
+  ListeningExecutorService getExecutorService()
+  {
+    return exec;
+  }
+
+  /**
    * Register a future that will be canceled when the provided {@code cancellationId} is canceled.
    *
    * @param future         cancelable future
@@ -478,6 +524,12 @@ public class FrameProcessorExecutor
   {
     if (cancellationId != null) {
       synchronized (lock) {
+        if (!activeCancellationIds.contains(cancellationId)) {
+          // Cancel and return immediately.
+          future.cancel(true);
+          return future;
+        }
+
         final SetMultimap<String, ListenableFuture<?>> map = isReturn ? cancelableReturnFutures : cancelableFutures;
         map.put(cancellationId, future);
         future.addListener(
@@ -601,7 +653,6 @@ public class FrameProcessorExecutor
 
       sb.append("; cancel=").append(finishedFuture.isCancelled() ? "y" : "n");
       sb.append("; done=").append(finishedFuture.isDone() ? "y" : "n");
-
       log.debug(StringUtils.encodeForFormat(sb.toString()));
     }
   }

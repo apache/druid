@@ -55,6 +55,12 @@ public class TestMetadataStorageConnector implements MetadataStorageConnector
   }
 
   @Override
+  public void createUpgradeSegmentsTable()
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
   public void createRulesTable()
   {
     throw new UnsupportedOperationException();
@@ -86,6 +92,12 @@ public class TestMetadataStorageConnector implements MetadataStorageConnector
 
   @Override
   public void deleteAllRecords(String tableName)
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public void createSegmentSchemasTable()
   {
     throw new UnsupportedOperationException();
   }

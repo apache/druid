@@ -31,6 +31,7 @@ import org.apache.druid.sql.calcite.run.QueryMaker;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.run.SqlEngines;
 import org.apache.druid.sql.calcite.table.RowSignatures;
+import org.apache.druid.sql.destination.IngestDestination;
 
 import java.util.Map;
 
@@ -55,13 +56,21 @@ public class IngestionTestSqlEngine implements SqlEngine
   }
 
   @Override
-  public RelDataType resultTypeForSelect(RelDataTypeFactory typeFactory, RelDataType validatedRowType)
+  public RelDataType resultTypeForSelect(
+      RelDataTypeFactory typeFactory,
+      RelDataType validatedRowType,
+      Map<String, Object> queryContext
+  )
   {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public RelDataType resultTypeForInsert(RelDataTypeFactory typeFactory, RelDataType validatedRowType)
+  public RelDataType resultTypeForInsert(
+      RelDataTypeFactory typeFactory,
+      RelDataType validatedRowType,
+      Map<String, Object> queryContext
+  )
   {
     // Matches the return structure of TestInsertQueryMaker.
     return typeFactory.createStructType(
@@ -74,7 +83,7 @@ public class IngestionTestSqlEngine implements SqlEngine
   }
 
   @Override
-  public boolean featureAvailable(final EngineFeature feature, final PlannerContext plannerContext)
+  public boolean featureAvailable(final EngineFeature feature)
   {
     switch (feature) {
       case CAN_SELECT:
@@ -83,12 +92,18 @@ public class IngestionTestSqlEngine implements SqlEngine
       case TOPN_QUERY:
       case TIME_BOUNDARY_QUERY:
       case SCAN_NEEDS_SIGNATURE:
+      case UNNEST:
+      case GROUPBY_IMPLICITLY_SORTS:
+      case WINDOW_FUNCTIONS:
+      case WINDOW_LEAF_OPERATOR:
         return false;
       case CAN_INSERT:
       case CAN_REPLACE:
       case READ_EXTERNAL_DATA:
+      case WRITE_EXTERNAL_DATA:
       case SCAN_ORDER_BY_NON_TIME:
       case ALLOW_BROADCAST_RIGHTY_JOIN:
+      case ALLOW_TOP_LEVEL_UNION_ALL:
         return true;
       default:
         throw SqlEngines.generateUnrecognizedFeatureException(IngestionTestSqlEngine.class.getSimpleName(), feature);
@@ -102,13 +117,13 @@ public class IngestionTestSqlEngine implements SqlEngine
   }
 
   @Override
-  public QueryMaker buildQueryMakerForInsert(String targetDataSource, RelRoot relRoot, PlannerContext plannerContext)
+  public QueryMaker buildQueryMakerForInsert(IngestDestination destination, RelRoot relRoot, PlannerContext plannerContext)
   {
     final RowSignature signature = RowSignatures.fromRelDataType(
         relRoot.validatedRowType.getFieldNames(),
         relRoot.validatedRowType
     );
 
-    return new TestInsertQueryMaker(targetDataSource, signature);
+    return new TestInsertQueryMaker(destination, signature);
   }
 }

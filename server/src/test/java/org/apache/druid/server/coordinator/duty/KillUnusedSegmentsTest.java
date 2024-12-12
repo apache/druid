@@ -19,20 +19,39 @@
 
 package org.apache.druid.server.coordinator.duty;
 
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.client.indexing.IndexingTotalWorkerCapacityInfo;
+import org.apache.druid.client.indexing.IndexingWorker;
+import org.apache.druid.client.indexing.IndexingWorkerInfo;
+import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.metadata.SegmentsMetadataManager;
-import org.apache.druid.rpc.indexing.OverlordClient;
+import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.parsers.CloseableIterator;
+import org.apache.druid.metadata.MetadataStorageTablesConfig;
+import org.apache.druid.metadata.SQLMetadataConnector;
+import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
+import org.apache.druid.metadata.SqlSegmentsMetadataManager;
+import org.apache.druid.metadata.SqlSegmentsMetadataManagerTestBase;
+import org.apache.druid.metadata.TestDerbyConnector;
+import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
-import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
+import org.apache.druid.server.coordinator.config.KillUnusedSegmentsConfig;
+import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
+import org.apache.druid.server.coordinator.stats.Dimension;
+import org.apache.druid.server.coordinator.stats.RowKey;
+import org.apache.druid.server.coordinator.stats.Stats;
+import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.DateTime;
@@ -41,306 +60,877 @@ import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.Answers;
-import org.mockito.ArgumentMatchers;
-import org.mockito.Mock;
-import org.mockito.Mockito;
-import org.mockito.junit.MockitoJUnitRunner;
 
+import javax.annotation.Nullable;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Map;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-
-/**
- *
- */
-@RunWith(MockitoJUnitRunner.class)
 public class KillUnusedSegmentsTest
 {
-  private static final int MAX_SEGMENTS_TO_KILL = 10;
-  private static final Duration COORDINATOR_KILL_PERIOD = Duration.standardMinutes(2);
-  private static final Duration DURATION_TO_RETAIN = Duration.standardDays(1);
-  private static final Duration INDEXING_PERIOD = Duration.standardMinutes(1);
+  private static final DateTime NOW = DateTimes.nowUtc();
+  private static final Interval YEAR_OLD = new Interval(Period.days(1), NOW.minusDays(365));
+  private static final Interval MONTH_OLD = new Interval(Period.days(1), NOW.minusDays(30));
+  private static final Interval DAY_OLD = new Interval(Period.days(1), NOW.minusDays(1));
+  private static final Interval HOUR_OLD = new Interval(Period.days(1), NOW.minusHours(1));
+  private static final Interval NEXT_DAY = new Interval(Period.days(1), NOW.plusDays(1));
+  private static final Interval NEXT_MONTH = new Interval(Period.days(1), NOW.plusDays(30));
 
-  @Mock
-  private SegmentsMetadataManager segmentsMetadataManager;
-  @Mock
-  private OverlordClient overlordClient;
-  @Mock(answer = Answers.RETURNS_DEEP_STUBS)
-  private DruidCoordinatorConfig config;
+  private static final String DS1 = "DS1";
+  private static final String DS2 = "DS2";
+  private static final String DS3 = "DS3";
 
-  @Mock
-  private DruidCoordinatorRuntimeParams params;
-  @Mock
-  private CoordinatorDynamicConfig coordinatorDynamicConfig;
+  private static final RowKey DS1_STAT_KEY = RowKey.of(Dimension.DATASOURCE, DS1);
+  private static final RowKey DS2_STAT_KEY = RowKey.of(Dimension.DATASOURCE, DS2);
+  private static final RowKey DS3_STAT_KEY = RowKey.of(Dimension.DATASOURCE, DS3);
+  
+  private static final String VERSION = "v1";
 
-  private DataSegment yearOldSegment;
-  private DataSegment monthOldSegment;
-  private DataSegment dayOldSegment;
-  private DataSegment hourOldSegment;
-  private DataSegment nextDaySegment;
-  private DataSegment nextMonthSegment;
+  private CoordinatorDynamicConfig.Builder dynamicConfigBuilder;
+  private TestOverlordClient overlordClient;
+  private KillUnusedSegmentsConfig.Builder configBuilder;
+  private DruidCoordinatorRuntimeParams.Builder paramsBuilder;
 
-  private KillUnusedSegments target;
+  private KillUnusedSegments killDuty;
+
+  @Rule
+  public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
+  private SqlSegmentsMetadataManager sqlSegmentsMetadataManager;
+  private SQLMetadataConnector connector;
+  private MetadataStorageTablesConfig config;
 
   @Before
   public void setup()
   {
-    Mockito.doReturn(coordinatorDynamicConfig).when(params).getCoordinatorDynamicConfig();
-    Mockito.doReturn(COORDINATOR_KILL_PERIOD).when(config).getCoordinatorKillPeriod();
-    Mockito.doReturn(DURATION_TO_RETAIN).when(config).getCoordinatorKillDurationToRetain();
-    Mockito.doReturn(INDEXING_PERIOD).when(config).getCoordinatorIndexingPeriod();
-    Mockito.doReturn(MAX_SEGMENTS_TO_KILL).when(config).getCoordinatorKillMaxSegments();
-
-    Mockito.doReturn(Collections.singleton("DS1"))
-           .when(coordinatorDynamicConfig).getSpecificDataSourcesToKillUnusedSegmentsIn();
-
-    final DateTime now = DateTimes.nowUtc();
-
-    yearOldSegment = createSegmentWithEnd(now.minusDays(365));
-    monthOldSegment = createSegmentWithEnd(now.minusDays(30));
-    dayOldSegment = createSegmentWithEnd(now.minusDays(1));
-    hourOldSegment = createSegmentWithEnd(now.minusHours(1));
-    nextDaySegment = createSegmentWithEnd(now.plusDays(1));
-    nextMonthSegment = createSegmentWithEnd(now.plusDays(30));
-
-    final List<DataSegment> unusedSegments = ImmutableList.of(
-        yearOldSegment,
-        monthOldSegment,
-        dayOldSegment,
-        hourOldSegment,
-        nextDaySegment,
-        nextMonthSegment
+    connector = derbyConnectorRule.getConnector();
+    SegmentsMetadataManagerConfig config = new SegmentsMetadataManagerConfig();
+    config.setPollDuration(Period.millis(1));
+    sqlSegmentsMetadataManager = new SqlSegmentsMetadataManager(
+        TestHelper.makeJsonMapper(),
+        Suppliers.ofInstance(config),
+        derbyConnectorRule.metadataTablesConfigSupplier(),
+        connector,
+        null,
+        CentralizedDatasourceSchemaConfig.create(),
+        NoopServiceEmitter.instance()
     );
+    sqlSegmentsMetadataManager.start();
 
-    Mockito.when(
-        segmentsMetadataManager.getUnusedSegmentIntervals(
-            ArgumentMatchers.anyString(),
-            ArgumentMatchers.any(),
-            ArgumentMatchers.anyInt()
-        )
-    ).thenAnswer(invocation -> {
-      DateTime maxEndTime = invocation.getArgument(1);
-      long maxEndMillis = maxEndTime.getMillis();
-      List<Interval> unusedIntervals =
-          unusedSegments.stream()
-                        .map(DataSegment::getInterval)
-                        .filter(i -> i.getEnd().getMillis() <= maxEndMillis)
-                        .collect(Collectors.toList());
+    this.config = derbyConnectorRule.metadataTablesConfigSupplier().get();
+    connector.createSegmentTable();
 
-      int limit = invocation.getArgument(2);
-      return unusedIntervals.size() <= limit ? unusedIntervals : unusedIntervals.subList(0, limit);
-    });
-
-    target = new KillUnusedSegments(segmentsMetadataManager, overlordClient, config);
+    overlordClient = new TestOverlordClient();
+    configBuilder = KillUnusedSegmentsConfig.builder()
+        .withCleanupPeriod(Duration.standardSeconds(0))
+        .withDurationToRetain(Duration.standardHours(36))
+        .withMaxSegmentsToKill(10)
+        .withBufferPeriod(Duration.standardSeconds(1));
+    dynamicConfigBuilder = CoordinatorDynamicConfig.builder()
+        .withKillTaskSlotRatio(1.0);
+    paramsBuilder = DruidCoordinatorRuntimeParams.builder()
+                                                 .withUsedSegments(Collections.emptySet());
   }
 
   @Test
-  public void testRunWithNoIntervalShouldNotKillAnySegments()
+  public void testKillWithDefaultCoordinatorConfig()
   {
-    Mockito.doReturn(null).when(segmentsMetadataManager).getUnusedSegmentIntervals(
-        ArgumentMatchers.anyString(),
-        ArgumentMatchers.any(),
-        ArgumentMatchers.anyInt()
-    );
+    configBuilder = KillUnusedSegmentsConfig.builder();
+    dynamicConfigBuilder = CoordinatorDynamicConfig.builder();
 
-    mockTaskSlotUsage(1.0, Integer.MAX_VALUE, 1, 10);
-    target.run(params);
-    Mockito.verify(overlordClient, Mockito.never())
-           .runKillTask(anyString(), anyString(), any(Interval.class));
+    final DateTime sixtyDaysAgo = NOW.minusDays(60);
+
+    createAndAddUnusedSegment(DS1, YEAR_OLD, VERSION, sixtyDaysAgo);
+    createAndAddUnusedSegment(DS1, MONTH_OLD, VERSION, sixtyDaysAgo);
+    createAndAddUnusedSegment(DS1, DAY_OLD, VERSION, sixtyDaysAgo);
+    createAndAddUnusedSegment(DS1, HOUR_OLD, VERSION, sixtyDaysAgo);
+    createAndAddUnusedSegment(DS1, NEXT_DAY, VERSION, sixtyDaysAgo);
+    createAndAddUnusedSegment(DS1, NEXT_MONTH, VERSION, sixtyDaysAgo);
+    createAndAddUnusedSegment(DS1, Intervals.ETERNITY, VERSION, sixtyDaysAgo);
+
+    initDuty();
+    final CoordinatorRunStats stats = runDutyAndGetStats();
+
+    Assert.assertEquals(1, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(1, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(1, stats.get(Stats.Kill.MAX_SLOTS));
+    Assert.assertEquals(2, stats.get(Stats.Kill.ELIGIBLE_UNUSED_SEGMENTS, DS1_STAT_KEY));
+
+    validateLastKillStateAndReset(DS1, Intervals.ETERNITY);
   }
 
   @Test
-  public void testRunWithSpecificDatasourceAndNoIntervalShouldNotKillAnySegments()
+  public void testKillWithNoDatasources()
   {
-    Mockito.doReturn(Duration.standardDays(400))
-           .when(config).getCoordinatorKillDurationToRetain();
-    target = new KillUnusedSegments(segmentsMetadataManager, overlordClient, config);
+    initDuty();
+    final CoordinatorRunStats stats = runDutyAndGetStats();
 
-    // No unused segment is older than the retention period
-    mockTaskSlotUsage(1.0, Integer.MAX_VALUE, 1, 10);
-    target.run(params);
-    Mockito.verify(overlordClient, Mockito.never())
-           .runKillTask(anyString(), anyString(), any(Interval.class));
+    Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(0, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(10, stats.get(Stats.Kill.MAX_SLOTS));
+  }
+
+  /**
+   * Set up multiple datasources {@link #DS1} and {@link #DS2} with unused segments.
+   * Then run the kill duty multiple times until all the segments are killed.
+   */
+  @Test
+  public void testKillWithMultipleDatasources()
+  {
+    configBuilder.withIgnoreDurationToRetain(true).withMaxSegmentsToKill(2);
+
+    createAndAddUnusedSegment(DS1, YEAR_OLD, VERSION, NOW.minusDays(1));
+    createAndAddUnusedSegment(DS1, MONTH_OLD, VERSION, NOW.minusDays(1));
+    createAndAddUnusedSegment(DS1, DAY_OLD, VERSION, NOW.minusDays(1));
+    createAndAddUnusedSegment(DS1, NEXT_DAY, VERSION, NOW.minusDays(1));
+    createAndAddUnusedSegment(DS1, NEXT_MONTH, VERSION, NOW.minusDays(1));
+
+    createAndAddUnusedSegment(DS2, YEAR_OLD, VERSION, NOW.minusDays(1));
+    createAndAddUnusedSegment(DS2, DAY_OLD, VERSION, NOW.minusDays(1));
+    createAndAddUnusedSegment(DS2, NEXT_DAY, VERSION, NOW.minusDays(1));
+
+    initDuty();
+    CoordinatorRunStats stats = runDutyAndGetStats();
+
+    Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(2, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(10, stats.get(Stats.Kill.MAX_SLOTS));
+    Assert.assertEquals(2, stats.get(Stats.Kill.ELIGIBLE_UNUSED_SEGMENTS, DS1_STAT_KEY));
+    Assert.assertEquals(2, stats.get(Stats.Kill.ELIGIBLE_UNUSED_SEGMENTS, DS2_STAT_KEY));
+
+    validateLastKillStateAndReset(DS1, new Interval(YEAR_OLD.getStart(), MONTH_OLD.getEnd()));
+    validateLastKillStateAndReset(DS2, new Interval(YEAR_OLD.getStart(), DAY_OLD.getEnd()));
+
+    stats = runDutyAndGetStats();
+
+    Assert.assertEquals(20, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(4, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(20, stats.get(Stats.Kill.MAX_SLOTS));
+    Assert.assertEquals(4, stats.get(Stats.Kill.ELIGIBLE_UNUSED_SEGMENTS, DS1_STAT_KEY));
+    Assert.assertEquals(3, stats.get(Stats.Kill.ELIGIBLE_UNUSED_SEGMENTS, DS2_STAT_KEY));
+
+    validateLastKillStateAndReset(DS1, new Interval(DAY_OLD.getStart(), NEXT_DAY.getEnd()));
+    validateLastKillStateAndReset(DS2, NEXT_DAY);
+
+    stats = runDutyAndGetStats();
+
+    Assert.assertEquals(30, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(5, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(30, stats.get(Stats.Kill.MAX_SLOTS));
+    Assert.assertEquals(5, stats.get(Stats.Kill.ELIGIBLE_UNUSED_SEGMENTS, DS1_STAT_KEY));
+    Assert.assertEquals(3, stats.get(Stats.Kill.ELIGIBLE_UNUSED_SEGMENTS, DS2_STAT_KEY));
+
+    validateLastKillStateAndReset(DS1, NEXT_MONTH);
+    validateLastKillStateAndReset(DS2, null);
+  }
+
+  /**
+   * Set up multiple datasources {@link #DS1}, {@link #DS2} and {@link #DS3} with unused segments with 2 kill task
+   * slots. Running the kill duty each time should pick at least one unique datasource in a round-robin manner.
+   */
+  @Test
+  public void testRoundRobinKillMultipleDatasources()
+  {
+    configBuilder.withIgnoreDurationToRetain(true)
+                 .withMaxSegmentsToKill(2);
+    dynamicConfigBuilder.withMaxKillTaskSlots(2);
+
+    createAndAddUnusedSegment(DS1, YEAR_OLD, VERSION, NOW.minusDays(1));
+    createAndAddUnusedSegment(DS1, MONTH_OLD, VERSION, NOW.minusDays(1));
+    createAndAddUnusedSegment(DS1, DAY_OLD, VERSION, NOW.minusDays(1));
+    createAndAddUnusedSegment(DS1, NEXT_DAY, VERSION, NOW.minusDays(1));
+    createAndAddUnusedSegment(DS1, NEXT_MONTH, VERSION, NOW.minusDays(1));
+
+    createAndAddUnusedSegment(DS2, YEAR_OLD, VERSION, NOW.minusDays(1));
+    createAndAddUnusedSegment(DS2, DAY_OLD, VERSION, NOW.minusDays(1));
+    createAndAddUnusedSegment(DS2, NEXT_DAY, VERSION, NOW.minusDays(1));
+
+    createAndAddUnusedSegment(DS3, YEAR_OLD, VERSION, NOW.minusDays(1));
+    createAndAddUnusedSegment(DS3, DAY_OLD, VERSION, NOW.minusDays(1));
+    createAndAddUnusedSegment(DS3, NEXT_DAY, VERSION, NOW.minusDays(1));
+
+    initDuty();
+    CoordinatorRunStats stats = runDutyAndGetStats();
+
+    Assert.assertEquals(2, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(2, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(2, stats.get(Stats.Kill.MAX_SLOTS));
+    Assert.assertEquals(2, stats.get(Stats.Kill.ELIGIBLE_UNUSED_SEGMENTS, DS1_STAT_KEY));
+    Assert.assertEquals(2, stats.get(Stats.Kill.ELIGIBLE_UNUSED_SEGMENTS, DS2_STAT_KEY));
+
+    stats = runDutyAndGetStats();
+
+    Assert.assertEquals(4, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(4, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(4, stats.get(Stats.Kill.MAX_SLOTS));
+    Assert.assertEquals(2, stats.get(Stats.Kill.ELIGIBLE_UNUSED_SEGMENTS, DS3_STAT_KEY));
+    Assert.assertEquals(4, stats.get(Stats.Kill.ELIGIBLE_UNUSED_SEGMENTS, DS1_STAT_KEY));
+
+    stats = runDutyAndGetStats();
+
+    Assert.assertEquals(6, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(6, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(6, stats.get(Stats.Kill.MAX_SLOTS));
+    Assert.assertEquals(3, stats.get(Stats.Kill.ELIGIBLE_UNUSED_SEGMENTS, DS2_STAT_KEY));
+    Assert.assertEquals(3, stats.get(Stats.Kill.ELIGIBLE_UNUSED_SEGMENTS, DS3_STAT_KEY));
+
+    stats = runDutyAndGetStats();
+
+    Assert.assertEquals(8, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(7, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(8, stats.get(Stats.Kill.MAX_SLOTS));
+    Assert.assertEquals(5, stats.get(Stats.Kill.ELIGIBLE_UNUSED_SEGMENTS, DS1_STAT_KEY));
+    Assert.assertEquals(3, stats.get(Stats.Kill.ELIGIBLE_UNUSED_SEGMENTS, DS2_STAT_KEY));
+  }
+
+  /**
+   * The set of datasources to kill change in consecutive runs. The kill duty should avoid selecting two
+   * consecutive datasources across runs as long as there are other datasources to kill.
+   */
+  @Test
+  public void testRoundRobinKillWhenDatasourcesChange()
+  {
+    configBuilder.withIgnoreDurationToRetain(true)
+                 .withMaxSegmentsToKill(2);
+    dynamicConfigBuilder.withMaxKillTaskSlots(1);
+
+    createAndAddUnusedSegment(DS1, YEAR_OLD, VERSION, NOW.minusDays(1));
+    createAndAddUnusedSegment(DS1, MONTH_OLD, VERSION, NOW.minusDays(1));
+    createAndAddUnusedSegment(DS1, DAY_OLD, VERSION, NOW.minusDays(1));
+
+    initDuty();
+    CoordinatorRunStats stats = runDutyAndGetStats();
+
+    Assert.assertEquals(1, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(1, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(1, stats.get(Stats.Kill.MAX_SLOTS));
+    Assert.assertEquals(2, stats.get(Stats.Kill.ELIGIBLE_UNUSED_SEGMENTS, DS1_STAT_KEY));
+
+    validateLastKillStateAndReset(DS1, new Interval(YEAR_OLD.getStart(), MONTH_OLD.getEnd()));
+
+    createAndAddUnusedSegment(DS2, YEAR_OLD, VERSION, NOW.minusDays(1));
+    createAndAddUnusedSegment(DS2, DAY_OLD, VERSION, NOW.minusDays(1));
+    createAndAddUnusedSegment(DS2, NEXT_DAY, VERSION, NOW.minusDays(1));
+
+    stats = runDutyAndGetStats();
+
+    Assert.assertEquals(2, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(2, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(2, stats.get(Stats.Kill.MAX_SLOTS));
+    Assert.assertEquals(2, stats.get(Stats.Kill.ELIGIBLE_UNUSED_SEGMENTS, DS2_STAT_KEY));
+
+    stats = runDutyAndGetStats();
+
+    Assert.assertEquals(3, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(3, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(3, stats.get(Stats.Kill.MAX_SLOTS));
+    Assert.assertEquals(3, stats.get(Stats.Kill.ELIGIBLE_UNUSED_SEGMENTS, DS1_STAT_KEY));
+
+    stats = runDutyAndGetStats();
+
+    Assert.assertEquals(4, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(4, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(4, stats.get(Stats.Kill.MAX_SLOTS));
+    Assert.assertEquals(3, stats.get(Stats.Kill.ELIGIBLE_UNUSED_SEGMENTS, DS2_STAT_KEY));
   }
 
   @Test
-  public void testDurationToRetain()
+  public void testKillSingleDatasourceMultipleRuns()
   {
-    // Only segments more than a day old are killed
-    Interval expectedKillInterval = new Interval(
-        yearOldSegment.getInterval().getStart(),
-        dayOldSegment.getInterval().getEnd()
-    );
-    mockTaskSlotUsage(1.0, Integer.MAX_VALUE, 1, 10);
-    runAndVerifyKillInterval(expectedKillInterval);
+    configBuilder.withIgnoreDurationToRetain(true)
+                 .withMaxSegmentsToKill(2);
+    dynamicConfigBuilder.withMaxKillTaskSlots(2);
+
+    createAndAddUnusedSegment(DS1, YEAR_OLD, VERSION, NOW.minusDays(1));
+    createAndAddUnusedSegment(DS1, MONTH_OLD, VERSION, NOW.minusDays(1));
+    createAndAddUnusedSegment(DS1, DAY_OLD, VERSION, NOW.minusDays(1));
+
+    initDuty();
+    CoordinatorRunStats stats = runDutyAndGetStats();
+
+    Assert.assertEquals(2, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(1, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(2, stats.get(Stats.Kill.MAX_SLOTS));
+    Assert.assertEquals(2, stats.get(Stats.Kill.ELIGIBLE_UNUSED_SEGMENTS, DS1_STAT_KEY));
+
+    stats = runDutyAndGetStats();
+
+    Assert.assertEquals(4, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(2, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(4, stats.get(Stats.Kill.MAX_SLOTS));
+    Assert.assertEquals(3, stats.get(Stats.Kill.ELIGIBLE_UNUSED_SEGMENTS, DS1_STAT_KEY));
+
+    stats = runDutyAndGetStats();
+
+    Assert.assertEquals(6, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(2, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(6, stats.get(Stats.Kill.MAX_SLOTS));
+    Assert.assertEquals(3, stats.get(Stats.Kill.ELIGIBLE_UNUSED_SEGMENTS, DS1_STAT_KEY));
+
+  }
+
+  /**
+   * The {@code DAY_OLD} and {@code HOUR_OLD} segments are "more recent" in terms of last updated time.
+   * Even though they fall within the umbrella kill interval computed by the duty, the kill task will narrow down to
+   * exclude them and clean up only segments that strictly honor the max last updated time.
+   * See {@code KillUnusedSegmentsTaskTest#testKillMultipleUnusedSegmentsWithNullMaxUsedStatusLastUpdatedTime}
+   * for example.
+   */
+  @Test
+  public void testKillWithDifferentLastUpdatedTimesInWideInterval()
+  {
+    configBuilder.withIgnoreDurationToRetain(true)
+                 .withBufferPeriod(Duration.standardDays(3));
+
+    createAndAddUnusedSegment(DS1, YEAR_OLD, VERSION, NOW.minusDays(10));
+    createAndAddUnusedSegment(DS1, MONTH_OLD, VERSION, NOW.minusDays(10));
+    createAndAddUnusedSegment(DS1, DAY_OLD, VERSION, NOW.minusDays(2));
+    createAndAddUnusedSegment(DS1, HOUR_OLD, VERSION, NOW.minusDays(2));
+    createAndAddUnusedSegment(DS1, NEXT_DAY, VERSION, NOW.minusDays(10));
+    createAndAddUnusedSegment(DS1, NEXT_MONTH, VERSION, NOW.minusDays(10));
+
+    initDuty();
+    final CoordinatorRunStats stats = runDutyAndGetStats();
+
+    Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(1, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(10, stats.get(Stats.Kill.MAX_SLOTS));
+    Assert.assertEquals(4, stats.get(Stats.Kill.ELIGIBLE_UNUSED_SEGMENTS, DS1_STAT_KEY));
+
+    validateLastKillStateAndReset(DS1, new Interval(YEAR_OLD.getStart(), NEXT_MONTH.getEnd()));
+  }
+
+  /**
+   * Add two older unused segments with {@code YEAR_OLD} and {@code MONTH_OLD} intervals after removing the initial set
+   * of unused segments. The duty will clean up the older segments eventually, but only after it deletes rest of
+   * the initial set of segments.
+   */
+  @Test
+  public void testAddOlderSegmentsAfterInitialRun()
+  {
+    configBuilder.withIgnoreDurationToRetain(true)
+                 .withMaxSegmentsToKill(2);
+
+    createAndAddUnusedSegment(DS1, DAY_OLD, VERSION, NOW.minusDays(1));
+    createAndAddUnusedSegment(DS1, NEXT_DAY, VERSION, NOW.minusDays(1));
+    createAndAddUnusedSegment(DS1, NEXT_MONTH, VERSION, NOW.minusDays(1));
+
+    initDuty();
+    CoordinatorRunStats stats = runDutyAndGetStats();
+
+    Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(1, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(10, stats.get(Stats.Kill.MAX_SLOTS));
+    Assert.assertEquals(2, stats.get(Stats.Kill.ELIGIBLE_UNUSED_SEGMENTS, DS1_STAT_KEY));
+
+    validateLastKillStateAndReset(DS1, new Interval(DAY_OLD.getStart(), NEXT_DAY.getEnd()));
+
+    // Add two old unused segments now. These only get killed much later on when the kill
+    // duty eventually round robins its way through until the latest time.
+    createAndAddUnusedSegment(DS1, YEAR_OLD, VERSION, NOW.minusDays(1));
+    createAndAddUnusedSegment(DS1, MONTH_OLD, VERSION, NOW.minusDays(1));
+
+    stats = runDutyAndGetStats();
+
+    Assert.assertEquals(20, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(2, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(20, stats.get(Stats.Kill.MAX_SLOTS));
+    Assert.assertEquals(3, stats.get(Stats.Kill.ELIGIBLE_UNUSED_SEGMENTS, DS1_STAT_KEY));
+
+    validateLastKillStateAndReset(DS1, NEXT_MONTH);
+
+    stats = runDutyAndGetStats();
+
+    Assert.assertEquals(30, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(2, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(30, stats.get(Stats.Kill.MAX_SLOTS));
+    Assert.assertEquals(3, stats.get(Stats.Kill.ELIGIBLE_UNUSED_SEGMENTS, DS1_STAT_KEY));
+
+    validateLastKillStateAndReset(DS1, null);
+
+    stats = runDutyAndGetStats();
+
+    Assert.assertEquals(40, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(3, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(40, stats.get(Stats.Kill.MAX_SLOTS));
+    Assert.assertEquals(5, stats.get(Stats.Kill.ELIGIBLE_UNUSED_SEGMENTS, DS1_STAT_KEY));
+
+    validateLastKillStateAndReset(DS1, new Interval(YEAR_OLD.getStart(), MONTH_OLD.getEnd()));
+  }
+
+  @Test
+  public void testDatasoucesAllowList()
+  {
+    dynamicConfigBuilder.withSpecificDataSourcesToKillUnusedSegmentsIn(ImmutableSet.of(DS2, DS3));
+    paramsBuilder.withDynamicConfigs(dynamicConfigBuilder.build());
+
+    createAndAddUnusedSegment(DS1, YEAR_OLD, VERSION, NOW.minusDays(1));
+    createAndAddUnusedSegment(DS2, YEAR_OLD, VERSION, NOW.minusDays(1));
+    createAndAddUnusedSegment(DS3, MONTH_OLD, VERSION, NOW.minusDays(1));
+
+    initDuty();
+    final CoordinatorRunStats stats = runDutyAndGetStats();
+
+    Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(2, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(10, stats.get(Stats.Kill.MAX_SLOTS));
+    Assert.assertEquals(0, stats.get(Stats.Kill.ELIGIBLE_UNUSED_SEGMENTS, DS1_STAT_KEY));
+    Assert.assertEquals(1, stats.get(Stats.Kill.ELIGIBLE_UNUSED_SEGMENTS, DS2_STAT_KEY));
+    Assert.assertEquals(1, stats.get(Stats.Kill.ELIGIBLE_UNUSED_SEGMENTS, DS3_STAT_KEY));
+
+    validateLastKillStateAndReset(DS1, null);
+    validateLastKillStateAndReset(DS2, YEAR_OLD);
+    validateLastKillStateAndReset(DS3, MONTH_OLD);
   }
 
   @Test
   public void testNegativeDurationToRetain()
   {
-    // Duration to retain = -1 day, reinit target for config to take effect
-    Mockito.doReturn(DURATION_TO_RETAIN.negated())
-           .when(config).getCoordinatorKillDurationToRetain();
-    target = new KillUnusedSegments(segmentsMetadataManager, overlordClient, config);
+    configBuilder.withDurationToRetain(Duration.standardHours(36).negated());
 
-    // Segments upto 1 day in the future are killed
-    Interval expectedKillInterval = new Interval(
-        yearOldSegment.getInterval().getStart(),
-        nextDaySegment.getInterval().getEnd()
+    createAndAddUnusedSegment(DS1, YEAR_OLD, VERSION, NOW.minusDays(10));
+    createAndAddUnusedSegment(DS1, MONTH_OLD, VERSION, NOW.minusDays(10));
+    createAndAddUnusedSegment(DS1, DAY_OLD, VERSION, NOW.minusDays(2));
+    createAndAddUnusedSegment(DS1, HOUR_OLD, VERSION, NOW.minusDays(2));
+    createAndAddUnusedSegment(DS1, NEXT_DAY, VERSION, NOW.minusDays(10));
+    createAndAddUnusedSegment(DS1, NEXT_MONTH, VERSION, NOW.minusDays(10));
+
+    initDuty();
+    final CoordinatorRunStats stats = runDutyAndGetStats();
+
+    Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(1, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(10, stats.get(Stats.Kill.MAX_SLOTS));
+    Assert.assertEquals(5, stats.get(Stats.Kill.ELIGIBLE_UNUSED_SEGMENTS, DS1_STAT_KEY));
+
+    validateLastKillStateAndReset(DS1, new Interval(YEAR_OLD.getStart(), NEXT_DAY.getEnd())
     );
-    mockTaskSlotUsage(1.0, Integer.MAX_VALUE, 1, 10);
-    runAndVerifyKillInterval(expectedKillInterval);
   }
 
   @Test
   public void testIgnoreDurationToRetain()
   {
-    Mockito.doReturn(true)
-           .when(config).getCoordinatorKillIgnoreDurationToRetain();
-    target = new KillUnusedSegments(segmentsMetadataManager, overlordClient, config);
+    configBuilder.withIgnoreDurationToRetain(true);
 
-    // All future and past unused segments are killed
-    Interval expectedKillInterval = new Interval(
-        yearOldSegment.getInterval().getStart(),
-        nextMonthSegment.getInterval().getEnd()
-    );
-    mockTaskSlotUsage(1.0, Integer.MAX_VALUE, 1, 10);
-    runAndVerifyKillInterval(expectedKillInterval);
+    createAndAddUnusedSegment(DS1, YEAR_OLD, VERSION, NOW.minusDays(10));
+    createAndAddUnusedSegment(DS1, MONTH_OLD, VERSION, NOW.minusDays(10));
+    createAndAddUnusedSegment(DS1, DAY_OLD, VERSION, NOW.minusDays(2));
+    createAndAddUnusedSegment(DS1, HOUR_OLD, VERSION, NOW.minusDays(2));
+    createAndAddUnusedSegment(DS1, NEXT_DAY, VERSION, NOW.minusDays(10));
+    createAndAddUnusedSegment(DS1, NEXT_MONTH, VERSION, NOW.minusDays(10));
+
+    initDuty();
+    final CoordinatorRunStats stats = runDutyAndGetStats();
+
+    Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(1, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(10, stats.get(Stats.Kill.MAX_SLOTS));
+    Assert.assertEquals(6, stats.get(Stats.Kill.ELIGIBLE_UNUSED_SEGMENTS, DS1_STAT_KEY));
+
+    // All past and future unused segments should be killed
+    validateLastKillStateAndReset(DS1, new Interval(YEAR_OLD.getStart(), NEXT_MONTH.getEnd()));
   }
 
   @Test
-  public void testMaxSegmentsToKill()
+  public void testLowerMaxSegmentsToKill()
   {
-    Mockito.doReturn(1)
-           .when(config).getCoordinatorKillMaxSegments();
-    target = new KillUnusedSegments(segmentsMetadataManager, overlordClient, config);
+    configBuilder.withMaxSegmentsToKill(1);
 
-    mockTaskSlotUsage(1.0, Integer.MAX_VALUE, 1, 10);
-    // Only 1 unused segment is killed
-    runAndVerifyKillInterval(yearOldSegment.getInterval());
+    createAndAddUnusedSegment(DS1, YEAR_OLD, VERSION, NOW.minusDays(10));
+    createAndAddUnusedSegment(DS1, MONTH_OLD, VERSION, NOW.minusDays(10));
+    createAndAddUnusedSegment(DS1, DAY_OLD, VERSION, NOW.minusDays(2));
+
+    initDuty();
+    final CoordinatorRunStats stats = runDutyAndGetStats();
+
+    Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(1, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(10, stats.get(Stats.Kill.MAX_SLOTS));
+    Assert.assertEquals(1, stats.get(Stats.Kill.ELIGIBLE_UNUSED_SEGMENTS, DS1_STAT_KEY));
+
+    validateLastKillStateAndReset(DS1, YEAR_OLD);
   }
 
   @Test
-  public void testKillTaskSlotRatioNoAvailableTaskCapacityForKill()
+  public void testKillDatasourceWithNoUnusedSegmentsInInitialRun()
   {
-    mockTaskSlotUsage(0.10, 10, 1, 5);
-    runAndVerifyNoKill();
+    configBuilder.withMaxSegmentsToKill(1);
+
+    // create a datasource but no unused segments yet.
+    createAndAddUsedSegment(DS1, YEAR_OLD, VERSION);
+
+    initDuty();
+    CoordinatorRunStats stats = runDutyAndGetStats();
+
+    Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(0, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(10, stats.get(Stats.Kill.MAX_SLOTS));
+    Assert.assertEquals(0, stats.get(Stats.Kill.ELIGIBLE_UNUSED_SEGMENTS, DS1_STAT_KEY));
+
+    createAndAddUnusedSegment(DS1, YEAR_OLD, VERSION, NOW.minusDays(10));
+    createAndAddUnusedSegment(DS1, MONTH_OLD, VERSION, NOW.minusDays(10));
+    createAndAddUnusedSegment(DS1, DAY_OLD, VERSION, NOW.minusDays(2));
+
+    stats = runDutyAndGetStats();
+
+    Assert.assertEquals(20, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(1, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(20, stats.get(Stats.Kill.MAX_SLOTS));
+    Assert.assertEquals(1, stats.get(Stats.Kill.ELIGIBLE_UNUSED_SEGMENTS, DS1_STAT_KEY));
+
+    validateLastKillStateAndReset(DS1, YEAR_OLD);
+  }
+
+  /**
+   * The kill period is honored after the first indexing run.
+   */
+  @Test
+  public void testLargeKillPeriod()
+  {
+    configBuilder.withCleanupPeriod(Duration.standardHours(1));
+
+    createAndAddUnusedSegment(DS1, YEAR_OLD, VERSION, NOW.minusDays(10));
+    createAndAddUnusedSegment(DS1, MONTH_OLD, VERSION, NOW.minusDays(10));
+    createAndAddUnusedSegment(DS1, DAY_OLD, VERSION, NOW.minusDays(2));
+    createAndAddUnusedSegment(DS1, HOUR_OLD, VERSION, NOW.minusDays(2));
+    createAndAddUnusedSegment(DS1, NEXT_DAY, VERSION, NOW.minusDays(10));
+    createAndAddUnusedSegment(DS1, NEXT_MONTH, VERSION, NOW.minusDays(10));
+
+    initDuty();
+    CoordinatorRunStats stats = runDutyAndGetStats();
+
+    Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(1, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(10, stats.get(Stats.Kill.MAX_SLOTS));
+    Assert.assertEquals(2, stats.get(Stats.Kill.ELIGIBLE_UNUSED_SEGMENTS, DS1_STAT_KEY));
+
+    validateLastKillStateAndReset(DS1, new Interval(YEAR_OLD.getStart(), MONTH_OLD.getEnd()));
+
+    stats = runDutyAndGetStats();
+
+    Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(1, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(10, stats.get(Stats.Kill.MAX_SLOTS));
+    Assert.assertEquals(2, stats.get(Stats.Kill.ELIGIBLE_UNUSED_SEGMENTS, DS1_STAT_KEY));
+
+    validateLastKillStateAndReset(DS1, null);
+  }
+
+  /**
+   * There are multiple datasources to be killed, but the kill task slot is at capacity,
+   * so the duty has to wait until the slots free up in the next cycle or so.
+   */
+  @Test
+  public void testKillTaskSlotAtCapacity()
+  {
+    dynamicConfigBuilder.withKillTaskSlotRatio(0.3);
+    dynamicConfigBuilder.withMaxKillTaskSlots(2);
+    paramsBuilder.withDynamicConfigs(dynamicConfigBuilder.build());
+
+    createAndAddUnusedSegment(DS1, YEAR_OLD, VERSION, NOW.minusDays(1));
+    createAndAddUnusedSegment(DS1, MONTH_OLD, VERSION, NOW.minusDays(1));
+    createAndAddUnusedSegment(DS1, DAY_OLD, VERSION, NOW.minusDays(1));
+
+    createAndAddUnusedSegment(DS2, YEAR_OLD, VERSION, NOW.minusDays(1));
+    createAndAddUnusedSegment(DS2, DAY_OLD, VERSION, NOW.minusDays(1));
+    createAndAddUnusedSegment(DS2, NEXT_MONTH, VERSION, NOW.minusDays(1));
+
+    createAndAddUnusedSegment(DS3, YEAR_OLD, VERSION, NOW.minusDays(1));
+
+    initDuty();
+    final CoordinatorRunStats stats = runDutyAndGetStats();
+
+    Assert.assertEquals(2, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(2, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(2, stats.get(Stats.Kill.MAX_SLOTS));
+    Assert.assertEquals(2, stats.get(Stats.Kill.ELIGIBLE_UNUSED_SEGMENTS, DS1_STAT_KEY));
+    Assert.assertEquals(1, stats.get(Stats.Kill.ELIGIBLE_UNUSED_SEGMENTS, DS2_STAT_KEY));
+
+    validateLastKillStateAndReset(DS1, new Interval(YEAR_OLD.getStart(), MONTH_OLD.getEnd()));
+    validateLastKillStateAndReset(DS2, YEAR_OLD);
+    validateLastKillStateAndReset(DS3, null);
   }
 
   @Test
-  public void testMaxKillTaskSlotsNoAvailableTaskCapacityForKill()
+  public void testKillWithOverlordTaskSlotsFull()
   {
-    mockTaskSlotUsage(1.0, 3, 3, 10);
-    runAndVerifyNoKill();
+    dynamicConfigBuilder.withKillTaskSlotRatio(0.10);
+    dynamicConfigBuilder.withMaxKillTaskSlots(10);
+    paramsBuilder.withDynamicConfigs(dynamicConfigBuilder.build());
+
+    overlordClient = new TestOverlordClient(1, 5);
+
+    overlordClient.addTask(DS1);
+
+    initDuty();
+    final CoordinatorRunStats stats = runDutyAndGetStats();
+
+    Assert.assertEquals(0, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(0, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(0, stats.get(Stats.Kill.MAX_SLOTS));
   }
 
   @Test
-  public void testGetKillTaskCapacity()
+  public void testKillWithOverlordTaskSlotAvailable()
   {
-    Assert.assertEquals(
-        10,
-        KillUnusedSegments.getKillTaskCapacity(10, 1.0, Integer.MAX_VALUE)
-    );
+    dynamicConfigBuilder.withKillTaskSlotRatio(1.0);
+    dynamicConfigBuilder.withMaxKillTaskSlots(3);
+    paramsBuilder.withDynamicConfigs(dynamicConfigBuilder.build());
 
-    Assert.assertEquals(
-        0,
-        KillUnusedSegments.getKillTaskCapacity(10, 0.0, Integer.MAX_VALUE)
-    );
+    overlordClient = new TestOverlordClient(3, 10);
+    overlordClient.addTask(DS1);
+    overlordClient.addTask(DS1);
 
-    Assert.assertEquals(
-        10,
-        KillUnusedSegments.getKillTaskCapacity(10, Double.POSITIVE_INFINITY, Integer.MAX_VALUE)
-    );
+    initDuty();
+    final CoordinatorRunStats stats = runDutyAndGetStats();
 
-    Assert.assertEquals(
-        0,
-        KillUnusedSegments.getKillTaskCapacity(10, 1.0, 0)
-    );
-
-    Assert.assertEquals(
-        1,
-        KillUnusedSegments.getKillTaskCapacity(10, 0.1, 3)
-    );
-
-    Assert.assertEquals(
-        2,
-        KillUnusedSegments.getKillTaskCapacity(10, 0.3, 2)
-    );
+    Assert.assertEquals(1, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(0, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(3, stats.get(Stats.Kill.MAX_SLOTS));
   }
 
-  private void runAndVerifyKillInterval(Interval expectedKillInterval)
+  @Test
+  public void testDefaultKillTaskSlotStats()
   {
-    int limit = config.getCoordinatorKillMaxSegments();
-    target.run(params);
-    Mockito.verify(overlordClient, Mockito.times(1)).runKillTask(
-        ArgumentMatchers.anyString(),
-        ArgumentMatchers.eq("DS1"),
-        ArgumentMatchers.eq(expectedKillInterval),
-        ArgumentMatchers.eq(limit)
-    );
+    dynamicConfigBuilder = CoordinatorDynamicConfig.builder();
+    paramsBuilder.withDynamicConfigs(dynamicConfigBuilder.build());
+
+    initDuty();
+    final CoordinatorRunStats stats = runDutyAndGetStats();
+
+    Assert.assertEquals(1, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(0, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(1, stats.get(Stats.Kill.MAX_SLOTS));
   }
 
-  private void runAndVerifyNoKill()
+  @Test
+  public void testKillTaskSlotStats1()
   {
-    target.run(params);
-    Mockito.verify(overlordClient, Mockito.never()).runKillTask(
-        ArgumentMatchers.anyString(),
-        ArgumentMatchers.anyString(),
-        ArgumentMatchers.any(Interval.class),
-        ArgumentMatchers.anyInt()
-    );
+    dynamicConfigBuilder.withKillTaskSlotRatio(1.0);
+    dynamicConfigBuilder.withMaxKillTaskSlots(Integer.MAX_VALUE);
+    paramsBuilder.withDynamicConfigs(dynamicConfigBuilder.build());
+
+    initDuty();
+    final CoordinatorRunStats stats = runDutyAndGetStats();
+
+    Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(0, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(10, stats.get(Stats.Kill.MAX_SLOTS));
   }
 
-  private void mockTaskSlotUsage(
-      double killTaskSlotRatio,
-      int maxKillTaskSlots,
-      int numPendingCoordKillTasks,
-      int maxWorkerCapacity
+  @Test
+  public void testKillTaskSlotStats2()
+  {
+    dynamicConfigBuilder.withKillTaskSlotRatio(0.0);
+    dynamicConfigBuilder.withMaxKillTaskSlots(Integer.MAX_VALUE);
+    paramsBuilder.withDynamicConfigs(dynamicConfigBuilder.build());
+
+    initDuty();
+    final CoordinatorRunStats stats = runDutyAndGetStats();
+
+    Assert.assertEquals(0, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(0, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(0, stats.get(Stats.Kill.MAX_SLOTS));
+  }
+
+  @Test
+  public void testKillTaskSlotStats3()
+  {
+    dynamicConfigBuilder.withKillTaskSlotRatio(1.0);
+    dynamicConfigBuilder.withMaxKillTaskSlots(0);
+    paramsBuilder.withDynamicConfigs(dynamicConfigBuilder.build());
+
+    initDuty();
+    final CoordinatorRunStats stats = runDutyAndGetStats();
+
+    Assert.assertEquals(0, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(0, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(0, stats.get(Stats.Kill.MAX_SLOTS));
+  }
+
+  @Test
+  public void testKillTaskSlotStats4()
+  {
+    dynamicConfigBuilder.withKillTaskSlotRatio(0.1);
+    dynamicConfigBuilder.withMaxKillTaskSlots(3);
+    paramsBuilder.withDynamicConfigs(dynamicConfigBuilder.build());
+
+    initDuty();
+    final CoordinatorRunStats stats = runDutyAndGetStats();
+
+    Assert.assertEquals(1, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(0, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(1, stats.get(Stats.Kill.MAX_SLOTS));
+  }
+
+  @Test
+  public void testKillTaskSlotStats5()
+  {
+    dynamicConfigBuilder.withKillTaskSlotRatio(0.3);
+    dynamicConfigBuilder.withMaxKillTaskSlots(2);
+    paramsBuilder.withDynamicConfigs(dynamicConfigBuilder.build());
+
+    initDuty();
+    final CoordinatorRunStats stats = runDutyAndGetStats();
+
+    Assert.assertEquals(2, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(0, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(2, stats.get(Stats.Kill.MAX_SLOTS));
+  }
+
+  @Test
+  public void testKillFirstHalfEternitySegment()
+  {
+    configBuilder.withIgnoreDurationToRetain(true);
+
+    final Interval firstHalfEternity = new Interval(DateTimes.MIN, DateTimes.of("2024"));
+    createAndAddUnusedSegment(DS1, firstHalfEternity, VERSION, NOW.minusDays(60));
+
+    initDuty();
+    final CoordinatorRunStats stats = runDutyAndGetStats();
+
+    Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(1, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(10, stats.get(Stats.Kill.MAX_SLOTS));
+    Assert.assertEquals(1, stats.get(Stats.Kill.ELIGIBLE_UNUSED_SEGMENTS, DS1_STAT_KEY));
+
+    validateLastKillStateAndReset(DS1, firstHalfEternity);
+  }
+
+  @Test
+  public void testKillEternitySegment()
+  {
+    configBuilder.withIgnoreDurationToRetain(true);
+
+    createAndAddUnusedSegment(DS1, Intervals.ETERNITY, VERSION, NOW.minusDays(60));
+
+    initDuty();
+    final CoordinatorRunStats stats = runDutyAndGetStats();
+
+    Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(1, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(10, stats.get(Stats.Kill.MAX_SLOTS));
+    Assert.assertEquals(1, stats.get(Stats.Kill.ELIGIBLE_UNUSED_SEGMENTS, DS1_STAT_KEY));
+
+    validateLastKillStateAndReset(DS1, Intervals.ETERNITY);
+  }
+
+  @Test
+  public void testKillSecondHalfEternitySegment()
+  {
+    configBuilder.withIgnoreDurationToRetain(true);
+    final Interval secondHalfEternity = new Interval(DateTimes.of("1970"), DateTimes.MAX);
+
+    createAndAddUnusedSegment(DS1, secondHalfEternity, VERSION, NOW.minusDays(60));
+
+    initDuty();
+    final CoordinatorRunStats stats = runDutyAndGetStats();
+
+    Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(1, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(10, stats.get(Stats.Kill.MAX_SLOTS));
+    Assert.assertEquals(1, stats.get(Stats.Kill.ELIGIBLE_UNUSED_SEGMENTS, DS1_STAT_KEY));
+
+    validateLastKillStateAndReset(DS1, secondHalfEternity);
+  }
+
+  @Test
+  public void testKillLargeIntervalSegments()
+  {
+    final Interval largeTimeRange1 = Intervals.of("1990-01-01T00Z/19940-01-01T00Z");
+    final Interval largeTimeRange2 = Intervals.of("-19940-01-01T00Z/1970-01-01T00Z");
+
+    createAndAddUnusedSegment(DS1, largeTimeRange1, VERSION, NOW.minusDays(60));
+    createAndAddUnusedSegment(DS1, largeTimeRange2, VERSION, NOW.minusDays(60));
+
+    initDuty();
+    final CoordinatorRunStats stats = runDutyAndGetStats();
+
+    Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(1, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(10, stats.get(Stats.Kill.MAX_SLOTS));
+    Assert.assertEquals(2, stats.get(Stats.Kill.ELIGIBLE_UNUSED_SEGMENTS, DS1_STAT_KEY));
+
+    validateLastKillStateAndReset(DS1, new Interval(largeTimeRange2.getStart(), largeTimeRange1.getEnd()));
+  }
+
+  @Test
+  public void testKillMultipleSegmentsInSameInterval()
+  {
+    configBuilder.withIgnoreDurationToRetain(true);
+
+    createAndAddUnusedSegment(DS1, YEAR_OLD, "v1", NOW.minusDays(10));
+    createAndAddUnusedSegment(DS1, YEAR_OLD, "v2", NOW.minusDays(10));
+    createAndAddUnusedSegment(DS1, YEAR_OLD, "v3", NOW.minusDays(10));
+
+    initDuty();
+    final CoordinatorRunStats stats = runDutyAndGetStats();
+
+    Assert.assertEquals(10, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(1, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(10, stats.get(Stats.Kill.MAX_SLOTS));
+    Assert.assertEquals(3, stats.get(Stats.Kill.ELIGIBLE_UNUSED_SEGMENTS, DS1_STAT_KEY));
+
+    validateLastKillStateAndReset(DS1, YEAR_OLD);
+  }
+
+  private void validateLastKillStateAndReset(final String dataSource, @Nullable final Interval expectedKillInterval)
+  {
+    final Interval observedLastKillInterval = overlordClient.getLastKillInterval(dataSource);
+    final String observedLastKillTaskId = overlordClient.getLastKillTaskId(dataSource);
+
+    Assert.assertEquals(expectedKillInterval, observedLastKillInterval);
+
+    String expectedKillTaskId = null;
+    if (expectedKillInterval != null) {
+      expectedKillTaskId = TestOverlordClient.getTaskId(
+          KillUnusedSegments.TASK_ID_PREFIX,
+          dataSource,
+          expectedKillInterval
+      );
+    }
+
+    Assert.assertEquals(expectedKillTaskId, observedLastKillTaskId);
+
+    // Clear the state after validation
+    overlordClient.deleteLastKillTaskId(dataSource);
+    overlordClient.deleteLastKillInterval(dataSource);
+  }
+
+  private DataSegment createAndAddUsedSegment(final String dataSource, final Interval interval, final String version)
+  {
+    final DataSegment segment = createSegment(dataSource, interval, version);
+    try {
+      SqlSegmentsMetadataManagerTestBase.publishSegment(connector, config, TestHelper.makeJsonMapper(), segment);
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+    return segment;
+  }
+
+  private void createAndAddUnusedSegment(
+      final String dataSource,
+      final Interval interval,
+      final String version,
+      final DateTime lastUpdatedTime
   )
   {
-    Mockito.doReturn(killTaskSlotRatio)
-        .when(coordinatorDynamicConfig).getKillTaskSlotRatio();
-    Mockito.doReturn(maxKillTaskSlots)
-        .when(coordinatorDynamicConfig).getMaxKillTaskSlots();
-    Mockito.doReturn(Futures.immediateFuture(new IndexingTotalWorkerCapacityInfo(1, maxWorkerCapacity)))
-        .when(overlordClient)
-        .getTotalWorkerCapacity();
-    List<TaskStatusPlus> runningCoordinatorIssuedKillTasks = new ArrayList<>();
-    for (int i = 0; i < numPendingCoordKillTasks; i++) {
-      runningCoordinatorIssuedKillTasks.add(new TaskStatusPlus(
-          KillUnusedSegments.TASK_ID_PREFIX + "_taskId_" + i,
-          "groupId_" + i,
-          KillUnusedSegments.KILL_TASK_TYPE,
-          DateTimes.EPOCH,
-          DateTimes.EPOCH,
-          TaskState.RUNNING,
-          RunnerTaskState.RUNNING,
-          -1L,
-          TaskLocation.unknown(),
-          "datasource",
-          null
-      ));
-    }
-    Mockito.doReturn(Futures.immediateFuture(
-            CloseableIterators.withEmptyBaggage(runningCoordinatorIssuedKillTasks.iterator())))
-        .when(overlordClient)
-        .taskStatuses(null, null, 0);
+    final DataSegment segment = createAndAddUsedSegment(dataSource, interval, version);
+    sqlSegmentsMetadataManager.markSegmentsAsUnused(ImmutableSet.of(segment.getId()));
+    derbyConnectorRule.segments().updateUsedStatusLastUpdated(segment.getId().toString(), lastUpdatedTime);
   }
 
-  private DataSegment createSegmentWithEnd(DateTime endTime)
+  private DataSegment createSegment(final String dataSource, final Interval interval, final String version)
   {
     return new DataSegment(
-        "DS1",
-        new Interval(Period.days(1), endTime),
-        DateTimes.nowUtc().toString(),
+        dataSource,
+        interval,
+        version,
         new HashMap<>(),
         new ArrayList<>(),
         new ArrayList<>(),
@@ -348,5 +938,137 @@ public class KillUnusedSegmentsTest
         1,
         0
     );
+  }
+
+  private void initDuty()
+  {
+    killDuty = new KillUnusedSegments(sqlSegmentsMetadataManager, overlordClient, configBuilder.build());
+  }
+
+  private CoordinatorRunStats runDutyAndGetStats()
+  {
+    paramsBuilder.withDynamicConfigs(dynamicConfigBuilder.build());
+    final DruidCoordinatorRuntimeParams params = killDuty.run(paramsBuilder.build());
+    return params.getCoordinatorStats();
+  }
+
+  /**
+   * Simulates an Overlord with a configurable list of kill tasks. It also helps verify the calls made by the kill duty.
+   */
+  private static class TestOverlordClient extends NoopOverlordClient
+  {
+    private final List<TaskStatusPlus> taskStatuses = new ArrayList<>();
+
+    private final Map<String, Interval> observedDatasourceToLastKillInterval = new HashMap<>();
+    private final Map<String, String> observedDatasourceToLastKillTaskId = new HashMap<>();
+    private final IndexingTotalWorkerCapacityInfo capcityInfo;
+    private int taskIdSuffix = 0;
+
+    TestOverlordClient()
+    {
+      capcityInfo = new IndexingTotalWorkerCapacityInfo(5, 10);
+    }
+
+    TestOverlordClient(final int currentClusterCapacity, final int maxWorkerCapacity)
+    {
+      capcityInfo = new IndexingTotalWorkerCapacityInfo(currentClusterCapacity, maxWorkerCapacity);
+    }
+
+    static String getTaskId(final String idPrefix, final String dataSource, final Interval interval)
+    {
+      return idPrefix + "-" + dataSource + "-" + interval;
+    }
+
+    void addTask(final String datasource)
+    {
+      taskStatuses.add(
+          new TaskStatusPlus(
+              KillUnusedSegments.TASK_ID_PREFIX + "__" + datasource + "__" + taskIdSuffix++,
+              null,
+              KillUnusedSegments.KILL_TASK_TYPE,
+              DateTimes.EPOCH,
+              DateTimes.EPOCH,
+              TaskState.RUNNING,
+              RunnerTaskState.RUNNING,
+              100L,
+              TaskLocation.unknown(),
+              datasource,
+              null
+          )
+      );
+    }
+
+    @Override
+    public ListenableFuture<CloseableIterator<TaskStatusPlus>> taskStatuses(
+        @Nullable String state,
+        @Nullable String dataSource,
+        @Nullable Integer maxCompletedTasks
+    )
+    {
+      return Futures.immediateFuture(
+          CloseableIterators.wrap(taskStatuses.iterator(), null)
+      );
+    }
+
+    @Override
+    public ListenableFuture<String> runKillTask(
+        String idPrefix,
+        String dataSource,
+        Interval interval,
+        @Nullable List<String> versions,
+        @Nullable Integer maxSegmentsToKill,
+        @Nullable DateTime maxUsedStatusLastUpdatedTime
+    )
+    {
+      final String taskId = getTaskId(idPrefix, dataSource, interval);
+      observedDatasourceToLastKillInterval.put(dataSource, interval);
+      observedDatasourceToLastKillTaskId.put(dataSource, taskId);
+      return Futures.immediateFuture(taskId);
+    }
+
+    @Override
+    public ListenableFuture<IndexingTotalWorkerCapacityInfo> getTotalWorkerCapacity()
+    {
+      return Futures.immediateFuture(capcityInfo);
+    }
+
+    @Override
+    public ListenableFuture<List<IndexingWorkerInfo>> getWorkers()
+    {
+      return Futures.immediateFuture(
+          ImmutableList.of(
+              new IndexingWorkerInfo(
+                  new IndexingWorker("http", "localhost", "1.2.3.4", 3, "2"),
+                  0,
+                  Collections.emptySet(),
+                  Collections.emptyList(),
+                  DateTimes.of("2000"),
+                  null
+              )
+          )
+      );
+    }
+
+    Interval getLastKillInterval(final String dataSource)
+    {
+      return observedDatasourceToLastKillInterval.get(dataSource);
+    }
+
+    void deleteLastKillInterval(final String dataSource)
+    {
+      observedDatasourceToLastKillInterval.remove(dataSource);
+    }
+
+    String getLastKillTaskId(final String dataSource)
+    {
+      final String lastKillTaskId = observedDatasourceToLastKillTaskId.get(dataSource);
+      observedDatasourceToLastKillTaskId.remove(dataSource);
+      return lastKillTaskId;
+    }
+
+    void deleteLastKillTaskId(final String dataSource)
+    {
+      observedDatasourceToLastKillTaskId.remove(dataSource);
+    }
   }
 }

@@ -30,6 +30,7 @@ import java.util.Comparator;
 import java.util.NoSuchElementException;
 import java.util.function.BinaryOperator;
 
+@SuppressWarnings("DoNotMock")
 public class CombiningIteratorTest
 {
   private CombiningIterator<String> testingIterator;

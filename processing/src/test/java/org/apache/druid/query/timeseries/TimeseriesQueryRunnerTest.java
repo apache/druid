@@ -35,6 +35,7 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
+import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.MetricsEmittingQueryRunner;
@@ -54,9 +55,9 @@ import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
-import org.apache.druid.query.aggregation.first.DoubleFirstAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.first.DoubleFirstAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.last.DoubleLastAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
-import org.apache.druid.query.aggregation.last.DoubleLastAggregatorFactory;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
@@ -115,7 +116,8 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                 new TimeseriesQueryQueryToolChest(),
                 new TimeseriesQueryEngine(),
                 QueryRunnerTestHelper.NOOP_QUERYWATCHER
-            )
+            ),
+            false
         ),
         // descending?
         Arrays.asList(false, true),
@@ -140,7 +142,7 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
         .collect(Collectors.toList());
   }
 
-  private <T> void assertExpectedResults(Iterable<Result<T>> expectedResults, Iterable<Result<T>> results)
+  protected <T> void assertExpectedResults(Iterable<Result<T>> expectedResults, Iterable<Result<T>> results)
   {
     if (descending) {
       expectedResults = TestHelper.revert(expectedResults);
@@ -151,7 +153,7 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
   protected final QueryRunner<Result<TimeseriesResultValue>> runner;
   protected final boolean descending;
   protected final boolean vectorize;
-  private final List<AggregatorFactory> aggregatorFactoryList;
+  protected final List<AggregatorFactory> aggregatorFactoryList;
 
   public TimeseriesQueryRunnerTest(
       QueryRunner<Result<TimeseriesResultValue>> runner,
@@ -169,9 +171,6 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
   @Test
   public void testEmptyTimeseries()
   {
-    // Cannot vectorize due to "doubleFirst" aggregator.
-    cannotVectorize();
-
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
                                   .granularity(QueryRunnerTestHelper.ALL_GRAN)
@@ -1770,30 +1769,49 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
                                   .context(makeContext())
                                   .build();
 
-    List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
-        new Result<>(
-            DateTimes.of("2011-04-01"),
-            new TimeseriesResultValue(
-                ImmutableMap.of(
-                    "rows", 13L,
-                    "index", 6626.151596069336,
-                    "addRowsIndexConstant", 6640.151596069336,
-                    "uniques", QueryRunnerTestHelper.UNIQUES_9
-                )
-            )
-        ),
-        new Result<>(
-            DateTimes.of("2011-04-02"),
-            new TimeseriesResultValue(
-                ImmutableMap.of(
-                    "rows", 13L,
-                    "index", 5833.2095947265625,
-                    "addRowsIndexConstant", 5847.2095947265625,
-                    "uniques", QueryRunnerTestHelper.UNIQUES_9
-                )
-            )
-        )
-    );
+
+    List<Result<TimeseriesResultValue>> expectedResults;
+    if (NullHandling.sqlCompatible()) {
+      expectedResults = Arrays.asList(
+          new Result<>(
+              DateTimes.of("2011-04-01"),
+              new TimeseriesResultValue(
+                  TestHelper.makeMap("rows", 0L, "index", null, "uniques", 0.0, "addRowsIndexConstant", null)
+              )
+          ),
+          new Result<>(
+              DateTimes.of("2011-04-02"),
+              new TimeseriesResultValue(
+                  TestHelper.makeMap("rows", 0L, "index", null, "uniques", 0.0, "addRowsIndexConstant", null)
+              )
+          )
+      );
+    } else {
+      expectedResults = Arrays.asList(
+          new Result<>(
+              DateTimes.of("2011-04-01"),
+              new TimeseriesResultValue(
+                  ImmutableMap.of(
+                      "rows", 13L,
+                      "index", 6626.151596069336,
+                      "addRowsIndexConstant", 6640.151596069336,
+                      "uniques", QueryRunnerTestHelper.UNIQUES_9
+                  )
+              )
+          ),
+          new Result<>(
+              DateTimes.of("2011-04-02"),
+              new TimeseriesResultValue(
+                  ImmutableMap.of(
+                      "rows", 13L,
+                      "index", 5833.2095947265625,
+                      "addRowsIndexConstant", 5847.2095947265625,
+                      "uniques", QueryRunnerTestHelper.UNIQUES_9
+                  )
+              )
+          )
+      );
+    }
 
     Iterable<Result<TimeseriesResultValue>> results = runner.run(QueryPlus.wrap(query))
                                                             .toList();
@@ -1960,9 +1978,6 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
   @Test
   public void testTimeseriesWithFirstLastAggregator()
   {
-    // Cannot vectorize due to "doubleFirst", "doubleLast" aggregators.
-    cannotVectorize();
-
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
                                   .granularity(QueryRunnerTestHelper.MONTH_GRAN)
@@ -2255,8 +2270,7 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
   @Test
   public void testTimeSeriesWithFilteredAggAndExpressionFilteredAgg()
   {
-    // can't vectorize if expression
-    cannotVectorize();
+    cannotVectorizeUnlessFallback();
     TimeseriesQuery query = Druids
         .newTimeseriesQueryBuilder()
         .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
@@ -3262,6 +3276,14 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
   protected void cannotVectorize()
   {
     if (vectorize) {
+      expectedException.expect(RuntimeException.class);
+      expectedException.expectMessage("Cannot vectorize!");
+    }
+  }
+
+  protected void cannotVectorizeUnlessFallback()
+  {
+    if (vectorize && !ExpressionProcessing.allowVectorizeFallback()) {
       expectedException.expect(RuntimeException.class);
       expectedException.expectMessage("Cannot vectorize!");
     }

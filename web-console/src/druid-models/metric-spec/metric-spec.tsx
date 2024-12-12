@@ -17,7 +17,6 @@
  */
 
 import { Code } from '@blueprintjs/core';
-import React from 'react';
 
 import type { Field } from '../../components';
 import { ExternalLink } from '../../components';
@@ -59,6 +58,12 @@ const KNOWN_TYPES = [
   'longMax',
   'doubleMax',
   'floatMax',
+  'longFirst',
+  'longLast',
+  'doubleFirst',
+  'doubleLast',
+  'floatFirst',
+  'floatLast',
   'stringFirst',
   'stringLast',
   'thetaSketch',
@@ -97,10 +102,14 @@ export const METRIC_SPEC_FIELDS: Field<MetricSpec>[] = [
         group: 'max',
         suggestions: ['longMax', 'doubleMax', 'floatMax'],
       },
-      // Do not show first and last aggregators as they can not be used in ingestion specs and this definition is only used in the data loader.
-      // Ref: https://druid.apache.org/docs/latest/querying/aggregations.html#first--last-aggregator
-      // Should the first / last aggregators become usable at ingestion time, reverse the changes made in:
-      // https://github.com/apache/druid/pull/10794
+      {
+        group: 'first',
+        suggestions: ['longFirst', 'doubleFirst', 'floatFirst', 'stringFirst'],
+      },
+      {
+        group: 'last',
+        suggestions: ['longLast', 'doubleLast', 'floatLast', 'stringLast'],
+      },
       'thetaSketch',
       'arrayOfDoublesSketch',
       {
@@ -129,6 +138,14 @@ export const METRIC_SPEC_FIELDS: Field<MetricSpec>[] = [
       'longMax',
       'doubleMax',
       'floatMax',
+      'longFirst',
+      'longLast',
+      'doubleFirst',
+      'doubleLast',
+      'floatFirst',
+      'floatLast',
+      'stringFirst',
+      'stringLast',
       'thetaSketch',
       'arrayOfDoublesSketch',
       'HLLSketchBuild',
@@ -183,7 +200,7 @@ export const METRIC_SPEC_FIELDS: Field<MetricSpec>[] = [
         </p>
         <p>
           See the{' '}
-          <ExternalLink href="https://datasketches.apache.org/docs/Theta/ThetaSize.html">
+          <ExternalLink href="https://datasketches.apache.org/docs/Theta/ThetaSize">
             DataSketches site
           </ExternalLink>{' '}
           for details.
@@ -289,7 +306,7 @@ export const METRIC_SPEC_FIELDS: Field<MetricSpec>[] = [
         </p>
         <p>
           Must be a power of 2 from 2 to 32768. See the{' '}
-          <ExternalLink href="https://datasketches.apache.org/docs/Quantiles/QuantilesAccuracy.html">
+          <ExternalLink href="https://datasketches.apache.org/docs/Quantiles/QuantilesAccuracy">
             Quantiles Accuracy
           </ExternalLink>{' '}
           for details.
@@ -367,7 +384,7 @@ export const METRIC_SPEC_FIELDS: Field<MetricSpec>[] = [
           <ExternalLink
             href={`${getLink(
               'DOCS',
-            )}/development/extensions-core/approximate-histograms.html#outlier-handling-modes`}
+            )}/development/extensions-core/approximate-histograms#outlier-handling-modes`}
           >
             outlier handling modes
           </ExternalLink>{' '}
@@ -413,7 +430,7 @@ export function getMetricSpecOutputType(metricSpec: MetricSpec): string | undefi
 
 export function getMetricSpecs(
   sampleResponse: SampleResponse,
-  typeHints: Record<string, string>,
+  columnTypeHints: Record<string, string>,
   guessNumericStringsAsNumbers: boolean,
 ): MetricSpec[] {
   return [{ name: 'count', type: 'count' }].concat(
@@ -421,7 +438,7 @@ export function getMetricSpecs(
       const h = s.name;
       if (h === '__time') return;
       const type =
-        typeHints[h] ||
+        columnTypeHints[h] ||
         guessColumnTypeFromSampleResponse(sampleResponse, h, guessNumericStringsAsNumbers);
       switch (type) {
         case 'double':

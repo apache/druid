@@ -27,6 +27,7 @@ import org.apache.calcite.avatica.util.Casing;
 import org.apache.calcite.avatica.util.Quoting;
 import org.apache.calcite.config.CalciteConnectionConfig;
 import org.apache.calcite.config.CalciteConnectionConfigImpl;
+import org.apache.calcite.config.CalciteConnectionProperty;
 import org.apache.calcite.plan.Context;
 import org.apache.calcite.plan.ConventionTraitDef;
 import org.apache.calcite.plan.volcano.DruidVolcanoCost;
@@ -38,6 +39,7 @@ import org.apache.calcite.tools.FrameworkConfig;
 import org.apache.calcite.tools.Frameworks;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthConfig;
@@ -48,6 +50,8 @@ import org.apache.druid.sql.calcite.planner.convertlet.DruidConvertletTable;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.schema.DruidSchemaName;
+import org.apache.druid.sql.hook.DruidHook;
+import org.apache.druid.sql.hook.DruidHookDispatcher;
 
 import java.util.Map;
 import java.util.Properties;
@@ -76,7 +80,8 @@ public class PlannerFactory extends PlannerToolbox
       final CalciteRulesManager calciteRuleManager,
       final JoinableFactoryWrapper joinableFactoryWrapper,
       final CatalogResolver catalog,
-      final AuthConfig authConfig
+      final AuthConfig authConfig,
+      final DruidHookDispatcher hookDispatcher
   )
   {
     super(
@@ -90,7 +95,8 @@ public class PlannerFactory extends PlannerToolbox
         druidSchemaName,
         calciteRuleManager,
         authorizerMapper,
-        authConfig
+        authConfig,
+        hookDispatcher
     );
   }
 
@@ -111,6 +117,7 @@ public class PlannerFactory extends PlannerToolbox
         queryContext,
         hook
     );
+    context.dispatchHook(DruidHook.SQL, sql);
 
     return new DruidPlanner(buildFrameworkConfig(context), context, engine, hook);
   }
@@ -138,14 +145,14 @@ public class PlannerFactory extends PlannerToolbox
   private FrameworkConfig buildFrameworkConfig(PlannerContext plannerContext)
   {
     final SqlToRelConverter.Config sqlToRelConverterConfig = SqlToRelConverter
-        .configBuilder()
+        .config()
         .withExpand(false)
         .withDecorrelationEnabled(false)
         .withTrimUnusedFields(false)
         .withInSubQueryThreshold(
             plannerContext.queryContext().getInSubQueryThreshold()
-        )
-        .build();
+        );
+
     Frameworks.ConfigBuilder frameworkConfigBuilder = Frameworks
         .newConfigBuilder()
         .parserConfig(PARSER_CONFIG)
@@ -181,13 +188,16 @@ public class PlannerFactory extends PlannerToolbox
                   return DruidConformance.instance();
                 }
               };
-            } else {
-              return null;
             }
+            if (aClass.equals(PlannerContext.class)) {
+              return (C) plannerContext;
+            }
+
+            return null;
           }
         });
 
-    if (PlannerConfig.NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED
+    if (QueryContexts.NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED
         .equals(plannerConfig().getNativeQuerySqlPlanningMode())
     ) {
       frameworkConfigBuilder.costFactory(new DruidVolcanoCost.Factory());
@@ -196,4 +206,33 @@ public class PlannerFactory extends PlannerToolbox
     return frameworkConfigBuilder.build();
 
   }
+
+  static class DruidCalciteConnectionConfigImpl extends CalciteConnectionConfigImpl
+  {
+    public DruidCalciteConnectionConfigImpl(Properties properties)
+    {
+      super(properties);
+    }
+
+    @Override
+    public <T> T typeSystem(Class<T> typeSystemClass, T defaultTypeSystem)
+    {
+      return (T) DruidTypeSystem.INSTANCE;
+    }
+
+    @Override
+    public SqlConformance conformance()
+    {
+      return DruidConformance.instance();
+    }
+
+    @Override
+    public CalciteConnectionConfigImpl set(CalciteConnectionProperty property, String value)
+    {
+      final Properties newProperties = (Properties) properties.clone();
+      newProperties.setProperty(property.camelName(), value);
+      return new DruidCalciteConnectionConfigImpl(newProperties);
+    }
+  }
 }
+

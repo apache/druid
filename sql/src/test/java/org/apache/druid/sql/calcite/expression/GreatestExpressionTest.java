@@ -28,8 +28,9 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.expression.builtin.GreatestOperatorConversion;
-import org.junit.Before;
-import org.junit.Test;
+import org.apache.druid.sql.calcite.util.CalciteTestBase;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.util.Arrays;
@@ -37,7 +38,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-public class GreatestExpressionTest extends ExpressionTestBase
+public class GreatestExpressionTest extends CalciteTestBase
 {
   private static final String DOUBLE_KEY = "d";
   private static final double DOUBLE_VALUE = 3.1;
@@ -60,7 +61,7 @@ public class GreatestExpressionTest extends ExpressionTestBase
   private GreatestOperatorConversion target;
   private ExpressionTestHelper testHelper;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     target = new GreatestOperatorConversion();
@@ -213,7 +214,7 @@ public class GreatestExpressionTest extends ExpressionTestBase
   }
 
   @Test
-  public void testDecimalWithNullShouldReturnString()
+  public void testDecimalWithNullShouldNotReturnString()
   {
     testExpression(
         Arrays.asList(
@@ -226,7 +227,7 @@ public class GreatestExpressionTest extends ExpressionTestBase
             null,
             3.4
         ),
-        "3.4"
+        3.4
     );
   }
   @Test

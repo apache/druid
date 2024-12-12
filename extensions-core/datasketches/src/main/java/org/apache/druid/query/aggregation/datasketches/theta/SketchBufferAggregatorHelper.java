@@ -95,7 +95,7 @@ final class SketchBufferAggregatorHelper
   /**
    * Returns a {@link Union} associated with a particular buffer location.
    *
-   * The Union object will be cached in this helper until {@link #close()} is called.
+   * The Union object will be cached in this helper until {@link #clear()} is called.
    */
   public Union getOrCreateUnion(ByteBuffer buf, int position)
   {
@@ -122,7 +122,7 @@ final class SketchBufferAggregatorHelper
     return union;
   }
 
-  public void close()
+  public void clear()
   {
     unions.clear();
     memCache.clear();

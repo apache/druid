@@ -23,9 +23,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import org.apache.druid.TestObjectMapper;
 import org.apache.druid.data.input.ByteBufferInputRowParser;
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldSpec;
@@ -42,7 +42,7 @@ import java.util.List;
 
 public class InputRowParserSerdeTest
 {
-  private final ObjectMapper jsonMapper = new TestObjectMapper();
+  private final ObjectMapper jsonMapper = new DefaultObjectMapper();
 
   @Test
   public void testStringInputRowParserSerde() throws Exception

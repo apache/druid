@@ -112,12 +112,12 @@ public class SqlExecutionReporter
       }
       metricBuilder.setDimension("remoteAddress", StringUtils.nullToEmptyNonDruidDataString(remoteAddress));
       metricBuilder.setDimension("success", String.valueOf(success));
-      emitter.emit(metricBuilder.build("sqlQuery/time", TimeUnit.NANOSECONDS.toMillis(queryTimeNs)));
+      emitter.emit(metricBuilder.setMetric("sqlQuery/time", TimeUnit.NANOSECONDS.toMillis(queryTimeNs)));
       if (bytesWritten >= 0) {
-        emitter.emit(metricBuilder.build("sqlQuery/bytes", bytesWritten));
+        emitter.emit(metricBuilder.setMetric("sqlQuery/bytes", bytesWritten));
       }
       if (planningTimeNanos >= 0) {
-        emitter.emit(metricBuilder.build(
+        emitter.emit(metricBuilder.setMetric(
             "sqlQuery/planningTimeMs",
             TimeUnit.NANOSECONDS.toMillis(planningTimeNanos)
         ));

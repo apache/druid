@@ -53,11 +53,4 @@ public class ServiceInjectorBuilder extends DruidInjectorBuilder
     return Guice.createInjector(merge());
   }
 
-  public ServiceInjectorBuilder addAll(Iterable<? extends Module> modules)
-  {
-    for (Module module : modules) {
-      add(module);
-    }
-    return this;
-  }
 }

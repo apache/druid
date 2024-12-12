@@ -87,8 +87,8 @@ The following table shows how each method handles rollup:
 |[Native batch](native-batch.md)|`index_parallel` and `index` type may be either perfect or best-effort, based on configuration.|
 |[SQL-based batch](../multi-stage-query/index.md)|Always perfect.|
 |[Hadoop](hadoop.md)|Always perfect.|
-|[Kafka indexing service](../development/extensions-core/kafka-ingestion.md)|Always best-effort.|
-|[Kinesis indexing service](../development/extensions-core/kinesis-ingestion.md)|Always best-effort.|
+|[Kafka indexing service](../ingestion/kafka-ingestion.md)|Always best-effort.|
+|[Kinesis indexing service](../ingestion/kinesis-ingestion.md)|Always best-effort.|
 
 ## Learn more
 

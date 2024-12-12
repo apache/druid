@@ -115,6 +115,7 @@ public class UriExtractionNamespaceTest
     // The third row will parse to data
     Assert.assertEquals(ImmutableMap.of("val2", "val3"), parser.getParser().parseToMap("val1,val2,val3"));
   }
+
   @Test(expected = IllegalArgumentException.class)
   public void testBadCSV()
   {

@@ -21,11 +21,12 @@ package org.apache.druid.msq.exec;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Injector;
-import org.apache.druid.frame.processor.Bouncer;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.msq.indexing.MSQWorkerTask;
 import org.apache.druid.msq.kernel.FrameContext;
-import org.apache.druid.msq.kernel.QueryDefinition;
+import org.apache.druid.msq.kernel.FrameProcessorFactory;
+import org.apache.druid.msq.kernel.WorkOrder;
+import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.server.DruidNode;
 
 import java.io.File;
@@ -33,10 +34,21 @@ import java.io.File;
 /**
  * Context used by multi-stage query workers.
  *
- * Useful because it allows test fixtures to provide their own implementations.
+ * Each context is scoped to a {@link Worker} and is shared across all {@link WorkOrder} run by that worker.
  */
 public interface WorkerContext
 {
+  /**
+   * Query ID for this context.
+   */
+  String queryId();
+
+  /**
+   * Identifier for this worker that enables the controller, and other workers, to find it. For tasks this is the
+   * task ID from {@link MSQWorkerTask#getId()}. For persistent servers, this is the server URI.
+   */
+  String workerId();
+
   ObjectMapper jsonMapper();
 
   // Using an Injector directly because tasks do not have a way to provide their own Guice modules.
@@ -49,9 +61,15 @@ public interface WorkerContext
   void registerWorker(Worker worker, Closer closer);
 
   /**
-   * Creates and fetches the controller client for the provided controller ID.
+   * Maximum number of {@link WorkOrder} that a {@link Worker} with this context will be asked to execute
+   * simultaneously.
    */
-  ControllerClient makeControllerClient(String controllerId);
+  int maxConcurrentStages();
+
+  /**
+   * Creates a controller client.
+   */
+  ControllerClient makeControllerClient();
 
   /**
    * Creates and fetches a {@link WorkerClient}. It is independent of the workerId because the workerId is passed
@@ -60,23 +78,30 @@ public interface WorkerContext
   WorkerClient makeWorkerClient();
 
   /**
-   * Fetch a directory for temporary outputs
+   * Directory for temporary outputs, used as a base for {@link FrameContext#tempDir()}. This directory is not
+   * necessarily fully owned by the worker.
    */
   File tempDir();
 
-  FrameContext frameContext(QueryDefinition queryDef, int stageNumber);
+  /**
+   * Create a context with useful objects required by {@link FrameProcessorFactory#makeProcessors}.
+   */
+  FrameContext frameContext(WorkOrder workOrder);
 
+  /**
+   * Number of available processing threads.
+   */
   int threadCount();
 
   /**
-   * Fetch node info about self
+   * Fetch node info about self.
    */
   DruidNode selfNode();
 
-  Bouncer processorBouncer();
+  DataServerQueryHandlerFactory dataServerQueryHandlerFactory();
 
-  default File tempDir(int stageNumber, String id)
-  {
-    return new File(StringUtils.format("%s/stage_%02d/%s", tempDir(), stageNumber, id));
-  }
+  /**
+   * Whether to include all counters in reports. See {@link MultiStageQueryContext#CTX_INCLUDE_ALL_COUNTERS} for detail.
+   */
+  boolean includeAllCounters();
 }

@@ -32,6 +32,8 @@ import org.apache.druid.guice.http.DruidHttpClientConfig;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.initialization.jetty.StandardResponseHeaderFilterHolder;
 import org.apache.druid.server.security.AuthConfig;
+import org.apache.druid.server.security.AuthorizationUtils;
+import org.apache.druid.server.security.AuthorizerMapper;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.client.api.Request;
 import org.eclipse.jetty.client.api.Response;
@@ -41,6 +43,7 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.concurrent.TimeUnit;
 
 public class AsyncManagementForwardingServlet extends AsyncProxyServlet
@@ -63,11 +66,15 @@ public class AsyncManagementForwardingServlet extends AsyncProxyServlet
   private static final String ARBITRARY_COORDINATOR_BASE_PATH = "/proxy/coordinator";
   private static final String ARBITRARY_OVERLORD_BASE_PATH = "/proxy/overlord";
 
+  // This path is used to check if the managment proxy is enabled, it simply returns {"enabled":true}
+  private static final String ENABLED_PATH = "/proxy/enabled";
+
   private final ObjectMapper jsonMapper;
   private final Provider<HttpClient> httpClientProvider;
   private final DruidHttpClientConfig httpClientConfig;
   private final DruidLeaderSelector coordLeaderSelector;
   private final DruidLeaderSelector overlordLeaderSelector;
+  private final AuthorizerMapper authorizerMapper;
 
   @Inject
   public AsyncManagementForwardingServlet(
@@ -75,7 +82,8 @@ public class AsyncManagementForwardingServlet extends AsyncProxyServlet
       @Global Provider<HttpClient> httpClientProvider,
       @Global DruidHttpClientConfig httpClientConfig,
       @Coordinator DruidLeaderSelector coordLeaderSelector,
-      @IndexingService DruidLeaderSelector overlordLeaderSelector
+      @IndexingService DruidLeaderSelector overlordLeaderSelector,
+      AuthorizerMapper authorizerMapper
   )
   {
     this.jsonMapper = jsonMapper;
@@ -83,6 +91,7 @@ public class AsyncManagementForwardingServlet extends AsyncProxyServlet
     this.httpClientConfig = httpClientConfig;
     this.coordLeaderSelector = coordLeaderSelector;
     this.overlordLeaderSelector = overlordLeaderSelector;
+    this.authorizerMapper = authorizerMapper;
   }
 
   @Override
@@ -106,17 +115,29 @@ public class AsyncManagementForwardingServlet extends AsyncProxyServlet
           MODIFIED_PATH_ATTRIBUTE,
           request.getRequestURI().substring(ARBITRARY_OVERLORD_BASE_PATH.length())
       );
+    } else if (ENABLED_PATH.equals(requestURI)) {
+      authorizeNoPermissionsNeeded(request);
+      handleEnabledRequest(response);
+      return;
     } else {
-      handleBadRequest(response, StringUtils.format("Unsupported proxy destination [%s]", request.getRequestURI()));
+      authorizeNoPermissionsNeeded(request);
+      handleInvalidRequest(
+          response,
+          StringUtils.format("Unsupported proxy destination[%s]", request.getRequestURI()),
+          HttpServletResponse.SC_BAD_REQUEST
+      );
       return;
     }
 
     if (currentLeader == null) {
-      handleBadRequest(
+      authorizeNoPermissionsNeeded(request);
+      handleInvalidRequest(
           response,
           StringUtils.format(
-              "Unable to determine destination for [%s]; is your coordinator/overlord running?", request.getRequestURI()
-          )
+              "Unable to determine destination[%s]; is your coordinator/overlord running?",
+              request.getRequestURI()
+          ),
+          HttpServletResponse.SC_SERVICE_UNAVAILABLE
       );
       return;
     }
@@ -179,12 +200,30 @@ public class AsyncManagementForwardingServlet extends AsyncProxyServlet
     super.onServerResponseHeaders(clientRequest, proxyResponse, serverResponse);
   }
 
-  private void handleBadRequest(HttpServletResponse response, String errorMessage) throws IOException
+  /**
+   * Authorizes router-internal requests that do not require any permissions. (But do require an authenticated user.)
+   */
+  private void authorizeNoPermissionsNeeded(HttpServletRequest request)
+  {
+    AuthorizationUtils.authorizeAllResourceActions(request, Collections.emptyList(), authorizerMapper);
+  }
+
+  private void handleInvalidRequest(HttpServletResponse response, String errorMessage, int statusCode) throws IOException
   {
     if (!response.isCommitted()) {
       response.resetBuffer();
-      response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+      response.setStatus(statusCode);
       jsonMapper.writeValue(response.getOutputStream(), ImmutableMap.of("error", errorMessage));
+    }
+    response.flushBuffer();
+  }
+
+  private void handleEnabledRequest(HttpServletResponse response) throws IOException
+  {
+    if (!response.isCommitted()) {
+      response.resetBuffer();
+      response.setStatus(HttpServletResponse.SC_OK);
+      jsonMapper.writeValue(response.getOutputStream(), ImmutableMap.of("enabled", true));
     }
     response.flushBuffer();
   }

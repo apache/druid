@@ -23,7 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import net.thisptr.jackson.jq.internal.misc.Lists;
+import com.google.common.collect.Lists;
 import org.apache.druid.client.indexing.SamplerResponse;
 import org.apache.druid.client.indexing.SamplerResponse.SamplerResponseRow;
 import org.apache.druid.data.input.InputFormat;
@@ -1165,8 +1165,8 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
     // the last row has parse exception when indexing, check if rawColumns and exception message match the expected
     //
     String indexParseExceptioMessage = ParserType.STR_CSV.equals(parserType)
-           ? "Found unparseable columns in row: [SamplerInputRow{row=TransformedInputRow{row=MapBasedInputRow{timestamp=2019-04-22T12:00:00.000Z, event={t=2019-04-22T12:00, dim1=foo2, dim2=null, met1=invalidNumber}, dimensions=[dim1PlusBar]}}}], exceptions: [Unable to parse value[invalidNumber] for field[met1]]"
-           : "Found unparseable columns in row: [SamplerInputRow{row=TransformedInputRow{row=MapBasedInputRow{timestamp=2019-04-22T12:00:00.000Z, event={t=2019-04-22T12:00, dim1=foo2, met1=invalidNumber}, dimensions=[dim1PlusBar]}}}], exceptions: [Unable to parse value[invalidNumber] for field[met1]]";
+           ? "Found unparseable columns in row: [SamplerInputRow{row=TransformedInputRow{row={timestamp=2019-04-22T12:00:00.000Z, event={t=2019-04-22T12:00, dim1=foo2, dim2=null, met1=invalidNumber}, dimensions=[dim1PlusBar]}}}], exceptions: [Unable to parse value[invalidNumber] for field[met1]]"
+           : "Found unparseable columns in row: [SamplerInputRow{row=TransformedInputRow{row={timestamp=2019-04-22T12:00:00.000Z, event={t=2019-04-22T12:00, dim1=foo2, met1=invalidNumber}, dimensions=[dim1PlusBar]}}}], exceptions: [Unable to parse value[invalidNumber] for field[met1]]";
     assertEqualsSamplerResponseRow(
         new SamplerResponseRow(
             rawColumns4ParseExceptionRow,
@@ -1460,7 +1460,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
       case STR_JSON:
         return new JsonInputFormat(null, null, null, null, null);
       case STR_CSV:
-        return new CsvInputFormat(ImmutableList.of("t", "dim1", "dim2", "met1"), null, null, false, 0);
+        return new CsvInputFormat(ImmutableList.of("t", "dim1", "dim2", "met1"), null, null, false, 0, null);
       default:
         throw new IAE("Unknown parser type: %s", parserType);
     }
@@ -1497,24 +1497,24 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
   ) throws IOException
   {
     if (useInputFormatApi) {
-      return new DataSchema(
-          "sampler",
-          timestampSpec,
-          dimensionsSpec,
-          aggregators,
-          granularitySpec,
-          transformSpec
-      );
+      return DataSchema.builder()
+                       .withDataSource("sampler")
+                       .withTimestamp(timestampSpec)
+                       .withDimensions(dimensionsSpec)
+                       .withAggregators(aggregators)
+                       .withGranularity(granularitySpec)
+                       .withTransform(transformSpec)
+                       .build();
     } else {
       final Map<String, Object> parserMap = getParserMap(createInputRowParser(timestampSpec, dimensionsSpec));
-      return new DataSchema(
-          "sampler",
-          parserMap,
-          aggregators,
-          granularitySpec,
-          transformSpec,
-          OBJECT_MAPPER
-      );
+      return DataSchema.builder()
+                       .withDataSource("sampler")
+                       .withParserMap(parserMap)
+                       .withAggregators(aggregators)
+                       .withGranularity(granularitySpec)
+                       .withTransform(transformSpec)
+                       .withObjectMapper(OBJECT_MAPPER)
+                       .build();
     }
   }
 

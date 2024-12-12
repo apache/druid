@@ -137,13 +137,16 @@ public class DoublesSketchAggregatorFactoryTest
               .aggregators(
                   new CountAggregatorFactory("count"),
                   new DoublesSketchAggregatorFactory("doublesSketch", "col", 8),
-                  new DoublesSketchMergeAggregatorFactory("doublesSketchMerge", 8)
+                  new DoublesSketchMergeAggregatorFactory("doublesSketchMerge", 8),
+                  new DoublesSketchMergeAggregatorFactory("doublesSketchNoFinalize", 8, null, false)
               )
               .postAggregators(
                   new FieldAccessPostAggregator("doublesSketch-access", "doublesSketch"),
                   new FinalizingFieldAccessPostAggregator("doublesSketch-finalize", "doublesSketch"),
                   new FieldAccessPostAggregator("doublesSketchMerge-access", "doublesSketchMerge"),
-                  new FinalizingFieldAccessPostAggregator("doublesSketchMerge-finalize", "doublesSketchMerge")
+                  new FinalizingFieldAccessPostAggregator("doublesSketchMerge-finalize", "doublesSketchMerge"),
+                  new FieldAccessPostAggregator("doublesSketchNoFinalize-access", "doublesSketchNoFinalize"),
+                  new FinalizingFieldAccessPostAggregator("doublesSketchNoFinalize-finalize", "doublesSketchNoFinalize")
               )
               .build();
 
@@ -153,10 +156,13 @@ public class DoublesSketchAggregatorFactoryTest
                     .add("count", ColumnType.LONG)
                     .add("doublesSketch", null)
                     .add("doublesSketchMerge", null)
+                    .add("doublesSketchNoFinalize", DoublesSketchModule.TYPE)
                     .add("doublesSketch-access", DoublesSketchModule.TYPE)
                     .add("doublesSketch-finalize", ColumnType.LONG)
                     .add("doublesSketchMerge-access", DoublesSketchModule.TYPE)
                     .add("doublesSketchMerge-finalize", ColumnType.LONG)
+                    .add("doublesSketchNoFinalize-access", DoublesSketchModule.TYPE)
+                    .add("doublesSketchNoFinalize-finalize", DoublesSketchModule.TYPE)
                     .build(),
         new TimeseriesQueryQueryToolChest().resultArraySignature(query)
     );
@@ -194,5 +200,20 @@ public class DoublesSketchAggregatorFactoryTest
     AggregateCombiner ac = factory.makeAggregateCombiner();
     ac.fold(new TestDoublesSketchColumnValueSelector());
     Assert.assertNotNull(ac.getObject());
+  }
+
+  @Test
+  public void testCanSubstitute()
+  {
+    final DoublesSketchAggregatorFactory sketch = new DoublesSketchAggregatorFactory("sketch", "x", 1024, 1000L, null);
+    final DoublesSketchAggregatorFactory sketch2 = new DoublesSketchAggregatorFactory("other", "x", 1024, 2000L, null);
+    final DoublesSketchAggregatorFactory sketch3 = new DoublesSketchAggregatorFactory("another", "x", 2048, 1000L, null);
+    final DoublesSketchAggregatorFactory incompatible = new DoublesSketchAggregatorFactory("incompatible", "y", 1024, 1000L, null);
+
+    Assert.assertNotNull(sketch.substituteCombiningFactory(sketch2));
+    Assert.assertNotNull(sketch.substituteCombiningFactory(sketch3));
+    Assert.assertNull(sketch2.substituteCombiningFactory(sketch3));
+    Assert.assertNull(sketch.substituteCombiningFactory(incompatible));
+    Assert.assertNull(sketch3.substituteCombiningFactory(sketch));
   }
 }

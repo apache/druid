@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite.rel;
 
+import com.google.common.collect.ImmutableList;
 import org.apache.calcite.plan.RelOptCluster;
 import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.plan.RelTraitSet;
@@ -26,11 +27,12 @@ import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelWriter;
 import org.apache.calcite.rel.core.Filter;
 import org.apache.calcite.rel.core.Uncollect;
-import org.apache.calcite.rel.logical.LogicalProject;
 import org.apache.calcite.rel.logical.LogicalValues;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexShuttle;
+import org.apache.calcite.rex.RexUtil;
+import org.apache.calcite.sql.validate.SqlValidatorUtil;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 
@@ -198,12 +200,17 @@ public class DruidUnnestRel extends DruidRel<DruidUnnestRel>
   protected RelDataType deriveRowType()
   {
     return Uncollect.deriveUncollectRowType(
-        LogicalProject.create(
-            LogicalValues.createOneRow(getCluster()),
-            Collections.singletonList(inputRexNode),
-            Collections.singletonList(FIELD_NAME)
+        LogicalValues.createEmpty(
+            getCluster(),
+            RexUtil.createStructType(
+                getCluster().getTypeFactory(),
+                ImmutableList.of(inputRexNode),
+                null,
+                SqlValidatorUtil.F_SUGGESTER
+            )
         ),
-        false
+        false,
+        Collections.emptyList()
     );
   }
 }

@@ -6,30 +6,31 @@ exports[`ExecutionDetailsPane matches snapshot no init tab 1`] = `
   className="execution-details-pane"
   onActivateTab={[Function]}
   tabs={
-    Array [
-      Object {
+    [
+      {
         "icon": "many-to-one",
         "id": "general",
         "label": "General",
       },
-      Object {
+      {
         "icon": "application",
         "id": "sql",
         "label": "SQL query",
       },
-      Object {
+      {
         "icon": "cog",
         "id": "native",
         "label": "Native query",
       },
+      false,
       undefined,
       undefined,
-      Object {
+      {
         "icon": "error",
         "id": "error",
         "label": "Error",
       },
-      Object {
+      {
         "icon": "warning-sign",
         "id": "warnings",
         "label": "Warnings",
@@ -37,9 +38,61 @@ exports[`ExecutionDetailsPane matches snapshot no init tab 1`] = `
     ]
   }
 >
-  <div>
+  <div
+    className="execution-details-pane-general"
+  >
     <p>
-      General info for query-af8a263d-213f-418e-ad8d-37d55beff59b ingesting into "kttm-blank-lines"
+      General info for 
+      <Blueprint5.Tag
+        active={false}
+        fill={false}
+        interactive={false}
+        large={false}
+        minimal={true}
+        round={false}
+      >
+        query-26d490c6-c06d-4cd2-938f-bc5f7f982754
+      </Blueprint5.Tag>
+      <React.Fragment>
+         
+        ingesting into 
+        <Blueprint5.Tag
+          active={false}
+          fill={false}
+          interactive={false}
+          large={false}
+          minimal={true}
+          round={false}
+        >
+          "kttm-blank-lines"
+        </Blueprint5.Tag>
+      </React.Fragment>
+    </p>
+    <p>
+      Query took 
+      <Blueprint5.Tag
+        active={false}
+        fill={false}
+        interactive={false}
+        large={false}
+        minimal={true}
+        round={false}
+      >
+        0:00:04
+      </Blueprint5.Tag>
+       
+      (starting at 
+      <Blueprint5.Tag
+        active={false}
+        fill={false}
+        interactive={false}
+        large={false}
+        minimal={true}
+        round={false}
+      >
+        2024-01-23 19:56:44
+      </Blueprint5.Tag>
+      )
     </p>
     <p>
       Results written to dataSource
@@ -47,49 +100,50 @@ exports[`ExecutionDetailsPane matches snapshot no init tab 1`] = `
     <Memo(ExecutionErrorPane)
       execution={
         Execution {
-          "_payload": Object {
-            "payload": Object {
-              "context": Object {
+          "_payload": {
+            "payload": {
+              "context": {
                 "forceTimeChunkLock": true,
                 "useLineageBasedSegmentAllocation": true,
               },
               "dataSource": "kttm-blank-lines",
-              "groupId": "query-af8a263d-213f-418e-ad8d-37d55beff59b",
-              "id": "query-af8a263d-213f-418e-ad8d-37d55beff59b",
-              "nativeTypeNames": Array [
+              "groupId": "query-26d490c6-c06d-4cd2-938f-bc5f7f982754",
+              "id": "query-26d490c6-c06d-4cd2-938f-bc5f7f982754",
+              "nativeTypeNames": [
                 "LONG",
                 "STRING",
               ],
-              "resource": Object {
-                "availabilityGroup": "query-af8a263d-213f-418e-ad8d-37d55beff59b",
+              "resource": {
+                "availabilityGroup": "query-26d490c6-c06d-4cd2-938f-bc5f7f982754",
                 "requiredCapacity": 1,
               },
-              "spec": Object {
+              "spec": {
                 "assignmentStrategy": "max",
-                "columnMappings": Array [
-                  Object {
+                "columnMappings": [
+                  {
                     "outputColumn": "__time",
                     "queryColumn": "v0",
                   },
-                  Object {
+                  {
                     "outputColumn": "agent_type",
                     "queryColumn": "agent_type",
                   },
                 ],
-                "destination": Object {
+                "destination": {
                   "dataSource": "kttm-blank-lines",
-                  "replaceTimeChunks": Array [
+                  "replaceTimeChunks": [
                     "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z",
                   ],
                   "segmentGranularity": "DAY",
                   "type": "dataSource",
                 },
-                "query": Object {
-                  "columns": Array [
+                "query": {
+                  "columns": [
                     "agent_type",
                     "v0",
                   ],
-                  "context": Object {
+                  "context": {
+                    "__resultFormat": "array",
                     "__user": "allowAll",
                     "executionMode": "async",
                     "finalize": false,
@@ -97,128 +151,130 @@ exports[`ExecutionDetailsPane matches snapshot no init tab 1`] = `
                     "groupByEnableMultiValueUnnesting": false,
                     "maxNumTasks": 2,
                     "maxParseExceptions": 2,
-                    "queryId": "af8a263d-213f-418e-ad8d-37d55beff59b",
-                    "scanSignature": "[{\\"name\\":\\"agent_type\\",\\"type\\":\\"STRING\\"},{\\"name\\":\\"v0\\",\\"type\\":\\"LONG\\"}]",
-                    "sqlInsertSegmentGranularity": "\\"DAY\\"",
-                    "sqlQueryId": "af8a263d-213f-418e-ad8d-37d55beff59b",
+                    "queryId": "26d490c6-c06d-4cd2-938f-bc5f7f982754",
+                    "scanSignature": "[{"name":"agent_type","type":"STRING"},{"name":"v0","type":"LONG"}]",
+                    "sqlInsertSegmentGranularity": ""DAY"",
+                    "sqlQueryId": "26d490c6-c06d-4cd2-938f-bc5f7f982754",
                     "sqlReplaceTimeChunks": "all",
+                    "waitUntilSegmentsLoad": true,
                   },
-                  "dataSource": Object {
-                    "inputFormat": Object {
+                  "dataSource": {
+                    "inputFormat": {
                       "assumeNewlineDelimited": false,
                       "keepNullColumns": false,
                       "type": "json",
                       "useJsonNodeReader": false,
                     },
-                    "inputSource": Object {
+                    "inputSource": {
                       "type": "http",
-                      "uris": Array [
+                      "uris": [
                         "https://static.imply.io/example-data/kttm-with-issues/kttm-blank-lines.json",
                       ],
                     },
-                    "signature": Array [
-                      Object {
+                    "signature": [
+                      {
                         "name": "timestamp",
                         "type": "STRING",
                       },
-                      Object {
+                      {
                         "name": "agent_type",
                         "type": "STRING",
                       },
                     ],
                     "type": "external",
                   },
-                  "granularity": Object {
+                  "granularity": {
                     "type": "all",
                   },
-                  "intervals": Object {
-                    "intervals": Array [
+                  "intervals": {
+                    "intervals": [
                       "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z",
                     ],
                     "type": "intervals",
                   },
-                  "legacy": false,
                   "queryType": "scan",
                   "resultFormat": "compactedList",
-                  "virtualColumns": Array [
-                    Object {
-                      "expression": "timestamp_parse(\\"timestamp\\",null,'UTC')",
+                  "virtualColumns": [
+                    {
+                      "expression": "timestamp_parse("timestamp",null,'UTC')",
                       "name": "v0",
                       "outputType": "LONG",
                       "type": "expression",
                     },
                   ],
                 },
-                "tuningConfig": Object {
+                "tuningConfig": {
                   "maxNumWorkers": 1,
                   "maxRowsInMemory": 100000,
                   "rowsPerSegment": 3000000,
                 },
               },
-              "sqlQuery": "REPLACE INTO \\"kttm-blank-lines\\" OVERWRITE ALL
+              "sqlQuery": "REPLACE INTO "kttm-blank-lines" OVERWRITE ALL
 SELECT
-  TIME_PARSE(\\"timestamp\\") AS \\"__time\\",
-  \\"agent_type\\"
+  TIME_PARSE("timestamp") AS "__time",
+  "agent_type"
 FROM TABLE(
   EXTERN(
-    '{\\"type\\":\\"http\\",\\"uris\\":[\\"https://static.imply.io/example-data/kttm-with-issues/kttm-blank-lines.json\\"]}',
-    '{\\"type\\":\\"json\\"}'
+    '{"type":"http","uris":["https://static.imply.io/example-data/kttm-with-issues/kttm-blank-lines.json"]}',
+    '{"type":"json"}'
   )
-) EXTEND (\\"timestamp\\" VARCHAR, \\"agent_type\\" VARCHAR)
+) EXTEND ("timestamp" VARCHAR, "agent_type" VARCHAR)
 PARTITIONED BY DAY",
-              "sqlQueryContext": Object {
+              "sqlQueryContext": {
+                "__resultFormat": "array",
                 "executionMode": "async",
                 "finalizeAggregations": false,
                 "groupByEnableMultiValueUnnesting": false,
                 "maxNumTasks": 2,
                 "maxParseExceptions": 2,
-                "queryId": "af8a263d-213f-418e-ad8d-37d55beff59b",
-                "sqlInsertSegmentGranularity": "\\"DAY\\"",
-                "sqlQueryId": "af8a263d-213f-418e-ad8d-37d55beff59b",
+                "queryId": "26d490c6-c06d-4cd2-938f-bc5f7f982754",
+                "sqlInsertSegmentGranularity": ""DAY"",
+                "sqlQueryId": "26d490c6-c06d-4cd2-938f-bc5f7f982754",
                 "sqlReplaceTimeChunks": "all",
+                "waitUntilSegmentsLoad": true,
               },
-              "sqlResultsContext": Object {
-                "serializeComplexValues": true,
+              "sqlResultsContext": {
                 "stringifyArrays": true,
                 "timeZone": "UTC",
               },
-              "sqlTypeNames": Array [
+              "sqlTypeNames": [
                 "TIMESTAMP",
                 "VARCHAR",
               ],
               "type": "query_controller",
             },
-            "task": "query-af8a263d-213f-418e-ad8d-37d55beff59b",
+            "task": "query-26d490c6-c06d-4cd2-938f-bc5f7f982754",
           },
           "capacityInfo": undefined,
-          "destination": Object {
+          "destination": {
             "dataSource": "kttm-blank-lines",
-            "replaceTimeChunks": Array [
+            "replaceTimeChunks": [
               "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z",
             ],
             "segmentGranularity": "DAY",
             "type": "dataSource",
           },
           "destinationPages": undefined,
-          "duration": 14545,
+          "duration": 4483,
           "engine": "sql-msq-task",
-          "error": Object {
-            "error": Object {
+          "error": {
+            "error": {
               "errorCode": "TooManyWarnings",
               "errorMessage": "Too many warnings of type CannotParseExternalData generated (max = 2)",
               "maxWarnings": 2,
               "rootErrorCode": "CannotParseExternalData",
             },
             "host": "localhost",
-            "taskId": "query-af8a263d-213f-418e-ad8d-37d55beff59b-worker0_0",
+            "taskId": "query-26d490c6-c06d-4cd2-938f-bc5f7f982754-worker0_0",
           },
-          "id": "query-af8a263d-213f-418e-ad8d-37d55beff59b",
-          "nativeQuery": Object {
-            "columns": Array [
+          "id": "query-26d490c6-c06d-4cd2-938f-bc5f7f982754",
+          "nativeQuery": {
+            "columns": [
               "agent_type",
               "v0",
             ],
-            "context": Object {
+            "context": {
+              "__resultFormat": "array",
               "__user": "allowAll",
               "executionMode": "async",
               "finalize": false,
@@ -226,111 +282,114 @@ PARTITIONED BY DAY",
               "groupByEnableMultiValueUnnesting": false,
               "maxNumTasks": 2,
               "maxParseExceptions": 2,
-              "queryId": "af8a263d-213f-418e-ad8d-37d55beff59b",
-              "scanSignature": "[{\\"name\\":\\"agent_type\\",\\"type\\":\\"STRING\\"},{\\"name\\":\\"v0\\",\\"type\\":\\"LONG\\"}]",
-              "sqlInsertSegmentGranularity": "\\"DAY\\"",
-              "sqlQueryId": "af8a263d-213f-418e-ad8d-37d55beff59b",
+              "queryId": "26d490c6-c06d-4cd2-938f-bc5f7f982754",
+              "scanSignature": "[{"name":"agent_type","type":"STRING"},{"name":"v0","type":"LONG"}]",
+              "sqlInsertSegmentGranularity": ""DAY"",
+              "sqlQueryId": "26d490c6-c06d-4cd2-938f-bc5f7f982754",
               "sqlReplaceTimeChunks": "all",
+              "waitUntilSegmentsLoad": true,
             },
-            "dataSource": Object {
-              "inputFormat": Object {
+            "dataSource": {
+              "inputFormat": {
                 "assumeNewlineDelimited": false,
                 "keepNullColumns": false,
                 "type": "json",
                 "useJsonNodeReader": false,
               },
-              "inputSource": Object {
+              "inputSource": {
                 "type": "http",
-                "uris": Array [
+                "uris": [
                   "https://static.imply.io/example-data/kttm-with-issues/kttm-blank-lines.json",
                 ],
               },
-              "signature": Array [
-                Object {
+              "signature": [
+                {
                   "name": "timestamp",
                   "type": "STRING",
                 },
-                Object {
+                {
                   "name": "agent_type",
                   "type": "STRING",
                 },
               ],
               "type": "external",
             },
-            "granularity": Object {
+            "granularity": {
               "type": "all",
             },
-            "intervals": Object {
-              "intervals": Array [
+            "intervals": {
+              "intervals": [
                 "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z",
               ],
               "type": "intervals",
             },
-            "legacy": false,
             "queryType": "scan",
             "resultFormat": "compactedList",
-            "virtualColumns": Array [
-              Object {
-                "expression": "timestamp_parse(\\"timestamp\\",null,'UTC')",
+            "virtualColumns": [
+              {
+                "expression": "timestamp_parse("timestamp",null,'UTC')",
                 "name": "v0",
                 "outputType": "LONG",
                 "type": "expression",
               },
             ],
           },
-          "queryContext": Object {
+          "queryContext": {
+            "__resultFormat": "array",
             "executionMode": "async",
             "finalizeAggregations": false,
             "groupByEnableMultiValueUnnesting": false,
             "maxNumTasks": 2,
             "maxParseExceptions": 2,
+            "waitUntilSegmentsLoad": true,
           },
           "result": undefined,
-          "sqlQuery": "REPLACE INTO \\"kttm-blank-lines\\" OVERWRITE ALL
+          "segmentStatus": undefined,
+          "sqlQuery": "REPLACE INTO "kttm-blank-lines" OVERWRITE ALL
 SELECT
-  TIME_PARSE(\\"timestamp\\") AS \\"__time\\",
-  \\"agent_type\\"
+  TIME_PARSE("timestamp") AS "__time",
+  "agent_type"
 FROM TABLE(
   EXTERN(
-    '{\\"type\\":\\"http\\",\\"uris\\":[\\"https://static.imply.io/example-data/kttm-with-issues/kttm-blank-lines.json\\"]}',
-    '{\\"type\\":\\"json\\"}'
+    '{"type":"http","uris":["https://static.imply.io/example-data/kttm-with-issues/kttm-blank-lines.json"]}',
+    '{"type":"json"}'
   )
-) EXTEND (\\"timestamp\\" VARCHAR, \\"agent_type\\" VARCHAR)
+) EXTEND ("timestamp" VARCHAR, "agent_type" VARCHAR)
 PARTITIONED BY DAY",
           "stages": Stages {
-            "counters": Object {
-              "0": Object {
-                "0": Object {
-                  "input0": Object {
-                    "bytes": Array [
+            "counters": {
+              "0": {
+                "0": {
+                  "input0": {
+                    "bytes": [
                       7658,
                     ],
-                    "files": Array [
+                    "files": [
                       1,
                     ],
-                    "rows": Array [
+                    "rows": [
                       10,
                     ],
-                    "totalFiles": Array [
+                    "totalFiles": [
                       1,
                     ],
                     "type": "channel",
                   },
-                  "output": Object {
-                    "bytes": Array [
+                  "output": {
+                    "bytes": [
                       712,
                     ],
-                    "frames": Array [
+                    "frames": [
                       1,
                     ],
-                    "rows": Array [
+                    "rows": [
                       10,
                     ],
                     "type": "channel",
                   },
-                  "sortProgress": Object {
-                    "levelToMergedBatches": Object {},
-                    "levelToTotalBatches": Object {
+                  "sortProgress": {
+                    "levelToMergedBatches": {},
+                    "levelToTotalBatches": {
                       "0": 1,
                       "1": 1,
                       "2": -1,
@@ -340,37 +399,37 @@ PARTITIONED BY DAY",
                     "totalMergingLevels": 3,
                     "type": "sortProgress",
                   },
-                  "warnings": Object {
+                  "warnings": {
                     "CannotParseExternalData": 3,
                     "type": "warnings",
                   },
                 },
               },
             },
-            "stages": Array [
-              Object {
-                "definition": Object {
-                  "id": "f635e36d-6b90-4b74-ad5e-a179c99f0ddc_0",
-                  "input": Array [
-                    Object {
-                      "inputFormat": Object {
+            "stages": [
+              {
+                "definition": {
+                  "id": "2c45d26d-8a63-45a7-ae8d-2a2a4d6309b7_0",
+                  "input": [
+                    {
+                      "inputFormat": {
                         "assumeNewlineDelimited": false,
                         "keepNullColumns": false,
                         "type": "json",
                         "useJsonNodeReader": false,
                       },
-                      "inputSource": Object {
+                      "inputSource": {
                         "type": "http",
-                        "uris": Array [
+                        "uris": [
                           "https://static.imply.io/example-data/kttm-with-issues/kttm-blank-lines.json",
                         ],
                       },
-                      "signature": Array [
-                        Object {
+                      "signature": [
+                        {
                           "name": "timestamp",
                           "type": "STRING",
                         },
-                        Object {
+                        {
                           "name": "agent_type",
                           "type": "STRING",
                         },
@@ -379,13 +438,14 @@ PARTITIONED BY DAY",
                     },
                   ],
                   "maxWorkerCount": 1,
-                  "processor": Object {
-                    "query": Object {
-                      "columns": Array [
+                  "processor": {
+                    "query": {
+                      "columns": [
                         "agent_type",
                         "v0",
                       ],
-                      "context": Object {
+                      "context": {
+                        "__resultFormat": "array",
                         "__timeColumn": "v0",
                         "__user": "allowAll",
                         "executionMode": "async",
@@ -394,52 +454,52 @@ PARTITIONED BY DAY",
                         "groupByEnableMultiValueUnnesting": false,
                         "maxNumTasks": 2,
                         "maxParseExceptions": 2,
-                        "queryId": "af8a263d-213f-418e-ad8d-37d55beff59b",
-                        "scanSignature": "[{\\"name\\":\\"agent_type\\",\\"type\\":\\"STRING\\"},{\\"name\\":\\"v0\\",\\"type\\":\\"LONG\\"}]",
-                        "sqlInsertSegmentGranularity": "\\"DAY\\"",
-                        "sqlQueryId": "af8a263d-213f-418e-ad8d-37d55beff59b",
+                        "queryId": "26d490c6-c06d-4cd2-938f-bc5f7f982754",
+                        "scanSignature": "[{"name":"agent_type","type":"STRING"},{"name":"v0","type":"LONG"}]",
+                        "sqlInsertSegmentGranularity": ""DAY"",
+                        "sqlQueryId": "26d490c6-c06d-4cd2-938f-bc5f7f982754",
                         "sqlReplaceTimeChunks": "all",
+                        "waitUntilSegmentsLoad": true,
                       },
-                      "dataSource": Object {
-                        "inputFormat": Object {
+                      "dataSource": {
+                        "inputFormat": {
                           "assumeNewlineDelimited": false,
                           "keepNullColumns": false,
                           "type": "json",
                           "useJsonNodeReader": false,
                         },
-                        "inputSource": Object {
+                        "inputSource": {
                           "type": "http",
-                          "uris": Array [
+                          "uris": [
                             "https://static.imply.io/example-data/kttm-with-issues/kttm-blank-lines.json",
                           ],
                         },
-                        "signature": Array [
-                          Object {
+                        "signature": [
+                          {
                             "name": "timestamp",
                             "type": "STRING",
                           },
-                          Object {
+                          {
                             "name": "agent_type",
                             "type": "STRING",
                           },
                         ],
                         "type": "external",
                       },
-                      "granularity": Object {
+                      "granularity": {
                         "type": "all",
                       },
-                      "intervals": Object {
-                        "intervals": Array [
+                      "intervals": {
+                        "intervals": [
                           "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z",
                         ],
                         "type": "intervals",
                       },
-                      "legacy": false,
                       "queryType": "scan",
                       "resultFormat": "compactedList",
-                      "virtualColumns": Array [
-                        Object {
-                          "expression": "timestamp_parse(\\"timestamp\\",null,'UTC')",
+                      "virtualColumns": [
+                        {
+                          "expression": "timestamp_parse("timestamp",null,'UTC')",
                           "name": "v0",
                           "outputType": "LONG",
                           "type": "expression",
@@ -449,15 +509,15 @@ PARTITIONED BY DAY",
                     "type": "scan",
                   },
                   "shuffleCheckHasMultipleValues": true,
-                  "shuffleSpec": Object {
-                    "clusterBy": Object {
+                  "shuffleSpec": {
+                    "clusterBy": {
                       "bucketByCount": 1,
-                      "columns": Array [
-                        Object {
+                      "columns": [
+                        {
                           "columnName": "__bucket",
                           "order": "ASCENDING",
                         },
-                        Object {
+                        {
                           "columnName": "__boost",
                           "order": "ASCENDING",
                         },
@@ -466,61 +526,61 @@ PARTITIONED BY DAY",
                     "targetSize": 3000000,
                     "type": "targetSize",
                   },
-                  "signature": Array [
-                    Object {
+                  "signature": [
+                    {
                       "name": "__bucket",
                       "type": "LONG",
                     },
-                    Object {
+                    {
                       "name": "__boost",
                       "type": "LONG",
                     },
-                    Object {
+                    {
                       "name": "agent_type",
                       "type": "STRING",
                     },
-                    Object {
+                    {
                       "name": "v0",
                       "type": "LONG",
                     },
                   ],
                 },
-                "duration": 14193,
+                "duration": 4259,
                 "phase": "FAILED",
                 "sort": true,
                 "stageNumber": 0,
-                "startTime": "2023-08-01T04:20:25.296Z",
+                "startTime": "2024-01-23T19:56:44.857Z",
                 "workerCount": 1,
               },
-              Object {
-                "definition": Object {
-                  "id": "f635e36d-6b90-4b74-ad5e-a179c99f0ddc_1",
-                  "input": Array [
-                    Object {
+              {
+                "definition": {
+                  "id": "2c45d26d-8a63-45a7-ae8d-2a2a4d6309b7_1",
+                  "input": [
+                    {
                       "stage": 0,
                       "type": "stage",
                     },
                   ],
                   "maxWorkerCount": 1,
-                  "processor": Object {
-                    "columnMappings": Array [
-                      Object {
+                  "processor": {
+                    "columnMappings": [
+                      {
                         "outputColumn": "__time",
                         "queryColumn": "v0",
                       },
-                      Object {
+                      {
                         "outputColumn": "agent_type",
                         "queryColumn": "agent_type",
                       },
                     ],
-                    "dataSchema": Object {
+                    "dataSchema": {
                       "dataSource": "kttm-blank-lines",
-                      "dimensionsSpec": Object {
-                        "dimensionExclusions": Array [
+                      "dimensionsSpec": {
+                        "dimensionExclusions": [
                           "__time",
                         ],
-                        "dimensions": Array [
-                          Object {
+                        "dimensions": [
+                          {
                             "createBitmapIndex": true,
                             "multiValueHandling": "SORTED_ARRAY",
                             "name": "agent_type",
@@ -530,138 +590,140 @@ PARTITIONED BY DAY",
                         "includeAllDimensions": false,
                         "useSchemaDiscovery": false,
                       },
-                      "granularitySpec": Object {
-                        "intervals": Array [
+                      "granularitySpec": {
+                        "intervals": [
                           "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z",
                         ],
-                        "queryGranularity": Object {
+                        "queryGranularity": {
                           "type": "none",
                         },
                         "rollup": false,
                         "type": "arbitrary",
                       },
-                      "metricsSpec": Array [],
-                      "timestampSpec": Object {
+                      "metricsSpec": [],
+                      "timestampSpec": {
                         "column": "__time",
                         "format": "millis",
                         "missingValue": null,
                       },
-                      "transformSpec": Object {
+                      "transformSpec": {
                         "filter": null,
-                        "transforms": Array [],
+                        "transforms": [],
                       },
                     },
-                    "tuningConfig": Object {
+                    "tuningConfig": {
                       "maxNumWorkers": 1,
                       "maxRowsInMemory": 100000,
                       "rowsPerSegment": 3000000,
                     },
                     "type": "segmentGenerator",
                   },
-                  "signature": Array [],
+                  "signature": [],
                 },
                 "stageNumber": 1,
               },
             ],
           },
-          "startTime": 2023-08-01T04:20:24.945Z,
+          "startTime": 2024-01-23T19:56:44.633Z,
           "status": "FAILED",
-          "usageInfo": Object {
+          "usageInfo": {
             "pendingTasks": 0,
-            "runningTasks": 2,
+            "runningTasks": 1,
           },
-          "warnings": Array [
-            Object {
-              "error": Object {
+          "warnings": [
+            {
+              "error": {
                 "errorCode": "CannotParseExternalData",
                 "errorMessage": "Unable to parse row [] (Path: https://static.imply.io/example-data/kttm-with-issues/kttm-blank-lines.json, Record: 3, Line: 3)",
               },
               "exceptionStackTrace": "org.apache.druid.java.util.common.parsers.ParseException: Unable to parse row [] (Path: https://static.imply.io/example-data/kttm-with-issues/kttm-blank-lines.json, Record: 3, Line: 3)
 	at org.apache.druid.data.input.IntermediateRowParsingReader$1.hasNext(IntermediateRowParsingReader.java:79)
-	at org.apache.druid.java.util.common.parsers.CloseableIterator$2.findNextIteratorIfNecessary(CloseableIterator.java:74)
-	at org.apache.druid.java.util.common.parsers.CloseableIterator$2.next(CloseableIterator.java:108)
-	at org.apache.druid.java.util.common.parsers.CloseableIterator$1.next(CloseableIterator.java:52)
+	at org.apache.druid.java.util.common.parsers.CloseableIterator$1.hasNext(CloseableIterator.java:42)
+	at org.apache.druid.java.util.common.parsers.CloseableIterator$2.findNextIteratorIfNecessary(CloseableIterator.java:72)
+	at org.apache.druid.java.util.common.parsers.CloseableIterator$2.hasNext(CloseableIterator.java:93)
+	at org.apache.druid.java.util.common.parsers.CloseableIterator$1.hasNext(CloseableIterator.java:42)
 	at org.apache.druid.msq.input.external.ExternalSegment$1$1.hasNext(ExternalSegment.java:95)
 	at org.apache.druid.java.util.common.guava.BaseSequence$1.next(BaseSequence.java:115)
-	at org.apache.druid.segment.RowWalker.advance(RowWalker.java:70)
+	at org.apache.druid.segment.RowWalker.advance(RowWalker.java:75)
 	at org.apache.druid.segment.RowBasedCursor.advanceUninterruptibly(RowBasedCursor.java:110)
 	at org.apache.druid.segment.RowBasedCursor.advance(RowBasedCursor.java:103)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeeded(ScanQueryFrameProcessor.java:275)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeededWithExceptionHandling(ScanQueryFrameProcessor.java:242)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runWithSegment(ScanQueryFrameProcessor.java:181)
-	at org.apache.druid.msq.querykit.BaseLeafFrameProcessor.runIncrementally(BaseLeafFrameProcessor.java:159)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runIncrementally(ScanQueryFrameProcessor.java:146)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeeded(ScanQueryFrameProcessor.java:362)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeededWithExceptionHandling(ScanQueryFrameProcessor.java:329)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runWithSegment(ScanQueryFrameProcessor.java:268)
+	at org.apache.druid.msq.querykit.BaseLeafFrameProcessor.runIncrementally(BaseLeafFrameProcessor.java:89)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runIncrementally(ScanQueryFrameProcessor.java:158)
 	at org.apache.druid.frame.processor.FrameProcessors$1FrameProcessorWithBaggage.runIncrementally(FrameProcessors.java:75)
-	at org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.runProcessorNow(FrameProcessorExecutor.java:229)
-	at org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.run(FrameProcessorExecutor.java:137)
-	at org.apache.druid.msq.exec.WorkerImpl$1$2.run(WorkerImpl.java:837)
-	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:515)
+	at org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.runProcessorNow(FrameProcessorExecutor.java:230)
+	at org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.run(FrameProcessorExecutor.java:138)
+	at org.apache.druid.msq.exec.WorkerImpl$1$2.run(WorkerImpl.java:840)
+	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:539)
 	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
-	at org.apache.druid.query.PrioritizedListenableFutureTask.run(PrioritizedExecutorService.java:251)
-	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1128)
-	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:628)
-	at java.base/java.lang.Thread.run(Thread.java:829)
+	at org.apache.druid.query.PrioritizedListenableFutureTask.run(PrioritizedExecutorService.java:259)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+	at java.base/java.lang.Thread.run(Thread.java:840)
 Caused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No content to map due to end-of-input
- at [Source: (String)\\"\\"; line: 1, column: 0]
+ at [Source: (String)""; line: 1, column: 0]
 	at com.fasterxml.jackson.databind.exc.MismatchedInputException.from(MismatchedInputException.java:59)
-	at com.fasterxml.jackson.databind.ObjectMapper._initForReading(ObjectMapper.java:4360)
-	at com.fasterxml.jackson.databind.ObjectMapper._readMapAndClose(ObjectMapper.java:4205)
-	at com.fasterxml.jackson.databind.ObjectMapper.readValue(ObjectMapper.java:3214)
-	at com.fasterxml.jackson.databind.ObjectMapper.readValue(ObjectMapper.java:3182)
+	at com.fasterxml.jackson.databind.ObjectMapper._initForReading(ObjectMapper.java:4688)
+	at com.fasterxml.jackson.databind.ObjectMapper._readMapAndClose(ObjectMapper.java:4586)
+	at com.fasterxml.jackson.databind.ObjectMapper.readValue(ObjectMapper.java:3548)
+	at com.fasterxml.jackson.databind.ObjectMapper.readValue(ObjectMapper.java:3516)
 	at org.apache.druid.data.input.impl.JsonLineReader.parseInputRows(JsonLineReader.java:75)
 	at org.apache.druid.data.input.impl.JsonLineReader.parseInputRows(JsonLineReader.java:48)
 	at org.apache.druid.data.input.IntermediateRowParsingReader$1.hasNext(IntermediateRowParsingReader.java:71)
-	... 23 more
+	... 24 more
 ",
               "host": "localhost:8101",
               "stageNumber": 0,
-              "taskId": "query-af8a263d-213f-418e-ad8d-37d55beff59b-worker0_0",
+              "taskId": "query-26d490c6-c06d-4cd2-938f-bc5f7f982754-worker0_0",
             },
-            Object {
-              "error": Object {
+            {
+              "error": {
                 "errorCode": "CannotParseExternalData",
                 "errorMessage": "Unable to parse row [] (Path: https://static.imply.io/example-data/kttm-with-issues/kttm-blank-lines.json, Record: 6, Line: 7)",
               },
               "exceptionStackTrace": "org.apache.druid.java.util.common.parsers.ParseException: Unable to parse row [] (Path: https://static.imply.io/example-data/kttm-with-issues/kttm-blank-lines.json, Record: 6, Line: 7)
 	at org.apache.druid.data.input.IntermediateRowParsingReader$1.hasNext(IntermediateRowParsingReader.java:79)
-	at org.apache.druid.java.util.common.parsers.CloseableIterator$2.findNextIteratorIfNecessary(CloseableIterator.java:74)
-	at org.apache.druid.java.util.common.parsers.CloseableIterator$2.next(CloseableIterator.java:108)
-	at org.apache.druid.java.util.common.parsers.CloseableIterator$1.next(CloseableIterator.java:52)
+	at org.apache.druid.java.util.common.parsers.CloseableIterator$1.hasNext(CloseableIterator.java:42)
+	at org.apache.druid.java.util.common.parsers.CloseableIterator$2.findNextIteratorIfNecessary(CloseableIterator.java:72)
+	at org.apache.druid.java.util.common.parsers.CloseableIterator$2.hasNext(CloseableIterator.java:93)
+	at org.apache.druid.java.util.common.parsers.CloseableIterator$1.hasNext(CloseableIterator.java:42)
 	at org.apache.druid.msq.input.external.ExternalSegment$1$1.hasNext(ExternalSegment.java:95)
 	at org.apache.druid.java.util.common.guava.BaseSequence$1.next(BaseSequence.java:115)
-	at org.apache.druid.segment.RowWalker.advance(RowWalker.java:70)
+	at org.apache.druid.segment.RowWalker.advance(RowWalker.java:75)
 	at org.apache.druid.segment.RowBasedCursor.advanceUninterruptibly(RowBasedCursor.java:110)
 	at org.apache.druid.segment.RowBasedCursor.advance(RowBasedCursor.java:103)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeeded(ScanQueryFrameProcessor.java:275)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeededWithExceptionHandling(ScanQueryFrameProcessor.java:242)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runWithSegment(ScanQueryFrameProcessor.java:181)
-	at org.apache.druid.msq.querykit.BaseLeafFrameProcessor.runIncrementally(BaseLeafFrameProcessor.java:159)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runIncrementally(ScanQueryFrameProcessor.java:146)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeeded(ScanQueryFrameProcessor.java:362)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeededWithExceptionHandling(ScanQueryFrameProcessor.java:329)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runWithSegment(ScanQueryFrameProcessor.java:268)
+	at org.apache.druid.msq.querykit.BaseLeafFrameProcessor.runIncrementally(BaseLeafFrameProcessor.java:89)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runIncrementally(ScanQueryFrameProcessor.java:158)
 	at org.apache.druid.frame.processor.FrameProcessors$1FrameProcessorWithBaggage.runIncrementally(FrameProcessors.java:75)
-	at org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.runProcessorNow(FrameProcessorExecutor.java:229)
-	at org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.run(FrameProcessorExecutor.java:137)
-	at org.apache.druid.msq.exec.WorkerImpl$1$2.run(WorkerImpl.java:837)
-	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:515)
+	at org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.runProcessorNow(FrameProcessorExecutor.java:230)
+	at org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.run(FrameProcessorExecutor.java:138)
+	at org.apache.druid.msq.exec.WorkerImpl$1$2.run(WorkerImpl.java:840)
+	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:539)
 	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
-	at org.apache.druid.query.PrioritizedListenableFutureTask.run(PrioritizedExecutorService.java:251)
-	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1128)
-	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:628)
-	at java.base/java.lang.Thread.run(Thread.java:829)
+	at org.apache.druid.query.PrioritizedListenableFutureTask.run(PrioritizedExecutorService.java:259)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+	at java.base/java.lang.Thread.run(Thread.java:840)
 Caused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No content to map due to end-of-input
- at [Source: (String)\\"\\"; line: 1, column: 0]
+ at [Source: (String)""; line: 1, column: 0]
 	at com.fasterxml.jackson.databind.exc.MismatchedInputException.from(MismatchedInputException.java:59)
-	at com.fasterxml.jackson.databind.ObjectMapper._initForReading(ObjectMapper.java:4360)
-	at com.fasterxml.jackson.databind.ObjectMapper._readMapAndClose(ObjectMapper.java:4205)
-	at com.fasterxml.jackson.databind.ObjectMapper.readValue(ObjectMapper.java:3214)
-	at com.fasterxml.jackson.databind.ObjectMapper.readValue(ObjectMapper.java:3182)
+	at com.fasterxml.jackson.databind.ObjectMapper._initForReading(ObjectMapper.java:4688)
+	at com.fasterxml.jackson.databind.ObjectMapper._readMapAndClose(ObjectMapper.java:4586)
+	at com.fasterxml.jackson.databind.ObjectMapper.readValue(ObjectMapper.java:3548)
+	at com.fasterxml.jackson.databind.ObjectMapper.readValue(ObjectMapper.java:3516)
 	at org.apache.druid.data.input.impl.JsonLineReader.parseInputRows(JsonLineReader.java:75)
 	at org.apache.druid.data.input.impl.JsonLineReader.parseInputRows(JsonLineReader.java:48)
 	at org.apache.druid.data.input.IntermediateRowParsingReader$1.hasNext(IntermediateRowParsingReader.java:71)
-	... 23 more
+	... 24 more
 ",
               "host": "localhost:8101",
               "stageNumber": 0,
-              "taskId": "query-af8a263d-213f-418e-ad8d-37d55beff59b-worker0_0",
+              "taskId": "query-26d490c6-c06d-4cd2-938f-bc5f7f982754-worker0_0",
             },
           ],
         }
@@ -670,49 +732,50 @@ Caused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No conte
     <Memo(ExecutionStagesPane)
       execution={
         Execution {
-          "_payload": Object {
-            "payload": Object {
-              "context": Object {
+          "_payload": {
+            "payload": {
+              "context": {
                 "forceTimeChunkLock": true,
                 "useLineageBasedSegmentAllocation": true,
               },
               "dataSource": "kttm-blank-lines",
-              "groupId": "query-af8a263d-213f-418e-ad8d-37d55beff59b",
-              "id": "query-af8a263d-213f-418e-ad8d-37d55beff59b",
-              "nativeTypeNames": Array [
+              "groupId": "query-26d490c6-c06d-4cd2-938f-bc5f7f982754",
+              "id": "query-26d490c6-c06d-4cd2-938f-bc5f7f982754",
+              "nativeTypeNames": [
                 "LONG",
                 "STRING",
               ],
-              "resource": Object {
-                "availabilityGroup": "query-af8a263d-213f-418e-ad8d-37d55beff59b",
+              "resource": {
+                "availabilityGroup": "query-26d490c6-c06d-4cd2-938f-bc5f7f982754",
                 "requiredCapacity": 1,
               },
-              "spec": Object {
+              "spec": {
                 "assignmentStrategy": "max",
-                "columnMappings": Array [
-                  Object {
+                "columnMappings": [
+                  {
                     "outputColumn": "__time",
                     "queryColumn": "v0",
                   },
-                  Object {
+                  {
                     "outputColumn": "agent_type",
                     "queryColumn": "agent_type",
                   },
                 ],
-                "destination": Object {
+                "destination": {
                   "dataSource": "kttm-blank-lines",
-                  "replaceTimeChunks": Array [
+                  "replaceTimeChunks": [
                     "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z",
                   ],
                   "segmentGranularity": "DAY",
                   "type": "dataSource",
                 },
-                "query": Object {
-                  "columns": Array [
+                "query": {
+                  "columns": [
                     "agent_type",
                     "v0",
                   ],
-                  "context": Object {
+                  "context": {
+                    "__resultFormat": "array",
                     "__user": "allowAll",
                     "executionMode": "async",
                     "finalize": false,
@@ -720,128 +783,130 @@ Caused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No conte
                     "groupByEnableMultiValueUnnesting": false,
                     "maxNumTasks": 2,
                     "maxParseExceptions": 2,
-                    "queryId": "af8a263d-213f-418e-ad8d-37d55beff59b",
-                    "scanSignature": "[{\\"name\\":\\"agent_type\\",\\"type\\":\\"STRING\\"},{\\"name\\":\\"v0\\",\\"type\\":\\"LONG\\"}]",
-                    "sqlInsertSegmentGranularity": "\\"DAY\\"",
-                    "sqlQueryId": "af8a263d-213f-418e-ad8d-37d55beff59b",
+                    "queryId": "26d490c6-c06d-4cd2-938f-bc5f7f982754",
+                    "scanSignature": "[{"name":"agent_type","type":"STRING"},{"name":"v0","type":"LONG"}]",
+                    "sqlInsertSegmentGranularity": ""DAY"",
+                    "sqlQueryId": "26d490c6-c06d-4cd2-938f-bc5f7f982754",
                     "sqlReplaceTimeChunks": "all",
+                    "waitUntilSegmentsLoad": true,
                   },
-                  "dataSource": Object {
-                    "inputFormat": Object {
+                  "dataSource": {
+                    "inputFormat": {
                       "assumeNewlineDelimited": false,
                       "keepNullColumns": false,
                       "type": "json",
                       "useJsonNodeReader": false,
                     },
-                    "inputSource": Object {
+                    "inputSource": {
                       "type": "http",
-                      "uris": Array [
+                      "uris": [
                         "https://static.imply.io/example-data/kttm-with-issues/kttm-blank-lines.json",
                       ],
                     },
-                    "signature": Array [
-                      Object {
+                    "signature": [
+                      {
                         "name": "timestamp",
                         "type": "STRING",
                       },
-                      Object {
+                      {
                         "name": "agent_type",
                         "type": "STRING",
                       },
                     ],
                     "type": "external",
                   },
-                  "granularity": Object {
+                  "granularity": {
                     "type": "all",
                   },
-                  "intervals": Object {
-                    "intervals": Array [
+                  "intervals": {
+                    "intervals": [
                       "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z",
                     ],
                     "type": "intervals",
                   },
-                  "legacy": false,
                   "queryType": "scan",
                   "resultFormat": "compactedList",
-                  "virtualColumns": Array [
-                    Object {
-                      "expression": "timestamp_parse(\\"timestamp\\",null,'UTC')",
+                  "virtualColumns": [
+                    {
+                      "expression": "timestamp_parse("timestamp",null,'UTC')",
                       "name": "v0",
                       "outputType": "LONG",
                       "type": "expression",
                     },
                   ],
                 },
-                "tuningConfig": Object {
+                "tuningConfig": {
                   "maxNumWorkers": 1,
                   "maxRowsInMemory": 100000,
                   "rowsPerSegment": 3000000,
                 },
               },
-              "sqlQuery": "REPLACE INTO \\"kttm-blank-lines\\" OVERWRITE ALL
+              "sqlQuery": "REPLACE INTO "kttm-blank-lines" OVERWRITE ALL
 SELECT
-  TIME_PARSE(\\"timestamp\\") AS \\"__time\\",
-  \\"agent_type\\"
+  TIME_PARSE("timestamp") AS "__time",
+  "agent_type"
 FROM TABLE(
   EXTERN(
-    '{\\"type\\":\\"http\\",\\"uris\\":[\\"https://static.imply.io/example-data/kttm-with-issues/kttm-blank-lines.json\\"]}',
-    '{\\"type\\":\\"json\\"}'
+    '{"type":"http","uris":["https://static.imply.io/example-data/kttm-with-issues/kttm-blank-lines.json"]}',
+    '{"type":"json"}'
   )
-) EXTEND (\\"timestamp\\" VARCHAR, \\"agent_type\\" VARCHAR)
+) EXTEND ("timestamp" VARCHAR, "agent_type" VARCHAR)
 PARTITIONED BY DAY",
-              "sqlQueryContext": Object {
+              "sqlQueryContext": {
+                "__resultFormat": "array",
                 "executionMode": "async",
                 "finalizeAggregations": false,
                 "groupByEnableMultiValueUnnesting": false,
                 "maxNumTasks": 2,
                 "maxParseExceptions": 2,
-                "queryId": "af8a263d-213f-418e-ad8d-37d55beff59b",
-                "sqlInsertSegmentGranularity": "\\"DAY\\"",
-                "sqlQueryId": "af8a263d-213f-418e-ad8d-37d55beff59b",
+                "queryId": "26d490c6-c06d-4cd2-938f-bc5f7f982754",
+                "sqlInsertSegmentGranularity": ""DAY"",
+                "sqlQueryId": "26d490c6-c06d-4cd2-938f-bc5f7f982754",
                 "sqlReplaceTimeChunks": "all",
+                "waitUntilSegmentsLoad": true,
               },
-              "sqlResultsContext": Object {
-                "serializeComplexValues": true,
+              "sqlResultsContext": {
                 "stringifyArrays": true,
                 "timeZone": "UTC",
               },
-              "sqlTypeNames": Array [
+              "sqlTypeNames": [
                 "TIMESTAMP",
                 "VARCHAR",
               ],
               "type": "query_controller",
             },
-            "task": "query-af8a263d-213f-418e-ad8d-37d55beff59b",
+            "task": "query-26d490c6-c06d-4cd2-938f-bc5f7f982754",
           },
           "capacityInfo": undefined,
-          "destination": Object {
+          "destination": {
             "dataSource": "kttm-blank-lines",
-            "replaceTimeChunks": Array [
+            "replaceTimeChunks": [
               "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z",
             ],
             "segmentGranularity": "DAY",
             "type": "dataSource",
           },
           "destinationPages": undefined,
-          "duration": 14545,
+          "duration": 4483,
           "engine": "sql-msq-task",
-          "error": Object {
-            "error": Object {
+          "error": {
+            "error": {
               "errorCode": "TooManyWarnings",
               "errorMessage": "Too many warnings of type CannotParseExternalData generated (max = 2)",
               "maxWarnings": 2,
               "rootErrorCode": "CannotParseExternalData",
             },
             "host": "localhost",
-            "taskId": "query-af8a263d-213f-418e-ad8d-37d55beff59b-worker0_0",
+            "taskId": "query-26d490c6-c06d-4cd2-938f-bc5f7f982754-worker0_0",
           },
-          "id": "query-af8a263d-213f-418e-ad8d-37d55beff59b",
-          "nativeQuery": Object {
-            "columns": Array [
+          "id": "query-26d490c6-c06d-4cd2-938f-bc5f7f982754",
+          "nativeQuery": {
+            "columns": [
               "agent_type",
               "v0",
             ],
-            "context": Object {
+            "context": {
+              "__resultFormat": "array",
               "__user": "allowAll",
               "executionMode": "async",
               "finalize": false,
@@ -849,111 +914,114 @@ PARTITIONED BY DAY",
               "groupByEnableMultiValueUnnesting": false,
               "maxNumTasks": 2,
               "maxParseExceptions": 2,
-              "queryId": "af8a263d-213f-418e-ad8d-37d55beff59b",
-              "scanSignature": "[{\\"name\\":\\"agent_type\\",\\"type\\":\\"STRING\\"},{\\"name\\":\\"v0\\",\\"type\\":\\"LONG\\"}]",
-              "sqlInsertSegmentGranularity": "\\"DAY\\"",
-              "sqlQueryId": "af8a263d-213f-418e-ad8d-37d55beff59b",
+              "queryId": "26d490c6-c06d-4cd2-938f-bc5f7f982754",
+              "scanSignature": "[{"name":"agent_type","type":"STRING"},{"name":"v0","type":"LONG"}]",
+              "sqlInsertSegmentGranularity": ""DAY"",
+              "sqlQueryId": "26d490c6-c06d-4cd2-938f-bc5f7f982754",
               "sqlReplaceTimeChunks": "all",
+              "waitUntilSegmentsLoad": true,
             },
-            "dataSource": Object {
-              "inputFormat": Object {
+            "dataSource": {
+              "inputFormat": {
                 "assumeNewlineDelimited": false,
                 "keepNullColumns": false,
                 "type": "json",
                 "useJsonNodeReader": false,
               },
-              "inputSource": Object {
+              "inputSource": {
                 "type": "http",
-                "uris": Array [
+                "uris": [
                   "https://static.imply.io/example-data/kttm-with-issues/kttm-blank-lines.json",
                 ],
               },
-              "signature": Array [
-                Object {
+              "signature": [
+                {
                   "name": "timestamp",
                   "type": "STRING",
                 },
-                Object {
+                {
                   "name": "agent_type",
                   "type": "STRING",
                 },
               ],
               "type": "external",
             },
-            "granularity": Object {
+            "granularity": {
               "type": "all",
             },
-            "intervals": Object {
-              "intervals": Array [
+            "intervals": {
+              "intervals": [
                 "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z",
               ],
               "type": "intervals",
             },
-            "legacy": false,
             "queryType": "scan",
             "resultFormat": "compactedList",
-            "virtualColumns": Array [
-              Object {
-                "expression": "timestamp_parse(\\"timestamp\\",null,'UTC')",
+            "virtualColumns": [
+              {
+                "expression": "timestamp_parse("timestamp",null,'UTC')",
                 "name": "v0",
                 "outputType": "LONG",
                 "type": "expression",
               },
             ],
           },
-          "queryContext": Object {
+          "queryContext": {
+            "__resultFormat": "array",
             "executionMode": "async",
             "finalizeAggregations": false,
             "groupByEnableMultiValueUnnesting": false,
             "maxNumTasks": 2,
             "maxParseExceptions": 2,
+            "waitUntilSegmentsLoad": true,
           },
           "result": undefined,
-          "sqlQuery": "REPLACE INTO \\"kttm-blank-lines\\" OVERWRITE ALL
+          "segmentStatus": undefined,
+          "sqlQuery": "REPLACE INTO "kttm-blank-lines" OVERWRITE ALL
 SELECT
-  TIME_PARSE(\\"timestamp\\") AS \\"__time\\",
-  \\"agent_type\\"
+  TIME_PARSE("timestamp") AS "__time",
+  "agent_type"
 FROM TABLE(
   EXTERN(
-    '{\\"type\\":\\"http\\",\\"uris\\":[\\"https://static.imply.io/example-data/kttm-with-issues/kttm-blank-lines.json\\"]}',
-    '{\\"type\\":\\"json\\"}'
+    '{"type":"http","uris":["https://static.imply.io/example-data/kttm-with-issues/kttm-blank-lines.json"]}',
+    '{"type":"json"}'
   )
-) EXTEND (\\"timestamp\\" VARCHAR, \\"agent_type\\" VARCHAR)
+) EXTEND ("timestamp" VARCHAR, "agent_type" VARCHAR)
 PARTITIONED BY DAY",
           "stages": Stages {
-            "counters": Object {
-              "0": Object {
-                "0": Object {
-                  "input0": Object {
-                    "bytes": Array [
+            "counters": {
+              "0": {
+                "0": {
+                  "input0": {
+                    "bytes": [
                       7658,
                     ],
-                    "files": Array [
+                    "files": [
                       1,
                     ],
-                    "rows": Array [
+                    "rows": [
                       10,
                     ],
-                    "totalFiles": Array [
+                    "totalFiles": [
                       1,
                     ],
                     "type": "channel",
                   },
-                  "output": Object {
-                    "bytes": Array [
+                  "output": {
+                    "bytes": [
                       712,
                     ],
-                    "frames": Array [
+                    "frames": [
                       1,
                     ],
-                    "rows": Array [
+                    "rows": [
                       10,
                     ],
                     "type": "channel",
                   },
-                  "sortProgress": Object {
-                    "levelToMergedBatches": Object {},
-                    "levelToTotalBatches": Object {
+                  "sortProgress": {
+                    "levelToMergedBatches": {},
+                    "levelToTotalBatches": {
                       "0": 1,
                       "1": 1,
                       "2": -1,
@@ -963,37 +1031,37 @@ PARTITIONED BY DAY",
                     "totalMergingLevels": 3,
                     "type": "sortProgress",
                   },
-                  "warnings": Object {
+                  "warnings": {
                     "CannotParseExternalData": 3,
                     "type": "warnings",
                   },
                 },
               },
             },
-            "stages": Array [
-              Object {
-                "definition": Object {
-                  "id": "f635e36d-6b90-4b74-ad5e-a179c99f0ddc_0",
-                  "input": Array [
-                    Object {
-                      "inputFormat": Object {
+            "stages": [
+              {
+                "definition": {
+                  "id": "2c45d26d-8a63-45a7-ae8d-2a2a4d6309b7_0",
+                  "input": [
+                    {
+                      "inputFormat": {
                         "assumeNewlineDelimited": false,
                         "keepNullColumns": false,
                         "type": "json",
                         "useJsonNodeReader": false,
                       },
-                      "inputSource": Object {
+                      "inputSource": {
                         "type": "http",
-                        "uris": Array [
+                        "uris": [
                           "https://static.imply.io/example-data/kttm-with-issues/kttm-blank-lines.json",
                         ],
                       },
-                      "signature": Array [
-                        Object {
+                      "signature": [
+                        {
                           "name": "timestamp",
                           "type": "STRING",
                         },
-                        Object {
+                        {
                           "name": "agent_type",
                           "type": "STRING",
                         },
@@ -1002,13 +1070,14 @@ PARTITIONED BY DAY",
                     },
                   ],
                   "maxWorkerCount": 1,
-                  "processor": Object {
-                    "query": Object {
-                      "columns": Array [
+                  "processor": {
+                    "query": {
+                      "columns": [
                         "agent_type",
                         "v0",
                       ],
-                      "context": Object {
+                      "context": {
+                        "__resultFormat": "array",
                         "__timeColumn": "v0",
                         "__user": "allowAll",
                         "executionMode": "async",
@@ -1017,52 +1086,52 @@ PARTITIONED BY DAY",
                         "groupByEnableMultiValueUnnesting": false,
                         "maxNumTasks": 2,
                         "maxParseExceptions": 2,
-                        "queryId": "af8a263d-213f-418e-ad8d-37d55beff59b",
-                        "scanSignature": "[{\\"name\\":\\"agent_type\\",\\"type\\":\\"STRING\\"},{\\"name\\":\\"v0\\",\\"type\\":\\"LONG\\"}]",
-                        "sqlInsertSegmentGranularity": "\\"DAY\\"",
-                        "sqlQueryId": "af8a263d-213f-418e-ad8d-37d55beff59b",
+                        "queryId": "26d490c6-c06d-4cd2-938f-bc5f7f982754",
+                        "scanSignature": "[{"name":"agent_type","type":"STRING"},{"name":"v0","type":"LONG"}]",
+                        "sqlInsertSegmentGranularity": ""DAY"",
+                        "sqlQueryId": "26d490c6-c06d-4cd2-938f-bc5f7f982754",
                         "sqlReplaceTimeChunks": "all",
+                        "waitUntilSegmentsLoad": true,
                       },
-                      "dataSource": Object {
-                        "inputFormat": Object {
+                      "dataSource": {
+                        "inputFormat": {
                           "assumeNewlineDelimited": false,
                           "keepNullColumns": false,
                           "type": "json",
                           "useJsonNodeReader": false,
                         },
-                        "inputSource": Object {
+                        "inputSource": {
                           "type": "http",
-                          "uris": Array [
+                          "uris": [
                             "https://static.imply.io/example-data/kttm-with-issues/kttm-blank-lines.json",
                           ],
                         },
-                        "signature": Array [
-                          Object {
+                        "signature": [
+                          {
                             "name": "timestamp",
                             "type": "STRING",
                           },
-                          Object {
+                          {
                             "name": "agent_type",
                             "type": "STRING",
                           },
                         ],
                         "type": "external",
                       },
-                      "granularity": Object {
+                      "granularity": {
                         "type": "all",
                       },
-                      "intervals": Object {
-                        "intervals": Array [
+                      "intervals": {
+                        "intervals": [
                           "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z",
                         ],
                         "type": "intervals",
                       },
-                      "legacy": false,
                       "queryType": "scan",
                       "resultFormat": "compactedList",
-                      "virtualColumns": Array [
-                        Object {
-                          "expression": "timestamp_parse(\\"timestamp\\",null,'UTC')",
+                      "virtualColumns": [
+                        {
+                          "expression": "timestamp_parse("timestamp",null,'UTC')",
                           "name": "v0",
                           "outputType": "LONG",
                           "type": "expression",
@@ -1072,15 +1141,15 @@ PARTITIONED BY DAY",
                     "type": "scan",
                   },
                   "shuffleCheckHasMultipleValues": true,
-                  "shuffleSpec": Object {
-                    "clusterBy": Object {
+                  "shuffleSpec": {
+                    "clusterBy": {
                       "bucketByCount": 1,
-                      "columns": Array [
-                        Object {
+                      "columns": [
+                        {
                           "columnName": "__bucket",
                           "order": "ASCENDING",
                         },
-                        Object {
+                        {
                           "columnName": "__boost",
                           "order": "ASCENDING",
                         },
@@ -1089,61 +1158,61 @@ PARTITIONED BY DAY",
                     "targetSize": 3000000,
                     "type": "targetSize",
                   },
-                  "signature": Array [
-                    Object {
+                  "signature": [
+                    {
                       "name": "__bucket",
                       "type": "LONG",
                     },
-                    Object {
+                    {
                       "name": "__boost",
                       "type": "LONG",
                     },
-                    Object {
+                    {
                       "name": "agent_type",
                       "type": "STRING",
                     },
-                    Object {
+                    {
                       "name": "v0",
                       "type": "LONG",
                     },
                   ],
                 },
-                "duration": 14193,
+                "duration": 4259,
                 "phase": "FAILED",
                 "sort": true,
                 "stageNumber": 0,
-                "startTime": "2023-08-01T04:20:25.296Z",
+                "startTime": "2024-01-23T19:56:44.857Z",
                 "workerCount": 1,
               },
-              Object {
-                "definition": Object {
-                  "id": "f635e36d-6b90-4b74-ad5e-a179c99f0ddc_1",
-                  "input": Array [
-                    Object {
+              {
+                "definition": {
+                  "id": "2c45d26d-8a63-45a7-ae8d-2a2a4d6309b7_1",
+                  "input": [
+                    {
                       "stage": 0,
                       "type": "stage",
                     },
                   ],
                   "maxWorkerCount": 1,
-                  "processor": Object {
-                    "columnMappings": Array [
-                      Object {
+                  "processor": {
+                    "columnMappings": [
+                      {
                         "outputColumn": "__time",
                         "queryColumn": "v0",
                       },
-                      Object {
+                      {
                         "outputColumn": "agent_type",
                         "queryColumn": "agent_type",
                       },
                     ],
-                    "dataSchema": Object {
+                    "dataSchema": {
                       "dataSource": "kttm-blank-lines",
-                      "dimensionsSpec": Object {
-                        "dimensionExclusions": Array [
+                      "dimensionsSpec": {
+                        "dimensionExclusions": [
                           "__time",
                         ],
-                        "dimensions": Array [
-                          Object {
+                        "dimensions": [
+                          {
                             "createBitmapIndex": true,
                             "multiValueHandling": "SORTED_ARRAY",
                             "name": "agent_type",
@@ -1153,138 +1222,140 @@ PARTITIONED BY DAY",
                         "includeAllDimensions": false,
                         "useSchemaDiscovery": false,
                       },
-                      "granularitySpec": Object {
-                        "intervals": Array [
+                      "granularitySpec": {
+                        "intervals": [
                           "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z",
                         ],
-                        "queryGranularity": Object {
+                        "queryGranularity": {
                           "type": "none",
                         },
                         "rollup": false,
                         "type": "arbitrary",
                       },
-                      "metricsSpec": Array [],
-                      "timestampSpec": Object {
+                      "metricsSpec": [],
+                      "timestampSpec": {
                         "column": "__time",
                         "format": "millis",
                         "missingValue": null,
                       },
-                      "transformSpec": Object {
+                      "transformSpec": {
                         "filter": null,
-                        "transforms": Array [],
+                        "transforms": [],
                       },
                     },
-                    "tuningConfig": Object {
+                    "tuningConfig": {
                       "maxNumWorkers": 1,
                       "maxRowsInMemory": 100000,
                       "rowsPerSegment": 3000000,
                     },
                     "type": "segmentGenerator",
                   },
-                  "signature": Array [],
+                  "signature": [],
                 },
                 "stageNumber": 1,
               },
             ],
           },
-          "startTime": 2023-08-01T04:20:24.945Z,
+          "startTime": 2024-01-23T19:56:44.633Z,
           "status": "FAILED",
-          "usageInfo": Object {
+          "usageInfo": {
             "pendingTasks": 0,
-            "runningTasks": 2,
+            "runningTasks": 1,
           },
-          "warnings": Array [
-            Object {
-              "error": Object {
+          "warnings": [
+            {
+              "error": {
                 "errorCode": "CannotParseExternalData",
                 "errorMessage": "Unable to parse row [] (Path: https://static.imply.io/example-data/kttm-with-issues/kttm-blank-lines.json, Record: 3, Line: 3)",
               },
               "exceptionStackTrace": "org.apache.druid.java.util.common.parsers.ParseException: Unable to parse row [] (Path: https://static.imply.io/example-data/kttm-with-issues/kttm-blank-lines.json, Record: 3, Line: 3)
 	at org.apache.druid.data.input.IntermediateRowParsingReader$1.hasNext(IntermediateRowParsingReader.java:79)
-	at org.apache.druid.java.util.common.parsers.CloseableIterator$2.findNextIteratorIfNecessary(CloseableIterator.java:74)
-	at org.apache.druid.java.util.common.parsers.CloseableIterator$2.next(CloseableIterator.java:108)
-	at org.apache.druid.java.util.common.parsers.CloseableIterator$1.next(CloseableIterator.java:52)
+	at org.apache.druid.java.util.common.parsers.CloseableIterator$1.hasNext(CloseableIterator.java:42)
+	at org.apache.druid.java.util.common.parsers.CloseableIterator$2.findNextIteratorIfNecessary(CloseableIterator.java:72)
+	at org.apache.druid.java.util.common.parsers.CloseableIterator$2.hasNext(CloseableIterator.java:93)
+	at org.apache.druid.java.util.common.parsers.CloseableIterator$1.hasNext(CloseableIterator.java:42)
 	at org.apache.druid.msq.input.external.ExternalSegment$1$1.hasNext(ExternalSegment.java:95)
 	at org.apache.druid.java.util.common.guava.BaseSequence$1.next(BaseSequence.java:115)
-	at org.apache.druid.segment.RowWalker.advance(RowWalker.java:70)
+	at org.apache.druid.segment.RowWalker.advance(RowWalker.java:75)
 	at org.apache.druid.segment.RowBasedCursor.advanceUninterruptibly(RowBasedCursor.java:110)
 	at org.apache.druid.segment.RowBasedCursor.advance(RowBasedCursor.java:103)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeeded(ScanQueryFrameProcessor.java:275)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeededWithExceptionHandling(ScanQueryFrameProcessor.java:242)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runWithSegment(ScanQueryFrameProcessor.java:181)
-	at org.apache.druid.msq.querykit.BaseLeafFrameProcessor.runIncrementally(BaseLeafFrameProcessor.java:159)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runIncrementally(ScanQueryFrameProcessor.java:146)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeeded(ScanQueryFrameProcessor.java:362)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeededWithExceptionHandling(ScanQueryFrameProcessor.java:329)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runWithSegment(ScanQueryFrameProcessor.java:268)
+	at org.apache.druid.msq.querykit.BaseLeafFrameProcessor.runIncrementally(BaseLeafFrameProcessor.java:89)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runIncrementally(ScanQueryFrameProcessor.java:158)
 	at org.apache.druid.frame.processor.FrameProcessors$1FrameProcessorWithBaggage.runIncrementally(FrameProcessors.java:75)
-	at org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.runProcessorNow(FrameProcessorExecutor.java:229)
-	at org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.run(FrameProcessorExecutor.java:137)
-	at org.apache.druid.msq.exec.WorkerImpl$1$2.run(WorkerImpl.java:837)
-	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:515)
+	at org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.runProcessorNow(FrameProcessorExecutor.java:230)
+	at org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.run(FrameProcessorExecutor.java:138)
+	at org.apache.druid.msq.exec.WorkerImpl$1$2.run(WorkerImpl.java:840)
+	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:539)
 	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
-	at org.apache.druid.query.PrioritizedListenableFutureTask.run(PrioritizedExecutorService.java:251)
-	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1128)
-	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:628)
-	at java.base/java.lang.Thread.run(Thread.java:829)
+	at org.apache.druid.query.PrioritizedListenableFutureTask.run(PrioritizedExecutorService.java:259)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+	at java.base/java.lang.Thread.run(Thread.java:840)
 Caused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No content to map due to end-of-input
- at [Source: (String)\\"\\"; line: 1, column: 0]
+ at [Source: (String)""; line: 1, column: 0]
 	at com.fasterxml.jackson.databind.exc.MismatchedInputException.from(MismatchedInputException.java:59)
-	at com.fasterxml.jackson.databind.ObjectMapper._initForReading(ObjectMapper.java:4360)
-	at com.fasterxml.jackson.databind.ObjectMapper._readMapAndClose(ObjectMapper.java:4205)
-	at com.fasterxml.jackson.databind.ObjectMapper.readValue(ObjectMapper.java:3214)
-	at com.fasterxml.jackson.databind.ObjectMapper.readValue(ObjectMapper.java:3182)
+	at com.fasterxml.jackson.databind.ObjectMapper._initForReading(ObjectMapper.java:4688)
+	at com.fasterxml.jackson.databind.ObjectMapper._readMapAndClose(ObjectMapper.java:4586)
+	at com.fasterxml.jackson.databind.ObjectMapper.readValue(ObjectMapper.java:3548)
+	at com.fasterxml.jackson.databind.ObjectMapper.readValue(ObjectMapper.java:3516)
 	at org.apache.druid.data.input.impl.JsonLineReader.parseInputRows(JsonLineReader.java:75)
 	at org.apache.druid.data.input.impl.JsonLineReader.parseInputRows(JsonLineReader.java:48)
 	at org.apache.druid.data.input.IntermediateRowParsingReader$1.hasNext(IntermediateRowParsingReader.java:71)
-	... 23 more
+	... 24 more
 ",
               "host": "localhost:8101",
               "stageNumber": 0,
-              "taskId": "query-af8a263d-213f-418e-ad8d-37d55beff59b-worker0_0",
+              "taskId": "query-26d490c6-c06d-4cd2-938f-bc5f7f982754-worker0_0",
             },
-            Object {
-              "error": Object {
+            {
+              "error": {
                 "errorCode": "CannotParseExternalData",
                 "errorMessage": "Unable to parse row [] (Path: https://static.imply.io/example-data/kttm-with-issues/kttm-blank-lines.json, Record: 6, Line: 7)",
               },
               "exceptionStackTrace": "org.apache.druid.java.util.common.parsers.ParseException: Unable to parse row [] (Path: https://static.imply.io/example-data/kttm-with-issues/kttm-blank-lines.json, Record: 6, Line: 7)
 	at org.apache.druid.data.input.IntermediateRowParsingReader$1.hasNext(IntermediateRowParsingReader.java:79)
-	at org.apache.druid.java.util.common.parsers.CloseableIterator$2.findNextIteratorIfNecessary(CloseableIterator.java:74)
-	at org.apache.druid.java.util.common.parsers.CloseableIterator$2.next(CloseableIterator.java:108)
-	at org.apache.druid.java.util.common.parsers.CloseableIterator$1.next(CloseableIterator.java:52)
+	at org.apache.druid.java.util.common.parsers.CloseableIterator$1.hasNext(CloseableIterator.java:42)
+	at org.apache.druid.java.util.common.parsers.CloseableIterator$2.findNextIteratorIfNecessary(CloseableIterator.java:72)
+	at org.apache.druid.java.util.common.parsers.CloseableIterator$2.hasNext(CloseableIterator.java:93)
+	at org.apache.druid.java.util.common.parsers.CloseableIterator$1.hasNext(CloseableIterator.java:42)
 	at org.apache.druid.msq.input.external.ExternalSegment$1$1.hasNext(ExternalSegment.java:95)
 	at org.apache.druid.java.util.common.guava.BaseSequence$1.next(BaseSequence.java:115)
-	at org.apache.druid.segment.RowWalker.advance(RowWalker.java:70)
+	at org.apache.druid.segment.RowWalker.advance(RowWalker.java:75)
 	at org.apache.druid.segment.RowBasedCursor.advanceUninterruptibly(RowBasedCursor.java:110)
 	at org.apache.druid.segment.RowBasedCursor.advance(RowBasedCursor.java:103)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeeded(ScanQueryFrameProcessor.java:275)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeededWithExceptionHandling(ScanQueryFrameProcessor.java:242)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runWithSegment(ScanQueryFrameProcessor.java:181)
-	at org.apache.druid.msq.querykit.BaseLeafFrameProcessor.runIncrementally(BaseLeafFrameProcessor.java:159)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runIncrementally(ScanQueryFrameProcessor.java:146)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeeded(ScanQueryFrameProcessor.java:362)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeededWithExceptionHandling(ScanQueryFrameProcessor.java:329)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runWithSegment(ScanQueryFrameProcessor.java:268)
+	at org.apache.druid.msq.querykit.BaseLeafFrameProcessor.runIncrementally(BaseLeafFrameProcessor.java:89)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runIncrementally(ScanQueryFrameProcessor.java:158)
 	at org.apache.druid.frame.processor.FrameProcessors$1FrameProcessorWithBaggage.runIncrementally(FrameProcessors.java:75)
-	at org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.runProcessorNow(FrameProcessorExecutor.java:229)
-	at org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.run(FrameProcessorExecutor.java:137)
-	at org.apache.druid.msq.exec.WorkerImpl$1$2.run(WorkerImpl.java:837)
-	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:515)
+	at org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.runProcessorNow(FrameProcessorExecutor.java:230)
+	at org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.run(FrameProcessorExecutor.java:138)
+	at org.apache.druid.msq.exec.WorkerImpl$1$2.run(WorkerImpl.java:840)
+	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:539)
 	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
-	at org.apache.druid.query.PrioritizedListenableFutureTask.run(PrioritizedExecutorService.java:251)
-	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1128)
-	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:628)
-	at java.base/java.lang.Thread.run(Thread.java:829)
+	at org.apache.druid.query.PrioritizedListenableFutureTask.run(PrioritizedExecutorService.java:259)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+	at java.base/java.lang.Thread.run(Thread.java:840)
 Caused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No content to map due to end-of-input
- at [Source: (String)\\"\\"; line: 1, column: 0]
+ at [Source: (String)""; line: 1, column: 0]
 	at com.fasterxml.jackson.databind.exc.MismatchedInputException.from(MismatchedInputException.java:59)
-	at com.fasterxml.jackson.databind.ObjectMapper._initForReading(ObjectMapper.java:4360)
-	at com.fasterxml.jackson.databind.ObjectMapper._readMapAndClose(ObjectMapper.java:4205)
-	at com.fasterxml.jackson.databind.ObjectMapper.readValue(ObjectMapper.java:3214)
-	at com.fasterxml.jackson.databind.ObjectMapper.readValue(ObjectMapper.java:3182)
+	at com.fasterxml.jackson.databind.ObjectMapper._initForReading(ObjectMapper.java:4688)
+	at com.fasterxml.jackson.databind.ObjectMapper._readMapAndClose(ObjectMapper.java:4586)
+	at com.fasterxml.jackson.databind.ObjectMapper.readValue(ObjectMapper.java:3548)
+	at com.fasterxml.jackson.databind.ObjectMapper.readValue(ObjectMapper.java:3516)
 	at org.apache.druid.data.input.impl.JsonLineReader.parseInputRows(JsonLineReader.java:75)
 	at org.apache.druid.data.input.impl.JsonLineReader.parseInputRows(JsonLineReader.java:48)
 	at org.apache.druid.data.input.IntermediateRowParsingReader$1.hasNext(IntermediateRowParsingReader.java:71)
-	... 23 more
+	... 24 more
 ",
               "host": "localhost:8101",
               "stageNumber": 0,
-              "taskId": "query-af8a263d-213f-418e-ad8d-37d55beff59b-worker0_0",
+              "taskId": "query-26d490c6-c06d-4cd2-938f-bc5f7f982754-worker0_0",
             },
           ],
         }
@@ -1303,30 +1374,31 @@ exports[`ExecutionDetailsPane matches snapshot with init tab 1`] = `
   className="execution-details-pane"
   onActivateTab={[Function]}
   tabs={
-    Array [
-      Object {
+    [
+      {
         "icon": "many-to-one",
         "id": "general",
         "label": "General",
       },
-      Object {
+      {
         "icon": "application",
         "id": "sql",
         "label": "SQL query",
       },
-      Object {
+      {
         "icon": "cog",
         "id": "native",
         "label": "Native query",
       },
+      false,
       undefined,
       undefined,
-      Object {
+      {
         "icon": "error",
         "id": "error",
         "label": "Error",
       },
-      Object {
+      {
         "icon": "warning-sign",
         "id": "warnings",
         "label": "Warnings",
@@ -1337,49 +1409,50 @@ exports[`ExecutionDetailsPane matches snapshot with init tab 1`] = `
   <Memo(ExecutionWarningsPane)
     execution={
       Execution {
-        "_payload": Object {
-          "payload": Object {
-            "context": Object {
+        "_payload": {
+          "payload": {
+            "context": {
               "forceTimeChunkLock": true,
               "useLineageBasedSegmentAllocation": true,
             },
             "dataSource": "kttm-blank-lines",
-            "groupId": "query-af8a263d-213f-418e-ad8d-37d55beff59b",
-            "id": "query-af8a263d-213f-418e-ad8d-37d55beff59b",
-            "nativeTypeNames": Array [
+            "groupId": "query-26d490c6-c06d-4cd2-938f-bc5f7f982754",
+            "id": "query-26d490c6-c06d-4cd2-938f-bc5f7f982754",
+            "nativeTypeNames": [
               "LONG",
               "STRING",
             ],
-            "resource": Object {
-              "availabilityGroup": "query-af8a263d-213f-418e-ad8d-37d55beff59b",
+            "resource": {
+              "availabilityGroup": "query-26d490c6-c06d-4cd2-938f-bc5f7f982754",
               "requiredCapacity": 1,
             },
-            "spec": Object {
+            "spec": {
               "assignmentStrategy": "max",
-              "columnMappings": Array [
-                Object {
+              "columnMappings": [
+                {
                   "outputColumn": "__time",
                   "queryColumn": "v0",
                 },
-                Object {
+                {
                   "outputColumn": "agent_type",
                   "queryColumn": "agent_type",
                 },
               ],
-              "destination": Object {
+              "destination": {
                 "dataSource": "kttm-blank-lines",
-                "replaceTimeChunks": Array [
+                "replaceTimeChunks": [
                   "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z",
                 ],
                 "segmentGranularity": "DAY",
                 "type": "dataSource",
               },
-              "query": Object {
-                "columns": Array [
+              "query": {
+                "columns": [
                   "agent_type",
                   "v0",
                 ],
-                "context": Object {
+                "context": {
+                  "__resultFormat": "array",
                   "__user": "allowAll",
                   "executionMode": "async",
                   "finalize": false,
@@ -1387,128 +1460,130 @@ exports[`ExecutionDetailsPane matches snapshot with init tab 1`] = `
                   "groupByEnableMultiValueUnnesting": false,
                   "maxNumTasks": 2,
                   "maxParseExceptions": 2,
-                  "queryId": "af8a263d-213f-418e-ad8d-37d55beff59b",
-                  "scanSignature": "[{\\"name\\":\\"agent_type\\",\\"type\\":\\"STRING\\"},{\\"name\\":\\"v0\\",\\"type\\":\\"LONG\\"}]",
-                  "sqlInsertSegmentGranularity": "\\"DAY\\"",
-                  "sqlQueryId": "af8a263d-213f-418e-ad8d-37d55beff59b",
+                  "queryId": "26d490c6-c06d-4cd2-938f-bc5f7f982754",
+                  "scanSignature": "[{"name":"agent_type","type":"STRING"},{"name":"v0","type":"LONG"}]",
+                  "sqlInsertSegmentGranularity": ""DAY"",
+                  "sqlQueryId": "26d490c6-c06d-4cd2-938f-bc5f7f982754",
                   "sqlReplaceTimeChunks": "all",
+                  "waitUntilSegmentsLoad": true,
                 },
-                "dataSource": Object {
-                  "inputFormat": Object {
+                "dataSource": {
+                  "inputFormat": {
                     "assumeNewlineDelimited": false,
                     "keepNullColumns": false,
                     "type": "json",
                     "useJsonNodeReader": false,
                   },
-                  "inputSource": Object {
+                  "inputSource": {
                     "type": "http",
-                    "uris": Array [
+                    "uris": [
                       "https://static.imply.io/example-data/kttm-with-issues/kttm-blank-lines.json",
                     ],
                   },
-                  "signature": Array [
-                    Object {
+                  "signature": [
+                    {
                       "name": "timestamp",
                       "type": "STRING",
                     },
-                    Object {
+                    {
                       "name": "agent_type",
                       "type": "STRING",
                     },
                   ],
                   "type": "external",
                 },
-                "granularity": Object {
+                "granularity": {
                   "type": "all",
                 },
-                "intervals": Object {
-                  "intervals": Array [
+                "intervals": {
+                  "intervals": [
                     "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z",
                   ],
                   "type": "intervals",
                 },
-                "legacy": false,
                 "queryType": "scan",
                 "resultFormat": "compactedList",
-                "virtualColumns": Array [
-                  Object {
-                    "expression": "timestamp_parse(\\"timestamp\\",null,'UTC')",
+                "virtualColumns": [
+                  {
+                    "expression": "timestamp_parse("timestamp",null,'UTC')",
                     "name": "v0",
                     "outputType": "LONG",
                     "type": "expression",
                   },
                 ],
               },
-              "tuningConfig": Object {
+              "tuningConfig": {
                 "maxNumWorkers": 1,
                 "maxRowsInMemory": 100000,
                 "rowsPerSegment": 3000000,
               },
             },
-            "sqlQuery": "REPLACE INTO \\"kttm-blank-lines\\" OVERWRITE ALL
+            "sqlQuery": "REPLACE INTO "kttm-blank-lines" OVERWRITE ALL
 SELECT
-  TIME_PARSE(\\"timestamp\\") AS \\"__time\\",
-  \\"agent_type\\"
+  TIME_PARSE("timestamp") AS "__time",
+  "agent_type"
 FROM TABLE(
   EXTERN(
-    '{\\"type\\":\\"http\\",\\"uris\\":[\\"https://static.imply.io/example-data/kttm-with-issues/kttm-blank-lines.json\\"]}',
-    '{\\"type\\":\\"json\\"}'
+    '{"type":"http","uris":["https://static.imply.io/example-data/kttm-with-issues/kttm-blank-lines.json"]}',
+    '{"type":"json"}'
   )
-) EXTEND (\\"timestamp\\" VARCHAR, \\"agent_type\\" VARCHAR)
+) EXTEND ("timestamp" VARCHAR, "agent_type" VARCHAR)
 PARTITIONED BY DAY",
-            "sqlQueryContext": Object {
+            "sqlQueryContext": {
+              "__resultFormat": "array",
               "executionMode": "async",
               "finalizeAggregations": false,
               "groupByEnableMultiValueUnnesting": false,
               "maxNumTasks": 2,
               "maxParseExceptions": 2,
-              "queryId": "af8a263d-213f-418e-ad8d-37d55beff59b",
-              "sqlInsertSegmentGranularity": "\\"DAY\\"",
-              "sqlQueryId": "af8a263d-213f-418e-ad8d-37d55beff59b",
+              "queryId": "26d490c6-c06d-4cd2-938f-bc5f7f982754",
+              "sqlInsertSegmentGranularity": ""DAY"",
+              "sqlQueryId": "26d490c6-c06d-4cd2-938f-bc5f7f982754",
               "sqlReplaceTimeChunks": "all",
+              "waitUntilSegmentsLoad": true,
             },
-            "sqlResultsContext": Object {
-              "serializeComplexValues": true,
+            "sqlResultsContext": {
               "stringifyArrays": true,
               "timeZone": "UTC",
             },
-            "sqlTypeNames": Array [
+            "sqlTypeNames": [
               "TIMESTAMP",
               "VARCHAR",
             ],
             "type": "query_controller",
           },
-          "task": "query-af8a263d-213f-418e-ad8d-37d55beff59b",
+          "task": "query-26d490c6-c06d-4cd2-938f-bc5f7f982754",
         },
         "capacityInfo": undefined,
-        "destination": Object {
+        "destination": {
           "dataSource": "kttm-blank-lines",
-          "replaceTimeChunks": Array [
+          "replaceTimeChunks": [
             "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z",
           ],
           "segmentGranularity": "DAY",
           "type": "dataSource",
         },
         "destinationPages": undefined,
-        "duration": 14545,
+        "duration": 4483,
         "engine": "sql-msq-task",
-        "error": Object {
-          "error": Object {
+        "error": {
+          "error": {
             "errorCode": "TooManyWarnings",
             "errorMessage": "Too many warnings of type CannotParseExternalData generated (max = 2)",
             "maxWarnings": 2,
             "rootErrorCode": "CannotParseExternalData",
           },
           "host": "localhost",
-          "taskId": "query-af8a263d-213f-418e-ad8d-37d55beff59b-worker0_0",
+          "taskId": "query-26d490c6-c06d-4cd2-938f-bc5f7f982754-worker0_0",
         },
-        "id": "query-af8a263d-213f-418e-ad8d-37d55beff59b",
-        "nativeQuery": Object {
-          "columns": Array [
+        "id": "query-26d490c6-c06d-4cd2-938f-bc5f7f982754",
+        "nativeQuery": {
+          "columns": [
             "agent_type",
             "v0",
           ],
-          "context": Object {
+          "context": {
+            "__resultFormat": "array",
             "__user": "allowAll",
             "executionMode": "async",
             "finalize": false,
@@ -1516,111 +1591,114 @@ PARTITIONED BY DAY",
             "groupByEnableMultiValueUnnesting": false,
             "maxNumTasks": 2,
             "maxParseExceptions": 2,
-            "queryId": "af8a263d-213f-418e-ad8d-37d55beff59b",
-            "scanSignature": "[{\\"name\\":\\"agent_type\\",\\"type\\":\\"STRING\\"},{\\"name\\":\\"v0\\",\\"type\\":\\"LONG\\"}]",
-            "sqlInsertSegmentGranularity": "\\"DAY\\"",
-            "sqlQueryId": "af8a263d-213f-418e-ad8d-37d55beff59b",
+            "queryId": "26d490c6-c06d-4cd2-938f-bc5f7f982754",
+            "scanSignature": "[{"name":"agent_type","type":"STRING"},{"name":"v0","type":"LONG"}]",
+            "sqlInsertSegmentGranularity": ""DAY"",
+            "sqlQueryId": "26d490c6-c06d-4cd2-938f-bc5f7f982754",
             "sqlReplaceTimeChunks": "all",
+            "waitUntilSegmentsLoad": true,
           },
-          "dataSource": Object {
-            "inputFormat": Object {
+          "dataSource": {
+            "inputFormat": {
               "assumeNewlineDelimited": false,
               "keepNullColumns": false,
               "type": "json",
               "useJsonNodeReader": false,
             },
-            "inputSource": Object {
+            "inputSource": {
               "type": "http",
-              "uris": Array [
+              "uris": [
                 "https://static.imply.io/example-data/kttm-with-issues/kttm-blank-lines.json",
               ],
             },
-            "signature": Array [
-              Object {
+            "signature": [
+              {
                 "name": "timestamp",
                 "type": "STRING",
               },
-              Object {
+              {
                 "name": "agent_type",
                 "type": "STRING",
               },
             ],
             "type": "external",
           },
-          "granularity": Object {
+          "granularity": {
             "type": "all",
           },
-          "intervals": Object {
-            "intervals": Array [
+          "intervals": {
+            "intervals": [
               "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z",
             ],
             "type": "intervals",
           },
-          "legacy": false,
           "queryType": "scan",
           "resultFormat": "compactedList",
-          "virtualColumns": Array [
-            Object {
-              "expression": "timestamp_parse(\\"timestamp\\",null,'UTC')",
+          "virtualColumns": [
+            {
+              "expression": "timestamp_parse("timestamp",null,'UTC')",
               "name": "v0",
               "outputType": "LONG",
               "type": "expression",
             },
           ],
         },
-        "queryContext": Object {
+        "queryContext": {
+          "__resultFormat": "array",
           "executionMode": "async",
           "finalizeAggregations": false,
           "groupByEnableMultiValueUnnesting": false,
           "maxNumTasks": 2,
           "maxParseExceptions": 2,
+          "waitUntilSegmentsLoad": true,
         },
         "result": undefined,
-        "sqlQuery": "REPLACE INTO \\"kttm-blank-lines\\" OVERWRITE ALL
+        "segmentStatus": undefined,
+        "sqlQuery": "REPLACE INTO "kttm-blank-lines" OVERWRITE ALL
 SELECT
-  TIME_PARSE(\\"timestamp\\") AS \\"__time\\",
-  \\"agent_type\\"
+  TIME_PARSE("timestamp") AS "__time",
+  "agent_type"
 FROM TABLE(
   EXTERN(
-    '{\\"type\\":\\"http\\",\\"uris\\":[\\"https://static.imply.io/example-data/kttm-with-issues/kttm-blank-lines.json\\"]}',
-    '{\\"type\\":\\"json\\"}'
+    '{"type":"http","uris":["https://static.imply.io/example-data/kttm-with-issues/kttm-blank-lines.json"]}',
+    '{"type":"json"}'
   )
-) EXTEND (\\"timestamp\\" VARCHAR, \\"agent_type\\" VARCHAR)
+) EXTEND ("timestamp" VARCHAR, "agent_type" VARCHAR)
 PARTITIONED BY DAY",
         "stages": Stages {
-          "counters": Object {
-            "0": Object {
-              "0": Object {
-                "input0": Object {
-                  "bytes": Array [
+          "counters": {
+            "0": {
+              "0": {
+                "input0": {
+                  "bytes": [
                     7658,
                   ],
-                  "files": Array [
+                  "files": [
                     1,
                   ],
-                  "rows": Array [
+                  "rows": [
                     10,
                   ],
-                  "totalFiles": Array [
+                  "totalFiles": [
                     1,
                   ],
                   "type": "channel",
                 },
-                "output": Object {
-                  "bytes": Array [
+                "output": {
+                  "bytes": [
                     712,
                   ],
-                  "frames": Array [
+                  "frames": [
                     1,
                   ],
-                  "rows": Array [
+                  "rows": [
                     10,
                   ],
                   "type": "channel",
                 },
-                "sortProgress": Object {
-                  "levelToMergedBatches": Object {},
-                  "levelToTotalBatches": Object {
+                "sortProgress": {
+                  "levelToMergedBatches": {},
+                  "levelToTotalBatches": {
                     "0": 1,
                     "1": 1,
                     "2": -1,
@@ -1630,37 +1708,37 @@ PARTITIONED BY DAY",
                   "totalMergingLevels": 3,
                   "type": "sortProgress",
                 },
-                "warnings": Object {
+                "warnings": {
                   "CannotParseExternalData": 3,
                   "type": "warnings",
                 },
               },
             },
           },
-          "stages": Array [
-            Object {
-              "definition": Object {
-                "id": "f635e36d-6b90-4b74-ad5e-a179c99f0ddc_0",
-                "input": Array [
-                  Object {
-                    "inputFormat": Object {
+          "stages": [
+            {
+              "definition": {
+                "id": "2c45d26d-8a63-45a7-ae8d-2a2a4d6309b7_0",
+                "input": [
+                  {
+                    "inputFormat": {
                       "assumeNewlineDelimited": false,
                       "keepNullColumns": false,
                       "type": "json",
                       "useJsonNodeReader": false,
                     },
-                    "inputSource": Object {
+                    "inputSource": {
                       "type": "http",
-                      "uris": Array [
+                      "uris": [
                         "https://static.imply.io/example-data/kttm-with-issues/kttm-blank-lines.json",
                       ],
                     },
-                    "signature": Array [
-                      Object {
+                    "signature": [
+                      {
                         "name": "timestamp",
                         "type": "STRING",
                       },
-                      Object {
+                      {
                         "name": "agent_type",
                         "type": "STRING",
                       },
@@ -1669,13 +1747,14 @@ PARTITIONED BY DAY",
                   },
                 ],
                 "maxWorkerCount": 1,
-                "processor": Object {
-                  "query": Object {
-                    "columns": Array [
+                "processor": {
+                  "query": {
+                    "columns": [
                       "agent_type",
                       "v0",
                     ],
-                    "context": Object {
+                    "context": {
+                      "__resultFormat": "array",
                       "__timeColumn": "v0",
                       "__user": "allowAll",
                       "executionMode": "async",
@@ -1684,52 +1763,52 @@ PARTITIONED BY DAY",
                       "groupByEnableMultiValueUnnesting": false,
                       "maxNumTasks": 2,
                       "maxParseExceptions": 2,
-                      "queryId": "af8a263d-213f-418e-ad8d-37d55beff59b",
-                      "scanSignature": "[{\\"name\\":\\"agent_type\\",\\"type\\":\\"STRING\\"},{\\"name\\":\\"v0\\",\\"type\\":\\"LONG\\"}]",
-                      "sqlInsertSegmentGranularity": "\\"DAY\\"",
-                      "sqlQueryId": "af8a263d-213f-418e-ad8d-37d55beff59b",
+                      "queryId": "26d490c6-c06d-4cd2-938f-bc5f7f982754",
+                      "scanSignature": "[{"name":"agent_type","type":"STRING"},{"name":"v0","type":"LONG"}]",
+                      "sqlInsertSegmentGranularity": ""DAY"",
+                      "sqlQueryId": "26d490c6-c06d-4cd2-938f-bc5f7f982754",
                       "sqlReplaceTimeChunks": "all",
+                      "waitUntilSegmentsLoad": true,
                     },
-                    "dataSource": Object {
-                      "inputFormat": Object {
+                    "dataSource": {
+                      "inputFormat": {
                         "assumeNewlineDelimited": false,
                         "keepNullColumns": false,
                         "type": "json",
                         "useJsonNodeReader": false,
                       },
-                      "inputSource": Object {
+                      "inputSource": {
                         "type": "http",
-                        "uris": Array [
+                        "uris": [
                           "https://static.imply.io/example-data/kttm-with-issues/kttm-blank-lines.json",
                         ],
                       },
-                      "signature": Array [
-                        Object {
+                      "signature": [
+                        {
                           "name": "timestamp",
                           "type": "STRING",
                         },
-                        Object {
+                        {
                           "name": "agent_type",
                           "type": "STRING",
                         },
                       ],
                       "type": "external",
                     },
-                    "granularity": Object {
+                    "granularity": {
                       "type": "all",
                     },
-                    "intervals": Object {
-                      "intervals": Array [
+                    "intervals": {
+                      "intervals": [
                         "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z",
                       ],
                       "type": "intervals",
                     },
-                    "legacy": false,
                     "queryType": "scan",
                     "resultFormat": "compactedList",
-                    "virtualColumns": Array [
-                      Object {
-                        "expression": "timestamp_parse(\\"timestamp\\",null,'UTC')",
+                    "virtualColumns": [
+                      {
+                        "expression": "timestamp_parse("timestamp",null,'UTC')",
                         "name": "v0",
                         "outputType": "LONG",
                         "type": "expression",
@@ -1739,15 +1818,15 @@ PARTITIONED BY DAY",
                   "type": "scan",
                 },
                 "shuffleCheckHasMultipleValues": true,
-                "shuffleSpec": Object {
-                  "clusterBy": Object {
+                "shuffleSpec": {
+                  "clusterBy": {
                     "bucketByCount": 1,
-                    "columns": Array [
-                      Object {
+                    "columns": [
+                      {
                         "columnName": "__bucket",
                         "order": "ASCENDING",
                       },
-                      Object {
+                      {
                         "columnName": "__boost",
                         "order": "ASCENDING",
                       },
@@ -1756,61 +1835,61 @@ PARTITIONED BY DAY",
                   "targetSize": 3000000,
                   "type": "targetSize",
                 },
-                "signature": Array [
-                  Object {
+                "signature": [
+                  {
                     "name": "__bucket",
                     "type": "LONG",
                   },
-                  Object {
+                  {
                     "name": "__boost",
                     "type": "LONG",
                   },
-                  Object {
+                  {
                     "name": "agent_type",
                     "type": "STRING",
                   },
-                  Object {
+                  {
                     "name": "v0",
                     "type": "LONG",
                   },
                 ],
               },
-              "duration": 14193,
+              "duration": 4259,
               "phase": "FAILED",
               "sort": true,
               "stageNumber": 0,
-              "startTime": "2023-08-01T04:20:25.296Z",
+              "startTime": "2024-01-23T19:56:44.857Z",
               "workerCount": 1,
             },
-            Object {
-              "definition": Object {
-                "id": "f635e36d-6b90-4b74-ad5e-a179c99f0ddc_1",
-                "input": Array [
-                  Object {
+            {
+              "definition": {
+                "id": "2c45d26d-8a63-45a7-ae8d-2a2a4d6309b7_1",
+                "input": [
+                  {
                     "stage": 0,
                     "type": "stage",
                   },
                 ],
                 "maxWorkerCount": 1,
-                "processor": Object {
-                  "columnMappings": Array [
-                    Object {
+                "processor": {
+                  "columnMappings": [
+                    {
                       "outputColumn": "__time",
                       "queryColumn": "v0",
                     },
-                    Object {
+                    {
                       "outputColumn": "agent_type",
                       "queryColumn": "agent_type",
                     },
                   ],
-                  "dataSchema": Object {
+                  "dataSchema": {
                     "dataSource": "kttm-blank-lines",
-                    "dimensionsSpec": Object {
-                      "dimensionExclusions": Array [
+                    "dimensionsSpec": {
+                      "dimensionExclusions": [
                         "__time",
                       ],
-                      "dimensions": Array [
-                        Object {
+                      "dimensions": [
+                        {
                           "createBitmapIndex": true,
                           "multiValueHandling": "SORTED_ARRAY",
                           "name": "agent_type",
@@ -1820,138 +1899,140 @@ PARTITIONED BY DAY",
                       "includeAllDimensions": false,
                       "useSchemaDiscovery": false,
                     },
-                    "granularitySpec": Object {
-                      "intervals": Array [
+                    "granularitySpec": {
+                      "intervals": [
                         "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z",
                       ],
-                      "queryGranularity": Object {
+                      "queryGranularity": {
                         "type": "none",
                       },
                       "rollup": false,
                       "type": "arbitrary",
                     },
-                    "metricsSpec": Array [],
-                    "timestampSpec": Object {
+                    "metricsSpec": [],
+                    "timestampSpec": {
                       "column": "__time",
                       "format": "millis",
                       "missingValue": null,
                     },
-                    "transformSpec": Object {
+                    "transformSpec": {
                       "filter": null,
-                      "transforms": Array [],
+                      "transforms": [],
                     },
                   },
-                  "tuningConfig": Object {
+                  "tuningConfig": {
                     "maxNumWorkers": 1,
                     "maxRowsInMemory": 100000,
                     "rowsPerSegment": 3000000,
                   },
                   "type": "segmentGenerator",
                 },
-                "signature": Array [],
+                "signature": [],
               },
               "stageNumber": 1,
             },
           ],
         },
-        "startTime": 2023-08-01T04:20:24.945Z,
+        "startTime": 2024-01-23T19:56:44.633Z,
         "status": "FAILED",
-        "usageInfo": Object {
+        "usageInfo": {
           "pendingTasks": 0,
-          "runningTasks": 2,
+          "runningTasks": 1,
         },
-        "warnings": Array [
-          Object {
-            "error": Object {
+        "warnings": [
+          {
+            "error": {
               "errorCode": "CannotParseExternalData",
               "errorMessage": "Unable to parse row [] (Path: https://static.imply.io/example-data/kttm-with-issues/kttm-blank-lines.json, Record: 3, Line: 3)",
             },
             "exceptionStackTrace": "org.apache.druid.java.util.common.parsers.ParseException: Unable to parse row [] (Path: https://static.imply.io/example-data/kttm-with-issues/kttm-blank-lines.json, Record: 3, Line: 3)
 	at org.apache.druid.data.input.IntermediateRowParsingReader$1.hasNext(IntermediateRowParsingReader.java:79)
-	at org.apache.druid.java.util.common.parsers.CloseableIterator$2.findNextIteratorIfNecessary(CloseableIterator.java:74)
-	at org.apache.druid.java.util.common.parsers.CloseableIterator$2.next(CloseableIterator.java:108)
-	at org.apache.druid.java.util.common.parsers.CloseableIterator$1.next(CloseableIterator.java:52)
+	at org.apache.druid.java.util.common.parsers.CloseableIterator$1.hasNext(CloseableIterator.java:42)
+	at org.apache.druid.java.util.common.parsers.CloseableIterator$2.findNextIteratorIfNecessary(CloseableIterator.java:72)
+	at org.apache.druid.java.util.common.parsers.CloseableIterator$2.hasNext(CloseableIterator.java:93)
+	at org.apache.druid.java.util.common.parsers.CloseableIterator$1.hasNext(CloseableIterator.java:42)
 	at org.apache.druid.msq.input.external.ExternalSegment$1$1.hasNext(ExternalSegment.java:95)
 	at org.apache.druid.java.util.common.guava.BaseSequence$1.next(BaseSequence.java:115)
-	at org.apache.druid.segment.RowWalker.advance(RowWalker.java:70)
+	at org.apache.druid.segment.RowWalker.advance(RowWalker.java:75)
 	at org.apache.druid.segment.RowBasedCursor.advanceUninterruptibly(RowBasedCursor.java:110)
 	at org.apache.druid.segment.RowBasedCursor.advance(RowBasedCursor.java:103)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeeded(ScanQueryFrameProcessor.java:275)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeededWithExceptionHandling(ScanQueryFrameProcessor.java:242)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runWithSegment(ScanQueryFrameProcessor.java:181)
-	at org.apache.druid.msq.querykit.BaseLeafFrameProcessor.runIncrementally(BaseLeafFrameProcessor.java:159)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runIncrementally(ScanQueryFrameProcessor.java:146)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeeded(ScanQueryFrameProcessor.java:362)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeededWithExceptionHandling(ScanQueryFrameProcessor.java:329)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runWithSegment(ScanQueryFrameProcessor.java:268)
+	at org.apache.druid.msq.querykit.BaseLeafFrameProcessor.runIncrementally(BaseLeafFrameProcessor.java:89)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runIncrementally(ScanQueryFrameProcessor.java:158)
 	at org.apache.druid.frame.processor.FrameProcessors$1FrameProcessorWithBaggage.runIncrementally(FrameProcessors.java:75)
-	at org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.runProcessorNow(FrameProcessorExecutor.java:229)
-	at org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.run(FrameProcessorExecutor.java:137)
-	at org.apache.druid.msq.exec.WorkerImpl$1$2.run(WorkerImpl.java:837)
-	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:515)
+	at org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.runProcessorNow(FrameProcessorExecutor.java:230)
+	at org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.run(FrameProcessorExecutor.java:138)
+	at org.apache.druid.msq.exec.WorkerImpl$1$2.run(WorkerImpl.java:840)
+	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:539)
 	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
-	at org.apache.druid.query.PrioritizedListenableFutureTask.run(PrioritizedExecutorService.java:251)
-	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1128)
-	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:628)
-	at java.base/java.lang.Thread.run(Thread.java:829)
+	at org.apache.druid.query.PrioritizedListenableFutureTask.run(PrioritizedExecutorService.java:259)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+	at java.base/java.lang.Thread.run(Thread.java:840)
 Caused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No content to map due to end-of-input
- at [Source: (String)\\"\\"; line: 1, column: 0]
+ at [Source: (String)""; line: 1, column: 0]
 	at com.fasterxml.jackson.databind.exc.MismatchedInputException.from(MismatchedInputException.java:59)
-	at com.fasterxml.jackson.databind.ObjectMapper._initForReading(ObjectMapper.java:4360)
-	at com.fasterxml.jackson.databind.ObjectMapper._readMapAndClose(ObjectMapper.java:4205)
-	at com.fasterxml.jackson.databind.ObjectMapper.readValue(ObjectMapper.java:3214)
-	at com.fasterxml.jackson.databind.ObjectMapper.readValue(ObjectMapper.java:3182)
+	at com.fasterxml.jackson.databind.ObjectMapper._initForReading(ObjectMapper.java:4688)
+	at com.fasterxml.jackson.databind.ObjectMapper._readMapAndClose(ObjectMapper.java:4586)
+	at com.fasterxml.jackson.databind.ObjectMapper.readValue(ObjectMapper.java:3548)
+	at com.fasterxml.jackson.databind.ObjectMapper.readValue(ObjectMapper.java:3516)
 	at org.apache.druid.data.input.impl.JsonLineReader.parseInputRows(JsonLineReader.java:75)
 	at org.apache.druid.data.input.impl.JsonLineReader.parseInputRows(JsonLineReader.java:48)
 	at org.apache.druid.data.input.IntermediateRowParsingReader$1.hasNext(IntermediateRowParsingReader.java:71)
-	... 23 more
+	... 24 more
 ",
             "host": "localhost:8101",
             "stageNumber": 0,
-            "taskId": "query-af8a263d-213f-418e-ad8d-37d55beff59b-worker0_0",
+            "taskId": "query-26d490c6-c06d-4cd2-938f-bc5f7f982754-worker0_0",
           },
-          Object {
-            "error": Object {
+          {
+            "error": {
               "errorCode": "CannotParseExternalData",
               "errorMessage": "Unable to parse row [] (Path: https://static.imply.io/example-data/kttm-with-issues/kttm-blank-lines.json, Record: 6, Line: 7)",
             },
             "exceptionStackTrace": "org.apache.druid.java.util.common.parsers.ParseException: Unable to parse row [] (Path: https://static.imply.io/example-data/kttm-with-issues/kttm-blank-lines.json, Record: 6, Line: 7)
 	at org.apache.druid.data.input.IntermediateRowParsingReader$1.hasNext(IntermediateRowParsingReader.java:79)
-	at org.apache.druid.java.util.common.parsers.CloseableIterator$2.findNextIteratorIfNecessary(CloseableIterator.java:74)
-	at org.apache.druid.java.util.common.parsers.CloseableIterator$2.next(CloseableIterator.java:108)
-	at org.apache.druid.java.util.common.parsers.CloseableIterator$1.next(CloseableIterator.java:52)
+	at org.apache.druid.java.util.common.parsers.CloseableIterator$1.hasNext(CloseableIterator.java:42)
+	at org.apache.druid.java.util.common.parsers.CloseableIterator$2.findNextIteratorIfNecessary(CloseableIterator.java:72)
+	at org.apache.druid.java.util.common.parsers.CloseableIterator$2.hasNext(CloseableIterator.java:93)
+	at org.apache.druid.java.util.common.parsers.CloseableIterator$1.hasNext(CloseableIterator.java:42)
 	at org.apache.druid.msq.input.external.ExternalSegment$1$1.hasNext(ExternalSegment.java:95)
 	at org.apache.druid.java.util.common.guava.BaseSequence$1.next(BaseSequence.java:115)
-	at org.apache.druid.segment.RowWalker.advance(RowWalker.java:70)
+	at org.apache.druid.segment.RowWalker.advance(RowWalker.java:75)
 	at org.apache.druid.segment.RowBasedCursor.advanceUninterruptibly(RowBasedCursor.java:110)
 	at org.apache.druid.segment.RowBasedCursor.advance(RowBasedCursor.java:103)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeeded(ScanQueryFrameProcessor.java:275)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeededWithExceptionHandling(ScanQueryFrameProcessor.java:242)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runWithSegment(ScanQueryFrameProcessor.java:181)
-	at org.apache.druid.msq.querykit.BaseLeafFrameProcessor.runIncrementally(BaseLeafFrameProcessor.java:159)
-	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runIncrementally(ScanQueryFrameProcessor.java:146)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeeded(ScanQueryFrameProcessor.java:362)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.populateFrameWriterAndFlushIfNeededWithExceptionHandling(ScanQueryFrameProcessor.java:329)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runWithSegment(ScanQueryFrameProcessor.java:268)
+	at org.apache.druid.msq.querykit.BaseLeafFrameProcessor.runIncrementally(BaseLeafFrameProcessor.java:89)
+	at org.apache.druid.msq.querykit.scan.ScanQueryFrameProcessor.runIncrementally(ScanQueryFrameProcessor.java:158)
 	at org.apache.druid.frame.processor.FrameProcessors$1FrameProcessorWithBaggage.runIncrementally(FrameProcessors.java:75)
-	at org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.runProcessorNow(FrameProcessorExecutor.java:229)
-	at org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.run(FrameProcessorExecutor.java:137)
-	at org.apache.druid.msq.exec.WorkerImpl$1$2.run(WorkerImpl.java:837)
-	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:515)
+	at org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.runProcessorNow(FrameProcessorExecutor.java:230)
+	at org.apache.druid.frame.processor.FrameProcessorExecutor$1ExecutorRunnable.run(FrameProcessorExecutor.java:138)
+	at org.apache.druid.msq.exec.WorkerImpl$1$2.run(WorkerImpl.java:840)
+	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:539)
 	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
-	at org.apache.druid.query.PrioritizedListenableFutureTask.run(PrioritizedExecutorService.java:251)
-	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1128)
-	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:628)
-	at java.base/java.lang.Thread.run(Thread.java:829)
+	at org.apache.druid.query.PrioritizedListenableFutureTask.run(PrioritizedExecutorService.java:259)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+	at java.base/java.lang.Thread.run(Thread.java:840)
 Caused by: com.fasterxml.jackson.databind.exc.MismatchedInputException: No content to map due to end-of-input
- at [Source: (String)\\"\\"; line: 1, column: 0]
+ at [Source: (String)""; line: 1, column: 0]
 	at com.fasterxml.jackson.databind.exc.MismatchedInputException.from(MismatchedInputException.java:59)
-	at com.fasterxml.jackson.databind.ObjectMapper._initForReading(ObjectMapper.java:4360)
-	at com.fasterxml.jackson.databind.ObjectMapper._readMapAndClose(ObjectMapper.java:4205)
-	at com.fasterxml.jackson.databind.ObjectMapper.readValue(ObjectMapper.java:3214)
-	at com.fasterxml.jackson.databind.ObjectMapper.readValue(ObjectMapper.java:3182)
+	at com.fasterxml.jackson.databind.ObjectMapper._initForReading(ObjectMapper.java:4688)
+	at com.fasterxml.jackson.databind.ObjectMapper._readMapAndClose(ObjectMapper.java:4586)
+	at com.fasterxml.jackson.databind.ObjectMapper.readValue(ObjectMapper.java:3548)
+	at com.fasterxml.jackson.databind.ObjectMapper.readValue(ObjectMapper.java:3516)
 	at org.apache.druid.data.input.impl.JsonLineReader.parseInputRows(JsonLineReader.java:75)
 	at org.apache.druid.data.input.impl.JsonLineReader.parseInputRows(JsonLineReader.java:48)
 	at org.apache.druid.data.input.IntermediateRowParsingReader$1.hasNext(IntermediateRowParsingReader.java:71)
-	... 23 more
+	... 24 more
 ",
             "host": "localhost:8101",
             "stageNumber": 0,
-            "taskId": "query-af8a263d-213f-418e-ad8d-37d55beff59b-worker0_0",
+            "taskId": "query-26d490c6-c06d-4cd2-938f-bc5f7f982754-worker0_0",
           },
         ],
       }

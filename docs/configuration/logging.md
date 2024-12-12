@@ -108,12 +108,14 @@ The following example log4j2.xml is based upon the micro quickstart:
 Peons always output logs to standard output. Middle Managers redirect task logs from standard output to
 [long-term storage](index.md#log-long-term-storage).
 
-> NOTE:
-> Druid shares the log4j configuration file among all services, including task peon processes.
-> However, you must define a console appender in the logger for your peon processes.
-> If you don't define a console appender, Druid creates and configures a new console appender
-> that retains the log level, such as `info` or `warn`, but does not retain any other appender
-> configuration, including non-console ones.
+:::info
+ NOTE:
+ Druid shares the log4j configuration file among all services, including task peon processes.
+ However, you must define a console appender in the logger for your peon processes.
+ If you don't define a console appender, Druid creates and configures a new console appender
+ that retains the log level, such as `info` or `warn`, but does not retain any other appender
+ configuration, including non-console ones.
+:::
 
 ## Log directory
 The included log4j2.xml configuration for Druid and ZooKeeper writes logs to the `log` directory at the root of the distribution.

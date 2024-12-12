@@ -1,6 +1,7 @@
 ---
 id: middlemanager
-title: "MiddleManager Process"
+title: "Middle Manager service"
+sidebar_label: "Middle Manager"
 ---
 
 <!--
@@ -22,23 +23,20 @@ title: "MiddleManager Process"
   ~ under the License.
   -->
 
+The Middle Manager service is a worker service that executes submitted tasks. Middle Managers forward tasks to [Peons](../design/peons.md) that run in separate JVMs.
+Druid uses separate JVMs for tasks to isolate resources and logs. Each Peon is capable of running only one task at a time, whereas a Middle Manager may have multiple Peons.
 
-### Configuration
+## Configuration
 
-For Apache Druid MiddleManager Process Configuration, see [Indexing Service Configuration](../configuration/index.md#middlemanager-and-peons).
+For Apache Druid Middle Manager service configuration, see [Middle Manager and Peons](../configuration/index.md#middle-manager-and-peon).
 
-For basic tuning guidance for the MiddleManager process, see [Basic cluster tuning](../operations/basic-cluster-tuning.md#middlemanager).
+For basic tuning guidance for the Middle Manager service, see [Basic cluster tuning](../operations/basic-cluster-tuning.md#middle-manager).
 
-### HTTP endpoints
+## HTTP endpoints
 
-For a list of API endpoints supported by the MiddleManager, please see the [Service status API reference](../api-reference/service-status-api.md#middlemanager).
+For a list of API endpoints supported by the Middle Manager, see the [Service status API reference](../api-reference/service-status-api.md#middle-manager).
 
-### Overview
-
-The MiddleManager process is a worker process that executes submitted tasks. Middle Managers forward tasks to Peons that run in separate JVMs.
-The reason we have separate JVMs for tasks is for resource and log isolation. Each [Peon](../design/peons.md) is capable of running only one task at a time, however, a MiddleManager may have multiple Peons.
-
-### Running
+## Running
 
 ```
 org.apache.druid.cli.Main server middleManager

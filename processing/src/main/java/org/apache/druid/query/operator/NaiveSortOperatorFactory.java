@@ -22,38 +22,21 @@ package org.apache.druid.query.operator;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import java.util.ArrayList;
+import java.util.List;
 
-public class NaiveSortOperatorFactory implements OperatorFactory
+public class NaiveSortOperatorFactory extends AbstractSortOperatorFactory
 {
-  private final ArrayList<ColumnWithDirection> sortColumns;
-
   @JsonCreator
   public NaiveSortOperatorFactory(
-      @JsonProperty("columns") ArrayList<ColumnWithDirection> sortColumns
+      @JsonProperty("columns") List<ColumnWithDirection> sortColumns
   )
   {
-    this.sortColumns = sortColumns;
-  }
-
-  @JsonProperty("columns")
-  public ArrayList<ColumnWithDirection> getSortColumns()
-  {
-    return sortColumns;
+    super(sortColumns);
   }
 
   @Override
   public Operator wrap(Operator op)
   {
     return new NaiveSortOperator(op, sortColumns);
-  }
-
-  @Override
-  public boolean validateEquivalent(OperatorFactory other)
-  {
-    if (other instanceof NaiveSortOperatorFactory) {
-      return sortColumns.equals(((NaiveSortOperatorFactory) other).getSortColumns());
-    }
-    return false;
   }
 }

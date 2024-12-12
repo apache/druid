@@ -24,6 +24,7 @@ import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.ExpressionValidationException;
 import org.apache.druid.math.expr.InputBindings;
+import org.apache.druid.math.expr.Parser;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -41,7 +42,7 @@ public class IPv4AddressMatchExprMacroTest extends MacroTestBase
   private static final Expr IPV6_MAPPED = ExprEval.of("::ffff:192.168.0.1").toExpr();
   private static final Expr SUBNET_192_168 = ExprEval.of("192.168.0.0/16").toExpr();
   private static final Expr SUBNET_10 = ExprEval.of("10.0.0.0/8").toExpr();
-  private static final Expr NOT_LITERAL = new NotLiteralExpr(null);
+  private static final Expr NOT_LITERAL = Parser.parse("\"notliteral\"", ExprMacroTable.nil());
 
   public IPv4AddressMatchExprMacroTest()
   {
@@ -209,27 +210,5 @@ public class IPv4AddressMatchExprMacroTest extends MacroTestBase
     Expr expr = apply(Arrays.asList(args));
     ExprEval eval = expr.eval(InputBindings.nilBindings());
     return eval.asBoolean();
-  }
-
-  /* Helper for tests */
-  @SuppressWarnings({"ReturnOfNull", "NullableProblems"})  // suppressed since this is a test helper class
-  private static class NotLiteralExpr extends ExprMacroTable.BaseScalarUnivariateMacroFunctionExpr
-  {
-    NotLiteralExpr(Expr arg)
-    {
-      super("not", arg);
-    }
-
-    @Override
-    public ExprEval eval(ObjectBinding bindings)
-    {
-      return null;
-    }
-
-    @Override
-    public Expr visit(Shuttle shuttle)
-    {
-      return null;
-    }
   }
 }

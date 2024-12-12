@@ -20,17 +20,13 @@
 package org.apache.druid.query;
 
 import com.google.common.util.concurrent.ListeningExecutorService;
-import org.apache.druid.java.util.emitter.core.Emitter;
-import org.apache.druid.java.util.emitter.core.Event;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
 
-import java.util.ArrayList;
-import java.util.List;
-
+@SuppressWarnings("DoNotMock")
 public class MetricsEmittingQueryProcessingPoolTest
 {
   @Test
@@ -38,23 +34,16 @@ public class MetricsEmittingQueryProcessingPoolTest
   {
     PrioritizedExecutorService service = Mockito.mock(PrioritizedExecutorService.class);
     Mockito.when(service.getQueueSize()).thenReturn(10);
+    Mockito.when(service.getActiveTasks()).thenReturn(2);
     ExecutorServiceMonitor monitor = new ExecutorServiceMonitor();
-    List<Event> events = new ArrayList<>();
     MetricsEmittingQueryProcessingPool processingPool = new MetricsEmittingQueryProcessingPool(service, monitor);
     Assert.assertSame(service, processingPool.delegate());
 
-    ServiceEmitter serviceEmitter = new ServiceEmitter("service", "host", Mockito.mock(Emitter.class))
-    {
-      @Override
-      public void emit(Event event)
-      {
-        events.add(event);
-      }
-    };
+    final StubServiceEmitter serviceEmitter = new StubServiceEmitter("service", "host");
     monitor.doMonitor(serviceEmitter);
-    Assert.assertEquals(1, events.size());
-    Assert.assertEquals(((ServiceMetricEvent) (events.get(0))).getMetric(), "segment/scan/pending");
-    Assert.assertEquals(((ServiceMetricEvent) (events.get(0))).getValue(), 10);
+
+    serviceEmitter.verifyValue("segment/scan/pending", 10);
+    serviceEmitter.verifyValue("segment/scan/active", 2);
   }
 
   @Test

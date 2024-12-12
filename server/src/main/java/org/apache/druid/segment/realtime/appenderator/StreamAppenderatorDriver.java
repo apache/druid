@@ -27,6 +27,7 @@ import com.google.common.util.concurrent.AsyncFunction;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
 import org.apache.druid.data.input.Committer;
 import org.apache.druid.data.input.InputRow;
@@ -39,19 +40,23 @@ import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifier;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
 import org.apache.druid.segment.loading.DataSegmentKiller;
-import org.apache.druid.segment.realtime.FireDepartmentMetrics;
+import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
 import org.apache.druid.segment.realtime.appenderator.SegmentWithState.SegmentState;
 import org.apache.druid.timeline.DataSegment;
+import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NavigableMap;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
@@ -77,7 +82,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
   private static final long HANDOFF_TIME_THRESHOLD = 600_000;
 
   private final SegmentHandoffNotifier handoffNotifier;
-  private final FireDepartmentMetrics metrics;
+  private final SegmentGenerationMetrics metrics;
   private final ObjectMapper objectMapper;
 
   /**
@@ -86,7 +91,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
    * @param appenderator           appenderator
    * @param segmentAllocator       segment allocator
    * @param handoffNotifierFactory handoff notifier factory
-   * @param usedSegmentChecker     used segment checker
+   * @param segmentRetriever     used segment checker
    * @param objectMapper           object mapper, used for serde of commit metadata
    * @param metrics                Firedepartment metrics
    */
@@ -94,16 +99,16 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
       Appenderator appenderator,
       SegmentAllocator segmentAllocator,
       SegmentHandoffNotifierFactory handoffNotifierFactory,
-      UsedSegmentChecker usedSegmentChecker,
+      PublishedSegmentRetriever segmentRetriever,
       DataSegmentKiller dataSegmentKiller,
       ObjectMapper objectMapper,
-      FireDepartmentMetrics metrics
+      SegmentGenerationMetrics metrics
   )
   {
-    super(appenderator, segmentAllocator, usedSegmentChecker, dataSegmentKiller);
+    super(appenderator, segmentAllocator, segmentRetriever, dataSegmentKiller);
 
     this.handoffNotifier = Preconditions.checkNotNull(handoffNotifierFactory, "handoffNotifierFactory")
-                                        .createSegmentHandoffNotifier(appenderator.getDataSource());
+                                        .createSegmentHandoffNotifier(appenderator.getDataSource(), appenderator.getId());
     this.metrics = Preconditions.checkNotNull(metrics, "metrics");
     this.objectMapper = Preconditions.checkNotNull(objectMapper, "objectMapper");
   }
@@ -206,7 +211,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
 
       for (final SegmentIdWithShardSpec identifier : identifiers) {
         log.info("Moving segment[%s] out of active list.", identifier);
-        final long key = identifier.getInterval().getStartMillis();
+        final Interval key = identifier.getInterval();
         final SegmentsOfInterval segmentsOfInterval = activeSegmentsForSequence.get(key);
         if (segmentsOfInterval == null ||
             segmentsOfInterval.getAppendingSegment() == null ||
@@ -277,18 +282,18 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
   {
     final List<SegmentIdWithShardSpec> theSegments = getSegmentIdsWithShardSpecs(sequenceNames);
 
-    final ListenableFuture<SegmentsAndCommitMetadata> publishFuture = Futures.transform(
+    final ListenableFuture<SegmentsAndCommitMetadata> publishFuture = Futures.transformAsync(
         // useUniquePath=true prevents inconsistencies in segment data when task failures or replicas leads to a second
         // version of a segment with the same identifier containing different data; see DataSegmentPusher.push() docs
         pushInBackground(wrapCommitter(committer), theSegments, true),
         (AsyncFunction<SegmentsAndCommitMetadata, SegmentsAndCommitMetadata>) sam -> publishInBackground(
             null,
             null,
-            null,
             sam,
             publisher,
             java.util.function.Function.identity()
-        )
+        ),
+        MoreExecutors.directExecutor()
     );
     return Futures.transform(
         publishFuture,
@@ -297,7 +302,8 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
             sequenceNames.forEach(segments::remove);
           }
           return sam;
-        }
+        },
+        MoreExecutors.directExecutor()
     );
   }
 
@@ -318,17 +324,23 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
       return Futures.immediateFuture(null);
 
     } else {
-      final List<SegmentIdWithShardSpec> waitingSegmentIdList = segmentsAndCommitMetadata.getSegments().stream()
-                                                                                         .map(
-                                                                                       SegmentIdWithShardSpec::fromDataSegment)
-                                                                                         .collect(Collectors.toList());
+      final Set<DataSegment> segmentsToBeHandedOff = new HashSet<>(segmentsAndCommitMetadata.getSegments());
+      if (segmentsAndCommitMetadata.getUpgradedSegments() != null) {
+        segmentsToBeHandedOff.addAll(segmentsAndCommitMetadata.getUpgradedSegments());
+      }
+      final List<SegmentIdWithShardSpec> waitingSegmentIdList =
+          segmentsToBeHandedOff.stream()
+                               .map(SegmentIdWithShardSpec::fromDataSegment)
+                               .collect(Collectors.toList());
       final Object metadata = Preconditions.checkNotNull(segmentsAndCommitMetadata.getCommitMetadata(), "commitMetadata");
 
       if (waitingSegmentIdList.isEmpty()) {
         return Futures.immediateFuture(
             new SegmentsAndCommitMetadata(
                 segmentsAndCommitMetadata.getSegments(),
-                ((AppenderatorDriverMetadata) metadata).getCallerMetadata()
+                ((AppenderatorDriverMetadata) metadata).getCallerMetadata(),
+                segmentsAndCommitMetadata.getSegmentSchemaMapping(),
+                segmentsAndCommitMetadata.getUpgradedSegments()
             )
         );
       }
@@ -348,7 +360,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
             ),
             Execs.directExecutor(),
             () -> {
-              log.debug("Segment[%s] successfully handed off, dropping.", segmentIdentifier);
+              log.debug("Segment[%s] successfully handed off for task[%s], dropping.", segmentIdentifier, appenderator.getId());
               metrics.incrementHandOffCount();
 
               final ListenableFuture<?> dropFuture = appenderator.drop(segmentIdentifier);
@@ -360,8 +372,7 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
                     public void onSuccess(Object result)
                     {
                       if (numRemainingHandoffSegments.decrementAndGet() == 0) {
-                        List<DataSegment> segments = segmentsAndCommitMetadata.getSegments();
-                        log.info("Successfully handed off [%d] segments.", segments.size());
+                        log.info("Successfully handed off [%d] segments.", segmentsToBeHandedOff.size());
                         final long handoffTotalTime = System.currentTimeMillis() - handoffStartTime;
                         metrics.reportMaxSegmentHandoffTime(handoffTotalTime);
                         if (handoffTotalTime > HANDOFF_TIME_THRESHOLD) {
@@ -370,8 +381,10 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
                         }
                         resultFuture.set(
                             new SegmentsAndCommitMetadata(
-                                segments,
-                                ((AppenderatorDriverMetadata) metadata).getCallerMetadata()
+                                segmentsAndCommitMetadata.getSegments(),
+                                ((AppenderatorDriverMetadata) metadata).getCallerMetadata(),
+                                segmentsAndCommitMetadata.getSegmentSchemaMapping(),
+                                segmentsAndCommitMetadata.getUpgradedSegments()
                             )
                         );
                       }
@@ -384,7 +397,8 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
                       numRemainingHandoffSegments.decrementAndGet();
                       resultFuture.setException(e);
                     }
-                  }
+                  },
+                  MoreExecutors.directExecutor()
               );
             }
         );
@@ -400,9 +414,10 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
       final Collection<String> sequenceNames
   )
   {
-    return Futures.transform(
+    return Futures.transformAsync(
         publish(publisher, committer, sequenceNames),
-        (AsyncFunction<SegmentsAndCommitMetadata, SegmentsAndCommitMetadata>) this::registerHandoff
+        this::registerHandoff,
+        MoreExecutors.directExecutor()
     );
   }
 
@@ -453,11 +468,11 @@ public class StreamAppenderatorDriver extends BaseAppenderatorDriver
 
     SegmentsForSequence build()
     {
-      final NavigableMap<Long, SegmentsOfInterval> map = new TreeMap<>();
+      final Map<Interval, SegmentsOfInterval> map = new HashMap<>();
       for (Entry<SegmentIdWithShardSpec, Pair<SegmentWithState, List<SegmentWithState>>> entry :
           intervalToSegments.entrySet()) {
         map.put(
-            entry.getKey().getInterval().getStartMillis(),
+            entry.getKey().getInterval(),
             new SegmentsOfInterval(entry.getKey().getInterval(), entry.getValue().lhs, entry.getValue().rhs)
         );
       }

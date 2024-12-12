@@ -16,12 +16,14 @@
  * limitations under the License.
  */
 
+const { createJsWithTsPreset } = require('ts-jest');
+
+process.env.TZ = 'UTC';
+
 module.exports = {
-  preset: 'ts-jest',
-  globals: {
-    'ts-jest': {
-      tsconfig: './tsconfig.test.json',
-    },
-  },
   testEnvironment: 'jsdom',
+  transformIgnorePatterns: ['/node_modules/(?!(d3-.+)/)'],
+  ...createJsWithTsPreset({
+    tsconfig: './tsconfig.test.json',
+  }),
 };

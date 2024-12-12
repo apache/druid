@@ -34,6 +34,7 @@ import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.InputStats;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.SplitHintSpec;
+import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.SplittableInputSource;
 import org.apache.druid.guice.IndexingServiceInputSourceModule;
 import org.apache.druid.java.util.common.CloseableIterators;
@@ -179,7 +180,10 @@ public class GeneratorInputSource extends AbstractInputSource implements Splitta
           public InputRow next()
           {
             rowCount++;
-            return generator.nextRow();
+            return MapInputRowParser.parse(
+                inputRowSchema,
+                generator.nextRaw(inputRowSchema.getTimestampSpec().getTimestampColumn())
+            );
           }
         });
       }

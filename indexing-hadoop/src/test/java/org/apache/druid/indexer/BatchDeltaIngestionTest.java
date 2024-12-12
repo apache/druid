@@ -26,13 +26,13 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import org.apache.commons.io.FileUtils;
-import org.apache.druid.data.input.Firehose;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.CSVParseSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.hll.HyperLogLogCollector;
+import org.apache.druid.indexer.hadoop.DatasourceRecordReader;
 import org.apache.druid.indexer.hadoop.WindowedDataSegment;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
@@ -44,13 +44,11 @@ import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.QueryableIndexStorageAdapter;
-import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.loading.LocalDataSegmentPuller;
-import org.apache.druid.segment.realtime.firehose.IngestSegmentFirehose;
-import org.apache.druid.segment.realtime.firehose.WindowedStorageAdapter;
+import org.apache.druid.segment.realtime.WindowedCursorFactory;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.DataSegment.PruneSpecsHolder;
@@ -402,10 +400,9 @@ public class BatchDeltaIngestionTest
     new LocalDataSegmentPuller().getSegmentFiles(indexZip, tmpUnzippedSegmentDir);
 
     QueryableIndex index = INDEX_IO.loadIndex(tmpUnzippedSegmentDir);
-    StorageAdapter adapter = new QueryableIndexStorageAdapter(index);
 
-    Firehose firehose = new IngestSegmentFirehose(
-        ImmutableList.of(new WindowedStorageAdapter(adapter, windowedDataSegment.getInterval())),
+    DatasourceRecordReader.SegmentReader segmentReader = new DatasourceRecordReader.SegmentReader(
+        ImmutableList.of(new WindowedCursorFactory(new QueryableIndexCursorFactory(index), windowedDataSegment.getInterval())),
         TransformSpec.NONE,
         expectedDimensions,
         expectedMetrics,
@@ -413,11 +410,12 @@ public class BatchDeltaIngestionTest
     );
 
     List<InputRow> rows = new ArrayList<>();
-    while (firehose.hasMore()) {
-      rows.add(firehose.nextRow());
+    while (segmentReader.hasMore()) {
+      rows.add(segmentReader.nextRow());
     }
 
     verifyRows(expectedRowsGenerated, rows, expectedDimensions, expectedMetrics);
+    segmentReader.close();
   }
 
   private HadoopDruidIndexerConfig makeHadoopDruidIndexerConfig(Map<String, Object> inputSpec, File tmpDir)
@@ -435,30 +433,33 @@ public class BatchDeltaIngestionTest
   {
     HadoopDruidIndexerConfig config = new HadoopDruidIndexerConfig(
         new HadoopIngestionSpec(
-            new DataSchema(
-                "website",
-                MAPPER.convertValue(
-                    new StringInputRowParser(
-                        new CSVParseSpec(
-                            new TimestampSpec("timestamp", "yyyyMMddHH", null),
-                            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host"))),
-                            null,
-                            ImmutableList.of("timestamp", "host", "host2", "visited_num"),
-                            false,
-                            0
-                        ),
-                        null
-                    ),
-                    Map.class
-                ),
-                aggregators != null ? aggregators : new AggregatorFactory[]{
-                    new LongSumAggregatorFactory("visited_sum", "visited_num"),
-                    new HyperUniquesAggregatorFactory("unique_hosts", "host2")
-                },
-                new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, ImmutableList.of(INTERVAL_FULL)),
-                null,
-                MAPPER
-            ),
+            DataSchema.builder()
+                      .withDataSource("website")
+                      .withParserMap(MAPPER.convertValue(
+                          new StringInputRowParser(
+                              new CSVParseSpec(
+                                  new TimestampSpec("timestamp", "yyyyMMddHH", null),
+                                  new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host"))),
+                                  null,
+                                  ImmutableList.of("timestamp", "host", "host2", "visited_num"),
+                                  false,
+                                  0
+                              ),
+                              null
+                          ),
+                          Map.class
+                      ))
+                      .withAggregators(aggregators != null ? aggregators : new AggregatorFactory[]{
+                          new LongSumAggregatorFactory("visited_sum", "visited_num"),
+                          new HyperUniquesAggregatorFactory("unique_hosts", "host2")
+                      })
+                      .withGranularity(new UniformGranularitySpec(
+                          Granularities.DAY,
+                          Granularities.NONE,
+                          ImmutableList.of(INTERVAL_FULL)
+                      ))
+                      .withObjectMapper(MAPPER)
+                      .build(),
             new HadoopIOConfig(
                 inputSpec,
                 null,
@@ -478,6 +479,7 @@ public class BatchDeltaIngestionTest
                 false,
                 false,
                 false,
+                false,
                 null,
                 false,
                 false,
@@ -489,7 +491,8 @@ public class BatchDeltaIngestionTest
                 null,
                 null,
                 null,
-                null
+                null,
+                1
             )
         )
     );

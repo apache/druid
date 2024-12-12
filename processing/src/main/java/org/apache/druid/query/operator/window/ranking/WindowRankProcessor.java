@@ -28,6 +28,7 @@ import org.apache.druid.query.rowsandcols.column.IntArrayColumn;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * This Processor assumes that data has already been sorted for it.  It does not re-sort the data and if it is given
@@ -104,5 +105,30 @@ public class WindowRankProcessor extends WindowRankingProcessorBase
            internalToString() +
            ", asPercent=" + asPercent +
            '}';
+  }
+
+  @Override
+  public int hashCode()
+  {
+    final int prime = 31;
+    int result = super.hashCode();
+    result = prime * result + Objects.hash(asPercent);
+    return result;
+  }
+
+  @Override
+  public boolean equals(Object obj)
+  {
+    if (this == obj) {
+      return true;
+    }
+    if (!super.equals(obj)) {
+      return false;
+    }
+    if (getClass() != obj.getClass()) {
+      return false;
+    }
+    WindowRankProcessor other = (WindowRankProcessor) obj;
+    return asPercent == other.asPercent;
   }
 }

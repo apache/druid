@@ -28,6 +28,11 @@ import org.apache.druid.timeline.DataSegment;
 import java.util.Collections;
 import java.util.Set;
 
+/**
+ * @deprecated This is currently being used only in tests for benchmarking purposes
+ * and will be removed in future releases.
+ */
+@Deprecated
 public class CachingCostBalancerStrategy extends CostBalancerStrategy
 {
   private final ClusterCostCache clusterCostCache;

@@ -121,7 +121,7 @@ public class NamespacedExtractorModuleTest
     Assert.assertNotNull(version);
     Map<String, String> map = cache.getCache();
     Assert.assertEquals("bar", map.get("foo"));
-    Assert.assertEquals(null, map.get("baz"));
+    Assert.assertNull(map.get("baz"));
   }
 
   @Test

@@ -21,28 +21,11 @@ package org.apache.druid.indexing.overlord;
 
 import com.google.common.base.Optional;
 import com.google.inject.Inject;
-import org.apache.druid.client.indexing.IndexingService;
-import org.apache.druid.curator.discovery.ServiceAnnouncer;
-import org.apache.druid.discovery.DruidLeaderSelector;
-import org.apache.druid.discovery.DruidLeaderSelector.Listener;
-import org.apache.druid.guice.annotations.Self;
-import org.apache.druid.indexing.common.actions.SegmentAllocationQueue;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClientFactory;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.autoscaling.ScalingStats;
-import org.apache.druid.indexing.overlord.config.DefaultTaskConfig;
-import org.apache.druid.indexing.overlord.config.TaskLockConfig;
-import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
-import org.apache.druid.indexing.overlord.duty.OverlordDutyExecutor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
-import org.apache.druid.java.util.common.lifecycle.Lifecycle;
-import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
-import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
-import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.apache.druid.server.DruidNode;
-import org.apache.druid.server.coordinator.CoordinatorOverlordServiceConfig;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.metrics.TaskCountStatsProvider;
 import org.apache.druid.server.metrics.TaskSlotCountStatsProvider;
@@ -50,222 +33,85 @@ import org.apache.druid.server.metrics.TaskSlotCountStatsProvider;
 import javax.annotation.Nullable;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.locks.ReentrantLock;
 
 /**
- * Encapsulates the indexer leadership lifecycle.
+ * Encapsulates various Overlord classes that allow querying and updating the
+ * current state of the Overlord leader.
  */
 public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsProvider
 {
-  private static final EmittingLogger log = new EmittingLogger(TaskMaster.class);
+  enum LeadershipState
+  {
+    NOT_LEADER,
 
-  private final DruidLeaderSelector overlordLeaderSelector;
-  private final DruidLeaderSelector.Listener leadershipListener;
+    /**
+     * Leader of essential services only: task queue, task action client, and task runner. We enter this state after
+     * the queue and runner are initialized, but before the supervisor manager is not yet initialized.
+     */
+    HALF_LEADER,
 
-  private final ReentrantLock giant = new ReentrantLock(true);
+    /**
+     * Leader of all services. We enter this state after the supervisor manager is initialized.
+     */
+    FULL_LEADER
+  }
+
   private final TaskActionClientFactory taskActionClientFactory;
   private final SupervisorManager supervisorManager;
-
-  private final AtomicReference<Lifecycle> leaderLifecycleRef = new AtomicReference<>(null);
-
   private volatile TaskRunner taskRunner;
   private volatile TaskQueue taskQueue;
 
-  /**
-   * This flag indicates that all services has been started and should be true before calling
-   * {@link ServiceAnnouncer#announce}. This is set to false immediately once {@link Listener#stopBeingLeader()} is
-   * called.
-   */
-  private volatile boolean initialized;
+  private final AtomicReference<LeadershipState> leadershipState = new AtomicReference<>(LeadershipState.NOT_LEADER);
 
   @Inject
   public TaskMaster(
-      final TaskLockConfig taskLockConfig,
-      final TaskQueueConfig taskQueueConfig,
-      final DefaultTaskConfig defaultTaskConfig,
-      final TaskLockbox taskLockbox,
-      final TaskStorage taskStorage,
-      final TaskActionClientFactory taskActionClientFactory,
-      @Self final DruidNode selfNode,
-      final TaskRunnerFactory runnerFactory,
-      final ServiceAnnouncer serviceAnnouncer,
-      final CoordinatorOverlordServiceConfig coordinatorOverlordServiceConfig,
-      final ServiceEmitter emitter,
-      final SupervisorManager supervisorManager,
-      final OverlordDutyExecutor overlordDutyExecutor,
-      @IndexingService final DruidLeaderSelector overlordLeaderSelector,
-      final SegmentAllocationQueue segmentAllocationQueue
+      TaskActionClientFactory taskActionClientFactory,
+      SupervisorManager supervisorManager
   )
   {
-    this.supervisorManager = supervisorManager;
     this.taskActionClientFactory = taskActionClientFactory;
-
-    this.overlordLeaderSelector = overlordLeaderSelector;
-
-    final DruidNode node = coordinatorOverlordServiceConfig.getOverlordService() == null ? selfNode :
-                           selfNode.withService(coordinatorOverlordServiceConfig.getOverlordService());
-
-    this.leadershipListener = new DruidLeaderSelector.Listener()
-    {
-      @Override
-      public void becomeLeader()
-      {
-        giant.lock();
-
-        // I AM THE MASTER OF THE UNIVERSE.
-        log.info("By the power of Grayskull, I have the power!");
-
-        try {
-          taskRunner = runnerFactory.build();
-          taskQueue = new TaskQueue(
-              taskLockConfig,
-              taskQueueConfig,
-              defaultTaskConfig,
-              taskStorage,
-              taskRunner,
-              taskActionClientFactory,
-              taskLockbox,
-              emitter
-          );
-
-          // Sensible order to start stuff:
-          final Lifecycle leaderLifecycle = new Lifecycle("task-master");
-          if (leaderLifecycleRef.getAndSet(leaderLifecycle) != null) {
-            log.makeAlert("TaskMaster set a new Lifecycle without the old one being cleared!  Race condition")
-               .emit();
-          }
-
-          leaderLifecycle.addManagedInstance(taskRunner);
-          leaderLifecycle.addManagedInstance(taskQueue);
-          leaderLifecycle.addManagedInstance(supervisorManager);
-          leaderLifecycle.addManagedInstance(overlordDutyExecutor);
-          leaderLifecycle.addHandler(
-              new Lifecycle.Handler()
-              {
-                @Override
-                public void start()
-                {
-                  segmentAllocationQueue.becomeLeader();
-                }
-
-                @Override
-                public void stop()
-                {
-                  segmentAllocationQueue.stopBeingLeader();
-                }
-              }
-          );
-
-          leaderLifecycle.addHandler(
-              new Lifecycle.Handler()
-              {
-                @Override
-                public void start()
-                {
-                  initialized = true;
-                  serviceAnnouncer.announce(node);
-                }
-
-                @Override
-                public void stop()
-                {
-                  serviceAnnouncer.unannounce(node);
-                }
-              }
-          );
-
-          leaderLifecycle.start();
-        }
-        catch (Exception e) {
-          throw new RuntimeException(e);
-        }
-        finally {
-          giant.unlock();
-        }
-      }
-
-      @Override
-      public void stopBeingLeader()
-      {
-        giant.lock();
-        try {
-          initialized = false;
-          final Lifecycle leaderLifecycle = leaderLifecycleRef.getAndSet(null);
-
-          if (leaderLifecycle != null) {
-            leaderLifecycle.stop();
-          }
-        }
-        finally {
-          giant.unlock();
-        }
-      }
-    };
+    this.supervisorManager = supervisorManager;
   }
 
   /**
-   * Starts waiting for leadership. Should only be called once throughout the life of the program.
+   * Enter state {@link LeadershipState#HALF_LEADER}, from any state.
    */
-  @LifecycleStart
-  public void start()
+  public void becomeHalfLeader(TaskRunner taskRunner, TaskQueue taskQueue)
   {
-    giant.lock();
-
-    try {
-      overlordLeaderSelector.registerListener(leadershipListener);
-    }
-    finally {
-      giant.unlock();
-    }
+    this.taskRunner = taskRunner;
+    this.taskQueue = taskQueue;
+    leadershipState.set(LeadershipState.HALF_LEADER);
   }
 
   /**
-   * Stops forever (not just this particular leadership session). Should only be called once throughout the life of
-   * the program.
+   * Enter state {@link LeadershipState#HALF_LEADER}, from {@link LeadershipState#FULL_LEADER}.
    */
-  @LifecycleStop
-  public void stop()
+  public void downgradeToHalfLeader()
   {
-    giant.lock();
-
-    try {
-      gracefulStopLeaderLifecycle();
-      overlordLeaderSelector.unregisterListener();
-    }
-    finally {
-      giant.unlock();
-    }
+    leadershipState.compareAndSet(LeadershipState.FULL_LEADER, LeadershipState.HALF_LEADER);
   }
 
   /**
-   * Returns true if it's the leader and its all services have been properly initialized.
+   * Enter state {@link LeadershipState#FULL_LEADER}.
    */
-  public boolean isLeader()
+  public void becomeFullLeader()
   {
-    return overlordLeaderSelector.isLeader() && initialized;
+    leadershipState.set(LeadershipState.FULL_LEADER);
   }
 
-  public String getCurrentLeader()
+  /**
+   * Enter state {@link LeadershipState#NOT_LEADER}.
+   */
+  public void stopBeingLeader()
   {
-    return overlordLeaderSelector.getCurrentLeader();
-  }
-
-  public Optional<String> getRedirectLocation()
-  {
-    String leader = overlordLeaderSelector.getCurrentLeader();
-    // do not redirect when
-    // leader is not elected
-    // leader is the current node
-    if (leader == null || leader.isEmpty() || overlordLeaderSelector.isLeader()) {
-      return Optional.absent();
-    } else {
-      return Optional.of(leader);
-    }
+    leadershipState.set(LeadershipState.NOT_LEADER);
+    this.taskQueue = null;
+    this.taskRunner = null;
   }
 
   public Optional<TaskRunner> getTaskRunner()
   {
-    if (isLeader()) {
+    if (isHalfOrFullLeader()) {
       return Optional.of(taskRunner);
     } else {
       return Optional.absent();
@@ -274,7 +120,7 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
 
   public Optional<TaskQueue> getTaskQueue()
   {
-    if (isLeader()) {
+    if (isHalfOrFullLeader()) {
       return Optional.of(taskQueue);
     } else {
       return Optional.absent();
@@ -283,7 +129,7 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
 
   public Optional<TaskActionClient> getTaskActionClient(Task task)
   {
-    if (isLeader()) {
+    if (isHalfOrFullLeader()) {
       return Optional.of(taskActionClientFactory.create(task));
     } else {
       return Optional.absent();
@@ -292,7 +138,7 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
 
   public Optional<ScalingStats> getScalingStats()
   {
-    if (isLeader()) {
+    if (isHalfOrFullLeader()) {
       return taskRunner.getScalingStats();
     } else {
       return Optional.absent();
@@ -301,7 +147,7 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
 
   public Optional<SupervisorManager> getSupervisorManager()
   {
-    if (isLeader()) {
+    if (isFullLeader()) {
       return Optional.of(supervisorManager);
     } else {
       return Optional.absent();
@@ -374,18 +220,6 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
     }
   }
 
-  private void gracefulStopLeaderLifecycle()
-  {
-    try {
-      if (isLeader()) {
-        leadershipListener.stopBeingLeader();
-      }
-    }
-    catch (Exception ex) {
-      // fail silently since we are stopping anyway
-    }
-  }
-
   @Override
   @Nullable
   public Map<String, Long> getTotalTaskSlotCount()
@@ -444,5 +278,16 @@ public class TaskMaster implements TaskCountStatsProvider, TaskSlotCountStatsPro
     } else {
       return null;
     }
+  }
+
+  public boolean isHalfOrFullLeader()
+  {
+    final LeadershipState state = leadershipState.get();
+    return state == LeadershipState.HALF_LEADER || state == LeadershipState.FULL_LEADER;
+  }
+
+  public boolean isFullLeader()
+  {
+    return leadershipState.get() == LeadershipState.FULL_LEADER;
   }
 }

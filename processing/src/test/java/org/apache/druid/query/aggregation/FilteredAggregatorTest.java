@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.aggregation;
 
-import com.google.common.base.Predicate;
 import com.google.common.collect.Lists;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.js.JavaScriptConfig;
@@ -28,6 +27,7 @@ import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.extraction.JavaScriptExtractionFn;
 import org.apache.druid.query.filter.AndDimFilter;
 import org.apache.druid.query.filter.BoundDimFilter;
+import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.JavaScriptDimFilter;
 import org.apache.druid.query.filter.NotDimFilter;
@@ -288,9 +288,9 @@ public class FilteredAggregatorTest extends InitializedNullHandlingTest
                 }
 
                 @Override
-                public ValueMatcher makeValueMatcher(Predicate<String> predicate)
+                public ValueMatcher makeValueMatcher(DruidPredicateFactory predicateFactory)
                 {
-                  return DimensionSelectorUtils.makeValueMatcherGeneric(this, predicate);
+                  return DimensionSelectorUtils.makeValueMatcherGeneric(this, predicateFactory);
                 }
 
                 @Override

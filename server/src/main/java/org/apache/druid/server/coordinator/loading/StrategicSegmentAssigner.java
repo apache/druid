@@ -22,7 +22,6 @@ package org.apache.druid.server.coordinator.loading;
 import com.google.common.collect.Sets;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.druid.client.DruidServer;
-import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.server.coordinator.balancer.BalancerStrategy;
@@ -56,8 +55,6 @@ import java.util.stream.Collectors;
 @NotThreadSafe
 public class StrategicSegmentAssigner implements SegmentActionHandler
 {
-  private static final EmittingLogger log = new EmittingLogger(StrategicSegmentAssigner.class);
-
   private final SegmentLoadQueueManager loadQueueManager;
   private final DruidCluster cluster;
   private final CoordinatorRunStats stats;
@@ -71,6 +68,8 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
   private final Map<String, Set<String>> datasourceToInvalidLoadTiers = new HashMap<>();
   private final Map<String, Integer> tierToHistoricalCount = new HashMap<>();
   private final Map<String, Set<SegmentId>> segmentsToDelete = new HashMap<>();
+  private final Map<String, Set<DataSegment>> segmentsWithZeroRequiredReplicas = new HashMap<>();
+  private final Set<DataSegment> broadcastSegments = new HashSet<>();
 
   public StrategicSegmentAssigner(
       SegmentLoadQueueManager loadQueueManager,
@@ -94,11 +93,6 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
     );
   }
 
-  public CoordinatorRunStats getStats()
-  {
-    return stats;
-  }
-
   public SegmentReplicationStatus getReplicationStatus()
   {
     return replicaCountMap.toReplicationStatus();
@@ -107,6 +101,11 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
   public Map<String, Set<SegmentId>> getSegmentsToDelete()
   {
     return segmentsToDelete;
+  }
+
+  public Map<String, Set<DataSegment>> getSegmentsWithZeroRequiredReplicas()
+  {
+    return segmentsWithZeroRequiredReplicas;
   }
 
   public Map<String, Set<String>> getDatasourceToInvalidLoadTiers()
@@ -223,6 +222,12 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
     }
 
     SegmentReplicaCount replicaCountInCluster = replicaCountMap.getTotal(segment.getId());
+    if (replicaCountInCluster.required() <= 0) {
+      segmentsWithZeroRequiredReplicas
+          .computeIfAbsent(segment.getDataSource(), ds -> new HashSet<>())
+          .add(segment);
+    }
+
     final int replicaSurplus = replicaCountInCluster.loadedNotDropping()
                                - replicaCountInCluster.requiredAndLoadable();
 
@@ -352,6 +357,8 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
         entry -> replicaCountMap.computeIfAbsent(segment.getId(), entry.getKey())
                                 .setRequired(entry.getIntValue(), entry.getIntValue())
     );
+
+    broadcastSegments.add(segment);
   }
 
   @Override
@@ -387,6 +394,11 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
 
     incrementSkipStat(Stats.Segments.ASSIGN_SKIPPED, skipReason, segment, server.getServer().getTier());
     return false;
+  }
+
+  public Set<DataSegment> getBroadcastSegments()
+  {
+    return broadcastSegments;
   }
 
   /**
@@ -497,7 +509,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
     final boolean isAlreadyLoadedOnTier = numLoadedReplicas >= 1;
 
     // Do not assign replicas if tier is already busy loading some
-    if (isAlreadyLoadedOnTier && replicationThrottler.isTierLoadingReplicas(tier)) {
+    if (isAlreadyLoadedOnTier && replicationThrottler.isReplicationThrottledForTier(tier)) {
       return 0;
     }
 
@@ -543,7 +555,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
   private boolean replicateSegment(DataSegment segment, ServerHolder server)
   {
     final String tier = server.getServer().getTier();
-    if (!replicationThrottler.canAssignReplica(tier)) {
+    if (replicationThrottler.isReplicationThrottledForTier(tier)) {
       incrementSkipStat(Stats.Segments.ASSIGN_SKIPPED, "Throttled replication", segment, tier);
       return false;
     }
@@ -563,24 +575,17 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
       SegmentLoadingConfig loadingConfig
   )
   {
-    final Set<String> tiersLoadingReplicas = new HashSet<>();
+    final Map<String, Integer> tierToLoadingReplicaCount = new HashMap<>();
 
     cluster.getHistoricals().forEach(
         (tier, historicals) -> {
           int numLoadingReplicas = historicals.stream().mapToInt(ServerHolder::getNumLoadingReplicas).sum();
-          if (numLoadingReplicas > 0) {
-            log.info(
-                "Tier [%s] will not be assigned replicas as it is already loading [%d] replicas.",
-                tier, numLoadingReplicas
-            );
-            tiersLoadingReplicas.add(tier);
-          }
+          tierToLoadingReplicaCount.put(tier, numLoadingReplicas);
         }
     );
     return new ReplicationThrottler(
-        tiersLoadingReplicas,
-        loadingConfig.getReplicationThrottleLimit(),
-        loadingConfig.getMaxReplicaAssignmentsInRun()
+        tierToLoadingReplicaCount,
+        loadingConfig.getReplicationThrottleLimit()
     );
   }
 

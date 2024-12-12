@@ -20,7 +20,6 @@
 package org.apache.druid.msq.querykit;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import org.apache.druid.frame.processor.FrameProcessor;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.msq.kernel.ExtraInfoHolder;
 import org.apache.druid.msq.kernel.FrameProcessorFactory;
@@ -30,28 +29,15 @@ import javax.annotation.Nullable;
 
 /**
  * Basic abstract {@link FrameProcessorFactory} that yields workers that do not require extra info and that
- * always return Longs. This base class isn't used for every worker factory, but it is used for many of them.
+ * ignore the return values of their processors. This base class isn't used for every worker factory, but it is used
+ * for many of them.
  */
-public abstract class BaseFrameProcessorFactory
-    implements FrameProcessorFactory<Object, FrameProcessor<Long>, Long, Long>
+public abstract class BaseFrameProcessorFactory implements FrameProcessorFactory<Object, Long, Object>
 {
   @Override
-  public TypeReference<Long> getAccumulatedResultTypeReference()
+  public TypeReference<Long> getResultTypeReference()
   {
     return new TypeReference<Long>() {};
-  }
-
-  @Override
-  public Long newAccumulatedResult()
-  {
-    return 0L;
-  }
-
-  @Nullable
-  @Override
-  public Long accumulateResult(Long accumulated, Long current)
-  {
-    return accumulated + current;
   }
 
   @Override

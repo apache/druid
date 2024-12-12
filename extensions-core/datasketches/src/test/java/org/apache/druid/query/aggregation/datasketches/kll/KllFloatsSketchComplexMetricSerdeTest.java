@@ -102,6 +102,7 @@ public class KllFloatsSketchComplexMetricSerdeTest
   {
     final KllFloatsSketchComplexMetricSerde serde = new KllFloatsSketchComplexMetricSerde();
     final ObjectStrategy<KllFloatsSketch> objectStrategy = serde.getObjectStrategy();
+    Assert.assertTrue(objectStrategy.readRetainsBufferReference());
 
     KllFloatsSketch sketch = KllFloatsSketch.newHeapInstance();
     sketch.update(1.1f);
@@ -123,7 +124,7 @@ public class KllFloatsSketchComplexMetricSerdeTest
 
       final ByteBuffer buf2 = ByteBuffer.wrap(garbage2).order(ByteOrder.LITTLE_ENDIAN);
       Assert.assertThrows(
-          IndexOutOfBoundsException.class,
+          Exception.class,
           () -> objectStrategy.fromByteBufferSafe(buf2, garbage2.length).toByteArray()
       );
     }
@@ -132,7 +133,7 @@ public class KllFloatsSketchComplexMetricSerdeTest
     final byte[] garbage = new byte[]{0x01, 0x02};
     final ByteBuffer buf3 = ByteBuffer.wrap(garbage).order(ByteOrder.LITTLE_ENDIAN);
     Assert.assertThrows(
-        IndexOutOfBoundsException.class,
+        Exception.class,
         () -> objectStrategy.fromByteBufferSafe(buf3, garbage.length).toByteArray()
     );
   }

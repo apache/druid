@@ -25,8 +25,8 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.segment.ColumnInspector;
-import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.DimensionSelector;
@@ -189,9 +189,12 @@ public class FallbackVirtualColumn implements VirtualColumn
 
   @Nullable
   @Override
-  public ColumnIndexSupplier getIndexSupplier(String columnName, ColumnSelector columnSelector)
+  public ColumnIndexSupplier getIndexSupplier(
+      String columnName,
+      ColumnIndexSelector indexSelector
+  )
   {
-    final ColumnHolder columnHolder = columnSelector.getColumnHolder(columnToUse(columnSelector).getDimension());
+    final ColumnHolder columnHolder = indexSelector.getColumnHolder(columnToUse(indexSelector).getDimension());
     if (columnHolder == null) {
       return null;
     }

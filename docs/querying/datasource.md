@@ -3,6 +3,10 @@ id: datasource
 title: "Datasources"
 ---
 
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
@@ -34,12 +38,15 @@ responses.
 
 ### `table`
 
-<!--DOCUSAURUS_CODE_TABS-->
-<!--SQL-->
+<Tabs>
+<TabItem value="1" label="SQL">
+
 ```sql
 SELECT column1, column2 FROM "druid"."dataSourceName"
 ```
-<!--Native-->
+</TabItem>
+<TabItem value="2" label="Native">
+
 ```json
 {
   "queryType": "scan",
@@ -48,7 +55,8 @@ SELECT column1, column2 FROM "druid"."dataSourceName"
   "intervals": ["0000/3000"]
 }
 ```
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 The table datasource is the most common type. This is the kind of datasource you get when you perform
 [data ingestion](../ingestion/index.md). They are split up into segments, distributed around the cluster,
@@ -72,12 +80,15 @@ To see a list of all table datasources, use the SQL query
 
 ### `lookup`
 
-<!--DOCUSAURUS_CODE_TABS-->
-<!--SQL-->
+<Tabs>
+<TabItem value="3" label="SQL">
+
 ```sql
 SELECT k, v FROM lookup.countries
 ```
-<!--Native-->
+</TabItem>
+<TabItem value="4" label="Native">
+
 ```json
 {
   "queryType": "scan",
@@ -89,7 +100,8 @@ SELECT k, v FROM lookup.countries
   "intervals": ["0000/3000"]
 }
 ```
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 Lookup datasources correspond to Druid's key-value [lookup](lookups.md) objects. In [Druid SQL](sql.md#from),
 they reside in the `lookup` schema. They are preloaded in memory on all servers, so they can be accessed rapidly.
@@ -101,19 +113,22 @@ both are always strings.
 To see a list of all lookup datasources, use the SQL query
 `SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = 'lookup'`.
 
-> Performance tip: Lookups can be joined with a base table either using an explicit [join](#join), or by using the
-> SQL [`LOOKUP` function](sql-scalar.md#string-functions).
-> However, the join operator must evaluate the condition on each row, whereas the
-> `LOOKUP` function can defer evaluation until after an aggregation phase. This means that the `LOOKUP` function is
-> usually faster than joining to a lookup datasource.
+:::info
+ Performance tip: Lookups can be joined with a base table either using an explicit [join](#join), or by using the
+ SQL [`LOOKUP` function](sql-scalar.md#string-functions).
+ However, the join operator must evaluate the condition on each row, whereas the
+ `LOOKUP` function can defer evaluation until after an aggregation phase. This means that the `LOOKUP` function is
+ usually faster than joining to a lookup datasource.
+:::
 
 Refer to the [Query execution](query-execution.md#table) page for more details on how queries are executed when you
 use table datasources.
 
 ### `union`
 
-<!--DOCUSAURUS_CODE_TABS-->
-<!--SQL-->
+<Tabs>
+<TabItem value="5" label="SQL">
+
 ```sql
 SELECT column1, column2
 FROM (
@@ -124,7 +139,9 @@ FROM (
   SELECT column1, column2 FROM table3
 )
 ```
-<!--Native-->
+</TabItem>
+<TabItem value="6" label="Native">
+
 ```json
 {
   "queryType": "scan",
@@ -136,7 +153,8 @@ FROM (
   "intervals": ["0000/3000"]
 }
 ```
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 Unions allow you to treat two or more tables as a single datasource. In SQL, this is done with the UNION ALL operator
 applied directly to tables, called a ["table-level union"](sql.md#table-level). In native queries, this is done with a
@@ -156,10 +174,57 @@ table unions.
 Refer to the [Query execution](query-execution.md#union) page for more details on how queries are executed when you
 use union datasources.
 
+#### Dynamic table append
+
+<Tabs>
+<TabItem value="sql" label="SQL">
+
+```sql
+SELECT column1, column2, column3
+FROM TABLE(APPEND('table1','table2','table3'))
+```
+</TabItem>
+</Tabs>
+
+Perform dynamic table appends in SQL using `TABLE(APPEND(...))`. This simplifies SQL syntax to match columns by name from multiple tables. The native query syntax remains the same as for native union datasources.
+Suppose you have three tables:
+* `table1` has `column1`
+* `table2` has `column2`
+* `table3` has `column1`, `column2`, `column3`
+
+You can create a union view of all the tables by using [table-level union](sql.md#table-level):
+```sql
+SELECT * from (
+  SELECT column1,NULL AS column2,NULL AS column3 FROM table1
+  UNION ALL
+  SELECT NULL AS column1,column2,NULL AS column3 FROM table2
+  UNION ALL
+  SELECT column1,column2,column3 FROM table3
+) t
+```
+
+However depending on the size of the table's schema it might be quite complicated to do that; `TABLE(APPEND('table1','table2','table3'))` represents the same in a more compact form.
+
+:::info
+Only tables defined in the catalog are supported in `TABLE(APPEND())` - due to that; common table expressions result in `table not found` errors for queries like:
+```sql
+WITH cte_table AS (SELECT * from TABLE1) SELECT * FROM TABLE(APPEND('cte_table'))
+```
+:::
+
 ### `inline`
 
-<!--DOCUSAURUS_CODE_TABS-->
-<!--Native-->
+<Tabs>
+<TabItem value="sql" label="SQL">
+
+```sql
+SELECT * from (VALUES ('United States', 'San Francisco'),
+                      ('Canada', 'Calgary')
+              ) t (country, city)
+```
+</TabItem>
+<TabItem value="native" label="Native">
+
 ```json
 {
   "queryType": "scan",
@@ -175,7 +240,8 @@ use union datasources.
   "intervals": ["0000/3000"]
 }
 ```
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 Inline datasources allow you to query a small amount of data that is embedded in the query itself. They are useful when
 you want to write a query on a small amount of data without loading it first. They are also useful as inputs into a
@@ -193,8 +259,9 @@ use inline datasources.
 
 ### `query`
 
-<!--DOCUSAURUS_CODE_TABS-->
-<!--SQL-->
+<Tabs>
+<TabItem value="8" label="SQL">
+
 ```sql
 -- Uses a subquery to count hits per page, then takes the average.
 SELECT
@@ -202,7 +269,9 @@ SELECT
 FROM
   (SELECT page, COUNT(*) AS hits FROM site_traffic GROUP BY page)
 ```
-<!--Native-->
+</TabItem>
+<TabItem value="9" label="Native">
+
 ```json
 {
   "queryType": "timeseries",
@@ -230,7 +299,8 @@ FROM
   ]
 }
 ```
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 Query datasources allow you to issue subqueries. In native queries, they can appear anywhere that accepts a
 `dataSource` (except underneath a `union`). In SQL, they can appear in the following places, always surrounded by parentheses:
@@ -239,15 +309,18 @@ Query datasources allow you to issue subqueries. In native queries, they can app
 - As inputs to a JOIN: `<table-or-subquery-1> t1 INNER JOIN <table-or-subquery-2> t2 ON t1.<col1> = t2.<col2>`.
 - In the WHERE clause: `WHERE <column> { IN | NOT IN } (<subquery>)`. These are translated to joins by the SQL planner.
 
-> Performance tip: In most cases, subquery results are fully buffered in memory on the Broker and then further
-> processing occurs on the Broker itself. This means that subqueries with large result sets can cause performance
-> bottlenecks or run into memory usage limits on the Broker. See the [Query execution](query-execution.md#query)
-> page for more details on how subqueries are executed and what limits will apply.
+:::info
+ Performance tip: In most cases, subquery results are fully buffered in memory on the Broker and then further
+ processing occurs on the Broker itself. This means that subqueries with large result sets can cause performance
+ bottlenecks or run into memory usage limits on the Broker. See the [Query execution](query-execution.md#query)
+ page for more details on how subqueries are executed and what limits will apply.
+:::
 
 ### `join`
 
-<!--DOCUSAURUS_CODE_TABS-->
-<!--SQL-->
+<Tabs>
+<TabItem value="10" label="SQL">
+
 ```sql
 -- Joins "sales" with "countries" (using "store" as the join key) to get sales by country.
 SELECT
@@ -259,7 +332,9 @@ FROM
 GROUP BY
   countries.v
 ```
-<!--Native-->
+</TabItem>
+<TabItem value="11" label="Native">
+
 ```json
 {
   "queryType": "groupBy",
@@ -284,18 +359,23 @@ GROUP BY
   ]
 }
 ```
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 Join datasources allow you to do a SQL-style join of two datasources. Stacking joins on top of each other allows
 you to join arbitrarily many datasources.
 
-In Druid {{DRUIDVERSION}}, joins in native queries are implemented with a broadcast hash-join algorithm. This means
-that all datasources other than the leftmost "base" datasource must fit in memory. It also means that the join condition
-must be an equality. This feature is intended mainly to allow joining regular Druid tables with [lookup](#lookup),
-[inline](#inline), and [query](#query) datasources.
+Joins in native queries are implemented with a broadcast hash-join algorithm. This means
+that all datasources other than the leftmost "base" datasource must fit in memory. In native queries, the join condition
+must be an equality. In SQL, any join condition is accepted, but only equalities of a certain form
+(see [Joins in SQL](#joins-in-sql)) execute efficiently as part of a native join. For other kinds of conditions, planner will try
+to re-arrange condition such that some of the sub-conditions are evaluated as a filter on top of join and other 
+sub-conditions are left out in the join condition. In worst case scenario, SQL will execute the join condition as a 
+cross join (cartesian product) plus a filter.
 
-Refer to the [Query execution](query-execution.md#join) page for more details on how queries are executed when you
-use join datasources.
+This feature is intended mainly to allow joining regular Druid tables with [lookup](#lookup), [inline](#inline), and
+[query](#query) datasources. Refer to the [Query execution](query-execution.md#join) page for more details on how
+queries are executed when you use join datasources.
 
 #### Joins in SQL
 
@@ -305,21 +385,23 @@ SQL joins take the form:
 <o1> [ INNER | LEFT [OUTER] ] JOIN <o2> ON <condition>
 ```
 
-The condition must involve only equalities, but functions are okay, and there can be multiple equalities ANDed together.
-Conditions like `t1.x = t2.x`, or `LOWER(t1.x) = t2.x`, or `t1.x = t2.x AND t1.y = t2.y` can all be handled. Conditions
-like `t1.x <> t2.x` cannot currently be handled.
+Any condition is accepted, but only certain kinds of conditions execute efficiently
+as a native join. The condition must be a single clause like the following, or an `AND` of clauses involving at
+least one of the following:
 
-Note that Druid SQL is less rigid than what native join datasources can handle. In cases where a SQL query does
-something that is not allowed as-is with a native join datasource, Druid SQL will generate a subquery. This can have
-a substantial effect on performance and scalability, so it is something to watch out for. Some examples of when the
-SQL layer will generate subqueries include:
+- Equality between fields of the same type on each side, like `t1 JOIN t2 ON t1.x = t2.x`.
+- Equality between a function call on one side, and a field on the other side, like `t1 JOIN t2 ON LOWER(t1.x) = t2.x`.
+- The equality operator may be `=` (which does not match nulls) or `IS NOT DISTINCT FROM` (which does match nulls).
 
-- Joining a regular Druid table to itself, or to another regular Druid table. The native join datasource can accept
-a table on the left-hand side, but not the right, so a subquery is needed.
+In other cases, Druid will either insert a subquery below the join, or will use a cross join (cartesian product)
+followed by a filter. Joins executed in these ways may run into resource or performance constraints. To determine
+if your query is using one of these execution paths, run `EXPLAIN PLAN FOR <query>` and look for the following:
 
-- Join conditions where the expressions on either side are of different types.
+- `query` type datasources under the `left` or `right` key of your `join` datasource.
+- `join` type datasource with `condition` set to `"1"` (cartesian product) followed by a `filter` that encodes the
+  condition you provided.
 
-- Join conditions where the right-hand expression is not a direct column access.
+In these cases, you may be able to improve the performance of your query by rewriting it.
 
 For more information about how Druid translates SQL to native queries, refer to the
 [Druid SQL](sql-translation.md) documentation.
@@ -349,43 +431,36 @@ and how to detect it.
 3. One common reason for implicit subquery generation is if the types of the two halves of an equality do not match.
 For example, since lookup keys are always strings, the condition `druid.d JOIN lookup.l ON d.field = l.field` will
 perform best if `d.field` is a string.
-4. As of Druid {{DRUIDVERSION}}, the join operator must evaluate the condition for each row. In the future, we expect
-to implement both early and deferred condition evaluation, which we expect to improve performance considerably for
-common use cases.
-5. Currently, Druid does not support pushing down predicates (condition and filter) past a Join (i.e. into 
-Join's children). Druid only supports pushing predicates into the join if they originated from 
-above the join. Hence, the location of predicates and filters in your Druid SQL is very important. 
+4. The join operator must evaluate the condition for each row. 
+5. Currently, Druid does not support pushing down predicates (condition and filter) past a Join (i.e. into
+Join's children). Druid only supports pushing predicates into the join if they originated from
+above the join. Hence, the location of predicates and filters in your Druid SQL is very important.
 Also, as a result of this, comma joins should be avoided.
 
-#### Future work for joins
+#### Limitations for joins
 
-Joins are an area of active development in Druid. The following features are missing today but may appear in
-future versions:
+Joins in Druid have the following limitations:
 
-- Reordering of join operations to get the most performant plan.
-- Preloaded dimension tables that are wider than lookups (i.e. supporting more than a single key and single value).
-- RIGHT OUTER and FULL OUTER joins in the native query engine. Currently, they are partially implemented. Queries run
+- The order of joins is not entirely optimized. Join operations are not reordered to get the most performant plan.
+- Preloaded dimension tables that are wider than lookups (i.e. supporting more than a single key and single value) are not supported.
+- RIGHT OUTER and FULL OUTER joins in the native query engine are not fully implemented. Queries run
   but results are not always correct.
-- Performance-related optimizations as mentioned in the [previous section](#join-performance).
-- Join conditions on a column containing a multi-value dimension.
+- Join conditions on a column can't contain a multi-value dimension.
 
 ### `unnest`
-
-> The unnest datasource is [experimental](../development/experimental.md). Its API and behavior are subject
-> to change in future releases. It is not recommended to use this feature in production at this time.
 
 Use the `unnest` datasource to unnest a column with multiple values in an array.
 For example, you have a source column that looks like this:
 
-| Nested | 
-| -- | 
+| Nested |
+| -- |
 | [a, b] |
 | [c, d] |
 | [e, [f,g]] |
 
 When you use the `unnest` datasource, the unnested column looks like this:
 
-| Unnested | 
+| Unnested |
 | -- |
 | a |
 | b |

@@ -236,7 +236,7 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
   {
     try {
     
-      ImmutableMap<String, List<Rule>> newRules = ImmutableMap.copyOf(
+      Map<String, List<Rule>> newRulesMap =
           dbi.withHandle(
               handle -> handle.createQuery(
                   // Return latest version rule by dataSource
@@ -272,8 +272,9 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
                     }
                   }
               )
-          )
       );
+
+      ImmutableMap<String, List<Rule>> newRules = ImmutableMap.copyOf(newRulesMap);
 
       final int newRuleCount = newRules.values().stream().mapToInt(List::size).sum();
       log.info("Polled and found [%d] rule(s) for [%d] datasource(s).", newRuleCount, newRules.size());
@@ -335,10 +336,10 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
     final String ruleString;
     try {
       ruleString = jsonMapper.writeValueAsString(newRules);
-      log.info("Updating [%s] with rules [%s] as per [%s]", dataSource, ruleString, auditInfo);
+      log.info("Updating datasource[%s] with rules[%s] as per [%s]", dataSource, ruleString, auditInfo);
     }
     catch (JsonProcessingException e) {
-      log.error(e, "Unable to write rules as string for [%s]", dataSource);
+      log.error(e, "Unable to write rules as string for datasource[%s]", dataSource);
       return false;
     }
     synchronized (lock) {
@@ -351,7 +352,7 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
                             .key(dataSource)
                             .type("rules")
                             .auditInfo(auditInfo)
-                            .payload(ruleString)
+                            .serializedPayload(ruleString)
                             .auditTime(auditTime)
                             .build(),
                   handle

@@ -30,18 +30,20 @@ import org.apache.druid.frame.processor.FrameProcessors;
 import org.apache.druid.frame.processor.FrameRowTooLargeException;
 import org.apache.druid.frame.processor.ReturnOrAwait;
 import org.apache.druid.frame.read.FrameReader;
+import org.apache.druid.frame.util.SettableLongVirtualColumn;
 import org.apache.druid.frame.write.FrameWriter;
 import org.apache.druid.frame.write.FrameWriterFactory;
+import org.apache.druid.java.util.common.Unit;
 import org.apache.druid.msq.querykit.QueryKitUtils;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.RowBasedGrouperHelper;
 import org.apache.druid.query.groupby.having.AlwaysHavingSpec;
 import org.apache.druid.query.groupby.having.DimFilterHavingSpec;
 import org.apache.druid.query.groupby.having.HavingSpec;
-import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
@@ -51,6 +53,7 @@ import org.apache.druid.segment.column.RowSignature;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -59,7 +62,7 @@ import java.util.function.BinaryOperator;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-public class GroupByPostShuffleFrameProcessor implements FrameProcessor<Long>
+public class GroupByPostShuffleFrameProcessor implements FrameProcessor<Object>
 {
   private final GroupByQuery query;
   private final ReadableFrameChannel inputChannel;
@@ -74,6 +77,8 @@ public class GroupByPostShuffleFrameProcessor implements FrameProcessor<Long>
   @Nullable
   private final HavingSpec havingSpec;
 
+  private final SettableLongVirtualColumn partitionBoostVirtualColumn;
+
   private Cursor frameCursor = null;
   private Supplier<ResultRow> rowSupplierFromFrameCursor;
   private ResultRow outputRow = null;
@@ -81,7 +86,7 @@ public class GroupByPostShuffleFrameProcessor implements FrameProcessor<Long>
 
   public GroupByPostShuffleFrameProcessor(
       final GroupByQuery query,
-      final GroupByStrategySelector strategySelector,
+      final GroupingEngine groupingEngine,
       final ReadableFrameChannel inputChannel,
       final WritableFrameChannel outputChannel,
       final FrameWriterFactory frameWriterFactory,
@@ -94,16 +99,17 @@ public class GroupByPostShuffleFrameProcessor implements FrameProcessor<Long>
     this.outputChannel = outputChannel;
     this.frameReader = frameReader;
     this.frameWriterFactory = frameWriterFactory;
-    this.compareFn = strategySelector.strategize(query).createResultComparator(query);
-    this.mergeFn = strategySelector.strategize(query).createMergeFn(query);
+    this.compareFn = groupingEngine.createResultComparator(query);
+    this.mergeFn = groupingEngine.createMergeFn(query);
     this.finalizeFn = makeFinalizeFn(query);
     this.havingSpec = cloneHavingSpec(query);
+    this.partitionBoostVirtualColumn = new SettableLongVirtualColumn(QueryKitUtils.PARTITION_BOOST_COLUMN);
     this.columnSelectorFactoryForFrameWriter =
-        makeVirtualColumnsForFrameWriter(jsonMapper, query).wrap(
+        makeVirtualColumnsForFrameWriter(partitionBoostVirtualColumn, jsonMapper, query).wrap(
             RowBasedGrouperHelper.createResultRowBasedColumnSelectorFactory(
                 query,
                 () -> outputRow,
-                RowSignature.Finalization.YES
+                GroupByQueryKit.isFinalize(query) ? RowSignature.Finalization.YES : RowSignature.Finalization.NO
             )
         );
   }
@@ -121,7 +127,7 @@ public class GroupByPostShuffleFrameProcessor implements FrameProcessor<Long>
   }
 
   @Override
-  public ReturnOrAwait<Long> runIncrementally(final IntSet readableInputs) throws IOException
+  public ReturnOrAwait<Object> runIncrementally(final IntSet readableInputs) throws IOException
   {
     if (frameCursor == null || frameCursor.isDone()) {
       // Keep reading through the input channel.
@@ -133,7 +139,7 @@ public class GroupByPostShuffleFrameProcessor implements FrameProcessor<Long>
         }
 
         writeCurrentFrameIfNeeded();
-        return ReturnOrAwait.returnObject(0L);
+        return ReturnOrAwait.returnObject(Unit.instance());
       } else {
         final Frame frame = inputChannel.read();
         frameCursor = FrameProcessors.makeCursor(frame, frameReader);
@@ -168,7 +174,6 @@ public class GroupByPostShuffleFrameProcessor implements FrameProcessor<Long>
 
     while (!frameCursor.isDone()) {
       final ResultRow currentRow = rowSupplierFromFrameCursor.get();
-
       if (outputRow == null) {
         outputRow = currentRow.copy();
       } else if (compareFn.compare(outputRow, currentRow) == 0) {
@@ -232,6 +237,7 @@ public class GroupByPostShuffleFrameProcessor implements FrameProcessor<Long>
     finalizeFn.accept(outputRow);
 
     if (frameWriter.addSelection()) {
+      incrementBoostColumn();
       outputRow = null;
       return false;
     } else if (frameWriter.getNumRows() > 0) {
@@ -239,6 +245,7 @@ public class GroupByPostShuffleFrameProcessor implements FrameProcessor<Long>
       setUpFrameWriterIfNeeded();
 
       if (frameWriter.addSelection()) {
+        incrementBoostColumn();
         outputRow = null;
         return true;
       } else {
@@ -305,17 +312,29 @@ public class GroupByPostShuffleFrameProcessor implements FrameProcessor<Long>
    * this processor. Kept in sync with the signature generated by {@link GroupByQueryKit}.
    */
   private static VirtualColumns makeVirtualColumnsForFrameWriter(
+      @Nullable final VirtualColumn partitionBoostVirtualColumn,
       final ObjectMapper jsonMapper,
       final GroupByQuery query
   )
   {
-    final VirtualColumn segmentGranularityVirtualColumn =
-        QueryKitUtils.makeSegmentGranularityVirtualColumn(jsonMapper, query);
+    List<VirtualColumn> virtualColumns = new ArrayList<>();
 
-    if (segmentGranularityVirtualColumn == null) {
-      return VirtualColumns.EMPTY;
-    } else {
-      return VirtualColumns.create(Collections.singletonList(segmentGranularityVirtualColumn));
+    virtualColumns.add(partitionBoostVirtualColumn);
+    final VirtualColumn segmentGranularityVirtualColumn =
+        QueryKitUtils.makeSegmentGranularityVirtualColumn(jsonMapper, query.context());
+    if (segmentGranularityVirtualColumn != null) {
+      virtualColumns.add(segmentGranularityVirtualColumn);
     }
+
+    return VirtualColumns.create(virtualColumns);
+  }
+
+  /**
+   * Increments the value of the partition boosting column. It should be called once the row value has been written
+   * to the frame
+   */
+  private void incrementBoostColumn()
+  {
+    partitionBoostVirtualColumn.setValue(partitionBoostVirtualColumn.getValue() + 1);
   }
 }

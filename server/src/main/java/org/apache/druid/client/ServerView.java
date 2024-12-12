@@ -19,6 +19,7 @@
 
 package org.apache.druid.client;
 
+import org.apache.druid.segment.realtime.appenderator.SegmentSchemas;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.timeline.DataSegment;
 
@@ -93,6 +94,14 @@ public interface ServerView
     CallbackAction segmentRemoved(DruidServerMetadata server, DataSegment segment);
 
     CallbackAction segmentViewInitialized();
+
+    /**
+     * Called when segment schema is announced.
+     *
+     * @param segmentSchemas segment schema
+     * @return continue or unregister
+     */
+    CallbackAction segmentSchemasAnnounced(SegmentSchemas segmentSchemas);
   }
 
   abstract class BaseSegmentCallback implements SegmentCallback
@@ -105,6 +114,12 @@ public interface ServerView
 
     @Override
     public CallbackAction segmentRemoved(DruidServerMetadata server, DataSegment segment)
+    {
+      return CallbackAction.CONTINUE;
+    }
+
+    @Override
+    public CallbackAction segmentSchemasAnnounced(SegmentSchemas segmentSchemas)
     {
       return CallbackAction.CONTINUE;
     }

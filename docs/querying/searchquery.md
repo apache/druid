@@ -23,9 +23,11 @@ sidebar_label: "Search"
   ~ under the License.
   -->
 
-> Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
-> This document describes a query
-> type that is only available in the native language.
+:::info
+ Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
+ This document describes a query
+ type that is only available in the native language.
+:::
 
 A search query returns dimension values that match the search specification.
 
@@ -123,10 +125,6 @@ are unique.
 - "cursorOnly" strategy generates a cursor-based execution plan. This plan creates a cursor which reads a row from a
 queryableIndexSegment, and then evaluates search predicates. If some filters support bitmap indexes, the cursor can read
 only the rows which satisfy those filters, thereby saving I/O cost. However, it might be slow with filters of low selectivity.
-
-- "auto" strategy uses a cost-based planner for choosing an optimal search strategy. It estimates the cost of index-only
-and cursor-based execution plans, and chooses the optimal one. Currently, it is not enabled by default due to the overhead
-of cost estimation.
 
 ## Server configuration
 

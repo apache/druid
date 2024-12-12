@@ -29,6 +29,7 @@ import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.segment.realtime.appenderator.SegmentSchemas;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.timeline.DataSegment;
 
@@ -39,7 +40,12 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
 
-public class CachingCostBalancerStrategyFactory implements BalancerStrategyFactory
+/**
+ * @deprecated This is currently being used only in tests for benchmarking purposes
+ * and will be removed in future releases.
+ */
+@Deprecated
+public class CachingCostBalancerStrategyFactory extends BalancerStrategyFactory
 {
   private static final EmittingLogger LOG = new EmittingLogger(CachingCostBalancerStrategyFactory.class);
 
@@ -91,6 +97,12 @@ public class CachingCostBalancerStrategyFactory implements BalancerStrategyFacto
             initialized.countDown();
             return ServerView.CallbackAction.CONTINUE;
           }
+
+          @Override
+          public ServerView.CallbackAction segmentSchemasAnnounced(SegmentSchemas segmentSchemas)
+          {
+            return ServerView.CallbackAction.CONTINUE;
+          }
         }
     );
 
@@ -123,8 +135,9 @@ public class CachingCostBalancerStrategyFactory implements BalancerStrategyFacto
   }
 
   @Override
-  public BalancerStrategy createBalancerStrategy(final ListeningExecutorService exec)
+  public BalancerStrategy createBalancerStrategy(int numBalancerThreads)
   {
+    final ListeningExecutorService exec = getOrCreateBalancerExecutor(numBalancerThreads);
     LOG.warn(
         "'cachingCost' balancer strategy has been deprecated as it can lead to"
         + " unbalanced clusters. Use 'cost' strategy instead."

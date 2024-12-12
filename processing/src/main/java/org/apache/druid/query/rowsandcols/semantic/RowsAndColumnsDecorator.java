@@ -21,6 +21,7 @@ package org.apache.druid.query.rowsandcols.semantic;
 
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.operator.ColumnWithDirection;
+import org.apache.druid.query.operator.OffsetLimit;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.segment.VirtualColumns;
 import org.joda.time.Interval;
@@ -61,7 +62,7 @@ public interface RowsAndColumnsDecorator
 
   void addVirtualColumns(VirtualColumns virtualColumn);
 
-  void setLimit(int numRows);
+  void setOffsetLimit(OffsetLimit offsetLimit);
 
   void setOrdering(List<ColumnWithDirection> ordering);
 

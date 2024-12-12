@@ -458,9 +458,14 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
       if (entry != null) {
         final int majorVersionCompare = versionComparator.compare(version, entry.getVersion());
         if (majorVersionCompare == 0) {
-          for (PartitionChunk<ObjectType> chunk : entry.partitionHolder) {
-            if (chunk.getObject().overshadows(object)) {
-              return true;
+          // If the major versions of the timeline entry and target segment are equal, and
+          // the maximum minor version among the segments is not greater than the minor version of the target segment,
+          // none of the segments in the interval can overshadow it.
+          if (entry.getMaxMinorVersion() > object.getMinorVersion()) {
+            for (PartitionChunk<ObjectType> chunk : entry.partitionHolder) {
+              if (chunk.getObject().overshadows(object)) {
+                return true;
+              }
             }
           }
           return false;
@@ -813,6 +818,15 @@ public class VersionedIntervalTimeline<VersionType, ObjectType extends Overshado
     public PartitionHolder<ObjectType> getPartitionHolder()
     {
       return partitionHolder;
+    }
+
+    /**
+     * Returns the maximum minor version across all the added segments.
+     * We do not handle updates of this variable when segments are removed for the sake of simplicity.
+     */
+    private short getMaxMinorVersion()
+    {
+      return partitionHolder.getMaxMinorVersion();
     }
 
     @Override

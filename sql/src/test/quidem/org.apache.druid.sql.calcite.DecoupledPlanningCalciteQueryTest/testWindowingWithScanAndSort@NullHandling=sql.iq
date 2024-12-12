@@ -1,0 +1,201 @@
+# testWindowingWithScanAndSort@NullHandling=sql case-crc:45108080
+# quidem testcase reason: SLIGHTLY_WORSE_PLAN
+!set debug true
+!set defaultTimeout 300000
+!set maxScatterGatherBytes 9223372036854775807
+!set plannerStrategy DECOUPLED
+!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
+!set sqlQueryId dummy
+!set outputformat mysql
+!use druidtest:///
+with t AS (
+SELECT  
+    RANK() OVER (PARTITION BY m2 ORDER BY m2 ASC) 
+      AS ranking,
+    COUNT(m1) as trend_score
+FROM foo
+GROUP BY m2,m1 LIMIT 10
+)
+select ranking, trend_score from t ORDER BY trend_score;
++---------+-------------+
+| ranking | trend_score |
++---------+-------------+
+|       1 |           1 |
+|       1 |           1 |
+|       1 |           1 |
+|       1 |           1 |
+|       1 |           1 |
+|       1 |           1 |
++---------+-------------+
+(6 rows)
+
+!ok
+LogicalProject(ranking=[$2], trend_score=[$1])
+  LogicalSort(sort0=[$1], dir0=[ASC])
+    LogicalSort(fetch=[10])
+      LogicalWindow(window#0=[window(partition {0} order by [0] aggs [RANK()])])
+        LogicalProject(m2=[$1], trend_score=[$2])
+          LogicalAggregate(group=[{5, 6}], trend_score=[COUNT($5)])
+            LogicalTableScan(table=[[druid, foo]])
+
+!logicalPlan
+DruidProject(ranking=[$2], trend_score=[$1], druid=[logical])
+  DruidSort(sort0=[$1], dir0=[ASC], druid=[logical])
+    DruidSort(fetch=[10], druid=[logical])
+      DruidWindow(window#0=[window(partition {0} order by [0] aggs [RANK()])])
+        DruidProject(m2=[$1], trend_score=[$2], druid=[logical])
+          DruidAggregate(group=[{5, 6}], trend_score=[COUNT($5)], druid=[logical])
+            DruidTableScan(table=[[druid, foo]], druid=[logical])
+
+!druidPlan
+{
+  "queryType" : "windowOperator",
+  "dataSource" : {
+    "type" : "query",
+    "query" : {
+      "queryType" : "scan",
+      "dataSource" : {
+        "type" : "query",
+        "query" : {
+          "queryType" : "windowOperator",
+          "dataSource" : {
+            "type" : "query",
+            "query" : {
+              "queryType" : "groupBy",
+              "dataSource" : {
+                "type" : "table",
+                "name" : "foo"
+              },
+              "intervals" : {
+                "type" : "intervals",
+                "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+              },
+              "granularity" : {
+                "type" : "all"
+              },
+              "dimensions" : [ {
+                "type" : "default",
+                "dimension" : "m1",
+                "outputName" : "d0",
+                "outputType" : "FLOAT"
+              }, {
+                "type" : "default",
+                "dimension" : "m2",
+                "outputName" : "d1",
+                "outputType" : "DOUBLE"
+              } ],
+              "aggregations" : [ {
+                "type" : "filtered",
+                "aggregator" : {
+                  "type" : "count",
+                  "name" : "a0"
+                },
+                "filter" : {
+                  "type" : "not",
+                  "field" : {
+                    "type" : "null",
+                    "column" : "m1"
+                  }
+                },
+                "name" : "a0"
+              } ],
+              "limitSpec" : {
+                "type" : "NoopLimitSpec"
+              }
+            }
+          },
+          "intervals" : {
+            "type" : "LegacySegmentSpec",
+            "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+          },
+          "outputSignature" : [ {
+            "name" : "d1",
+            "type" : "DOUBLE"
+          }, {
+            "name" : "a0",
+            "type" : "LONG"
+          }, {
+            "name" : "w0",
+            "type" : "LONG"
+          } ],
+          "operatorDefinition" : [ {
+            "type" : "naiveSort",
+            "columns" : [ {
+              "column" : "d1",
+              "direction" : "ASC"
+            } ]
+          }, {
+            "type" : "naivePartition",
+            "partitionColumns" : [ "d1" ]
+          }, {
+            "type" : "window",
+            "processor" : {
+              "type" : "rank",
+              "group" : [ "d1" ],
+              "outputColumn" : "w0",
+              "asPercent" : false
+            }
+          } ],
+          "leafOperators" : [ ],
+          "granularity" : {
+            "type" : "all"
+          }
+        }
+      },
+      "intervals" : {
+        "type" : "intervals",
+        "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+      },
+      "resultFormat" : "compactedList",
+      "limit" : 10,
+      "columns" : [ "d1", "a0", "w0" ],
+      "columnTypes" : [ "DOUBLE", "LONG", "LONG" ],
+      "granularity" : {
+        "type" : "all"
+      },
+      "legacy" : false
+    }
+  },
+  "intervals" : {
+    "type" : "LegacySegmentSpec",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "outputSignature" : [ {
+    "name" : "w0",
+    "type" : "LONG"
+  }, {
+    "name" : "a0",
+    "type" : "LONG"
+  } ],
+  "operatorDefinition" : [ {
+    "type" : "naiveSort",
+    "columns" : [ {
+      "column" : "a0",
+      "direction" : "ASC"
+    } ]
+  }, {
+    "type" : "scan",
+    "timeRange" : null,
+    "filter" : null,
+    "offsetLimit" : null,
+    "projectedColumns" : [ "w0", "a0" ],
+    "virtualColumns" : null,
+    "ordering" : null
+  } ],
+  "leafOperators" : [ {
+    "type" : "scan",
+    "timeRange" : null,
+    "filter" : null,
+    "offsetLimit" : {
+      "offset" : 0,
+      "limit" : 9223372036854775807
+    },
+    "projectedColumns" : [ "w0", "a0" ],
+    "virtualColumns" : null,
+    "ordering" : null
+  } ],
+  "granularity" : {
+    "type" : "all"
+  }
+}
+!nativePlan

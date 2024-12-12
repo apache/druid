@@ -26,36 +26,60 @@ import it.unimi.dsi.fastutil.ints.IntAVLTreeSet;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.msq.guice.MSQIndexingModule;
 import org.apache.druid.segment.TestHelper;
+import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.Test;
 
 public class StripedReadablePartitionsTest
 {
   @Test
+  public void testFromDenseSet()
+  {
+    // Tests that when ReadablePartitions.striped is called with a dense set, we get StripedReadablePartitions.
+
+    final IntAVLTreeSet workers = new IntAVLTreeSet();
+    workers.add(0);
+    workers.add(1);
+
+    final ReadablePartitions readablePartitionsFromSet = ReadablePartitions.striped(1, workers, 3);
+
+    MatcherAssert.assertThat(
+        readablePartitionsFromSet,
+        CoreMatchers.instanceOf(StripedReadablePartitions.class)
+    );
+
+    Assert.assertEquals(
+        ReadablePartitions.striped(1, 2, 3),
+        readablePartitionsFromSet
+    );
+  }
+
+  @Test
   public void testPartitionNumbers()
   {
-    final StripedReadablePartitions partitions = ReadablePartitions.striped(1, 2, 3);
+    final StripedReadablePartitions partitions = (StripedReadablePartitions) ReadablePartitions.striped(1, 2, 3);
     Assert.assertEquals(ImmutableSet.of(0, 1, 2), partitions.getPartitionNumbers());
   }
 
   @Test
   public void testNumWorkers()
   {
-    final StripedReadablePartitions partitions = ReadablePartitions.striped(1, 2, 3);
+    final StripedReadablePartitions partitions = (StripedReadablePartitions) ReadablePartitions.striped(1, 2, 3);
     Assert.assertEquals(2, partitions.getNumWorkers());
   }
 
   @Test
   public void testStageNumber()
   {
-    final StripedReadablePartitions partitions = ReadablePartitions.striped(1, 2, 3);
+    final StripedReadablePartitions partitions = (StripedReadablePartitions) ReadablePartitions.striped(1, 2, 3);
     Assert.assertEquals(1, partitions.getStageNumber());
   }
 
   @Test
   public void testSplit()
   {
-    final StripedReadablePartitions partitions = ReadablePartitions.striped(1, 2, 3);
+    final ReadablePartitions partitions = ReadablePartitions.striped(1, 2, 3);
 
     Assert.assertEquals(
         ImmutableList.of(
@@ -72,7 +96,7 @@ public class StripedReadablePartitionsTest
     final ObjectMapper mapper = TestHelper.makeJsonMapper()
                                           .registerModules(new MSQIndexingModule().getJacksonModules());
 
-    final StripedReadablePartitions partitions = ReadablePartitions.striped(1, 2, 3);
+    final ReadablePartitions partitions = ReadablePartitions.striped(1, 2, 3);
 
     Assert.assertEquals(
         partitions,

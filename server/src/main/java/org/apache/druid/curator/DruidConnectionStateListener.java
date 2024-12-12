@@ -75,7 +75,7 @@ public class DruidConnectionStateListener extends AbstractMonitor implements Con
       }
 
       if (disconnectDuration != NIL) {
-        emitter.emit(ServiceMetricEvent.builder().build(METRIC_RECONNECT_TIME, disconnectDuration));
+        emitter.emit(ServiceMetricEvent.builder().setMetric(METRIC_RECONNECT_TIME, disconnectDuration));
       }
     } else {
       synchronized (this) {
@@ -97,7 +97,7 @@ public class DruidConnectionStateListener extends AbstractMonitor implements Con
   @Override
   public boolean doMonitor(ServiceEmitter emitter)
   {
-    emitter.emit(ServiceMetricEvent.builder().build(METRIC_IS_CONNECTED, isConnected() ? 1 : 0));
+    emitter.emit(ServiceMetricEvent.builder().setMetric(METRIC_IS_CONNECTED, isConnected() ? 1 : 0));
     return true;
   }
 }

@@ -392,4 +392,34 @@ public class RowSignature implements ColumnInspector
      */
     UNKNOWN
   }
+
+  /**
+   * Builds a safe {@link RowSignature}.
+   *
+   * The new rowsignature will not contain `null` types - they will be replaced by STRING.
+   */
+  public RowSignature buildSafeSignature(ImmutableList<String> requestedColumnNames)
+  {
+    Builder builder = new Builder();
+    for (String columnName : requestedColumnNames) {
+      ColumnType columnType = columnTypes.get(columnName);
+      if (columnType == null) {
+        columnType = ColumnType.STRING;
+      }
+      builder.add(columnName, columnType);
+    }
+    return builder.build();
+  }
+
+  /**
+   * Returns the column types in the order they are in.
+   */
+  public List<ColumnType> getColumnTypes()
+  {
+    List<ColumnType> ret = new ArrayList<ColumnType>();
+    for (String colName : columnNames) {
+      ret.add(columnTypes.get(colName));
+    }
+    return ret;
+  }
 }

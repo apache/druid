@@ -21,11 +21,11 @@ package org.apache.druid.msq.sql.entity;
 
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import javax.annotation.Nullable;
-import java.util.Comparator;
 import java.util.Objects;
 
 /**
@@ -39,6 +39,14 @@ public class PageInformation
   @Nullable
   private final Long sizeInBytes;
 
+  // Worker field should not flow to the users of SqlStatementResource API since users should not care about worker
+  @Nullable
+  private final Integer worker;
+
+  // Partition field should not flow to the users of SqlStatementResource API since users should not care about partitions
+  @Nullable
+  private final Integer partition;
+
   @JsonCreator
   public PageInformation(
       @JsonProperty("id") long id,
@@ -49,7 +57,26 @@ public class PageInformation
     this.id = id;
     this.numRows = numRows;
     this.sizeInBytes = sizeInBytes;
+    this.worker = null;
+    this.partition = null;
   }
+
+
+  public PageInformation(
+      long id,
+      Long numRows,
+      Long sizeInBytes,
+      Integer worker,
+      Integer partition
+  )
+  {
+    this.id = id;
+    this.numRows = numRows;
+    this.sizeInBytes = sizeInBytes;
+    this.worker = worker;
+    this.partition = partition;
+  }
+
 
   @JsonProperty
   public long getId()
@@ -74,6 +101,20 @@ public class PageInformation
   }
 
 
+  @Nullable
+  @JsonIgnore
+  public Integer getWorker()
+  {
+    return worker;
+  }
+
+  @Nullable
+  @JsonIgnore
+  public Integer getPartition()
+  {
+    return partition;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -87,13 +128,13 @@ public class PageInformation
     return id == that.id && Objects.equals(numRows, that.numRows) && Objects.equals(
         sizeInBytes,
         that.sizeInBytes
-    );
+    ) && Objects.equals(worker, that.worker) && Objects.equals(partition, that.partition);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(id, numRows, sizeInBytes);
+    return Objects.hash(id, numRows, sizeInBytes, worker, partition);
   }
 
   @Override
@@ -103,20 +144,8 @@ public class PageInformation
            "id=" + id +
            ", numRows=" + numRows +
            ", sizeInBytes=" + sizeInBytes +
+           ", worker=" + worker +
+           ", partition=" + partition +
            '}';
-  }
-
-  public static Comparator<PageInformation> getIDComparator()
-  {
-    return new PageComparator();
-  }
-
-  public static class PageComparator implements Comparator<PageInformation>
-  {
-    @Override
-    public int compare(PageInformation s1, PageInformation s2)
-    {
-      return Long.compare(s1.getId(), s2.getId());
-    }
   }
 }

@@ -20,6 +20,7 @@
 package org.apache.druid.frame.read;
 
 import com.google.common.base.Preconditions;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.field.FieldReader;
 import org.apache.druid.frame.field.FieldReaders;
@@ -28,10 +29,10 @@ import org.apache.druid.frame.key.FrameComparisonWidgetImpl;
 import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.frame.read.columnar.FrameColumnReader;
 import org.apache.druid.frame.read.columnar.FrameColumnReaders;
-import org.apache.druid.frame.segment.row.FrameCursorFactory;
+import org.apache.druid.frame.segment.columnar.ColumnarFrameCursorFactory;
+import org.apache.druid.frame.segment.row.RowFrameCursorFactory;
 import org.apache.druid.frame.write.FrameWriterUtils;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
@@ -44,7 +45,7 @@ import java.util.Set;
 
 /**
  * Embeds the logic to read frames with a given {@link RowSignature}.
- *
+ * <p>
  * Stateless and immutable.
  */
 public class FrameReader
@@ -74,6 +75,7 @@ public class FrameReader
    * If the columnType is null, we store the data as {@link ColumnType#NESTED_DATA}. This can be done if we know that
    * the data that we receive can be serded generically using the nested data. It is currently used in the brokers to
    * store the data with unknown types into frames.
+   *
    * @param signature signature used to generate the reader
    */
   public static FrameReader create(final RowSignature signature)
@@ -96,8 +98,8 @@ public class FrameReader
               signature.getColumnName(columnNumber)
           );
 
-      columnReaders.add(FrameColumnReaders.create(columnNumber, columnType));
       fieldReaders.add(FieldReaders.create(signature.getColumnName(columnNumber), columnType));
+      columnReaders.add(FrameColumnReaders.create(signature.getColumnName(columnNumber), columnNumber, columnType));
     }
 
     return new FrameReader(signature, columnReaders, fieldReaders);
@@ -110,7 +112,7 @@ public class FrameReader
 
   /**
    * Returns capabilities for a particular column in a particular frame.
-   *
+   * <p>
    * Preferred over {@link RowSignature#getColumnCapabilities(String)} when reading a particular frame, because this
    * method has more insight into what's actually going on with that specific frame (nulls, multivalue, etc). The
    * RowSignature version is based solely on type.
@@ -141,17 +143,17 @@ public class FrameReader
   {
     switch (frame.type()) {
       case COLUMNAR:
-        return new org.apache.druid.frame.segment.columnar.FrameCursorFactory(frame, signature, columnReaders);
+        return new ColumnarFrameCursorFactory(frame, signature, columnReaders);
       case ROW_BASED:
-        return new FrameCursorFactory(frame, this, fieldReaders);
+        return new RowFrameCursorFactory(frame, this, fieldReaders);
       default:
-        throw new ISE("Unrecognized frame type [%s]", frame.type());
+        throw DruidException.defensive("Unrecognized frame type [%s]", frame.type());
     }
   }
 
   /**
    * Create a {@link FrameComparisonWidget} for the given frame.
-   *
+   * <p>
    * Only possible for frames of type {@link org.apache.druid.frame.FrameType#ROW_BASED}. The provided
    * sortColumns must be a prefix of {@link #signature()}.
    */

@@ -19,16 +19,19 @@
 
 package org.apache.druid.segment.virtual;
 
+import org.apache.druid.collections.bitmap.RoaringBitmapFactory;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.extraction.ExtractionFn;
+import org.apache.druid.segment.ColumnSelectorColumnIndexSelector;
 import org.apache.druid.segment.ConstantDimensionSelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IdLookup;
 import org.apache.druid.segment.TestColumnSelector;
 import org.apache.druid.segment.TestColumnSelectorFactory;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
@@ -317,17 +320,22 @@ public class FallbackVirtualColumnTest
         .addCapabilities("colA", ColumnCapabilitiesImpl.createDefault())
         .addCapabilities("colB", ColumnCapabilitiesImpl.createDefault())
         .addCapabilities("colC", ColumnCapabilitiesImpl.createDefault());
+    final ColumnSelectorColumnIndexSelector columnIndexSelector = new ColumnSelectorColumnIndexSelector(
+        RoaringBitmapFactory.INSTANCE,
+        VirtualColumns.EMPTY,
+        selectorFactory
+    );
 
-    Assert.assertSame(colA, col.getIndexSupplier("abcd", selectorFactory));
+    Assert.assertSame(colA, col.getIndexSupplier("abcd", columnIndexSelector));
 
     selectorFactory.addCapabilities("colA", null);
-    Assert.assertSame(colB, col.getIndexSupplier("abcd", selectorFactory));
+    Assert.assertSame(colB, col.getIndexSupplier("abcd", columnIndexSelector));
 
     selectorFactory.addCapabilities("colB", null);
-    Assert.assertSame(colC, col.getIndexSupplier("abcd", selectorFactory));
+    Assert.assertSame(colC, col.getIndexSupplier("abcd", columnIndexSelector));
 
     selectorFactory.addCapabilities("colC", null);
-    Assert.assertSame(colA, col.getIndexSupplier("abcd", selectorFactory));
+    Assert.assertSame(colA, col.getIndexSupplier("abcd", columnIndexSelector));
 
   }
 
@@ -489,7 +497,7 @@ public class FallbackVirtualColumnTest
     }
   }
 
-  private static class SameMultiVectorSelector implements MultiValueDimensionVectorSelector
+  public static class SameMultiVectorSelector implements MultiValueDimensionVectorSelector
   {
     @Override
     public int getValueCardinality()

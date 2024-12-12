@@ -27,12 +27,12 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.sql.SqlQueryPlus;
 import org.apache.druid.sql.avatica.DruidJdbcResultSet.ResultFetcherFactory;
 import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PrepareResult;
 
 import java.io.Closeable;
-import java.sql.Array;
 import java.sql.DatabaseMetaData;
 import java.util.ArrayList;
 import java.util.List;
@@ -60,6 +60,7 @@ public abstract class AbstractDruidJdbcStatement implements Closeable
   protected final ResultFetcherFactory fetcherFactory;
   protected Throwable throwable;
   protected DruidJdbcResultSet resultSet;
+  protected SqlQueryPlus sqlQuery;
 
   public AbstractDruidJdbcStatement(
       final String connectionId,
@@ -174,27 +175,15 @@ public abstract class AbstractDruidJdbcStatement implements Closeable
   private static ColumnMetaData.Rep rep(final SqlTypeName sqlType)
   {
     if (SqlTypeName.CHAR_TYPES.contains(sqlType)) {
-      return ColumnMetaData.Rep.of(String.class);
-    } else if (sqlType == SqlTypeName.TIMESTAMP) {
-      return ColumnMetaData.Rep.of(Long.class);
-    } else if (sqlType == SqlTypeName.DATE) {
-      return ColumnMetaData.Rep.of(Integer.class);
-    } else if (sqlType == SqlTypeName.INTEGER) {
-      // use Number.class for exact numeric types since JSON transport might switch longs to integers
-      return ColumnMetaData.Rep.of(Number.class);
-    } else if (sqlType == SqlTypeName.BIGINT) {
-      // use Number.class for exact numeric types since JSON transport might switch longs to integers
-      return ColumnMetaData.Rep.of(Number.class);
-    } else if (sqlType == SqlTypeName.FLOAT) {
-      return ColumnMetaData.Rep.of(Float.class);
-    } else if (sqlType == SqlTypeName.DOUBLE || sqlType == SqlTypeName.DECIMAL) {
-      return ColumnMetaData.Rep.of(Double.class);
+      return ColumnMetaData.Rep.STRING;
+    } else if (SqlTypeName.DATETIME_TYPES.contains(sqlType) || SqlTypeName.NUMERIC_TYPES.contains(sqlType)) {
+      return ColumnMetaData.Rep.NUMBER;
     } else if (sqlType == SqlTypeName.BOOLEAN) {
-      return ColumnMetaData.Rep.of(Boolean.class);
+      return ColumnMetaData.Rep.BOOLEAN;
     } else if (sqlType == SqlTypeName.OTHER) {
-      return ColumnMetaData.Rep.of(Object.class);
+      return ColumnMetaData.Rep.OBJECT;
     } else if (sqlType == SqlTypeName.ARRAY) {
-      return ColumnMetaData.Rep.of(Array.class);
+      return ColumnMetaData.Rep.ARRAY;
     } else {
       throw new ISE("No rep for SQL type [%s]", sqlType);
     }
@@ -258,5 +247,10 @@ public abstract class AbstractDruidJdbcStatement implements Closeable
   public int getStatementId()
   {
     return statementId;
+  }
+
+  public SqlQueryPlus getSqlQuery()
+  {
+    return sqlQuery;
   }
 }

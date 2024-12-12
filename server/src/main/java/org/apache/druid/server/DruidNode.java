@@ -156,7 +156,7 @@ public class DruidNode
     Integer portFromHostConfig;
     if (host != null) {
       hostAndPort = HostAndPort.fromString(host);
-      host = hostAndPort.getHostText();
+      host = hostAndPort.getHost();
       portFromHostConfig = hostAndPort.hasPort() ? hostAndPort.getPort() : null;
       if (plainTextPort != null && portFromHostConfig != null && !plainTextPort.equals(portFromHostConfig)) {
         throw new IAE("Conflicting host:port [%s] and port [%d] settings", host, plainTextPort);

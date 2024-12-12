@@ -96,7 +96,7 @@ public class CatalogSyncTest
       TableMetadata table = TableBuilder.external("externTable")
           .inputSource(toMap(new InlineInputSource("a\nc")))
           .inputFormat(BaseExternTableTest.CSV_FORMAT)
-          .column("a", Columns.VARCHAR)
+          .column("a", Columns.STRING)
           .build();
       storage.validate(table);
     }
@@ -114,7 +114,7 @@ public class CatalogSyncTest
     {
       TableMetadata table = TableBuilder.external("externTable")
           .inputSource(toMap(new InlineInputSource("a\nc")))
-           .column("a", Columns.VARCHAR)
+           .column("a", Columns.STRING)
           .build();
       assertThrows(IAE.class, () -> storage.validate(table));
     }
@@ -195,15 +195,15 @@ public class CatalogSyncTest
   {
     TableMetadata table1 = TableBuilder.datasource("table1", "P1D")
         .timeColumn()
-        .column("a", Columns.VARCHAR)
+        .column("a", Columns.STRING)
         .build();
     storage.validate(table1);
     storage.tables().create(table1);
 
     TableMetadata table2 = TableBuilder.datasource("table2", "P1D")
         .timeColumn()
-        .column("dim", Columns.VARCHAR)
-        .column("measure", "BIGINT")
+        .column("dim", Columns.STRING)
+        .column("measure", Columns.LONG)
         .build();
     storage.validate(table2);
     storage.tables().create(table2);
@@ -211,7 +211,7 @@ public class CatalogSyncTest
     TableMetadata table3 = TableBuilder.external("table3")
         .inputFormat(BaseExternTableTest.CSV_FORMAT)
         .inputSource(toMap(new InlineInputSource("a\nc")))
-        .column("a", Columns.VARCHAR)
+        .column("a", Columns.STRING)
         .build();
     storage.validate(table3);
     storage.tables().create(table3);
@@ -230,9 +230,9 @@ public class CatalogSyncTest
       List<ColumnSpec> cols = dsSpec.columns();
       assertEquals(2, cols.size());
       assertEquals(Columns.TIME_COLUMN, cols.get(0).name());
-      assertEquals(Columns.TIMESTAMP, cols.get(0).sqlType());
+      assertEquals(Columns.LONG, cols.get(0).dataType());
       assertEquals("a", cols.get(1).name());
-      assertEquals(Columns.VARCHAR, cols.get(1).sqlType());
+      assertEquals(Columns.STRING, cols.get(1).dataType());
 
       DatasourceFacade ds = new DatasourceFacade(catalog.resolveTable(id));
       assertEquals("P1D", ds.segmentGranularityString());
@@ -249,11 +249,11 @@ public class CatalogSyncTest
       assertEquals(3, cols.size());
       assertEquals("__time", cols.get(0).name());
       assertEquals(Columns.TIME_COLUMN, cols.get(0).name());
-      assertEquals(Columns.TIMESTAMP, cols.get(0).sqlType());
+      assertEquals(Columns.LONG, cols.get(0).dataType());
       assertEquals("dim", cols.get(1).name());
-      assertEquals(Columns.VARCHAR, cols.get(1).sqlType());
+      assertEquals(Columns.STRING, cols.get(1).dataType());
       assertEquals("measure", cols.get(2).name());
-      assertEquals("BIGINT", cols.get(2).sqlType());
+      assertEquals(Columns.LONG, cols.get(2).dataType());
 
       DatasourceFacade ds = new DatasourceFacade(catalog.resolveTable(id));
       assertEquals("P1D", ds.segmentGranularityString());
@@ -273,7 +273,7 @@ public class CatalogSyncTest
       List<ColumnSpec> cols = inputSpec.columns();
       assertEquals(1, cols.size());
       assertEquals("a", cols.get(0).name());
-      assertEquals(Columns.VARCHAR, cols.get(0).sqlType());
+      assertEquals(Columns.STRING, cols.get(0).dataType());
 
       assertNotNull(inputSpec.properties());
     }
@@ -303,7 +303,7 @@ public class CatalogSyncTest
     // Create a table 3
     TableMetadata table3 = TableBuilder.datasource("table3", "P1D")
         .timeColumn()
-        .column("x", "FLOAT")
+        .column("x", Columns.FLOAT)
         .build();
     storage.tables().create(table3);
   }
@@ -320,7 +320,7 @@ public class CatalogSyncTest
       assertEquals(Columns.TIME_COLUMN, cols.get(0).name());
       assertEquals("a", cols.get(1).name());
       assertEquals("b", cols.get(2).name());
-      assertEquals(Columns.DOUBLE, cols.get(2).sqlType());
+      assertEquals(Columns.DOUBLE, cols.get(2).dataType());
     }
     {
       TableId id = TableId.datasource("table3");

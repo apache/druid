@@ -64,7 +64,7 @@ public class FluentQueryRunner<T> implements QueryRunner<T>
 
   public FluentQueryRunner<T> applyPreMergeDecoration()
   {
-    return from(new UnionQueryRunner<>(toolChest.preMergeQueryDecoration(baseRunner)));
+    return from(new UnionDataSourceQueryRunner<>(toolChest.preMergeQueryDecoration(baseRunner)));
   }
 
   public FluentQueryRunner<T> emitCPUTimeMetric(ServiceEmitter emitter)
@@ -90,40 +90,18 @@ public class FluentQueryRunner<T> implements QueryRunner<T>
     return from(postProcessing != null ? postProcessing.postProcess(baseRunner) : baseRunner);
   }
 
-  public FluentQueryRunner<T> mergeResults()
+  /**
+   * Delegates to {@link QueryToolChest#mergeResults(QueryRunner, boolean)}.
+   * 
+   * @see QueryToolChest#mergeResults(QueryRunner, boolean)
+   */
+  public FluentQueryRunner<T> mergeResults(boolean willMergeRunner)
   {
-    return from(toolChest.mergeResults(baseRunner));
+    return from(toolChest.mergeResults(baseRunner, willMergeRunner));
   }
 
   public FluentQueryRunner<T> map(final Function<QueryRunner<T>, QueryRunner<T>> mapFn)
   {
     return from(mapFn.apply(baseRunner));
-  }
-
-  /**
-   * Sets the toString of the QueryRunner.  This is used because QueryRunner objects are often used as parameters for
-   * tests and the toString() value of the QueryRunners are used for the name of the test.
-   *
-   * This method doesn't return a FluentQueryRunner because it breaks the fluency.
-   *
-   * @param toStringValue the value that the resulting QueryRunner should return from its toString method.
-   * @return a QueryRunner that will return toStringValue from its toString method
-   */
-  public QueryRunner<T> setToString(String toStringValue)
-  {
-    return new QueryRunner<T>()
-    {
-      @Override
-      public Sequence<T> run(QueryPlus<T> queryPlus, ResponseContext responseContext)
-      {
-        return FluentQueryRunner.this.run(queryPlus, responseContext);
-      }
-
-      @Override
-      public String toString()
-      {
-        return toStringValue;
-      }
-    };
   }
 }

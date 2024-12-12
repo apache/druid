@@ -16,14 +16,14 @@
  * limitations under the License.
  */
 
-import { C } from '@druid-toolkit/query';
-import type { AxiosResponse } from 'axios';
+import type { AxiosResponse, CancelToken } from 'axios';
 import axios from 'axios';
+import { C } from 'druid-query-toolkit';
 
 import { Api } from '../singletons';
 
-import { assemble } from './general';
-import type { RowColumn } from './query-cursor';
+import type { RowColumn } from './general';
+import { assemble, lookupBy } from './general';
 
 const CANCELED_MESSAGE = 'Query canceled by user.';
 
@@ -109,20 +109,28 @@ export function getDruidErrorMessage(e: any): string {
 }
 
 export class DruidError extends Error {
-  static extractPosition(context: Record<string, any> | undefined): RowColumn | undefined {
+  static extractStartRowColumn(
+    context: Record<string, any> | undefined,
+    offsetLines = 0,
+  ): RowColumn | undefined {
     if (context?.sourceType !== 'sql' || !context.line || !context.column) return;
 
-    const rowColumn: RowColumn = {
-      row: Number(context.line) - 1,
+    return {
+      row: Number(context.line) - 1 + offsetLines,
       column: Number(context.column) - 1,
     };
+  }
 
-    if (context.endLine && context.endColumn) {
-      rowColumn.endRow = Number(context.endLine) - 1;
-      rowColumn.endColumn = Number(context.endColumn) - 1;
-    }
+  static extractEndRowColumn(
+    context: Record<string, any> | undefined,
+    offsetLines = 0,
+  ): RowColumn | undefined {
+    if (context?.sourceType !== 'sql' || !context.endLine || !context.endColumn) return;
 
-    return rowColumn;
+    return {
+      row: Number(context.endLine) - 1 + offsetLines,
+      column: Number(context.endColumn) - 1,
+    };
   }
 
   static positionToIndex(str: string, line: number, column: number): number {
@@ -256,15 +264,17 @@ export class DruidError extends Error {
   public errorMessage?: string;
   public errorMessageWithoutExpectation?: string;
   public expectation?: string;
-  public position?: RowColumn;
+  public startRowColumn?: RowColumn;
+  public endRowColumn?: RowColumn;
   public suggestion?: QuerySuggestion;
+  public queryDuration?: number;
 
   // Deprecated
   public error?: string;
   public errorClass?: string;
   public host?: string;
 
-  constructor(e: any, skipLines = 0) {
+  constructor(e: any, offsetLines = 0) {
     super(axios.isCancel(e) ? CANCELED_MESSAGE : getDruidErrorMessage(e));
     if (axios.isCancel(e)) {
       this.canceled = true;
@@ -286,14 +296,15 @@ export class DruidError extends Error {
       Object.assign(this, druidErrorResponse);
 
       if (this.errorMessage) {
-        if (skipLines) {
+        if (offsetLines) {
           this.errorMessage = this.errorMessage.replace(
             /line \[(\d+)],/g,
-            (_, c) => `line [${Number(c) - skipLines}],`,
+            (_, c) => `line [${Number(c) + offsetLines}],`,
           );
         }
 
-        this.position = DruidError.extractPosition(this.context);
+        this.startRowColumn = DruidError.extractStartRowColumn(this.context, offsetLines);
+        this.endRowColumn = DruidError.extractEndRowColumn(this.context, offsetLines);
         this.suggestion = DruidError.getSuggestion(this.errorMessage);
 
         const expectationIndex = this.errorMessage.indexOf('Was expecting one of');
@@ -308,33 +319,72 @@ export class DruidError extends Error {
   }
 }
 
-export async function queryDruidRune(runeQuery: Record<string, any>): Promise<any> {
+export async function queryDruidRune(
+  runeQuery: Record<string, any>,
+  cancelToken?: CancelToken,
+): Promise<any> {
   let runeResultResp: AxiosResponse;
   try {
-    runeResultResp = await Api.instance.post('/druid/v2', runeQuery);
+    runeResultResp = await Api.instance.post('/druid/v2', runeQuery, { cancelToken });
   } catch (e) {
     throw new Error(getDruidErrorMessage(e));
   }
   return runeResultResp.data;
 }
 
-export async function queryDruidSql<T = any>(sqlQueryPayload: Record<string, any>): Promise<T[]> {
+export async function queryDruidSql<T = any>(
+  sqlQueryPayload: Record<string, any>,
+  cancelToken?: CancelToken,
+): Promise<T[]> {
   let sqlResultResp: AxiosResponse;
   try {
-    sqlResultResp = await Api.instance.post('/druid/v2/sql', sqlQueryPayload);
+    sqlResultResp = await Api.instance.post('/druid/v2/sql', sqlQueryPayload, { cancelToken });
   } catch (e) {
     throw new Error(getDruidErrorMessage(e));
   }
   return sqlResultResp.data;
 }
 
+export async function queryDruidSqlDart<T = any>(
+  sqlQueryPayload: Record<string, any>,
+  cancelToken?: CancelToken,
+): Promise<T[]> {
+  let sqlResultResp: AxiosResponse;
+  try {
+    sqlResultResp = await Api.instance.post('/druid/v2/sql/dart', sqlQueryPayload, { cancelToken });
+  } catch (e) {
+    throw new Error(getDruidErrorMessage(e));
+  }
+  return sqlResultResp.data;
+}
+
+export async function getApiArray<T = any>(url: string, cancelToken?: CancelToken): Promise<T[]> {
+  const result = (await Api.instance.get(url, { cancelToken })).data;
+  if (!Array.isArray(result)) throw new Error('unexpected result');
+  return result;
+}
+
 export interface QueryExplanation {
   query: any;
   signature: { name: string; type: string }[];
+  columnMappings: {
+    queryColumn: string;
+    outputColumn: string;
+  }[];
 }
 
-export function formatSignature(queryExplanation: QueryExplanation): string {
-  return queryExplanation.signature
-    .map(({ name, type }) => `${C.optionalQuotes(name)}::${type}`)
+export function formatColumnMappingsAndSignature(queryExplanation: QueryExplanation): string {
+  const columnNameToType = lookupBy(
+    queryExplanation.signature,
+    c => c.name,
+    c => c.type,
+  );
+  return queryExplanation.columnMappings
+    .map(({ queryColumn, outputColumn }) => {
+      const type = columnNameToType[queryColumn];
+      return `${C.optionalQuotes(queryColumn)}${type ? `::${type}` : ''}→${C.optionalQuotes(
+        outputColumn,
+      )}`;
+    })
     .join(', ');
 }

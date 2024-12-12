@@ -1,0 +1,4 @@
+LogicalInsert(target=[druid.dst], partitionedBy=[P1D], clusteredBy=[2, `dim1`, CEIL(`m2`)])
+  LogicalSort(sort0=[$1], sort1=[$2], sort2=[$3], dir0=[ASC], dir1=[ASC], dir2=[ASC])
+    LogicalProject(inputs=[0], exprs=[[FLOOR($5), $1, CEIL($6)]])
+      LogicalTableScan(table=[[druid, foo]])

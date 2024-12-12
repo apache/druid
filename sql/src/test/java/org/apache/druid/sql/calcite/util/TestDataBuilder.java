@@ -19,9 +19,12 @@
 
 package org.apache.druid.sql.calcite.util;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterators;
 import com.google.inject.Injector;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
@@ -36,24 +39,46 @@ import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.RE;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.InlineDataSource;
+import org.apache.druid.query.NestedDataTestUtils;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.first.DoubleFirstAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.first.LongFirstAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.first.StringFirstAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.last.DoubleLastAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.last.FloatLastAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.last.LongLastAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.last.StringLastAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
+import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
+import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.IndexBuilder;
+import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.SegmentWrangler;
+import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.StringEncodingStrategy;
+import org.apache.druid.segment.generator.GeneratorBasicSchemas;
+import org.apache.druid.segment.generator.GeneratorSchemaInfo;
+import org.apache.druid.segment.generator.SegmentGenerator;
+import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.segment.join.Joinable;
@@ -61,9 +86,11 @@ import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.join.table.IndexedTableJoinable;
 import org.apache.druid.segment.join.table.RowBasedIndexedTable;
+import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.QueryStackTests;
+import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
@@ -71,11 +98,13 @@ import org.joda.time.DateTime;
 import org.joda.time.chrono.ISOChronology;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -86,8 +115,12 @@ import java.util.stream.Collectors;
  */
 public class TestDataBuilder
 {
+  private static final ObjectMapper MAPPER = new DefaultObjectMapper();
+
   public static final String TIMESTAMP_COLUMN = "t";
   public static final GlobalTableDataSource CUSTOM_TABLE = new GlobalTableDataSource(CalciteTests.BROADCAST_DATASOURCE);
+
+  public static QueryableIndex QUERYABLE_INDEX_FOR_BENCHMARK_DATASOURCE = null;
 
   public static final JoinableFactory CUSTOM_ROW_TABLE_JOINABLE = new JoinableFactory()
   {
@@ -138,8 +171,8 @@ public class TestDataBuilder
                            "dim5",
                            "dim6"
                        )))
-                       .add(new DoubleDimensionSchema("d1"))
-                       .add(new DoubleDimensionSchema("d2"))
+                       .add(new DoubleDimensionSchema("dbl1"))
+                       .add(new DoubleDimensionSchema("dbl2"))
                        .add(new FloatDimensionSchema("f1"))
                        .add(new FloatDimensionSchema("f2"))
                        .add(new LongDimensionSchema("l1"))
@@ -172,7 +205,7 @@ public class TestDataBuilder
   );
 
 
-  private static final IncrementalIndexSchema INDEX_SCHEMA = new IncrementalIndexSchema.Builder()
+  public static final IncrementalIndexSchema INDEX_SCHEMA = new IncrementalIndexSchema.Builder()
       .withMetrics(
           new CountAggregatorFactory("cnt"),
           new FloatSumAggregatorFactory("m1", "m1"),
@@ -222,7 +255,7 @@ public class TestDataBuilder
       .withRollup(false)
       .build();
 
-  private static final IncrementalIndexSchema INDEX_SCHEMA_LOTS_O_COLUMNS = new IncrementalIndexSchema.Builder()
+  public static final IncrementalIndexSchema INDEX_SCHEMA_LOTS_O_COLUMNS = new IncrementalIndexSchema.Builder()
       .withMetrics(
           new CountAggregatorFactory("count")
       )
@@ -357,7 +390,7 @@ public class TestDataBuilder
                   .put("t", "2000-01-01")
                   .put("m1", "1.0")
                   .put("m2", "1.0")
-                  .put("d1", 1.0)
+                  .put("dbl1", 1.0)
                   .put("f1", 1.0f)
                   .put("l1", 7L)
                   .put("dim1", "")
@@ -371,8 +404,8 @@ public class TestDataBuilder
                   .put("t", "2000-01-02")
                   .put("m1", "2.0")
                   .put("m2", "2.0")
-                  .put("d1", 1.7)
-                  .put("d2", 1.7)
+                  .put("dbl1", 1.7)
+                  .put("dbl2", 1.7)
                   .put("f1", 0.1f)
                   .put("f2", 0.1f)
                   .put("l1", 325323L)
@@ -388,8 +421,8 @@ public class TestDataBuilder
                   .put("t", "2000-01-03")
                   .put("m1", "3.0")
                   .put("m2", "3.0")
-                  .put("d1", 0.0)
-                  .put("d2", 0.0)
+                  .put("dbl1", 0.0)
+                  .put("dbl2", 0.0)
                   .put("f1", 0.0)
                   .put("f2", 0.0)
                   .put("l1", 0)
@@ -561,8 +594,8 @@ public class TestDataBuilder
           x.get("dim3"),
           x.get("dim4"),
           x.get("dim5"),
-          x.get("d1"),
-          x.get("d2"),
+          x.get("dbl1"),
+          x.get("dbl2"),
           x.get("f1"),
           x.get("f2"),
           x.get("l1"),
@@ -574,8 +607,8 @@ public class TestDataBuilder
                   .add("dim3", ColumnType.STRING)
                   .add("dim4", ColumnType.STRING)
                   .add("dim5", ColumnType.STRING)
-                  .add("d1", ColumnType.DOUBLE)
-                  .add("d2", ColumnType.DOUBLE)
+                  .add("dbl1", ColumnType.DOUBLE)
+                  .add("dbl2", ColumnType.DOUBLE)
                   .add("f1", ColumnType.FLOAT)
                   .add("f2", ColumnType.FLOAT)
                   .add("l1", ColumnType.LONG)
@@ -595,6 +628,19 @@ public class TestDataBuilder
 
   public static QueryableIndex makeWikipediaIndex(File tmpDir)
   {
+    try {
+      final File directory = new File(tmpDir, StringUtils.format("wikipedia-index-%s", UUID.randomUUID()));
+      final IncrementalIndex index = TestIndex.makeWikipediaIncrementalIndex();
+      TestIndex.INDEX_MERGER.persist(index, directory, IndexSpec.DEFAULT, null);
+      return TestIndex.INDEX_IO.loadIndex(directory);
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  public static QueryableIndex makeWikipediaIndexWithAggregation(File tmpDir)
+  {
     final List<DimensionSchema> dimensions = Arrays.asList(
         new StringDimensionSchema("channel"),
         new StringDimensionSchema("cityName"),
@@ -611,10 +657,7 @@ public class TestDataBuilder
         new StringDimensionSchema("page"),
         new StringDimensionSchema("regionIsoCode"),
         new StringDimensionSchema("regionName"),
-        new StringDimensionSchema("user"),
-        new LongDimensionSchema("delta"),
-        new LongDimensionSchema("added"),
-        new LongDimensionSchema("deleted")
+        new StringDimensionSchema("user")
     );
 
     return IndexBuilder
@@ -622,15 +665,25 @@ public class TestDataBuilder
         .tmpDir(new File(tmpDir, "wikipedia1"))
         .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
         .schema(new IncrementalIndexSchema.Builder()
-                    .withRollup(false)
+                    .withRollup(true)
                     .withTimestampSpec(new TimestampSpec("time", null, null))
                     .withDimensionsSpec(new DimensionsSpec(dimensions))
+                    .withMetrics(
+                        new LongLastAggregatorFactory("long_last_added", "added", "__time"),
+                        new LongFirstAggregatorFactory("long_first_added", "added", "__time"),
+                        new FloatLastAggregatorFactory("float_last_added", "added", "__time"),
+                        new FloatLastAggregatorFactory("float_first_added", "added", "__time"),
+                        new DoubleLastAggregatorFactory("double_last_added", "added", "__time"),
+                        new DoubleFirstAggregatorFactory("double_first_added", "added", "__time"),
+                        new StringFirstAggregatorFactory("string_first_added", "comment", "__time", 1000),
+                        new StringLastAggregatorFactory("string_last_added", "comment", "__time", 1000)
+                    )
                     .build()
         )
         .inputSource(
             ResourceInputSource.of(
-                TestDataBuilder.class.getClassLoader(),
-                "calcite/tests/wikiticker-2015-09-12-sampled.json.gz"
+                TestIndex.class.getClassLoader(),
+                "wikipedia/wikiticker-2015-09-12-sampled.json.gz"
             )
         )
         .inputFormat(DEFAULT_JSON_INPUT_FORMAT)
@@ -775,11 +828,37 @@ public class TestDataBuilder
         .rows(USER_VISIT_ROWS)
         .buildMMappedIndex();
 
-    return new SpecificSegmentsQuerySegmentWalker(
+    final QueryableIndex arraysIndex = IndexBuilder
+        .create()
+        .tmpDir(new File(tmpDir, "9"))
+        .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+        .schema(
+            new IncrementalIndexSchema.Builder()
+                .withTimestampSpec(NestedDataTestUtils.AUTO_SCHEMA.getTimestampSpec())
+                .withDimensionsSpec(NestedDataTestUtils.AUTO_SCHEMA.getDimensionsSpec())
+                .withMetrics(
+                    new CountAggregatorFactory("cnt")
+                )
+                .withRollup(false)
+                .build()
+        )
+        .inputSource(
+            ResourceInputSource.of(
+                NestedDataTestUtils.class.getClassLoader(),
+                NestedDataTestUtils.ARRAY_TYPES_DATA_FILE
+            )
+        )
+        .inputFormat(TestDataBuilder.DEFAULT_JSON_INPUT_FORMAT)
+        .inputTmpDir(new File(tmpDir, "9-input"))
+        .buildMMappedIndex();
+
+    return SpecificSegmentsQuerySegmentWalker.createWalker(
+        injector,
         conglomerate,
         injector.getInstance(SegmentWrangler.class),
         joinableFactoryWrapper,
-        scheduler
+        scheduler,
+        injector.getInstance(GroupByQueryConfig.class)
     ).add(
         DataSegment.builder()
                    .dataSource(CalciteTests.DATASOURCE1)
@@ -872,14 +951,250 @@ public class TestDataBuilder
         userVisitIndex
     ).add(
         DataSegment.builder()
-                   .dataSource("wikipedia")
+                   .dataSource(CalciteTests.WIKIPEDIA)
                    .interval(Intervals.of("2015-09-12/2015-09-13"))
                    .version("1")
                    .shardSpec(new NumberedShardSpec(0, 0))
                    .size(0)
                    .build(),
         makeWikipediaIndex(tmpDir)
+    ).add(
+      DataSegment.builder()
+                 .dataSource(CalciteTests.WIKIPEDIA_FIRST_LAST)
+                 .interval(Intervals.of("2015-09-12/2015-09-13"))
+                 .version("1")
+                 .shardSpec(new NumberedShardSpec(0, 0))
+                 .size(0)
+                 .build(),
+      makeWikipediaIndexWithAggregation(tmpDir)
+    ).add(
+        DataSegment.builder()
+                   .dataSource(CalciteTests.ARRAYS_DATASOURCE)
+                   .version("1")
+                   .interval(arraysIndex.getDataInterval())
+                   .shardSpec(new LinearShardSpec(1))
+                   .size(0)
+                   .build(),
+        arraysIndex
     );
+  }
+
+  public static void attachIndexesForDrillTestDatasources(SpecificSegmentsQuerySegmentWalker segmentWalker, File tmpDir)
+  {
+    attachIndexForDrillTestDatasource(segmentWalker, CalciteTests.TBL_WITH_NULLS_PARQUET, tmpDir);
+    attachIndexForDrillTestDatasource(segmentWalker, CalciteTests.SML_TBL_PARQUET, tmpDir);
+    attachIndexForDrillTestDatasource(segmentWalker, CalciteTests.ALL_TYPES_UNIQ_PARQUET, tmpDir);
+    attachIndexForDrillTestDatasource(segmentWalker, CalciteTests.FEW_ROWS_ALL_DATA_PARQUET, tmpDir);
+    attachIndexForDrillTestDatasource(segmentWalker, CalciteTests.T_ALL_TYPE_PARQUET, tmpDir);
+  }
+
+  public static void attachIndexesForBenchmarkDatasource(SpecificSegmentsQuerySegmentWalker segmentWalker)
+  {
+    final QueryableIndex queryableIndex = getQueryableIndexForBenchmarkDatasource();
+
+    segmentWalker.add(
+        DataSegment.builder()
+                   .dataSource(CalciteTests.BENCHMARK_DATASOURCE)
+                   .interval(Intervals.ETERNITY)
+                   .version("1")
+                   .shardSpec(new NumberedShardSpec(0, 0))
+                   .size(0)
+                   .build(),
+        queryableIndex);
+  }
+
+  @SuppressWarnings({"rawtypes", "unchecked"})
+  private static void attachIndexForDrillTestDatasource(
+      SpecificSegmentsQuerySegmentWalker segmentWalker,
+      String dataSource,
+      File tmpDir
+  )
+  {
+    final QueryableIndex queryableIndex = getQueryableIndexForDrillDatasource(dataSource, tmpDir);
+
+    segmentWalker.add(
+        DataSegment.builder()
+                   .dataSource(dataSource)
+                   .interval(Intervals.ETERNITY)
+                   .version("1")
+                   .shardSpec(new NumberedShardSpec(0, 0))
+                   .size(0)
+                   .build(),
+        queryableIndex);
+  }
+
+  public static QueryableIndex getQueryableIndexForDrillDatasource(String datasource, File parentTempDir)
+  {
+    final IncrementalIndexSchema indexSchema = new IncrementalIndexSchema.Builder()
+        .withDimensionsSpec(getDimensionSpecForDrillDatasource(datasource))
+        .withRollup(false)
+        .build();
+    Iterable<InputRow> inputRowsForDrillDatasource = getInputRowsForDrillDatasource(datasource);
+    return IndexBuilder
+        .create()
+        .tmpDir(new File(parentTempDir, datasource))
+        .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+        .schema(indexSchema)
+        .rows(inputRowsForDrillDatasource)
+        .buildMMappedIndex();
+  }
+
+  public static QueryableIndex getQueryableIndexForBenchmarkDatasource()
+  {
+    if (QUERYABLE_INDEX_FOR_BENCHMARK_DATASOURCE == null) {
+      throw new RuntimeException("Queryable index was not populated for benchmark datasource.");
+    }
+    return QUERYABLE_INDEX_FOR_BENCHMARK_DATASOURCE;
+  }
+
+  public static void makeQueryableIndexForBenchmarkDatasource(Closer closer, int rowsPerSegment)
+  {
+    if (closer == null) {
+      throw new RuntimeException("Closer not supplied for generating segments, exiting.");
+    }
+
+    final GeneratorSchemaInfo schemaInfo = GeneratorBasicSchemas.SCHEMA_MAP.get("basic");
+    final DataSegment dataSegment = schemaInfo.makeSegmentDescriptor(CalciteTests.BENCHMARK_DATASOURCE);
+    final SegmentGenerator segmentGenerator = closer.register(new SegmentGenerator());
+
+    List<DimensionSchema> columnSchemas = schemaInfo.getDimensionsSpec()
+                                                    .getDimensions()
+                                                    .stream()
+                                                    .map(x -> new AutoTypeColumnSchema(x.getName(), null))
+                                                    .collect(Collectors.toList());
+    QUERYABLE_INDEX_FOR_BENCHMARK_DATASOURCE = segmentGenerator.generate(
+        dataSegment,
+        schemaInfo,
+        DimensionsSpec.builder().setDimensions(columnSchemas).build(),
+        TransformSpec.NONE,
+        IndexSpec.builder().withStringDictionaryEncoding(new StringEncodingStrategy.Utf8()).build(),
+        Granularities.NONE,
+        rowsPerSegment
+    );
+  }
+
+  private static DimensionsSpec getDimensionSpecForDrillDatasource(String datasource)
+  {
+    switch (datasource) {
+      case CalciteTests.TBL_WITH_NULLS_PARQUET: {
+        return new DimensionsSpec(
+            ImmutableList.of(
+                new LongDimensionSchema("c1"),
+                new StringDimensionSchema("c2")
+            )
+        );
+      }
+      case CalciteTests.SML_TBL_PARQUET: {
+        return new DimensionsSpec(
+            ImmutableList.of(
+                // "col_int": 8122,
+                new LongDimensionSchema("col_int"),
+                // "col_bgint": 817200,
+                new LongDimensionSchema("col_bgint"),
+                // "col_char_2": "IN",
+                new StringDimensionSchema("col_char_2"),
+                // "col_vchar_52":
+                // "AXXXXXXXXXXXXXXXXXXXXXXXXXCXXXXXXXXXXXXXXXXXXXXXXXXB",
+                new StringDimensionSchema("col_vchar_52"),
+                // "col_tmstmp": 1409617682418,
+                new LongDimensionSchema("col_tmstmp"),
+                // "col_dt": 422717616000000,
+                new LongDimensionSchema("col_dt"),
+                // "col_booln": false,
+                new StringDimensionSchema("col_booln"),
+                // "col_dbl": 12900.48,
+                new DoubleDimensionSchema("col_dbl"),
+                // "col_tm": 33109170
+                new LongDimensionSchema("col_tm")
+            )
+        );
+      }
+      case CalciteTests.ALL_TYPES_UNIQ_PARQUET: {
+        // {"col0":1,"col1":65534,"col2":256.0,"col3":1234.9,"col4":73578580,"col5":1393720082338,"col6":421185052800000,"col7":false,"col8":"CA","col9":"AXXXXXXXXXXXXXXXXXXXXXXXXXCXXXXXXXXXXXXXXXXXXXXXXXXZ"}
+        return new DimensionsSpec(
+            ImmutableList.of(
+                new LongDimensionSchema("col0"),
+                new LongDimensionSchema("col1"),
+                new DoubleDimensionSchema("col2"),
+                new DoubleDimensionSchema("col3"),
+                new LongDimensionSchema("col4"),
+                new LongDimensionSchema("col5"),
+                new LongDimensionSchema("col6"),
+                new StringDimensionSchema("col7"),
+                new StringDimensionSchema("col8"),
+                new StringDimensionSchema("col9")
+            )
+        );
+      }
+      case CalciteTests.FEW_ROWS_ALL_DATA_PARQUET: {
+        return new DimensionsSpec(
+            ImmutableList.of(
+                // "col0":12024,
+                new LongDimensionSchema("col0"),
+                // "col1":307168,
+                new LongDimensionSchema("col1"),
+                // "col2":"VT",
+                new StringDimensionSchema("col2"),
+                // "col3":"DXXXXXXXXXXXXXXXXXXXXXXXXXEXXXXXXXXXXXXXXXXXXXXXXXXF",
+                new StringDimensionSchema("col3"),
+                // "col4":1338596882419,
+                new LongDimensionSchema("col4"),
+                // "col5":422705433600000,
+                new LongDimensionSchema("col5"),
+                // "col6":true,
+                new StringDimensionSchema("col6"),
+                // "col7":3.95110006277E8,
+                new DoubleDimensionSchema("col7"),
+                // "col8":67465430
+                new LongDimensionSchema("col8")
+            )
+        );
+      }
+      case CalciteTests.T_ALL_TYPE_PARQUET: {
+        return new DimensionsSpec(
+            ImmutableList.of(
+                // "c1":1,
+                new LongDimensionSchema("c1"),
+                // "c2":592475043,
+                new LongDimensionSchema("c2"),
+                // "c3":616080519999272,
+                new LongDimensionSchema("c3"),
+                // "c4":"ObHeWTDEcbGzssDwPwurfs",
+                new StringDimensionSchema("c4"),
+                // "c5":"0sZxIfZ CGwTOaLWZ6nWkUNx",
+                new StringDimensionSchema("c5"),
+                // "c6":1456290852307,
+                new LongDimensionSchema("c6"),
+                // "c7":421426627200000,
+                new LongDimensionSchema("c7"),
+                // "c8":true,
+                new StringDimensionSchema("c8"),
+                // "c9":0.626179100469
+                new DoubleDimensionSchema("c9")
+            )
+        );
+      }
+      default:
+        throw new RuntimeException("Invalid datasource supplied for drill tests");
+    }
+  }
+
+  private static Iterable<InputRow> getInputRowsForDrillDatasource(String datasource)
+  {
+    DimensionsSpec dimensionSpecForDrillDatasource = getDimensionSpecForDrillDatasource(datasource);
+    return () -> {
+      try {
+        return Iterators.transform(
+              MAPPER.readerFor(Map.class)
+                    .readValues(
+                        ClassLoader.getSystemResource("drill/window/datasources/" + datasource + ".json")),
+              (Function<Map, InputRow>) input -> new MapBasedInputRow(0, dimensionSpecForDrillDatasource.getDimensionNames(), input)
+        );
+      }
+      catch (IOException e) {
+        throw new RE(e, "problem reading file");
+      }
+    };
   }
 
   private static MapBasedInputRow toRow(String time, List<String> dimensions, Map<String, Object> event)

@@ -287,7 +287,7 @@ public class FilteredRequestLoggerTest
     );
 
     expectedException.expect(ProvisionException.class);
-    expectedException.expectMessage("log.delegate - may not be null");
+    expectedException.expectMessage("log.delegate - must not be null");
     configurator.configurate(properties, "log", RequestLoggerProvider.class);
   }
 }

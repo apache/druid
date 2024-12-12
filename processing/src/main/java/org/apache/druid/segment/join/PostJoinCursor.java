@@ -19,19 +19,19 @@
 
 package org.apache.druid.segment.join;
 
-import org.apache.druid.query.BaseQuery;
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.VirtualColumns;
-import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 
 /**
- * A Cursor decorator used by {@link HashJoinSegmentStorageAdapter#makeCursors} to add post-join virtual columns
- * and filters.
+ * A Cursor decorator used by {@link HashJoinSegmentCursorFactory#makeCursorHolder(CursorBuildSpec)} to add post-join
+ * virtual columns and filters.
  */
 public class PostJoinCursor implements Cursor
 {
@@ -39,7 +39,7 @@ public class PostJoinCursor implements Cursor
   private final ColumnSelectorFactory columnSelectorFactory;
 
   @Nullable
-  private final ValueMatcher valueMatcher;
+  private ValueMatcher valueMatcher;
 
   @Nullable
   private final Filter postJoinFilter;
@@ -69,11 +69,17 @@ public class PostJoinCursor implements Cursor
     return postJoinCursor;
   }
 
+  @VisibleForTesting
+  public void setValueMatcher(@Nullable ValueMatcher valueMatcher)
+  {
+    this.valueMatcher = valueMatcher;
+  }
+
   private void advanceToMatch()
   {
     if (valueMatcher != null) {
-      while (!isDone() && !valueMatcher.matches()) {
-        baseCursor.advanceUninterruptibly();
+      while (!isDone() && !valueMatcher.matches(false)) {
+        baseCursor.advance();
       }
     }
   }
@@ -82,12 +88,6 @@ public class PostJoinCursor implements Cursor
   public ColumnSelectorFactory getColumnSelectorFactory()
   {
     return columnSelectorFactory;
-  }
-
-  @Override
-  public DateTime getTime()
-  {
-    return baseCursor.getTime();
   }
 
   @Nullable
@@ -99,15 +99,23 @@ public class PostJoinCursor implements Cursor
   @Override
   public void advance()
   {
-    advanceUninterruptibly();
-    BaseQuery.checkInterrupted();
+    baseCursor.advance();
+    // Relies on baseCursor.advance() call inside this for BaseQuery.checkInterrupted() checks -- unlike other cursors
+    // which call advanceInterruptibly() and hence have to explicitly provision for interrupts.
+    advanceToMatch();
   }
 
+
+  /**
+   * Advancing the post-join requires evaluating the join on whole segment and advancing without interruption can take
+   * a long time if there are no matches but the join itself is big. This can leave the thread running well after
+   * the timeout elapses. One such issue is described in
+   * <a href="https://github.com/apache/druid/issues/14514">CPU thread running PostJoinCursor cannot be terminated</a>
+   */
   @Override
   public void advanceUninterruptibly()
   {
-    baseCursor.advanceUninterruptibly();
-    advanceToMatch();
+    advance();
   }
 
   @Override

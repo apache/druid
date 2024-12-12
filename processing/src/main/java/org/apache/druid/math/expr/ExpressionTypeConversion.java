@@ -55,6 +55,9 @@ public class ExpressionTypeConversion
   {
     ExpressionType type = eval.type();
     ExpressionType otherType = otherEval.type();
+    if (type == otherType && type.getType().isPrimitive()) {
+      return type;
+    }
     if (Types.is(type, ExprType.STRING) && Types.is(otherType, ExprType.STRING)) {
       return ExpressionType.STRING;
     }
@@ -88,10 +91,7 @@ public class ExpressionTypeConversion
       return type;
     }
     if (type.isArray() || other.isArray()) {
-      if (!Objects.equals(type, other)) {
-        throw new Types.IncompatibleTypeException(type, other);
-      }
-      return type;
+      return leastRestrictiveType(type, other);
     }
     if (type.is(ExprType.COMPLEX) || other.is(ExprType.COMPLEX)) {
       if (type.getComplexTypeName() == null) {
@@ -131,12 +131,8 @@ public class ExpressionTypeConversion
     if (other == null) {
       return type;
     }
-    // arrays cannot be auto converted
     if (type.isArray() || other.isArray()) {
-      if (!Objects.equals(type, other)) {
-        throw new Types.IncompatibleTypeException(type, other);
-      }
-      return type;
+      return leastRestrictiveType(type, other);
     }
     if (type.is(ExprType.COMPLEX) || other.is(ExprType.COMPLEX)) {
       if (type.getComplexTypeName() == null) {

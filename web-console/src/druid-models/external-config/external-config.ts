@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import type { SqlQuery } from '@druid-toolkit/query';
+import type { SqlQuery } from 'druid-query-toolkit';
 import {
   C,
   F,
@@ -28,10 +28,11 @@ import {
   SqlLiteral,
   SqlStar,
   SqlType,
-} from '@druid-toolkit/query';
+} from 'druid-query-toolkit';
 import * as JSONBig from 'json-bigint-native';
 
 import { nonEmptyArray } from '../../utils';
+import type { ArrayMode } from '../ingestion-spec/ingestion-spec';
 import type { InputFormat } from '../input-format/input-format';
 import type { InputSource } from '../input-source/input-source';
 
@@ -75,7 +76,7 @@ export function summarizeInputSource(inputSource: InputSource, multiline: boolea
 
     case 's3':
     case 'google':
-    case 'azure': {
+    case 'azureStorage': {
       const possibleLines = inputSource.uris || inputSource.prefixes;
       if (nonEmptyArray(possibleLines)) {
         let lines: string[] = possibleLines;
@@ -127,15 +128,18 @@ export function externalConfigToTableExpression(config: ExternalConfig): SqlExpr
 
 export function externalConfigToInitDimensions(
   config: ExternalConfig,
-  isArrays: boolean[],
   timeExpression: SqlExpression | undefined,
+  arrayMode: ArrayMode,
 ): SqlExpression[] {
-  return (timeExpression ? [timeExpression.as('__time')] : [])
+  return (timeExpression ? [timeExpression.setAlias('__time')] : [])
     .concat(
-      filterMap(config.signature, (columnDeclaration, i) => {
+      filterMap(config.signature, columnDeclaration => {
         const columnName = columnDeclaration.getColumnName();
         if (timeExpression && timeExpression.containsColumnName(columnName)) return;
-        return C(columnName).applyIf(isArrays[i], ex => F('MV_TO_ARRAY', ex).as(columnName) as any);
+        return C(columnName).applyIf(
+          arrayMode === 'multi-values' && columnDeclaration.columnType.isArray(),
+          ex => F('ARRAY_TO_MV', ex).as(columnName),
+        );
       }),
     )
     .slice(0, MULTI_STAGE_QUERY_MAX_COLUMNS);

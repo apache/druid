@@ -3,8 +3,12 @@ id: service-status-api
 title: Service status API
 sidebar_label: Service status
 ---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
 
 <!--
+
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
   ~ distributed with this work for additional information
@@ -32,7 +36,7 @@ In this document, `http://SERVICE_IP:SERVICE_PORT` is a placeholder for the serv
 
 All services support the following endpoints.
 
-You can use each endpoint with the ports for each type of service.  The following table contains port addresses for a local configuration:
+You can use each endpoint with the ports for each type of service. The following table contains port addresses for a local configuration:
 
 |Service|Port address|
 | ------ | ------------ |
@@ -41,56 +45,62 @@ You can use each endpoint with the ports for each type of service.  The followin
 | Router|8888|
 | Broker|8082|
 | Historical|8083|
-| MiddleManager|8091|
+| Middle Manager|8091|
 
 ### Get service information
 
-Retrieves the Druid version, loaded extensions, memory used, total memory, and other useful information about the individual service. 
+Retrieves the Druid version, loaded extensions, memory used, total memory, and other useful information about the individual service.
 
 Modify the host and port for the endpoint to match the service to query. Refer to the [default service ports](#common) for the port numbers.
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/status</code>
+`GET` `/status`
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="1" label="200 SUCCESS">
+
 
 <br/>
 
-*Successfully retrieved service information*  
+*Successfully retrieved service information*
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 ---
 
 #### Sample request
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="2" label="cURL">
+
 
 ```shell
 curl "http://ROUTER_IP:ROUTER_PORT/status"
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="3" label="HTTP">
+
 
 ```http
 GET /status HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
-  
+  <summary>View the response</summary>
+
   ```json
   {
     "version": "26.0.0",
@@ -193,47 +203,53 @@ Retrieves the online status of the individual Druid service. It is a simple heal
 
 Modify the host and port for the endpoint to match the service to query. Refer to the [default service ports](#common) for the port numbers.
 
-Additional checks for readiness should use the [Historical segment readiness](#get-segment-readiness) and [Broker query readiness](#get-broker-query-readiness) endpoints. 
+Additional checks for readiness should use the [Historical segment readiness](#get-segment-readiness) and [Broker query readiness](#get-broker-query-readiness) endpoints.
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/status/health</code>
+`GET` `/status/health`
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="4" label="200 SUCCESS">
+
 
 <br/>
 
-*Successfully retrieved service health*  
+*Successfully retrieved service health*
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample request
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="5" label="cURL">
+
 
 ```shell
 curl "http://ROUTER_IP:ROUTER_PORT/status/health"
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="6" label="HTTP">
+
 
 ```http
 GET /status/health HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
   true
@@ -244,49 +260,55 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 ### Get configuration properties
 
-Retrieves the current configuration properties of the individual service queried. 
+Retrieves the current configuration properties of the individual service queried.
 
 Modify the host and port for the endpoint to match the service to query. Refer to the [default service ports](#common) for the port numbers.
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/status/properties</code>
+`GET` `/status/properties`
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="7" label="200 SUCCESS">
+
 
 <br/>
 
-*Successfully retrieved service configuration properties* 
+*Successfully retrieved service configuration properties*
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample request
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="8" label="cURL">
+
 
 ```shell
 curl "http://ROUTER_IP:ROUTER_PORT/status/properties"
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="9" label="HTTP">
+
 
 ```http
 GET /status/properties HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
   {
@@ -387,53 +409,58 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 </details>
 
-
 ### Get node discovery status and cluster integration confirmation
 
-Retrieves a JSON map of the form `{"selfDiscovered": true/false}`, indicating whether the node has received a confirmation from the central node discovery mechanism (currently ZooKeeper) of the Druid cluster that the node has been added to the cluster. 
+Retrieves a JSON map of the form `{"selfDiscovered": true/false}`, indicating whether the node has received a confirmation from the central node discovery mechanism (currently ZooKeeper) of the Druid cluster that the node has been added to the cluster.
 
 Only consider a Druid node "healthy" or "ready" in automated deployment/container management systems when this endpoint returns `{"selfDiscovered": true}`. Nodes experiencing network issues may become isolated and are not healthy.
 For nodes that use Zookeeper segment discovery, a response of `{"selfDiscovered": true}` indicates that the node's Zookeeper client has started receiving data from the Zookeeper cluster, enabling timely discovery of segments and other nodes.
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/status/selfDiscovered/status</code>
+`GET` `/status/selfDiscovered/status`
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="10" label="200 SUCCESS">
+
 
 <br/>
 
-*Node was successfully added to the cluster*  
+*Node was successfully added to the cluster*
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample request
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="11" label="cURL">
+
 
 ```shell
 curl "http://ROUTER_IP:ROUTER_PORT/status/selfDiscovered/status"
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="12" label="HTTP">
+
 
 ```http
 GET /status/selfDiscovered/status HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
   {
@@ -451,44 +478,52 @@ Use this endpoint for monitoring checks that are unable to examine the response 
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/status/selfDiscovered</code>
+`GET` `/status/selfDiscovered`
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="13" label="200 SUCCESS">
 
-<br/>
-
-*Successfully retrieved node status*  
-
-<!--503 SERVICE UNAVAILABLE-->
 
 <br/>
 
-*Unsuccessful node self-discovery*  
+*Successfully retrieved node status*
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+<TabItem value="14" label="503 SERVICE UNAVAILABLE">
+
+
+<br/>
+
+*Unsuccessful node self-discovery*
+
+</TabItem>
+</Tabs>
 
 #### Sample request
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="15" label="cURL">
+
 
 ```shell
 curl "http://ROUTER_IP:ROUTER_PORT/status/selfDiscovered"
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="16" label="HTTP">
+
 
 ```http
 GET /status/selfDiscovered HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
 
@@ -498,49 +533,55 @@ A successful response to this endpoint results in an empty response body.
 
 ### Get Coordinator leader address
 
-Retrieves the address of the current leader Coordinator of the cluster. If any request is sent to a non-leader Coordinator, the request is automatically redirected to the leader Coordinator. 
+Retrieves the address of the current leader Coordinator of the cluster. If any request is sent to a non-leader Coordinator, the request is automatically redirected to the leader Coordinator.
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/coordinator/v1/leader</code>
+`GET` `/druid/coordinator/v1/leader`
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="17" label="200 SUCCESS">
+
 
 <br/>
 
-*Successfully retrieved leader Coordinator address* 
+*Successfully retrieved leader Coordinator address*
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 ---
 
 #### Sample request
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="18" label="cURL">
+
 
 ```shell
 curl "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/leader"
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="19" label="HTTP">
+
 
 ```http
 GET /druid/coordinator/v1/leader HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
   http://localhost:8081
@@ -556,51 +597,59 @@ Use this endpoint as a load balancer status check when you only want the active 
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/coordinator/v1/isLeader</code>
+`GET` `/druid/coordinator/v1/isLeader`
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="20" label="200 SUCCESS">
 
-<br/>
-
-*Current server is the leader*  
-
-<!--404 NOT FOUND->
 
 <br/>
 
-*Current server is not the leader*  
+*Current server is the leader*
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+<TabItem value="21" label="404 NOT FOUND">
+
+
+<br/>
+
+*Current server is not the leader*
+
+</TabItem>
+</Tabs>
 
 ---
 
 #### Sample request
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="22" label="cURL">
+
 
 ```shell
 curl "http://COORDINATOR_IP:COORDINATOR_PORT/druid/coordinator/v1/isLeader"
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="23" label="HTTP">
+
 
 ```http
 GET /druid/coordinator/v1/isLeader HTTP/1.1
 Host: http://COORDINATOR_IP:COORDINATOR_PORT
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
   {
@@ -618,45 +667,51 @@ Retrieves the address of the current leader Overlord of the cluster. In a cluste
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/indexer/v1/leader</code>
+`GET` `/druid/indexer/v1/leader`
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="24" label="200 SUCCESS">
+
 
 <br/>
 
-*Successfully retrieved leader Overlord address*  
+*Successfully retrieved leader Overlord address*
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 ---
 
 #### Sample request
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="25" label="cURL">
+
 
 ```shell
 curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/leader"
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="26" label="HTTP">
+
 
 ```http
 GET /druid/indexer/v1/leader HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
   http://localhost:8081
@@ -673,51 +728,59 @@ Use this endpoint as a load balancer status check when you only want the active 
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/indexer/v1/isLeader</code>
+`GET` `/druid/indexer/v1/isLeader`
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="27" label="200 SUCCESS">
 
-<br/>
-
-*Current server is the leader*  
-
-<!--404 NOT FOUND-->
 
 <br/>
 
-*Current server is not the leader*  
+*Current server is the leader*
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+<TabItem value="28" label="404 NOT FOUND">
+
+
+<br/>
+
+*Current server is not the leader*
+
+</TabItem>
+</Tabs>
 
 ---
 
 #### Sample request
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="29" label="cURL">
+
 
 ```shell
 curl "http://OVERLORD_IP:OVERLORD_PORT/druid/indexer/v1/isLeader"
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="30" label="HTTP">
+
 
 ```http
 GET /druid/indexer/v1/isLeader HTTP/1.1
 Host: http://OVERLORD_IP:OVERLORD_PORT
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
   {
@@ -728,54 +791,60 @@ Host: http://OVERLORD_IP:OVERLORD_PORT
 </details>
 
 
-## MiddleManager
+## Middle Manager
 
-### Get MiddleManager state status
+### Get Middle Manager state status
 
-Retrieves the enabled state of the MiddleManager. Returns JSON object keyed by the combined `druid.host` and `druid.port` with a boolean `true` or `false` state as the value.
+Retrieves the enabled state of the Middle Manager process. Returns JSON object keyed by the combined `druid.host` and `druid.port` with a boolean `true` or `false` state as the value.
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/worker/v1/enabled</code>
+`GET` `/druid/worker/v1/enabled`
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="31" label="200 SUCCESS">
+
 
 <br/>
 
-*Successfully retrieved MiddleManager state*  
+*Successfully retrieved Middle Manager state*
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 ---
 
 #### Sample request
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="32" label="cURL">
+
 
 ```shell
 curl "http://MIDDLEMANAGER_IP:MIDDLEMANAGER_PORT/druid/worker/v1/enabled"
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="33" label="HTTP">
+
 
 ```http
 GET /druid/worker/v1/enabled HTTP/1.1
 Host: http://MIDDLEMANAGER_IP:MIDDLEMANAGER_PORT
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
-  
+  <summary>View the response</summary>
+
   ```json
   {
     "localhost:8091": true
@@ -784,52 +853,58 @@ Host: http://MIDDLEMANAGER_IP:MIDDLEMANAGER_PORT
 
 </details>
 
-### Get active tasks 
+### Get active tasks
 
-Retrieves a list of active tasks being run on MiddleManager. Returns JSON list of task ID strings. Note that for normal usage, you should use the `/druid/indexer/v1/tasks` [Tasks API](./tasks-api.md) endpoint or one of the task state specific variants instead.
+Retrieves a list of active tasks being run on the Middle Manager. Returns JSON list of task ID strings. Note that for normal usage, you should use the `/druid/indexer/v1/tasks` [Tasks API](./tasks-api.md) endpoint or one of the task state specific variants instead.
 
-#### URL 
+#### URL
 
-<code class="getAPI">GET</code> <code>/druid/worker/v1/tasks</code>
+`GET` `/druid/worker/v1/tasks`
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="34" label="200 SUCCESS">
+
 
 <br/>
 
-*Successfully retrieved active tasks*  
+*Successfully retrieved active tasks*
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 ---
 
 #### Sample request
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="35" label="cURL">
+
 
 ```shell
 curl "http://MIDDLEMANAGER_IP:MIDDLEMANAGER_PORT/druid/worker/v1/tasks"
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="36" label="HTTP">
+
 
 ```http
 GET /druid/worker/v1/tasks HTTP/1.1
 Host: http://MIDDLEMANAGER_IP:MIDDLEMANAGER_PORT
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
-  
+  <summary>View the response</summary>
+
   ```json
   [
     "index_parallel_wikipedia_mgchefio_2023-06-13T22:18:05.360Z"
@@ -845,27 +920,29 @@ Retrieves task log output stream by task ID. For normal usage, you should use th
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/worker/v1/task/:taskId/log</code>
+`GET` `/druid/worker/v1/task/{taskId}/log`
 
 ### Shut down running task
 
-Shuts down a running task by ID. For normal usage, you should use the `/druid/indexer/v1/task/:taskId/shutdown`
+Shuts down a running task by ID. For normal usage, you should use the `/druid/indexer/v1/task/{taskId}/shutdown`
 [Tasks API](./tasks-api.md) endpoint instead.
 
 #### URL
 
-<code class="postAPI">POST</code> <code>/druid/worker/v1/task/:taskId/shutdown</code>
+`POST` `/druid/worker/v1/task/{taskId}/shutdown`
 
 #### Responses
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="37" label="200 SUCCESS">
+
 
 <br/>
 
-*Successfully shut down a task*  
+*Successfully shut down a task*
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 ---
 
@@ -873,28 +950,32 @@ Shuts down a running task by ID. For normal usage, you should use the `/druid/in
 
 The following example shuts down a task with specified ID `index_kafka_wikiticker_f7011f8ffba384b_fpeclode`.
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="38" label="cURL">
+
 
 ```shell
 curl "http://MIDDLEMANAGER_IP:MIDDLEMANAGER_PORT/druid/worker/v1/task/index_kafka_wikiticker_f7011f8ffba384b_fpeclode/shutdown"
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="39" label="HTTP">
+
 
 ```http
 POST /druid/worker/v1/task/index_kafka_wikiticker_f7011f8ffba384b_fpeclode/shutdown HTTP/1.1
 Host: http://MIDDLEMANAGER_IP:MIDDLEMANAGER_PORT
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
-  
+  <summary>View the response</summary>
+
   ```json
   {
     "task":"index_kafka_wikiticker_f7011f8ffba384b_fpeclode"
@@ -903,51 +984,57 @@ Host: http://MIDDLEMANAGER_IP:MIDDLEMANAGER_PORT
 
 </details>
 
-### Disable MiddleManager
+### Disable Middle Manager
 
-Disables a MiddleManager, causing it to stop accepting new tasks but complete all existing tasks. Returns a JSON  object
+Disables a Middle Manager, causing it to stop accepting new tasks but complete all existing tasks. Returns a JSON  object
 keyed by the combined `druid.host` and `druid.port`.
 
 #### URL
 
-<code class="postAPI">POST</code> <code>/druid/worker/v1/disable</code>
+`POST` `/druid/worker/v1/disable`
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="40" label="200 SUCCESS">
+
 
 <br/>
 
-*Successfully disabled MiddleManager*  
+*Successfully disabled Middle Manager*
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample request
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="41" label="cURL">
+
 
 ```shell
 curl "http://MIDDLEMANAGER_IP:MIDDLEMANAGER_PORT/druid/worker/v1/disable"
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="42" label="HTTP">
+
 
 ```http
 POST /druid/worker/v1/disable HTTP/1.1
 Host: http://MIDDLEMANAGER_IP:MIDDLEMANAGER_PORT
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
-  
+  <summary>View the response</summary>
+
   ```json
   {
     "localhost:8091":"disabled"
@@ -956,51 +1043,56 @@ Host: http://MIDDLEMANAGER_IP:MIDDLEMANAGER_PORT
 
 </details>
 
-### Enable MiddleManager
+### Enable Middle Manager
 
-Enables a MiddleManager, allowing it to accept new tasks again if it was previously disabled. Returns a JSON  object
-keyed by the combined `druid.host` and `druid.port`.
+Enables a Middle Manager, allowing it to accept new tasks again if it was previously disabled. Returns a JSON object keyed by the combined `druid.host` and `druid.port`.
 
 #### URL
 
-<code class="postAPI">POST</code> <code>/druid/worker/v1/enable</code>
+`POST` `/druid/worker/v1/enable`
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="43" label="200 SUCCESS">
+
 
 <br/>
 
-*Successfully enabled MiddleManager*  
+*Successfully enabled Middle Manager*
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample request
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="44" label="cURL">
+
 
 ```shell
 curl "http://MIDDLEMANAGER_IP:MIDDLEMANAGER_PORT/druid/worker/v1/enable"
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="45" label="HTTP">
+
 
 ```http
 POST /druid/worker/v1/enable HTTP/1.1
 Host: http://MIDDLEMANAGER_IP:MIDDLEMANAGER_PORT
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
-  
+  <summary>View the response</summary>
+
   ```json
   {
     "localhost:8091":"enabled"
@@ -1009,54 +1101,60 @@ Host: http://MIDDLEMANAGER_IP:MIDDLEMANAGER_PORT
 
 </details>
 
-## Historical  
+## Historical
 
 ### Get segment load status
 
-Retrieves a JSON object of the form `{"cacheInitialized":value}`, where value is either `true` or `false` indicating if all segments in the local cache have been loaded. 
+Retrieves a JSON object of the form `{"cacheInitialized":value}`, where value is either `true` or `false` indicating if all segments in the local cache have been loaded.
 
 Use this endpoint to know when a Broker service is ready to accept queries after a restart.
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/historical/v1/loadstatus</code>
+`GET` `/druid/historical/v1/loadstatus`
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="46" label="200 SUCCESS">
+
 
 <br/>
 
-*Successfully retrieved status*  
+*Successfully retrieved status*
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample request
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="47" label="cURL">
+
 
 ```shell
 curl "http://HISTORICAL_IP:HISTORICAL_PORT/druid/historical/v1/loadstatus"
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="48" label="HTTP">
+
 
 ```http
 GET /druid/historical/v1/loadstatus HTTP/1.1
 Host: http://HISTORICAL_IP:HISTORICAL_PORT
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
-  
+  <summary>View the response</summary>
+
   ```json
   {
     "cacheInitialized": true
@@ -1071,44 +1169,52 @@ Retrieves a status code to indicate if all segments in the local cache have been
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/historical/v1/readiness</code>
+`GET` `/druid/historical/v1/readiness`
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="49" label="200 SUCCESS">
 
-<br/>
-
-*Segments in local cache successfully loaded*  
-
-<!--503 SERVICE UNAVAILABLE-->
 
 <br/>
 
-*Segments in local cache have not been loaded*  
+*Segments in local cache successfully loaded*
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+<TabItem value="50" label="503 SERVICE UNAVAILABLE">
+
+
+<br/>
+
+*Segments in local cache have not been loaded*
+
+</TabItem>
+</Tabs>
 
 #### Sample request
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="51" label="cURL">
+
 
 ```shell
 curl "http://HISTORICAL_IP:HISTORICAL_PORT/druid/historical/v1/readiness"
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="52" label="HTTP">
+
 
 ```http
 GET /druid/historical/v1/readiness HTTP/1.1
 Host: http://HISTORICAL_IP:HISTORICAL_PORT
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
 
@@ -1122,43 +1228,49 @@ Retrieves a flag indicating if the Broker knows about all segments in the cluste
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/broker/v1/loadstatus</code>
+`GET` `/druid/broker/v1/loadstatus`
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="53" label="200 SUCCESS">
+
 
 <br/>
 
-*Segments successfully loaded*  
+*Segments successfully loaded*
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample request
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="54" label="cURL">
+
 
 ```shell
 curl "http://BROKER_IP:BROKER_PORT/druid/broker/v1/loadstatus"
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="55" label="HTTP">
+
 
 ```http
 GET /druid/broker/v1/loadstatus HTTP/1.1
 Host: http://<BROKER_IP>:<BROKER_PORT>
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
   {
@@ -1174,47 +1286,53 @@ Retrieves a status code to indicate Broker readiness. Readiness signifies the Br
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/broker/v1/readiness</code>
+`GET` `/druid/broker/v1/readiness`
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="56" label="200 SUCCESS">
 
-<br/>
-
-*Segments successfully loaded*  
-
-<!--503 SERVICE UNAVAILABLE-->
 
 <br/>
 
-*Segments have not been loaded*  
+*Segments successfully loaded*
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+<TabItem value="57" label="503 SERVICE UNAVAILABLE">
+
+
+<br/>
+
+*Segments have not been loaded*
+
+</TabItem>
+</Tabs>
 
 #### Sample request
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="58" label="cURL">
+
 
 ```shell
 curl "http://BROKER_IP:BROKER_PORT/druid/broker/v1/readiness"
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="59" label="HTTP">
+
 
 ```http
 GET /druid/broker/v1/readiness HTTP/1.1
 Host: http://BROKER_IP:BROKER_PORT
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
 
 A successful response to this endpoint results in an empty response body.
-
-

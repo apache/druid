@@ -20,6 +20,7 @@
 package org.apache.druid.benchmark;
 
 import org.apache.druid.java.util.common.parsers.Parser;
+import org.apache.druid.utils.JvmUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -64,15 +65,31 @@ public class FlattenJSONBenchmarkUtilTest
     Assert.assertEquals("129047958", event.get("e2.ad1[0]").toString());
     Assert.assertEquals("1658972185", event.get("e2.ad1[1]").toString());
     Assert.assertEquals("-997010830", event.get("e2.ad1[2]").toString());
-    Assert.assertEquals("-5.8772014847368817E18", event.get("e3.m1").toString());
+
+    // Java 19 changes some floating point string representation
+    // https://bugs.openjdk.org/browse/JDK-8291475
+    if (JvmUtils.majorVersion() < 19) {
+      Assert.assertEquals("-5.8772014847368817E18", event.get("e3.m1").toString());
+    } else {
+      Assert.assertEquals("-5.877201484736882E18", event.get("e3.m1").toString());
+    }
+
     Assert.assertEquals("0.4375433369079904", event.get("e3.m2").toString());
     Assert.assertEquals("0.8510482953607659", event.get("e3.m3").toString());
     Assert.assertEquals("-2.3832626488759337E18", event.get("e3.m4").toString());
-    Assert.assertEquals("7.9789762132607068E18", event.get("e3.am1[0]").toString());
-    Assert.assertEquals("-7.8634787235005573E18", event.get("e3.am1[1]").toString());
-    Assert.assertEquals("8.7372945568982446E18", event.get("e3.am1[2]").toString());
-    Assert.assertEquals("3.1928124802414899E18", event.get("e3.am1[3]").toString());
-    Assert.assertEquals("-3.9806631713718011E18", event.get("e4.e4.m4").toString());
+    if (JvmUtils.majorVersion() < 19) {
+      Assert.assertEquals("7.9789762132607068E18", event.get("e3.am1[0]").toString());
+      Assert.assertEquals("-7.8634787235005573E18", event.get("e3.am1[1]").toString());
+      Assert.assertEquals("8.7372945568982446E18", event.get("e3.am1[2]").toString());
+      Assert.assertEquals("3.1928124802414899E18", event.get("e3.am1[3]").toString());
+      Assert.assertEquals("-3.9806631713718011E18", event.get("e4.e4.m4").toString());
+    } else {
+      Assert.assertEquals("7.978976213260707E18", event.get("e3.am1[0]").toString());
+      Assert.assertEquals("-7.863478723500557E18", event.get("e3.am1[1]").toString());
+      Assert.assertEquals("8.737294556898245E18", event.get("e3.am1[2]").toString());
+      Assert.assertEquals("3.19281248024149E18", event.get("e3.am1[3]").toString());
+      Assert.assertEquals("-3.980663171371801E18", event.get("e4.e4.m4").toString());
+    }
     Assert.assertEquals("-1915243040", event.get("ae1[0].d1").toString());
     Assert.assertEquals("-2020543641", event.get("ae1[1].d1").toString());
     Assert.assertEquals("1414285347", event.get("ae1[2].e1.d2").toString());

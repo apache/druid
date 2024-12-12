@@ -19,10 +19,14 @@
 
 package org.apache.druid.segment.column;
 
-import com.google.common.base.Predicate;
-import com.google.common.base.Predicates;
+import com.google.common.collect.Lists;
+import org.apache.druid.collections.bitmap.BitmapFactory;
+import org.apache.druid.common.semantic.SemanticUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.extraction.ExtractionFn;
+import org.apache.druid.query.filter.DruidObjectPredicate;
+import org.apache.druid.query.filter.DruidPredicateFactory;
+import org.apache.druid.query.filter.StringPredicateDruidPredicateFactory;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.AbstractDimensionSelector;
@@ -34,7 +38,7 @@ import org.apache.druid.segment.data.Indexed;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.ReadableOffset;
 import org.apache.druid.segment.data.SingleIndexedInt;
-import org.apache.druid.segment.filter.BooleanValueMatcher;
+import org.apache.druid.segment.filter.ValueMatchers;
 import org.apache.druid.segment.historical.HistoricalDimensionSelector;
 import org.apache.druid.segment.historical.SingleValueHistoricalDimensionSelector;
 import org.apache.druid.segment.nested.NestedCommonFormatColumn;
@@ -48,9 +52,10 @@ import org.apache.druid.utils.CloseableUtils;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
 
 /**
  * {@link DictionaryEncodedColumn<String>} for a column which has a {@link ByteBuffer} based UTF-8 dictionary.
@@ -61,21 +66,27 @@ import java.util.List;
  */
 public class StringUtf8DictionaryEncodedColumn implements DictionaryEncodedColumn<String>, NestedCommonFormatColumn
 {
+  private static final Map<Class<?>, Function<StringUtf8DictionaryEncodedColumn, ?>> AS_MAP =
+      SemanticUtils.makeAsMap(StringUtf8DictionaryEncodedColumn.class);
+
   @Nullable
   private final ColumnarInts column;
   @Nullable
   private final ColumnarMultiInts multiValueColumn;
   private final Indexed<ByteBuffer> utf8Dictionary;
+  private final BitmapFactory bitmapFactory;
 
   public StringUtf8DictionaryEncodedColumn(
       @Nullable ColumnarInts singleValueColumn,
       @Nullable ColumnarMultiInts multiValueColumn,
-      Indexed<ByteBuffer> utf8Dictionary
+      Indexed<ByteBuffer> utf8Dictionary,
+      BitmapFactory bitmapFactory
   )
   {
     this.column = singleValueColumn;
     this.multiValueColumn = multiValueColumn;
     this.utf8Dictionary = utf8Dictionary;
+    this.bitmapFactory = bitmapFactory;
   }
 
   @Override
@@ -126,6 +137,11 @@ public class StringUtf8DictionaryEncodedColumn implements DictionaryEncodedColum
   public int getCardinality()
   {
     return utf8Dictionary.size();
+  }
+
+  public BitmapFactory getBitmapFactory()
+  {
+    return bitmapFactory;
   }
 
   @Override
@@ -216,16 +232,9 @@ public class StringUtf8DictionaryEncodedColumn implements DictionaryEncodedColum
         }
 
         @Override
-        public ValueMatcher makeValueMatcher(Predicate<String> predicate)
+        public ValueMatcher makeValueMatcher(DruidPredicateFactory predicateFactory)
         {
-          return DimensionSelectorUtils.makeValueMatcherGeneric(this, predicate);
-        }
-
-        @Nullable
-        @Override
-        public Object getObject()
-        {
-          return defaultGetObject();
+          return DimensionSelectorUtils.makeValueMatcherGeneric(this, predicateFactory);
         }
 
         @Override
@@ -279,13 +288,15 @@ public class StringUtf8DictionaryEncodedColumn implements DictionaryEncodedColum
         {
           if (extractionFn == null) {
             final int valueId = super.lookupId(value);
+            final int nullId = super.lookupId(null);
             if (valueId >= 0) {
               return new ValueMatcher()
               {
                 @Override
-                public boolean matches()
+                public boolean matches(boolean includeUnknown)
                 {
-                  return getRowValue() == valueId;
+                  final int rowId = getRowValue();
+                  return (includeUnknown && rowId == nullId) || rowId == valueId;
                 }
 
                 @Override
@@ -295,32 +306,54 @@ public class StringUtf8DictionaryEncodedColumn implements DictionaryEncodedColum
                 }
               };
             } else {
-              return BooleanValueMatcher.of(false);
+              // no nulls, and value isn't in column, we can safely optimize to 'allFalse'
+              if (nullId < 0) {
+                return ValueMatchers.allFalse();
+              }
+              return new ValueMatcher()
+              {
+                @Override
+                public boolean matches(boolean includeUnknown)
+                {
+                  if (includeUnknown && getRowValue() == 0) {
+                    return true;
+                  }
+                  return false;
+                }
+
+                @Override
+                public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+                {
+                  inspector.visit("column", StringUtf8DictionaryEncodedColumn.this);
+                }
+              };
             }
           } else {
             // Employ caching BitSet optimization
-            return makeValueMatcher(Predicates.equalTo(value));
+            return makeValueMatcher(StringPredicateDruidPredicateFactory.equalTo(value));
           }
         }
 
         @Override
-        public ValueMatcher makeValueMatcher(final Predicate<String> predicate)
+        public ValueMatcher makeValueMatcher(final DruidPredicateFactory predicateFactory)
         {
           final BitSet checkedIds = new BitSet(getCardinality());
           final BitSet matchingIds = new BitSet(getCardinality());
+          final DruidObjectPredicate<String> predicate = predicateFactory.makeStringPredicate();
 
           // Lazy matcher; only check an id if matches() is called.
           return new ValueMatcher()
           {
             @Override
-            public boolean matches()
+            public boolean matches(boolean includeUnknown)
             {
               final int id = getRowValue();
 
               if (checkedIds.get(id)) {
                 return matchingIds.get(id);
               } else {
-                final boolean matches = predicate.apply(lookupName(id));
+                final String rowValue = lookupName(id);
+                final boolean matches = predicate.apply(rowValue).matches(includeUnknown);
                 checkedIds.set(id);
                 if (matches) {
                   matchingIds.set(id);
@@ -480,6 +513,15 @@ public class StringUtf8DictionaryEncodedColumn implements DictionaryEncodedColum
     }
   }
 
+  @SuppressWarnings("unchecked")
+  @Nullable
+  @Override
+  public <T> T as(Class<? extends T> clazz)
+  {
+    //noinspection ReturnOfNull
+    return (T) AS_MAP.getOrDefault(clazz, arg -> null).apply(this);
+  }
+
   @Override
   public void close() throws IOException
   {
@@ -503,11 +545,11 @@ public class StringUtf8DictionaryEncodedColumn implements DictionaryEncodedColum
   /**
    * Base type for a {@link SingleValueDimensionVectorSelector} for a dictionary encoded {@link ColumnType#STRING}
    * built around a {@link ColumnarInts}. Dictionary not included - BYO dictionary lookup methods.
-   *
+   * <p>
    * Assumes that all implementations return true for {@link #supportsLookupNameUtf8()}.
    */
   public abstract static class StringSingleValueDimensionVectorSelector
-          implements SingleValueDimensionVectorSelector, IdLookup
+      implements SingleValueDimensionVectorSelector, IdLookup
   {
     private final ColumnarInts column;
     private final ReadableVectorOffset offset;
@@ -515,8 +557,8 @@ public class StringUtf8DictionaryEncodedColumn implements DictionaryEncodedColum
     private int id = ReadableVectorInspector.NULL_ID;
 
     public StringSingleValueDimensionVectorSelector(
-            ColumnarInts column,
-            ReadableVectorOffset offset
+        ColumnarInts column,
+        ReadableVectorOffset offset
     )
     {
       this.column = column;
@@ -576,11 +618,11 @@ public class StringUtf8DictionaryEncodedColumn implements DictionaryEncodedColum
   /**
    * Base type for a {@link MultiValueDimensionVectorSelector} for a dictionary encoded {@link ColumnType#STRING}
    * built around a {@link ColumnarMultiInts}. Dictionary not included - BYO dictionary lookup methods.
-   *
+   * <p>
    * Assumes that all implementations return true for {@link #supportsLookupNameUtf8()}.
    */
   public abstract static class StringMultiValueDimensionVectorSelector
-          implements MultiValueDimensionVectorSelector, IdLookup
+      implements MultiValueDimensionVectorSelector, IdLookup
   {
     private final ColumnarMultiInts multiValueColumn;
     private final ReadableVectorOffset offset;
@@ -589,8 +631,8 @@ public class StringUtf8DictionaryEncodedColumn implements DictionaryEncodedColum
     private int id = ReadableVectorInspector.NULL_ID;
 
     public StringMultiValueDimensionVectorSelector(
-            ColumnarMultiInts multiValueColumn,
-            ReadableVectorOffset offset
+        ColumnarMultiInts multiValueColumn,
+        ReadableVectorOffset offset
     )
     {
       this.multiValueColumn = multiValueColumn;
@@ -645,6 +687,7 @@ public class StringUtf8DictionaryEncodedColumn implements DictionaryEncodedColum
     {
       return this;
     }
+
     @Override
     public int getCurrentVectorSize()
     {
@@ -672,8 +715,8 @@ public class StringUtf8DictionaryEncodedColumn implements DictionaryEncodedColum
     private int id = ReadableVectorInspector.NULL_ID;
 
     public StringVectorObjectSelector(
-            ColumnarInts column,
-            ReadableVectorOffset offset
+        ColumnarInts column,
+        ReadableVectorOffset offset
     )
     {
       this.column = column;
@@ -732,8 +775,8 @@ public class StringUtf8DictionaryEncodedColumn implements DictionaryEncodedColum
     private int id = ReadableVectorInspector.NULL_ID;
 
     public MultiValueStringVectorObjectSelector(
-            ColumnarMultiInts multiValueColumn,
-            ReadableVectorOffset offset
+        ColumnarMultiInts multiValueColumn,
+        ReadableVectorOffset offset
     )
     {
       this.multiValueColumn = multiValueColumn;
@@ -772,14 +815,14 @@ public class StringUtf8DictionaryEncodedColumn implements DictionaryEncodedColum
 
       for (int i = 0; i < offset.getCurrentVectorSize(); i++) {
         IndexedInts ithRow = vector[i];
-        if (ithRow.size() == 0) {
+        final int size = ithRow.size();
+        if (size == 0) {
           strings[i] = null;
-        } else if (ithRow.size() == 1) {
+        } else if (size == 1) {
           strings[i] = lookupName(ithRow.get(0));
         } else {
-          List<String> row = new ArrayList<>(ithRow.size());
-          // noinspection SSBasedInspection
-          for (int j = 0; j < ithRow.size(); j++) {
+          List<String> row = Lists.newArrayListWithCapacity(size);
+          for (int j = 0; j < size; j++) {
             row.add(lookupName(ithRow.get(j)));
           }
           strings[i] = row;

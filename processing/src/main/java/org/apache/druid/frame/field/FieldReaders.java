@@ -24,7 +24,6 @@ import org.apache.druid.frame.key.RowKey;
 import org.apache.druid.frame.key.RowKeyReader;
 import org.apache.druid.frame.write.UnsupportedColumnTypeException;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.column.ValueType;
 
 /**
  * Helper used to read field values from row-based frames or {@link RowKey}.
@@ -46,23 +45,37 @@ public class FieldReaders
   {
     switch (Preconditions.checkNotNull(columnType, "columnType").getType()) {
       case LONG:
-        return new LongFieldReader();
+        return LongFieldReader.forPrimitive();
 
       case FLOAT:
-        return new FloatFieldReader();
+        return FloatFieldReader.forPrimitive();
 
       case DOUBLE:
-        return new DoubleFieldReader();
+        return DoubleFieldReader.forPrimitive();
 
       case STRING:
-        return new StringFieldReader(false);
+        return new StringFieldReader();
 
       case COMPLEX:
         return ComplexFieldReader.createFromType(columnType);
 
       case ARRAY:
-        if (columnType.getElementType().getType() == ValueType.STRING) {
-          return new StringFieldReader(true);
+        switch (Preconditions.checkNotNull(columnType.getElementType().getType(), "array elementType")) {
+          case STRING:
+            return new StringArrayFieldReader();
+
+          case LONG:
+            return new LongArrayFieldReader();
+
+          case FLOAT:
+            return new FloatArrayFieldReader();
+
+          case DOUBLE:
+            return new DoubleArrayFieldReader();
+
+          default:
+            throw new UnsupportedColumnTypeException(columnName, columnType);
+
         }
         // Fall through to error for other array types
 

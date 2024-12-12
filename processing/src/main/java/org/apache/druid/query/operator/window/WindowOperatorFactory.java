@@ -26,6 +26,8 @@ import org.apache.druid.query.operator.Operator;
 import org.apache.druid.query.operator.OperatorFactory;
 import org.apache.druid.query.operator.WindowProcessorOperator;
 
+import java.util.Objects;
+
 public class WindowOperatorFactory implements OperatorFactory
 {
   private Processor processor;
@@ -67,4 +69,25 @@ public class WindowOperatorFactory implements OperatorFactory
            "processor=" + processor +
            '}';
   }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(processor);
+  }
+
+  @Override
+  public boolean equals(Object obj)
+  {
+    if (this == obj) {
+      return true;
+    }
+    if (obj == null || obj.getClass() != getClass()) {
+      return false;
+    }
+    WindowOperatorFactory other = (WindowOperatorFactory) obj;
+    return Objects.equals(processor, other.processor);
+  }
+
+
 }

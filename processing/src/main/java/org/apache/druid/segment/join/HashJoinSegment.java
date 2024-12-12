@@ -23,9 +23,15 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.filter.Filter;
+import org.apache.druid.query.rowsandcols.CursorFactoryRowsAndColumns;
+import org.apache.druid.segment.CloseableShapeshifter;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.SegmentReference;
-import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.SimpleTopNOptimizationInspector;
+import org.apache.druid.segment.TimeBoundaryInspector;
+import org.apache.druid.segment.TopNOptimizationInspector;
+import org.apache.druid.segment.WrappedTimeBoundaryInspector;
 import org.apache.druid.segment.join.filter.JoinFilterPreAnalysis;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.utils.CloseableUtils;
@@ -99,14 +105,35 @@ public class HashJoinSegment implements SegmentReference
   }
 
   @Override
-  public StorageAdapter asStorageAdapter()
+  public CursorFactory asCursorFactory()
   {
-    return new HashJoinSegmentStorageAdapter(
-        baseSegment.asStorageAdapter(),
+    return new HashJoinSegmentCursorFactory(
+        baseSegment.asCursorFactory(),
         baseFilter,
         clauses,
         joinFilterPreAnalysis
     );
+  }
+
+  @SuppressWarnings("unchecked")
+  @Override
+  public <T> T as(Class<T> clazz)
+  {
+    if (CloseableShapeshifter.class.equals(clazz)) {
+      return (T) new CursorFactoryRowsAndColumns(asCursorFactory());
+    } else if (TimeBoundaryInspector.class.equals(clazz)) {
+      return (T) WrappedTimeBoundaryInspector.create(baseSegment.as(TimeBoundaryInspector.class));
+    } else if (TopNOptimizationInspector.class.equals(clazz)) {
+      // if the baseFilter is not null, then rows from underlying cursor can be potentially filtered.
+      // otherwise, a filtering inner or left join can also filter rows.
+      return (T) new SimpleTopNOptimizationInspector(
+          baseFilter == null && clauses.stream().allMatch(
+              clause -> clause.getJoinType().isLefty() || clause.getCondition().isAlwaysTrue()
+          )
+      );
+    } else {
+      return SegmentReference.super.as(clazz);
+    }
   }
 
   @Override
@@ -129,7 +156,7 @@ public class HashJoinSegment implements SegmentReference
         if (acquireFailed) {
           break;
         }
-        acquireFailed |= joinClause.acquireReferences().map(closeable -> {
+        acquireFailed = joinClause.acquireReferences().map(closeable -> {
           closer.register(closeable);
           return false;
         }).orElse(true);

@@ -1,0 +1,2 @@
+org.apache.druid.quidem.DruidAvaticaTestDriver
+org.apache.calcite.avatica.remote.Driver

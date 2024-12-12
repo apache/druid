@@ -7,16 +7,16 @@ exports[`SupervisorStatisticsTable matches snapshot on error 1`] = `
   <div
     className="top-actions"
   >
-    <Blueprint4.ButtonGroup
+    <Blueprint5.ButtonGroup
       className="right-buttons"
     >
-      <Blueprint4.Button
+      <Blueprint5.Button
         disabled={false}
         minimal={true}
         onClick={[Function]}
         text="View raw"
       />
-    </Blueprint4.ButtonGroup>
+    </Blueprint5.ButtonGroup>
   </div>
   <div
     className="main-area"
@@ -45,7 +45,7 @@ exports[`SupervisorStatisticsTable matches snapshot on error 1`] = `
       collapseOnPageChange={true}
       collapseOnSortingChange={true}
       column={
-        Object {
+        {
           "Aggregated": undefined,
           "Cell": undefined,
           "Expander": undefined,
@@ -61,52 +61,57 @@ exports[`SupervisorStatisticsTable matches snapshot on error 1`] = `
           "filterMethod": undefined,
           "filterable": undefined,
           "footerClassName": "",
-          "footerStyle": Object {},
+          "footerStyle": {},
           "getFooterProps": [Function],
           "getHeaderProps": [Function],
           "getProps": [Function],
           "headerClassName": "",
-          "headerStyle": Object {},
+          "headerStyle": {},
           "minResizeWidth": 11,
           "minWidth": 100,
           "resizable": undefined,
           "show": true,
           "sortMethod": undefined,
           "sortable": undefined,
-          "style": Object {},
+          "style": {},
         }
       }
       columns={
-        Array [
-          Object {
-            "Header": "Task ID",
-            "accessor": [Function],
+        [
+          {
+            "Header": "Group ID",
+            "accessor": "groupId",
             "className": "padded",
-            "id": "task_id",
+            "width": 100,
+          },
+          {
+            "Header": "Task ID",
+            "accessor": "taskId",
+            "className": "padded",
             "width": 400,
           },
-          Object {
+          {
             "Cell": [Function],
             "Header": "Totals",
-            "accessor": [Function],
+            "accessor": "rowStats.totals.buildSegments",
             "className": "padded",
             "id": "total",
             "width": 200,
           },
         ]
       }
-      data={Array []}
-      defaultExpanded={Object {}}
+      data={[]}
+      defaultExpanded={{}}
       defaultFilterMethod={[Function]}
-      defaultFiltered={Array []}
+      defaultFiltered={[]}
       defaultPage={0}
       defaultPageSize={25}
-      defaultResized={Array []}
+      defaultResized={[]}
       defaultSortDesc={false}
       defaultSortMethod={[Function]}
-      defaultSorted={Array []}
+      defaultSorted={[]}
       expanderDefaults={
-        Object {
+        {
           "filterable": false,
           "resizable": false,
           "sortable": false,
@@ -150,14 +155,14 @@ exports[`SupervisorStatisticsTable matches snapshot on error 1`] = `
       originalKey="_original"
       pageJumpText="jump to page"
       pageSizeOptions={
-        Array [
+        [
           25,
           50,
           100,
         ]
       }
       pageText="Page"
-      pivotDefaults={Object {}}
+      pivotDefaults={{}}
       pivotIDKey="_pivotID"
       pivotValKey="_pivotVal"
       previousText="Previous"
@@ -171,7 +176,7 @@ exports[`SupervisorStatisticsTable matches snapshot on error 1`] = `
       showPaginationBottom={true}
       showPaginationTop={false}
       sortable={true}
-      style={Object {}}
+      style={{}}
       subRowsKey="_subRows"
     />
   </div>
@@ -185,16 +190,16 @@ exports[`SupervisorStatisticsTable matches snapshot on init 1`] = `
   <div
     className="top-actions"
   >
-    <Blueprint4.ButtonGroup
+    <Blueprint5.ButtonGroup
       className="right-buttons"
     >
-      <Blueprint4.Button
+      <Blueprint5.Button
         disabled={false}
         minimal={true}
         onClick={[Function]}
         text="View raw"
       />
-    </Blueprint4.ButtonGroup>
+    </Blueprint5.ButtonGroup>
   </div>
   <div
     className="main-area"
@@ -223,7 +228,7 @@ exports[`SupervisorStatisticsTable matches snapshot on init 1`] = `
       collapseOnPageChange={true}
       collapseOnSortingChange={true}
       column={
-        Object {
+        {
           "Aggregated": undefined,
           "Cell": undefined,
           "Expander": undefined,
@@ -239,52 +244,57 @@ exports[`SupervisorStatisticsTable matches snapshot on init 1`] = `
           "filterMethod": undefined,
           "filterable": undefined,
           "footerClassName": "",
-          "footerStyle": Object {},
+          "footerStyle": {},
           "getFooterProps": [Function],
           "getHeaderProps": [Function],
           "getProps": [Function],
           "headerClassName": "",
-          "headerStyle": Object {},
+          "headerStyle": {},
           "minResizeWidth": 11,
           "minWidth": 100,
           "resizable": undefined,
           "show": true,
           "sortMethod": undefined,
           "sortable": undefined,
-          "style": Object {},
+          "style": {},
         }
       }
       columns={
-        Array [
-          Object {
-            "Header": "Task ID",
-            "accessor": [Function],
+        [
+          {
+            "Header": "Group ID",
+            "accessor": "groupId",
             "className": "padded",
-            "id": "task_id",
+            "width": 100,
+          },
+          {
+            "Header": "Task ID",
+            "accessor": "taskId",
+            "className": "padded",
             "width": 400,
           },
-          Object {
+          {
             "Cell": [Function],
             "Header": "Totals",
-            "accessor": [Function],
+            "accessor": "rowStats.totals.buildSegments",
             "className": "padded",
             "id": "total",
             "width": 200,
           },
         ]
       }
-      data={Array []}
-      defaultExpanded={Object {}}
+      data={[]}
+      defaultExpanded={{}}
       defaultFilterMethod={[Function]}
-      defaultFiltered={Array []}
+      defaultFiltered={[]}
       defaultPage={0}
       defaultPageSize={25}
-      defaultResized={Array []}
+      defaultResized={[]}
       defaultSortDesc={false}
       defaultSortMethod={[Function]}
-      defaultSorted={Array []}
+      defaultSorted={[]}
       expanderDefaults={
-        Object {
+        {
           "filterable": false,
           "resizable": false,
           "sortable": false,
@@ -328,14 +338,14 @@ exports[`SupervisorStatisticsTable matches snapshot on init 1`] = `
       originalKey="_original"
       pageJumpText="jump to page"
       pageSizeOptions={
-        Array [
+        [
           25,
           50,
           100,
         ]
       }
       pageText="Page"
-      pivotDefaults={Object {}}
+      pivotDefaults={{}}
       pivotIDKey="_pivotID"
       pivotValKey="_pivotVal"
       previousText="Previous"
@@ -349,7 +359,7 @@ exports[`SupervisorStatisticsTable matches snapshot on init 1`] = `
       showPaginationBottom={true}
       showPaginationTop={false}
       sortable={true}
-      style={Object {}}
+      style={{}}
       subRowsKey="_subRows"
     />
   </div>
@@ -363,16 +373,16 @@ exports[`SupervisorStatisticsTable matches snapshot on loading 1`] = `
   <div
     className="top-actions"
   >
-    <Blueprint4.ButtonGroup
+    <Blueprint5.ButtonGroup
       className="right-buttons"
     >
-      <Blueprint4.Button
+      <Blueprint5.Button
         disabled={true}
         minimal={true}
         onClick={[Function]}
         text="View raw"
       />
-    </Blueprint4.ButtonGroup>
+    </Blueprint5.ButtonGroup>
   </div>
   <div
     className="main-area"
@@ -389,16 +399,16 @@ exports[`SupervisorStatisticsTable matches snapshot on no data 1`] = `
   <div
     className="top-actions"
   >
-    <Blueprint4.ButtonGroup
+    <Blueprint5.ButtonGroup
       className="right-buttons"
     >
-      <Blueprint4.Button
+      <Blueprint5.Button
         disabled={false}
         minimal={true}
         onClick={[Function]}
         text="View raw"
       />
-    </Blueprint4.ButtonGroup>
+    </Blueprint5.ButtonGroup>
   </div>
   <div
     className="main-area"
@@ -427,7 +437,7 @@ exports[`SupervisorStatisticsTable matches snapshot on no data 1`] = `
       collapseOnPageChange={true}
       collapseOnSortingChange={true}
       column={
-        Object {
+        {
           "Aggregated": undefined,
           "Cell": undefined,
           "Expander": undefined,
@@ -443,52 +453,57 @@ exports[`SupervisorStatisticsTable matches snapshot on no data 1`] = `
           "filterMethod": undefined,
           "filterable": undefined,
           "footerClassName": "",
-          "footerStyle": Object {},
+          "footerStyle": {},
           "getFooterProps": [Function],
           "getHeaderProps": [Function],
           "getProps": [Function],
           "headerClassName": "",
-          "headerStyle": Object {},
+          "headerStyle": {},
           "minResizeWidth": 11,
           "minWidth": 100,
           "resizable": undefined,
           "show": true,
           "sortMethod": undefined,
           "sortable": undefined,
-          "style": Object {},
+          "style": {},
         }
       }
       columns={
-        Array [
-          Object {
-            "Header": "Task ID",
-            "accessor": [Function],
+        [
+          {
+            "Header": "Group ID",
+            "accessor": "groupId",
             "className": "padded",
-            "id": "task_id",
+            "width": 100,
+          },
+          {
+            "Header": "Task ID",
+            "accessor": "taskId",
+            "className": "padded",
             "width": 400,
           },
-          Object {
+          {
             "Cell": [Function],
             "Header": "Totals",
-            "accessor": [Function],
+            "accessor": "rowStats.totals.buildSegments",
             "className": "padded",
             "id": "total",
             "width": 200,
           },
         ]
       }
-      data={Array []}
-      defaultExpanded={Object {}}
+      data={[]}
+      defaultExpanded={{}}
       defaultFilterMethod={[Function]}
-      defaultFiltered={Array []}
+      defaultFiltered={[]}
       defaultPage={0}
       defaultPageSize={25}
-      defaultResized={Array []}
+      defaultResized={[]}
       defaultSortDesc={false}
       defaultSortMethod={[Function]}
-      defaultSorted={Array []}
+      defaultSorted={[]}
       expanderDefaults={
-        Object {
+        {
           "filterable": false,
           "resizable": false,
           "sortable": false,
@@ -532,14 +547,14 @@ exports[`SupervisorStatisticsTable matches snapshot on no data 1`] = `
       originalKey="_original"
       pageJumpText="jump to page"
       pageSizeOptions={
-        Array [
+        [
           25,
           50,
           100,
         ]
       }
       pageText="Page"
-      pivotDefaults={Object {}}
+      pivotDefaults={{}}
       pivotIDKey="_pivotID"
       pivotValKey="_pivotVal"
       previousText="Previous"
@@ -553,7 +568,7 @@ exports[`SupervisorStatisticsTable matches snapshot on no data 1`] = `
       showPaginationBottom={true}
       showPaginationTop={false}
       sortable={true}
-      style={Object {}}
+      style={{}}
       subRowsKey="_subRows"
     />
   </div>
@@ -567,16 +582,16 @@ exports[`SupervisorStatisticsTable matches snapshot on some data 1`] = `
   <div
     className="top-actions"
   >
-    <Blueprint4.ButtonGroup
+    <Blueprint5.ButtonGroup
       className="right-buttons"
     >
-      <Blueprint4.Button
+      <Blueprint5.Button
         disabled={false}
         minimal={true}
         onClick={[Function]}
         text="View raw"
       />
-    </Blueprint4.ButtonGroup>
+    </Blueprint5.ButtonGroup>
   </div>
   <div
     className="main-area"
@@ -605,7 +620,7 @@ exports[`SupervisorStatisticsTable matches snapshot on some data 1`] = `
       collapseOnPageChange={true}
       collapseOnSortingChange={true}
       column={
-        Object {
+        {
           "Aggregated": undefined,
           "Cell": undefined,
           "Expander": undefined,
@@ -621,58 +636,63 @@ exports[`SupervisorStatisticsTable matches snapshot on some data 1`] = `
           "filterMethod": undefined,
           "filterable": undefined,
           "footerClassName": "",
-          "footerStyle": Object {},
+          "footerStyle": {},
           "getFooterProps": [Function],
           "getHeaderProps": [Function],
           "getProps": [Function],
           "headerClassName": "",
-          "headerStyle": Object {},
+          "headerStyle": {},
           "minResizeWidth": 11,
           "minWidth": 100,
           "resizable": undefined,
           "show": true,
           "sortMethod": undefined,
           "sortable": undefined,
-          "style": Object {},
+          "style": {},
         }
       }
       columns={
-        Array [
-          Object {
-            "Header": "Task ID",
-            "accessor": [Function],
+        [
+          {
+            "Header": "Group ID",
+            "accessor": "groupId",
             "className": "padded",
-            "id": "task_id",
+            "width": 100,
+          },
+          {
+            "Header": "Task ID",
+            "accessor": "taskId",
+            "className": "padded",
             "width": 400,
           },
-          Object {
+          {
             "Cell": [Function],
             "Header": "Totals",
-            "accessor": [Function],
+            "accessor": "rowStats.totals.buildSegments",
             "className": "padded",
             "id": "total",
             "width": 200,
           },
-          Object {
+          {
             "Cell": [Function],
             "Header": "1m",
-            "accessor": [Function],
+            "accessor": "rowStats.movingAverages.buildSegments.1m",
             "className": "padded",
             "id": "1m",
             "width": 200,
           },
-          Object {
+          {
             "Cell": [Function],
             "Header": "5m",
-            "accessor": [Function],
+            "accessor": "rowStats.movingAverages.buildSegments.5m",
             "className": "padded",
             "id": "5m",
             "width": 200,
           },
-          Object {
+          {
             "Cell": [Function],
             "Header": "15m",
-            "accessor": [Function],
+            "accessor": "rowStats.movingAverages.buildSegments.15m",
             "className": "padded",
             "id": "15m",
             "width": 200,
@@ -680,34 +700,39 @@ exports[`SupervisorStatisticsTable matches snapshot on some data 1`] = `
         ]
       }
       data={
-        Array [
-          Object {
-            "summary": Object {
-              "movingAverages": Object {
-                "buildSegments": Object {
-                  "15m": Object {
+        [
+          {
+            "groupId": "0",
+            "rowStats": {
+              "movingAverages": {
+                "buildSegments": {
+                  "15m": {
                     "processed": 5.544749689510444,
+                    "processedBytes": 20,
                     "processedWithError": 0,
                     "thrownAway": 0,
                     "unparseable": 0,
                   },
-                  "1m": Object {
+                  "1m": {
                     "processed": 4.593670088770785,
+                    "processedBytes": 30,
                     "processedWithError": 0,
                     "thrownAway": 0,
                     "unparseable": 0,
                   },
-                  "5m": Object {
+                  "5m": {
                     "processed": 3.5455993615040584,
+                    "processedBytes": 10,
                     "processedWithError": 0,
                     "thrownAway": 0,
                     "unparseable": 0,
                   },
                 },
               },
-              "totals": Object {
-                "buildSegments": Object {
+              "totals": {
+                "buildSegments": {
                   "processed": 7516,
+                  "processedBytes": 60,
                   "processedWithError": 0,
                   "thrownAway": 0,
                   "unparseable": 0,
@@ -718,17 +743,17 @@ exports[`SupervisorStatisticsTable matches snapshot on some data 1`] = `
           },
         ]
       }
-      defaultExpanded={Object {}}
+      defaultExpanded={{}}
       defaultFilterMethod={[Function]}
-      defaultFiltered={Array []}
+      defaultFiltered={[]}
       defaultPage={0}
       defaultPageSize={25}
-      defaultResized={Array []}
+      defaultResized={[]}
       defaultSortDesc={false}
       defaultSortMethod={[Function]}
-      defaultSorted={Array []}
+      defaultSorted={[]}
       expanderDefaults={
-        Object {
+        {
           "filterable": false,
           "resizable": false,
           "sortable": false,
@@ -772,14 +797,14 @@ exports[`SupervisorStatisticsTable matches snapshot on some data 1`] = `
       originalKey="_original"
       pageJumpText="jump to page"
       pageSizeOptions={
-        Array [
+        [
           25,
           50,
           100,
         ]
       }
       pageText="Page"
-      pivotDefaults={Object {}}
+      pivotDefaults={{}}
       pivotIDKey="_pivotID"
       pivotValKey="_pivotVal"
       previousText="Previous"
@@ -793,7 +818,7 @@ exports[`SupervisorStatisticsTable matches snapshot on some data 1`] = `
       showPaginationBottom={true}
       showPaginationTop={false}
       sortable={true}
-      style={Object {}}
+      style={{}}
       subRowsKey="_subRows"
     />
   </div>

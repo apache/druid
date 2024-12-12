@@ -17,8 +17,7 @@
  * under the License.
  */
 
-// Using fully qualified name for Pair class, since Calcite also has a same class name being used in the Parser.jj
-org.apache.druid.java.util.common.Pair<Granularity, String> PartitionGranularity() :
+SqlGranularityLiteral PartitionGranularity() :
 {
   SqlNode e;
   Granularity granularity;
@@ -52,40 +51,40 @@ org.apache.druid.java.util.common.Pair<Granularity, String> PartitionGranularity
   |
     <ALL>
     {
-      granularity = Granularities.ALL;
-      unparseString = "ALL";
+          granularity = Granularities.ALL;
+          unparseString = "ALL";
     }
     [
-      <TIME>
-      {
-        unparseString += " TIME";
-      }
+       <TIME>
+       {
+            unparseString += " TIME";
+       }
     ]
   |
     e = Expression(ExprContext.ACCEPT_SUB_QUERY)
     {
-      granularity = DruidSqlParserUtils.convertSqlNodeToGranularityThrowingParseExceptions(e);
+      granularity = DruidSqlParserUtils.convertSqlNodeToGranularity(e);
       unparseString = e.toString();
     }
   )
   {
-    return new org.apache.druid.java.util.common.Pair(granularity, unparseString);
+    return new SqlGranularityLiteral(granularity, unparseString, getPos());
   }
 }
 
-SqlNodeList ClusterItems() :
+SqlNodeList ClusteredBy() :
 {
-  List<SqlNode> list;
+  final List<SqlNode> list = new ArrayList<SqlNode>();
   final Span s;
   SqlNode e;
 }
 {
-  e = OrderItem() {
+  <CLUSTERED> {
     s = span();
-    list = startList(e);
   }
+  <BY> AddOrderItem(list)
   (
-    LOOKAHEAD(2) <COMMA> e = OrderItem() { list.add(e); }
+    LOOKAHEAD(2) <COMMA> AddOrderItem(list)
   )*
   {
     return new SqlNodeList(list, s.addAll(list).pos());
@@ -105,4 +104,84 @@ SqlTypeNameSpec DruidType() :
   {
     return new SqlUserDefinedTypeNameSpec(typeName, span().pos());
   }
+}
+
+// Parses the supported file formats for export.
+SqlIdentifier FileFormat() :
+{
+  SqlNode format;
+}
+{
+  format = SimpleIdentifier()
+  {
+    return (SqlIdentifier) format;
+  }
+}
+
+SqlIdentifier ExternalDestination() :
+{
+  final Span s;
+  SqlIdentifier destinationType = null;
+  String destinationTypeString = null;
+  Map<String, String> properties = new HashMap();
+}
+{
+ (
+  destinationType = SimpleIdentifier()
+  {
+    destinationTypeString = destinationType.toString();
+  }
+  |
+  <LOCAL>
+  {
+    // local is a reserved keyword in calcite. However, local is also a supported input source / destination and
+    // keeping the name is preferred for consistency in other places, and so that permission checks are applied
+    // correctly, so this is handled as a special case.
+    destinationTypeString = "local";
+  }
+ )
+ [ <LPAREN> [ properties = ExternProperties() ] <RPAREN>]
+ {
+   s = span();
+   return new ExternalDestinationSqlIdentifier(
+     destinationTypeString,
+     s.pos(),
+     properties
+   );
+ }
+}
+
+Map<String, String> ExternProperties() :
+{
+  final Span s;
+  final Map<String, String> properties = new HashMap();
+  SqlIdentifier identifier;
+  String value;
+  SqlNodeList commaList = SqlNodeList.EMPTY;
+}
+{
+  (
+    identifier = SimpleIdentifier() <NAMED_ARGUMENT_ASSIGNMENT> value = SimpleStringLiteral()
+    {
+      properties.put(identifier.toString(), value);
+    }
+  )
+  (
+    <COMMA>
+    identifier = SimpleIdentifier() <NAMED_ARGUMENT_ASSIGNMENT> value = SimpleStringLiteral()
+    {
+      properties.put(identifier.toString(), value);
+    }
+  )*
+  {
+    return properties;
+  }
+}
+
+SqlNode testRule():
+{
+  final SqlNode e;
+}
+{
+  e = SimpleIdentifier() { return e; }
 }

@@ -52,11 +52,11 @@ public class TimestampShiftExprMacro implements ExprMacroTable.ExprMacro
     validationHelperCheckArgumentRange(args, 3, 4);
 
     if (args.stream().skip(1).allMatch(Expr::isLiteral)) {
-      return new TimestampShiftExpr(args);
+      return new TimestampShiftExpr(this, args);
     } else {
       // Use dynamic impl if any args are non-literal. Don't bother optimizing for the case where period is
       // literal but step isn't.
-      return new TimestampShiftDynamicExpr(args);
+      return new TimestampShiftDynamicExpr(this, args);
     }
   }
 
@@ -87,9 +87,9 @@ public class TimestampShiftExprMacro implements ExprMacroTable.ExprMacro
     private final Period period;
     private final int step;
 
-    TimestampShiftExpr(final List<Expr> args)
+    TimestampShiftExpr(final TimestampShiftExprMacro macro, final List<Expr> args)
     {
-      super(FN_NAME, args);
+      super(macro, args);
       period = getPeriod(args, InputBindings.nilBindings());
       chronology = getTimeZone(args, InputBindings.nilBindings());
       step = getStep(args, InputBindings.nilBindings());
@@ -107,12 +107,6 @@ public class TimestampShiftExprMacro implements ExprMacroTable.ExprMacro
     }
 
     @Override
-    public Expr visit(Shuttle shuttle)
-    {
-      return shuttle.visit(new TimestampShiftExpr(shuttle.visitAll(args)));
-    }
-
-    @Override
     public boolean canVectorize(InputBindingInspector inspector)
     {
       return args.get(0).canVectorize(inspector);
@@ -123,7 +117,11 @@ public class TimestampShiftExprMacro implements ExprMacroTable.ExprMacro
     {
       ExprVectorProcessor<?> processor;
       processor = new LongOutLongInFunctionVectorValueProcessor(
-          CastToTypeVectorProcessor.cast(args.get(0).asVectorProcessor(inspector), ExpressionType.LONG),
+          CastToTypeVectorProcessor.cast(
+              args.get(0).asVectorProcessor(inspector),
+              ExpressionType.LONG,
+              inspector.getMaxVectorSize()
+          ),
           inspector.getMaxVectorSize()
       )
       {
@@ -147,9 +145,9 @@ public class TimestampShiftExprMacro implements ExprMacroTable.ExprMacro
 
   private static class TimestampShiftDynamicExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
   {
-    TimestampShiftDynamicExpr(final List<Expr> args)
+    TimestampShiftDynamicExpr(final TimestampShiftExprMacro macro, final List<Expr> args)
     {
-      super(FN_NAME, args);
+      super(macro, args);
     }
 
     @Nonnull
@@ -164,12 +162,6 @@ public class TimestampShiftExprMacro implements ExprMacroTable.ExprMacro
       final Chronology chronology = getTimeZone(args, bindings);
       final int step = getStep(args, bindings);
       return ExprEval.of(chronology.add(period, timestamp.asLong(), step));
-    }
-
-    @Override
-    public Expr visit(Shuttle shuttle)
-    {
-      return shuttle.visit(new TimestampShiftDynamicExpr(shuttle.visitAll(args)));
     }
 
     @Nullable

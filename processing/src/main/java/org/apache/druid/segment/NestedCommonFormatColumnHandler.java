@@ -30,6 +30,8 @@ import org.apache.druid.segment.selector.settable.SettableColumnValueSelector;
 import org.apache.druid.segment.selector.settable.SettableObjectColumnValueSelector;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
+import javax.annotation.Nullable;
+import java.io.File;
 import java.util.Comparator;
 
 public class NestedCommonFormatColumnHandler implements DimensionHandler<StructuredData, StructuredData, StructuredData>
@@ -41,10 +43,13 @@ public class NestedCommonFormatColumnHandler implements DimensionHandler<Structu
       );
 
   private final String name;
+  @Nullable
+  private final ColumnType castTo;
 
-  public NestedCommonFormatColumnHandler(String name)
+  public NestedCommonFormatColumnHandler(String name, @Nullable ColumnType castTo)
   {
     this.name = name;
+    this.castTo = castTo;
   }
 
   @Override
@@ -56,31 +61,33 @@ public class NestedCommonFormatColumnHandler implements DimensionHandler<Structu
   @Override
   public DimensionSpec getDimensionSpec()
   {
-    return new DefaultDimensionSpec(name, name, ColumnType.NESTED_DATA);
+    return new DefaultDimensionSpec(name, name, castTo != null ? castTo : ColumnType.NESTED_DATA);
   }
 
   @Override
   public DimensionSchema getDimensionSchema(ColumnCapabilities capabilities)
   {
-    return new AutoTypeColumnSchema(name);
+    return new AutoTypeColumnSchema(name, castTo);
   }
 
   @Override
   public DimensionIndexer<StructuredData, StructuredData, StructuredData> makeIndexer(boolean useMaxMemoryEstimates)
   {
-    return new AutoTypeColumnIndexer();
+    return new AutoTypeColumnIndexer(name, castTo);
   }
 
   @Override
   public DimensionMergerV9 makeMerger(
+      String outputName,
       IndexSpec indexSpec,
       SegmentWriteOutMedium segmentWriteOutMedium,
       ColumnCapabilities capabilities,
       ProgressIndicator progress,
+      File segmentBaseDir,
       Closer closer
   )
   {
-    return new AutoTypeColumnMerger(name, indexSpec, segmentWriteOutMedium, closer);
+    return new AutoTypeColumnMerger(name, outputName, castTo, indexSpec, segmentWriteOutMedium, segmentBaseDir, closer);
   }
 
   @Override
@@ -94,6 +101,14 @@ public class NestedCommonFormatColumnHandler implements DimensionHandler<Structu
   @Override
   public Comparator<ColumnValueSelector> getEncodedValueSelectorComparator()
   {
+    if (castTo != null) {
+      final Comparator<Object> typeComparator = castTo.getNullableStrategy();
+      return (s1, s2) ->
+          typeComparator.compare(
+              StructuredData.unwrap(s1.getObject()),
+              StructuredData.unwrap(s2.getObject())
+          );
+    }
     return COMPARATOR;
   }
 

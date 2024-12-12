@@ -20,7 +20,6 @@
 package org.apache.druid.java.util.common;
 
 import com.google.common.base.Strings;
-import it.unimi.dsi.fastutil.bytes.ByteArrayList;
 import org.apache.commons.io.IOUtils;
 
 import javax.annotation.Nonnull;
@@ -261,11 +260,6 @@ public class StringUtils
     return StringUtils.fromUtf8(buffer, buffer.remaining());
   }
 
-  public static String fromUtf8(final ByteArrayList buffer)
-  {
-    return StringUtils.fromUtf8(buffer.elements(), 0, buffer.size());
-  }
-
   /**
    * If buffer is Decodes a UTF-8 string from the remaining bytes of a buffer.
    * Advances the position of the buffer by {@link ByteBuffer#remaining()}.
@@ -458,6 +452,11 @@ public class StringUtils
   public static String maybeRemoveTrailingSlash(String s)
   {
     return s != null && s.endsWith("/") ? s.substring(0, s.length() - 1) : s;
+  }
+
+  public static String maybeAppendTrailingSlash(String s)
+  {
+    return s != null && !s.endsWith("/") ? s + "/" : s;
   }
 
   /**
@@ -824,5 +823,14 @@ public class StringUtils
     catch (IOException e) {
       throw new ISE(e, "Cannot load resource: [%s]", resource);
     }
+  }
+
+  /**
+   This method is removed from commons lang3.
+   https://commons.apache.org/proper/commons-lang/article3_0.html
+   */
+  public static String escapeSql(String str)
+  {
+    return str == null ? null : StringUtils.replace(str, "'", "''");
   }
 }

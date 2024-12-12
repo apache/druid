@@ -35,6 +35,7 @@ import org.apache.druid.sql.calcite.parser.DruidSqlReplace;
 import org.apache.druid.sql.calcite.planner.JoinAlgorithm;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
+import org.apache.druid.sql.destination.IngestDestination;
 
 import java.util.Map;
 import java.util.Set;
@@ -82,19 +83,27 @@ public class NativeSqlEngine implements SqlEngine
   }
 
   @Override
-  public RelDataType resultTypeForSelect(RelDataTypeFactory typeFactory, RelDataType validatedRowType)
+  public RelDataType resultTypeForSelect(
+      RelDataTypeFactory typeFactory,
+      RelDataType validatedRowType,
+      Map<String, Object> queryContext
+  )
   {
     return validatedRowType;
   }
 
   @Override
-  public RelDataType resultTypeForInsert(RelDataTypeFactory typeFactory, RelDataType validatedRowType)
+  public RelDataType resultTypeForInsert(
+      RelDataTypeFactory typeFactory,
+      RelDataType validatedRowType,
+      Map<String, Object> queryContext
+  )
   {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public boolean featureAvailable(EngineFeature feature, PlannerContext plannerContext)
+  public boolean featureAvailable(EngineFeature feature)
   {
     switch (feature) {
       case CAN_SELECT:
@@ -105,14 +114,17 @@ public class NativeSqlEngine implements SqlEngine
       case WINDOW_FUNCTIONS:
       case UNNEST:
       case ALLOW_BROADCAST_RIGHTY_JOIN:
-        return true;
+      case ALLOW_TOP_LEVEL_UNION_ALL:
       case TIME_BOUNDARY_QUERY:
-        return plannerContext.queryContext().isTimeBoundaryPlanningEnabled();
+      case GROUPBY_IMPLICITLY_SORTS:
+        return true;
       case CAN_INSERT:
       case CAN_REPLACE:
       case READ_EXTERNAL_DATA:
+      case WRITE_EXTERNAL_DATA:
       case SCAN_ORDER_BY_NON_TIME:
       case SCAN_NEEDS_SIGNATURE:
+      case WINDOW_LEAF_OPERATOR:
         return false;
       default:
         throw SqlEngines.generateUnrecognizedFeatureException(NativeSqlEngine.class.getSimpleName(), feature);
@@ -132,7 +144,7 @@ public class NativeSqlEngine implements SqlEngine
 
   @Override
   public QueryMaker buildQueryMakerForInsert(
-      final String targetDataSource,
+      final IngestDestination destination,
       final RelRoot relRoot,
       final PlannerContext plannerContext
   )

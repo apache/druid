@@ -41,7 +41,6 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import javax.annotation.Nullable;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -220,7 +219,20 @@ public class ServiceClientImpl implements ServiceClient
                     if (shouldTry(nextAttemptNumber) && retryPolicy.retryThrowable(t)) {
                       final long backoffMs = computeBackoffMs(retryPolicy, attemptNumber);
 
-                      log.noStackTrace().info(t, buildErrorMessage(request, null, backoffMs, nextAttemptNumber));
+                      if (retryPolicy.retryLoggable()) {
+                        // log as INFO level if the retry is loggable
+                        log.noStackTrace().info(t, buildErrorMessage(request, null, backoffMs, nextAttemptNumber));
+                      } else if (log.isDebugEnabled()) {
+                        // log as DEBUG level if the debug log is enabled
+                        log.noStackTrace().debug(t, buildErrorMessage(request, null, backoffMs, nextAttemptNumber));
+                      } else {
+                        // If none of the above is valid, we log the error message every tenth time we retry. It seems like
+                        // a good balance between making the logs not too verbose when the retry is due to the same cause
+                        // and enriching logs with useful information, if we keep retrying due to the same reason
+                        if (nextAttemptNumber > 0 && nextAttemptNumber % 10 == 0) {
+                          log.noStackTrace().info(t, buildErrorMessage(request, null, backoffMs, nextAttemptNumber));
+                        }
+                      }
 
                       connectExec.schedule(
                           () -> tryRequest(requestBuilder, handler, retVal, nextAttemptNumber, ImmutableSet.of()),
@@ -272,7 +284,15 @@ public class ServiceClientImpl implements ServiceClient
                   // Retryable server response (or null errorHolder, which means null result, which can happen
                   // if the HttpClient encounters an exception in the midst of response processing).
                   final long backoffMs = computeBackoffMs(retryPolicy, attemptNumber);
-                  log.info(buildErrorMessage(request, errorHolder, backoffMs, nextAttemptNumber));
+                  if (retryPolicy.retryLoggable()) {
+                    log.noStackTrace().info(buildErrorMessage(request, errorHolder, backoffMs, nextAttemptNumber));
+                  } else if (log.isDebugEnabled()) {
+                    log.noStackTrace().debug(buildErrorMessage(request, errorHolder, backoffMs, nextAttemptNumber));
+                  } else {
+                    if (nextAttemptNumber > 0 && nextAttemptNumber % 10 == 0) {
+                      log.noStackTrace().info(buildErrorMessage(request, errorHolder, backoffMs, nextAttemptNumber));
+                    }
+                  }
                   connectExec.schedule(
                       () -> tryRequest(requestBuilder, handler, retVal, nextAttemptNumber, ImmutableSet.of()),
                       backoffMs,
@@ -476,19 +496,7 @@ public class ServiceClientImpl implements ServiceClient
   }
 
   /**
-   * Sanitizes IPv6 address if it has brackets. Eg. host = "[1:2:3:4:5:6:7:8]" will be returned as "1:2:3:4:5:6:7:8"
-   * after this function
-   */
-  static String sanitizeHost(String host)
-  {
-    if (host.charAt(0) == '[') {
-      return host.substring(1, host.length() - 1);
-    }
-    return host;
-  }
-
-  /**
-   * Returns a {@link ServiceLocation} without a path component, based on a URI.
+   * Returns a {@link ServiceLocation} without a path component, based on a URI. Returns null on invalid URIs.
    */
   @Nullable
   @VisibleForTesting
@@ -499,24 +507,17 @@ public class ServiceClientImpl implements ServiceClient
     }
 
     try {
-      final URI uri = new URI(uriString);
+      final ServiceLocation location = ServiceLocation.fromUri(URI.create(uriString));
 
-      if (uri.getHost() == null) {
-        return null;
-      }
-
-      final String scheme = uri.getScheme();
-      final String host = sanitizeHost(uri.getHost());
-
-      if ("http".equals(scheme)) {
-        return new ServiceLocation(host, uri.getPort() < 0 ? 80 : uri.getPort(), -1, "");
-      } else if ("https".equals(scheme)) {
-        return new ServiceLocation(host, -1, uri.getPort() < 0 ? 443 : uri.getPort(), "");
-      } else {
-        return null;
-      }
+      // Strip path.
+      return new ServiceLocation(
+          location.getHost(),
+          location.getPlaintextPort(),
+          location.getTlsPort(),
+          ""
+      );
     }
-    catch (URISyntaxException e) {
+    catch (IllegalArgumentException e) {
       return null;
     }
   }
@@ -528,8 +529,8 @@ public class ServiceClientImpl implements ServiceClient
   static boolean serviceLocationMatches(final ServiceLocation left, final ServiceLocation right)
   {
     return left.getHost().equals(right.getHost())
-        && portMatches(left.getPlaintextPort(), right.getPlaintextPort())
-        && portMatches(left.getTlsPort(), right.getTlsPort());
+           && portMatches(left.getPlaintextPort(), right.getPlaintextPort())
+           && portMatches(left.getTlsPort(), right.getTlsPort());
   }
 
   static boolean portMatches(int left, int right)

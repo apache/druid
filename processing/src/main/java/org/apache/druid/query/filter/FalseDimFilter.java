@@ -45,12 +45,6 @@ public class FalseDimFilter extends AbstractOptimizableDimFilter implements DimF
   }
 
   @Override
-  public DimFilter optimize()
-  {
-    return this;
-  }
-
-  @Override
   public Filter toFilter()
   {
     return FalseFilter.instance();

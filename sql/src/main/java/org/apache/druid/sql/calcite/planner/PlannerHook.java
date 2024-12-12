@@ -23,7 +23,10 @@ import org.apache.calcite.interpreter.BindableRel;
 import org.apache.calcite.rel.RelRoot;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.sql.SqlInsert;
+import org.apache.calcite.sql.SqlNode;
+import org.apache.druid.guice.annotations.UnstableApi;
 import org.apache.druid.sql.calcite.rel.DruidRel;
+import org.apache.druid.sql.hook.DruidHookDispatcher;
 
 /**
  * Druid-specific version of Calcite's {@link org.apache.calcite.runtime.Hook Hook}
@@ -31,10 +34,17 @@ import org.apache.druid.sql.calcite.rel.DruidRel;
  * for test validation. Calcite's hook has multiple low-level events, but, sadly,
  * none at the points where tests want to verify, except for the opportunity to
  * capture the native query.
+ *
+ * Should be removed ; use {@link DruidHookDispatcher} instead.
  */
+@UnstableApi
+@Deprecated
 public interface PlannerHook
 {
   void captureSql(String sql);
+  default void captureSqlNode(SqlNode node)
+  {
+  }
   void captureQueryRel(RelRoot rootQueryRel);
   void captureDruidRel(DruidRel<?> druidRel);
   void captureBindableRel(BindableRel bindableRel);

@@ -360,20 +360,6 @@ public class DoublesSketchAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public List<AggregatorFactory> getRequiredColumns()
-  {
-    return Collections.singletonList(
-        new DoublesSketchAggregatorFactory(
-            fieldName,
-            fieldName,
-            k,
-            maxStreamLength,
-            shouldFinalize
-        )
-    );
-  }
-
-  @Override
   public AggregatorFactory getCombiningFactory()
   {
     return new DoublesSketchMergeAggregatorFactory(name, k, maxStreamLength, shouldFinalize);
@@ -424,7 +410,11 @@ public class DoublesSketchAggregatorFactory extends AggregatorFactory
   @Override
   public ColumnType getResultType()
   {
-    return ColumnType.LONG;
+    if (shouldFinalize) {
+      return ColumnType.LONG;
+    } else {
+      return getIntermediateType();
+    }
   }
 
   @Override
@@ -432,6 +422,25 @@ public class DoublesSketchAggregatorFactory extends AggregatorFactory
   {
     // maxStreamLength is not included in the cache key as it does nothing with query result.
     return new CacheKeyBuilder(cacheTypeId).appendString(name).appendString(fieldName).appendInt(k).build();
+  }
+
+  @Nullable
+  @Override
+  public AggregatorFactory substituteCombiningFactory(AggregatorFactory preAggregated)
+  {
+    if (this == preAggregated) {
+      return getCombiningFactory();
+    }
+
+    if (getClass() != preAggregated.getClass()) {
+      return null;
+    }
+
+    DoublesSketchAggregatorFactory that = (DoublesSketchAggregatorFactory) preAggregated;
+    if (k <= that.k && maxStreamLength <= that.getMaxStreamLength() && Objects.equals(fieldName, that.fieldName)) {
+      return getCombiningFactory();
+    }
+    return null;
   }
 
   @Override

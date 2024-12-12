@@ -79,12 +79,6 @@ public class SpatialDimFilter extends AbstractOptimizableDimFilter implements Di
                      .array();
   }
 
-  @Override
-  public DimFilter optimize()
-  {
-    return this;
-  }
-
   @JsonProperty
   public String getDimension()
   {

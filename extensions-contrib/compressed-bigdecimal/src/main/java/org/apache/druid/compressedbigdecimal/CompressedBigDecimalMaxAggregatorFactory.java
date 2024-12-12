@@ -28,9 +28,6 @@ import org.apache.druid.query.aggregation.BufferAggregator;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 
-import java.util.Collections;
-import java.util.List;
-
 public class CompressedBigDecimalMaxAggregatorFactory extends CompressedBigDecimalAggregatorFactoryBase
 {
   private static final byte CACHE_TYPE_ID = 0x37;
@@ -111,18 +108,6 @@ public class CompressedBigDecimalMaxAggregatorFactory extends CompressedBigDecim
   public AggregateCombiner<CompressedBigDecimal> makeAggregateCombiner()
   {
     return new CompressedBigDecimalMaxAggregateCombiner();
-  }
-
-  @Override
-  public List<AggregatorFactory> getRequiredColumns()
-  {
-    return Collections.singletonList(new CompressedBigDecimalMaxAggregatorFactory(
-        fieldName,
-        fieldName,
-        size,
-        scale,
-        strictNumberParsing
-    ));
   }
 
   @Override

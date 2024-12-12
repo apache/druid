@@ -22,6 +22,7 @@ package org.apache.druid.java.util.metrics.cgroups;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.primitives.Longs;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.metrics.CgroupUtil;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -44,9 +45,11 @@ public class Memory
     this.cgroupDiscoverer = cgroupDiscoverer;
   }
 
-  public MemoryStat snapshot()
+  public MemoryStat snapshot(String memoryUsageFile, String memoryLimitFile)
   {
     final MemoryStat memoryStat = new MemoryStat();
+    memoryStat.usage = CgroupUtil.readLongValue(cgroupDiscoverer, CGROUP, memoryUsageFile, -1);
+    memoryStat.limit = CgroupUtil.readLongValue(cgroupDiscoverer, CGROUP, memoryLimitFile, -1);
 
     try (final BufferedReader reader = Files.newBufferedReader(
         Paths.get(cgroupDiscoverer.discover(CGROUP).toString(), CGROUP_MEMORY_FILE)
@@ -102,6 +105,8 @@ public class Memory
   {
     private final Map<String, Long> memoryStats = new HashMap<>();
     private final Map<Long, Map<String, Long>> numaMemoryStats = new HashMap<>();
+    private long usage;
+    private long limit;
 
     public Map<String, Long> getMemoryStats()
     {
@@ -112,6 +117,16 @@ public class Memory
     {
       // They can modify the inner map... but why?
       return ImmutableMap.copyOf(numaMemoryStats);
+    }
+
+    public long getUsage()
+    {
+      return usage;
+    }
+
+    public long getLimit()
+    {
+      return limit;
     }
   }
 }

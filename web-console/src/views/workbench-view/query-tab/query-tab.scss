@@ -19,6 +19,7 @@
 @import '../../../variables';
 
 $vertical-gap: 6px;
+$visible-splitter-size: 3px;
 
 .query-tab {
   position: relative;
@@ -27,14 +28,26 @@ $vertical-gap: 6px;
     background: $dark-gray2;
   }
 
-  .splitter-layout {
-    position: absolute;
-    width: 100%;
+  .splitter-layout.splitter-layout-vertical {
     height: 100%;
 
-    &.splitter-layout-vertical > .layout-splitter {
-      height: 3px;
-      background-color: $gray1;
+    & > .layout-splitter {
+      height: 3px + $vertical-gap * 2;
+      position: relative;
+
+      &::after {
+        content: '';
+        background-color: $gray1;
+        position: absolute;
+        top: $vertical-gap;
+        width: 100%;
+        height: $visible-splitter-size;
+        border-radius: 2px;
+      }
+
+      &:hover::after {
+        background-color: $gray2;
+      }
     }
   }
 
@@ -42,46 +55,27 @@ $vertical-gap: 6px;
     position: absolute;
     width: 100%;
     top: 0;
-    bottom: $vertical-gap;
+    bottom: 0;
 
     .query-section {
       position: absolute;
       width: 100%;
       top: 0;
       bottom: 30px + $vertical-gap;
-      overflow: auto;
+      @include card-like;
+      overflow: hidden;
 
-      .helper-query {
-        margin-top: $vertical-gap;
+      .flexible-query-input {
+        height: 100%;
       }
 
-      .main-query {
-        position: relative;
-        @include card-like;
-        min-height: 100%;
-        overflow: hidden;
-
-        &.single {
-          height: 100%;
-
-          .flexible-query-input {
-            height: 100%;
-          }
-        }
-
-        &.multi {
-          min-height: calc(100% - 18px);
-          margin-top: $vertical-gap;
-        }
-
-        .corner {
-          position: absolute;
-          top: 0;
-          right: 0;
-          @include card-background;
-          z-index: 1;
-          padding: 3px;
-        }
+      .corner {
+        position: absolute;
+        top: 0;
+        right: 0;
+        @include card-background;
+        z-index: 1;
+        padding: 3px;
       }
     }
 
@@ -103,7 +97,7 @@ $vertical-gap: 6px;
   .output-section {
     position: absolute;
     width: 100%;
-    top: $vertical-gap;
+    top: 0;
     bottom: 0;
     @include card-like;
 
@@ -138,6 +132,26 @@ $vertical-gap: 6px;
       .execution-stages-pane {
         position: absolute;
         top: 160px;
+        bottom: 0;
+        left: 0;
+        right: 0;
+      }
+    }
+
+    .generic-status-container {
+      position: relative;
+
+      .generic-status-container-info {
+        position: absolute;
+        top: 5px;
+        left: 5px;
+        right: 5px;
+        height: 30px;
+      }
+
+      .execution-stages-pane {
+        position: absolute;
+        top: 40px;
         bottom: 0;
         left: 0;
         right: 0;

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.StorageConnectorProvider;
@@ -36,6 +37,7 @@ import java.io.File;
 public class AzureStorageConnectorProvider extends AzureOutputConfig implements StorageConnectorProvider
 {
 
+  @Global
   @JacksonInject
   AzureStorage azureStorage;
 
@@ -43,7 +45,7 @@ public class AzureStorageConnectorProvider extends AzureOutputConfig implements 
   public AzureStorageConnectorProvider(
       @JsonProperty(value = "container", required = true) String container,
       @JsonProperty(value = "prefix", required = true) String prefix,
-      @JsonProperty(value = "tempDir", required = true) File tempDir,
+      @JsonProperty(value = "tempDir") @Nullable File tempDir,
       @JsonProperty(value = "chunkSize") @Nullable HumanReadableBytes chunkSize,
       @JsonProperty(value = "maxRetry") @Nullable Integer maxRetry
   )
@@ -52,8 +54,10 @@ public class AzureStorageConnectorProvider extends AzureOutputConfig implements 
   }
 
   @Override
-  public StorageConnector get()
+  public StorageConnector createStorageConnector(final File defaultTempDir)
   {
-    return new AzureStorageConnector(this, azureStorage);
+    AzureOutputConfig config = this.getTempDir() == null ? this.withTempDir(defaultTempDir) : this;
+    config.validateTempDirectory();
+    return new AzureStorageConnector(config, azureStorage);
   }
 }

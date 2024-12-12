@@ -26,7 +26,6 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
-import java.io.Closeable;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
@@ -42,7 +41,7 @@ import java.util.stream.Collectors;
  * (2) Query engines are freed from the need to manage how much space each individual aggregator needs. They only
  * need to allocate a block of size "spaceNeeded".
  */
-public class AggregatorAdapters implements Closeable
+public class AggregatorAdapters
 {
   private static final Logger log = new Logger(AggregatorAdapters.class);
 
@@ -230,14 +229,14 @@ public class AggregatorAdapters implements Closeable
   }
 
   /**
-   * Close all of our aggregators.
+   * Reset all of our aggregators, releasing resources held by them. After this, this instance may be reused or
+   * it may be discarded.
    */
-  @Override
-  public void close()
+  public void reset()
   {
     for (Adapter adapter : adapters) {
       try {
-        adapter.close();
+        adapter.reset();
       }
       catch (Exception e) {
         log.warn(e, "Could not close aggregator [%s], skipping.", adapter.getFactory().getName());
@@ -250,7 +249,7 @@ public class AggregatorAdapters implements Closeable
    * BufferAggregator and VectorAggregator. Private, since it doesn't escape this class and the
    * only two implementations are private static classes below.
    */
-  private interface Adapter extends Closeable
+  private interface Adapter
   {
     void init(ByteBuffer buf, int position);
 
@@ -259,8 +258,7 @@ public class AggregatorAdapters implements Closeable
 
     void relocate(int oldPosition, int newPosition, ByteBuffer oldBuffer, ByteBuffer newBuffer);
 
-    @Override
-    void close();
+    void reset();
 
     AggregatorFactory getFactory();
 
@@ -293,7 +291,7 @@ public class AggregatorAdapters implements Closeable
     }
 
     @Override
-    public void close()
+    public void reset()
     {
       aggregator.close();
     }
@@ -352,7 +350,7 @@ public class AggregatorAdapters implements Closeable
     }
 
     @Override
-    public void close()
+    public void reset()
     {
       aggregator.close();
     }

@@ -106,7 +106,7 @@ public class ServerInjectorBuilder
     CoreInjectorBuilder coreBuilder = new CoreInjectorBuilder(childInjector, nodeRoles).forServer();
 
     // Override with the per-service modules.
-    ServiceInjectorBuilder serviceBuilder = new ServiceInjectorBuilder(coreBuilder).addAll(
+    ServiceInjectorBuilder serviceBuilder = (ServiceInjectorBuilder) new ServiceInjectorBuilder(coreBuilder).addAll(
         Iterables.concat(
             // bind nodeRoles for the new injector as well
             ImmutableList.of(registerNodeRoleModule),

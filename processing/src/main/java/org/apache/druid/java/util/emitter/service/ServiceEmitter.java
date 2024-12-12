@@ -67,7 +67,7 @@ public class ServiceEmitter implements Emitter
     emitter.emit(event);
   }
 
-  public void emit(ServiceEventBuilder builder)
+  public <E extends Event> void emit(ServiceEventBuilder<E> builder)
   {
     emit(builder.build(serviceDimensions));
   }

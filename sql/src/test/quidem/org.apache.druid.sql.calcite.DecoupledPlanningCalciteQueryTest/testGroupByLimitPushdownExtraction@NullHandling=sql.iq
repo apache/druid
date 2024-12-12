@@ -1,0 +1,85 @@
+# testGroupByLimitPushdownExtraction@NullHandling=sql case-crc:006ffd2b
+# quidem testcase reason: IMPROVED_PLAN
+!set debug true
+!set defaultTimeout 300000
+!set maxScatterGatherBytes 9223372036854775807
+!set plannerStrategy DECOUPLED
+!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
+!set sqlQueryId dummy
+!set outputformat mysql
+!use druidtest:///
+SELECT dim4, substring(dim5, 1, 1), count(*) FROM druid.numfoo WHERE dim4 = 'a' GROUP BY 1,2 LIMIT 2;
++------+--------+--------+
+| dim4 | EXPR$1 | EXPR$2 |
++------+--------+--------+
+| a    | a      |      2 |
+| a    | b      |      1 |
++------+--------+--------+
+(2 rows)
+
+!ok
+LogicalProject(dim4=[CAST('a':VARCHAR):VARCHAR], EXPR$1=[$0], EXPR$2=[$1])
+  LogicalSort(fetch=[2])
+    LogicalAggregate(group=[{0}], EXPR$2=[COUNT()])
+      LogicalProject(EXPR$1=[SUBSTRING($5, 1, 1)])
+        LogicalFilter(condition=[=($4, 'a')])
+          LogicalTableScan(table=[[druid, numfoo]])
+
+!logicalPlan
+DruidProject(dim4=[CAST('a':VARCHAR):VARCHAR], EXPR$1=[$0], EXPR$2=[$1], druid=[logical])
+  DruidSort(fetch=[2], druid=[logical])
+    DruidAggregate(group=[{0}], EXPR$2=[COUNT()], druid=[logical])
+      DruidProject(EXPR$1=[SUBSTRING($5, 1, 1)], druid=[logical])
+        DruidFilter(condition=[=($4, 'a')])
+          DruidTableScan(table=[[druid, numfoo]], druid=[logical])
+
+!druidPlan
+{
+  "queryType" : "topN",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "numfoo"
+  },
+  "dimension" : {
+    "type" : "extraction",
+    "dimension" : "dim5",
+    "outputName" : "d0",
+    "outputType" : "STRING",
+    "extractionFn" : {
+      "type" : "substring",
+      "index" : 0,
+      "length" : 1
+    }
+  },
+  "metric" : {
+    "type" : "dimension",
+    "ordering" : {
+      "type" : "lexicographic"
+    }
+  },
+  "threshold" : 2,
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "filter" : {
+    "type" : "equals",
+    "column" : "dim4",
+    "matchValueType" : "STRING",
+    "matchValue" : "a"
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  } ],
+  "postAggregations" : [ {
+    "type" : "expression",
+    "name" : "s0",
+    "expression" : "'a'",
+    "outputType" : "STRING"
+  } ]
+}
+!nativePlan

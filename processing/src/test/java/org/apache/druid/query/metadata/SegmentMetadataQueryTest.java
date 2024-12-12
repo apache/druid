@@ -205,15 +205,11 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                       .merge(true)
                       .build();
 
-    int preferedSize1 = 0;
-    int placementSize2 = 0;
-    int overallSize1 = 153543;
-    int overallSize2 = 153543;
+    int placementSize = 0;
+    int overallSize = 153543;
     if (bitmaps) {
-      preferedSize1 = mmap1 ? 10881 : 10764;
-      placementSize2 = mmap2 ? 10881 : 0;
-      overallSize1 = mmap1 ? 201345 : 200831;
-      overallSize2 = mmap2 ? 201345 : 200831;
+      placementSize = 10881;
+      overallSize = 201345;
     }
 
     final Map<String, AggregatorFactory> expectedAggregators = new HashMap<>();
@@ -256,7 +252,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                     ValueType.STRING.toString(),
                     false,
                     false,
-                    preferedSize1,
+                    placementSize,
                     1,
                     "preferred",
                     "preferred",
@@ -264,7 +260,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                 )
             )
         ),
-        overallSize1,
+        overallSize,
         1209,
         expectedAggregators,
         null,
@@ -306,7 +302,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                     ValueType.STRING.toString(),
                     false,
                     false,
-                    placementSize2,
+                    placementSize,
                     1,
                     null,
                     null,
@@ -314,8 +310,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                 )
             )
         ),
-        // null_column will be included only for incremental index, which makes a little bigger result than expected
-        overallSize2,
+        overallSize,
         1209,
         expectedAggregators,
         null,
@@ -558,18 +553,16 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
   @Test
   public void testSegmentMetadataQueryWithDefaultAnalysisMerge()
   {
-    int size1 = 0;
-    int size2 = 0;
+    int size = 0;
     if (bitmaps) {
-      size1 = mmap1 ? 10881 : 10764;
-      size2 = mmap2 ? 10881 : 10764;
+      size = 10881;
     }
     ColumnAnalysis analysis = new ColumnAnalysis(
         ColumnType.STRING,
         ValueType.STRING.toString(),
         false,
         false,
-        size1 + size2,
+        size * 2,
         1,
         "preferred",
         "preferred",
@@ -581,18 +574,16 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
   @Test
   public void testSegmentMetadataQueryWithDefaultAnalysisMerge2()
   {
-    int size1 = 0;
-    int size2 = 0;
+    int size = 0;
     if (bitmaps) {
-      size1 = mmap1 ? 6882 : 6808;
-      size2 = mmap2 ? 6882 : 6808;
+      size = 6882;
     }
     ColumnAnalysis analysis = new ColumnAnalysis(
         ColumnType.STRING,
         ValueType.STRING.toString(),
         false,
         false,
-        size1 + size2,
+        size * 2,
         3,
         "spot",
         "upfront",
@@ -604,18 +595,16 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
   @Test
   public void testSegmentMetadataQueryWithDefaultAnalysisMerge3()
   {
-    int size1 = 0;
-    int size2 = 0;
+    int size = 0;
     if (bitmaps) {
-      size1 = mmap1 ? 9765 : 9660;
-      size2 = mmap2 ? 9765 : 9660;
+      size = 9765;
     }
     ColumnAnalysis analysis = new ColumnAnalysis(
         ColumnType.STRING,
         ValueType.STRING.toString(),
         false,
         false,
-        size1 + size2,
+        size * 2,
         9,
         "automotive",
         "travel",
@@ -921,7 +910,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
         0,
         expectedSegmentAnalysis1.getNumRows() + expectedSegmentAnalysis2.getNumRows(),
         null,
-        new TimestampSpec("ds", "auto", null),
+        new TimestampSpec("ts", "iso", null),
         null,
         null
     );

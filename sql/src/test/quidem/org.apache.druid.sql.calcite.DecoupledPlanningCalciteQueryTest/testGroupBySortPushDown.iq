@@ -1,0 +1,76 @@
+# testGroupBySortPushDown case-crc:0f7a48bb
+# quidem testcase reason: AGG_COL_EXCHANGE
+!set debug true
+!set defaultTimeout 300000
+!set maxScatterGatherBytes 9223372036854775807
+!set plannerStrategy DECOUPLED
+!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
+!set sqlQueryId dummy
+!set outputformat mysql
+!use druidtest:///
+SELECT dim2, dim1, SUM(cnt) FROM druid.foo GROUP BY dim2, dim1 ORDER BY dim1 LIMIT 4;
++------+------+--------+
+| dim2 | dim1 | EXPR$2 |
++------+------+--------+
+| a    |      |      1 |
+| a    | 1    |      1 |
+|      | 10.1 |      1 |
+|      | 2    |      1 |
++------+------+--------+
+(4 rows)
+
+!ok
+LogicalProject(dim2=[$1], dim1=[$0], EXPR$2=[$2])
+  LogicalSort(sort0=[$0], dir0=[ASC], fetch=[4])
+    LogicalAggregate(group=[{1, 2}], EXPR$2=[SUM($4)])
+      LogicalTableScan(table=[[druid, foo]])
+
+!logicalPlan
+DruidProject(dim2=[$1], dim1=[$0], EXPR$2=[$2], druid=[logical])
+  DruidSort(sort0=[$0], dir0=[ASC], fetch=[4], druid=[logical])
+    DruidAggregate(group=[{1, 2}], EXPR$2=[SUM($4)], druid=[logical])
+      DruidTableScan(table=[[druid, foo]], druid=[logical])
+
+!druidPlan
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "table",
+    "name" : "foo"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "dim1",
+    "outputName" : "d0",
+    "outputType" : "STRING"
+  }, {
+    "type" : "default",
+    "dimension" : "dim2",
+    "outputName" : "d1",
+    "outputType" : "STRING"
+  } ],
+  "aggregations" : [ {
+    "type" : "longSum",
+    "name" : "a0",
+    "fieldName" : "cnt"
+  } ],
+  "limitSpec" : {
+    "type" : "default",
+    "columns" : [ {
+      "dimension" : "d0",
+      "direction" : "ascending",
+      "dimensionOrder" : {
+        "type" : "lexicographic"
+      }
+    } ],
+    "limit" : 4
+  }
+}
+!nativePlan

@@ -28,6 +28,8 @@ import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.math.expr.vector.CastToTypeVectorProcessor;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 import org.apache.druid.math.expr.vector.LongOutLongInFunctionVectorValueProcessor;
+import org.apache.druid.segment.column.ColumnHolder;
+import org.joda.time.Period;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -36,7 +38,27 @@ import java.util.Objects;
 
 public class TimestampFloorExprMacro implements ExprMacroTable.ExprMacro
 {
+  public static String forQueryGranularity(Period period)
+  {
+    return FN_NAME + "(" + ColumnHolder.TIME_COLUMN_NAME + ",'" + period + "')";
+  }
+
   private static final String FN_NAME = "timestamp_floor";
+
+  private static PeriodGranularity computeGranularity(
+      final Expr expr,
+      final List<Expr> args,
+      final Expr.ObjectBinding bindings
+  )
+  {
+    return ExprUtils.toPeriodGranularity(
+        expr,
+        args.get(1),
+        args.size() > 2 ? args.get(2) : null,
+        args.size() > 3 ? args.get(3) : null,
+        bindings
+    );
+  }
 
   @Override
   public String name()
@@ -50,30 +72,20 @@ public class TimestampFloorExprMacro implements ExprMacroTable.ExprMacro
     validationHelperCheckArgumentRange(args, 2, 4);
 
     if (args.stream().skip(1).allMatch(Expr::isLiteral)) {
-      return new TimestampFloorExpr(args);
+      return new TimestampFloorExpr(this, args);
     } else {
-      return new TimestampFloorDynamicExpr(args);
+      return new TimestampFloorDynamicExpr(this, args);
     }
-  }
-
-  private static PeriodGranularity computeGranularity(final List<Expr> args, final Expr.ObjectBinding bindings)
-  {
-    return ExprUtils.toPeriodGranularity(
-        args.get(1),
-        args.size() > 2 ? args.get(2) : null,
-        args.size() > 3 ? args.get(3) : null,
-        bindings
-    );
   }
 
   public static class TimestampFloorExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
   {
     private final PeriodGranularity granularity;
 
-    TimestampFloorExpr(final List<Expr> args)
+    TimestampFloorExpr(final TimestampFloorExprMacro macro, final List<Expr> args)
     {
-      super(FN_NAME, args);
-      this.granularity = computeGranularity(args, InputBindings.nilBindings());
+      super(macro, args);
+      this.granularity = computeGranularity(this, args, InputBindings.nilBindings());
     }
 
     /**
@@ -104,12 +116,6 @@ public class TimestampFloorExprMacro implements ExprMacroTable.ExprMacro
       return ExprEval.of(granularity.bucketStart(eval.asLong()));
     }
 
-    @Override
-    public Expr visit(Shuttle shuttle)
-    {
-      return shuttle.visit(new TimestampFloorExpr(shuttle.visitAll(args)));
-    }
-
     @Nullable
     @Override
     public ExpressionType getOutputType(InputBindingInspector inspector)
@@ -128,7 +134,7 @@ public class TimestampFloorExprMacro implements ExprMacroTable.ExprMacro
     {
       ExprVectorProcessor<?> processor;
       processor = new LongOutLongInFunctionVectorValueProcessor(
-          CastToTypeVectorProcessor.cast(args.get(0).asVectorProcessor(inspector), ExpressionType.LONG),
+          CastToTypeVectorProcessor.cast(args.get(0).asVectorProcessor(inspector), ExpressionType.LONG, inspector.getMaxVectorSize()),
           inspector.getMaxVectorSize()
       )
       {
@@ -167,23 +173,17 @@ public class TimestampFloorExprMacro implements ExprMacroTable.ExprMacro
 
   public static class TimestampFloorDynamicExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
   {
-    TimestampFloorDynamicExpr(final List<Expr> args)
+    TimestampFloorDynamicExpr(final TimestampFloorExprMacro macro, final List<Expr> args)
     {
-      super(FN_NAME, args);
+      super(macro, args);
     }
 
     @Nonnull
     @Override
     public ExprEval eval(final ObjectBinding bindings)
     {
-      final PeriodGranularity granularity = computeGranularity(args, bindings);
+      final PeriodGranularity granularity = computeGranularity(this, args, bindings);
       return ExprEval.of(granularity.bucketStart(args.get(0).eval(bindings).asLong()));
-    }
-
-    @Override
-    public Expr visit(Shuttle shuttle)
-    {
-      return shuttle.visit(new TimestampFloorDynamicExpr(shuttle.visitAll(args)));
     }
 
     @Nullable

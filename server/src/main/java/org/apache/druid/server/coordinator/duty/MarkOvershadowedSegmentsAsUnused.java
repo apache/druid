@@ -21,7 +21,7 @@ package org.apache.druid.server.coordinator.duty;
 
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ImmutableDruidServer;
-import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
@@ -33,27 +33,32 @@ import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.SegmentTimeline;
-import org.joda.time.DateTime;
+import org.joda.time.Duration;
 
-import java.time.Duration;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
 /**
- * Marks segments that are overshadowed by currently served segments as unused.
+ * Marks a segment as unused if it is overshadowed by:
+ * <ul>
+ * <li>a segment served by a historical or broker</li>
+ * <li>a segment that has zero required replicas and thus will never be loaded on a server</li>
+ * </ul>
+ * <p>
  * This duty runs only if the Coordinator has been running long enough to have a
  * refreshed metadata view. This duration is controlled by the dynamic config
- * {@code millisToWaitBeforeDeleting}.
+ * {@link org.apache.druid.server.coordinator.CoordinatorDynamicConfig#markSegmentAsUnusedDelayMillis}.
  */
 public class MarkOvershadowedSegmentsAsUnused implements CoordinatorDuty
 {
   private static final Logger log = new Logger(MarkOvershadowedSegmentsAsUnused.class);
 
-  private final SegmentDeleteHandler deleteHandler;
+  private final MetadataAction.DeleteSegments deleteHandler;
+  private final Stopwatch sinceCoordinatorStarted = Stopwatch.createStarted();
 
-  public MarkOvershadowedSegmentsAsUnused(SegmentDeleteHandler deleteHandler)
+  public MarkOvershadowedSegmentsAsUnused(MetadataAction.DeleteSegments deleteHandler)
   {
     this.deleteHandler = deleteHandler;
   }
@@ -63,23 +68,19 @@ public class MarkOvershadowedSegmentsAsUnused implements CoordinatorDuty
   {
     // Mark overshadowed segments as unused only if the coordinator has been running
     // long enough to have refreshed its metadata view
-    final DateTime coordinatorStartTime = params.getCoordinatorStartTime();
-    final long delayMillis = params.getCoordinatorDynamicConfig().getMarkSegmentAsUnusedDelayMillis();
-    if (DateTimes.nowUtc().isBefore(coordinatorStartTime.plus(delayMillis))) {
-      log.info(
-          "Skipping MarkAsUnused until [%s] have elapsed after coordinator start [%s].",
-          Duration.ofMillis(delayMillis), coordinatorStartTime
-      );
+    final Duration requiredDelay = Duration.millis(
+        params.getCoordinatorDynamicConfig().getMarkSegmentAsUnusedDelayMillis()
+    );
+    if (sinceCoordinatorStarted.hasNotElapsed(requiredDelay)) {
       return params;
     }
 
     final Set<DataSegment> allOvershadowedSegments = params.getDataSourcesSnapshot().getOvershadowedSegments();
     if (allOvershadowedSegments.isEmpty()) {
-      log.info("Skipping MarkAsUnused as there are no overshadowed segments.");
       return params;
     }
 
-    DruidCluster cluster = params.getDruidCluster();
+    final DruidCluster cluster = params.getDruidCluster();
     final Map<String, SegmentTimeline> timelines = new HashMap<>();
 
     cluster.getHistoricals().values().forEach(
@@ -91,7 +92,14 @@ public class MarkOvershadowedSegmentsAsUnused implements CoordinatorDuty
         broker -> addSegmentsFromServer(broker, timelines)
     );
 
-    // Note that we do not include segments from ingestion services such as tasks or indexers,
+    // Include all segments that require zero replicas to be loaded
+    params.getSegmentAssigner().getSegmentsWithZeroRequiredReplicas().forEach(
+        (datasource, segments) -> timelines
+            .computeIfAbsent(datasource, ds -> new SegmentTimeline())
+            .addSegments(segments.iterator())
+    );
+
+    // Do not include segments served by ingestion services such as tasks or indexers,
     // to prevent unpublished segments from prematurely overshadowing segments.
 
     // Mark all segments overshadowed by served segments as unused
@@ -110,8 +118,12 @@ public class MarkOvershadowedSegmentsAsUnused implements CoordinatorDuty
           RowKey datasourceKey = RowKey.of(Dimension.DATASOURCE, datasource);
           stats.add(Stats.Segments.OVERSHADOWED, datasourceKey, unusedSegments.size());
 
+          final Stopwatch updateTime = Stopwatch.createStarted();
           int updatedCount = deleteHandler.markSegmentsAsUnused(unusedSegments);
-          log.info("Successfully marked [%d] segments of datasource[%s] as unused.", updatedCount, datasource);
+          log.info(
+              "Marked [%d] segments of datasource[%s] as unused in [%,d]ms.",
+              updatedCount, datasource, updateTime.millisElapsed()
+          );
         }
     );
 

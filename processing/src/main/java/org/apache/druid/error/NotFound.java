@@ -19,9 +19,8 @@
 
 package org.apache.druid.error;
 
-public class NotFound extends DruidException.Failure
+public class NotFound extends BaseFailure
 {
-
   public static DruidException exception(String msg, Object... args)
   {
     return exception(null, msg, args);
@@ -32,33 +31,17 @@ public class NotFound extends DruidException.Failure
     return DruidException.fromFailure(new NotFound(t, msg, args));
   }
 
-  private final Throwable t;
-  private final String msg;
-  private final Object[] args;
-
   public NotFound(
       Throwable t,
       String msg,
       Object... args
   )
   {
-    super("notFound");
-    this.t = t;
-    this.msg = msg;
-    this.args = args;
-  }
-
-
-  @Override
-  public DruidException makeException(DruidException.DruidExceptionBuilder bob)
-  {
-    bob = bob.forPersona(DruidException.Persona.USER)
-             .ofCategory(DruidException.Category.NOT_FOUND);
-
-    if (t == null) {
-      return bob.build(msg, args);
-    } else {
-      return bob.build(t, msg, args);
-    }
+    super(
+        "notFound",
+        DruidException.Persona.USER,
+        DruidException.Category.NOT_FOUND,
+        t, msg, args
+    );
   }
 }

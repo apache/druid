@@ -21,8 +21,6 @@ package org.apache.druid.catalog.model.table;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Strings;
-import org.apache.druid.catalog.model.CatalogUtils;
 import org.apache.druid.catalog.model.ColumnSpec;
 import org.apache.druid.catalog.model.Columns;
 import org.apache.druid.catalog.model.ModelProperties;
@@ -68,16 +66,6 @@ public class DatasourceDefn extends TableDefn
    */
   public static final String HIDDEN_COLUMNS_PROPERTY = "hiddenColumns";
 
-  /**
-   * By default: columns are optional hints. If a datasource has columns defined,
-   * well validate them, but MSQ and other tools are free to create additional columns.
-   * That is, we assume "auto-discovered" columns by default. However, in some use cases,
-   * the schema may be carefully designed. This is especially true for ETL use cases in
-   * which multiple input schemas are mapped into a single datasource schema designed for
-   * ease of end user use. In this second use case, we may want to reject an attempt to
-   * ingest columns other than those in the schema. To do that, set {@code sealed = true}.
-   * In other words, "sealed" mode works like a traditional RDBMS.
-   */
   public static final String SEALED_PROPERTY = "sealed";
 
   public static final String TABLE_TYPE = "datasource";
@@ -89,15 +77,6 @@ public class DatasourceDefn extends TableDefn
       super(SEGMENT_GRANULARITY_PROPERTY);
     }
 
-    @Override
-    public void validate(Object value, ObjectMapper jsonMapper)
-    {
-      String gran = decode(value, jsonMapper);
-      if (Strings.isNullOrEmpty(gran)) {
-        throw new IAE("Segment granularity is required.");
-      }
-      CatalogUtils.validateGranularity(gran);
-    }
   }
 
   public static class HiddenColumnsDefn extends StringListPropertyDefn
@@ -124,6 +103,34 @@ public class DatasourceDefn extends TableDefn
     }
   }
 
+  public static class ClusterKeysDefn extends ModelProperties.ListPropertyDefn<ClusterKeySpec>
+  {
+    public ClusterKeysDefn()
+    {
+      super(
+          CLUSTER_KEYS_PROPERTY,
+          "ClusterKeySpec list",
+          new TypeReference<List<ClusterKeySpec>>() {}
+      );
+    }
+
+    @Override
+    public void validate(Object value, ObjectMapper jsonMapper)
+    {
+      if (value == null) {
+        return;
+      }
+      List<ClusterKeySpec> clusterKeys = decode(value, jsonMapper);
+      for (ClusterKeySpec clusterKey : clusterKeys) {
+        if (clusterKey.desc()) {
+          throw new IAE(
+              StringUtils.format("Cannot specify DESC clustering key [%s]. Only ASC is supported.", clusterKey)
+          );
+        }
+      }
+    }
+  }
+
   public DatasourceDefn()
   {
     super(
@@ -132,11 +139,7 @@ public class DatasourceDefn extends TableDefn
         Arrays.asList(
             new SegmentGranularityFieldDefn(),
             new ModelProperties.IntPropertyDefn(TARGET_SEGMENT_ROWS_PROPERTY),
-            new ModelProperties.ListPropertyDefn<ClusterKeySpec>(
-                CLUSTER_KEYS_PROPERTY,
-                "cluster keys",
-                new TypeReference<List<ClusterKeySpec>>() { }
-            ),
+            new ClusterKeysDefn(),
             new HiddenColumnsDefn(),
             new ModelProperties.BooleanPropertyDefn(SEALED_PROPERTY)
         ),
@@ -148,7 +151,7 @@ public class DatasourceDefn extends TableDefn
   protected void validateColumn(ColumnSpec spec)
   {
     super.validateColumn(spec);
-    if (Columns.isTimeColumn(spec.name()) && spec.sqlType() != null) {
+    if (Columns.isTimeColumn(spec.name()) && spec.dataType() != null) {
       // Validate type in next PR
     }
   }

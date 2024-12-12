@@ -34,8 +34,8 @@ public abstract class DoubleOutLongsInFunctionVectorValueProcessor
   )
   {
     super(
-        CastToTypeVectorProcessor.cast(left, ExpressionType.LONG),
-        CastToTypeVectorProcessor.cast(right, ExpressionType.LONG),
+        CastToTypeVectorProcessor.cast(left, ExpressionType.LONG, maxVectorSize),
+        CastToTypeVectorProcessor.cast(right, ExpressionType.LONG, maxVectorSize),
         maxVectorSize
     );
   }
@@ -45,7 +45,7 @@ public abstract class DoubleOutLongsInFunctionVectorValueProcessor
   @Override
   public ExpressionType getOutputType()
   {
-    return ExpressionType.LONG;
+    return ExpressionType.DOUBLE;
   }
 
   @Override

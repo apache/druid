@@ -21,20 +21,29 @@ package org.apache.druid.client.coordinator;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.client.BootstrapSegmentsResponse;
+import org.apache.druid.client.ImmutableSegmentLoadInfo;
+import org.apache.druid.client.JsonParserIterator;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.http.client.response.BytesFullResponseHandler;
+import org.apache.druid.java.util.http.client.response.InputStreamResponseHandler;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.rpc.ServiceClient;
 import org.apache.druid.rpc.ServiceRetryPolicy;
+import org.apache.druid.segment.metadata.DataSourceInformation;
+import org.apache.druid.server.coordination.LoadableDataSegment;
 import org.apache.druid.timeline.DataSegment;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.Interval;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 public class CoordinatorClientImpl implements CoordinatorClient
 {
@@ -71,12 +80,13 @@ public class CoordinatorClientImpl implements CoordinatorClient
   }
 
   @Override
-  public ListenableFuture<DataSegment> fetchUsedSegment(String dataSource, String segmentId)
+  public ListenableFuture<DataSegment> fetchSegment(String dataSource, String segmentId, boolean includeUnused)
   {
     final String path = StringUtils.format(
-        "/druid/coordinator/v1/metadata/datasources/%s/segments/%s",
+        "/druid/coordinator/v1/metadata/datasources/%s/segments/%s?includeUnused=%s",
         StringUtils.urlEncode(dataSource),
-        StringUtils.urlEncode(segmentId)
+        StringUtils.urlEncode(segmentId),
+        includeUnused ? "true" : "false"
     );
 
     return FutureUtils.transform(
@@ -86,6 +96,37 @@ public class CoordinatorClientImpl implements CoordinatorClient
         ),
         holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), DataSegment.class)
     );
+  }
+
+  @Override
+  public Iterable<ImmutableSegmentLoadInfo> fetchServerViewSegments(String dataSource, List<Interval> intervals)
+  {
+    ArrayList<ImmutableSegmentLoadInfo> retVal = new ArrayList<>();
+    for (Interval interval : intervals) {
+      String intervalString = StringUtils.replace(interval.toString(), "/", "_");
+
+      final String path = StringUtils.format(
+          "/druid/coordinator/v1/datasources/%s/intervals/%s/serverview?full",
+          StringUtils.urlEncode(dataSource),
+          intervalString
+      );
+      ListenableFuture<Iterable<ImmutableSegmentLoadInfo>> segments = FutureUtils.transform(
+          client.asyncRequest(
+              new RequestBuilder(HttpMethod.GET, path),
+              new BytesFullResponseHandler()
+          ),
+          holder -> JacksonUtils.readValue(
+              jsonMapper,
+              holder.getContent(),
+              new TypeReference<Iterable<ImmutableSegmentLoadInfo>>()
+              {
+              }
+          )
+      );
+      FutureUtils.getUnchecked(segments, true).forEach(retVal::add);
+    }
+
+    return retVal;
   }
 
   @Override
@@ -107,8 +148,57 @@ public class CoordinatorClientImpl implements CoordinatorClient
   }
 
   @Override
+  public ListenableFuture<List<DataSourceInformation>> fetchDataSourceInformation(Set<String> dataSources)
+  {
+    final String path = "/druid/coordinator/v1/metadata/dataSourceInformation";
+    return FutureUtils.transform(
+        client.asyncRequest(
+            new RequestBuilder(HttpMethod.POST, path)
+                .jsonContent(jsonMapper, dataSources),
+            new BytesFullResponseHandler()
+        ),
+        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), new TypeReference<List<DataSourceInformation>>() {})
+    );
+  }
+
+  @Override
+  public ListenableFuture<BootstrapSegmentsResponse> fetchBootstrapSegments()
+  {
+    final String path = "/druid/coordinator/v1/metadata/bootstrapSegments";
+    return FutureUtils.transform(
+        client.asyncRequest(
+            new RequestBuilder(HttpMethod.POST, path),
+            new InputStreamResponseHandler()
+        ),
+        in -> new BootstrapSegmentsResponse(
+            new JsonParserIterator<>(
+                // Some servers, like the Broker, may have PruneLoadSpec set to true for optimization reasons.
+                // We specifically use LoadableDataSegment here instead of DataSegment so the callers can still correctly
+                // load the bootstrap segments, as the load specs are guaranteed not to be pruned.
+                jsonMapper.getTypeFactory().constructType(LoadableDataSegment.class),
+                Futures.immediateFuture(in),
+                jsonMapper
+            )
+        )
+    );
+  }
+
+  @Override
   public CoordinatorClientImpl withRetryPolicy(ServiceRetryPolicy retryPolicy)
   {
     return new CoordinatorClientImpl(client.withRetryPolicy(retryPolicy), jsonMapper);
+  }
+
+  @Override
+  public ListenableFuture<Set<String>> fetchDataSourcesWithUsedSegments()
+  {
+    final String path = "/druid/coordinator/v1/metadata/datasources";
+    return FutureUtils.transform(
+        client.asyncRequest(
+            new RequestBuilder(HttpMethod.GET, path),
+            new BytesFullResponseHandler()
+        ),
+        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), new TypeReference<Set<String>>() {})
+    );
   }
 }

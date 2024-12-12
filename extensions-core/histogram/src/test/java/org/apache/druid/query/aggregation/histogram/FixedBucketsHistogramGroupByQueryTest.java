@@ -35,7 +35,6 @@ import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.TestGroupByBuffers;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
-import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.After;
@@ -81,47 +80,8 @@ public class FixedBucketsHistogramGroupByQueryTest extends InitializedNullHandli
   {
     setUpClass();
 
-    final GroupByQueryConfig v1Config = new GroupByQueryConfig()
-    {
-      @Override
-      public String getDefaultStrategy()
-      {
-        return GroupByStrategySelector.STRATEGY_V1;
-      }
-
-      @Override
-      public String toString()
-      {
-        return "v1";
-      }
-    };
-    final GroupByQueryConfig v1SingleThreadedConfig = new GroupByQueryConfig()
-    {
-      @Override
-      public boolean isSingleThreaded()
-      {
-        return true;
-      }
-
-      @Override
-      public String getDefaultStrategy()
-      {
-        return GroupByStrategySelector.STRATEGY_V1;
-      }
-
-      @Override
-      public String toString()
-      {
-        return "v1SingleThreaded";
-      }
-    };
     final GroupByQueryConfig v2Config = new GroupByQueryConfig()
     {
-      @Override
-      public String getDefaultStrategy()
-      {
-        return GroupByStrategySelector.STRATEGY_V2;
-      }
 
       @Override
       public String toString()
@@ -130,19 +90,14 @@ public class FixedBucketsHistogramGroupByQueryTest extends InitializedNullHandli
       }
     };
 
-    v1Config.setMaxIntermediateRows(10000);
-    v1SingleThreadedConfig.setMaxIntermediateRows(10000);
-
     final List<Object[]> constructors = new ArrayList<>();
     final List<GroupByQueryConfig> configs = ImmutableList.of(
-        v1Config,
-        v1SingleThreadedConfig,
         v2Config
     );
 
     for (GroupByQueryConfig config : configs) {
       final GroupByQueryRunnerFactory factory = GroupByQueryRunnerTest.makeQueryRunnerFactory(config, BUFFER_POOLS);
-      for (QueryRunner<ResultRow> runner : QueryRunnerTestHelper.makeQueryRunnersToMerge(factory)) {
+      for (QueryRunner<ResultRow> runner : QueryRunnerTestHelper.makeQueryRunnersToMerge(factory, true)) {
         final String testName = StringUtils.format(
             "config=%s, runner=%s",
             config.toString(),
@@ -231,7 +186,8 @@ public class FixedBucketsHistogramGroupByQueryTest extends InitializedNullHandli
         )
     );
 
-    Iterable<ResultRow> results = runner.run(QueryPlus.wrap(query)).toList();
+    Iterable<ResultRow> results = runner.run(QueryPlus.wrap(GroupByQueryRunnerTestHelper.populateResourceId(query)))
+                                        .toList();
     TestHelper.assertExpectedObjects(expectedResults, results, "fixed-histo");
   }
 
@@ -278,7 +234,8 @@ public class FixedBucketsHistogramGroupByQueryTest extends InitializedNullHandli
         )
     );
 
-    Iterable<ResultRow> results = runner.run(QueryPlus.wrap(query)).toList();
+    Iterable<ResultRow> results = runner.run(QueryPlus.wrap(GroupByQueryRunnerTestHelper.populateResourceId(query)))
+                                        .toList();
     TestHelper.assertExpectedObjects(expectedResults, results, "fixed-histo");
   }
 }

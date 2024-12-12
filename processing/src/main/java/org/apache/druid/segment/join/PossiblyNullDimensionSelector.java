@@ -19,7 +19,7 @@
 
 package org.apache.druid.segment.join;
 
-import com.google.common.base.Predicate;
+import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.AbstractDimensionSelector;
@@ -80,9 +80,9 @@ public class PossiblyNullDimensionSelector extends AbstractDimensionSelector imp
 
   @Override
   @Nonnull
-  public ValueMatcher makeValueMatcher(final Predicate<String> predicate)
+  public ValueMatcher makeValueMatcher(final DruidPredicateFactory predicateFactory)
   {
-    return DimensionSelectorUtils.makeValueMatcherGeneric(this, predicate);
+    return DimensionSelectorUtils.makeValueMatcherGeneric(this, predicateFactory);
   }
 
   @Override

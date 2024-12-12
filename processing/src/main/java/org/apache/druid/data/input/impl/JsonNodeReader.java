@@ -33,7 +33,6 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.IntermediateRowParsingReader;
 import org.apache.druid.java.util.common.CloseableIterators;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.common.parsers.JSONFlattenerMaker;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
@@ -43,6 +42,7 @@ import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.utils.CollectionUtils;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -94,10 +94,8 @@ public class JsonNodeReader extends IntermediateRowParsingReader<JsonNode>
   @Override
   protected CloseableIterator<JsonNode> intermediateRowIterator() throws IOException
   {
-    final String sourceString = IOUtils.toString(source.open(), StringUtils.UTF8_STRING);
     final List<JsonNode> jsonNodes = new ArrayList<>();
-    try {
-      JsonParser parser = jsonFactory.createParser(sourceString);
+    try (final JsonParser parser = jsonFactory.createParser(source.open())) {
       final MappingIterator<JsonNode> delegate = mapper.readValues(parser, JsonNode.class);
       while (delegate.hasNext()) {
         jsonNodes.add(delegate.next());
@@ -107,9 +105,10 @@ public class JsonNodeReader extends IntermediateRowParsingReader<JsonNode>
       //convert Jackson's JsonParseException into druid's exception for further processing
       //JsonParseException will be thrown from MappingIterator#hasNext or MappingIterator#next when input json text is ill-formed
       if (e.getCause() instanceof JsonParseException) {
+        final String rowAsString = IOUtils.toString(source.open(), StandardCharsets.UTF_8);
         jsonNodes.add(
             new ParseExceptionMarkerJsonNode(
-                new ParseException(sourceString, e, "Unable to parse row [%s]", sourceString)
+                new ParseException(rowAsString, e, "Unable to parse row [%s]", rowAsString)
             )
         );
       } else {
@@ -117,13 +116,14 @@ public class JsonNodeReader extends IntermediateRowParsingReader<JsonNode>
       }
     }
 
-    if (CollectionUtils.isNullOrEmpty(jsonNodes)) {
+    if (jsonNodes.isEmpty()) {
+      final String rowAsString = IOUtils.toString(source.open(), StandardCharsets.UTF_8);
       jsonNodes.add(
           new ParseExceptionMarkerJsonNode(
               new ParseException(
-                  sourceString,
+                  rowAsString,
                   "Unable to parse [%s] as the intermediateRow resulted in empty input row",
-                  sourceString
+                  rowAsString
               )
           )
       );

@@ -23,8 +23,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.msq.exec.ClusterStatisticsMergeMode;
-import org.apache.druid.msq.sql.SqlTaskStatus;
 import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.query.http.SqlTaskStatus;
 import org.apache.druid.sql.http.SqlQuery;
 import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
 import org.apache.druid.testing.utils.DataLoaderHelper;
@@ -106,7 +106,7 @@ public class ITKeyStatisticsSketchMergeMode
 
     // Submit the task and wait for the datasource to get loaded
     SqlQuery sqlQuery = new SqlQuery(queryLocal, null, false, false, false, context, null);
-    SqlTaskStatus sqlTaskStatus = msqHelper.submitMsqTask(sqlQuery);
+    SqlTaskStatus sqlTaskStatus = msqHelper.submitMsqTaskSuccesfully(sqlQuery);
 
     if (sqlTaskStatus.getState().isFailure()) {
       Assert.fail(StringUtils.format(
@@ -176,7 +176,7 @@ public class ITKeyStatisticsSketchMergeMode
 
     // Submit the task and wait for the datasource to get loaded
     SqlQuery sqlQuery = new SqlQuery(queryLocal, null, false, false, false, context, null);
-    SqlTaskStatus sqlTaskStatus = msqHelper.submitMsqTask(sqlQuery);
+    SqlTaskStatus sqlTaskStatus = msqHelper.submitMsqTaskSuccesfully(sqlQuery);
 
     if (sqlTaskStatus.getState().isFailure()) {
       Assert.fail(StringUtils.format(
@@ -251,7 +251,7 @@ public class ITKeyStatisticsSketchMergeMode
 
     // Submit the task and wait for the datasource to get loaded
     SqlQuery sqlQuery = new SqlQuery(queryLocal, null, false, false, false, context, null);
-    SqlTaskStatus sqlTaskStatus = msqHelper.submitMsqTask(sqlQuery);
+    SqlTaskStatus sqlTaskStatus = msqHelper.submitMsqTaskSuccesfully(sqlQuery);
 
     if (sqlTaskStatus.getState().isFailure()) {
       Assert.fail(StringUtils.format(

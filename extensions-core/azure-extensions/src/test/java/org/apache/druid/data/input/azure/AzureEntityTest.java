@@ -24,19 +24,23 @@ import org.apache.commons.io.input.NullInputStream;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.storage.azure.AzureByteSource;
 import org.apache.druid.storage.azure.AzureByteSourceFactory;
+import org.apache.druid.storage.azure.AzureStorage;
 import org.apache.druid.storage.azure.AzureUtils;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
+
 public class AzureEntityTest extends EasyMockSupport
 {
+  private static final String STORAGE_ACCOUNT_NAME = "storageAccount";
   private static final String CONTAINER_NAME = "container";
   private static final String BLOB_NAME = "blob";
   private static final int OFFSET = 20;
@@ -47,8 +51,7 @@ public class AzureEntityTest extends EasyMockSupport
   private CloudObjectLocation location;
   private AzureByteSourceFactory byteSourceFactory;
   private AzureByteSource byteSource;
-
-  private AzureEntity azureEntity;
+  private AzureStorage azureStorage;
 
   static {
     try {
@@ -59,12 +62,13 @@ public class AzureEntityTest extends EasyMockSupport
     }
   }
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     location = createMock(CloudObjectLocation.class);
     byteSourceFactory = createMock(AzureByteSourceFactory.class);
     byteSource = createMock(AzureByteSource.class);
+    azureStorage = createMock(AzureStorage.class);
   }
 
   @Test
@@ -72,17 +76,37 @@ public class AzureEntityTest extends EasyMockSupport
   {
     EasyMock.expect(location.getBucket()).andReturn(CONTAINER_NAME);
     EasyMock.expect(location.getPath()).andReturn(BLOB_NAME);
-    EasyMock.expect(byteSourceFactory.create(CONTAINER_NAME, BLOB_NAME)).andReturn(byteSource);
+    EasyMock.expect(byteSourceFactory.create(CONTAINER_NAME, BLOB_NAME, azureStorage)).andReturn(byteSource);
     EasyMock.expect(location.toUri(AzureInputSource.SCHEME)).andReturn(ENTITY_URI);
     replayAll();
 
-    azureEntity = new AzureEntity(location, byteSourceFactory);
+    final AzureEntity azureEntity = new AzureEntity(location, azureStorage, AzureInputSource.SCHEME, byteSourceFactory);
 
     URI actualUri = azureEntity.getUri();
-    Assert.assertEquals(ENTITY_URI, actualUri);
+    assertEquals(ENTITY_URI, actualUri);
 
     verifyAll();
+  }
 
+  @Test
+  public void test_getUri_returnsLocationUri_azureStorageScheme()
+  {
+    EasyMock.expect(byteSourceFactory.create(CONTAINER_NAME, BLOB_NAME, azureStorage)).andReturn(byteSource);
+    replayAll();
+
+    final AzureEntity azureEntity = new AzureEntity(
+        new CloudObjectLocation(STORAGE_ACCOUNT_NAME, CONTAINER_NAME + "/" + BLOB_NAME),
+        azureStorage,
+        AzureStorageAccountInputSource.SCHEME,
+        byteSourceFactory
+    );
+
+    assertEquals(
+        URI.create(AzureStorageAccountInputSource.SCHEME + "://" + STORAGE_ACCOUNT_NAME + "/" + CONTAINER_NAME + "/" + BLOB_NAME),
+        azureEntity.getUri()
+    );
+
+    verifyAll();
   }
 
   @Test
@@ -91,13 +115,13 @@ public class AzureEntityTest extends EasyMockSupport
     EasyMock.expect(location.getBucket()).andReturn(CONTAINER_NAME);
     EasyMock.expect(location.getPath()).andReturn(BLOB_NAME);
     EasyMock.expect(byteSource.openStream(0)).andReturn(INPUT_STREAM);
-    EasyMock.expect(byteSourceFactory.create(CONTAINER_NAME, BLOB_NAME)).andReturn(byteSource);
+    EasyMock.expect(byteSourceFactory.create(CONTAINER_NAME, BLOB_NAME, azureStorage)).andReturn(byteSource);
     replayAll();
 
-    azureEntity = new AzureEntity(location, byteSourceFactory);
+    final AzureEntity azureEntity = new AzureEntity(location, azureStorage, AzureInputSource.SCHEME, byteSourceFactory);
 
     InputStream actualInputStream = azureEntity.readFrom(0);
-    Assert.assertSame(INPUT_STREAM, actualInputStream);
+    assertSame(INPUT_STREAM, actualInputStream);
   }
 
   @Test
@@ -106,13 +130,13 @@ public class AzureEntityTest extends EasyMockSupport
     EasyMock.expect(location.getBucket()).andReturn(CONTAINER_NAME);
     EasyMock.expect(location.getPath()).andReturn(BLOB_NAME);
     EasyMock.expect(byteSource.openStream(OFFSET)).andReturn(INPUT_STREAM);
-    EasyMock.expect(byteSourceFactory.create(CONTAINER_NAME, BLOB_NAME)).andReturn(byteSource);
+    EasyMock.expect(byteSourceFactory.create(CONTAINER_NAME, BLOB_NAME, azureStorage)).andReturn(byteSource);
     replayAll();
 
-    azureEntity = new AzureEntity(location, byteSourceFactory);
+    final AzureEntity azureEntity = new AzureEntity(location, azureStorage, AzureInputSource.SCHEME, byteSourceFactory);
 
     InputStream actualInputStream = azureEntity.readFrom(OFFSET);
-    Assert.assertSame(INPUT_STREAM, actualInputStream);
+    assertSame(INPUT_STREAM, actualInputStream);
   }
 
   @Test
@@ -122,10 +146,10 @@ public class AzureEntityTest extends EasyMockSupport
       EasyMock.expect(location.getBucket()).andReturn(CONTAINER_NAME);
       EasyMock.expect(location.getPath()).andReturn(BLOB_NAME);
       EasyMock.expect(byteSource.openStream(OFFSET)).andThrow(IO_EXCEPTION);
-      EasyMock.expect(byteSourceFactory.create(CONTAINER_NAME, BLOB_NAME)).andReturn(byteSource);
+      EasyMock.expect(byteSourceFactory.create(CONTAINER_NAME, BLOB_NAME, azureStorage)).andReturn(byteSource);
       replayAll();
 
-      azureEntity = new AzureEntity(location, byteSourceFactory);
+      final AzureEntity azureEntity = new AzureEntity(location, azureStorage, AzureInputSource.SCHEME, byteSourceFactory);
       azureEntity.readFrom(OFFSET);
     }
     catch (IOException e) {
@@ -138,13 +162,31 @@ public class AzureEntityTest extends EasyMockSupport
   {
     EasyMock.expect(location.getBucket()).andReturn(CONTAINER_NAME);
     EasyMock.expect(location.getPath()).andReturn(BLOB_NAME).atLeastOnce();
-    EasyMock.expect(byteSourceFactory.create(CONTAINER_NAME, BLOB_NAME)).andReturn(byteSource);
+    EasyMock.expect(byteSourceFactory.create(CONTAINER_NAME, BLOB_NAME, azureStorage)).andReturn(byteSource);
     replayAll();
 
-    azureEntity = new AzureEntity(location, byteSourceFactory);
+    final AzureEntity azureEntity = new AzureEntity(location, azureStorage, AzureInputSource.SCHEME, byteSourceFactory);
     String actualPath = azureEntity.getPath();
 
-    Assert.assertEquals(BLOB_NAME, actualPath);
+    assertEquals(BLOB_NAME, actualPath);
+    verifyAll();
+  }
+
+  @Test
+  public void test_getPath_azureStorageScheme()
+  {
+    EasyMock.expect(byteSourceFactory.create(CONTAINER_NAME, BLOB_NAME, azureStorage)).andReturn(byteSource);
+    replayAll();
+
+    final AzureEntity azureEntity = new AzureEntity(
+        new CloudObjectLocation(STORAGE_ACCOUNT_NAME, CONTAINER_NAME + "/" + BLOB_NAME),
+        azureStorage,
+        AzureStorageAccountInputSource.SCHEME,
+        byteSourceFactory
+    );
+
+    assertEquals(CONTAINER_NAME + "/" + BLOB_NAME, azureEntity.getPath());
+
     verifyAll();
   }
 
@@ -153,11 +195,11 @@ public class AzureEntityTest extends EasyMockSupport
   {
     EasyMock.expect(location.getBucket()).andReturn(CONTAINER_NAME);
     EasyMock.expect(location.getPath()).andReturn(BLOB_NAME).atLeastOnce();
-    EasyMock.expect(byteSourceFactory.create(CONTAINER_NAME, BLOB_NAME)).andReturn(byteSource);
+    EasyMock.expect(byteSourceFactory.create(CONTAINER_NAME, BLOB_NAME, azureStorage)).andReturn(byteSource);
     replayAll();
 
-    azureEntity = new AzureEntity(location, byteSourceFactory);
+    final AzureEntity azureEntity = new AzureEntity(location, azureStorage, AzureInputSource.SCHEME, byteSourceFactory);
     Predicate<Throwable> actualRetryCondition = azureEntity.getRetryCondition();
-    Assert.assertSame(AzureUtils.AZURE_RETRY, actualRetryCondition);
+    assertSame(AzureUtils.AZURE_RETRY, actualRetryCondition);
   }
 }

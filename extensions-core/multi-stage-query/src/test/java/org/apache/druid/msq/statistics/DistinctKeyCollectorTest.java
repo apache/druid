@@ -20,6 +20,7 @@
 package org.apache.druid.msq.statistics;
 
 import com.google.common.collect.ImmutableList;
+import it.unimi.dsi.fastutil.objects.Object2LongRBTreeMap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.ClusterByPartition;
@@ -28,6 +29,8 @@ import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.frame.key.KeyOrder;
 import org.apache.druid.frame.key.RowKey;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
 import org.junit.Assert;
@@ -42,7 +45,8 @@ import java.util.NoSuchElementException;
 public class DistinctKeyCollectorTest
 {
   private final ClusterBy clusterBy = new ClusterBy(ImmutableList.of(new KeyColumn("x", KeyOrder.ASCENDING)), 0);
-  private final Comparator<RowKey> comparator = clusterBy.keyComparator();
+  private final RowSignature signature = RowSignature.builder().add("x", ColumnType.LONG).build();
+  private final Comparator<RowKey> comparator = clusterBy.keyComparator(signature);
   private final int numKeys = 500_000;
 
   static {
@@ -53,7 +57,7 @@ public class DistinctKeyCollectorTest
   public void test_empty()
   {
     KeyCollectorTestUtils.doTest(
-        DistinctKeyCollectorFactory.create(clusterBy),
+        DistinctKeyCollectorFactory.create(clusterBy, signature),
         Collections.emptyList(),
         comparator,
         (testName, collector) -> {
@@ -77,7 +81,7 @@ public class DistinctKeyCollectorTest
         ClusterByStatisticsCollectorImplTest.computeSortedKeyWeightsFromWeightedKeys(keyWeights, comparator);
 
     KeyCollectorTestUtils.doTest(
-        DistinctKeyCollectorFactory.create(clusterBy),
+        DistinctKeyCollectorFactory.create(clusterBy, signature),
         keyWeights,
         comparator,
         (testName, collector) -> {
@@ -88,6 +92,21 @@ public class DistinctKeyCollectorTest
   }
 
   @Test
+  public void test_single_key_addition()
+  {
+    DistinctKeyCollector distinctKeyCollector = new DistinctKeyCollector(
+        clusterBy.keyComparator(signature),
+        new Object2LongRBTreeMap<>(comparator),
+        2
+    );
+    List<Pair<RowKey, Integer>> pairs = KeyCollectorTestUtils.sequentialKeys(2);
+
+    distinctKeyCollector.add(pairs.get(1).lhs, pairs.get(1).rhs);
+    distinctKeyCollector.downSample();
+    distinctKeyCollector.add(pairs.get(0).lhs, pairs.get(0).rhs);
+  }
+
+  @Test
   public void test_uniformRandomKeys_unweighted()
   {
     final List<Pair<RowKey, Integer>> keyWeights = KeyCollectorTestUtils.uniformRandomKeys(numKeys);
@@ -95,7 +114,7 @@ public class DistinctKeyCollectorTest
         ClusterByStatisticsCollectorImplTest.computeSortedKeyWeightsFromWeightedKeys(keyWeights, comparator);
 
     KeyCollectorTestUtils.doTest(
-        DistinctKeyCollectorFactory.create(clusterBy),
+        DistinctKeyCollectorFactory.create(clusterBy, signature),
         keyWeights,
         comparator,
         (testName, collector) -> {
@@ -113,7 +132,7 @@ public class DistinctKeyCollectorTest
   @Test(expected = IllegalArgumentException.class)
   public void test_generateWithNegativeTargetWeight_throwsException()
   {
-    DistinctKeyCollector distinctKeyCollector = DistinctKeyCollectorFactory.create(clusterBy).newKeyCollector();
+    DistinctKeyCollector distinctKeyCollector = DistinctKeyCollectorFactory.create(clusterBy, signature).newKeyCollector();
     distinctKeyCollector.generatePartitionsWithTargetWeight(-1);
   }
 
@@ -125,7 +144,7 @@ public class DistinctKeyCollectorTest
         ClusterByStatisticsCollectorImplTest.computeSortedKeyWeightsFromWeightedKeys(keyWeights, comparator).firstKey();
 
     KeyCollectorTestUtils.doTest(
-        DistinctKeyCollectorFactory.create(clusterBy),
+        DistinctKeyCollectorFactory.create(clusterBy, signature),
         keyWeights,
         comparator,
         (testName, collector) -> {
@@ -161,7 +180,7 @@ public class DistinctKeyCollectorTest
         ClusterByStatisticsCollectorImplTest.computeSortedKeyWeightsFromWeightedKeys(keyWeights, comparator);
 
     KeyCollectorTestUtils.doTest(
-        DistinctKeyCollectorFactory.create(clusterBy),
+        DistinctKeyCollectorFactory.create(clusterBy, signature),
         keyWeights,
         comparator,
         (testName, collector) -> {
@@ -184,7 +203,7 @@ public class DistinctKeyCollectorTest
         ClusterByStatisticsCollectorImplTest.computeSortedKeyWeightsFromWeightedKeys(keyWeights, comparator);
 
     KeyCollectorTestUtils.doTest(
-        DistinctKeyCollectorFactory.create(clusterBy),
+        DistinctKeyCollectorFactory.create(clusterBy, signature),
         keyWeights,
         comparator,
         (testName, collector) -> {
@@ -211,7 +230,7 @@ public class DistinctKeyCollectorTest
         ClusterByStatisticsCollectorImplTest.computeSortedKeyWeightsFromWeightedKeys(keyWeights, comparator);
 
     KeyCollectorTestUtils.doTest(
-        DistinctKeyCollectorFactory.create(clusterBy),
+        DistinctKeyCollectorFactory.create(clusterBy, signature),
         keyWeights,
         comparator,
         (testName, collector) -> {

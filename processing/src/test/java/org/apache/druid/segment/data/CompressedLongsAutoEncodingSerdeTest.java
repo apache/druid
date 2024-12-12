@@ -21,6 +21,7 @@ package org.apache.druid.segment.data;
 
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMedium;
+import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -95,19 +96,19 @@ public class CompressedLongsAutoEncodingSerdeTest
 
   public void testValues(long[] values) throws Exception
   {
+    SegmentWriteOutMedium segmentWriteOutMedium = new OffHeapMemorySegmentWriteOutMedium();
     ColumnarLongsSerializer serializer = CompressionFactory.getLongSerializer(
         "test",
-        new OffHeapMemorySegmentWriteOutMedium(),
+        segmentWriteOutMedium,
         "test",
         order,
         encodingStrategy,
-        compressionStrategy
+        compressionStrategy,
+        segmentWriteOutMedium.getCloser()
     );
     serializer.open();
 
-    for (long value : values) {
-      serializer.add(value);
-    }
+    serializer.addAll(values, 0, values.length);
     Assert.assertEquals(values.length, serializer.size());
 
     final ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -119,6 +120,7 @@ public class CompressedLongsAutoEncodingSerdeTest
 
     assertIndexMatchesVals(longs, values);
     longs.close();
+    segmentWriteOutMedium.close();
   }
 
   private void assertIndexMatchesVals(ColumnarLongs indexed, long[] vals)

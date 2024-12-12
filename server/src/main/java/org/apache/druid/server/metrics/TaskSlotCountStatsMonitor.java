@@ -55,7 +55,7 @@ public class TaskSlotCountStatsMonitor extends AbstractMonitor
     if (counts != null) {
       counts.forEach((k, v) -> {
         builder.setDimension("category", k);
-        emitter.emit(builder.build(key, v));
+        emitter.emit(builder.setMetric(key, v));
       });
     }
   }

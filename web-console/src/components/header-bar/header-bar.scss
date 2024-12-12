@@ -89,4 +89,9 @@
       }
     }
   }
+
+  .#{$bp-ns}-navbar-group.#{$bp-ns}-align-right {
+    position: absolute;
+    right: 15px;
+  }
 }

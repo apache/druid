@@ -24,7 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
-import org.apache.druid.collections.spatial.ImmutablePoint;
+import org.apache.druid.collections.spatial.ImmutableFloatPoint;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -161,14 +161,14 @@ public class PolygonBound extends RectangularBound
   }
 
   @Override
-  public Iterable<ImmutablePoint> filter(Iterable<ImmutablePoint> points)
+  public Iterable<ImmutableFloatPoint> filter(Iterable<ImmutableFloatPoint> points)
   {
     return Iterables.filter(
         points,
-        new Predicate<ImmutablePoint>()
+        new Predicate<ImmutableFloatPoint>()
         {
           @Override
-          public boolean apply(ImmutablePoint immutablePoint)
+          public boolean apply(ImmutableFloatPoint immutablePoint)
           {
             return contains(immutablePoint.getCoords());
           }

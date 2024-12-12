@@ -21,10 +21,12 @@ package org.apache.druid.segment.nested;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.google.common.primitives.Longs;
 import net.jpountz.xxhash.XXHash64;
 import net.jpountz.xxhash.XXHashFactory;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.segment.column.TypeStrategies;
+import org.apache.druid.segment.serde.ColumnSerializerUtils;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
@@ -44,7 +46,7 @@ public class StructuredData implements Comparable<StructuredData>
   private static long computeHash(StructuredData data)
   {
     try {
-      final byte[] bytes = NestedDataComplexTypeSerde.OBJECT_MAPPER.writeValueAsBytes(data.value);
+      final byte[] bytes = ColumnSerializerUtils.SMILE_MAPPER.writeValueAsBytes(data.value);
       return HASH_FUNCTION.hash(bytes, 0, bytes.length, SEED);
     }
     catch (JsonProcessingException e) {
@@ -183,6 +185,12 @@ public class StructuredData implements Comparable<StructuredData>
   public int hashCode()
   {
     return Objects.hash(value);
+  }
+
+  // hashCode that relies on the object equality. Translates the hashcode to an integer as well
+  public int equalityHash()
+  {
+    return Longs.hashCode(hash.getAsLong());
   }
 
   @Override

@@ -39,6 +39,10 @@ import org.apache.druid.server.initialization.BaseJettyTest;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.initialization.jetty.JettyServerInitUtils;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
+import org.apache.druid.server.security.AllowAllAuthenticator;
+import org.apache.druid.server.security.AllowAllAuthorizer;
+import org.apache.druid.server.security.AuthenticationUtils;
+import org.apache.druid.server.security.AuthorizerMapper;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
@@ -71,6 +75,7 @@ public class AsyncManagementForwardingServletTest extends BaseJettyTest
 
   private static int coordinatorPort;
   private static int overlordPort;
+  private static boolean isValidLeader;
 
   private Server coordinator;
   private Server overlord;
@@ -109,6 +114,7 @@ public class AsyncManagementForwardingServletTest extends BaseJettyTest
 
     coordinator.start();
     overlord.start();
+    isValidLeader = true;
   }
 
   @After
@@ -119,6 +125,7 @@ public class AsyncManagementForwardingServletTest extends BaseJettyTest
 
     COORDINATOR_EXPECTED_REQUEST.reset();
     OVERLORD_EXPECTED_REQUEST.reset();
+    isValidLeader = true;
   }
 
   @Override
@@ -318,10 +325,64 @@ public class AsyncManagementForwardingServletTest extends BaseJettyTest
   }
 
   @Test
+  public void testProxyEnabledCheck() throws Exception
+  {
+    HttpURLConnection connection = ((HttpURLConnection)
+        new URL(StringUtils.format("http://localhost:%d/proxy/enabled", port)).openConnection());
+    connection.setRequestMethod("GET");
+
+    Assert.assertEquals(200, connection.getResponseCode());
+    byte[] bytes = new byte[connection.getContentLength()];
+    Assert.assertEquals(connection.getInputStream().read(bytes), connection.getContentLength());
+    Assert.assertEquals(ImmutableMap.of("enabled", true), new ObjectMapper().readValue(bytes, Map.class));
+    Assert.assertFalse("coordinator called", COORDINATOR_EXPECTED_REQUEST.called);
+    Assert.assertFalse("overlord called", OVERLORD_EXPECTED_REQUEST.called);
+  }
+
+  @Test
   public void testBadProxyDestination() throws Exception
   {
     HttpURLConnection connection = ((HttpURLConnection)
         new URL(StringUtils.format("http://localhost:%d/proxy/other/status", port)).openConnection());
+    connection.setRequestMethod("GET");
+
+    Assert.assertEquals(400, connection.getResponseCode());
+    Assert.assertFalse("coordinator called", COORDINATOR_EXPECTED_REQUEST.called);
+    Assert.assertFalse("overlord called", OVERLORD_EXPECTED_REQUEST.called);
+  }
+
+  @Test
+  public void testCoordinatorLeaderUnknown() throws Exception
+  {
+    isValidLeader = false;
+    HttpURLConnection connection = ((HttpURLConnection)
+        new URL(StringUtils.format("http://localhost:%d/druid/coordinator", port)).openConnection());
+    connection.setRequestMethod("GET");
+
+    Assert.assertEquals(503, connection.getResponseCode());
+    Assert.assertFalse("coordinator called", COORDINATOR_EXPECTED_REQUEST.called);
+    Assert.assertFalse("overlord called", OVERLORD_EXPECTED_REQUEST.called);
+  }
+
+  @Test
+  public void testOverlordLeaderUnknown() throws Exception
+  {
+    isValidLeader = false;
+    HttpURLConnection connection = ((HttpURLConnection)
+        new URL(StringUtils.format("http://localhost:%d/druid/indexer", port)).openConnection());
+    connection.setRequestMethod("GET");
+
+    Assert.assertEquals(503, connection.getResponseCode());
+    Assert.assertFalse("coordinator called", COORDINATOR_EXPECTED_REQUEST.called);
+    Assert.assertFalse("overlord called", OVERLORD_EXPECTED_REQUEST.called);
+    isValidLeader = true;
+  }
+
+  @Test
+  public void testUnsupportedProxyDestination() throws Exception
+  {
+    HttpURLConnection connection = ((HttpURLConnection)
+        new URL(StringUtils.format("http://localhost:%d/proxy/other/status2", port)).openConnection());
     connection.setRequestMethod("GET");
 
     Assert.assertEquals(400, connection.getResponseCode());
@@ -407,7 +468,11 @@ public class AsyncManagementForwardingServletTest extends BaseJettyTest
         @Override
         public String getCurrentLeader()
         {
-          return StringUtils.format("http://localhost:%d", coordinatorPort);
+          if (isValidLeader) {
+            return StringUtils.format("http://localhost:%d", coordinatorPort);
+          } else {
+            return null;
+          }
         }
       };
 
@@ -416,7 +481,11 @@ public class AsyncManagementForwardingServletTest extends BaseJettyTest
         @Override
         public String getCurrentLeader()
         {
-          return StringUtils.format("http://localhost:%d", overlordPort);
+          if (isValidLeader) {
+            return StringUtils.format("http://localhost:%d", overlordPort);
+          } else {
+            return null;
+          }
         }
       };
 
@@ -426,7 +495,8 @@ public class AsyncManagementForwardingServletTest extends BaseJettyTest
               injector.getProvider(HttpClient.class),
               injector.getInstance(DruidHttpClientConfig.class),
               coordinatorLeaderSelector,
-              overlordLeaderSelector
+              overlordLeaderSelector,
+              new AuthorizerMapper(ImmutableMap.of("allowAll", new AllowAllAuthorizer()))
           )
       );
 
@@ -437,6 +507,7 @@ public class AsyncManagementForwardingServletTest extends BaseJettyTest
       root.addServlet(holder, "/druid/indexer/*");
       root.addServlet(holder, "/proxy/*");
 
+      AuthenticationUtils.addAuthenticationFilterChain(root, ImmutableList.of(new AllowAllAuthenticator()));
       JettyServerInitUtils.addExtensionFilters(root, injector);
 
       final HandlerList handlerList = new HandlerList();

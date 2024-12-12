@@ -19,20 +19,12 @@
 
 package org.apache.druid.msq.statistics;
 
-import com.fasterxml.jackson.databind.JsonDeserializer;
-
 public interface KeyCollectorFactory<TCollector extends KeyCollector<TCollector>, TSnapshot extends KeyCollectorSnapshot>
 {
   /**
    * Create a new {@link KeyCollector}
    */
   TCollector newKeyCollector();
-
-  /**
-   * Fetches the deserializer that can be used to deserialize the snapshots created by the KeyCollectors corresponding
-   * to this factory
-   */
-  JsonDeserializer<TSnapshot> snapshotDeserializer();
 
   /**
    * Serializes a {@link KeyCollector} to a {@link KeyCollectorSnapshot}

@@ -21,27 +21,22 @@ package org.apache.druid.indexing.common.actions;
 
 import com.google.inject.Inject;
 import org.apache.druid.indexing.common.task.Task;
-import org.apache.druid.indexing.overlord.TaskStorage;
 
 /**
  */
 public class LocalTaskActionClientFactory implements TaskActionClientFactory
 {
-  private final TaskStorage storage;
   private final TaskActionToolbox toolbox;
-  private final TaskAuditLogConfig auditLogConfig;
 
   @Inject
-  public LocalTaskActionClientFactory(TaskStorage storage, TaskActionToolbox toolbox, TaskAuditLogConfig auditLogConfig)
+  public LocalTaskActionClientFactory(TaskActionToolbox toolbox)
   {
-    this.storage = storage;
     this.toolbox = toolbox;
-    this.auditLogConfig = auditLogConfig;
   }
 
   @Override
   public TaskActionClient create(Task task)
   {
-    return new LocalTaskActionClient(task, storage, toolbox, auditLogConfig);
+    return new LocalTaskActionClient(task, toolbox);
   }
 }

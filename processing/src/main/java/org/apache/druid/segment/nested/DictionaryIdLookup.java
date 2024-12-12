@@ -19,114 +19,312 @@
 
 package org.apache.druid.segment.nested;
 
-import com.google.common.base.Preconditions;
-import it.unimi.dsi.fastutil.doubles.Double2IntLinkedOpenHashMap;
-import it.unimi.dsi.fastutil.doubles.Double2IntMap;
-import it.unimi.dsi.fastutil.longs.Long2IntLinkedOpenHashMap;
-import it.unimi.dsi.fastutil.longs.Long2IntMap;
-import it.unimi.dsi.fastutil.objects.Object2IntAVLTreeMap;
-import it.unimi.dsi.fastutil.objects.Object2IntLinkedOpenHashMap;
-import it.unimi.dsi.fastutil.objects.Object2IntMap;
-import org.apache.druid.segment.data.FrontCodedIntArrayIndexedWriter;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.java.util.common.FileUtils;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
+import org.apache.druid.segment.column.StringEncodingStrategies;
+import org.apache.druid.segment.column.TypeStrategies;
+import org.apache.druid.segment.data.DictionaryWriter;
+import org.apache.druid.segment.data.FixedIndexed;
+import org.apache.druid.segment.data.FrontCodedIntArrayIndexed;
+import org.apache.druid.segment.data.Indexed;
+import org.apache.druid.segment.serde.ColumnSerializerUtils;
+import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
+import java.io.Closeable;
+import java.io.File;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 
 /**
- * Ingestion time dictionary identifier lookup, used by {@link NestedDataColumnSerializerV4} to build a global dictionary
- * id to value mapping for the 'stacked' global value dictionaries.
+ * Value to dictionary id lookup, backed with memory mapped dictionaries populated lazily by the supplied
+ * {@link DictionaryWriter}.
  */
-public class DictionaryIdLookup
+public final class DictionaryIdLookup implements Closeable
 {
-  private final Object2IntMap<String> stringLookup;
 
-  private final Long2IntMap longLookup;
+  private final String name;
+  private final File tempBasePath;
 
-  private final Double2IntMap doubleLookup;
+  @Nullable
+  private final DictionaryWriter<String> stringDictionaryWriter;
+  private File stringDictionaryFile = null;
+  private SmooshedFileMapper stringBufferMapper = null;
+  private Indexed<ByteBuffer> stringDictionary = null;
 
-  private final Object2IntMap<int[]> arrayLookup;
+  @Nullable
+  private final DictionaryWriter<Long> longDictionaryWriter;
+  private File longDictionaryFile = null;
+  private SmooshedFileMapper longBufferMapper = null;
+  private FixedIndexed<Long> longDictionary = null;
 
-  private int dictionarySize;
+  @Nullable
+  private final DictionaryWriter<Double> doubleDictionaryWriter;
+  private File doubleDictionaryFile = null;
+  SmooshedFileMapper doubleBufferMapper = null;
+  FixedIndexed<Double> doubleDictionary = null;
 
-  public DictionaryIdLookup()
+  @Nullable
+  private final DictionaryWriter<int[]> arrayDictionaryWriter;
+  private File arrayDictionaryFile = null;
+  private SmooshedFileMapper arrayBufferMapper = null;
+  private FrontCodedIntArrayIndexed arrayDictionary = null;
+  private final Closer closer = Closer.create();
+
+  public DictionaryIdLookup(
+      String name,
+      File tempBaseDir,
+      @Nullable DictionaryWriter<String> stringDictionaryWriter,
+      @Nullable DictionaryWriter<Long> longDictionaryWriter,
+      @Nullable DictionaryWriter<Double> doubleDictionaryWriter,
+      @Nullable DictionaryWriter<int[]> arrayDictionaryWriter
+  )
   {
-    this.stringLookup = new Object2IntLinkedOpenHashMap<>();
-    stringLookup.defaultReturnValue(-1);
-    this.longLookup = new Long2IntLinkedOpenHashMap();
-    longLookup.defaultReturnValue(-1);
-    this.doubleLookup = new Double2IntLinkedOpenHashMap();
-    doubleLookup.defaultReturnValue(-1);
-    this.arrayLookup = new Object2IntAVLTreeMap<>(FrontCodedIntArrayIndexedWriter.ARRAY_COMPARATOR);
-    this.arrayLookup.defaultReturnValue(-1);
+    this.name = name;
+    this.tempBasePath = tempBaseDir;
+    this.stringDictionaryWriter = stringDictionaryWriter;
+    this.longDictionaryWriter = longDictionaryWriter;
+    this.doubleDictionaryWriter = doubleDictionaryWriter;
+    this.arrayDictionaryWriter = arrayDictionaryWriter;
   }
 
-  public void addString(@Nullable String value)
+  public int[] getArrayValue(int id)
   {
-    Preconditions.checkState(
-        longLookup.size() == 0 && doubleLookup.size() == 0,
-        "All string values must be inserted to the lookup before long and double types"
-    );
-    int id = dictionarySize++;
-    stringLookup.put(value, id);
+    ensureArrayDictionaryLoaded();
+    return arrayDictionary.get(id - arrayOffset());
   }
 
-  // used when there are no string values to ensure that 0 is used for the null value
-  public void addNumericNull()
+  @Nullable
+  public Object getDictionaryValue(int id)
   {
-    Preconditions.checkState(
-        stringLookup.size() == 0 && longLookup.size() == 0 && doubleLookup.size() == 0,
-        "Lookup must be empty to add implicit null"
-    );
-    dictionarySize++;
+    ensureStringDictionaryLoaded();
+    ensureLongDictionaryLoaded();
+    ensureDoubleDictionaryLoaded();
+    ensureArrayDictionaryLoaded();
+    if (id < longOffset()) {
+      return StringUtils.fromUtf8Nullable(stringDictionary.get(id));
+    } else if (id < doubleOffset()) {
+      return longDictionary.get(id - longOffset());
+    } else if (id < arrayOffset()) {
+      return doubleDictionary.get(id - doubleOffset());
+    } else {
+      return arrayDictionary.get(id - arrayOffset());
+    }
   }
 
   public int lookupString(@Nullable String value)
   {
-    return stringLookup.getInt(value);
-  }
-
-  public void addLong(long value)
-  {
-    Preconditions.checkState(
-        doubleLookup.size() == 0,
-        "All long values must be inserted to the lookup before double types"
-    );
-    int id = dictionarySize++;
-    longLookup.put(value, id);
+    ensureStringDictionaryLoaded();
+    final byte[] bytes = StringUtils.toUtf8Nullable(value);
+    final int index = stringDictionary.indexOf(bytes == null ? null : ByteBuffer.wrap(bytes));
+    if (index < 0) {
+      throw DruidException.defensive("Value not found in column[%s] string dictionary", name);
+    }
+    return index;
   }
 
   public int lookupLong(@Nullable Long value)
   {
-    if (value == null) {
-      return 0;
+    ensureLongDictionaryLoaded();
+    final int index = longDictionary.indexOf(value);
+    if (index < 0) {
+      throw DruidException.defensive("Value not found in column[%s] long dictionary", name);
     }
-    return longLookup.get(value.longValue());
-  }
-
-  public void addDouble(double value)
-  {
-    int id = dictionarySize++;
-    doubleLookup.put(value, id);
+    return index + longOffset();
   }
 
   public int lookupDouble(@Nullable Double value)
   {
-    if (value == null) {
-      return 0;
+    ensureDoubleDictionaryLoaded();
+    final int index = doubleDictionary.indexOf(value);
+    if (index < 0) {
+      throw DruidException.defensive("Value not found in column[%s] double dictionary", name);
     }
-    return doubleLookup.get(value.doubleValue());
-  }
-
-  public void addArray(int[] value)
-  {
-    int id = dictionarySize++;
-    arrayLookup.put(value, id);
+    return index + doubleOffset();
   }
 
   public int lookupArray(@Nullable int[] value)
   {
-    if (value == null) {
-      return 0;
+    ensureArrayDictionaryLoaded();
+    final int index = arrayDictionary.indexOf(value);
+    if (index < 0) {
+      throw DruidException.defensive("Value not found in column[%s] array dictionary", name);
     }
-    return arrayLookup.getInt(value);
+    return index + arrayOffset();
+  }
+
+  @Nullable
+  public SmooshedFileMapper getStringBufferMapper()
+  {
+    return stringBufferMapper;
+  }
+
+  @Nullable
+  public SmooshedFileMapper getLongBufferMapper()
+  {
+    return longBufferMapper;
+  }
+
+  @Nullable
+  public SmooshedFileMapper getDoubleBufferMapper()
+  {
+    return doubleBufferMapper;
+  }
+
+  @Nullable
+  public SmooshedFileMapper getArrayBufferMapper()
+  {
+    return arrayBufferMapper;
+  }
+
+  @Override
+  public void close()
+  {
+    CloseableUtils.closeAndWrapExceptions(closer);
+  }
+
+  private int longOffset()
+  {
+    return stringDictionaryWriter != null ? stringDictionaryWriter.getCardinality() : 0;
+  }
+
+  private int doubleOffset()
+  {
+    return longOffset() + (longDictionaryWriter != null ? longDictionaryWriter.getCardinality() : 0);
+  }
+
+  private int arrayOffset()
+  {
+    return doubleOffset() + (doubleDictionaryWriter != null ? doubleDictionaryWriter.getCardinality() : 0);
+  }
+
+  private void ensureStringDictionaryLoaded()
+  {
+    if (stringDictionary == null) {
+      final String fileName = ColumnSerializerUtils.getInternalFileName(
+          name,
+          ColumnSerializerUtils.STRING_DICTIONARY_FILE_NAME
+      );
+      stringDictionaryFile = makeTempDir(fileName);
+      stringBufferMapper = closer.register(
+          ColumnSerializerUtils.mapSerializer(stringDictionaryFile, stringDictionaryWriter, fileName)
+      );
+
+      try {
+        final ByteBuffer stringBuffer = stringBufferMapper.mapFile(fileName);
+        stringDictionary = StringEncodingStrategies.getStringDictionarySupplier(
+            stringBufferMapper,
+            stringBuffer,
+            ByteOrder.nativeOrder()
+        ).get();
+      }
+      catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    }
+  }
+
+  private void ensureLongDictionaryLoaded()
+  {
+    if (longDictionary == null) {
+      final String fileName = ColumnSerializerUtils.getInternalFileName(
+          name,
+          ColumnSerializerUtils.LONG_DICTIONARY_FILE_NAME
+      );
+      longDictionaryFile = makeTempDir(fileName);
+      longBufferMapper = closer.register(
+          ColumnSerializerUtils.mapSerializer(longDictionaryFile, longDictionaryWriter, fileName)
+      );
+      try {
+        final ByteBuffer buffer = longBufferMapper.mapFile(fileName);
+        longDictionary = FixedIndexed.read(buffer, TypeStrategies.LONG, ByteOrder.nativeOrder(), Long.BYTES).get();
+      }
+      catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    }
+  }
+
+  private void ensureDoubleDictionaryLoaded()
+  {
+    if (doubleDictionary == null) {
+      final String fileName = ColumnSerializerUtils.getInternalFileName(
+          name,
+          ColumnSerializerUtils.DOUBLE_DICTIONARY_FILE_NAME
+      );
+      doubleDictionaryFile = makeTempDir(fileName);
+      doubleBufferMapper = closer.register(
+          ColumnSerializerUtils.mapSerializer(doubleDictionaryFile, doubleDictionaryWriter, fileName)
+      );
+      try {
+        final ByteBuffer buffer = doubleBufferMapper.mapFile(fileName);
+        doubleDictionary = FixedIndexed.read(buffer, TypeStrategies.DOUBLE, ByteOrder.nativeOrder(), Long.BYTES).get();
+      }
+      catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    }
+  }
+
+  private void ensureArrayDictionaryLoaded()
+  {
+    if (arrayDictionary == null && arrayDictionaryWriter != null) {
+      final String fileName = ColumnSerializerUtils.getInternalFileName(
+          name,
+          ColumnSerializerUtils.ARRAY_DICTIONARY_FILE_NAME
+      );
+      arrayDictionaryFile = makeTempDir(fileName);
+      arrayBufferMapper = closer.register(
+          ColumnSerializerUtils.mapSerializer(arrayDictionaryFile, arrayDictionaryWriter, fileName)
+      );
+      try {
+        final ByteBuffer buffer = arrayBufferMapper.mapFile(fileName);
+        arrayDictionary = FrontCodedIntArrayIndexed.read(buffer, ByteOrder.nativeOrder()).get();
+      }
+      catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    }
+  }
+
+  private File makeTempDir(String fileName)
+  {
+    try {
+      final File f = new File(tempBasePath, StringUtils.urlEncode(fileName));
+      FileUtils.mkdirp(f);
+      closer.register(() -> FileUtils.deleteDirectory(f));
+      return f;
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  public int getStringCardinality()
+  {
+    ensureStringDictionaryLoaded();
+    return stringDictionary == null ? 0 : stringDictionary.size();
+  }
+
+  public int getLongCardinality()
+  {
+    ensureLongDictionaryLoaded();
+    return longDictionary == null ? 0 : longDictionary.size();
+  }
+
+  public int getDoubleCardinality()
+  {
+    ensureDoubleDictionaryLoaded();
+    return doubleDictionary == null ? 0 : doubleDictionary.size();
+  }
+
+  public int getArrayCardinality()
+  {
+    ensureArrayDictionaryLoaded();
+    return arrayDictionary == null ? 0 : arrayDictionary.size();
   }
 }

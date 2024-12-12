@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import com.google.errorprone.annotations.Immutable;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.segment.column.BaseTypeSignature;
 import org.apache.druid.segment.column.ColumnType;
@@ -36,6 +37,7 @@ import javax.annotation.Nullable;
  * The type system used to process Druid expressions. This is basically {@link ColumnType}, but without
  * {@link ColumnType#FLOAT} because the expression processing system does not currently directly support them.
  */
+@Immutable
 @JsonSerialize(using = ToStringSerializer.class)
 public class ExpressionType extends BaseTypeSignature<ExprType>
 {

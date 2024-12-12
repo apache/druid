@@ -267,7 +267,7 @@ public class CoordinatorPollingBasicAuthenticatorCacheManager implements BasicAu
         writeUserMapToDisk(prefix, userMapBytes);
       }
     } else {
-      LOG.info("Empty cached serialized user map retrieved, authenticator - %s", prefix);
+      LOG.debug("Empty cached serialized user map retrieved, authenticator - %s", prefix);
     }
     return userMap;
   }

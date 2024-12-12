@@ -132,6 +132,18 @@ public class TestBufferPool implements NonBlockingPool<ByteBuffer>, BlockingPool
     }
   }
 
+  @Override
+  public long getPendingRequests()
+  {
+    return 0;
+  }
+
+  @Override
+  public long getUsedResourcesCount()
+  {
+    return takenFromMap.size();
+  }
+
   public long getOutstandingObjectCount()
   {
     return takenFromMap.size();

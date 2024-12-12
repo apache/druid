@@ -23,6 +23,7 @@ import com.google.common.base.Predicate;
 import org.apache.druid.client.ServerView.CallbackAction;
 import org.apache.druid.client.ServerView.SegmentCallback;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.segment.realtime.appenderator.SegmentSchemas;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.timeline.DataSegment;
 
@@ -72,5 +73,11 @@ public class FilteringSegmentCallback implements SegmentCallback
   public CallbackAction segmentViewInitialized()
   {
     return callback.segmentViewInitialized();
+  }
+
+  @Override
+  public CallbackAction segmentSchemasAnnounced(SegmentSchemas segmentSchemas)
+  {
+    return CallbackAction.CONTINUE;
   }
 }

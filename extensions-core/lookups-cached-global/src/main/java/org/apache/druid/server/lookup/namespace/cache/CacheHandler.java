@@ -20,9 +20,11 @@
 package org.apache.druid.server.lookup.namespace.cache;
 
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.lookup.LookupExtractor;
 
 import java.io.Closeable;
 import java.util.Map;
+import java.util.function.Supplier;
 
 public final class CacheHandler implements AutoCloseable, Closeable
 {
@@ -43,6 +45,14 @@ public final class CacheHandler implements AutoCloseable, Closeable
   public Map<String, String> getCache()
   {
     return cache;
+  }
+
+  /**
+   * Returns a {@link LookupExtractor} view of the cached data.
+   */
+  public LookupExtractor asLookupExtractor(final boolean isOneToOne, final Supplier<byte[]> cacheKeySupplier)
+  {
+    return cacheManager.asLookupExtractor(this, isOneToOne, cacheKeySupplier);
   }
 
   @Override

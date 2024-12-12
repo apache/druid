@@ -35,7 +35,7 @@ public class FloatTopNColumnAggregatesProcessor
 {
   private Int2ObjectMap<Aggregator[]> aggregatesStore;
 
-  protected FloatTopNColumnAggregatesProcessor(Function<Object, Comparable<?>> converter)
+  protected FloatTopNColumnAggregatesProcessor(Function<Object, Object> converter)
   {
     super(converter);
   }
@@ -68,7 +68,7 @@ public class FloatTopNColumnAggregatesProcessor
   }
 
   @Override
-  Comparable<?> convertAggregatorStoreKeyToColumnValue(Object aggregatorStoreKey)
+  Object convertAggregatorStoreKeyToColumnValue(Object aggregatorStoreKey)
   {
     return converter.apply(Float.intBitsToFloat((Integer) aggregatorStoreKey));
   }

@@ -135,7 +135,6 @@ public class IncrementalIndexRowTypeBenchmark
   {
     return appendableIndexSpec.builder()
         .setSimpleTestingIndexSchema(aggs)
-        .setDeserializeComplexMetrics(false)
         .setMaxRowCount(rowsPerSegment)
         .build();
   }

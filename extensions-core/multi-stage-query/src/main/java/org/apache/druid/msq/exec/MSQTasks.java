@@ -19,10 +19,8 @@
 
 package org.apache.druid.msq.exec;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Injector;
 import com.google.inject.Key;
-import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.msq.guice.MultiStageQuery;
@@ -39,10 +37,6 @@ import org.apache.druid.msq.indexing.error.TooManyAttemptsForWorker;
 import org.apache.druid.msq.indexing.error.UnknownFault;
 import org.apache.druid.msq.indexing.error.WorkerFailedFault;
 import org.apache.druid.msq.indexing.error.WorkerRpcFailedFault;
-import org.apache.druid.msq.statistics.KeyCollectorFactory;
-import org.apache.druid.msq.statistics.KeyCollectorSnapshot;
-import org.apache.druid.msq.statistics.KeyCollectorSnapshotDeserializerModule;
-import org.apache.druid.msq.statistics.KeyCollectors;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.storage.NilStorageConnector;
@@ -120,27 +114,15 @@ public class MSQTasks
       // be a long at execution time. So a nice user-friendly message isn't needed here: it would only happen
       // if the SQL layer is bypassed. Nice, friendly users wouldn't do that :)
       final UnknownFault fault =
-          UnknownFault.forMessage(StringUtils.format("Incorrect type for [%s]", ColumnHolder.TIME_COLUMN_NAME));
+          UnknownFault.forMessage(
+              StringUtils.format(
+                  "Incorrect type for column [%s]. Expected LONG but got type [%s]. Please ensure that the value is cast to LONG.",
+                  ColumnHolder.TIME_COLUMN_NAME,
+                  timestamp.getClass().getSimpleName()
+              )
+          );
       throw new MSQException(fault);
     }
-  }
-
-  /**
-   * Returns a decorated copy of an ObjectMapper that knows how to deserialize the appropriate kind of
-   * {@link KeyCollectorSnapshot}.
-   */
-  static ObjectMapper decorateObjectMapperForKeyCollectorSnapshot(
-      final ObjectMapper mapper,
-      final ClusterBy clusterBy,
-      final boolean aggregate
-  )
-  {
-    final KeyCollectorFactory<?, ?> keyCollectorFactory =
-        KeyCollectors.makeStandardFactory(clusterBy, aggregate);
-
-    final ObjectMapper mapperCopy = mapper.copy();
-    mapperCopy.registerModule(new KeyCollectorSnapshotDeserializerModule(keyCollectorFactory));
-    return mapperCopy;
   }
 
   /**

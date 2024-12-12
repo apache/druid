@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { AnchorButton, Button, ButtonGroup, Intent, Switch } from '@blueprintjs/core';
+import { AnchorButton, Button, ButtonGroup, Classes, Intent, Switch } from '@blueprintjs/core';
 import copy from 'copy-to-clipboard';
 import * as JSONBig from 'json-bigint-native';
 import React from 'react';
@@ -62,10 +62,11 @@ export class ShowLog extends React.PureComponent<ShowLogProps, ShowLogState> {
     };
 
     this.showLogQueryManager = new QueryManager({
-      processQuery: async () => {
+      processQuery: async (_, cancelToken) => {
         const { endpoint, tailOffset } = this.props;
         const resp = await Api.instance.get(
           endpoint + (tailOffset ? `?offset=-${tailOffset}` : ''),
+          { cancelToken },
         );
         const data = resp.data;
 
@@ -184,7 +185,7 @@ export class ShowLog extends React.PureComponent<ShowLogProps, ShowLogState> {
             <Loader />
           ) : (
             <textarea
-              className="bp4-input"
+              className={Classes.INPUT}
               readOnly
               value={logState.data || logState.getErrorMessage()}
               ref={this.log}

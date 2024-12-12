@@ -23,6 +23,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.query.PerSegmentQueryOptimizationContext;
@@ -49,7 +51,7 @@ public class FilteredAggregatorFactory extends AggregatorFactory
 {
   private final AggregatorFactory delegate;
   private final DimFilter dimFilter;
-  private final Filter filter;
+  private final Supplier<Filter> filterSupplier;
 
   @Nullable
   private final String name;
@@ -75,14 +77,14 @@ public class FilteredAggregatorFactory extends AggregatorFactory
 
     this.delegate = delegate;
     this.dimFilter = dimFilter;
-    this.filter = dimFilter.toFilter();
+    this.filterSupplier = Suppliers.memoize(dimFilter::toFilter);
     this.name = name;
   }
 
   @Override
   public Aggregator factorize(ColumnSelectorFactory columnSelectorFactory)
   {
-    final ValueMatcher valueMatcher = filter.makeMatcher(columnSelectorFactory);
+    final ValueMatcher valueMatcher = filterSupplier.get().makeMatcher(columnSelectorFactory);
     return new FilteredAggregator(
         valueMatcher,
         delegate.factorize(columnSelectorFactory)
@@ -92,7 +94,7 @@ public class FilteredAggregatorFactory extends AggregatorFactory
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory columnSelectorFactory)
   {
-    final ValueMatcher valueMatcher = filter.makeMatcher(columnSelectorFactory);
+    final ValueMatcher valueMatcher = filterSupplier.get().makeMatcher(columnSelectorFactory);
     return new FilteredBufferAggregator(
         valueMatcher,
         delegate.factorizeBuffered(columnSelectorFactory)
@@ -103,7 +105,7 @@ public class FilteredAggregatorFactory extends AggregatorFactory
   public VectorAggregator factorizeVector(VectorColumnSelectorFactory columnSelectorFactory)
   {
     Preconditions.checkState(canVectorize(columnSelectorFactory), "Cannot vectorize");
-    final VectorValueMatcher valueMatcher = filter.makeVectorMatcher(columnSelectorFactory);
+    final VectorValueMatcher valueMatcher = filterSupplier.get().makeVectorMatcher(columnSelectorFactory);
     return new FilteredVectorAggregator(
         valueMatcher,
         delegate.factorizeVector(columnSelectorFactory)
@@ -113,7 +115,7 @@ public class FilteredAggregatorFactory extends AggregatorFactory
   @Override
   public boolean canVectorize(ColumnInspector columnInspector)
   {
-    return delegate.canVectorize(columnInspector) && filter.canVectorizeMatcher(columnInspector);
+    return delegate.canVectorize(columnInspector) && filterSupplier.get().canVectorizeMatcher(columnInspector);
   }
 
   @Override
@@ -137,7 +139,14 @@ public class FilteredAggregatorFactory extends AggregatorFactory
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return delegate.getCombiningFactory();
+    final AggregatorFactory delegateCombiningFactory = delegate.getCombiningFactory();
+    final String myName = getName();
+
+    if (myName.equals(delegateCombiningFactory.getName())) {
+      return delegateCombiningFactory;
+    } else {
+      return delegateCombiningFactory.withName(myName);
+    }
   }
 
   @Override
@@ -176,7 +185,7 @@ public class FilteredAggregatorFactory extends AggregatorFactory
   {
     return ImmutableList.copyOf(
         // use a set to get rid of dupes
-        ImmutableSet.<String>builder().addAll(delegate.requiredFields()).addAll(filter.getRequiredColumns()).build()
+        ImmutableSet.<String>builder().addAll(delegate.requiredFields()).addAll(filterSupplier.get().getRequiredColumns()).build()
     );
   }
 
@@ -282,12 +291,6 @@ public class FilteredAggregatorFactory extends AggregatorFactory
   public DimFilter getFilter()
   {
     return dimFilter;
-  }
-
-  @Override
-  public List<AggregatorFactory> getRequiredColumns()
-  {
-    return delegate.getRequiredColumns();
   }
 
   @Override

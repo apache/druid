@@ -29,6 +29,7 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
 import java.io.File;
@@ -46,10 +47,11 @@ public class CsvInputFormat extends FlatTextInputFormat
       @JsonProperty("listDelimiter") @Nullable String listDelimiter,
       @Deprecated @JsonProperty("hasHeaderRow") @Nullable Boolean hasHeaderRow,
       @JsonProperty("findColumnsFromHeader") @Nullable Boolean findColumnsFromHeader,
-      @JsonProperty("skipHeaderRows") int skipHeaderRows
+      @JsonProperty("skipHeaderRows") int skipHeaderRows,
+      @JsonProperty("tryParseNumbers") @Nullable Boolean tryParseNumbers
   )
   {
-    super(columns, listDelimiter, String.valueOf(SEPARATOR), hasHeaderRow, findColumnsFromHeader, skipHeaderRows);
+    super(columns, listDelimiter, String.valueOf(SEPARATOR), hasHeaderRow, findColumnsFromHeader, skipHeaderRows, tryParseNumbers);
   }
 
   @Override
@@ -78,7 +80,9 @@ public class CsvInputFormat extends FlatTextInputFormat
         getColumns(),
         isFindColumnsFromHeader(),
         getSkipHeaderRows(),
-        line -> Arrays.asList(parser.parseLine(line))
+        line -> Arrays.asList(parser.parseLine(StringUtils.fromUtf8(line))),
+        useListBasedInputRows(),
+        shouldTryParseNumbers()
     );
   }
 

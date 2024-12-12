@@ -90,8 +90,8 @@ public class MarkOvershadowedSegmentsAsUnusedTest
         .build();
 
     DruidCoordinatorRuntimeParams params = DruidCoordinatorRuntimeParams
-        .newBuilder(DateTimes.nowUtc())
-        .withSnapshotOfDataSourcesWithAllUsedSegments(
+        .builder()
+        .withDataSourcesSnapshot(
             segmentsMetadataManager.getSnapshotOfDataSourcesWithAllUsedSegments()
         )
         .withDruidCluster(druidCluster)
@@ -99,7 +99,7 @@ public class MarkOvershadowedSegmentsAsUnusedTest
             CoordinatorDynamicConfig.builder().withMarkSegmentAsUnusedDelayMillis(0).build()
         )
         .withBalancerStrategy(new RandomBalancerStrategy())
-        .withSegmentAssignerUsing(new SegmentLoadQueueManager(null, null, null))
+        .withSegmentAssignerUsing(new SegmentLoadQueueManager(null, null))
         .build();
 
     SegmentTimeline timeline = segmentsMetadataManager.getSnapshotOfDataSourcesWithAllUsedSegments()

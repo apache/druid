@@ -16,9 +16,9 @@
  * limitations under the License.
  */
 
-import { C } from '@druid-toolkit/query';
+import { C } from 'druid-query-toolkit';
 
-import type { StageDefinition } from '../stages/stages';
+import type { Counters, StageDefinition } from '../stages/stages';
 
 export type TaskStatus = 'WAITING' | 'PENDING' | 'RUNNING' | 'FAILED' | 'SUCCESS';
 export type TaskStatusWithCanceled = TaskStatus | 'CANCELED';
@@ -77,6 +77,24 @@ export interface MsqTaskPayloadResponse {
   };
 }
 
+export interface WorkerState {
+  workerId: string;
+  state: string;
+  durationMs: number;
+}
+
+export interface SegmentLoadWaiterStatus {
+  state: 'INIT' | 'WAITING' | 'SUCCESS';
+  startTime: string;
+  duration: number;
+  totalSegments: number;
+  usedSegments: number;
+  precachedSegments: number;
+  onDemandSegments: number;
+  pendingSegments: number;
+  unknownSegments: number;
+}
+
 export interface MsqTaskReportResponse {
   multiStageQuery: {
     type: 'multiStageQuery';
@@ -90,9 +108,17 @@ export interface MsqTaskReportResponse {
         durationMs: number;
         pendingTasks: number;
         runningTasks: number;
+        workers?: Record<string, WorkerState[]>;
+        segmentLoadWaiterStatus?: SegmentLoadWaiterStatus;
       };
       stages: StageDefinition[];
-      counters: Record<string, Record<string, any>>;
+      counters: Counters;
+      results?: {
+        signature: { name: string; type: string }[];
+        sqlTypeNames: string[];
+        results: any[];
+        resultsTruncated?: boolean;
+      };
     };
   };
   error?: any;

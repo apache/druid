@@ -27,7 +27,10 @@ import org.apache.druid.query.rowsandcols.semantic.DefaultFramedOnHeapAggregatab
 import org.apache.druid.query.rowsandcols.semantic.FramedOnHeapAggregatable;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
+import java.util.Objects;
 
 public class WindowFramedAggregateProcessor implements Processor
 {
@@ -43,6 +46,16 @@ public class WindowFramedAggregateProcessor implements Processor
 
   private final WindowFrame frame;
   private final AggregatorFactory[] aggregations;
+
+  @Override
+  public List<String> getOutputColumnNames()
+  {
+    List<String> outputColumnNames = new ArrayList<>();
+    for (AggregatorFactory aggregation : aggregations) {
+      outputColumnNames.add(aggregation.getName());
+    }
+    return outputColumnNames;
+  }
 
   @JsonCreator
   public WindowFramedAggregateProcessor(
@@ -73,7 +86,6 @@ public class WindowFramedAggregateProcessor implements Processor
     if (agger == null) {
       agger = new DefaultFramedOnHeapAggregatable(RowsAndColumns.expectAppendable(inputPartition));
     }
-
     return agger.aggregateAll(frame, aggregations);
   }
 
@@ -95,5 +107,31 @@ public class WindowFramedAggregateProcessor implements Processor
            "frame=" + frame +
            ", aggregations=" + Arrays.toString(aggregations) +
            '}';
+  }
+
+  @Override
+  public int hashCode()
+  {
+    final int prime = 31;
+    int result = 1;
+    result = prime * result + Arrays.hashCode(aggregations);
+    result = prime * result + Objects.hash(frame);
+    return result;
+  }
+
+  @Override
+  public boolean equals(Object obj)
+  {
+    if (this == obj) {
+      return true;
+    }
+    if (obj == null) {
+      return false;
+    }
+    if (getClass() != obj.getClass()) {
+      return false;
+    }
+    WindowFramedAggregateProcessor other = (WindowFramedAggregateProcessor) obj;
+    return Arrays.equals(aggregations, other.aggregations) && Objects.equals(frame, other.frame);
   }
 }

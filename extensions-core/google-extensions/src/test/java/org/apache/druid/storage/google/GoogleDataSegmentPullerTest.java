@@ -52,7 +52,7 @@ public class GoogleDataSegmentPullerTest extends EasyMockSupport
           300,
           "test"
       );
-      EasyMock.expect(storage.get(EasyMock.eq(BUCKET), EasyMock.eq(PATH))).andThrow(exception);
+      EasyMock.expect(storage.getInputStream(EasyMock.eq(BUCKET), EasyMock.eq(PATH))).andThrow(exception);
 
       replayAll();
 
@@ -93,7 +93,7 @@ public class GoogleDataSegmentPullerTest extends EasyMockSupport
     String prefix = "prefix/";
 
     GoogleStorage storage = createMock(GoogleStorage.class);
-    EasyMock.expect(storage.get(EasyMock.eq(bucket), EasyMock.eq(prefix))).andReturn(EasyMock.createMock(InputStream.class));
+    EasyMock.expect(storage.getInputStream(EasyMock.eq(bucket), EasyMock.eq(prefix))).andReturn(EasyMock.createMock(InputStream.class));
     EasyMock.replay(storage);
 
     GoogleDataSegmentPuller puller = new GoogleDataSegmentPuller(storage);

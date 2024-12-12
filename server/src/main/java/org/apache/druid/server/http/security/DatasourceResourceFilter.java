@@ -20,7 +20,6 @@
 package org.apache.druid.server.http.security;
 
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ContainerRequest;
@@ -33,16 +32,15 @@ import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
 
 import javax.ws.rs.core.PathSegment;
+import java.util.List;
 
 /**
- * Use this ResourceFilter when the datasource information is present after "datasources" segment in the request Path
- * Here are some example paths where this filter is used -
- * - druid/coordinator/v1/datasources/{dataSourceName}/...
- * - druid/coordinator/v1/metadata/datasources/{dataSourceName}/...
- * - druid/v2/datasources/{dataSourceName}/...
+ * Use this resource filter for API endpoints that contain {@link #DATASOURCES_PATH_SEGMENT} in their request path.
  */
 public class DatasourceResourceFilter extends AbstractResourceFilter
 {
+  private static final String DATASOURCES_PATH_SEGMENT = "datasources";
+
   @Inject
   public DatasourceResourceFilter(
       AuthorizerMapper authorizerMapper
@@ -74,20 +72,11 @@ public class DatasourceResourceFilter extends AbstractResourceFilter
 
   private String getRequestDatasourceName(ContainerRequest request)
   {
-    final String dataSourceName = request.getPathSegments()
-                                         .get(
-                                             Iterables.indexOf(
-                                                 request.getPathSegments(),
-                                                 new Predicate<PathSegment>()
-                                                 {
-                                                   @Override
-                                                   public boolean apply(PathSegment input)
-                                                   {
-                                                     return "datasources".equals(input.getPath());
-                                                   }
-                                                 }
-                                             ) + 1
-                                         ).getPath();
+    final List<PathSegment> pathSegments = request.getPathSegments();
+    final String dataSourceName = pathSegments.get(
+        Iterables.indexOf(pathSegments, input -> DATASOURCES_PATH_SEGMENT.equals(input.getPath())) + 1
+    ).getPath();
+
     Preconditions.checkNotNull(dataSourceName);
     return dataSourceName;
   }

@@ -32,6 +32,7 @@ import org.apache.druid.security.basic.authentication.db.updater.CoordinatorBasi
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorCredentialUpdate;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorCredentials;
 import org.apache.druid.security.basic.authentication.entity.BasicAuthenticatorUser;
+import org.apache.druid.security.basic.authentication.validator.PasswordHashGenerator;
 import org.apache.druid.server.security.AuthenticatorMapper;
 import org.junit.After;
 import org.junit.Assert;
@@ -163,7 +164,7 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdaterTest
     );
     BasicAuthenticatorCredentials credentials = userMap.get("druid").getCredentials();
 
-    byte[] recalculatedHash = BasicAuthUtils.hashPassword(
+    byte[] recalculatedHash = PasswordHashGenerator.computePasswordHash(
         "helloworld".toCharArray(),
         credentials.getSalt(),
         credentials.getIterations()

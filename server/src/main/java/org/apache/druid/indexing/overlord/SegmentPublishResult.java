@@ -23,10 +23,13 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.metadata.PendingSegmentRecord;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.utils.CollectionUtils;
 
 import javax.annotation.Nullable;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
@@ -46,10 +49,17 @@ public class SegmentPublishResult
   private final boolean success;
   @Nullable
   private final String errorMsg;
+  @Nullable
+  private final List<PendingSegmentRecord> upgradedPendingSegments;
 
   public static SegmentPublishResult ok(Set<DataSegment> segments)
   {
     return new SegmentPublishResult(segments, true, null);
+  }
+
+  public static SegmentPublishResult ok(Set<DataSegment> segments, List<PendingSegmentRecord> upgradedPendingSegments)
+  {
+    return new SegmentPublishResult(segments, true, null, upgradedPendingSegments);
   }
 
   public static SegmentPublishResult fail(String errorMsg)
@@ -64,12 +74,27 @@ public class SegmentPublishResult
       @JsonProperty("errorMsg") @Nullable String errorMsg
   )
   {
+    this(segments, success, errorMsg, null);
+  }
+
+  private SegmentPublishResult(
+      Set<DataSegment> segments,
+      boolean success,
+       @Nullable String errorMsg,
+      List<PendingSegmentRecord> upgradedPendingSegments
+  )
+  {
     this.segments = Preconditions.checkNotNull(segments, "segments");
     this.success = success;
     this.errorMsg = errorMsg;
+    this.upgradedPendingSegments = upgradedPendingSegments;
 
     if (!success) {
       Preconditions.checkArgument(segments.isEmpty(), "segments must be empty for unsuccessful publishes");
+      Preconditions.checkArgument(
+          CollectionUtils.isNullOrEmpty(upgradedPendingSegments),
+          "upgraded pending segments must be null or empty for unsuccessful publishes"
+      );
     }
   }
 
@@ -90,6 +115,12 @@ public class SegmentPublishResult
   public String getErrorMsg()
   {
     return errorMsg;
+  }
+
+  @Nullable
+  public List<PendingSegmentRecord> getUpgradedPendingSegments()
+  {
+    return upgradedPendingSegments;
   }
 
   @Override

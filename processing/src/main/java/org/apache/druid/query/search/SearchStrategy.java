@@ -21,20 +21,24 @@ package org.apache.druid.query.search;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
-import org.apache.druid.collections.bitmap.BitmapFactory;
-import org.apache.druid.collections.bitmap.ConciseBitmapFactory;
-import org.apache.druid.collections.bitmap.RoaringBitmapFactory;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.filter.Filter;
+import org.apache.druid.segment.Metadata;
+import org.apache.druid.segment.PhysicalSegmentInspector;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.Segment;
-import org.apache.druid.segment.data.Indexed;
+import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.filter.Filters;
 import org.joda.time.Interval;
 
+import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 public abstract class SearchStrategy
 {
@@ -53,22 +57,36 @@ public abstract class SearchStrategy
 
   public abstract List<SearchQueryExecutor> getExecutionPlan(SearchQuery query, Segment segment);
 
-  public SearchQueryDecisionHelper getDecisionHelper(QueryableIndex index)
-  {
-    final BitmapFactory bitmapFactory = index.getBitmapFactoryForDimensions();
-    if (bitmapFactory.getClass().equals(ConciseBitmapFactory.class)) {
-      return ConciseBitmapDecisionHelper.instance();
-    } else if (bitmapFactory.getClass().equals(RoaringBitmapFactory.class)) {
-      return RoaringBitmapDecisionHelper.instance();
-    } else {
-      throw new IAE("Unknown bitmap type[%s]", bitmapFactory.getClass().getName());
-    }
-  }
-
-  static List<DimensionSpec> getDimsToSearch(Indexed<String> availableDimensions, List<DimensionSpec> dimensions)
+  static List<DimensionSpec> getDimsToSearch(Segment segment, List<DimensionSpec> dimensions)
   {
     if (dimensions == null || dimensions.isEmpty()) {
-      return ImmutableList.copyOf(Iterables.transform(availableDimensions, Druids.DIMENSION_IDENTITY));
+      final Set<String> dims = new LinkedHashSet<>();
+      final QueryableIndex index = segment.as(QueryableIndex.class);
+      if (index != null) {
+        for (String dim : index.getAvailableDimensions()) {
+          dims.add(dim);
+        }
+      } else {
+        // fallback to RowSignature and Metadata if QueryableIndex not available
+        final PhysicalSegmentInspector segmentInspector = segment.as(PhysicalSegmentInspector.class);
+        final Metadata metadata = segmentInspector != null ? segmentInspector.getMetadata() : null;
+        final Set<String> ignore = new HashSet<>();
+        ignore.add(ColumnHolder.TIME_COLUMN_NAME);
+        if (metadata != null && metadata.getAggregators() != null) {
+          for (AggregatorFactory factory : metadata.getAggregators()) {
+            ignore.add(factory.getName());
+          }
+        }
+        final RowSignature rowSignature = segment.asCursorFactory().getRowSignature();
+        for (String columnName : rowSignature.getColumnNames()) {
+          if (!ignore.contains(columnName)) {
+            dims.add(columnName);
+          }
+        }
+      }
+      return ImmutableList.copyOf(
+          Iterables.transform(dims, Druids.DIMENSION_IDENTITY)
+      );
     } else {
       return dimensions;
     }

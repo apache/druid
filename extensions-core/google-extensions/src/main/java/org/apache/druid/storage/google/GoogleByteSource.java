@@ -51,12 +51,12 @@ public class GoogleByteSource extends ByteSource
   @Override
   public InputStream openStream() throws IOException
   {
-    return storage.get(bucket, path);
+    return storage.getInputStream(bucket, path);
   }
 
   public InputStream openStream(long start) throws IOException
   {
-    return storage.get(bucket, path, start);
+    return storage.getInputStream(bucket, path, start);
   }
 
   @Override

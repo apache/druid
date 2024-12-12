@@ -69,8 +69,8 @@ import java.util.Set;
  *
  * The result of this pre-analysis method should be passed into the next step of join filter analysis, described below.
  *
- * The {@link #splitFilter(JoinFilterPreAnalysis)} method takes the pre-analysis result and optionally applies the
- * filter rewrite and push down operations on a per-segment level.
+ * The {@link #splitFilter(JoinFilterPreAnalysis, Filter)} method takes the pre-analysis result and optionally applies
+ * the filter rewrite and push down operations on a per-segment level.
  */
 public class JoinFilterAnalyzer
 {
@@ -90,11 +90,10 @@ public class JoinFilterAnalyzer
    */
   public static JoinFilterPreAnalysis computeJoinFilterPreAnalysis(final JoinFilterPreAnalysisKey key)
   {
-    final List<VirtualColumn> preJoinVirtualColumns = new ArrayList<>();
-    final List<VirtualColumn> postJoinVirtualColumns = new ArrayList<>();
-
     final JoinableClauses joinableClauses = JoinableClauses.fromList(key.getJoinableClauses());
-    joinableClauses.splitVirtualColumns(key.getVirtualColumns(), preJoinVirtualColumns, postJoinVirtualColumns);
+    final Set<VirtualColumn> postJoinVirtualColumns = joinableClauses.getPostJoinVirtualColumns(
+        key.getVirtualColumns()
+    );
 
     final JoinFilterPreAnalysis.Builder preAnalysisBuilder =
         new JoinFilterPreAnalysis.Builder(key, postJoinVirtualColumns);
@@ -159,13 +158,6 @@ public class JoinFilterAnalyzer
     return preAnalysisBuilder.withCorrelations(correlations).build();
   }
 
-  public static JoinFilterSplit splitFilter(
-      JoinFilterPreAnalysis joinFilterPreAnalysis
-  )
-  {
-    return splitFilter(joinFilterPreAnalysis, null);
-  }
-
   /**
    * @param joinFilterPreAnalysis The pre-analysis computed by {@link #computeJoinFilterPreAnalysis)}
    * @param baseFilter - Filter on base table that was specified in the query itself
@@ -210,7 +202,8 @@ public class JoinFilterAnalyzer
       );
       if (joinFilterAnalysis.isCanPushDown()) {
         //noinspection OptionalGetWithoutIsPresent isCanPushDown checks isPresent
-        leftFilters.add(joinFilterAnalysis.getPushDownFilter().get());
+        final Filter pushDown = joinFilterAnalysis.getPushDownFilter().get();
+        leftFilters.add(pushDown);
       }
       if (joinFilterAnalysis.isRetainAfterJoin()) {
         rightFilters.add(joinFilterAnalysis.getOriginalFilter());
@@ -452,7 +445,7 @@ public class JoinFilterAnalyzer
 
     for (JoinFilterColumnCorrelationAnalysis correlationAnalysis : correlationAnalyses) {
       if (correlationAnalysis.supportsPushDown()) {
-        Optional<Set<String>> correlatedValues = correlationAnalysis.getCorrelatedValuesMap().get(
+        Optional<InDimFilter.ValuesSet> correlatedValues = correlationAnalysis.getCorrelatedValuesMap().get(
             Pair.of(filteringColumn, filteringValue)
         );
 
@@ -460,7 +453,7 @@ public class JoinFilterAnalyzer
           return JoinFilterAnalysis.createNoPushdownFilterAnalysis(selectorFilter);
         }
 
-        Set<String> newFilterValues = correlatedValues.get();
+        InDimFilter.ValuesSet newFilterValues = correlatedValues.get();
         // in nothing => match nothing
         if (newFilterValues.isEmpty()) {
           return new JoinFilterAnalysis(
@@ -519,7 +512,7 @@ public class JoinFilterAnalyzer
   }
 
   private static boolean isColumnFromPostJoinVirtualColumns(
-      List<VirtualColumn> postJoinVirtualColumns,
+      Set<VirtualColumn> postJoinVirtualColumns,
       String column
   )
   {
@@ -532,7 +525,7 @@ public class JoinFilterAnalyzer
   }
 
   private static boolean areSomeColumnsFromPostJoinVirtualColumns(
-      List<VirtualColumn> postJoinVirtualColumns,
+      Set<VirtualColumn> postJoinVirtualColumns,
       Collection<String> columns
   )
   {

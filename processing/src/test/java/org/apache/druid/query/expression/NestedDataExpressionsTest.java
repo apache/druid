@@ -29,6 +29,7 @@ import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.ExpressionProcessingException;
 import org.apache.druid.math.expr.ExpressionType;
+import org.apache.druid.math.expr.ExpressionTypeFactory;
 import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.segment.nested.StructuredData;
@@ -37,6 +38,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 
 public class NestedDataExpressionsTest extends InitializedNullHandlingTest
@@ -47,8 +49,10 @@ public class NestedDataExpressionsTest extends InitializedNullHandlingTest
           new NestedDataExpressions.JsonPathsExprMacro(),
           new NestedDataExpressions.JsonKeysExprMacro(),
           new NestedDataExpressions.JsonObjectExprMacro(),
+          new NestedDataExpressions.JsonMergeExprMacro(JSON_MAPPER),
           new NestedDataExpressions.JsonValueExprMacro(),
           new NestedDataExpressions.JsonQueryExprMacro(),
+          new NestedDataExpressions.JsonQueryArrayExprMacro(),
           new NestedDataExpressions.ToJsonStringExprMacro(JSON_MAPPER),
           new NestedDataExpressions.ParseJsonExprMacro(JSON_MAPPER),
           new NestedDataExpressions.TryParseJsonExprMacro(JSON_MAPPER)
@@ -107,6 +111,63 @@ public class NestedDataExpressionsTest extends InitializedNullHandlingTest
     // decompose because of array equals
     Assert.assertArrayEquals(new Object[]{"a", "b", "c"}, (Object[]) ((Map) eval.value()).get("x"));
     Assert.assertEquals(ImmutableMap.of("a", "hello", "b", "world"), ((Map) eval.value()).get("y"));
+  }
+
+  @Test
+  public void testJsonMergeExpression() throws JsonProcessingException
+  {
+    Expr expr = Parser.parse("json_merge('{\"a\":\"x\"}','{\"b\":\"y\"}')", MACRO_TABLE);
+    ExprEval eval = expr.eval(inputBindings);
+    Assert.assertEquals("{\"a\":\"x\",\"b\":\"y\"}", JSON_MAPPER.writeValueAsString(eval.value()));
+    Assert.assertEquals(ExpressionType.NESTED_DATA, eval.type());
+
+    expr = Parser.parse("json_merge('{\"a\":\"x\"}', null)", MACRO_TABLE);
+    eval = expr.eval(inputBindings);
+    Assert.assertEquals("{\"a\":\"x\"}", JSON_MAPPER.writeValueAsString(eval.value()));
+    Assert.assertEquals(ExpressionType.NESTED_DATA, eval.type());
+
+    expr = Parser.parse("json_merge('{\"a\":\"x\"}','{\"b\":\"y\"}','{\"c\":[1,2,3]}')", MACRO_TABLE);
+    eval = expr.eval(inputBindings);
+    Assert.assertEquals("{\"a\":\"x\",\"b\":\"y\",\"c\":[1,2,3]}", JSON_MAPPER.writeValueAsString(eval.value()));
+    Assert.assertEquals(ExpressionType.NESTED_DATA, eval.type());
+
+    expr = Parser.parse("json_merge(json_object('a', 'x'),json_object('b', 'y'))", MACRO_TABLE);
+    eval = expr.eval(inputBindings);
+    Assert.assertEquals("{\"a\":\"x\",\"b\":\"y\"}", JSON_MAPPER.writeValueAsString(eval.value()));
+    Assert.assertEquals(ExpressionType.NESTED_DATA, eval.type());
+
+    expr = Parser.parse("json_merge('{\"a\":\"x\"}',json_merge('{\"a\":\"z\"}','{\"a\":\"y\"}'))", MACRO_TABLE);
+    eval = expr.eval(inputBindings);
+    Assert.assertEquals("{\"a\":\"y\"}", JSON_MAPPER.writeValueAsString(eval.value()));
+    Assert.assertEquals(ExpressionType.NESTED_DATA, eval.type());
+
+    expr = Parser.parse("json_merge('[\"a\", \"b\"]', '[\"c\", \"d\"]')", MACRO_TABLE);
+    eval = expr.eval(inputBindings);
+    Assert.assertEquals("[\"a\",\"b\",\"c\",\"d\"]", JSON_MAPPER.writeValueAsString(eval.value()));
+    Assert.assertEquals(ExpressionType.NESTED_DATA, eval.type());
+  }
+
+  @Test
+  public void testJsonMergeOverflow() throws JsonProcessingException
+  {
+    Expr.ObjectBinding input1 = InputBindings.forInputSuppliers(
+        new ImmutableMap.Builder<String, InputBindings.InputSupplier<?>>()
+          .put("attr", InputBindings.inputSupplier(ExpressionType.NESTED_DATA, () -> ImmutableMap.of("key", "blah", "value", "blahblah")))
+          .build()
+    );
+    Expr.ObjectBinding input2 = InputBindings.forInputSuppliers(
+        new ImmutableMap.Builder<String, InputBindings.InputSupplier<?>>()
+          .put("attr", InputBindings.inputSupplier(ExpressionType.NESTED_DATA, () -> ImmutableMap.of("key", "blah2", "value", "blahblah2")))
+          .build()
+    );
+
+    Expr expr = Parser.parse("json_merge(json_object(), json_object(json_value(attr, '$.key'), json_value(attr, '$.value')))", MACRO_TABLE);
+    ExprEval eval = expr.eval(input1);
+    Assert.assertEquals("{\"blah\":\"blahblah\"}", JSON_MAPPER.writeValueAsString(eval.value()));
+    Assert.assertEquals(ExpressionType.NESTED_DATA, eval.type());
+    eval = expr.eval(input2);
+    Assert.assertEquals("{\"blah2\":\"blahblah2\"}", JSON_MAPPER.writeValueAsString(eval.value()));
+    Assert.assertEquals(ExpressionType.NESTED_DATA, eval.type());
   }
 
   @Test
@@ -272,6 +333,11 @@ public class NestedDataExpressionsTest extends InitializedNullHandlingTest
     eval = expr.eval(inputBindings);
     Assert.assertArrayEquals(new Object[]{"1", "2", "3"}, (Object[]) eval.value());
     Assert.assertEquals(ExpressionType.STRING_ARRAY, eval.type());
+
+    expr = Parser.parse("json_value(nester, array_offset(json_paths(nester), 0))", MACRO_TABLE);
+    eval = expr.eval(inputBindings);
+    Assert.assertArrayEquals(new Object[]{"a", "b", "c"}, (Object[]) eval.value());
+    Assert.assertEquals(ExpressionType.STRING_ARRAY, eval.type());
   }
 
   @Test
@@ -317,6 +383,58 @@ public class NestedDataExpressionsTest extends InitializedNullHandlingTest
     eval = expr.eval(inputBindings);
     Assert.assertEquals(1234L, eval.value());
     Assert.assertEquals(ExpressionType.NESTED_DATA, eval.type());
+
+    expr = Parser.parse("json_query(nester, array_offset(json_paths(nester), 0))", MACRO_TABLE);
+    eval = expr.eval(inputBindings);
+    Assert.assertEquals(NESTER.get("x"), eval.value());
+    Assert.assertEquals(ExpressionType.NESTED_DATA, eval.type());
+  }
+
+  @Test
+  public void testJsonQueryArrayExpression()
+  {
+    final ExpressionType nestedArray = ExpressionTypeFactory.getInstance().ofArray(ExpressionType.NESTED_DATA);
+
+    Expr expr = Parser.parse("json_query_array(nest, '$.x')", MACRO_TABLE);
+    ExprEval eval = expr.eval(inputBindings);
+    Assert.assertArrayEquals(new Object[]{100L}, (Object[]) eval.value());
+    Assert.assertEquals(nestedArray, eval.type());
+
+    expr = Parser.parse("json_query_array(nester, '$.x')", MACRO_TABLE);
+    eval = expr.eval(inputBindings);
+    Assert.assertArrayEquals(((List) NESTER.get("x")).toArray(), (Object[]) eval.value());
+    Assert.assertEquals(nestedArray, eval.type());
+
+    expr = Parser.parse("json_query_array(nester, array_offset(json_paths(nester), 0))", MACRO_TABLE);
+    eval = expr.eval(inputBindings);
+    Assert.assertArrayEquals(((List) NESTER.get("x")).toArray(), (Object[]) eval.value());
+    Assert.assertEquals(nestedArray, eval.type());
+
+    expr = Parser.parse("json_query_array(nesterer, '$.y')", MACRO_TABLE);
+    eval = expr.eval(inputBindings);
+    Assert.assertArrayEquals(((List) NESTERER.get("y")).toArray(), (Object[]) eval.value());
+    Assert.assertEquals(nestedArray, eval.type());
+
+    expr = Parser.parse("array_length(json_query_array(nesterer, '$.y'))", MACRO_TABLE);
+    eval = expr.eval(inputBindings);
+    Assert.assertEquals(3L, eval.value());
+    Assert.assertEquals(ExpressionType.LONG, eval.type());
+
+    expr = Parser.parse("array_contains(json_query_array(nest, '$.x'), 100)", MACRO_TABLE);
+    expr = expr.asSingleThreaded(inputBindings);
+    Assert.assertEquals(1L, expr.eval(inputBindings).value());
+
+    expr = Parser.parse("array_contains(json_query_array(nest, '$.x'), 101)", MACRO_TABLE);
+    expr = expr.asSingleThreaded(inputBindings);
+    Assert.assertEquals(0L, expr.eval(inputBindings).value());
+
+    expr = Parser.parse("array_overlap(json_query_array(nest, '$.x'), [100, 101])", MACRO_TABLE);
+    expr = expr.asSingleThreaded(inputBindings);
+    Assert.assertEquals(1L, expr.eval(inputBindings).value());
+
+    expr = Parser.parse("array_overlap(json_query_array(nest, '$.x'), [101, 102])", MACRO_TABLE);
+    expr = expr.asSingleThreaded(inputBindings);
+    Assert.assertEquals(0L, expr.eval(inputBindings).value());
   }
 
   @Test

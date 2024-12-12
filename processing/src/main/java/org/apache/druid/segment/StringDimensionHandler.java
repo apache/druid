@@ -21,6 +21,7 @@ package org.apache.druid.segment;
 
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionSchema.MultiValueHandling;
+import org.apache.druid.data.input.impl.NewSpatialDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.io.Closer;
@@ -31,6 +32,8 @@ import org.apache.druid.segment.selector.settable.SettableColumnValueSelector;
 import org.apache.druid.segment.selector.settable.SettableDimensionValueSelector;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
+import java.io.File;
+import java.util.Collections;
 import java.util.Comparator;
 
 public class StringDimensionHandler implements DimensionHandler<Integer, int[], String>
@@ -124,6 +127,9 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
   @Override
   public DimensionSchema getDimensionSchema(ColumnCapabilities capabilities)
   {
+    if (hasSpatialIndexes) {
+      return new NewSpatialDimensionSchema(dimensionName, Collections.singletonList(dimensionName));
+    }
     return new StringDimensionSchema(dimensionName, multiValueHandling, hasBitmapIndexes);
   }
 
@@ -159,10 +165,12 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
 
   @Override
   public DimensionMergerV9 makeMerger(
+      String outputName,
       IndexSpec indexSpec,
       SegmentWriteOutMedium segmentWriteOutMedium,
       ColumnCapabilities capabilities,
       ProgressIndicator progress,
+      File segmentBaseDir,
       Closer closer
   )
   {
@@ -177,10 +185,12 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
 
     return new StringDimensionMergerV9(
         dimensionName,
+        outputName,
         indexSpec,
         segmentWriteOutMedium,
         capabilities,
         progress,
+        segmentBaseDir,
         closer
     );
   }

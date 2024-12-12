@@ -20,43 +20,50 @@
 package org.apache.druid.k8s.overlord.taskadapter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableMap;
 import io.fabric8.kubernetes.api.model.PodTemplate;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.api.model.batch.v1.JobBuilder;
+import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
-import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.IOE;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.k8s.overlord.KubernetesTaskRunnerConfig;
 import org.apache.druid.k8s.overlord.common.Base64Compression;
 import org.apache.druid.k8s.overlord.common.DruidK8sConstants;
+import org.apache.druid.k8s.overlord.common.K8sTaskId;
 import org.apache.druid.k8s.overlord.common.K8sTestUtils;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.coordination.BroadcastDatasourceLoadingSpec;
+import org.apache.druid.tasklogs.TaskLogs;
+import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+import org.mockito.Mockito;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.nio.charset.Charset;
 import java.util.Collections;
 import java.util.Map;
-import java.util.Properties;
+import java.util.stream.Collectors;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class PodTemplateTaskAdapterTest
 {
-  @TempDir private Path tempDir;
   private KubernetesTaskRunnerConfig taskRunnerConfig;
   private PodTemplate podTemplateSpec;
   private TaskConfig taskConfig;
   private DruidNode node;
   private ObjectMapper mapper;
+  private TaskLogs taskLogs;
 
   @BeforeEach
   public void setup()
@@ -74,84 +81,14 @@ public class PodTemplateTaskAdapterTest
     );
     mapper = new TestUtils().getTestObjectMapper();
     podTemplateSpec = K8sTestUtils.fileToResource("basePodTemplate.yaml", PodTemplate.class);
-  }
 
-  @Test
-  public void test_fromTask_withoutBasePodTemplateInRuntimeProperites_raisesIAE()
-  {
-    Assert.assertThrows(
-        "Pod template task adapter requires a base pod template to be specified",
-        IAE.class,
-        () -> new PodTemplateTaskAdapter(
-        taskRunnerConfig,
-        taskConfig,
-        node,
-        mapper,
-        new Properties()
-    ));
-  }
-
-  @Test
-  public void test_fromTask_withBasePodTemplateInRuntimeProperites_withEmptyFile_raisesISE() throws IOException
-  {
-    Path templatePath = Files.createFile(tempDir.resolve("empty.yaml"));
-
-    Properties props = new Properties();
-    props.setProperty("druid.indexer.runner.k8s.podTemplate.base", templatePath.toString());
-
-    Assert.assertThrows(
-        "Pod template task adapter requires a base pod template to be specified",
-        ISE.class,
-        () -> new PodTemplateTaskAdapter(
-        taskRunnerConfig,
-        taskConfig,
-        node,
-        mapper,
-        props
-    ));
-  }
-
-  @Test
-  public void test_fromTask_withBasePodTemplateInRuntimeProperites() throws IOException
-  {
-    Path templatePath = Files.createFile(tempDir.resolve("base.yaml"));
-    mapper.writeValue(templatePath.toFile(), podTemplateSpec);
-
-    Properties props = new Properties();
-    props.setProperty("druid.indexer.runner.k8s.podTemplate.base", templatePath.toString());
-
-    PodTemplateTaskAdapter adapter = new PodTemplateTaskAdapter(
-        taskRunnerConfig,
-        taskConfig,
-        node,
-        mapper,
-        props
-    );
-
-    Task task = new NoopTask(
-        "id",
-        "id",
-        "datasource",
-        0,
-        0,
-        null,
-        null,
-        null
-    );
-    Job actual = adapter.fromTask(task);
-    Job expected = K8sTestUtils.fileToResource("expectedNoopJob.yaml", Job.class);
-
-    assertJobSpecsEqual(actual, expected);
+    taskLogs = EasyMock.createMock(TaskLogs.class);
   }
 
   @Test
   public void test_fromTask_withBasePodTemplateInRuntimeProperites_andTlsEnabled() throws IOException
   {
-    Path templatePath = Files.createFile(tempDir.resolve("base.yaml"));
-    mapper.writeValue(templatePath.toFile(), podTemplateSpec);
-
-    Properties props = new Properties();
-    props.setProperty("druid.indexer.runner.k8s.podTemplate.base", templatePath.toString());
+    TestPodTemplateSelector podTemplateSelector = new TestPodTemplateSelector(podTemplateSpec);
 
     PodTemplateTaskAdapter adapter = new PodTemplateTaskAdapter(
         taskRunnerConfig,
@@ -166,7 +103,29 @@ public class PodTemplateTaskAdapterTest
             true
         ),
         mapper,
-        props
+        taskLogs,
+        podTemplateSelector
+    );
+
+    Task task = new NoopTask("id", "id", "datasource", 0, 0, null);
+    Job actual = adapter.fromTask(task);
+    Job expected = K8sTestUtils.fileToResource("expectedNoopJobTlsEnabledBase.yaml", Job.class);
+
+    assertJobSpecsEqual(actual, expected);
+  }
+
+  @Test
+  public void test_fromTask_withNoopPodTemplateInRuntimeProperites_dontSetTaskJSON() throws IOException
+  {
+    TestPodTemplateSelector podTemplateSelector = new TestPodTemplateSelector(podTemplateSpec);
+
+    PodTemplateTaskAdapter adapter = new PodTemplateTaskAdapter(
+        taskRunnerConfig,
+        taskConfig,
+        node,
+        mapper,
+        taskLogs,
+        podTemplateSelector
     );
 
     Task task = new NoopTask(
@@ -175,110 +134,110 @@ public class PodTemplateTaskAdapterTest
         "datasource",
         0,
         0,
-        null,
-        null,
-        null
+        ImmutableMap.of("context", RandomStringUtils.randomAlphanumeric((int) DruidK8sConstants.MAX_ENV_VARIABLE_KBS * 20))
     );
 
     Job actual = adapter.fromTask(task);
-    Job expected = K8sTestUtils.fileToResource("expectedNoopJobTlsEnabled.yaml", Job.class);
+    Job expected = K8sTestUtils.fileToResource("expectedNoopJobNoTaskJson.yaml", Job.class);
 
-    assertJobSpecsEqual(actual, expected);
+    Assertions.assertEquals(actual, expected);
   }
 
   @Test
-  public void test_fromTask_withNoopPodTemplateInRuntimeProperties_withEmptyFile_raisesISE() throws IOException
+  public void test_fromTask_withoutAnnotations_throwsDruidException()
   {
-    Path baseTemplatePath = Files.createFile(tempDir.resolve("base.yaml"));
-    Path noopTemplatePath = Files.createFile(tempDir.resolve("noop.yaml"));
-    mapper.writeValue(baseTemplatePath.toFile(), podTemplateSpec);
+    TestPodTemplateSelector podTemplateSelector = new TestPodTemplateSelector(podTemplateSpec);
 
-    Properties props = new Properties();
-    props.setProperty("druid.indexer.runner.k8s.podTemplate.base", baseTemplatePath.toString());
-    props.setProperty("druid.indexer.runner.k8s.podTemplate.noop", noopTemplatePath.toString());
-
-    Assert.assertThrows(ISE.class, () -> new PodTemplateTaskAdapter(
-        taskRunnerConfig,
-        taskConfig,
-        node,
-        mapper,
-        props
-    ));
-  }
-
-  @Test
-  public void test_fromTask_withNoopPodTemplateInRuntimeProperites() throws IOException
-  {
-    Path templatePath = Files.createFile(tempDir.resolve("noop.yaml"));
-    mapper.writeValue(templatePath.toFile(), podTemplateSpec);
-
-    Properties props = new Properties();
-    props.setProperty("druid.indexer.runner.k8s.podTemplate.base", templatePath.toString());
-    props.setProperty("druid.indexer.runner.k8s.podTemplate.noop", templatePath.toString());
 
     PodTemplateTaskAdapter adapter = new PodTemplateTaskAdapter(
         taskRunnerConfig,
         taskConfig,
         node,
         mapper,
-        props
-    );
-
-    Task task = new NoopTask(
-        "id",
-        "id",
-        "datasource",
-        0,
-        0,
-        null,
-        null,
-        null
-    );
-
-    Job actual = adapter.fromTask(task);
-    Job expected = K8sTestUtils.fileToResource("expectedNoopJob.yaml", Job.class);
-
-    assertJobSpecsEqual(actual, expected);
-  }
-
-  @Test
-  public void test_fromTask_withoutAnnotations_throwsIOE() throws IOException
-  {
-    Path templatePath = Files.createFile(tempDir.resolve("base.yaml"));
-    mapper.writeValue(templatePath.toFile(), podTemplateSpec);
-
-    Properties props = new Properties();
-    props.setProperty("druid.indexer.runner.k8s.podTemplate.base", templatePath.toString());
-
-    PodTemplateTaskAdapter adapter = new PodTemplateTaskAdapter(
-        taskRunnerConfig,
-        taskConfig,
-        node,
-        mapper,
-        props
+        taskLogs,
+        podTemplateSelector
     );
 
     Job job = K8sTestUtils.fileToResource("baseJobWithoutAnnotations.yaml", Job.class);
 
 
-    Assert.assertThrows(IOE.class, () -> adapter.toTask(job));
+    Assert.assertThrows(DruidException.class, () -> adapter.toTask(job));
   }
 
   @Test
-  public void test_fromTask_withoutTaskAnnotation_throwsIOE() throws IOException
+  public void test_getTaskId()
   {
-    Path templatePath = Files.createFile(tempDir.resolve("base.yaml"));
-    mapper.writeValue(templatePath.toFile(), podTemplateSpec);
-
-    Properties props = new Properties();
-    props.put("druid.indexer.runner.k8s.podTemplate.base", templatePath.toString());
+    TestPodTemplateSelector podTemplateSelector = new TestPodTemplateSelector(podTemplateSpec);
 
     PodTemplateTaskAdapter adapter = new PodTemplateTaskAdapter(
         taskRunnerConfig,
         taskConfig,
         node,
         mapper,
-        props
+        taskLogs,
+        podTemplateSelector
+    );
+    Job job = new JobBuilder()
+        .editSpec().editTemplate().editMetadata()
+        .addToAnnotations(DruidK8sConstants.TASK_ID, "ID")
+        .endMetadata().endTemplate().endSpec().build();
+
+    assertEquals(new K8sTaskId("ID"), adapter.getTaskId(job));
+  }
+
+  @Test
+  public void test_getTaskId_noAnnotations()
+  {
+    TestPodTemplateSelector podTemplateSelector = new TestPodTemplateSelector(podTemplateSpec);
+    PodTemplateTaskAdapter adapter = new PodTemplateTaskAdapter(
+        taskRunnerConfig,
+        taskConfig,
+        node,
+        mapper,
+        taskLogs,
+        podTemplateSelector
+    );
+    Job job = new JobBuilder()
+        .editSpec().editTemplate().editMetadata()
+        .endMetadata().endTemplate().endSpec()
+        .editMetadata().withName("job").endMetadata().build();
+
+    Assert.assertThrows(DruidException.class, () -> adapter.getTaskId(job));
+  }
+
+  @Test
+  public void test_getTaskId_missingTaskIdAnnotation()
+  {
+    TestPodTemplateSelector podTemplateSelector = new TestPodTemplateSelector(podTemplateSpec);
+    PodTemplateTaskAdapter adapter = new PodTemplateTaskAdapter(
+        taskRunnerConfig,
+        taskConfig,
+        node,
+        mapper,
+        taskLogs,
+        podTemplateSelector
+    );
+    Job job = new JobBuilder()
+        .editSpec().editTemplate().editMetadata()
+        .addToAnnotations(DruidK8sConstants.TASK_GROUP_ID, "ID")
+        .endMetadata().endTemplate().endSpec()
+        .editMetadata().withName("job").endMetadata().build();
+
+    Assert.assertThrows(DruidException.class, () -> adapter.getTaskId(job));
+  }
+
+  @Test
+  public void test_toTask_withoutTaskAnnotation_throwsIOE()
+  {
+    TestPodTemplateSelector podTemplateSelector = new TestPodTemplateSelector(podTemplateSpec);
+
+    PodTemplateTaskAdapter adapter = new PodTemplateTaskAdapter(
+        taskRunnerConfig,
+        taskConfig,
+        node,
+        mapper,
+        taskLogs,
+        podTemplateSelector
     );
 
     Job baseJob = K8sTestUtils.fileToResource("baseJobWithoutAnnotations.yaml", Job.class);
@@ -292,49 +251,67 @@ public class PodTemplateTaskAdapterTest
         .endTemplate()
         .endSpec()
         .build();
-    Assert.assertThrows(IOE.class, () -> adapter.toTask(job));
+    Assert.assertThrows(DruidException.class, () -> adapter.toTask(job));
   }
 
   @Test
-  public void test_fromTask() throws IOException
+  public void test_toTask() throws IOException
   {
-    Path templatePath = Files.createFile(tempDir.resolve("base.yaml"));
-    mapper.writeValue(templatePath.toFile(), podTemplateSpec);
-
-    Properties props = new Properties();
-    props.put("druid.indexer.runner.k8s.podTemplate.base", templatePath.toString());
+    TestPodTemplateSelector podTemplateSelector = new TestPodTemplateSelector(podTemplateSpec);
 
     PodTemplateTaskAdapter adapter = new PodTemplateTaskAdapter(
         taskRunnerConfig,
         taskConfig,
         node,
         mapper,
-        props
+        taskLogs,
+        podTemplateSelector
     );
 
     Job job = K8sTestUtils.fileToResource("baseJob.yaml", Job.class);
     Task actual = adapter.toTask(job);
-    Task expected = NoopTask.create("id", 1);
+    Task expected = K8sTestUtils.createTask("id", 1);
 
+    Assertions.assertEquals(expected, actual);
+  }
+
+  @Test
+  public void test_toTask_useTaskPayloadManager() throws IOException
+  {
+    TestPodTemplateSelector podTemplateSelector = new TestPodTemplateSelector(podTemplateSpec);
+
+    Task expected = new NoopTask("id", null, "datasource", 0, 0, ImmutableMap.of());
+    TaskLogs mockTestLogs = Mockito.mock(TaskLogs.class);
+    Mockito.when(mockTestLogs.streamTaskPayload("id")).thenReturn(Optional.of(
+        new ByteArrayInputStream(mapper.writeValueAsString(expected).getBytes(Charset.defaultCharset()))
+    ));
+
+    PodTemplateTaskAdapter adapter = new PodTemplateTaskAdapter(
+        taskRunnerConfig,
+        taskConfig,
+        node,
+        mapper,
+        mockTestLogs,
+        podTemplateSelector
+    );
+
+    Job job = K8sTestUtils.fileToResource("expectedNoopJob.yaml", Job.class);
+    Task actual = adapter.toTask(job);
     Assertions.assertEquals(expected, actual);
   }
 
   @Test
   public void test_fromTask_withRealIds() throws IOException
   {
-    Path templatePath = Files.createFile(tempDir.resolve("noop.yaml"));
-    mapper.writeValue(templatePath.toFile(), podTemplateSpec);
-
-    Properties props = new Properties();
-    props.setProperty("druid.indexer.runner.k8s.podTemplate.base", templatePath.toString());
-    props.setProperty("druid.indexer.runner.k8s.podTemplate.noop", templatePath.toString());
+    TestPodTemplateSelector podTemplateSelector = new TestPodTemplateSelector(podTemplateSpec);
 
     PodTemplateTaskAdapter adapter = new PodTemplateTaskAdapter(
         taskRunnerConfig,
         taskConfig,
         node,
         mapper,
-        props
+        taskLogs,
+        podTemplateSelector
     );
 
     Task task = new NoopTask(
@@ -343,8 +320,6 @@ public class PodTemplateTaskAdapterTest
         "data_source",
         0,
         0,
-        null,
-        null,
         null
     );
 
@@ -354,7 +329,130 @@ public class PodTemplateTaskAdapterTest
     assertJobSpecsEqual(actual, expected);
   }
 
+  @Test
+  public void test_fromTask_noTemplate()
+  {
 
+    PodTemplateSelector podTemplateSelector = EasyMock.createMock(PodTemplateSelector.class);
+
+    PodTemplateTaskAdapter adapter = new PodTemplateTaskAdapter(
+        taskRunnerConfig,
+        taskConfig,
+        node,
+        mapper,
+        taskLogs,
+        podTemplateSelector
+    );
+
+    Task task = new NoopTask(
+        "id",
+        "groupId",
+        "data_source",
+        0,
+        0,
+        null
+    );
+    EasyMock.expect(podTemplateSelector.getPodTemplateForTask(EasyMock.anyObject()))
+        .andReturn(Optional.absent());
+
+    Assert.assertThrows(DruidException.class, () -> adapter.fromTask(task));
+  }
+
+  @Test
+  public void test_fromTask_null()
+  {
+
+    PodTemplateSelector podTemplateSelector = EasyMock.createMock(PodTemplateSelector.class);
+
+    PodTemplateTaskAdapter adapter = new PodTemplateTaskAdapter(
+        taskRunnerConfig,
+        taskConfig,
+        node,
+        mapper,
+        taskLogs,
+        podTemplateSelector
+    );
+
+    Task task = new NoopTask(
+        "id",
+        "groupId",
+        "data_source",
+        0,
+        0,
+        null
+    );
+    EasyMock.expect(podTemplateSelector.getPodTemplateForTask(EasyMock.anyObject()))
+        .andReturn(null);
+
+    Assert.assertThrows(DruidException.class, () -> adapter.fromTask(task));
+  }
+
+  @Test
+  public void test_fromTask_taskSupportsQueries() throws IOException
+  {
+    TestPodTemplateSelector podTemplateSelector = new TestPodTemplateSelector(podTemplateSpec);
+
+    PodTemplateTaskAdapter adapter = new PodTemplateTaskAdapter(
+        taskRunnerConfig,
+        taskConfig,
+        node,
+        mapper,
+        taskLogs,
+        podTemplateSelector
+    );
+
+    Task task = EasyMock.mock(Task.class);
+    EasyMock.expect(task.supportsQueries()).andReturn(true);
+    EasyMock.expect(task.getType()).andReturn("queryable").anyTimes();
+    EasyMock.expect(task.getId()).andReturn("id").anyTimes();
+    EasyMock.expect(task.getGroupId()).andReturn("groupid").anyTimes();
+    EasyMock.expect(task.getDataSource()).andReturn("datasource").anyTimes();
+    EasyMock.expect(task.getBroadcastDatasourceLoadingSpec()).andReturn(BroadcastDatasourceLoadingSpec.ALL).anyTimes();
+
+    EasyMock.replay(task);
+    Job actual = adapter.fromTask(task);
+    EasyMock.verify(task);
+
+    Assertions.assertEquals("true", actual.getSpec().getTemplate()
+        .getSpec().getContainers()
+        .get(0).getEnv().stream()
+        .filter(env -> env.getName().equals(DruidK8sConstants.LOAD_BROADCAST_SEGMENTS_ENV))
+        .collect(Collectors.toList()).get(0).getValue());
+  }
+
+  @Test
+  public void test_fromTask_withBroadcastDatasourceLoadingModeAll() throws IOException
+  {
+    TestPodTemplateSelector podTemplateSelector = new TestPodTemplateSelector(podTemplateSpec);
+
+
+    PodTemplateTaskAdapter adapter = new PodTemplateTaskAdapter(
+        taskRunnerConfig,
+        taskConfig,
+        node,
+        mapper,
+        taskLogs,
+        podTemplateSelector
+    );
+
+    Task task = EasyMock.mock(Task.class);
+    EasyMock.expect(task.supportsQueries()).andReturn(true);
+    EasyMock.expect(task.getType()).andReturn("queryable").anyTimes();
+    EasyMock.expect(task.getId()).andReturn("id").anyTimes();
+    EasyMock.expect(task.getGroupId()).andReturn("groupid").anyTimes();
+    EasyMock.expect(task.getDataSource()).andReturn("datasource").anyTimes();
+    EasyMock.expect(task.getBroadcastDatasourceLoadingSpec()).andReturn(BroadcastDatasourceLoadingSpec.ALL).anyTimes();
+
+    EasyMock.replay(task);
+    Job actual = adapter.fromTask(task);
+    EasyMock.verify(task);
+
+    Assertions.assertEquals(BroadcastDatasourceLoadingSpec.Mode.ALL.toString(), actual.getSpec().getTemplate()
+                                          .getSpec().getContainers()
+                                          .get(0).getEnv().stream()
+                                          .filter(env -> env.getName().equals(DruidK8sConstants.LOAD_BROADCAST_DATASOURCE_MODE_ENV))
+                                          .collect(Collectors.toList()).get(0).getValue());
+  }
 
   private void assertJobSpecsEqual(Job actual, Job expected) throws IOException
   {
@@ -368,7 +466,7 @@ public class PodTemplateTaskAdapterTest
     expectedAnnotations.remove(DruidK8sConstants.TASK);
     expected.getSpec().getTemplate().getMetadata().setAnnotations(expectedAnnotations);
 
-    Assertions.assertEquals(actual, expected);
+    Assertions.assertEquals(expected, actual);
     Assertions.assertEquals(
         Base64Compression.decompressBase64(actualTaskAnnotation),
         Base64Compression.decompressBase64(expectedTaskAnnotation)

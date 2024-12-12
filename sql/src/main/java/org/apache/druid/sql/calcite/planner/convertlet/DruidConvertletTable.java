@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableList;
 import org.apache.calcite.sql.SqlCall;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperator;
-import org.apache.calcite.sql.fun.SqlLibraryOperators;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql2rel.SqlRexConvertlet;
 import org.apache.calcite.sql2rel.SqlRexConvertletTable;
@@ -65,8 +64,9 @@ public class DruidConvertletTable implements SqlRexConvertletTable
                    .add(SqlStdOperatorTable.UNION)
                    .add(SqlStdOperatorTable.UNION_ALL)
                    .add(SqlStdOperatorTable.NULLIF)
-                   .add(SqlStdOperatorTable.COALESCE)
-                   .add(SqlLibraryOperators.NVL)
+                   .add(SqlStdOperatorTable.DESC)
+                   .add(SqlStdOperatorTable.NULLS_FIRST)
+                   .add(SqlStdOperatorTable.NULLS_LAST)
                    .build();
 
   private final Map<SqlOperator, SqlRexConvertlet> table;

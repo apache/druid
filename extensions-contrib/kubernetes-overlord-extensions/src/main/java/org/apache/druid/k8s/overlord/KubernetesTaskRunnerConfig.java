@@ -87,6 +87,12 @@ public class KubernetesTaskRunnerConfig
 
   @JsonProperty
   @NotNull
+  // how long to wait to join peon k8s jobs on startup
+  private Period taskJoinTimeout = new Period("PT1M");
+
+
+  @JsonProperty
+  @NotNull
   // how long to wait for the peon k8s job to launch
   private Period k8sjobLaunchTimeout = new Period("PT1H");
 
@@ -100,6 +106,10 @@ public class KubernetesTaskRunnerConfig
   @JsonProperty
   @NotNull
   private List<String> javaOptsArray = ImmutableList.of();
+
+  @JsonProperty
+  @NotNull
+  private int cpuCoreInMicro = 0;
 
   @JsonProperty
   @NotNull
@@ -133,9 +143,11 @@ public class KubernetesTaskRunnerConfig
       Period k8sjobLaunchTimeout,
       List<String> peonMonitors,
       List<String> javaOptsArray,
+      int cpuCoreInMicro,
       Map<String, String> labels,
       Map<String, String> annotations,
-      Integer capacity
+      Integer capacity,
+      Period taskJoinTimeout
   )
   {
     this.namespace = namespace;
@@ -176,6 +188,10 @@ public class KubernetesTaskRunnerConfig
         k8sjobLaunchTimeout,
         this.k8sjobLaunchTimeout
     );
+    this.taskJoinTimeout = ObjectUtils.defaultIfNull(
+        taskJoinTimeout,
+        this.taskJoinTimeout
+    );
     this.peonMonitors = ObjectUtils.defaultIfNull(
         peonMonitors,
         this.peonMonitors
@@ -183,6 +199,10 @@ public class KubernetesTaskRunnerConfig
     this.javaOptsArray = ObjectUtils.defaultIfNull(
         javaOptsArray,
         this.javaOptsArray
+    );
+    this.cpuCoreInMicro = ObjectUtils.defaultIfNull(
+        cpuCoreInMicro,
+        this.cpuCoreInMicro
     );
     this.labels = ObjectUtils.defaultIfNull(
         labels,
@@ -238,6 +258,11 @@ public class KubernetesTaskRunnerConfig
   {
     return maxTaskDuration;
   }
+  public Period getTaskJoinTimeout()
+  {
+    return taskJoinTimeout;
+  }
+
 
   public Period getTaskCleanupDelay()
   {
@@ -262,6 +287,11 @@ public class KubernetesTaskRunnerConfig
   public List<String> getJavaOptsArray()
   {
     return javaOptsArray;
+  }
+
+  public int getCpuCoreInMicro()
+  {
+    return cpuCoreInMicro;
   }
 
   public Map<String, String> getLabels()
@@ -299,9 +329,11 @@ public class KubernetesTaskRunnerConfig
     private Period k8sjobLaunchTimeout;
     private List<String> peonMonitors;
     private List<String> javaOptsArray;
+    private int cpuCoreInMicro;
     private Map<String, String> labels;
     private Map<String, String> annotations;
     private Integer capacity;
+    private Period taskJoinTimeout;
 
     public Builder()
     {
@@ -379,6 +411,12 @@ public class KubernetesTaskRunnerConfig
       return this;
     }
 
+    public Builder withCpuCore(int cpuCore)
+    {
+      this.cpuCoreInMicro = cpuCore;
+      return this;
+    }
+
     public Builder withJavaOptsArray(List<String> javaOptsArray)
     {
       this.javaOptsArray = javaOptsArray;
@@ -397,9 +435,16 @@ public class KubernetesTaskRunnerConfig
       return this;
     }
 
+
     public Builder withCapacity(@Min(0) @Max(Integer.MAX_VALUE) Integer capacity)
     {
       this.capacity = capacity;
+      return this;
+    }
+
+    public Builder withTaskJoinTimeout(Period taskJoinTimeout)
+    {
+      this.taskJoinTimeout = taskJoinTimeout;
       return this;
     }
 
@@ -419,9 +464,11 @@ public class KubernetesTaskRunnerConfig
           this.k8sjobLaunchTimeout,
           this.peonMonitors,
           this.javaOptsArray,
+          this.cpuCoreInMicro,
           this.labels,
           this.annotations,
-          this.capacity
+          this.capacity,
+          this.taskJoinTimeout
       );
     }
   }

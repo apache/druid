@@ -19,16 +19,27 @@
 
 package org.apache.druid.storage.azure;
 
-import com.microsoft.azure.storage.StorageException;
+import com.azure.core.http.HttpResponse;
+import com.azure.storage.blob.models.BlobStorageException;
 import org.apache.druid.data.input.azure.AzureInputSource;
-import org.junit.Assert;
-import org.junit.Test;
+import org.easymock.EasyMock;
+import org.easymock.EasyMockExtension;
+import org.easymock.EasyMockSupport;
+import org.easymock.Mock;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.concurrent.TimeoutException;
 
-public class AzureUtilsTest
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+@ExtendWith(EasyMockExtension.class)
+public class AzureUtilsTest extends EasyMockSupport
 {
   private static final String CONTAINER_NAME = "container1";
   private static final String BLOB_NAME = "blob1";
@@ -39,7 +50,7 @@ public class AzureUtilsTest
   private static final URI URI_WITH_PATH_WITH_LEADING_SLASH;
 
   private static final URISyntaxException URI_SYNTAX_EXCEPTION = new URISyntaxException("", "");
-  private static final StorageException STORAGE_EXCEPTION = new StorageException("", "", null);
+
   private static final IOException IO_EXCEPTION = new IOException();
   private static final RuntimeException RUNTIME_EXCEPTION = new RuntimeException();
   private static final RuntimeException NULL_EXCEPTION_WRAPPED_IN_RUNTIME_EXCEPTION = new RuntimeException("", null);
@@ -64,80 +75,152 @@ public class AzureUtilsTest
     }
   }
 
+  @Mock
+  private HttpResponse httpResponse;
+
   @Test
   public void test_extractAzureKey_pathHasLeadingSlash_returnsPathWithLeadingSlashRemoved()
   {
     String extractedKey = AzureUtils.extractAzureKey(URI_WITH_PATH_WITH_LEADING_SLASH);
-    Assert.assertEquals(BLOB_NAME, extractedKey);
+    assertEquals(BLOB_NAME, extractedKey);
   }
 
   @Test
   public void test_maybeRemoveAzurePathPrefix_pathHasLeadingAzurePathPrefix_returnsPathWithLeadingAzurePathRemoved()
   {
-    String path = AzureUtils.maybeRemoveAzurePathPrefix(BLOB_PATH_WITH_LEADING_AZURE_PREFIX);
-    Assert.assertEquals(BLOB_NAME, path);
+    String path = AzureUtils.maybeRemoveAzurePathPrefix(BLOB_PATH_WITH_LEADING_AZURE_PREFIX, AzureUtils.AZURE_STORAGE_HOST_ADDRESS);
+    assertEquals(BLOB_NAME, path);
   }
 
   @Test
   public void test_maybeRemoveAzurePathPrefix_pathDoesNotHaveAzurePathPrefix__returnsPathWithLeadingAzurePathRemoved()
   {
-    String path = AzureUtils.maybeRemoveAzurePathPrefix(BLOB_NAME);
-    Assert.assertEquals(BLOB_NAME, path);
+    String path = AzureUtils.maybeRemoveAzurePathPrefix(BLOB_NAME, AzureUtils.AZURE_STORAGE_HOST_ADDRESS);
+    assertEquals(BLOB_NAME, path);
   }
 
   @Test
   public void test_azureRetry_URISyntaxException_returnsFalse()
   {
     boolean retry = AzureUtils.AZURE_RETRY.apply(URI_SYNTAX_EXCEPTION);
-    Assert.assertFalse(retry);
+    assertFalse(retry);
   }
 
   @Test
-  public void test_azureRetry_StorageException_returnsTrue()
+  public void test_azureRetry_StorageException_500ErrorCode_returnsTrue()
   {
-    boolean retry = AzureUtils.AZURE_RETRY.apply(STORAGE_EXCEPTION);
-    Assert.assertTrue(retry);
+    EasyMock.expect(httpResponse.getStatusCode()).andReturn(500).anyTimes();
+
+    replayAll();
+    BlobStorageException blobStorageException = new BlobStorageException("storage exception", httpResponse, null);
+    boolean retry = AzureUtils.AZURE_RETRY.apply(blobStorageException);
+    verifyAll();
+    assertTrue(retry);
+  }
+
+  @Test
+  public void test_azureRetry_StorageException_429ErrorCode_returnsTrue()
+  {
+    EasyMock.expect(httpResponse.getStatusCode()).andReturn(429).anyTimes();
+
+    replayAll();
+    BlobStorageException blobStorageException = new BlobStorageException("storage exception", httpResponse, null);
+    boolean retry = AzureUtils.AZURE_RETRY.apply(blobStorageException);
+    verifyAll();
+    assertTrue(retry);
+  }
+
+  @Test
+  public void test_azureRetry_StorageException_503ErrorCode_returnsTrue()
+  {
+    EasyMock.expect(httpResponse.getStatusCode()).andReturn(503).anyTimes();
+
+    replayAll();
+    BlobStorageException blobStorageException = new BlobStorageException("storage exception", httpResponse, null);
+    boolean retry = AzureUtils.AZURE_RETRY.apply(blobStorageException);
+    verifyAll();
+    assertTrue(retry);
+  }
+
+  @Test
+  public void test_azureRetry_StorageException_400ErrorCode_returnsFalse()
+  {
+    EasyMock.expect(httpResponse.getStatusCode()).andReturn(400).anyTimes();
+
+    replayAll();
+    BlobStorageException blobStorageException = new BlobStorageException("storage exception", httpResponse, null);
+    boolean retry = AzureUtils.AZURE_RETRY.apply(blobStorageException);
+    verifyAll();
+    assertFalse(retry);
+  }
+
+  @Test
+  public void test_azureRetry_nestedIOException_returnsTrue()
+  {
+    boolean retry = AzureUtils.AZURE_RETRY.apply(new RuntimeException("runtime", new IOException("ioexception")));
+    assertTrue(retry);
+  }
+
+  @Test
+  public void test_azureRetry_nestedTimeoutException_returnsTrue()
+  {
+    boolean retry = AzureUtils.AZURE_RETRY.apply(new RuntimeException("runtime", new TimeoutException("timeout exception")));
+    assertTrue(retry);
   }
 
   @Test
   public void test_azureRetry_IOException_returnsTrue()
   {
     boolean retry = AzureUtils.AZURE_RETRY.apply(IO_EXCEPTION);
-    Assert.assertTrue(retry);
+    assertTrue(retry);
   }
 
   @Test
   public void test_azureRetry_nullException_returnsFalse()
   {
     boolean retry = AzureUtils.AZURE_RETRY.apply(null);
-    Assert.assertFalse(retry);
+    assertFalse(retry);
   }
 
   @Test
   public void test_azureRetry_RunTimeException_returnsFalse()
   {
     boolean retry = AzureUtils.AZURE_RETRY.apply(RUNTIME_EXCEPTION);
-    Assert.assertFalse(retry);
+    assertFalse(retry);
   }
 
   @Test
   public void test_azureRetry_nullExceptionWrappedInRunTimeException_returnsFalse()
   {
     boolean retry = AzureUtils.AZURE_RETRY.apply(NULL_EXCEPTION_WRAPPED_IN_RUNTIME_EXCEPTION);
-    Assert.assertFalse(retry);
+    assertFalse(retry);
   }
 
   @Test
   public void test_azureRetry_IOExceptionWrappedInRunTimeException_returnsTrue()
   {
     boolean retry = AzureUtils.AZURE_RETRY.apply(IO_EXCEPTION_WRAPPED_IN_RUNTIME_EXCEPTION);
-    Assert.assertTrue(retry);
+    assertTrue(retry);
   }
 
   @Test
   public void test_azureRetry_RunTimeExceptionWrappedInRunTimeException_returnsFalse()
   {
     boolean retry = AzureUtils.AZURE_RETRY.apply(RUNTIME_EXCEPTION_WRAPPED_IN_RUNTIME_EXCEPTON);
-    Assert.assertFalse(retry);
+    assertFalse(retry);
+  }
+
+  @Test
+  public void testRemoveAzurePathPrefixDefaultEndpoint()
+  {
+    String outputBlob = AzureUtils.maybeRemoveAzurePathPrefix("blob.core.windows.net/container/blob", "blob.core.windows.net");
+    assertEquals("container/blob", outputBlob);
+  }
+
+  @Test
+  public void testRemoveAzurePathPrefixCustomEndpoint()
+  {
+    String outputBlob = AzureUtils.maybeRemoveAzurePathPrefix("blob.core.usgovcloudapi.net/container/blob", "blob.core.usgovcloudapi.net");
+    assertEquals("container/blob", outputBlob);
   }
 }

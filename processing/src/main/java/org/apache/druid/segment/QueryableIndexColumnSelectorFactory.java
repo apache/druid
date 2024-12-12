@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment;
 
+import org.apache.druid.query.Order;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.segment.column.BaseColumn;
@@ -43,7 +44,7 @@ import java.util.function.Function;
 public class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactory, RowIdSupplier
 {
   private final VirtualColumns virtualColumns;
-  private final boolean descending;
+  private final Order timeOrder;
   protected final ReadableOffset offset;
 
   // Share Column objects, since they cache decompressed buffers internally, and we can avoid recomputation if the
@@ -56,13 +57,13 @@ public class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactor
 
   public QueryableIndexColumnSelectorFactory(
       VirtualColumns virtualColumns,
-      boolean descending,
+      Order timeOrder,
       ReadableOffset offset,
       ColumnCache columnCache
   )
   {
     this.virtualColumns = virtualColumns;
-    this.descending = descending;
+    this.timeOrder = timeOrder;
     this.offset = offset;
     this.columnCache = columnCache;
     this.dimensionSelectorCache = new HashMap<>();
@@ -107,8 +108,12 @@ public class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactor
       return DimensionSelector.constant(null, extractionFn);
     }
 
-    if (dimension.equals(ColumnHolder.TIME_COLUMN_NAME)) {
-      return new SingleScanTimeDimensionSelector(makeColumnValueSelector(dimension), extractionFn, descending);
+    if (dimension.equals(ColumnHolder.TIME_COLUMN_NAME) && timeOrder != Order.NONE) {
+      return new SingleScanTimeDimensionSelector(
+          makeColumnValueSelector(dimension),
+          extractionFn,
+          timeOrder
+      );
     }
 
     ColumnCapabilities capabilities = columnHolder.getCapabilities();
@@ -178,10 +183,6 @@ public class QueryableIndexColumnSelectorFactory implements ColumnSelectorFactor
   @Nullable
   public ColumnCapabilities getColumnCapabilities(String columnName)
   {
-    if (virtualColumns.exists(columnName)) {
-      return virtualColumns.getColumnCapabilities(columnCache, columnName);
-    }
-
-    return columnCache.getColumnCapabilities(columnName);
+    return virtualColumns.getColumnCapabilitiesWithFallback(columnCache, columnName);
   }
 }

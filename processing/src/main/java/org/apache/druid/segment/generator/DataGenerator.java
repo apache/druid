@@ -24,6 +24,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
+import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
@@ -100,6 +101,21 @@ public class DataGenerator
       event.put(generator.getSchema().getName(), generator.generateRowValue());
     }
     return new MapBasedInputRow(nextTimestamp(), dimensionNames, event);
+  }
+
+  public Map<String, Object> nextRaw()
+  {
+    return nextRaw(TimestampSpec.DEFAULT_COLUMN);
+  }
+
+  public Map<String, Object> nextRaw(String timestampColumn)
+  {
+    Map<String, Object> event = new HashMap<>();
+    for (ColumnValueGenerator generator : columnGenerators) {
+      event.put(generator.getSchema().getName(), generator.generateRowValue());
+    }
+    event.put(timestampColumn, nextTimestamp());
+    return event;
   }
 
   /**

@@ -19,13 +19,13 @@
 
 package org.apache.druid.segment.data;
 
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.segment.CompressedPools;
 import org.apache.druid.segment.serde.MetaSerdeHelper;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
 import javax.annotation.Nullable;
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -59,17 +59,24 @@ public class BlockLayoutColumnarLongsSerializer implements ColumnarLongsSerializ
       String filenameBase,
       ByteOrder byteOrder,
       CompressionFactory.LongEncodingWriter writer,
-      CompressionStrategy compression
+      CompressionStrategy compression,
+      Closer closer
   )
   {
     this.columnName = columnName;
     this.sizePer = writer.getBlockSize(CompressedPools.BUFFER_SIZE);
     int bufferSize = writer.getNumBytes(sizePer);
-    this.flattener = GenericIndexedWriter.ofCompressedByteBuffers(segmentWriteOutMedium, filenameBase, compression, bufferSize);
+    this.flattener = GenericIndexedWriter.ofCompressedByteBuffers(
+        segmentWriteOutMedium,
+        filenameBase,
+        compression,
+        bufferSize,
+        closer
+    );
     this.writer = writer;
     this.compression = compression;
     CompressionStrategy.Compressor compressor = compression.getCompressor();
-    endBuffer = compressor.allocateInBuffer(writer.getNumBytes(sizePer), segmentWriteOutMedium.getCloser()).order(byteOrder);
+    endBuffer = compressor.allocateInBuffer(writer.getNumBytes(sizePer), closer).order(byteOrder);
     writer.setBuffer(endBuffer);
     numInsertedForNextFlush = sizePer;
   }

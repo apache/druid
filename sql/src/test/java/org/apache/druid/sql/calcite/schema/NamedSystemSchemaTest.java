@@ -25,8 +25,8 @@ import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.easymock.EasyMock;
 import org.easymock.Mock;
 import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class NamedSystemSchemaTest extends CalciteTestBase
 {
@@ -39,7 +39,7 @@ public class NamedSystemSchemaTest extends CalciteTestBase
 
   private NamedSystemSchema target;
 
-  @Before
+  @BeforeEach
   public void setUp()
   {
     plannerConfig = EasyMock.createMock(PlannerConfig.class);

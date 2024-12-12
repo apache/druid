@@ -22,6 +22,8 @@ package org.apache.druid.k8s.overlord;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.SettableFuture;
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.PodStatus;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
@@ -40,8 +42,10 @@ import org.apache.druid.k8s.overlord.common.KubernetesPeonClient;
 import org.apache.druid.tasklogs.TaskLogs;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -71,9 +75,9 @@ public class KubernetesPeonLifecycle
 
   protected enum State
   {
-    /** Lifecycle's state before {@link #run(Job, long, long)} or {@link #join(long)} is called. */
+    /** Lifecycle's state before {@link #run(Job, long, long, boolean)} or {@link #join(long)} is called. */
     NOT_STARTED,
-    /** Lifecycle's state since {@link #run(Job, long, long)} is called. */
+    /** Lifecycle's state since {@link #run(Job, long, long, boolean)} is called. */
     PENDING,
     /** Lifecycle's state since {@link #join(long)} is called. */
     RUNNING,
@@ -84,9 +88,11 @@ public class KubernetesPeonLifecycle
   private final AtomicReference<State> state = new AtomicReference<>(State.NOT_STARTED);
   private final K8sTaskId taskId;
   private final TaskLogs taskLogs;
+  private final Task task;
   private final KubernetesPeonClient kubernetesClient;
   private final ObjectMapper mapper;
   private final TaskStateListener stateListener;
+  private final SettableFuture<Boolean> taskStartedSuccessfullyFuture;
 
   @MonotonicNonNull
   private LogWatch logWatch;
@@ -102,10 +108,12 @@ public class KubernetesPeonLifecycle
   )
   {
     this.taskId = new K8sTaskId(task);
+    this.task = task;
     this.kubernetesClient = kubernetesClient;
     this.taskLogs = taskLogs;
     this.mapper = mapper;
     this.stateListener = stateListener;
+    this.taskStartedSuccessfullyFuture = SettableFuture.create();
   }
 
   /**
@@ -117,28 +125,53 @@ public class KubernetesPeonLifecycle
    * @return
    * @throws IllegalStateException
    */
-  protected synchronized TaskStatus run(Job job, long launchTimeout, long timeout) throws IllegalStateException
+  protected synchronized TaskStatus run(Job job, long launchTimeout, long timeout, boolean useDeepStorageForTaskPayload) throws IllegalStateException, IOException
   {
     try {
       updateState(new State[]{State.NOT_STARTED}, State.PENDING);
+
+      if (useDeepStorageForTaskPayload) {
+        writeTaskPayload(task);
+      }
 
       // In case something bad happens and run is called twice on this KubernetesPeonLifecycle, reset taskLocation.
       taskLocation = null;
       kubernetesClient.launchPeonJobAndWaitForStart(
           job,
+          task,
           launchTimeout,
           TimeUnit.MILLISECONDS
       );
-
       return join(timeout);
     }
     catch (Exception e) {
       log.info("Failed to run task: %s", taskId.getOriginalTaskId());
-      shutdown();
+      if (!taskStartedSuccessfullyFuture.isDone()) {
+        taskStartedSuccessfullyFuture.set(false);
+      }
       throw e;
     }
     finally {
       stopTask();
+    }
+  }
+
+  private void writeTaskPayload(Task task) throws IOException
+  {
+    Path file = null;
+    try {
+      file = Files.createTempFile(taskId.getOriginalTaskId(), "task.json");
+      FileUtils.writeStringToFile(file.toFile(), mapper.writeValueAsString(task), Charset.defaultCharset());
+      taskLogs.pushTaskPayload(task.getId(), file.toFile());
+    }
+    catch (Exception e) {
+      log.error("Failed to write task payload for task: %s", taskId.getOriginalTaskId());
+      throw new RuntimeException(e);
+    }
+    finally {
+      if (file != null) {
+        Files.deleteIfExists(file);
+      }
     }
   }
 
@@ -153,7 +186,7 @@ public class KubernetesPeonLifecycle
   {
     try {
       updateState(new State[]{State.NOT_STARTED, State.PENDING}, State.RUNNING);
-
+      taskStartedSuccessfullyFuture.set(true);
       JobResponse jobResponse = kubernetesClient.waitForPeonJobCompletion(
           taskId,
           timeout,
@@ -162,15 +195,19 @@ public class KubernetesPeonLifecycle
 
       return getTaskStatus(jobResponse.getJobDuration());
     }
+    catch (Exception e) {
+      if (!taskStartedSuccessfullyFuture.isDone()) {
+        taskStartedSuccessfullyFuture.set(false);
+      }
+      throw e;
+    }
     finally {
       try {
         saveLogs();
-        shutdown();
       }
       catch (Exception e) {
-        log.warn(e, "Task [%s] cleanup failed", taskId);
+        log.warn(e, "Log processing failed for task [%s]", taskId);
       }
-
       stopTask();
     }
   }
@@ -185,7 +222,7 @@ public class KubernetesPeonLifecycle
    */
   protected void shutdown()
   {
-    if (State.PENDING.equals(state.get()) || State.RUNNING.equals(state.get())) {
+    if (State.PENDING.equals(state.get()) || State.RUNNING.equals(state.get()) || State.STOPPED.equals(state.get())) {
       kubernetesClient.deletePeonJob(taskId);
     }
   }
@@ -220,8 +257,11 @@ public class KubernetesPeonLifecycle
    */
   protected TaskLocation getTaskLocation()
   {
-    if (!State.RUNNING.equals(state.get())) {
-      log.debug("Can't get task location for non-running job. [%s]", taskId.getOriginalTaskId());
+    if (State.PENDING.equals(state.get()) || State.NOT_STARTED.equals(state.get())) {
+      /* This should not actually ever happen because KubernetesTaskRunner.start() should not return until all running tasks
+      have already gone into State.RUNNING, so getTaskLocation should not be called.
+       */
+      log.warn("Can't get task location for non-running job. [%s]", taskId.getOriginalTaskId());
       return TaskLocation.unknown();
     }
 
@@ -232,6 +272,10 @@ public class KubernetesPeonLifecycle
     if (taskLocation == null) {
       Optional<Pod> maybePod = kubernetesClient.getPeonPod(taskId.getK8sJobName());
       if (!maybePod.isPresent()) {
+        /* Arguably we should throw a exception here but leaving it as a warn log to prevent unexpected errors.
+         If there is strange behavior during overlord restarts the operator should look for this warn log.
+        */
+        log.warn("Could not get task location from k8s for task [%s].", taskId);
         return TaskLocation.unknown();
       }
 
@@ -239,6 +283,7 @@ public class KubernetesPeonLifecycle
       PodStatus podStatus = pod.getStatus();
 
       if (podStatus == null || podStatus.getPodIP() == null) {
+        log.warn("Could not get task location from k8s for task [%s].", taskId);
         return TaskLocation.unknown();
       }
       taskLocation = TaskLocation.create(
@@ -248,7 +293,6 @@ public class KubernetesPeonLifecycle
           Boolean.parseBoolean(pod.getMetadata().getAnnotations().getOrDefault(DruidK8sConstants.TLS_ENABLED, "false")),
           pod.getMetadata() != null ? pod.getMetadata().getName() : ""
       );
-      log.info("K8s task %s is running at location %s", taskId.getOriginalTaskId(), taskLocation);
     }
 
     return taskLocation;
@@ -265,7 +309,11 @@ public class KubernetesPeonLifecycle
             TaskStatus.class
         );
       } else {
-        taskStatus = TaskStatus.failure(taskId.getOriginalTaskId(), "task status not found");
+        log.info(
+            "Peon for task [%s] did not push its task status. Check k8s logs and events for the pod to see what happened.",
+            taskId
+        );
+        taskStatus = TaskStatus.failure(taskId.getOriginalTaskId(), "Peon did not report status successfully.");
       }
     }
     catch (IOException e) {
@@ -299,14 +347,20 @@ public class KubernetesPeonLifecycle
   protected void saveLogs()
   {
     try {
-      Path file = Files.createTempFile(taskId.getOriginalTaskId(), "log");
+      final Path file = Files.createTempFile(taskId.getOriginalTaskId(), "log");
       try {
-        startWatchingLogs();
+        final InputStream logStream;
         if (logWatch != null) {
-          FileUtils.copyInputStreamToFile(logWatch.getOutput(), file.toFile());
+          logStream = logWatch.getOutput();
         } else {
-          log.debug("Log stream not found for %s", taskId.getOriginalTaskId());
+          logStream = kubernetesClient.getPeonLogs(taskId).or(
+              new ByteArrayInputStream(StringUtils.format(
+                  "Peon for task [%s] did not report any logs. Check k8s metrics and events for the pod to see what happened.",
+                  taskId
+              ).getBytes(StandardCharsets.UTF_8))
+          );
         }
+        FileUtils.copyInputStreamToFile(logStream, file.toFile());
         taskLogs.pushTaskLog(taskId.getOriginalTaskId(), file.toFile());
       }
       catch (IOException e) {
@@ -341,5 +395,18 @@ public class KubernetesPeonLifecycle
         targetState
     );
     stateListener.stateChanged(state.get(), taskId.getOriginalTaskId());
+  }
+
+  /**
+   * Retrieves the current {@link ListenableFuture} representing whether the task started successfully
+   *
+   * <p>This future can be used to track whether the task started successfully, with a boolean result
+   * indicating success (true) or failure (false) when the task starts.
+   *
+   * @return a {@link ListenableFuture} representing whether the task started successfully.
+   */
+  protected ListenableFuture<Boolean> getTaskStartedSuccessfullyFuture()
+  {
+    return taskStartedSuccessfullyFuture;
   }
 }

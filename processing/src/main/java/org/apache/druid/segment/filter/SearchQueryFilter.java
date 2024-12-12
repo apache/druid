@@ -22,13 +22,14 @@ package org.apache.druid.segment.filter;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Predicate;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.filter.DruidDoublePredicate;
 import org.apache.druid.query.filter.DruidFloatPredicate;
 import org.apache.druid.query.filter.DruidLongPredicate;
+import org.apache.druid.query.filter.DruidObjectPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
+import org.apache.druid.query.filter.DruidPredicateMatch;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.FilterTuning;
 import org.apache.druid.query.search.SearchQuerySpec;
@@ -128,27 +129,27 @@ public class SearchQueryFilter extends DimensionPredicateFilter
     }
 
     @Override
-    public Predicate<String> makeStringPredicate()
+    public DruidObjectPredicate<String> makeStringPredicate()
     {
-      return input -> query.accept(input);
+      return input -> input == null ? DruidPredicateMatch.UNKNOWN : DruidPredicateMatch.of(query.accept(input));
     }
 
     @Override
     public DruidLongPredicate makeLongPredicate()
     {
-      return input -> query.accept(String.valueOf(input));
+      return input -> DruidPredicateMatch.of(query.accept(String.valueOf(input)));
     }
 
     @Override
     public DruidFloatPredicate makeFloatPredicate()
     {
-      return input -> query.accept(String.valueOf(input));
+      return input -> DruidPredicateMatch.of(query.accept(String.valueOf(input)));
     }
 
     @Override
     public DruidDoublePredicate makeDoublePredicate()
     {
-      return input -> query.accept(String.valueOf(input));
+      return input -> DruidPredicateMatch.of(query.accept(String.valueOf(input)));
     }
 
     @Override

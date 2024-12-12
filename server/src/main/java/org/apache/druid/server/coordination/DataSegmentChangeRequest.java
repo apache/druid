@@ -30,7 +30,8 @@ import javax.annotation.Nullable;
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "load", value = SegmentChangeRequestLoad.class),
     @JsonSubTypes.Type(name = "drop", value = SegmentChangeRequestDrop.class),
-    @JsonSubTypes.Type(name = "noop", value = SegmentChangeRequestNoop.class)
+    @JsonSubTypes.Type(name = "noop", value = SegmentChangeRequestNoop.class),
+    @JsonSubTypes.Type(name = "schema", value = SegmentSchemasChangeRequest.class)
 })
 public interface DataSegmentChangeRequest
 {

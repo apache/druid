@@ -65,7 +65,6 @@ public class DistinctCountGroupByQueryTest extends InitializedNullHandlingTest
   public void setup()
   {
     final GroupByQueryConfig config = new GroupByQueryConfig();
-    config.setMaxIntermediateRows(10000);
     this.resourceCloser = Closer.create();
     this.factory = GroupByQueryRunnerTest.makeQueryRunnerFactory(
         config,
@@ -89,7 +88,6 @@ public class DistinctCountGroupByQueryTest extends InitializedNullHandlingTest
                 .withMetrics(new CountAggregatorFactory("cnt"))
                 .build()
         )
-        .setConcurrentEventAdd(true)
         .setMaxRowCount(1000)
         .build();
 
@@ -139,9 +137,9 @@ public class DistinctCountGroupByQueryTest extends InitializedNullHandlingTest
     Iterable<ResultRow> results = FluentQueryRunner
         .create(factory.createRunner(incrementalIndexSegment), factory.getToolchest())
         .applyPreMergeDecoration()
-        .mergeResults()
+        .mergeResults(true)
         .applyPostMergeDecoration()
-        .run(QueryPlus.wrap(query))
+        .run(QueryPlus.wrap(GroupByQueryRunnerTestHelper.populateResourceId(query)))
         .toList();
 
     List<ResultRow> expectedResults = Arrays.asList(

@@ -149,8 +149,8 @@ public abstract class AbstractRedisCache implements Cache
     final long priorCount = priorRequestCount.get();
     final long totalCount = totalRequestCount.get();
     final ServiceMetricEvent.Builder builder = ServiceMetricEvent.builder();
-    emitter.emit(builder.build("query/cache/redis/total/requests", totalCount));
-    emitter.emit(builder.build("query/cache/redis/delta/requests", totalCount - priorCount));
+    emitter.emit(builder.setMetric("query/cache/redis/total/requests", totalCount));
+    emitter.emit(builder.setMetric("query/cache/redis/delta/requests", totalCount - priorCount));
     if (!priorRequestCount.compareAndSet(priorCount, totalCount)) {
       log.error("Prior value changed while I was reporting! updating anyways");
       priorRequestCount.set(totalCount);

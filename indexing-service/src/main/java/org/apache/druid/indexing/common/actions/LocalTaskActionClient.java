@@ -22,8 +22,6 @@ package org.apache.druid.indexing.common.actions;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.indexing.common.task.Task;
-import org.apache.druid.indexing.overlord.TaskStorage;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
@@ -37,45 +35,21 @@ public class LocalTaskActionClient implements TaskActionClient
   private static final EmittingLogger log = new EmittingLogger(LocalTaskActionClient.class);
 
   private final Task task;
-  private final TaskStorage storage;
   private final TaskActionToolbox toolbox;
-  private final TaskAuditLogConfig auditLogConfig;
 
   public LocalTaskActionClient(
       Task task,
-      TaskStorage storage,
-      TaskActionToolbox toolbox,
-      TaskAuditLogConfig auditLogConfig
+      TaskActionToolbox toolbox
   )
   {
     this.task = task;
-    this.storage = storage;
     this.toolbox = toolbox;
-    this.auditLogConfig = auditLogConfig;
   }
 
   @Override
   public <RetType> RetType submit(TaskAction<RetType> taskAction)
   {
     log.debug("Performing action for task[%s]: %s", task.getId(), taskAction);
-
-    if (auditLogConfig.isEnabled() && taskAction.isAudited()) {
-      // Add audit log
-      try {
-        final long auditLogStartTime = System.currentTimeMillis();
-        storage.addAuditLog(task, taskAction);
-        emitTimerMetric("task/action/log/time", taskAction, System.currentTimeMillis() - auditLogStartTime);
-      }
-      catch (Exception e) {
-        final String actionClass = taskAction.getClass().getName();
-        log.makeAlert(e, "Failed to record action in audit log")
-           .addData("task", task.getId())
-           .addData("actionClass", actionClass)
-           .emit();
-        throw new ISE(e, "Failed to record action [%s] in audit log", actionClass);
-      }
-    }
-
     final long performStartTime = System.currentTimeMillis();
     final RetType result = performAction(taskAction);
     emitTimerMetric("task/action/run/time", taskAction, System.currentTimeMillis() - performStartTime);
@@ -95,6 +69,7 @@ public class LocalTaskActionClient implements TaskActionClient
       return result;
     }
     catch (Throwable t) {
+      log.error(t, "Failed to perform action[%s]", taskAction);
       throw new RuntimeException(t);
     }
   }
@@ -107,7 +82,7 @@ public class LocalTaskActionClient implements TaskActionClient
     if (actionType != null) {
       metricBuilder.setDimension("taskActionType", actionType);
     }
-    toolbox.getEmitter().emit(metricBuilder.build(metric, Math.max(0, time)));
+    toolbox.getEmitter().emit(metricBuilder.setMetric(metric, Math.max(0, time)));
   }
 
   @Nullable

@@ -32,6 +32,7 @@ import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.frame.write.FrameWriter;
 import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Unit;
 import org.apache.druid.segment.Cursor;
 
 import javax.annotation.Nullable;
@@ -39,7 +40,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 
-public class OffsetLimitFrameProcessor implements FrameProcessor<Long>
+public class OffsetLimitFrameProcessor implements FrameProcessor<Object>
 {
   private final ReadableFrameChannel inputChannel;
   private final WritableFrameChannel outputChannel;
@@ -86,12 +87,12 @@ public class OffsetLimitFrameProcessor implements FrameProcessor<Long>
   }
 
   @Override
-  public ReturnOrAwait<Long> runIncrementally(final IntSet readableInputs) throws IOException
+  public ReturnOrAwait<Object> runIncrementally(final IntSet readableInputs) throws IOException
   {
     if (readableInputs.isEmpty()) {
       return ReturnOrAwait.awaitAll(1);
     } else if (inputChannel.isFinished() || rowsProcessedSoFar == offset + limit) {
-      return ReturnOrAwait.returnObject(rowsProcessedSoFar);
+      return ReturnOrAwait.returnObject(Unit.instance());
     }
 
     final Frame frame = inputChannel.read();
@@ -103,7 +104,7 @@ public class OffsetLimitFrameProcessor implements FrameProcessor<Long>
 
     if (rowsProcessedSoFar == offset + limit) {
       // This check is not strictly necessary, given the check above, but prevents one extra scheduling round.
-      return ReturnOrAwait.returnObject(rowsProcessedSoFar);
+      return ReturnOrAwait.returnObject(Unit.instance());
     } else {
       assert rowsProcessedSoFar < offset + limit;
       return ReturnOrAwait.awaitAll(1);

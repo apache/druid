@@ -18,17 +18,19 @@
 
 import {
   arrangeWithPrefixSuffix,
+  caseInsensitiveEquals,
   formatBytes,
   formatBytesCompact,
   formatInteger,
   formatMegabytes,
   formatMillions,
+  formatNumber,
   formatPercent,
   hashJoaat,
   moveElement,
   moveToIndex,
-  objectHash,
   offsetToRowColumn,
+  OVERLAY_OPEN_SELECTOR,
   parseCsvLine,
   swapElements,
 } from './general';
@@ -92,6 +94,15 @@ describe('general', () => {
         'b',
         'd',
       ]);
+    });
+  });
+
+  describe('formatNumber', () => {
+    it('works', () => {
+      expect(formatNumber(null as any)).toEqual('0');
+      expect(formatNumber(0)).toEqual('0');
+      expect(formatNumber(5)).toEqual('5');
+      expect(formatNumber(5.1)).toEqual('5.1');
     });
   });
 
@@ -167,24 +178,43 @@ describe('general', () => {
     });
   });
 
-  describe('objectHash', () => {
+  describe('offsetToRowColumn', () => {
     it('works', () => {
-      expect(objectHash({ hello: 'world1' })).toEqual('cc14ad13');
+      const str = 'Hello\nThis is a test\nstring.';
+      expect(offsetToRowColumn(str, -6)).toBeUndefined();
+      expect(offsetToRowColumn(str, 666)).toBeUndefined();
+      expect(offsetToRowColumn(str, 3)).toEqual({
+        row: 0,
+        column: 3,
+      });
+      expect(offsetToRowColumn(str, 5)).toEqual({
+        row: 0,
+        column: 5,
+      });
+      expect(offsetToRowColumn(str, 24)).toEqual({
+        row: 2,
+        column: 3,
+      });
+      expect(offsetToRowColumn(str, str.length)).toEqual({
+        row: 2,
+        column: 7,
+      });
     });
   });
 
-  describe('offsetToRowColumn', () => {
+  describe('caseInsensitiveEquals', () => {
     it('works', () => {
-      expect(offsetToRowColumn('Hello\nThis is a test\nstring.', -6)).toBeUndefined();
-      expect(offsetToRowColumn('Hello\nThis is a test\nstring.', 666)).toBeUndefined();
-      expect(offsetToRowColumn('Hello\nThis is a test\nstring.', 3)).toEqual({
-        column: 3,
-        row: 0,
-      });
-      expect(offsetToRowColumn('Hello\nThis is a test\nstring.', 24)).toEqual({
-        column: 3,
-        row: 2,
-      });
+      expect(caseInsensitiveEquals(undefined, undefined)).toEqual(true);
+      expect(caseInsensitiveEquals(undefined, 'x')).toEqual(false);
+      expect(caseInsensitiveEquals('x', undefined)).toEqual(false);
+      expect(caseInsensitiveEquals('x', 'X')).toEqual(true);
+      expect(caseInsensitiveEquals(undefined, '')).toEqual(false);
+    });
+  });
+
+  describe('OVERLAY_OPEN_SELECTOR', () => {
+    it('is what it is', () => {
+      expect(OVERLAY_OPEN_SELECTOR).toEqual('.bp5-portal .bp5-overlay-open');
     });
   });
 });

@@ -29,19 +29,22 @@ import java.util.Map;
 public class DimValHolder
 {
   private final Object topNMetricVal;
-  private final Comparable dimValue;
+  private final Object dimValue;
+  private final ColumnType dimType;
   private final Object dimValIndex;
   private final Map<String, Object> metricValues;
 
   public DimValHolder(
       Object topNMetricVal,
-      Comparable dimValue,
+      Object dimValue,
+      ColumnType dimType,
       Object dimValIndex,
       Map<String, Object> metricValues
   )
   {
     this.topNMetricVal = topNMetricVal;
     this.dimValue = dimValue;
+    this.dimType = dimType;
     this.dimValIndex = dimValIndex;
     this.metricValues = metricValues;
   }
@@ -51,9 +54,14 @@ public class DimValHolder
     return topNMetricVal;
   }
 
-  public Comparable getDimValue()
+  public Object getDimValue()
   {
     return dimValue;
+  }
+
+  public ColumnType getDimType()
+  {
+    return dimType;
   }
 
   public Object getDimValIndex()
@@ -69,8 +77,9 @@ public class DimValHolder
   public static class Builder
   {
     private Object topNMetricVal;
-    private Comparable dimValue;
+    private Object dimValue;
     private Object dimValIndex;
+    private ColumnType dimType;
     private Map<String, Object> metricValues;
 
     public Builder()
@@ -79,6 +88,7 @@ public class DimValHolder
       dimValue = null;
       dimValIndex = null;
       metricValues = null;
+      dimType = null;
     }
 
     public Builder withTopNMetricVal(Object topNMetricVal)
@@ -102,9 +112,10 @@ public class DimValHolder
      *                 {@link org.apache.druid.query.dimension.DimensionSpec} associated with dimValue from the
      *                 calling TopNResultBuilder
      */
-    public Builder withDimValue(Comparable dimValue, ColumnType type)
+    public Builder withDimValue(Object dimValue, ColumnType type)
     {
       this.dimValue = DimensionHandlerUtils.convertObjectToType(dimValue, type);
+      this.dimType = type;
       return this;
     }
 
@@ -122,7 +133,7 @@ public class DimValHolder
 
     public DimValHolder build()
     {
-      return new DimValHolder(topNMetricVal, dimValue, dimValIndex, metricValues);
+      return new DimValHolder(topNMetricVal, dimValue, dimType, dimValIndex, metricValues);
     }
   }
 }

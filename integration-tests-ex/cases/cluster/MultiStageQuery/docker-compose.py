@@ -22,5 +22,6 @@ class Template(BaseTemplate):
         self.add_property(service, 'druid.msq.intermediate.storage.enable', 'true')
         self.add_property(service, 'druid.msq.intermediate.storage.type', 'local')
         self.add_property(service, 'druid.msq.intermediate.storage.basePath', '/shared/durablestorage/')
+        self.add_property(service, 'druid.export.storage.baseDir', '/')
 
 generate(__file__, Template())

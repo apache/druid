@@ -1,0 +1,77 @@
+# testUnnestWithMultipleOrFiltersOnVariationsOfUnnestedColumns@NullHandling=sql case-crc:02630011
+# quidem testcase reason: UNNEST_DIFFERENT_RESULTSET
+!set debug true
+!set defaultTimeout 300000
+!set maxScatterGatherBytes 9223372036854775807
+!set plannerStrategy DECOUPLED
+!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
+!set sqlQueryId dummy
+!set sqlStringifyArrays false
+!set outputformat mysql
+!use druidtest:///
+SELECT d3 FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3) where strlen(d3) < 2 or d3='d' ;
++----+
+| d3 |
++----+
+|    |
+| a  |
+| b  |
+| b  |
+| c  |
+| d  |
++----+
+(6 rows)
+
+!ok
+LogicalProject(d3=[$18])
+  LogicalUnnest(unnestExpr=[MV_TO_ARRAY($3)], filter=[OR(<(STRLEN($0), 2), =($0, 'd'))])
+    LogicalProject(__time=[$0], dim1=[$1], dim2=[$2], dim3=[$3], dim4=[$4], dim5=[$5], dim6=[$6], dbl1=[$7], dbl2=[$8], f1=[$9], f2=[$10], l1=[$11], l2=[$12], cnt=[$13], m1=[$14], m2=[$15], unique_dim1=[$16], __time0=[$0])
+      LogicalTableScan(table=[[druid, numfoo]])
+
+!logicalPlan
+DruidProject(d3=[$18], druid=[logical])
+  DruidUnnest(unnestExpr=[MV_TO_ARRAY($3)], filter=[OR(<(STRLEN($0), 2), =($0, 'd'))])
+    DruidProject(__time=[$0], dim1=[$1], dim2=[$2], dim3=[$3], dim4=[$4], dim5=[$5], dim6=[$6], dbl1=[$7], dbl2=[$8], f1=[$9], f2=[$10], l1=[$11], l2=[$12], cnt=[$13], m1=[$14], m2=[$15], unique_dim1=[$16], __time0=[$0], druid=[logical])
+      DruidTableScan(table=[[druid, numfoo]], druid=[logical])
+
+!druidPlan
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "unnest",
+    "base" : {
+      "type" : "table",
+      "name" : "numfoo"
+    },
+    "virtualColumn" : {
+      "type" : "expression",
+      "name" : "j0.unnest",
+      "expression" : "mv_to_array(\"dim3\")",
+      "outputType" : "ARRAY<STRING>"
+    },
+    "unnestFilter" : {
+      "type" : "or",
+      "fields" : [ {
+        "type" : "expression",
+        "expression" : "(strlen(\"j0.unnest\") < 2)"
+      }, {
+        "type" : "equals",
+        "column" : "j0.unnest",
+        "matchValueType" : "STRING",
+        "matchValue" : "d"
+      } ]
+    }
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "resultFormat" : "compactedList",
+  "columns" : [ "j0.unnest" ],
+  "columnTypes" : [ "STRING" ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "legacy" : false
+}
+!nativePlan

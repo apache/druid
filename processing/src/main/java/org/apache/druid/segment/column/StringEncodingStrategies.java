@@ -19,12 +19,15 @@
 
 package org.apache.druid.segment.column;
 
+import com.google.common.base.Supplier;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.data.DictionaryWriter;
 import org.apache.druid.segment.data.EncodedStringDictionaryWriter;
+import org.apache.druid.segment.data.FrontCodedIndexed;
 import org.apache.druid.segment.data.FrontCodedIndexedWriter;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.GenericIndexedWriter;
@@ -33,6 +36,7 @@ import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.Iterator;
 
 public class StringEncodingStrategies
@@ -64,6 +68,39 @@ public class StringEncodingStrategies
         throw new ISE("Unknown encoding strategy: %s", encodingStrategy.getType());
       }
       return new EncodedStringDictionaryWriter(writer, encodingStrategy);
+    }
+  }
+
+  public static Supplier<? extends Indexed<ByteBuffer>> getStringDictionarySupplier(
+      SmooshedFileMapper mapper,
+      ByteBuffer stringDictionaryBuffer,
+      ByteOrder byteOrder
+  )
+  {
+    final int dictionaryStartPosition = stringDictionaryBuffer.position();
+    final byte dictionaryVersion = stringDictionaryBuffer.get();
+
+    if (dictionaryVersion == EncodedStringDictionaryWriter.VERSION) {
+      final byte encodingId = stringDictionaryBuffer.get();
+      if (encodingId == StringEncodingStrategy.FRONT_CODED_ID) {
+        return FrontCodedIndexed.read(
+            stringDictionaryBuffer,
+            byteOrder
+        );
+      } else if (encodingId == StringEncodingStrategy.UTF8_ID) {
+        // this cannot happen naturally right now since generic indexed is written in the 'legacy' format, but
+        // this provides backwards compatibility should we switch at some point in the future to always
+        // writing dictionaryVersion
+        return GenericIndexed.read(stringDictionaryBuffer, GenericIndexed.UTF8_STRATEGY, mapper)::singleThreaded;
+      } else {
+        throw new ISE("impossible, unknown encoding strategy id: %s", encodingId);
+      }
+    } else {
+      // legacy format that only supports plain utf8 enoding stored in GenericIndexed and the byte we are reading
+      // as dictionaryVersion is actually also the GenericIndexed version, so we reset start position so the
+      // GenericIndexed version can be correctly read
+      stringDictionaryBuffer.position(dictionaryStartPosition);
+      return GenericIndexed.read(stringDictionaryBuffer, GenericIndexed.UTF8_STRATEGY, mapper)::singleThreaded;
     }
   }
 

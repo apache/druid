@@ -107,7 +107,6 @@ public class StringColumnAggregationTest
         new AggregatorFactory[]{new CountAggregatorFactory("count")},
         0,
         Granularities.NONE,
-        false,
         100,
         false
     );

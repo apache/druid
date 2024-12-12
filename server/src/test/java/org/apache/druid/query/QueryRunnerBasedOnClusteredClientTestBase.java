@@ -49,7 +49,6 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.segment.generator.GeneratorSchemaInfo;
 import org.apache.druid.segment.generator.SegmentGenerator;
-import org.apache.druid.segment.join.JoinableFactoryWrapperTest;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
@@ -93,9 +92,7 @@ public abstract class QueryRunnerBasedOnClusteredClientTestBase
   private static final boolean USE_PARALLEL_MERGE_POOL_CONFIGURED = false;
 
   protected final ObjectMapper objectMapper = new DefaultObjectMapper();
-  protected final QueryToolChestWarehouse toolChestWarehouse;
-
-  private final QueryRunnerFactoryConglomerate conglomerate;
+  protected final QueryRunnerFactoryConglomerate conglomerate;
 
   protected TestHttpClient httpClient;
   protected SimpleServerView simpleServerView;
@@ -108,18 +105,8 @@ public abstract class QueryRunnerBasedOnClusteredClientTestBase
   {
     conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(
         CLOSER,
-        USE_PARALLEL_MERGE_POOL_CONFIGURED,
-        () -> TopNQueryConfig.DEFAULT_MIN_TOPN_THRESHOLD
+        TopNQueryConfig.DEFAULT_MIN_TOPN_THRESHOLD
     );
-
-    toolChestWarehouse = new QueryToolChestWarehouse()
-    {
-      @Override
-      public <T, QueryType extends Query<T>> QueryToolChest<T, QueryType> getToolChest(final QueryType query)
-      {
-        return conglomerate.findFactory(query).getToolchest();
-      }
-    };
   }
 
   @AfterClass
@@ -133,22 +120,18 @@ public abstract class QueryRunnerBasedOnClusteredClientTestBase
   {
     segmentGenerator = new SegmentGenerator();
     httpClient = new TestHttpClient(objectMapper);
-    simpleServerView = new SimpleServerView(toolChestWarehouse, objectMapper, httpClient);
+    simpleServerView = new SimpleServerView(conglomerate, objectMapper, httpClient);
     cachingClusteredClient = new CachingClusteredClient(
-        toolChestWarehouse,
+        conglomerate,
         simpleServerView,
         MapCache.create(0),
         objectMapper,
         new ForegroundCachePopulator(objectMapper, new CachePopulatorStats(), 0),
         new CacheConfig(),
         new DruidHttpClientConfig(),
-        QueryStackTests.getProcessingConfig(
-            USE_PARALLEL_MERGE_POOL_CONFIGURED,
-            DruidProcessingConfig.DEFAULT_NUM_MERGE_BUFFERS
-        ),
+        QueryStackTests.getParallelMergeConfig(USE_PARALLEL_MERGE_POOL_CONFIGURED),
         ForkJoinPool.commonPool(),
         QueryStackTests.DEFAULT_NOOP_SCHEDULER,
-        JoinableFactoryWrapperTest.NOOP_JOINABLE_FACTORY_WRAPPER,
         new NoopServiceEmitter()
     );
     servers = new ArrayList<>();

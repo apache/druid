@@ -19,19 +19,22 @@
 
 package org.apache.druid.data.input.azure;
 
+import com.azure.storage.blob.models.BlobStorageException;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterators;
-import com.microsoft.azure.storage.StorageException;
-import com.microsoft.azure.storage.blob.CloudBlob;
+import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.impl.CloudObjectInputSource;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.data.input.impl.CloudObjectSplitWidget;
 import org.apache.druid.data.input.impl.SplittableInputSource;
+import org.apache.druid.data.input.impl.systemfield.SystemField;
+import org.apache.druid.data.input.impl.systemfield.SystemFields;
+import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.storage.azure.AzureCloudBlobIterableFactory;
 import org.apache.druid.storage.azure.AzureInputDataConfig;
 import org.apache.druid.storage.azure.AzureStorage;
@@ -39,7 +42,6 @@ import org.apache.druid.storage.azure.AzureStorage;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -61,17 +63,18 @@ public class AzureInputSource extends CloudObjectInputSource
 
   @JsonCreator
   public AzureInputSource(
-      @JacksonInject AzureStorage storage,
+      @JacksonInject @Global AzureStorage storage,
       @JacksonInject AzureEntityFactory entityFactory,
       @JacksonInject AzureCloudBlobIterableFactory azureCloudBlobIterableFactory,
       @JacksonInject AzureInputDataConfig inputDataConfig,
       @JsonProperty("uris") @Nullable List<URI> uris,
       @JsonProperty("prefixes") @Nullable List<URI> prefixes,
       @JsonProperty("objects") @Nullable List<CloudObjectLocation> objects,
-      @JsonProperty("objectGlob") @Nullable String objectGlob
+      @JsonProperty("objectGlob") @Nullable String objectGlob,
+      @JsonProperty(SYSTEM_FIELDS_PROPERTY) @Nullable SystemFields systemFields
   )
   {
-    super(SCHEME, uris, prefixes, objects, objectGlob);
+    super(SCHEME, uris, prefixes, objects, objectGlob, systemFields);
     this.storage = Preconditions.checkNotNull(storage, "AzureStorage");
     this.entityFactory = Preconditions.checkNotNull(entityFactory, "AzureEntityFactory");
     this.azureCloudBlobIterableFactory = Preconditions.checkNotNull(
@@ -100,14 +103,32 @@ public class AzureInputSource extends CloudObjectInputSource
         null,
         null,
         split.get(),
-        getObjectGlob()
+        getObjectGlob(),
+        systemFields
     );
+  }
+
+  @Override
+  public Object getSystemFieldValue(InputEntity entity, SystemField field)
+  {
+    final AzureEntity googleEntity = (AzureEntity) entity;
+
+    switch (field) {
+      case URI:
+        return googleEntity.getUri().toString();
+      case BUCKET:
+        return googleEntity.getLocation().getBucket();
+      case PATH:
+        return googleEntity.getLocation().getPath();
+      default:
+        return null;
+    }
   }
 
   @Override
   protected AzureEntity createEntity(CloudObjectLocation location)
   {
-    return entityFactory.create(location);
+    return entityFactory.create(location, storage, SCHEME);
   }
 
   @Override
@@ -119,7 +140,7 @@ public class AzureInputSource extends CloudObjectInputSource
       public Iterator<LocationWithSize> getDescriptorIteratorForPrefixes(List<URI> prefixes)
       {
         return Iterators.transform(
-            azureCloudBlobIterableFactory.create(getPrefixes(), inputDataConfig.getMaxListingLength()).iterator(),
+            azureCloudBlobIterableFactory.create(getPrefixes(), inputDataConfig.getMaxListingLength(), storage).iterator(),
             blob -> {
               try {
                 return new LocationWithSize(
@@ -128,7 +149,7 @@ public class AzureInputSource extends CloudObjectInputSource
                     blob.getBlobLength()
                 );
               }
-              catch (URISyntaxException | StorageException e) {
+              catch (BlobStorageException e) {
                 throw new RuntimeException(e);
               }
             }
@@ -139,32 +160,15 @@ public class AzureInputSource extends CloudObjectInputSource
       public long getObjectSize(CloudObjectLocation location)
       {
         try {
-          final CloudBlob blobWithAttributes = storage.getBlockBlobReferenceWithAttributes(
-              location.getBucket(),
-              location.getPath()
-          );
-
-          return blobWithAttributes.getProperties().getLength();
+          return storage.getBlockBlobLength(location.getBucket(), location.getPath());
         }
-        catch (URISyntaxException | StorageException e) {
+        catch (BlobStorageException e) {
           throw new RuntimeException(e);
         }
       }
     }
 
     return new SplitWidget();
-  }
-
-  @Override
-  public int hashCode()
-  {
-    return Objects.hash(
-        super.hashCode(),
-        storage,
-        entityFactory,
-        azureCloudBlobIterableFactory,
-        inputDataConfig
-    );
   }
 
   @Override
@@ -187,6 +191,12 @@ public class AzureInputSource extends CloudObjectInputSource
   }
 
   @Override
+  public int hashCode()
+  {
+    return Objects.hash(super.hashCode(), storage, entityFactory, azureCloudBlobIterableFactory, inputDataConfig);
+  }
+
+  @Override
   public String toString()
   {
     return "AzureInputSource{" +
@@ -194,6 +204,7 @@ public class AzureInputSource extends CloudObjectInputSource
            ", prefixes=" + getPrefixes() +
            ", objects=" + getObjects() +
            ", objectGlob=" + getObjectGlob() +
+           (systemFields.getFields().isEmpty() ? "" : ", systemFields=" + systemFields) +
            '}';
   }
 }

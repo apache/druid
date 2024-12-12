@@ -109,7 +109,7 @@ public class DimFilterHavingSpec implements HavingSpec
       rowSupplier.set(row);
     }
 
-    final boolean retVal = matcher.matches();
+    final boolean retVal = matcher.matches(false);
 
     if (evalCount != oldEvalCount + 1) {
       // Oops, someone was using this from two different threads, bad caller.

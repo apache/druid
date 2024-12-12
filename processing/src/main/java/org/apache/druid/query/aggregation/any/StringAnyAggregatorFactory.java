@@ -27,13 +27,14 @@ import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
-import org.apache.druid.query.aggregation.first.StringFirstAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.first.StringFirstAggregatorFactory;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 
 import javax.annotation.Nullable;
@@ -48,13 +49,15 @@ public class StringAnyAggregatorFactory extends AggregatorFactory
 
   private final String fieldName;
   private final String name;
-  protected final int maxStringBytes;
+  private final int maxStringBytes;
+  private final boolean aggregateMultipleValues;
 
   @JsonCreator
   public StringAnyAggregatorFactory(
       @JsonProperty("name") String name,
       @JsonProperty("fieldName") final String fieldName,
-      @JsonProperty("maxStringBytes") Integer maxStringBytes
+      @JsonProperty("maxStringBytes") Integer maxStringBytes,
+      @JsonProperty("aggregateMultipleValues") @Nullable final Boolean aggregateMultipleValues
   )
   {
     Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
@@ -67,18 +70,19 @@ public class StringAnyAggregatorFactory extends AggregatorFactory
     this.maxStringBytes = maxStringBytes == null
                           ? StringFirstAggregatorFactory.DEFAULT_MAX_STRING_SIZE
                           : maxStringBytes;
+    this.aggregateMultipleValues = aggregateMultipleValues == null ? true : aggregateMultipleValues;
   }
 
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
-    return new StringAnyAggregator(metricFactory.makeColumnValueSelector(fieldName), maxStringBytes);
+    return new StringAnyAggregator(metricFactory.makeColumnValueSelector(fieldName), maxStringBytes, aggregateMultipleValues);
   }
 
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
-    return new StringAnyBufferAggregator(metricFactory.makeColumnValueSelector(fieldName), maxStringBytes);
+    return new StringAnyBufferAggregator(metricFactory.makeColumnValueSelector(fieldName), maxStringBytes, aggregateMultipleValues);
   }
 
   @Override
@@ -86,17 +90,20 @@ public class StringAnyAggregatorFactory extends AggregatorFactory
   {
     ColumnCapabilities capabilities = selectorFactory.getColumnCapabilities(fieldName);
     // null capabilities mean the column doesn't exist, so in vector engines the selector will never be multi-value
+    // canVectorize ensures that nonnull capabilities => dict-encoded string
     if (capabilities != null && capabilities.hasMultipleValues().isMaybeTrue()) {
       return new StringAnyVectorAggregator(
           null,
           selectorFactory.makeMultiValueDimensionSelector(DefaultDimensionSpec.of(fieldName)),
-          maxStringBytes
+          maxStringBytes,
+          aggregateMultipleValues
       );
     } else {
       return new StringAnyVectorAggregator(
           selectorFactory.makeSingleValueDimensionSelector(DefaultDimensionSpec.of(fieldName)),
           null,
-          maxStringBytes
+          maxStringBytes,
+          aggregateMultipleValues
       );
     }
   }
@@ -104,7 +111,9 @@ public class StringAnyAggregatorFactory extends AggregatorFactory
   @Override
   public boolean canVectorize(ColumnInspector columnInspector)
   {
-    return true;
+    final ColumnCapabilities capabilities = columnInspector.getColumnCapabilities(fieldName);
+    return capabilities == null
+           || (capabilities.is(ValueType.STRING) && capabilities.isDictionaryEncoded().isTrue());
   }
 
   @Override
@@ -122,13 +131,7 @@ public class StringAnyAggregatorFactory extends AggregatorFactory
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return new StringAnyAggregatorFactory(name, name, maxStringBytes);
-  }
-
-  @Override
-  public List<AggregatorFactory> getRequiredColumns()
-  {
-    return Collections.singletonList(new StringAnyAggregatorFactory(fieldName, fieldName, maxStringBytes));
+    return new StringAnyAggregatorFactory(name, name, maxStringBytes, aggregateMultipleValues);
   }
 
   @Override
@@ -160,6 +163,11 @@ public class StringAnyAggregatorFactory extends AggregatorFactory
   public Integer getMaxStringBytes()
   {
     return maxStringBytes;
+  }
+  @JsonProperty
+  public boolean getAggregateMultipleValues()
+  {
+    return aggregateMultipleValues;
   }
 
   @Override
@@ -198,7 +206,7 @@ public class StringAnyAggregatorFactory extends AggregatorFactory
   @Override
   public AggregatorFactory withName(String newName)
   {
-    return new StringAnyAggregatorFactory(newName, getFieldName(), getMaxStringBytes());
+    return new StringAnyAggregatorFactory(newName, getFieldName(), getMaxStringBytes(), getAggregateMultipleValues());
   }
 
   @Override

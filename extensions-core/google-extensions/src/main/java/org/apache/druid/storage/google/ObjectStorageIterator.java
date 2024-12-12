@@ -19,9 +19,6 @@
 
 package org.apache.druid.storage.google;
 
-import com.google.api.services.storage.Storage;
-import com.google.api.services.storage.model.Objects;
-import com.google.api.services.storage.model.StorageObject;
 import org.apache.druid.java.util.common.StringUtils;
 
 import java.io.IOException;
@@ -29,58 +26,45 @@ import java.net.URI;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
-public class ObjectStorageIterator implements Iterator<StorageObject>
+public class ObjectStorageIterator implements Iterator<GoogleStorageObjectMetadata>
 {
   private final GoogleStorage storage;
   private final Iterator<URI> uris;
   private final long maxListingLength;
-
-  private Storage.Objects.List listRequest;
-  private Objects results;
+  private GoogleStorageObjectPage googleStorageObjectPage;
   private URI currentUri;
   private String nextPageToken;
-  private Iterator<StorageObject> storageObjectsIterator;
-  private StorageObject currentObject;
+  private Iterator<GoogleStorageObjectMetadata> blobIterator;
+  private GoogleStorageObjectMetadata currentObject;
 
   public ObjectStorageIterator(GoogleStorage storage, Iterator<URI> uris, long maxListingLength)
   {
     this.storage = storage;
     this.uris = uris;
     this.maxListingLength = maxListingLength;
-    this.nextPageToken = null;
 
-    prepareNextRequest();
-    fetchNextBatch();
+    advanceURI();
+    fetchNextPage();
     advanceStorageObject();
   }
 
-  private void prepareNextRequest()
+
+  private void advanceURI()
+  {
+    currentUri = uris.next();
+  }
+
+  private void fetchNextPage()
   {
     try {
-      currentUri = uris.next();
       String currentBucket = currentUri.getAuthority();
       String currentPrefix = StringUtils.maybeRemoveLeadingSlash(currentUri.getPath());
-      nextPageToken = null;
-      listRequest = storage.list(currentBucket)
-                           .setPrefix(currentPrefix)
-                           .setMaxResults(maxListingLength);
-
+      googleStorageObjectPage = storage.list(currentBucket, currentPrefix, maxListingLength, nextPageToken);
+      blobIterator = googleStorageObjectPage.getObjectList().iterator();
+      nextPageToken = googleStorageObjectPage.getNextPageToken();
     }
     catch (IOException io) {
       throw new RuntimeException(io);
-    }
-  }
-
-  private void fetchNextBatch()
-  {
-    try {
-      listRequest.setPageToken(nextPageToken);
-      results = GoogleUtils.retryGoogleCloudStorageOperation(() -> listRequest.execute());
-      storageObjectsIterator = results.getItems().iterator();
-      nextPageToken = results.getNextPageToken();
-    }
-    catch (Exception ex) {
-      throw new RuntimeException(ex);
     }
   }
 
@@ -91,35 +75,35 @@ public class ObjectStorageIterator implements Iterator<StorageObject>
   }
 
   @Override
-  public StorageObject next()
+  public GoogleStorageObjectMetadata next()
   {
     if (!hasNext()) {
       throw new NoSuchElementException();
     }
 
-    final StorageObject retVal = currentObject;
+    final GoogleStorageObjectMetadata retVal = currentObject;
     advanceStorageObject();
     return retVal;
   }
 
   private void advanceStorageObject()
   {
-    while (storageObjectsIterator.hasNext() || nextPageToken != null || uris.hasNext()) {
-      while (storageObjectsIterator.hasNext()) {
-        final StorageObject next = storageObjectsIterator.next();
+    while (blobIterator.hasNext() || nextPageToken != null || uris.hasNext()) {
+      while (blobIterator.hasNext()) {
+        final GoogleStorageObjectMetadata next = blobIterator.next();
         // list with prefix can return directories, but they should always end with `/`, ignore them.
         // also skips empty objects.
-        if (!next.getName().endsWith("/") && next.getSize().signum() > 0) {
+        if (!next.getName().endsWith("/") && Long.signum(next.getSize()) > 0) {
           currentObject = next;
           return;
         }
       }
 
       if (nextPageToken != null) {
-        fetchNextBatch();
+        fetchNextPage();
       } else if (uris.hasNext()) {
-        prepareNextRequest();
-        fetchNextBatch();
+        advanceURI();
+        fetchNextPage();
       }
     }
 

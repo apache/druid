@@ -37,7 +37,8 @@ RUN pip install requests \
     pip install seaborn \
     pip install bokeh \
     pip install kafka-python \
-    pip install sortedcontainers 
+    pip install sortedcontainers \
+    pip install tqdm
 
 # Install druidapi client from apache/druid
 # Local install requires sudo privileges 
@@ -46,21 +47,10 @@ ADD druidapi /home/jovyan/druidapi
 WORKDIR /home/jovyan/druidapi
 RUN pip install .
 
-
-
-# WIP -- install DruidDataDriver as a package
-# Import data generator and configuration file
-# Change permissions to allow import (requires sudo privileges)
-
 # The Jupyter notebooks themselves are mounted into the image's /home/jovyan/notebooks
 # path when running this image.
 RUN mkdir -p /home/jovyan/notebooks
 
 WORKDIR /home/jovyan/notebooks
 USER jovyan
-
-
-
-# Add location of the data generator to PYTHONPATH
-ENV PYTHONPATH "${PYTHONPATH}:/home/jovyan/notebooks/02-ingestion"
 

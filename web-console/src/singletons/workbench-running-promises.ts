@@ -16,35 +16,29 @@
  * limitations under the License.
  */
 
-import type { QueryResult } from '@druid-toolkit/query';
+import type { Execution } from '../druid-models';
 
 export interface WorkbenchRunningPromise {
-  promise: Promise<QueryResult>;
-  sqlPrefixLines: number | undefined;
+  executionPromise: Promise<Execution>;
+  startTime: Date;
 }
 
 export class WorkbenchRunningPromises {
-  private static readonly promises: Record<string, WorkbenchRunningPromise> = {};
+  private static readonly promises = new Map<string, WorkbenchRunningPromise>();
 
   static isWorkbenchRunningPromise(x: any): x is WorkbenchRunningPromise {
-    return Boolean(x.promise);
+    return Boolean(x.executionPromise);
   }
 
   static storePromise(id: string, promise: WorkbenchRunningPromise): void {
-    WorkbenchRunningPromises.promises[id] = promise;
+    WorkbenchRunningPromises.promises.set(id, promise);
   }
 
   static getPromise(id: string): WorkbenchRunningPromise | undefined {
-    return WorkbenchRunningPromises.promises[id];
+    return WorkbenchRunningPromises.promises.get(id);
   }
 
   static deletePromise(id: string): void {
-    delete WorkbenchRunningPromises.promises[id];
-  }
-
-  static deletePromises(ids: string[]): void {
-    for (const id of ids) {
-      delete WorkbenchRunningPromises.promises[id];
-    }
+    WorkbenchRunningPromises.promises.delete(id);
   }
 }

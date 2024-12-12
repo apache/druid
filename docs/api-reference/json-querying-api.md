@@ -3,8 +3,12 @@ id: json-querying-api
 title: JSON querying API
 sidebar_label: JSON querying
 ---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
 
 <!--
+
   ~ Licensed to the Apache Software Foundation (ASF) under one
   ~ or more contributor license agreements.  See the NOTICE file
   ~ distributed with this work for additional information
@@ -33,14 +37,14 @@ In this topic, `http://SERVICE_IP:SERVICE_PORT` is a placeholder for the server 
 Submits a JSON-based native query. The body of the request is the native query itself.
 
 Druid supports different types of queries for different use cases. All queries require the following properties:
-* `queryType`: A string representing the type of query. Druid supports the following native query types: `timeseries`, `topN`, `groupBy`, `timeBoundaries`, `segmentMetadata`, `datasourceMetadata`, `scan`, and `search`. 
+* `queryType`: A string representing the type of query. Druid supports the following native query types: `timeseries`, `topN`, `groupBy`, `timeBoundaries`, `segmentMetadata`, `datasourceMetadata`, `scan`, and `search`.
 * `dataSource`: A string or object defining the source of data to query. The most common value is the name of the datasource to query. For more information, see [Datasources](../querying/datasource.md).
 
 For additional properties based on your query type or use case, see [available native queries](../querying/querying.md#available-queries).
 
 ### URL
 
-<code class="postAPI">POST</code> <code>/druid/v2/</code>
+`POST` `/druid/v2`
 
 ### Query parameters
 
@@ -49,13 +53,16 @@ For additional properties based on your query type or use case, see [available n
 
 ### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="1" label="200 SUCCESS">
 
-*Successfully submitted query* 
 
-<!--400 BAD REQUEST-->
+*Successfully submitted query*
+
+</TabItem>
+<TabItem value="2" label="400 BAD REQUEST">
+
 
 *Error thrown due to bad query. Returns a JSON object detailing the error with the following format:*
 
@@ -69,17 +76,19 @@ For additional properties based on your query type or use case, see [available n
 ```
 For more information on possible error messages, see [query execution failures](../querying/querying.md#query-execution-failures).
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 ---
 
 ### Example query: `topN`
 
-The following example shows a `topN` query. The query analyzes the `social_media` datasource to return the top five users from the `username` dimension with the highest number of views from the `views` metric. 
+The following example shows a `topN` query. The query analyzes the `social_media` datasource to return the top five users from the `username` dimension with the highest number of views from the `views` metric.
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="3" label="cURL">
+
 
 ```shell
 curl "http://ROUTER_IP:ROUTER_PORT/druid/v2?pretty=null" \
@@ -103,7 +112,9 @@ curl "http://ROUTER_IP:ROUTER_PORT/druid/v2?pretty=null" \
   ]
 }'
 ```
-<!--HTTP-->
+</TabItem>
+<TabItem value="4" label="HTTP">
+
 
 ```HTTP
 POST /druid/v2?pretty=null HTTP/1.1
@@ -131,12 +142,13 @@ Content-Length: 336
 }
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Example response: `topN`
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
 [
@@ -179,9 +191,10 @@ In this query:
 * The `upvoteToPostRatio` is a post-aggregation of the `upvoteSum` and the `postCount`, divided to calculate the ratio.
 * The result is sorted based on the `upvoteToPostRatio` in descending order.
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="5" label="cURL">
+
 
 ```shell
 curl "http://ROUTER_IP:ROUTER_PORT/druid/v2" \
@@ -217,7 +230,9 @@ curl "http://ROUTER_IP:ROUTER_PORT/druid/v2" \
 }'
 ```
 
-<!--HTTP-->
+</TabItem>
+
+<TabItem value="6" label="HTTP">
 
 ```HTTP
 POST /druid/v2?pretty=null HTTP/1.1
@@ -256,12 +271,14 @@ Content-Length: 817
 }
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Example response: `groupBy`
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
+
 ```json
 [
     {
@@ -280,25 +297,29 @@ Content-Length: 817
 
 ## Get segment information for query
 
-Retrieves an array that contains objects with segment information, including the server locations associated with the query provided in the request body. 
+Retrieves an array that contains objects with segment information, including the server locations associated with the query provided in the request body.
 
 ### URL
 
-<code class="postAPI">POST</code> <code>/druid/v2/candidates/</code>
+`POST` `/druid/v2/candidates`
 
 ### Query parameters
+
 * `pretty` (optional)
   *  Druid returns the response in a pretty-printed format using indentation and line breaks.
 
 ### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="7" label="200 SUCCESS">
 
-*Successfully retrieved segment information* 
 
-<!--400 BAD REQUEST-->
+*Successfully retrieved segment information*
+
+</TabItem>
+<TabItem value="8" label="400 BAD REQUEST">
+
 
 *Error thrown due to bad query. Returns a JSON object detailing the error with the following format:*
 
@@ -310,17 +331,20 @@ Retrieves an array that contains objects with segment information, including the
     "host": "The host on which the error occurred."
 }
 ```
+
 For more information on possible error messages, see [query execution failures](../querying/querying.md#query-execution-failures).
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 ---
 
 ### Sample request
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="9" label="cURL">
+
 
 ```shell
 curl "http://ROUTER_IP:ROUTER_PORT/druid/v2/candidates" \
@@ -345,7 +369,9 @@ curl "http://ROUTER_IP:ROUTER_PORT/druid/v2/candidates" \
 }'
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="10" label="HTTP">
+
 
 ```HTTP
 POST /druid/v2/candidates HTTP/1.1
@@ -374,12 +400,13 @@ Content-Length: 336
 }
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 ### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
 [

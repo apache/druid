@@ -20,6 +20,7 @@
 package org.apache.druid.java.util.common;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -39,17 +40,17 @@ public final class Intervals
 
   public static Interval of(String interval)
   {
-    return new Interval(interval, ISOChronology.getInstanceUTC());
+    try {
+      return new Interval(interval, ISOChronology.getInstanceUTC());
+    }
+    catch (IllegalArgumentException e) {
+      throw InvalidInput.exception(e, "Invalid interval[%s]: [%s]", interval, e.getMessage());
+    }
   }
 
   public static Interval of(String format, Object... formatArgs)
   {
     return of(StringUtils.format(format, formatArgs));
-  }
-
-  public static boolean isEmpty(Interval interval)
-  {
-    return interval.getStart().equals(interval.getEnd());
   }
 
   /**

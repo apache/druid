@@ -25,9 +25,10 @@ import com.google.inject.Provides;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.annotations.LoadScope;
-import org.apache.druid.guice.annotations.MSQ;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.metadata.input.InputSourceModule;
+import org.apache.druid.msq.indexing.destination.MSQTerminalStageSpecFactory;
+import org.apache.druid.msq.indexing.destination.SegmentGenerationTerminalStageSpecFactory;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.SqlToolbox;
@@ -55,6 +56,8 @@ public class MSQSqlModule implements DruidModule
     // We want this module to bring InputSourceModule along for the ride.
     binder.install(new InputSourceModule());
 
+    binder.bind(MSQTerminalStageSpecFactory.class).to(SegmentGenerationTerminalStageSpecFactory.class).in(LazySingleton.class);
+
     binder.bind(MSQTaskSqlEngine.class).in(LazySingleton.class);
 
     // Set up the EXTERN macro.
@@ -62,11 +65,11 @@ public class MSQSqlModule implements DruidModule
   }
 
   @Provides
-  @MSQ
+  @MultiStageQuery
   @LazySingleton
   public SqlStatementFactory makeMSQSqlStatementFactory(
       final MSQTaskSqlEngine engine,
-      SqlToolbox toolbox
+      final SqlToolbox toolbox
   )
   {
     return new SqlStatementFactory(toolbox.withEngine(engine));

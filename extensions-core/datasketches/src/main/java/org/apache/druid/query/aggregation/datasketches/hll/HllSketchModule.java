@@ -35,6 +35,7 @@ import org.apache.druid.query.aggregation.datasketches.hll.sql.HllSketchEstimate
 import org.apache.druid.query.aggregation.datasketches.hll.sql.HllSketchObjectSqlAggregator;
 import org.apache.druid.query.aggregation.datasketches.hll.sql.HllSketchSetUnionOperatorConversion;
 import org.apache.druid.query.aggregation.datasketches.hll.sql.HllSketchToStringOperatorConversion;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.sql.guice.SqlBindings;
 
@@ -48,6 +49,7 @@ import java.util.List;
 public class HllSketchModule implements DruidModule
 {
   public static final String TYPE_NAME = "HLLSketch"; // common type name to be associated with segment data
+  public static final ColumnType TYPE = ColumnType.ofComplex(TYPE_NAME);
   public static final String BUILD_TYPE_NAME = "HLLSketchBuild";
   public static final String MERGE_TYPE_NAME = "HLLSketchMerge";
   public static final String TO_STRING_TYPE_NAME = "HLLSketchToString";

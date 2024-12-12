@@ -21,24 +21,33 @@ package org.apache.druid.server.metrics;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
+import org.apache.druid.collections.BlockingPool;
+import org.apache.druid.guice.annotations.Merging;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.AbstractMonitor;
 import org.apache.druid.java.util.metrics.KeyedDiff;
 
+import java.nio.ByteBuffer;
 import java.util.Map;
 
 public class QueryCountStatsMonitor extends AbstractMonitor
 {
   private final KeyedDiff keyedDiff = new KeyedDiff();
   private final QueryCountStatsProvider statsProvider;
+  private final BlockingPool<ByteBuffer> mergeBufferPool;
+  private final boolean emitMergeBufferPendingRequests;
 
   @Inject
   public QueryCountStatsMonitor(
-      QueryCountStatsProvider statsProvider
+      QueryCountStatsProvider statsProvider,
+      MonitorsConfig monitorsConfig,
+      @Merging BlockingPool<ByteBuffer> mergeBufferPool
   )
   {
     this.statsProvider = statsProvider;
+    this.mergeBufferPool = mergeBufferPool;
+    this.emitMergeBufferPendingRequests = !monitorsConfig.getMonitors().contains(GroupByStatsMonitor.class);
   }
 
   @Override
@@ -62,10 +71,15 @@ public class QueryCountStatsMonitor extends AbstractMonitor
     );
     if (diff != null) {
       for (Map.Entry<String, Long> diffEntry : diff.entrySet()) {
-        emitter.emit(builder.build(diffEntry.getKey(), diffEntry.getValue()));
+        emitter.emit(builder.setMetric(diffEntry.getKey(), diffEntry.getValue()));
       }
     }
+
+    if (emitMergeBufferPendingRequests) {
+      long pendingQueries = this.mergeBufferPool.getPendingRequests();
+      emitter.emit(builder.setMetric("mergeBuffer/pendingRequests", pendingQueries));
+    }
+
     return true;
   }
-
 }

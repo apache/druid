@@ -24,11 +24,11 @@ import it.unimi.dsi.fastutil.longs.Long2IntMap;
 import it.unimi.dsi.fastutil.longs.Long2IntOpenHashMap;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 import it.unimi.dsi.fastutil.longs.LongList;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
 import javax.annotation.Nullable;
-
 import java.io.IOException;
 import java.nio.ByteOrder;
 import java.nio.channels.WritableByteChannel;
@@ -45,6 +45,7 @@ public class IntermediateColumnarLongsSerializer implements ColumnarLongsSeriali
   private final String filenameBase;
   private final ByteOrder order;
   private final CompressionStrategy compression;
+  private final Closer closer;
 
   private int numInserted = 0;
 
@@ -64,7 +65,8 @@ public class IntermediateColumnarLongsSerializer implements ColumnarLongsSeriali
       SegmentWriteOutMedium segmentWriteOutMedium,
       String filenameBase,
       ByteOrder order,
-      CompressionStrategy compression
+      CompressionStrategy compression,
+      Closer closer
   )
   {
     this.columnName = columnName;
@@ -72,6 +74,7 @@ public class IntermediateColumnarLongsSerializer implements ColumnarLongsSeriali
     this.filenameBase = filenameBase;
     this.order = order;
     this.compression = compression;
+    this.closer = closer;
   }
 
   @Override
@@ -141,7 +144,8 @@ public class IntermediateColumnarLongsSerializer implements ColumnarLongsSeriali
           filenameBase,
           order,
           writer,
-          compression
+          compression,
+          closer
       );
     }
 

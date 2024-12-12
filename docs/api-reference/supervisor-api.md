@@ -3,6 +3,8 @@ id: supervisor-api
 title: Supervisor API
 sidebar_label: Supervisors
 ---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
 <!--
   ~ Licensed to the Apache Software Foundation (ASF) under one
@@ -24,6 +26,7 @@ sidebar_label: Supervisors
   -->
 
 This topic describes the API endpoints to manage and monitor supervisors for Apache Druid.
+The topic uses the Apache Kafka term offset to refer to the identifier for records in a partition. If you are using Amazon Kinesis, the equivalent is sequence number.
 
 In this topic, `http://ROUTER_IP:ROUTER_PORT` is a placeholder for your Router service address and port. Replace it with the information for your deployment. For example, use `http://localhost:8888` for quickstart deployments.
 
@@ -34,8 +37,8 @@ The following table lists the properties of a supervisor object:
 |Property|Type|Description|
 |---|---|---|
 |`id`|String|Unique identifier.|
-|`state`|String|Generic state of the supervisor. Available states:`UNHEALTHY_SUPERVISOR`, `UNHEALTHY_TASKS`, `PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`. See [Apache Kafka operations](../development/extensions-core/kafka-supervisor-operations.md) for details.|
-|`detailedState`|String|Detailed state of the supervisor. This property contains a more descriptive, implementation-specific state that may provide more insight into the supervisor's activities than the `state` property. See [Apache Kafka ingestion](../development/extensions-core/kafka-ingestion.md) and [Amazon Kinesis ingestion](../development/extensions-core/kinesis-ingestion.md) for supervisor-specific states.|
+|`state`|String|Generic state of the supervisor. Available states:`UNHEALTHY_SUPERVISOR`, `UNHEALTHY_TASKS`, `PENDING`, `RUNNING`, `SUSPENDED`, `STOPPING`. See [Supervisor reference](../ingestion/supervisor.md#status-report) for more information.|
+|`detailedState`|String|Detailed state of the supervisor. This property contains a more descriptive, implementation-specific state that may provide more insight into the supervisor's activities than the `state` property. See [Apache Kafka ingestion](../ingestion/kafka-ingestion.md) and [Amazon Kinesis ingestion](../ingestion/kinesis-ingestion.md) for supervisor-specific states.|
 |`healthy`|Boolean|Supervisor health indicator.|
 |`spec`|Object|Container object for the supervisor configuration.|
 |`suspended`|Boolean|Indicates whether the supervisor is in a suspended state.|
@@ -46,44 +49,50 @@ Returns an array of strings representing the names of active supervisors. If the
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/indexer/v1/supervisor</code>
+`GET` `/druid/indexer/v1/supervisor`
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="1" label="200 SUCCESS">
 
-*Successfully retrieved array of active supervisor IDs* 
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+*Successfully retrieved array of active supervisor IDs*
+
+</TabItem>
+</Tabs>
 
 ---
 
 #### Sample request
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="2" label="cURL">
+
 
 ```shell
 curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor"
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="3" label="HTTP">
+
 
 ```HTTP
 GET /druid/indexer/v1/supervisor HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
-  
+  <summary>View the response</summary>
+
   ```json
   [
     "wikipedia_stream",
@@ -98,44 +107,50 @@ Retrieves an array of active supervisor objects. If there are no active supervis
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/indexer/v1/supervisor?full</code>
+`GET` `/druid/indexer/v1/supervisor?full`
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="4" label="200 SUCCESS">
 
-*Successfully retrieved supervisor objects* 
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+*Successfully retrieved supervisor objects*
+
+</TabItem>
+</Tabs>
 
 ---
 
 #### Sample request
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="5" label="cURL">
+
 
 ```shell
 curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor?full=null"
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="6" label="HTTP">
+
 
 ```HTTP
 GET /druid/indexer/v1/supervisor?full=null HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
-  
+  <summary>View the response</summary>
+
   ```json
   [
     {
@@ -216,10 +231,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
                 "ioConfig": {
                     "topic": "social_media",
                     "inputFormat": {
-                        "type": "json",
-                        "keepNullColumns": false,
-                        "assumeNewlineDelimited": false,
-                        "useJsonNodeReader": false
+                        "type": "json"
                     },
                     "replicas": 1,
                     "taskCount": 1,
@@ -414,10 +426,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
             "ioConfig": {
                 "topic": "social_media",
                 "inputFormat": {
-                    "type": "json",
-                    "keepNullColumns": false,
-                    "assumeNewlineDelimited": false,
-                    "useJsonNodeReader": false
+                    "type": "json"
                 },
                 "replicas": 1,
                 "taskCount": 1,
@@ -522,10 +531,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
                 "ioConfig": {
                     "topic": "social_media",
                     "inputFormat": {
-                        "type": "json",
-                        "keepNullColumns": false,
-                        "assumeNewlineDelimited": false,
-                        "useJsonNodeReader": false
+                        "type": "json"
                     },
                     "replicas": 1,
                     "taskCount": 1,
@@ -720,10 +726,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
             "ioConfig": {
                 "topic": "social_media",
                 "inputFormat": {
-                    "type": "json",
-                    "keepNullColumns": false,
-                    "assumeNewlineDelimited": false,
-                    "useJsonNodeReader": false
+                    "type": "json"
                 },
                 "replicas": 1,
                 "taskCount": 1,
@@ -760,44 +763,50 @@ Retrieves an array of objects representing active supervisors and their current 
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/indexer/v1/supervisor?state=true</code>
+`GET` `/druid/indexer/v1/supervisor?state=true`
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="7" label="200 SUCCESS">
 
-*Successfully retrieved supervisor state objects*  
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+*Successfully retrieved supervisor state objects*
+
+</TabItem>
+</Tabs>
 
 ---
 
 #### Sample request
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="8" label="cURL">
+
 
 ```shell
 curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor?state=true"
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="9" label="HTTP">
+
 
 ```HTTP
 GET /druid/indexer/v1/supervisor?state=true HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
-  
+  <summary>View the response</summary>
+
   ```json
   [
     {
@@ -825,21 +834,25 @@ Retrieves the specification for a single supervisor. The returned specification 
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/indexer/v1/supervisor/:supervisorId</code>
+`GET` `/druid/indexer/v1/supervisor/{supervisorId}`
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="10" label="200 SUCCESS">
 
-*Successfully retrieved supervisor spec* 
 
-<!--404 NOT FOUND-->
+*Successfully retrieved supervisor spec*
 
-*Invalid supervisor ID* 
+</TabItem>
+<TabItem value="11" label="404 NOT FOUND">
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+
+*Invalid supervisor ID*
+
+</TabItem>
+</Tabs>
 
 ---
 
@@ -847,28 +860,32 @@ Retrieves the specification for a single supervisor. The returned specification 
 
 The following example shows how to retrieve the specification of a supervisor with the name `wikipedia_stream`.
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="12" label="cURL">
+
 
 ```shell
 curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor/wikipedia_stream"
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="13" label="HTTP">
+
 
 ```HTTP
 GET /druid/indexer/v1/supervisor/wikipedia_stream HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
 {
@@ -944,10 +961,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
         "ioConfig": {
             "topic": "social_media",
             "inputFormat": {
-                "type": "json",
-                "keepNullColumns": false,
-                "assumeNewlineDelimited": false,
-                "useJsonNodeReader": false
+                "type": "json"
             },
             "replicas": 1,
             "taskCount": 1,
@@ -1142,10 +1156,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
     "ioConfig": {
         "topic": "social_media",
         "inputFormat": {
-            "type": "json",
-            "keepNullColumns": false,
-            "assumeNewlineDelimited": false,
-            "useJsonNodeReader": false
+            "type": "json"
         },
         "replicas": 1,
         "taskCount": 1,
@@ -1177,27 +1188,29 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 Retrieves the current status report for a single supervisor. The report contains the state of the supervisor tasks and an array of recently thrown exceptions.
 
-For additional information about the status report, see the topic for each streaming ingestion methods:
-* [Amazon Kinesis](../development/extensions-core/kinesis-ingestion.md#get-supervisor-status-report)
-* [Apache Kafka](../development/extensions-core/kafka-supervisor-operations.md#getting-supervisor-status-report)
+For additional information about the status report, see [Supervisor reference](../ingestion/supervisor.md#status-report).
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/indexer/v1/supervisor/:supervisorId/status</code>
+`GET` `/druid/indexer/v1/supervisor/{supervisorId}/status`
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="14" label="200 SUCCESS">
 
-*Successfully retrieved supervisor status* 
 
-<!--404 NOT FOUND-->
+*Successfully retrieved supervisor status*
 
-*Invalid supervisor ID* 
+</TabItem>
+<TabItem value="15" label="404 NOT FOUND">
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+
+*Invalid supervisor ID*
+
+</TabItem>
+</Tabs>
 
 ---
 
@@ -1205,27 +1218,31 @@ For additional information about the status report, see the topic for each strea
 
 The following example shows how to retrieve the status of a supervisor with the name `social_media`.
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="16" label="cURL">
+
 
 ```shell
 curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor/social_media/status"
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="17" label="HTTP">
+
 
 ```HTTP
 GET /druid/indexer/v1/supervisor/social_media/status HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
   {
@@ -1273,53 +1290,230 @@ Host: http://ROUTER_IP:ROUTER_PORT
   ```
 </details>
 
+### Get supervisor health
+
+Retrieves the current health report for a single supervisor. The health of a supervisor is determined by the supervisor's `state` (as returned by the `/status` endpoint) and the `druid.supervisor.*` Overlord configuration thresholds.
+
+#### URL
+
+`GET` `/druid/indexer/v1/supervisor/{supervisorId}/health`
+
+#### Responses
+
+<Tabs>
+
+<TabItem value="18" label="200 SUCCESS">
+
+*Supervisor is healthy*
+
+</TabItem>
+
+<TabItem value="19" label="404 NOT FOUND">
+
+*Invalid supervisor ID*
+
+</TabItem>
+
+<TabItem value="20" label="503 SERVICE UNAVAILABLE">
+
+*Supervisor is unhealthy*
+
+</TabItem>
+
+</Tabs>
+
+---
+
+#### Sample request
+
+The following example shows how to retrieve the health report for a supervisor with the name `social_media`.
+
+<Tabs>
+
+<TabItem value="21" label="cURL">
+
+```shell
+curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor/social_media/health"
+```
+</TabItem>
+
+<TabItem value="22" label="HTTP">
+
+```HTTP
+GET /druid/indexer/v1/supervisor/social_media/health HTTP/1.1
+Host: http://ROUTER_IP:ROUTER_PORT
+```
+</TabItem>
+
+</Tabs>
+
+#### Sample response
+
+<details>
+  <summary>View the response</summary>
+
+  ```json
+  {
+    "healthy": false
+  }
+  ```
+</details>
+
+### Get supervisor ingestion stats
+
+Returns a snapshot of the current ingestion row counters for each task being managed by the supervisor, along with moving averages for the row counters. See [Row stats](../ingestion/tasks.md#row-stats) for more information.
+
+#### URL
+
+`GET` `/druid/indexer/v1/supervisor/{supervisorId}/stats`
+
+#### Responses
+
+<Tabs>
+
+<TabItem value="23" label="200 SUCCESS">
+
+*Successfully retrieved supervisor stats*
+
+</TabItem>
+
+<TabItem value="24" label="404 NOT FOUND">
+
+*Invalid supervisor ID*
+
+</TabItem>
+
+</Tabs>
+
+---
+
+#### Sample request
+
+The following example shows how to retrieve the current ingestion row counters for a supervisor with the name `custom_data`.
+
+<Tabs>
+
+<TabItem value="25" label="cURL">
+
+
+```shell
+curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor/custom_data/stats"
+```
+
+</TabItem>
+<TabItem value="26" label="HTTP">
+
+
+```HTTP
+GET /druid/indexer/v1/supervisor/custom_data/stats HTTP/1.1
+Host: http://ROUTER_IP:ROUTER_PORT
+```
+
+</TabItem>
+</Tabs>
+
+#### Sample response
+
+<details>
+  <summary>View the response</summary>
+
+  ```json
+  {
+    "0": {
+        "index_kafka_custom_data_881d621078f6b7c_ccplchbi": {
+            "movingAverages": {
+                "buildSegments": {
+                    "5m": {
+                        "processed": 53.401225142603316,
+                        "processedBytes": 5226.400757148808,
+                        "unparseable": 0.0,
+                        "thrownAway": 0.0,
+                        "processedWithError": 0.0
+                    },
+                    "15m": {
+                        "processed": 56.92994990102502,
+                        "processedBytes": 5571.772059828217,
+                        "unparseable": 0.0,
+                        "thrownAway": 0.0,
+                        "processedWithError": 0.0
+                    },
+                    "1m": {
+                        "processed": 37.134921285556636,
+                        "processedBytes": 3634.2766230628677,
+                        "unparseable": 0.0,
+                        "thrownAway": 0.0,
+                        "processedWithError": 0.0
+                    }
+                }
+            },
+            "totals": {
+                "buildSegments": {
+                    "processed": 665,
+                    "processedBytes": 65079,
+                    "processedWithError": 0,
+                    "thrownAway": 0,
+                    "unparseable": 0
+                    }
+                }
+            }
+        }
+    }
+  ```
+</details>
+
 ## Audit history
 
 An audit history provides a comprehensive log of events, including supervisor configuration, creation, suspension, and modification history.
 
 ### Get audit history for all supervisors
 
-Retrieve an audit history of specs for all supervisors.
+Retrieves an audit history of specs for all supervisors.
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/indexer/v1/supervisor/history</code>
+`GET` `/druid/indexer/v1/supervisor/history`
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="27" label="200 SUCCESS">
 
-*Successfully retrieved audit history* 
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+*Successfully retrieved audit history*
+
+</TabItem>
+</Tabs>
 
 ---
 
 #### Sample request
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="28" label="cURL">
+
 
 ```shell
 curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor/history"
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="29" label="HTTP">
+
 
 ```HTTP
 GET /druid/indexer/v1/supervisor/history HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
 {
@@ -1398,10 +1592,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
                     "ioConfig": {
                         "topic": "social_media",
                         "inputFormat": {
-                            "type": "json",
-                            "keepNullColumns": false,
-                            "assumeNewlineDelimited": false,
-                            "useJsonNodeReader": false
+                            "type": "json"
                         },
                         "replicas": 1,
                         "taskCount": 1,
@@ -1596,10 +1787,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
                 "ioConfig": {
                     "topic": "social_media",
                     "inputFormat": {
-                        "type": "json",
-                        "keepNullColumns": false,
-                        "assumeNewlineDelimited": false,
-                        "useJsonNodeReader": false
+                        "type": "json"
                     },
                     "replicas": 1,
                     "taskCount": 1,
@@ -1637,22 +1825,26 @@ Retrieves an audit history of specs for a single supervisor.
 
 #### URL
 
-<code class="getAPI">GET</code> <code>/druid/indexer/v1/supervisor/:supervisorId/history</code>
+`GET` `/druid/indexer/v1/supervisor/{supervisorId}/history`
 
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="30" label="200 SUCCESS">
 
-*Successfully retrieved supervisor audit history* 
 
-<!--404 NOT FOUND-->
+*Successfully retrieved supervisor audit history*
 
-*Invalid supervisor ID* 
+</TabItem>
+<TabItem value="31" label="404 NOT FOUND">
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+
+*Invalid supervisor ID*
+
+</TabItem>
+</Tabs>
 
 ---
 
@@ -1660,27 +1852,31 @@ Retrieves an audit history of specs for a single supervisor.
 
 The following example shows how to retrieve the audit history of a supervisor with the name `wikipedia_stream`.
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="23" label="cURL">
+
 
 ```shell
 curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor/wikipedia_stream/history"
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="32" label="HTTP">
+
 
 ```HTTP
 GET /druid/indexer/v1/supervisor/wikipedia_stream/history HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
 [
@@ -1758,10 +1954,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
                 "ioConfig": {
                     "topic": "social_media",
                     "inputFormat": {
-                        "type": "json",
-                        "keepNullColumns": false,
-                        "assumeNewlineDelimited": false,
-                        "useJsonNodeReader": false
+                        "type": "json"
                     },
                     "replicas": 1,
                     "taskCount": 1,
@@ -1956,10 +2149,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
             "ioConfig": {
                 "topic": "social_media",
                 "inputFormat": {
-                    "type": "json",
-                    "keepNullColumns": false,
-                    "assumeNewlineDelimited": false,
-                    "useJsonNodeReader": false
+                    "type": "json"
                 },
                 "replicas": 1,
                 "taskCount": 1,
@@ -1994,39 +2184,54 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 ### Create or update a supervisor
 
-Creates a new supervisor or updates an existing one for the same datasource with a new schema and configuration. 
+Creates a new supervisor spec or updates an existing one with new configuration and schema information. When updating a supervisor spec, the datasource must remain the same as the previous supervisor.
 
-You can define a supervisor spec for [Apache Kafka](../development/extensions-core/kafka-ingestion.md#define-a-supervisor-spec) or [Amazon Kinesis](../development/extensions-core/kinesis-ingestion.md#supervisor-spec) streaming ingestion methods. Once created, the supervisor persists in the metadata database.
+You can define a supervisor spec for [Apache Kafka](../ingestion/kafka-ingestion.md) or [Amazon Kinesis](../ingestion/kinesis-ingestion.md) streaming ingestion methods.
 
-When you call this endpoint on an existing supervisor for the same datasource, the running supervisor signals its tasks to stop reading and begin publishing, exiting itself. Druid then uses the provided configuration from the request body to create a new supervisor. Druid submits a new schema while retaining existing publishing tasks and starts new tasks at the previous task offsets.
+The following table lists the properties of a supervisor spec:
+
+|Property|Type|Description|Required|
+|--------|----|-----------|--------|
+|`type`|String|The supervisor type. One of`kafka` or `kinesis`.|Yes|
+|`spec`|Object|The container object for the supervisor configuration.|Yes|
+|`ioConfig`|Object|The I/O configuration object to define the connection and I/O-related settings for the supervisor and indexing task.|Yes|
+|`dataSchema`|Object|The schema for the indexing task to use during ingestion. See [`dataSchema`](../ingestion/ingestion-spec.md#dataschema) for more information.|Yes|
+|`tuningConfig`|Object|The tuning configuration object to define performance-related settings for the supervisor and indexing tasks.|No|
+
+When you call this endpoint on an existing supervisor, the running supervisor signals its tasks to stop reading and begin publishing, exiting itself. Druid then uses the provided configuration from the request body to create a new supervisor. Druid submits a new schema while retaining existing publishing tasks and starts new tasks at the previous task offsets.
+This way, you can apply configuration changes without a pause in ingestion.
 
 #### URL
 
-<code class="postAPI">POST</code> <code>/druid/indexer/v1/supervisor</code>
+`POST` `/druid/indexer/v1/supervisor`
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="33" label="200 SUCCESS">
 
-*Successfully created a new supervisor or updated an existing supervisor* 
 
-<!--415 UNSUPPORTED MEDIA TYPE-->
+*Successfully created a new supervisor or updated an existing supervisor*
 
-*Request body content type is not in JSON format* 
+</TabItem>
+<TabItem value="34" label="415 UNSUPPORTED MEDIA TYPE">
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+
+*Request body content type is not in JSON format*
+
+</TabItem>
+</Tabs>
 
 ---
 
 #### Sample request
 
-The following example uses JSON input format to create a supervisor spec for Kafka with a `social_media` datasource and `social_media` topic. 
+The following example uses JSON input format to create a supervisor spec for Kafka with a `social_media` datasource and `social_media` topic.
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="35" label="cURL">
 
 ```shell
 curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor" \
@@ -2083,7 +2288,9 @@ curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor" \
 }'
 ```
 
-<!--HTTP-->
+</TabItem>
+
+<TabItem value="36" label="HTTP">
 
 ```HTTP
 POST /druid/indexer/v1/supervisor HTTP/1.1
@@ -2143,12 +2350,13 @@ Content-Length: 1359
 }
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
 {
@@ -2160,27 +2368,35 @@ Content-Length: 1359
 ### Suspend a running supervisor
 
 Suspends a single running supervisor. Returns the updated supervisor spec, where the `suspended` property is set to `true`. The suspended supervisor continues to emit logs and metrics.
+Indexing tasks remain suspended until you [resume the supervisor](#resume-a-supervisor).
 
 #### URL
-<code class="postAPI">POST</code> <code>/druid/indexer/v1/supervisor/:supervisorId/suspend</code>
+
+`POST` `/druid/indexer/v1/supervisor/{supervisorId}/suspend`
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="37" label="200 SUCCESS">
 
-*Successfully shut down supervisor* 
 
-<!--400 BAD REQUEST-->
+*Successfully shut down supervisor*
 
-*Supervisor already suspended* 
+</TabItem>
+<TabItem value="38" label="400 BAD REQUEST">
 
-<!--404 NOT FOUND-->
 
-*Invalid supervisor ID* 
+*Supervisor already suspended*
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+<TabItem value="39" label="404 NOT FOUND">
+
+
+*Invalid supervisor ID*
+
+</TabItem>
+</Tabs>
 
 ---
 
@@ -2188,27 +2404,31 @@ Suspends a single running supervisor. Returns the updated supervisor spec, where
 
 The following example shows how to suspend a running supervisor with the name `social_media`.
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="40" label="cURL">
+
 
 ```shell
 curl --request POST "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor/social_media/suspend"
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="41" label="HTTP">
+
 
 ```HTTP
 POST /druid/indexer/v1/supervisor/social_media/suspend HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
 {
@@ -2284,10 +2504,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
         "ioConfig": {
             "topic": "social_media",
             "inputFormat": {
-                "type": "json",
-                "keepNullColumns": false,
-                "assumeNewlineDelimited": false,
-                "useJsonNodeReader": false
+                "type": "json"
             },
             "replicas": 1,
             "taskCount": 1,
@@ -2482,10 +2699,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
     "ioConfig": {
         "topic": "social_media",
         "inputFormat": {
-            "type": "json",
-            "keepNullColumns": false,
-            "assumeNewlineDelimited": false,
-            "useJsonNodeReader": false
+            "type": "json"
         },
         "replicas": 1,
         "taskCount": 1,
@@ -2518,43 +2732,50 @@ Host: http://ROUTER_IP:ROUTER_PORT
 Suspends all supervisors. Note that this endpoint returns an HTTP `200 Success` code message even if there are no supervisors or running supervisors to suspend.
 
 #### URL
-<code class="postAPI">POST</code> <code>/druid/indexer/v1/supervisor/suspendAll</code>
+
+`POST` `/druid/indexer/v1/supervisor/suspendAll`
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="42" label="200 SUCCESS">
 
-*Successfully suspended all supervisors* 
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+*Successfully suspended all supervisors*
+
+</TabItem>
+</Tabs>
 
 ---
 
 #### Sample request
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="43" label="cURL">
+
 
 ```shell
 curl --request POST "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor/suspendAll"
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="44" label="HTTP">
+
 
 ```HTTP
 POST /druid/indexer/v1/supervisor/suspendAll HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
 {
@@ -2569,25 +2790,31 @@ Resumes indexing tasks for a supervisor. Returns an updated supervisor spec with
 
 #### URL
 
-<code class="postAPI">POST</code> <code>/druid/indexer/v1/supervisor/:supervisorId/resume</code>
+`POST` `/druid/indexer/v1/supervisor/{supervisorId}/resume`
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="45" label="200 SUCCESS">
 
-*Successfully resumed supervisor* 
 
-<!--400 BAD REQUEST-->
+*Successfully resumed supervisor*
 
-*Supervisor already running* 
+</TabItem>
+<TabItem value="46" label="400 BAD REQUEST">
 
-<!--404 NOT FOUND-->
 
-*Invalid supervisor ID* 
+*Supervisor already running*
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+<TabItem value="47" label="404 NOT FOUND">
+
+
+*Invalid supervisor ID*
+
+</TabItem>
+</Tabs>
 
 ---
 
@@ -2595,27 +2822,31 @@ Resumes indexing tasks for a supervisor. Returns an updated supervisor spec with
 
 The following example resumes a previously suspended supervisor with name `social_media`.
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="48" label="cURL">
+
 
 ```shell
 curl --request POST "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor/social_media/resume"
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="49" label="HTTP">
+
 
 ```HTTP
 POST /druid/indexer/v1/supervisor/social_media/resume HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
 {
@@ -2691,10 +2922,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
         "ioConfig": {
             "topic": "social_media",
             "inputFormat": {
-                "type": "json",
-                "keepNullColumns": false,
-                "assumeNewlineDelimited": false,
-                "useJsonNodeReader": false
+                "type": "json"
             },
             "replicas": 1,
             "taskCount": 1,
@@ -2889,10 +3117,7 @@ Host: http://ROUTER_IP:ROUTER_PORT
     "ioConfig": {
         "topic": "social_media",
         "inputFormat": {
-            "type": "json",
-            "keepNullColumns": false,
-            "assumeNewlineDelimited": false,
-            "useJsonNodeReader": false
+            "type": "json"
         },
         "replicas": 1,
         "taskCount": 1,
@@ -2926,43 +3151,49 @@ Resumes all supervisors. Note that this endpoint returns an HTTP `200 Success` c
 
 #### URL
 
-<code class="postAPI">POST</code> <code>/druid/indexer/v1/supervisor/resumeAll</code>
+`POST` `/druid/indexer/v1/supervisor/resumeAll`
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="50" label="200 SUCCESS">
 
-*Successfully resumed all supervisors* 
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+*Successfully resumed all supervisors*
+
+</TabItem>
+</Tabs>
 
 ---
 
 #### Sample request
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="51" label="cURL">
+
 
 ```shell
 curl --request POST "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor/resumeAll"
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="52" label="HTTP">
+
 
 ```HTTP
 POST /druid/indexer/v1/supervisor/resumeAll HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
 {
@@ -2973,55 +3204,180 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 ### Reset a supervisor
 
-Resets the specified supervisor. This endpoint clears stored offsets in Kafka or sequence numbers in Kinesis, prompting the supervisor to resume data reading. The supervisor will start from the earliest or latest available position, depending on the platform (offsets in Kafka or sequence numbers in Kinesis). It kills and recreates active tasks to read from valid positions.
+The supervisor must be running for this endpoint to be available.
 
-Use this endpoint to recover from a stopped state due to missing offsets in Kafka or sequence numbers in Kinesis. Use this endpoint with caution as it may result in skipped messages and lead to data loss or duplicate data.  
+Resets the specified supervisor. This endpoint clears supervisor metadata, prompting the supervisor to resume data reading. The supervisor restarts from the earliest or latest available position, depending on the value of the `useEarliestOffset` property.
+After clearing all stored offsets, the supervisor kills and recreates active tasks,
+so that tasks begin reading from valid positions.
+
+Use this endpoint to recover from a stopped state due to missing offsets. Use this endpoint with caution as it may result in skipped messages and lead to data loss or duplicate data.
+
+The indexing service keeps track of the latest persisted offsets to provide exactly-once ingestion guarantees across tasks. Subsequent tasks must start reading from where the previous task completed for Druid to accept the generated segments. If the messages at the expected starting offsets are no longer available, the supervisor refuses to start and in-flight tasks fail. Possible causes for missing messages include the message retention period elapsing or the topic being removed and re-created. Use the `reset` endpoint to recover from this condition.
 
 #### URL
 
-<code class="postAPI">POST</code> <code>/druid/indexer/v1/supervisor/:supervisorId/reset</code>
+`POST` `/druid/indexer/v1/supervisor/{supervisorId}/reset`
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="53" label="200 SUCCESS">
 
-*Successfully reset supervisor* 
 
-<!--404 NOT FOUND-->
+*Successfully reset supervisor*
 
-*Invalid supervisor ID* 
+</TabItem>
+<TabItem value="54" label="404 NOT FOUND">
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+
+*Invalid supervisor ID*
+
+</TabItem>
+</Tabs>
 
 ---
 
 #### Sample request
 
-The following example shows how to reset a supervisor with the name `social_media`. 
+The following example shows how to reset a supervisor with the name `social_media`.
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="55" label="cURL">
+
 
 ```shell
 curl --request POST "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor/social_media/reset"
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="56" label="HTTP">
+
 
 ```HTTP
 POST /druid/indexer/v1/supervisor/social_media/reset HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
+
+  ```json
+{
+    "id": "social_media"
+}
+  ```
+</details>
+
+### Reset offsets for a supervisor
+
+The supervisor must be running for this endpoint to be available.
+
+Resets the specified offsets for partitions without resetting the entire set.
+
+This endpoint clears only the stored offsets, prompting the supervisor to resume reading data from the specified offsets.
+If there are no stored offsets, the specified offsets are set in the metadata store.
+
+After resetting stored offsets, the supervisor kills and recreates any active tasks pertaining to the specified partitions,
+so that tasks begin reading specified offsets. For partitions that are not specified in this operation, the supervisor resumes from the last stored offset.
+
+Use this endpoint with caution. It can cause skipped messages, leading to data loss or duplicate data.
+
+#### URL
+
+`POST` `/druid/indexer/v1/supervisor/{supervisorId}/resetOffsets`
+
+#### Responses
+
+<Tabs>
+
+<TabItem value="1" label="200 SUCCESS">
+
+
+*Successfully reset offsets*
+
+</TabItem>
+<TabItem value="2" label="404 NOT FOUND">
+
+
+*Invalid supervisor ID*
+
+</TabItem>
+</Tabs>
+
+---
+#### Reset Offsets Metadata
+
+This section presents the structure and details of the reset offsets metadata payload.
+
+| Field | Type | Description | Required |
+|---------|---------|---------|---------|
+| `type` | String | The type of reset offsets metadata payload. It must match the supervisor's `type`. Possible values: `kafka` or `kinesis`. | Yes |
+| `partitions` | Object | An object representing the reset metadata. See below for details. | Yes |
+
+#### Partitions
+
+The following table defines the fields within the `partitions` object in the reset offsets metadata payload.
+
+| Field | Type | Description | Required |
+|---------|---------|---------|---------|
+| `type` | String | Must be set as `end`.  Indicates the end sequence numbers for the reset offsets. | Yes |
+| `stream` | String | The stream to be reset. It must be a valid stream consumed by the supervisor. | Yes |
+| `partitionOffsetMap` | Object | A map of partitions to corresponding offsets for the stream to be reset.| Yes |
+
+#### Sample request
+
+The following example shows how to reset offsets for a Kafka supervisor with the name `social_media`. For example, the supervisor is reading from a Kafka topic `ads_media_stream` and has the stored offsets: `{"0": 0, "1": 10, "2": 20, "3": 40}`.
+
+<Tabs>
+
+<TabItem value="3" label="cURL">
+
+
+```shell
+curl --request POST "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor/social_media/resetOffsets"
+--header 'Content-Type: application/json'
+--data-raw '{"type":"kafka","partitions":{"type":"end","stream":"ads_media_stream","partitionOffsetMap":{"0":100, "2": 650}}}'
+```
+
+</TabItem>
+<TabItem value="4" label="HTTP">
+
+
+```HTTP
+POST /druid/indexer/v1/supervisor/social_media/resetOffsets HTTP/1.1
+Host: http://ROUTER_IP:ROUTER_PORT
+Content-Type: application/json
+
+{
+  "type": "kafka",
+  "partitions": {
+    "type": "end",
+    "stream": "ads_media_stream",
+    "partitionOffsetMap": {
+      "0": 100,
+      "2": 650
+    }
+  }
+}
+```
+
+The example operation resets offsets only for partitions `0` and `2` to 100 and 650 respectively. After a successful reset,
+when the supervisor's tasks restart, they resume reading from `{"0": 100, "1": 10, "2": 650, "3": 40}`.
+
+</TabItem>
+</Tabs>
+
+#### Sample response
+
+<details>
+  <summary>View the response</summary>
 
   ```json
 {
@@ -3032,53 +3388,61 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 ### Terminate a supervisor
 
-Terminates a supervisor and its associated indexing tasks, triggering the publishing of their segments. When terminated, a tombstone marker is placed in the database to prevent reloading on restart. 
+Terminates a supervisor and its associated indexing tasks, triggering the publishing of their segments. When you terminate a supervisor, Druid places a tombstone marker in the metadata store to prevent reloading on restart.
 
 The terminated supervisor still exists in the metadata store and its history can be retrieved.
 
-#### URL 
+#### URL
 
-<code class="postAPI">POST</code> <code>/druid/indexer/v1/supervisor/:supervisorId/terminate</code>
+`POST` `/druid/indexer/v1/supervisor/{supervisorId}/terminate`
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="49" label="200 SUCCESS">
 
-*Successfully terminated a supervisor* 
 
-<!--404 NOT FOUND-->
+*Successfully terminated a supervisor*
 
-*Invalid supervisor ID or supervisor not running* 
+</TabItem>
+<TabItem value="50" label="404 NOT FOUND">
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+
+*Invalid supervisor ID or supervisor not running*
+
+</TabItem>
+</Tabs>
 
 ---
 
 #### Sample request
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="51" label="cURL">
+
 
 ```shell
 curl --request POST "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor/social_media/terminate"
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="52" label="HTTP">
+
 
 ```HTTP
 POST /druid/indexer/v1/supervisor/social_media/terminate HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
 {
@@ -3093,43 +3457,49 @@ Terminates all supervisors. Terminated supervisors still exist in the metadata s
 
 #### URL
 
-<code class="postAPI">POST</code> <code>/druid/indexer/v1/supervisor/terminateAll</code>
+`POST` `/druid/indexer/v1/supervisor/terminateAll`
 
 #### Responses
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--200 SUCCESS-->
+<TabItem value="53" label="200 SUCCESS">
 
-*Successfully terminated all supervisors* 
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+*Successfully terminated all supervisors*
+
+</TabItem>
+</Tabs>
 
 ---
 
 #### Sample request
 
-<!--DOCUSAURUS_CODE_TABS-->
+<Tabs>
 
-<!--cURL-->
+<TabItem value="54" label="cURL">
+
 
 ```shell
 curl --request POST "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor/terminateAll"
 ```
 
-<!--HTTP-->
+</TabItem>
+<TabItem value="55" label="HTTP">
+
 
 ```HTTP
 POST /druid/indexer/v1/supervisor/terminateAll HTTP/1.1
 Host: http://ROUTER_IP:ROUTER_PORT
 ```
 
-<!--END_DOCUSAURUS_CODE_TABS-->
+</TabItem>
+</Tabs>
 
 #### Sample response
 
 <details>
-  <summary>Click to show sample response</summary>
+  <summary>View the response</summary>
 
   ```json
 {
@@ -3138,10 +3508,57 @@ Host: http://ROUTER_IP:ROUTER_PORT
   ```
 </details>
 
-### Shut down a supervisor
+### Handoff task groups for a supervisor early
 
-Shuts down a supervisor. This endpoint is deprecated and will be removed in future releases. Use the equivalent [terminate](#terminate-a-supervisor) endpoint instead. 
+Trigger handoff for specified task groups of a supervisor early. This is a best effort API and makes no guarantees of handoff execution
 
 #### URL
 
-<code class="postAPI">POST</code> <code>/druid/indexer/v1/supervisor/:supervisorId/shutdown</code>
+`POST` `/druid/indexer/v1/supervisor/{supervisorId}/taskGroups/handoff`
+
+#### Sample request
+
+The following example shows how to handoff task groups for a supervisor with the name `social_media` and has the task groups: `1,2,3`.
+
+<Tabs>
+
+<TabItem value="3" label="cURL">
+
+
+```shell
+curl --request POST "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor/social_media/taskGroups/handoff"
+--header 'Content-Type: application/json'
+--data-raw '{"taskGroupIds": [1, 2, 3]}'
+```
+
+</TabItem>
+<TabItem value="4" label="HTTP">
+
+
+```HTTP
+POST /druid/indexer/v1/supervisor/social_media/taskGroups/handoff HTTP/1.1
+Host: http://ROUTER_IP:ROUTER_PORT
+Content-Type: application/json
+
+{
+  "taskGroupIds": [1, 2, 3],
+}
+```
+
+</TabItem>
+</Tabs>
+
+#### Sample response
+
+<details>
+  <summary>View the response</summary>
+(empty response)
+</details>
+
+### Shut down a supervisor
+
+Shuts down a supervisor. This endpoint is deprecated and will be removed in future releases. Use the equivalent [terminate](#terminate-a-supervisor) endpoint instead.
+
+#### URL
+
+`POST` `/druid/indexer/v1/supervisor/{supervisorId}/shutdown`

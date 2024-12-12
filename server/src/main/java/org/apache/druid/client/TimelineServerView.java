@@ -22,10 +22,12 @@ package org.apache.druid.client;
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.planning.DataSourceAnalysis;
+import org.apache.druid.segment.realtime.appenderator.SegmentSchemas;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.TimelineLookup;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Executor;
@@ -44,10 +46,23 @@ public interface TimelineServerView extends ServerView
    *
    * @throws IllegalStateException if 'analysis' does not represent a scan-based datasource of a single table
    */
-  Optional<? extends TimelineLookup<String, ServerSelector>> getTimeline(DataSourceAnalysis analysis);
+  <T extends TimelineLookup<String, ServerSelector>> Optional<T> getTimeline(DataSourceAnalysis analysis);
 
   /**
-   * Returns a list of {@link ImmutableDruidServer}
+   * Returns a snapshot of the current set of server metadata.
+   */
+  default List<DruidServerMetadata> getDruidServerMetadatas()
+  {
+    final List<ImmutableDruidServer> druidServers = getDruidServers();
+    final List<DruidServerMetadata> metadatas = new ArrayList<>(druidServers.size());
+    for (final ImmutableDruidServer druidServer : druidServers) {
+      metadatas.add(druidServer.getMetadata());
+    }
+    return metadatas;
+  }
+
+  /**
+   * Returns a snapshot of the current servers, their metadata, and their inventory.
    */
   List<ImmutableDruidServer> getDruidServers();
 
@@ -101,5 +116,15 @@ public interface TimelineServerView extends ServerView
      * @return continue or unregister
      */
     CallbackAction serverSegmentRemoved(DruidServerMetadata server, DataSegment segment);
+
+    /**
+     * Called when segment schema is announced.
+     * Schema flow HttpServerInventoryView -> CoordinatorServerView -> CoordinatorSegmentMetadataCache
+     * CoordinatorServerView simply delegates the schema information by invoking Timeline callback to metadata cache.
+     *
+     * @param segmentSchemas segment schema
+     * @return continue or unregister
+     */
+    CallbackAction segmentSchemasAnnounced(SegmentSchemas segmentSchemas);
   }
 }

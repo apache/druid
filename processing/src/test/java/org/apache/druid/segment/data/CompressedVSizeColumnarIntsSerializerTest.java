@@ -124,7 +124,8 @@ public class CompressedVSizeColumnarIntsSerializerTest
         vals.length > 0 ? Ints.max(vals) : 0,
         chunkSize,
         byteOrder,
-        compressionStrategy
+        compressionStrategy,
+        segmentWriteOutMedium.getCloser()
     );
     CompressedVSizeColumnarIntsSupplier supplierFromList = CompressedVSizeColumnarIntsSupplier.fromList(
         IntArrayList.wrap(vals),
@@ -197,16 +198,17 @@ public class CompressedVSizeColumnarIntsSerializerTest
           segmentWriteOutMedium,
           "test",
           compressionStrategy,
-          Long.BYTES * 10000
+          Long.BYTES * 10000,
+          segmentWriteOutMedium.getCloser()
       );
       CompressedVSizeColumnarIntsSerializer serializer = new CompressedVSizeColumnarIntsSerializer(
           "test",
-          segmentWriteOutMedium,
           maxValue,
           maxChunkSize,
           byteOrder,
           compressionStrategy,
-          genericIndexed
+          genericIndexed,
+          segmentWriteOutMedium.getCloser()
       );
       serializer.open();
 
@@ -233,16 +235,17 @@ public class CompressedVSizeColumnarIntsSerializerTest
         segmentWriteOutMedium,
         "test",
         compressionStrategy,
-        Long.BYTES * 10000
+        Long.BYTES * 10000,
+        segmentWriteOutMedium.getCloser()
     );
     CompressedVSizeColumnarIntsSerializer writer = new CompressedVSizeColumnarIntsSerializer(
         columnName,
-        segmentWriteOutMedium,
         vals.length > 0 ? Ints.max(vals) : 0,
         chunkSize,
         byteOrder,
         compressionStrategy,
-        genericIndexed
+        genericIndexed,
+        segmentWriteOutMedium.getCloser()
     );
     writer.open();
     for (int val : vals) {

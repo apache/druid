@@ -23,26 +23,22 @@ import com.fasterxml.jackson.core.Version;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.google.common.base.Supplier;
-import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Provides;
 import com.google.inject.assistedinject.FactoryModuleBuilder;
-import com.microsoft.azure.storage.CloudStorageAccount;
-import com.microsoft.azure.storage.blob.CloudBlobClient;
+import org.apache.commons.lang3.BooleanUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.druid.data.input.azure.AzureEntityFactory;
 import org.apache.druid.data.input.azure.AzureInputSource;
+import org.apache.druid.data.input.azure.AzureStorageAccountInputSource;
 import org.apache.druid.guice.Binders;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.storage.azure.blob.ListBlobItemHolderFactory;
 
-import java.net.URISyntaxException;
-import java.security.InvalidKeyException;
 import java.util.List;
 
 /**
@@ -52,10 +48,6 @@ public class AzureStorageDruidModule implements DruidModule
 {
 
   public static final String SCHEME = "azure";
-  public static final String
-      STORAGE_CONNECTION_STRING_WITH_KEY = "DefaultEndpointsProtocol=%s;AccountName=%s;AccountKey=%s";
-  public static final String
-      STORAGE_CONNECTION_STRING_WITH_TOKEN = "DefaultEndpointsProtocol=%s;AccountName=%s;SharedAccessSignature=%s";
   public static final String INDEX_ZIP_FILE_NAME = "index.zip";
 
   @Override
@@ -83,7 +75,8 @@ public class AzureStorageDruidModule implements DruidModule
           }
         },
         new SimpleModule().registerSubtypes(
-            new NamedType(AzureInputSource.class, SCHEME)
+            new NamedType(AzureInputSource.class, SCHEME),
+            new NamedType(AzureStorageAccountInputSource.class, AzureStorageAccountInputSource.SCHEME)
         )
     );
   }
@@ -114,64 +107,45 @@ public class AzureStorageDruidModule implements DruidModule
                        .build(AzureCloudBlobIteratorFactory.class));
     binder.install(new FactoryModuleBuilder()
                        .build(AzureCloudBlobIterableFactory.class));
-    binder.install(new FactoryModuleBuilder()
-                       .build(ListBlobItemHolderFactory.class));
   }
 
-  /**
-   * Creates a supplier that lazily initialize {@link CloudBlobClient}.
-   * This is to avoid immediate config validation but defer it until you actually use the client.
-   */
+
   @Provides
   @LazySingleton
-  public Supplier<CloudBlobClient> getCloudBlobClient(final AzureAccountConfig config)
+  public AzureClientFactory getAzureClientFactory(final AzureAccountConfig config)
   {
-    if ((config.getKey() != null && config.getSharedAccessStorageToken() != null)
-        ||
-        (config.getKey() == null && config.getSharedAccessStorageToken() == null)) {
-      throw new ISE("Either set 'key' or 'sharedAccessStorageToken' in the azure config but not both."
-                    + " Please refer to azure documentation.");
+    if (StringUtils.isEmpty(config.getAccount())) {
+      throw new ISE("Set 'account' to the storage account that needs to be configured in the azure config."
+          + " Please refer to azure documentation.");
     }
-    return Suppliers.memoize(() -> {
-      try {
-        final CloudStorageAccount account;
-        if (config.getKey() != null) {
-          account = CloudStorageAccount.parse(
-              StringUtils.format(
-                  STORAGE_CONNECTION_STRING_WITH_KEY,
-                  config.getProtocol(),
-                  config.getAccount(),
-                  config.getKey()
-              )
 
-          );
-          return account.createCloudBlobClient();
-        } else if (config.getSharedAccessStorageToken() != null) {
-          account = CloudStorageAccount.parse(StringUtils.format(
-              STORAGE_CONNECTION_STRING_WITH_TOKEN,
-              config.getProtocol(),
-              config.getAccount(),
-              config.getSharedAccessStorageToken()
-          ));
-          return account.createCloudBlobClient();
-        } else {
-          throw new ISE(
-              "None of 'key' or 'sharedAccessStorageToken' is set in the azure config."
-              + " Please refer to azure extension documentation.");
-        }
-      }
-      catch (URISyntaxException | InvalidKeyException e) {
-        throw new RuntimeException(e);
-      }
-    });
+    if (StringUtils.isEmpty(config.getKey()) && StringUtils.isEmpty(config.getSharedAccessStorageToken()) && BooleanUtils.isNotTrue(config.getUseAzureCredentialsChain())) {
+      throw new ISE("Either set 'key' or 'sharedAccessStorageToken' or 'useAzureCredentialsChain' in the azure config."
+          + " Please refer to azure documentation.");
+    }
+
+    /* Azure named keys and sas tokens are mutually exclusive with each other and with azure keychain auth,
+    but any form of auth supported by the DefaultAzureCredentialChain is not mutually exclusive, e.g. you can have
+    environment credentials or workload credentials or managed credentials using the same chain.
+    **/
+    if (!StringUtils.isEmpty(config.getKey()) && !StringUtils.isEmpty(config.getSharedAccessStorageToken()) ||
+        !StringUtils.isEmpty(config.getKey()) && BooleanUtils.isTrue(config.getUseAzureCredentialsChain()) ||
+        !StringUtils.isEmpty(config.getSharedAccessStorageToken()) && BooleanUtils.isTrue(config.getUseAzureCredentialsChain())
+    ) {
+      throw new ISE("Set only one of 'key' or 'sharedAccessStorageToken' or 'useAzureCredentialsChain' in the azure config."
+          + " Please refer to azure documentation.");
+    }
+    return new AzureClientFactory(config);
   }
 
   @Provides
+  @Global
   @LazySingleton
   public AzureStorage getAzureStorageContainer(
-      final Supplier<CloudBlobClient> cloudBlobClient
+      final AzureClientFactory azureClientFactory,
+      final AzureAccountConfig azureAccountConfig
   )
   {
-    return new AzureStorage(cloudBlobClient);
+    return new AzureStorage(azureClientFactory, azureAccountConfig.getAccount());
   }
 }

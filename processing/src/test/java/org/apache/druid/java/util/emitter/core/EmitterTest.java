@@ -240,12 +240,14 @@ public class EmitterTest
                 request.getHeaders().get(HttpHeaders.Names.CONTENT_TYPE)
             );
             Assert.assertEquals(
-                StringUtils.format(
+                JSON_MAPPER.readTree(StringUtils.format(
                     "[%s,%s]\n",
                     JSON_MAPPER.writeValueAsString(events.get(0)),
                     JSON_MAPPER.writeValueAsString(events.get(1))
-                ),
-                StandardCharsets.UTF_8.decode(request.getByteBufferData().slice()).toString()
+                )),
+                JSON_MAPPER.readTree(
+                    StandardCharsets.UTF_8.decode(request.getByteBufferData().slice()).toString()
+                )
             );
 
             return GoHandlers.immediateFuture(okResponse());
@@ -282,12 +284,14 @@ public class EmitterTest
                 request.getHeaders().get(HttpHeaders.Names.CONTENT_TYPE)
             );
             Assert.assertEquals(
-                StringUtils.format(
+                JSON_MAPPER.readTree(StringUtils.format(
                     "[%s,%s]\n",
                     JSON_MAPPER.writeValueAsString(events.get(0)),
                     JSON_MAPPER.writeValueAsString(events.get(1))
-                ),
-                StandardCharsets.UTF_8.decode(request.getByteBufferData().slice()).toString()
+                )),
+                JSON_MAPPER.readTree(
+                    StandardCharsets.UTF_8.decode(request.getByteBufferData().slice()).toString()
+                )
             );
 
             return GoHandlers.immediateFuture(okResponse());
@@ -467,12 +471,14 @@ public class EmitterTest
                 request.getHeaders().get(HttpHeaders.Names.AUTHORIZATION)
             );
             Assert.assertEquals(
-                StringUtils.format(
+                JSON_MAPPER.readTree(StringUtils.format(
                     "%s\n%s\n",
                     JSON_MAPPER.writeValueAsString(events.get(0)),
                     JSON_MAPPER.writeValueAsString(events.get(1))
-                ),
-                StandardCharsets.UTF_8.decode(request.getByteBufferData().slice()).toString()
+                )),
+                JSON_MAPPER.readTree(
+                  StandardCharsets.UTF_8.decode(request.getByteBufferData().slice()).toString()
+                )
             );
 
             return GoHandlers.immediateFuture(okResponse());
@@ -521,12 +527,14 @@ public class EmitterTest
                 request.getHeaders().get(HttpHeaders.Names.CONTENT_TYPE)
             );
             Assert.assertEquals(
-                StringUtils.format(
+                JSON_MAPPER.readTree(StringUtils.format(
                     "[%s,%s]\n",
                     JSON_MAPPER.writeValueAsString(events.get(counter.getAndIncrement())),
                     JSON_MAPPER.writeValueAsString(events.get(counter.getAndIncrement()))
-                ),
-                StandardCharsets.UTF_8.decode(request.getByteBufferData().slice()).toString()
+                )),
+                JSON_MAPPER.readTree(
+                    StandardCharsets.UTF_8.decode(request.getByteBufferData().slice()).toString()
+                )
             );
 
             return GoHandlers.immediateFuture(okResponse());
@@ -584,12 +592,14 @@ public class EmitterTest
             CompressionUtils.gunzip(new ByteArrayInputStream(dataArray), baos);
 
             Assert.assertEquals(
-                StringUtils.format(
+                JSON_MAPPER.readTree(StringUtils.format(
                     "[%s,%s]\n",
                     JSON_MAPPER.writeValueAsString(events.get(0)),
                     JSON_MAPPER.writeValueAsString(events.get(1))
-                ),
+                )),
+                JSON_MAPPER.readTree(
                 baos.toString(StandardCharsets.UTF_8.name())
+                )
             );
 
             return GoHandlers.immediateFuture(okResponse());

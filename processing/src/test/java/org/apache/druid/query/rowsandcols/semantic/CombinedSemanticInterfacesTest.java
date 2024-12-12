@@ -30,6 +30,8 @@ import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.column.ColumnAccessor;
 import org.apache.druid.query.rowsandcols.column.IntArrayColumn;
 import org.apache.druid.query.rowsandcols.column.ObjectArrayColumn;
+import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.column.ColumnType;
 import org.junit.Assert;
 import org.junit.Test;
@@ -38,7 +40,11 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
 /**
  * Place where tests can live that are testing the interactions of multiple semantic interfaces
@@ -52,6 +58,30 @@ public class CombinedSemanticInterfacesTest extends SemanticTestBase
   )
   {
     super(name, fn);
+  }
+
+  @Test
+  public void testColumnSelectorFactoryMakeColumnValueSelectorNonExistentColumn()
+  {
+    RowsAndColumns rac = make(MapOfColumnsRowsAndColumns.fromMap(
+        ImmutableMap.of(
+            "some", new IntArrayColumn(new int[] {3, 54, 21, 1, 5, 54, 2, 3, 92}))));
+    AtomicInteger currRow = new AtomicInteger();
+    ColumnSelectorFactory csfm = ColumnSelectorFactoryMaker.fromRAC(rac).make(currRow);
+
+    assertEquals(DimensionSelector.nilSelector(), csfm.makeColumnValueSelector("nonexistent"));
+  }
+
+  @Test
+  public void testColumnSelectorFactoryGetColumnCapabilitiesNonExistentColumn()
+  {
+    RowsAndColumns rac = make(MapOfColumnsRowsAndColumns.fromMap(
+        ImmutableMap.of(
+            "some", new IntArrayColumn(new int[] {3, 54, 21, 1, 5, 54, 2, 3, 92}))));
+    AtomicInteger currRow = new AtomicInteger();
+    ColumnSelectorFactory csfm = ColumnSelectorFactoryMaker.fromRAC(rac).make(currRow);
+
+    assertNull(csfm.getColumnCapabilities("nonexistent"));
   }
 
   /**

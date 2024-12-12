@@ -31,7 +31,6 @@ import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.math.expr.Parser;
-import org.apache.druid.segment.virtual.ExpressionSelectors;
 
 import java.util.List;
 import java.util.Objects;
@@ -111,9 +110,7 @@ public class ExpressionTransform implements Transform
     public List<String> evalDimension(Row row)
     {
       try {
-        return Rows.objectToStrings(
-            ExpressionSelectors.coerceEvalToObjectOrList(expr.eval(InputBindings.forRow(row)))
-        );
+        return Rows.objectToStrings(expr.eval(InputBindings.forRow(row)).valueOrDefault());
       }
       catch (Throwable t) {
         throw new ISE(t, "Could not transform dimension value for %s reason: %s", name, t.getMessage());

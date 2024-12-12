@@ -54,12 +54,6 @@ public final class NoopLimitSpec implements LimitSpec
   }
 
   @Override
-  public LimitSpec merge(LimitSpec other)
-  {
-    return other;
-  }
-
-  @Override
   public LimitSpec filterColumns(Set<String> names)
   {
     return this;

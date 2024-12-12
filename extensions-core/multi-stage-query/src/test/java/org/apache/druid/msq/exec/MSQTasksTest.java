@@ -20,13 +20,24 @@
 package org.apache.druid.msq.exec;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
+import org.apache.druid.client.indexing.NoopOverlordClient;
+import org.apache.druid.client.indexing.TaskStatusResponse;
+import org.apache.druid.common.guava.FutureUtils;
+import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.TaskStatusPlus;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.msq.indexing.MSQWorkerTask;
 import org.apache.druid.msq.indexing.MSQWorkerTaskLauncher;
+import org.apache.druid.msq.indexing.error.InsertTimeNullFault;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.indexing.error.MSQFaultUtils;
@@ -37,6 +48,8 @@ import org.apache.druid.msq.indexing.error.TooManyColumnsFault;
 import org.apache.druid.msq.indexing.error.TooManyWorkersFault;
 import org.apache.druid.msq.indexing.error.UnknownFault;
 import org.apache.druid.msq.indexing.error.WorkerRpcFailedFault;
+import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.utils.CollectionUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -47,8 +60,6 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.fail;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 public class MSQTasksTest
 {
@@ -214,12 +225,10 @@ public class MSQTasksTest
     final int numSlots = 5;
     final int numTasks = 10;
 
-    ControllerContext controllerContext = mock(ControllerContext.class);
-    when(controllerContext.workerManager()).thenReturn(new TasksTestWorkerManagerClient(numSlots));
     MSQWorkerTaskLauncher msqWorkerTaskLauncher = new MSQWorkerTaskLauncher(
         CONTROLLER_ID,
         "foo",
-        controllerContext,
+        new TasksTestOverlordClient(numSlots),
         (task, fault) -> {},
         ImmutableMap.of(),
         TimeUnit.SECONDS.toMillis(5)
@@ -227,7 +236,7 @@ public class MSQTasksTest
 
     try {
       msqWorkerTaskLauncher.start();
-      msqWorkerTaskLauncher.launchTasksIfNeeded(numTasks);
+      msqWorkerTaskLauncher.launchWorkersIfNeeded(numTasks);
       fail();
     }
     catch (Exception e) {
@@ -238,7 +247,43 @@ public class MSQTasksTest
     }
   }
 
-  static class TasksTestWorkerManagerClient implements WorkerManagerClient
+  @Test
+  public void test_getPrimaryTimestampFromObjectForInsert_longValue()
+  {
+    Assert.assertEquals(100, MSQTasks.primaryTimestampFromObjectForInsert(100L));
+  }
+
+  @Test
+  public void test_getPrimaryTimestampFromObjectForInsert_nullValueShouldThrowError()
+  {
+    final MSQException e = Assert.assertThrows(
+        MSQException.class,
+        () -> MSQTasks.primaryTimestampFromObjectForInsert(null)
+    );
+    Assert.assertEquals(InsertTimeNullFault.INSTANCE, e.getFault());
+  }
+
+  @Test
+  public void test_getPrimaryTimestampFromObjectForInsert_DoubleValueShouldThrowError()
+  {
+    final Object timestamp = 1.693837200123456E15;
+    final MSQException e = Assert.assertThrows(
+        MSQException.class,
+        () -> MSQTasks.primaryTimestampFromObjectForInsert(timestamp)
+    );
+    Assert.assertEquals(
+        UnknownFault.forMessage(
+            StringUtils.format(
+                "Incorrect type for column [%s]. Expected LONG but got type [%s]. Please ensure that the value is cast to LONG.",
+                ColumnHolder.TIME_COLUMN_NAME,
+                timestamp.getClass().getSimpleName()
+            )
+        ),
+        e.getFault()
+    );
+  }
+
+  static class TasksTestOverlordClient extends NoopOverlordClient
   {
     // Num of slots available for tasks
     final int numSlots;
@@ -252,13 +297,13 @@ public class MSQTasksTest
     @GuardedBy("this")
     final Set<String> canceledTasks = new HashSet<>();
 
-    public TasksTestWorkerManagerClient(final int numSlots)
+    public TasksTestOverlordClient(final int numSlots)
     {
       this.numSlots = numSlots;
     }
 
     @Override
-    public synchronized Map<String, TaskStatus> statuses(final Set<String> taskIds)
+    public synchronized ListenableFuture<Map<String, TaskStatus>> taskStatuses(final Set<String> taskIds)
     {
       final Map<String, TaskStatus> retVal = new HashMap<>();
 
@@ -277,42 +322,66 @@ public class MSQTasksTest
         }
       }
 
-      return retVal;
+      return Futures.immediateFuture(retVal);
     }
 
     @Override
-    public synchronized TaskLocation location(String workerId)
+    public synchronized ListenableFuture<TaskStatusResponse> taskStatus(String workerId)
     {
+      final TaskStatus status = CollectionUtils.getOnlyElement(
+          FutureUtils.getUnchecked(taskStatuses(ImmutableSet.of(workerId)), true).values(),
+          xs -> new ISE("Expected one worker with id[%s] but saw[%s]", workerId, xs)
+      );
+
+      final TaskLocation location;
+
       if (runningTasks.contains(workerId)) {
-        return TaskLocation.create("host-" + workerId, 1, -1);
+        location = TaskLocation.create("host-" + workerId, 1, -1);
       } else {
-        return TaskLocation.unknown();
+        location = TaskLocation.unknown();
       }
+
+      return Futures.immediateFuture(
+          new TaskStatusResponse(
+              status.getId(),
+              new TaskStatusPlus(
+                  status.getId(),
+                  null,
+                  null,
+                  DateTimes.utc(0),
+                  DateTimes.utc(0),
+                  status.getStatusCode(),
+                  status.getStatusCode(),
+                  RunnerTaskState.NONE,
+                  status.getDuration(),
+                  location,
+                  null,
+                  status.getErrorMsg()
+              )
+          )
+      );
     }
 
     @Override
-    public synchronized String run(String taskId, MSQWorkerTask task)
+    public synchronized ListenableFuture<Void> runTask(String taskId, Object taskObject)
     {
+      final MSQWorkerTask task = (MSQWorkerTask) taskObject;
+
       allTasks.add(task.getId());
 
       if (runningTasks.size() < numSlots) {
         runningTasks.add(task.getId());
       }
 
-      return task.getId();
+      return Futures.immediateFuture(null);
     }
 
     @Override
-    public synchronized void cancel(String workerId)
+    public synchronized ListenableFuture<Void> cancelTask(String workerId)
     {
       runningTasks.remove(workerId);
       canceledTasks.add(workerId);
-    }
-
-    @Override
-    public void close()
-    {
-      // do nothing
+      return Futures.immediateFuture(null);
     }
   }
 }

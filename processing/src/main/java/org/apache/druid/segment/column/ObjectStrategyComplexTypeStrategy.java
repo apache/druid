@@ -19,6 +19,8 @@
 
 package org.apache.druid.segment.column;
 
+import it.unimi.dsi.fastutil.Hash;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.segment.data.ObjectStrategy;
 
 import javax.annotation.Nullable;
@@ -27,7 +29,7 @@ import java.nio.ByteBuffer;
 /**
  * Default implementation of {@link TypeStrategy} for all {@link org.apache.druid.segment.serde.ComplexMetricSerde}
  * implementations that just wraps the {@link ObjectStrategy} they are required to implement.
- *
+ * <p>
  * This is not likely to be the most efficient way to do things, especially since writing must first produce a byte
  * array before it can be written to the buffer, but it is cheap and should work correctly, which is important.
  */
@@ -35,11 +37,27 @@ public class ObjectStrategyComplexTypeStrategy<T> implements TypeStrategy<T>
 {
   private final ObjectStrategy<T> objectStrategy;
   private final TypeSignature<?> typeSignature;
+  @Nullable
+  private final Hash.Strategy<T> hashStrategy;
+  @Nullable
+  private final Class<?> clazz;
 
   public ObjectStrategyComplexTypeStrategy(ObjectStrategy<T> objectStrategy, TypeSignature<?> signature)
   {
+    this(objectStrategy, signature, null);
+  }
+
+  public ObjectStrategyComplexTypeStrategy(
+      ObjectStrategy<T> objectStrategy,
+      TypeSignature<?> signature,
+      @Nullable final Hash.Strategy<T> hashStrategy
+  )
+  {
     this.objectStrategy = objectStrategy;
     this.typeSignature = signature;
+    this.hashStrategy = hashStrategy;
+    //noinspection VariableNotUsedInsideIf
+    this.clazz = hashStrategy == null ? null : objectStrategy.getClazz();
   }
 
   @Override
@@ -64,8 +82,7 @@ public class ObjectStrategyComplexTypeStrategy<T> implements TypeStrategy<T>
   @Override
   public boolean readRetainsBufferReference()
   {
-    // Can't guarantee that ObjectStrategy *doesn't* retain a reference.
-    return true;
+    return objectStrategy.readRetainsBufferReference();
   }
 
   @Override
@@ -93,5 +110,38 @@ public class ObjectStrategyComplexTypeStrategy<T> implements TypeStrategy<T>
   public T fromBytes(byte[] value)
   {
     return objectStrategy.fromByteBufferSafe(ByteBuffer.wrap(value), value.length);
+  }
+
+  @Override
+  public boolean groupable()
+  {
+    return hashStrategy != null;
+  }
+
+  @Override
+  public int hashCode(T o)
+  {
+    if (hashStrategy == null) {
+      throw DruidException.defensive("Type [%s] is not groupable", typeSignature.asTypeString());
+    }
+    return hashStrategy.hashCode(o);
+  }
+
+  @Override
+  public boolean equals(T a, T b)
+  {
+    if (hashStrategy == null) {
+      throw DruidException.defensive("Type [%s] is not groupable", typeSignature.asTypeString());
+    }
+    return hashStrategy.equals(a, b);
+  }
+
+  @Override
+  public Class<?> getClazz()
+  {
+    if (clazz == null) {
+      throw DruidException.defensive("Type [%s] is not groupable", typeSignature.asTypeString());
+    }
+    return clazz;
   }
 }

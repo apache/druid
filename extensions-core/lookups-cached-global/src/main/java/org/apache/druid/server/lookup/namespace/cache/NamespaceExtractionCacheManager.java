@@ -25,10 +25,12 @@ import org.apache.druid.java.util.common.concurrent.ExecutorServices;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.server.lookup.namespace.NamespaceExtractionConfig;
 
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 /**
  * Usage:
@@ -111,6 +113,16 @@ public abstract class NamespaceExtractionCacheManager
    * should be treated as read-only (though some implmentations may still allow modification, it is not safe to do so).
    */
   public abstract CacheHandler attachCache(CacheHandler cache);
+
+  /**
+   * Given a cache from {@link #createCache()} or {@link #allocateCache()}, return a {@link LookupExtractor}
+   * view of it.
+   */
+  public abstract LookupExtractor asLookupExtractor(
+      CacheHandler cacheHandler,
+      boolean isOneToOne,
+      Supplier<byte[]> cacheKeySupplier
+  );
 
   abstract void disposeCache(CacheHandler cacheHandler);
 

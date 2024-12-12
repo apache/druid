@@ -141,4 +141,20 @@ public class Types
       super("Cannot implicitly cast [%s] to [%s]", type, other);
     }
   }
+
+  public static class InvalidCastException extends IAE
+  {
+    public InvalidCastException(TypeSignature<?> type, TypeSignature<?> other)
+    {
+      super("Invalid type, cannot cast [" + type + "] to [" + other + "]");
+    }
+  }
+
+  public static class InvalidCastBooleanException extends IAE
+  {
+    public InvalidCastBooleanException(TypeSignature<?> type)
+    {
+      super("Invalid type, cannot coerce [" + type + "] to boolean");
+    }
+  }
 }

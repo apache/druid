@@ -121,8 +121,11 @@ public class HllSketchUnionPostAggregator implements PostAggregator
   {
     final Union union = new Union(lgK);
     for (final PostAggregator field : fields) {
-      final HllSketchHolder sketch = HllSketchHolder.fromObj(field.compute(combinedAggregators));
-      union.update(sketch.getSketch());
+      Object hllSketchHolderObject = field.compute(combinedAggregators);
+      if (hllSketchHolderObject != null) {
+        final HllSketchHolder holder = HllSketchHolder.fromObj(hllSketchHolderObject);
+        union.update(holder.getSketch());
+      }
     }
     return HllSketchHolder.of(union.getResult(tgtHllType));
   }

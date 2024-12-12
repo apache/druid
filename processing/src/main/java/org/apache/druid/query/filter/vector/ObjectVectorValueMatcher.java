@@ -19,9 +19,10 @@
 
 package org.apache.druid.query.filter.vector;
 
-import com.google.common.base.Predicate;
+import org.apache.druid.query.filter.DruidObjectPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.filter.ConstantMatcherType;
 import org.apache.druid.segment.vector.VectorObjectSelector;
 
 import javax.annotation.Nullable;
@@ -50,26 +51,32 @@ public class ObjectVectorValueMatcher implements VectorValueMatcherFactory
   public VectorValueMatcher makeMatcher(@Nullable String value)
   {
     // return a traditional nil matcher, as is the custom of our people
-    return BooleanVectorValueMatcher.of(selector, value == null);
+    if (value == null) {
+      return ConstantMatcherType.ALL_TRUE.asVectorMatcher(selector);
+    }
+    return VectorValueMatcher.allFalseObjectMatcher(selector);
   }
 
   @Override
   public VectorValueMatcher makeMatcher(Object matchValue, ColumnType matchValueType)
   {
-    return BooleanVectorValueMatcher.of(selector, matchValue == null);
+    if (matchValue == null) {
+      return ConstantMatcherType.ALL_TRUE.asVectorMatcher(selector);
+    }
+    return VectorValueMatcher.allFalseObjectMatcher(selector);
   }
 
   @Override
   public VectorValueMatcher makeMatcher(DruidPredicateFactory predicateFactory)
   {
-    final Predicate<Object> predicate = predicateFactory.makeObjectPredicate();
+    final DruidObjectPredicate<Object> predicate = predicateFactory.makeObjectPredicate();
 
     return new BaseVectorValueMatcher(selector)
     {
       final VectorMatch match = VectorMatch.wrap(new int[selector.getMaxVectorSize()]);
 
       @Override
-      public ReadableVectorMatch match(final ReadableVectorMatch mask)
+      public ReadableVectorMatch match(final ReadableVectorMatch mask, boolean includeUnknown)
       {
         final Object[] vector = selector.getObjectVector();
         final int[] selection = match.getSelection();
@@ -78,7 +85,8 @@ public class ObjectVectorValueMatcher implements VectorValueMatcherFactory
 
         for (int i = 0; i < mask.getSelectionSize(); i++) {
           final int rowNum = mask.getSelection()[i];
-          if (predicate.apply(vector[rowNum])) {
+          final Object o = vector[rowNum];
+          if (predicate.apply(o).matches(includeUnknown)) {
             selection[numRows++] = rowNum;
           }
         }

@@ -1,0 +1,42 @@
+type: "operatorValidation"
+
+sql: |
+   SELECT
+     l2,l1,
+     MIN(l2) OVER(partition by l2),
+     MIN(l2) OVER(partition by l2 order by l1)
+   FROM druid.numfoo
+   WHERE (l2 is null or l2 = -1111 or l2 = 0) and (l1 is null or l1 != 7)
+
+
+expectedOperators:
+  - type: "naiveSort"
+    columns:
+      - column: "l2"
+        direction: "ASC"
+  - type: "naivePartition"
+    partitionColumns: [ "l2" ]
+  - type: "window"
+    processor:
+      type: "framedAgg"
+      frame: { type: rows }
+      aggregations:
+        - { type: "longMin", name: "w0", fieldName: "l2" }
+  - type: "naiveSort"
+    columns:
+      - { column: l2, direction: ASC }
+      - { column: l1, direction: ASC }
+  - type: "naivePartition"
+    partitionColumns: [ "l2" ]
+  - type: "window"
+    processor:
+      type: "framedAgg"
+      frame: { type: groups, upperOffset: 0, orderByColumns: [ l1 ] }
+      aggregations:
+        - { type: "longMin", name: "w1", fieldName: "l2" }
+
+expectedResults:
+  - [null,null,null,null]
+  - [null,null,null,null]
+  - [null,null,null,null]
+  - [0,0,0,0]

@@ -1,0 +1,18 @@
+type: "operatorValidation"
+
+sql: |
+    SELECT
+      countryName,
+      cityName,
+      channel,
+      string_agg(channel, '|') over (partition by cityName order by countryName) s
+    FROM wikipedia
+    WHERE countryName='Austria'
+    GROUP BY 1, 2, 3
+
+expectedResults:
+  - ["Austria",null,"#de.wikipedia","#de.wikipedia"]
+  - ["Austria","Horsching","#de.wikipedia","#de.wikipedia"]
+  - ["Austria","Vienna","#de.wikipedia","#de.wikipedia|#es.wikipedia|#tr.wikipedia"]
+  - ["Austria","Vienna","#es.wikipedia","#de.wikipedia|#es.wikipedia|#tr.wikipedia"]
+  - ["Austria","Vienna","#tr.wikipedia","#de.wikipedia|#es.wikipedia|#tr.wikipedia"]

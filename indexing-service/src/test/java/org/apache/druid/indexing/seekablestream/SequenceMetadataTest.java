@@ -21,31 +21,33 @@ package org.apache.druid.indexing.seekablestream;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
+import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
-import org.junit.Rule;
+import org.junit.Assert;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnitRunner;
 
+import java.math.BigInteger;
+import java.util.Collections;
 import java.util.Set;
 
 @RunWith(MockitoJUnitRunner.class)
 public class SequenceMetadataTest
 {
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
   @Mock
   private SeekableStreamIndexTaskRunner mockSeekableStreamIndexTaskRunner;
 
@@ -59,7 +61,7 @@ public class SequenceMetadataTest
   private TaskToolbox mockTaskToolbox;
 
   @Test
-  public void testPublishAnnotatedSegmentsThrowExceptionIfOverwriteSegmentsNotNullAndNotEmpty() throws Exception
+  public void testPublishAnnotatedSegmentsThrowExceptionIfOverwriteSegmentsNotNullAndNotEmpty()
   {
     DataSegment dataSegment = DataSegment.builder()
                                          .dataSource("foo")
@@ -76,53 +78,34 @@ public class SequenceMetadataTest
         ImmutableMap.of(),
         ImmutableMap.of(),
         true,
-        ImmutableSet.of()
+        ImmutableSet.of(),
+        null
     );
-    TransactionalSegmentPublisher transactionalSegmentPublisher = sequenceMetadata.createPublisher(mockSeekableStreamIndexTaskRunner, mockTaskToolbox, true);
+    TransactionalSegmentPublisher transactionalSegmentPublisher
+        = sequenceMetadata.createPublisher(mockSeekableStreamIndexTaskRunner, mockTaskToolbox, true);
 
-    expectedException.expect(ISE.class);
-    expectedException.expectMessage(
-        "Stream ingestion task unexpectedly attempted to overwrite segments: " + SegmentUtils.commaSeparatedIdentifiers(notNullNotEmptySegment)
+    ISE exception = Assert.assertThrows(
+        ISE.class,
+        () -> transactionalSegmentPublisher.publishAnnotatedSegments(notNullNotEmptySegment, ImmutableSet.of(), null, null)
     );
-
-    transactionalSegmentPublisher.publishAnnotatedSegments(notNullNotEmptySegment, null, ImmutableSet.of(), null);
-  }
-
-  @Test
-  public void testPublishAnnotatedSegmentsThrowExceptionIfDropSegmentsNotNullAndNotEmpty() throws Exception
-  {
-    DataSegment dataSegment = DataSegment.builder()
-                                         .dataSource("foo")
-                                         .interval(Intervals.of("2001/P1D"))
-                                         .shardSpec(new LinearShardSpec(1))
-                                         .version("b")
-                                         .size(0)
-                                         .build();
-
-    Set<DataSegment> notNullNotEmptySegment = ImmutableSet.of(dataSegment);
-    SequenceMetadata<Integer, Integer> sequenceMetadata = new SequenceMetadata<>(
-        1,
-        "test",
-        ImmutableMap.of(),
-        ImmutableMap.of(),
-        true,
-        ImmutableSet.of()
+    Assert.assertEquals(
+        "Stream ingestion task unexpectedly attempted to overwrite segments: "
+        + SegmentUtils.commaSeparatedIdentifiers(notNullNotEmptySegment),
+        exception.getMessage()
     );
-    TransactionalSegmentPublisher transactionalSegmentPublisher = sequenceMetadata.createPublisher(mockSeekableStreamIndexTaskRunner, mockTaskToolbox, true);
-
-    expectedException.expect(ISE.class);
-    expectedException.expectMessage(
-        "Stream ingestion task unexpectedly attempted to drop segments: " + SegmentUtils.commaSeparatedIdentifiers(notNullNotEmptySegment)
-    );
-
-    transactionalSegmentPublisher.publishAnnotatedSegments(null, notNullNotEmptySegment, ImmutableSet.of(), null);
   }
 
   @Test
   public void testPublishAnnotatedSegmentsSucceedIfDropSegmentsAndOverwriteSegmentsNullAndEmpty() throws Exception
   {
-    Mockito.when(mockSeekableStreamIndexTaskRunner.deserializePartitionsFromMetadata(ArgumentMatchers.any(), ArgumentMatchers.any())).thenReturn(mockSeekableStreamEndSequenceNumbers);
+    Mockito.when(
+               mockSeekableStreamIndexTaskRunner.deserializePartitionsFromMetadata(
+                   ArgumentMatchers.any(),
+                   ArgumentMatchers.any()
+               ))
+           .thenReturn(mockSeekableStreamEndSequenceNumbers);
     Mockito.when(mockSeekableStreamEndSequenceNumbers.getPartitionSequenceNumberMap()).thenReturn(ImmutableMap.of());
+    Mockito.when(mockSeekableStreamEndSequenceNumbers.getStream()).thenReturn("stream");
     Mockito.when(mockTaskToolbox.getTaskActionClient()).thenReturn(mockTaskActionClient);
     DataSegment dataSegment = DataSegment.builder()
                                          .dataSource("foo")
@@ -139,10 +122,70 @@ public class SequenceMetadataTest
         ImmutableMap.of(),
         ImmutableMap.of(),
         true,
-        ImmutableSet.of()
+        ImmutableSet.of(0),
+        null
     );
     TransactionalSegmentPublisher transactionalSegmentPublisher = sequenceMetadata.createPublisher(mockSeekableStreamIndexTaskRunner, mockTaskToolbox, false);
 
-    transactionalSegmentPublisher.publishAnnotatedSegments(null, null, notNullNotEmptySegment, ImmutableMap.of());
+    transactionalSegmentPublisher.publishAnnotatedSegments(null, notNullNotEmptySegment, ImmutableMap.of(), null);
+
+    transactionalSegmentPublisher = sequenceMetadata.createPublisher(mockSeekableStreamIndexTaskRunner, mockTaskToolbox, true);
+
+    transactionalSegmentPublisher.publishAnnotatedSegments(null, notNullNotEmptySegment, ImmutableMap.of(), null);
+  }
+
+  @Test
+  public void testCanHandle()
+  {
+    SequenceMetadata<Integer, Integer> sequenceMetadata = new SequenceMetadata<>(
+        1,
+        "test",
+        ImmutableMap.of(0, 0),
+        ImmutableMap.of(),
+        true,
+        ImmutableSet.of(0),
+        null
+    );
+
+    OrderedPartitionableRecord<Integer, Integer, ?> record = new OrderedPartitionableRecord<>(
+        "stream",
+        0,
+        0,
+        Collections.singletonList(new ByteEntity(StringUtils.toUtf8("unparseable")))
+    );
+
+    Mockito.when(mockSeekableStreamIndexTaskRunner.createSequenceNumber(ArgumentMatchers.any())).thenReturn(makeSequenceNumber("1", false));
+    Mockito.when(mockSeekableStreamIndexTaskRunner.isEndOffsetExclusive()).thenReturn(true);
+    Assert.assertFalse(sequenceMetadata.canHandle(mockSeekableStreamIndexTaskRunner, record));
+
+    Mockito.when(mockSeekableStreamIndexTaskRunner.isEndOffsetExclusive()).thenReturn(false);
+    Assert.assertFalse(sequenceMetadata.canHandle(mockSeekableStreamIndexTaskRunner, record));
+  }
+
+  private OrderedSequenceNumber<String> makeSequenceNumber(String seq, boolean isExclusive)
+  {
+    return new OrderedSequenceNumber<String>(seq, isExclusive)
+    {
+      @Override
+      public int compareTo(OrderedSequenceNumber<String> o)
+      {
+        return new BigInteger(this.get()).compareTo(new BigInteger(o.get()));
+      }
+
+      @Override
+      public boolean equals(Object o)
+      {
+        if (o.getClass() != this.getClass()) {
+          return false;
+        }
+        return new BigInteger(this.get()).equals(new BigInteger(((OrderedSequenceNumber<String>) o).get()));
+      }
+
+      @Override
+      public int hashCode()
+      {
+        return super.hashCode();
+      }
+    };
   }
 }

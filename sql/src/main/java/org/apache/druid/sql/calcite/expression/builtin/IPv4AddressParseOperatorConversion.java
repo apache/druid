@@ -23,8 +23,8 @@ import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.type.OperandTypes;
-import org.apache.calcite.sql.type.ReturnTypes;
 import org.apache.calcite.sql.type.SqlTypeFamily;
+import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.expression.IPv4AddressParseExprMacro;
 import org.apache.druid.sql.calcite.expression.DirectOperatorConversion;
@@ -39,7 +39,7 @@ public class IPv4AddressParseOperatorConversion extends DirectOperatorConversion
               OperandTypes.family(SqlTypeFamily.STRING),
               OperandTypes.family(SqlTypeFamily.INTEGER)
           ))
-      .returnTypeInference(ReturnTypes.INTEGER_NULLABLE)
+      .returnTypeNullable(SqlTypeName.BIGINT)
       .functionCategory(SqlFunctionCategory.USER_DEFINED_FUNCTION)
       .build();
 

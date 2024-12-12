@@ -23,7 +23,6 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.sql.SqlFunction;
 import org.apache.calcite.sql.SqlFunctionCategory;
 import org.apache.calcite.sql.SqlOperator;
-import org.apache.calcite.sql.type.OperandTypes;
 import org.apache.calcite.sql.type.SqlReturnTypeInference;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.druid.java.util.common.StringUtils;
@@ -52,13 +51,10 @@ public class ComplexDecodeBase64OperatorConversion implements SqlOperatorConvers
 
   private static final SqlFunction SQL_FUNCTION = OperatorConversions
       .operatorBuilder(StringUtils.toUpperCase(BuiltInExprMacros.ComplexDecodeBase64ExprMacro.NAME))
-      .operandTypeChecker(
-          OperandTypes.sequence(
-              "'" + StringUtils.toUpperCase(BuiltInExprMacros.ComplexDecodeBase64ExprMacro.NAME) + "(typeName, base64)'",
-              OperandTypes.and(OperandTypes.family(SqlTypeFamily.STRING), OperandTypes.LITERAL),
-              OperandTypes.ANY
-          )
-      )
+      .operandNames("typeName", "base64")
+      .operandTypes(SqlTypeFamily.STRING, SqlTypeFamily.ANY)
+      .requiredOperandCount(2)
+      .literalOperands(0)
       .returnTypeInference(ARBITRARY_COMPLEX_RETURN_TYPE_INFERENCE)
       .functionCategory(SqlFunctionCategory.USER_DEFINED_FUNCTION)
       .build();

@@ -40,12 +40,10 @@ public class FloatWrappingDimensionSelector extends BaseSingleValueDimensionSele
   @Override
   protected String getValue()
   {
-    if (selector.isNull()) {
-      return null;
-    } else if (extractionFn == null) {
-      return String.valueOf(selector.getFloat());
+    if (extractionFn == null) {
+      return selector.isNull() ? null : String.valueOf(selector.getFloat());
     } else {
-      return extractionFn.apply(selector.getFloat());
+      return selector.isNull() ? extractionFn.apply(null) : extractionFn.apply(selector.getFloat());
     }
   }
 

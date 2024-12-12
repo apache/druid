@@ -77,7 +77,9 @@ parsing data is less efficient than writing a native Java parser or using an ext
 
 You can use the `inputFormat` field to specify the data format for your input data.
 
-> `inputFormat` doesn't support all data formats or ingestion methods supported by Druid.
+:::info
+ `inputFormat` doesn't support all data formats or ingestion methods supported by Druid.
+:::
 
 Especially if you want to use the Hadoop ingestion, you still need to use the [Parser](#parser).
 If your data is formatted in some format not listed in this section, please consider using the Parser instead.
@@ -123,6 +125,7 @@ Configure the CSV `inputFormat` to load CSV data as follows:
 | columns | JSON array | Specifies the columns of the data. The columns should be in the same order with the columns of your data. | yes if `findColumnsFromHeader` is false or missing |
 | findColumnsFromHeader | Boolean | If this is set, the task will find the column names from the header row. Note that `skipHeaderRows` will be applied before finding column names from the header. For example, if you set `skipHeaderRows` to 2 and `findColumnsFromHeader` to true, the task will skip the first two lines and then extract column information from the third line. `columns` will be ignored if this is set to true. | no (default = false if `columns` is set; otherwise null) |
 | skipHeaderRows | Integer | If this is set, the task will skip the first `skipHeaderRows` rows. | no (default = 0) |
+| tryParseNumbers| Boolean| If this is set, the task will attempt to parse numeric strings into long or double data type, in that order. This parsing also applies to values separated by `listDelimiter`. If the value cannot be parsed as a number, it is retained as a string. | no (default = false) |
 
 For example:
 
@@ -148,6 +151,7 @@ Configure the TSV `inputFormat` to load TSV data as follows:
 | columns | JSON array | Specifies the columns of the data. The columns should be in the same order with the columns of your data. | yes if `findColumnsFromHeader` is false or missing |
 | findColumnsFromHeader | Boolean | If this is set, the task will find the column names from the header row. Note that `skipHeaderRows` will be applied before finding column names from the header. For example, if you set `skipHeaderRows` to 2 and `findColumnsFromHeader` to true, the task will skip the first two lines and then extract column information from the third line. `columns` will be ignored if this is set to true. | no (default = false if `columns` is set; otherwise null) |
 | skipHeaderRows | Integer | If this is set, the task will skip the first `skipHeaderRows` rows. | no (default = 0) |
+| tryParseNumbers| Boolean| If this is set, the task will attempt to parse numeric strings into long or double data type, in that order. This parsing also applies to values separated by `listDelimiter`. If the value cannot be parsed as a number, it is retained as a string. | no (default = false) |
 
 Be sure to change the `delimiter` to the appropriate delimiter for your data. Like CSV, you must specify the columns and which subset of the columns you want indexed.
 
@@ -167,7 +171,9 @@ For example:
 ### ORC
 
 To use the ORC input format, load the Druid Orc extension ( [`druid-orc-extensions`](../development/extensions-core/orc.md)).
-> To upgrade from versions earlier than 0.15.0 to 0.15.0 or new, read [Migration from 'contrib' extension](../development/extensions-core/orc.md#migration-from-contrib-extension).
+:::info
+ To upgrade from versions earlier than 0.15.0 to 0.15.0 or new, read [Migration from 'contrib' extension](../development/extensions-core/orc.md#migration-from-contrib-extension).
+:::
 
 Configure the ORC `inputFormat` to load ORC data as follows:
 
@@ -289,9 +295,11 @@ If `type` is not included, the avroBytesDecoder defaults to `schema_repo`.
 
 ###### Inline Schema Based Avro Bytes Decoder
 
-> The "schema_inline" decoder reads Avro records using a fixed schema and does not support schema migration. If you
-> may need to migrate schemas in the future, consider one of the other decoders, all of which use a message header that
-> allows the parser to identify the proper Avro schema for reading records.
+:::info
+ The "schema_inline" decoder reads Avro records using a fixed schema and does not support schema migration. If you
+ may need to migrate schemas in the future, consider one of the other decoders, all of which use a message header that
+ allows the parser to identify the proper Avro schema for reading records.
+:::
 
 This decoder can be used if all the input events can be read using the same schema. In this case, specify the schema in the input task JSON itself, as described below.
 
@@ -392,8 +400,8 @@ For details, see the Schema Registry [documentation](http://docs.confluent.io/cu
 | url | String | Specifies the URL endpoint of the Schema Registry. | yes |
 | capacity | Integer | Specifies the max size of the cache (default = Integer.MAX_VALUE). | no |
 | urls | Array<String\> | Specifies the URL endpoints of the multiple Schema Registry instances. | yes (if `url` is not provided) |
-| config | Json | To send additional configurations, configured for Schema Registry.  This can be supplied via a [DynamicConfigProvider](../operations/dynamic-config-provider.md) | no |
-| headers | Json | To send headers to the Schema Registry.  This can be supplied via a [DynamicConfigProvider](../operations/dynamic-config-provider.md) | no |
+| config | Json | To send additional configurations, configured for Schema Registry. This can be supplied via a [DynamicConfigProvider](../operations/dynamic-config-provider.md) | no |
+| headers | Json | To send headers to the Schema Registry. This can be supplied via a [DynamicConfigProvider](../operations/dynamic-config-provider.md) | no |
 
 For a single schema registry instance, use Field `url` or `urls` for multi instances.
 
@@ -503,7 +511,9 @@ For example:
 
 ### Protobuf
 
-> You need to include the [`druid-protobuf-extensions`](../development/extensions-core/protobuf.md) as an extension to use the Protobuf input format.
+:::info
+ You need to include the [`druid-protobuf-extensions`](../development/extensions-core/protobuf.md) as an extension to use the Protobuf input format.
+:::
 
 Configure the Protobuf `inputFormat` to load Protobuf data as follows:
 
@@ -541,51 +551,64 @@ For example:
 
 ### Kafka
 
-`kafka` is a special input format that wraps a regular input format (which goes in `valueFormat`) and allows you
-to parse the Kafka metadata (timestamp, headers, and key) that is part of Kafka messages.
-It should only be used when ingesting from Apache Kafka. 
+The `kafka` input format lets you parse the Kafka metadata fields in addition to the Kafka payload value contents.
+It should only be used when ingesting from Apache Kafka.
 
-Configure the Kafka `inputFormat` as follows:
-
-| Field | Type | Description | Required |
-|-------|------|-------------|----------|
-| `type` | String | Set value to `kafka`. | yes |
-| `valueFormat` | [InputFormat](#input-format) | Any [InputFormat](#input-format) to parse the Kafka value payload. For details about specifying the input format, see [Specifying data format](../development/extensions-core/kafka-supervisor-reference.md#specifying-data-format). | yes |
-| `timestampColumnName` | String | Name of the column for the kafka record's timestamp.| no (default = "kafka.timestamp") |
-| `headerColumnPrefix` | String | Custom prefix for all the header columns. | no (default = "kafka.header.") |
-| `headerFormat` | Object | `headerFormat` specifies how to parse the Kafka headers. Supports String types. Because Kafka header values are bytes, the parser decodes them as UTF-8 encoded strings. To change this behavior, implement your own parser based on the encoding style. Change the 'encoding' type in `KafkaStringHeaderFormat` to match your custom implementation. | no |
-| `keyFormat` | [InputFormat](#input-format) | Any [input format](#input-format) to parse the Kafka key. It only processes the first entry of the `inputFormat` field. For details, see [Specifying data format](../development/extensions-core/kafka-supervisor-reference.md#specifying-data-format). | no |
-| `keyColumnName` | String | Name of the column for the kafka record's key.| no (default = "kafka.key") |
-
-The Kafka input format augments the payload with information from the Kafka timestamp, headers, and key.
+The `kafka` input format wraps around the payload parsing input format and augments the data it outputs with the Kafka event timestamp, topic name, event headers, and the key field that itself can be parsed using any available input format.
 
 If there are conflicts between column names in the payload and those created from the metadata, the payload takes precedence.
 This ensures that upgrading a Kafka ingestion to use the Kafka input format (by taking its existing input format and setting it as the `valueFormat`) can be done without losing any of the payload data.  
 
-Here is a minimal example that only augments the parsed payload with the Kafka timestamp column:
+Configure the Kafka `inputFormat` as follows:
 
-```
+| Field | Type | Description | Required | Default |
+|-------|------|-------------|----------|---------|
+| `type` | String | Set value to `kafka`. | yes ||
+| `valueFormat` | [InputFormat](#input-format) | The [input format](#input-format) to parse the Kafka value payload. | yes ||
+| `timestampColumnName` | String | The name of the column for the Kafka timestamp.| no |`kafka.timestamp`|
+| `topicColumnName` | String |The name of the column for the Kafka topic. This field is useful when ingesting data from multiple topics into same datasource.| no |`kafka.topic`|
+| `headerColumnPrefix` | String | The custom prefix for all the header columns. | no | `kafka.header`|
+| `headerFormat` | Object | Specifies how to parse the Kafka headers. Supports String types. Because Kafka header values are bytes, the parser decodes them as UTF-8 encoded strings. To change this behavior, implement your own parser based on the encoding style. Change the `encoding` type in `KafkaStringHeaderFormat` to match your custom implementation. See [Header format](#header-format) for supported encoding formats.| no ||
+| `keyFormat` | [InputFormat](#input-format) | The [input format](#input-format) to parse the Kafka key. It only processes the first entry of the `inputFormat` field. If your key values are simple strings, you can use the `tsv` format to parse them. Note that for `tsv`,`csv`, and `regex` formats, you need to provide a `columns` array to make a valid input format. Only the first one is used, and its name will be ignored in favor of `keyColumnName`. | no ||
+| `keyColumnName` | String | The name of the column for the Kafka key.| no |`kafka.key`|
+
+#### Header format
+
+`headerFormat` supports the following encoding formats:
+   - `ISO-8859-1`: ISO Latin Alphabet No. 1, that is, ISO-LATIN-1.
+   - `US-ASCII`: Seven-bit ASCII. Also known as ISO646-US. The Basic Latin block of the Unicode character set.
+   - `UTF-8`: Eight-bit UCS Transformation Format.
+   - `UTF-16`: Sixteen-bit UCS Transformation Format, byte order identified by an optional byte-order mark.
+   - `UTF-16BE`: Sixteen-bit UCS Transformation Format, big-endian byte order.
+   - `UTF-16LE`: Sixteen-bit UCS Transformation Format, little-endian byte order.
+- `headerColumnPrefix`: Supply a prefix to the Kafka headers to avoid any conflicts with columns from the payload. The default is `kafka.header.`.
+
+#### Example
+
+Using `{ "type": "json" }` as the input format would only parse the payload value.
+To parse the Kafka metadata in addition to the payload, use the `kafka` input format.
+
+For example, consider the following structure for a Kafka message that represents an edit in a development environment:
+
+- **Kafka timestamp**: `1680795276351`
+- **Kafka topic**: `wiki-edits`
+- **Kafka headers**:
+  - `env=development`
+  - `zone=z1`
+- **Kafka key**: `wiki-edit`
+- **Kafka payload value**: `{"channel":"#sv.wikipedia","timestamp":"2016-06-27T00:00:11.080Z","page":"Salo Toraut","delta":31,"namespace":"Main"}`
+
+You would configure it as follows:
+
+```json
 "ioConfig": {
   "inputFormat": {
     "type": "kafka",
     "valueFormat": {
       "type": "json"
-    }
-  },
-  ...
-}
-```
-
-Here is a complete example:
-
-```
-"ioConfig": {
-  "inputFormat": {
-    "type": "kafka",
-    "valueFormat": {
-      "type": "json"
-    }
+    },
     "timestampColumnName": "kafka.timestamp",
+    "topicColumnName": "kafka.topic",
     "headerFormat": {
       "type": "string",
       "encoding": "UTF-8"
@@ -597,8 +620,24 @@ Here is a complete example:
       "columns": ["x"]
     },
     "keyColumnName": "kafka.key",
-  },
-  ...
+  }
+}
+```
+
+You would parse the example message as follows:
+
+```json
+{
+  "channel": "#sv.wikipedia",
+  "timestamp": "2016-06-27T00:00:11.080Z",
+  "page": "Salo Toraut",
+  "delta": 31,
+  "namespace": "Main",
+  "kafka.timestamp": 1680795276351,
+  "kafka.topic": "wiki-edits",
+  "kafka.header.env": "development",
+  "kafka.header.zone": "z1",
+  "kafka.key": "wiki-edit"
 }
 ```
 
@@ -619,6 +658,222 @@ Similarly, if you want to use a timestamp extracted from the Kafka header:
   "format": "millis"
 }
 ```
+
+Finally, add these Kafka metadata columns to the `dimensionsSpec` or  set your `dimensionsSpec` to auto-detect columns.
+     
+The following supervisor spec demonstrates how to ingest the Kafka header, key, timestamp, and topic into Druid dimensions:
+
+<details>
+<summary>Click to view the example</summary>
+
+```json
+{
+  "type": "kafka",
+  "spec": {
+    "ioConfig": {
+      "type": "kafka",
+      "consumerProperties": {
+        "bootstrap.servers": "localhost:9092"
+      },
+      "topic": "wiki-edits",
+      "inputFormat": {
+        "type": "kafka",
+        "valueFormat": {
+          "type": "json"
+        },
+        "headerFormat": {
+          "type": "string"
+        },
+        "keyFormat": {
+          "type": "tsv",
+          "findColumnsFromHeader": false,
+          "columns": ["x"]
+        }
+      },
+      "useEarliestOffset": true
+    },
+    "dataSchema": {
+      "dataSource": "wikiticker",
+      "timestampSpec": {
+        "column": "timestamp",
+        "format": "posix"
+      },
+      "dimensionsSpec":  "dimensionsSpec": {
+        "useSchemaDiscovery": true,
+        "includeAllDimensions": true
+      },
+      "granularitySpec": {
+        "queryGranularity": "none",
+        "rollup": false,
+        "segmentGranularity": "day"
+      }
+    },
+    "tuningConfig": {
+      "type": "kafka"
+    }
+  }
+}
+```
+</details>
+
+After Druid ingests the data, you can query the Kafka metadata columns as follows:
+
+```sql
+SELECT
+  "kafka.header.env",
+  "kafka.key",
+  "kafka.timestamp",
+  "kafka.topic"
+FROM "wikiticker"
+```
+
+This query returns:
+
+| `kafka.header.env` | `kafka.key` | `kafka.timestamp` | `kafka.topic` |
+|--------------------|-----------|---------------|---------------|
+| `development`      | `wiki-edit` | `1680795276351` | `wiki-edits`  |
+
+### Kinesis
+
+The `kinesis` input format lets you parse the Kinesis metadata fields in addition to the Kinesis payload value contents.
+It should only be used when ingesting from Kinesis.
+
+The `kinesis` input format wraps around the payload parsing input format and augments the data it outputs with the Kinesis event timestamp and partition key, the `ApproximateArrivalTimestamp ` and `PartitionKey` fields in the Kinesis record.
+
+If there are conflicts between column names in the payload and those created from the metadata, the payload takes precedence.
+This ensures that upgrading a Kinesis ingestion to use the Kinesis input format (by taking its existing input format and setting it as the `valueFormat`) can be done without losing any of the payload data.
+
+Configure the Kinesis `inputFormat` as follows:
+
+| Field | Type | Description                                                                                                                                       | Required | Default             |
+|-------|------|---------------------------------------------------------------------------------------------------------------------------------------------------|----------|---------------------|
+| `type` | String | Set value to `kinesis`. | yes ||
+| `valueFormat` | [InputFormat](#input-format) | The [input format](#input-format) to parse the Kinesis value payload. | yes ||
+| `partitionKeyColumnName` | String | The name of the column for the Kinesis partition key. This field is useful when ingesting data from multiple partitions into the same datasource. | no | `kinesis.partitionKey` |
+| `timestampColumnName` | String | The name of the column for the Kinesis timestamp. | no | `kinesis.timestamp` |
+
+#### Example
+
+Using `{ "type": "json" }` as the input format would only parse the payload value.
+To parse the Kinesis metadata in addition to the payload, use the `kinesis` input format.
+
+For example, consider the following structure for a Kinesis record that represents an edit in a development environment:
+
+- **Kinesis timestamp**: `1680795276351`
+- **Kinesis partition key**: `partition-1`
+- **Kinesis payload value**: `{"channel":"#sv.wikipedia","timestamp":"2016-06-27T00:00:11.080Z","page":"Salo Toraut","delta":31,"namespace":"Main"}`
+
+You would configure it as follows:
+
+```json
+{
+  "ioConfig": {
+    "inputFormat": {
+      "type": "kinesis",
+      "valueFormat": {
+        "type": "json"
+      },
+      "timestampColumnName": "kinesis.timestamp",
+      "partitionKeyColumnName": "kinesis.partitionKey"
+    }
+  }
+}
+```
+
+You would parse the example record as follows:
+
+```json
+{
+  "channel": "#sv.wikipedia",
+  "timestamp": "2016-06-27T00:00:11.080Z",
+  "page": "Salo Toraut",
+  "delta": 31,
+  "namespace": "Main",
+  "kinesis.timestamp": 1680795276351,
+  "kinesis.partitionKey": "partition-1"
+}
+```
+
+If you want to use `kinesis.timestamp` as Druid's primary timestamp (`__time`), specify it as the value for `column` in the `timestampSpec`:
+
+```json
+"timestampSpec": {
+  "column": "kinesis.timestamp",
+  "format": "millis"
+}
+```
+
+Finally, add these Kinesis metadata columns to the `dimensionsSpec` or  set your `dimensionsSpec` to automatically detect columns.
+
+The following supervisor spec demonstrates how to ingest the Kinesis timestamp, and partition key into Druid dimensions:
+
+<details>
+<summary>Click to view the example</summary>
+
+```json
+{
+  "type": "kinesis",
+  "spec": {
+    "ioConfig": {
+      "type": "kinesis",
+      "consumerProperties": {
+        "bootstrap.servers": "localhost:9092"
+      },
+      "topic": "wiki-edits",
+      "inputFormat": {
+        "type": "kinesis",
+        "valueFormat": {
+          "type": "json"
+        },
+        "headerFormat": {
+          "type": "string"
+        },
+        "keyFormat": {
+          "type": "tsv",
+          "findColumnsFromHeader": false,
+          "columns": ["x"]
+        }
+      },
+      "useEarliestOffset": true
+    },
+    "dataSchema": {
+      "dataSource": "wikiticker",
+      "timestampSpec": {
+        "column": "timestamp",
+        "format": "posix"
+      },
+      "dimensionsSpec": {
+        "useSchemaDiscovery": true,
+        "includeAllDimensions": true
+      },
+      "granularitySpec": {
+        "queryGranularity": "none",
+        "rollup": false,
+        "segmentGranularity": "day"
+      }
+    },
+    "tuningConfig": {
+      "type": "kinesis"
+    }
+  }
+}
+```
+</details>
+
+After Druid ingests the data, you can query the Kinesis metadata columns as follows:
+
+```sql
+SELECT
+  "kinesis.timestamp",
+  "kinesis.partitionKey"
+FROM "wikiticker"
+```
+
+This query returns:
+
+| `kinesis.timestamp` | `kinesis.topic` |
+|---------------------|-----------------|
+| `1680795276351`     | `partition-1`   |
 
 ## FlattenSpec
 
@@ -686,9 +941,11 @@ Each entry in the `fields` list can have the following components:
 
 ## Parser
 
-> The Parser is deprecated for [native batch tasks](./native-batch.md), [Kafka indexing service](../development/extensions-core/kafka-ingestion.md),
-and [Kinesis indexing service](../development/extensions-core/kinesis-ingestion.md).
+:::info
+ The Parser is deprecated for [native batch tasks](./native-batch.md), [Kafka indexing service](../ingestion/kafka-ingestion.md),
+and [Kinesis indexing service](../ingestion/kinesis-ingestion.md).
 Consider using the [input format](#input-format) instead for these types of ingestion.
+:::
 
 This section lists all default and core extension parsers.
 For community extension parsers, please see our [community extensions list](../configuration/extensions.md#community-extensions).
@@ -705,9 +962,13 @@ Each line can be further parsed using [`parseSpec`](#parsespec).
 
 ### Avro Hadoop Parser
 
-> You need to include the [`druid-avro-extensions`](../development/extensions-core/avro.md) as an extension to use the Avro Hadoop Parser.
+:::info
+ You need to include the [`druid-avro-extensions`](../development/extensions-core/avro.md) as an extension to use the Avro Hadoop Parser.
+:::
 
-> See the [Avro Types](../development/extensions-core/avro.md#avro-types) section for how Avro types are handled in Druid
+:::info
+ See the [Avro Types](../development/extensions-core/avro.md#avro-types) section for how Avro types are handled in Druid
+:::
 
 This parser is for [Hadoop batch ingestion](./hadoop.md).
 The `inputFormat` of `inputSpec` in `ioConfig` must be set to `"org.apache.druid.data.input.avro.AvroValueInputFormat"`.
@@ -764,10 +1025,14 @@ For example, using Avro Hadoop parser with custom reader's schema file:
 
 ### ORC Hadoop Parser
 
-> You need to include the [`druid-orc-extensions`](../development/extensions-core/orc.md) as an extension to use the ORC Hadoop Parser.
+:::info
+ You need to include the [`druid-orc-extensions`](../development/extensions-core/orc.md) as an extension to use the ORC Hadoop Parser.
+:::
 
-> If you are considering upgrading from earlier than 0.15.0 to 0.15.0 or a higher version,
-> please read [Migration from 'contrib' extension](../development/extensions-core/orc.md#migration-from-contrib-extension) carefully.
+:::info
+ If you are considering upgrading from earlier than 0.15.0 to 0.15.0 or a higher version,
+ please read [Migration from 'contrib' extension](../development/extensions-core/orc.md#migration-from-contrib-extension) carefully.
+:::
 
 This parser is for [Hadoop batch ingestion](./hadoop.md).
 The `inputFormat` of `inputSpec` in `ioConfig` must be set to `"org.apache.orc.mapreduce.OrcInputFormat"`.
@@ -1005,7 +1270,9 @@ setting `"mapreduce.job.user.classpath.first": "true"`, then this will not be an
 
 ### Parquet Hadoop Parser
 
-> You need to include the [`druid-parquet-extensions`](../development/extensions-core/parquet.md) as an extension to use the Parquet Hadoop Parser.
+:::info
+ You need to include the [`druid-parquet-extensions`](../development/extensions-core/parquet.md) as an extension to use the Parquet Hadoop Parser.
+:::
 
 The Parquet Hadoop parser is for [Hadoop batch ingestion](./hadoop.md) and parses Parquet files directly.
 The `inputFormat` of `inputSpec` in `ioConfig` must be set to `org.apache.druid.data.input.parquet.DruidParquetInputFormat`.
@@ -1147,12 +1414,16 @@ However, the Parquet Avro Hadoop Parser was the original basis for supporting th
 
 ### Parquet Avro Hadoop Parser
 
-> Consider using the [Parquet Hadoop Parser](#parquet-hadoop-parser) over this parser to ingest
+:::info
+ Consider using the [Parquet Hadoop Parser](#parquet-hadoop-parser) over this parser to ingest
 Parquet files. See [Parquet Hadoop Parser vs Parquet Avro Hadoop Parser](#parquet-hadoop-parser-vs-parquet-avro-hadoop-parser)
 for the differences between those parsers.
+:::
 
-> You need to include both the [`druid-parquet-extensions`](../development/extensions-core/parquet.md)
+:::info
+ You need to include both the [`druid-parquet-extensions`](../development/extensions-core/parquet.md)
 [`druid-avro-extensions`] as extensions to use the Parquet Avro Hadoop Parser.
+:::
 
 The Parquet Avro Hadoop Parser is for [Hadoop batch ingestion](./hadoop.md).
 This parser first converts the Parquet data into Avro records, and then parses them to ingest into Druid.
@@ -1234,9 +1505,13 @@ an explicitly defined [format](http://www.joda.org/joda-time/apidocs/org/joda/ti
 
 ### Avro Stream Parser
 
-> You need to include the [`druid-avro-extensions`](../development/extensions-core/avro.md) as an extension to use the Avro Stream Parser.
+:::info
+ You need to include the [`druid-avro-extensions`](../development/extensions-core/avro.md) as an extension to use the Avro Stream Parser.
+:::
 
-> See the [Avro Types](../development/extensions-core/avro.md#avro-types) section for how Avro types are handled in Druid
+:::info
+ See the [Avro Types](../development/extensions-core/avro.md#avro-types) section for how Avro types are handled in Druid
+:::
 
 This parser is for [stream ingestion](./index.md#streaming) and reads Avro data from a stream directly.
 
@@ -1276,7 +1551,9 @@ For example, using Avro stream parser with schema repo Avro bytes decoder:
 
 ### Protobuf Parser
 
-> You need to include the [`druid-protobuf-extensions`](../development/extensions-core/protobuf.md) as an extension to use the Protobuf Parser.
+:::info
+ You need to include the [`druid-protobuf-extensions`](../development/extensions-core/protobuf.md) as an extension to use the Protobuf Parser.
+:::
 
 This parser is for [stream ingestion](./index.md#streaming) and reads Protocol buffer data from a stream directly.
 
@@ -1430,9 +1707,11 @@ Multiple Instances:
 
 ## ParseSpec
 
-> The Parser is deprecated for [native batch tasks](./native-batch.md), [Kafka indexing service](../development/extensions-core/kafka-ingestion.md),
-and [Kinesis indexing service](../development/extensions-core/kinesis-ingestion.md).
+:::info
+ The Parser is deprecated for [native batch tasks](./native-batch.md), [Kafka indexing service](../ingestion/kafka-ingestion.md),
+and [Kinesis indexing service](../ingestion/kinesis-ingestion.md).
 Consider using the [input format](#input-format) instead for these types of ingestion.
+:::
 
 ParseSpecs serve two purposes:
 
@@ -1468,7 +1747,9 @@ Sample spec:
 
 ### JSON Lowercase ParseSpec
 
-> The _jsonLowercase_ parser is deprecated and may be removed in a future version of Druid.
+:::info
+ The _jsonLowercase_ parser is deprecated and may be removed in a future version of Druid.
+:::
 
 This is a special variation of the JSON ParseSpec that lower cases all the column names in the incoming JSON data. This parseSpec is required if you are updating to Druid 0.7.x from Druid 0.6.x, are directly ingesting JSON with mixed case column names, do not have any ETL in place to lower case those column names, and would like to make queries that include the data you created using 0.6.x and 0.7.x.
 
@@ -1608,7 +1889,9 @@ columns names ("column_1", "column2", ... "column_n") will be assigned. Ensure t
 Note with the JavaScript parser that data must be fully parsed and returned as a `{key:value}` format in the JS logic.
 This means any flattening or parsing multi-dimensional values must be done here.
 
-> JavaScript-based functionality is disabled by default. Please refer to the Druid [JavaScript programming guide](../development/javascript.md) for guidelines about using Druid's JavaScript functionality, including instructions on how to enable it.
+:::info
+ JavaScript-based functionality is disabled by default. Please refer to the Druid [JavaScript programming guide](../development/javascript.md) for guidelines about using Druid's JavaScript functionality, including instructions on how to enable it.
+:::
 
 ### TimeAndDims ParseSpec
 

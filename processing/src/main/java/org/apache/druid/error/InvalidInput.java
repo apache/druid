@@ -19,7 +19,11 @@
 
 package org.apache.druid.error;
 
-public class InvalidInput extends DruidException.Failure
+/**
+ * A failure type used to make {@link DruidException}s of category
+ * {@link DruidException.Category#INVALID_INPUT} for persona {@link DruidException.Persona#USER}.
+ */
+public class InvalidInput extends BaseFailure
 {
   public static DruidException exception(String msg, Object... args)
   {
@@ -31,9 +35,36 @@ public class InvalidInput extends DruidException.Failure
     return DruidException.fromFailure(new InvalidInput(t, msg, args));
   }
 
-  private final Throwable t;
-  private final String msg;
-  private final Object[] args;
+  /**
+   * evalues a condition. If it's false, it throws the appropriate DruidException
+   *
+   * @param condition - boolean condition to validate
+   * @param msg - passed through to DruidException.exception()
+   * @param args - passed through to DruidException.exception()
+   */
+  public static void conditionalException(boolean condition, String msg, Object... args)
+  {
+    if (!condition) {
+      throw exception(msg, args);
+    }
+  }
+
+  /**
+   * evalues a condition. If it's false, it throws the appropriate DruidException with a given cause
+   *
+   * @param condition - boolean condition to validate
+   * @param t - throwable to pass to InvalidInput.exception()
+   * @param msg - passed through to InvalidInput.exception()
+   * @param args - passed through to InvalidInput.exception()
+   */
+
+  public static void conditionalException(boolean condition, Throwable t, String msg, Object... args)
+  {
+    if (!condition) {
+      throw exception(t, msg, args);
+    }
+  }
+
 
   public InvalidInput(
       Throwable t,
@@ -41,23 +72,12 @@ public class InvalidInput extends DruidException.Failure
       Object... args
   )
   {
-    super("invalidInput");
-    this.t = t;
-    this.msg = msg;
-    this.args = args;
+    super(
+        "invalidInput",
+        DruidException.Persona.USER,
+        DruidException.Category.INVALID_INPUT,
+        t, msg, args
+    );
   }
 
-
-  @Override
-  public DruidException makeException(DruidException.DruidExceptionBuilder bob)
-  {
-    bob = bob.forPersona(DruidException.Persona.USER)
-             .ofCategory(DruidException.Category.INVALID_INPUT);
-
-    if (t == null) {
-      return bob.build(msg, args);
-    } else {
-      return bob.build(t, msg, args);
-    }
-  }
 }

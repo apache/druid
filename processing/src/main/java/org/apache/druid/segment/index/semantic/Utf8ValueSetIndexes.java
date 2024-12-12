@@ -23,14 +23,17 @@ import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.segment.index.BitmapColumnIndex;
 
 import java.nio.ByteBuffer;
-import java.util.SortedSet;
+import java.util.List;
 
+/**
+ * Construct a {@link BitmapColumnIndex} for a set of utf8 byte values which might be present in the column.
+ */
 public interface Utf8ValueSetIndexes
 {
   /**
-   * Get an {@link Iterable} of {@link ImmutableBitmap} corresponding to the specified set of values (if they are
-   * contained in the underlying column). The set must be sorted using
+   * Get the wrapped {@link ImmutableBitmap} corresponding to the specified set of values (if they are contained in the
+   * underlying column). The set must be sorted using
    * {@link org.apache.druid.java.util.common.ByteBufferUtils#utf8Comparator()}.
    */
-  BitmapColumnIndex forSortedValuesUtf8(SortedSet<ByteBuffer> valuesUtf8);
+  BitmapColumnIndex forSortedValuesUtf8(List<ByteBuffer> sortedValuesUtf8);
 }

@@ -27,6 +27,7 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
+ *
  */
 public class DimFilters
 {
@@ -60,9 +61,9 @@ public class DimFilters
     return new NotDimFilter(filter);
   }
 
-  public static List<DimFilter> optimize(List<DimFilter> filters)
+  public static List<DimFilter> optimize(List<DimFilter> filters, boolean mayIncludeUnknown)
   {
-    return filterNulls(Lists.transform(filters, DimFilter::optimize));
+    return filterNulls(Lists.transform(filters, filter -> filter.optimize(mayIncludeUnknown)));
   }
 
   public static List<DimFilter> filterNulls(List<DimFilter> optimized)

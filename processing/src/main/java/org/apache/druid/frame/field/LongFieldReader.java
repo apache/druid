@@ -21,75 +21,69 @@ package org.apache.druid.frame.field;
 
 import org.apache.datasketches.memory.Memory;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.query.extraction.ExtractionFn;
+import org.apache.druid.frame.Frame;
+import org.apache.druid.frame.write.RowBasedFrameWriter;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
+import org.apache.druid.query.rowsandcols.column.Column;
+import org.apache.druid.query.rowsandcols.column.ColumnAccessor;
 import org.apache.druid.segment.ColumnValueSelector;
-import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.LongColumnSelector;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
-import org.apache.druid.segment.column.ValueTypes;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
  * Reads values written by {@link LongFieldWriter}.
  *
- * Values are sortable as bytes without decoding.
- *
- * Format:
- *
- * - 1 byte: {@link LongFieldWriter#NULL_BYTE} or {@link LongFieldWriter#NOT_NULL_BYTE}
- * - 8 bytes: encoded long: big-endian order, with sign flipped
+ * @see LongFieldWriter
+ * @see NumericFieldWriter for the details of the byte-format that it expects for reading
  */
-public class LongFieldReader implements FieldReader
+public class LongFieldReader extends NumericFieldReader
 {
-  LongFieldReader()
+
+  public static LongFieldReader forPrimitive()
   {
+    return new LongFieldReader(false);
+  }
+
+  public static LongFieldReader forArray()
+  {
+    return new LongFieldReader(true);
+  }
+
+  private LongFieldReader(final boolean forArray)
+  {
+    super(forArray);
   }
 
   @Override
-  public ColumnValueSelector<?> makeColumnValueSelector(Memory memory, ReadableFieldPointer fieldPointer)
+  public ValueType getValueType()
   {
-    return new Selector(memory, fieldPointer);
+    return ValueType.LONG;
   }
 
   @Override
-  public DimensionSelector makeDimensionSelector(
-      Memory memory,
-      ReadableFieldPointer fieldPointer,
-      @Nullable ExtractionFn extractionFn
+  public ColumnValueSelector<?> getColumnValueSelector(
+      final Memory memory,
+      final ReadableFieldPointer fieldPointer,
+      final byte nullIndicatorByte
   )
   {
-    return ValueTypes.makeNumericWrappingDimensionSelector(
-        ValueType.LONG,
-        makeColumnValueSelector(memory, fieldPointer),
-        extractionFn
-    );
+    return new LongFieldSelector(memory, fieldPointer, nullIndicatorByte);
   }
 
-  @Override
-  public boolean isNull(Memory memory, long position)
+  private static class LongFieldSelector extends NumericFieldReader.Selector implements LongColumnSelector
   {
-    return memory.getByte(position) == LongFieldWriter.NULL_BYTE;
-  }
+    final Memory dataRegion;
+    final ReadableFieldPointer fieldPointer;
 
-  @Override
-  public boolean isComparable()
-  {
-    return true;
-  }
-
-  /**
-   * Selector that reads a value from a location pointed to by {@link ReadableFieldPointer}.
-   */
-  private static class Selector implements LongColumnSelector
-  {
-    private final Memory memory;
-    private final ReadableFieldPointer fieldPointer;
-
-    private Selector(final Memory memory, final ReadableFieldPointer fieldPointer)
+    public LongFieldSelector(Memory dataRegion, ReadableFieldPointer fieldPointer, byte nullIndicatorByte)
     {
-      this.memory = memory;
+      super(dataRegion, fieldPointer, nullIndicatorByte);
+      this.dataRegion = dataRegion;
       this.fieldPointer = fieldPointer;
     }
 
@@ -97,20 +91,151 @@ public class LongFieldReader implements FieldReader
     public long getLong()
     {
       assert NullHandling.replaceWithDefault() || !isNull();
-      final long bits = memory.getLong(fieldPointer.position() + Byte.BYTES);
-      return LongFieldWriter.detransform(bits);
+      final long bits = dataRegion.getLong(fieldPointer.position() + Byte.BYTES);
+      return TransformUtils.detransformToLong(bits);
+    }
+
+    @Override
+    public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+    {
+
     }
 
     @Override
     public boolean isNull()
     {
-      return memory.getByte(fieldPointer.position()) == LongFieldWriter.NULL_BYTE;
+      return super._isNull();
+    }
+  }
+
+  @Override
+  public Column makeRACColumn(Frame frame, RowSignature signature, String columnName)
+  {
+    return new LongFieldReaderColumn(frame, signature.indexOf(columnName), signature.size());
+  }
+
+  private class LongFieldReaderColumn implements Column
+  {
+    private final Frame frame;
+    private final Memory dataRegion;
+    private final FieldPositionHelper coach;
+
+    public LongFieldReaderColumn(Frame frame, int columnIndex, int numFields)
+    {
+      this.frame = frame;
+      this.dataRegion = frame.region(RowBasedFrameWriter.ROW_DATA_REGION);
+
+      this.coach = new FieldPositionHelper(
+          frame,
+          frame.region(RowBasedFrameWriter.ROW_OFFSET_REGION),
+          dataRegion,
+          columnIndex,
+          numFields
+      );
     }
 
+    @Nonnull
     @Override
-    public void inspectRuntimeShape(final RuntimeShapeInspector inspector)
+    public ColumnAccessor toAccessor()
     {
-      // Do nothing.
+      return new ColumnAccessor()
+      {
+        @Override
+        public ColumnType getType()
+        {
+          return ColumnType.LONG;
+        }
+
+        @Override
+        public int numRows()
+        {
+          return frame.numRows();
+        }
+
+        @Override
+        public boolean isNull(int rowNum)
+        {
+          final long fieldPosition = coach.computeFieldPosition(rowNum);
+          return dataRegion.getByte(fieldPosition) == getNullIndicatorByte();
+        }
+
+        @Nullable
+        @Override
+        public Object getObject(int rowNum)
+        {
+          final long fieldPosition = coach.computeFieldPosition(rowNum);
+
+          if (dataRegion.getByte(fieldPosition) == getNullIndicatorByte()) {
+            return null;
+          } else {
+            return getLongAtPosition(fieldPosition);
+          }
+        }
+
+        @Override
+        public double getDouble(int rowNum)
+        {
+          return getLong(rowNum);
+        }
+
+        @Override
+        public float getFloat(int rowNum)
+        {
+          return getLong(rowNum);
+        }
+
+        @Override
+        public long getLong(int rowNum)
+        {
+          final long fieldPosition = coach.computeFieldPosition(rowNum);
+
+          if (dataRegion.getByte(fieldPosition) == getNullIndicatorByte()) {
+            return 0L;
+          } else {
+            return getLongAtPosition(fieldPosition);
+          }
+        }
+
+        @Override
+        public int getInt(int rowNum)
+        {
+          return (int) getLong(rowNum);
+        }
+
+        @Override
+        public int compareRows(int lhsRowNum, int rhsRowNum)
+        {
+          long lhsPosition = coach.computeFieldPosition(lhsRowNum);
+          long rhsPosition = coach.computeFieldPosition(rhsRowNum);
+
+          final byte nullIndicatorByte = getNullIndicatorByte();
+          if (dataRegion.getByte(lhsPosition) == nullIndicatorByte) {
+            if (dataRegion.getByte(rhsPosition) == nullIndicatorByte) {
+              return 0;
+            } else {
+              return -1;
+            }
+          } else {
+            if (dataRegion.getByte(rhsPosition) == nullIndicatorByte) {
+              return 1;
+            } else {
+              return Long.compare(getLongAtPosition(lhsPosition), getLongAtPosition(rhsPosition));
+            }
+          }
+        }
+
+        private long getLongAtPosition(long rhsPosition)
+        {
+          return TransformUtils.detransformToLong(dataRegion.getLong(rhsPosition + Byte.BYTES));
+        }
+      };
+    }
+
+    @Nullable
+    @Override
+    public <T> T as(Class<? extends T> clazz)
+    {
+      return null;
     }
   }
 }

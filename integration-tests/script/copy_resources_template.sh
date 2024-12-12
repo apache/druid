@@ -30,7 +30,8 @@ cp -R docker $SHARED_DIR/docker
 
 pushd ../
 rm -rf distribution/target/apache-druid-$DRUID_VERSION-integration-test-bin
-mvn -Pskip-static-checks,skip-tests -T1C -Danimal.sniffer.skip=true -Dcheckstyle.skip=true -Dweb.console.skip=true -Dcyclonedx.skip=true -Denforcer.skip=true -Dforbiddenapis.skip=true -Dmaven.javadoc.skip=true -Dpmd.skip=true -Dspotbugs.skip=true install -Pintegration-test
+# using parallel build here may not yield significant speedups
+mvn -B -Pskip-static-checks,skip-tests -Dweb.console.skip=true install -Pintegration-test
 mv distribution/target/apache-druid-$DRUID_VERSION-integration-test-bin/bin $SHARED_DIR/docker/bin
 mv distribution/target/apache-druid-$DRUID_VERSION-integration-test-bin/lib $SHARED_DIR/docker/lib
 mv distribution/target/apache-druid-$DRUID_VERSION-integration-test-bin/extensions $SHARED_DIR/docker/extensions

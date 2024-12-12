@@ -24,24 +24,21 @@ import org.apache.druid.query.rowsandcols.semantic.NaiveSortMaker;
 
 import java.io.Closeable;
 import java.util.ArrayList;
+import java.util.List;
 
 /**
  * A naive sort operator is an operation that sorts a stream of data in-place.  Generally speaking this means
  * that it has to accumulate all of the data of its child operator first before it can sort.  This limitation
  * means that hopefully this operator is only planned in a very small number of circumstances.
  */
-public class NaiveSortOperator implements Operator
+public class NaiveSortOperator extends AbstractSortOperator
 {
-  private final Operator child;
-  private final ArrayList<ColumnWithDirection> sortColumns;
-
   public NaiveSortOperator(
       Operator child,
-      ArrayList<ColumnWithDirection> sortColumns
+      List<ColumnWithDirection> sortColumns
   )
   {
-    this.child = child;
-    this.sortColumns = sortColumns;
+    super(child, sortColumns);
   }
 
   @Override
@@ -57,7 +54,7 @@ public class NaiveSortOperator implements Operator
           public Signal push(RowsAndColumns rac)
           {
             if (sorter == null) {
-              sorter = NaiveSortMaker.fromRAC(rac).make(sortColumns);
+              sorter = NaiveSortMaker.fromRAC(rac).make(new ArrayList<>(sortColumns));
             } else {
               sorter.moreData(rac);
             }
@@ -67,7 +64,9 @@ public class NaiveSortOperator implements Operator
           @Override
           public void completed()
           {
-            receiver.push(sorter.complete());
+            if (sorter != null) {
+              receiver.push(sorter.complete());
+            }
             receiver.completed();
           }
         }

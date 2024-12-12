@@ -48,7 +48,6 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
-import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
@@ -106,36 +105,37 @@ public class SeekableStreamSamplerSpecTest extends EasyMockSupport
   @Test(timeout = 10_000L)
   public void testSampleWithInputRowParser() throws Exception
   {
-    final DataSchema dataSchema = new DataSchema(
-        "test_ds",
-        OBJECT_MAPPER.convertValue(
-            new StringInputRowParser(
-                new JSONParseSpec(
-                    new TimestampSpec("timestamp", "iso", null),
-                    new DimensionsSpec(
-                        Arrays.asList(
-                            new StringDimensionSchema("dim1"),
-                            new StringDimensionSchema("dim1t"),
-                            new StringDimensionSchema("dim2"),
-                            new LongDimensionSchema("dimLong"),
-                            new FloatDimensionSchema("dimFloat")
-                        )
-                    ),
-                    new JSONPathSpec(true, ImmutableList.of()),
-                    ImmutableMap.of(),
-                    false
-                )
-            ),
-            Map.class
-        ),
-        new AggregatorFactory[]{
-            new DoubleSumAggregatorFactory("met1sum", "met1"),
-            new CountAggregatorFactory("rows")
-        },
-        new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null),
-        null,
-        OBJECT_MAPPER
-    );
+    DataSchema dataSchema = DataSchema.builder()
+                                      .withDataSource("test_ds")
+                                      .withParserMap(
+                                          OBJECT_MAPPER.convertValue(
+                                              new StringInputRowParser(
+                                                  new JSONParseSpec(
+                                                      new TimestampSpec("timestamp", "iso", null),
+                                                      new DimensionsSpec(
+                                                          Arrays.asList(
+                                                              new StringDimensionSchema("dim1"),
+                                                              new StringDimensionSchema("dim1t"),
+                                                              new StringDimensionSchema("dim2"),
+                                                              new LongDimensionSchema("dimLong"),
+                                                              new FloatDimensionSchema("dimFloat")
+                                                          )
+                                                      ),
+                                                      new JSONPathSpec(true, ImmutableList.of()),
+                                                      ImmutableMap.of(),
+                                                      false
+                                                  )
+                                              ),
+                                              Map.class
+                                          )
+                                      )
+                                      .withAggregators(
+                                          new DoubleSumAggregatorFactory("met1sum", "met1"),
+                                          new CountAggregatorFactory("rows")
+                                      )
+                                      .withGranularity(new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null))
+                                      .withObjectMapper(OBJECT_MAPPER)
+                                      .build();
 
     final SeekableStreamSupervisorIOConfig supervisorIOConfig = new TestableSeekableStreamSupervisorIOConfig(
         STREAM,

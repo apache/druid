@@ -1,0 +1,202 @@
+# testVirtualColumnOnMVFilterMultiJoinExpression@filter-rewrites case-crc:dfefab18
+# quidem testcase reason: DEFINETLY_WORSE_PLAN
+!set debug true
+!set defaultTimeout 300000
+!set enableJoinFilterRewrite true
+!set enableJoinFilterRewriteValueColumnFilters true
+!set enableRewriteJoinToFilter false
+!set maxScatterGatherBytes 9223372036854775807
+!set plannerStrategy DECOUPLED
+!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
+!set sqlQueryId dummy
+!set outputformat mysql
+!use druidtest:///
+SELECT foo1.dim3, foo2.dim3 FROM druid.numfoo as foo1 INNER JOIN (SELECT foo3.dim3 FROM druid.numfoo as foo3 INNER JOIN druid.numfoo as foo4    ON MV_FILTER_ONLY(foo3.dim3, ARRAY['a']) = MV_FILTER_ONLY(foo4.dim3, ARRAY['a'])) as foo2 ON MV_FILTER_ONLY(foo1.dim3, ARRAY['a']) = MV_FILTER_ONLY(foo2.dim3, ARRAY['a'])
+;
++-----------+-----------+
+| dim3      | dim3      |
++-----------+-----------+
+| ["a","b"] | ["a","b"] |
++-----------+-----------+
+(1 row)
+
+!ok
+LogicalProject(dim3=[$0], dim30=[$2])
+  LogicalJoin(condition=[=($1, $3)], joinType=[inner])
+    LogicalProject(dim3=[$3], $f17=[MV_FILTER_ONLY($3, ARRAY('a'))])
+      LogicalTableScan(table=[[druid, numfoo]])
+    LogicalProject(dim3=[$0], $f1=[MV_FILTER_ONLY($0, ARRAY('a'))])
+      LogicalJoin(condition=[=($1, $2)], joinType=[inner])
+        LogicalProject(dim3=[$3], $f17=[MV_FILTER_ONLY($3, ARRAY('a'))])
+          LogicalTableScan(table=[[druid, numfoo]])
+        LogicalProject($f17=[MV_FILTER_ONLY($3, ARRAY('a'))])
+          LogicalTableScan(table=[[druid, numfoo]])
+
+!logicalPlan
+DruidProject(dim3=[$0], dim30=[$2], druid=[logical])
+  DruidJoin(condition=[=($1, $3)], joinType=[inner])
+    DruidProject(dim3=[$3], $f17=[MV_FILTER_ONLY($3, ARRAY('a'))], druid=[logical])
+      DruidTableScan(table=[[druid, numfoo]], druid=[logical])
+    DruidProject(dim3=[$0], $f1=[MV_FILTER_ONLY($0, ARRAY('a'))], druid=[logical])
+      DruidJoin(condition=[=($1, $2)], joinType=[inner])
+        DruidProject(dim3=[$3], $f17=[MV_FILTER_ONLY($3, ARRAY('a'))], druid=[logical])
+          DruidTableScan(table=[[druid, numfoo]], druid=[logical])
+        DruidProject($f17=[MV_FILTER_ONLY($3, ARRAY('a'))], druid=[logical])
+          DruidTableScan(table=[[druid, numfoo]], druid=[logical])
+
+!druidPlan
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "join",
+    "left" : {
+      "type" : "query",
+      "query" : {
+        "queryType" : "scan",
+        "dataSource" : {
+          "type" : "table",
+          "name" : "numfoo"
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "virtualColumns" : [ {
+          "type" : "mv-filtered",
+          "name" : "v0",
+          "delegate" : {
+            "type" : "default",
+            "dimension" : "dim3",
+            "outputName" : "dim3",
+            "outputType" : "STRING"
+          },
+          "values" : [ "a" ],
+          "isAllowList" : true
+        } ],
+        "resultFormat" : "compactedList",
+        "columns" : [ "dim3", "v0" ],
+        "columnTypes" : [ "STRING", "STRING" ],
+        "granularity" : {
+          "type" : "all"
+        },
+        "legacy" : false
+      }
+    },
+    "right" : {
+      "type" : "query",
+      "query" : {
+        "queryType" : "scan",
+        "dataSource" : {
+          "type" : "join",
+          "left" : {
+            "type" : "query",
+            "query" : {
+              "queryType" : "scan",
+              "dataSource" : {
+                "type" : "table",
+                "name" : "numfoo"
+              },
+              "intervals" : {
+                "type" : "intervals",
+                "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+              },
+              "virtualColumns" : [ {
+                "type" : "mv-filtered",
+                "name" : "v0",
+                "delegate" : {
+                  "type" : "default",
+                  "dimension" : "dim3",
+                  "outputName" : "dim3",
+                  "outputType" : "STRING"
+                },
+                "values" : [ "a" ],
+                "isAllowList" : true
+              } ],
+              "resultFormat" : "compactedList",
+              "columns" : [ "dim3", "v0" ],
+              "columnTypes" : [ "STRING", "STRING" ],
+              "granularity" : {
+                "type" : "all"
+              },
+              "legacy" : false
+            }
+          },
+          "right" : {
+            "type" : "query",
+            "query" : {
+              "queryType" : "scan",
+              "dataSource" : {
+                "type" : "table",
+                "name" : "numfoo"
+              },
+              "intervals" : {
+                "type" : "intervals",
+                "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+              },
+              "virtualColumns" : [ {
+                "type" : "mv-filtered",
+                "name" : "v0",
+                "delegate" : {
+                  "type" : "default",
+                  "dimension" : "dim3",
+                  "outputName" : "dim3",
+                  "outputType" : "STRING"
+                },
+                "values" : [ "a" ],
+                "isAllowList" : true
+              } ],
+              "resultFormat" : "compactedList",
+              "columns" : [ "v0" ],
+              "columnTypes" : [ "STRING" ],
+              "granularity" : {
+                "type" : "all"
+              },
+              "legacy" : false
+            }
+          },
+          "rightPrefix" : "j0.",
+          "condition" : "(\"v0\" == \"j0.v0\")",
+          "joinType" : "INNER"
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "virtualColumns" : [ {
+          "type" : "mv-filtered",
+          "name" : "_v0",
+          "delegate" : {
+            "type" : "default",
+            "dimension" : "dim3",
+            "outputName" : "dim3",
+            "outputType" : "STRING"
+          },
+          "values" : [ "a" ],
+          "isAllowList" : true
+        } ],
+        "resultFormat" : "compactedList",
+        "columns" : [ "dim3", "_v0" ],
+        "columnTypes" : [ "STRING", "STRING" ],
+        "granularity" : {
+          "type" : "all"
+        },
+        "legacy" : false
+      }
+    },
+    "rightPrefix" : "_j0.",
+    "condition" : "(\"v0\" == \"_j0._v0\")",
+    "joinType" : "INNER"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "resultFormat" : "compactedList",
+  "columns" : [ "dim3", "_j0.dim3" ],
+  "columnTypes" : [ "STRING", "STRING" ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "legacy" : false
+}
+!nativePlan

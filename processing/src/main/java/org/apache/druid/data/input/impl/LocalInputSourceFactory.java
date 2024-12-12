@@ -20,6 +20,7 @@
 package org.apache.druid.data.input.impl;
 
 import org.apache.druid.data.input.InputSourceFactory;
+import org.apache.druid.data.input.impl.systemfield.SystemFields;
 
 import java.io.File;
 import java.util.List;
@@ -35,7 +36,8 @@ public class LocalInputSourceFactory implements InputSourceFactory
         null,
         null,
         inputFilePaths.stream().map(chosenPath -> new File(chosenPath)).collect(
-            Collectors.toList())
+            Collectors.toList()),
+        SystemFields.none()
     );
   }
 }

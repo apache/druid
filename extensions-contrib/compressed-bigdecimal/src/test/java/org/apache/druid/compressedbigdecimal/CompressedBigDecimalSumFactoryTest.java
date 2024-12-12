@@ -26,7 +26,6 @@ import org.junit.Test;
 
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.util.Arrays;
 
 /**
  * test CompressedBigDecimalSumFactory and various aggregators and combiner produced
@@ -52,10 +51,7 @@ public class CompressedBigDecimalSumFactoryTest extends CompressedBigDecimalFact
     Assert.assertEquals("5", aggregatorFactory.deserialize(new BigDecimal(5)).toString());
     Assert.assertEquals("5.0", aggregatorFactory.deserialize(5d).toString());
     Assert.assertEquals("5", aggregatorFactory.deserialize("5").toString());
-    Assert.assertEquals(
-        "[CompressedBigDecimalSumAggregatorFactory{name='name', type='COMPLEX<compressedBigDecimal>', fieldName='fieldName', requiredFields='[fieldName]', size='9', scale='0', strictNumberParsing='false'}]",
-        Arrays.toString(aggregatorFactory.getRequiredColumns().toArray())
-    );
+
     Assert.assertEquals("0", aggregatorFactory.combine(null, null).toString());
     Assert.assertEquals("4", aggregatorFactory.combine(new BigDecimal(4), null).toString());
     Assert.assertEquals("4", aggregatorFactory.combine(null, new BigDecimal(4)).toString());

@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
+import org.apache.druid.segment.RowAdapter;
 import org.joda.time.DateTime;
 
 import java.io.IOException;
@@ -134,5 +135,11 @@ public class TimedShutoffInputSourceReader implements InputSourceReader
     );
 
     return wrappingIterator;
+  }
+
+  @Override
+  public RowAdapter<InputRow> rowAdapter()
+  {
+    return delegate.rowAdapter();
   }
 }

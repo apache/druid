@@ -39,7 +39,6 @@ import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.experimental.runners.Enclosed;
 import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -54,7 +53,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
-@RunWith(Enclosed.class)
 public class JsonParserIteratorTest
 {
   private static final JavaType JAVA_TYPE = Mockito.mock(JavaType.class);
@@ -103,7 +101,7 @@ public class JsonParserIteratorTest
           OBJECT_MAPPER
       );
       expectedException.expect(QueryInterruptedException.class);
-      expectedException.expectMessage("Immediate cancelled future.");
+      expectedException.expectMessage("Task was cancelled.");
       iterator.hasNext();
     }
 
@@ -316,8 +314,60 @@ public class JsonParserIteratorTest
     }
   }
 
+  public static class IAEExceptionConversionTest
+  {
+    @Rule
+    public ExpectedException expectedException = ExpectedException.none();
+
+    private String errorMessage = "pstream connect error or disconnect/reset before header";
+    private String nullErrMsg = null;
+
+    @Test
+    public void testNullErrorMsg() throws JsonProcessingException
+    {
+      JsonParserIterator<Object> iterator = new JsonParserIterator<>(
+          JAVA_TYPE,
+          Futures.immediateFuture(
+              mockErrorResponse(nullErrMsg)
+          ),
+          URL,
+          null,
+          HOST,
+          OBJECT_MAPPER
+      );
+
+      expectedException.expect(QueryInterruptedException.class);
+      expectedException.expectMessage("");
+      iterator.hasNext();
+    }
+
+    @Test
+    public void testParsingError() throws JsonProcessingException
+    {
+      JsonParserIterator<Object> iterator = new JsonParserIterator<>(
+          JAVA_TYPE,
+          Futures.immediateFuture(
+              mockErrorResponse(errorMessage)
+          ),
+          URL,
+          null,
+          HOST,
+          OBJECT_MAPPER
+      );
+
+      expectedException.expect(QueryInterruptedException.class);
+      expectedException.expectMessage(errorMessage);
+      iterator.hasNext();
+    }
+  }
+
   private static InputStream mockErrorResponse(Exception e) throws JsonProcessingException
   {
     return new ByteArrayInputStream(OBJECT_MAPPER.writeValueAsBytes(e));
+  }
+
+  private static InputStream mockErrorResponse(String errMsg) throws JsonProcessingException
+  {
+    return new ByteArrayInputStream(OBJECT_MAPPER.writeValueAsBytes(errMsg));
   }
 }

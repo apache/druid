@@ -123,7 +123,11 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
                                     throw e;
                                   }
                                   catch (Exception e) {
-                                    log.noStackTrace().error(e, "Exception with one of the sequences!");
+                                    if (query.context().isDebug()) {
+                                      log.error(e, "Exception with one of the sequences!");
+                                    } else {
+                                      log.noStackTrace().error(e, "Exception with one of the sequences!");
+                                    }
                                     Throwables.propagateIfPossible(e);
                                     throw new RuntimeException(e);
                                   }

@@ -63,15 +63,14 @@ import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
-import org.apache.druid.query.groupby.GroupByQueryEngine;
 import org.apache.druid.query.groupby.GroupByQueryQueryToolChest;
 import org.apache.druid.query.groupby.GroupByQueryRunnerFactory;
+import org.apache.druid.query.groupby.GroupByResourcesReservationPool;
+import org.apache.druid.query.groupby.GroupByStatsProvider;
+import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
-import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
-import org.apache.druid.query.groupby.strategy.GroupByStrategyV1;
-import org.apache.druid.query.groupby.strategy.GroupByStrategyV2;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
@@ -94,6 +93,7 @@ import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.server.ResourceIdPopulatingQueryRunner;
 import org.apache.druid.timeline.SegmentId;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -122,12 +122,12 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
 @State(Scope.Benchmark)
-@Fork(value = 2)
-@Warmup(iterations = 10)
-@Measurement(iterations = 25)
+@Fork(value = 1)
+@Warmup(iterations = 5)
+@Measurement(iterations = 15)
 public class GroupByBenchmark
 {
-  @Param({"2", "4"})
+  @Param({"4"})
   private int numProcessingThreads;
 
   @Param({"-1"})
@@ -139,13 +139,10 @@ public class GroupByBenchmark
   @Param({"basic.A", "basic.nested"})
   private String schemaAndQuery;
 
-  @Param({"v1", "v2"})
-  private String defaultStrategy;
-
   @Param({"all", "day"})
   private String queryGranularity;
 
-  @Param({"force", "false"})
+  @Param({"false", "force"})
   private String vectorize;
 
   private static final Logger log = new Logger(GroupByBenchmark.class);
@@ -438,7 +435,8 @@ public class GroupByBenchmark
     String queryName = schemaQuery[1];
 
     schemaInfo = GeneratorBasicSchemas.SCHEMA_MAP.get(schemaName);
-    query = SCHEMA_QUERY_MAP.get(schemaName).get(queryName);
+    query = (GroupByQuery) ResourceIdPopulatingQueryRunner.populateResourceId(SCHEMA_QUERY_MAP.get(schemaName)
+                                                                                              .get(queryName));
 
     generator = new DataGenerator(
         schemaInfo.getColumnSchemas(),
@@ -461,11 +459,6 @@ public class GroupByBenchmark
     );
     final GroupByQueryConfig config = new GroupByQueryConfig()
     {
-      @Override
-      public String getDefaultStrategy()
-      {
-        return defaultStrategy;
-      }
 
       @Override
       public int getBufferGrouperInitialBuckets()
@@ -480,8 +473,6 @@ public class GroupByBenchmark
       }
     };
     config.setSingleThreaded(false);
-    config.setMaxIntermediateRows(Integer.MAX_VALUE);
-    config.setMaxResults(Integer.MAX_VALUE);
 
     DruidProcessingConfig druidProcessingConfig = new DruidProcessingConfig()
     {
@@ -500,27 +491,23 @@ public class GroupByBenchmark
     };
 
     final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
-    final GroupByStrategySelector strategySelector = new GroupByStrategySelector(
+    final GroupByStatsProvider groupByStatsProvider = new GroupByStatsProvider();
+    final GroupByResourcesReservationPool groupByResourcesReservationPool =
+        new GroupByResourcesReservationPool(mergePool, config);
+    final GroupingEngine groupingEngine = new GroupingEngine(
+        druidProcessingConfig,
         configSupplier,
-        new GroupByStrategyV1(
-            configSupplier,
-            new GroupByQueryEngine(configSupplier, bufferPool),
-            QueryBenchmarkUtil.NOOP_QUERYWATCHER
-        ),
-        new GroupByStrategyV2(
-            druidProcessingConfig,
-            configSupplier,
-            bufferPool,
-            mergePool,
-            TestHelper.makeJsonMapper(),
-            new ObjectMapper(new SmileFactory()),
-            QueryBenchmarkUtil.NOOP_QUERYWATCHER
-        )
+        groupByResourcesReservationPool,
+        TestHelper.makeJsonMapper(),
+        new ObjectMapper(new SmileFactory()),
+        QueryBenchmarkUtil.NOOP_QUERYWATCHER,
+        groupByStatsProvider
     );
 
     factory = new GroupByQueryRunnerFactory(
-        strategySelector,
-        new GroupByQueryQueryToolChest(strategySelector)
+        groupingEngine,
+        new GroupByQueryQueryToolChest(groupingEngine, groupByResourcesReservationPool),
+        bufferPool
     );
   }
 
@@ -530,7 +517,7 @@ public class GroupByBenchmark
   @State(Scope.Benchmark)
   public static class IncrementalIndexState
   {
-    @Param({"onheap", "offheap"})
+    @Param({"onheap"})
     private String indexType;
 
     IncrementalIndex incIndex;
@@ -629,7 +616,6 @@ public class GroupByBenchmark
                 .withRollup(withRollup)
                 .build()
         )
-        .setConcurrentEventAdd(true)
         .setMaxRowCount(rowsPerSegment)
         .build();
   }
@@ -781,12 +767,12 @@ public class GroupByBenchmark
     //noinspection unchecked
     QueryRunner<ResultRow> theRunner = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
-            new SerializingQueryRunner<>(
-                new DefaultObjectMapper(new SmileFactory(), null),
+            new SerializingQueryRunner(
+                toolChest.decorateObjectMapper(new DefaultObjectMapper(new SmileFactory(), null), query),
                 ResultRow.class,
-                toolChest.mergeResults(
+                (queryPlus, responseContext) -> toolChest.mergeResults(
                     factory.mergeRunners(state.executorService, makeMultiRunners(state))
-                )
+                ).run(QueryPlus.wrap(ResourceIdPopulatingQueryRunner.populateResourceId(query)))
             )
         ),
         (QueryToolChest) toolChest

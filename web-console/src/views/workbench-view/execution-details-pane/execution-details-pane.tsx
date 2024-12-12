@@ -16,14 +16,21 @@
  * limitations under the License.
  */
 
+import { Tag } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { T } from '@druid-toolkit/query';
+import { T } from 'druid-query-toolkit';
 import * as JSONBig from 'json-bigint-native';
 import React, { useState } from 'react';
 
 import { FancyTabPane } from '../../../components';
 import type { Execution } from '../../../druid-models';
-import { pluralIfNeeded } from '../../../utils';
+import {
+  formatDuration,
+  formatDurationWithMs,
+  formatDurationWithMsIfNeeded,
+  pluralIfNeeded,
+  prettyFormatIsoDate,
+} from '../../../utils';
 import { DestinationPagesPane } from '../destination-pages-pane/destination-pages-pane';
 import { ExecutionErrorPane } from '../execution-error-pane/execution-error-pane';
 import { ExecutionStagesPane } from '../execution-stages-pane/execution-stages-pane';
@@ -40,7 +47,8 @@ export type ExecutionDetailsTab =
   | 'result'
   | 'pages'
   | 'error'
-  | 'warnings';
+  | 'warnings'
+  | 'segmentStatus';
 
 interface ExecutionDetailsPaneProps {
   execution: Execution;
@@ -53,16 +61,29 @@ export const ExecutionDetailsPane = React.memo(function ExecutionDetailsPane(
 ) {
   const { execution, initTab, goToTask } = props;
   const [activeTab, setActiveTab] = useState<ExecutionDetailsTab>(initTab || 'general');
+  const segmentStatusDescription = execution.getSegmentStatusDescription();
 
   function renderContent() {
     switch (activeTab) {
       case 'general': {
         const ingestDatasource = execution.getIngestDatasource();
         return (
-          <div>
-            <p>{`General info for ${execution.id}${
-              ingestDatasource ? ` ingesting into ${T(ingestDatasource)}` : ''
-            }`}</p>
+          <div className="execution-details-pane-general">
+            <p>
+              General info for <Tag minimal>{execution.id}</Tag>
+              {ingestDatasource && (
+                <>
+                  {' '}
+                  ingesting into <Tag minimal>{T(ingestDatasource).toString()}</Tag>
+                </>
+              )}
+            </p>
+            {execution.startTime && !!execution.duration && (
+              <p>
+                Query took <Tag minimal>{formatDurationWithMsIfNeeded(execution.duration)}</Tag>{' '}
+                (starting at <Tag minimal>{prettyFormatIsoDate(execution.startTime)}</Tag>)
+              </p>
+            )}
             {execution.destination && (
               <p>
                 {`Results written to ${execution.destination.type}`}
@@ -95,7 +116,7 @@ export const ExecutionDetailsPane = React.memo(function ExecutionDetailsPane(
                 ? String(execution.sqlQuery)
                 : JSONBig.stringify(execution.nativeQuery, undefined, 2)
             }
-            autoHeight={false}
+            leaveBackground
           />
         );
 
@@ -119,6 +140,25 @@ export const ExecutionDetailsPane = React.memo(function ExecutionDetailsPane(
 
       case 'warnings':
         return <ExecutionWarningsPane execution={execution} />;
+
+      case 'segmentStatus':
+        return (
+          <>
+            <p>
+              Duration:{' '}
+              {segmentStatusDescription.duration
+                ? formatDurationWithMs(segmentStatusDescription.duration)
+                : '-'}
+              {execution.duration
+                ? ` (query duration was ${formatDuration(execution.duration)})`
+                : ''}
+            </p>
+            <p>Total segments: {segmentStatusDescription.totalSegments ?? '-'}</p>
+            <p>Used segments: {segmentStatusDescription.usedSegments ?? '-'}</p>
+            <p>Precached segments: {segmentStatusDescription.precachedSegments ?? '-'}</p>
+            <p>On demand segments: {segmentStatusDescription.onDemandSegments ?? '-'}</p>
+          </>
+        );
 
       default:
         return;
@@ -145,6 +185,11 @@ export const ExecutionDetailsPane = React.memo(function ExecutionDetailsPane(
           id: 'native',
           label: 'Native query',
           icon: IconNames.COG,
+        },
+        Boolean(execution.segmentStatus) && {
+          id: 'segmentStatus',
+          label: 'Segments',
+          icon: IconNames.HEAT_GRID,
         },
         execution.result && {
           id: 'result',

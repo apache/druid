@@ -36,6 +36,7 @@ import org.apache.druid.segment.data.DictionaryWriter;
 import org.apache.druid.segment.data.FixedIndexedIntWriter;
 import org.apache.druid.segment.data.GenericIndexedWriter;
 import org.apache.druid.segment.data.SingleValueColumnarIntsSerializer;
+import org.apache.druid.segment.serde.ColumnSerializerUtils;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
 import javax.annotation.Nullable;
@@ -52,7 +53,6 @@ public abstract class ScalarNestedCommonFormatColumnSerializer<T> extends Nested
   protected final IndexSpec indexSpec;
   @SuppressWarnings("unused")
   protected final Closer closer;
-  protected final String dictionaryFileName;
 
   protected DictionaryIdLookup dictionaryIdLookup;
   protected DictionaryWriter<T> dictionaryWriter;
@@ -62,22 +62,20 @@ public abstract class ScalarNestedCommonFormatColumnSerializer<T> extends Nested
   protected ByteBuffer columnNameBytes = null;
 
   protected boolean hasNulls;
+  protected boolean writeDictionary = true;
 
 
   public ScalarNestedCommonFormatColumnSerializer(
       String name,
-      String dictionaryFileName,
       IndexSpec indexSpec,
       SegmentWriteOutMedium segmentWriteOutMedium,
       Closer closer
   )
   {
     this.name = name;
-    this.dictionaryFileName = dictionaryFileName;
     this.segmentWriteOutMedium = segmentWriteOutMedium;
     this.indexSpec = indexSpec;
     this.closer = closer;
-    this.dictionaryIdLookup = new DictionaryIdLookup();
   }
 
   /**
@@ -99,6 +97,10 @@ public abstract class ScalarNestedCommonFormatColumnSerializer<T> extends Nested
    */
   protected abstract void writeValueColumn(FileSmoosher smoosher) throws IOException;
 
+  protected abstract void writeDictionaryFile(FileSmoosher smoosher) throws IOException;
+
+  public abstract int getCardinality();
+
   @Override
   public String getColumnName()
   {
@@ -106,9 +108,17 @@ public abstract class ScalarNestedCommonFormatColumnSerializer<T> extends Nested
   }
 
   @Override
-  public DictionaryIdLookup getGlobalLookup()
+  public DictionaryIdLookup getDictionaryIdLookup()
   {
     return dictionaryIdLookup;
+  }
+
+  @Override
+  public void setDictionaryIdLookup(DictionaryIdLookup dictionaryIdLookup)
+  {
+    this.dictionaryIdLookup = dictionaryIdLookup;
+    this.writeDictionary = false;
+    this.dictionarySerialized = true;
   }
 
   @Override
@@ -167,7 +177,9 @@ public abstract class ScalarNestedCommonFormatColumnSerializer<T> extends Nested
   ) throws IOException
   {
     Preconditions.checkState(closedForWrite, "Not closed yet!");
-    Preconditions.checkArgument(dictionaryWriter.isSorted(), "Dictionary not sorted?!?");
+    if (writeDictionary) {
+      Preconditions.checkArgument(dictionaryWriter.isSorted(), "Dictionary not sorted?!?");
+    }
 
     // write out compressed dictionaryId int column and bitmap indexes by iterating intermediate value column
     // the intermediate value column should be replaced someday by a cooler compressed int column writer that allows
@@ -185,8 +197,9 @@ public abstract class ScalarNestedCommonFormatColumnSerializer<T> extends Nested
         name,
         segmentWriteOutMedium,
         filenameBase,
-        dictionaryWriter.getCardinality(),
-        compressionToUse
+        getCardinality(),
+        compressionToUse,
+        segmentWriteOutMedium.getCloser()
     );
     encodedValueSerializer.open();
 
@@ -198,7 +211,7 @@ public abstract class ScalarNestedCommonFormatColumnSerializer<T> extends Nested
     bitmapIndexWriter.open();
     bitmapIndexWriter.setObjectsNotSorted();
     final MutableBitmap[] bitmaps;
-    bitmaps = new MutableBitmap[dictionaryWriter.getCardinality()];
+    bitmaps = new MutableBitmap[getCardinality()];
     for (int i = 0; i < bitmaps.length; i++) {
       bitmaps[i] = indexSpec.getBitmapSerdeFactory().getBitmapFactory().makeEmptyMutableBitmap();
     }
@@ -220,10 +233,12 @@ public abstract class ScalarNestedCommonFormatColumnSerializer<T> extends Nested
     }
 
     writeV0Header(channel, columnNameBytes);
-    writeInternal(smoosher, dictionaryWriter, dictionaryFileName);
-    writeInternal(smoosher, encodedValueSerializer, ENCODED_VALUE_COLUMN_FILE_NAME);
+    if (writeDictionary) {
+      writeDictionaryFile(smoosher);
+    }
+    writeInternal(smoosher, encodedValueSerializer, ColumnSerializerUtils.ENCODED_VALUE_COLUMN_FILE_NAME);
     writeValueColumn(smoosher);
-    writeInternal(smoosher, bitmapIndexWriter, BITMAP_INDEX_FILE_NAME);
+    writeInternal(smoosher, bitmapIndexWriter, ColumnSerializerUtils.BITMAP_INDEX_FILE_NAME);
 
     log.info("Column [%s] serialized successfully.", name);
   }

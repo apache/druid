@@ -13,7 +13,10 @@ expectedOperators:
   - type: "window"
     processor:
       type: "framedAgg"
-      frame: { peerType: "ROWS", lowUnbounded: true, lowOffset: 0, uppUnbounded: false, uppOffset: 0 }
+      frame:
+          type: groups
+          upperOffset: 0
+          orderByColumns: [ "d0" ]
       aggregations:
         - { type: "longSum", name: "w0", fieldName: "a0" }
 

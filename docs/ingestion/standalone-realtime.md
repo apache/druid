@@ -41,5 +41,5 @@ suffered from limitations which made it not possible to achieve exactly once ing
 The extensions `druid-kafka-eight`, `druid-kafka-eight-simpleConsumer`, `druid-rabbitmq`, and `druid-rocketmq` were also
 removed at this time, since they were built to operate on the realtime nodes.
 
-Please consider using the [Kafka Indexing Service](../development/extensions-core/kafka-ingestion.md) or
-[Kinesis Indexing Service](../development/extensions-core/kinesis-ingestion.md) for stream pull ingestion instead.
+Please consider using the [Kafka Indexing Service](../ingestion/kafka-ingestion.md) or
+[Kinesis Indexing Service](../ingestion/kinesis-ingestion.md) for stream pull ingestion instead.

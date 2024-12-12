@@ -64,8 +64,8 @@ public class LookupJoinMatcherTest
   @Before
   public void setUp()
   {
-    Mockito.doReturn(true).when(extractor).canIterate();
-    Mockito.doReturn(lookupMap.entrySet()).when(extractor).iterable();
+    Mockito.doReturn(true).when(extractor).supportsAsMap();
+    Mockito.doReturn(lookupMap).when(extractor).asMap();
   }
 
   @Test
@@ -82,7 +82,7 @@ public class LookupJoinMatcherTest
   public void testCreateConditionAlwaysTrueShouldReturnSuccessfullyAndNotThrowException()
   {
     JoinConditionAnalysis condition = JoinConditionAnalysis.forExpression("1", PREFIX, ExprMacroTable.nil());
-    Mockito.doReturn(true).when(extractor).canIterate();
+    Mockito.doReturn(true).when(extractor).supportsAsMap();
     target = LookupJoinMatcher.create(extractor, leftSelectorFactory, condition, false);
     Assert.assertNotNull(target);
     target = LookupJoinMatcher.create(extractor, leftSelectorFactory, condition, true);

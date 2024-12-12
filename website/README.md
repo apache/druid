@@ -55,7 +55,7 @@ Documentation pages can refer to a number of special variables using the
 creating links to files of the same version on GitHub.
 
 The variables are not replaced when running the web site locally using the
-`start` command above.
+`start` command above. They're replaced as part of the process that copies the docs to `apache/druid-website-src/`.
 
 ## Spellcheck
 

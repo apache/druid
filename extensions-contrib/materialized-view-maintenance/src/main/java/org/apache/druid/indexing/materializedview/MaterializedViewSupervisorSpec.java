@@ -47,8 +47,7 @@ import org.apache.druid.metadata.SqlSegmentsMetadataManager;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
-import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
-import org.apache.druid.segment.transform.TransformSpec;
+import org.apache.druid.segment.realtime.ChatHandlerProvider;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
@@ -184,6 +183,7 @@ public class MaterializedViewSupervisorSpec implements SupervisorSpec
         tuningConfig.getAppendableIndexSpec(),
         tuningConfig.getMaxRowsInMemory(),
         tuningConfig.getMaxBytesInMemory(),
+        tuningConfig.isUseMaxMemoryEstimates(),
         tuningConfig.isLeaveIntermediate(),
         tuningConfig.isCleanupOnFailure(),
         tuningConfig.isOverwriteFiles(),
@@ -199,7 +199,8 @@ public class MaterializedViewSupervisorSpec implements SupervisorSpec
         tuningConfig.isLogParseExceptions(),
         tuningConfig.getMaxParseExceptions(),
         tuningConfig.isUseYarnRMJobStatusFallback(),
-        tuningConfig.getAwaitSegmentAvailabilityTimeoutMillis()
+        tuningConfig.getAwaitSegmentAvailabilityTimeoutMillis(),
+        HadoopTuningConfig.DEFAULT_DETERMINE_PARTITIONS_SAMPLING_FACTOR
     );
 
     // generate granularity
@@ -209,14 +210,13 @@ public class MaterializedViewSupervisorSpec implements SupervisorSpec
     );
 
     // generate DataSchema
-    DataSchema dataSchema = new DataSchema(
-        dataSourceName,
-        parser,
-        aggregators,
-        granularitySpec,
-        TransformSpec.NONE,
-        objectMapper
-    );
+    DataSchema dataSchema = DataSchema.builder()
+                                      .withDataSource(dataSourceName)
+                                      .withParserMap(parser)
+                                      .withAggregators(aggregators)
+                                      .withGranularity(granularitySpec)
+                                      .withObjectMapper(objectMapper)
+                                      .build();
 
     // generate DatasourceIngestionSpec
     DatasourceIngestionSpec datasourceIngestionSpec = new DatasourceIngestionSpec(

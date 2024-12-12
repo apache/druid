@@ -27,6 +27,7 @@ import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.bitmap.MutableBitmap;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.query.DefaultBitmapResultFactory;
+import org.apache.druid.query.Order;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.extraction.IdentityExtractionFn;
@@ -34,10 +35,11 @@ import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.search.CursorOnlyStrategy.CursorBasedExecutor;
 import org.apache.druid.segment.ColumnSelectorColumnIndexSelector;
+import org.apache.druid.segment.CursorFactory;
+import org.apache.druid.segment.Cursors;
 import org.apache.druid.segment.DeprecatedQueryableIndexColumnSelector;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.Segment;
-import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -72,14 +74,15 @@ public class UseIndexesStrategy extends SearchStrategy
   public List<SearchQueryExecutor> getExecutionPlan(SearchQuery query, Segment segment)
   {
     final ImmutableList.Builder<SearchQueryExecutor> builder = ImmutableList.builder();
-    final QueryableIndex index = segment.asQueryableIndex();
-    final StorageAdapter adapter = segment.asStorageAdapter();
-    final List<DimensionSpec> searchDims = getDimsToSearch(adapter.getAvailableDimensions(), query.getDimensions());
+    final QueryableIndex index = segment.as(QueryableIndex.class);
+    final CursorFactory cursorFactory = segment.asCursorFactory();
+    final List<DimensionSpec> searchDims = getDimsToSearch(segment, query.getDimensions());
 
     if (index != null) {
       // pair of bitmap dims and non-bitmap dims
       final Pair<List<DimensionSpec>, List<DimensionSpec>> pair = partitionDimensionList(
-          adapter,
+          segment,
+          cursorFactory,
           query.getVirtualColumns(),
           searchDims
       );
@@ -98,7 +101,8 @@ public class UseIndexesStrategy extends SearchStrategy
         // Note: if some filters support bitmap indexes but others are not, the current implementation always employs
         // the cursor-based plan. This can be more optimized. One possible optimization is generating a bitmap index
         // from the non-bitmap-support filter, and then use it to compute the filtered result by intersecting bitmaps.
-        if (filter == null || filter.getBitmapColumnIndex(selector) != null) {
+        if ((filter == null || filter.getBitmapColumnIndex(selector) != null)
+            && Cursors.getTimeOrdering(index.getOrdering()) == Order.ASCENDING) {
           final ImmutableBitmap timeFilteredBitmap = makeTimeFilteredBitmap(
               index,
               segment,
@@ -114,10 +118,10 @@ public class UseIndexesStrategy extends SearchStrategy
       }
 
       if (nonBitmapSuppDims.size() > 0) {
-        builder.add(new CursorBasedExecutor(query, segment, filter, interval, nonBitmapSuppDims));
+        builder.add(new CursorBasedExecutor(query, segment, nonBitmapSuppDims));
       }
     } else {
-      builder.add(new CursorBasedExecutor(query, segment, filter, interval, searchDims));
+      builder.add(new CursorBasedExecutor(query, segment, searchDims));
     }
 
     return builder.build();
@@ -128,7 +132,8 @@ public class UseIndexesStrategy extends SearchStrategy
    * Note that the returned lists are free to modify.
    */
   private static Pair<List<DimensionSpec>, List<DimensionSpec>> partitionDimensionList(
-      StorageAdapter adapter,
+      Segment segment,
+      CursorFactory cursorFactory,
       VirtualColumns virtualColumns,
       List<DimensionSpec> dimensions
   )
@@ -136,10 +141,10 @@ public class UseIndexesStrategy extends SearchStrategy
     final List<DimensionSpec> bitmapDims = new ArrayList<>();
     final List<DimensionSpec> nonBitmapDims = new ArrayList<>();
     final List<DimensionSpec> dimsToSearch = getDimsToSearch(
-        adapter.getAvailableDimensions(),
+        segment,
         dimensions
     );
-    VirtualizedColumnInspector columnInspector = new VirtualizedColumnInspector(adapter, virtualColumns);
+    VirtualizedColumnInspector columnInspector = new VirtualizedColumnInspector(cursorFactory, virtualColumns);
 
     for (DimensionSpec spec : dimsToSearch) {
       ColumnCapabilities capabilities = columnInspector.getColumnCapabilities(spec.getDimension());
@@ -181,7 +186,7 @@ public class UseIndexesStrategy extends SearchStrategy
           "filter[%s] should support bitmap",
           filter
       );
-      baseFilter = columnIndex.computeBitmapResult(new DefaultBitmapResultFactory(selector.getBitmapFactory()));
+      baseFilter = columnIndex.computeBitmapResult(new DefaultBitmapResultFactory(selector.getBitmapFactory()), false);
     }
 
     final ImmutableBitmap timeFilteredBitmap;
@@ -260,7 +265,7 @@ public class UseIndexesStrategy extends SearchStrategy
     @Override
     public Object2IntRBTreeMap<SearchHit> execute(int limit)
     {
-      final QueryableIndex index = segment.asQueryableIndex();
+      final QueryableIndex index = segment.as(QueryableIndex.class);
       Preconditions.checkArgument(index != null, "Index should not be null");
 
       ColumnSelectorColumnIndexSelector indexSelector = new ColumnSelectorColumnIndexSelector(

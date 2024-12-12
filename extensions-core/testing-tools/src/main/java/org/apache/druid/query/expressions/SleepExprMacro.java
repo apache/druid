@@ -21,7 +21,7 @@ package org.apache.druid.query.expressions;
 
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
-import org.apache.druid.math.expr.ExprMacroTable.BaseScalarUnivariateMacroFunctionExpr;
+import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.math.expr.ExprMacroTable.ExprMacro;
 import org.apache.druid.math.expr.ExpressionType;
 
@@ -52,11 +52,11 @@ public class SleepExprMacro implements ExprMacro
 
     Expr arg = args.get(0);
 
-    class SleepExpr extends BaseScalarUnivariateMacroFunctionExpr
+    class SleepExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
     {
-      public SleepExpr(Expr arg)
+      public SleepExpr(List<Expr> args)
       {
-        super(NAME, arg);
+        super(SleepExprMacro.this, args);
       }
 
       @Override
@@ -78,12 +78,6 @@ public class SleepExprMacro implements ExprMacro
         }
       }
 
-      @Override
-      public Expr visit(Shuttle shuttle)
-      {
-        return shuttle.visit(apply(shuttle.visitAll(args)));
-      }
-
       /**
        * Explicitly override this method to not vectorize the sleep expression.
        * If we ever want to vectorize this expression, {@link #getOutputType} should be considered to return something
@@ -101,6 +95,6 @@ public class SleepExprMacro implements ExprMacro
         return null;
       }
     }
-    return new SleepExpr(arg);
+    return new SleepExpr(args);
   }
 }

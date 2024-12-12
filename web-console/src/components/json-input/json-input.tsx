@@ -25,9 +25,8 @@ import AceEditor from 'react-ace';
 
 import './json-input.scss';
 
-function parseHjson(str: string) {
-  // Throwing on empty input is more consistent with how JSON.parse works
-  if (str.trim() === '') throw new Error('empty hjson');
+function parseHjson(str: string): any {
+  if (str.trim() === '') return;
   return Hjson.parse(str);
 }
 
@@ -66,7 +65,7 @@ interface InternalValue {
 
 interface JsonInputProps {
   value: any;
-  onChange: (value: any) => void;
+  onChange?: (value: any) => void;
   setError?: (error: Error | undefined) => void;
   placeholder?: string;
   focus?: boolean;
@@ -123,7 +122,7 @@ export const JsonInput = React.memo(function JsonInput(props: JsonInputProps) {
 
           setError?.(error);
           if (!error) {
-            onChange(value);
+            onChange?.(value);
           }
 
           if (showErrorIfNeeded) {
@@ -131,6 +130,7 @@ export const JsonInput = React.memo(function JsonInput(props: JsonInputProps) {
           }
         }}
         onBlur={() => setShowErrorIfNeeded(true)}
+        readOnly={!onChange}
         focus={focus}
         fontSize={12}
         width={width || '100%'}

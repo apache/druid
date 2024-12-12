@@ -53,6 +53,7 @@ import org.apache.druid.query.timeboundary.TimeBoundaryQuery;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.column.ColumnType;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -823,9 +824,9 @@ public class Druids
     private long limit;
     private DimFilter dimFilter;
     private List<String> columns = new ArrayList<>();
-    private Boolean legacy;
-    private ScanQuery.Order order;
-    private List<ScanQuery.OrderBy> orderBy;
+    private Order order;
+    private List<OrderBy> orderBy;
+    private List<ColumnType> columnTypes = null;
 
     public ScanQuery build()
     {
@@ -841,8 +842,8 @@ public class Druids
           orderBy,
           dimFilter,
           columns,
-          legacy,
-          context
+          context,
+          columnTypes
       );
     }
 
@@ -858,14 +859,19 @@ public class Druids
           .limit(query.getScanRowsLimit())
           .filters(query.getFilter())
           .columns(query.getColumns())
-          .legacy(query.isLegacy())
           .context(query.getContext())
-          .orderBy(query.getOrderBys());
+          .orderBy(query.getOrderBys())
+          .columnTypes(query.getColumnTypes());
     }
 
     public ScanQueryBuilder dataSource(String ds)
     {
       dataSource = new TableDataSource(ds);
+      return this;
+    }
+    public ScanQueryBuilder dataSource(Query<?> q)
+    {
+      dataSource = new QueryDataSource(q);
       return this;
     }
 
@@ -950,21 +956,27 @@ public class Druids
       return this;
     }
 
-    public ScanQueryBuilder legacy(Boolean legacy)
-    {
-      this.legacy = legacy;
-      return this;
-    }
-
-    public ScanQueryBuilder order(ScanQuery.Order order)
+    public ScanQueryBuilder order(Order order)
     {
       this.order = order;
       return this;
     }
 
-    public ScanQueryBuilder orderBy(List<ScanQuery.OrderBy> orderBys)
+    public ScanQueryBuilder orderBy(List<OrderBy> orderBys)
     {
       this.orderBy = orderBys;
+      return this;
+    }
+
+    public ScanQueryBuilder columnTypes(List<ColumnType> columnTypes)
+    {
+      this.columnTypes = columnTypes;
+      return this;
+    }
+
+    public ScanQueryBuilder columnTypes(ColumnType... columnType)
+    {
+      this.columnTypes = Arrays.asList(columnType);
       return this;
     }
   }

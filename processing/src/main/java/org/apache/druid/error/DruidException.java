@@ -24,6 +24,7 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.concurrent.NotThreadSafe;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -36,17 +37,17 @@ import java.util.Map;
  * be using the DruidException.
  * <p>
  * Said another way, when a developer builds a DruidException in the code, they should be confident that the exception
- * will make its way back to the user.  DruidException is always the answer to "how do I generate an error message and
+ * will make its way back to the user.  DruidException is always the answer to "How do I generate an error message and
  * deliver it to the user"?
  * <p>
  * At the time that DruidException was introduced, this type of "show this to the user please" exception was largely
  * handled by created {@link org.apache.druid.java.util.common.RE}, {@link org.apache.druid.java.util.common.IAE}, or
  * {@link org.apache.druid.java.util.common.ISE} objects.  It is intended that DruidException replaces all usage of
  * these exceptions where the intention is to deliver a message to the user, which we believe to be the vast majority
- * of usages.  In cases where those exceptions are with the intention of being caught and acted upon, they should
+ * of usages.  In cases where those exceptions are thrown with the intention of being caught and acted upon,
  * no change should occur.
- *
- * <h>Notes about exception messages</h>
+ * <p>
+ * <h3>Notes about exception messages:</h3>
  * <p>
  * Firstly, exception messages should always be written with the notions from the style conventions covered in
  * {@code dev/style-conventions.md}.  Whenever possible, we should also try to provide an action to take to resolve
@@ -78,8 +79,8 @@ import java.util.Map;
  * which is something that we would expect an operator to be in charge of.  So, we would pick the OPERATOR persona
  * message, which also allows us to include more specific information about what server was not found and provide a
  * more meaningful action to take (check the health of your brokers).
- *
- * <h>Description of fields of DruidException</h>
+ * <p>
+ * <h3>Description of fields of DruidException</h3>
  * Every error consists of:
  * <ul>
  * <li>A target persona</li>
@@ -90,7 +91,7 @@ import java.util.Map;
  * </ul>
  * <p>
  * <p>
- * The target persona indicates who the message is written for.  This is important for 2 reasons
+ * The target persona indicates who the message is written for.  This is important for 2 reasons.
  * <ol>
  *   <li>It identifies why the developer is creating the exception and who they believe can take action on it.
  *   This context allows for code reviewers and other developers to evaluate the message with the persona in mind</li>
@@ -114,8 +115,8 @@ import java.util.Map;
  * The context is a place to add extra information about the error that is not necessarily interpolated into the
  * error message.  It's a way to carry extra information that might be useful to a developer, but not necessarily to
  * the target persona.
- *
- * <h>Notes for developers working with DruidException</h>
+ * <p>
+ * <h3>Notes for developers working with DruidException:</h3>
  * <p>
  * A DruidException can be built from one of 2 static methods: {@link #forPersona} or {@link #fromFailure(Failure)}.
  * The only way to set a specific error code is to build a DruidException from a Failure, when built in-line using
@@ -130,8 +131,10 @@ import java.util.Map;
 @NotThreadSafe
 public class DruidException extends RuntimeException
 {
+  public static final String CLASS_NAME_STR = DruidException.class.getName();
+
   /**
-   * Starts building a "general" DruidException targeting the specific persona.
+   * Starts building a "general" DruidException targeting the specified persona.
    *
    * @param persona the target persona of the exception message
    * @return a builder that can be used to complete the creation of the DruidException
@@ -167,13 +170,40 @@ public class DruidException extends RuntimeException
 
   /**
    * Build a "defensive" exception, this is an exception that should never actually be triggered, but we are
-   * throwing it inside of a defensive check.
+   * throwing it inside a defensive check.
    *
    * @return A builder for a defensive exception.
    */
   public static DruidException defensive(String format, Object... args)
   {
     return defensive().build(format, args);
+  }
+
+  /**
+   * Build a "defensive" exception, this is an exception that should never actually be triggered, but we are
+   * throwing it inside a defensive check.
+   *
+   * @return A builder for a defensive exception.
+   */
+  public static DruidException defensive(Throwable cause, String format, Object... args)
+  {
+    return defensive().build(cause, format, args);
+  }
+
+  /**
+   * Build a "defensive" exception, this is an exception that should never actually be triggered. Throw to
+   * allow messages to be seen by developers
+   *
+   * @param condition - boolean condition to validate
+   * @param msg - passed through to InvalidInput.exception()
+   * @param args - passed through to InvalidInput.exception()
+   */
+  @SuppressWarnings("unused")
+  public static void conditionalDefensive(boolean condition, String msg, Object... args)
+  {
+    if (!condition) {
+      throw defensive(msg, args);
+    }
   }
 
   private final Persona targetPersona;
@@ -315,19 +345,19 @@ public class DruidException extends RuntimeException
   }
 
   /**
-   * Category of error.  The simplest way to describe this is that it exists as a classification of errors that
+   * Category of error. The simplest way to describe this is that it exists as a classification of errors that
    * enables us to identify the expected response code (e.g. HTTP status code) of a specific DruidException
    */
   public enum Category
   {
     /**
      * Means that the exception is being created defensively, because we want to validate something but expect that
-     * it should never actually be hit.  Using this category is good to provide an indication to future reviewers and
+     * it should never actually be hit. Using this category is good to provide an indication to future reviewers and
      * developers that the case being checked is not intended to actually be able to occur in the wild.
      */
     DEFENSIVE(500),
     /**
-     * Means that the input provided was malformed in some way.  Generally speaking, it is hoped that errors of this
+     * Means that the input provided was malformed in some way. Generally speaking, it is hoped that errors of this
      * category have messages written either targeting the USER or ADMIN personas as those are the general users
      * of the APIs who could generate invalid inputs.
      */
@@ -340,9 +370,8 @@ public class DruidException extends RuntimeException
      * Means that an action that was attempted is forbidden
      */
     FORBIDDEN(403),
-
     /**
-     * Means that the requsted requested resource cannot be found.
+     * Means that the requested resource cannot be found.
      */
     NOT_FOUND(404),
     /**
@@ -386,8 +415,8 @@ public class DruidException extends RuntimeException
 
   public static class PartialDruidExceptionBuilder
   {
-    private String errorCode;
-    private Persona targetPersona;
+    private final String errorCode;
+    private final Persona targetPersona;
 
     private PartialDruidExceptionBuilder(String errorCode, Persona targetPersona)
     {
@@ -420,6 +449,12 @@ public class DruidException extends RuntimeException
       return this;
     }
 
+    public DruidExceptionBuilder withErrorCode(String errorCode)
+    {
+      this.errorCode = errorCode;
+      return this;
+    }
+
     public DruidExceptionBuilder ofCategory(Category category)
     {
       this.category = category;
@@ -446,7 +481,7 @@ public class DruidException extends RuntimeException
 
     public DruidException build(Throwable cause, String formatMe, Object... vals)
     {
-      return new DruidException(
+      final DruidException retVal = new DruidException(
           cause,
           errorCode,
           targetPersona,
@@ -454,6 +489,19 @@ public class DruidException extends RuntimeException
           StringUtils.nonStrictFormat(formatMe, vals),
           deserialized
       );
+
+      StackTraceElement[] stackTrace = retVal.getStackTrace();
+      int firstNonDruidExceptionIndex = 0;
+      while (
+          firstNonDruidExceptionIndex < stackTrace.length
+          && stackTrace[firstNonDruidExceptionIndex].getClassName().startsWith(CLASS_NAME_STR)) {
+        ++firstNonDruidExceptionIndex;
+      }
+      if (firstNonDruidExceptionIndex > 0) {
+        retVal.setStackTrace(Arrays.copyOfRange(stackTrace, firstNonDruidExceptionIndex, stackTrace.length));
+      }
+
+      return retVal;
     }
   }
 
@@ -475,5 +523,4 @@ public class DruidException extends RuntimeException
 
     protected abstract DruidException makeException(DruidExceptionBuilder bob);
   }
-
 }

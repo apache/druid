@@ -19,9 +19,8 @@
 
 package org.apache.druid.server.coordinator.duty;
 
-import com.google.inject.Inject;
 import org.apache.druid.audit.AuditManager;
-import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
+import org.apache.druid.server.coordinator.config.MetadataCleanupConfig;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.joda.time.DateTime;
 
@@ -29,20 +28,9 @@ public class KillAuditLog extends MetadataCleanupDuty
 {
   private final AuditManager auditManager;
 
-  @Inject
-  public KillAuditLog(
-      AuditManager auditManager,
-      DruidCoordinatorConfig config
-  )
+  public KillAuditLog(MetadataCleanupConfig config, AuditManager auditManager)
   {
-    super(
-        "audit logs",
-        "druid.coordinator.kill.audit",
-        config.getCoordinatorAuditKillPeriod(),
-        config.getCoordinatorAuditKillDurationToRetain(),
-        Stats.Kill.AUDIT_LOGS,
-        config
-    );
+    super("audit logs", config, Stats.Kill.AUDIT_LOGS);
     this.auditManager = auditManager;
   }
 

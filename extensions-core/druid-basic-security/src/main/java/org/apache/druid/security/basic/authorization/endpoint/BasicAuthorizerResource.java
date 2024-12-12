@@ -22,10 +22,14 @@ package org.apache.druid.security.basic.authorization.endpoint;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
+import org.apache.druid.audit.AuditEntry;
+import org.apache.druid.audit.AuditManager;
 import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.security.basic.BasicSecurityResourceFilter;
 import org.apache.druid.security.basic.authorization.entity.BasicAuthorizerGroupMapping;
 import org.apache.druid.server.security.AuthValidator;
+import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.ResourceAction;
 
 import javax.servlet.http.HttpServletRequest;
@@ -48,15 +52,18 @@ public class BasicAuthorizerResource
 {
   private final BasicAuthorizerResourceHandler resourceHandler;
   private final AuthValidator authValidator;
+  private final AuditManager auditManager;
 
   @Inject
   public BasicAuthorizerResource(
       BasicAuthorizerResourceHandler resourceHandler,
-      AuthValidator authValidator
+      AuthValidator authValidator,
+      AuditManager auditManager
   )
   {
     this.resourceHandler = resourceHandler;
     this.authValidator = authValidator;
+    this.auditManager = auditManager;
   }
 
   /**
@@ -198,7 +205,11 @@ public class BasicAuthorizerResource
   )
   {
     authValidator.validateAuthorizerName(authorizerName);
-    return resourceHandler.createUser(authorizerName, userName);
+
+    final Response response = resourceHandler.createUser(authorizerName, userName);
+    performAuditIfSuccess(authorizerName, req, response, "Create user[%s]", userName);
+
+    return response;
   }
 
   /**
@@ -221,7 +232,11 @@ public class BasicAuthorizerResource
   )
   {
     authValidator.validateAuthorizerName(authorizerName);
-    return resourceHandler.deleteUser(authorizerName, userName);
+
+    final Response response = resourceHandler.deleteUser(authorizerName, userName);
+    performAuditIfSuccess(authorizerName, req, response, "Delete user[%s]", userName);
+
+    return response;
   }
 
   /**
@@ -245,10 +260,21 @@ public class BasicAuthorizerResource
   )
   {
     authValidator.validateAuthorizerName(authorizerName);
-    return resourceHandler.createGroupMapping(
+    final Response response = resourceHandler.createGroupMapping(
         authorizerName,
         new BasicAuthorizerGroupMapping(groupMappingName, groupMapping.getGroupPattern(), groupMapping.getRoles())
     );
+    performAuditIfSuccess(
+        authorizerName,
+        req,
+        response,
+        "Create groupMapping[%s] with pattern[%s], roles[%s]",
+        groupMappingName,
+        groupMapping.getGroupPattern(),
+        groupMapping.getRoles()
+    );
+
+    return response;
   }
 
   /**
@@ -271,7 +297,11 @@ public class BasicAuthorizerResource
   )
   {
     authValidator.validateAuthorizerName(authorizerName);
-    return resourceHandler.deleteGroupMapping(authorizerName, groupMappingName);
+
+    final Response response = resourceHandler.deleteGroupMapping(authorizerName, groupMappingName);
+    performAuditIfSuccess(authorizerName, req, response, "Delete groupMapping[%s]", groupMappingName);
+
+    return response;
   }
 
   /**
@@ -338,7 +368,11 @@ public class BasicAuthorizerResource
   )
   {
     authValidator.validateAuthorizerName(authorizerName);
-    return resourceHandler.createRole(authorizerName, roleName);
+
+    final Response response = resourceHandler.createRole(authorizerName, roleName);
+    performAuditIfSuccess(authorizerName, req, response, "Create role[%s]", roleName);
+
+    return response;
   }
 
   /**
@@ -361,7 +395,11 @@ public class BasicAuthorizerResource
   )
   {
     authValidator.validateAuthorizerName(authorizerName);
-    return resourceHandler.deleteRole(authorizerName, roleName);
+
+    final Response response = resourceHandler.deleteRole(authorizerName, roleName);
+    performAuditIfSuccess(authorizerName, req, response, "Delete role[%s]", roleName);
+
+    return response;
   }
 
   /**
@@ -386,7 +424,11 @@ public class BasicAuthorizerResource
   )
   {
     authValidator.validateAuthorizerName(authorizerName);
-    return resourceHandler.assignRoleToUser(authorizerName, userName, roleName);
+
+    final Response response = resourceHandler.assignRoleToUser(authorizerName, userName, roleName);
+    performAuditIfSuccess(authorizerName, req, response, "Assign role[%s] to user[%s]", roleName, userName);
+
+    return response;
   }
 
   /**
@@ -411,7 +453,11 @@ public class BasicAuthorizerResource
   )
   {
     authValidator.validateAuthorizerName(authorizerName);
-    return resourceHandler.unassignRoleFromUser(authorizerName, userName, roleName);
+
+    final Response response = resourceHandler.unassignRoleFromUser(authorizerName, userName, roleName);
+    performAuditIfSuccess(authorizerName, req, response, "Unassign role[%s] from user[%s]", roleName, userName);
+
+    return response;
   }
 
   /**
@@ -436,7 +482,12 @@ public class BasicAuthorizerResource
   )
   {
     authValidator.validateAuthorizerName(authorizerName);
-    return resourceHandler.assignRoleToGroupMapping(authorizerName, groupMappingName, roleName);
+    final Response response = resourceHandler.assignRoleToGroupMapping(authorizerName, groupMappingName, roleName);
+
+    String msgFormat = "Assign role[%s] to groupMapping[%s]";
+    performAuditIfSuccess(authorizerName, req, response, msgFormat, roleName, groupMappingName);
+
+    return response;
   }
 
   /**
@@ -461,7 +512,12 @@ public class BasicAuthorizerResource
   )
   {
     authValidator.validateAuthorizerName(authorizerName);
-    return resourceHandler.unassignRoleFromGroupMapping(authorizerName, groupMappingName, roleName);
+
+    final Response response = resourceHandler.unassignRoleFromGroupMapping(authorizerName, groupMappingName, roleName);
+    String msgFormat = "Unassign role[%s] from groupMapping[%s]";
+    performAuditIfSuccess(authorizerName, req, response, msgFormat, roleName, groupMappingName);
+
+    return response;
   }
 
   /**
@@ -486,7 +542,11 @@ public class BasicAuthorizerResource
   )
   {
     authValidator.validateAuthorizerName(authorizerName);
-    return resourceHandler.setRolePermissions(authorizerName, roleName, permissions);
+
+    final Response response = resourceHandler.setRolePermissions(authorizerName, roleName, permissions);
+    performAuditIfSuccess(authorizerName, req, response, "Set permissions[%s] for role[%s]", permissions, roleName);
+
+    return response;
   }
 
   /**
@@ -606,5 +666,36 @@ public class BasicAuthorizerResource
   {
     authValidator.validateAuthorizerName(authorizerName);
     return resourceHandler.authorizerGroupMappingUpdateListener(authorizerName, serializedGroupMappingAndRoleMap);
+  }
+
+  private boolean isSuccess(Response response)
+  {
+    if (response == null) {
+      return false;
+    }
+
+    int responseCode = response.getStatus();
+    return responseCode >= 200 && responseCode < 300;
+  }
+
+  private void performAuditIfSuccess(
+      String authorizerName,
+      HttpServletRequest request,
+      Response response,
+      String msgFormat,
+      Object... args
+  )
+  {
+    if (isSuccess(response)) {
+      auditManager.doAudit(
+          AuditEntry.builder()
+                    .key(authorizerName)
+                    .type("basic.authorizer")
+                    .auditInfo(AuthorizationUtils.buildAuditInfo(request))
+                    .request(AuthorizationUtils.buildRequestInfo("coordinator", request))
+                    .payload(StringUtils.format(msgFormat, args))
+                    .build()
+      );
+    }
   }
 }

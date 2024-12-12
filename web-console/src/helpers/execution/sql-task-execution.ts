@@ -16,25 +16,13 @@
  * limitations under the License.
  */
 
-import { L, QueryResult } from '@druid-toolkit/query';
 import type { AxiosResponse, CancelToken } from 'axios';
+import { QueryResult } from 'druid-query-toolkit';
 
 import type { AsyncStatusResponse, MsqTaskPayloadResponse, QueryContext } from '../../druid-models';
 import { Execution } from '../../druid-models';
 import { Api } from '../../singletons';
-import {
-  deepGet,
-  DruidError,
-  IntermediateQueryState,
-  queryDruidSql,
-  QueryManager,
-} from '../../utils';
-import { maybeGetClusterCapacity } from '../capacity';
-
-const USE_TASK_PAYLOAD = true;
-const USE_TASK_REPORTS = true;
-const WAIT_FOR_SEGMENT_METADATA_TIMEOUT = 180000; // 3 minutes to wait until segments appear in the metadata
-const WAIT_FOR_SEGMENT_LOAD_TIMEOUT = 540000; // 9 minutes to wait for segments to load at all
+import { deepGet, DruidError, IntermediateQueryState, QueryManager } from '../../utils';
 
 // some executionMode has to be set on the /druid/v2/sql/statements API
 function ensureExecutionModeIsSet(context: QueryContext | undefined): QueryContext {
@@ -48,6 +36,7 @@ function ensureExecutionModeIsSet(context: QueryContext | undefined): QueryConte
 export interface SubmitTaskQueryOptions {
   query: string | Record<string, any>;
   context?: QueryContext;
+  baseQueryContext?: QueryContext;
   prefixLines?: number;
   cancelToken?: CancelToken;
   preserveOnTermination?: boolean;
@@ -57,7 +46,15 @@ export interface SubmitTaskQueryOptions {
 export async function submitTaskQuery(
   options: SubmitTaskQueryOptions,
 ): Promise<Execution | IntermediateQueryState<Execution>> {
-  const { query, context, prefixLines, cancelToken, preserveOnTermination, onSubmitted } = options;
+  const {
+    query,
+    context,
+    baseQueryContext,
+    prefixLines,
+    cancelToken,
+    preserveOnTermination,
+    onSubmitted,
+  } = options;
 
   let sqlQuery: string;
   let jsonQuery: Record<string, any>;
@@ -65,7 +62,7 @@ export async function submitTaskQuery(
     sqlQuery = query;
     jsonQuery = {
       query: sqlQuery,
-      context: ensureExecutionModeIsSet(context),
+      context: ensureExecutionModeIsSet({ ...baseQueryContext, ...context }),
       resultFormat: 'array',
       header: true,
       typesHeader: true,
@@ -77,6 +74,7 @@ export async function submitTaskQuery(
     jsonQuery = {
       ...query,
       context: ensureExecutionModeIsSet({
+        ...baseQueryContext,
         ...query.context,
         ...context,
       }),
@@ -108,15 +106,13 @@ export async function submitTaskQuery(
     );
   }
 
-  let execution = Execution.fromAsyncStatus(sqlAsyncStatus, sqlQuery, context);
+  const execution = Execution.fromAsyncStatus(sqlAsyncStatus, sqlQuery, jsonQuery.context);
 
   if (onSubmitted) {
     onSubmitted(execution.id);
   }
 
-  execution = await updateExecutionWithDatasourceLoadedIfNeeded(execution, cancelToken);
-
-  if (execution.isFullyComplete()) return execution;
+  if (!execution.isWaitingForQuery()) return execution;
 
   if (cancelToken) {
     cancelTaskExecutionOnCancel(execution.id, cancelToken, Boolean(preserveOnTermination));
@@ -139,12 +135,11 @@ export async function reattachTaskExecution(
 
   try {
     execution = await getTaskExecution(id, undefined, cancelToken);
-    execution = await updateExecutionWithDatasourceLoadedIfNeeded(execution, cancelToken);
   } catch (e) {
     throw new Error(`Reattaching to query failed due to: ${e.message}`);
   }
 
-  if (execution.isFullyComplete()) return execution;
+  if (!execution.isWaitingForQuery()) return execution;
 
   if (cancelToken) {
     cancelTaskExecutionOnCancel(execution.id, cancelToken, Boolean(preserveOnTermination));
@@ -172,7 +167,7 @@ export async function getTaskExecution(
 
   let execution: Execution | undefined;
 
-  if (USE_TASK_REPORTS) {
+  if (Execution.USE_TASK_REPORTS) {
     let taskReport: any;
     try {
       taskReport = (
@@ -199,7 +194,7 @@ export async function getTaskExecution(
 
   if (!execution) {
     const statusResp = await Api.instance.get<AsyncStatusResponse>(
-      `/druid/v2/sql/statements/${encodedId}`,
+      `/druid/v2/sql/statements/${encodedId}?detail=true`,
       {
         cancelToken,
       },
@@ -209,7 +204,7 @@ export async function getTaskExecution(
   }
 
   let taskPayload = taskPayloadOverride;
-  if (USE_TASK_PAYLOAD && !taskPayload) {
+  if (Execution.USE_TASK_PAYLOAD && !taskPayload) {
     try {
       taskPayload = (
         await Api.instance.get(`/druid/indexer/v1/task/${encodedId}`, {
@@ -224,73 +219,30 @@ export async function getTaskExecution(
     execution = execution.updateWithTaskPayload(taskPayload);
   }
 
-  // Still have to pull the destination page info from the async status
+  // Still have to pull the destination page info from the async status, do this in a best effort way since the statements API may have permission errors
   if (execution.status === 'SUCCESS' && !execution.destinationPages) {
-    const statusResp = await Api.instance.get<AsyncStatusResponse>(
-      `/druid/v2/sql/statements/${encodedId}`,
-      {
-        cancelToken,
-      },
-    );
+    try {
+      const statusResp = await Api.instance.get<AsyncStatusResponse>(
+        `/druid/v2/sql/statements/${encodedId}`,
+        {
+          cancelToken,
+        },
+      );
 
-    execution = execution.updateWithAsyncStatus(statusResp.data);
+      execution = execution.updateWithAsyncStatus(statusResp.data);
+    } catch (e) {
+      if (Api.isNetworkError(e)) throw e;
+    }
   }
 
-  if (execution.hasPotentiallyStuckStage()) {
-    const capacityInfo = await maybeGetClusterCapacity();
+  if (Execution.getClusterCapacity && execution.hasPotentiallyStuckStage()) {
+    const capacityInfo = await Execution.getClusterCapacity();
     if (capacityInfo) {
       execution = execution.changeCapacityInfo(capacityInfo);
     }
   }
 
   return execution;
-}
-
-export async function updateExecutionWithDatasourceLoadedIfNeeded(
-  execution: Execution,
-  _cancelToken?: CancelToken,
-): Promise<Execution> {
-  if (
-    !(execution.destination?.type === 'dataSource' && !execution.destination.loaded) ||
-    execution.status !== 'SUCCESS'
-  ) {
-    return execution;
-  }
-
-  const endTime = execution.getEndTime();
-  if (
-    !endTime || // If endTime is not set (this is not expected to happen) then just bow out
-    execution.stages?.getLastStage()?.partitionCount === 0 || // No data was meant to be written anyway, nothing to do
-    endTime.valueOf() + WAIT_FOR_SEGMENT_LOAD_TIMEOUT < Date.now() // Enough time has passed since the query ran... don't bother waiting for segments to load.
-  ) {
-    return execution.markDestinationDatasourceLoaded();
-  }
-
-  const segmentCheck = await queryDruidSql({
-    query: `SELECT
-  COUNT(*) AS num_segments,
-  COUNT(*) FILTER (WHERE is_published = 1 AND is_available = 0 AND replication_factor <> 0) AS loading_segments
-FROM sys.segments
-WHERE datasource = ${L(execution.destination.dataSource)} AND is_overshadowed = 0`,
-  });
-
-  const numSegments: number = deepGet(segmentCheck, '0.num_segments') || 0;
-  const loadingSegments: number = deepGet(segmentCheck, '0.loading_segments') || 0;
-
-  // There appear to be no segments, since we checked above that something was written out we know that they have not shown up in the metadata yet
-  if (numSegments === 0) {
-    if (endTime.valueOf() + WAIT_FOR_SEGMENT_METADATA_TIMEOUT < Date.now()) {
-      // Enough time has passed since the query ran... give up waiting for segments to show up in metadata.
-      return execution.markDestinationDatasourceLoaded();
-    }
-
-    return execution;
-  }
-
-  // There are segments, and we are still waiting for some of them to load
-  if (loadingSegments > 0) return execution;
-
-  return execution.markDestinationDatasourceLoaded();
 }
 
 function cancelTaskExecutionOnCancel(

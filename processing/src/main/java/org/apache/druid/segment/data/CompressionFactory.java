@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Supplier;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.segment.serde.MetaSerdeHelper;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.WriteOutBytes;
@@ -232,6 +233,14 @@ public class CompressionFactory
 
     void write(long value) throws IOException;
 
+    @SuppressWarnings("unused")
+    default void write(long[] values, int offset, int length) throws IOException
+    {
+      for (int i = offset; i < length; ++i) {
+        write(values[i]);
+      }
+    }
+
     /**
      * Flush the unwritten content to the current output.
      */
@@ -293,6 +302,8 @@ public class CompressionFactory
      * various duplicates.
      */
     LongEncodingReader duplicate();
+
+    LongEncodingStrategy getStrategy();
   }
 
   public static Supplier<ColumnarLongs> getLongSupplier(
@@ -324,7 +335,8 @@ public class CompressionFactory
       String filenameBase,
       ByteOrder order,
       LongEncodingStrategy encodingStrategy,
-      CompressionStrategy compressionStrategy
+      CompressionStrategy compressionStrategy,
+      Closer closer
   )
   {
     if (encodingStrategy == LongEncodingStrategy.AUTO) {
@@ -333,7 +345,8 @@ public class CompressionFactory
           segmentWriteOutMedium,
           filenameBase,
           order,
-          compressionStrategy
+          compressionStrategy,
+          closer
       );
     } else if (encodingStrategy == LongEncodingStrategy.LONGS) {
       if (compressionStrategy == CompressionStrategy.NONE) {
@@ -349,7 +362,8 @@ public class CompressionFactory
             filenameBase,
             order,
             new LongsLongEncodingWriter(order),
-            compressionStrategy
+            compressionStrategy,
+            closer
         );
       }
     } else {
@@ -379,7 +393,8 @@ public class CompressionFactory
       SegmentWriteOutMedium segmentWriteOutMedium,
       String filenameBase,
       ByteOrder order,
-      CompressionStrategy compressionStrategy
+      CompressionStrategy compressionStrategy,
+      Closer closer
   )
   {
     if (compressionStrategy == CompressionStrategy.NONE) {
@@ -390,7 +405,8 @@ public class CompressionFactory
           segmentWriteOutMedium,
           filenameBase,
           order,
-          compressionStrategy
+          compressionStrategy,
+          closer
       );
     }
   }
@@ -417,7 +433,8 @@ public class CompressionFactory
       SegmentWriteOutMedium segmentWriteOutMedium,
       String filenameBase,
       ByteOrder byteOrder,
-      CompressionStrategy compression
+      CompressionStrategy compression,
+      Closer closer
   )
   {
     if (compression == CompressionStrategy.NONE) {
@@ -428,7 +445,8 @@ public class CompressionFactory
           segmentWriteOutMedium,
           filenameBase,
           byteOrder,
-          compression
+          compression,
+          closer
       );
     }
   }

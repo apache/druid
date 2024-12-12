@@ -20,11 +20,11 @@
 package org.apache.druid.indexing.common.actions;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.timeline.DataSegment;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -33,25 +33,26 @@ import java.util.List;
 
 public class RetrieveUnusedSegmentsAction implements TaskAction<List<DataSegment>>
 {
-  @JsonIgnore
   private final String dataSource;
-
-  @JsonIgnore
   private final Interval interval;
-
-  @JsonIgnore
+  private final List<String> versions;
   private final Integer limit;
+  private final DateTime maxUsedStatusLastUpdatedTime;
 
   @JsonCreator
   public RetrieveUnusedSegmentsAction(
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("interval") Interval interval,
-      @JsonProperty("limit") @Nullable Integer limit
+      @JsonProperty("versions") @Nullable List<String> versions,
+      @JsonProperty("limit") @Nullable Integer limit,
+      @JsonProperty("maxUsedStatusLastUpdatedTime") @Nullable DateTime maxUsedStatusLastUpdatedTime
   )
   {
     this.dataSource = dataSource;
     this.interval = interval;
+    this.versions = versions;
     this.limit = limit;
+    this.maxUsedStatusLastUpdatedTime = maxUsedStatusLastUpdatedTime;
   }
 
   @JsonProperty
@@ -68,9 +69,23 @@ public class RetrieveUnusedSegmentsAction implements TaskAction<List<DataSegment
 
   @Nullable
   @JsonProperty
+  public List<String> getVersions()
+  {
+    return versions;
+  }
+
+  @Nullable
+  @JsonProperty
   public Integer getLimit()
   {
     return limit;
+  }
+
+  @Nullable
+  @JsonProperty
+  public DateTime getMaxUsedStatusLastUpdatedTime()
+  {
+    return maxUsedStatusLastUpdatedTime;
   }
 
   @Override
@@ -83,13 +98,7 @@ public class RetrieveUnusedSegmentsAction implements TaskAction<List<DataSegment
   public List<DataSegment> perform(Task task, TaskActionToolbox toolbox)
   {
     return toolbox.getIndexerMetadataStorageCoordinator()
-        .retrieveUnusedSegmentsForInterval(dataSource, interval, limit);
-  }
-
-  @Override
-  public boolean isAudited()
-  {
-    return false;
+        .retrieveUnusedSegmentsForInterval(dataSource, interval, versions, limit, maxUsedStatusLastUpdatedTime);
   }
 
   @Override
@@ -98,7 +107,9 @@ public class RetrieveUnusedSegmentsAction implements TaskAction<List<DataSegment
     return getClass().getSimpleName() + "{" +
            "dataSource='" + dataSource + '\'' +
            ", interval=" + interval +
+           ", versions=" + versions +
            ", limit=" + limit +
+           ", maxUsedStatusLastUpdatedTime=" + maxUsedStatusLastUpdatedTime +
            '}';
   }
 }

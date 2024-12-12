@@ -45,6 +45,4 @@ public class ArrayToMultiValueStringOperatorConversion extends DirectOperatorCon
   {
     super(SQL_FUNCTION, "array_to_mv");
   }
-
-
 }

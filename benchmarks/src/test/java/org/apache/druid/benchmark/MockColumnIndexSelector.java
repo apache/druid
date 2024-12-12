@@ -22,6 +22,7 @@ package org.apache.druid.benchmark;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 
 import javax.annotation.Nullable;
@@ -56,6 +57,13 @@ public class MockColumnIndexSelector implements ColumnIndexSelector
   public ColumnIndexSupplier getIndexSupplier(String column)
   {
     return indexSupplier;
+  }
+
+  @Nullable
+  @Override
+  public ColumnHolder getColumnHolder(String columnName)
+  {
+    return null;
   }
 
   @Nullable

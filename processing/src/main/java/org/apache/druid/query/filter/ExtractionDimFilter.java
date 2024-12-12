@@ -95,9 +95,9 @@ public class ExtractionDimFilter extends AbstractOptimizableDimFilter implements
   }
 
   @Override
-  public DimFilter optimize()
+  public DimFilter optimize(final boolean mayIncludeUnknown)
   {
-    return new SelectorDimFilter(dimension, value, extractionFn).optimize();
+    return new SelectorDimFilter(dimension, value, extractionFn).optimize(mayIncludeUnknown);
   }
 
   @Override

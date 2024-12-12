@@ -23,10 +23,8 @@ import com.fasterxml.jackson.core.Version;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.google.api.client.http.HttpRequestInitializer;
-import com.google.api.client.http.HttpTransport;
-import com.google.api.client.json.JsonFactory;
-import com.google.api.services.storage.Storage;
+import com.google.cloud.storage.Storage;
+import com.google.cloud.storage.StorageOptions;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Provider;
@@ -86,6 +84,7 @@ public class GoogleStorageDruidModule implements DruidModule
   {
     LOG.info("Configuring GoogleStorageDruidModule...");
 
+    JsonConfigProvider.bind(binder, "druid.google", GoogleInputDataConfig.class);
     JsonConfigProvider.bind(binder, "druid.google", GoogleAccountConfig.class);
 
     Binders.dataSegmentPusherBinder(binder).addBinding(SCHEME).to(GoogleDataSegmentPusher.class)
@@ -104,16 +103,9 @@ public class GoogleStorageDruidModule implements DruidModule
 
   @Provides
   @LazySingleton
-  public Storage getGcpStorage(
-      HttpTransport httpTransport,
-      JsonFactory jsonFactory,
-      HttpRequestInitializer requestInitializer
-  )
+  public Storage getGcpStorage()
   {
-    return new Storage
-        .Builder(httpTransport, jsonFactory, requestInitializer)
-        .setApplicationName(APPLICATION_NAME)
-        .build();
+    return StorageOptions.getDefaultInstance().getService();
   }
 
   /**

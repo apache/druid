@@ -31,7 +31,7 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InlineInputSource;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.counters.CounterNames;
 import org.apache.druid.msq.counters.CounterTracker;
@@ -42,8 +42,10 @@ import org.apache.druid.msq.input.InputSliceReader;
 import org.apache.druid.msq.input.NilInputSource;
 import org.apache.druid.msq.input.ReadableInput;
 import org.apache.druid.msq.input.ReadableInputs;
+import org.apache.druid.msq.input.table.RichSegmentDescriptor;
 import org.apache.druid.msq.input.table.SegmentWithDescriptor;
 import org.apache.druid.msq.util.DimensionSchemaUtils;
+import org.apache.druid.segment.CompleteSegment;
 import org.apache.druid.segment.RowBasedSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -52,6 +54,7 @@ import org.apache.druid.segment.incremental.SimpleRowIngestionMeters;
 import org.apache.druid.timeline.SegmentId;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
 import java.util.function.Consumer;
@@ -93,7 +96,7 @@ public class ExternalInputSliceReader implements InputSliceReader
                 externalInputSlice.getInputSources(),
                 externalInputSlice.getInputFormat(),
                 externalInputSlice.getSignature(),
-                temporaryDirectory,
+                new File(temporaryDirectory, String.valueOf(inputNumber)),
                 counters.channel(CounterNames.inputChannel(inputNumber)).setTotalFiles(slice.fileCount()),
                 counters.warnings(),
                 warningPublisher
@@ -118,19 +121,22 @@ public class ExternalInputSliceReader implements InputSliceReader
         new DimensionsSpec(
             signature.getColumnNames().stream().map(
                 column ->
-                    DimensionSchemaUtils.createDimensionSchema(
+                    DimensionSchemaUtils.createDimensionSchemaForExtern(
                         column,
-                        signature.getColumnType(column).orElse(null),
-                        false
+                        signature.getColumnType(column).orElse(null)
                     )
             ).collect(Collectors.toList())
         ),
         ColumnsFilter.all()
     );
 
-    if (!temporaryDirectory.exists() && !temporaryDirectory.mkdir()) {
-      throw new ISE("Cannot create temporary directory at [%s]", temporaryDirectory);
+    try {
+      FileUtils.mkdirp(temporaryDirectory);
     }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+
     return Iterators.transform(
         inputSources.iterator(),
         inputSource -> {
@@ -158,8 +164,8 @@ public class ExternalInputSliceReader implements InputSliceReader
               signature
           );
           return new SegmentWithDescriptor(
-              () -> ResourceHolder.fromCloseable(segment),
-              segmentId.toDescriptor()
+              () -> ResourceHolder.fromCloseable(new CompleteSegment(null, segment)),
+              new RichSegmentDescriptor(segmentId.toDescriptor(), null)
           );
         }
     );

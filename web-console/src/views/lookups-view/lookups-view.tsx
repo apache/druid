@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Button, Icon, Intent } from '@blueprintjs/core';
+import { Button, Icon, Intent, Tag } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import React from 'react';
 import type { Filter } from 'react-table';
@@ -41,8 +41,9 @@ import { STANDARD_TABLE_PAGE_SIZE, STANDARD_TABLE_PAGE_SIZE_OPTIONS } from '../.
 import { Api, AppToaster } from '../../singletons';
 import {
   deepGet,
+  getApiArray,
   getDruidErrorMessage,
-  hasPopoverOpen,
+  hasOverlayOpen,
   isLookupsUninitialized,
   LocalStorageBackedVisibility,
   LocalStorageKeys,
@@ -60,7 +61,6 @@ const tableColumns: string[] = [
   'Version',
   'Poll period',
   'Summary',
-  ACTION_COLUMN_LABEL,
 ];
 
 const DEFAULT_LOOKUP_TIER = '__default';
@@ -124,16 +124,17 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
     };
 
     this.lookupsQueryManager = new QueryManager({
-      processQuery: async () => {
-        const tiersResp = await Api.instance.get(
+      processQuery: async (_, cancelToken) => {
+        const tiersResp = await getApiArray(
           '/druid/coordinator/v1/lookups/config?discover=true',
+          cancelToken,
         );
         const tiers =
-          tiersResp.data && tiersResp.data.length > 0
-            ? tiersResp.data.sort(tierNameCompare)
-            : [DEFAULT_LOOKUP_TIER];
+          tiersResp.length > 0 ? tiersResp.sort(tierNameCompare) : [DEFAULT_LOOKUP_TIER];
 
-        const lookupResp = await Api.instance.get('/druid/coordinator/v1/lookups/config/all');
+        const lookupResp = await Api.instance.get('/druid/coordinator/v1/lookups/config/all', {
+          cancelToken,
+        });
         const lookupData = lookupResp.data;
 
         const lookupEntries: LookupEntry[] = [];
@@ -296,8 +297,16 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
           );
         }}
         confirmButtonText="Delete lookup"
-        successText="Lookup was deleted"
-        failText="Could not delete lookup"
+        successText={
+          <>
+            Lookup <Tag minimal>{deleteLookupName}</Tag> was deleted
+          </>
+        }
+        failText={
+          <>
+            Could not delete lookup <Tag minimal>{deleteLookupName}</Tag>
+          </>
+        }
         intent={Intent.DANGER}
         onClose={() => {
           this.setState({ deleteLookupTier: undefined, deleteLookupName: undefined });
@@ -323,6 +332,7 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
   private renderFilterableCell(field: string) {
     const { filters, onFiltersChange } = this.props;
 
+    // eslint-disable-next-line react/display-name
     return (row: { value: any }) => (
       <TableFilterableCell
         field={field}
@@ -343,11 +353,13 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
 
     if (isLookupsUninitialized(lookupEntriesAndTiersState.error)) {
       return (
-        <div className="init-div">
+        <div className="init-pane">
           <Button
             icon={IconNames.BUILD}
             text="Initialize lookups"
             onClick={() => void this.initializeLookup()}
+            large
+            intent={Intent.PRIMARY}
           />
         </div>
       );
@@ -375,6 +387,7 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
             width: 200,
             Cell: ({ value, original }) => (
               <TableClickableCell
+                tooltip="Show detail"
                 onClick={() => this.onDetail(original)}
                 hoverIcon={IconNames.SEARCH_TEMPLATE}
               >
@@ -442,10 +455,10 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
           },
           {
             Header: ACTION_COLUMN_LABEL,
-            show: visibleColumns.shown(ACTION_COLUMN_LABEL),
             id: ACTION_COLUMN_ID,
             width: ACTION_COLUMN_WIDTH,
             filterable: false,
+            sortable: false,
             accessor: 'id',
             Cell: ({ original }) => {
               const lookupId = original.id;
@@ -457,6 +470,7 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
                     this.onDetail(original);
                   }}
                   actions={lookupActions}
+                  menuTitle={lookupId}
                 />
               );
             },
@@ -497,7 +511,7 @@ export class LookupsView extends React.PureComponent<LookupsViewProps, LookupsVi
         <ViewControlBar label="Lookups">
           <RefreshButton
             onRefresh={auto => {
-              if (auto && hasPopoverOpen()) return;
+              if (auto && hasOverlayOpen()) return;
               this.lookupsQueryManager.rerunLastQuery(auto);
             }}
             localStorageKey={LocalStorageKeys.LOOKUPS_REFRESH_RATE}

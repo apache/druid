@@ -107,6 +107,7 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
         null,
         null,
         null,
+        null,
         null
     );
   }
@@ -143,7 +144,8 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
       @JsonProperty("maxSavedParseExceptions") @Nullable Integer maxSavedParseExceptions,
       @JsonProperty("maxColumnsToMerge") @Nullable Integer maxColumnsToMerge,
       @JsonProperty("awaitSegmentAvailabilityTimeoutMillis") @Nullable Long awaitSegmentAvailabilityTimeoutMillis,
-      @JsonProperty("maxAllowedLockCount") @Nullable Integer maxAllowedLockCount
+      @JsonProperty("maxAllowedLockCount") @Nullable Integer maxAllowedLockCount,
+      @JsonProperty("numPersistThreads") @Nullable Integer numPersistThreads
   )
   {
     super(
@@ -170,7 +172,8 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
         maxParseExceptions,
         maxSavedParseExceptions,
         maxColumnsToMerge,
-        awaitSegmentAvailabilityTimeoutMillis
+        awaitSegmentAvailabilityTimeoutMillis,
+        numPersistThreads
     );
 
     if (maxNumSubTasks != null && maxNumConcurrentSubTasks != null) {
@@ -270,44 +273,6 @@ public class ParallelIndexTuningConfig extends IndexTuningConfig
   public int getMaxAllowedLockCount()
   {
     return maxAllowedLockCount;
-  }
-
-  @Override
-  public ParallelIndexTuningConfig withPartitionsSpec(PartitionsSpec partitionsSpec)
-  {
-    return new ParallelIndexTuningConfig(
-        null,
-        null,
-        getAppendableIndexSpec(),
-        getMaxRowsInMemory(),
-        getMaxBytesInMemory(),
-        isSkipBytesInMemoryOverheadCheck(),
-        null,
-        null,
-        getSplitHintSpec(),
-        partitionsSpec,
-        getIndexSpec(),
-        getIndexSpecForIntermediatePersists(),
-        getMaxPendingPersists(),
-        isForceGuaranteedRollup(),
-        isReportParseExceptions(),
-        getPushTimeout(),
-        getSegmentWriteOutMediumFactory(),
-        null,
-        getMaxNumConcurrentSubTasks(),
-        getMaxRetry(),
-        getTaskStatusCheckPeriodMs(),
-        getChatHandlerTimeout(),
-        getChatHandlerNumRetries(),
-        getMaxNumSegmentsToMerge(),
-        getTotalNumMergeTasks(),
-        isLogParseExceptions(),
-        getMaxParseExceptions(),
-        getMaxSavedParseExceptions(),
-        getMaxColumnsToMerge(),
-        getAwaitSegmentAvailabilityTimeoutMillis(),
-        getMaxAllowedLockCount()
-    );
   }
 
   @Override

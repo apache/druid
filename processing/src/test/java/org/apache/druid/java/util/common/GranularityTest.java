@@ -1003,6 +1003,27 @@ public class GranularityTest
   }
 
   @Test
+  public void testGranularitiesFinerThanWeek()
+  {
+    Assert.assertEquals(
+        ImmutableList.of(
+            Granularities.WEEK,
+            Granularities.DAY,
+            Granularities.EIGHT_HOUR,
+            Granularities.SIX_HOUR,
+            Granularities.HOUR,
+            Granularities.THIRTY_MINUTE,
+            Granularities.FIFTEEN_MINUTE,
+            Granularities.TEN_MINUTE,
+            Granularities.FIVE_MINUTE,
+            Granularities.MINUTE,
+            Granularities.SECOND
+        ),
+        Granularity.granularitiesFinerThan(Granularities.WEEK)
+    );
+  }
+
+  @Test
   public void testGranularitiesFinerThanAll()
   {
     Assert.assertEquals(
@@ -1011,7 +1032,6 @@ public class GranularityTest
             Granularities.YEAR,
             Granularities.QUARTER,
             Granularities.MONTH,
-            Granularities.WEEK,
             Granularities.DAY,
             Granularities.EIGHT_HOUR,
             Granularities.SIX_HOUR,

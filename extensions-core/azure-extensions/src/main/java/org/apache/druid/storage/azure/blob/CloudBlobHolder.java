@@ -19,28 +19,34 @@
 
 package org.apache.druid.storage.azure.blob;
 
-import com.microsoft.azure.storage.StorageException;
-import com.microsoft.azure.storage.blob.CloudBlob;
-
-import java.net.URISyntaxException;
+import com.azure.storage.blob.models.BlobItem;
 import java.util.Date;
 
 /**
- * Wrapper for {@link CloudBlob}. Used to make testing easier, since {@link CloudBlob}
+ * Wrapper for {@link BlobItem}. Used to make testing easier, since {@link BlobItem}
  * is a final class and so is difficult to mock in unit tests.
  */
 public class CloudBlobHolder
 {
-  private final CloudBlob delegate;
+  private final BlobItem delegate;
+  private final String container;
+  private final String storageAccount;
 
-  public CloudBlobHolder(CloudBlob delegate)
+  public CloudBlobHolder(BlobItem delegate, String container, String storageAccount)
   {
     this.delegate = delegate;
+    this.container = container;
+    this.storageAccount = storageAccount;
   }
 
-  public String getContainerName() throws URISyntaxException, StorageException
+  public String getContainerName()
   {
-    return delegate.getContainer().getName();
+    return container;
+  }
+
+  public String getStorageAccount()
+  {
+    return storageAccount;
   }
 
   public String getName()
@@ -50,11 +56,11 @@ public class CloudBlobHolder
 
   public long getBlobLength()
   {
-    return delegate.getProperties().getLength();
+    return delegate.getProperties().getContentLength();
   }
 
   public Date getLastModifed()
   {
-    return delegate.getProperties().getLastModified();
+    return Date.from(delegate.getProperties().getLastModified().toInstant());
   }
 }

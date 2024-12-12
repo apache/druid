@@ -21,6 +21,7 @@ package org.apache.druid.indexer;
 
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
@@ -149,17 +150,9 @@ public class DataSegmentAndIndexZipFilePathTest
   }
 
   @Test
-  public void test_equals_sameObject_equal()
+  public void test_equals()
   {
-    String tmpPath = "tmpPath";
-    String finalPath = "finalPath";
-    target = new DataSegmentAndIndexZipFilePath(
-        SEGMENT,
-        tmpPath,
-        finalPath
-    );
-
-    Assert.assertEquals(target, target);
+    EqualsVerifier.forClass(DataSegmentAndIndexZipFilePath.class).usingGetClass().verify();
   }
 
   @Test

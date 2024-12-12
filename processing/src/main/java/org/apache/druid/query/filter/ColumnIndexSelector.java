@@ -20,14 +20,14 @@
 package org.apache.druid.query.filter;
 
 import org.apache.druid.collections.bitmap.BitmapFactory;
-import org.apache.druid.segment.ColumnInspector;
+import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 
 import javax.annotation.Nullable;
 
 /**
  */
-public interface ColumnIndexSelector extends ColumnInspector
+public interface ColumnIndexSelector extends ColumnSelector
 {
   int getNumRows();
 

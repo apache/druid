@@ -30,7 +30,7 @@ import org.testng.annotations.Test;
 import java.util.List;
 import java.util.Map;
 
-@Test(groups = TestNGGroup.INPUT_FORMAT)
+@Test(groups = {TestNGGroup.INPUT_FORMAT})
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITLocalInputSourceAllInputFormatTest extends AbstractLocalInputSourceParallelIndexTest
 {

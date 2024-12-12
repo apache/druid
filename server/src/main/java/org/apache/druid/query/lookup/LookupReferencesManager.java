@@ -28,7 +28,7 @@ import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
-import org.apache.commons.lang.mutable.MutableBoolean;
+import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.concurrent.LifecycleLock;
 import org.apache.druid.discovery.DruidLeaderClient;
@@ -45,6 +45,8 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
+import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
+import org.apache.druid.server.metrics.DataSourceTaskIdHolder;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
@@ -53,6 +55,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.AbstractMap;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -65,9 +68,11 @@ import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.LockSupport;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * This class provide a basic {@link LookupExtractorFactory} references manager. It allows basic operations fetching,
@@ -116,6 +121,8 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
 
   private final LookupConfig lookupConfig;
 
+  private ExecutorService lookupUpdateExecutorService;
+
   @Inject
   public LookupReferencesManager(
       LookupConfig lookupConfig,
@@ -146,6 +153,10 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
     this.lookupListeningAnnouncerConfig = lookupListeningAnnouncerConfig;
     this.lookupConfig = lookupConfig;
     this.testMode = testMode;
+    this.lookupUpdateExecutorService = Execs.multiThreaded(
+        lookupConfig.getNumLookupLoadingThreads(),
+        "LookupExtractorFactoryContainerProvider-Update-%s"
+    );
   }
 
   @LifecycleStart
@@ -159,7 +170,7 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
       if (!Strings.isNullOrEmpty(lookupConfig.getSnapshotWorkingDir())) {
         FileUtils.mkdirp(new File(lookupConfig.getSnapshotWorkingDir()));
       }
-      loadAllLookupsAndInitStateRef();
+      loadLookupsAndInitStateRef();
       if (!testMode) {
         mainThread = Execs.makeThread(
             "LookupExtractorFactoryContainerProvider-MainThread",
@@ -216,7 +227,7 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
     Map<String, LookupExtractorFactoryContainer> lookupMap = new HashMap<>(swappedState.lookupMap);
     for (Notice notice : swappedState.noticesBeingHandled) {
       try {
-        notice.handle(lookupMap);
+        notice.handle(lookupMap, this);
       }
       catch (Exception ex) {
         LOG.error(ex, "Exception occurred while handling lookup notice [%s].", notice);
@@ -265,7 +276,7 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
         LOG.error(ex, "Failed to close lookup [%s].", e.getKey());
       }
     }
-
+    lookupUpdateExecutorService.shutdown();
     LOG.debug("LookupExtractorFactoryContainerProvider is stopped.");
   }
 
@@ -276,10 +287,10 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
     addNotice(new LoadNotice(lookupName, lookupExtractorFactoryContainer, lookupConfig.getLookupStartRetries()));
   }
 
-  public void remove(String lookupName)
+  public void remove(String lookupName, LookupExtractorFactoryContainer loadedContainer)
   {
     Preconditions.checkState(lifecycleLock.awaitStarted(1, TimeUnit.MILLISECONDS));
-    addNotice(new DropNotice(lookupName));
+    addNotice(new DropNotice(lookupName, loadedContainer));
   }
 
   private void addNotice(Notice notice)
@@ -300,6 +311,11 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
     LockSupport.unpark(mainThread);
   }
 
+  public void submitAsyncLookupTask(Runnable task)
+  {
+    lookupUpdateExecutorService.submit(task);
+  }
+
   @Override
   public Optional<LookupExtractorFactoryContainer> get(String lookupName)
   {
@@ -310,7 +326,16 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
   @Override
   public Set<String> getAllLookupNames()
   {
+    if (stateRef.get() == null) {
+      return Collections.emptySet();
+    }
     return stateRef.get().lookupMap.keySet();
+  }
+
+  @Override
+  public String getCanonicalLookupName(String lookupName)
+  {
+    return lookupName;
   }
 
   // Note that this should ensure that "toLoad" and "toDrop" are disjoint.
@@ -357,10 +382,26 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
     }
   }
 
-  private void loadAllLookupsAndInitStateRef()
+  /**
+   * Load a set of lookups based on the injected value in {@link DataSourceTaskIdHolder#getLookupLoadingSpec()}.
+   */
+  private void loadLookupsAndInitStateRef()
   {
-    List<LookupBean> lookupBeanList = getLookupsList();
-    if (lookupBeanList != null) {
+    LookupLoadingSpec lookupLoadingSpec = lookupListeningAnnouncerConfig.getLookupLoadingSpec();
+    LOG.info("Loading lookups using spec[%s].", lookupLoadingSpec);
+    List<LookupBean> lookupBeanList;
+    if (lookupLoadingSpec.getMode() == LookupLoadingSpec.Mode.NONE) {
+      lookupBeanList = Collections.emptyList();
+    } else {
+      lookupBeanList = getLookupsList();
+      if (lookupLoadingSpec.getMode() == LookupLoadingSpec.Mode.ONLY_REQUIRED && lookupBeanList != null) {
+        lookupBeanList = lookupBeanList.stream()
+                                       .filter(lookupBean -> lookupLoadingSpec.getLookupsToLoad().contains(lookupBean.getName()))
+                                       .collect(Collectors.toList());
+      }
+    }
+
+    if (lookupBeanList != null && !lookupBeanList.isEmpty()) {
       startLookups(lookupBeanList);
     } else {
       LOG.debug("No lookups to be loaded at this point.");
@@ -378,7 +419,7 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
     if (lookupConfig.getEnableLookupSyncOnStartup()) {
       lookupBeanList = getLookupListFromCoordinator(lookupListeningAnnouncerConfig.getLookupTier());
       if (lookupBeanList == null) {
-        LOG.info("Coordinator is unavailable. Loading saved snapshot instead");
+        LOG.info("Could not fetch lookups from the coordinator. Loading saved snapshot instead");
         lookupBeanList = getLookupListFromSnapshot();
       }
     } else {
@@ -591,11 +632,24 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
         )
     );
   }
+  private void dropContainer(LookupExtractorFactoryContainer container, String lookupName)
+  {
+    if (container != null) {
+      LOG.debug("Removed lookup [%s] with spec [%s].", lookupName, container);
 
+      if (!container.getLookupExtractorFactory().destroy()) {
+        throw new ISE(
+            "destroy method returned false for lookup [%s]:[%s]",
+            lookupName,
+            container
+        );
+      }
+    }
+  }
   @VisibleForTesting
   interface Notice
   {
-    void handle(Map<String, LookupExtractorFactoryContainer> lookupMap) throws Exception;
+    void handle(Map<String, LookupExtractorFactoryContainer> lookupMap, LookupReferencesManager manager) throws Exception;
   }
 
   private static class LoadNotice implements Notice
@@ -612,7 +666,8 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
     }
 
     @Override
-    public void handle(Map<String, LookupExtractorFactoryContainer> lookupMap) throws Exception
+    public void handle(Map<String, LookupExtractorFactoryContainer> lookupMap, LookupReferencesManager manager)
+        throws Exception
     {
       LookupExtractorFactoryContainer old = lookupMap.get(lookupName);
       if (old != null && !lookupExtractorFactoryContainer.replaces(old)) {
@@ -638,18 +693,49 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
           e -> true,
           startRetries
       );
-
-      old = lookupMap.put(lookupName, lookupExtractorFactoryContainer);
-
-      LOG.debug("Loaded lookup [%s] with spec [%s].", lookupName, lookupExtractorFactoryContainer);
-
-      if (old != null) {
-        if (!old.getLookupExtractorFactory().destroy()) {
-          throw new ISE("destroy method returned false for lookup [%s]:[%s]", lookupName, old);
-        }
+      /*
+       if new container is initailized then add it to manager to start serving immediately.
+       if old container is null then it is fresh load, we can skip waiting for initialization and add the container to registry first. Esp for MSQ workers.
+       */
+      if (old == null || lookupExtractorFactoryContainer.getLookupExtractorFactory().isInitialized()) {
+        old = lookupMap.put(lookupName, lookupExtractorFactoryContainer);
+        LOG.debug("Loaded lookup [%s] with spec [%s].", lookupName, lookupExtractorFactoryContainer);
+        manager.dropContainer(old, lookupName);
+        return;
       }
+      manager.submitAsyncLookupTask(() -> {
+        try {
+        /*
+        Retry startRetries times and wait for first cache to load for new container,
+        if loaded then kill old container and start serving from new one.
+        If new lookupExtractorFactoryContainer has errors in loading, kill the new container and do not remove the old container
+         */
+          RetryUtils.retry(
+              () -> {
+                lookupExtractorFactoryContainer.getLookupExtractorFactory().awaitInitialization();
+                return null;
+              }, e -> true,
+              startRetries
+          );
+          if (lookupExtractorFactoryContainer.getLookupExtractorFactory().isInitialized()) {
+            // send load notice with cache loaded container
+            manager.add(lookupName, lookupExtractorFactoryContainer);
+          } else {
+            // skip loading new container as it is failed after 3 attempts
+            manager.dropContainer(lookupExtractorFactoryContainer, lookupName);
+          }
+        }
+        catch (Exception e) {
+          // drop new failed container and continue serving old one
+          LOG.error(
+              e,
+              "Exception in updating the namespace %s, continue serving from old container and killing new container ",
+              lookupExtractorFactoryContainer
+          );
+          manager.dropContainer(lookupExtractorFactoryContainer, lookupName);
+        }
+      });
     }
-
     @Override
     public String toString()
     {
@@ -663,28 +749,36 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
   private static class DropNotice implements Notice
   {
     private final String lookupName;
+    private final LookupExtractorFactoryContainer loadedContainer;
 
-    DropNotice(String lookupName)
+    /**
+     * @param lookupName      Name of the lookup to drop
+     * @param loadedContainer Container ref to newly loaded container, this is mandatory in the update lookup call, it can be null in purely drop call.
+     */
+    DropNotice(String lookupName, @Nullable LookupExtractorFactoryContainer loadedContainer)
     {
       this.lookupName = lookupName;
+      this.loadedContainer = loadedContainer;
     }
 
     @Override
-    public void handle(Map<String, LookupExtractorFactoryContainer> lookupMap)
+    public void handle(Map<String, LookupExtractorFactoryContainer> lookupMap, LookupReferencesManager manager)
     {
-      final LookupExtractorFactoryContainer lookupExtractorFactoryContainer = lookupMap.remove(lookupName);
-
-      if (lookupExtractorFactoryContainer != null) {
-        LOG.debug("Removed lookup [%s] with spec [%s].", lookupName, lookupExtractorFactoryContainer);
-
-        if (!lookupExtractorFactoryContainer.getLookupExtractorFactory().destroy()) {
-          throw new ISE(
-              "destroy method returned false for lookup [%s]:[%s]",
-              lookupName,
-              lookupExtractorFactoryContainer
-          );
-        }
+      if (loadedContainer != null && !loadedContainer.getLookupExtractorFactory().isInitialized()) {
+        final LookupExtractorFactoryContainer containterToDrop = lookupMap.get(lookupName);
+        manager.submitAsyncLookupTask(() -> {
+          try {
+            loadedContainer.getLookupExtractorFactory().awaitInitialization();
+            manager.dropContainer(containterToDrop, lookupName);
+          }
+          catch (InterruptedException | TimeoutException e) {
+            // do nothing as loadedContainer is dropped by LoadNotice handler eventually if cache is not loaded
+          }
+        });
+        return;
       }
+      final LookupExtractorFactoryContainer lookupExtractorFactoryContainer = lookupMap.remove(lookupName);
+      manager.dropContainer(lookupExtractorFactoryContainer, lookupName);
     }
 
     @Override

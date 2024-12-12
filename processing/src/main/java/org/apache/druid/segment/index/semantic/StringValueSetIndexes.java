@@ -27,18 +27,20 @@ import java.util.SortedSet;
 
 /**
  * Index on individual values, and provides bitmaps for the rows which contain these values
+ * @deprecated use {@link ValueIndexes}, {@link ValueSetIndexes}, or {@link Utf8ValueSetIndexes} instead
  */
+@Deprecated
 public interface StringValueSetIndexes
 {
   /**
-   * Get the {@link ImmutableBitmap} corresponding to the supplied value.  Generates an empty bitmap when passed a
-   * value that doesn't exist.  Never returns null.
+   * Get the wrapped {@link ImmutableBitmap} corresponding to the supplied value.  Generates an empty bitmap when
+   * passed a value that doesn't exist.  Never returns null.
    */
   BitmapColumnIndex forValue(@Nullable String value);
 
   /**
-   * Get an {@link Iterable} of {@link ImmutableBitmap} corresponding to the specified set of values (if they are
-   * contained in the underlying column). The set must be sorted using
+   * Get the wrapped {@link ImmutableBitmap} corresponding to the specified set of values (if they are contained in the
+   * underlying column). The set must be sorted using
    * {@link org.apache.druid.java.util.common.guava.Comparators#naturalNullsFirst()}.
    */
   BitmapColumnIndex forSortedValues(SortedSet<String> values);

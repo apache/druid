@@ -102,7 +102,7 @@ libraryDependencies ++= Seq(
   "com.fasterxml.jackson.jaxrs" % "jackson-jaxrs-smile-provider" % "2.3.0",
   "com.fasterxml.jackson.module" % "jackson-module-jaxb-annotations" % "2.3.0",
   "com.sun.jersey" % "jersey-servlet" % "1.17.1",
-  "mysql" % "mysql-connector-java" % "5.1.34",
+  "mysql" % "mysql-connector-java" % "8.2.0",
   "org.scalatest" %% "scalatest" % "2.2.3" % "test",
   "org.mockito" % "mockito-core" % "1.10.19" % "test"
 )

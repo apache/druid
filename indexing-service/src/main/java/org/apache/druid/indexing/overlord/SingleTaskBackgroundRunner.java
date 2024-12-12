@@ -185,6 +185,7 @@ public class SingleTaskBackgroundRunner implements TaskRunner, QuerySegmentWalke
       // stopGracefully for resource cleaning
       log.info("Starting graceful shutdown of task[%s].", task.getId());
       task.stopGracefully(taskConfig);
+      task.waitForCleanupToFinish();
 
       if (taskConfig.isRestoreTasksOnRestart() && task.canRestore()) {
         try {
@@ -245,8 +246,8 @@ public class SingleTaskBackgroundRunner implements TaskRunner, QuerySegmentWalke
           .setDimension("graceful", "true") // for backward compatibility
           .setDimension("error", String.valueOf(error));
 
-      emitter.emit(metricBuilder.build("task/interrupt/count", 1L));
-      emitter.emit(metricBuilder.build("task/interrupt/elapsed", elapsed));
+      emitter.emit(metricBuilder.setMetric("task/interrupt/count", 1L));
+      emitter.emit(metricBuilder.setMetric("task/interrupt/elapsed", elapsed));
     }
 
     // Ok, now interrupt everything.

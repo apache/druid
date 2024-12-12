@@ -26,12 +26,9 @@ import javax.annotation.concurrent.ThreadSafe;
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Contains statistics typically tracked during a single coordinator run or the
@@ -89,7 +86,7 @@ public class CoordinatorRunStats
 
   public long get(CoordinatorStat stat)
   {
-    return get(stat, RowKey.EMPTY);
+    return get(stat, RowKey.empty());
   }
 
   public long get(CoordinatorStat stat, RowKey rowKey)
@@ -114,8 +111,6 @@ public class CoordinatorRunStats
   public String buildStatsTable()
   {
     final StringBuilder statsTable = new StringBuilder();
-    final AtomicInteger hiddenStats = new AtomicInteger(0);
-    final AtomicInteger totalStats = new AtomicInteger();
 
     allStats.forEach(
         (rowKey, statMap) -> {
@@ -131,7 +126,6 @@ public class CoordinatorRunStats
           // Add all the errors
           final Map<CoordinatorStat, Long> errorStats = levelToStats
               .getOrDefault(CoordinatorStat.Level.ERROR, Collections.emptyMap());
-          totalStats.addAndGet(errorStats.size());
           if (!errorStats.isEmpty()) {
             statsTable.append(
                 StringUtils.format("\nError: %s ==> %s", rowKey, errorStats)
@@ -141,7 +135,6 @@ public class CoordinatorRunStats
           // Add all the info level stats
           final Map<CoordinatorStat, Long> infoStats = levelToStats
               .getOrDefault(CoordinatorStat.Level.INFO, Collections.emptyMap());
-          totalStats.addAndGet(infoStats.size());
           if (!infoStats.isEmpty()) {
             statsTable.append(
                 StringUtils.format("\nInfo : %s ==> %s", rowKey, infoStats)
@@ -151,27 +144,13 @@ public class CoordinatorRunStats
           // Add all the debug level stats if the row key has a debug dimension
           final Map<CoordinatorStat, Long> debugStats = levelToStats
               .getOrDefault(CoordinatorStat.Level.DEBUG, Collections.emptyMap());
-          totalStats.addAndGet(debugStats.size());
           if (!debugStats.isEmpty() && hasDebugDimension(rowKey)) {
             statsTable.append(
                 StringUtils.format("\nDebug: %s ==> %s", rowKey, debugStats)
             );
-          } else {
-            hiddenStats.addAndGet(debugStats.size());
           }
         }
     );
-
-    if (hiddenStats.get() > 0) {
-      statsTable.append(
-          StringUtils.format("\nDebug: %d hidden stats. Set 'debugDimensions' to see these.", hiddenStats.get())
-      );
-    }
-    if (totalStats.get() > 0) {
-      statsTable.append(
-          StringUtils.format("\nTOTAL: %d stats for %d dimension keys", totalStats.get(), rowCount())
-      );
-    }
 
     return statsTable.toString();
   }
@@ -198,7 +177,7 @@ public class CoordinatorRunStats
 
   public void add(CoordinatorStat stat, long value)
   {
-    add(stat, RowKey.EMPTY, value);
+    add(stat, RowKey.empty(), value);
   }
 
   public void add(CoordinatorStat stat, RowKey rowKey, long value)
@@ -224,37 +203,14 @@ public class CoordinatorRunStats
   }
 
   /**
-   * Creates a new {@code CoordinatorRunStats} which represents the snapshot of
-   * the stats collected so far in this instance.
-   * <p>
-   * While this method is in progress, any updates made to the stats of this
-   * instance by another thread are not guaranteed to be present in the snapshot.
-   * But the snapshots are consistent, i.e. stats present in the snapshot created
-   * in one invocation of this method are permanently removed from this instance
-   * and will not be present in subsequent snapshots.
-   *
-   * @return Snapshot of the current state of this {@code CoordinatorRunStats}.
-   */
-  public CoordinatorRunStats getSnapshotAndReset()
-  {
-    final CoordinatorRunStats snapshot = new CoordinatorRunStats(debugDimensions);
-
-    // Get a snapshot of all the keys, remove and copy each of them atomically
-    final Set<RowKey> keys = new HashSet<>(allStats.keySet());
-    for (RowKey key : keys) {
-      snapshot.allStats.put(key, allStats.remove(key));
-    }
-
-    return snapshot;
-  }
-
-  /**
    * Checks if the given rowKey has any of the debug dimensions.
    */
   private boolean hasDebugDimension(RowKey rowKey)
   {
     if (debugDimensions.isEmpty()) {
       return false;
+    } else if (rowKey.getValues().isEmpty()) {
+      return true;
     }
 
     for (Map.Entry<Dimension, String> entry : rowKey.getValues().entrySet()) {

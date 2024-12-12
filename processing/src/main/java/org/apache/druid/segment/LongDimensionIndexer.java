@@ -39,13 +39,21 @@ import java.util.Objects;
 public class LongDimensionIndexer implements DimensionIndexer<Long, Long, Long>
 {
   public static final Comparator<Long> LONG_COMPARATOR = Comparators.naturalNullsFirst();
-
+  private final String dimensionName;
   private volatile boolean hasNulls = false;
 
-  @Override
-  public EncodedKeyComponent<Long> processRowValsToUnsortedEncodedKeyComponent(@Nullable Object dimValues, boolean reportParseExceptions)
+  public LongDimensionIndexer(String dimensionName)
   {
-    Long l = DimensionHandlerUtils.convertObjectToLong(dimValues, reportParseExceptions);
+    this.dimensionName = dimensionName;
+  }
+
+  @Override
+  public EncodedKeyComponent<Long> processRowValsToUnsortedEncodedKeyComponent(
+      @Nullable Object dimValues,
+      boolean reportParseExceptions
+  )
+  {
+    Long l = DimensionHandlerUtils.convertObjectToLong(dimValues, reportParseExceptions, dimensionName);
     if (l == null) {
       hasNulls = NullHandling.sqlCompatible();
     }

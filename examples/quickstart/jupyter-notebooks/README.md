@@ -19,13 +19,15 @@
   ~ under the License.
   -->
 
-If you are reading this in Jupyter, switch over to the [0-START-HERE](0-START-HERE.ipynb)
-notebook instead.
+NOTICE: THIS SET OF JUPYTER NOTEBOOKS AND DOCKER COMPOSE STACK HAS MOVED
 
-You can try out the Druid APIs using the Jupyter Notebook-based tutorials. These
-tutorials provide snippets of Python code that you can use to run calls against
-the Druid API to complete the tutorial.
+The notebooks and docker-compose configuration continue to be improved as part of a new project dedicated to 
+making it easy to start using and learning Druid directly on your computer. It now contains a data generator service, 
+kafka, druid and jupyter notebooks that guide you through data ingestion in batch & streaming, query strategies and 
+modeling.
 
-For information on prerequisites and getting started with the Jupyter-based tutorials,
-see [Jupyter Notebook tutorials](../../../docs/tutorials/tutorial-jupyter-index.md).
+You can find the new project home at:
 
+https://github.com/implydata/learn-druid
+
+Contributions welcome.

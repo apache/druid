@@ -20,18 +20,20 @@
 package org.apache.druid.sql.calcite.rule;
 
 import org.apache.calcite.rel.core.AggregateCall;
-import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.sql.SqlKind;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
+import org.apache.druid.sql.calcite.aggregation.NativelySupportsDistinct;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.Expressions;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
+import org.apache.druid.sql.calcite.rel.InputAccessor;
 import org.apache.druid.sql.calcite.rel.VirtualColumnRegistry;
 
 import javax.annotation.Nullable;
@@ -52,28 +54,40 @@ public class GroupByRules
    *
    * @return translated aggregation, or null if translation failed.
    */
+  @Nullable
   public static Aggregation translateAggregateCall(
       final PlannerContext plannerContext,
       final RowSignature rowSignature,
       @Nullable final VirtualColumnRegistry virtualColumnRegistry,
       final RexBuilder rexBuilder,
-      final Project project,
+      final InputAccessor inputAccessor,
       final List<Aggregation> existingAggregations,
       final String name,
       final AggregateCall call,
       final boolean finalizeAggregations
   )
   {
+    if (!call.getCollation().getFieldCollations().isEmpty()) {
+      return null;
+    }
+
+    if (call.isDistinct() && call.getAggregation().getKind() != SqlKind.COUNT) {
+      if (!call.getAggregation().getClass().isAnnotationPresent(NativelySupportsDistinct.class)) {
+        plannerContext.setPlanningError(
+            "Aggregation [%s] with DISTINCT is not supported when useApproximateCountDistinct is enabled. Run with disabling it.",
+            call.getAggregation().getName()
+        );
+        return null;
+      }
+    }
+
     final DimFilter filter;
 
     if (call.filterArg >= 0) {
       // AGG(xxx) FILTER(WHERE yyy)
-      if (project == null) {
-        // We need some kind of projection to support filtered aggregations.
-        return null;
-      }
 
-      final RexNode expression = project.getChildExps().get(call.filterArg);
+      final RexNode expression = inputAccessor.getField(call.filterArg);
+
       final DimFilter nonOptimizedFilter = Expressions.toFilter(
           plannerContext,
           rowSignature,
@@ -130,12 +144,10 @@ public class GroupByRules
 
     final Aggregation retVal = sqlAggregator.toDruidAggregation(
         plannerContext,
-        rowSignature,
         virtualColumnRegistry,
-        rexBuilder,
         name,
         call,
-        project,
+        inputAccessor,
         existingAggregationsWithSameFilter,
         finalizeAggregations
     );

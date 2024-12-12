@@ -25,6 +25,7 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.extraction.MapLookupExtractor;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -36,7 +37,7 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.Optional;
 
-public class RegisteredLookupExtractionFnTest
+public class RegisteredLookupExtractionFnTest extends InitializedNullHandlingTest
 {
   private static Map<String, String> MAP = ImmutableMap.of(
       "foo", "bar",
@@ -64,8 +65,13 @@ public class RegisteredLookupExtractionFnTest
     );
     EasyMock.verify(manager);
 
+    Assert.assertSame(LOOKUP_EXTRACTOR, fn.getDelegate().getLookup());
+
     Assert.assertEquals(false, fn.isInjective());
+    Assert.assertFalse(fn.getDelegate().isInjective());
+
     Assert.assertEquals(ExtractionFn.ExtractionType.MANY_TO_ONE, fn.getExtractionType());
+    Assert.assertEquals(ExtractionFn.ExtractionType.MANY_TO_ONE, fn.getDelegate().getExtractionType());
 
     for (String orig : Arrays.asList(null, "foo", "bat")) {
       Assert.assertEquals(LOOKUP_EXTRACTOR.apply(orig), fn.apply(orig));
@@ -282,6 +288,16 @@ public class RegisteredLookupExtractionFnTest
                     return null;
                   }
 
+                  @Override
+                  public void awaitInitialization()
+                  {
+                  }
+
+                  @Override
+                  public boolean isInitialized()
+                  {
+                    return true;
+                  }
                   @Override
                   public LookupExtractor get()
                   {

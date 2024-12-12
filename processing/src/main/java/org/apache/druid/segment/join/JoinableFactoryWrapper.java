@@ -55,6 +55,11 @@ public class JoinableFactoryWrapper
     this.joinableFactory = Preconditions.checkNotNull(joinableFactory, "joinableFactory");
   }
 
+  public JoinableFactory getJoinableFactory()
+  {
+    return joinableFactory;
+  }
+
   /**
    * Converts any join clauses to filters that can be converted, and returns the rest as-is.
    * <p>
@@ -170,7 +175,9 @@ public class JoinableFactoryWrapper
       }
 
       Joinable.ColumnValuesWithUniqueFlag columnValuesWithUniqueFlag =
-          clause.getJoinable().getNonNullColumnValues(condition.getRightColumn(), maxNumFilterValues);
+          clause.getJoinable()
+                .getMatchableColumnValues(condition.getRightColumn(), condition.isIncludeNull(), maxNumFilterValues);
+
       // For an empty values set, isAllUnique flag will be true only if the column had no non-null values.
       if (columnValuesWithUniqueFlag.getColumnValues().isEmpty()) {
         if (columnValuesWithUniqueFlag.isAllUnique()) {
@@ -188,11 +195,6 @@ public class JoinableFactoryWrapper
       return new JoinClauseToFilterConversion(onlyFilter, joinClauseFullyConverted);
     }
     return new JoinClauseToFilterConversion(null, false);
-  }
-
-  public JoinableFactory getJoinableFactory()
-  {
-    return joinableFactory;
   }
 
   /**

@@ -31,9 +31,10 @@ import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.query.filter.vector.VectorValueMatcherColumnProcessorFactory;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnProcessors;
-import org.apache.druid.segment.ColumnSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
+import org.apache.druid.segment.index.AllTrueBitmapColumnIndex;
+import org.apache.druid.segment.index.AllUnknownBitmapColumnIndex;
 import org.apache.druid.segment.index.BitmapColumnIndex;
 import org.apache.druid.segment.index.semantic.NullValueIndex;
 import org.apache.druid.segment.index.semantic.StringValueSetIndexes;
@@ -87,7 +88,10 @@ public class SelectorFilter implements Filter
     final boolean isNull = NullHandling.isNullOrEquivalent(value);
     final ColumnIndexSupplier indexSupplier = selector.getIndexSupplier(dimension);
     if (indexSupplier == null) {
-      return Filters.makeMissingColumnNullIndex(isNull, selector);
+      if (isNull) {
+        return new AllTrueBitmapColumnIndex(selector);
+      }
+      return new AllUnknownBitmapColumnIndex(selector);
     }
     if (isNull) {
       final NullValueIndex nullValueIndex = indexSupplier.as(NullValueIndex.class);
@@ -123,12 +127,6 @@ public class SelectorFilter implements Filter
         VectorValueMatcherColumnProcessorFactory.instance(),
         factory
     ).makeMatcher(value);
-  }
-
-  @Override
-  public boolean supportsSelectivityEstimation(ColumnSelector columnSelector, ColumnIndexSelector indexSelector)
-  {
-    return Filters.supportsSelectivityEstimation(this, dimension, columnSelector, indexSelector);
   }
 
   @Override

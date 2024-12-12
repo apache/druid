@@ -31,9 +31,9 @@ import org.apache.druid.frame.testutil.FrameTestUtil;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.http.client.response.ClientResponse;
-import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.TestIndex;
-import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
+import org.apache.druid.segment.incremental.IncrementalIndexCursorFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
@@ -70,7 +70,7 @@ public class FrameFileHttpResponseHandlerTest extends InitializedNullHandlingTes
 
   private final int maxRowsPerFrame;
 
-  private StorageAdapter adapter;
+  private CursorFactory cursorFactory;
   private File file;
   private ReadableByteChunksFrameChannel channel;
   private FrameFileHttpResponseHandler handler;
@@ -95,9 +95,9 @@ public class FrameFileHttpResponseHandlerTest extends InitializedNullHandlingTes
   @Before
   public void setUp() throws IOException
   {
-    adapter = new IncrementalIndexStorageAdapter(TestIndex.getIncrementalTestIndex());
+    cursorFactory = new IncrementalIndexCursorFactory(TestIndex.getIncrementalTestIndex());
     file = FrameTestUtil.writeFrameFile(
-        FrameSequenceBuilder.fromAdapter(adapter)
+        FrameSequenceBuilder.fromCursorFactory(cursorFactory)
                             .maxRowsPerFrame(maxRowsPerFrame)
                             .frameType(FrameType.ROW_BASED) // No particular reason to test with both frame types
                             .frames(),
@@ -134,8 +134,8 @@ public class FrameFileHttpResponseHandlerTest extends InitializedNullHandlingTes
     channel.doneWriting();
 
     FrameTestUtil.assertRowsEqual(
-        FrameTestUtil.readRowsFromAdapter(adapter, null, false),
-        FrameTestUtil.readRowsFromFrameChannel(channel, FrameReader.create(adapter.getRowSignature()))
+        FrameTestUtil.readRowsFromCursorFactory(cursorFactory),
+        FrameTestUtil.readRowsFromFrameChannel(channel, FrameReader.create(cursorFactory.getRowSignature()))
     );
 
     // Backpressure future resolves once channel is read.
@@ -230,8 +230,8 @@ public class FrameFileHttpResponseHandlerTest extends InitializedNullHandlingTes
     channel.doneWriting();
 
     FrameTestUtil.assertRowsEqual(
-        FrameTestUtil.readRowsFromAdapter(adapter, null, false),
-        FrameTestUtil.readRowsFromFrameChannel(channel, FrameReader.create(adapter.getRowSignature()))
+        FrameTestUtil.readRowsFromCursorFactory(cursorFactory),
+        FrameTestUtil.readRowsFromFrameChannel(channel, FrameReader.create(cursorFactory.getRowSignature()))
     );
 
     // Backpressure future resolves after channel is read.
@@ -341,8 +341,88 @@ public class FrameFileHttpResponseHandlerTest extends InitializedNullHandlingTes
     channel.doneWriting();
 
     FrameTestUtil.assertRowsEqual(
-        FrameTestUtil.readRowsFromAdapter(adapter, null, false),
-        FrameTestUtil.readRowsFromFrameChannel(channel, FrameReader.create(adapter.getRowSignature()))
+        FrameTestUtil.readRowsFromCursorFactory(cursorFactory),
+        FrameTestUtil.readRowsFromFrameChannel(channel, FrameReader.create(cursorFactory.getRowSignature()))
+    );
+  }
+
+  @Test
+  public void testCaughtExceptionDuringChunkedResponseRetryWithSameHandler() throws Exception
+  {
+    // Split file into 12 chunks after the first 100 bytes.
+    final int firstPart = 100;
+    final int chunkSize = Ints.checkedCast(LongMath.divide(file.length() - firstPart, 12, RoundingMode.CEILING));
+    final byte[] allBytes = Files.readAllBytes(file.toPath());
+
+    // Add firstPart and be done.
+    ClientResponse<FrameFilePartialFetch> response = handler.done(
+        handler.handleResponse(
+            makeResponse(HttpResponseStatus.OK, byteSlice(allBytes, 0, firstPart)),
+            null
+        )
+    );
+
+    Assert.assertEquals(firstPart, channel.getBytesAdded());
+    Assert.assertTrue(response.isFinished());
+
+    // Add first quarter after firstPart using a new handler.
+    handler = new FrameFileHttpResponseHandler(channel);
+    response = handler.handleResponse(
+        makeResponse(HttpResponseStatus.OK, byteSlice(allBytes, firstPart, chunkSize * 3)),
+        null
+    );
+
+    // Set an exception.
+    handler.exceptionCaught(response, new ISE("Oh no!"));
+
+    // Add another chunk after the exception is caught (this can happen in real life!). We expect it to be ignored.
+    response = handler.handleChunk(
+        response,
+        makeChunk(byteSlice(allBytes, firstPart + chunkSize * 3, chunkSize * 3)),
+        2
+    );
+
+    // Verify that the exception handler was called.
+    Assert.assertTrue(response.getObj().isExceptionCaught());
+    final Throwable e = response.getObj().getExceptionCaught();
+    MatcherAssert.assertThat(e, CoreMatchers.instanceOf(IllegalStateException.class));
+    MatcherAssert.assertThat(e, ThrowableMessageMatcher.hasMessage(CoreMatchers.equalTo("Oh no!")));
+
+    // Retry connection with the same handler and same initial offset firstPart (don't recreate handler), but now use
+    // thirds instead of quarters as chunks. (ServiceClientImpl would retry from the same offset with the same handler
+    // if the exception is retryable.)
+    response = handler.handleResponse(
+        makeResponse(HttpResponseStatus.OK, byteSlice(allBytes, firstPart, chunkSize * 4)),
+        null
+    );
+
+    Assert.assertEquals(firstPart + chunkSize * 4L, channel.getBytesAdded());
+    Assert.assertFalse(response.isFinished());
+
+    // Send the rest of the data.
+    response = handler.handleChunk(
+        response,
+        makeChunk(byteSlice(allBytes, firstPart + chunkSize * 4, chunkSize * 4)),
+        1
+    );
+    Assert.assertEquals(firstPart + chunkSize * 8L, channel.getBytesAdded());
+
+    response = handler.handleChunk(
+        response,
+        makeChunk(byteSlice(allBytes, firstPart + chunkSize * 8, chunkSize * 4)),
+        2
+    );
+    response = handler.done(response);
+
+    Assert.assertTrue(response.isFinished());
+    Assert.assertFalse(response.getObj().isExceptionCaught());
+
+    // Verify channel.
+    Assert.assertEquals(allBytes.length, channel.getBytesAdded());
+    channel.doneWriting();
+    FrameTestUtil.assertRowsEqual(
+        FrameTestUtil.readRowsFromCursorFactory(cursorFactory),
+        FrameTestUtil.readRowsFromFrameChannel(channel, FrameReader.create(cursorFactory.getRowSignature()))
     );
   }
 

@@ -1,0 +1,23 @@
+type: "operatorValidation"
+
+sql: |
+  SELECT
+    LAST_VALUE(dim1) OVER ()
+        = 'abc',
+    FIRST_VALUE(dim1) OVER ()
+        = '',
+    LAST_VALUE(dim1) OVER (ORDER BY m1 ASC)
+        is not distinct from  dim1,
+    LAST_VALUE(dim1) OVER (ORDER BY m1 DESC)
+        is not distinct from  dim1,
+    m1,dim1
+  FROM foo
+  ORDER by m1
+
+expectedResults:
+  - [true,true,true,true,1.0,""]
+  - [true,true,true,true,2.0,"10.1"]
+  - [true,true,true,true,3.0,"2"]
+  - [true,true,true,true,4.0,"1"]
+  - [true,true,true,true,5.0,"def"]
+  - [true,true,true,true,6.0,"abc"]

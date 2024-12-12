@@ -154,7 +154,8 @@ public class CompressedLongsSerdeTest
           "test",
           order,
           encodingStrategy,
-          compressionStrategy
+          compressionStrategy,
+          segmentWriteOutMedium.getCloser()
       );
       serializer.open();
 
@@ -173,19 +174,19 @@ public class CompressedLongsSerdeTest
 
   public void testValues(long[] values) throws Exception
   {
+    SegmentWriteOutMedium segmentWriteOutMedium = new OffHeapMemorySegmentWriteOutMedium();
     ColumnarLongsSerializer serializer = CompressionFactory.getLongSerializer(
         "test",
-        new OffHeapMemorySegmentWriteOutMedium(),
+        segmentWriteOutMedium,
         "test",
         order,
         encodingStrategy,
-        compressionStrategy
+        compressionStrategy,
+        segmentWriteOutMedium.getCloser()
     );
     serializer.open();
 
-    for (long value : values) {
-      serializer.add(value);
-    }
+    serializer.addAll(values, 0, values.length);
     Assert.assertEquals(values.length, serializer.size());
 
     final ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -205,6 +206,9 @@ public class CompressedLongsSerdeTest
       }
       testSupplierSerde(supplier, values);
       testConcurrentThreadReads(supplier, longs, values);
+    }
+    finally {
+      segmentWriteOutMedium.close();
     }
   }
 

@@ -81,7 +81,7 @@ function category {
   # shared folder.
 
   # DRUID_INTEGRATION_TEST_GROUP is used in
-  # docker-compose files and here. Despite the name, it is the
+  # docker compose files and here. Despite the name, it is the
   # name of the cluster configuration we want to run, not the
   # test category. Multiple categories can map to the same cluster
   # definition.
@@ -142,7 +142,7 @@ function build_shared_dir {
   sudo chmod -R a+rwx $SHARED_DIR
 }
 
-# Either generate the docker-compose file, or use "static" versions.
+# Either generate the docker compose file, or use "static" versions.
 function docker_file {
 
   # If a template exists, generate the docker-compose.yaml file.
@@ -214,7 +214,7 @@ function run_setup {
   fi
 }
 
-# Determine if docker-compose is available. If not, assume Docker supports
+# Determine if docker compose is available. If not, assume Docker supports
 # the compose subcommand
 set +e
 if which docker-compose > /dev/null
@@ -252,7 +252,7 @@ case $CMD in
     cd $COMPOSE_DIR
     $DOCKER_COMPOSE $DOCKER_ARGS up -d
     # Enable the following for debugging
-    #show_status
+    # show_status
     ;;
   "status" )
     check_env_file

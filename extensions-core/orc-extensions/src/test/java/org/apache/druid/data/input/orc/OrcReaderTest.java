@@ -37,7 +37,7 @@ import org.apache.druid.java.util.common.parsers.JSONPathFieldSpec;
 import org.apache.druid.java.util.common.parsers.JSONPathFieldType;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
-import org.apache.druid.segment.NestedDataDimensionSchema;
+import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.transform.ExpressionTransform;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.segment.transform.TransformingInputEntityReader;
@@ -314,8 +314,11 @@ public class OrcReaderTest extends InitializedNullHandlingTest
         //deviation of [7,8,9] is 1/3, stddev is sqrt(1/3), approximately 0.8165
         Assert.assertEquals(0.8165, Double.parseDouble(Iterables.getOnlyElement(row.getDimension("stddev"))), 0.0001);
 
-        //append is not supported
-        Assert.assertEquals(Collections.emptyList(), row.getDimension("append"));
+        // we do not support json-path append function for ORC format (see https://github.com/apache/druid/pull/11722)
+        Exception exception = Assert.assertThrows(UnsupportedOperationException.class, () -> {
+          row.getDimension("append");
+        });
+        Assert.assertEquals("Unused", exception.getMessage());
       }
       Assert.assertEquals(1, actualRowCount);
     }
@@ -333,9 +336,9 @@ public class OrcReaderTest extends InitializedNullHandlingTest
         new TimestampSpec("ts", "millis", null),
         new DimensionsSpec(
             ImmutableList.of(
-                new NestedDataDimensionSchema("middle"),
-                new NestedDataDimensionSchema("list"),
-                new NestedDataDimensionSchema("map")
+                new AutoTypeColumnSchema("middle", null),
+                new AutoTypeColumnSchema("list", null),
+                new AutoTypeColumnSchema("map", null)
             )
         ),
         inputFormat,
@@ -542,8 +545,8 @@ public class OrcReaderTest extends InitializedNullHandlingTest
         new TimestampSpec("timestamp", "auto", null),
         new DimensionsSpec(
             ImmutableList.of(
-                new NestedDataDimensionSchema("a"),
-                new NestedDataDimensionSchema("b")
+                new AutoTypeColumnSchema("a", null),
+                new AutoTypeColumnSchema("b", null)
             )
         ),
         inputFormat,
@@ -608,11 +611,11 @@ public class OrcReaderTest extends InitializedNullHandlingTest
         new TimestampSpec("timestamp", "auto", null),
         new DimensionsSpec(
             ImmutableList.of(
-                new NestedDataDimensionSchema("a"),
-                new NestedDataDimensionSchema("b"),
-                new NestedDataDimensionSchema("c"),
-                new NestedDataDimensionSchema("d"),
-                new NestedDataDimensionSchema("t_d_0")
+                new AutoTypeColumnSchema("a", null),
+                new AutoTypeColumnSchema("b", null),
+                new AutoTypeColumnSchema("c", null),
+                new AutoTypeColumnSchema("d", null),
+                new AutoTypeColumnSchema("t_d_0", null)
             )
         ),
         inputFormat,

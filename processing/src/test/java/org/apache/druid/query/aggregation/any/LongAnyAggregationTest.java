@@ -119,6 +119,17 @@ public class LongAnyAggregationTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testComparatorWithTypeMismatch()
+  {
+    Integer n1 = 3;
+    Long n2 = 4L;
+    Comparator comparator = longAnyAggFactory.getComparator();
+    Assert.assertEquals(0, comparator.compare(n1, n1));
+    Assert.assertEquals(-1, comparator.compare(n1, n2));
+    Assert.assertEquals(1, comparator.compare(n2, n1));
+  }
+
+  @Test
   public void testLongAnyCombiningAggregator()
   {
     Aggregator agg = combiningAggFactory.factorize(colSelectorFactory);

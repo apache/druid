@@ -39,7 +39,6 @@ import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
@@ -85,7 +84,8 @@ public class RangePartitionTaskKillTest extends AbstractMultiPhaseParallelIndexi
       LIST_DELIMITER,
       false,
       false,
-      0
+      0,
+      null
   );
 
   private File inputDir;
@@ -211,7 +211,7 @@ public class RangePartitionTaskKillTest extends AbstractMultiPhaseParallelIndexi
     Assert.assertTrue(task.isReady(actionClient));
     task.stopGracefully(null);
 
-
+    task.setToolbox(toolbox);
     TaskStatus taskStatus = task.runRangePartitionMultiPhaseParallel(toolbox);
 
     Assert.assertTrue(taskStatus.isFailure());
@@ -243,7 +243,7 @@ public class RangePartitionTaskKillTest extends AbstractMultiPhaseParallelIndexi
         int succedsBeforeFailing
     )
     {
-      super(id, groupId, taskResource, ingestionSchema, baseSubtaskSpecName, context);
+      super(id, groupId, taskResource, ingestionSchema, baseSubtaskSpecName, context, false);
       this.failInPhase = succedsBeforeFailing;
     }
 
@@ -323,21 +323,19 @@ public class RangePartitionTaskKillTest extends AbstractMultiPhaseParallelIndexi
 
     Preconditions.checkArgument(parseSpec == null);
     ParallelIndexIOConfig ioConfig = new ParallelIndexIOConfig(
-        null,
         new LocalInputSource(inputDir, filter),
         inputFormat,
         appendToExisting,
         null
     );
     ingestionSpec = new ParallelIndexIngestionSpec(
-        new DataSchema(
-            DATASOURCE,
-            timestampSpec,
-            dimensionsSpec,
-            new AggregatorFactory[]{new LongSumAggregatorFactory("val", "val")},
-            granularitySpec,
-            null
-        ),
+        DataSchema.builder()
+                  .withDataSource(DATASOURCE)
+                  .withTimestamp(timestampSpec)
+                  .withDimensions(dimensionsSpec)
+                  .withAggregators(new LongSumAggregatorFactory("val", "val"))
+                  .withGranularity(granularitySpec)
+                  .build(),
         ioConfig,
         tuningConfig
     );

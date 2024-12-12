@@ -19,40 +19,49 @@
 
 package org.apache.druid.cli;
 
-import com.fasterxml.jackson.databind.Module;
+import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 import com.google.inject.Injector;
 import com.google.inject.Key;
+import com.google.inject.name.Names;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.bitmap.RoaringBitmapFactory;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.guice.NestedDataModule;
+import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.guice.BuiltInTypesModule;
+import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.guice.annotations.Json;
+import org.apache.druid.initialization.ServerInjectorBuilder;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.DirectQueryProcessingPool;
 import org.apache.druid.query.NestedDataTestUtils;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
-import org.apache.druid.query.aggregation.AggregationTestHelper;
+import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.expression.TestExprMacroTable;
+import org.apache.druid.segment.DefaultColumnFormatConfig;
+import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.TestIndex;
+import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.index.semantic.DictionaryEncodedStringValueIndex;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.apache.druid.timeline.SegmentId;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -62,16 +71,13 @@ import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.Collections;
 import java.util.List;
 
 public class DumpSegmentTest extends InitializedNullHandlingTest
 {
-  private final AggregationTestHelper helper;
   private final Closer closer;
 
   @Rule
@@ -79,12 +85,7 @@ public class DumpSegmentTest extends InitializedNullHandlingTest
 
   public DumpSegmentTest()
   {
-    NestedDataModule.registerHandlersAndSerde();
-    List<? extends Module> mods = NestedDataModule.getJacksonModulesList();
-    this.helper = AggregationTestHelper.createScanQueryAggregationTestHelper(
-        mods,
-        tempFolder
-    );
+    BuiltInTypesModule.registerHandlersAndSerde();
     this.closer = Closer.create();
   }
 
@@ -103,14 +104,56 @@ public class DumpSegmentTest extends InitializedNullHandlingTest
     QueryRunner runner = Mockito.mock(QueryRunner.class);
     QueryRunner mergeRunner = Mockito.mock(QueryRunner.class);
     Query query = Mockito.mock(Query.class);
+    QueryableIndex index = Mockito.mock(QueryableIndex.class);
     Sequence expected = Sequences.simple(Collections.singletonList(123));
+    Mockito.when(query.withOverriddenContext(ArgumentMatchers.any())).thenReturn(query);
     Mockito.when(injector.getInstance(QueryRunnerFactoryConglomerate.class)).thenReturn(conglomerate);
     Mockito.when(conglomerate.findFactory(ArgumentMatchers.any())).thenReturn(factory);
     Mockito.when(factory.createRunner(ArgumentMatchers.any())).thenReturn(runner);
     Mockito.when(factory.getToolchest().mergeResults(factory.mergeRunners(DirectQueryProcessingPool.INSTANCE, ImmutableList.of(runner)))).thenReturn(mergeRunner);
+    Mockito.when(factory.getToolchest().mergeResults(factory.mergeRunners(DirectQueryProcessingPool.INSTANCE, ImmutableList.of(runner)), true)).thenReturn(mergeRunner);
     Mockito.when(mergeRunner.run(ArgumentMatchers.any(), ArgumentMatchers.any())).thenReturn(expected);
-    Sequence actual = DumpSegment.executeQuery(injector, null, query);
+    Mockito.when(index.getOrdering()).thenReturn(Collections.emptyList());
+    Sequence actual = DumpSegment.executeQuery(injector, index, query);
     Assert.assertSame(expected, actual);
+  }
+
+  @Test
+  public void testDumpRows() throws Exception
+  {
+    Injector injector = Mockito.mock(Injector.class);
+    ObjectMapper mapper = TestHelper.makeJsonMapper();
+    mapper.registerModules(BuiltInTypesModule.getJacksonModulesList());
+    mapper.setInjectableValues(
+        new InjectableValues.Std()
+            .addValue(ExprMacroTable.class.getName(), TestExprMacroTable.INSTANCE)
+            .addValue(ObjectMapper.class.getName(), mapper)
+            .addValue(DefaultColumnFormatConfig.class, new DefaultColumnFormatConfig(null, null))
+    );
+    Mockito.when(injector.getInstance(Key.get(ObjectMapper.class, Json.class))).thenReturn(mapper);
+    Mockito.when(injector.getInstance(DefaultColumnFormatConfig.class)).thenReturn(new DefaultColumnFormatConfig(null, null));
+
+    List<Segment> segments = createSegments(tempFolder, closer);
+    QueryableIndex queryableIndex = segments.get(0).as(QueryableIndex.class);
+
+    File outputFile = tempFolder.newFile();
+
+    DumpSegment.runDump(
+        injector,
+        outputFile.getPath(),
+        queryableIndex,
+        DumpSegment.getColumnsToInclude(queryableIndex, Collections.emptyList()),
+        null,
+        false
+    );
+    final byte[] fileBytes = Files.readAllBytes(outputFile.toPath());
+    final String output = StringUtils.fromUtf8(fileBytes);
+    final String expected = "{\"__time\":1609459200000,\"nest\":{\"x\":200,\"y\":2.2},\"count\":1}\n"
+                            + "{\"__time\":1609459200000,\"nest\":{\"x\":400,\"y\":1.1,\"z\":\"a\"},\"count\":1}\n"
+                            + "{\"__time\":1609459200000,\"nest\":{\"x\":200,\"z\":\"b\"},\"count\":1}\n"
+                            + "{\"__time\":1609459200000,\"nest\":{\"x\":100,\"y\":1.1,\"z\":\"a\"},\"count\":1}\n"
+                            + "{\"__time\":1609459200000,\"nest\":{\"y\":3.3,\"z\":\"b\"},\"count\":1}\n";
+    Assert.assertEquals(expected, output);
   }
 
   @Test
@@ -154,11 +197,18 @@ public class DumpSegmentTest extends InitializedNullHandlingTest
   {
     Injector injector = Mockito.mock(Injector.class);
     ObjectMapper mapper = TestHelper.makeJsonMapper();
-    mapper.registerModules(NestedDataModule.getJacksonModulesList());
+    mapper.registerModules(BuiltInTypesModule.getJacksonModulesList());
+    mapper.setInjectableValues(
+        new InjectableValues.Std()
+            .addValue(ExprMacroTable.class.getName(), TestExprMacroTable.INSTANCE)
+            .addValue(ObjectMapper.class.getName(), mapper)
+            .addValue(DefaultColumnFormatConfig.class, new DefaultColumnFormatConfig(null, null))
+    );
     Mockito.when(injector.getInstance(Key.get(ObjectMapper.class, Json.class))).thenReturn(mapper);
+    Mockito.when(injector.getInstance(DefaultColumnFormatConfig.class)).thenReturn(new DefaultColumnFormatConfig(null, null));
 
-    List<Segment> segments = createSegments(helper, tempFolder, closer);
-    QueryableIndex queryableIndex = segments.get(0).asQueryableIndex();
+    List<Segment> segments = createSegments(tempFolder, closer);
+    QueryableIndex queryableIndex = segments.get(0).as(QueryableIndex.class);
 
     File outputFile = tempFolder.newFile();
     DumpSegment.runDumpNestedColumn(
@@ -187,10 +237,18 @@ public class DumpSegmentTest extends InitializedNullHandlingTest
   {
     Injector injector = Mockito.mock(Injector.class);
     ObjectMapper mapper = TestHelper.makeJsonMapper();
-    mapper.registerModules(NestedDataModule.getJacksonModulesList());
+    mapper.registerModules(BuiltInTypesModule.getJacksonModulesList());
+    mapper.setInjectableValues(
+        new InjectableValues.Std()
+            .addValue(ExprMacroTable.class.getName(), TestExprMacroTable.INSTANCE)
+            .addValue(ObjectMapper.class.getName(), mapper)
+            .addValue(DefaultColumnFormatConfig.class, new DefaultColumnFormatConfig(null, null))
+    );
     Mockito.when(injector.getInstance(Key.get(ObjectMapper.class, Json.class))).thenReturn(mapper);
-    List<Segment> segments = createSegments(helper, tempFolder, closer);
-    QueryableIndex queryableIndex = segments.get(0).asQueryableIndex();
+    Mockito.when(injector.getInstance(DefaultColumnFormatConfig.class)).thenReturn(new DefaultColumnFormatConfig(null, null));
+
+    List<Segment> segments = createSegments(tempFolder, closer);
+    QueryableIndex queryableIndex = segments.get(0).as(QueryableIndex.class);
 
     File outputFile = tempFolder.newFile();
     DumpSegment.runDumpNestedColumnPath(
@@ -215,50 +273,41 @@ public class DumpSegmentTest extends InitializedNullHandlingTest
     }
   }
 
+  @Test
+  public void testGetModules()
+  {
+    DumpSegment dumpSegment = new DumpSegment();
+    Injector injector = ServerInjectorBuilder.makeServerInjector(
+        new StartupInjectorBuilder().forServer().build(),
+        Collections.emptySet(),
+        dumpSegment.getModules()
+    );
+    Assert.assertNotNull(injector.getInstance(ColumnConfig.class));
+    Assert.assertEquals("druid/tool", injector.getInstance(Key.get(String.class, Names.named("serviceName"))));
+    Assert.assertEquals(9999, (int) injector.getInstance(Key.get(Integer.class, Names.named("servicePort"))));
+    Assert.assertEquals(-1, (int) injector.getInstance(Key.get(Integer.class, Names.named("tlsServicePort"))));
+  }
+
+
   public static List<Segment> createSegments(
-      AggregationTestHelper helper,
       TemporaryFolder tempFolder,
       Closer closer
   ) throws Exception
   {
-    File segmentDir = tempFolder.newFolder();
-    File inputFile = readFileFromClasspath("nested-test-data.json");
-    FileInputStream inputDataStream = new FileInputStream(inputFile);
-    String parserJson = readFileFromClasspathAsString("nested-test-parser.json");
-    String aggJson = readFileFromClasspathAsString("nested-test-aggs.json");
-
-    helper.createIndex(
-        inputDataStream,
-        parserJson,
-        aggJson,
-        segmentDir,
-        0,
+    return NestedDataTestUtils.createSegments(
+        tempFolder,
+        closer,
+        "nested-test-data.json",
+        TestIndex.DEFAULT_JSON_INPUT_FORMAT,
+        new TimestampSpec("timestamp", null, null),
+        DimensionsSpec.builder().useSchemaDiscovery(true).build(),
+        null,
+        new AggregatorFactory[] {
+            new CountAggregatorFactory("count")
+        },
         Granularities.HOUR,
-        1000,
-        true
+        true,
+        IndexSpec.DEFAULT
     );
-
-    final List<Segment> segments = Lists.transform(
-        ImmutableList.of(segmentDir),
-        dir -> {
-          try {
-            return closer.register(new QueryableIndexSegment(helper.getIndexIO().loadIndex(dir), SegmentId.dummy("")));
-          }
-          catch (IOException ex) {
-            throw new RuntimeException(ex);
-          }
-        }
-    );
-
-    return segments;
-  }
-  public static File readFileFromClasspath(String fileName)
-  {
-    return new File(NestedDataTestUtils.class.getClassLoader().getResource(fileName).getFile());
-  }
-
-  public static String readFileFromClasspathAsString(String fileName) throws IOException
-  {
-    return com.google.common.io.Files.asCharSource(readFileFromClasspath(fileName), StandardCharsets.UTF_8).read();
   }
 }

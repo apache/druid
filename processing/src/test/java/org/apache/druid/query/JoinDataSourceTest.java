@@ -29,11 +29,14 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.TrueDimFilter;
+import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.join.NoopJoinableFactory;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.easymock.Mock;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -431,6 +434,51 @@ public class JoinDataSourceTest
     Assert.assertNotEquals(cacheKey1.length, 0);
     Assert.assertNotEquals(cacheKey2.length, 0);
     Assert.assertFalse(Arrays.equals(cacheKey1, cacheKey2));
+  }
+
+  @Test
+  public void testGetAnalysisWithUnnestDS()
+  {
+    JoinDataSource dataSource = JoinDataSource.create(
+        UnnestDataSource.create(
+            new TableDataSource("table1"),
+            new ExpressionVirtualColumn("j0.unnest", "\"dim3\"", ColumnType.STRING, ExprMacroTable.nil()),
+            null
+        ),
+        new TableDataSource("table2"),
+        "j.",
+        "x == \"j.x\"",
+        JoinType.LEFT,
+        null,
+        ExprMacroTable.nil(),
+        null
+    );
+    DataSourceAnalysis analysis = dataSource.getAnalysis();
+    Assert.assertEquals("table1", analysis.getBaseDataSource().getTableNames().iterator().next());
+  }
+
+  @Test
+  public void testGetAnalysisWithFilteredDS()
+  {
+    JoinDataSource dataSource = JoinDataSource.create(
+        UnnestDataSource.create(
+            FilteredDataSource.create(
+                new TableDataSource("table1"),
+                TrueDimFilter.instance()
+            ),
+            new ExpressionVirtualColumn("j0.unnest", "\"dim3\"", ColumnType.STRING, ExprMacroTable.nil()),
+            null
+        ),
+        new TableDataSource("table2"),
+        "j.",
+        "x == \"j.x\"",
+        JoinType.LEFT,
+        null,
+        ExprMacroTable.nil(),
+        null
+    );
+    DataSourceAnalysis analysis = dataSource.getAnalysis();
+    Assert.assertEquals("table1", analysis.getBaseDataSource().getTableNames().iterator().next());
   }
 
   @Test

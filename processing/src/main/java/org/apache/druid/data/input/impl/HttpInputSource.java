@@ -26,11 +26,18 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.data.input.AbstractInputSource;
+import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.InputSplit;
 import org.apache.druid.data.input.SplitHintSpec;
+import org.apache.druid.data.input.impl.systemfield.SystemField;
+import org.apache.druid.data.input.impl.systemfield.SystemFieldDecoratorFactory;
+import org.apache.druid.data.input.impl.systemfield.SystemFieldInputSource;
+import org.apache.druid.data.input.impl.systemfield.SystemFields;
+import org.apache.druid.error.InvalidInput;
+import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.metadata.PasswordProvider;
@@ -41,11 +48,14 @@ import java.io.File;
 import java.net.URI;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Stream;
 
-public class HttpInputSource extends AbstractInputSource implements SplittableInputSource<URI>
+public class HttpInputSource
+    extends AbstractInputSource
+    implements SplittableInputSource<URI>, SystemFieldInputSource
 {
   public static final String TYPE_KEY = "http";
 
@@ -54,13 +64,17 @@ public class HttpInputSource extends AbstractInputSource implements SplittableIn
   private final String httpAuthenticationUsername;
   @Nullable
   private final PasswordProvider httpAuthenticationPasswordProvider;
+  private final SystemFields systemFields;
   private final HttpInputSourceConfig config;
+  private final Map<String, String> requestHeaders;
 
   @JsonCreator
   public HttpInputSource(
       @JsonProperty("uris") List<URI> uris,
       @JsonProperty("httpAuthenticationUsername") @Nullable String httpAuthenticationUsername,
       @JsonProperty("httpAuthenticationPassword") @Nullable PasswordProvider httpAuthenticationPasswordProvider,
+      @JsonProperty(SYSTEM_FIELDS_PROPERTY) @Nullable SystemFields systemFields,
+      @JsonProperty("requestHeaders") @Nullable Map<String, String> requestHeaders,
       @JacksonInject HttpInputSourceConfig config
   )
   {
@@ -69,15 +83,10 @@ public class HttpInputSource extends AbstractInputSource implements SplittableIn
     this.uris = uris;
     this.httpAuthenticationUsername = httpAuthenticationUsername;
     this.httpAuthenticationPasswordProvider = httpAuthenticationPasswordProvider;
+    this.systemFields = systemFields == null ? SystemFields.none() : systemFields;
+    this.requestHeaders = requestHeaders == null ? Collections.emptyMap() : requestHeaders;
+    throwIfForbiddenHeaders(config, this.requestHeaders);
     this.config = config;
-  }
-
-  @JsonIgnore
-  @Nonnull
-  @Override
-  public Set<String> getTypes()
-  {
-    return Collections.singleton(TYPE_KEY);
   }
 
   public static void throwIfInvalidProtocols(HttpInputSourceConfig config, List<URI> uris)
@@ -89,10 +98,35 @@ public class HttpInputSource extends AbstractInputSource implements SplittableIn
     }
   }
 
+  public static void throwIfForbiddenHeaders(HttpInputSourceConfig config, Map<String, String> requestHeaders)
+  {
+    for (Map.Entry<String, String> entry : requestHeaders.entrySet()) {
+      if (!config.getAllowedHeaders().contains(StringUtils.toLowerCase(entry.getKey()))) {
+        throw InvalidInput.exception("Got forbidden header [%s], allowed headers are only [%s]. You can control the allowed headers by updating druid.ingestion.http.allowedHeaders",
+                                     entry.getKey(), config.getAllowedHeaders()
+        );
+      }
+    }
+  }
+
+  @JsonIgnore
+  @Nonnull
+  @Override
+  public Set<String> getTypes()
+  {
+    return Collections.singleton(TYPE_KEY);
+  }
+
   @JsonProperty
   public List<URI> getUris()
   {
     return uris;
+  }
+
+  @Override
+  public Set<SystemField> getConfiguredSystemFields()
+  {
+    return systemFields.getFields();
   }
 
   @Nullable
@@ -109,6 +143,14 @@ public class HttpInputSource extends AbstractInputSource implements SplittableIn
   public PasswordProvider getHttpAuthenticationPasswordProvider()
   {
     return httpAuthenticationPasswordProvider;
+  }
+
+  @Nullable
+  @JsonProperty("requestHeaders")
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public Map<String, String> getRequestHeaders()
+  {
+    return requestHeaders;
   }
 
   @Override
@@ -130,8 +172,25 @@ public class HttpInputSource extends AbstractInputSource implements SplittableIn
         Collections.singletonList(split.get()),
         httpAuthenticationUsername,
         httpAuthenticationPasswordProvider,
+        systemFields,
+        requestHeaders,
         config
     );
+  }
+
+  @Override
+  public Object getSystemFieldValue(InputEntity entity, SystemField field)
+  {
+    final HttpEntity httpEntity = (HttpEntity) entity;
+
+    switch (field) {
+      case URI:
+        return httpEntity.getUri().toString();
+      case PATH:
+        return httpEntity.getPath();
+      default:
+        return null;
+    }
   }
 
   @Override
@@ -144,11 +203,15 @@ public class HttpInputSource extends AbstractInputSource implements SplittableIn
     return new InputEntityIteratingReader(
         inputRowSchema,
         inputFormat,
-        createSplits(inputFormat, null).map(split -> new HttpEntity(
-            split.get(),
-            httpAuthenticationUsername,
-            httpAuthenticationPasswordProvider
-        )).iterator(),
+        CloseableIterators.withEmptyBaggage(
+            createSplits(inputFormat, null).map(split -> new HttpEntity(
+                split.get(),
+                httpAuthenticationUsername,
+                httpAuthenticationPasswordProvider,
+                requestHeaders
+            )).iterator()
+        ),
+        SystemFieldDecoratorFactory.fromInputSource(this),
         temporaryDirectory
     );
   }
@@ -163,16 +226,25 @@ public class HttpInputSource extends AbstractInputSource implements SplittableIn
       return false;
     }
     HttpInputSource that = (HttpInputSource) o;
-    return Objects.equals(uris, that.uris) &&
-           Objects.equals(httpAuthenticationUsername, that.httpAuthenticationUsername) &&
-           Objects.equals(httpAuthenticationPasswordProvider, that.httpAuthenticationPasswordProvider) &&
-           Objects.equals(config, that.config);
+    return Objects.equals(uris, that.uris)
+           && Objects.equals(httpAuthenticationUsername, that.httpAuthenticationUsername)
+           && Objects.equals(httpAuthenticationPasswordProvider, that.httpAuthenticationPasswordProvider)
+           && Objects.equals(systemFields, that.systemFields)
+           && Objects.equals(requestHeaders, that.requestHeaders)
+           && Objects.equals(config, that.config);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(uris, httpAuthenticationUsername, httpAuthenticationPasswordProvider, config);
+    return Objects.hash(
+        uris,
+        httpAuthenticationUsername,
+        httpAuthenticationPasswordProvider,
+        systemFields,
+        requestHeaders,
+        config
+    );
   }
 
   @Override
@@ -185,9 +257,11 @@ public class HttpInputSource extends AbstractInputSource implements SplittableIn
   public String toString()
   {
     return "HttpInputSource{" +
-           "uris=\"" + uris +
-           "\", httpAuthenticationUsername=" + httpAuthenticationUsername +
+           "uris=\"" + uris + "\"" +
+           ", httpAuthenticationUsername=" + httpAuthenticationUsername +
            ", httpAuthenticationPasswordProvider=" + httpAuthenticationPasswordProvider +
+           (systemFields.getFields().isEmpty() ? "" : ", systemFields=" + systemFields) +
+           ", requestHeaders = " + requestHeaders +
            "}";
   }
 }

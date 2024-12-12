@@ -19,6 +19,8 @@
 
 package org.apache.druid.indexing.overlord.supervisor;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
@@ -30,6 +32,10 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ResourceFilters;
+import org.apache.commons.lang3.NotImplementedException;
+import org.apache.druid.audit.AuditEntry;
+import org.apache.druid.audit.AuditManager;
+import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.http.security.SupervisorResourceFilter;
 import org.apache.druid.java.util.common.StringUtils;
@@ -44,7 +50,10 @@ import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
+import org.apache.druid.utils.CollectionUtils;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
@@ -88,6 +97,7 @@ public class SupervisorResource
   private final TaskMaster taskMaster;
   private final AuthorizerMapper authorizerMapper;
   private final ObjectMapper objectMapper;
+  private final AuditManager auditManager;
   private final AuthConfig authConfig;
 
   @Inject
@@ -95,13 +105,15 @@ public class SupervisorResource
       TaskMaster taskMaster,
       AuthorizerMapper authorizerMapper,
       ObjectMapper objectMapper,
-      AuthConfig authConfig
+      AuthConfig authConfig,
+      AuditManager auditManager
   )
   {
     this.taskMaster = taskMaster;
     this.authorizerMapper = authorizerMapper;
     this.objectMapper = objectMapper;
     this.authConfig = authConfig;
+    this.auditManager = auditManager;
   }
 
   @POST
@@ -112,7 +124,7 @@ public class SupervisorResource
     return asLeaderWithSupervisorManager(
         manager -> {
           Preconditions.checkArgument(
-              spec.getDataSources() != null && spec.getDataSources().size() > 0,
+              !CollectionUtils.isNullOrEmpty(spec.getDataSources()),
               "No dataSources found to perform authorization checks"
           );
           final Set<ResourceAction> resourceActions;
@@ -141,6 +153,19 @@ public class SupervisorResource
           }
 
           manager.createOrUpdateAndStartSupervisor(spec);
+
+          final String auditPayload
+              = StringUtils.format("Update supervisor[%s] for datasource[%s]", spec.getId(), spec.getDataSources());
+          auditManager.doAudit(
+              AuditEntry.builder()
+                        .key(spec.getId())
+                        .type("supervisor")
+                        .auditInfo(AuthorizationUtils.buildAuditInfo(req))
+                        .request(AuthorizationUtils.buildRequestInfo("overlord", req))
+                        .payload(auditPayload)
+                        .build()
+          );
+
           return Response.ok(ImmutableMap.of("id", spec.getId())).build();
         }
     );
@@ -375,6 +400,45 @@ public class SupervisorResource
     return terminate(id);
   }
 
+  /**
+   * This method will immediately try to handoff the list of task group ids for the given supervisor.
+   * This is a best effort API and makes no guarantees of execution, e.g. if a non-existent task group id
+   * is passed to it, the API call will still suceced.
+   */
+  @POST
+  @Path("/{id}/taskGroups/handoff")
+  @Consumes(MediaType.APPLICATION_JSON)
+  @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(SupervisorResourceFilter.class)
+  public Response handoffTaskGroups(@PathParam("id") final String id, @Nonnull final HandoffTaskGroupsRequest handoffTaskGroupsRequest)
+  {
+    List<Integer> taskGroupIds = handoffTaskGroupsRequest.getTaskGroupIds();
+    if (CollectionUtils.isNullOrEmpty(taskGroupIds)) {
+      return Response.status(Response.Status.BAD_REQUEST)
+          .entity(ImmutableMap.of("error", "List of task groups to handoff can't be empty"))
+          .build();
+
+    }
+    return asLeaderWithSupervisorManager(
+        manager -> {
+          try {
+            if (manager.handoffTaskGroupsEarly(id, taskGroupIds)) {
+              return Response.ok().build();
+            } else {
+              return Response.status(Response.Status.NOT_FOUND)
+                  .entity(ImmutableMap.of("error", StringUtils.format("Supervisor was not found [%s]", id)))
+                  .build();
+            }
+          }
+          catch (NotImplementedException e) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                .entity(ImmutableMap.of("error", StringUtils.format("Supervisor [%s] does not support early handoff", id)))
+                .build();
+          }
+        }
+    );
+  }
+
   @POST
   @Path("/{id}/terminate")
   @Produces(MediaType.APPLICATION_JSON)
@@ -470,7 +534,7 @@ public class SupervisorResource
                         authorizerMapper
                     )
                 );
-            if (authorizedHistoryForId.size() > 0) {
+            if (!authorizedHistoryForId.isEmpty()) {
               return Response.ok(authorizedHistoryForId).build();
             }
           }
@@ -494,9 +558,30 @@ public class SupervisorResource
   @ResourceFilters(SupervisorResourceFilter.class)
   public Response reset(@PathParam("id") final String id)
   {
+    return handleResetRequest(id, null);
+  }
+
+  @POST
+  @Path("/{id}/resetOffsets")
+  @Produces(MediaType.APPLICATION_JSON)
+  @Consumes(MediaType.APPLICATION_JSON)
+  @ResourceFilters(SupervisorResourceFilter.class)
+  public Response resetOffsets(
+      @PathParam("id") final String id,
+      final DataSourceMetadata resetDataSourceMetadata
+  )
+  {
+    return handleResetRequest(id, resetDataSourceMetadata);
+  }
+
+  private Response handleResetRequest(
+      final String id,
+      @Nullable final DataSourceMetadata resetDataSourceMetadata
+  )
+  {
     return asLeaderWithSupervisorManager(
         manager -> {
-          if (manager.resetSupervisor(id, null)) {
+          if (manager.resetSupervisor(id, resetDataSourceMetadata)) {
             return Response.ok(ImmutableMap.of("id", id)).build();
           } else {
             return Response.status(Response.Status.NOT_FOUND)
@@ -589,5 +674,23 @@ public class SupervisorResource
           return Response.ok(ImmutableMap.of("status", "success")).build();
         }
     );
+  }
+
+  public static class HandoffTaskGroupsRequest
+  {
+
+    private final List<Integer> taskGroupIds;
+
+    @JsonCreator
+    public HandoffTaskGroupsRequest(@JsonProperty("taskGroupIds") List<Integer> taskGroupIds)
+    {
+      this.taskGroupIds = taskGroupIds;
+    }
+
+    @JsonProperty
+    public List<Integer> getTaskGroupIds()
+    {
+      return taskGroupIds;
+    }
   }
 }

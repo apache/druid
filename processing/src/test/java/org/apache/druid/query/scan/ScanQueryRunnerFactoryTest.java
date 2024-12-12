@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.Order;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerTestHelper;
@@ -43,7 +44,6 @@ import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.experimental.runners.Enclosed;
 import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -57,7 +57,6 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 
-@RunWith(Enclosed.class)
 public class ScanQueryRunnerFactoryTest
 {
   private static final ScanQueryConfig CONFIG = new ScanQueryConfig()
@@ -76,10 +75,7 @@ public class ScanQueryRunnerFactoryTest
   };
 
   private static final ScanQueryRunnerFactory FACTORY = new ScanQueryRunnerFactory(
-      new ScanQueryQueryToolChest(
-          CONFIG,
-          DefaultGenericQueryMetricsFactory.instance()
-      ),
+      new ScanQueryQueryToolChest(DefaultGenericQueryMetricsFactory.instance()),
       new ScanQueryEngine(),
       CONFIG
   );
@@ -96,7 +92,7 @@ public class ScanQueryRunnerFactoryTest
         final int batchSize,
         final long limit,
         final ScanQuery.ResultFormat resultFormat,
-        final ScanQuery.Order order
+        final Order order
     )
     {
       this.numElements = numElements;
@@ -121,9 +117,9 @@ public class ScanQueryRunnerFactoryTest
           ScanQuery.ResultFormat.RESULT_FORMAT_LIST,
           ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST
       );
-      List<ScanQuery.Order> order = ImmutableList.of(
-          ScanQuery.Order.ASCENDING,
-          ScanQuery.Order.DESCENDING
+      List<Order> order = ImmutableList.of(
+          Order.ASCENDING,
+          Order.DESCENDING
       );
 
       return QueryRunnerTestHelper.cartesian(
@@ -152,7 +148,7 @@ public class ScanQueryRunnerFactoryTest
         } else if (o1 < o2) {
           retVal = -1;
         }
-        if (query.getTimeOrder().equals(ScanQuery.Order.DESCENDING)) {
+        if (query.getTimeOrder().equals(Order.DESCENDING)) {
           return retVal * -1;
         }
         return retVal;
@@ -205,7 +201,7 @@ public class ScanQueryRunnerFactoryTest
         scanResultValues3.add(ScanQueryTestHelper.generateScanResultValue(timestamp, resultFormat, 1));
       }
 
-      if (query.getTimeOrder() == ScanQuery.Order.DESCENDING) {
+      if (query.getTimeOrder() == Order.DESCENDING) {
         Collections.reverse(scanResultValues1);
         Collections.reverse(scanResultValues2);
         Collections.reverse(scanResultValues3);
@@ -226,7 +222,7 @@ public class ScanQueryRunnerFactoryTest
 
       List<List<QueryRunner<ScanResultValue>>> groupedRunners = new ArrayList<>(2);
 
-      if (query.getTimeOrder() == ScanQuery.Order.DESCENDING) {
+      if (query.getTimeOrder() == Order.DESCENDING) {
         groupedRunners.add(Arrays.asList(runnerSegment2Partition1, runnerSegment2Partition2));
         groupedRunners.add(Arrays.asList(runnerSegment1Partition1, runnerSegment1Partition2));
       } else {
@@ -241,7 +237,7 @@ public class ScanQueryRunnerFactoryTest
         } else if (o1 < o2) {
           retVal = -1;
         }
-        if (query.getTimeOrder().equals(ScanQuery.Order.DESCENDING)) {
+        if (query.getTimeOrder().equals(Order.DESCENDING)) {
           return retVal * -1;
         }
         return retVal;
@@ -273,7 +269,7 @@ public class ScanQueryRunnerFactoryTest
 
       // check ordering is correct
       for (int i = 1; i < output.size(); i++) {
-        if (query.getTimeOrder().equals(ScanQuery.Order.DESCENDING)) {
+        if (query.getTimeOrder().equals(Order.DESCENDING)) {
           Assert.assertTrue(output.get(i).getFirstEventTimestamp(resultFormat) <
                             output.get(i - 1).getFirstEventTimestamp(resultFormat));
         } else {
@@ -375,7 +371,7 @@ public class ScanQueryRunnerFactoryTest
                                      .collect(Collectors.toList())
                         )
                     )
-                    .order(ScanQuery.Order.ASCENDING)
+                    .order(Order.ASCENDING)
                     .build()
           ),
           ResponseContext.createEmpty()

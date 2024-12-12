@@ -42,7 +42,6 @@ public class TableMetadataTest
   public void testId()
   {
     TableId id1 = new TableId("schema", "table");
-    assertEquals(id1, id1);
     assertEquals("schema", id1.schema());
     assertEquals("table", id1.name());
     assertEquals("\"schema\".\"table\"", id1.sqlName());

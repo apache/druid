@@ -19,9 +19,9 @@
 
 package org.apache.druid.frame.processor;
 
-import com.google.common.base.Predicate;
 import org.apache.druid.frame.segment.row.FrameColumnSelectorFactory;
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -103,9 +103,9 @@ public class MultiColumnSelectorFactory implements ColumnSelectorFactory
       }
 
       @Override
-      public ValueMatcher makeValueMatcher(Predicate<String> predicate)
+      public ValueMatcher makeValueMatcher(DruidPredicateFactory predicateFactory)
       {
-        return DimensionSelectorUtils.makeValueMatcherGeneric(this, predicate);
+        return DimensionSelectorUtils.makeValueMatcherGeneric(this, predicateFactory);
       }
 
       @Nullable

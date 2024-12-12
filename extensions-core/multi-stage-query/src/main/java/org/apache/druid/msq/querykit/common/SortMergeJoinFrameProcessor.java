@@ -20,7 +20,6 @@
 package org.apache.druid.msq.querykit.common;
 
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
@@ -41,11 +40,13 @@ import org.apache.druid.frame.segment.FrameCursor;
 import org.apache.druid.frame.write.FrameWriter;
 import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Unit;
 import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.indexing.error.TooManyRowsWithSameKeyFault;
 import org.apache.druid.msq.input.ReadableInput;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -101,7 +102,7 @@ import java.util.List;
  * 5) Once we process the final row on the *other* side, reset both marks with {@link Tracker#markCurrent()} and
  * continue the algorithm.
  */
-public class SortMergeJoinFrameProcessor implements FrameProcessor<Long>
+public class SortMergeJoinFrameProcessor implements FrameProcessor<Object>
 {
   private static final int LEFT = 0;
   private static final int RIGHT = 1;
@@ -137,6 +138,7 @@ public class SortMergeJoinFrameProcessor implements FrameProcessor<Long>
       FrameWriterFactory frameWriterFactory,
       String rightPrefix,
       List<List<KeyColumn>> keyColumns,
+      int[] requiredNonNullKeyParts,
       JoinType joinType,
       long maxBufferedBytes
   )
@@ -147,8 +149,8 @@ public class SortMergeJoinFrameProcessor implements FrameProcessor<Long>
     this.rightPrefix = rightPrefix;
     this.joinType = joinType;
     this.trackers = ImmutableList.of(
-        new Tracker(left, keyColumns.get(LEFT), maxBufferedBytes),
-        new Tracker(right, keyColumns.get(RIGHT), maxBufferedBytes)
+        new Tracker(left, keyColumns.get(LEFT), requiredNonNullKeyParts, maxBufferedBytes),
+        new Tracker(right, keyColumns.get(RIGHT), requiredNonNullKeyParts, maxBufferedBytes)
     );
     this.maxBufferedBytes = maxBufferedBytes;
   }
@@ -166,7 +168,7 @@ public class SortMergeJoinFrameProcessor implements FrameProcessor<Long>
   }
 
   @Override
-  public ReturnOrAwait<Long> runIncrementally(IntSet readableInputs) throws IOException
+  public ReturnOrAwait<Object> runIncrementally(IntSet readableInputs) throws IOException
   {
     // Fetch enough frames such that each tracker has one readable row (or is done).
     for (int i = 0; i < inputChannels.size(); i++) {
@@ -194,7 +196,7 @@ public class SortMergeJoinFrameProcessor implements FrameProcessor<Long>
 
       // Two rows match if the keys compare equal _and_ neither key has a null component. (x JOIN y ON x.a = y.a does
       // not match rows where "x.a" is null.)
-      final boolean marksMatch = markCmp == 0 && trackers.get(LEFT).hasCompletelyNonNullMark();
+      final boolean marksMatch = markCmp == 0 && trackers.get(LEFT).markHasRequiredNonNullKeyParts();
 
       // If marked keys are equal on both sides ("marksMatch"), at least one side needs to have a complete set of rows
       // for the marked key. Check if this is true, otherwise call nextAwait to read more data.
@@ -218,7 +220,7 @@ public class SortMergeJoinFrameProcessor implements FrameProcessor<Long>
 
     if (allTrackersAreAtEnd()) {
       flushCurrentFrame();
-      return ReturnOrAwait.returnObject(0L);
+      return ReturnOrAwait.returnObject(Unit.instance());
     } else {
       // Keep reading.
       return nextAwait();
@@ -381,7 +383,7 @@ public class SortMergeJoinFrameProcessor implements FrameProcessor<Long>
    *
    * If all channels have hit their limit, throws {@link MSQException} with {@link TooManyRowsWithSameKeyFault}.
    */
-  private ReturnOrAwait<Long> nextAwait()
+  private ReturnOrAwait<Object> nextAwait()
   {
     final IntSet awaitSet = new IntOpenHashSet();
     int trackerAtLimit = -1;
@@ -445,7 +447,7 @@ public class SortMergeJoinFrameProcessor implements FrameProcessor<Long>
   /**
    * Compares the marked rows of the two {@link #trackers}. This method returns 0 if both sides are null, even
    * though this is not considered a match by join semantics. Therefore, it is important to also check
-   * {@link Tracker#hasCompletelyNonNullMark()}.
+   * {@link Tracker#markHasRequiredNonNullKeyParts()}.
    *
    * @return negative if {@link #LEFT} key is earlier, positive if {@link #RIGHT} key is earlier, zero if the keys
    * are the same. Returns zero even if a key component is null, even though this is not considered a match by
@@ -548,6 +550,7 @@ public class SortMergeJoinFrameProcessor implements FrameProcessor<Long>
     private final List<FrameHolder> holders = new ArrayList<>();
     private final ReadableInput input;
     private final List<KeyColumn> keyColumns;
+    private final int[] requiredNonNullKeyParts;
     private final long maxBytesBuffered;
 
     // markFrame and markRow are the first frame and row with the current key.
@@ -560,10 +563,16 @@ public class SortMergeJoinFrameProcessor implements FrameProcessor<Long>
     // done indicates that no more data is available in the channel.
     private boolean done;
 
-    public Tracker(ReadableInput input, List<KeyColumn> keyColumns, long maxBytesBuffered)
+    public Tracker(
+        final ReadableInput input,
+        final List<KeyColumn> keyColumns,
+        final int[] requiredNonNullKeyParts,
+        final long maxBytesBuffered
+    )
     {
       this.input = input;
       this.keyColumns = keyColumns;
+      this.requiredNonNullKeyParts = requiredNonNullKeyParts;
       this.maxBytesBuffered = maxBytesBuffered;
     }
 
@@ -685,9 +694,9 @@ public class SortMergeJoinFrameProcessor implements FrameProcessor<Long>
     /**
      * Whether this tracker has a marked row that is completely nonnull.
      */
-    public boolean hasCompletelyNonNullMark()
+    public boolean markHasRequiredNonNullKeyParts()
     {
-      return hasMark() && holders.get(markFrame).comparisonWidget.isCompletelyNonNullKey(markRow);
+      return hasMark() && holders.get(markFrame).comparisonWidget.hasNonNullKeyParts(markRow, requiredNonNullKeyParts);
     }
 
     /**
@@ -1040,9 +1049,9 @@ public class SortMergeJoinFrameProcessor implements FrameProcessor<Long>
       }
 
       @Override
-      public ValueMatcher makeValueMatcher(Predicate<String> predicate)
+      public ValueMatcher makeValueMatcher(DruidPredicateFactory predicateFactory)
       {
-        return DimensionSelectorUtils.makeValueMatcherGeneric(this, predicate);
+        return DimensionSelectorUtils.makeValueMatcherGeneric(this, predicateFactory);
       }
 
       @Override

@@ -66,11 +66,11 @@ public class RegexpExtractExprMacro implements ExprMacroTable.ExprMacro
 
     final int index = indexExpr == null ? 0 : ((Number) indexExpr.getLiteralValue()).intValue();
 
-    class RegexpExtractExpr extends ExprMacroTable.BaseScalarUnivariateMacroFunctionExpr
+    class RegexpExtractExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
     {
-      private RegexpExtractExpr(Expr arg)
+      private RegexpExtractExpr(List<Expr> args)
       {
-        super(FN_NAME, arg);
+        super(RegexpExtractExprMacro.this, args);
       }
 
       @Nonnull
@@ -89,34 +89,13 @@ public class RegexpExtractExprMacro implements ExprMacroTable.ExprMacro
         }
       }
 
-      @Override
-      public Expr visit(Shuttle shuttle)
-      {
-        return shuttle.visit(apply(shuttle.visitAll(args)));
-      }
-
       @Nullable
       @Override
       public ExpressionType getOutputType(InputBindingInspector inspector)
       {
         return ExpressionType.STRING;
       }
-
-      @Override
-      public String stringify()
-      {
-        if (indexExpr != null) {
-          return StringUtils.format(
-              "%s(%s, %s, %s)",
-              FN_NAME,
-              arg.stringify(),
-              patternExpr.stringify(),
-              indexExpr.stringify()
-          );
-        }
-        return StringUtils.format("%s(%s, %s)", FN_NAME, arg.stringify(), patternExpr.stringify());
-      }
     }
-    return new RegexpExtractExpr(arg);
+    return new RegexpExtractExpr(args);
   }
 }

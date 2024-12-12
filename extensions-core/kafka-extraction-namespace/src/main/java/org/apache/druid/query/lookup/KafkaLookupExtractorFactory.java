@@ -298,6 +298,18 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
   }
 
   @Override
+  public void awaitInitialization()
+  {
+    // Kafka lookup do not need await on initialization as it is realtime kafka lookups.
+  }
+
+  @Override
+  public boolean isInitialized()
+  {
+    return true;
+  }
+
+  @Override
   public LookupExtractor get()
   {
     final Map<String, String> map = Preconditions.checkNotNull(mapRef.get(), "Not started");

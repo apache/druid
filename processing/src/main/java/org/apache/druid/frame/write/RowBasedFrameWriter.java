@@ -23,6 +23,7 @@ import com.google.common.base.Throwables;
 import com.google.common.primitives.Ints;
 import org.apache.datasketches.memory.Memory;
 import org.apache.datasketches.memory.WritableMemory;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.AppendableMemory;
@@ -33,6 +34,7 @@ import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.utils.CloseableUtils;
 
@@ -299,19 +301,35 @@ public class RowBasedFrameWriter implements FrameWriter
                                       .column(signature.getColumnName(i))
                                       .build();
       }
-      catch (Exception e) {
-        throw Throwables.propagate(e);
+      catch (ParseException pe) {
+        throw Throwables.propagate(pe);
       }
-
+      catch (Exception e) {
+        throw InvalidFieldException.builder().column(signature.getColumnName(i))
+                                   .errorMsg(e.getMessage())
+                                   .build();
+      }
 
       if (writeResult < 0) {
         // Reset to beginning of loop.
         i = -1;
 
+        final int priorAllocation = BASE_DATA_ALLOCATION_SIZE * reserveMultiple;
+
         // Try again with a bigger allocation.
         reserveMultiple *= 2;
 
-        if (!dataMemory.reserveAdditional(Ints.checkedCast((long) BASE_DATA_ALLOCATION_SIZE * reserveMultiple))) {
+        final int nextAllocation = Math.min(
+            dataMemory.availableToReserve(),
+            Ints.checkedCast((long) BASE_DATA_ALLOCATION_SIZE * reserveMultiple)
+        );
+
+        if (nextAllocation > priorAllocation) {
+          if (!dataMemory.reserveAdditional(nextAllocation)) {
+            // Shouldn't see this unless availableToReserve lied to us.
+            throw DruidException.defensive("Unexpected failure of dataMemory.reserveAdditional");
+          }
+        } else {
           return false;
         }
 

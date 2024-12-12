@@ -41,8 +41,9 @@ import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifier;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifierFactory;
 import org.apache.druid.segment.loading.DataSegmentKiller;
-import org.apache.druid.segment.realtime.FireDepartmentMetrics;
+import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
@@ -58,6 +59,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -72,6 +74,7 @@ public class StreamAppenderatorDriverTest extends EasyMockSupport
 {
   private static final String DATA_SOURCE = "foo";
   private static final String VERSION = "abc123";
+  private static final String UPGRADED_VERSION = "xyz456";
   private static final ObjectMapper OBJECT_MAPPER = new DefaultObjectMapper();
   private static final int MAX_ROWS_IN_MEMORY = 100;
   private static final int MAX_ROWS_PER_SEGMENT = 3;
@@ -124,10 +127,10 @@ public class StreamAppenderatorDriverTest extends EasyMockSupport
         streamAppenderatorTester.getAppenderator(),
         allocator,
         segmentHandoffNotifierFactory,
-        new TestUsedSegmentChecker(streamAppenderatorTester.getPushedSegments()),
+        new TestPublishedSegmentRetriever(streamAppenderatorTester.getPushedSegments()),
         dataSegmentKiller,
         OBJECT_MAPPER,
-        new FireDepartmentMetrics()
+        new SegmentGenerationMetrics()
     );
 
     EasyMock.replay(dataSegmentKiller);
@@ -244,6 +247,44 @@ public class StreamAppenderatorDriverTest extends EasyMockSupport
     }
 
     driver.registerHandoff(published).get(HANDOFF_CONDITION_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
+  }
+
+  @Test
+  public void testHandoffUpgradedSegments()
+      throws IOException, InterruptedException, TimeoutException, ExecutionException
+  {
+    final TestCommitterSupplier<Integer> committerSupplier = new TestCommitterSupplier<>();
+
+    Assert.assertNull(driver.startJob(null));
+
+    for (int i = 0; i < ROWS.size(); i++) {
+      committerSupplier.setMetadata(i + 1);
+      Assert.assertTrue(driver.add(ROWS.get(i), "dummy", committerSupplier, false, true).isOk());
+    }
+
+    driver.persist(committerSupplier.get());
+
+    // There is no remaining rows in the driver, and thus the result must be empty
+    final SegmentsAndCommitMetadata segmentsAndCommitMetadata = driver.publishAndRegisterHandoff(
+        makeUpgradingPublisher(),
+        committerSupplier.get(),
+        ImmutableList.of("dummy")
+    ).get(PUBLISH_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
+
+    Assert.assertNotNull(segmentsAndCommitMetadata.getUpgradedSegments());
+    Assert.assertEquals(
+        segmentsAndCommitMetadata.getSegments().size(),
+        segmentsAndCommitMetadata.getUpgradedSegments().size()
+    );
+
+    Set<SegmentDescriptor> expectedHandedOffSegments = new HashSet<>();
+    for (DataSegment segment : segmentsAndCommitMetadata.getSegments()) {
+      expectedHandedOffSegments.add(segment.toDescriptor());
+    }
+    for (DataSegment segment : segmentsAndCommitMetadata.getUpgradedSegments()) {
+      expectedHandedOffSegments.add(segment.toDescriptor());
+    }
+    Assert.assertEquals(expectedHandedOffSegments, segmentHandoffNotifierFactory.getHandedOffSegmentDescriptors());
   }
 
   @Test
@@ -375,13 +416,36 @@ public class StreamAppenderatorDriverTest extends EasyMockSupport
 
   static TransactionalSegmentPublisher makeOkPublisher()
   {
-    return (segmentsToBeOverwritten, segmentsToBeDropped, segmentsToPublish, commitMetadata) ->
+    return (segmentsToBeOverwritten, segmentsToPublish, commitMetadata, segmentSchemaMapping) ->
         SegmentPublishResult.ok(Collections.emptySet());
+  }
+
+  private TransactionalSegmentPublisher makeUpgradingPublisher()
+  {
+    return (segmentsToBeOverwritten, segmentsToPublish, commitMetadata, segmentSchemaMapping) -> {
+      Set<DataSegment> allSegments = new HashSet<>(segmentsToPublish);
+      int id = 0;
+      for (DataSegment segment : segmentsToPublish) {
+        DataSegment upgradedSegment = new DataSegment(
+            SegmentId.of(DATA_SOURCE, Intervals.ETERNITY, UPGRADED_VERSION, id),
+            segment.getLoadSpec(),
+            segment.getDimensions(),
+            segment.getMetrics(),
+            new NumberedShardSpec(id, 0),
+            null,
+            segment.getBinaryVersion(),
+            segment.getSize()
+        );
+        id++;
+        allSegments.add(upgradedSegment);
+      }
+      return SegmentPublishResult.ok(allSegments);
+    };
   }
 
   static TransactionalSegmentPublisher makeFailingPublisher(boolean failWithException)
   {
-    return (segmentsToBeOverwritten, segmentsToBeDropped, segmentsToPublish, commitMetadata) -> {
+    return (segmentsToBeOverwritten, segmentsToPublish, commitMetadata, segmentSchemaMapping) -> {
       final RuntimeException exception = new RuntimeException("test");
       if (failWithException) {
         throw exception;
@@ -459,6 +523,7 @@ public class StreamAppenderatorDriverTest extends EasyMockSupport
   {
     private boolean handoffEnabled = true;
     private long handoffDelay;
+    private final Set<SegmentDescriptor> handedOffSegmentDescriptors = new HashSet<>();
 
     public void disableHandoff()
     {
@@ -470,8 +535,15 @@ public class StreamAppenderatorDriverTest extends EasyMockSupport
       handoffDelay = delay;
     }
 
+    public Set<SegmentDescriptor> getHandedOffSegmentDescriptors()
+    {
+      synchronized (handedOffSegmentDescriptors) {
+        return ImmutableSet.copyOf(handedOffSegmentDescriptors);
+      }
+    }
+
     @Override
-    public SegmentHandoffNotifier createSegmentHandoffNotifier(String dataSource)
+    public SegmentHandoffNotifier createSegmentHandoffNotifier(String dataSource, String taskId)
     {
       return new SegmentHandoffNotifier()
       {
@@ -494,6 +566,9 @@ public class StreamAppenderatorDriverTest extends EasyMockSupport
             }
 
             exec.execute(handOffRunnable);
+            synchronized (handedOffSegmentDescriptors) {
+              handedOffSegmentDescriptors.add(descriptor);
+            }
           }
           return true;
         }

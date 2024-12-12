@@ -22,17 +22,26 @@ title: "Query from deep storage"
   ~ under the License.
   -->
 
-> Query from deep storage is an [experimental feature](../development/experimental.md).
-
 Druid can query segments that are only stored in deep storage. Running a query from deep storage is slower than running queries from segments that are loaded on Historical processes, but it's a great tool for data that you either access infrequently or where the low latency results that typical Druid queries provide is not necessary. Queries from deep storage can increase the surface area of data available to query without requiring you to scale your Historical processes to accommodate more segments.
+
+## Prerequisites
+
+Query from deep storage requires the Multi-stage query (MSQ) task engine. Load the extension for it if you don't already have it enabled before you begin. See [enable MSQ](../multi-stage-query/index.md#load-the-extension) for more information.
+
+To be queryable, your datasource must meet one of the following conditions:
+
+- At least one segment from the datasource is loaded onto a Historical service for Druid to plan the query. This segment can be any segment from the datasource. You can verify that a datasource has at least one segment on a Historical service if it's visible in the Druid console.
+- You have the centralized datasource schema feature enabled. For more information, see [Centralized datasource schema](../configuration/index.md#centralized-datasource-schema).
+
+If you use centralized data source schema, there's an additional step for any datasource created prior to enabling it to make the datasource queryable from deep storage. You need to load the segments from deep storage onto a Historical so that the schema can be backfilled in the metadata database. You can load some or all of the segments that are only in deep storage. If you don't load all the segments, any dimensions that are only in the segments you didn't load will not be in the queryable datasource schema and won't be queryable from deep storage. That is, only the dimensions that are present in the segment schema in metadata database are queryable. Once that process is complete, you can unload all the segments from the Historical and only keep the data in deep storage.
 
 ## Keep segments in deep storage only
 
-Any data you ingest into Druid is already stored in deep storage, so you don't need to perform any additional configuration from that perspective. However, to take advantage of the cost savings that querying from deep storage provides, make sure not all your segments get loaded onto Historical processes.
+Any data you ingest into Druid is already stored in deep storage, so you don't need to perform any additional configuration from that perspective. However, to take advantage of the cost savings that querying from deep storage provides, make sure not all your segments get loaded onto Historical processes. If you use centralized datasource schema, a datasource can be kept only in deep storage but remain queryable.
 
-To do this, configure [load rules](../operations/rule-configuration.md#load-rules) to manage the which segments are only in deep storage and which get loaded onto Historical processes.
+To manage which segments are kept only in deep storage and which get loaded onto Historical processes, configure [load rules](../operations/rule-configuration.md#load-rules) 
 
-The easiest way to do this is to explicitly configure the segments that don't get loaded onto Historical processes. Set `tieredReplicants` to an empty array and `useDefaultTierForNull` to `false`. For example, if you configure the following rule for a datasource:
+The easiest way to keep segments only in deep storage is to explicitly configure the segments that don't get loaded onto Historical processes. Set `tieredReplicants` to an empty array and `useDefaultTierForNull` to `false`. For example, if you configure the following rule for a datasource:
 
 ```json
 [
@@ -62,10 +71,7 @@ Segments with a `replication_factor` of `0` are not assigned to any Historical t
 
 You can also confirm this through the Druid console. On the **Segments** page, see the **Replication factor** column.
 
-Keep the following in mind when working with load rules to control what exists only in deep storage:
-
-- At least one of the segments in a datasource must be loaded onto a Historical process so that Druid can plan the query. The segment on the Historical process can be any segment from the datasource. It does not need to be a specific segment. One way to verify that a datasource has at least one segment on a Historical process is if it's visible in the Druid console.
-- The actual number of replicas may differ from the replication factor temporarily as Druid processes your load rules.
+Note that the actual number of replicas may differ from the replication factor temporarily as Druid processes your load rules.
 
 ## Run a query from deep storage
 
@@ -87,10 +93,10 @@ Submitting a query from deep storage uses the same syntax as any other Druid SQL
 
 Generally, the request body fields are the same between the `sql` and `sql/statements` endpoints.
 
-There are additional context parameters for `sql/statements` specifically: 
+Apart from the context parameters mentioned [here](../multi-stage-query/reference.md#context-parameters) there are additional context parameters for `sql/statements`: 
 
    - `executionMode`  (required) determines how query results are fetched. Set this to `ASYNC`. 
-   - `selectDestination` (optional) set to `durableStorage` instructs Druid to write the results from SELECT queries to durable storage. Note that this requires you to have [durable storage for MSQ enabled](../operations/durable-storage.md).
+   - `selectDestination` (optional) set to `durableStorage` instructs Druid to write the results of SELECT queries to durable storage. For result sets with more than 3000 rows, it is highly recommended to use `durableStorage`. Note that this requires you to have [durable storage for MSQ enabled](../operations/durable-storage.md).
 
 The following sample query includes the two additional context parameters that querying from deep storage supports:
 
@@ -180,12 +186,14 @@ Only the user who submitted a query can retrieve the results for the query.
 Use the following endpoint to retrieve results:
 
 ```
-GET https://ROUTER:8888/druid/v2/sql/statements/QUERYID/results?page=PAGENUMBER&size=RESULT_SIZE&timeout=TIMEOUT_MS
+GET https://ROUTER:8888/druid/v2/sql/statements/QUERYID/results?page=PAGENUMBER&resultFormat=FORMAT
 ```
 
 Results are returned in JSON format.
 
-You can use the optional `page`, `size`, and `timeout` parameters to refine your results. You can retrieve the `page` information for your results by fetching the status of the completed query.
+You can use the optional `page` parameter to refine your results, and `resultFormat` parameter to define the format in which the results will be presented. 
+* You can retrieve the `page` information for your results by fetching the status of the completed query.
+* For `resultFormat` the following options are supported `arrayLines`,`objectLines`,`array`,`object`, and `csv`. Default value is `object`. More documentation present [here](../api-reference/sql-api.md#request-body). 
 
 When you try to get results for a query from deep storage, you may receive an error that states the query is still running. Wait until the query completes before you try again.
 

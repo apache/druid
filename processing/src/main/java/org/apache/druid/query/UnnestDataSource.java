@@ -26,13 +26,11 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.SegmentReference;
-import org.apache.druid.segment.UnnestSegmentReference;
+import org.apache.druid.segment.UnnestSegment;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.utils.JvmUtils;
 
-
 import javax.annotation.Nullable;
-
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -147,13 +145,7 @@ public class UnnestDataSource implements DataSource
     );
     return JvmUtils.safeAccumulateThreadCpuTime(
         cpuTimeAccumulator,
-        () ->
-            baseSegment ->
-                new UnnestSegmentReference(
-                    segmentMapFn.apply(baseSegment),
-                    virtualColumn,
-                    unnestFilter
-                )
+        () -> baseSegment -> new UnnestSegment(segmentMapFn.apply(baseSegment), virtualColumn, unnestFilter)
     );
   }
 

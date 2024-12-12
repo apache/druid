@@ -25,6 +25,8 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.InlineDataSource;
+import org.apache.druid.query.Order;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.filter.DimFilter;
@@ -32,12 +34,14 @@ import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.RowSignature.Finalization;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+
 
 /**
  * A query that can compute window functions on top of a completely in-memory inline datasource or query results.
@@ -95,7 +99,6 @@ public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
     super(
         validateMaybeRewriteDataSource(dataSource, leafOperators != null),
         intervals,
-        false,
         context
     );
     this.rowSignature = rowSignature;
@@ -112,24 +115,27 @@ public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
           ScanQuery scan = (ScanQuery) subQuery;
 
           ArrayList<ColumnWithDirection> ordering = new ArrayList<>();
-          for (ScanQuery.OrderBy orderBy : scan.getOrderBys()) {
+          for (OrderBy orderBy : scan.getOrderBys()) {
             ordering.add(
                 new ColumnWithDirection(
                     orderBy.getColumnName(),
-                    ScanQuery.Order.DESCENDING == orderBy.getOrder()
+                    Order.DESCENDING == orderBy.getOrder()
                     ? ColumnWithDirection.Direction.DESC
                     : ColumnWithDirection.Direction.ASC
                 )
             );
+          }
+          if (ordering.isEmpty()) {
+            ordering = null;
           }
 
           this.leafOperators.add(
               new ScanOperatorFactory(
                   null,
                   scan.getFilter(),
-                  (int) scan.getScanRowsLimit(),
+                  scan.getOffsetLimit(),
                   scan.getColumns(),
-                  scan.getVirtualColumns(),
+                  scan.getVirtualColumns().isEmpty() ? null : scan.getVirtualColumns(),
                   ordering
               )
           );
@@ -156,6 +162,12 @@ public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
   public RowSignature getRowSignature()
   {
     return rowSignature;
+  }
+
+  @Override
+  public RowSignature getResultRowSignature(Finalization finalization)
+  {
+    return getRowSignature();
   }
 
   @Override
@@ -196,7 +208,7 @@ public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
   {
     return new WindowOperatorQuery(
         getDataSource(),
-        getQuerySegmentSpec(),
+        spec,
         getContext(),
         rowSignature,
         operators,
@@ -209,6 +221,18 @@ public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
   {
     return new WindowOperatorQuery(
         dataSource,
+        getQuerySegmentSpec(),
+        getContext(),
+        rowSignature,
+        operators,
+        leafOperators
+    );
+  }
+
+  public Query<RowsAndColumns> withOperators(List<OperatorFactory> operators)
+  {
+    return new WindowOperatorQuery(
+        getDataSource(),
         getQuerySegmentSpec(),
         getContext(),
         rowSignature,
@@ -230,16 +254,15 @@ public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
       return false;
     }
     WindowOperatorQuery that = (WindowOperatorQuery) o;
-    return Objects.equals(rowSignature, that.rowSignature) && Objects.equals(
-        operators,
-        that.operators
-    );
+    return Objects.equals(rowSignature, that.rowSignature)
+        && Objects.equals(operators, that.operators)
+        && Objects.equals(leafOperators, that.leafOperators);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(super.hashCode(), rowSignature, operators);
+    return Objects.hash(super.hashCode(), rowSignature, operators, leafOperators);
   }
 
   @Override
@@ -251,6 +274,7 @@ public class WindowOperatorQuery extends BaseQuery<RowsAndColumns>
            ", context=" + getContext() +
            ", rowSignature=" + rowSignature +
            ", operators=" + operators +
+           ", leafOperators=" + leafOperators +
            '}';
   }
 }

@@ -39,11 +39,11 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class RegexReader extends TextReader
+public class RegexReader extends TextReader.Strings
 {
   private final String pattern;
   private final Pattern compiledPattern;
-  private final Function<String, Object> multiValueFunction;
+  private final Function<String, Object> transformationFunction;
 
   private List<String> columns;
 
@@ -60,7 +60,11 @@ public class RegexReader extends TextReader
     this.pattern = pattern;
     this.compiledPattern = compiledPattern;
     final String finalListDelimeter = listDelimiter == null ? Parsers.DEFAULT_LIST_DELIMITER : listDelimiter;
-    this.multiValueFunction = ParserUtils.getMultiValueFunction(finalListDelimeter, Splitter.on(finalListDelimeter));
+    this.transformationFunction = ParserUtils.getTransformationFunction(
+        finalListDelimeter,
+        Splitter.on(finalListDelimeter),
+        false
+    );
     this.columns = columns;
   }
 
@@ -94,7 +98,7 @@ public class RegexReader extends TextReader
         columns = ParserUtils.generateFieldNames(matcher.groupCount());
       }
 
-      return Utils.zipMapPartial(columns, Iterables.transform(values, multiValueFunction));
+      return Utils.zipMapPartial(columns, Iterables.transform(values, transformationFunction));
     }
     catch (Exception e) {
       throw new ParseException(line, e, "Unable to parse row [%s]", line);

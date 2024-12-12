@@ -26,8 +26,10 @@ import com.google.common.primitives.Chars;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rex.RexBuilder;
+import org.apache.calcite.rex.RexCall;
 import org.apache.calcite.rex.RexLiteral;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.rex.RexUtil;
 import org.apache.calcite.sql.SqlCollation;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlOperatorBinding;
@@ -40,9 +42,7 @@ import org.apache.calcite.util.TimeString;
 import org.apache.calcite.util.TimestampString;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.math.expr.ExpressionProcessingConfig;
 import org.apache.druid.query.ordering.StringComparator;
@@ -77,7 +77,6 @@ import java.util.regex.Pattern;
  */
 public class Calcites
 {
-  private static final EmittingLogger log = new EmittingLogger(Calcites.class);
   private static final DateTimes.UtcFormatter CALCITE_DATE_PARSER = DateTimes.wrapFormatter(ISODateTimeFormat.dateParser());
   private static final DateTimes.UtcFormatter CALCITE_TIMESTAMP_PARSER = DateTimes.wrapFormatter(
       new DateTimeFormatterBuilder()
@@ -100,6 +99,15 @@ public class Calcites
       ARG0_NULLABLE_ARRAY_RETURN_TYPE_INFERENCE = new Arg0NullableArrayTypeInference();
   public static final SqlReturnTypeInference
       ARG1_NULLABLE_ARRAY_RETURN_TYPE_INFERENCE = new Arg1NullableArrayTypeInference();
+
+  public static SqlReturnTypeInference complexReturnTypeWithNullability(ColumnType columnType, boolean nullable)
+  {
+    return opBinding -> RowSignatures.makeComplexType(
+        opBinding.getTypeFactory(),
+        columnType,
+        nullable
+    );
+  }
 
   private Calcites()
   {
@@ -130,6 +138,31 @@ public class Calcites
     }
     builder.append("'");
     return isPlainAscii ? builder.toString() : "U&" + builder;
+  }
+
+  /**
+   * Returns whether an expression is a literal. Like {@link RexUtil#isLiteral(RexNode, boolean)} but can accept
+   * arrays too.
+   *
+   * @param rexNode    expression
+   * @param allowCast  allow calls to CAST if its argument is literal
+   * @param allowArray allow calls to ARRAY if its arguments are literal
+   */
+  public static boolean isLiteral(RexNode rexNode, boolean allowCast, boolean allowArray)
+  {
+    if (RexUtil.isLiteral(rexNode, allowCast)) {
+      return true;
+    } else if (allowArray && rexNode.isA(SqlKind.ARRAY_VALUE_CONSTRUCTOR)) {
+      for (final RexNode element : ((RexCall) rexNode).getOperands()) {
+        if (!RexUtil.isLiteral(element, allowCast)) {
+          return false;
+        }
+      }
+
+      return true;
+    } else {
+      return false;
+    }
   }
 
   /**
@@ -185,6 +218,9 @@ public class Calcites
       if (elementType != null) {
         return ColumnType.ofArray(elementType);
       }
+      if (type.getComponentType().getSqlTypeName() == SqlTypeName.NULL) {
+        return ColumnType.LONG_ARRAY;
+      }
       return null;
     } else {
       return null;
@@ -210,12 +246,18 @@ public class Calcites
            SqlTypeName.INT_TYPES.contains(sqlTypeName);
   }
 
+  /**
+   * Returns the natural StringComparator associated with the RelDataType
+   */
   public static StringComparator getStringComparatorForRelDataType(RelDataType dataType)
   {
     final ColumnType valueType = getColumnTypeForRelDataType(dataType);
     return getStringComparatorForValueType(valueType);
   }
 
+  /**
+   * Returns the natural StringComparator associated with the given ColumnType
+   */
   public static StringComparator getStringComparatorForValueType(ColumnType valueType)
   {
     if (valueType.isNumeric()) {
@@ -223,7 +265,7 @@ public class Calcites
     } else if (valueType.is(ValueType.STRING)) {
       return StringComparators.LEXICOGRAPHIC;
     } else {
-      throw new ISE("Unrecognized valueType[%s]", valueType);
+      return StringComparators.NATURAL;
     }
   }
 
@@ -249,8 +291,9 @@ public class Calcites
 
     switch (typeName) {
       case TIMESTAMP:
+      case TIMESTAMP_WITH_LOCAL_TIME_ZONE:
         // Our timestamps are down to the millisecond (precision = 3).
-        dataType = typeFactory.createSqlType(typeName, 3);
+        dataType = typeFactory.createSqlType(typeName, DruidTypeSystem.DEFAULT_TIMESTAMP_PRECISION);
         break;
       case CHAR:
       case VARCHAR:
@@ -329,13 +372,29 @@ public class Calcites
       final int precision
   )
   {
+    return rexBuilder.makeTimestampLiteral(jodaToCalciteTimestampString(dateTime, sessionTimeZone), precision);
+  }
+
+  /**
+   * Calcite expects TIMESTAMP literals to be represented by TimestampStrings in the local time zone.
+   *
+   * @param dateTime        joda timestamp
+   * @param sessionTimeZone session time zone
+   *
+   * @return Calcite style Calendar, appropriate for literals
+   */
+  public static TimestampString jodaToCalciteTimestampString(
+      final DateTime dateTime,
+      final DateTimeZone sessionTimeZone
+  )
+  {
     // Calcite expects TIMESTAMP literals to be represented by TimestampStrings in the session time zone.
     // The TRAILING_ZEROS ... replaceAll is because Calcite doesn't like trailing zeroes in its fractional seconds part.
     final String timestampString = TRAILING_ZEROS
         .matcher(CALCITE_TIMESTAMP_PRINTER.print(dateTime.withZone(sessionTimeZone)))
         .replaceAll("");
 
-    return rexBuilder.makeTimestampLiteral(new TimestampString(timestampString), precision);
+    return new TimestampString(timestampString);
   }
 
   /**

@@ -19,91 +19,66 @@
 
 package org.apache.druid.msq.exec;
 
-import com.google.common.base.Preconditions;
+import com.google.common.collect.Iterables;
 import com.google.common.primitives.Ints;
-import com.google.inject.Injector;
+import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
-import org.apache.druid.frame.processor.Bouncer;
-import org.apache.druid.indexing.worker.config.WorkerConfig;
-import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.frame.processor.FrameProcessor;
+import org.apache.druid.frame.processor.SuperSorter;
 import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.indexing.error.NotEnoughMemoryFault;
 import org.apache.druid.msq.indexing.error.TooManyWorkersFault;
-import org.apache.druid.msq.input.InputSpecs;
-import org.apache.druid.msq.kernel.QueryDefinition;
+import org.apache.druid.msq.indexing.processor.KeyStatisticsCollectionProcessor;
+import org.apache.druid.msq.indexing.processor.SegmentGeneratorFrameProcessorFactory;
+import org.apache.druid.msq.input.InputSlice;
+import org.apache.druid.msq.input.InputSlices;
+import org.apache.druid.msq.input.stage.ReadablePartition;
+import org.apache.druid.msq.input.stage.StageInputSlice;
+import org.apache.druid.msq.kernel.GlobalSortMaxCountShuffleSpec;
+import org.apache.druid.msq.kernel.ShuffleSpec;
 import org.apache.druid.msq.kernel.StageDefinition;
+import org.apache.druid.msq.kernel.WorkOrder;
+import org.apache.druid.msq.querykit.BroadcastJoinSegmentMapFnProcessor;
 import org.apache.druid.msq.statistics.ClusterByStatisticsCollectorImpl;
-import org.apache.druid.query.lookup.LookupExtractor;
-import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
-import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
-import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
-import org.apache.druid.segment.realtime.appenderator.UnifiedIndexerAppenderatorsManager;
+import org.apache.druid.segment.incremental.IncrementalIndex;
 
+import javax.annotation.Nullable;
+import java.util.List;
 import java.util.Objects;
 
 /**
- * Class for determining how much JVM heap to allocate to various purposes.
+ * Class for determining how much JVM heap to allocate to various purposes for executing a {@link WorkOrder}.
  *
- * First, we take a chunk out of the total JVM heap that is dedicated for MSQ; see {@link #computeUsableMemoryInJvm}.
+ * First, we split each worker's memory allotment, given by {@link MemoryIntrospector#memoryPerTask()}, into
+ * equally-sized "bundles" for each {@link WorkOrder} that may be running simultaneously within the {@link Worker}
+ * for that {@link WorkOrder}.
  *
- * Then, we carve out some space for each worker that may be running in our JVM; see {@link #memoryPerWorker}.
+ * Within each bundle, we carve out memory required for buffering broadcast data
+ * (see {@link #computeBroadcastBufferMemory}) and for concurrently-running processors
+ * (see {@link #computeProcessorMemory}).
  *
- * Then, we split the rest into "bundles" of equal size; see {@link #memoryPerBundle}. The number of bundles is based
- * entirely on server configuration; this makes the calculation robust to different queries running simultaneously in
- * the same JVM.
- *
- * Within each bundle, we split up memory in two different ways: one assuming it'll be used for a
- * {@link org.apache.druid.frame.processor.SuperSorter}, and one assuming it'll be used for a regular
- * processor. Callers can then use whichever set of allocations makes sense. (We assume no single bundle
- * will be used for both purposes.)
+ * The remainder is called "bundle free memory", a pool of memory that can be used for {@link SuperSorter} or
+ * {@link SegmentGeneratorFrameProcessorFactory}. The amounts overlap, because the same {@link WorkOrder} never
+ * does both.
  */
 public class WorkerMemoryParameters
 {
-  private static final Logger log = new Logger(WorkerMemoryParameters.class);
-
   /**
-   * Percent of memory that we allocate to bundles. It is less than 100% because we need to leave some space
-   * left over for miscellaneous other stuff, and to ensure that GC pressure does not get too high.
+   * Default size for frames.
    */
-  static final double USABLE_MEMORY_FRACTION = 0.75;
+  public static final int DEFAULT_FRAME_SIZE = 1_000_000;
 
   /**
-   * Percent of each bundle's memory that we allocate to appenderators. It is less than 100% because appenderators
+   * Amount of extra memory available for each processing thread, beyond what is needed for input and output
+   * channels. This memory is used for miscellaneous purposes within the various {@link FrameProcessor}.
+   */
+  private static final long EXTRA_MEMORY_PER_PROCESSOR = 25_000_000;
+
+  /**
+   * Percent of each bundle's free memory that we allocate to appenderators. It is less than 100% because appenderators
    * unfortunately have a variety of unaccounted-for memory usage.
    */
-  static final double APPENDERATOR_MEMORY_FRACTION = 0.67;
-
-  /**
-   * Size for "standard frames", which are used for most purposes, except inputs to super-sorters.
-   *
-   * In particular, frames that travel between workers are always the minimum size. This is helpful because it makes
-   * it easier to compute the amount of memory needed to merge input streams.
-   */
-  private static final int STANDARD_FRAME_SIZE = 1_000_000;
-
-  /**
-   * Size for "large frames", which are used for inputs and inner channels in to super-sorters.
-   *
-   * This is helpful because it minimizes the number of temporary files needed during super-sorting.
-   */
-  private static final int LARGE_FRAME_SIZE = 8_000_000;
-
-  /**
-   * Minimum amount of bundle memory available for processing (i.e., total bundle size minus the amount
-   * needed for input channels). This memory is guaranteed to be available for things like segment generation
-   * and broadcast data.
-   */
-  public static final long PROCESSING_MINIMUM_BYTES = 25_000_000;
-
-  /**
-   * Maximum amount of parallelism for the super-sorter. Higher amounts of concurrency tend to be wasteful.
-   */
-  private static final int MAX_SUPER_SORTER_PROCESSORS = 4;
-
-  /**
-   * Each super-sorter must have at least 1 processor with 2 input frames and 1 output frame. That's 3 total.
-   */
-  private static final int MIN_SUPER_SORTER_FRAMES = 3;
+  private static final double APPENDERATOR_BUNDLE_FREE_MEMORY_FRACTION = 0.67;
 
   /**
    * (Very) rough estimate of the on-heap overhead of reading a column.
@@ -111,258 +86,214 @@ public class WorkerMemoryParameters
   private static final int APPENDERATOR_MERGE_ROUGH_MEMORY_PER_COLUMN = 3_000;
 
   /**
-   * Maximum percent of *total* available memory (not each bundle), i.e. {@link #USABLE_MEMORY_FRACTION}, that we'll
-   * ever use for maxRetainedBytes of {@link ClusterByStatisticsCollectorImpl} across all workers.
+   * Maximum percent of each bundle's free memory that will be used for maxRetainedBytes of
+   * {@link ClusterByStatisticsCollectorImpl}.
    */
-  private static final double PARTITION_STATS_MEMORY_MAX_FRACTION = 0.1;
+  private static final double PARTITION_STATS_MAX_BUNDLE_FREE_MEMORY_FRACTION = 0.1;
 
   /**
-   * Maximum number of bytes we'll ever use for maxRetainedBytes of {@link ClusterByStatisticsCollectorImpl} for
-   * a single worker. Acts as a limit on the value computed based on {@link #PARTITION_STATS_MEMORY_MAX_FRACTION}.
+   * Maximum number of bytes from each bundle's free memory that we'll ever use for maxRetainedBytes of
+   * {@link ClusterByStatisticsCollectorImpl}. Limits the value computed based on
+   * {@link #PARTITION_STATS_MAX_BUNDLE_FREE_MEMORY_FRACTION}.
    */
-  private static final long PARTITION_STATS_MEMORY_MAX_BYTES = 300_000_000;
+  private static final long PARTITION_STATS_MAX_MEMORY_PER_BUNDLE = 300_000_000;
 
   /**
-   * Threshold in bytes below which we assume that the worker is "small". While calculating the memory requirements for
-   * a small worker, we try to be as conservatives with the estimates and the extra temporary space required by the
-   * frames, since that can add up quickly and cause OOM.
+   * Minimum number of bytes from each bundle's free memory that we'll use for maxRetainedBytes of
+   * {@link ClusterByStatisticsCollectorImpl}.
    */
-  private static final long SMALL_WORKER_CAPACITY_THRESHOLD_BYTES = 256_000_000;
+  private static final long PARTITION_STATS_MIN_MEMORY_PER_BUNDLE = 10_000_000;
 
   /**
-   * Fraction of free memory per bundle that can be used by {@link org.apache.druid.msq.querykit.BroadcastJoinHelper}
-   * to store broadcast data on-heap. This is used to limit the total size of input frames, which we expect to
-   * expand on-heap. Expansion can potentially be somewhat over 2x: for example, strings are UTF-8 in frames, but are
-   * UTF-16 on-heap, which is a 2x expansion, and object and index overhead must be considered on top of that. So
-   * we use a value somewhat lower than 0.5.
+   * Fraction of each bundle's total memory that can be used to buffer broadcast inputs. This is used by
+   * {@link BroadcastJoinSegmentMapFnProcessor} to limit how much joinable data is stored on-heap. This is carved
+   * directly out of the total bundle memory, which makes its size more predictable and stable: it only depends on
+   * the total JVM memory, the number of tasks per JVM, and the value of maxConcurrentStages for the query. This
+   * stability is important, because if the broadcast buffer fills up, the query fails. So any time its size changes,
+   * we risk queries failing that would formerly have succeeded.
    */
-  static final double BROADCAST_JOIN_MEMORY_FRACTION = 0.3;
+  private static final double BROADCAST_BUFFER_TOTAL_MEMORY_FRACTION = 0.2;
 
   /**
-   * Fraction of free memory per bundle that can be used by
+   * Multiplier to apply to {@link #BROADCAST_BUFFER_TOTAL_MEMORY_FRACTION} when determining how much free bundle
+   * memory is left over. This fudge factor exists because {@link BroadcastJoinSegmentMapFnProcessor} applies data
+   * size limits based on frame size, which we expect to expand somewhat in memory due to indexing structures in
+   * {@link org.apache.druid.segment.join.table.FrameBasedIndexedTable}.
+   */
+  private static final double BROADCAST_BUFFER_OVERHEAD_RATIO = 1.5;
+
+  /**
+   * Amount of memory that can be used by
    * {@link org.apache.druid.msq.querykit.common.SortMergeJoinFrameProcessor} to buffer frames in its trackers.
    */
-  static final double SORT_MERGE_JOIN_MEMORY_FRACTION = 0.9;
+  private static final long SORT_MERGE_JOIN_MEMORY_PER_PROCESSOR = (long) (EXTRA_MEMORY_PER_PROCESSOR * 0.9);
 
-  /**
-   * In case {@link NotEnoughMemoryFault} is thrown, a fixed estimation overhead is added when estimating total memory required for the process.
-   */
-  private static final long BUFFER_BYTES_FOR_ESTIMATION = 1000;
-
-  private final long processorBundleMemory;
-  private final int superSorterMaxActiveProcessors;
-  private final int superSorterMaxChannelsPerProcessor;
+  private final long bundleFreeMemory;
+  private final int frameSize;
+  private final int superSorterConcurrentProcessors;
+  private final int superSorterMaxChannelsPerMerger;
   private final int partitionStatisticsMaxRetainedBytes;
+  private final long broadcastBufferMemory;
 
-  WorkerMemoryParameters(
-      final long processorBundleMemory,
-      final int superSorterMaxActiveProcessors,
-      final int superSorterMaxChannelsPerProcessor,
-      final int partitionStatisticsMaxRetainedBytes
+  public WorkerMemoryParameters(
+      final long bundleFreeMemory,
+      final int frameSize,
+      final int superSorterConcurrentProcessors,
+      final int superSorterMaxChannelsPerMerger,
+      final int partitionStatisticsMaxRetainedBytes,
+      final long broadcastBufferMemory
   )
   {
-    this.processorBundleMemory = processorBundleMemory;
-    this.superSorterMaxActiveProcessors = superSorterMaxActiveProcessors;
-    this.superSorterMaxChannelsPerProcessor = superSorterMaxChannelsPerProcessor;
+    this.bundleFreeMemory = bundleFreeMemory;
+    this.frameSize = frameSize;
+    this.superSorterConcurrentProcessors = superSorterConcurrentProcessors;
+    this.superSorterMaxChannelsPerMerger = superSorterMaxChannelsPerMerger;
     this.partitionStatisticsMaxRetainedBytes = partitionStatisticsMaxRetainedBytes;
+    this.broadcastBufferMemory = broadcastBufferMemory;
   }
 
   /**
-   * Create a production instance for {@link org.apache.druid.msq.indexing.MSQControllerTask}.
+   * Create a production instance for a given {@link WorkOrder}.
    */
-  public static WorkerMemoryParameters createProductionInstanceForController(final Injector injector)
-  {
-    long totalLookupFootprint = computeTotalLookupFootprint(injector);
-    return createInstance(
-        Runtime.getRuntime().maxMemory(),
-        computeNumWorkersInJvm(injector),
-        computeNumProcessorsInJvm(injector),
-        0,
-        0,
-        totalLookupFootprint
-    );
-  }
-
-  /**
-   * Create a production instance for {@link org.apache.druid.msq.indexing.MSQWorkerTask}.
-   */
-  public static WorkerMemoryParameters createProductionInstanceForWorker(
-      final Injector injector,
-      final QueryDefinition queryDef,
-      final int stageNumber
+  public static WorkerMemoryParameters createProductionInstance(
+      final WorkOrder workOrder,
+      final MemoryIntrospector memoryIntrospector,
+      final int maxConcurrentStages
   )
   {
-    final StageDefinition stageDef = queryDef.getStageDefinition(stageNumber);
-    final IntSet inputStageNumbers = InputSpecs.getStageNumbers(stageDef.getInputSpecs());
-    final int numInputWorkers =
-        inputStageNumbers.intStream()
-                         .map(inputStageNumber -> queryDef.getStageDefinition(inputStageNumber).getMaxWorkerCount())
-                         .sum();
-    long totalLookupFootprint = computeTotalLookupFootprint(injector);
-
-    final int numHashOutputPartitions;
-    if (stageDef.doesShuffle() && stageDef.getShuffleSpec().kind().isHash()) {
-      numHashOutputPartitions = stageDef.getShuffleSpec().partitionCount();
-    } else {
-      numHashOutputPartitions = 0;
-    }
-
+    final StageDefinition stageDef = workOrder.getStageDefinition();
     return createInstance(
-        Runtime.getRuntime().maxMemory(),
-        computeNumWorkersInJvm(injector),
-        computeNumProcessorsInJvm(injector),
-        numInputWorkers,
-        numHashOutputPartitions,
-        totalLookupFootprint
+        memoryIntrospector,
+        DEFAULT_FRAME_SIZE,
+        workOrder.getInputs(),
+        stageDef.getBroadcastInputNumbers(),
+        stageDef.doesShuffle() ? stageDef.getShuffleSpec() : null,
+        maxConcurrentStages,
+        computeFramesPerOutputChannel(workOrder.getOutputChannelMode())
     );
   }
 
   /**
-   * Returns an object specifying memory-usage parameters.
+   * Returns an object specifying memory-usage parameters for a {@link WorkOrder} running inside a {@link Worker}.
    *
    * Throws a {@link MSQException} with an appropriate fault if the provided combination of parameters cannot
    * yield a workable memory situation.
    *
-   * @param maxMemoryInJvm            memory available in the entire JVM. This will be divided amongst processors.
-   * @param numWorkersInJvm           number of workers that can run concurrently in this JVM. Generally equal to
-   *                                  the task capacity.
-   * @param numProcessingThreadsInJvm size of the processing thread pool in the JVM.
-   * @param numInputWorkers           total number of workers across all input stages.
-   * @param numHashOutputPartitions   total number of output partitions, if using hash partitioning; zero if not using
-   *                                  hash partitioning.
-   * @param totalLookupFootprint      estimated size of the lookups loaded by the process.
+   * @param memoryIntrospector           memory introspector
+   * @param frameSize                    frame size
+   * @param inputSlices                  from {@link WorkOrder#getInputs()}
+   * @param broadcastInputNumbers        from {@link StageDefinition#getBroadcastInputNumbers()}
+   * @param shuffleSpec                  from {@link StageDefinition#getShuffleSpec()}
+   * @param maxConcurrentStages          figure from {@link WorkerContext#maxConcurrentStages()}
+   * @param numFramesPerOutputChannel    figure from {@link #computeFramesPerOutputChannel(OutputChannelMode)}
+   *
+   * @throws MSQException with {@link TooManyWorkersFault} or {@link NotEnoughMemoryFault} if not enough memory
+   *                      is available to generate a usable instance
    */
   public static WorkerMemoryParameters createInstance(
-      final long maxMemoryInJvm,
-      final int numWorkersInJvm,
-      final int numProcessingThreadsInJvm,
-      final int numInputWorkers,
-      final int numHashOutputPartitions,
-      final long totalLookupFootprint
+      final MemoryIntrospector memoryIntrospector,
+      final int frameSize,
+      final List<InputSlice> inputSlices,
+      final IntSet broadcastInputNumbers,
+      @Nullable final ShuffleSpec shuffleSpec,
+      final int maxConcurrentStages,
+      final int numFramesPerOutputChannel
   )
   {
-    Preconditions.checkArgument(maxMemoryInJvm > 0, "Max memory passed: [%s] should be > 0", maxMemoryInJvm);
-    Preconditions.checkArgument(numWorkersInJvm > 0, "Number of workers: [%s] in jvm should be > 0", numWorkersInJvm);
-    Preconditions.checkArgument(
-        numProcessingThreadsInJvm > 0,
-        "Number of processing threads [%s] should be > 0",
-        numProcessingThreadsInJvm
+    final long bundleMemory = computeBundleMemory(memoryIntrospector.memoryPerTask(), maxConcurrentStages);
+    final long processorMemory = computeProcessorMemory(
+        computeMaxSimultaneousInputChannelsPerProcessor(inputSlices, broadcastInputNumbers),
+        frameSize
     );
-    Preconditions.checkArgument(numInputWorkers >= 0, "Number of input workers: [%s] should be >=0", numInputWorkers);
-    Preconditions.checkArgument(
-        totalLookupFootprint >= 0,
-        "Lookup memory footprint: [%s] should be >= 0",
-        totalLookupFootprint
-    );
-    final long usableMemoryInJvm = computeUsableMemoryInJvm(maxMemoryInJvm, totalLookupFootprint);
-    final long workerMemory = memoryPerWorker(usableMemoryInJvm, numWorkersInJvm);
-    final long bundleMemory = memoryPerBundle(usableMemoryInJvm, numWorkersInJvm, numProcessingThreadsInJvm);
-    final long bundleMemoryForInputChannels = memoryNeededForInputChannels(numInputWorkers);
-    final long bundleMemoryForHashPartitioning = memoryNeededForHashPartitioning(numHashOutputPartitions);
-    final long bundleMemoryForProcessing =
-        bundleMemory - bundleMemoryForInputChannels - bundleMemoryForHashPartitioning;
+    final boolean hasBroadcastInputs = !broadcastInputNumbers.isEmpty();
+    final long broadcastBufferMemory =
+        hasBroadcastInputs ? computeBroadcastBufferMemoryIncludingOverhead(bundleMemory) : 0;
+    final int numProcessingThreads = memoryIntrospector.numProcessingThreads();
+    final int maxSimultaneousWorkProcessors = Math.min(numProcessingThreads, computeNumInputPartitions(inputSlices));
+    final long bundleFreeMemory =
+        bundleMemory - maxSimultaneousWorkProcessors * processorMemory - broadcastBufferMemory;
 
-    if (bundleMemoryForProcessing < PROCESSING_MINIMUM_BYTES) {
-      final int maxWorkers = computeMaxWorkers(
-          usableMemoryInJvm,
-          numWorkersInJvm,
-          numProcessingThreadsInJvm,
-          numHashOutputPartitions
-      );
-
-      if (maxWorkers > 0) {
-        throw new MSQException(new TooManyWorkersFault(numInputWorkers, Math.min(Limits.MAX_WORKERS, maxWorkers)));
-      } else {
-        // Not enough memory for even one worker. More of a NotEnoughMemory situation than a TooManyWorkers situation.
-        throw new MSQException(
-            new NotEnoughMemoryFault(
-                calculateSuggestedMinMemoryFromUsableMemory(
-                    estimateUsableMemory(
-                        numWorkersInJvm,
-                        numProcessingThreadsInJvm,
-                        PROCESSING_MINIMUM_BYTES + BUFFER_BYTES_FOR_ESTIMATION + bundleMemoryForInputChannels
-                    ), totalLookupFootprint),
-                maxMemoryInJvm,
-                usableMemoryInJvm,
-                numWorkersInJvm,
-                numProcessingThreadsInJvm
-            )
-        );
-      }
-    }
-
-    // Compute memory breakdown for super-sorting bundles.
-    final int maxNumFramesForSuperSorter = Ints.checkedCast(bundleMemory / WorkerMemoryParameters.LARGE_FRAME_SIZE);
-
-    if (maxNumFramesForSuperSorter < MIN_SUPER_SORTER_FRAMES) {
+    final long minimumBundleFreeMemory = computeMinimumBundleFreeMemory(frameSize, numFramesPerOutputChannel);
+    if (bundleFreeMemory < minimumBundleFreeMemory) {
+      final long requiredTaskMemory = (bundleMemory - bundleFreeMemory + minimumBundleFreeMemory) * maxConcurrentStages;
       throw new MSQException(
           new NotEnoughMemoryFault(
-              calculateSuggestedMinMemoryFromUsableMemory(
-                  estimateUsableMemory(
-                      numWorkersInJvm,
-                      (MIN_SUPER_SORTER_FRAMES + BUFFER_BYTES_FOR_ESTIMATION) * LARGE_FRAME_SIZE
-                  ),
-                  totalLookupFootprint
-              ),
-              maxMemoryInJvm,
-              usableMemoryInJvm,
-              numWorkersInJvm,
-              numProcessingThreadsInJvm
+              memoryIntrospector.computeJvmMemoryRequiredForTaskMemory(requiredTaskMemory),
+              memoryIntrospector.totalMemoryInJvm(),
+              memoryIntrospector.memoryPerTask(),
+              memoryIntrospector.numTasksInJvm(),
+              memoryIntrospector.numProcessingThreads(),
+              computeNumInputWorkers(inputSlices),
+              maxConcurrentStages
           )
       );
     }
 
-    final int superSorterMaxActiveProcessors = Math.min(
-        numProcessingThreadsInJvm,
-        Math.min(
-            maxNumFramesForSuperSorter / MIN_SUPER_SORTER_FRAMES,
-            MAX_SUPER_SORTER_PROCESSORS
-        )
-    );
+    // Compute memory breakdown for super-sorting bundles.
+    final int partitionStatsMemory =
+        StageDefinition.mustGatherResultKeyStatistics(shuffleSpec) ? computePartitionStatsMemory(bundleFreeMemory) : 0;
+    final long superSorterMemory = bundleFreeMemory - partitionStatsMemory;
+    final int maxOutputPartitions = computeMaxOutputPartitions(shuffleSpec);
 
-    final int isSmallWorker = usableMemoryInJvm < SMALL_WORKER_CAPACITY_THRESHOLD_BYTES ? 1 : 0;
-    // Apportion max frames to all processors equally, then subtract one to account for an output frame and one to account
-    // for the durable storage's output frame in the supersorter. The extra frame is required in case of durable storage
-    // since composing output channel factories keep a frame open while writing to them.
-    // We only account for this extra frame in the workers where the heap size is relatively small to be more
-    // conservative with the memory estimations. In workers with heap size larger than the frame size, we can get away
-    // without accounting for this extra frame, and instead better parallelize the supersorter's operations.
-    final int superSorterMaxChannelsPerProcessor = maxNumFramesForSuperSorter / superSorterMaxActiveProcessors
-                                                   - 1
-                                                   - isSmallWorker;
-    if (superSorterMaxActiveProcessors <= 0) {
+    int superSorterConcurrentProcessors;
+    int superSorterMaxChannelsPerMerger = -1;
+
+    if (maxOutputPartitions == 0) {
+      superSorterConcurrentProcessors = numProcessingThreads;
+    } else {
+      superSorterConcurrentProcessors = Math.min(maxOutputPartitions, numProcessingThreads);
+    }
+
+    for (; superSorterConcurrentProcessors > 0; superSorterConcurrentProcessors--) {
+      final long memoryPerProcessor = superSorterMemory / superSorterConcurrentProcessors;
+
+      // Each processor has at least 2 frames for inputs, plus numFramesPerOutputChannel for outputs.
+      // Compute whether we can support this level of parallelism, given these constraints.
+      final int minMemoryForInputsPerProcessor = 2 * frameSize;
+      final int memoryForOutputsPerProcessor = numFramesPerOutputChannel * frameSize;
+
+      if (memoryPerProcessor >= minMemoryForInputsPerProcessor + memoryForOutputsPerProcessor) {
+        final long memoryForInputsPerProcessor = memoryPerProcessor - memoryForOutputsPerProcessor;
+        superSorterMaxChannelsPerMerger = Ints.checkedCast(memoryForInputsPerProcessor / frameSize);
+        break;
+      }
+    }
+
+    if (superSorterConcurrentProcessors == 0) {
+      // Couldn't support any level of concurrency. Not expected, since we should have accounted for at least a
+      // minimally-sized SuperSorter by way of the calculation in "computeMinimumBundleFreeMemory". Return a
+      // NotEnoughMemoryFault with no suggestedServerMemory, since at this point, we aren't sure what will work.
       throw new MSQException(
           new NotEnoughMemoryFault(
-              calculateSuggestedMinMemoryFromUsableMemory(
-                  estimateUsableMemory(
-                      numWorkersInJvm,
-                      numProcessingThreadsInJvm,
-                      PROCESSING_MINIMUM_BYTES + BUFFER_BYTES_FOR_ESTIMATION + bundleMemoryForInputChannels
-                  ), totalLookupFootprint),
-              maxMemoryInJvm,
-              usableMemoryInJvm,
-              numWorkersInJvm,
-              numProcessingThreadsInJvm
+              0,
+              memoryIntrospector.totalMemoryInJvm(),
+              memoryIntrospector.memoryPerTask(),
+              memoryIntrospector.numTasksInJvm(),
+              memoryIntrospector.numProcessingThreads(),
+              computeNumInputWorkers(inputSlices),
+              maxConcurrentStages
           )
       );
     }
 
     return new WorkerMemoryParameters(
-        bundleMemoryForProcessing,
-        superSorterMaxActiveProcessors,
-        superSorterMaxChannelsPerProcessor,
-        Ints.checkedCast(workerMemory) // 100% of worker memory is devoted to partition statistics
+        bundleFreeMemory,
+        frameSize,
+        superSorterConcurrentProcessors,
+        superSorterMaxChannelsPerMerger,
+        partitionStatsMemory,
+        hasBroadcastInputs ? computeBroadcastBufferMemory(bundleMemory) : 0
     );
   }
 
-  public int getSuperSorterMaxActiveProcessors()
+  public int getSuperSorterConcurrentProcessors()
   {
-    return superSorterMaxActiveProcessors;
+    return superSorterConcurrentProcessors;
   }
 
-  public int getSuperSorterMaxChannelsPerProcessor()
+  public int getSuperSorterMaxChannelsPerMerger()
   {
-    return superSorterMaxChannelsPerProcessor;
+    return superSorterMaxChannelsPerMerger;
   }
 
   public long getAppenderatorMaxBytesInMemory()
@@ -377,24 +308,27 @@ public class WorkerMemoryParameters
     return Ints.checkedCast(Math.max(2, getAppenderatorMemory() / 2 / APPENDERATOR_MERGE_ROUGH_MEMORY_PER_COLUMN));
   }
 
-  public int getStandardFrameSize()
+  public int getFrameSize()
   {
-    return STANDARD_FRAME_SIZE;
+    return frameSize;
   }
 
-  public int getLargeFrameSize()
+  /**
+   * Memory available for buffering broadcast data. Used to restrict the amount of memory used by
+   * {@link BroadcastJoinSegmentMapFnProcessor}.
+   */
+  public long getBroadcastBufferMemory()
   {
-    return LARGE_FRAME_SIZE;
+    return broadcastBufferMemory;
   }
 
-  public long getBroadcastJoinMemory()
-  {
-    return (long) (processorBundleMemory * BROADCAST_JOIN_MEMORY_FRACTION);
-  }
-
+  /**
+   * Fraction of each processor's memory that can be used by
+   * {@link org.apache.druid.msq.querykit.common.SortMergeJoinFrameProcessor} to buffer frames in its trackers.
+   */
   public long getSortMergeJoinMemory()
   {
-    return (long) (processorBundleMemory * SORT_MERGE_JOIN_MEMORY_FRACTION);
+    return SORT_MERGE_JOIN_MEMORY_PER_PROCESSOR;
   }
 
   public int getPartitionStatisticsMaxRetainedBytes()
@@ -407,7 +341,7 @@ public class WorkerMemoryParameters
    */
   private long getAppenderatorMemory()
   {
-    return (long) (processorBundleMemory * APPENDERATOR_MEMORY_FRACTION);
+    return (long) (bundleFreeMemory * APPENDERATOR_BUNDLE_FREE_MEMORY_FRACTION);
   }
 
   @Override
@@ -420,20 +354,24 @@ public class WorkerMemoryParameters
       return false;
     }
     WorkerMemoryParameters that = (WorkerMemoryParameters) o;
-    return processorBundleMemory == that.processorBundleMemory
-           && superSorterMaxActiveProcessors == that.superSorterMaxActiveProcessors
-           && superSorterMaxChannelsPerProcessor == that.superSorterMaxChannelsPerProcessor
-           && partitionStatisticsMaxRetainedBytes == that.partitionStatisticsMaxRetainedBytes;
+    return bundleFreeMemory == that.bundleFreeMemory
+           && frameSize == that.frameSize
+           && superSorterConcurrentProcessors == that.superSorterConcurrentProcessors
+           && superSorterMaxChannelsPerMerger == that.superSorterMaxChannelsPerMerger
+           && partitionStatisticsMaxRetainedBytes == that.partitionStatisticsMaxRetainedBytes
+           && broadcastBufferMemory == that.broadcastBufferMemory;
   }
 
   @Override
   public int hashCode()
   {
     return Objects.hash(
-        processorBundleMemory,
-        superSorterMaxActiveProcessors,
-        superSorterMaxChannelsPerProcessor,
-        partitionStatisticsMaxRetainedBytes
+        bundleFreeMemory,
+        frameSize,
+        superSorterConcurrentProcessors,
+        superSorterMaxChannelsPerMerger,
+        partitionStatisticsMaxRetainedBytes,
+        broadcastBufferMemory
     );
   }
 
@@ -441,195 +379,205 @@ public class WorkerMemoryParameters
   public String toString()
   {
     return "WorkerMemoryParameters{" +
-           "processorBundleMemory=" + processorBundleMemory +
-           ", superSorterMaxActiveProcessors=" + superSorterMaxActiveProcessors +
-           ", superSorterMaxChannelsPerProcessor=" + superSorterMaxChannelsPerProcessor +
+           "bundleFreeMemory=" + bundleFreeMemory +
+           ", frameSize=" + frameSize +
+           ", superSorterConcurrentProcessors=" + superSorterConcurrentProcessors +
+           ", superSorterMaxChannelsPerMerger=" + superSorterMaxChannelsPerMerger +
            ", partitionStatisticsMaxRetainedBytes=" + partitionStatisticsMaxRetainedBytes +
+           ", broadcastBufferMemory=" + broadcastBufferMemory +
            '}';
   }
 
   /**
-   * Computes the highest value of numInputWorkers, for the given parameters, that can be passed to
-   * {@link #createInstance} without resulting in a {@link TooManyWorkersFault}.
-   *
-   * Returns 0 if no number of workers would be OK.
+   * Compute the memory allocated to each {@link WorkOrder} within a {@link Worker}.
    */
-  static int computeMaxWorkers(
-      final long usableMemoryInJvm,
-      final int numWorkersInJvm,
-      final int numProcessingThreadsInJvm,
-      final int numHashOutputPartitions
-  )
+  static long computeBundleMemory(final long memoryPerWorker, final int maxConcurrentStages)
   {
-    final long bundleMemory = memoryPerBundle(usableMemoryInJvm, numWorkersInJvm, numProcessingThreadsInJvm);
+    return memoryPerWorker / maxConcurrentStages;
+  }
 
-    // Compute number of workers that gives us PROCESSING_MINIMUM_BYTES of memory per bundle, while accounting for
-    // memoryNeededForInputChannels + memoryNeededForHashPartitioning.
-    final int isHashing = numHashOutputPartitions > 0 ? 1 : 0;
-    return Math.max(
-        0,
-        Ints.checkedCast((bundleMemory - PROCESSING_MINIMUM_BYTES) / ((long) STANDARD_FRAME_SIZE * (1 + isHashing)) - 1)
+  /**
+   * Compute the memory allocated to {@link KeyStatisticsCollectionProcessor} within each bundle.
+   */
+  static int computePartitionStatsMemory(final long bundleFreeMemory)
+  {
+    return Ints.checkedCast(
+        Math.max(
+            (long) Math.min(
+                bundleFreeMemory * PARTITION_STATS_MAX_BUNDLE_FREE_MEMORY_FRACTION,
+                PARTITION_STATS_MAX_MEMORY_PER_BUNDLE
+            ),
+            PARTITION_STATS_MIN_MEMORY_PER_BUNDLE
+        )
     );
   }
 
   /**
-   * Maximum number of workers that may exist in the current JVM.
+   * Compute the memory limit passed to {@link BroadcastJoinSegmentMapFnProcessor} within each worker bundle. This
+   * is somewhat lower than {@link #computeBroadcastBufferMemoryIncludingOverhead}, because we expect some overhead on
+   * top of this limit due to indexing structures. This overhead isn't accounted for by the processor
+   * {@link BroadcastJoinSegmentMapFnProcessor} itself.
    */
-  private static int computeNumWorkersInJvm(final Injector injector)
+  static long computeBroadcastBufferMemory(final long bundleMemory)
   {
-    final AppenderatorsManager appenderatorsManager = injector.getInstance(AppenderatorsManager.class);
+    return (long) (bundleMemory * BROADCAST_BUFFER_TOTAL_MEMORY_FRACTION);
+  }
 
-    if (appenderatorsManager instanceof UnifiedIndexerAppenderatorsManager) {
-      // CliIndexer
-      return injector.getInstance(WorkerConfig.class).getCapacity();
-    } else {
-      // CliPeon
-      return 1;
+  /**
+   * Memory allocated to {@link BroadcastJoinSegmentMapFnProcessor} within each worker bundle, including
+   * expected overhead.
+   */
+  static long computeBroadcastBufferMemoryIncludingOverhead(final long bundleMemory)
+  {
+    return (long) (computeBroadcastBufferMemory(bundleMemory) * BROADCAST_BUFFER_OVERHEAD_RATIO);
+  }
+
+  /**
+   * Memory allocated to each processor within a bundle, including fixed overheads and buffered input and output frames.
+   *
+   * @param maxSimultaneousInputChannelsPerProcessor figure from {@link #computeMaxSimultaneousInputChannelsPerProcessor}
+   * @param frameSize                                frame size
+   */
+  static long computeProcessorMemory(final int maxSimultaneousInputChannelsPerProcessor, final int frameSize)
+  {
+    return EXTRA_MEMORY_PER_PROCESSOR
+           + computeProcessorMemoryForInputChannels(maxSimultaneousInputChannelsPerProcessor, frameSize)
+           + frameSize /* output frame */;
+  }
+
+  /**
+   * Memory allocated to each processor for reading its inputs.
+   *
+   * @param maxSimultaneousInputChannelsPerProcessor figure from {@link #computeMaxSimultaneousInputChannelsPerProcessor}
+   * @param frameSize                                frame size
+   */
+  static long computeProcessorMemoryForInputChannels(
+      final int maxSimultaneousInputChannelsPerProcessor,
+      final int frameSize
+  )
+  {
+    return (long) maxSimultaneousInputChannelsPerProcessor * frameSize;
+  }
+
+  /**
+   * Number of input partitions across all {@link StageInputSlice}.
+   */
+  static int computeNumInputPartitions(final List<InputSlice> inputSlices)
+  {
+    int retVal = 0;
+
+    for (final StageInputSlice slice : InputSlices.allStageSlices(inputSlices)) {
+      retVal += Iterables.size(slice.getPartitions());
     }
+
+    return retVal;
   }
 
   /**
-   * Maximum number of concurrent processors that exist in the current JVM.
-   */
-  private static int computeNumProcessorsInJvm(final Injector injector)
-  {
-    return injector.getInstance(Bouncer.class).getMaxCount();
-  }
-
-  /**
-   * Compute the memory allocated to each worker. Includes anything that exists outside of processing bundles.
+   * Maximum number of input channels that a processor may have open at once, given the provided worker assignment.
    *
-   * Today, we only look at one thing: the amount of memory taken up by
-   * {@link org.apache.druid.msq.statistics.ClusterByStatisticsCollector}. This is the single largest source of memory
-   * usage outside processing bundles.
+   * To compute this, we take the maximum number of workers associated with some partition for each slice. Then we sum
+   * those maxes up for all broadcast slices, and for all non-broadcast slices, and take the max between those two.
+   * The idea is that processors first read broadcast data, then read non-broadcast data, and during both phases
+   * they should have at most one partition open from each slice at once.
+   *
+   * @param inputSlices           object from {@link WorkOrder#getInputs()}
+   * @param broadcastInputNumbers object from {@link StageDefinition#getBroadcastInputNumbers()}
    */
-  private static long memoryPerWorker(
-      final long usableMemoryInJvm,
-      final int numWorkersInJvm
+  static int computeMaxSimultaneousInputChannelsPerProcessor(
+      final List<InputSlice> inputSlices,
+      final IntSet broadcastInputNumbers
   )
   {
-    final long memoryForWorkers = (long) Math.min(
-        usableMemoryInJvm * PARTITION_STATS_MEMORY_MAX_FRACTION,
-        numWorkersInJvm * PARTITION_STATS_MEMORY_MAX_BYTES
-    );
+    long totalNonBroadcastInputChannels = 0;
+    long totalBroadcastInputChannels = 0;
 
-    return memoryForWorkers / numWorkersInJvm;
-  }
+    final List<StageInputSlice> allStageSlices = InputSlices.allStageSlices(inputSlices);
 
-  /**
-   * Compute the memory allocated to each processing bundle. Any computation changes done to this method should also be done in its corresponding method {@link WorkerMemoryParameters#estimateUsableMemory(int, int, long)}
-   */
-  private static long memoryPerBundle(
-      final long usableMemoryInJvm,
-      final int numWorkersInJvm,
-      final int numProcessingThreadsInJvm
-  )
-  {
-    final int bundleCount = numWorkersInJvm + numProcessingThreadsInJvm;
+    for (int inputNumber = 0; inputNumber < allStageSlices.size(); inputNumber++) {
+      final StageInputSlice slice = allStageSlices.get(inputNumber);
 
-    // Need to subtract memoryForWorkers off the top of usableMemoryInJvm, since this is reserved for
-    // statistics collection.
-    final long memoryForWorkers = numWorkersInJvm * memoryPerWorker(usableMemoryInJvm, numWorkersInJvm);
-    final long memoryForBundles = usableMemoryInJvm - memoryForWorkers;
+      int maxWorkers = 0;
+      for (final ReadablePartition partition : slice.getPartitions()) {
+        maxWorkers = Math.max(maxWorkers, partition.getWorkerNumbers().size());
+      }
 
-    // Divide up the usable memory per bundle.
-    return memoryForBundles / bundleCount;
-  }
-
-  /**
-   * Used for estimating the usable memory for better exception messages when {@link NotEnoughMemoryFault} is thrown.
-   */
-  private static long estimateUsableMemory(
-      final int numWorkersInJvm,
-      final int numProcessingThreadsInJvm,
-      final long estimatedEachBundleMemory
-  )
-  {
-    final int bundleCount = numWorkersInJvm + numProcessingThreadsInJvm;
-    return estimateUsableMemory(numWorkersInJvm, estimatedEachBundleMemory * bundleCount);
-
-  }
-
-  /**
-   * Add overheads to the estimated bundle memoery for all the workers. Checkout {@link WorkerMemoryParameters#memoryPerWorker(long, int)}
-   * for the overhead calculation outside the processing bundles.
-   */
-  private static long estimateUsableMemory(final int numWorkersInJvm, final long estimatedTotalBundleMemory)
-  {
-
-    // Currently, we only add the partition stats overhead since it will be the single largest overhead per worker.
-    final long estimateStatOverHeadPerWorker = PARTITION_STATS_MEMORY_MAX_BYTES;
-    return estimatedTotalBundleMemory + (estimateStatOverHeadPerWorker * numWorkersInJvm);
-  }
-
-  private static long memoryNeededForInputChannels(final int numInputWorkers)
-  {
-    // Workers that read sorted inputs must open all channels at once to do an N-way merge. Calculate memory needs.
-    // Requirement: one input frame per worker, one buffered output frame.
-    return (long) STANDARD_FRAME_SIZE * (numInputWorkers + 1);
-  }
-
-  private static long memoryNeededForHashPartitioning(final int numOutputPartitions)
-  {
-    // One standard frame for each processor output.
-    // May be zero, since numOutputPartitions is zero if not using hash partitioning.
-    return (long) STANDARD_FRAME_SIZE * numOutputPartitions;
-  }
-
-  /**
-   * Amount of heap memory available for our usage. Any computation changes done to this method should also be done in
-   * its corresponding method {@link WorkerMemoryParameters#calculateSuggestedMinMemoryFromUsableMemory}
-   */
-  private static long computeUsableMemoryInJvm(final long maxMemory, final long totalLookupFootprint)
-  {
-    // Always report at least one byte, to simplify the math in createInstance.
-    return Math.max(
-        1,
-        (long) ((maxMemory - totalLookupFootprint) * USABLE_MEMORY_FRACTION)
-    );
-  }
-
-  /**
-   * Estimate amount of heap memory for the given workload to use in case usable memory is provided. This method is used
-   * for better exception messages when {@link NotEnoughMemoryFault} is thrown.
-   */
-  private static long calculateSuggestedMinMemoryFromUsableMemory(long usuableMemeory, final long totalLookupFootprint)
-  {
-    return (long) ((usuableMemeory / USABLE_MEMORY_FRACTION) + totalLookupFootprint);
-  }
-
-  /**
-   * Total estimated lookup footprint. Obtained by calling {@link LookupExtractor#estimateHeapFootprint()} on
-   * all available lookups.
-   */
-  private static long computeTotalLookupFootprint(final Injector injector)
-  {
-    // Subtract memory taken up by lookups. Correctness of this operation depends on lookups being loaded *before*
-    // we create this instance. Luckily, this is the typical mode of operation, since by default
-    // druid.lookup.enableLookupSyncOnStartup = true.
-    final LookupExtractorFactoryContainerProvider lookupManager =
-        injector.getInstance(LookupExtractorFactoryContainerProvider.class);
-
-    int lookupCount = 0;
-    long lookupFootprint = 0;
-
-    for (final String lookupName : lookupManager.getAllLookupNames()) {
-      final LookupExtractorFactoryContainer container = lookupManager.get(lookupName).orElse(null);
-
-      if (container != null) {
-        try {
-          final LookupExtractor extractor = container.getLookupExtractorFactory().get();
-          lookupFootprint += extractor.estimateHeapFootprint();
-          lookupCount++;
-        }
-        catch (Exception e) {
-          log.noStackTrace().warn(e, "Failed to load lookup [%s] for size estimation. Skipping.", lookupName);
-        }
+      if (broadcastInputNumbers.contains(inputNumber)) {
+        totalBroadcastInputChannels += maxWorkers;
+      } else {
+        totalNonBroadcastInputChannels += maxWorkers;
       }
     }
 
-    log.debug("Lookup footprint: %d lookups with %,d total bytes.", lookupCount, lookupFootprint);
+    return Ints.checkedCast(Math.max(totalBroadcastInputChannels, totalNonBroadcastInputChannels));
+  }
 
-    return lookupFootprint;
+
+  /**
+   * Distinct number of input workers.
+   */
+  static int computeNumInputWorkers(final List<InputSlice> inputSlices)
+  {
+    final IntSet workerNumbers = new IntOpenHashSet();
+
+    for (final StageInputSlice slice : InputSlices.allStageSlices(inputSlices)) {
+      for (final ReadablePartition partition : slice.getPartitions()) {
+        workerNumbers.addAll(partition.getWorkerNumbers());
+      }
+    }
+
+    return workerNumbers.size();
+  }
+
+  /**
+   * Maximum number of output channels for a shuffle spec, or 0 if not knowable in advance.
+   */
+  static int computeMaxOutputPartitions(@Nullable final ShuffleSpec shuffleSpec)
+  {
+    if (shuffleSpec == null) {
+      return 0;
+    } else {
+      switch (shuffleSpec.kind()) {
+        case HASH:
+        case HASH_LOCAL_SORT:
+        case MIX:
+          return shuffleSpec.partitionCount();
+
+        case GLOBAL_SORT:
+          if (shuffleSpec instanceof GlobalSortMaxCountShuffleSpec) {
+            return ((GlobalSortMaxCountShuffleSpec) shuffleSpec).getMaxPartitions();
+          }
+          // Fall through
+
+        default:
+          return 0;
+      }
+    }
+  }
+
+  /**
+   * Maximum number of output channels for a shuffle spec, or 0 if not knowable in advance.
+   */
+  static int computeFramesPerOutputChannel(final OutputChannelMode outputChannelMode)
+  {
+    // If durable storage is enabled, we need one extra frame per output channel.
+    return outputChannelMode.isDurable() ? 2 : 1;
+  }
+
+  /**
+   * Minimum number of bytes for a bundle's free memory allotment. This must be enough to reasonably produce and
+   * persist an {@link IncrementalIndex}, or to run a {@link SuperSorter} with 1 thread and 2 frames.
+   */
+  static long computeMinimumBundleFreeMemory(final int frameSize, final int numFramesPerOutputChannel)
+  {
+    // Some for partition statistics.
+    long minMemory = PARTITION_STATS_MIN_MEMORY_PER_BUNDLE;
+
+    // Some for a minimally-sized super-sorter.
+    minMemory += (long) (2 + numFramesPerOutputChannel) * frameSize;
+
+    // That's enough. Don't consider the possibility that the bundle may be used for producing IncrementalIndex,
+    // because PARTITION_STATS_MIN_MEMORY_PER_BUNDLE more or less covers that.
+    return minMemory;
   }
 }

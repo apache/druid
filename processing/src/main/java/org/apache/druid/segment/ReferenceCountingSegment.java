@@ -112,11 +112,11 @@ public class ReferenceCountingSegment extends ReferenceCountingCloseableObject<S
     return !isClosed() ? baseObject.asQueryableIndex() : null;
   }
 
-  @Override
   @Nullable
-  public StorageAdapter asStorageAdapter()
+  @Override
+  public CursorFactory asCursorFactory()
   {
-    return !isClosed() ? baseObject.asStorageAdapter() : null;
+    return !isClosed() ? baseObject.asCursorFactory() : null;
   }
 
   @Override
@@ -183,5 +183,17 @@ public class ReferenceCountingSegment extends ReferenceCountingCloseableObject<S
       return null;
     }
     return baseObject.as(clazz);
+  }
+
+  @Override
+  public boolean isTombstone()
+  {
+    return baseObject.isTombstone();
+  }
+
+  @Override
+  public String asString()
+  {
+    return baseObject.asString();
   }
 }

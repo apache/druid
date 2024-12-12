@@ -25,6 +25,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
+import org.apache.druid.segment.column.RowSignature;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -68,6 +69,15 @@ public class ArrayLinesWriter implements ResultFormat.Writer
   ) throws IOException
   {
     ArrayWriter.writeHeader(jsonGenerator, rowType, includeTypes, includeSqlTypes);
+  }
+
+  @Override
+  public void writeHeaderFromRowSignature(
+      final RowSignature rowSignature,
+      final boolean includeTypes
+  ) throws IOException
+  {
+    ArrayWriter.writeHeader(jsonGenerator, rowSignature, includeTypes);
   }
 
   @Override

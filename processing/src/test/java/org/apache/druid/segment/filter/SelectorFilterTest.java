@@ -28,12 +28,13 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.query.extraction.MapLookupExtractor;
 import org.apache.druid.query.extraction.TimeDimExtractionFn;
 import org.apache.druid.query.filter.ExtractionDimFilter;
+import org.apache.druid.query.filter.FalseDimFilter;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.lookup.LookupExtractionFn;
 import org.apache.druid.query.lookup.LookupExtractor;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.IndexBuilder;
-import org.apache.druid.segment.StorageAdapter;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Test;
@@ -44,13 +45,17 @@ import java.io.Closeable;
 import java.util.Arrays;
 import java.util.Map;
 
+/**
+ * Classic {@link SelectorFilter} test. Consider adding tests to {@link EqualityFilterTests} in addition to, or
+ * instead of here.
+ */
 @RunWith(Parameterized.class)
 public class SelectorFilterTest extends BaseFilterTest
 {
   public SelectorFilterTest(
       String testName,
       IndexBuilder indexBuilder,
-      Function<IndexBuilder, Pair<StorageAdapter, Closeable>> finisher,
+      Function<IndexBuilder, Pair<CursorFactory, Closeable>> finisher,
       boolean cnf,
       boolean optimize
   )
@@ -340,12 +345,12 @@ public class SelectorFilterTest extends BaseFilterTest
     SelectorDimFilter optFilter4Optimized = new SelectorDimFilter("dim0", "5", null);
     SelectorDimFilter optFilter6Optimized = new SelectorDimFilter("dim0", "5", null);
 
-    Assert.assertTrue(optFilter1.equals(optFilter1.optimize()));
-    Assert.assertTrue(optFilter2Optimized.equals(optFilter2.optimize()));
-    Assert.assertTrue(optFilter3.equals(optFilter3.optimize()));
-    Assert.assertTrue(optFilter4Optimized.equals(optFilter4.optimize()));
-    Assert.assertTrue(optFilter5.equals(optFilter5.optimize()));
-    Assert.assertTrue(optFilter6Optimized.equals(optFilter6.optimize()));
+    Assert.assertEquals(optFilter1, optFilter1.optimize(false));
+    Assert.assertEquals(optFilter2Optimized, optFilter2.optimize(false));
+    Assert.assertEquals(optFilter3, optFilter3.optimize(false));
+    Assert.assertEquals(optFilter4Optimized, optFilter4.optimize(false));
+    Assert.assertEquals(FalseDimFilter.instance(), optFilter5.optimize(false));
+    Assert.assertEquals(optFilter6Optimized, optFilter6.optimize(false));
 
     assertFilterMatches(optFilter1, ImmutableList.of("0", "1", "2", "5"));
     assertFilterMatches(optFilter2, ImmutableList.of("2", "5"));

@@ -41,7 +41,7 @@ export const DestinationPagesDialog = React.memo(function DestinationPagesDialog
       </div>
       <div className={Classes.DIALOG_FOOTER}>
         <div className={Classes.DIALOG_FOOTER_ACTIONS}>
-          <Button text="Close" onClick={onClose} />
+          <Button onClick={onClose}>Close</Button>
         </div>
       </div>
     </Dialog>

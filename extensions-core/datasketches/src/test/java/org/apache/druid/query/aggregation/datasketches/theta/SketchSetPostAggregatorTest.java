@@ -85,11 +85,13 @@ public class SketchSetPostAggregatorTest
     );
     List<PostAggregator> serdeTests = Arrays.asList(union, intersect, not);
 
+    DefaultObjectMapper mapper = new DefaultObjectMapper();
+    mapper.registerModules(new SketchModule().getJacksonModules());
+
     for (PostAggregator there : serdeTests) {
-      DefaultObjectMapper mapper = new DefaultObjectMapper();
-      SketchSetPostAggregator andBackAgain = mapper.readValue(
+      PostAggregator andBackAgain = mapper.readValue(
           mapper.writeValueAsString(there),
-          SketchSetPostAggregator.class
+          PostAggregator.class
       );
 
       Assert.assertEquals(there, andBackAgain);

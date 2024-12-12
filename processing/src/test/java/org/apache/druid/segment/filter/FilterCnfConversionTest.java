@@ -709,7 +709,7 @@ public class FilterCnfConversionTest
             return null;
           }
         }
-    ).matches();
+    ).matches(false);
   }
 
   private Filter visitSelectorFilters(Filter filter, Function<SelectorFilter, Filter> visitAction)

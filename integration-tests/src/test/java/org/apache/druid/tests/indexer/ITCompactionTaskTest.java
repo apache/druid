@@ -21,6 +21,9 @@ package org.apache.druid.tests.indexer;
 
 import com.google.inject.Inject;
 import org.apache.commons.io.IOUtils;
+import org.apache.druid.indexer.report.IngestionStatsAndErrors;
+import org.apache.druid.indexer.report.IngestionStatsAndErrorsTaskReport;
+import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.GranularityType;
@@ -31,6 +34,7 @@ import org.apache.druid.testing.utils.ITRetryUtil;
 import org.apache.druid.tests.TestNGGroup;
 import org.joda.time.Interval;
 import org.joda.time.chrono.ISOChronology;
+import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
@@ -47,7 +51,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-@Test(groups = {TestNGGroup.COMPACTION, TestNGGroup.QUICKSTART_COMPATIBLE})
+@Test(groups = {TestNGGroup.COMPACTION, TestNGGroup.QUICKSTART_COMPATIBLE, TestNGGroup.CDS_TASK_SCHEMA_PUBLISH_DISABLED, TestNGGroup.CDS_COORDINATOR_METADATA_QUERY_DISABLED})
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITCompactionTaskTest extends AbstractIndexerTest
 {
@@ -63,6 +67,7 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
   private static final String SEGMENT_METADATA_QUERY_RESOURCE = "/indexer/segment_metadata_query.json";
 
   private static final String COMPACTION_TASK = "/indexer/wikipedia_compaction_task.json";
+  private static final String PARALLEL_COMPACTION_TASK = "/indexer/wikipedia_compaction_task_parallel.json";
   private static final String COMPACTION_TASK_WITH_SEGMENT_GRANULARITY = "/indexer/wikipedia_compaction_task_with_segment_granularity.json";
   private static final String COMPACTION_TASK_WITH_GRANULARITY_SPEC = "/indexer/wikipedia_compaction_task_with_granularity_spec.json";
 
@@ -137,6 +142,58 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
   }
 
   @Test
+  public void testParallelHashedCompaction() throws Exception
+  {
+    try (final Closeable ignored = unloader(fullDatasourceName)) {
+      loadData(INDEX_TASK, fullDatasourceName);
+      // 4 segments across 2 days
+      checkNumberOfSegments(4);
+      List<String> expectedIntervalAfterCompaction = coordinator.getSegmentIntervals(fullDatasourceName);
+      expectedIntervalAfterCompaction.sort(null);
+
+      checkQueryGranularity(SEGMENT_METADATA_QUERY_RESOURCE, GranularityType.SECOND.name(), 4);
+      String queryResponseTemplate = getQueryResponseTemplate(INDEX_QUERIES_RESOURCE);
+
+      queryResponseTemplate = StringUtils.replace(
+          queryResponseTemplate,
+          "%%SEGMENT_AVAIL_TIMEOUT_MILLIS%%",
+          jsonMapper.writeValueAsString("0")
+      );
+
+      queryHelper.testQueriesFromString(queryResponseTemplate);
+      String taskId = compactData(PARALLEL_COMPACTION_TASK, null, null);
+
+      // The original 4 segments should be compacted into 2 new segments
+      checkNumberOfSegments(2);
+      queryHelper.testQueriesFromString(queryResponseTemplate);
+      checkQueryGranularity(SEGMENT_METADATA_QUERY_RESOURCE, GranularityType.SECOND.name(), 2);
+
+
+      checkCompactionIntervals(expectedIntervalAfterCompaction);
+
+      Map<String, TaskReport> reports = indexer.getTaskReport(taskId);
+      Assert.assertTrue(reports != null && reports.size() > 0);
+
+      Assert.assertEquals(
+          2,
+          reports.values()
+                 .stream()
+                 .filter(r -> r instanceof IngestionStatsAndErrorsTaskReport)
+                 .mapToLong(r -> ((IngestionStatsAndErrors) r.getPayload()).getSegmentsPublished())
+                 .sum()
+      );
+      Assert.assertEquals(
+          4,
+          reports.values()
+                 .stream()
+                 .filter(r -> r instanceof IngestionStatsAndErrorsTaskReport)
+                 .mapToLong(r -> ((IngestionStatsAndErrors) r.getPayload()).getSegmentsRead())
+                 .sum()
+      );
+    }
+  }
+
+  @Test
   public void testCompactionWithSegmentGranularityAndQueryGranularityInGranularitySpec() throws Exception
   {
     try (final Closeable ignored = unloader(fullDatasourceName)) {
@@ -198,7 +255,7 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
       );
 
       queryHelper.testQueriesFromString(queryResponseTemplate);
-      compactData(compactionResource, newSegmentGranularity, null);
+      String taskId = compactData(compactionResource, newSegmentGranularity, null);
 
       // The original 4 segments should be compacted into 2 new segments
       checkNumberOfSegments(2);
@@ -215,10 +272,17 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
         expectedIntervalAfterCompaction = newIntervals;
       }
       checkCompactionIntervals(expectedIntervalAfterCompaction);
+
+      Map<String, TaskReport> reports = indexer.getTaskReport(taskId);
+      Assert.assertTrue(reports != null && reports.size() > 0);
     }
   }
 
-  private void compactData(String compactionResource, GranularityType newSegmentGranularity, GranularityType newQueryGranularity) throws Exception
+  private String compactData(
+      String compactionResource,
+      GranularityType newSegmentGranularity,
+      GranularityType newQueryGranularity
+  ) throws Exception
   {
     String template = getResourceAsString(compactionResource);
     template = StringUtils.replace(template, "%%DATASOURCE%%", fullDatasourceName);
@@ -251,6 +315,8 @@ public class ITCompactionTaskTest extends AbstractIndexerTest
         () -> coordinator.areSegmentsLoaded(fullDatasourceName),
         "Segment Compaction"
     );
+
+    return taskID;
   }
 
   private void checkQueryGranularity(String queryResource, String expectedQueryGranularity, int segmentCount) throws Exception

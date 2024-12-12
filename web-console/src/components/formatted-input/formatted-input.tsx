@@ -17,8 +17,7 @@
  */
 
 import type { InputGroupProps2 } from '@blueprintjs/core';
-import { InputGroup, Intent, TextArea } from '@blueprintjs/core';
-import { Tooltip2 } from '@blueprintjs/popover2';
+import { InputGroup, Intent, TextArea, Tooltip } from '@blueprintjs/core';
 import classNames from 'classnames';
 import React, { useState } from 'react';
 
@@ -48,6 +47,7 @@ export const FormattedInput = React.memo(function FormattedInput(props: Formatte
     intent,
     placeholder,
     multiline,
+    height,
     ...rest
   } = props;
 
@@ -105,6 +105,7 @@ export const FormattedInput = React.memo(function FormattedInput(props: Formatte
           onBlur={myOnBlur}
           intent={myIntent}
           placeholder={placeholder}
+          style={height ? { height } : undefined}
         />
       ) : (
         <InputGroup
@@ -119,7 +120,7 @@ export const FormattedInput = React.memo(function FormattedInput(props: Formatte
         />
       )}
       {showIssue && (
-        <Tooltip2
+        <Tooltip
           isOpen
           content={showIssue ? issue : undefined}
           position="right"
@@ -127,7 +128,7 @@ export const FormattedInput = React.memo(function FormattedInput(props: Formatte
           targetTagName="div"
         >
           <div className="target-dummy" />
-        </Tooltip2>
+        </Tooltip>
       )}
     </div>
   );

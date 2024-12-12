@@ -20,7 +20,7 @@
 package org.apache.druid.segment;
 
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
+import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.data.CloseableIndexed;
@@ -58,7 +58,10 @@ public abstract class DictionaryEncodedColumnIndexer<KeyType, ActualType extends
   @Override
   public void setSparseIndexed()
   {
-    isSparse = true;
+    if (!isSparse) {
+      dimLookup.add(null);
+      isSparse = true;
+    }
   }
 
   public int getSortedEncodedValueFromUnsorted(Integer unsortedIntermediateValue)
@@ -174,7 +177,7 @@ public abstract class DictionaryEncodedColumnIndexer<KeyType, ActualType extends
       }
 
       @Override
-      public ValueMatcher makeValueMatcher(Predicate<String> predicate)
+      public ValueMatcher makeValueMatcher(DruidPredicateFactory predicateFactory)
       {
         throw new UnsupportedOperationException();
       }
@@ -225,17 +228,6 @@ public abstract class DictionaryEncodedColumnIndexer<KeyType, ActualType extends
       }
     }
     return new SortedDimensionSelector();
-  }
-
-  /**
-   * returns true if all values are encoded in {@link #dimLookup}
-   */
-  protected boolean dictionaryEncodesAllValues()
-  {
-    // name lookup is possible in advance if we explicitly process a value for every row, or if we've encountered an
-    // actual null value and it is present in our dictionary. otherwise the dictionary will be missing ids for implicit
-    // null values
-    return !isSparse || dimLookup.getIdForNull() != DimensionDictionary.ABSENT_VALUE_ID;
   }
 
   protected SortedDimensionDictionary<ActualType> sortedLookup()

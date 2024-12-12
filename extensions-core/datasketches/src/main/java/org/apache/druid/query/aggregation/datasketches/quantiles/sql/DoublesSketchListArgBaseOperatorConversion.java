@@ -142,7 +142,7 @@ public abstract class DoublesSketchListArgBaseOperatorConversion implements SqlO
         final RelDataType operandType = callBinding.getValidator().deriveType(callBinding.getScope(), operand);
 
         // Verify that 'operand' is a literal number.
-        if (!SqlUtil.isLiteral(operand)) {
+        if (!SqlUtil.isLiteral(operand, true)) {
           return OperatorConversions.throwOrReturn(
               throwOnFailure,
               callBinding,

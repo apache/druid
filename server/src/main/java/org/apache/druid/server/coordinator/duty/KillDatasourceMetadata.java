@@ -20,11 +20,10 @@
 package org.apache.druid.server.coordinator.duty;
 
 import com.google.common.base.Strings;
-import com.google.inject.Inject;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorSpec;
 import org.apache.druid.metadata.MetadataSupervisorManager;
-import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
+import org.apache.druid.server.coordinator.config.MetadataCleanupConfig;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.joda.time.DateTime;
 
@@ -44,21 +43,13 @@ public class KillDatasourceMetadata extends MetadataCleanupDuty
   private final IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator;
   private final MetadataSupervisorManager metadataSupervisorManager;
 
-  @Inject
   public KillDatasourceMetadata(
-      DruidCoordinatorConfig config,
+      MetadataCleanupConfig config,
       IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator,
       MetadataSupervisorManager metadataSupervisorManager
   )
   {
-    super(
-        "datasources",
-        "druid.coordinator.kill.datasource",
-        config.getCoordinatorDatasourceKillPeriod(),
-        config.getCoordinatorDatasourceKillDurationToRetain(),
-        Stats.Kill.DATASOURCES,
-        config
-    );
+    super("datasources", config, Stats.Kill.DATASOURCES);
     this.indexerMetadataStorageCoordinator = indexerMetadataStorageCoordinator;
     this.metadataSupervisorManager = metadataSupervisorManager;
   }

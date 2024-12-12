@@ -22,7 +22,6 @@ package org.apache.druid.frame.write;
 import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.frame.FrameType;
-import org.apache.druid.frame.field.FieldReaders;
 import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -33,7 +32,6 @@ import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.data.ComparableStringArray;
 import org.apache.druid.segment.data.IndexedInts;
 
 import javax.annotation.Nullable;
@@ -132,7 +130,7 @@ public class FrameWriterUtils
    * Retrieves UTF-8 byte buffers from a {@link ColumnValueSelector}, which is expected to be the kind of
    * selector you get for an {@code ARRAY<STRING>} column.
    *
-   * Null strings are returned as {@link #NULL_STRING_MARKER_ARRAY}.
+   * Null strings are returned as {@code null}.
    *
    * If the entire array returned by {@link BaseObjectColumnValueSelector#getObject()} is null, returns either
    * null or {@link #NULL_STRING_MARKER_ARRAY} depending on the value of "useNullArrays".
@@ -146,30 +144,16 @@ public class FrameWriterUtils
       @SuppressWarnings("rawtypes") final BaseObjectColumnValueSelector selector
   )
   {
-    Object row = selector.getObject();
+    final Object[] row = (Object[]) selector.getObject();
     if (row == null) {
       return null;
-    } else if (row instanceof String) {
-      return Collections.singletonList(getUtf8ByteBufferFromString((String) row));
-    }
-
-    final List<ByteBuffer> retVal = new ArrayList<>();
-    if (row instanceof List) {
-      for (int i = 0; i < ((List<?>) row).size(); i++) {
-        retVal.add(getUtf8ByteBufferFromString(((List<String>) row).get(i)));
-      }
-    } else if (row instanceof Object[]) {
-      for (Object value : (Object[]) row) {
+    } else {
+      final List<ByteBuffer> retVal = new ArrayList<>();
+      for (Object value : row) {
         retVal.add(getUtf8ByteBufferFromString((String) value));
       }
-    } else if (row instanceof ComparableStringArray) {
-      for (String value : ((ComparableStringArray) row).getDelegate()) {
-        retVal.add(getUtf8ByteBufferFromString(value));
-      }
-    } else {
-      throw new ISE("Unexpected type %s found", row.getClass().getName());
+      return retVal;
     }
-    return retVal;
   }
 
   /**
@@ -207,23 +191,63 @@ public class FrameWriterUtils
     for (final KeyColumn keyColumn : keyColumns) {
       final ColumnType columnType = signature.getColumnType(keyColumn.columnName()).orElse(null);
 
-      if (columnType == null || !FieldReaders.create(keyColumn.columnName(), columnType).isComparable()) {
-        throw new IAE("Sort column [%s] is not comparable (type = %s)", keyColumn.columnName(), columnType);
+      if (columnType == null) {
+        throw new IAE("Sort column [%s] type is unknown", keyColumn.columnName());
       }
     }
   }
 
   /**
-   * Copies "len" bytes from {@code src.position()} to "dstPosition" in "memory". Does not update the position of src.
-   *
-   * @throws InvalidNullByteException if "allowNullBytes" is false and a null byte is encountered
+   * Copies {@code src} to {@code dst} without making any modification to the source data.
    */
-  public static void copyByteBufferToMemory(
+  public static void copyByteBufferToMemoryAllowingNullBytes(
+      final ByteBuffer src,
+      final WritableMemory dst,
+      final long dstPosition,
+      final int len
+  )
+  {
+    copyByteBufferToMemory(src, dst, dstPosition, len, true, false);
+  }
+
+  /**
+   * Copies {@code src} to {@code dst}, disallowing null bytes to be written to the destination. If {@code removeNullBytes}
+   * is true, the method will drop the null bytes, and if it is false, the method will throw an exception. The written bytes
+   * can be less than "len" if the null bytes are dropped, and the callers must evaluate the return value to see the actual
+   * length of the buffer that is copied
+   */
+  public static int copyByteBufferToMemoryDisallowingNullBytes(
       final ByteBuffer src,
       final WritableMemory dst,
       final long dstPosition,
       final int len,
-      final boolean allowNullBytes
+      final boolean removeNullBytes
+  )
+  {
+    return copyByteBufferToMemory(src, dst, dstPosition, len, false, removeNullBytes);
+  }
+
+  /**
+   * Tries to copy "len" bytes from {@code src.position()} to "dstPosition" in "memory". If removeNullBytes is set to true,
+   * it will remove the U+0000 bytes from the src buffer, and the written bytes will be less than "len". It is imperative that the
+   * callers check the number of written bytes when "removeNullBytes" can be set to true, i.e. this method is invoked via
+   * {@link #copyByteBufferToMemoryDisallowingNullBytes}
+   * <p>
+   * Does not update the position of src.
+   * <p>
+   * Whenever "allowNullBytes" is true, "removeNullBytes" must be false. Use the methods {@link #copyByteBufferToMemoryAllowingNullBytes}
+   * and {@link #copyByteBufferToMemoryDisallowingNullBytes} to copy between the memory
+   * <p>
+   *
+   * @throws InvalidNullByteException if "allowNullBytes" and "removeNullBytes" is false and a null byte is encountered
+   */
+  private static int copyByteBufferToMemory(
+      final ByteBuffer src,
+      final WritableMemory dst,
+      final long dstPosition,
+      final int len,
+      final boolean allowNullBytes,
+      final boolean removeNullBytes
   )
   {
     if (src.remaining() < len) {
@@ -234,22 +258,45 @@ public class FrameWriterUtils
     }
 
     final int srcEnd = src.position() + len;
-    long q = dstPosition;
+    int writtenLength = 0;
 
-    for (int p = src.position(); p < srcEnd; p++, q++) {
-      final byte b = src.get(p);
-
-      if (!allowNullBytes && b == 0) {
-        ByteBuffer duplicate = src.duplicate();
-        duplicate.limit(srcEnd);
-        throw InvalidNullByteException.builder()
-                                      .value(StringUtils.fromUtf8(duplicate))
-                                      .position(p - src.position())
-                                      .build();
+    if (allowNullBytes) {
+      if (src.hasArray()) {
+        // Null bytes are ignored and the src buffer is backed by an array. Bulk copying to the destination would be the fastest
+        dst.putByteArray(dstPosition, src.array(), src.arrayOffset() + src.position(), len);
+      } else {
+        // Null bytes are ignored and the src buffer is not backed by an array. We can copy the byte buffer to the destination individually
+        long q = dstPosition;
+        for (int p = src.position(); p < srcEnd; p++, q++) {
+          final byte b = src.get(p);
+          dst.putByte(q, b);
+        }
       }
+      // The method does not alter the length of the memory copied if null bytes are allowed
+      writtenLength = len;
+    } else {
+      long q = dstPosition;
+      for (int p = src.position(); p < srcEnd; p++) {
+        final byte b = src.get(p);
 
-      dst.putByte(q, b);
+        if (b == 0) {
+          if (!removeNullBytes) {
+            // Cannot ignore the null byte, but cannot remove them as well. Therefore, throw an error.
+            ByteBuffer duplicate = src.duplicate();
+            duplicate.limit(srcEnd);
+            throw InvalidNullByteException.builder()
+                                          .value(StringUtils.fromUtf8(duplicate))
+                                          .position(p - src.position())
+                                          .build();
+          }
+        } else {
+          dst.putByte(q, b);
+          q++;
+          writtenLength++;
+        }
+      }
     }
+    return writtenLength;
   }
 
   /**

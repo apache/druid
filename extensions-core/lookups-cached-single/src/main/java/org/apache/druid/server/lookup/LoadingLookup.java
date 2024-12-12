@@ -28,9 +28,10 @@ import org.apache.druid.server.lookup.cache.loading.LoadingCache;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
+import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -74,15 +75,19 @@ public class LoadingLookup extends LookupExtractor
       return null;
     }
 
-    final String presentVal;
-    try {
-      presentVal = loadingCache.get(keyEquivalent, new ApplyCallable(keyEquivalent));
+    final String presentVal = this.loadingCache.getIfPresent(keyEquivalent);
+    if (presentVal != null) {
       return NullHandling.emptyToNullIfNeeded(presentVal);
     }
-    catch (ExecutionException e) {
-      LOGGER.debug("value not found for key [%s]", key);
+
+    final String val = this.dataFetcher.fetch(keyEquivalent);
+    if (val == null) {
       return null;
     }
+
+    this.loadingCache.putAll(Collections.singletonMap(keyEquivalent, val));
+
+    return NullHandling.emptyToNullIfNeeded(val);
   }
 
   @Override
@@ -107,51 +112,24 @@ public class LoadingLookup extends LookupExtractor
   }
 
   @Override
-  public boolean canIterate()
+  public boolean supportsAsMap()
   {
-    return false;
+    return true;
   }
 
   @Override
-  public boolean canGetKeySet()
+  public Map<String, String> asMap()
   {
-    return false;
-  }
-
-  @Override
-  public Iterable<Map.Entry<String, String>> iterable()
-  {
-    throw new UnsupportedOperationException("Cannot iterate");
-  }
-
-  @Override
-  public Set<String> keySet()
-  {
-    throw new UnsupportedOperationException("Cannot get key set");
+    final Map<String, String> map = new HashMap<>();
+    Optional.ofNullable(this.dataFetcher.fetchAll())
+            .ifPresent(data -> data.forEach(entry -> map.put(entry.getKey(), entry.getValue())));
+    return map;
   }
 
   @Override
   public byte[] getCacheKey()
   {
     return LookupExtractionModule.getRandomCacheKey();
-  }
-
-  private class ApplyCallable implements Callable<String>
-  {
-    private final String key;
-
-    public ApplyCallable(String key)
-    {
-      this.key = key;
-    }
-
-    @Override
-    public String call()
-    {
-      // When SQL compatible null handling is disabled,
-      // avoid returning null and return an empty string to cache it.
-      return NullHandling.nullToEmptyIfNeeded(dataFetcher.fetch(key));
-    }
   }
 
   public synchronized void close()

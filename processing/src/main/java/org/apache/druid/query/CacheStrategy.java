@@ -24,6 +24,7 @@ import com.google.common.base.Function;
 import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.segment.column.ColumnType;
 
 import java.util.Iterator;
 import java.util.List;
@@ -36,6 +37,7 @@ import java.util.List;
 @ExtensionPoint
 public interface CacheStrategy<T, CacheType, QueryType extends Query<T>>
 {
+
   /**
    * This method is deprecated and retained for backward incompatibility.
    * Returns whether the given query is cacheable or not.
@@ -155,10 +157,15 @@ public interface CacheStrategy<T, CacheType, QueryType extends Query<T>>
         throw new ISE("Ran out of objects while reading aggregators from cache!");
       }
 
-      if (isResultLevelCache) {
-        addToResultFunction.apply(aggregator.getName(), i, resultIter.next());
-      } else {
+      ColumnType resultType = aggregator.getResultType();
+      ColumnType intermediateType = aggregator.getIntermediateType();
+
+      boolean needsDeserialize = !isResultLevelCache || resultType.equals(intermediateType);
+
+      if (needsDeserialize) {
         addToResultFunction.apply(aggregator.getName(), i, aggregator.deserialize(resultIter.next()));
+      } else {
+        addToResultFunction.apply(aggregator.getName(), i, resultIter.next());
       }
     }
   }

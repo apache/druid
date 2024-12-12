@@ -21,6 +21,11 @@ package org.apache.druid.java.util.emitter.service;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.emitter.core.EventMap;
+import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.partition.NumberedShardSpec;
+import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -48,6 +53,32 @@ public class SegmentMetadataEventTest
             .put(SegmentMetadataEvent.VERSION, "dummy_version")
             .put(SegmentMetadataEvent.IS_COMPACTED, true)
             .build(),
+        event.toMap()
+    );
+  }
+
+  @Test
+  public void testCreate()
+  {
+    final DataSegment segment = DataSegment.builder()
+                                           .dataSource("wiki")
+                                           .interval(Intervals.of("2023/2024"))
+                                           .shardSpec(new NumberedShardSpec(1, 1))
+                                           .version("v1")
+                                           .size(100)
+                                           .build();
+    final DateTime eventTime = DateTimes.nowUtc();
+    SegmentMetadataEvent event = SegmentMetadataEvent.create(segment, eventTime);
+    Assert.assertEquals(
+        EventMap.builder()
+                .put(SegmentMetadataEvent.FEED, "segment_metadata")
+                .put(SegmentMetadataEvent.DATASOURCE, segment.getDataSource())
+                .put(SegmentMetadataEvent.CREATED_TIME, eventTime)
+                .put(SegmentMetadataEvent.START_TIME, segment.getInterval().getStart())
+                .put(SegmentMetadataEvent.END_TIME, segment.getInterval().getEnd())
+                .put(SegmentMetadataEvent.VERSION, segment.getVersion())
+                .put(SegmentMetadataEvent.IS_COMPACTED, false)
+                .build(),
         event.toMap()
     );
   }

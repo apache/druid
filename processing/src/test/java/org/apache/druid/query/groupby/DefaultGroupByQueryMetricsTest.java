@@ -22,8 +22,7 @@ package org.apache.druid.query.groupby;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.apache.druid.query.CachingEmitter;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.query.DefaultQueryMetricsTest;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.QueryContexts;
@@ -33,6 +32,7 @@ import org.apache.druid.query.dimension.ExtractionDimensionSpec;
 import org.apache.druid.query.extraction.MapLookupExtractor;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.lookup.LookupExtractionFn;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.Assert;
@@ -41,7 +41,7 @@ import org.junit.Test;
 import java.util.Collections;
 import java.util.Map;
 
-public class DefaultGroupByQueryMetricsTest
+public class DefaultGroupByQueryMetricsTest extends InitializedNullHandlingTest
 {
 
   /**
@@ -51,8 +51,7 @@ public class DefaultGroupByQueryMetricsTest
   @Test
   public void testDefaultGroupByQueryMetricsQuery()
   {
-    CachingEmitter cachingEmitter = new CachingEmitter();
-    ServiceEmitter serviceEmitter = new ServiceEmitter("", "", cachingEmitter);
+    final StubServiceEmitter serviceEmitter = new StubServiceEmitter("", "");
     DefaultGroupByQueryMetrics queryMetrics = new DefaultGroupByQueryMetrics();
     GroupByQuery.Builder builder = GroupByQuery
         .builder()
@@ -75,7 +74,7 @@ public class DefaultGroupByQueryMetricsTest
     queryMetrics.query(query);
 
     queryMetrics.reportQueryTime(0).emit(serviceEmitter);
-    Map<String, Object> actualEvent = cachingEmitter.getLastEmittedEvent().toMap();
+    Map<String, Object> actualEvent = serviceEmitter.getEvents().get(0).toMap();
     Assert.assertEquals(16, actualEvent.size());
     Assert.assertTrue(actualEvent.containsKey("feed"));
     Assert.assertTrue(actualEvent.containsKey("timestamp"));
@@ -103,9 +102,7 @@ public class DefaultGroupByQueryMetricsTest
   @Test
   public void testDefaultGroupByQueryMetricsMetricNamesAndUnits()
   {
-    CachingEmitter cachingEmitter = new CachingEmitter();
-    ServiceEmitter serviceEmitter = new ServiceEmitter("", "", cachingEmitter);
     DefaultGroupByQueryMetrics queryMetrics = new DefaultGroupByQueryMetrics();
-    DefaultQueryMetricsTest.testQueryMetricsDefaultMetricNamesAndUnits(cachingEmitter, serviceEmitter, queryMetrics);
+    DefaultQueryMetricsTest.testQueryMetricsDefaultMetricNamesAndUnits(queryMetrics);
   }
 }

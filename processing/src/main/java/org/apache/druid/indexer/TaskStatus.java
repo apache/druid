@@ -23,10 +23,11 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Preconditions;
 
 import javax.annotation.Nullable;
+import java.util.Objects;
 
 /**
  * Represents the status of a task from the perspective of the coordinator. The task may be ongoing
@@ -36,7 +37,7 @@ import javax.annotation.Nullable;
  */
 public class TaskStatus
 {
-  public static final int MAX_ERROR_MSG_LENGTH = 100;
+  public static final int MAX_ERROR_MSG_TRUNCATION_LIMIT = 1024;
 
   public static TaskStatus running(String taskId)
   {
@@ -87,8 +88,10 @@ public class TaskStatus
    */
   private static @Nullable String truncateErrorMsg(@Nullable String errorMsg)
   {
-    if (errorMsg != null && errorMsg.length() > MAX_ERROR_MSG_LENGTH) {
-      return errorMsg.substring(0, MAX_ERROR_MSG_LENGTH) + "...";
+    if (errorMsg != null && errorMsg.length() > MAX_ERROR_MSG_TRUNCATION_LIMIT) {
+      return errorMsg.substring(0, MAX_ERROR_MSG_TRUNCATION_LIMIT / 2)
+             + "..." + (errorMsg.length() - MAX_ERROR_MSG_TRUNCATION_LIMIT) + " characters omitted..."
+             + errorMsg.substring(errorMsg.length() - MAX_ERROR_MSG_TRUNCATION_LIMIT / 2);
     } else {
       return errorMsg;
     }
@@ -220,12 +223,12 @@ public class TaskStatus
   @Override
   public String toString()
   {
-    return Objects.toStringHelper(this)
-                  .add("id", id)
-                  .add("status", status)
-                  .add("duration", duration)
-                  .add("errorMsg", errorMsg)
-                  .toString();
+    return MoreObjects.toStringHelper(this)
+                      .add("id", id)
+                      .add("status", status)
+                      .add("duration", duration)
+                      .add("errorMsg", errorMsg)
+                      .toString();
   }
 
   @Override
@@ -239,14 +242,14 @@ public class TaskStatus
     }
     TaskStatus that = (TaskStatus) o;
     return getDuration() == that.getDuration() &&
-           java.util.Objects.equals(getId(), that.getId()) &&
+           Objects.equals(getId(), that.getId()) &&
            status == that.status &&
-           java.util.Objects.equals(getErrorMsg(), that.getErrorMsg());
+           Objects.equals(getErrorMsg(), that.getErrorMsg());
   }
 
   @Override
   public int hashCode()
   {
-    return java.util.Objects.hash(getId(), status, getDuration(), getErrorMsg());
+    return Objects.hash(getId(), status, getDuration(), getErrorMsg());
   }
 }

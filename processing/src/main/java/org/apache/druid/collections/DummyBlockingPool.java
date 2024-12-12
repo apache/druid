@@ -55,4 +55,16 @@ public final class DummyBlockingPool<T> implements BlockingPool<T>
   {
     throw new UnsupportedOperationException();
   }
+
+  @Override
+  public long getPendingRequests()
+  {
+    return 0;
+  }
+
+  @Override
+  public long getUsedResourcesCount()
+  {
+    return 0;
+  }
 }

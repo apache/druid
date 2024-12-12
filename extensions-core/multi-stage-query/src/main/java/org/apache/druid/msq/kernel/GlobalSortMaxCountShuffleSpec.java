@@ -43,17 +43,20 @@ public class GlobalSortMaxCountShuffleSpec implements GlobalSortShuffleSpec
   private final ClusterBy clusterBy;
   private final int maxPartitions;
   private final boolean aggregate;
+  private final long limitHint;
 
   @JsonCreator
   public GlobalSortMaxCountShuffleSpec(
       @JsonProperty("clusterBy") final ClusterBy clusterBy,
       @JsonProperty("partitions") final int maxPartitions,
-      @JsonProperty("aggregate") final boolean aggregate
+      @JsonProperty("aggregate") final boolean aggregate,
+      @JsonProperty("limitHint") final Long limitHint
   )
   {
     this.clusterBy = Preconditions.checkNotNull(clusterBy, "clusterBy");
     this.maxPartitions = maxPartitions;
     this.aggregate = aggregate;
+    this.limitHint = limitHint == null ? UNLIMITED : limitHint;
 
     if (maxPartitions < 1) {
       throw new IAE("Partition count must be at least 1");
@@ -100,6 +103,7 @@ public class GlobalSortMaxCountShuffleSpec implements GlobalSortShuffleSpec
     } else if (maxPartitions > maxNumPartitions) {
       return Either.error((long) maxPartitions);
     } else {
+      collector.logSketches();
       final ClusterByPartitions generatedPartitions = collector.generatePartitionsWithMaxCount(maxPartitions);
       if (generatedPartitions.size() <= maxNumPartitions) {
         return Either.value(generatedPartitions);
@@ -119,13 +123,25 @@ public class GlobalSortMaxCountShuffleSpec implements GlobalSortShuffleSpec
   @Override
   public int partitionCount()
   {
-    throw new ISE("Number of partitions not known for [%s].", kind());
+    if (maxPartitions == 1) {
+      return 1;
+    } else {
+      throw new ISE("Number of partitions not known for [%s] with maxPartitions[%d].", kind(), maxPartitions);
+    }
   }
 
   @JsonProperty("partitions")
   public int getMaxPartitions()
   {
     return maxPartitions;
+  }
+
+  @Override
+  @JsonInclude(value = JsonInclude.Include.CUSTOM, valueFilter = LimitHintJsonIncludeFilter.class)
+  @JsonProperty
+  public long limitHint()
+  {
+    return limitHint;
   }
 
   @Override
@@ -140,22 +156,24 @@ public class GlobalSortMaxCountShuffleSpec implements GlobalSortShuffleSpec
     GlobalSortMaxCountShuffleSpec that = (GlobalSortMaxCountShuffleSpec) o;
     return maxPartitions == that.maxPartitions
            && aggregate == that.aggregate
-           && Objects.equals(clusterBy, that.clusterBy);
+           && Objects.equals(clusterBy, that.clusterBy)
+           && Objects.equals(limitHint, that.limitHint);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(clusterBy, maxPartitions, aggregate);
+    return Objects.hash(clusterBy, maxPartitions, aggregate, limitHint);
   }
 
   @Override
   public String toString()
   {
-    return "MaxCountShuffleSpec{" +
+    return "GlobalSortMaxCountShuffleSpec{" +
            "clusterBy=" + clusterBy +
-           ", partitions=" + maxPartitions +
+           ", maxPartitions=" + maxPartitions +
            ", aggregate=" + aggregate +
+           ", limitHint=" + limitHint +
            '}';
   }
 }

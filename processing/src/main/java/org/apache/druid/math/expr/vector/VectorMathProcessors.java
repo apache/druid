@@ -47,13 +47,12 @@ public class VectorMathProcessors
     final ExpressionType inputType = arg.getOutputType(inspector);
 
     ExprVectorProcessor<?> processor = null;
-    if (inputType != null) {
-      if (inputType.is(ExprType.LONG)) {
-        processor = longOutLongInSupplier.get();
-      } else if (inputType.is(ExprType.DOUBLE)) {
-        processor = doubleOutDoubleInSupplier.get();
-      }
+    if (Types.isNullOr(inputType, ExprType.DOUBLE)) {
+      processor = doubleOutDoubleInSupplier.get();
+    } else if (inputType.is(ExprType.LONG)) {
+      processor = longOutLongInSupplier.get();
     }
+
     if (processor == null) {
       throw Exprs.cannotVectorize();
     }
@@ -75,13 +74,12 @@ public class VectorMathProcessors
     final ExpressionType inputType = arg.getOutputType(inspector);
 
     ExprVectorProcessor<?> processor = null;
-    if (inputType != null) {
-      if (inputType.is(ExprType.LONG)) {
-        processor = doubleOutLongInSupplier.get();
-      } else if (inputType.is(ExprType.DOUBLE)) {
-        processor = doubleOutDoubleInSupplier.get();
-      }
+    if (Types.isNullOr(inputType, ExprType.DOUBLE)) {
+      processor = doubleOutDoubleInSupplier.get();
+    } else if (inputType.is(ExprType.LONG)) {
+      processor = doubleOutLongInSupplier.get();
     }
+
     if (processor == null) {
       throw Exprs.cannotVectorize();
     }
@@ -103,13 +101,12 @@ public class VectorMathProcessors
     final ExpressionType inputType = arg.getOutputType(inspector);
 
     ExprVectorProcessor<?> processor = null;
-    if (inputType != null) {
-      if (inputType.is(ExprType.LONG)) {
-        processor = longOutLongInSupplier.get();
-      } else if (inputType.is(ExprType.DOUBLE)) {
-        processor = longOutDoubleInSupplier.get();
-      }
+    if (Types.isNullOr(inputType, ExprType.DOUBLE)) {
+      processor = longOutDoubleInSupplier.get();
+    } else if (inputType.is(ExprType.LONG)) {
+      processor = longOutLongInSupplier.get();
     }
+
     if (processor == null) {
       throw Exprs.cannotVectorize();
     }
@@ -2035,7 +2032,7 @@ public class VectorMathProcessors
           return Double.doubleToLongBits(input);
         }
       };
-    } else if (Types.is(inputType, ExprType.DOUBLE)) {
+    } else if (Types.isNullOr(inputType, ExprType.DOUBLE)) {
       processor = new LongOutDoubleInFunctionVectorValueProcessor(
           arg.asVectorProcessor(inspector),
           inspector.getMaxVectorSize()
@@ -2074,7 +2071,7 @@ public class VectorMathProcessors
           return Double.longBitsToDouble(input);
         }
       };
-    } else if (Types.is(inputType, ExprType.DOUBLE)) {
+    } else if (Types.isNullOr(inputType, ExprType.DOUBLE)) {
       processor = new DoubleOutDoubleInFunctionVectorValueProcessor(
           arg.asVectorProcessor(inspector),
           inspector.getMaxVectorSize()

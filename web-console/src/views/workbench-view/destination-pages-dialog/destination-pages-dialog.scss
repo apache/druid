@@ -21,6 +21,14 @@
 .destination-pages-dialog {
   &.#{$bp-ns}-dialog {
     min-width: 700px;
-    min-height: 480px;
+    height: 80vh;
+  }
+
+  .destination-pages-pane {
+    height: 100%;
+  }
+
+  .#{$bp-ns}-dialog-footer {
+    margin-top: 0;
   }
 }

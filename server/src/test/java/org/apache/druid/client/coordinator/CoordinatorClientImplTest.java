@@ -21,14 +21,28 @@ package org.apache.druid.client.coordinator;
 
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.inject.Injector;
+import org.apache.druid.client.BootstrapSegmentsResponse;
+import org.apache.druid.client.ImmutableSegmentLoadInfo;
+import org.apache.druid.guice.StartupInjectorBuilder;
+import org.apache.druid.initialization.CoreInjectorBuilder;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.rpc.MockServiceClient;
 import org.apache.druid.rpc.RequestBuilder;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.metadata.DataSourceInformation;
+import org.apache.druid.server.coordination.DruidServerMetadata;
+import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.PruneLoadSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
@@ -42,12 +56,31 @@ import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 public class CoordinatorClientImplTest
 {
   private ObjectMapper jsonMapper;
   private MockServiceClient serviceClient;
   private CoordinatorClient coordinatorClient;
+
+  private static final DataSegment SEGMENT1 = DataSegment.builder()
+                                                         .dataSource("xyz")
+                                                         .interval(Intervals.of("1000/2000"))
+                                                         .version("1")
+                                                         .loadSpec(ImmutableMap.of("type", "local", "loc", "foo"))
+                                                         .shardSpec(new NumberedShardSpec(0, 1))
+                                                         .size(1)
+                                                         .build();
+
+  private static final DataSegment SEGMENT2 = DataSegment.builder()
+                                                         .dataSource("xyz")
+                                                         .interval(Intervals.of("2000/3000"))
+                                                         .version("1")
+                                                         .loadSpec(ImmutableMap.of("type", "local", "loc", "bar"))
+                                                         .shardSpec(new NumberedShardSpec(0, 1))
+                                                         .size(1)
+                                                         .build();
 
   @Before
   public void setup()
@@ -105,7 +138,7 @@ public class CoordinatorClientImplTest
                    .build();
 
     serviceClient.expectAndRespond(
-        new RequestBuilder(HttpMethod.GET, "/druid/coordinator/v1/metadata/datasources/xyz/segments/def"),
+        new RequestBuilder(HttpMethod.GET, "/druid/coordinator/v1/metadata/datasources/xyz/segments/def?includeUnused=false"),
         HttpResponseStatus.OK,
         ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
         jsonMapper.writeValueAsBytes(segment)
@@ -113,7 +146,35 @@ public class CoordinatorClientImplTest
 
     Assert.assertEquals(
         segment,
-        coordinatorClient.fetchUsedSegment("xyz", "def").get()
+        coordinatorClient.fetchSegment("xyz", "def", false).get()
+    );
+  }
+
+  @Test
+  public void test_fetchSegment() throws Exception
+  {
+    final DataSegment segment =
+        DataSegment.builder()
+                   .dataSource("xyz")
+                   .interval(Intervals.of("2000/3000"))
+                   .version("1")
+                   .shardSpec(new NumberedShardSpec(0, 1))
+                   .size(1)
+                   .build();
+
+    serviceClient.expectAndRespond(
+        new RequestBuilder(
+            HttpMethod.GET,
+            "/druid/coordinator/v1/metadata/datasources/xyz/segments/def?includeUnused=true"
+        ),
+        HttpResponseStatus.OK,
+        ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
+        jsonMapper.writeValueAsBytes(segment)
+    );
+
+    Assert.assertEquals(
+        segment,
+        coordinatorClient.fetchSegment("xyz", "def", true).get()
     );
   }
 
@@ -141,6 +202,176 @@ public class CoordinatorClientImplTest
     Assert.assertEquals(
         Collections.singletonList(segment),
         coordinatorClient.fetchUsedSegments("xyz", intervals).get()
+    );
+  }
+
+  @Test
+  public void test_fetchBootstrapSegments() throws Exception
+  {
+    final List<DataSegment> expectedSegments = ImmutableList.of(SEGMENT1, SEGMENT2);
+
+    serviceClient.expectAndRespond(
+        new RequestBuilder(HttpMethod.POST, "/druid/coordinator/v1/metadata/bootstrapSegments"),
+        HttpResponseStatus.OK,
+        ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
+        jsonMapper.writeValueAsBytes(expectedSegments)
+    );
+
+    final ListenableFuture<BootstrapSegmentsResponse> response = coordinatorClient.fetchBootstrapSegments();
+    Assert.assertNotNull(response);
+
+    final ImmutableList<DataSegment> observedDataSegments = ImmutableList.copyOf(response.get().getIterator());
+    for (int idx = 0; idx < expectedSegments.size(); idx++) {
+      Assert.assertEquals(expectedSegments.get(idx).getLoadSpec(), observedDataSegments.get(idx).getLoadSpec());
+    }
+  }
+
+  /**
+   * Set up a Guice injector with PruneLoadSpec set to true. This test verifies that the bootstrap segments API
+   * always return segments with load specs present, ensuring they can be loaded anywhere.
+   */
+  @Test
+  public void test_fetchBootstrapSegmentsAreLoadableWhenPruneLoadSpecIsEnabled() throws Exception
+  {
+    final List<DataSegment> expectedSegments = ImmutableList.of(SEGMENT1, SEGMENT2);
+
+    // Set up a coordinator client with PruneLoadSpec set to true in the injector
+    final Injector injector = new CoreInjectorBuilder(new StartupInjectorBuilder().build())
+        .addModule(binder -> binder.bindConstant().annotatedWith(PruneLoadSpec.class).to(true))
+        .build();
+
+    final ObjectMapper objectMapper = injector.getInstance(ObjectMapper.class);
+    final CoordinatorClient coordinatorClient = new CoordinatorClientImpl(serviceClient, objectMapper);
+
+    serviceClient.expectAndRespond(
+        new RequestBuilder(HttpMethod.POST, "/druid/coordinator/v1/metadata/bootstrapSegments"),
+        HttpResponseStatus.OK,
+        ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
+        objectMapper.writeValueAsBytes(expectedSegments)
+    );
+
+    final ListenableFuture<BootstrapSegmentsResponse> response = coordinatorClient.fetchBootstrapSegments();
+    Assert.assertNotNull(response);
+
+    final ImmutableList<DataSegment> observedDataSegments = ImmutableList.copyOf(response.get().getIterator());
+    Assert.assertEquals(expectedSegments, observedDataSegments);
+    for (int idx = 0; idx < expectedSegments.size(); idx++) {
+      Assert.assertEquals(expectedSegments.get(idx).getLoadSpec(), observedDataSegments.get(idx).getLoadSpec());
+    }
+  }
+
+  @Test
+  public void test_fetchEmptyBootstrapSegments() throws Exception
+  {
+    final List<DataSegment> segments = ImmutableList.of();
+
+    serviceClient.expectAndRespond(
+        new RequestBuilder(HttpMethod.POST, "/druid/coordinator/v1/metadata/bootstrapSegments"),
+        HttpResponseStatus.OK,
+        ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
+        jsonMapper.writeValueAsBytes(segments)
+    );
+
+    final ListenableFuture<BootstrapSegmentsResponse> response = coordinatorClient.fetchBootstrapSegments();
+    Assert.assertNotNull(response);
+
+    Assert.assertEquals(
+        segments,
+        ImmutableList.copyOf(response.get().getIterator())
+    );
+  }
+
+  @Test
+  public void test_fetchDataSourceInformation() throws Exception
+  {
+    String foo = "foo";
+
+    DataSourceInformation fooInfo = new DataSourceInformation(
+        "foo",
+        RowSignature.builder()
+                    .add("d1", ColumnType.FLOAT)
+                    .add("d2", ColumnType.DOUBLE)
+                    .build()
+    );
+
+    serviceClient.expectAndRespond(
+        new RequestBuilder(HttpMethod.POST, "/druid/coordinator/v1/metadata/dataSourceInformation")
+            .jsonContent(jsonMapper, Collections.singletonList(foo)),
+        HttpResponseStatus.OK,
+        ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
+        jsonMapper.writeValueAsBytes(Collections.singletonList(fooInfo))
+    );
+
+    Assert.assertEquals(
+        Collections.singletonList(fooInfo),
+        coordinatorClient.fetchDataSourceInformation(Collections.singleton(foo)).get()
+    );
+  }
+
+  @Test
+  public void test_fetchServerViewSegments() throws Exception
+  {
+
+    final List<Interval> intervals = ImmutableList.of(
+        Intervals.of("2001/2002"),
+        Intervals.of("2501/2502")
+    );
+
+    final Set<DruidServerMetadata> serverMetadataSet =
+        ImmutableSet.of(
+            new DruidServerMetadata(
+                "TEST_SERVER",
+                "testhost:9092",
+                null,
+                1,
+                ServerType.INDEXER_EXECUTOR,
+                "tier1",
+                0
+            )
+        );
+
+    final ImmutableSegmentLoadInfo immutableSegmentLoadInfo1 = new ImmutableSegmentLoadInfo(
+        DataSegment.builder()
+                   .dataSource("xyz")
+                   .interval(intervals.get(0))
+                   .version("1")
+                   .shardSpec(new NumberedShardSpec(0, 1))
+                   .size(1)
+                   .build(),
+        serverMetadataSet
+        );
+
+    serviceClient.expectAndRespond(
+        new RequestBuilder(HttpMethod.GET, "/druid/coordinator/v1/datasources/xyz/intervals/2001-01-01T00:00:00.000Z_2002-01-01T00:00:00.000Z/serverview?full"),
+        HttpResponseStatus.OK,
+        ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
+        jsonMapper.writeValueAsBytes(Collections.singletonList(immutableSegmentLoadInfo1))
+    );
+
+    final ImmutableSegmentLoadInfo immutableSegmentLoadInfo2 = new ImmutableSegmentLoadInfo(
+        DataSegment.builder()
+                   .dataSource("xyz")
+                   .interval(intervals.get(1))
+                   .version("1")
+                   .shardSpec(new NumberedShardSpec(0, 1))
+                   .size(1)
+                   .build(),
+        serverMetadataSet
+    );
+
+    serviceClient.expectAndRespond(
+        new RequestBuilder(HttpMethod.GET, "/druid/coordinator/v1/datasources/xyz/intervals/2501-01-01T00:00:00.000Z_2502-01-01T00:00:00.000Z/serverview?full"),
+        HttpResponseStatus.OK,
+        ImmutableMap.of(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON),
+        jsonMapper.writeValueAsBytes(Collections.singletonList(immutableSegmentLoadInfo2))
+    );
+
+    List<ImmutableSegmentLoadInfo> segmentLoadInfoList =
+        ImmutableList.of(immutableSegmentLoadInfo1, immutableSegmentLoadInfo2);
+
+    Assert.assertEquals(
+        segmentLoadInfoList,
+        coordinatorClient.fetchServerViewSegments("xyz", intervals)
     );
   }
 }

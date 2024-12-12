@@ -19,27 +19,28 @@
 
 package org.apache.druid.query.filter.vector;
 
+import org.apache.druid.segment.filter.ConstantMatcherType;
 import org.apache.druid.segment.vector.VectorSizeInspector;
 
-public class BooleanVectorValueMatcher extends BaseVectorValueMatcher
+public final class BooleanVectorValueMatcher extends BaseVectorValueMatcher
 {
-  private final boolean matches;
+  private final ConstantMatcherType type;
 
-  private BooleanVectorValueMatcher(final VectorSizeInspector selector, final boolean matches)
+  private BooleanVectorValueMatcher(final VectorSizeInspector selector, final ConstantMatcherType type)
   {
     super(selector);
-    this.matches = matches;
+    this.type = type;
   }
 
-  public static BooleanVectorValueMatcher of(final VectorSizeInspector selector, final boolean matches)
+  public static BooleanVectorValueMatcher of(final VectorSizeInspector selector, ConstantMatcherType matcherType)
   {
-    return new BooleanVectorValueMatcher(selector, matches);
+    return new BooleanVectorValueMatcher(selector, matcherType);
   }
 
   @Override
-  public ReadableVectorMatch match(final ReadableVectorMatch mask)
+  public ReadableVectorMatch match(final ReadableVectorMatch mask, boolean includeUnknown)
   {
-    if (matches) {
+    if (type == ConstantMatcherType.ALL_TRUE || (includeUnknown && type == ConstantMatcherType.ALL_UNKNOWN)) {
       assert mask.isValid(mask);
       return mask;
     } else {

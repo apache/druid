@@ -31,9 +31,11 @@ import com.google.common.collect.Sets;
 import org.apache.druid.client.BatchServerInventoryView;
 import org.apache.druid.client.BrokerSegmentWatcherConfig;
 import org.apache.druid.client.BrokerServerView;
+import org.apache.druid.client.DirectDruidClientFactory;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.selector.HighestPriorityTierSelectorStrategy;
 import org.apache.druid.client.selector.RandomServerSelectorStrategy;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.curator.CuratorTestBase;
 import org.apache.druid.indexing.materializedview.DerivativeDataSourceMetadata;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -42,14 +44,17 @@ import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QueryRunnerTestHelper;
-import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.topn.TopNQuery;
 import org.apache.druid.query.topn.TopNQueryBuilder;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
+import org.apache.druid.segment.metadata.SegmentSchemaManager;
+import org.apache.druid.segment.realtime.appenderator.SegmentSchemas;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.initialization.ZkPathsConfig;
@@ -72,6 +77,10 @@ import java.util.concurrent.TimeUnit;
 
 public class DatasourceOptimizerTest extends CuratorTestBase
 {
+  static {
+    NullHandling.initializeForTests();
+  }
+
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
   private DerivativeDataSourceManager derivativesManager;
@@ -82,12 +91,14 @@ public class DatasourceOptimizerTest extends CuratorTestBase
   private IndexerSQLMetadataStorageCoordinator metadataStorageCoordinator;
   private BatchServerInventoryView baseView;
   private BrokerServerView brokerServerView;
+  private SegmentSchemaManager segmentSchemaManager;
 
   @Before
   public void setUp() throws Exception
   {
     TestDerbyConnector derbyConnector = derbyConnectorRule.getConnector();
     derbyConnector.createDataSourceTable();
+    derbyConnector.createSegmentSchemasTable();
     derbyConnector.createSegmentTable();
     MaterializedViewConfig viewConfig = new MaterializedViewConfig();
     jsonMapper = TestHelper.makeJsonMapper();
@@ -99,10 +110,18 @@ public class DatasourceOptimizerTest extends CuratorTestBase
         jsonMapper,
         derbyConnector
     );
+    segmentSchemaManager = new SegmentSchemaManager(
+        derbyConnectorRule.metadataTablesConfigSupplier().get(),
+        jsonMapper,
+        derbyConnector
+    );
+
     metadataStorageCoordinator = new IndexerSQLMetadataStorageCoordinator(
         jsonMapper,
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
-        derbyConnector
+        derbyConnector,
+        segmentSchemaManager,
+        CentralizedDatasourceSchemaConfig.create()
     );
 
     setupServerAndCurator();
@@ -142,7 +161,7 @@ public class DatasourceOptimizerTest extends CuratorTestBase
     Set<String> metrics = Sets.newHashSet("cost");
     DerivativeDataSourceMetadata metadata = new DerivativeDataSourceMetadata(baseDataSource, dims, metrics);
     metadataStorageCoordinator.insertDataSourceMetadata(dataSource, metadata);
-    // insert base datasource segments 
+    // insert base datasource segments
     List<Boolean> baseResult = Lists.transform(
         ImmutableList.of(
             "2011-04-01/2011-04-02",
@@ -159,13 +178,8 @@ public class DatasourceOptimizerTest extends CuratorTestBase
               Lists.newArrayList("dim1", "dim2", "dim3", "dim4"),
               1024 * 1024
           );
-          try {
-            metadataStorageCoordinator.announceHistoricalSegments(Sets.newHashSet(segment));
-            announceSegmentForServer(druidServer, segment, zkPathsConfig, jsonMapper);
-          }
-          catch (IOException e) {
-            return false;
-          }
+          metadataStorageCoordinator.commitSegments(Sets.newHashSet(segment), null);
+          announceSegmentForServer(druidServer, segment, zkPathsConfig, jsonMapper);
           return true;
         }
     );
@@ -184,13 +198,8 @@ public class DatasourceOptimizerTest extends CuratorTestBase
               Lists.newArrayList("dim1", "dim2", "dim3"),
               1024
           );
-          try {
-            metadataStorageCoordinator.announceHistoricalSegments(Sets.newHashSet(segment));
-            announceSegmentForServer(druidServer, segment, zkPathsConfig, jsonMapper);
-          }
-          catch (IOException e) {
-            return false;
-          }
+          metadataStorageCoordinator.commitSegments(Sets.newHashSet(segment), null);
+          announceSegmentForServer(druidServer, segment, zkPathsConfig, jsonMapper);
           return true;
         }
     );
@@ -285,16 +294,27 @@ public class DatasourceOptimizerTest extends CuratorTestBase
               {
                 return callback.segmentViewInitialized();
               }
+
+              @Override
+              public CallbackAction segmentSchemasAnnounced(SegmentSchemas segmentSchemas)
+              {
+                return CallbackAction.CONTINUE;
+              }
             }
         );
       }
     };
 
-    brokerServerView = new BrokerServerView(
-        EasyMock.createMock(QueryToolChestWarehouse.class),
+    DirectDruidClientFactory druidClientFactory = new DirectDruidClientFactory(
+        new NoopServiceEmitter(),
+        EasyMock.createMock(QueryRunnerFactoryConglomerate.class),
         EasyMock.createMock(QueryWatcher.class),
         getSmileMapper(),
-        EasyMock.createMock(HttpClient.class),
+        EasyMock.createMock(HttpClient.class)
+    );
+
+    brokerServerView = new BrokerServerView(
+        druidClientFactory,
         baseView,
         new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
         new NoopServiceEmitter(),

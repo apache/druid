@@ -58,9 +58,9 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
+import org.apache.druid.query.groupby.GroupByQueryRunnerTestHelper;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.having.HavingSpec;
-import org.apache.druid.query.groupby.strategy.GroupByStrategySelector;
 import org.apache.druid.query.topn.TopNQuery;
 import org.apache.druid.query.topn.TopNQueryBuilder;
 import org.apache.druid.server.initialization.ServerConfig;
@@ -89,6 +89,8 @@ public class QuerySchedulerTest
   private static final int NUM_ROWS = 10000;
   private static final int TEST_HI_CAPACITY = 5;
   private static final int TEST_LO_CAPACITY = 2;
+  private static final ServerConfig SERVER_CONFIG_WITHOUT_TOTAL = new ServerConfig();
+  private static final ServerConfig SERVER_CONFIG_WITH_TOTAL = new ServerConfig(false);
 
   private ListeningExecutorService executorService;
   private ObservableQueryScheduler scheduler;
@@ -103,7 +105,8 @@ public class QuerySchedulerTest
         TEST_HI_CAPACITY,
         ManualQueryPrioritizationStrategy.INSTANCE,
         new HiLoQueryLaningStrategy(40),
-        new ServerConfig()
+        // Test with total laning turned on
+        SERVER_CONFIG_WITH_TOTAL
     );
   }
 
@@ -339,7 +342,7 @@ public class QuerySchedulerTest
         0,
         ManualQueryPrioritizationStrategy.INSTANCE,
         new NoQueryLaningStrategy(),
-        new ServerConfig()
+        SERVER_CONFIG_WITHOUT_TOTAL
     );
     List<Future<?>> futures = new ArrayList<>(NUM_QUERIES);
     for (int i = 0; i < NUM_QUERIES; i++) {
@@ -349,9 +352,9 @@ public class QuerySchedulerTest
   }
 
   @Test
-  public void testTotalLimitWithQueryQueuing()
+  public void testTotalLimitWithoutQueryQueuing()
   {
-    ServerConfig serverConfig = new ServerConfig();
+    ServerConfig serverConfig = SERVER_CONFIG_WITH_TOTAL;
     QueryScheduler queryScheduler = new QueryScheduler(
         serverConfig.getNumThreads() - 1,
         ManualQueryPrioritizationStrategy.INSTANCE,
@@ -362,9 +365,9 @@ public class QuerySchedulerTest
   }
 
   @Test
-  public void testTotalLimitWithouQueryQueuing()
+  public void testTotalLimitWithQueryQueuing()
   {
-    ServerConfig serverConfig = new ServerConfig(true);
+    ServerConfig serverConfig = SERVER_CONFIG_WITHOUT_TOTAL;
     QueryScheduler queryScheduler = new QueryScheduler(
         serverConfig.getNumThreads() - 1,
         ManualQueryPrioritizationStrategy.INSTANCE,
@@ -381,17 +384,12 @@ public class QuerySchedulerTest
         5,
         ManualQueryPrioritizationStrategy.INSTANCE,
         new NoQueryLaningStrategy(),
-        new ServerConfig()
+        SERVER_CONFIG_WITH_TOTAL
     );
 
     QueryRunnerFactory factory = GroupByQueryRunnerTest.makeQueryRunnerFactory(
         new GroupByQueryConfig()
         {
-          @Override
-          public String getDefaultStrategy()
-          {
-            return GroupByStrategySelector.STRATEGY_V2;
-          }
 
           @Override
           public String toString()
@@ -555,7 +553,7 @@ public class QuerySchedulerTest
     Assert.assertEquals(
         "Unable to provision, see the following errors:\n"
         + "\n"
-        + "1) Problem parsing object at prefix[druid.query.scheduler]: Cannot construct instance of `org.apache.druid.server.scheduling.ThresholdBasedQueryPrioritizationStrategy`, problem: periodThreshold, durationThreshold, or segmentCountThreshold must be set\n"
+        + "1) Problem parsing object at prefix[druid.query.scheduler]: Cannot construct instance of `org.apache.druid.server.scheduling.ThresholdBasedQueryPrioritizationStrategy`, problem: periodThreshold, durationThreshold, segmentCountThreshold or segmentRangeThreshold must be set\n"
         + " at [Source: UNKNOWN; line: -1, column: -1] (through reference chain: org.apache.druid.server.QuerySchedulerProvider[\"prioritization\"]).\n"
         + "\n"
         + "1 error",
@@ -794,10 +792,12 @@ public class QuerySchedulerTest
                 toolChest
             )
             .applyPreMergeDecoration()
-            .mergeResults()
+            .mergeResults(true)
             .applyPostMergeDecoration();
 
-        final int actualNumRows = consumeAndCloseSequence(runner.run(QueryPlus.wrap(query)));
+        final int actualNumRows = consumeAndCloseSequence(
+            runner.run(QueryPlus.wrap(GroupByQueryRunnerTestHelper.populateResourceId(query)))
+        );
         Assert.assertEquals(actualNumRows, numRows);
       }
       catch (IOException ex) {
@@ -865,7 +865,7 @@ public class QuerySchedulerTest
     Injector injector = GuiceInjectors.makeStartupInjectorWithModules(
         ImmutableList.of(
             binder -> {
-              binder.bind(ServerConfig.class).toInstance(new ServerConfig());
+              binder.bind(ServerConfig.class).toInstance(SERVER_CONFIG_WITH_TOTAL);
               binder.bind(ServiceEmitter.class).toInstance(new ServiceEmitter("test", "localhost", new NoopEmitter()));
               JsonConfigProvider.bind(binder, "druid.query.scheduler", QuerySchedulerProvider.class, Global.class);
             }

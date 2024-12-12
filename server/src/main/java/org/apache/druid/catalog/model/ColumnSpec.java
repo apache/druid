@@ -35,8 +35,7 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * Specification of table columns. Columns have multiple types
- * represented via the type field.
+ * Specification of table columns.
  */
 @UnstableApi
 public class ColumnSpec
@@ -49,14 +48,10 @@ public class ColumnSpec
   private final String name;
 
   /**
-   * The data type of the column expressed as a supported SQL type. The data type here must
-   * directly match a Druid storage type. So, {@code BIGINT} for {code long}, say.
-   * This usage does not support Druid's usual "fudging": one cannot use {@code INTEGER}
-   * to mean {@code long}. The type will likely encode complex and aggregation types
-   * in the future, though that is not yet supported. The set of valid mappings is
-   * defined in the {@link Columns} class.
+   * The data type of the column expressed as a supported Druid type. The data type here must
+   * directly match a Druid storage type.
    */
-  private final String sqlType;
+  private final String dataType;
 
   /**
    * Properties for the column. At present, these are all user and application defined.
@@ -69,18 +64,18 @@ public class ColumnSpec
   @JsonCreator
   public ColumnSpec(
       @JsonProperty("name")final String name,
-      @JsonProperty("sqlType") @Nullable final String sqlType,
+      @JsonProperty("dataType") @Nullable final String dataType,
       @JsonProperty("properties") @Nullable final Map<String, Object> properties
   )
   {
     this.name = name;
-    this.sqlType = sqlType;
+    this.dataType = dataType;
     this.properties = properties == null ? Collections.emptyMap() : properties;
   }
 
   public ColumnSpec(ColumnSpec from)
   {
-    this(from.name, from.sqlType, from.properties);
+    this(from.name, from.dataType, from.properties);
   }
 
   @JsonProperty("name")
@@ -89,11 +84,11 @@ public class ColumnSpec
     return name;
   }
 
-  @JsonProperty("sqlType")
+  @JsonProperty("dataType")
   @JsonInclude(Include.NON_NULL)
-  public String sqlType()
+  public String dataType()
   {
-    return sqlType;
+    return dataType;
   }
 
   @JsonProperty("properties")
@@ -107,6 +102,16 @@ public class ColumnSpec
   {
     if (Strings.isNullOrEmpty(name)) {
       throw new IAE("Column name is required");
+    }
+    if (Columns.isTimeColumn(name)) {
+      if (dataType != null && !Columns.LONG.equalsIgnoreCase(dataType)) {
+        throw new IAE(
+            "[%s] column must have type [%s] or no type. Found [%s]",
+            name,
+            Columns.LONG,
+            dataType
+        );
+      }
     }
     // Validate type in the next PR
   }
@@ -126,7 +131,7 @@ public class ColumnSpec
       final ColumnSpec update
   )
   {
-    String revisedType = update.sqlType() == null ? sqlType() : update.sqlType();
+    String revisedType = update.dataType() == null ? dataType() : update.dataType();
     Map<String, Object> revisedProps = CatalogUtils.mergeProperties(
         columnProperties,
         properties(),
@@ -152,7 +157,7 @@ public class ColumnSpec
     }
     ColumnSpec other = (ColumnSpec) o;
     return Objects.equals(this.name, other.name)
-        && Objects.equals(this.sqlType, other.sqlType)
+        && Objects.equals(this.dataType, other.dataType)
         && Objects.equals(this.properties, other.properties);
   }
 
@@ -161,7 +166,7 @@ public class ColumnSpec
   {
     return Objects.hash(
         name,
-        sqlType,
+        dataType,
         properties
     );
   }

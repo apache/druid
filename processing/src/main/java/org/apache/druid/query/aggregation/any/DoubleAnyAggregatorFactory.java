@@ -28,6 +28,7 @@ import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.aggregation.BufferAggregator;
+import org.apache.druid.query.aggregation.DoubleSumAggregator;
 import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.segment.BaseDoubleColumnValueSelector;
@@ -48,8 +49,6 @@ import java.util.Objects;
 
 public class DoubleAnyAggregatorFactory extends AggregatorFactory
 {
-  private static final Comparator<Double> VALUE_COMPARATOR = Comparator.nullsFirst(Double::compare);
-
   private static final Aggregator NIL_AGGREGATOR = new DoubleAnyAggregator(
       NilColumnValueSelector.instance()
   )
@@ -123,7 +122,7 @@ public class DoubleAnyAggregatorFactory extends AggregatorFactory
     if (capabilities == null || capabilities.isNumeric()) {
       return new DoubleAnyVectorAggregator(selectorFactory.makeValueSelector(fieldName));
     } else {
-      return NumericNilVectorAggregator.doubleNilVectorAggregator();
+      return NilVectorAggregator.doubleNilVectorAggregator();
     }
   }
 
@@ -136,7 +135,7 @@ public class DoubleAnyAggregatorFactory extends AggregatorFactory
   @Override
   public Comparator getComparator()
   {
-    return VALUE_COMPARATOR;
+    return DoubleSumAggregator.COMPARATOR;
   }
 
   @Override
@@ -156,12 +155,6 @@ public class DoubleAnyAggregatorFactory extends AggregatorFactory
   public AggregatorFactory getCombiningFactory()
   {
     return new DoubleAnyAggregatorFactory(name, name);
-  }
-
-  @Override
-  public List<AggregatorFactory> getRequiredColumns()
-  {
-    return Collections.singletonList(new DoubleAnyAggregatorFactory(fieldName, fieldName));
   }
 
   @Override

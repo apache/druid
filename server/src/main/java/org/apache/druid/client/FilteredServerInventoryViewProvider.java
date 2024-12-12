@@ -23,11 +23,12 @@ package org.apache.druid.client;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.inject.Provider;
+import org.apache.druid.guice.ServerViewModule;
 
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = FilteredHttpServerInventoryViewProvider.class)
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = ServerViewModule.TYPE, defaultImpl = FilteredHttpServerInventoryViewProvider.class)
 @JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "batch", value = FilteredBatchServerInventoryViewProvider.class),
-    @JsonSubTypes.Type(name = "http", value = FilteredHttpServerInventoryViewProvider.class)
+    @JsonSubTypes.Type(name = ServerViewModule.SERVERVIEW_TYPE_BATCH, value = FilteredBatchServerInventoryViewProvider.class),
+    @JsonSubTypes.Type(name = ServerViewModule.SERVERVIEW_TYPE_HTTP, value = FilteredHttpServerInventoryViewProvider.class)
 })
 public interface FilteredServerInventoryViewProvider extends Provider<FilteredServerInventoryView>
 {

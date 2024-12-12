@@ -26,7 +26,6 @@ import org.apache.druid.segment.AutoTypeColumnIndexer;
 import org.apache.druid.segment.ComparatorDimensionDictionary;
 import org.apache.druid.segment.ComparatorSortedDimensionDictionary;
 import org.apache.druid.segment.DimensionDictionary;
-import org.apache.druid.segment.NestedDataColumnIndexer;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.FrontCodedIntArrayIndexedWriter;
 import org.apache.druid.segment.data.GenericIndexed;
@@ -40,9 +39,8 @@ import java.util.Set;
 import java.util.TreeSet;
 
 /**
- * Used by {@link AutoTypeColumnIndexer} and {@link NestedDataColumnIndexer} to build the
- * value dictionary, which can be converted into a {@link SortedValueDictionary} to sort and write out the values to a
- * segment with {@link #getSortedCollector()}.
+ * Used by {@link AutoTypeColumnIndexer} to build the value dictionary, which can be converted into a
+ * {@link SortedValueDictionary} to sort and write out the values to a segment with {@link #getSortedCollector()}.
  */
 public class ValueDictionary
 {

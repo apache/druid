@@ -41,7 +41,6 @@ import org.joda.time.Interval;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
-
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -326,10 +325,84 @@ public class QueryContextTest
   }
 
   @Test
+  public void testGetMaxSubqueryBytes()
+  {
+    final QueryContext context1 = new QueryContext(
+        ImmutableMap.of(QueryContexts.MAX_SUBQUERY_BYTES_KEY, 500_000_000)
+    );
+    assertEquals("500000000", context1.getMaxSubqueryMemoryBytes(null));
+
+    final QueryContext context2 = new QueryContext(
+        ImmutableMap.of(QueryContexts.MAX_SUBQUERY_BYTES_KEY, "auto")
+    );
+    assertEquals("auto", context2.getMaxSubqueryMemoryBytes(null));
+
+    final QueryContext context3 = new QueryContext(ImmutableMap.of());
+    assertEquals("disabled", context3.getMaxSubqueryMemoryBytes("disabled"));
+  }
+
+  @Test
+  public void testGetInFunctionThreshold()
+  {
+    final QueryContext context1 = new QueryContext(
+        ImmutableMap.of(QueryContexts.IN_FUNCTION_THRESHOLD, Integer.MAX_VALUE)
+    );
+    assertEquals(Integer.MAX_VALUE, context1.getInFunctionThreshold());
+
+    final QueryContext context2 = QueryContext.empty();
+    assertEquals(QueryContexts.DEFAULT_IN_FUNCTION_THRESHOLD, context2.getInFunctionThreshold());
+  }
+
+  @Test
+  public void testGetInFunctionExprThreshold()
+  {
+    final QueryContext context1 = new QueryContext(
+        ImmutableMap.of(QueryContexts.IN_FUNCTION_EXPR_THRESHOLD, Integer.MAX_VALUE)
+    );
+    assertEquals(Integer.MAX_VALUE, context1.getInFunctionExprThreshold());
+
+    final QueryContext context2 = QueryContext.empty();
+    assertEquals(QueryContexts.DEFAULT_IN_FUNCTION_EXPR_THRESHOLD, context2.getInFunctionExprThreshold());
+  }
+
+  @Test
   public void testDefaultEnableQueryDebugging()
   {
     assertFalse(QueryContext.empty().isDebug());
     assertTrue(QueryContext.of(ImmutableMap.of(QueryContexts.ENABLE_DEBUG, true)).isDebug());
+  }
+
+  @Test
+  public void testIsDecoupled()
+  {
+    assertFalse(QueryContext.empty().isDecoupledMode());
+    assertTrue(
+        QueryContext.of(
+            ImmutableMap.of(
+                QueryContexts.CTX_NATIVE_QUERY_SQL_PLANNING_MODE,
+                QueryContexts.NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED
+            )
+        ).isDecoupledMode()
+    );
+    assertFalse(
+        QueryContext.of(
+            ImmutableMap.of(
+                QueryContexts.CTX_NATIVE_QUERY_SQL_PLANNING_MODE,
+                "garbage"
+            )
+        ).isDecoupledMode()
+    );
+  }
+
+  @Test
+  public void testExtendedFilteredSumRewrite()
+  {
+    assertTrue(QueryContext.empty().isExtendedFilteredSumRewrite());
+    assertFalse(
+        QueryContext
+            .of(ImmutableMap.of(QueryContexts.EXTENDED_FILTERED_SUM_REWRITE_ENABLED, false))
+            .isExtendedFilteredSumRewrite()
+    );
   }
 
   // This test is a bit silly. It is retained because another test uses the
@@ -422,12 +495,6 @@ public class QueryContextTest
     public Map<String, Object> getContext()
     {
       return context;
-    }
-
-    @Override
-    public boolean isDescending()
-    {
-      return false;
     }
 
     @Override

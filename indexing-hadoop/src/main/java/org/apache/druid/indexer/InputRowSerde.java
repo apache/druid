@@ -293,7 +293,7 @@ public class InputRowSerde
   public static SerializeResult toBytes(
       final Map<String, IndexSerdeTypeHelper> typeHelperMap,
       final InputRow row,
-      AggregatorFactory[] aggs
+      final AggregatorFactory[] aggs
   )
   {
     try {
@@ -323,14 +323,15 @@ public class InputRowSerde
       }
 
       //writing all metrics
-      Supplier<InputRow> supplier = () -> row;
       WritableUtils.writeVInt(out, aggs.length);
       for (AggregatorFactory aggFactory : aggs) {
         String k = aggFactory.getName();
         writeString(k, out);
 
+        final IncrementalIndex.InputRowHolder holder = new IncrementalIndex.InputRowHolder();
+        holder.set(row);
         try (Aggregator agg = aggFactory.factorize(
-            IncrementalIndex.makeColumnSelectorFactory(VirtualColumns.EMPTY, aggFactory, supplier, true)
+            IncrementalIndex.makeColumnSelectorFactory(VirtualColumns.EMPTY, holder, aggFactory)
         )) {
           try {
             agg.aggregate();

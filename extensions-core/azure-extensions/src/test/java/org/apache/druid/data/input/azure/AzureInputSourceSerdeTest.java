@@ -23,39 +23,54 @@ import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
+import org.apache.druid.data.input.impl.systemfield.SystemField;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.storage.azure.AzureAccountConfig;
 import org.apache.druid.storage.azure.AzureCloudBlobIterableFactory;
 import org.apache.druid.storage.azure.AzureDataSegmentConfig;
 import org.apache.druid.storage.azure.AzureInputDataConfig;
 import org.apache.druid.storage.azure.AzureStorage;
 import org.apache.druid.storage.azure.AzureStorageDruidModule;
 import org.easymock.EasyMockSupport;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.net.URI;
+import java.util.Collections;
 import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 public class AzureInputSourceSerdeTest extends EasyMockSupport
 {
-  private static final String JSON_WITH_URIS = "{\n"
-                                               + "        \"type\": \"azure\",\n"
-                                               + "        \"uris\": [\"azure://datacontainer2/wikipedia.json\"]\n"
-                                               + "}";
+  private static final String JSON_WITH_URIS =
+      "{\n"
+      + "    \"type\": \"azure\",\n"
+      + "    \"uris\": [\"azure://datacontainer2/wikipedia.json\"]\n"
+      + "}";
 
-  private static final String JSON_WITH_PREFIXES = "{\n"
-                                                   + "        \"type\": \"azure\",\n"
-                                                   + "        \"prefixes\": [\"azure://datacontainer2\"]\n"
-                                                   + "}";
+  private static final String JSON_WITH_PREFIXES =
+      "{\n"
+      + "    \"type\": \"azure\",\n"
+      + "    \"prefixes\": [\"azure://datacontainer2\"]\n"
+      + "}";
 
-  private static final String JSON_WITH_OBJECTS = "{\n"
-                                                  + "        \"type\": \"azure\",\n"
-                                                  + "        \"objects\": [\n"
-                                                  + "          { \"bucket\": \"container1\", \"path\": \"bar/file1.json\"},\n"
-                                                  + "          { \"bucket\": \"conatiner2\", \"path\": \"foo/file2.json\"}\n"
-                                                  + "        ]\n"
-                                                  + "      }";
+  private static final String JSON_WITH_OBJECTS =
+      "{\n"
+      + "    \"type\": \"azure\",\n"
+      + "    \"objects\": [\n"
+      + "        { \"bucket\": \"container1\", \"path\": \"bar/file1.json\"},\n"
+      + "        { \"bucket\": \"conatiner2\", \"path\": \"foo/file2.json\"}\n"
+      + "    ]\n"
+      + "}";
+
+  private static final String JSON_WITH_URIS_AND_SYSFIELDS =
+      "{\n"
+      + "    \"type\": \"azure\",\n"
+      + "    \"uris\": [\"azure://datacontainer2/wikipedia.json\"],\n"
+      + "    \"systemFields\": [\"__file_uri\"]\n"
+      + "}";
 
   private static final List<URI> EXPECTED_URIS;
   private static final List<URI> EXPECTED_PREFIXES;
@@ -65,6 +80,7 @@ public class AzureInputSourceSerdeTest extends EasyMockSupport
   private AzureEntityFactory entityFactory;
   private AzureCloudBlobIterableFactory azureCloudBlobIterableFactory;
   private AzureInputDataConfig inputDataConfig;
+  private AzureAccountConfig accountConfig;
 
   static {
     try {
@@ -80,14 +96,14 @@ public class AzureInputSourceSerdeTest extends EasyMockSupport
     }
   }
 
-  @Before
+  @BeforeEach
   public void setup()
   {
     azureStorage = createMock(AzureStorage.class);
     entityFactory = createMock(AzureEntityFactory.class);
     azureCloudBlobIterableFactory = createMock(AzureCloudBlobIterableFactory.class);
     inputDataConfig = createMock(AzureInputDataConfig.class);
-
+    accountConfig = createMock(AzureAccountConfig.class);
   }
 
   @Test
@@ -105,7 +121,23 @@ public class AzureInputSourceSerdeTest extends EasyMockSupport
         objectMapper.writeValueAsBytes(inputSource),
         AzureInputSource.class);
     verifyInputSourceWithUris(roundTripInputSource);
+  }
 
+  @Test
+  public void test_uriAndSystemFieldsSerde_constructsProperAzureInputSource() throws Exception
+  {
+    final InjectableValues.Std injectableValues = initInjectableValues();
+    final ObjectMapper objectMapper = new DefaultObjectMapper()
+        .registerModules(new AzureStorageDruidModule().getJacksonModules());
+    objectMapper.setInjectableValues(injectableValues);
+
+    final AzureInputSource inputSource = objectMapper.readValue(JSON_WITH_URIS_AND_SYSFIELDS, AzureInputSource.class);
+    assertEquals(Collections.singleton(SystemField.URI), inputSource.getConfiguredSystemFields());
+
+    final AzureInputSource roundTripInputSource = objectMapper.readValue(
+        objectMapper.writeValueAsBytes(inputSource),
+        AzureInputSource.class);
+    assertEquals(Collections.singleton(SystemField.URI), roundTripInputSource.getConfiguredSystemFields());
   }
 
   @Test
@@ -124,7 +156,6 @@ public class AzureInputSourceSerdeTest extends EasyMockSupport
         objectMapper.writeValueAsBytes(inputSource),
         AzureInputSource.class);
     verifyInputSourceWithPrefixes(roundTripInputSource);
-
   }
 
   @Test
@@ -151,29 +182,28 @@ public class AzureInputSourceSerdeTest extends EasyMockSupport
     injectableValues.addValue(AzureEntityFactory.class, entityFactory);
     injectableValues.addValue(AzureCloudBlobIterableFactory.class, azureCloudBlobIterableFactory);
     injectableValues.addValue(AzureInputDataConfig.class, inputDataConfig);
+    injectableValues.addValue(AzureAccountConfig.class, accountConfig);
     return injectableValues;
   }
 
   private static void verifyInputSourceWithUris(final AzureInputSource inputSource)
   {
-
-    Assert.assertEquals(EXPECTED_URIS, inputSource.getUris());
-    Assert.assertNull(inputSource.getPrefixes());
-    Assert.assertNull(inputSource.getObjects());
+    assertEquals(EXPECTED_URIS, inputSource.getUris());
+    assertNull(inputSource.getPrefixes());
+    assertNull(inputSource.getObjects());
   }
 
   private static void verifyInputSourceWithPrefixes(final AzureInputSource inputSource)
   {
-
-    Assert.assertNull(inputSource.getUris());
-    Assert.assertEquals(EXPECTED_PREFIXES, inputSource.getPrefixes());
-    Assert.assertNull(inputSource.getObjects());
+    assertNull(inputSource.getUris());
+    assertEquals(EXPECTED_PREFIXES, inputSource.getPrefixes());
+    assertNull(inputSource.getObjects());
   }
 
   private static void verifyInputSourceWithObjects(final AzureInputSource inputSource)
   {
-    Assert.assertNull(inputSource.getUris());
-    Assert.assertNull(inputSource.getPrefixes());
-    Assert.assertEquals(EXPECTED_CLOUD_OBJECTS, inputSource.getObjects());
+    assertNull(inputSource.getUris());
+    assertNull(inputSource.getPrefixes());
+    assertEquals(EXPECTED_CLOUD_OBJECTS, inputSource.getObjects());
   }
 }

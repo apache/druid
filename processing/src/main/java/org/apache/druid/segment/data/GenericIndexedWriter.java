@@ -24,6 +24,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.primitives.Ints;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 import it.unimi.dsi.fastutil.longs.LongList;
+import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -76,13 +77,14 @@ public class GenericIndexedWriter<T> implements DictionaryWriter<T>
       final SegmentWriteOutMedium segmentWriteOutMedium,
       final String filenameBase,
       final CompressionStrategy compressionStrategy,
-      final int bufferSize
+      final int bufferSize,
+      final Closer closer
   )
   {
     GenericIndexedWriter<ByteBuffer> writer = new GenericIndexedWriter<>(
         segmentWriteOutMedium,
         filenameBase,
-        compressedByteBuffersWriteObjectStrategy(compressionStrategy, bufferSize, segmentWriteOutMedium.getCloser())
+        compressedByteBuffersWriteObjectStrategy(compressionStrategy, bufferSize, closer)
     );
     writer.objectsSorted = false;
     return writer;
@@ -240,7 +242,7 @@ public class GenericIndexedWriter<T> implements DictionaryWriter<T>
   }
 
   @Override
-  public void write(@Nullable T objectToWrite) throws IOException
+  public int write(@Nullable T objectToWrite) throws IOException
   {
     if (objectsSorted && prevObject != null && strategy.compare(prevObject, objectToWrite) >= 0) {
       objectsSorted = false;
@@ -261,7 +263,7 @@ public class GenericIndexedWriter<T> implements DictionaryWriter<T>
 
     // Increment number of values written. Important to do this after the check above, since numWritten is
     // accessed during "initializeHeaderOutLong" to determine the length of the header.
-    ++numWritten;
+    int retVal = numWritten++;
 
     if (!requireMultipleFiles) {
       headerOut.writeInt(checkedCastNonnegativeLongToInt(valuesOut.size()));
@@ -278,6 +280,7 @@ public class GenericIndexedWriter<T> implements DictionaryWriter<T>
     if (objectsSorted) {
       prevObject = objectToWrite;
     }
+    return retVal;
   }
 
   @Nullable
@@ -293,7 +296,16 @@ public class GenericIndexedWriter<T> implements DictionaryWriter<T>
     long endOffset = getOffset(index);
     int valueSize = checkedCastNonnegativeLongToInt(endOffset - startOffset);
     if (valueSize == 0) {
-      return null;
+      if (NullHandling.replaceWithDefault()) {
+        return null;
+      }
+      ByteBuffer bb = ByteBuffer.allocate(Integer.BYTES);
+      valuesOut.readFully(startOffset - Integer.BYTES, bb);
+      bb.flip();
+      if (bb.getInt() < 0) {
+        return null;
+      }
+      return strategy.fromByteBuffer(bb, 0);
     }
     ByteBuffer bb = ByteBuffer.allocate(valueSize);
     valuesOut.readFully(startOffset, bb);

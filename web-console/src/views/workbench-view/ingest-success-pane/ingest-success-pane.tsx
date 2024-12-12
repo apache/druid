@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { T } from '@druid-toolkit/query';
+import { T } from 'druid-query-toolkit';
 import React from 'react';
 
 import type { Execution } from '../../../druid-models';
@@ -28,7 +28,7 @@ import './ingest-success-pane.scss';
 
 export interface IngestSuccessPaneProps {
   execution: Execution;
-  onDetails(id: string, initTab?: ExecutionDetailsTab): void;
+  onDetails(execution: Execution, initTab?: ExecutionDetailsTab): void;
   onQueryTab?(newQuery: WorkbenchQuery, tabName?: string): void;
 }
 
@@ -44,7 +44,9 @@ export const IngestSuccessPane = React.memo(function IngestSuccessPane(
 
   const warnings = execution.stages?.getWarningCount() || 0;
 
-  const duration = execution.duration;
+  const { duration } = execution;
+  const segmentStatusDescription = execution.getSegmentStatusDescription();
+
   return (
     <div className="ingest-success-pane">
       <p>
@@ -54,7 +56,7 @@ export const IngestSuccessPane = React.memo(function IngestSuccessPane(
         {warnings > 0 && (
           <>
             {' '}
-            <span className="action" onClick={() => onDetails(execution.id, 'warnings')}>
+            <span className="action" onClick={() => onDetails(execution, 'warnings')}>
               {pluralIfNeeded(warnings, 'warning')}
             </span>{' '}
             recorded.
@@ -63,10 +65,12 @@ export const IngestSuccessPane = React.memo(function IngestSuccessPane(
       </p>
       <p>
         {duration ? `Insert query took ${formatDuration(duration)}. ` : `Insert query completed. `}
-        <span className="action" onClick={() => onDetails(execution.id)}>
+        {segmentStatusDescription ? segmentStatusDescription.label + ' ' : ''}
+        <span className="action" onClick={() => onDetails(execution)}>
           Show details
         </span>
       </p>
+
       {onQueryTab && (
         <p>
           Open new tab with:{' '}

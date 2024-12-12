@@ -28,7 +28,7 @@ import java.nio.ByteOrder;
 /**
  * Writer for {@link org.apache.druid.frame.Frame}. See that class for format information.
  *
- * Generally obtained through a {@link FrameWriters#makeFrameWriterFactory}.
+ * Generally obtained through a {@link FrameWriters#makeRowBasedFrameWriterFactory}
  */
 public interface FrameWriter extends Closeable
 {
