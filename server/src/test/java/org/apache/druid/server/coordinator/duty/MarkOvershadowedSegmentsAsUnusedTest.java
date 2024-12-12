@@ -111,7 +111,9 @@ public class MarkOvershadowedSegmentsAsUnusedTest
     Assert.assertTrue(timeline.isOvershadowed(segmentV1));
 
     // Run the duty and verify that the overshadowed segments are marked unused
-    params = new MarkOvershadowedSegmentsAsUnused(segmentsMetadataManager::markSegmentsAsUnused).run(params);
+    params = new MarkOvershadowedSegmentsAsUnused(
+        (ds, segmentIds) -> segmentsMetadataManager.markSegmentsAsUnused(segmentIds)
+    ).run(params);
 
     Set<DataSegment> updatedUsedSegments = Sets.newHashSet(segmentsMetadataManager.iterateAllUsedSegments());
     Assert.assertEquals(1, updatedUsedSegments.size());
