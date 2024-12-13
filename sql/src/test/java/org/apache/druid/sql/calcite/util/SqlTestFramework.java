@@ -21,6 +21,7 @@ package org.apache.druid.sql.calcite.util;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -38,9 +39,11 @@ import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.SegmentWranglerModule;
 import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.guice.annotations.Global;
+import org.apache.druid.guice.annotations.Merging;
 import org.apache.druid.initialization.CoreInjectorBuilder;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.initialization.ServiceInjectorBuilder;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -57,11 +60,15 @@ import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.TestBufferPool;
+import org.apache.druid.query.groupby.DefaultGroupByQueryMetricsFactory;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
+import org.apache.druid.query.groupby.GroupByQueryMetricsFactory;
 import org.apache.druid.query.groupby.GroupByQueryQueryToolChest;
 import org.apache.druid.query.groupby.GroupByQueryRunnerFactory;
-import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
+import org.apache.druid.query.groupby.GroupByResourcesReservationPool;
+import org.apache.druid.query.groupby.GroupByStatsProvider;
+import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.groupby.TestGroupByBuffers;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.metadata.SegmentMetadataQueryQueryToolChest;
@@ -732,6 +739,11 @@ public class SqlTestFramework
       return builder.build();
     }
 
+    @Provides
+    GenericQueryMetricsFactory getGenericQueryMetricsFactory() {
+      return DefaultGenericQueryMetricsFactory.instance();
+    }
+
     @Override
     public void configure(Binder binder)
     {
@@ -750,7 +762,6 @@ public class SqlTestFramework
             .annotatedWith(Global.class)
             .to(TestBufferPool.class);
 
-      binder.bind(GenericQueryMetricsFactory.class).toInstance(DefaultGenericQueryMetricsFactory.instance());
       binder.bind(SearchQueryMetricsFactory.class).toInstance(DefaultSearchQueryMetricsFactory.instance());
       binder.bind(TimeseriesQueryMetricsFactory.class).toInstance(DefaultTimeseriesQueryMetricsFactory.instance());
       binder.bind(TopNQueryMetricsFactory.class).toInstance(DefaultTopNQueryMetricsFactory.instance());
@@ -760,12 +771,13 @@ public class SqlTestFramework
       binder.bind(new TypeLiteral<Supplier<SearchQueryConfig>>(){}).toInstance(() -> searchQueryConfig);
 
       final GroupByQueryConfig groupByConfig = new GroupByQueryConfig();
-      binder.bind(GroupByQueryConfig.class).toInstance(groupByConfig);
       binder.bind(new TypeLiteral<Supplier<GroupByQueryConfig>>(){}).toInstance(() -> groupByConfig);
+      binder.bind(GroupByQueryConfig.class).toInstance(groupByConfig);
 
       DruidBinders
           .queryRFBinder(binder)
-          .mapOnlyBind(GroupByQuery.class, GroupByQueryRunnerFactory.class)
+          .naiveBinding(GroupByQuery.class, GroupByQueryRunnerFactory.class)
+//          .mapOnlyBind(GroupByQuery.class, GroupByQueryRunnerFactory.class)
           .naiveBinding(SegmentMetadataQuery.class, SegmentMetadataQueryRunnerFactory.class)
           .naiveBinding(SearchQuery.class, SearchQueryRunnerFactory.class)
           .naiveBinding(ScanQuery.class, ScanQueryRunnerFactory.class)
@@ -776,7 +788,8 @@ public class SqlTestFramework
 
       DruidBinders
           .queryTCBinder(binder)
-          .mapOnlyBind(GroupByQuery.class, GroupByQueryQueryToolChest.class)
+//          .mapOnlyBind(GroupByQuery.class, GroupByQueryQueryToolChest.class)
+          .naiveBinding(GroupByQuery.class, GroupByQueryQueryToolChest.class)
           .naiveBinding(SegmentMetadataQuery.class, SegmentMetadataQueryQueryToolChest.class)
           .naiveBinding(SearchQuery.class, SearchQueryQueryToolChest.class)
           .naiveBinding(ScanQuery.class, ScanQueryQueryToolChest.class)
@@ -804,7 +817,6 @@ public class SqlTestFramework
       };
     }
 
-    @Provides
     @LazySingleton
     public GroupByQueryQueryToolChest makeGroupByToolChest(
         GroupByQueryRunnerFactory groupByQueryRunnerFactory)
@@ -812,22 +824,102 @@ public class SqlTestFramework
       return (GroupByQueryQueryToolChest) groupByQueryRunnerFactory.getToolchest();
     }
 
-    @Provides
     @LazySingleton
-    public GroupByQueryRunnerFactory makeGroupByFactory(
-        ObjectMapper jsonMapper,
-        GroupByQueryConfig groupByQueryConfig,
-        TestGroupByBuffers testBufferPool,
-        DruidProcessingConfig processingConfig
+    public GroupByQueryRunnerFactory makeQueryRunnerFactory1(
+        final ObjectMapper mapper,
+        final GroupByQueryConfig config,
+        final TestGroupByBuffers bufferPools,
+        final DruidProcessingConfig processingConfig,
+        final GroupByStatsProvider statsProvider
     )
     {
-      return GroupByQueryRunnerTest.makeQueryRunnerFactory(
-          jsonMapper,
-          groupByQueryConfig,
-          testBufferPool,
-          processingConfig
+      if (bufferPools.getBufferSize() != processingConfig.intermediateComputeSizeBytes()) {
+        throw new ISE(
+            "Provided buffer size [%,d] does not match configured size [%,d]",
+            bufferPools.getBufferSize(),
+            processingConfig.intermediateComputeSizeBytes()
+        );
+      }
+      if (bufferPools.getNumMergeBuffers() != processingConfig.getNumMergeBuffers()) {
+        throw new ISE(
+            "Provided merge buffer count [%,d] does not match configured count [%,d]",
+            bufferPools.getNumMergeBuffers(),
+            processingConfig.getNumMergeBuffers()
+        );
+      }
+      final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
+      final GroupByResourcesReservationPool groupByResourcesReservationPool =
+          extracted(config, bufferPools);
+      return null;
+    }
+
+    @Provides
+    @LazySingleton
+    private GroupByResourcesReservationPool extracted(final GroupByQueryConfig config,
+        final TestGroupByBuffers bufferPools)
+    {
+      return new GroupByResourcesReservationPool(bufferPools.getMergePool(), config);
+    }
+
+    @Provides
+    @LazySingleton
+    private GroupingEngine extracted(final ObjectMapper mapper, final DruidProcessingConfig processingConfig,
+        final GroupByStatsProvider statsProvider,
+        final GroupByQueryConfig config,
+        final GroupByResourcesReservationPool groupByResourcesReservationPool)
+    {
+      final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
+      return new GroupingEngine(
+          processingConfig,
+          configSupplier,
+          groupByResourcesReservationPool,
+          mapper,
+          mapper,
+          QueryRunnerTestHelper.NOOP_QUERYWATCHER,
+          statsProvider
       );
     }
+
+    @Provides
+    @LazySingleton
+    GroupByQueryMetricsFactory gfd()
+    {
+      return DefaultGroupByQueryMetricsFactory.instance();
+    }
+
+
+    @Provides
+    @LazySingleton
+    @Merging
+    GroupByResourcesReservationPool gfdg(
+        final GroupByResourcesReservationPool groupByResourcesReservationPool)
+    {
+      return groupByResourcesReservationPool;
+    }
+
+//    @Provides
+    @LazySingleton
+    private GroupByQueryQueryToolChest extracted(final GroupByQueryConfig config,
+        final GroupByStatsProvider statsProvider, final GroupByResourcesReservationPool groupByResourcesReservationPool,
+        final GroupingEngine groupingEngine)
+    {
+      return new GroupByQueryQueryToolChest(
+          groupingEngine,
+          () -> config,
+          DefaultGroupByQueryMetricsFactory.instance(),
+          groupByResourcesReservationPool,
+          statsProvider
+      );
+    }
+
+//    @Provides
+    @LazySingleton
+    private GroupByQueryRunnerFactory extracted(final TestGroupByBuffers bufferPools,
+        final GroupingEngine groupingEngine, final GroupByQueryQueryToolChest toolChest)
+    {
+      return new GroupByQueryRunnerFactory(groupingEngine, toolChest, bufferPools.getProcessingPool());
+    }
+
 
     @Provides
     @LazySingleton
