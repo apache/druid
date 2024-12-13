@@ -275,7 +275,7 @@ public class TopNQueryEngine
       final int numBytesToWorkWith = resultsBuf.capacity();
       final int numValuesPerPass = numBytesPerRecord > 0 ? numBytesToWorkWith / numBytesPerRecord : cardinality;
 
-      return numValuesPerPass <= cardinality;
+      return numValuesPerPass >= cardinality;
     }
   }
 

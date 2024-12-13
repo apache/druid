@@ -20,8 +20,10 @@
 package org.apache.druid.query.topn;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.BufferAggregator;
@@ -103,6 +105,12 @@ public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Pa
     while (numProcessed < cardinality) {
       final int numToProcess;
       int maxNumToProcess = Math.min(params.getNumValuesPerPass(), cardinality - numProcessed);
+      // sanity check to ensure that we only do multi-pass with ALL granularity
+      if (maxNumToProcess < cardinality && !Granularities.ALL.equals(params.getGranularizer().getGranularity())) {
+        throw DruidException.defensive(
+            "runWithCardinalityKnown can only be used for ALL granularity if multiple-passes are required"
+        );
+      }
 
       DimValSelector theDimValSelector;
       if (!hasDimValSelector) {

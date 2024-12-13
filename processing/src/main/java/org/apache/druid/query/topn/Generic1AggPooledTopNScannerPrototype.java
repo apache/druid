@@ -54,7 +54,7 @@ public final class Generic1AggPooledTopNScannerPrototype implements Generic1AggP
   {
     long processedRows = 0;
     int positionToAllocate = 0;
-    while (!cursor.isDoneOrInterrupted()) {
+    while (!cursor.isDoneOrInterrupted() && granularizer.currentOffsetWithinBucket()) {
       final IndexedInts dimValues = dimensionSelector.getRow();
       final int dimSize = dimValues.size();
       for (int i = 0; i < dimSize; i++) {

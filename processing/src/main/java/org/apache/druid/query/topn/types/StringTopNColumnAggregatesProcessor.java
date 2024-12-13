@@ -150,7 +150,7 @@ public class StringTopNColumnAggregatesProcessor implements TopNColumnAggregates
   )
   {
     long processedRows = 0;
-    while (!cursor.isDone()) {
+    while (!cursor.isDone() && granularizer.currentOffsetWithinBucket()) {
       final IndexedInts dimValues = selector.getRow();
       for (int i = 0, size = dimValues.size(); i < size; ++i) {
         final int dimIndex = dimValues.get(i);
@@ -192,7 +192,7 @@ public class StringTopNColumnAggregatesProcessor implements TopNColumnAggregates
   )
   {
     long processedRows = 0;
-    while (!cursor.isDone()) {
+    while (!cursor.isDone() && granularizer.currentOffsetWithinBucket()) {
       final IndexedInts dimValues = selector.getRow();
       for (int i = 0, size = dimValues.size(); i < size; ++i) {
         final int dimIndex = dimValues.get(i);

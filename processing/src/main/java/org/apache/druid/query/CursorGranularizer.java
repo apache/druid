@@ -94,7 +94,7 @@ public class CursorGranularizer
       timeSelector = cursor.getColumnSelectorFactory().makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME);
     }
 
-    return new CursorGranularizer(cursor, bucketIterable, timeSelector, timeOrder == Order.DESCENDING);
+    return new CursorGranularizer(cursor, granularity, bucketIterable, timeSelector, timeOrder == Order.DESCENDING);
   }
 
   private final Cursor cursor;
@@ -109,18 +109,26 @@ public class CursorGranularizer
 
   private long currentBucketStart;
   private long currentBucketEnd;
+  private final Granularity granularity;
 
   private CursorGranularizer(
       Cursor cursor,
+      Granularity granularity,
       Iterable<Interval> bucketIterable,
       @Nullable ColumnValueSelector timeSelector,
       boolean descending
   )
   {
     this.cursor = cursor;
+    this.granularity = granularity;
     this.bucketIterable = bucketIterable;
     this.timeSelector = timeSelector;
     this.descending = descending;
+  }
+
+  public Granularity getGranularity()
+  {
+    return granularity;
   }
 
   public Iterable<Interval> getBucketIterable()
@@ -135,11 +143,11 @@ public class CursorGranularizer
 
   public boolean advanceToBucket(final Interval bucketInterval)
   {
+    currentBucketStart = bucketInterval.getStartMillis();
+    currentBucketEnd = bucketInterval.getEndMillis();
     if (cursor.isDone()) {
       return false;
     }
-    currentBucketStart = bucketInterval.getStartMillis();
-    currentBucketEnd = bucketInterval.getEndMillis();
     if (timeSelector == null) {
       return true;
     }

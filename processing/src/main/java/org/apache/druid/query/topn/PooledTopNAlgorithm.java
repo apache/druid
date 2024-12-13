@@ -477,7 +477,7 @@ public class PooledTopNAlgorithm
     final int aggExtra = aggSize % AGG_UNROLL_COUNT;
     int currentPosition = 0;
     long processedRows = 0;
-    while (!cursor.isDoneOrInterrupted()) {
+    while (!cursor.isDoneOrInterrupted() && granularizer.currentOffsetWithinBucket()) {
       final IndexedInts dimValues = dimSelector.getRow();
 
       final int dimSize = dimValues.size();

@@ -94,7 +94,7 @@ public abstract class NullableNumericTopNColumnAggregatesProcessor<Selector exte
   )
   {
     long processedRows = 0;
-    while (!cursor.isDone()) {
+    while (!cursor.isDone() && granularizer.currentOffsetWithinBucket()) {
       if (hasNulls && selector.isNull()) {
         if (nullValueAggregates == null) {
           nullValueAggregates = BaseTopNAlgorithm.makeAggregators(cursor, query.getAggregatorSpecs());
