@@ -177,7 +177,7 @@ public class BaseLeafFrameProcessorManager implements ProcessorManager<Object, L
             resource = queueRef.get().poll();
           }
 
-          return new ResourceHolder<>()
+          return new ResourceHolder<T>()
           {
             @Override
             public T get()

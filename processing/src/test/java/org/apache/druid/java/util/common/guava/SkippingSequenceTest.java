@@ -80,7 +80,7 @@ public class SkippingSequenceTest
     // Create a Sequence whose Yielders will yield for each element, regardless of what the accumulator passed
     // to "toYielder" does.
     final BaseSequence<Integer, Iterator<Integer>> sequence = new BaseSequence<>(
-        new BaseSequence.IteratorMaker<>()
+        new BaseSequence.IteratorMaker<Integer, Iterator<Integer>>()
         {
           @Override
           public Iterator<Integer> make()

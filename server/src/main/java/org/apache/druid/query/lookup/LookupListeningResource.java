@@ -59,7 +59,7 @@ class LookupListeningResource extends ListenerResource
     super(
         jsonMapper,
         smileMapper,
-        new AbstractListenerHandler<>(new TypeReference<>()
+        new AbstractListenerHandler<LookupExtractorFactory>(new TypeReference<>()
         {
         })
         {

@@ -769,7 +769,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
             final File file = segmentCacheManager.getSegmentFiles(dataSegment);
             closer.register(() -> segmentCacheManager.cleanup(dataSegment));
             final QueryableIndex queryableIndex = closer.register(indexIO.loadIndex(file));
-            return new ResourceHolder<>()
+            return new ResourceHolder<QueryableIndex>()
             {
               @Override
               public QueryableIndex get()

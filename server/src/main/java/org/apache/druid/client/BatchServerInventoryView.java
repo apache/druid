@@ -354,7 +354,7 @@ public class BatchServerInventoryView implements ServerInventoryView, FilteredSe
                 ),
                 predicate
             ),
-            new Function<>()
+            new Function<Pair<DruidServerMetadata, DataSegment>, DataSegment>()
             {
               @Override
               public DataSegment apply(Pair<DruidServerMetadata, DataSegment> input)

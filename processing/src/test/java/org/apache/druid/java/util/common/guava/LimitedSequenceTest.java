@@ -73,7 +73,7 @@ public class LimitedSequenceTest
 
     // Create a Sequence whose Yielders will yield for each element, regardless of what the accumulator passed
     // to "toYielder" does.
-    final BaseSequence<Integer, Iterator<Integer>> sequence = new BaseSequence<>(
+    final BaseSequence<Integer, Iterator<Integer>> sequence = new BaseSequence<Integer, Iterator<Integer>>(
         new BaseSequence.IteratorMaker<>()
         {
           @Override
