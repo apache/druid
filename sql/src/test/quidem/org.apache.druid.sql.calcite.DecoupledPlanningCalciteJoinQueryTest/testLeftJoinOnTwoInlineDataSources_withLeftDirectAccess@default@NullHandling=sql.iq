@@ -109,7 +109,8 @@ DruidProject(dim1=[CAST('10.1':VARCHAR):VARCHAR], __time=[$1], druid=[logical])
     },
     "rightPrefix" : "j0.",
     "condition" : "(\"v0\" == \"j0.dim1\")",
-    "joinType" : "LEFT"
+    "joinType" : "LEFT",
+    "joinAlgorithm" : "broadcast"
   },
   "intervals" : {
     "type" : "intervals",

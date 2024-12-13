@@ -85,7 +85,8 @@ DruidJoin(condition=[=($0, $1)], joinType=[right])
     },
     "rightPrefix" : "j0.",
     "condition" : "(\"dim1\" == \"j0.k\")",
-    "joinType" : "RIGHT"
+    "joinType" : "RIGHT",
+    "joinAlgorithm" : "broadcast"
   },
   "intervals" : {
     "type" : "intervals",

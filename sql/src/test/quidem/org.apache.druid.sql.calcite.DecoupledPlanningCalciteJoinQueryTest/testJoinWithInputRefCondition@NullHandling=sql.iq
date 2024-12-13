@@ -111,7 +111,8 @@ DruidAggregate(group=[{}], EXPR$0=[COUNT() FILTER $0], druid=[logical])
       },
       "rightPrefix" : "j0.",
       "condition" : "1",
-      "joinType" : "INNER"
+      "joinType" : "INNER",
+      "joinAlgorithm" : "broadcast"
     },
     "right" : {
       "type" : "query",
@@ -147,7 +148,8 @@ DruidAggregate(group=[{}], EXPR$0=[COUNT() FILTER $0], druid=[logical])
     },
     "rightPrefix" : "_j0.",
     "condition" : "(CAST(floor(100), 'DOUBLE') == \"_j0.d0\")",
-    "joinType" : "LEFT"
+    "joinType" : "LEFT",
+    "joinAlgorithm" : "broadcast"
   },
   "intervals" : {
     "type" : "intervals",

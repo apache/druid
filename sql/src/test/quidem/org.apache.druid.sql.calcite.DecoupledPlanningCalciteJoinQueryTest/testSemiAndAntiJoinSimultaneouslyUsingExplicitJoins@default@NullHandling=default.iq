@@ -101,7 +101,8 @@ DruidAggregate(group=[{1}], EXPR$1=[COUNT()], druid=[logical])
       },
       "rightPrefix" : "j0.",
       "condition" : "(\"__time\" == \"j0.a0\")",
-      "joinType" : "INNER"
+      "joinType" : "INNER",
+      "joinAlgorithm" : "broadcast"
     },
     "right" : {
       "type" : "query",
@@ -123,7 +124,8 @@ DruidAggregate(group=[{1}], EXPR$1=[COUNT()], druid=[logical])
     },
     "rightPrefix" : "_j0.",
     "condition" : "(\"__time\" == \"_j0.a0\")",
-    "joinType" : "LEFT"
+    "joinType" : "LEFT",
+    "joinAlgorithm" : "broadcast"
   },
   "intervals" : {
     "type" : "intervals",

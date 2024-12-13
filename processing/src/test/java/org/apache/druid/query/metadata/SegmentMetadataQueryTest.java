@@ -1618,7 +1618,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
         DruidExceptionMatcher
             .invalidInput()
             .expectMessageIs(
-                "Invalid dataSource type [JoinDataSource{left=table1, right=table2, rightPrefix='j.', condition=x == \"j.x\", joinType=LEFT, leftFilter=null, joinAlgorithm=null}]. SegmentMetadataQuery only supports table or union datasources.")
+                "Invalid dataSource type [JoinDataSource{left=table1, right=table2, rightPrefix='j.', condition=x == \"j.x\", joinType=LEFT, leftFilter=null, joinAlgorithm=broadcast}]. SegmentMetadataQuery only supports table or union datasources.")
     );
   }
 

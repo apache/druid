@@ -84,7 +84,8 @@ DruidProject(dim1=[$0], druid=[logical])
       },
       "rightPrefix" : "j0.",
       "condition" : "(\"dim2\" == \"j0.k\")",
-      "joinType" : "INNER"
+      "joinType" : "INNER",
+      "joinAlgorithm" : "broadcast"
     },
     "right" : {
       "type" : "lookup",
@@ -92,7 +93,8 @@ DruidProject(dim1=[$0], druid=[logical])
     },
     "rightPrefix" : "_j0.",
     "condition" : "(\"dim2\" == \"_j0.k\")",
-    "joinType" : "INNER"
+    "joinType" : "INNER",
+    "joinAlgorithm" : "broadcast"
   },
   "intervals" : {
     "type" : "intervals",

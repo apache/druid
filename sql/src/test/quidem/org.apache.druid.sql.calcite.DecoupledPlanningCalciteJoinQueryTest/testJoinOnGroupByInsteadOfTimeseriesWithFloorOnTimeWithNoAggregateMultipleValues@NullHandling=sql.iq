@@ -122,7 +122,8 @@ DruidAggregate(group=[{0, 1}], EXPR$2=[ANY_VALUE($2, $3, $4)], druid=[logical])
     },
     "rightPrefix" : "j0.",
     "condition" : "((\"v0\" == \"j0.d0\") && (\"m1\" == \"j0.a0\"))",
-    "joinType" : "INNER"
+    "joinType" : "INNER",
+    "joinAlgorithm" : "broadcast"
   },
   "intervals" : {
     "type" : "intervals",

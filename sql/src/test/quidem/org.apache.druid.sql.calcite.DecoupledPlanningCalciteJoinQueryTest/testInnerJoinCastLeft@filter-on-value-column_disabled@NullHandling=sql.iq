@@ -73,7 +73,8 @@ DruidProject(m1=[$0], k=[$2], v=[$3], druid=[logical])
     },
     "rightPrefix" : "j0.",
     "condition" : "(\"v0\" == \"j0.k\")",
-    "joinType" : "INNER"
+    "joinType" : "INNER",
+    "joinAlgorithm" : "broadcast"
   },
   "intervals" : {
     "type" : "intervals",

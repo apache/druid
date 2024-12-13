@@ -288,7 +288,8 @@ DruidProject(m1=[$2], m10=[$3], druid=[logical])
     },
     "rightPrefix" : "j0.",
     "condition" : "(\"m1\" == \"j0.m1\")",
-    "joinType" : "INNER"
+    "joinType" : "INNER",
+    "joinAlgorithm" : "broadcast"
   },
   "intervals" : {
     "type" : "intervals",

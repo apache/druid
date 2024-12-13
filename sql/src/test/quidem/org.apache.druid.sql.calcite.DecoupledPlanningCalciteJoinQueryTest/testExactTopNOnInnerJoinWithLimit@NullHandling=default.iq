@@ -84,7 +84,8 @@ DruidSort(fetch=[1], druid=[logical])
     },
     "rightPrefix" : "j0.",
     "condition" : "(\"dim4\" == \"j0.d0\")",
-    "joinType" : "INNER"
+    "joinType" : "INNER",
+    "joinAlgorithm" : "broadcast"
   },
   "dimension" : {
     "type" : "default",

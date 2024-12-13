@@ -110,7 +110,8 @@ DruidProject(dim1=[$1], EXPR$1=[EXTRACT(FLAG(MONTH), $0)], druid=[logical])
     },
     "rightPrefix" : "j0.",
     "condition" : "(\"dim2\" == \"j0.d0\")",
-    "joinType" : "INNER"
+    "joinType" : "INNER",
+    "joinAlgorithm" : "broadcast"
   },
   "intervals" : {
     "type" : "intervals",

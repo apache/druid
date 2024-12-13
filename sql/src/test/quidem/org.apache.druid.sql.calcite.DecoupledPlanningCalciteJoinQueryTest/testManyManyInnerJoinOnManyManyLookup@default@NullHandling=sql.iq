@@ -237,7 +237,8 @@ DruidProject(dim1=[$0], druid=[logical])
                                         },
                                         "rightPrefix" : "j0.",
                                         "condition" : "(\"dim2\" == \"j0.k\")",
-                                        "joinType" : "INNER"
+                                        "joinType" : "INNER",
+                                        "joinAlgorithm" : "broadcast"
                                       },
                                       "right" : {
                                         "type" : "lookup",
@@ -245,7 +246,8 @@ DruidProject(dim1=[$0], druid=[logical])
                                       },
                                       "rightPrefix" : "_j0.",
                                       "condition" : "(\"dim2\" == \"_j0.k\")",
-                                      "joinType" : "INNER"
+                                      "joinType" : "INNER",
+                                      "joinAlgorithm" : "broadcast"
                                     },
                                     "right" : {
                                       "type" : "lookup",
@@ -253,7 +255,8 @@ DruidProject(dim1=[$0], druid=[logical])
                                     },
                                     "rightPrefix" : "__j0.",
                                     "condition" : "(\"dim2\" == \"__j0.k\")",
-                                    "joinType" : "INNER"
+                                    "joinType" : "INNER",
+                                    "joinAlgorithm" : "broadcast"
                                   },
                                   "right" : {
                                     "type" : "lookup",
@@ -261,7 +264,8 @@ DruidProject(dim1=[$0], druid=[logical])
                                   },
                                   "rightPrefix" : "___j0.",
                                   "condition" : "(\"dim2\" == \"___j0.k\")",
-                                  "joinType" : "INNER"
+                                  "joinType" : "INNER",
+                                  "joinAlgorithm" : "broadcast"
                                 },
                                 "right" : {
                                   "type" : "lookup",
@@ -269,7 +273,8 @@ DruidProject(dim1=[$0], druid=[logical])
                                 },
                                 "rightPrefix" : "____j0.",
                                 "condition" : "(\"dim2\" == \"____j0.k\")",
-                                "joinType" : "INNER"
+                                "joinType" : "INNER",
+                                "joinAlgorithm" : "broadcast"
                               },
                               "right" : {
                                 "type" : "lookup",
@@ -277,7 +282,8 @@ DruidProject(dim1=[$0], druid=[logical])
                               },
                               "rightPrefix" : "_____j0.",
                               "condition" : "(\"dim2\" == \"_____j0.k\")",
-                              "joinType" : "INNER"
+                              "joinType" : "INNER",
+                              "joinAlgorithm" : "broadcast"
                             },
                             "right" : {
                               "type" : "lookup",
@@ -285,7 +291,8 @@ DruidProject(dim1=[$0], druid=[logical])
                             },
                             "rightPrefix" : "______j0.",
                             "condition" : "(\"dim2\" == \"______j0.k\")",
-                            "joinType" : "INNER"
+                            "joinType" : "INNER",
+                            "joinAlgorithm" : "broadcast"
                           },
                           "right" : {
                             "type" : "lookup",
@@ -293,7 +300,8 @@ DruidProject(dim1=[$0], druid=[logical])
                           },
                           "rightPrefix" : "_______j0.",
                           "condition" : "(\"dim2\" == \"_______j0.k\")",
-                          "joinType" : "INNER"
+                          "joinType" : "INNER",
+                          "joinAlgorithm" : "broadcast"
                         },
                         "right" : {
                           "type" : "lookup",
@@ -301,7 +309,8 @@ DruidProject(dim1=[$0], druid=[logical])
                         },
                         "rightPrefix" : "________j0.",
                         "condition" : "(\"dim2\" == \"________j0.k\")",
-                        "joinType" : "INNER"
+                        "joinType" : "INNER",
+                        "joinAlgorithm" : "broadcast"
                       },
                       "right" : {
                         "type" : "lookup",
@@ -309,7 +318,8 @@ DruidProject(dim1=[$0], druid=[logical])
                       },
                       "rightPrefix" : "_________j0.",
                       "condition" : "(\"dim2\" == \"_________j0.k\")",
-                      "joinType" : "INNER"
+                      "joinType" : "INNER",
+                      "joinAlgorithm" : "broadcast"
                     },
                     "right" : {
                       "type" : "lookup",
@@ -317,7 +327,8 @@ DruidProject(dim1=[$0], druid=[logical])
                     },
                     "rightPrefix" : "__________j0.",
                     "condition" : "(\"dim2\" == \"__________j0.k\")",
-                    "joinType" : "INNER"
+                    "joinType" : "INNER",
+                    "joinAlgorithm" : "broadcast"
                   },
                   "right" : {
                     "type" : "lookup",
@@ -325,7 +336,8 @@ DruidProject(dim1=[$0], druid=[logical])
                   },
                   "rightPrefix" : "___________j0.",
                   "condition" : "(\"dim2\" == \"___________j0.k\")",
-                  "joinType" : "INNER"
+                  "joinType" : "INNER",
+                  "joinAlgorithm" : "broadcast"
                 },
                 "right" : {
                   "type" : "lookup",
@@ -333,7 +345,8 @@ DruidProject(dim1=[$0], druid=[logical])
                 },
                 "rightPrefix" : "____________j0.",
                 "condition" : "(\"dim2\" == \"____________j0.k\")",
-                "joinType" : "INNER"
+                "joinType" : "INNER",
+                "joinAlgorithm" : "broadcast"
               },
               "right" : {
                 "type" : "lookup",
@@ -341,7 +354,8 @@ DruidProject(dim1=[$0], druid=[logical])
               },
               "rightPrefix" : "_____________j0.",
               "condition" : "(\"dim2\" == \"_____________j0.k\")",
-              "joinType" : "INNER"
+              "joinType" : "INNER",
+              "joinAlgorithm" : "broadcast"
             },
             "right" : {
               "type" : "lookup",
@@ -349,7 +363,8 @@ DruidProject(dim1=[$0], druid=[logical])
             },
             "rightPrefix" : "______________j0.",
             "condition" : "(\"dim2\" == \"______________j0.k\")",
-            "joinType" : "INNER"
+            "joinType" : "INNER",
+            "joinAlgorithm" : "broadcast"
           },
           "right" : {
             "type" : "lookup",
@@ -357,7 +372,8 @@ DruidProject(dim1=[$0], druid=[logical])
           },
           "rightPrefix" : "_______________j0.",
           "condition" : "(\"dim2\" == \"_______________j0.k\")",
-          "joinType" : "INNER"
+          "joinType" : "INNER",
+          "joinAlgorithm" : "broadcast"
         },
         "right" : {
           "type" : "lookup",
@@ -365,7 +381,8 @@ DruidProject(dim1=[$0], druid=[logical])
         },
         "rightPrefix" : "________________j0.",
         "condition" : "(\"dim2\" == \"________________j0.k\")",
-        "joinType" : "INNER"
+        "joinType" : "INNER",
+        "joinAlgorithm" : "broadcast"
       },
       "right" : {
         "type" : "lookup",
@@ -373,7 +390,8 @@ DruidProject(dim1=[$0], druid=[logical])
       },
       "rightPrefix" : "_________________j0.",
       "condition" : "(\"dim2\" == \"_________________j0.k\")",
-      "joinType" : "INNER"
+      "joinType" : "INNER",
+      "joinAlgorithm" : "broadcast"
     },
     "right" : {
       "type" : "lookup",
@@ -381,7 +399,8 @@ DruidProject(dim1=[$0], druid=[logical])
     },
     "rightPrefix" : "__________________j0.",
     "condition" : "(\"dim2\" == \"__________________j0.k\")",
-    "joinType" : "INNER"
+    "joinType" : "INNER",
+    "joinAlgorithm" : "broadcast"
   },
   "intervals" : {
     "type" : "intervals",
