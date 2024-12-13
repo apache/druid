@@ -76,14 +76,10 @@ import java.util.concurrent.atomic.AtomicReference;
 public class HttpLoadQueuePeon implements LoadQueuePeon
 {
   public static final TypeReference<List<DataSegmentChangeRequest>> REQUEST_ENTITY_TYPE_REF =
-      new TypeReference<List<DataSegmentChangeRequest>>()
-      {
-      };
+      new TypeReference<>() {};
 
   public static final TypeReference<List<DataSegmentChangeResponse>> RESPONSE_ENTITY_TYPE_REF =
-      new TypeReference<List<DataSegmentChangeResponse>>()
-      {
-      };
+      new TypeReference<>() {};
 
   private static final EmittingLogger log = new EmittingLogger(HttpLoadQueuePeon.class);
 
@@ -390,8 +386,10 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
       stopped = true;
 
       // Cancel all queued requests
-      queuedSegments.forEach(holder -> onRequestCompleted(holder, RequestStatus.CANCELLED));
-      log.info("Cancelled [%d] requests queued on server [%s].", queuedSegments.size(), serverId);
+      if (!queuedSegments.isEmpty()) {
+        queuedSegments.forEach(holder -> onRequestCompleted(holder, RequestStatus.CANCELLED));
+        log.info("Cancelled [%d] requests queued on server[%s].", queuedSegments.size(), serverId);
+      }
 
       segmentsToDrop.clear();
       segmentsToLoad.clear();
