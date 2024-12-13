@@ -80,7 +80,11 @@ public @interface DecoupledTestConfig
     /**
      * Occurs in tandem with {@link NotYetSupported.Modes.RESULT_MISMATCH_NATIVE_UNNEST_INCORRECT_RESULTS}.
      */
-    RESULT_MISMATCH_NATIVE_UNNEST_INCORRECT_RESULTS;
+    RESULT_MISMATCH_NATIVE_UNNEST_INCORRECT_RESULTS,
+    /**
+     * Not really different plan.
+     */
+    EQUIV_PLAN;
 
     public boolean isPresent()
     {
