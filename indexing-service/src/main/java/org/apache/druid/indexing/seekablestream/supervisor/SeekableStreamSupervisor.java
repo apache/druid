@@ -34,6 +34,7 @@ import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.AsyncFunction;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import it.unimi.dsi.fastutil.ints.Int2ObjectLinkedOpenHashMap;
@@ -123,6 +124,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -1107,6 +1109,15 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
   }
 
+  @Override
+  public ListenableFuture<Void> stopAsync(boolean stopGracefully) {
+    ListeningExecutorService shutdownExec = MoreExecutors.listeningDecorator(Execs.singleThreaded(StringUtils.encodeForFormat(supervisorId) + "-Shutdown-%d"));
+    return shutdownExec.submit(() -> {
+      stop(stopGracefully);
+      shutdownExec.shutdown();
+      return null;
+    });
+  }
   @Override
   public void reset(@Nullable final DataSourceMetadata dataSourceMetadata)
   {

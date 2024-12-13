@@ -64,7 +64,6 @@ public class SupervisorManager
   // SupervisorTaskAutoScaler could be null
   private final ConcurrentHashMap<String, SupervisorTaskAutoScaler> autoscalers = new ConcurrentHashMap<>();
   private final Object lock = new Object();
-  private final ListeningExecutorService shutdownExec;
 
   private volatile boolean started = false;
 
@@ -72,9 +71,6 @@ public class SupervisorManager
   public SupervisorManager(MetadataSupervisorManager metadataSupervisorManager)
   {
     this.metadataSupervisorManager = metadataSupervisorManager;
-    this.shutdownExec = MoreExecutors.listeningDecorator(
-        Execs.multiThreaded(25, "supervisor-manager-shutdown-%d")
-    );
   }
 
   public MetadataSupervisorManager getMetadataSupervisorManager()
@@ -227,9 +223,8 @@ public class SupervisorManager
     List<ListenableFuture<Void>> stopFutures = new ArrayList<>();
     synchronized (lock) {
       for (String id : supervisors.keySet()) {
-        stopFutures.add(shutdownExec.submit(() -> {
           try {
-            supervisors.get(id).lhs.stop(false);
+            stopFutures.add(supervisors.get(id).lhs.stopAsync(false));
             SupervisorTaskAutoScaler autoscaler = autoscalers.get(id);
             if (autoscaler != null) {
               autoscaler.stop();
@@ -238,15 +233,14 @@ public class SupervisorManager
           catch (Exception e) {
             log.warn(e, "Caught exception while stopping supervisor [%s]", id);
           }
-          return null;
-        }));
       }
       log.info("Waiting for [%d] supervisors to shutdown", stopFutures.size());
       try {
-        FutureUtils.coalesce(stopFutures).get(80, TimeUnit.SECONDS);
+        FutureUtils.coalesce(stopFutures).get();
       }
       catch (Exception e) {
         log.warn(
+            e,
             "Stopped [%d] out of [%d] supervisors. Remaining supervisors will be killed.",
             stopFutures.stream().filter(Future::isDone).count(),
             stopFutures.size()
