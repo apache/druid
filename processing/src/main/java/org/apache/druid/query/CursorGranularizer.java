@@ -99,6 +99,8 @@ public class CursorGranularizer
 
   private final Cursor cursor;
 
+  private final Granularity granularity;
+
   // Iterable that iterates over time buckets.
   private final Iterable<Interval> bucketIterable;
 
@@ -109,7 +111,6 @@ public class CursorGranularizer
 
   private long currentBucketStart;
   private long currentBucketEnd;
-  private final Granularity granularity;
 
   private CursorGranularizer(
       Cursor cursor,

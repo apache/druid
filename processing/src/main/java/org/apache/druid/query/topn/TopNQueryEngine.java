@@ -246,7 +246,7 @@ public class TopNQueryEngine
   )
   {
     if (cardinality < 0) {
-      // unknown cardinality doesn't work with the pooled algorith which requires an exact count of dictionary ids
+      // unknown cardinality doesn't work with the pooled algorithm which requires an exact count of dictionary ids
       return false;
     }
 
