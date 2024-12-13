@@ -41,8 +41,8 @@ public class ApproximateHistogram
   // max size of the histogram (number of bincount/position pairs)
   int size;
 
-  public float[] positions;
-  public long[] bins;
+  protected float[] positions;
+  protected long[] bins;
 
   // used bincount
   int binCount;

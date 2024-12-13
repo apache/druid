@@ -22,6 +22,7 @@ package org.apache.druid.sql.calcite.run;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedSet;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
@@ -42,7 +43,7 @@ import java.util.List;
 
 public class SqlResultsTest extends InitializedNullHandlingTest
 {
-  private static final SqlResults.Context DEFAULT_CONTEXT = new SqlResults.Context(DateTimeZone.UTC, true, false);
+  private static final SqlResults.Context DEFAULT_CONTEXT = new SqlResults.Context(DateTimeZone.UTC, false);
 
   private ObjectMapper jsonMapper;
 
@@ -244,6 +245,12 @@ public class SqlResultsTest extends InitializedNullHandlingTest
   public void testMayNotCoerceList()
   {
     Assert.assertEquals("hello", SqlResults.coerceArrayToList("hello", false));
+  }
+
+  @Test
+  public void testContextEqualsAndHashcode()
+  {
+    EqualsVerifier.forClass(SqlResults.Context.class).usingGetClass().verify();
   }
 
   private void assertCoerce(Object expected, Object toCoerce, SqlTypeName typeName)

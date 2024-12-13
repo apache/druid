@@ -17,12 +17,12 @@
  * under the License.
  */
 
-package org.apache.druid.sql.client;
+package org.apache.druid.client.broker;
 
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.sql.http.ExplainPlan;
-import org.apache.druid.sql.http.SqlQuery;
-import org.apache.druid.sql.http.SqlTaskStatus;
+import org.apache.druid.query.explain.ExplainPlan;
+import org.apache.druid.query.http.ClientSqlQuery;
+import org.apache.druid.query.http.SqlTaskStatus;
 
 import java.util.List;
 
@@ -40,12 +40,12 @@ public interface BrokerClient
   /**
    * Submit the given {@code sqlQuery} to the Broker's SQL task endpoint.
    */
-  ListenableFuture<SqlTaskStatus> submitSqlTask(SqlQuery sqlQuery);
+  ListenableFuture<SqlTaskStatus> submitSqlTask(ClientSqlQuery sqlQuery);
 
   /**
    * Fetches the explain plan for the given {@code sqlQuery} from the Broker's SQL task endpoint.
    *
    * @param sqlQuery the SQL query for which the {@code EXPLAIN PLAN FOR} information is to be fetched
    */
-  ListenableFuture<List<ExplainPlan>> fetchExplainPlan(SqlQuery sqlQuery);
+  ListenableFuture<List<ExplainPlan>> fetchExplainPlan(ClientSqlQuery sqlQuery);
 }

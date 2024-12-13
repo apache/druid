@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.sql.client;
+package org.apache.druid.client.broker;
 
 import com.google.inject.BindingAnnotation;
 

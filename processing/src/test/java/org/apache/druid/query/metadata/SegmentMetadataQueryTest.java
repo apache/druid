@@ -910,7 +910,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
         0,
         expectedSegmentAnalysis1.getNumRows() + expectedSegmentAnalysis2.getNumRows(),
         null,
-        new TimestampSpec("ds", "auto", null),
+        new TimestampSpec("ts", "iso", null),
         null,
         null
     );

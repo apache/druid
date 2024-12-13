@@ -2270,10 +2270,10 @@ public class TaskLockboxTest
     }
 
     @Override
-    protected TaskLockPosse verifyAndCreateOrFindLockPosse(Task task, TaskLock taskLock)
+    protected TaskLockPosse reacquireLockOnStartup(Task task, TaskLock taskLock)
     {
       return task.getGroupId()
-                 .contains("FailingLockAcquisition") ? null : super.verifyAndCreateOrFindLockPosse(task, taskLock);
+                 .contains("FailingLockAcquisition") ? null : super.reacquireLockOnStartup(task, taskLock);
     }
   }
 }

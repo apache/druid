@@ -17,24 +17,21 @@
  * under the License.
  */
 
-package org.apache.druid.sql.client;
+package org.apache.druid.client.broker;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.calcite.avatica.SqlType;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.query.explain.ExplainAttributes;
+import org.apache.druid.query.explain.ExplainPlan;
+import org.apache.druid.query.http.ClientSqlQuery;
+import org.apache.druid.query.http.SqlTaskStatus;
 import org.apache.druid.rpc.MockServiceClient;
 import org.apache.druid.rpc.RequestBuilder;
-import org.apache.druid.sql.calcite.planner.ExplainAttributes;
-import org.apache.druid.sql.http.ExplainPlan;
-import org.apache.druid.sql.http.ResultFormat;
-import org.apache.druid.sql.http.SqlParameter;
-import org.apache.druid.sql.http.SqlQuery;
-import org.apache.druid.sql.http.SqlTaskStatus;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.junit.After;
@@ -43,7 +40,6 @@ import org.junit.Test;
 
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
-
 import java.util.List;
 import java.util.Map;
 
@@ -72,14 +68,14 @@ public class BrokerClientImplTest
   @Test
   public void testSubmitSqlTask() throws Exception
   {
-    final SqlQuery query = new SqlQuery(
+    final ClientSqlQuery query = new ClientSqlQuery(
         "REPLACE INTO foo OVERWRITE ALL SELECT * FROM bar PARTITIONED BY ALL",
-        ResultFormat.ARRAY,
+        null,
         true,
         true,
         true,
         ImmutableMap.of("useCache", false),
-        ImmutableList.of(new SqlParameter(SqlType.INTEGER, 1))
+        null
     );
     final SqlTaskStatus taskStatus = new SqlTaskStatus("taskId1", TaskState.RUNNING, null);
 
@@ -97,16 +93,16 @@ public class BrokerClientImplTest
   @Test
   public void testFetchExplainPlan() throws Exception
   {
-    final SqlQuery query = new SqlQuery(
+    final ClientSqlQuery query = new ClientSqlQuery(
         "REPLACE INTO foo OVERWRITE ALL SELECT * FROM bar PARTITIONED BY ALL",
-        ResultFormat.ARRAY,
+        null,
         true,
         true,
         true,
         ImmutableMap.of("useCache", false),
-        ImmutableList.of(new SqlParameter(SqlType.INTEGER, 1))
+        null
     );
-    final SqlQuery explainQuery = new SqlQuery(
+    final ClientSqlQuery explainQuery = new ClientSqlQuery(
         StringUtils.format("EXPLAIN PLAN FOR %s", query.getQuery()),
         null,
         false,
