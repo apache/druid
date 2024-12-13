@@ -775,7 +775,7 @@ public class SqlTestFramework
       binder.bind(GroupByQueryConfig.class).toInstance(groupByConfig);
 
       DruidBinders
-          .queryRFBinder(binder)
+          .queryBinder(binder)
           .naiveBinding(GroupByQuery.class, GroupByQueryRunnerFactory.class)
 //          .mapOnlyBind(GroupByQuery.class, GroupByQueryRunnerFactory.class)
           .naiveBinding(SegmentMetadataQuery.class, SegmentMetadataQueryRunnerFactory.class)
@@ -787,20 +787,20 @@ public class SqlTestFramework
           .naiveBinding(WindowOperatorQuery.class, WindowOperatorQueryQueryRunnerFactory.class);
 
       DruidBinders
-          .queryTCBinder(binder)
+          .queryBinder(binder)
 //          .mapOnlyBind(GroupByQuery.class, GroupByQueryQueryToolChest.class)
-          .naiveBinding(GroupByQuery.class, GroupByQueryQueryToolChest.class)
-          .naiveBinding(SegmentMetadataQuery.class, SegmentMetadataQueryQueryToolChest.class)
-          .naiveBinding(SearchQuery.class, SearchQueryQueryToolChest.class)
-          .naiveBinding(ScanQuery.class, ScanQueryQueryToolChest.class)
-          .naiveBinding(TimeseriesQuery.class, TimeseriesQueryQueryToolChest.class)
-          .naiveBinding(TopNQuery.class, TopNQueryQueryToolChest.class)
-          .naiveBinding(TimeBoundaryQuery.class, TimeBoundaryQueryQueryToolChest.class)
-          .naiveBinding(WindowOperatorQuery.class, WindowOperatorQueryQueryToolChest.class);
+          .naiveBinding2(GroupByQuery.class, GroupByQueryQueryToolChest.class)
+          .naiveBinding2(SegmentMetadataQuery.class, SegmentMetadataQueryQueryToolChest.class)
+          .naiveBinding2(SearchQuery.class, SearchQueryQueryToolChest.class)
+          .naiveBinding2(ScanQuery.class, ScanQueryQueryToolChest.class)
+          .naiveBinding2(TimeseriesQuery.class, TimeseriesQueryQueryToolChest.class)
+          .naiveBinding2(TopNQuery.class, TopNQueryQueryToolChest.class)
+          .naiveBinding2(TimeBoundaryQuery.class, TimeBoundaryQueryQueryToolChest.class)
+          .naiveBinding2(WindowOperatorQuery.class, WindowOperatorQueryQueryToolChest.class);
 
       DruidBinders
-          .queryLogicBinder(binder)
-          .naiveBinding(UnionQuery.class, UnionQueryLogic.class);
+          .queryBinder(binder)
+          .bindQueryLogic(UnionQuery.class, UnionQueryLogic.class);
     }
 
     @Provides

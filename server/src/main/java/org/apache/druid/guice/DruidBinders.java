@@ -19,6 +19,7 @@
 
 package org.apache.druid.guice;
 
+import com.google.common.collect.ImmutableSet;
 import com.google.inject.Binder;
 import com.google.inject.TypeLiteral;
 import com.google.inject.multibindings.MapBinder;
@@ -33,6 +34,9 @@ import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.server.DruidNode;
 
+import java.lang.annotation.Annotation;
+import java.util.Set;
+
 public class DruidBinders
 {
   public static MapBinder<Class<? extends Query>, QueryRunnerFactory> queryRunnerFactoryBinder(Binder binder)
@@ -44,11 +48,6 @@ public class DruidBinders
     );
   }
 
-  public static MapBinderHelper<Class<? extends Query>, QueryRunnerFactory> queryRFBinder(Binder binder)
-  {
-    return new MapBinderHelper<>(binder, queryRunnerFactoryBinder(binder));
-  }
-
   public static MapBinder<Class<? extends Query>, QueryToolChest> queryToolChestBinder(Binder binder)
   {
     return MapBinder.newMapBinder(
@@ -56,11 +55,6 @@ public class DruidBinders
         new TypeLiteral<Class<? extends Query>>() {},
         new TypeLiteral<QueryToolChest>() {}
     );
-  }
-
-  public static MapBinderHelper<Class<? extends Query>, QueryToolChest> queryTCBinder(Binder binder)
-  {
-    return new MapBinderHelper<>(binder, queryToolChestBinder(binder));
   }
 
   public static MapBinder<Class<? extends Query>, QueryLogic> queryLogicBinderType(Binder binder)
@@ -72,24 +66,68 @@ public class DruidBinders
     );
   }
 
-  public static QueryLogicBinder queryLogicBinder(Binder binder)
+  public static QueryLogicBinder queryBinder(Binder binder)
   {
     return new QueryLogicBinder(binder);
   }
 
-  public static class QueryLogicBinder extends MapBinderHelper<Class<? extends Query>, QueryLogic>
+  public static class QueryLogicBinder
   {
+    MapBinderHelper<Class<? extends Query>, QueryLogic> queryLogicBinder;
+    MapBinderHelper<Class<? extends Query>, QueryRunnerFactory> queryRunnerFactoryBinder;
+    MapBinderHelper<Class<? extends Query>, QueryToolChest> queryToolChestBinder;
+
+
     public QueryLogicBinder(Binder binder)
     {
-      super(binder, DruidBinders.queryLogicBinderType(binder));
+      queryLogicBinder = new MapBinderHelper<>(
+          binder, queryLogicBinderType(binder), ImmutableSet.of(LazySingleton.class)
+      );
+      queryRunnerFactoryBinder = new MapBinderHelper<>(
+          binder, queryRunnerFactoryBinder(binder), ImmutableSet.of(LazySingleton.class)
+      );
+      queryToolChestBinder = new MapBinderHelper<>(
+          binder, queryToolChestBinder(binder), ImmutableSet.of(LazySingleton.class)
+      );
     }
 
-    QueryLogicBinder bindQueryLogic(
+    public QueryLogicBinder bindQueryLogic(
         Class<? extends Query> queryTypeClazz,
         Class<? extends QueryLogic> queryLogicClazz)
     {
-      naiveBinding(queryTypeClazz, queryLogicClazz);
+      queryLogicBinder.bind(queryTypeClazz, queryLogicClazz);
       return this;
+    }
+
+    public QueryLogicBinder bindQueryRunnerFactory(
+        Class<? extends Query> queryTypeClazz,
+        Class<? extends QueryRunnerFactory> queryRunnerFactory)
+    {
+      queryRunnerFactoryBinder.bind(queryTypeClazz, queryRunnerFactory);
+      return this;
+    }
+
+    public QueryLogicBinder naiveBinding2(Class<? extends Query> class1, Class<? extends QueryToolChest> class2)
+    {
+      return bindQueryToolChest(class1, class2);
+    }
+
+    private QueryLogicBinder bindQueryToolChest(
+        Class<? extends Query> queryTypeClazz,
+        Class<? extends QueryToolChest> queryToolChest)
+    {
+      queryToolChestBinder.bind(queryTypeClazz, queryToolChest);
+      return this;
+    }
+
+    public QueryLogicBinder naiveBinding(
+
+        Class<? extends Query> queryTypeClazz,
+        Class<? extends QueryRunnerFactory> queryRunnerFactory)
+
+    {
+      return bindQueryRunnerFactory(queryTypeClazz, queryRunnerFactory);
+
     }
   }
 
@@ -132,55 +170,43 @@ public class DruidBinders
 
   public static class MapBinderHelper<KeyClass, ValueClass>
   {
-    private final Binder binder;
-    private final MapBinder<KeyClass, ValueClass> mapBinder;
+    protected final Binder binder;
+    protected final MapBinder<KeyClass, ValueClass> mapBinder;
+    protected final Set<Class<? extends Annotation>> scopes;
 
     private MapBinderHelper(
         Binder binder,
-        MapBinder<KeyClass, ValueClass> mapBinder
-    )
+        MapBinder<KeyClass, ValueClass> mapBinder,
+        Set<Class<? extends Annotation>> scopes)
     {
       this.binder = binder;
       this.mapBinder = mapBinder;
+      this.scopes = scopes;
     }
 
-    public Binder getBinder()
+    protected Binder getBinder()
     {
       return binder;
     }
 
-    public MapBinder<KeyClass, ValueClass> getMapBinder()
+    protected MapBinder<KeyClass, ValueClass> getMapBinder()
     {
       return mapBinder;
     }
 
     /**
-     * Just binds with the MapBinder, so that modules can control how the actual object is injected
+     * Binds the given map value.
      *
      * @param key
      * @param value
-     * @return
+     * @return this to enable builder like reuse
      */
-    public MapBinderHelper<KeyClass, ValueClass> mapOnlyBind(KeyClass key, Class<? extends ValueClass> value)
+    public MapBinderHelper<KeyClass, ValueClass> bind(KeyClass key, Class<? extends ValueClass> value)
     {
       mapBinder.addBinding(key).to(value);
-      return this;
-    }
-
-    /**
-     * Bundles the map binding and the binding of the object.  The actual object will be bound directly in
-     * LazySingleton scope.  It is important to realize that this binding will be used instead of, e.g. provider
-     * methods on the module.  So if you want to control how the object is instantiated beyond just using an
-     * @Inject constructor, use mapOnlyBind instead.
-     *
-     * @param key
-     * @param value
-     * @return
-     */
-    public MapBinderHelper<KeyClass, ValueClass> naiveBinding(KeyClass key, Class<? extends ValueClass> value)
-    {
-      mapOnlyBind(key, value);
-      binder.bind(value).in(LazySingleton.class);
+      for (Class<? extends Annotation> clazz : scopes) {
+        binder.bind(value).in(clazz);
+      }
       return this;
     }
   }
