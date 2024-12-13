@@ -24,7 +24,6 @@ import org.apache.calcite.plan.RelOptUtil;
 import org.apache.calcite.rel.RelHomogeneousShuttle;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.CorrelationId;
-import org.apache.calcite.rel.core.TableScan;
 import org.apache.calcite.rel.logical.LogicalCorrelate;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeField;
@@ -53,14 +52,12 @@ import java.util.Set;
 
 public class DruidRelFieldTrimmer extends RelFieldTrimmer
 {
-  private final boolean trimTableScan;
   private final RelBuilder relBuilder;
 
-  public DruidRelFieldTrimmer(@Nullable SqlValidator validator, RelBuilder relBuilder, boolean trimTableScan)
+  public DruidRelFieldTrimmer(@Nullable SqlValidator validator, RelBuilder relBuilder)
   {
     super(validator, relBuilder);
     this.relBuilder = relBuilder;
-    this.trimTableScan = trimTableScan;
   }
 
   @Override
@@ -72,7 +69,7 @@ public class DruidRelFieldTrimmer extends RelFieldTrimmer
   protected TrimResult dummyProject(int fieldCount, RelNode input,
       @Nullable RelNode originalRelNode)
   {
-    if (fieldCount != 0 && trimTableScan) {
+    if (fieldCount != 0) {
       return super.dummyProject(fieldCount, input, originalRelNode);
     }
     // workaround to support fieldCount == 0 projections
@@ -94,19 +91,6 @@ public class DruidRelFieldTrimmer extends RelFieldTrimmer
   {
     Mapping mapping = Mappings.createIdentity(input.getRowType().getFieldCount());
     return result(input, mapping);
-  }
-
-  public TrimResult trimFields(
-      final TableScan tableAccessRel,
-      ImmutableBitSet fieldsUsed,
-      Set<RelDataTypeField> extraFields)
-  {
-    if (fieldsUsed.cardinality()>0 || trimTableScan) {
-      return super.trimFields(tableAccessRel, fieldsUsed, extraFields);
-    } else {
-      Mapping mapping = Mappings.createIdentity(tableAccessRel.getRowType().getFieldCount());
-      return result(tableAccessRel, mapping, tableAccessRel);
-    }
   }
 
   public TrimResult trimFields(LogicalCorrelate correlate,
