@@ -53,9 +53,7 @@ public class ResetDataSourceMetadataAction implements TaskAction<Boolean>
   @Override
   public TypeReference<Boolean> getReturnTypeReference()
   {
-    return new TypeReference<>()
-    {
-    };
+    return new TypeReference<>() {};
   }
 
   @Override

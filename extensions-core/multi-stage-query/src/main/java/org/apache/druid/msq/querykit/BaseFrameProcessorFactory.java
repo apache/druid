@@ -37,9 +37,7 @@ public abstract class BaseFrameProcessorFactory implements FrameProcessorFactory
   @Override
   public TypeReference<Long> getResultTypeReference()
   {
-    return new TypeReference<>()
-    {
-    };
+    return new TypeReference<>() {};
   }
 
   @Override

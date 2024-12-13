@@ -2187,9 +2187,7 @@ public class CompactSegmentsTest
 
       List<Object> metricsSpec = null;
       if (clientCompactionTaskQuery.getMetricsSpec() != null) {
-        metricsSpec = jsonMapper.convertValue(clientCompactionTaskQuery.getMetricsSpec(), new TypeReference<>()
-        {
-        });
+        metricsSpec = jsonMapper.convertValue(clientCompactionTaskQuery.getMetricsSpec(), new TypeReference<>() {});
       }
 
       for (int i = 0; i < 2; i++) {

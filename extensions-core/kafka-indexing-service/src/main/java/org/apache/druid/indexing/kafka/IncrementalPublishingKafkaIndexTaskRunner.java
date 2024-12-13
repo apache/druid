@@ -218,9 +218,7 @@ public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamInd
   @Override
   public TypeReference<List<SequenceMetadata<KafkaTopicPartition, Long>>> getSequenceMetadataTypeReference()
   {
-    return new TypeReference<>()
-    {
-    };
+    return new TypeReference<>() {};
   }
 
   @Nullable

@@ -122,9 +122,7 @@ public class MovingAverageQueryToolChest extends QueryToolChest<Row, MovingAvera
   @Override
   public TypeReference<Row> getResultTypeReference()
   {
-    return new TypeReference<>()
-    {
-    };
+    return new TypeReference<>() {};
   }
 
   @Override

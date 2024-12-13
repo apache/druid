@@ -333,9 +333,7 @@ public class CoordinatorResourceTestClient
 
     Map<String, Object> results2 = jsonMapper.readValue(
         response.getContent(),
-        new TypeReference<>()
-        {
-        }
+        new TypeReference<>() {}
     );
 
     return results2;

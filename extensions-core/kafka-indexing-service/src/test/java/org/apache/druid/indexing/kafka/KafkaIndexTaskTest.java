@@ -2287,9 +2287,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     Map<KafkaTopicPartition, Long> currentOffsets = OBJECT_MAPPER.readValue(
         task.getRunner().pause().getEntity().toString(),
-        new TypeReference<>()
-        {
-        }
+        new TypeReference<>() {}
     );
     Assert.assertEquals(Status.PAUSED, task.getRunner().getStatus());
     Assert.assertEquals(Status.PAUSED.toString(), task.getCurrentRunnerStatus());

@@ -164,9 +164,7 @@ public class JsonNodeReader extends IntermediateRowParsingReader<JsonNode>
       throw ((ParseExceptionMarkerJsonNode) intermediateRow).getParseException();
     }
     return Collections.singletonList(
-        mapper.readValue(intermediateRow.toString(), new TypeReference<>()
-        {
-        })
+        mapper.readValue(intermediateRow.toString(), new TypeReference<>() {})
     );
   }
 

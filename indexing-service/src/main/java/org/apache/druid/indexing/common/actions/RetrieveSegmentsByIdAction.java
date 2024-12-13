@@ -62,9 +62,7 @@ public class RetrieveSegmentsByIdAction implements TaskAction<Set<DataSegment>>
   @Override
   public TypeReference<Set<DataSegment>> getReturnTypeReference()
   {
-    return new TypeReference<>()
-    {
-    };
+    return new TypeReference<>() {};
   }
 
   @Override

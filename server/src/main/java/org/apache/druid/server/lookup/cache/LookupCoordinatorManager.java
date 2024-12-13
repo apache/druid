@@ -488,9 +488,7 @@ public class LookupCoordinatorManager
     //Note: this call is idempotent, so multiple start() would not cause any problems.
     lookupMapConfigRef = configManager.watch(
         LOOKUP_CONFIG_KEY,
-        new TypeReference<>()
-        {
-        },
+        new TypeReference<>() {},
         null
     );
 

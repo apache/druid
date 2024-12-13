@@ -56,9 +56,7 @@ public class SegmentNukeAction implements TaskAction<Void>
   @Override
   public TypeReference<Void> getReturnTypeReference()
   {
-    return new TypeReference<>()
-    {
-    };
+    return new TypeReference<>() {};
   }
 
   @Override

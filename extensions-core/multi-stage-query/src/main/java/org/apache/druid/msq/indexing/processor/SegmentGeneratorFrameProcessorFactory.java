@@ -237,9 +237,7 @@ public class SegmentGeneratorFrameProcessorFactory
   @Override
   public TypeReference<Set<DataSegment>> getResultTypeReference()
   {
-    return new TypeReference<>()
-    {
-    };
+    return new TypeReference<>() {};
   }
 
   @Nullable

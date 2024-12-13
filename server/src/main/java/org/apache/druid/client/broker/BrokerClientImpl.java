@@ -77,9 +77,7 @@ public class BrokerClientImpl implements BrokerClient
                 .jsonContent(jsonMapper, explainSqlQuery),
             new BytesFullResponseHandler()
         ),
-        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), new TypeReference<>()
-        {
-        })
+        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), new TypeReference<>() {})
     );
   }
 }

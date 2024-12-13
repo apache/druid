@@ -135,9 +135,7 @@ public class IncrementalPublishingRabbitStreamIndexTaskRunner
   @Override
   public TypeReference<List<SequenceMetadata<String, Long>>> getSequenceMetadataTypeReference()
   {
-    return new TypeReference<>()
-    {
-    };
+    return new TypeReference<>() {};
   }
 
   @Nullable

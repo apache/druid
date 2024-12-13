@@ -30,9 +30,7 @@ public class LockListAction implements TaskAction<List<TaskLock>>
   @Override
   public TypeReference<List<TaskLock>> getReturnTypeReference()
   {
-    return new TypeReference<>()
-    {
-    };
+    return new TypeReference<>() {};
   }
 
   @Override

@@ -46,7 +46,6 @@ import org.apache.druid.query.FrameBasedInlineDataSource;
 import org.apache.druid.query.FrameSignaturePair;
 import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.InlineDataSource;
-import org.apache.druid.query.PostProcessingOperator;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;

@@ -2551,9 +2551,7 @@ public class IndexTaskTest extends IngestionTestBase
   {
     TaskReport.ReportMap taskReports = jsonMapper.readValue(
         taskRunner.getTaskReportsFile(),
-        new TypeReference<>()
-        {
-        }
+        new TypeReference<>() {}
     );
     return IngestionStatsAndErrors.getPayloadFromTaskReports(taskReports);
   }

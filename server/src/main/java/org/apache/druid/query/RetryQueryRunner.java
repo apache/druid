@@ -167,9 +167,7 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
 
     return jsonMapper.convertValue(
         maybeMissingSegments,
-        new TypeReference<>()
-        {
-        }
+        new TypeReference<>() {}
     );
   }
 

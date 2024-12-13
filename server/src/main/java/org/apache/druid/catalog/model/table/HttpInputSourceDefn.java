@@ -310,9 +310,7 @@ public class HttpInputSourceDefn extends FormattedInputSourceDefn
     Map<String, String> headersMap;
     if (requestHeaders != null) {
       try {
-        headersMap = DefaultObjectMapper.INSTANCE.readValue(requestHeaders, new TypeReference<>()
-        {
-        });
+        headersMap = DefaultObjectMapper.INSTANCE.readValue(requestHeaders, new TypeReference<>() {});
       }
       catch (JsonProcessingException e) {
         throw new ISE("Failed read map from headers json");

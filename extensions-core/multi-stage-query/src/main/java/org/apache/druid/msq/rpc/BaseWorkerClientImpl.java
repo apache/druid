@@ -190,9 +190,7 @@ public abstract class BaseWorkerClientImpl implements WorkerClient
             new RequestBuilder(HttpMethod.GET, "/counters").header(HttpHeaders.ACCEPT, contentType),
             new BytesFullResponseHandler()
         ),
-        holder -> deserialize(holder, new TypeReference<>()
-        {
-        })
+        holder -> deserialize(holder, new TypeReference<>() {})
     );
   }
 

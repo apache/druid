@@ -59,9 +59,7 @@ public class ClientCompactionTaskTransformSpec
   {
     return objectMapper.convertValue(
         this,
-        new TypeReference<>()
-        {
-        }
+        new TypeReference<>() {}
     );
   }
 

@@ -105,9 +105,7 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
   @Override
   public TypeReference<SegmentPublishResult> getReturnTypeReference()
   {
-    return new TypeReference<>()
-    {
-    };
+    return new TypeReference<>() {};
   }
 
   /**

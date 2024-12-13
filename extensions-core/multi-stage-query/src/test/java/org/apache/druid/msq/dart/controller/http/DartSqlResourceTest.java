@@ -571,9 +571,7 @@ public class DartSqlResourceTest extends MSQTestBase
 
     final List<List<TaskReport.ReportMap>> reportMaps = objectMapper.readValue(
         asyncResponse.baos.toByteArray(),
-        new TypeReference<>()
-        {
-        }
+        new TypeReference<>() {}
     );
 
     Assertions.assertEquals(1, reportMaps.size());
@@ -612,9 +610,7 @@ public class DartSqlResourceTest extends MSQTestBase
 
     final List<List<TaskReport.ReportMap>> reportMaps = objectMapper.readValue(
         asyncResponse.baos.toByteArray(),
-        new TypeReference<>()
-        {
-        }
+        new TypeReference<>() {}
     );
 
     Assertions.assertEquals(1, reportMaps.size());

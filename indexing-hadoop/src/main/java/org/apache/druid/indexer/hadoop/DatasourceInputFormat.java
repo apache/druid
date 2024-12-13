@@ -253,9 +253,7 @@ public class DatasourceInputFormat extends InputFormat<NullWritable, InputRow>
 
     return HadoopDruidIndexerConfig.JSON_MAPPER.readValue(
         currentDatasources,
-        new TypeReference<>()
-        {
-        }
+        new TypeReference<>() {}
     );
   }
 
@@ -288,9 +286,7 @@ public class DatasourceInputFormat extends InputFormat<NullWritable, InputRow>
   {
     return HadoopDruidIndexerConfig.JSON_MAPPER.readValue(
         conf.get(StringUtils.format("%s.%s", CONF_SEGMENTS, dataSource)),
-        new TypeReference<>()
-        {
-        }
+        new TypeReference<>() {}
     );
   }
 

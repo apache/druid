@@ -143,9 +143,7 @@ public class CoordinatorClientImpl implements CoordinatorClient
                 .jsonContent(jsonMapper, intervals),
             new BytesFullResponseHandler()
         ),
-        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), new TypeReference<>()
-        {
-        })
+        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), new TypeReference<>() {})
     );
   }
 
@@ -159,9 +157,7 @@ public class CoordinatorClientImpl implements CoordinatorClient
                 .jsonContent(jsonMapper, dataSources),
             new BytesFullResponseHandler()
         ),
-        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), new TypeReference<>()
-        {
-        })
+        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), new TypeReference<>() {})
     );
   }
 
@@ -202,9 +198,7 @@ public class CoordinatorClientImpl implements CoordinatorClient
             new RequestBuilder(HttpMethod.GET, path),
             new BytesFullResponseHandler()
         ),
-        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), new TypeReference<>()
-        {
-        })
+        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), new TypeReference<>() {})
     );
   }
 }

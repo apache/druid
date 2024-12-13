@@ -64,9 +64,7 @@ public class RetrieveUpgradedToSegmentIdsAction implements TaskAction<UpgradedTo
   @Override
   public TypeReference<UpgradedToSegmentsResponse> getReturnTypeReference()
   {
-    return new TypeReference<>()
-    {
-    };
+    return new TypeReference<>() {};
   }
 
   @Override

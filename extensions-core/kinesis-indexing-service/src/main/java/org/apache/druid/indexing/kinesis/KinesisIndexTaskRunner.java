@@ -181,9 +181,7 @@ public class KinesisIndexTaskRunner extends SeekableStreamIndexTaskRunner<String
   @Override
   public TypeReference<List<SequenceMetadata<String, String>>> getSequenceMetadataTypeReference()
   {
-    return new TypeReference<>()
-    {
-    };
+    return new TypeReference<>() {};
   }
 
   @Nullable

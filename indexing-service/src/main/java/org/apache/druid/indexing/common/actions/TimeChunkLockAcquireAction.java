@@ -76,9 +76,7 @@ public class TimeChunkLockAcquireAction implements TaskAction<TaskLock>
   @Override
   public TypeReference<TaskLock> getReturnTypeReference()
   {
-    return new TypeReference<>()
-    {
-    };
+    return new TypeReference<>() {};
   }
 
   @Override

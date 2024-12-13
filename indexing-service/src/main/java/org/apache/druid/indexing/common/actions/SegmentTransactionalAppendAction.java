@@ -132,9 +132,7 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
   @Override
   public TypeReference<SegmentPublishResult> getReturnTypeReference()
   {
-    return new TypeReference<>()
-    {
-    };
+    return new TypeReference<>() {};
   }
 
   @Override

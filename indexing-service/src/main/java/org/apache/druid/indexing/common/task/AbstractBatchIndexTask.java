@@ -639,10 +639,10 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
                                           : new ClientCompactionTaskTransformSpec(ingestionSpec.getDataSchema().getTransformSpec().getFilter()).asMap(toolbox.getJsonMapper());
       List<Object> metricsSpec = ingestionSpec.getDataSchema().getAggregators() == null
                                  ? null
-                                 : toolbox.getJsonMapper().convertValue(ingestionSpec.getDataSchema().getAggregators(),
-                                                                        new TypeReference<>()
-                                                                        {
-                                                                        });
+                                 : toolbox.getJsonMapper().convertValue(
+                                     ingestionSpec.getDataSchema().getAggregators(),
+                                     new TypeReference<>() {}
+                                 );
 
       return CompactionState.addCompactionStateToSegments(
           tuningConfig.getPartitionsSpec(),

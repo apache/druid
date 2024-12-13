@@ -85,9 +85,7 @@ public abstract class BaseGranularitySpec implements GranularitySpec
   {
     return objectMapper.convertValue(
         this,
-        new TypeReference<>()
-        {
-        }
+        new TypeReference<>() {}
     );
   }
 
