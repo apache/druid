@@ -225,7 +225,7 @@ public class NestedDataColumnSupplierV4Test extends InitializedNullHandlingTest
     bob.setFileMapper(fileMapper);
     ComplexColumnPartSerde partSerde = ComplexColumnPartSerde.createDeserializer(NestedDataComplexTypeSerde.TYPE_NAME);
     ColumnPartSerde.Deserializer deserializer = partSerde.getDeserializer();
-    deserializer.read(baseBuffer, bob, ColumnConfig.SELECTION_SIZE);
+    deserializer.read(baseBuffer, bob, ColumnConfig.SELECTION_SIZE, null);
     final ColumnHolder holder = bob.build();
     final ColumnCapabilities capabilities = holder.getCapabilities();
     Assert.assertEquals(ColumnType.NESTED_DATA, capabilities.toColumnType());

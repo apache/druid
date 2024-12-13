@@ -244,6 +244,32 @@ public class FutureUtilsTest
   }
 
   @Test
+  public void test_transformAsync_exceptionInFunction()
+  {
+    final ListenableFuture<Object> f = FutureUtils.transformAsync(
+        Futures.immediateFuture("x"),
+        s -> {
+          throw new ISE("error!");
+        }
+    );
+
+    final ExecutionException e = Assert.assertThrows(
+        ExecutionException.class,
+        f::get
+    );
+
+    MatcherAssert.assertThat(
+        e,
+        ThrowableCauseMatcher.hasCause(CoreMatchers.instanceOf(ISE.class))
+    );
+
+    MatcherAssert.assertThat(
+        e,
+        ThrowableCauseMatcher.hasCause(ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("error!")))
+    );
+  }
+
+  @Test
   public void test_coalesce_allOk() throws Exception
   {
     final List<ListenableFuture<String>> futures = new ArrayList<>();

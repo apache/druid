@@ -16,9 +16,14 @@
  * limitations under the License.
  */
 
-export type DruidEngine = 'native' | 'sql-native' | 'sql-msq-task';
+export type DruidEngine = 'native' | 'sql-native' | 'sql-msq-task' | 'sql-msq-dart';
 
-export const DRUID_ENGINES: DruidEngine[] = ['native', 'sql-native', 'sql-msq-task'];
+export const DRUID_ENGINES: DruidEngine[] = [
+  'native',
+  'sql-native',
+  'sql-msq-task',
+  'sql-msq-dart',
+];
 
 export function validDruidEngine(
   possibleDruidEngine: string | undefined,

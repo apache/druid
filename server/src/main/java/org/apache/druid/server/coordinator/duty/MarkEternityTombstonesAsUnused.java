@@ -72,9 +72,9 @@ public class MarkEternityTombstonesAsUnused implements CoordinatorDuty
 {
   private static final Logger log = new Logger(MarkEternityTombstonesAsUnused.class);
 
-  private final SegmentDeleteHandler deleteHandler;
+  private final MetadataAction.DeleteSegments deleteHandler;
 
-  public MarkEternityTombstonesAsUnused(final SegmentDeleteHandler deleteHandler)
+  public MarkEternityTombstonesAsUnused(final MetadataAction.DeleteSegments deleteHandler)
   {
     this.deleteHandler = deleteHandler;
   }

@@ -40,6 +40,12 @@ public class AllTrueBitmapColumnIndex implements BitmapColumnIndex
   }
 
   @Override
+  public int estimatedComputeCost()
+  {
+    return 0;
+  }
+
+  @Override
   public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
   {
     return bitmapResultFactory.wrapAllTrue(

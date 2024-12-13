@@ -67,14 +67,13 @@ public class InputSourceSampler
 {
   private static final String SAMPLER_DATA_SOURCE = "sampler";
 
-  private static final DataSchema DEFAULT_DATA_SCHEMA = new DataSchema(
-      SAMPLER_DATA_SOURCE,
-      new TimestampSpec(null, null, null),
-      new DimensionsSpec(null),
-      null,
-      null,
-      null
-  );
+
+  private static final DataSchema DEFAULT_DATA_SCHEMA =
+      DataSchema.builder()
+                .withDataSource(SAMPLER_DATA_SOURCE)
+                .withTimestamp(new TimestampSpec(null, null, null))
+                .withDimensions(DimensionsSpec.builder().build())
+                .build();
 
   // We want to be able to sort the list of processed results back into the same order that we read them from the input
   // source so that the rows in the data loader are not always changing. To do this, we add a temporary column to the

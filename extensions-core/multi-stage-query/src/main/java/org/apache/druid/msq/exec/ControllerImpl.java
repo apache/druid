@@ -117,6 +117,7 @@ import org.apache.druid.msq.indexing.error.TooManyBucketsFault;
 import org.apache.druid.msq.indexing.error.TooManySegmentsInTimeChunkFault;
 import org.apache.druid.msq.indexing.error.TooManyWarningsFault;
 import org.apache.druid.msq.indexing.error.UnknownFault;
+import org.apache.druid.msq.indexing.error.WorkerFailedFault;
 import org.apache.druid.msq.indexing.error.WorkerRpcFailedFault;
 import org.apache.druid.msq.indexing.processor.SegmentGeneratorFrameProcessorFactory;
 import org.apache.druid.msq.indexing.report.MSQSegmentReport;
@@ -151,6 +152,7 @@ import org.apache.druid.msq.kernel.controller.ControllerStagePhase;
 import org.apache.druid.msq.kernel.controller.WorkerInputs;
 import org.apache.druid.msq.querykit.MultiQueryKit;
 import org.apache.druid.msq.querykit.QueryKit;
+import org.apache.druid.msq.querykit.QueryKitSpec;
 import org.apache.druid.msq.querykit.QueryKitUtils;
 import org.apache.druid.msq.querykit.ShuffleSpecFactory;
 import org.apache.druid.msq.querykit.WindowOperatorQueryKit;
@@ -224,6 +226,7 @@ import java.util.stream.StreamSupport;
 public class ControllerImpl implements Controller
 {
   private static final Logger log = new Logger(ControllerImpl.class);
+  private static final String RESULT_READER_CANCELLATION_ID = "result-reader";
 
   private final String queryId;
   private final MSQSpec querySpec;
@@ -364,7 +367,7 @@ public class ControllerImpl implements Controller
 
       // Execution-related: run the multi-stage QueryDefinition.
       final InputSpecSlicerFactory inputSpecSlicerFactory =
-          makeInputSpecSlicerFactory(context.newTableInputSpecSlicer());
+          makeInputSpecSlicerFactory(context.newTableInputSpecSlicer(workerManager));
 
       final Pair<ControllerQueryKernel, ListenableFuture<?>> queryRunResult =
           new RunQueryUntilDone(
@@ -430,8 +433,10 @@ public class ControllerImpl implements Controller
       }
     }
     if (queryKernel != null && queryKernel.isSuccess()) {
-      // If successful, encourage the tasks to exit successfully.
-      postFinishToAllTasks();
+      // If successful, encourage workers to exit successfully.
+      // Only send this command to participating workers. For task-based queries, this is all tasks, since tasks
+      // are launched only when needed. For Dart, this is any servers that were actually assigned work items.
+      postFinishToWorkers(queryKernel.getAllParticipatingWorkers());
       workerManager.stop(false);
     } else {
       // If not successful, cancel running tasks.
@@ -560,12 +565,12 @@ public class ControllerImpl implements Controller
   private QueryDefinition initializeQueryDefAndState(final Closer closer)
   {
     this.selfDruidNode = context.selfNode();
-    this.netClient = new ExceptionWrappingWorkerClient(context.newWorkerClient());
-    closer.register(netClient);
+    this.netClient = closer.register(new ExceptionWrappingWorkerClient(context.newWorkerClient()));
+    this.queryKernelConfig = context.queryKernelConfig(queryId, querySpec);
 
+    final QueryContext queryContext = querySpec.getQuery().context();
     final QueryDefinition queryDef = makeQueryDefinition(
-        queryId(),
-        makeQueryControllerToolKit(),
+        context.makeQueryKitSpec(makeQueryControllerToolKit(), queryId, querySpec, queryKernelConfig),
         querySpec,
         context.jsonMapper(),
         resultsContext
@@ -587,7 +592,6 @@ public class ControllerImpl implements Controller
     QueryValidator.validateQueryDef(queryDef);
     queryDefRef.set(queryDef);
 
-    queryKernelConfig = context.queryKernelConfig(querySpec, queryDef);
     workerManager = context.newWorkerManager(
         queryId,
         querySpec,
@@ -612,7 +616,7 @@ public class ControllerImpl implements Controller
       );
     }
 
-    final long maxParseExceptions = MultiStageQueryContext.getMaxParseExceptions(querySpec.getQuery().context());
+    final long maxParseExceptions = MultiStageQueryContext.getMaxParseExceptions(queryContext);
     this.faultsExceededChecker = new FaultsExceededChecker(
         ImmutableMap.of(CannotParseExternalDataFault.CODE, maxParseExceptions)
     );
@@ -624,14 +628,15 @@ public class ControllerImpl implements Controller
                 stageDefinition.getId().getStageNumber(),
                 finalizeClusterStatisticsMergeMode(
                     stageDefinition,
-                    MultiStageQueryContext.getClusterStatisticsMergeMode(querySpec.getQuery().context())
+                    MultiStageQueryContext.getClusterStatisticsMergeMode(queryContext)
                 )
             )
     );
     this.workerSketchFetcher = new WorkerSketchFetcher(
         netClient,
         workerManager,
-        queryKernelConfig.isFaultTolerant()
+        queryKernelConfig.isFaultTolerant(),
+        MultiStageQueryContext.getSketchEncoding(querySpec.getQuery().context())
     );
     closer.register(workerSketchFetcher::close);
 
@@ -748,6 +753,11 @@ public class ControllerImpl implements Controller
     }
 
     workerErrorRef.compareAndSet(null, mapQueryColumnNameToOutputColumnName(errorReport));
+
+    // Wake up the main controller thread.
+    addToKernelManipulationQueue(kernel -> {
+      throw new MSQException(new WorkerFailedFault(errorReport.getTaskId(), null));
+    });
   }
 
   /**
@@ -919,7 +929,7 @@ public class ControllerImpl implements Controller
           destination,
           partitionBoundaries,
           keyReader,
-          MultiStageQueryContext.validateAndGetTaskLockType(QueryContext.of(querySpec.getQuery().getContext()), false),
+          context.taskLockType(),
           isStageOutputEmpty
       );
     }
@@ -1166,6 +1176,16 @@ public class ControllerImpl implements Controller
     return workerManager.getWorkerIds();
   }
 
+  @Override
+  public boolean hasWorker(String workerId)
+  {
+    if (workerManager == null) {
+      return false;
+    }
+
+    return workerManager.getWorkerNumber(workerId) != WorkerManager.UNKNOWN_WORKER_NUMBER;
+  }
+
   @SuppressWarnings({"unchecked", "rawtypes"})
   @Nullable
   private Int2ObjectMap<Object> makeWorkerFactoryInfosForStage(
@@ -1190,7 +1210,7 @@ public class ControllerImpl implements Controller
   }
 
   @SuppressWarnings("rawtypes")
-  private QueryKit makeQueryControllerToolKit()
+  private QueryKit<Query<?>> makeQueryControllerToolKit()
   {
     final Map<Class<? extends Query>, QueryKit> kitMap =
         ImmutableMap.<Class<? extends Query>, QueryKit>builder()
@@ -1327,10 +1347,7 @@ public class ControllerImpl implements Controller
         (DataSourceMSQDestination) querySpec.getDestination();
     final Set<DataSegment> segmentsWithTombstones = new HashSet<>(segments);
     int numTombstones = 0;
-    final TaskLockType taskLockType = MultiStageQueryContext.validateAndGetTaskLockType(
-        QueryContext.of(querySpec.getQuery().getContext()),
-        destination.isReplaceTimeChunks()
-    );
+    final TaskLockType taskLockType = context.taskLockType();
 
     if (destination.isReplaceTimeChunks()) {
       final List<Interval> intervalsToDrop = findIntervalsToDrop(Preconditions.checkNotNull(segments, "segments"));
@@ -1447,15 +1464,15 @@ public class ControllerImpl implements Controller
     return IntervalUtils.difference(replaceIntervals, publishIntervals);
   }
 
-  private CounterSnapshotsTree getCountersFromAllTasks()
+  private CounterSnapshotsTree fetchCountersFromWorkers(final IntSet workers)
   {
     final CounterSnapshotsTree retVal = new CounterSnapshotsTree();
     final List<String> taskList = getWorkerIds();
 
     final List<ListenableFuture<CounterSnapshotsTree>> futures = new ArrayList<>();
 
-    for (String taskId : taskList) {
-      futures.add(netClient.getCounters(taskId));
+    for (int workerNumber : workers) {
+      futures.add(netClient.getCounters(taskList.get(workerNumber)));
     }
 
     final List<CounterSnapshotsTree> snapshotsTrees =
@@ -1468,14 +1485,14 @@ public class ControllerImpl implements Controller
     return retVal;
   }
 
-  private void postFinishToAllTasks()
+  private void postFinishToWorkers(final IntSet workers)
   {
     final List<String> taskList = getWorkerIds();
 
     final List<ListenableFuture<Void>> futures = new ArrayList<>();
 
-    for (String taskId : taskList) {
-      futures.add(netClient.postFinish(taskId));
+    for (int workerNumber : workers) {
+      futures.add(netClient.postFinish(taskList.get(workerNumber)));
     }
 
     FutureUtils.getUnchecked(MSQFutureUtils.allAsList(futures, true), true);
@@ -1490,7 +1507,7 @@ public class ControllerImpl implements Controller
   private CounterSnapshotsTree getFinalCountersSnapshot(@Nullable final ControllerQueryKernel queryKernel)
   {
     if (queryKernel != null && queryKernel.isSuccess()) {
-      return getCountersFromAllTasks();
+      return fetchCountersFromWorkers(queryKernel.getAllParticipatingWorkers());
     } else {
       return makeCountersSnapshotForLiveReports();
     }
@@ -1603,9 +1620,10 @@ public class ControllerImpl implements Controller
     if (shardSpec != null) {
       if (Objects.equals(shardSpec.getType(), ShardSpec.Type.RANGE)) {
         List<String> partitionDimensions = ((DimensionRangeShardSpec) shardSpec).getDimensions();
+        // Effective maxRowsPerSegment is propagated as rowsPerSegment in MSQ
         partitionSpec = new DimensionRangePartitionsSpec(
-            tuningConfig.getRowsPerSegment(),
             null,
+            tuningConfig.getRowsPerSegment(),
             partitionDimensions,
             false
         );
@@ -1623,9 +1641,10 @@ public class ControllerImpl implements Controller
                 )));
       }
     } else if (clusterBy != null && !clusterBy.getColumns().isEmpty()) {
+      // Effective maxRowsPerSegment is propagated as rowsPerSegment in MSQ
       partitionSpec = new DimensionRangePartitionsSpec(
-          tuningConfig.getRowsPerSegment(),
           null,
+          tuningConfig.getRowsPerSegment(),
           clusterBy.getColumns()
                    .stream()
                    .map(KeyColumn::columnName).collect(Collectors.toList()),
@@ -1712,8 +1731,7 @@ public class ControllerImpl implements Controller
 
   @SuppressWarnings("unchecked")
   private static QueryDefinition makeQueryDefinition(
-      final String queryId,
-      @SuppressWarnings("rawtypes") final QueryKit toolKit,
+      final QueryKitSpec queryKitSpec,
       final MSQSpec querySpec,
       final ObjectMapper jsonMapper,
       final ResultsContext resultsContext
@@ -1722,11 +1740,11 @@ public class ControllerImpl implements Controller
     final MSQTuningConfig tuningConfig = querySpec.getTuningConfig();
     final ColumnMappings columnMappings = querySpec.getColumnMappings();
     final Query<?> queryToPlan;
-    final ShuffleSpecFactory shuffleSpecFactory;
+    final ShuffleSpecFactory resultShuffleSpecFactory;
 
     if (MSQControllerTask.isIngestion(querySpec)) {
-      shuffleSpecFactory = querySpec.getDestination()
-                                    .getShuffleSpecFactory(tuningConfig.getRowsPerSegment());
+      resultShuffleSpecFactory = querySpec.getDestination()
+                                          .getShuffleSpecFactory(tuningConfig.getRowsPerSegment());
 
       if (!columnMappings.hasUniqueOutputColumnNames()) {
         // We do not expect to hit this case in production, because the SQL validator checks that column names
@@ -1750,7 +1768,7 @@ public class ControllerImpl implements Controller
         queryToPlan = querySpec.getQuery();
       }
     } else {
-      shuffleSpecFactory =
+      resultShuffleSpecFactory =
           querySpec.getDestination()
                    .getShuffleSpecFactory(MultiStageQueryContext.getRowsPerPage(querySpec.getQuery().context()));
       queryToPlan = querySpec.getQuery();
@@ -1759,12 +1777,10 @@ public class ControllerImpl implements Controller
     final QueryDefinition queryDef;
 
     try {
-      queryDef = toolKit.makeQueryDefinition(
-          queryId,
+      queryDef = queryKitSpec.getQueryKit().makeQueryDefinition(
+          queryKitSpec,
           queryToPlan,
-          toolKit,
-          shuffleSpecFactory,
-          tuningConfig.getMaxNumWorkers(),
+          resultShuffleSpecFactory,
           0
       );
     }
@@ -1793,7 +1809,7 @@ public class ControllerImpl implements Controller
 
       // Add all query stages.
       // Set shuffleCheckHasMultipleValues on the stage that serves as input to the final segment-generation stage.
-      final QueryDefinitionBuilder builder = QueryDefinition.builder(queryId);
+      final QueryDefinitionBuilder builder = QueryDefinition.builder(queryKitSpec.getQueryId());
 
       for (final StageDefinition stageDef : queryDef.getStageDefinitions()) {
         if (stageDef.equals(finalShuffleStageDef)) {
@@ -1819,7 +1835,7 @@ public class ControllerImpl implements Controller
       // attaching new query results stage if the final stage does sort during shuffle so that results are ordered.
       StageDefinition finalShuffleStageDef = queryDef.getFinalStageDefinition();
       if (finalShuffleStageDef.doesSortDuringShuffle()) {
-        final QueryDefinitionBuilder builder = QueryDefinition.builder(queryId);
+        final QueryDefinitionBuilder builder = QueryDefinition.builder(queryKitSpec.getQueryId());
         builder.addAll(queryDef);
         builder.add(StageDefinition.builder(queryDef.getNextStageNumber())
                                    .inputs(new StageInputSpec(queryDef.getFinalStageDefinition().getStageNumber()))
@@ -1856,7 +1872,7 @@ public class ControllerImpl implements Controller
       }
 
       final ResultFormat resultFormat = exportMSQDestination.getResultFormat();
-      final QueryDefinitionBuilder builder = QueryDefinition.builder(queryId);
+      final QueryDefinitionBuilder builder = QueryDefinition.builder(queryKitSpec.getQueryId());
       builder.addAll(queryDef);
       builder.add(StageDefinition.builder(queryDef.getNextStageNumber())
                                  .inputs(new StageInputSpec(queryDef.getFinalStageDefinition().getStageNumber()))
@@ -1864,7 +1880,7 @@ public class ControllerImpl implements Controller
                                  .signature(queryDef.getFinalStageDefinition().getSignature())
                                  .shuffleSpec(null)
                                  .processorFactory(new ExportResultsFrameProcessorFactory(
-                                     queryId,
+                                     queryKitSpec.getQueryId(),
                                      exportStorageProvider,
                                      resultFormat,
                                      columnMappings,
@@ -2177,6 +2193,34 @@ public class ControllerImpl implements Controller
                      )
                      .collect(Collectors.joining("; "))
       );
+    }
+  }
+
+  /**
+   * Create a result-reader executor for {@link RunQueryUntilDone#readQueryResults()}.
+   */
+  private static FrameProcessorExecutor createResultReaderExec(final String queryId)
+  {
+    return new FrameProcessorExecutor(
+        MoreExecutors.listeningDecorator(
+            Execs.singleThreaded(StringUtils.encodeForFormat("msq-result-reader[" + queryId + "]")))
+    );
+  }
+
+  /**
+   * Cancel any currently-running work and shut down a result-reader executor, like one created by
+   * {@link #createResultReaderExec(String)}.
+   */
+  private static void closeResultReaderExec(final FrameProcessorExecutor exec)
+  {
+    try {
+      exec.cancel(RESULT_READER_CANCELLATION_ID);
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+    finally {
+      exec.shutdownNow();
     }
   }
 
@@ -2689,12 +2733,9 @@ public class ControllerImpl implements Controller
         inputChannelFactory = new WorkerInputChannelFactory(netClient, () -> taskIds);
       }
 
-      final FrameProcessorExecutor resultReaderExec = new FrameProcessorExecutor(
-          MoreExecutors.listeningDecorator(
-              Execs.singleThreaded(StringUtils.encodeForFormat("msq-result-reader[" + queryId() + "]")))
-      );
+      final FrameProcessorExecutor resultReaderExec = createResultReaderExec(queryId());
+      resultReaderExec.registerCancellationId(RESULT_READER_CANCELLATION_ID);
 
-      final String cancellationId = "results-reader";
       ReadableConcatFrameChannel resultsChannel = null;
 
       try {
@@ -2704,7 +2745,7 @@ public class ControllerImpl implements Controller
             inputChannelFactory,
             () -> ArenaMemoryAllocator.createOnHeap(5_000_000),
             resultReaderExec,
-            cancellationId,
+            RESULT_READER_CANCELLATION_ID,
             null,
             MultiStageQueryContext.removeNullBytes(querySpec.getQuery().context())
         );
@@ -2738,7 +2779,7 @@ public class ControllerImpl implements Controller
             queryListener
         );
 
-        queryResultsReaderFuture = resultReaderExec.runFully(resultsReader, cancellationId);
+        queryResultsReaderFuture = resultReaderExec.runFully(resultsReader, RESULT_READER_CANCELLATION_ID);
 
         // When results are done being read, kick the main thread.
         // Important: don't use FutureUtils.futureWithBaggage, because we need queryResultsReaderFuture to resolve
@@ -2755,23 +2796,13 @@ public class ControllerImpl implements Controller
             e,
             () -> CloseableUtils.closeAll(
                 finalResultsChannel,
-                () -> resultReaderExec.getExecutorService().shutdownNow()
+                () -> closeResultReaderExec(resultReaderExec)
             )
         );
       }
 
       // Result reader is set up. Register with the query-wide closer.
-      closer.register(() -> {
-        try {
-          resultReaderExec.cancel(cancellationId);
-        }
-        catch (Exception e) {
-          throw new RuntimeException(e);
-        }
-        finally {
-          resultReaderExec.getExecutorService().shutdownNow();
-        }
-      });
+      closer.register(() -> closeResultReaderExec(resultReaderExec));
     }
 
     /**

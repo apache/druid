@@ -28,7 +28,6 @@ import org.apache.druid.msq.indexing.MSQControllerTask;
 import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
 
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.regex.Matcher;
@@ -82,10 +81,8 @@ public class MSQTaskQueryMakerUtils
       final Set<String> allOutputColumns
   )
   {
-    final Set<String> allOutputColumnsSet = new HashSet<>(allOutputColumns);
-
     for (final String column : contextSortOrder) {
-      if (!allOutputColumnsSet.contains(column)) {
+      if (!allOutputColumns.contains(column)) {
         throw InvalidSqlInput.exception(
             "Column[%s] from context parameter[%s] does not appear in the query output",
             column,

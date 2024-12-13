@@ -66,7 +66,7 @@ public class CsvInputFormatTest extends BaseExternTableTest
   public void testConversion()
   {
     CsvInputFormat format = new CsvInputFormat(
-        Collections.singletonList("a"), ";", false, false, 1);
+        Collections.singletonList("a"), ";", false, false, 1, null);
     TableMetadata table = TableBuilder.external("foo")
         .inputSource(toMap(new InlineInputSource("a\n")))
         .inputFormat(formatToMap(format))

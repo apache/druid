@@ -62,6 +62,7 @@ public abstract class ScalarNestedCommonFormatColumnSerializer<T> extends Nested
   protected ByteBuffer columnNameBytes = null;
 
   protected boolean hasNulls;
+  protected boolean writeDictionary = true;
 
 
   public ScalarNestedCommonFormatColumnSerializer(
@@ -98,6 +99,8 @@ public abstract class ScalarNestedCommonFormatColumnSerializer<T> extends Nested
 
   protected abstract void writeDictionaryFile(FileSmoosher smoosher) throws IOException;
 
+  public abstract int getCardinality();
+
   @Override
   public String getColumnName()
   {
@@ -105,9 +108,17 @@ public abstract class ScalarNestedCommonFormatColumnSerializer<T> extends Nested
   }
 
   @Override
-  public DictionaryIdLookup getGlobalLookup()
+  public DictionaryIdLookup getDictionaryIdLookup()
   {
     return dictionaryIdLookup;
+  }
+
+  @Override
+  public void setDictionaryIdLookup(DictionaryIdLookup dictionaryIdLookup)
+  {
+    this.dictionaryIdLookup = dictionaryIdLookup;
+    this.writeDictionary = false;
+    this.dictionarySerialized = true;
   }
 
   @Override
@@ -166,7 +177,9 @@ public abstract class ScalarNestedCommonFormatColumnSerializer<T> extends Nested
   ) throws IOException
   {
     Preconditions.checkState(closedForWrite, "Not closed yet!");
-    Preconditions.checkArgument(dictionaryWriter.isSorted(), "Dictionary not sorted?!?");
+    if (writeDictionary) {
+      Preconditions.checkArgument(dictionaryWriter.isSorted(), "Dictionary not sorted?!?");
+    }
 
     // write out compressed dictionaryId int column and bitmap indexes by iterating intermediate value column
     // the intermediate value column should be replaced someday by a cooler compressed int column writer that allows
@@ -184,7 +197,7 @@ public abstract class ScalarNestedCommonFormatColumnSerializer<T> extends Nested
         name,
         segmentWriteOutMedium,
         filenameBase,
-        dictionaryWriter.getCardinality(),
+        getCardinality(),
         compressionToUse,
         segmentWriteOutMedium.getCloser()
     );
@@ -198,7 +211,7 @@ public abstract class ScalarNestedCommonFormatColumnSerializer<T> extends Nested
     bitmapIndexWriter.open();
     bitmapIndexWriter.setObjectsNotSorted();
     final MutableBitmap[] bitmaps;
-    bitmaps = new MutableBitmap[dictionaryWriter.getCardinality()];
+    bitmaps = new MutableBitmap[getCardinality()];
     for (int i = 0; i < bitmaps.length; i++) {
       bitmaps[i] = indexSpec.getBitmapSerdeFactory().getBitmapFactory().makeEmptyMutableBitmap();
     }
@@ -220,7 +233,9 @@ public abstract class ScalarNestedCommonFormatColumnSerializer<T> extends Nested
     }
 
     writeV0Header(channel, columnNameBytes);
-    writeDictionaryFile(smoosher);
+    if (writeDictionary) {
+      writeDictionaryFile(smoosher);
+    }
     writeInternal(smoosher, encodedValueSerializer, ColumnSerializerUtils.ENCODED_VALUE_COLUMN_FILE_NAME);
     writeValueColumn(smoosher);
     writeInternal(smoosher, bitmapIndexWriter, ColumnSerializerUtils.BITMAP_INDEX_FILE_NAME);

@@ -60,6 +60,18 @@ public class ReadablePartition
   }
 
   /**
+   * Returns an output partition that is striped across a set of {@code workerNumbers}.
+   */
+  public static ReadablePartition striped(
+      final int stageNumber,
+      final IntSortedSet workerNumbers,
+      final int partitionNumber
+  )
+  {
+    return new ReadablePartition(stageNumber, workerNumbers, partitionNumber);
+  }
+
+  /**
    * Returns an output partition that has been collected onto a single worker.
    */
   public static ReadablePartition collected(final int stageNumber, final int workerNumber, final int partitionNumber)

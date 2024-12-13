@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Provides;
+import com.google.inject.name.Named;
 import com.google.inject.name.Names;
 import org.apache.calcite.avatica.server.AbstractAvaticaHandler;
 import org.apache.druid.guice.DruidInjectorBuilder;
@@ -120,9 +121,13 @@ public class DruidAvaticaTestDriver implements Driver
 
     @Provides
     @LazySingleton
-    public DruidConnectionExtras getConnectionExtras(ObjectMapper objectMapper, DruidHookDispatcher druidHookDispatcher)
+    public DruidConnectionExtras getConnectionExtras(
+        ObjectMapper objectMapper,
+        DruidHookDispatcher druidHookDispatcher,
+        @Named("isExplainSupported") Boolean isExplainSupported
+    )
     {
-      return new DruidConnectionExtras.DruidConnectionExtrasImpl(objectMapper, druidHookDispatcher);
+      return new DruidConnectionExtras.DruidConnectionExtrasImpl(objectMapper, druidHookDispatcher, isExplainSupported);
     }
 
     @Provides
@@ -280,6 +285,12 @@ public class DruidAvaticaTestDriver implements Driver
     public PlannerComponentSupplier getPlannerComponentSupplier()
     {
       return delegate.getPlannerComponentSupplier();
+    }
+
+    @Override
+    public Boolean isExplainSupported()
+    {
+      return delegate.isExplainSupported();
     }
   }
 

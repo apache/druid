@@ -1031,7 +1031,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
           ResultSet resultSet = getIndexInfo(databaseMetaData, tableName);
           while (resultSet.next()) {
             String indexName = resultSet.getString("INDEX_NAME");
-            if (org.apache.commons.lang.StringUtils.isNotBlank(indexName)) {
+            if (org.apache.commons.lang3.StringUtils.isNotBlank(indexName)) {
               res.add(StringUtils.toUpperCase(indexName));
             }
           }

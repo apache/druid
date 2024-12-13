@@ -9,5 +9,5 @@ sql: |
   GROUP BY cityName
 
 expectedResults:
-  - ["Horsching","[\"Horsching\"]"]
-  - ["Vienna","[\"Vienna\"]"]
+  - ["Horsching",["Horsching"]]
+  - ["Vienna",["Vienna"]]

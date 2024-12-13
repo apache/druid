@@ -52,7 +52,8 @@ public class DelimitedInputFormat extends FlatTextInputFormat
       @JsonProperty("delimiter") @Nullable String delimiter,
       @Deprecated @JsonProperty("hasHeaderRow") @Nullable Boolean hasHeaderRow,
       @JsonProperty("findColumnsFromHeader") @Nullable Boolean findColumnsFromHeader,
-      @JsonProperty("skipHeaderRows") int skipHeaderRows
+      @JsonProperty("skipHeaderRows") int skipHeaderRows,
+      @JsonProperty("tryParseNumbers") @Nullable Boolean tryParseNumbers
   )
   {
     super(
@@ -61,7 +62,8 @@ public class DelimitedInputFormat extends FlatTextInputFormat
         delimiter == null ? DEFAULT_DELIMITER : delimiter,
         hasHeaderRow,
         findColumnsFromHeader,
-        skipHeaderRows
+        skipHeaderRows,
+        tryParseNumbers
     );
   }
 
@@ -85,7 +87,8 @@ public class DelimitedInputFormat extends FlatTextInputFormat
             getDelimiter(),
             useListBasedInputRows() ? getColumns().size() : DelimitedBytes.UNKNOWN_FIELD_COUNT
         ),
-        useListBasedInputRows()
+        useListBasedInputRows(),
+        shouldTryParseNumbers()
     );
   }
 

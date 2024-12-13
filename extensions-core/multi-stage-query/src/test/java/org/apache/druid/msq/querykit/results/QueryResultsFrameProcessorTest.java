@@ -36,7 +36,7 @@ import org.apache.druid.msq.kernel.StagePartition;
 import org.apache.druid.msq.querykit.FrameProcessorTestBase;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
+import org.apache.druid.segment.incremental.IncrementalIndexCursorFactory;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -50,11 +50,11 @@ public class QueryResultsFrameProcessorTest extends FrameProcessorTestBase
   public void sanityTest() throws ExecutionException, InterruptedException, IOException
   {
 
-    final IncrementalIndexStorageAdapter adapter =
-        new IncrementalIndexStorageAdapter(TestIndex.getIncrementalTestIndex());
+    final IncrementalIndexCursorFactory cursorFactory =
+        new IncrementalIndexCursorFactory(TestIndex.getIncrementalTestIndex());
 
     final FrameSequenceBuilder frameSequenceBuilder =
-        FrameSequenceBuilder.fromAdapter(adapter)
+        FrameSequenceBuilder.fromCursorFactory(cursorFactory)
                             .maxRowsPerFrame(5)
                             .frameType(FrameType.ROW_BASED)
                             .allocator(ArenaMemoryAllocator.createOnHeap(100_000));
@@ -85,7 +85,7 @@ public class QueryResultsFrameProcessorTest extends FrameProcessorTestBase
         FrameReader.create(signature)
     );
     FrameTestUtil.assertRowsEqual(
-        FrameTestUtil.readRowsFromAdapter(adapter, signature, false),
+        FrameTestUtil.readRowsFromCursorFactory(cursorFactory, signature, false),
         rowsFromProcessor
     );
     Assert.assertEquals(Unit.instance(), retVal.get());

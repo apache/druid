@@ -262,13 +262,21 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
     return new RowIteratorImpl();
   }
 
+  @Override
+  public IndexableAdapter getProjectionAdapter(String projection)
+  {
+    QueryableIndex projectionIndex = input.getProjectionQueryableIndex(projection);
+    DruidException.conditionalDefensive(projectionIndex != null, "Projection[%s] was not found", projection);
+    return new QueryableIndexIndexableAdapter(projectionIndex);
+  }
+
   /**
    * On {@link #moveToNext()} and {@link #mark()}, this class copies all column values into a set of {@link
    * SettableColumnValueSelector} instances. Alternative approach was to save only offset in column and use the same
-   * column value selectors as in {@link QueryableIndexStorageAdapter}. The approach with "caching" in {@link
+   * column value selectors as in {@link QueryableIndexCursorFactory}. The approach with "caching" in {@link
    * SettableColumnValueSelector}s is chosen for two reasons:
    *  1) Avoid re-reading column values from serialized format multiple times (because they are accessed multiple times)
-   *     For comparison, it's not a factor for {@link QueryableIndexStorageAdapter} because during query processing,
+   *     For comparison, it's not a factor for {@link QueryableIndexCursorFactory} because during query processing,
    *     column values are usually accessed just once per offset, if aggregator or query runner are written sanely.
    *     Avoiding re-reads is especially important for object columns, because object deserialization is potentially
    *     expensive.

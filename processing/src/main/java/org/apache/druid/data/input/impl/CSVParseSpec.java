@@ -93,7 +93,7 @@ public class CSVParseSpec extends ParseSpec
   @Override
   public Parser<String, Object> makeParser()
   {
-    return new CSVParser(listDelimiter, columns, hasHeaderRow, skipHeaderRows);
+    return new CSVParser(listDelimiter, columns, hasHeaderRow, skipHeaderRows, false);
   }
 
   @Override

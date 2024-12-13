@@ -24,11 +24,13 @@ import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.fasterxml.jackson.dataformat.smile.SmileGenerator;
 import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
-import org.apache.druid.java.util.common.io.smoosh.SmooshedWriter;
+import org.apache.druid.segment.data.VByte;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 
 public class ColumnSerializerUtils
 {
@@ -59,23 +61,33 @@ public class ColumnSerializerUtils
   public static void writeInternal(FileSmoosher smoosher, Serializer serializer, String columnName, String fileName)
       throws IOException
   {
-    final String internalName = getInternalFileName(columnName, fileName);
-    try (SmooshedWriter smooshChannel = smoosher.addWithSmooshedWriter(internalName, serializer.getSerializedSize())) {
-      serializer.writeTo(smooshChannel, smoosher);
-    }
+    smoosher.serializeAs(getInternalFileName(columnName, fileName), serializer);
   }
 
   public static void writeInternal(FileSmoosher smoosher, ByteBuffer buffer, String columnName, String fileName)
       throws IOException
   {
-    final String internalName = getInternalFileName(columnName, fileName);
-    try (SmooshedWriter smooshChannel = smoosher.addWithSmooshedWriter(internalName, buffer.capacity())) {
-      smooshChannel.write(buffer);
-    }
+    smoosher.add(getInternalFileName(columnName, fileName), buffer);
   }
 
   public static String getInternalFileName(String fileNameBase, String field)
   {
     return fileNameBase + "." + field;
+  }
+
+  /**
+   * Convert a String to a ByteBuffer with a variable size length prepended to it.
+   * @param stringVal the value to store in the ByteBuffer
+   * @return ByteBuffer with the string converted to utf8 bytes and stored with a variable size length int prepended
+   */
+  public static ByteBuffer stringToUtf8InVSizeByteBuffer(String stringVal)
+  {
+    final byte[] bytes = StringUtils.toUtf8(stringVal);
+    final int length = VByte.computeIntSize(bytes.length);
+    final ByteBuffer buffer = ByteBuffer.allocate(length + bytes.length).order(ByteOrder.nativeOrder());
+    VByte.writeInt(buffer, bytes.length);
+    buffer.put(bytes);
+    buffer.flip();
+    return buffer;
   }
 }

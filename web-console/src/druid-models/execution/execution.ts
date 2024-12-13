@@ -255,12 +255,13 @@ export class Execution {
       };
     }
 
+    const { createdAt, durationMs, state } = asyncSubmitResult;
     return new Execution({
       engine: 'sql-msq-task',
       id: queryId,
-      startTime: new Date(asyncSubmitResult.createdAt),
-      duration: asyncSubmitResult.durationMs,
-      status: Execution.normalizeAsyncState(asyncSubmitResult.state),
+      startTime: new Date(createdAt),
+      duration: durationMs >= 0 ? durationMs : undefined,
+      status: Execution.normalizeAsyncState(state),
       sqlQuery,
       queryContext,
       stages: Array.isArray(stages) && counters ? new Stages(stages, counters) : undefined,
@@ -335,7 +336,7 @@ export class Execution {
       status: Execution.normalizeTaskStatus(status),
       segmentStatus: segmentLoaderStatus,
       startTime: isNaN(startTime.getTime()) ? undefined : startTime,
-      duration: typeof durationMs === 'number' ? durationMs : undefined,
+      duration: typeof durationMs === 'number' && durationMs >= 0 ? durationMs : undefined,
       usageInfo: getUsageInfoFromStatusPayload(
         deepGet(taskReport, 'multiStageQuery.payload.status'),
       ),
@@ -439,6 +440,13 @@ export class Execution {
 
       _payload: this._payload,
     };
+  }
+
+  public changeEngine(engine: DruidEngine): Execution {
+    return new Execution({
+      ...this.valueOf(),
+      engine,
+    });
   }
 
   public changeSqlQuery(sqlQuery: string, queryContext?: QueryContext): Execution {

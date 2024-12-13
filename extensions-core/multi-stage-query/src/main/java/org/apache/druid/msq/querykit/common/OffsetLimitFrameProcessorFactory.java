@@ -141,6 +141,12 @@ public class OffsetLimitFrameProcessorFactory extends BaseFrameProcessorFactory
   }
 
   @Override
+  public boolean usesProcessingBuffers()
+  {
+    return false;
+  }
+
+  @Override
   public boolean equals(Object o)
   {
     if (this == o) {

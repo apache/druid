@@ -93,11 +93,6 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
     );
   }
 
-  public CoordinatorRunStats getStats()
-  {
-    return stats;
-  }
-
   public SegmentReplicationStatus getReplicationStatus()
   {
     return replicaCountMap.toReplicationStatus();

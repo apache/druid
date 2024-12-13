@@ -31,11 +31,9 @@ import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
-import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.timeline.partition.BuildingHashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.HashPartitionFunction;
 import org.joda.time.Interval;
@@ -97,16 +95,13 @@ class ParallelIndexTestingFactory
         DimensionsSpec.getDefaultSchemas(ImmutableList.of(SCHEMA_DIMENSION))
     );
 
-    return new DataSchema(
-        DATASOURCE,
-        timestampSpec,
-        dimensionsSpec,
-        new AggregatorFactory[]{},
-        granularitySpec,
-        TransformSpec.NONE,
-        null,
-        NESTED_OBJECT_MAPPER
-    );
+    return DataSchema.builder()
+                     .withDataSource(DATASOURCE)
+                     .withTimestamp(timestampSpec)
+                     .withDimensions(dimensionsSpec)
+                     .withGranularity(granularitySpec)
+                     .withObjectMapper(NESTED_OBJECT_MAPPER)
+                     .build();
   }
 
   static ParallelIndexIngestionSpec createIngestionSpec(

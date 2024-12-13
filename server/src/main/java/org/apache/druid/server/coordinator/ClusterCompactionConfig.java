@@ -21,7 +21,6 @@ package org.apache.druid.server.coordinator;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.server.compaction.CompactionCandidateSearchPolicy;
 
 import javax.annotation.Nullable;
@@ -37,7 +36,6 @@ public class ClusterCompactionConfig
   private final Double compactionTaskSlotRatio;
   private final Integer maxCompactionTaskSlots;
   private final Boolean useAutoScaleSlots;
-  private final CompactionEngine engine;
   private final CompactionCandidateSearchPolicy compactionPolicy;
 
   @JsonCreator
@@ -45,7 +43,6 @@ public class ClusterCompactionConfig
       @JsonProperty("compactionTaskSlotRatio") @Nullable Double compactionTaskSlotRatio,
       @JsonProperty("maxCompactionTaskSlots") @Nullable Integer maxCompactionTaskSlots,
       @JsonProperty("useAutoScaleSlots") @Nullable Boolean useAutoScaleSlots,
-      @JsonProperty("engine") @Nullable CompactionEngine engine,
       @JsonProperty("compactionPolicy") @Nullable CompactionCandidateSearchPolicy compactionPolicy
   )
   {
@@ -53,7 +50,6 @@ public class ClusterCompactionConfig
     this.maxCompactionTaskSlots = maxCompactionTaskSlots;
     this.useAutoScaleSlots = useAutoScaleSlots;
     this.compactionPolicy = compactionPolicy;
-    this.engine = engine;
   }
 
   @Nullable
@@ -79,13 +75,6 @@ public class ClusterCompactionConfig
 
   @Nullable
   @JsonProperty
-  public CompactionEngine getEngine()
-  {
-    return engine;
-  }
-
-  @Nullable
-  @JsonProperty
   public CompactionCandidateSearchPolicy getCompactionPolicy()
   {
     return compactionPolicy;
@@ -104,8 +93,7 @@ public class ClusterCompactionConfig
     return Objects.equals(compactionTaskSlotRatio, that.compactionTaskSlotRatio)
            && Objects.equals(maxCompactionTaskSlots, that.maxCompactionTaskSlots)
            && Objects.equals(useAutoScaleSlots, that.useAutoScaleSlots)
-           && Objects.equals(compactionPolicy, that.compactionPolicy)
-           && engine == that.engine;
+           && Objects.equals(compactionPolicy, that.compactionPolicy);
   }
 
   @Override
@@ -115,8 +103,7 @@ public class ClusterCompactionConfig
         compactionTaskSlotRatio,
         maxCompactionTaskSlots,
         useAutoScaleSlots,
-        compactionPolicy,
-        engine
+        compactionPolicy
     );
   }
 }

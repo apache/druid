@@ -35,6 +35,9 @@ public class InputSpecs
     // No instantiation.
   }
 
+  /**
+   * Returns the set of input stages, from {@link StageInputSpec}, for a given list of {@link InputSpec}.
+   */
   public static IntSet getStageNumbers(final List<InputSpec> specs)
   {
     final IntSet retVal = new IntRBTreeSet();

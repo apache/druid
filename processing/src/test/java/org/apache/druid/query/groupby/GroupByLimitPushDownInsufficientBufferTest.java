@@ -336,7 +336,6 @@ public class GroupByLimitPushDownInsufficientBufferTest extends InitializedNullH
     final GroupingEngine groupingEngine = new GroupingEngine(
         druidProcessingConfig,
         configSupplier,
-        bufferPool,
         groupByResourcesReservationPool,
         TestHelper.makeJsonMapper(),
         new ObjectMapper(new SmileFactory()),
@@ -346,7 +345,6 @@ public class GroupByLimitPushDownInsufficientBufferTest extends InitializedNullH
     final GroupingEngine tooSmallEngine = new GroupingEngine(
         tooSmallDruidProcessingConfig,
         configSupplier,
-        bufferPool2,
         tooSmallGroupByResourcesReservationPool,
         TestHelper.makeJsonMapper(),
         new ObjectMapper(new SmileFactory()),
@@ -355,12 +353,14 @@ public class GroupByLimitPushDownInsufficientBufferTest extends InitializedNullH
 
     groupByFactory = new GroupByQueryRunnerFactory(
         groupingEngine,
-        new GroupByQueryQueryToolChest(groupingEngine, groupByResourcesReservationPool)
+        new GroupByQueryQueryToolChest(groupingEngine, groupByResourcesReservationPool),
+        bufferPool
     );
 
     tooSmallGroupByFactory = new GroupByQueryRunnerFactory(
         tooSmallEngine,
-        new GroupByQueryQueryToolChest(tooSmallEngine, tooSmallGroupByResourcesReservationPool)
+        new GroupByQueryQueryToolChest(tooSmallEngine, tooSmallGroupByResourcesReservationPool),
+        bufferPool2
     );
   }
 

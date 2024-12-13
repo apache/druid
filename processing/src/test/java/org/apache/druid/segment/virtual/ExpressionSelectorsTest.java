@@ -25,7 +25,6 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.guava.SettableSupplier;
 import org.apache.druid.data.input.MapBasedInputRow;
-import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -44,13 +43,12 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.QueryableIndexStorageAdapter;
-import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.TestObjectColumnSelector;
-import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
@@ -58,8 +56,8 @@ import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.segment.generator.GeneratorSchemaInfo;
 import org.apache.druid.segment.generator.SegmentGenerator;
 import org.apache.druid.segment.incremental.IncrementalIndex;
+import org.apache.druid.segment.incremental.IncrementalIndexCursorFactory;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -79,10 +77,10 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
 {
   private static Closer CLOSER;
   private static QueryableIndex QUERYABLE_INDEX;
-  private static QueryableIndexStorageAdapter QUERYABLE_INDEX_STORAGE_ADAPTER;
+  private static QueryableIndexCursorFactory QUERYABLE_INDEX_CURSOR_FACTORY;
   private static IncrementalIndex INCREMENTAL_INDEX;
-  private static IncrementalIndexStorageAdapter INCREMENTAL_INDEX_STORAGE_ADAPTER;
-  private static List<StorageAdapter> ADAPTERS;
+  private static IncrementalIndexCursorFactory INCREMENTAL_INDEX_CURSOR_FACTORY;
+  private static List<CursorFactory> CURSOR_FACTORIES;
 
   private static final ColumnCapabilities SINGLE_VALUE = new ColumnCapabilitiesImpl().setType(ColumnType.STRING)
                                                                                      .setDictionaryEncoded(true)
@@ -116,14 +114,17 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
     INCREMENTAL_INDEX = CLOSER.register(
         segmentGenerator.generateIncrementalIndex(dataSegment, schemaInfo, Granularities.HOUR, numRows)
     );
-    INCREMENTAL_INDEX_STORAGE_ADAPTER = new IncrementalIndexStorageAdapter(INCREMENTAL_INDEX);
+    INCREMENTAL_INDEX_CURSOR_FACTORY = new IncrementalIndexCursorFactory(INCREMENTAL_INDEX);
 
     QUERYABLE_INDEX = CLOSER.register(
         segmentGenerator.generate(dataSegment, schemaInfo, Granularities.HOUR, numRows)
     );
-    QUERYABLE_INDEX_STORAGE_ADAPTER = new QueryableIndexStorageAdapter(QUERYABLE_INDEX);
+    QUERYABLE_INDEX_CURSOR_FACTORY = new QueryableIndexCursorFactory(QUERYABLE_INDEX);
 
-    ADAPTERS = ImmutableList.of(INCREMENTAL_INDEX_STORAGE_ADAPTER, QUERYABLE_INDEX_STORAGE_ADAPTER);
+    CURSOR_FACTORIES = ImmutableList.of(
+        INCREMENTAL_INDEX_CURSOR_FACTORY,
+        QUERYABLE_INDEX_CURSOR_FACTORY
+    );
   }
 
   @AfterClass
@@ -137,7 +138,7 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
   public void test_single_value_string_bindings()
   {
     final String columnName = "string3";
-    for (StorageAdapter adapter : ADAPTERS) {
+    for (CursorFactory adapter : CURSOR_FACTORIES) {
       try (final CursorHolder cursorHolder = adapter.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
         Cursor cursor = cursorHolder.asCursor();
 
@@ -202,7 +203,7 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
   public void test_multi_value_string_bindings()
   {
     final String columnName = "multi-string3";
-    for (StorageAdapter adapter : ADAPTERS) {
+    for (CursorFactory adapter : CURSOR_FACTORIES) {
       try (final CursorHolder cursorHolder = adapter.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
         Cursor cursor = cursorHolder.asCursor();
         ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
@@ -279,7 +280,7 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
   public void test_long_bindings()
   {
     final String columnName = "long3";
-    for (StorageAdapter adapter : ADAPTERS) {
+    for (CursorFactory adapter : CURSOR_FACTORIES) {
       try (final CursorHolder cursorHolder = adapter.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
         Cursor cursor = cursorHolder.asCursor();
         ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
@@ -324,7 +325,7 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
   public void test_double_bindings()
   {
     final String columnName = "double3";
-    for (StorageAdapter adapter : ADAPTERS) {
+    for (CursorFactory adapter : CURSOR_FACTORIES) {
       try (final CursorHolder cursorHolder = adapter.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
         Cursor cursor = cursorHolder.asCursor();
         ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
@@ -617,15 +618,10 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
     // underlying dimension selector.
     // This occurred during schemaless ingestion with spare dimension values and no explicit null rows, so the
     // conditions are replicated by this test. See https://github.com/apache/druid/pull/10248 for details
-    IncrementalIndexSchema schema = new IncrementalIndexSchema(
-        0,
-        new TimestampSpec("time", "millis", DateTimes.nowUtc()),
-        Granularities.NONE,
-        VirtualColumns.EMPTY,
-        DimensionsSpec.EMPTY,
-        new AggregatorFactory[]{new CountAggregatorFactory("count")},
-        true
-    );
+    IncrementalIndexSchema schema = IncrementalIndexSchema.builder()
+                                                          .withTimestampSpec(new TimestampSpec("time", "millis", DateTimes.nowUtc()))
+                                                          .withMetrics(new AggregatorFactory[]{new CountAggregatorFactory("count")})
+                                                          .build();
 
     IncrementalIndex index = new OnheapIncrementalIndex.Builder().setMaxRowCount(100).setIndexSchema(schema).build();
     index.add(
@@ -643,8 +639,8 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
         )
     );
 
-    IncrementalIndexStorageAdapter adapter = new IncrementalIndexStorageAdapter(index);
-    try (final CursorHolder cursorHolder = adapter.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+    IncrementalIndexCursorFactory cursorFactory = new IncrementalIndexCursorFactory(index);
+    try (final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
       Cursor cursor = cursorHolder.asCursor();
       DimensionSelector xExprSelector = ExpressionSelectors.makeDimensionSelector(
           cursor.getColumnSelectorFactory(),
