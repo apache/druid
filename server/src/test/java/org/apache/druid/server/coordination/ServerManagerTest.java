@@ -864,9 +864,7 @@ public class ServerManagerTest
     @Override
     public TypeReference<T> getResultTypeReference()
     {
-      return new TypeReference<>()
-      {
-      };
+      return new TypeReference<>() {};
     }
   }
 

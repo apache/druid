@@ -47,9 +47,7 @@ class LookupListeningResource extends ListenerResource
   private static final Logger LOG = new Logger(LookupListeningResource.class);
 
   private static final TypeReference<LookupsState<Object>> LOOKUPS_STATE_GENERIC_REFERENCE =
-      new TypeReference<>()
-      {
-      };
+      new TypeReference<>() {};
 
   @Inject
   public LookupListeningResource(

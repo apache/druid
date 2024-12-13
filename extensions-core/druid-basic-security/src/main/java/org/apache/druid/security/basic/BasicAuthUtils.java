@@ -63,34 +63,22 @@ public class BasicAuthUtils
       (throwable) -> throwable instanceof BasicSecurityDBResourceException;
 
   public static final TypeReference<Map<String, BasicAuthenticatorUser>> AUTHENTICATOR_USER_MAP_TYPE_REFERENCE =
-      new TypeReference<>()
-      {
-      };
+      new TypeReference<>() {};
 
   public static final TypeReference<Map<String, BasicAuthorizerUser>> AUTHORIZER_USER_MAP_TYPE_REFERENCE =
-      new TypeReference<>()
-      {
-      };
+      new TypeReference<>() {};
 
   public static final TypeReference<Map<String, BasicAuthorizerGroupMapping>> AUTHORIZER_GROUP_MAPPING_MAP_TYPE_REFERENCE =
-      new TypeReference<>()
-      {
-      };
+      new TypeReference<>() {};
 
   public static final TypeReference<Map<String, BasicAuthorizerRole>> AUTHORIZER_ROLE_MAP_TYPE_REFERENCE =
-      new TypeReference<>()
-      {
-      };
+      new TypeReference<>() {};
 
   public static final TypeReference<UserAndRoleMap> AUTHORIZER_USER_AND_ROLE_MAP_TYPE_REFERENCE =
-      new TypeReference<>()
-      {
-      };
+      new TypeReference<>() {};
 
   public static final TypeReference<GroupMappingAndRoleMap> AUTHORIZER_GROUP_MAPPING_AND_ROLE_MAP_TYPE_REFERENCE =
-      new TypeReference<>()
-      {
-      };
+      new TypeReference<>() {};
 
   public static byte[] generateSalt()
   {

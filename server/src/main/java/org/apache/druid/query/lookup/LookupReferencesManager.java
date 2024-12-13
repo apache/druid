@@ -90,9 +90,7 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
   private static final EmittingLogger LOG = new EmittingLogger(LookupReferencesManager.class);
 
   private static final TypeReference<Map<String, Object>> LOOKUPS_ALL_GENERIC_REFERENCE =
-      new TypeReference<>()
-      {
-      };
+      new TypeReference<>() {};
 
   // Lookups state (loaded/to-be-loaded/to-be-dropped etc) is managed by immutable LookupUpdateState instance.
   // Any update to state is done by creating updated LookupUpdateState instance and atomically setting that

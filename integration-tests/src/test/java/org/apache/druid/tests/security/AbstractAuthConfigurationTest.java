@@ -94,9 +94,7 @@ public abstract class AbstractAuthConfigurationTest
       "SELECT * FROM sys.tasks WHERE datasource IN ('auth_test')";
 
   protected static final TypeReference<List<Map<String, Object>>> SYS_SCHEMA_RESULTS_TYPE_REFERENCE =
-      new TypeReference<>()
-      {
-      };
+      new TypeReference<>() {};
 
   /**
    * create a ResourceAction set of permissions that can only read a 'auth_test' datasource, for Authorizer

@@ -763,9 +763,7 @@ public class SQLCatalogManager implements CatalogManager
   }
 
   private static final TypeReference<Map<String, Object>> PROPERTIES_TYPE_REF =
-      new TypeReference<>()
-      {
-      };
+      new TypeReference<>() {};
 
   private static Map<String, Object> propertiesFromBytes(
       final ObjectMapper jsonMapper,
@@ -776,9 +774,7 @@ public class SQLCatalogManager implements CatalogManager
   }
 
   private static final TypeReference<List<ColumnSpec>> COLUMNS_TYPE_REF =
-      new TypeReference<>()
-      {
-      };
+      new TypeReference<>() {};
 
   private static List<ColumnSpec> columnsFromBytes(
       final ObjectMapper jsonMapper,

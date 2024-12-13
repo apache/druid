@@ -49,9 +49,7 @@ public class DataSourceQueryQueryToolChest
     extends QueryToolChest<Result<DataSourceMetadataResultValue>, DataSourceMetadataQuery>
 {
   private static final TypeReference<Result<DataSourceMetadataResultValue>> TYPE_REFERENCE =
-      new TypeReference<>()
-      {
-      };
+      new TypeReference<>() {};
 
   private final GenericQueryMetricsFactory queryMetricsFactory;
 

@@ -39,17 +39,11 @@ import java.util.Map;
 public final class JacksonUtils
 {
   public static final TypeReference<Map<String, Object>> TYPE_REFERENCE_MAP_STRING_OBJECT =
-      new TypeReference<>()
-      {
-      };
+      new TypeReference<>() {};
   public static final TypeReference<Map<String, String>> TYPE_REFERENCE_MAP_STRING_STRING =
-      new TypeReference<>()
-      {
-      };
+      new TypeReference<>() {};
   public static final TypeReference<Map<String, Boolean>> TYPE_REFERENCE_MAP_STRING_BOOLEAN =
-      new TypeReference<>()
-      {
-      };
+      new TypeReference<>() {};
 
   private JacksonUtils()
   {

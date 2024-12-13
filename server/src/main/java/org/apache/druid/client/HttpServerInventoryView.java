@@ -86,9 +86,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class HttpServerInventoryView implements ServerInventoryView, FilteredServerInventoryView
 {
   public static final TypeReference<ChangeRequestsSnapshot<DataSegmentChangeRequest>> SEGMENT_LIST_RESP_TYPE_REF =
-      new TypeReference<>()
-      {
-      };
+      new TypeReference<>() {};
 
   private final EmittingLogger log = new EmittingLogger(HttpServerInventoryView.class);
   private final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider;

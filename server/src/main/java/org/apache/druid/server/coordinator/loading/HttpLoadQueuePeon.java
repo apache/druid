@@ -76,14 +76,10 @@ import java.util.concurrent.atomic.AtomicReference;
 public class HttpLoadQueuePeon implements LoadQueuePeon
 {
   public static final TypeReference<List<DataSegmentChangeRequest>> REQUEST_ENTITY_TYPE_REF =
-      new TypeReference<>()
-      {
-      };
+      new TypeReference<>() {};
 
   public static final TypeReference<List<DataSegmentChangeResponse>> RESPONSE_ENTITY_TYPE_REF =
-      new TypeReference<>()
-      {
-      };
+      new TypeReference<>() {};
 
   private static final EmittingLogger log = new EmittingLogger(HttpLoadQueuePeon.class);
 

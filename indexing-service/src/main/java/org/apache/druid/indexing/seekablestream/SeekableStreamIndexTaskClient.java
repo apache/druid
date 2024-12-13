@@ -32,9 +32,7 @@ import java.util.TreeMap;
 public interface SeekableStreamIndexTaskClient<PartitionIdType, SequenceOffsetType>
 {
   TypeReference<List<ParseExceptionReport>> TYPE_REFERENCE_LIST_PARSE_EXCEPTION_REPORT =
-      new TypeReference<>()
-      {
-      };
+      new TypeReference<>() {};
 
   /**
    * Retrieve current task checkpoints.

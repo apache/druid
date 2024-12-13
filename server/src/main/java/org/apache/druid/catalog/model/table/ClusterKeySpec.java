@@ -41,9 +41,7 @@ import java.util.Objects;
 public class ClusterKeySpec
 {
   public static final TypeReference<List<ClusterKeySpec>> CLUSTER_KEY_LIST_TYPE_REF =
-      new TypeReference<>()
-      {
-      };
+      new TypeReference<>() {};
 
   private final String expr;
   private final boolean desc;

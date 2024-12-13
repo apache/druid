@@ -104,9 +104,7 @@ public class LookupCoordinatorManager
   private static final String LOOKUP_UPDATE_REQUEST_PATH = LOOKUP_BASE_REQUEST_PATH + "/" + "updates";
 
   private static final TypeReference<LookupsState<LookupExtractorFactoryMapContainer>> LOOKUPS_STATE_TYPE_REFERENCE =
-      new TypeReference<>()
-      {
-      };
+      new TypeReference<>() {};
 
   private static final EmittingLogger LOG = new EmittingLogger(LookupCoordinatorManager.class);
 
