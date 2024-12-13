@@ -43,7 +43,6 @@ import org.apache.druid.guice.annotations.Merging;
 import org.apache.druid.initialization.CoreInjectorBuilder;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.initialization.ServiceInjectorBuilder;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -815,42 +814,6 @@ public class SqlTestFramework
       };
     }
 
-    @LazySingleton
-    public GroupByQueryQueryToolChest makeGroupByToolChest(
-        GroupByQueryRunnerFactory groupByQueryRunnerFactory)
-    {
-      return (GroupByQueryQueryToolChest) groupByQueryRunnerFactory.getToolchest();
-    }
-
-    @LazySingleton
-    public GroupByQueryRunnerFactory makeQueryRunnerFactory1(
-        final ObjectMapper mapper,
-        final GroupByQueryConfig config,
-        final TestGroupByBuffers bufferPools,
-        final DruidProcessingConfig processingConfig,
-        final GroupByStatsProvider statsProvider
-    )
-    {
-      if (bufferPools.getBufferSize() != processingConfig.intermediateComputeSizeBytes()) {
-        throw new ISE(
-            "Provided buffer size [%,d] does not match configured size [%,d]",
-            bufferPools.getBufferSize(),
-            processingConfig.intermediateComputeSizeBytes()
-        );
-      }
-      if (bufferPools.getNumMergeBuffers() != processingConfig.getNumMergeBuffers()) {
-        throw new ISE(
-            "Provided merge buffer count [%,d] does not match configured count [%,d]",
-            bufferPools.getNumMergeBuffers(),
-            processingConfig.getNumMergeBuffers()
-        );
-      }
-      final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
-      final GroupByResourcesReservationPool groupByResourcesReservationPool =
-          extracted(config, bufferPools);
-      return null;
-    }
-
     @Provides
     @LazySingleton
     private GroupByResourcesReservationPool extracted(final GroupByQueryConfig config,
@@ -861,7 +824,7 @@ public class SqlTestFramework
 
     @Provides
     @LazySingleton
-    private GroupingEngine extracted(final ObjectMapper mapper, final DruidProcessingConfig processingConfig,
+    private GroupingEngine makeGroupingEngine(final ObjectMapper mapper, final DruidProcessingConfig processingConfig,
         final GroupByStatsProvider statsProvider,
         final GroupByQueryConfig config,
         final GroupByResourcesReservationPool groupByResourcesReservationPool)
@@ -894,30 +857,6 @@ public class SqlTestFramework
     {
       return groupByResourcesReservationPool;
     }
-
-//    @Provides
-    @LazySingleton
-    private GroupByQueryQueryToolChest extracted(final GroupByQueryConfig config,
-        final GroupByStatsProvider statsProvider, final GroupByResourcesReservationPool groupByResourcesReservationPool,
-        final GroupingEngine groupingEngine)
-    {
-      return new GroupByQueryQueryToolChest(
-          groupingEngine,
-          () -> config,
-          DefaultGroupByQueryMetricsFactory.instance(),
-          groupByResourcesReservationPool,
-          statsProvider
-      );
-    }
-
-//    @Provides
-    @LazySingleton
-    private GroupByQueryRunnerFactory extracted(final TestGroupByBuffers bufferPools,
-        final GroupingEngine groupingEngine, final GroupByQueryQueryToolChest toolChest)
-    {
-      return new GroupByQueryRunnerFactory(groupingEngine, toolChest, bufferPools.getProcessingPool());
-    }
-
 
     @Provides
     @LazySingleton
