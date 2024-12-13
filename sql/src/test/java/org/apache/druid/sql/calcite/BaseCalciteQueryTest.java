@@ -46,6 +46,7 @@ import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
@@ -599,7 +600,8 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         joinType,
         filter,
         CalciteTests.createExprMacroTable(),
-        CalciteTests.createJoinableFactoryWrapper()
+        CalciteTests.createJoinableFactoryWrapper(),
+        JoinAlgorithm.BROADCAST
     );
   }
 

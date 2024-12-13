@@ -40,31 +40,21 @@ public class PreJoinableClause
   private final DataSource dataSource;
   private final JoinType joinType;
   private final JoinConditionAnalysis condition;
-  private final JoinAlgorithm preferredJoinAlgorithm;
-
-  public PreJoinableClause(
-      final String prefix,
-      final DataSource dataSource,
-      final JoinType joinType,
-      final JoinConditionAnalysis condition
-  )
-  {
-    this(prefix, dataSource, joinType, condition, null);
-  }
+  private final JoinAlgorithm joinAlgorithm;
 
   public PreJoinableClause(
       final String prefix,
       final DataSource dataSource,
       final JoinType joinType,
       final JoinConditionAnalysis condition,
-      @Nullable final JoinAlgorithm preferredJoinAlgorithm
+      @Nullable final JoinAlgorithm joinAlgorithm
   )
   {
     this.prefix = JoinPrefixUtils.validatePrefix(prefix);
     this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
     this.joinType = Preconditions.checkNotNull(joinType, "joinType");
     this.condition = Preconditions.checkNotNull(condition, "condition");
-    this.preferredJoinAlgorithm = preferredJoinAlgorithm;
+    this.joinAlgorithm = joinAlgorithm;
   }
 
   public String getPrefix()
@@ -88,9 +78,9 @@ public class PreJoinableClause
   }
 
   @Nullable
-  public JoinAlgorithm getPreferredJoinAlgorithm()
+  public JoinAlgorithm getJoinAlgorithm()
   {
-    return preferredJoinAlgorithm;
+    return joinAlgorithm;
   }
 
   @Override
@@ -103,16 +93,17 @@ public class PreJoinableClause
       return false;
     }
     PreJoinableClause that = (PreJoinableClause) o;
-    return Objects.equals(prefix, that.prefix) &&
-           Objects.equals(dataSource, that.dataSource) &&
-           joinType == that.joinType &&
-           Objects.equals(condition, that.condition);
+    return Objects.equals(prefix, that.prefix)
+           && Objects.equals(dataSource, that.dataSource)
+           && joinType == that.joinType
+           && Objects.equals(condition, that.condition)
+           && joinAlgorithm == that.joinAlgorithm;
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(prefix, dataSource, joinType, condition);
+    return Objects.hash(prefix, dataSource, joinType, condition, joinAlgorithm);
   }
 
   @Override
@@ -123,6 +114,7 @@ public class PreJoinableClause
            ", dataSource=" + dataSource +
            ", joinType=" + joinType +
            ", condition=" + condition +
+           ", joinAlgorithm=" + joinAlgorithm +
            '}';
   }
 }

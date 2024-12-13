@@ -68,6 +68,16 @@ public enum JoinHint
     return id;
   }
 
+  public static boolean isValidJoinAlgorithm(final String id)
+  {
+    for (final JoinHint value : values()) {
+      if (value.id.equals(id)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   /**
    * Whether this join algorithm requires subqueries for all inputs.
    */

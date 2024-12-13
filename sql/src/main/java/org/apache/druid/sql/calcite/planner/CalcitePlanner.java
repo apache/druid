@@ -38,11 +38,8 @@ import org.apache.calcite.prepare.CalciteCatalogReader;
 import org.apache.calcite.rel.RelCollationTraitDef;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.RelRoot;
-import org.apache.calcite.rel.core.TableScan;
-import org.apache.calcite.rel.hint.HintPredicate;
 import org.apache.calcite.rel.hint.HintPredicates;
 import org.apache.calcite.rel.hint.HintStrategyTable;
-import org.apache.calcite.rel.logical.LogicalJoin;
 import org.apache.calcite.rel.metadata.CachingRelMetadataProvider;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeSystem;
@@ -65,14 +62,12 @@ import org.apache.calcite.tools.Program;
 import org.apache.calcite.tools.RelBuilder;
 import org.apache.calcite.tools.ValidationException;
 import org.apache.calcite.util.Pair;
-import org.apache.calcite.util.Util;
 
 import javax.annotation.Nullable;
 import java.io.Reader;
 import java.util.List;
 import java.util.Objects;
 import java.util.Properties;
-import java.util.stream.Collectors;
 
 /**
  * Calcite planner. Clone of Calcite's
@@ -242,7 +237,7 @@ public class CalcitePlanner implements Planner, ViewExpander
   @Override
   public SqlNode validate(SqlNode sqlNode) throws ValidationException
   {
-    Hook.PARSE_TREE.run(new Object[] {null, sqlNode});
+    Hook.PARSE_TREE.run(new Object[]{null, sqlNode});
     ensure(CalcitePlanner.State.STATE_3_PARSED);
     this.validator = createSqlValidator(createCatalogReader());
     try {
@@ -306,7 +301,7 @@ public class CalcitePlanner implements Planner, ViewExpander
                                .withHintStrategyTable(HintTools.HINT_STRATEGY_TABLE);
     final SqlToRelConverter sqlToRelConverter =
         new DruidSqlToRelConverter(this, validator,
-                              createCatalogReader(), cluster, convertletTable, config
+                                   createCatalogReader(), cluster, convertletTable, config
         );
     RelRoot root =
         sqlToRelConverter.convertQuery(sql, false, true);
@@ -511,7 +506,9 @@ public class CalcitePlanner implements Planner, ViewExpander
     }
   }
 
-  /** Define some tool members and methods for hints. */
+  /**
+   * Define some tool members and methods for hints.
+   */
   private static class HintTools
   {
     static final HintStrategyTable HINT_STRATEGY_TABLE = createHintStrategies();
@@ -524,27 +521,9 @@ public class CalcitePlanner implements Planner, ViewExpander
     private static HintStrategyTable createHintStrategies()
     {
       return HintStrategyTable.builder()
-                              .hintStrategy("broadcast", HintPredicates.JOIN)
-                              .hintStrategy("sort_merge", HintPredicates.JOIN)
-                              //.hintStrategy("sort_merge", HintPredicates.and(HintPredicates.JOIN, joinWithFixedTableName()))
+                              .hintStrategy(JoinHint.BROADCAST.name(), HintPredicates.JOIN)
+                              .hintStrategy(JoinHint.SORT_MERGE.name(), HintPredicates.JOIN)
                               .build();
-    }
-
-    /** Returns a {@link HintPredicate} for join with specified table references. */
-    private static HintPredicate joinWithFixedTableName()
-    {
-      return (hint, rel) -> {
-        if (!(rel instanceof LogicalJoin)) {
-          return false;
-        }
-        LogicalJoin join = (LogicalJoin) rel;
-        final List<String> tableNames = hint.listOptions;
-        final List<String> inputTables = join.getInputs().stream()
-                                             .filter(input -> input instanceof TableScan)
-                                             .map(scan -> Util.last(scan.getTable().getQualifiedName()))
-                                             .collect(Collectors.toList());
-        return tableNames.equals(inputTables);
-      };
     }
   }
 }

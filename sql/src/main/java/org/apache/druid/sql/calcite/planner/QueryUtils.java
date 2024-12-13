@@ -63,7 +63,8 @@ public class QueryUtils
   {
     RelHint closestHint = null;
     for (RelHint hint : join.getHints()) {
-      if (closestHint == null || hint.inheritPath.size() < closestHint.inheritPath.size()) {
+      if ((closestHint == null || hint.inheritPath.size() < closestHint.inheritPath.size())
+          && JoinHint.isValidJoinAlgorithm(hint.hintName)) {
         closestHint = hint;
       }
     }

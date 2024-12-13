@@ -213,8 +213,8 @@ public class DataSourcePlan
       );
     } else if (dataSource instanceof JoinDataSource) {
       JoinDataSource joinDataSource = (JoinDataSource) dataSource;
-      final JoinAlgorithm preferredJoinAlgorithm = joinDataSource.getPreferredJoinAlgorithm() != null
-                                                   ? joinDataSource.getPreferredJoinAlgorithm()
+      final JoinAlgorithm preferredJoinAlgorithm = joinDataSource.getJoinAlgorithm() != null
+                                                   ? joinDataSource.getJoinAlgorithm()
                                                    : PlannerContext.getJoinAlgorithm(queryContext);
       final JoinAlgorithm deducedJoinAlgorithm = deduceJoinAlgorithm(
           preferredJoinAlgorithm,
@@ -619,7 +619,7 @@ public class DataSourcePlan
           // First JoinDataSource (i == 0) involves the base table, so we need to propagate the base table filter.
           i == 0 ? analysis.getJoinBaseTableFilter().orElse(null) : null,
           dataSource.getJoinableFactoryWrapper(),
-          clause.getPreferredJoinAlgorithm()
+          clause.getJoinAlgorithm()
       );
       inputSpecs.addAll(clausePlan.getInputSpecs());
       clausePlan.getBroadcastInputs().intStream().forEach(n -> broadcastInputs.add(n + shift));

@@ -874,7 +874,7 @@ public class DruidQuery
           joinDataSource.getJoinType(),
           leftFiltration.getDimFilter(),
           joinableFactoryWrapper,
-          joinDataSource.getPreferredJoinAlgorithm()
+          joinDataSource.getJoinAlgorithm()
       );
       return Pair.of(newDataSource, queryFiltration);
     } else {

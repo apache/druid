@@ -36,6 +36,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.Order;
 import org.apache.druid.query.QueryContexts;
@@ -977,7 +978,8 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                                    JoinType.INNER,
                                    null,
                                    ExprMacroTable.nil(),
-                                   CalciteTests.createJoinableFactoryWrapper()
+                                   CalciteTests.createJoinableFactoryWrapper(),
+                                   JoinAlgorithm.BROADCAST
                                ))
                                .intervals(querySegmentSpec(Filtration.eternity()))
                                .granularity(Granularities.ALL)
@@ -1108,7 +1110,8 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                             JoinType.LEFT,
                             null,
                             ExprMacroTable.nil(),
-                            CalciteTests.createJoinableFactoryWrapper()
+                            CalciteTests.createJoinableFactoryWrapper(),
+                            JoinAlgorithm.BROADCAST
                         ),
                         new QueryDataSource(
                             newScanQueryBuilder()
@@ -1128,7 +1131,8 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                                         JoinType.LEFT,
                                         null,
                                         ExprMacroTable.nil(),
-                                        CalciteTests.createJoinableFactoryWrapper()
+                                        CalciteTests.createJoinableFactoryWrapper(),
+                                        JoinAlgorithm.BROADCAST
                                     )
                                 )
                                 .columns("dim1", "j0.dim2")
@@ -1141,7 +1145,8 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                         JoinType.FULL,
                         null,
                         ExprMacroTable.nil(),
-                        CalciteTests.createJoinableFactoryWrapper()
+                        CalciteTests.createJoinableFactoryWrapper(),
+                        JoinAlgorithm.BROADCAST
                     )
                 )
                 .columns("dim1", "_j0.j0.dim2")
@@ -1468,7 +1473,8 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                         JoinType.INNER,
                         null,
                         TestExprMacroTable.INSTANCE,
-                        null
+                        null,
+                        JoinAlgorithm.BROADCAST
                     )
                 )
                 .intervals(querySegmentSpec(Intervals.ETERNITY))
@@ -1545,7 +1551,8 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                         JoinType.INNER,
                         null,
                         TestExprMacroTable.INSTANCE,
-                        null
+                        null,
+                        JoinAlgorithm.BROADCAST
                     )
                 )
                 .intervals(querySegmentSpec(Intervals.ETERNITY))
@@ -1600,7 +1607,8 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                         JoinType.INNER,
                         null,
                         TestExprMacroTable.INSTANCE,
-                        null
+                        null,
+                        JoinAlgorithm.BROADCAST
                     )
                 )
                 .intervals(querySegmentSpec(Intervals.ETERNITY))

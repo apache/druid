@@ -177,7 +177,7 @@ where w1.cityName='New York';
           "rightPrefix" : "j0.",
           "condition" : "(\"cityName\" == \"j0.cityName\")",
           "joinType" : "INNER",
-          "preferredJoinAlgorithm" : "broadcast"
+          "joinAlgorithm" : "broadcast"
         },
         "intervals" : {
           "type" : "intervals",
@@ -420,7 +420,7 @@ LogicalJoin:[[broadcast inheritPath:[0, 0]]]
           "rightPrefix" : "j0.",
           "condition" : "(\"cityName\" == \"j0.cityName\")",
           "joinType" : "INNER",
-          "preferredJoinAlgorithm" : "broadcast"
+          "joinAlgorithm" : "broadcast"
         },
         "intervals" : {
           "type" : "intervals",
