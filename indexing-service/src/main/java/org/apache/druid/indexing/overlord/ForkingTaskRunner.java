@@ -274,9 +274,7 @@ public class ForkingTaskRunner
                           try {
                             List<String> taskJavaOptsArray = jsonMapper.convertValue(
                                 task.getContextValue(ForkingTaskRunnerConfig.JAVA_OPTS_ARRAY_PROPERTY),
-                                new TypeReference<>()
-                                {
-                                }
+                                new TypeReference<>() {}
                             );
                             if (taskJavaOptsArray != null) {
                               command.addAll(taskJavaOptsArray);

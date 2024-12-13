@@ -118,9 +118,7 @@ public class CoordinatorClientImpl implements CoordinatorClient
           holder -> JacksonUtils.readValue(
               jsonMapper,
               holder.getContent(),
-              new TypeReference<>()
-              {
-              }
+              new TypeReference<>() {}
           )
       );
       FutureUtils.getUnchecked(segments, true).forEach(retVal::add);

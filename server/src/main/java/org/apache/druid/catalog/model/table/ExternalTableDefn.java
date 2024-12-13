@@ -236,9 +236,7 @@ public class ExternalTableDefn extends TableDefn
    * Type reference used to deserialize JSON to a generic map.
    */
   @VisibleForTesting
-  public static final TypeReference<Map<String, Object>> MAP_TYPE_REF = new TypeReference<>()
-  {
-  };
+  public static final TypeReference<Map<String, Object>> MAP_TYPE_REF = new TypeReference<>() {};
 
   private TableDefnRegistry registry;
 

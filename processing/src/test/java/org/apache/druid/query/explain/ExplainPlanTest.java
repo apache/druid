@@ -110,9 +110,7 @@ public class ExplainPlanTest
     try {
       observedExplainPlans = MAPPER.readValue(
           MAPPER.writeValueAsString(givenPlans),
-          new TypeReference<>()
-          {
-          }
+          new TypeReference<>() {}
       );
     }
     catch (Exception e) {

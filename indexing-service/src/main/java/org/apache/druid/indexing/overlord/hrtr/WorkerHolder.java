@@ -62,9 +62,7 @@ public class WorkerHolder
 {
   private static final EmittingLogger log = new EmittingLogger(WorkerHolder.class);
 
-  public static final TypeReference<ChangeRequestsSnapshot<WorkerHistoryItem>> WORKER_SYNC_RESP_TYPE_REF = new TypeReference<>()
-  {
-  };
+  public static final TypeReference<ChangeRequestsSnapshot<WorkerHistoryItem>> WORKER_SYNC_RESP_TYPE_REF = new TypeReference<>() {};
 
 
   private final Worker worker;

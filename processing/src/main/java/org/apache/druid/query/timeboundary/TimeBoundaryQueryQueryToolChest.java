@@ -62,12 +62,8 @@ public class TimeBoundaryQueryQueryToolChest
 {
   private static final byte TIMEBOUNDARY_QUERY = 0x3;
 
-  private static final TypeReference<Result<TimeBoundaryResultValue>> TYPE_REFERENCE = new TypeReference<>()
-  {
-  };
-  private static final TypeReference<Object> OBJECT_TYPE_REFERENCE = new TypeReference<>()
-  {
-  };
+  private static final TypeReference<Result<TimeBoundaryResultValue>> TYPE_REFERENCE = new TypeReference<>() {};
+  private static final TypeReference<Object> OBJECT_TYPE_REFERENCE = new TypeReference<>() {};
 
   private final GenericQueryMetricsFactory queryMetricsFactory;
 

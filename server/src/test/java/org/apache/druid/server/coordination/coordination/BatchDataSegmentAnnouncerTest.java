@@ -606,9 +606,7 @@ public class BatchDataSegmentAnnouncerTest
       try {
         if (cf.checkExists().forPath(path) != null) {
           return jsonMapper.readValue(
-              cf.getData().forPath(path), new TypeReference<>()
-              {
-              }
+              cf.getData().forPath(path), new TypeReference<>() {}
           );
         }
       }

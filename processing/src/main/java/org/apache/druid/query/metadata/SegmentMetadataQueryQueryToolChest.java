@@ -76,9 +76,7 @@ import java.util.function.BinaryOperator;
 
 public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAnalysis, SegmentMetadataQuery>
 {
-  private static final TypeReference<SegmentAnalysis> TYPE_REFERENCE = new TypeReference<>()
-  {
-  };
+  private static final TypeReference<SegmentAnalysis> TYPE_REFERENCE = new TypeReference<>() {};
   private static final byte SEGMENT_METADATA_CACHE_PREFIX = 0x4;
   private static final byte SEGMENT_METADATA_QUERY = 0x16;
   private static final Function<SegmentAnalysis, SegmentAnalysis> MERGE_TRANSFORM_FN =

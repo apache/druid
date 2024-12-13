@@ -173,9 +173,7 @@ public class OverlordClientImpl implements OverlordClient
             new BytesFullResponseHandler()
         ),
         holder ->
-            JacksonUtils.readValue(jsonMapper, holder.getContent(), new TypeReference<>()
-            {
-            })
+            JacksonUtils.readValue(jsonMapper, holder.getContent(), new TypeReference<>() {})
     );
   }
 
@@ -210,9 +208,7 @@ public class OverlordClientImpl implements OverlordClient
           final Map<String, List<Interval>> response = JacksonUtils.readValue(
               jsonMapper,
               holder.getContent(),
-              new TypeReference<>()
-              {
-              }
+              new TypeReference<>() {}
           );
 
           return response == null ? Collections.emptyMap() : response;
@@ -259,9 +255,7 @@ public class OverlordClientImpl implements OverlordClient
             new BytesFullResponseHandler()
         ),
         holder ->
-            JacksonUtils.readValue(jsonMapper, holder.getContent(), new TypeReference<>()
-            {
-            })
+            JacksonUtils.readValue(jsonMapper, holder.getContent(), new TypeReference<>() {})
     );
   }
 

@@ -90,9 +90,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
   private static final byte GROUPBY_QUERY = 0x14;
   private static final TypeReference<Object> OBJECT_TYPE_REFERENCE =
       new TypeReference<>() {};
-  private static final TypeReference<ResultRow> TYPE_REFERENCE = new TypeReference<>()
-  {
-  };
+  private static final TypeReference<ResultRow> TYPE_REFERENCE = new TypeReference<>() {};
 
   private final GroupingEngine groupingEngine;
   private final GroupByQueryConfig queryConfig;

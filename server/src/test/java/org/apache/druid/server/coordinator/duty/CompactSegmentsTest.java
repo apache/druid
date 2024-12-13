@@ -2175,9 +2175,7 @@ public class CompactSegmentsTest
           transformSpec = jsonMapper.readValue(
               jsonMapper.writeValueAsString(new TransformSpec(clientCompactionTaskQuery.getTransformSpec()
                                                                                        .getFilter(), null)),
-              new TypeReference<>()
-              {
-              }
+              new TypeReference<>() {}
           );
         }
       }

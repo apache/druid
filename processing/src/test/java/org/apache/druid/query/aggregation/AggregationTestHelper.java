@@ -471,9 +471,7 @@ public class AggregationTestHelper implements Closeable
       LineIterator iter = IOUtils.lineIterator(inputDataStream, "UTF-8");
       List<AggregatorFactory> aggregatorSpecs = mapper.readValue(
           aggregators,
-          new TypeReference<>()
-          {
-          }
+          new TypeReference<>() {}
       );
 
       createIndex(

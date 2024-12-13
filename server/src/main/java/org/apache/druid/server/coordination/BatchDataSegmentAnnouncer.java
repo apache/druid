@@ -433,9 +433,7 @@ public class BatchDataSegmentAnnouncer implements DataSegmentAnnouncer
       try {
         return jsonMapper.readValue(
             bytes,
-            new TypeReference<>()
-            {
-            }
+            new TypeReference<>() {}
         );
       }
       catch (Exception e) {

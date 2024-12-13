@@ -154,9 +154,7 @@ public class ITQueryRetryTestOnMissingSegments
 
         List<Map<String, Object>> result = jsonMapper.readValue(
             responseHolder.getContent(),
-            new TypeReference<>()
-            {
-            }
+            new TypeReference<>() {}
         );
         if (!QueryResultVerifier.compareResults(
             result,

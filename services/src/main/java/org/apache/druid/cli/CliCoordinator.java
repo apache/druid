@@ -367,9 +367,7 @@ public class CliCoordinator extends ServerRunnable
           if (Strings.isNullOrEmpty(props.getProperty(dutyListProperty))) {
             throw new IAE("Coordinator custom duty group given without any duty for group %s", coordinatorCustomDutyGroupName);
           }
-          List<String> dutyForGroup = jsonMapper.readValue(props.getProperty(dutyListProperty), new TypeReference<>()
-          {
-          });
+          List<String> dutyForGroup = jsonMapper.readValue(props.getProperty(dutyListProperty), new TypeReference<>() {});
           List<CoordinatorCustomDuty> coordinatorCustomDuties = new ArrayList<>();
           for (String dutyName : dutyForGroup) {
             final String dutyPropertyBase = StringUtils.format(

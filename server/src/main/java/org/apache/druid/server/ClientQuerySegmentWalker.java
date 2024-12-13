@@ -594,9 +594,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         .postProcess(
             objectMapper.convertValue(
                 query.context().getString("postProcessing"),
-                new TypeReference<>()
-                {
-                }
+                new TypeReference<>() {}
             )
         )
         .map(

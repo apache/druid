@@ -85,25 +85,19 @@ public class SQLMetadataStorageActionHandlerTest
           @Override
           public TypeReference<Map<String, Object>> getEntryType()
           {
-            return new TypeReference<>()
-            {
-            };
+            return new TypeReference<>() {};
           }
 
           @Override
           public TypeReference<Map<String, Object>> getStatusType()
           {
-            return new TypeReference<>()
-            {
-            };
+            return new TypeReference<>() {};
           }
 
           @Override
           public TypeReference<Map<String, Object>> getLockType()
           {
-            return new TypeReference<>()
-            {
-            };
+            return new TypeReference<>() {};
           }
         },
         entryType,

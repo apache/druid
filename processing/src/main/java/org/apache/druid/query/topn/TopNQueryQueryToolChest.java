@@ -80,12 +80,8 @@ import java.util.Optional;
 public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultValue>, TopNQuery>
 {
   private static final byte TOPN_QUERY = 0x1;
-  private static final TypeReference<Result<TopNResultValue>> TYPE_REFERENCE = new TypeReference<>()
-  {
-  };
-  private static final TypeReference<Object> OBJECT_TYPE_REFERENCE = new TypeReference<>()
-  {
-  };
+  private static final TypeReference<Result<TopNResultValue>> TYPE_REFERENCE = new TypeReference<>() {};
+  private static final TypeReference<Object> OBJECT_TYPE_REFERENCE = new TypeReference<>() {};
 
   private final TopNQueryConfig config;
   private final TopNQueryMetricsFactory queryMetricsFactory;

@@ -131,9 +131,7 @@ public class CoordinatorResourceTestClient
       );
 
       segments = jsonMapper.readValue(
-          response.getContent(), new TypeReference<>()
-          {
-          }
+          response.getContent(), new TypeReference<>() {}
       );
     }
     catch (Exception e) {
@@ -152,9 +150,7 @@ public class CoordinatorResourceTestClient
       );
 
       segments = jsonMapper.readValue(
-          response.getContent(), new TypeReference<>()
-          {
-          }
+          response.getContent(), new TypeReference<>() {}
       );
     }
     catch (Exception e) {
@@ -171,9 +167,7 @@ public class CoordinatorResourceTestClient
       StatusResponseHolder response = makeRequest(HttpMethod.GET, getIntervalsURL(dataSource));
 
       segments = jsonMapper.readValue(
-          response.getContent(), new TypeReference<>()
-          {
-          }
+          response.getContent(), new TypeReference<>() {}
       );
     }
     catch (Exception e) {
@@ -189,9 +183,7 @@ public class CoordinatorResourceTestClient
       StatusResponseHolder response = makeRequest(HttpMethod.GET, getFullSegmentsURL(dataSource));
 
       return jsonMapper.readValue(
-          response.getContent(), new TypeReference<>()
-          {
-          }
+          response.getContent(), new TypeReference<>() {}
       );
     }
     catch (Exception e) {
@@ -222,9 +214,7 @@ public class CoordinatorResourceTestClient
       }
 
       status = jsonMapper.readValue(
-          response.getContent(), new TypeReference<>()
-          {
-          }
+          response.getContent(), new TypeReference<>() {}
       );
     }
     catch (Exception e) {
@@ -365,9 +355,7 @@ public class CoordinatorResourceTestClient
 
       status = jsonMapper.readValue(
           response.getContent(),
-          new TypeReference<>()
-          {
-          }
+          new TypeReference<>() {}
       );
     }
     catch (Exception e) {

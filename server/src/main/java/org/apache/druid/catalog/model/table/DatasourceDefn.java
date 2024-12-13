@@ -110,9 +110,7 @@ public class DatasourceDefn extends TableDefn
       super(
           CLUSTER_KEYS_PROPERTY,
           "ClusterKeySpec list",
-          new TypeReference<>()
-          {
-          }
+          new TypeReference<>() {}
       );
     }
 

@@ -83,9 +83,7 @@ import java.util.stream.Collectors;
  */
 public class RabbitStreamSupervisor extends SeekableStreamSupervisor<String, Long, ByteEntity>
 {
-  public static final TypeReference<TreeMap<Integer, Map<String, Long>>> CHECKPOINTS_TYPE_REF = new TypeReference<>()
-  {
-  };
+  public static final TypeReference<TreeMap<Integer, Map<String, Long>>> CHECKPOINTS_TYPE_REF = new TypeReference<>() {};
 
   private static final EmittingLogger log = new EmittingLogger(RabbitStreamSupervisor.class);
   private static final Long NOT_SET = -1L;

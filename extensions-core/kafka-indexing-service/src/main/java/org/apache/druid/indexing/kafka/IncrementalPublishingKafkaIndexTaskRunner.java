@@ -232,9 +232,7 @@ public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamInd
       log.debug("Got checkpoints from task context[%s].", checkpointsString);
       return toolbox.getJsonMapper().readValue(
           checkpointsString,
-          new TypeReference<>()
-          {
-          }
+          new TypeReference<>() {}
       );
     } else {
       return null;

@@ -147,9 +147,7 @@ public class OverlordResourceTestClient
       LOG.debug("Index status response" + response.getContent());
       TaskStatusResponse taskStatusResponse = jsonMapper.readValue(
           response.getContent(),
-          new TypeReference<>()
-          {
-          }
+          new TypeReference<>() {}
       );
       return taskStatusResponse.getStatus();
     }
@@ -236,9 +234,7 @@ public class OverlordResourceTestClient
         LOG.debug("Tasks %s response %s", identifier, response.getContent());
       }
       return jsonMapper.readValue(
-          response.getContent(), new TypeReference<>()
-          {
-          }
+          response.getContent(), new TypeReference<>() {}
       );
     }
     catch (Exception e) {
@@ -257,9 +253,7 @@ public class OverlordResourceTestClient
         LOG.debug("Task %s response %s", taskId, response.getContent());
       }
       return jsonMapper.readValue(
-          response.getContent(), new TypeReference<>()
-          {
-          }
+          response.getContent(), new TypeReference<>() {}
       );
     }
     catch (ISE e) {
@@ -350,9 +344,7 @@ public class OverlordResourceTestClient
       ).get();
       return jsonMapper.readValue(
           response.getContent(),
-          new TypeReference<>()
-          {
-          }
+          new TypeReference<>() {}
       );
     }
     catch (Exception e) {
@@ -758,9 +750,7 @@ public class OverlordResourceTestClient
         );
       }
       List<Object> responseData = jsonMapper.readValue(
-          response.getContent(), new TypeReference<>()
-          {
-          }
+          response.getContent(), new TypeReference<>() {}
       );
       return responseData;
     }

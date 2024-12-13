@@ -99,9 +99,7 @@ public abstract class AbstractQueryResourceTestClient<QueryType>
     @Override
     public List<Map<String, Object>> decode(byte[] content) throws IOException
     {
-      return om.readValue(content, new TypeReference<>()
-      {
-      });
+      return om.readValue(content, new TypeReference<>() {});
     }
   }
 

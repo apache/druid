@@ -272,9 +272,7 @@ public class DeterminePartitionsJob implements Jobby
         }
         if (Utils.exists(dimSelectionJob, fileSystem, partitionInfoPath)) {
           List<ShardSpec> specs = HadoopDruidIndexerConfig.JSON_MAPPER.readValue(
-              Utils.openInputStream(dimSelectionJob, partitionInfoPath), new TypeReference<>()
-              {
-              }
+              Utils.openInputStream(dimSelectionJob, partitionInfoPath), new TypeReference<>() {}
           );
 
           List<HadoopyShardSpec> actualSpecs = Lists.newArrayListWithExpectedSize(specs.size());

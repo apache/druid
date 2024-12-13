@@ -115,9 +115,7 @@ public class BatchServerInventoryView implements ServerInventoryView, FilteredSe
           public Set<DataSegment> deserializeInventory(byte[] bytes)
           {
             try {
-              return jsonMapper.readValue(bytes, new TypeReference<>()
-              {
-              });
+              return jsonMapper.readValue(bytes, new TypeReference<>() {});
             }
             catch (IOException e) {
               log.error(e, "Could not parse json: %s", StringUtils.fromUtf8(bytes));
