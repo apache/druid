@@ -101,7 +101,7 @@ public class DruidRelFieldTrimmer extends RelFieldTrimmer
       ImmutableBitSet fieldsUsed,
       Set<RelDataTypeField> extraFields)
   {
-    if (trimTableScan) {
+    if (fieldsUsed.cardinality()>0 || trimTableScan) {
       return super.trimFields(tableAccessRel, fieldsUsed, extraFields);
     } else {
       Mapping mapping = Mappings.createIdentity(tableAccessRel.getRowType().getFieldCount());
