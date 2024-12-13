@@ -391,7 +391,7 @@ public class GroupByQueryEngine
       if (delegate != null && delegate.hasNext()) {
         return true;
       } else {
-        if (!cursor.isDone() && granularizer.currentOffsetWithinBucket()) {
+        if (granularizer.currentOffsetWithinBucket()) {
           if (delegate != null) {
             delegate.close();
           }

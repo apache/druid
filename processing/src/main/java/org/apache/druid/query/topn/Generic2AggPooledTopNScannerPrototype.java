@@ -57,29 +57,31 @@ public final class Generic2AggPooledTopNScannerPrototype implements Generic2AggP
     int totalAggregatorsSize = aggregator1Size + aggregator2Size;
     long processedRows = 0;
     int positionToAllocate = 0;
-    while (!cursor.isDoneOrInterrupted() && granularizer.currentOffsetWithinBucket()) {
-      final IndexedInts dimValues = dimensionSelector.getRow();
-      final int dimSize = dimValues.size();
-      for (int i = 0; i < dimSize; i++) {
-        int dimIndex = dimValues.get(i);
-        int position = positions[dimIndex];
-        if (position >= 0) {
-          aggregator1.aggregate(resultsBuffer, position);
-          aggregator2.aggregate(resultsBuffer, position + aggregator1Size);
-        } else if (position == TopNAlgorithm.INIT_POSITION_VALUE) {
-          positions[dimIndex] = positionToAllocate;
-          position = positionToAllocate;
-          aggregator1.init(resultsBuffer, position);
-          aggregator1.aggregate(resultsBuffer, position);
-          position += aggregator1Size;
-          aggregator2.init(resultsBuffer, position);
-          aggregator2.aggregate(resultsBuffer, position);
-          positionToAllocate += totalAggregatorsSize;
+    if (granularizer.currentOffsetWithinBucket()) {
+      while (!cursor.isDoneOrInterrupted()) {
+        final IndexedInts dimValues = dimensionSelector.getRow();
+        final int dimSize = dimValues.size();
+        for (int i = 0; i < dimSize; i++) {
+          int dimIndex = dimValues.get(i);
+          int position = positions[dimIndex];
+          if (position >= 0) {
+            aggregator1.aggregate(resultsBuffer, position);
+            aggregator2.aggregate(resultsBuffer, position + aggregator1Size);
+          } else if (position == TopNAlgorithm.INIT_POSITION_VALUE) {
+            positions[dimIndex] = positionToAllocate;
+            position = positionToAllocate;
+            aggregator1.init(resultsBuffer, position);
+            aggregator1.aggregate(resultsBuffer, position);
+            position += aggregator1Size;
+            aggregator2.init(resultsBuffer, position);
+            aggregator2.aggregate(resultsBuffer, position);
+            positionToAllocate += totalAggregatorsSize;
+          }
         }
-      }
-      processedRows++;
-      if (!granularizer.advanceCursorWithinBucketUninterruptedly()) {
-        break;
+        processedRows++;
+        if (!granularizer.advanceCursorWithinBucketUninterruptedly()) {
+          break;
+        }
       }
     }
     return processedRows;

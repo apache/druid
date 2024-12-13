@@ -93,20 +93,22 @@ public class TimeExtractionTopNAlgorithm extends BaseTopNAlgorithm<int[], Map<Ob
     final DimensionSelector dimSelector = params.getDimSelector();
 
     long processedRows = 0;
-    while (!cursor.isDone() && granularizer.currentOffsetWithinBucket()) {
-      final Object key = dimensionValueConverter.apply(dimSelector.lookupName(dimSelector.getRow().get(0)));
+    if (granularizer.currentOffsetWithinBucket()) {
+      while (!cursor.isDone()) {
+        final Object key = dimensionValueConverter.apply(dimSelector.lookupName(dimSelector.getRow().get(0)));
 
-      Aggregator[] theAggregators = aggregatesStore.computeIfAbsent(
-          key,
-          k -> makeAggregators(cursor, query.getAggregatorSpecs())
-      );
+        Aggregator[] theAggregators = aggregatesStore.computeIfAbsent(
+            key,
+            k -> makeAggregators(cursor, query.getAggregatorSpecs())
+        );
 
-      for (Aggregator aggregator : theAggregators) {
-        aggregator.aggregate();
-      }
-      processedRows++;
-      if (!granularizer.advanceCursorWithinBucket()) {
-        break;
+        for (Aggregator aggregator : theAggregators) {
+          aggregator.aggregate();
+        }
+        processedRows++;
+        if (!granularizer.advanceCursorWithinBucket()) {
+          break;
+        }
       }
     }
     return processedRows;
