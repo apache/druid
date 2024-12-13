@@ -66,6 +66,7 @@ public class DruidRelFieldTrimmer extends RelFieldTrimmer
     return makeIdentityMapping(input);
   }
 
+  @Override
   protected TrimResult dummyProject(int fieldCount, RelNode input,
       @Nullable RelNode originalRelNode)
   {
