@@ -32,10 +32,10 @@ import com.google.inject.Provides;
 import com.google.inject.TypeLiteral;
 import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.guice.BuiltInTypesModule;
-import org.apache.druid.guice.DruidBinders;
 import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.guice.ExpressionModule;
 import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.guice.QueryRunnerFactoryModule;
 import org.apache.druid.guice.SegmentWranglerModule;
 import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.guice.annotations.Global;
@@ -60,47 +60,21 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.TestBufferPool;
 import org.apache.druid.query.groupby.DefaultGroupByQueryMetricsFactory;
-import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryMetricsFactory;
-import org.apache.druid.query.groupby.GroupByQueryQueryToolChest;
-import org.apache.druid.query.groupby.GroupByQueryRunnerFactory;
 import org.apache.druid.query.groupby.GroupByResourcesReservationPool;
 import org.apache.druid.query.groupby.GroupByStatsProvider;
 import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.groupby.TestGroupByBuffers;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
-import org.apache.druid.query.metadata.SegmentMetadataQueryQueryToolChest;
-import org.apache.druid.query.metadata.SegmentMetadataQueryRunnerFactory;
-import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
-import org.apache.druid.query.operator.WindowOperatorQuery;
-import org.apache.druid.query.operator.WindowOperatorQueryQueryRunnerFactory;
-import org.apache.druid.query.operator.WindowOperatorQueryQueryToolChest;
-import org.apache.druid.query.scan.ScanQuery;
-import org.apache.druid.query.scan.ScanQueryQueryToolChest;
-import org.apache.druid.query.scan.ScanQueryRunnerFactory;
 import org.apache.druid.query.search.DefaultSearchQueryMetricsFactory;
-import org.apache.druid.query.search.SearchQuery;
 import org.apache.druid.query.search.SearchQueryConfig;
 import org.apache.druid.query.search.SearchQueryMetricsFactory;
-import org.apache.druid.query.search.SearchQueryQueryToolChest;
-import org.apache.druid.query.search.SearchQueryRunnerFactory;
-import org.apache.druid.query.timeboundary.TimeBoundaryQuery;
-import org.apache.druid.query.timeboundary.TimeBoundaryQueryQueryToolChest;
-import org.apache.druid.query.timeboundary.TimeBoundaryQueryRunnerFactory;
 import org.apache.druid.query.timeseries.DefaultTimeseriesQueryMetricsFactory;
-import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryMetricsFactory;
-import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
-import org.apache.druid.query.timeseries.TimeseriesQueryRunnerFactory;
 import org.apache.druid.query.topn.DefaultTopNQueryMetricsFactory;
-import org.apache.druid.query.topn.TopNQuery;
 import org.apache.druid.query.topn.TopNQueryConfig;
 import org.apache.druid.query.topn.TopNQueryMetricsFactory;
-import org.apache.druid.query.topn.TopNQueryQueryToolChest;
-import org.apache.druid.query.topn.TopNQueryRunnerFactory;
-import org.apache.druid.query.union.UnionQuery;
-import org.apache.druid.query.union.UnionQueryLogic;
 import org.apache.druid.quidem.TestSqlModule;
 import org.apache.druid.segment.DefaultColumnFormatConfig;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
@@ -410,7 +384,8 @@ public class SqlTestFramework
       builder.addModules(
           new LookylooModule(),
           new SegmentWranglerModule(),
-          new ExpressionModule()
+          new ExpressionModule(),
+          new QueryRunnerFactoryModule()
       );
 
       builder.addModules(
@@ -779,31 +754,6 @@ public class SqlTestFramework
       binder.bind(new TypeLiteral<Supplier<GroupByQueryConfig>>(){}).toInstance(() -> groupByConfig);
       binder.bind(GroupByQueryConfig.class).toInstance(groupByConfig);
 
-      DruidBinders
-          .queryBinder(binder)
-          .bindQueryRunnerFactory(GroupByQuery.class, GroupByQueryRunnerFactory.class)
-          .bindQueryRunnerFactory(SegmentMetadataQuery.class, SegmentMetadataQueryRunnerFactory.class)
-          .bindQueryRunnerFactory(SearchQuery.class, SearchQueryRunnerFactory.class)
-          .bindQueryRunnerFactory(ScanQuery.class, ScanQueryRunnerFactory.class)
-          .bindQueryRunnerFactory(TimeseriesQuery.class, TimeseriesQueryRunnerFactory.class)
-          .bindQueryRunnerFactory(TopNQuery.class, TopNQueryRunnerFactory.class)
-          .bindQueryRunnerFactory(TimeBoundaryQuery.class, TimeBoundaryQueryRunnerFactory.class)
-          .bindQueryRunnerFactory(WindowOperatorQuery.class, WindowOperatorQueryQueryRunnerFactory.class);
-
-      DruidBinders
-          .queryBinder(binder)
-          .bindQueryToolChest(GroupByQuery.class, GroupByQueryQueryToolChest.class)
-          .bindQueryToolChest(SegmentMetadataQuery.class, SegmentMetadataQueryQueryToolChest.class)
-          .bindQueryToolChest(SearchQuery.class, SearchQueryQueryToolChest.class)
-          .bindQueryToolChest(ScanQuery.class, ScanQueryQueryToolChest.class)
-          .bindQueryToolChest(TimeseriesQuery.class, TimeseriesQueryQueryToolChest.class)
-          .bindQueryToolChest(TopNQuery.class, TopNQueryQueryToolChest.class)
-          .bindQueryToolChest(TimeBoundaryQuery.class, TimeBoundaryQueryQueryToolChest.class)
-          .bindQueryToolChest(WindowOperatorQuery.class, WindowOperatorQueryQueryToolChest.class);
-
-      DruidBinders
-          .queryBinder(binder)
-          .bindQueryLogic(UnionQuery.class, UnionQueryLogic.class);
     }
 
     @Provides
