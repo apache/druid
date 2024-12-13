@@ -66,19 +66,19 @@ public class DruidBinders
     );
   }
 
-  public static QueryLogicBinder queryBinder(Binder binder)
+  public static QueryBinder queryBinder(Binder binder)
   {
-    return new QueryLogicBinder(binder);
+    return new QueryBinder(binder);
   }
 
-  public static class QueryLogicBinder
+  public static class QueryBinder
   {
     MapBinderHelper<Class<? extends Query>, QueryLogic> queryLogicBinder;
     MapBinderHelper<Class<? extends Query>, QueryRunnerFactory> queryRunnerFactoryBinder;
     MapBinderHelper<Class<? extends Query>, QueryToolChest> queryToolChestBinder;
 
 
-    public QueryLogicBinder(Binder binder)
+    public QueryBinder(Binder binder)
     {
       queryLogicBinder = new MapBinderHelper<>(
           binder, queryLogicBinderType(binder), ImmutableSet.of(LazySingleton.class)
@@ -91,7 +91,7 @@ public class DruidBinders
       );
     }
 
-    public QueryLogicBinder bindQueryLogic(
+    public QueryBinder bindQueryLogic(
         Class<? extends Query> queryTypeClazz,
         Class<? extends QueryLogic> queryLogicClazz)
     {
@@ -99,7 +99,7 @@ public class DruidBinders
       return this;
     }
 
-    public QueryLogicBinder bindQueryRunnerFactory(
+    public QueryBinder bindQueryRunnerFactory(
         Class<? extends Query> queryTypeClazz,
         Class<? extends QueryRunnerFactory> queryRunnerFactory)
     {
@@ -107,12 +107,12 @@ public class DruidBinders
       return this;
     }
 
-    public QueryLogicBinder naiveBinding2(Class<? extends Query> class1, Class<? extends QueryToolChest> class2)
+    public QueryBinder naiveBinding2(Class<? extends Query> class1, Class<? extends QueryToolChest> class2)
     {
       return bindQueryToolChest(class1, class2);
     }
 
-    private QueryLogicBinder bindQueryToolChest(
+    public QueryBinder bindQueryToolChest(
         Class<? extends Query> queryTypeClazz,
         Class<? extends QueryToolChest> queryToolChest)
     {
@@ -120,17 +120,14 @@ public class DruidBinders
       return this;
     }
 
-    public QueryLogicBinder naiveBinding(
-
+    public QueryBinder naiveBinding(
         Class<? extends Query> queryTypeClazz,
         Class<? extends QueryRunnerFactory> queryRunnerFactory)
 
     {
       return bindQueryRunnerFactory(queryTypeClazz, queryRunnerFactory);
-
     }
   }
-
 
   public static Multibinder<KeyHolder<DruidNode>> discoveryAnnouncementBinder(Binder binder)
   {
@@ -194,13 +191,6 @@ public class DruidBinders
       return mapBinder;
     }
 
-    /**
-     * Binds the given map value.
-     *
-     * @param key
-     * @param value
-     * @return this to enable builder like reuse
-     */
     public MapBinderHelper<KeyClass, ValueClass> bind(KeyClass key, Class<? extends ValueClass> value)
     {
       mapBinder.addBinding(key).to(value);

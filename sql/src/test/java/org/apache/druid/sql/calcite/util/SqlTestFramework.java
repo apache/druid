@@ -776,27 +776,25 @@ public class SqlTestFramework
 
       DruidBinders
           .queryBinder(binder)
-          .naiveBinding(GroupByQuery.class, GroupByQueryRunnerFactory.class)
-//          .mapOnlyBind(GroupByQuery.class, GroupByQueryRunnerFactory.class)
-          .naiveBinding(SegmentMetadataQuery.class, SegmentMetadataQueryRunnerFactory.class)
-          .naiveBinding(SearchQuery.class, SearchQueryRunnerFactory.class)
-          .naiveBinding(ScanQuery.class, ScanQueryRunnerFactory.class)
-          .naiveBinding(TimeseriesQuery.class, TimeseriesQueryRunnerFactory.class)
-          .naiveBinding(TopNQuery.class, TopNQueryRunnerFactory.class)
-          .naiveBinding(TimeBoundaryQuery.class, TimeBoundaryQueryRunnerFactory.class)
-          .naiveBinding(WindowOperatorQuery.class, WindowOperatorQueryQueryRunnerFactory.class);
+          .bindQueryRunnerFactory(GroupByQuery.class, GroupByQueryRunnerFactory.class)
+          .bindQueryRunnerFactory(SegmentMetadataQuery.class, SegmentMetadataQueryRunnerFactory.class)
+          .bindQueryRunnerFactory(SearchQuery.class, SearchQueryRunnerFactory.class)
+          .bindQueryRunnerFactory(ScanQuery.class, ScanQueryRunnerFactory.class)
+          .bindQueryRunnerFactory(TimeseriesQuery.class, TimeseriesQueryRunnerFactory.class)
+          .bindQueryRunnerFactory(TopNQuery.class, TopNQueryRunnerFactory.class)
+          .bindQueryRunnerFactory(TimeBoundaryQuery.class, TimeBoundaryQueryRunnerFactory.class)
+          .bindQueryRunnerFactory(WindowOperatorQuery.class, WindowOperatorQueryQueryRunnerFactory.class);
 
       DruidBinders
           .queryBinder(binder)
-//          .mapOnlyBind(GroupByQuery.class, GroupByQueryQueryToolChest.class)
-          .naiveBinding2(GroupByQuery.class, GroupByQueryQueryToolChest.class)
-          .naiveBinding2(SegmentMetadataQuery.class, SegmentMetadataQueryQueryToolChest.class)
-          .naiveBinding2(SearchQuery.class, SearchQueryQueryToolChest.class)
-          .naiveBinding2(ScanQuery.class, ScanQueryQueryToolChest.class)
-          .naiveBinding2(TimeseriesQuery.class, TimeseriesQueryQueryToolChest.class)
-          .naiveBinding2(TopNQuery.class, TopNQueryQueryToolChest.class)
-          .naiveBinding2(TimeBoundaryQuery.class, TimeBoundaryQueryQueryToolChest.class)
-          .naiveBinding2(WindowOperatorQuery.class, WindowOperatorQueryQueryToolChest.class);
+          .bindQueryToolChest(GroupByQuery.class, GroupByQueryQueryToolChest.class)
+          .bindQueryToolChest(SegmentMetadataQuery.class, SegmentMetadataQueryQueryToolChest.class)
+          .bindQueryToolChest(SearchQuery.class, SearchQueryQueryToolChest.class)
+          .bindQueryToolChest(ScanQuery.class, ScanQueryQueryToolChest.class)
+          .bindQueryToolChest(TimeseriesQuery.class, TimeseriesQueryQueryToolChest.class)
+          .bindQueryToolChest(TopNQuery.class, TopNQueryQueryToolChest.class)
+          .bindQueryToolChest(TimeBoundaryQuery.class, TimeBoundaryQueryQueryToolChest.class)
+          .bindQueryToolChest(WindowOperatorQuery.class, WindowOperatorQueryQueryToolChest.class);
 
       DruidBinders
           .queryBinder(binder)
