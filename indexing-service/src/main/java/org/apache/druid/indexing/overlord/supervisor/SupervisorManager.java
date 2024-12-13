@@ -22,8 +22,6 @@ package org.apache.druid.indexing.overlord.supervisor;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.error.DruidException;
@@ -34,7 +32,6 @@ import org.apache.druid.indexing.overlord.supervisor.autoscaler.SupervisorTaskAu
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorSpec;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
@@ -50,7 +47,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Manages the creation and lifetime of {@link Supervisor}.
@@ -223,16 +219,16 @@ public class SupervisorManager
     List<ListenableFuture<Void>> stopFutures = new ArrayList<>();
     synchronized (lock) {
       for (String id : supervisors.keySet()) {
-          try {
-            stopFutures.add(supervisors.get(id).lhs.stopAsync(false));
-            SupervisorTaskAutoScaler autoscaler = autoscalers.get(id);
-            if (autoscaler != null) {
-              autoscaler.stop();
-            }
+        try {
+          stopFutures.add(supervisors.get(id).lhs.stopAsync(false));
+          SupervisorTaskAutoScaler autoscaler = autoscalers.get(id);
+          if (autoscaler != null) {
+            autoscaler.stop();
           }
-          catch (Exception e) {
-            log.warn(e, "Caught exception while stopping supervisor [%s]", id);
-          }
+        }
+        catch (Exception e) {
+          log.warn(e, "Caught exception while stopping supervisor [%s]", id);
+        }
       }
       log.info("Waiting for [%d] supervisors to shutdown", stopFutures.size());
       try {

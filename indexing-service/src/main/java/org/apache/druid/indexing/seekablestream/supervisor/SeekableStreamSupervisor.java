@@ -124,7 +124,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -1110,8 +1109,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   }
 
   @Override
-  public ListenableFuture<Void> stopAsync(boolean stopGracefully) {
-    ListeningExecutorService shutdownExec = MoreExecutors.listeningDecorator(Execs.singleThreaded(StringUtils.encodeForFormat(supervisorId) + "-Shutdown-%d"));
+  public ListenableFuture<Void> stopAsync(boolean stopGracefully)
+  {
+    ListeningExecutorService shutdownExec = MoreExecutors.listeningDecorator(
+        Execs.singleThreaded(StringUtils.encodeForFormat(supervisorId) + "-Shutdown-%d")
+    );
     return shutdownExec.submit(() -> {
       stop(stopGracefully);
       shutdownExec.shutdown();

@@ -23,15 +23,12 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
-import net.spy.memcached.internal.ImmediateFuture;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Future;
 
 /**
  * An interface representing a general supervisor for managing ingestion tasks. For streaming ingestion use cases,
@@ -49,9 +46,10 @@ public interface Supervisor
    */
   void stop(boolean stopGracefully);
 
-  default ListenableFuture<Void> stopAsync(boolean stopGracefully) {
-    stop(stopGracefully);
+  default ListenableFuture<Void> stopAsync(boolean stopGracefully)
+  {
     SettableFuture<Void> stopFuture = SettableFuture.create();
+    stop(stopGracefully);
     stopFuture.set(null);
     return stopFuture;
   }
