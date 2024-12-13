@@ -95,8 +95,7 @@ DruidAggregate(group=[{1}], EXPR$1=[COUNT()], druid=[logical])
     },
     "rightPrefix" : "j0.",
     "condition" : "(\"k\" == \"j0.dim2\")",
-    "joinType" : "INNER",
-    "joinAlgorithm" : "broadcast"
+    "joinType" : "INNER"
   },
   "intervals" : {
     "type" : "intervals",

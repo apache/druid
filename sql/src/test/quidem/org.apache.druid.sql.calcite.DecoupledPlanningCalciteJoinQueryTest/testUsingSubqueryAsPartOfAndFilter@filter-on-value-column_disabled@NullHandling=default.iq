@@ -114,8 +114,7 @@ DruidSort(sort0=[$1], dir0=[ASC], druid=[logical])
     },
     "rightPrefix" : "j0.",
     "condition" : "(\"dim2\" == \"j0.d0\")",
-    "joinType" : "INNER",
-    "joinAlgorithm" : "broadcast"
+    "joinType" : "INNER"
   },
   "intervals" : {
     "type" : "intervals",

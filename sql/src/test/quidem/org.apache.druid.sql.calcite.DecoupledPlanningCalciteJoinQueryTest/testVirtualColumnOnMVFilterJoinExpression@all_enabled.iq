@@ -109,8 +109,7 @@ DruidProject(dim3=[$0], dim30=[$2], druid=[logical])
     },
     "rightPrefix" : "j0.",
     "condition" : "(\"v0\" == \"j0.v0\")",
-    "joinType" : "INNER",
-    "joinAlgorithm" : "broadcast"
+    "joinType" : "INNER"
   },
   "intervals" : {
     "type" : "intervals",

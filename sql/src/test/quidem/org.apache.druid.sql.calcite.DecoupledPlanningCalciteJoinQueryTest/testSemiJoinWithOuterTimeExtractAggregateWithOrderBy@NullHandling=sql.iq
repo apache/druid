@@ -116,8 +116,7 @@ DruidProject(EXPR$0=[$1], EXPR$1=[$0], druid=[logical])
     },
     "rightPrefix" : "j0.",
     "condition" : "(\"dim2\" == \"j0.d0\")",
-    "joinType" : "INNER",
-    "joinAlgorithm" : "broadcast"
+    "joinType" : "INNER"
   },
   "intervals" : {
     "type" : "intervals",

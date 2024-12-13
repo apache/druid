@@ -60,8 +60,7 @@ DruidUnion(all=[true])
           },
           "rightPrefix" : "j0.",
           "condition" : "(\"dim1\" == \"j0.k\")",
-          "joinType" : "INNER",
-          "joinAlgorithm" : "broadcast"
+          "joinType" : "INNER"
         },
         "intervals" : {
           "type" : "intervals",

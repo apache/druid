@@ -117,8 +117,7 @@ DruidAggregate(group=[{0}], druid=[logical])
         },
         "rightPrefix" : "j0.",
         "condition" : "(\"v0\" == \"j0.dim1\")",
-        "joinType" : "INNER",
-        "joinAlgorithm" : "broadcast"
+        "joinType" : "INNER"
       },
       "intervals" : {
         "type" : "intervals",

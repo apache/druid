@@ -72,8 +72,7 @@ DruidAggregate(group=[{0}], EXPR$1=[AVG($2)], druid=[logical])
         },
         "rightPrefix" : "j0.",
         "condition" : "(\"m1\" == \"j0.m1\")",
-        "joinType" : "INNER",
-        "joinAlgorithm" : "broadcast"
+        "joinType" : "INNER"
       },
       "intervals" : {
         "type" : "intervals",

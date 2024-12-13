@@ -100,8 +100,7 @@ DruidAggregate(group=[{}], EXPR$0=[COUNT() FILTER $0], druid=[logical])
     },
     "rightPrefix" : "j0.",
     "condition" : "(CAST(floor(100), 'DOUBLE') == \"j0.d0\")",
-    "joinType" : "LEFT",
-    "joinAlgorithm" : "broadcast"
+    "joinType" : "LEFT"
   },
   "intervals" : {
     "type" : "intervals",
