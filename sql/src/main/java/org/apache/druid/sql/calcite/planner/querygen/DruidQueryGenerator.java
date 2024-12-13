@@ -35,6 +35,7 @@ import org.apache.druid.query.FilteredDataSource;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.querygen.DruidQueryGenerator.PDQVertexFactory.PDQVertex;
@@ -455,7 +456,7 @@ public class DruidQueryGenerator
           if (q.getFilter() == null) {
             dataSource = origInput.dataSource;
           } else {
-            dataSource = makeFilteredDataSource(origInput, q.getFilter());
+            dataSource = makeFilteredDataSource(origInput, q.getFilter(), q.getVirtualColumns());
           }
           return new SourceDesc(dataSource, q.getOutputRowSignature());
         }
@@ -477,6 +478,9 @@ public class DruidQueryGenerator
         if (partialDruidQuery.stage() == PartialDruidQuery.Stage.SELECT_PROJECT &&
             (tweaks.filteredDatasourceAllowed() || partialDruidQuery.getWhereFilter() == null) &&
             mayDiscardSelectProject()) {
+          return true;
+        }
+        if (partialDruidQuery.stage() == PartialDruidQuery.Stage.SELECT_PROJECT && tweaks.filteredDatasourceAllowed()) {
           return true;
         }
         return false;
@@ -531,12 +535,13 @@ public class DruidQueryGenerator
    * This method should not live here.
    *
    * The fact that {@link Filtration} have to be run on the filter is out-of scope here.
+   * @param virtualColumns
    */
-  public static FilteredDataSource makeFilteredDataSource(SourceDesc sd, DimFilter filter)
+  public static FilteredDataSource makeFilteredDataSource(SourceDesc sd, DimFilter filter, VirtualColumns virtualColumns)
   {
 
     Filtration filtration = Filtration.create(filter).optimizeFilterOnly(sd.rowSignature);
     DimFilter newFilter = filtration.getDimFilter();
-    return FilteredDataSource.create(sd.dataSource, newFilter);
+    return FilteredDataSource.create(sd.dataSource, newFilter, virtualColumns);
   }
 }
