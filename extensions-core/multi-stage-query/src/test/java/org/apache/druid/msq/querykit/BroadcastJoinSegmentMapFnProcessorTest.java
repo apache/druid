@@ -41,7 +41,7 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.msq.indexing.error.BroadcastTablesTooLargeFault;
 import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.query.DataSource;
-import org.apache.druid.query.InlineDataSource;
+import org.apache.druid.query.FrameBasedInlineDataSource;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
@@ -165,7 +165,9 @@ public class BroadcastJoinSegmentMapFnProcessorTest extends InitializedNullHandl
     );
 
     final List<Object[]> rowsFromStage3 =
-        ((InlineDataSource) broadcastJoinReader.inlineChannelData(new InputNumberDataSource(3))).getRowsAsList();
+        ((FrameBasedInlineDataSource) broadcastJoinReader.inlineChannelData(new InputNumberDataSource(3)))
+            .getRowsAsSequence()
+            .toList();
     Assert.assertEquals(1209, rowsFromStage3.size());
 
     FrameTestUtil.assertRowsEqual(
@@ -174,7 +176,9 @@ public class BroadcastJoinSegmentMapFnProcessorTest extends InitializedNullHandl
     );
 
     final List<Object[]> rowsFromStage4 =
-        ((InlineDataSource) broadcastJoinReader.inlineChannelData(new InputNumberDataSource(4))).getRowsAsList();
+        ((FrameBasedInlineDataSource) broadcastJoinReader.inlineChannelData(new InputNumberDataSource(4)))
+            .getRowsAsSequence()
+            .toList();
     Assert.assertEquals(2, rowsFromStage4.size());
 
     FrameTestUtil.assertRowsEqual(
@@ -196,12 +200,15 @@ public class BroadcastJoinSegmentMapFnProcessorTest extends InitializedNullHandl
 
     MatcherAssert.assertThat(
         ((JoinDataSource) inlinedJoinDataSource).getRight(),
-        CoreMatchers.instanceOf(InlineDataSource.class)
+        CoreMatchers.instanceOf(FrameBasedInlineDataSource.class)
     );
 
     Assert.assertEquals(
         2,
-        ((InlineDataSource) ((JoinDataSource) inlinedJoinDataSource).getRight()).getRowsAsList().size()
+        ((FrameBasedInlineDataSource) ((JoinDataSource) inlinedJoinDataSource).getRight())
+            .getRowsAsSequence()
+            .toList()
+            .size()
     );
   }
 
