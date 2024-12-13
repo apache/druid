@@ -408,6 +408,12 @@ public class SqlTestFramework
     public void configureGuice(DruidInjectorBuilder builder, List<Module> overrideModules)
     {
       builder.addModules(
+          new LookylooModule(),
+          new SegmentWranglerModule(),
+          new ExpressionModule()
+      );
+
+      builder.addModules(
           binder -> binder.bind(QuerySegmentWalker.class)
                           .to(SpecificSegmentsQuerySegmentWalker.class)
                           .in(LazySingleton.class)
@@ -993,12 +999,6 @@ public class SqlTestFramework
         // test pulls in a module, then pull in that module, even though we are
         // not the Druid node to which the module is scoped.
         .ignoreLoadScopes();
-
-    injectorBuilder.addModules(
-        new LookylooModule(),
-        new SegmentWranglerModule(),
-        new ExpressionModule()
-    );
 
     ArrayList<Module> overrideModules = new ArrayList<>(builder.overrideModules);
 
