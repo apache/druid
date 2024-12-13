@@ -60,6 +60,7 @@ import org.apache.druid.query.groupby.GroupByStatsProvider;
 import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.topn.TopNQueryBuilder;
+import org.apache.druid.query.topn.TopNQueryConfig;
 import org.apache.druid.query.topn.TopNQueryEngine;
 import org.apache.druid.query.topn.TopNResultValue;
 import org.apache.druid.segment.CloserRule;
@@ -393,6 +394,7 @@ public class IncrementalIndexCursorFactoryTest extends InitializedNullHandlingTe
                 .threshold(10)
                 .aggregators(new LongSumAggregatorFactory("cnt", "cnt"))
                 .build(),
+            new TopNQueryConfig(),
             new IncrementalIndexSegment(index, SegmentId.dummy("test")),
             null
         )

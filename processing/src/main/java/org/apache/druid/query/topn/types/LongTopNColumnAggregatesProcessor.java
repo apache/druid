@@ -46,7 +46,7 @@ public class LongTopNColumnAggregatesProcessor
     long key = selector.getLong();
     return aggregatesStore.computeIfAbsent(
         key,
-        k -> BaseTopNAlgorithm.makeAggregators(cursor, query.getAggregatorSpecs())
+        k -> BaseTopNAlgorithm.makeAggregators(query, cursor)
     );
   }
 

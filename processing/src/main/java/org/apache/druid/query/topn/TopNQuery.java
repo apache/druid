@@ -30,6 +30,7 @@ import org.apache.druid.query.DataSource;
 import org.apache.druid.query.PerSegmentQueryOptimizationContext;
 import org.apache.druid.query.Queries;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
@@ -60,24 +61,25 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
   private final DimFilter dimFilter;
   private final List<AggregatorFactory> aggregatorSpecs;
   private final List<PostAggregator> postAggregatorSpecs;
+  private final TopNAggregatorResourceHelper aggregatorHelper;
 
-  @JsonCreator
+  // A ctor which allows passing of parameters not intended for serialization
   public TopNQuery(
-      @JsonProperty("dataSource") DataSource dataSource,
-      @JsonProperty("virtualColumns") VirtualColumns virtualColumns,
-      @JsonProperty("dimension") DimensionSpec dimensionSpec,
-      @JsonProperty("metric") TopNMetricSpec topNMetricSpec,
-      @JsonProperty("threshold") int threshold,
-      @JsonProperty("intervals") QuerySegmentSpec querySegmentSpec,
-      @JsonProperty("filter") DimFilter dimFilter,
-      @JsonProperty("granularity") Granularity granularity,
-      @JsonProperty("aggregations") List<AggregatorFactory> aggregatorSpecs,
-      @JsonProperty("postAggregations") List<PostAggregator> postAggregatorSpecs,
-      @JsonProperty("context") Map<String, Object> context
+      DataSource dataSource,
+      VirtualColumns virtualColumns,
+      DimensionSpec dimensionSpec,
+      TopNMetricSpec topNMetricSpec,
+      int threshold,
+      QuerySegmentSpec querySegmentSpec,
+      DimFilter dimFilter,
+      Granularity granularity,
+      List<AggregatorFactory> aggregatorSpecs,
+      List<PostAggregator> postAggregatorSpecs,
+      Map<String, Object> context,
+      @Nullable TopNAggregatorResourceHelper aggregatorHelper
   )
   {
     super(dataSource, querySegmentSpec, context, granularity);
-
     Preconditions.checkNotNull(dimensionSpec, "dimensionSpec can't be null");
     Preconditions.checkNotNull(topNMetricSpec, "must specify a metric");
     Preconditions.checkArgument(threshold != 0, "Threshold cannot be equal to 0.");
@@ -97,8 +99,61 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
             : postAggregatorSpecs
     );
 
+    final long expectedAllocBytes = aggregatorSpecs.stream()
+        .mapToLong(AggregatorFactory::getMaxIntermediateSizeWithNulls)
+        .sum();
+    final long maxAggregatorHeapSizeBytes = this.context()
+        .getLong(
+            QueryContexts.MAX_TOP_N_AGGREGATOR_HEAP_SIZE_BYTES,
+            TopNQueryConfig.DEFAULT_MAX_AGGREGATOR_HEAP_SIZE_BYTES
+        );
+    if (aggregatorHelper == null) {
+      this.aggregatorHelper = new TopNAggregatorResourceHelper(
+          expectedAllocBytes,
+          maxAggregatorHeapSizeBytes
+      );
+    } else {
+      this.aggregatorHelper = new TopNAggregatorResourceHelper(
+          expectedAllocBytes,
+          maxAggregatorHeapSizeBytes,
+          aggregatorHelper
+      );
+    }
+
     topNMetricSpec.verifyPreconditions(this.aggregatorSpecs, this.postAggregatorSpecs);
   }
+
+  @JsonCreator
+  public TopNQuery(
+      @JsonProperty("dataSource") DataSource dataSource,
+      @JsonProperty("virtualColumns") VirtualColumns virtualColumns,
+      @JsonProperty("dimension") DimensionSpec dimensionSpec,
+      @JsonProperty("metric") TopNMetricSpec topNMetricSpec,
+      @JsonProperty("threshold") int threshold,
+      @JsonProperty("intervals") QuerySegmentSpec querySegmentSpec,
+      @JsonProperty("filter") DimFilter dimFilter,
+      @JsonProperty("granularity") Granularity granularity,
+      @JsonProperty("aggregations") List<AggregatorFactory> aggregatorSpecs,
+      @JsonProperty("postAggregations") List<PostAggregator> postAggregatorSpecs,
+      @JsonProperty("context") Map<String, Object> context
+  )
+  {
+    this(
+        dataSource,
+        virtualColumns,
+        dimensionSpec,
+        topNMetricSpec,
+        threshold,
+        querySegmentSpec,
+        dimFilter,
+        granularity,
+        aggregatorSpecs,
+        postAggregatorSpecs,
+        context,
+        null
+    );
+  }
+
 
   @Override
   public boolean hasFilters()
@@ -221,6 +276,16 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
   public Query<Result<TopNResultValue>> withDataSource(DataSource dataSource)
   {
     return new TopNQueryBuilder(this).dataSource(dataSource).build();
+  }
+
+  public void trackAggregatorMemory()
+  {
+    aggregatorHelper.addAggregatorMemory();
+  }
+
+  public TopNAggregatorResourceHelper getAggregatorHelper()
+  {
+    return aggregatorHelper;
   }
 
   @Override

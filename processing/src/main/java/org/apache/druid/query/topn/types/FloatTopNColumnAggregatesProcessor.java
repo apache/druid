@@ -50,7 +50,7 @@ public class FloatTopNColumnAggregatesProcessor
     int key = Float.floatToIntBits(selector.getFloat());
     return aggregatesStore.computeIfAbsent(
         key,
-        k -> BaseTopNAlgorithm.makeAggregators(cursor, query.getAggregatorSpecs())
+        k -> BaseTopNAlgorithm.makeAggregators(query, cursor)
     );
   }
 

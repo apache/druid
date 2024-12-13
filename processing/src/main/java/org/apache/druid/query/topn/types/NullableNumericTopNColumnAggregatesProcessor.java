@@ -97,7 +97,7 @@ public abstract class NullableNumericTopNColumnAggregatesProcessor<Selector exte
     while (!cursor.isDone()) {
       if (hasNulls && selector.isNull()) {
         if (nullValueAggregates == null) {
-          nullValueAggregates = BaseTopNAlgorithm.makeAggregators(cursor, query.getAggregatorSpecs());
+          nullValueAggregates = BaseTopNAlgorithm.makeAggregators(query, cursor);
         }
         for (Aggregator aggregator : nullValueAggregates) {
           aggregator.aggregate();
