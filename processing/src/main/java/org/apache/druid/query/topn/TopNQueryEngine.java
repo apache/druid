@@ -245,6 +245,11 @@ public class TopNQueryEngine
       final int numBytesPerRecord
   )
   {
+    if (cardinality < 0) {
+      // unknown cardinality doesn't work with the pooled algorith which requires an exact count of dictionary ids
+      return false;
+    }
+
     if (selector.isHasExtractionFn()) {
       // extraction functions can have a many to one mapping, and should use a heap algorithm
       return false;
@@ -254,19 +259,22 @@ public class TopNQueryEngine
       // non-string output cannot use the pooled algorith, even if the underlying selector supports it
       return false;
     }
+
     if (!Types.is(capabilities, ValueType.STRING)) {
       // non-strings are not eligible to use the pooled algorithm, and should use a heap algorithm
       return false;
     }
 
-    // string columns must use the on heap algorithm unless they have the following capabilites
     if (!capabilities.isDictionaryEncoded().isTrue() || !capabilities.areDictionaryValuesUnique().isTrue()) {
+      // string columns must use the on heap algorithm unless they have the following capabilites
       return false;
     }
+
     if (Granularities.ALL.equals(query.getGranularity())) {
       // all other requirements have been satisfied, ALL granularity can always use the pooled algorithms
       return true;
     }
+
     // if not using ALL granularity, we can still potentially use the pooled algorithm if we are certain it doesn't
     // need to make multiple passes (e.g. reset the cursor)
     try (final ResourceHolder<ByteBuffer> resultsBufHolder = bufferPool.take()) {
