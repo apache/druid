@@ -99,18 +99,20 @@ public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Pa
     }
     boolean hasDimValSelector = (dimValSelector != null);
 
-    int cardinality = params.getCardinality();
+    final int cardinality = params.getCardinality();
+    final int numValuesPerPass = params.getNumValuesPerPass();
+    // sanity check to ensure that we only do multi-pass with ALL granularity
+    if (numValuesPerPass < cardinality && !Granularities.ALL.equals(params.getGranularizer().getGranularity())) {
+      throw DruidException.defensive(
+          "runWithCardinalityKnown can only be used for ALL granularity if multiple-passes are required"
+      );
+    }
     int numProcessed = 0;
     long processedRows = 0;
     while (numProcessed < cardinality) {
       final int numToProcess;
-      int maxNumToProcess = Math.min(params.getNumValuesPerPass(), cardinality - numProcessed);
-      // sanity check to ensure that we only do multi-pass with ALL granularity
-      if (maxNumToProcess < cardinality && !Granularities.ALL.equals(params.getGranularizer().getGranularity())) {
-        throw DruidException.defensive(
-            "runWithCardinalityKnown can only be used for ALL granularity if multiple-passes are required"
-        );
-      }
+      int maxNumToProcess = Math.min(numValuesPerPass, cardinality - numProcessed);
+
 
       DimValSelector theDimValSelector;
       if (!hasDimValSelector) {
