@@ -218,6 +218,7 @@ public class SupervisorManager
     Preconditions.checkState(started, "SupervisorManager not started");
     List<ListenableFuture<Void>> stopFutures = new ArrayList<>();
     synchronized (lock) {
+      log.info("Stopping [%d] supervisors", supervisors.keySet().size());
       for (String id : supervisors.keySet()) {
         try {
           stopFutures.add(supervisors.get(id).lhs.stopAsync(false));

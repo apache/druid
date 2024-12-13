@@ -1077,10 +1077,6 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             long shutdownTimeoutMillis = tuningConfig.getShutdownTimeout().getMillis();
             long endTime = System.currentTimeMillis() + shutdownTimeoutMillis;
             while (!stopped) {
-              if (!stopGracefully) {
-                stopped = true;
-                break;
-              }
               long sleepTime = endTime - System.currentTimeMillis();
               if (sleepTime <= 0) {
                 log.info("Timed out while waiting for shutdown (timeout [%,dms])", shutdownTimeoutMillis);
