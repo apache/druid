@@ -816,7 +816,8 @@ public class SqlTestFramework
 
     @Provides
     @LazySingleton
-    private GroupByResourcesReservationPool extracted(final GroupByQueryConfig config,
+    private GroupByResourcesReservationPool makeGroupByResourcesReservationPool(
+        final GroupByQueryConfig config,
         final TestGroupByBuffers bufferPools)
     {
       return new GroupByResourcesReservationPool(bufferPools.getMergePool(), config);
@@ -1000,6 +1001,7 @@ public class SqlTestFramework
     );
 
     ArrayList<Module> overrideModules = new ArrayList<>(builder.overrideModules);
+
     overrideModules.add(testSetupModule());
     builder.componentSupplier.configureGuice(injectorBuilder, overrideModules);
 
