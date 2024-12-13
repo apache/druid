@@ -67,14 +67,7 @@ import org.apache.druid.query.groupby.GroupByStatsProvider;
 import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.groupby.TestGroupByBuffers;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
-import org.apache.druid.query.search.DefaultSearchQueryMetricsFactory;
-import org.apache.druid.query.search.SearchQueryConfig;
-import org.apache.druid.query.search.SearchQueryMetricsFactory;
-import org.apache.druid.query.timeseries.DefaultTimeseriesQueryMetricsFactory;
-import org.apache.druid.query.timeseries.TimeseriesQueryMetricsFactory;
-import org.apache.druid.query.topn.DefaultTopNQueryMetricsFactory;
 import org.apache.druid.query.topn.TopNQueryConfig;
-import org.apache.druid.query.topn.TopNQueryMetricsFactory;
 import org.apache.druid.quidem.TestSqlModule;
 import org.apache.druid.segment.DefaultColumnFormatConfig;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
@@ -741,18 +734,6 @@ public class SqlTestFramework
       binder.bind(new TypeLiteral<NonBlockingPool<ByteBuffer>>(){})
             .annotatedWith(Global.class)
             .to(TestBufferPool.class);
-
-      binder.bind(SearchQueryMetricsFactory.class).toInstance(DefaultSearchQueryMetricsFactory.instance());
-      binder.bind(TimeseriesQueryMetricsFactory.class).toInstance(DefaultTimeseriesQueryMetricsFactory.instance());
-      binder.bind(TopNQueryMetricsFactory.class).toInstance(DefaultTopNQueryMetricsFactory.instance());
-
-      final SearchQueryConfig searchQueryConfig = new SearchQueryConfig();
-      binder.bind(SearchQueryConfig.class).toInstance(searchQueryConfig);
-      binder.bind(new TypeLiteral<Supplier<SearchQueryConfig>>(){}).toInstance(() -> searchQueryConfig);
-
-      final GroupByQueryConfig groupByConfig = new GroupByQueryConfig();
-      binder.bind(new TypeLiteral<Supplier<GroupByQueryConfig>>(){}).toInstance(() -> groupByConfig);
-      binder.bind(GroupByQueryConfig.class).toInstance(groupByConfig);
 
     }
 
