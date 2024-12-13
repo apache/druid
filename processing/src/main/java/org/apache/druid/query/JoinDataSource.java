@@ -100,6 +100,19 @@ public class JoinDataSource implements DataSource
   private static final Logger log = new Logger(JoinDataSource.class);
   private final DataSourceAnalysis analysis;
 
+//  private JoinDataSource()
+//  {
+//    analysis = null;
+//    leftFilter = null;
+//    joinableFactoryWrapper = null;
+//    joinAlgorithm = JoinAlgorithm.BROADCAST;
+//    conditionAnalysis = null;
+//    joinType = null;
+//    rightPrefix = null;
+//    right = null;
+//    left = null;
+//  }
+
   private JoinDataSource(
       DataSource left,
       DataSource right,
@@ -118,7 +131,7 @@ public class JoinDataSource implements DataSource
     this.joinType = Preconditions.checkNotNull(joinType, "joinType");
     this.leftFilter = validateLeftFilter(left, leftFilter);
     this.joinableFactoryWrapper = joinableFactoryWrapper;
-    this.joinAlgorithm = joinAlgorithm;
+    this.joinAlgorithm = JoinAlgorithm.BROADCAST.equals(joinAlgorithm) ? null : joinAlgorithm;
 
     this.analysis = this.getAnalysisForDataSource();
   }
@@ -371,11 +384,16 @@ public class JoinDataSource implements DataSource
     return analysis;
   }
 
-  @Nullable
   @JsonProperty("joinAlgorithm")
-  public JoinAlgorithm getJoinAlgorithm()
+  @JsonInclude(Include.NON_NULL)
+  private JoinAlgorithm getJoinAlgorithmForSerialization()
   {
     return joinAlgorithm;
+  }
+
+  public JoinAlgorithm getJoinAlgorithm()
+  {
+    return joinAlgorithm == null ? JoinAlgorithm.BROADCAST : joinAlgorithm;
   }
 
   @Override
