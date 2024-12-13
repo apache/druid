@@ -296,7 +296,7 @@ public class CalciteRulesManager
     cleanupRules.addRuleInstance(AggregateProjectMergeRule.Config.DEFAULT.toRule());
     return Programs.sequence(
         Programs.of(builder.build(), true, DefaultRelMetadataProvider.INSTANCE),
-        new DruidTrimFieldsProgram(true),
+        new DruidTrimFieldsProgram(false),
         Programs.of(cleanupRules.build(), true, DefaultRelMetadataProvider.INSTANCE)
     );
   }
@@ -553,7 +553,7 @@ public class CalciteRulesManager
     {
       final RelBuilder relBuilder = RelFactories.LOGICAL_BUILDER.create(rel.getCluster(), null);
       final RelNode decorrelatedRel = RelDecorrelator.decorrelateQuery(rel, relBuilder);
-      RelNode ret = new DruidRelFieldTrimmer(null, relBuilder, true).trim(decorrelatedRel);
+      RelNode ret = new DruidRelFieldTrimmer(null, relBuilder, false).trim(decorrelatedRel);
       return ret;
     }
 

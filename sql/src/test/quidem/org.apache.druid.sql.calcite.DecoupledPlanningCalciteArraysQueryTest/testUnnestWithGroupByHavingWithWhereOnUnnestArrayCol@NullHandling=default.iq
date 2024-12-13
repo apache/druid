@@ -18,16 +18,14 @@ SELECT uln, COUNT(*) FROM druid.arrays, UNNEST(arrayLongNulls) AS unnested(uln) 
 (1 row)
 
 !ok
-LogicalAggregate(group=[{1}], EXPR$1=[COUNT()])
-  LogicalUnnest(unnestExpr=[$0], filter=[=($0, 1)])
-    LogicalProject(arrayLongNulls=[$4])
-      LogicalTableScan(table=[[druid, arrays]])
+LogicalAggregate(group=[{12}], EXPR$1=[COUNT()])
+  LogicalUnnest(unnestExpr=[$4], filter=[=($0, 1)])
+    LogicalTableScan(table=[[druid, arrays]])
 
 !logicalPlan
-DruidAggregate(group=[{1}], EXPR$1=[COUNT()], druid=[logical])
-  DruidUnnest(unnestExpr=[$0], filter=[=($0, 1)])
-    DruidProject(arrayLongNulls=[$4], druid=[logical])
-      DruidTableScan(table=[[druid, arrays]], druid=[logical])
+DruidAggregate(group=[{12}], EXPR$1=[COUNT()], druid=[logical])
+  DruidUnnest(unnestExpr=[$4], filter=[=($0, 1)])
+    DruidTableScan(table=[[druid, arrays]], druid=[logical])
 
 !druidPlan
 {
