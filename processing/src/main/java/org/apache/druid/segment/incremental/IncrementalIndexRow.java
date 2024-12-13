@@ -137,7 +137,7 @@ public final class IncrementalIndexRow
     return "IncrementalIndexRow{" +
            "timestamp=" + DateTimes.utc(timestamp) +
            ", dims=" + Lists.transform(
-        Arrays.asList(dims), new Function<Object, Object>()
+        Arrays.asList(dims), new Function<>()
         {
           @Override
           public Object apply(@Nullable Object input)

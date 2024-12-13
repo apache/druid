@@ -169,7 +169,7 @@ public class IndexSpec
   {
     return objectMapper.convertValue(
         this,
-        new TypeReference<Map<String, Object>>()
+        new TypeReference<>()
         {
         }
     );

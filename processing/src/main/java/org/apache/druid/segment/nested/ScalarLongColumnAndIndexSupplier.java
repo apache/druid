@@ -556,7 +556,7 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
         @Override
         public Iterable<ImmutableBitmap> getBitmapIterable()
         {
-          return () -> new Iterator<ImmutableBitmap>()
+          return () -> new Iterator<>()
           {
             final IntIterator rangeIterator = IntListUtils.fromTo(startIndex, endIndex).iterator();
 
@@ -596,7 +596,7 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
         @Override
         public Iterable<ImmutableBitmap> getBitmapIterable(boolean includeUnknown)
         {
-          return () -> new Iterator<ImmutableBitmap>()
+          return () -> new Iterator<>()
           {
             final Iterator<Long> iterator = dictionary.iterator();
             final DruidLongPredicate longPredicate = matcherFactory.makeLongPredicate();

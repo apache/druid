@@ -168,7 +168,7 @@ public class CoordinatorBasicAuthenticatorMetadataStorageUpdater implements Basi
           exec,
           new Duration(commonCacheConfig.getPollingPeriod()),
           new Duration(commonCacheConfig.getPollingPeriod()),
-          new Callable<ScheduledExecutors.Signal>()
+          new Callable<>()
           {
             @Override
             public ScheduledExecutors.Signal call()

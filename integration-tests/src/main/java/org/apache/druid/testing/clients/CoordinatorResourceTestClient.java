@@ -131,7 +131,7 @@ public class CoordinatorResourceTestClient
       );
 
       segments = jsonMapper.readValue(
-          response.getContent(), new TypeReference<List<String>>()
+          response.getContent(), new TypeReference<>()
           {
           }
       );
@@ -152,7 +152,7 @@ public class CoordinatorResourceTestClient
       );
 
       segments = jsonMapper.readValue(
-          response.getContent(), new TypeReference<List<DataSegment>>()
+          response.getContent(), new TypeReference<>()
           {
           }
       );
@@ -171,7 +171,7 @@ public class CoordinatorResourceTestClient
       StatusResponseHolder response = makeRequest(HttpMethod.GET, getIntervalsURL(dataSource));
 
       segments = jsonMapper.readValue(
-          response.getContent(), new TypeReference<List<String>>()
+          response.getContent(), new TypeReference<>()
           {
           }
       );
@@ -189,7 +189,7 @@ public class CoordinatorResourceTestClient
       StatusResponseHolder response = makeRequest(HttpMethod.GET, getFullSegmentsURL(dataSource));
 
       return jsonMapper.readValue(
-          response.getContent(), new TypeReference<List<DataSegment>>()
+          response.getContent(), new TypeReference<>()
           {
           }
       );
@@ -222,7 +222,7 @@ public class CoordinatorResourceTestClient
       }
 
       status = jsonMapper.readValue(
-          response.getContent(), new TypeReference<Map<String, Integer>>()
+          response.getContent(), new TypeReference<>()
           {
           }
       );
@@ -333,7 +333,7 @@ public class CoordinatorResourceTestClient
 
     Map<String, Object> results2 = jsonMapper.readValue(
         response.getContent(),
-        new TypeReference<Map<String, Object>>()
+        new TypeReference<>()
         {
         }
     );
@@ -367,7 +367,7 @@ public class CoordinatorResourceTestClient
 
       status = jsonMapper.readValue(
           response.getContent(),
-          new TypeReference<Map<String, Map<HostAndPort, LookupsState<LookupExtractorFactoryMapContainer>>>>()
+          new TypeReference<>()
           {
           }
       );

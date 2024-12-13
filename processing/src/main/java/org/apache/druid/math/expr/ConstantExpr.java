@@ -124,7 +124,7 @@ abstract class ConstantExpr<T> implements Expr
   @Override
   public Expr asSingleThreaded(InputBindingInspector inspector)
   {
-    return new ExprEvalBasedConstantExpr<T>(realEval());
+    return new ExprEvalBasedConstantExpr<>(realEval());
   }
 
   @Override

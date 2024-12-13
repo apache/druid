@@ -184,7 +184,7 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
   @Override
   public TypeReference<SegmentIdWithShardSpec> getReturnTypeReference()
   {
-    return new TypeReference<SegmentIdWithShardSpec>()
+    return new TypeReference<>()
     {
     };
   }

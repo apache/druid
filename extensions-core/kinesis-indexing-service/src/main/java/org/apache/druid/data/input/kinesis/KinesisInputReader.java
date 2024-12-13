@@ -204,7 +204,7 @@ public class KinesisInputReader implements InputEntityReader
     final Set<String> keySet = new HashSet<>(fallback.keySet());
     keySet.addAll(rowDimensions);
 
-    return new AbstractMap<String, Object>()
+    return new AbstractMap<>()
     {
       @Override
       public Object get(Object key)
@@ -227,29 +227,29 @@ public class KinesisInputReader implements InputEntityReader
       public Set<Entry<String, Object>> entrySet()
       {
         return keySet().stream()
-            .map(
-                field -> new Entry<String, Object>()
-                {
-                  @Override
-                  public String getKey()
-                  {
-                    return field;
-                  }
+                       .map(
+                           field -> new Entry<String, Object>()
+                           {
+                             @Override
+                             public String getKey()
+                             {
+                               return field;
+                             }
 
-                  @Override
-                  public Object getValue()
-                  {
-                    return get(field);
-                  }
+                             @Override
+                             public Object getValue()
+                             {
+                               return get(field);
+                             }
 
-                  @Override
-                  public Object setValue(final Object value)
-                  {
-                    throw new UnsupportedOperationException();
-                  }
-                }
-            )
-            .collect(Collectors.toCollection(LinkedHashSet::new));
+                             @Override
+                             public Object setValue(final Object value)
+                             {
+                               throw new UnsupportedOperationException();
+                             }
+                           }
+                       )
+                       .collect(Collectors.toCollection(LinkedHashSet::new));
       }
     };
   }

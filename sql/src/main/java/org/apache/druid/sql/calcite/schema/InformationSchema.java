@@ -186,7 +186,7 @@ public class InformationSchema extends AbstractSchema
       final FluentIterable<Object[]> results = FluentIterable
           .from(rootSchema.getSubSchemaNames())
           .transform(
-              new Function<String, Object[]>()
+              new Function<>()
               {
                 @Override
                 public Object[] apply(final String schemaName)
@@ -282,7 +282,7 @@ public class InformationSchema extends AbstractSchema
                               }
                           ),
                           FluentIterable.from(authorizedFunctionNames).transform(
-                              new Function<String, Object[]>()
+                              new Function<>()
                               {
                                 @Override
                                 public Object[] apply(final String functionName)
@@ -364,7 +364,7 @@ public class InformationSchema extends AbstractSchema
                       Iterables.filter(
                           Iterables.concat(
                               FluentIterable.from(authorizedTableNames).transform(
-                                  new Function<String, Iterable<Object[]>>()
+                                  new Function<>()
                                   {
                                     @Override
                                     public Iterable<Object[]> apply(final String tableName)
@@ -377,14 +377,14 @@ public class InformationSchema extends AbstractSchema
                                       return generateColumnMetadata(
                                           schemaName,
                                           tableName,
-                                           table.getRowType(typeFactory),
+                                          table.getRowType(typeFactory),
                                           typeFactory
                                       );
                                     }
                                   }
                               ),
                               FluentIterable.from(authorizedFunctionNames).transform(
-                                  new Function<String, Iterable<Object[]>>()
+                                  new Function<>()
                                   {
                                     @Override
                                     public Iterable<Object[]> apply(final String functionName)
@@ -449,7 +449,7 @@ public class InformationSchema extends AbstractSchema
       return FluentIterable
           .from(tableSchema.getFieldList())
           .transform(
-              new Function<RelDataTypeField, Object[]>()
+              new Function<>()
               {
                 @Override
                 public Object[] apply(final RelDataTypeField field)
@@ -460,7 +460,9 @@ public class InformationSchema extends AbstractSchema
                   boolean isCharacter = SqlTypeName.CHAR_TYPES.contains(sqlTypeName);
                   boolean isDateTime = SqlTypeName.DATETIME_TYPES.contains(sqlTypeName);
 
-                  final String typeName = type instanceof RowSignatures.ComplexSqlType ? ((RowSignatures.ComplexSqlType) type).asTypeString() : sqlTypeName.toString();
+                  final String typeName = type instanceof RowSignatures.ComplexSqlType
+                                          ? ((RowSignatures.ComplexSqlType) type).asTypeString()
+                                          : sqlTypeName.toString();
                   return new Object[]{
                       CATALOG_NAME, // TABLE_CATALOG
                       schemaName, // TABLE_SCHEMA

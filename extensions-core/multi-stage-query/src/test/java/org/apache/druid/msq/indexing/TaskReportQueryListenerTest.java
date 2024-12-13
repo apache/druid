@@ -114,7 +114,9 @@ public class TaskReportQueryListenerTest
     final TaskReport.ReportMap reportMap =
         JSON_MAPPER.readValue(
             baos.toByteArray(),
-            new TypeReference<TaskReport.ReportMap>() {}
+            new TypeReference<>()
+            {
+            }
         );
 
     Assert.assertEquals(ImmutableSet.of("multiStageQuery", TaskContextReport.REPORT_KEY), reportMap.keySet());
@@ -183,7 +185,9 @@ public class TaskReportQueryListenerTest
     final TaskReport.ReportMap reportMap =
         JSON_MAPPER.readValue(
             baos.toByteArray(),
-            new TypeReference<TaskReport.ReportMap>() {}
+            new TypeReference<>()
+            {
+            }
         );
 
     Assert.assertEquals(ImmutableSet.of("multiStageQuery", TaskContextReport.REPORT_KEY), reportMap.keySet());

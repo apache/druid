@@ -94,7 +94,7 @@ public abstract class AbstractAuthConfigurationTest
       "SELECT * FROM sys.tasks WHERE datasource IN ('auth_test')";
 
   protected static final TypeReference<List<Map<String, Object>>> SYS_SCHEMA_RESULTS_TYPE_REFERENCE =
-      new TypeReference<List<Map<String, Object>>>()
+      new TypeReference<>()
       {
       };
 

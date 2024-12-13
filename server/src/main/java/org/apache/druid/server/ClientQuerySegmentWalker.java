@@ -513,7 +513,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       } else {
         // Cannot inline subquery. Attempt to inline one level deeper, and then try again.
 
-        List<DataSource> newDataSources = new ArrayList<DataSource>();
+        List<DataSource> newDataSources = new ArrayList<>();
         for (DataSource ds : dataSource.getChildren()) {
           newDataSources.add(
               inlineIfNecessary(
@@ -595,7 +595,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         .postProcess(
             objectMapper.convertValue(
                 query.context().getString("postProcessing"),
-                new TypeReference<PostProcessingOperator<T>>()
+                new TypeReference<>()
                 {
                 }
             )

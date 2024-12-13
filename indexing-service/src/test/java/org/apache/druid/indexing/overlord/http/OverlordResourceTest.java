@@ -1076,7 +1076,7 @@ public class OverlordResourceTest
     final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
     Map<String, List<Interval>> observedIntervals = jsonMapper.readValue(
         jsonMapper.writeValueAsString(response.getEntity()),
-        new TypeReference<Map<String, List<Interval>>>()
+        new TypeReference<>()
         {
         }
     );

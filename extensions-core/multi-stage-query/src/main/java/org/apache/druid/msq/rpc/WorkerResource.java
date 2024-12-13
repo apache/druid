@@ -144,7 +144,7 @@ public class WorkerResource
 
     Futures.addCallback(
         dataFuture,
-        new FutureCallback<InputStream>()
+        new FutureCallback<>()
         {
           @Override
           public void onSuccess(final InputStream inputStream)

@@ -412,7 +412,7 @@ public class GroupByLimitPushDownInsufficientBufferTest extends InitializedNullH
 
     QueryRunner<ResultRow> theRunner3 = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
-            new QueryRunner<ResultRow>()
+            new QueryRunner<>()
             {
               @Override
               public Sequence<ResultRow> run(QueryPlus<ResultRow> queryPlus, ResponseContext responseContext)
@@ -515,7 +515,7 @@ public class GroupByLimitPushDownInsufficientBufferTest extends InitializedNullH
 
     QueryRunner<ResultRow> theRunner3 = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
-            new QueryRunner<ResultRow>()
+            new QueryRunner<>()
             {
               @Override
               public Sequence<ResultRow> run(QueryPlus<ResultRow> queryPlus, ResponseContext responseContext)

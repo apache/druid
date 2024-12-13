@@ -57,7 +57,7 @@ import java.util.stream.Collectors;
 public class LookupJoinMatcher implements JoinMatcher
 {
   private static final ColumnProcessorFactory<Supplier<String>> LEFT_KEY_READER =
-      new ColumnProcessorFactory<Supplier<String>>()
+      new ColumnProcessorFactory<>()
       {
         @Override
         public ColumnType defaultType()

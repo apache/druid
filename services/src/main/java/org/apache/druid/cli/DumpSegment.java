@@ -252,7 +252,7 @@ public class DumpSegment extends GuiceRunnable
         null
     );
     withOutputStream(
-        new Function<OutputStream, Object>()
+        new Function<>()
         {
           @Override
           public Object apply(final OutputStream out)
@@ -260,7 +260,7 @@ public class DumpSegment extends GuiceRunnable
             evaluateSequenceForSideEffects(
                 Sequences.map(
                     executeQuery(injector, index, query),
-                    new Function<SegmentAnalysis, Object>()
+                    new Function<>()
                     {
                       @Override
                       public Object apply(SegmentAnalysis analysis)
@@ -309,7 +309,7 @@ public class DumpSegment extends GuiceRunnable
       }
 
       withOutputStream(
-          new Function<OutputStream, Object>()
+          new Function<>()
           {
             @Override
             public Object apply(final OutputStream out)

@@ -218,7 +218,7 @@ public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamInd
   @Override
   public TypeReference<List<SequenceMetadata<KafkaTopicPartition, Long>>> getSequenceMetadataTypeReference()
   {
-    return new TypeReference<List<SequenceMetadata<KafkaTopicPartition, Long>>>()
+    return new TypeReference<>()
     {
     };
   }
@@ -234,7 +234,7 @@ public class IncrementalPublishingKafkaIndexTaskRunner extends SeekableStreamInd
       log.debug("Got checkpoints from task context[%s].", checkpointsString);
       return toolbox.getJsonMapper().readValue(
           checkpointsString,
-          new TypeReference<TreeMap<Integer, Map<KafkaTopicPartition, Long>>>()
+          new TypeReference<>()
           {
           }
       );

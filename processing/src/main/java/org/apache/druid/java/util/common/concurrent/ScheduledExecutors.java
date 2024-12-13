@@ -47,14 +47,18 @@ public class ScheduledExecutors
         exec,
         initialDelay,
         delay,
-        new Callable<Signal>()
+        new Callable<>()
         {
           @Override
           public Signal call()
           {
             runnable.run(); // (Exceptions are handled for us)
             if (exec.isShutdown()) {
-              log.warn("ScheduledExecutorService is ShutDown. Return 'Signal.STOP' and stopped rescheduling %s (delay %s)", this, delay);
+              log.warn(
+                  "ScheduledExecutorService is ShutDown. Return 'Signal.STOP' and stopped rescheduling %s (delay %s)",
+                  this,
+                  delay
+              );
               return Signal.STOP;
             } else {
               return Signal.REPEAT;
@@ -112,7 +116,7 @@ public class ScheduledExecutors
       final Runnable runnable
   )
   {
-    scheduleAtFixedRate(exec, initialDelay, period, new Callable<Signal>()
+    scheduleAtFixedRate(exec, initialDelay, period, new Callable<>()
     {
       @Override
       public Signal call()

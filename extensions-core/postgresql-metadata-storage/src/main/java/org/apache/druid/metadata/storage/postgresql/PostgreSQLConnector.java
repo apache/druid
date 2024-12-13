@@ -187,40 +187,40 @@ public class PostgreSQLConnector extends SQLMetadataConnector
   )
   {
     return getDBI().withHandle(
-        new HandleCallback<Void>()
+        new HandleCallback<>()
         {
           @Override
           public Void withHandle(Handle handle) throws Exception
           {
             if (canUpsert(handle)) {
               handle.createStatement(
-                  StringUtils.format(
-                      "INSERT INTO %1$s (%2$s, %3$s) VALUES (:key, :value) ON CONFLICT (%2$s) DO UPDATE SET %3$s = EXCLUDED.%3$s",
-                      tableName,
-                      keyColumn,
-                      valueColumn
-                  )
-              )
+                        StringUtils.format(
+                            "INSERT INTO %1$s (%2$s, %3$s) VALUES (:key, :value) ON CONFLICT (%2$s) DO UPDATE SET %3$s = EXCLUDED.%3$s",
+                            tableName,
+                            keyColumn,
+                            valueColumn
+                        )
+                    )
                     .bind("key", key)
                     .bind("value", value)
                     .execute();
             } else {
               handle.createStatement(
-                  StringUtils.format(
-                      "BEGIN;\n"
-                      +
-                      "LOCK TABLE %1$s IN SHARE ROW EXCLUSIVE MODE;\n"
-                      +
-                      "WITH upsert AS (UPDATE %1$s SET %3$s=:value WHERE %2$s=:key RETURNING *)\n"
-                      +
-                      "    INSERT INTO %1$s (%2$s, %3$s) SELECT :key, :value WHERE NOT EXISTS (SELECT * FROM upsert)\n;"
-                      +
-                      "COMMIT;",
-                      tableName,
-                      keyColumn,
-                      valueColumn
-                  )
-              )
+                        StringUtils.format(
+                            "BEGIN;\n"
+                            +
+                            "LOCK TABLE %1$s IN SHARE ROW EXCLUSIVE MODE;\n"
+                            +
+                            "WITH upsert AS (UPDATE %1$s SET %3$s=:value WHERE %2$s=:key RETURNING *)\n"
+                            +
+                            "    INSERT INTO %1$s (%2$s, %3$s) SELECT :key, :value WHERE NOT EXISTS (SELECT * FROM upsert)\n;"
+                            +
+                            "COMMIT;",
+                            tableName,
+                            keyColumn,
+                            valueColumn
+                        )
+                    )
                     .bind("key", key)
                     .bind("value", value)
                     .execute();

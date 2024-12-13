@@ -47,7 +47,7 @@ public abstract class AbstractHttpClientProvider<HttpClientType> implements Prov
     Preconditions.checkNotNull(annotation, "annotation");
 
     configKey = Key.get(
-        new TypeLiteral<Supplier<DruidHttpClientConfig>>()
+        new TypeLiteral<>()
         {
         }, annotation
     );

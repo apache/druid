@@ -134,7 +134,7 @@ public class TestSegmentLoadingHttpClient implements HttpClient
   {
     final List<DataSegmentChangeRequest> changeRequests = objectMapper.readValue(
         request.getContent().array(),
-        new TypeReference<List<DataSegmentChangeRequest>>()
+        new TypeReference<>()
         {
         }
     );

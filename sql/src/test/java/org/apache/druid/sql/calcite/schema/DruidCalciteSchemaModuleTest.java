@@ -168,7 +168,9 @@ public class DruidCalciteSchemaModuleTest extends CalciteTestBase
   @Test
   public void testDruidCalciteSchemasAreInjected()
   {
-    Set<NamedSchema> sqlSchemas = injector.getInstance(Key.get(new TypeLiteral<Set<NamedSchema>>(){}));
+    Set<NamedSchema> sqlSchemas = injector.getInstance(Key.get(new TypeLiteral<>()
+    {
+    }));
     Set<Class<? extends NamedSchema>> expectedSchemas =
         ImmutableSet.of(NamedSystemSchema.class, NamedDruidSchema.class, NamedLookupSchema.class, NamedViewSchema.class);
     Assert.assertEquals(expectedSchemas.size(), sqlSchemas.size());

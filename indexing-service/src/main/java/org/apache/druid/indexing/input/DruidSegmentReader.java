@@ -195,7 +195,7 @@ public class DruidSegmentReader extends IntermediateRowParsingReader<Map<String,
       final CleanableFile segmentFile
   )
   {
-    return new CloseableIterator<Map<String, Object>>()
+    return new CloseableIterator<>()
     {
       Yielder<Map<String, Object>> rowYielder = Yielders.each(sequence);
 

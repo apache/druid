@@ -179,7 +179,7 @@ public class JobHelper
 
   public static Predicate<Throwable> shouldRetryPredicate()
   {
-    return new Predicate<Throwable>()
+    return new Predicate<>()
     {
       @Override
       public boolean apply(Throwable input)

@@ -154,7 +154,7 @@ public class LookupCoordinatorResource
       final ObjectMapper mapper = isSmile ? smileMapper : jsonMapper;
       final Map<String, Map<String, LookupExtractorFactoryMapContainer>> map;
       try {
-        map = mapper.readValue(in, new TypeReference<Map<String, Map<String, LookupExtractorFactoryMapContainer>>>()
+        map = mapper.readValue(in, new TypeReference<>()
         {
         });
       }

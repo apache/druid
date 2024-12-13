@@ -921,7 +921,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
   public static class HadoopRenameSegmentIndexFilesRunner
   {
     TypeReference<List<DataSegmentAndIndexZipFilePath>> LIST_DATA_SEGMENT_AND_INDEX_ZIP_FILE_PATH =
-        new TypeReference<List<DataSegmentAndIndexZipFilePath>>()
+        new TypeReference<>()
         {
         };
 
@@ -963,7 +963,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
   public static class HadoopIndexerGeneratorCleanupRunner
   {
     TypeReference<List<DataSegmentAndIndexZipFilePath>> LIST_DATA_SEGMENT_AND_INDEX_ZIP_FILE_PATH =
-        new TypeReference<List<DataSegmentAndIndexZipFilePath>>()
+        new TypeReference<>()
         {
         };
 

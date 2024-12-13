@@ -232,7 +232,7 @@ public class Utils
     log.info("App status response from YARN RM: " + res.getContentAsString());
     Map<String, Object> respMap = HadoopDruidIndexerConfig.JSON_MAPPER.readValue(
         res.getContentAsString(),
-        new TypeReference<Map<String, Object>>()
+        new TypeReference<>()
         {
         }
     );

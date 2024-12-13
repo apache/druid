@@ -35,7 +35,7 @@ public class FilteredSequenceTest
   @Test
   public void testSanity() throws Exception
   {
-    Predicate<Integer> pred = new Predicate<Integer>()
+    Predicate<Integer> pred = new Predicate<>()
     {
       @Override
       public boolean apply(Integer input)

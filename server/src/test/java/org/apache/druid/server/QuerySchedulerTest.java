@@ -667,12 +667,12 @@ public class QuerySchedulerTest
   {
     return new LazySequence<>(() -> {
       return new BaseSequence<>(
-          new BaseSequence.IteratorMaker<Integer, Iterator<Integer>>()
+          new BaseSequence.IteratorMaker<>()
           {
             @Override
             public Iterator<Integer> make()
             {
-              return new Iterator<Integer>()
+              return new Iterator<>()
               {
                 int rowCounter = 0;
 
@@ -705,12 +705,12 @@ public class QuerySchedulerTest
   {
     final int explodeAt = explodeAfter + 1;
     return new BaseSequence<>(
-        new BaseSequence.IteratorMaker<Integer, Iterator<Integer>>()
+        new BaseSequence.IteratorMaker<>()
         {
           @Override
           public Iterator<Integer> make()
           {
-            return new Iterator<Integer>()
+            return new Iterator<>()
             {
               int rowCounter = 0;
 

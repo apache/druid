@@ -335,13 +335,13 @@ public class QueryRunnerTestHelper
   // simple cartesian iterable
   public static Iterable<Object[]> cartesian(final Iterable... iterables)
   {
-    return new Iterable<Object[]>()
+    return new Iterable<>()
     {
 
       @Override
       public Iterator<Object[]> iterator()
       {
-        return new Iterator<Object[]>()
+        return new Iterator<>()
         {
           private final Iterator[] iterators = new Iterator[iterables.length];
           private final Object[] cached = new Object[iterables.length];

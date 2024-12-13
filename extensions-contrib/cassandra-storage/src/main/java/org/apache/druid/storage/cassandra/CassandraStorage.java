@@ -66,7 +66,8 @@ public class CassandraStorage
     this.config = config;
     indexStorage = new CassandraChunkedStorageProvider(keyspace, INDEX_TABLE_NAME);
 
-    descriptorStorage = new ColumnFamily<String, String>(DESCRIPTOR_TABLE_NAME,
-        StringSerializer.get(), StringSerializer.get());
+    descriptorStorage = new ColumnFamily<>(DESCRIPTOR_TABLE_NAME,
+                                           StringSerializer.get(), StringSerializer.get()
+    );
   }
 }

@@ -379,7 +379,7 @@ public class RowBasedGrouperHelper
     final RowSignature signature = query.getResultRowSignature(finalization);
 
     final RowAdapter<ResultRow> adapter =
-        new RowAdapter<ResultRow>()
+        new RowAdapter<>()
         {
           @Override
           public ToLongFunction<ResultRow> timestampFunction()
@@ -1382,7 +1382,7 @@ public class RowBasedGrouperHelper
     public ObjectMapper decorateObjectMapper(ObjectMapper spillMapper)
     {
 
-      final JsonDeserializer<RowBasedKey> deserializer = new JsonDeserializer<RowBasedKey>()
+      final JsonDeserializer<RowBasedKey> deserializer = new JsonDeserializer<>()
       {
         @Override
         public RowBasedKey deserialize(
@@ -1405,7 +1405,11 @@ public class RowBasedGrouperHelper
                 jp.currentToken() != JsonToken.END_ARRAY,
                 "Unexpected end of array when deserializing timestamp from the spilled files"
             );
-            objects[dimsReadSoFar] = JacksonUtils.readObjectUsingDeserializationContext(jp, deserializationContext, Long.class);
+            objects[dimsReadSoFar] = JacksonUtils.readObjectUsingDeserializationContext(
+                jp,
+                deserializationContext,
+                Long.class
+            );
 
             ++dimsReadSoFar;
             jp.nextToken();

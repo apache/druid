@@ -490,13 +490,13 @@ public class SpatialFilterBonusTest
                                   .build();
 
     List<Result<TimeseriesResultValue>> expectedResults = Collections.singletonList(
-        new Result<TimeseriesResultValue>(
+        new Result<>(
             DateTimes.of("2013-01-01T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
-                    .put("rows", 3L)
-                    .put("val", 59L)
-                    .build()
+                            .put("rows", 3L)
+                            .put("val", 59L)
+                            .build()
             )
         )
     );
@@ -540,49 +540,49 @@ public class SpatialFilterBonusTest
                                   .build();
 
     List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
-        new Result<TimeseriesResultValue>(
+        new Result<>(
             DateTimes.of("2013-01-01T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
-                    .put("rows", 1L)
-                    .put("val", 17L)
-                    .build()
+                            .put("rows", 1L)
+                            .put("val", 17L)
+                            .build()
             )
         ),
-        new Result<TimeseriesResultValue>(
+        new Result<>(
             DateTimes.of("2013-01-02T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
-                    .put("rows", 1L)
-                    .put("val", 29L)
-                    .build()
+                            .put("rows", 1L)
+                            .put("val", 29L)
+                            .build()
             )
         ),
-        new Result<TimeseriesResultValue>(
+        new Result<>(
             DateTimes.of("2013-01-03T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
-                    .put("rows", 1L)
-                    .put("val", 13L)
-                    .build()
+                            .put("rows", 1L)
+                            .put("val", 13L)
+                            .build()
             )
         ),
-        new Result<TimeseriesResultValue>(
+        new Result<>(
             DateTimes.of("2013-01-04T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
-                    .put("rows", 1L)
-                    .put("val", 91L)
-                    .build()
+                            .put("rows", 1L)
+                            .put("val", 91L)
+                            .build()
             )
         ),
-        new Result<TimeseriesResultValue>(
+        new Result<>(
             DateTimes.of("2013-01-05T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
-                    .put("rows", 1L)
-                    .put("val", 47L)
-                    .build()
+                            .put("rows", 1L)
+                            .put("val", 47L)
+                            .build()
             )
         )
     );

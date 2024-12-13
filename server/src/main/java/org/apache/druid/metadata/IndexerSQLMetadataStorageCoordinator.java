@@ -661,7 +661,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
     try {
       return connector.retryTransaction(
-          new TransactionCallback<SegmentPublishResult>()
+          new TransactionCallback<>()
           {
             @Override
             public SegmentPublishResult inTransaction(
@@ -2785,20 +2785,20 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     );
 
     return connector.retryWithHandle(
-        new HandleCallback<Boolean>()
+        new HandleCallback<>()
         {
           @Override
           public Boolean withHandle(Handle handle)
           {
             final int numRows = handle.createStatement(
-                StringUtils.format(
-                    "UPDATE %s SET "
-                    + "commit_metadata_payload = :new_commit_metadata_payload, "
-                    + "commit_metadata_sha1 = :new_commit_metadata_sha1 "
-                    + "WHERE dataSource = :dataSource",
-                    dbTables.getDataSourceTable()
-                )
-            )
+                                          StringUtils.format(
+                                              "UPDATE %s SET "
+                                              + "commit_metadata_payload = :new_commit_metadata_payload, "
+                                              + "commit_metadata_sha1 = :new_commit_metadata_sha1 "
+                                              + "WHERE dataSource = :dataSource",
+                                              dbTables.getDataSourceTable()
+                                          )
+                                      )
                                       .bind("dataSource", dataSource)
                                       .bind("new_commit_metadata_payload", newCommitMetadataBytes)
                                       .bind("new_commit_metadata_sha1", newCommitMetadataSha1)

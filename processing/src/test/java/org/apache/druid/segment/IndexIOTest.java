@@ -120,7 +120,7 @@ public class IndexIOTest extends InitializedNullHandlingTest
               @Override
               public Iterator<Iterable<Object[]>> iterator()
               {
-                return new Iterator<Iterable<Object[]>>()
+                return new Iterator<>()
                 {
                   long nextBitset = 1L;
 
@@ -136,7 +136,7 @@ public class IndexIOTest extends InitializedNullHandlingTest
                     final BitSet bitset = BitSet.valueOf(new long[]{nextBitset++});
                     final List<Map<String, Object>> myMaps = filterByBitset(maps, bitset);
                     return Collections2.transform(
-                        Collections2.permutations(myMaps), new Function<List<Map<String, Object>>, Object[]>()
+                        Collections2.permutations(myMaps), new Function<>()
                         {
                           @Nullable
                           @Override
@@ -164,7 +164,7 @@ public class IndexIOTest extends InitializedNullHandlingTest
               @Override
               public Iterator<Iterable<Object[]>> iterator()
               {
-                return new Iterator<Iterable<Object[]>>()
+                return new Iterator<>()
                 {
                   long nextMap1Bits = 1L;
 
@@ -179,12 +179,12 @@ public class IndexIOTest extends InitializedNullHandlingTest
                   {
                     final BitSet bitset1 = BitSet.valueOf(new long[]{nextMap1Bits++});
                     final List<Map<String, Object>> maplist1 = filterByBitset(maps, bitset1);
-                    return new Iterable<Object[]>()
+                    return new Iterable<>()
                     {
                       @Override
                       public Iterator<Object[]> iterator()
                       {
-                        return new Iterator<Object[]>()
+                        return new Iterator<>()
                         {
                           long nextMap2Bits = 1L;
 
@@ -207,7 +207,7 @@ public class IndexIOTest extends InitializedNullHandlingTest
                                 maplist1,
                                 maplist2,
                                 filterNullValues(maplist1).equals(filterNullValues(maplist2)) ?
-                                    null : SegmentValidationException.class
+                                null : SegmentValidationException.class
                             };
                           }
 

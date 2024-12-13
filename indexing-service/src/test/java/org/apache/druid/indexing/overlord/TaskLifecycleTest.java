@@ -201,7 +201,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
   @Rule
   public final TemporaryFolder temporaryFolder = new TemporaryFolder();
 
-  private static final Ordering<DataSegment> BY_INTERVAL_ORDERING = new Ordering<DataSegment>()
+  private static final Ordering<DataSegment> BY_INTERVAL_ORDERING = new Ordering<>()
   {
     @Override
     public int compare(DataSegment dataSegment, DataSegment dataSegment2)
@@ -287,7 +287,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         @Override
         public CloseableIterator<InputRow> read(InputStats inputStats)
         {
-          return new CloseableIterator<InputRow>()
+          return new CloseableIterator<>()
           {
             @Override
             public void close()
@@ -777,7 +777,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
             "2011-04-01/2011-04-02",
             "2011-04-02/2011-04-03",
             "2011-04-04/2011-04-05"
-        ), new Function<String, DataSegment>()
+        ), new Function<>()
         {
           @Override
           public DataSegment apply(String input)
@@ -874,7 +874,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
             "2011-04-01/2011-04-02",
             "2011-04-02/2011-04-03",
             "2011-04-04/2011-04-05"
-        ), new Function<String, DataSegment>()
+        ), new Function<>()
         {
           @Override
           public DataSegment apply(String input)
@@ -882,30 +882,30 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
             final Interval interval = Intervals.of(input);
             try {
               return DataSegment.builder()
-                  .dataSource("test_kill_task")
-                  .interval(interval)
-                  .loadSpec(
-                      ImmutableMap.of(
-                          "type",
-                          "local",
-                          "path",
-                          tmpSegmentDir.getCanonicalPath()
-                          + "/druid/localStorage/wikipedia/"
-                          + interval.getStart()
-                          + "-"
-                          + interval.getEnd()
-                          + "/"
-                          + "2011-04-6T16:52:46.119-05:00"
-                          + "/0/index.zip"
-                      )
-                  )
-                  .version("2011-04-6T16:52:46.119-05:00")
-                  .dimensions(ImmutableList.of())
-                  .metrics(ImmutableList.of())
-                  .shardSpec(NoneShardSpec.instance())
-                  .binaryVersion(9)
-                  .size(0)
-                  .build();
+                                .dataSource("test_kill_task")
+                                .interval(interval)
+                                .loadSpec(
+                                    ImmutableMap.of(
+                                        "type",
+                                        "local",
+                                        "path",
+                                        tmpSegmentDir.getCanonicalPath()
+                                        + "/druid/localStorage/wikipedia/"
+                                        + interval.getStart()
+                                        + "-"
+                                        + interval.getEnd()
+                                        + "/"
+                                        + "2011-04-6T16:52:46.119-05:00"
+                                        + "/0/index.zip"
+                                    )
+                                )
+                                .version("2011-04-6T16:52:46.119-05:00")
+                                .dimensions(ImmutableList.of())
+                                .metrics(ImmutableList.of())
+                                .shardSpec(NoneShardSpec.instance())
+                                .binaryVersion(9)
+                                .size(0)
+                                .build();
             }
             catch (IOException e) {
               throw new ISE(e, "Error creating segments");

@@ -132,7 +132,7 @@ public class ITQueryRetryTestOnMissingSegments
   {
     final List<QueryWithResults> queries = jsonMapper.readValue(
         queryWithResultsStr,
-        new TypeReference<List<QueryWithResults>>()
+        new TypeReference<>()
         {
         }
     );
@@ -156,7 +156,7 @@ public class ITQueryRetryTestOnMissingSegments
 
         List<Map<String, Object>> result = jsonMapper.readValue(
             responseHolder.getContent(),
-            new TypeReference<List<Map<String, Object>>>()
+            new TypeReference<>()
             {
             }
         );

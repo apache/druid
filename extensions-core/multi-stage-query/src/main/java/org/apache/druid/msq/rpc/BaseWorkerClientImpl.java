@@ -190,7 +190,9 @@ public abstract class BaseWorkerClientImpl implements WorkerClient
             new RequestBuilder(HttpMethod.GET, "/counters").header(HttpHeaders.ACCEPT, contentType),
             new BytesFullResponseHandler()
         ),
-        holder -> deserialize(holder, new TypeReference<CounterSnapshotsTree>() {})
+        holder -> deserialize(holder, new TypeReference<>()
+        {
+        })
     );
   }
 
@@ -216,7 +218,7 @@ public abstract class BaseWorkerClientImpl implements WorkerClient
 
     Futures.addCallback(
         clientFuture,
-        new FutureCallback<FrameFilePartialFetch>()
+        new FutureCallback<>()
         {
           @Override
           public void onSuccess(FrameFilePartialFetch partialFetch)

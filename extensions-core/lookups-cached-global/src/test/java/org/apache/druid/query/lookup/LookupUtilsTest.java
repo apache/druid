@@ -42,12 +42,12 @@ import java.util.Map;
 public class LookupUtilsTest
 {
   private static final TypeReference<Map<String, Object>> LOOKUPS_ALL_GENERIC_REFERENCE =
-      new TypeReference<Map<String, Object>>()
+      new TypeReference<>()
       {
       };
 
   private static final TypeReference<Map<String, LookupExtractorFactoryContainer>> LOOKUPS_ALL_REFERENCE =
-      new TypeReference<Map<String, LookupExtractorFactoryContainer>>()
+      new TypeReference<>()
       {
       };
 

@@ -37,7 +37,9 @@ public class MessageBatchTest
     final ObjectMapper objectMapper = TestHelper.JSON_MAPPER;
     final MessageBatch<String> batch = new MessageBatch<>(ImmutableList.of("foo", "bar"), 123L, 456L);
     final MessageBatch<String> batch2 =
-        objectMapper.readValue(objectMapper.writeValueAsBytes(batch), new TypeReference<MessageBatch<String>>() {});
+        objectMapper.readValue(objectMapper.writeValueAsBytes(batch), new TypeReference<>()
+        {
+        });
     Assert.assertEquals(batch, batch2);
   }
 

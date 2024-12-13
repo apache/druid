@@ -46,7 +46,7 @@ import java.util.Optional;
 
 public class ScanQueryQueryToolChest extends QueryToolChest<ScanResultValue, ScanQuery>
 {
-  private static final TypeReference<ScanResultValue> TYPE_REFERENCE = new TypeReference<ScanResultValue>()
+  private static final TypeReference<ScanResultValue> TYPE_REFERENCE = new TypeReference<>()
   {
   };
 

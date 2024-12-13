@@ -86,13 +86,14 @@ public class IterableRowsCursorHelper
   public static Pair<Cursor, Closeable> getCursorFromYielder(Yielder<Object[]> yielderParam, RowSignature rowSignature)
   {
     return getCursorFromIterable(
-        new Iterable<Object[]>()
+        new Iterable<>()
         {
           Yielder<Object[]> yielder = yielderParam;
+
           @Override
           public Iterator<Object[]> iterator()
           {
-            return new Iterator<Object[]>()
+            return new Iterator<>()
             {
               @Override
               public boolean hasNext()

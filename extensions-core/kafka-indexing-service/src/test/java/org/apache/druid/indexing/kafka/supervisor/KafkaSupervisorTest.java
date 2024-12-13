@@ -2666,15 +2666,16 @@ public class KafkaSupervisorTest extends EasyMockSupport
     taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
     EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(
         new KafkaDataSourceMetadata(
-            new SeekableStreamEndSequenceNumbers<KafkaTopicPartition, Long>(
+            new SeekableStreamEndSequenceNumbers<>(
                 topic,
-                singlePartitionMap(topic,
-                                   0,
-                                   2L,
-                                   1,
-                                   2L,
-                                   2,
-                                   2L
+                singlePartitionMap(
+                    topic,
+                    0,
+                    2L,
+                    1,
+                    2L,
+                    2,
+                    2L
                 )
             )
         )
@@ -2724,15 +2725,16 @@ public class KafkaSupervisorTest extends EasyMockSupport
     taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
     EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(
         new KafkaDataSourceMetadata(
-            new SeekableStreamEndSequenceNumbers<KafkaTopicPartition, Long>(
+            new SeekableStreamEndSequenceNumbers<>(
                 topic,
-                singlePartitionMap(topic,
-                                   0,
-                                   2L,
-                                   1,
-                                   2L,
-                                   2,
-                                   2L
+                singlePartitionMap(
+                    topic,
+                    0,
+                    2L,
+                    1,
+                    2L,
+                    2,
+                    2L
                 )
             )
         )
@@ -2784,15 +2786,16 @@ public class KafkaSupervisorTest extends EasyMockSupport
     taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
     EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(
         new KafkaDataSourceMetadata(
-            new SeekableStreamEndSequenceNumbers<KafkaTopicPartition, Long>(
+            new SeekableStreamEndSequenceNumbers<>(
                 topic,
-                singlePartitionMap(topic,
-                                   0,
-                                   2L,
-                                   1,
-                                   2L,
-                                   2,
-                                   2L
+                singlePartitionMap(
+                    topic,
+                    0,
+                    2L,
+                    1,
+                    2L,
+                    2,
+                    2L
                 )
             )
         )

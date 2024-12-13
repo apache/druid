@@ -240,25 +240,26 @@ public class SQLServerConnector extends SQLMetadataConnector
       final byte[] value)
   {
     return getDBI().withHandle(
-        new HandleCallback<Void>()
+        new HandleCallback<>()
         {
           @Override
           public Void withHandle(Handle handle)
           {
             handle.createStatement(StringUtils.format(
-                "MERGE INTO %1$s WITH (UPDLOCK, HOLDLOCK) as target"
-                    + " USING "
-                    + " (:key, :value) as source (%2$s, %3$s)"
-                    + " ON"
-                    + " (target.%2$s = source.%2$s)"
-                    + " WHEN MATCHED THEN UPDATE SET %3$s = :value"
-                    + " WHEN NOT MATCHED THEN INSERT (%2$s, %3$s) VALUES (:key, :value)",
-                tableName,
-                keyColumn,
-                valueColumn))
-                .bind("key", key)
-                .bind("value", value)
-                .execute();
+                      "MERGE INTO %1$s WITH (UPDLOCK, HOLDLOCK) as target"
+                      + " USING "
+                      + " (:key, :value) as source (%2$s, %3$s)"
+                      + " ON"
+                      + " (target.%2$s = source.%2$s)"
+                      + " WHEN MATCHED THEN UPDATE SET %3$s = :value"
+                      + " WHEN NOT MATCHED THEN INSERT (%2$s, %3$s) VALUES (:key, :value)",
+                      tableName,
+                      keyColumn,
+                      valueColumn
+                  ))
+                  .bind("key", key)
+                  .bind("value", value)
+                  .execute();
 
             return null;
           }

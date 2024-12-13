@@ -142,7 +142,7 @@ public class SQLCatalogManager implements CatalogManager
   {
     try {
       return dbi.withHandle(
-          new HandleCallback<Long>()
+          new HandleCallback<>()
           {
             @Override
             public Long withHandle(Handle handle) throws DuplicateKeyException
@@ -165,8 +165,8 @@ public class SQLCatalogManager implements CatalogManager
               catch (UnableToExecuteStatementException e) {
                 if (DbUtils.isDuplicateRecordException(e)) {
                   throw new DuplicateKeyException(
-                        "Tried to insert a duplicate table: %s",
-                        table.sqlName()
+                      "Tried to insert a duplicate table: %s",
+                      table.sqlName()
                   );
                 } else {
                   throw e;
@@ -197,7 +197,7 @@ public class SQLCatalogManager implements CatalogManager
   {
     try {
       return dbi.withHandle(
-          new HandleCallback<TableMetadata>()
+          new HandleCallback<>()
           {
             @Override
             public TableMetadata withHandle(Handle handle) throws NotFoundException
@@ -209,14 +209,14 @@ public class SQLCatalogManager implements CatalogManager
                   .bind(TABLE_NAME_COL, id.name());
               final ResultIterator<TableMetadata> resultIterator =
                   query.map((index, r, ctx) ->
-                    new TableMetadata(
-                        id,
-                        r.getLong(1),
-                        r.getLong(2),
-                        TableMetadata.TableState.fromCode(r.getString(3)),
-                        tableSpecFromBytes(jsonMapper, r.getString(4), r.getBytes(5), r.getBytes(6))
-                    ))
-                  .iterator();
+                                new TableMetadata(
+                                    id,
+                                    r.getLong(1),
+                                    r.getLong(2),
+                                    TableMetadata.TableState.fromCode(r.getString(3)),
+                                    tableSpecFromBytes(jsonMapper, r.getString(4), r.getBytes(5), r.getBytes(6))
+                                ))
+                       .iterator();
               if (resultIterator.hasNext()) {
                 return resultIterator.next();
               }
@@ -248,7 +248,7 @@ public class SQLCatalogManager implements CatalogManager
   {
     try {
       final TableMetadata revised = dbi.withHandle(
-          new HandleCallback<TableMetadata>()
+          new HandleCallback<>()
           {
             @Override
             public TableMetadata withHandle(Handle handle) throws NotFoundException
@@ -293,7 +293,7 @@ public class SQLCatalogManager implements CatalogManager
   {
     try {
       final TableMetadata revised = dbi.withHandle(
-          new HandleCallback<TableMetadata>()
+          new HandleCallback<>()
           {
             @Override
             public TableMetadata withHandle(Handle handle) throws NotFoundException
@@ -354,7 +354,7 @@ public class SQLCatalogManager implements CatalogManager
   {
     try {
       final TableMetadata result = dbi.withHandle(
-          new HandleCallback<TableMetadata>()
+          new HandleCallback<>()
           {
             @Override
             public TableMetadata withHandle(Handle handle) throws CatalogException
@@ -368,15 +368,15 @@ public class SQLCatalogManager implements CatalogManager
                     .bind(TABLE_NAME_COL, id.name());
 
                 final ResultIterator<TableSpec> resultIterator = query
-                      .map((index, r, ctx) ->
-                          tableSpecFromBytes(
-                              jsonMapper,
-                              r.getString(1),
-                              r.getBytes(2),
-                              null
-                          )
-                       )
-                      .iterator();
+                    .map((index, r, ctx) ->
+                             tableSpecFromBytes(
+                                 jsonMapper,
+                                 r.getString(1),
+                                 r.getBytes(2),
+                                 null
+                             )
+                    )
+                    .iterator();
                 final TableSpec tableSpec;
                 if (resultIterator.hasNext()) {
                   tableSpec = resultIterator.next();
@@ -446,7 +446,7 @@ public class SQLCatalogManager implements CatalogManager
   {
     try {
       final TableMetadata result = dbi.withHandle(
-          new HandleCallback<TableMetadata>()
+          new HandleCallback<>()
           {
             @Override
             public TableMetadata withHandle(Handle handle) throws CatalogException
@@ -460,15 +460,15 @@ public class SQLCatalogManager implements CatalogManager
                     .bind(TABLE_NAME_COL, id.name());
 
                 final ResultIterator<TableSpec> resultIterator = query
-                      .map((index, r, ctx) ->
-                          tableSpecFromBytes(
-                              jsonMapper,
-                              r.getString(1),
-                              null,
-                              r.getBytes(2)
-                          )
-                       )
-                      .iterator();
+                    .map((index, r, ctx) ->
+                             tableSpecFromBytes(
+                                 jsonMapper,
+                                 r.getString(1),
+                                 null,
+                                 r.getBytes(2)
+                             )
+                    )
+                    .iterator();
                 final TableSpec tableSpec;
                 if (resultIterator.hasNext()) {
                   tableSpec = resultIterator.next();
@@ -527,7 +527,7 @@ public class SQLCatalogManager implements CatalogManager
   public long markDeleting(TableId id)
   {
     return dbi.withHandle(
-        new HandleCallback<Long>()
+        new HandleCallback<>()
         {
           @Override
           public Long withHandle(Handle handle)
@@ -593,7 +593,7 @@ public class SQLCatalogManager implements CatalogManager
   public List<TableId> allTablePaths()
   {
     return dbi.withHandle(
-        new HandleCallback<List<TableId>>()
+        new HandleCallback<>()
         {
           @Override
           public List<TableId> withHandle(Handle handle)
@@ -603,8 +603,8 @@ public class SQLCatalogManager implements CatalogManager
                 .setFetchSize(connector.getStreamingFetchSize());
             final ResultIterator<TableId> resultIterator =
                 query.map((index, r, ctx) ->
-                    new TableId(r.getString(1), r.getString(2)))
-                .iterator();
+                              new TableId(r.getString(1), r.getString(2)))
+                     .iterator();
             return Lists.newArrayList(resultIterator);
           }
         }
@@ -621,7 +621,7 @@ public class SQLCatalogManager implements CatalogManager
   public List<String> tableNamesInSchema(String dbSchema)
   {
     return dbi.withHandle(
-        new HandleCallback<List<String>>()
+        new HandleCallback<>()
         {
           @Override
           public List<String> withHandle(Handle handle)
@@ -632,8 +632,8 @@ public class SQLCatalogManager implements CatalogManager
                 .setFetchSize(connector.getStreamingFetchSize());
             final ResultIterator<String> resultIterator =
                 query.map((index, r, ctx) ->
-                    r.getString(1))
-                .iterator();
+                              r.getString(1))
+                     .iterator();
             return Lists.newArrayList(resultIterator);
           }
         }
@@ -650,7 +650,7 @@ public class SQLCatalogManager implements CatalogManager
   public List<TableMetadata> tablesInSchema(String dbSchema)
   {
     return dbi.withHandle(
-        new HandleCallback<List<TableMetadata>>()
+        new HandleCallback<>()
         {
           @Override
           public List<TableMetadata> withHandle(Handle handle)
@@ -661,15 +661,15 @@ public class SQLCatalogManager implements CatalogManager
                 .setFetchSize(connector.getStreamingFetchSize());
             final ResultIterator<TableMetadata> resultIterator =
                 query.map((index, r, ctx) ->
-                    new TableMetadata(
-                        TableId.of(dbSchema, r.getString(1)),
-                        r.getLong(2),
-                        r.getLong(3),
-                        TableMetadata.TableState.fromCode(r.getString(4)),
-                        tableSpecFromBytes(jsonMapper, r.getString(5), r.getBytes(6), r.getBytes(7))
-                    )
-                 )
-                .iterator();
+                              new TableMetadata(
+                                  TableId.of(dbSchema, r.getString(1)),
+                                  r.getLong(2),
+                                  r.getLong(3),
+                                  TableMetadata.TableState.fromCode(r.getString(4)),
+                                  tableSpecFromBytes(jsonMapper, r.getString(5), r.getBytes(6), r.getBytes(7))
+                              )
+                     )
+                     .iterator();
             return Lists.newArrayList(resultIterator);
           }
         }
@@ -763,7 +763,9 @@ public class SQLCatalogManager implements CatalogManager
   }
 
   private static final TypeReference<Map<String, Object>> PROPERTIES_TYPE_REF =
-      new TypeReference<Map<String, Object>>() { };
+      new TypeReference<>()
+      {
+      };
 
   private static Map<String, Object> propertiesFromBytes(
       final ObjectMapper jsonMapper,
@@ -774,7 +776,9 @@ public class SQLCatalogManager implements CatalogManager
   }
 
   private static final TypeReference<List<ColumnSpec>> COLUMNS_TYPE_REF =
-      new TypeReference<List<ColumnSpec>>() { };
+      new TypeReference<>()
+      {
+      };
 
   private static List<ColumnSpec> columnsFromBytes(
       final ObjectMapper jsonMapper,

@@ -98,7 +98,7 @@ public class BatchServerInventoryView implements ServerInventoryView, FilteredSe
           }
         },
         Execs.singleThreaded(pathChildrenCacheExecPrefix + "-%s"),
-        new CuratorInventoryManagerStrategy<DruidServer, Set<DataSegment>>()
+        new CuratorInventoryManagerStrategy<>()
         {
           @Override
           public DruidServer deserializeContainer(byte[] bytes)
@@ -115,7 +115,7 @@ public class BatchServerInventoryView implements ServerInventoryView, FilteredSe
           public Set<DataSegment> deserializeInventory(byte[] bytes)
           {
             try {
-              return jsonMapper.readValue(bytes, new TypeReference<Set<DataSegment>>()
+              return jsonMapper.readValue(bytes, new TypeReference<>()
               {
               });
             }
@@ -343,7 +343,7 @@ public class BatchServerInventoryView implements ServerInventoryView, FilteredSe
             Iterables.filter(
                 Iterables.transform(
                     inventory,
-                    new Function<DataSegment, Pair<DruidServerMetadata, DataSegment>>()
+                    new Function<>()
                     {
                       @Override
                       public Pair<DruidServerMetadata, DataSegment> apply(DataSegment input)
@@ -354,7 +354,7 @@ public class BatchServerInventoryView implements ServerInventoryView, FilteredSe
                 ),
                 predicate
             ),
-            new Function<Pair<DruidServerMetadata, DataSegment>, DataSegment>()
+            new Function<>()
             {
               @Override
               public DataSegment apply(Pair<DruidServerMetadata, DataSegment> input)

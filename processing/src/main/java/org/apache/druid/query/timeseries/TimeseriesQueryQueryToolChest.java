@@ -84,11 +84,11 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
 {
   private static final byte TIMESERIES_QUERY = 0x0;
   private static final TypeReference<Object> OBJECT_TYPE_REFERENCE =
-      new TypeReference<Object>()
+      new TypeReference<>()
       {
       };
   private static final TypeReference<Result<TimeseriesResultValue>> TYPE_REFERENCE =
-      new TypeReference<Result<TimeseriesResultValue>>()
+      new TypeReference<>()
       {
       };
 
@@ -111,7 +111,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
       QueryRunner<Result<TimeseriesResultValue>> queryRunner
   )
   {
-    final QueryRunner<Result<TimeseriesResultValue>> resultMergeQueryRunner = new ResultMergeQueryRunner<Result<TimeseriesResultValue>>(
+    final QueryRunner<Result<TimeseriesResultValue>> resultMergeQueryRunner = new ResultMergeQueryRunner<>(
         queryRunner,
         this::createResultComparator,
         this::createMergeFn
@@ -288,7 +288,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
       @Nullable final ObjectMapper objectMapper
   )
   {
-    return new CacheStrategy<Result<TimeseriesResultValue>, Object, TimeseriesQuery>()
+    return new CacheStrategy<>()
     {
       private final List<AggregatorFactory> aggs = query.getAggregatorSpecs();
 
@@ -363,7 +363,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
       @Override
       public Function<Object, Result<TimeseriesResultValue>> pullFromCache(boolean isResultLevelCache)
       {
-        return new Function<Object, Result<TimeseriesResultValue>>()
+        return new Function<>()
         {
           private final Granularity granularity = query.getGranularity();
 

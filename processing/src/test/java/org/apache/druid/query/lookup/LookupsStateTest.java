@@ -55,7 +55,7 @@ public class LookupsStateTest
                      + "}";
 
     TypeReference<LookupsState<LookupExtractorFactoryContainer>> typeRef =
-        new TypeReference<LookupsState<LookupExtractorFactoryContainer>>()
+        new TypeReference<>()
         {
         };
 

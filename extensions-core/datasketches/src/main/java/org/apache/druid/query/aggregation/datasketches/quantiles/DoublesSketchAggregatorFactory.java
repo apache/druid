@@ -170,7 +170,7 @@ public class DoublesSketchAggregatorFactory extends AggregatorFactory
   {
     return ColumnProcessors.makeVectorProcessor(
         fieldName,
-        new VectorColumnProcessorFactory<VectorAggregator>()
+        new VectorColumnProcessorFactory<>()
         {
           @Override
           public VectorAggregator makeSingleValueDimensionProcessor(

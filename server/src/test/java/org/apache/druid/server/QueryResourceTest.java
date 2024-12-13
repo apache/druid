@@ -298,7 +298,7 @@ public class QueryResourceTest
 
     final List<Result<TimeBoundaryResultValue>> responses = jsonMapper.readValue(
         response.baos.toByteArray(),
-        new TypeReference<List<Result<TimeBoundaryResultValue>>>()
+        new TypeReference<>()
         {
         }
     );
@@ -625,7 +625,7 @@ public class QueryResourceTest
 
     final List<Result<TimeBoundaryResultValue>> responses = jsonMapper.readValue(
         response.baos.toByteArray(),
-        new TypeReference<List<Result<TimeBoundaryResultValue>>>()
+        new TypeReference<>()
         {
         }
     );
@@ -876,7 +876,7 @@ public class QueryResourceTest
 
     final List<Result<TimeBoundaryResultValue>> responses = jsonMapper.readValue(
         response.baos.toByteArray(),
-        new TypeReference<List<Result<TimeBoundaryResultValue>>>()
+        new TypeReference<>()
         {
         }
     );

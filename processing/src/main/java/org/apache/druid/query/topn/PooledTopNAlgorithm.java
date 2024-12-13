@@ -231,7 +231,7 @@ public class PooledTopNAlgorithm
       throw new UnsupportedOperationException("Cannot operate on a dimension with no dictionary");
     }
 
-    final TopNMetricSpecBuilder<int[]> arrayProvider = new BaseArrayProvider<int[]>(dimSelector, query, cursorInspector)
+    final TopNMetricSpecBuilder<int[]> arrayProvider = new BaseArrayProvider<>(dimSelector, query, cursorInspector)
     {
       private final int[] positions = new int[cardinality];
 

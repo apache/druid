@@ -259,7 +259,9 @@ public class FrameFile implements Closeable
       }
 
       final ReferenceCountingCloseableObject<Closeable> referenceCounter =
-          new ReferenceCountingCloseableObject<Closeable>(fileCloser) {};
+          new ReferenceCountingCloseableObject<>(fileCloser)
+          {
+          };
 
       return new FrameFile(
           file,

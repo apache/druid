@@ -80,10 +80,10 @@ import java.util.Optional;
 public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultValue>, TopNQuery>
 {
   private static final byte TOPN_QUERY = 0x1;
-  private static final TypeReference<Result<TopNResultValue>> TYPE_REFERENCE = new TypeReference<Result<TopNResultValue>>()
+  private static final TypeReference<Result<TopNResultValue>> TYPE_REFERENCE = new TypeReference<>()
   {
   };
-  private static final TypeReference<Object> OBJECT_TYPE_REFERENCE = new TypeReference<Object>()
+  private static final TypeReference<Object> OBJECT_TYPE_REFERENCE = new TypeReference<>()
   {
   };
 
@@ -192,7 +192,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
       throw DruidException.defensive("This method can only be used to deserialize.");
     }
 
-    return new Function<Result<TopNResultValue>, Result<TopNResultValue>>()
+    return new Function<>()
     {
       private final AggregatorFactory[] aggregatorFactories = query.getAggregatorSpecs()
                                                                    .toArray(new AggregatorFactory[0]);
@@ -232,7 +232,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
     }
 
     if (MetricManipulatorFns.finalizing() == fn) {
-      return new Function<Result<TopNResultValue>, Result<TopNResultValue>>()
+      return new Function<>()
       {
         private final AggregatorFactory[] aggregatorFactories = query.getAggregatorSpecs()
                                                                      .toArray(new AggregatorFactory[0]);
@@ -282,7 +282,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
       @Nullable final ObjectMapper objectMapper
   )
   {
-    return new CacheStrategy<Result<TopNResultValue>, Object, TopNQuery>()
+    return new CacheStrategy<>()
     {
       private final List<AggregatorFactory> aggs = Lists.newArrayList(query.getAggregatorSpecs());
       private final List<PostAggregator> postAggs = AggregatorUtil.pruneDependentPostAgg(
@@ -342,7 +342,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
       @Override
       public Function<Result<TopNResultValue>, Object> prepareForCache(boolean isResultLevelCache)
       {
-        return new Function<Result<TopNResultValue>, Object>()
+        return new Function<>()
         {
           private final String[] aggFactoryNames = extractFactoryName(query.getAggregatorSpecs());
 
@@ -375,7 +375,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
       @Override
       public Function<Object, Result<TopNResultValue>> pullFromCache(boolean isResultLevelCache)
       {
-        return new Function<Object, Result<TopNResultValue>>()
+        return new Function<>()
         {
           private final Granularity granularity = query.getGranularity();
 
@@ -458,7 +458,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
         runner,
         config
     );
-    return new QueryRunner<Result<TopNResultValue>>()
+    return new QueryRunner<>()
     {
 
       @Override
@@ -474,14 +474,14 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
         } else {
           return Sequences.map(
               resultSequence,
-              new Function<Result<TopNResultValue>, Result<TopNResultValue>>()
+              new Function<>()
               {
                 @Override
                 public Result<TopNResultValue> apply(Result<TopNResultValue> input)
                 {
                   TopNResultValue resultValue = input.getValue();
 
-                  return new Result<TopNResultValue>(
+                  return new Result<>(
                       input.getTimestamp(),
                       TopNResultValue.create(
                           Lists.transform(
@@ -642,7 +642,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
 
       return Sequences.map(
           runner.run(queryPlus.withQuery(query.withThreshold(minTopNThreshold)), responseContext),
-          new Function<Result<TopNResultValue>, Result<TopNResultValue>>()
+          new Function<>()
           {
             @Override
             public Result<TopNResultValue> apply(Result<TopNResultValue> input)
@@ -656,7 +656,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
                     new BySegmentTopNResultValue(
                         Lists.transform(
                             value.getResults(),
-                            new Function<Result<TopNResultValue>, Result<TopNResultValue>>()
+                            new Function<>()
                             {
                               @Override
                               public Result<TopNResultValue> apply(Result<TopNResultValue> input)

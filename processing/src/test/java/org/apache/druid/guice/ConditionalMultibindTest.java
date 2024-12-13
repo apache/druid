@@ -72,7 +72,7 @@ public class ConditionalMultibindTest
       }
     });
 
-    Set<Animal> animalSet = injector.getInstance(Key.get(new TypeLiteral<Set<Animal>>()
+    Set<Animal> animalSet = injector.getInstance(Key.get(new TypeLiteral<>()
     {
     }));
 
@@ -96,7 +96,7 @@ public class ConditionalMultibindTest
       }
     });
 
-    Set<Animal> animalSet = injector.getInstance(Key.get(new TypeLiteral<Set<Animal>>()
+    Set<Animal> animalSet = injector.getInstance(Key.get(new TypeLiteral<>()
     {
     }));
 
@@ -123,7 +123,7 @@ public class ConditionalMultibindTest
       }
     });
 
-    Set<Animal> animalSet = injector.getInstance(Key.get(new TypeLiteral<Set<Animal>>()
+    Set<Animal> animalSet = injector.getInstance(Key.get(new TypeLiteral<>()
     {
     }));
 
@@ -159,7 +159,7 @@ public class ConditionalMultibindTest
         }
     );
 
-    Set<Animal> animalSet = injector.getInstance(Key.get(new TypeLiteral<Set<Animal>>()
+    Set<Animal> animalSet = injector.getInstance(Key.get(new TypeLiteral<>()
     {
     }));
 
@@ -198,13 +198,13 @@ public class ConditionalMultibindTest
         }
     );
 
-    Set<Animal> animalSet_1 = injector.getInstance(Key.get(new TypeLiteral<Set<Animal>>()
+    Set<Animal> animalSet_1 = injector.getInstance(Key.get(new TypeLiteral<>()
     {
     }, SanDiego.class));
     Assert.assertEquals(4, animalSet_1.size());
     Assert.assertEquals(animalSet_1, ImmutableSet.of(new Bird(), new Cat(), new Dog(), new Tiger()));
 
-    Set<Animal> animalSet_2 = injector.getInstance(Key.get(new TypeLiteral<Set<Animal>>()
+    Set<Animal> animalSet_2 = injector.getInstance(Key.get(new TypeLiteral<>()
     {
     }, SanJose.class));
     Assert.assertEquals(1, animalSet_2.size());
@@ -293,21 +293,29 @@ public class ConditionalMultibindTest
 
             ConditionalMultibind
                 .create(props, binder, new TypeLiteral<Zoo<Animal>>() {})
-                .addBinding(new TypeLiteral<Zoo<Animal>>() {});
+                .addBinding(new TypeLiteral<>()
+                {
+                });
 
           }
         }
     );
 
-    Set<Set<Animal>> actualAnimalSet = injector.getInstance(Key.get(new TypeLiteral<Set<Set<Animal>>>() {}));
+    Set<Set<Animal>> actualAnimalSet = injector.getInstance(Key.get(new TypeLiteral<>()
+    {
+    }));
     Assert.assertEquals(3, actualAnimalSet.size());
     Assert.assertEquals(ImmutableSet.of(set1, set2, set3), actualAnimalSet);
 
-    actualAnimalSet = injector.getInstance(Key.get(new TypeLiteral<Set<Set<Animal>>>() {}, SanDiego.class));
+    actualAnimalSet = injector.getInstance(Key.get(new TypeLiteral<>()
+    {
+    }, SanDiego.class));
     Assert.assertEquals(1, actualAnimalSet.size());
     Assert.assertEquals(ImmutableSet.of(union), actualAnimalSet);
 
-    final Set<Zoo<Animal>> actualZooSet = injector.getInstance(Key.get(new TypeLiteral<Set<Zoo<Animal>>>() {}));
+    final Set<Zoo<Animal>> actualZooSet = injector.getInstance(Key.get(new TypeLiteral<>()
+    {
+    }));
     Assert.assertEquals(2, actualZooSet.size());
     Assert.assertEquals(ImmutableSet.of(zoo1, zoo2), actualZooSet);
   }

@@ -49,7 +49,9 @@ public class DataSourceQueryQueryToolChest
     extends QueryToolChest<Result<DataSourceMetadataResultValue>, DataSourceMetadataQuery>
 {
   private static final TypeReference<Result<DataSourceMetadataResultValue>> TYPE_REFERENCE =
-      new TypeReference<Result<DataSourceMetadataResultValue>>() {};
+      new TypeReference<>()
+      {
+      };
 
   private final GenericQueryMetricsFactory queryMetricsFactory;
 
@@ -78,7 +80,7 @@ public class DataSourceQueryQueryToolChest
       final QueryRunner<Result<DataSourceMetadataResultValue>> runner
   )
   {
-    return new BySegmentSkippingQueryRunner<Result<DataSourceMetadataResultValue>>(runner)
+    return new BySegmentSkippingQueryRunner<>(runner)
     {
       @Override
       protected Sequence<Result<DataSourceMetadataResultValue>> doRun(

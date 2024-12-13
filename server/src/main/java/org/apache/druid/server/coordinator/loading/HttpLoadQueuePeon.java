@@ -76,12 +76,12 @@ import java.util.concurrent.atomic.AtomicReference;
 public class HttpLoadQueuePeon implements LoadQueuePeon
 {
   public static final TypeReference<List<DataSegmentChangeRequest>> REQUEST_ENTITY_TYPE_REF =
-      new TypeReference<List<DataSegmentChangeRequest>>()
+      new TypeReference<>()
       {
       };
 
   public static final TypeReference<List<DataSegmentChangeResponse>> RESPONSE_ENTITY_TYPE_REF =
-      new TypeReference<List<DataSegmentChangeResponse>>()
+      new TypeReference<>()
       {
       };
 
@@ -223,7 +223,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
 
       Futures.addCallback(
           future,
-          new FutureCallback<InputStream>()
+          new FutureCallback<>()
           {
             @Override
             public void onSuccess(InputStream result)

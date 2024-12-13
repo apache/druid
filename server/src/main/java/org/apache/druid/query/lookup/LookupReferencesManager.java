@@ -90,7 +90,7 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
   private static final EmittingLogger LOG = new EmittingLogger(LookupReferencesManager.class);
 
   private static final TypeReference<Map<String, Object>> LOOKUPS_ALL_GENERIC_REFERENCE =
-      new TypeReference<Map<String, Object>>()
+      new TypeReference<>()
       {
       };
 

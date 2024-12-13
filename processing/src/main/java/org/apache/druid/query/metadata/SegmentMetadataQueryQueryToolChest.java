@@ -76,7 +76,7 @@ import java.util.function.BinaryOperator;
 
 public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAnalysis, SegmentMetadataQuery>
 {
-  private static final TypeReference<SegmentAnalysis> TYPE_REFERENCE = new TypeReference<SegmentAnalysis>()
+  private static final TypeReference<SegmentAnalysis> TYPE_REFERENCE = new TypeReference<>()
   {
   };
   private static final byte SEGMENT_METADATA_CACHE_PREFIX = 0x4;
@@ -106,7 +106,7 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
   @Override
   public QueryRunner<SegmentAnalysis> mergeResults(final QueryRunner<SegmentAnalysis> runner)
   {
-    return new BySegmentSkippingQueryRunner<SegmentAnalysis>(runner)
+    return new BySegmentSkippingQueryRunner<>(runner)
     {
       @Override
       public Sequence<SegmentAnalysis> doRun(
@@ -196,7 +196,7 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
       @Nullable final ObjectMapper objectMapper
   )
   {
-    return new CacheStrategy<SegmentAnalysis, SegmentAnalysis, SegmentMetadataQuery>()
+    return new CacheStrategy<>()
     {
       @Override
       public boolean isCacheable(SegmentMetadataQuery query, boolean willMergeRunners, boolean bySegment)

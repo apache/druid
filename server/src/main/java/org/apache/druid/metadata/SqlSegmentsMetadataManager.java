@@ -1093,13 +1093,16 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
     // setting connection to read-only will allow some database such as MySQL
     // to automatically use read-only transaction mode, further optimizing the query
     final List<DataSegment> segments = connector.inReadOnlyTransaction(
-        new TransactionCallback<List<DataSegment>>()
+        new TransactionCallback<>()
         {
           @Override
           public List<DataSegment> inTransaction(Handle handle, TransactionStatus status)
           {
             return handle
-                .createQuery(StringUtils.format("SELECT payload, schema_fingerprint, num_rows FROM %s WHERE used=true", getSegmentsTable()))
+                .createQuery(StringUtils.format(
+                    "SELECT payload, schema_fingerprint, num_rows FROM %s WHERE used=true",
+                    getSegmentsTable()
+                ))
                 .setFetchSize(connector.getStreamingFetchSize())
                 .map(
                     (index, r, ctx) -> {
@@ -1251,7 +1254,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   {
     // Note that we handle the case where used_status_last_updated IS NULL here to allow smooth transition to Druid version that uses used_status_last_updated column
     return connector.inReadOnlyTransaction(
-        new TransactionCallback<List<Interval>>()
+        new TransactionCallback<>()
         {
           @Override
           public List<Interval> inTransaction(Handle handle, TransactionStatus status)
@@ -1272,7 +1275,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
                 .bind("end", maxEndTime.toString())
                 .bind("used_status_last_updated", maxUsedStatusLastUpdatedTime.toString())
                 .map(
-                    new BaseResultSetMapper<Interval>()
+                    new BaseResultSetMapper<>()
                     {
                       @Override
                       protected Interval mapInternal(int index, Map<String, Object> row)

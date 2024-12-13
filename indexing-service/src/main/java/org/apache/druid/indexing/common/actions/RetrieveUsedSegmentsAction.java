@@ -107,7 +107,9 @@ public class RetrieveUsedSegmentsAction implements TaskAction<Collection<DataSeg
   @Override
   public TypeReference<Collection<DataSegment>> getReturnTypeReference()
   {
-    return new TypeReference<Collection<DataSegment>>() {};
+    return new TypeReference<>()
+    {
+    };
   }
 
   @Override

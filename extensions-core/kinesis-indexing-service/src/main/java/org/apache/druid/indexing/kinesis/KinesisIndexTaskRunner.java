@@ -181,7 +181,7 @@ public class KinesisIndexTaskRunner extends SeekableStreamIndexTaskRunner<String
   @Override
   public TypeReference<List<SequenceMetadata<String, String>>> getSequenceMetadataTypeReference()
   {
-    return new TypeReference<List<SequenceMetadata<String, String>>>()
+    return new TypeReference<>()
     {
     };
   }
@@ -197,7 +197,7 @@ public class KinesisIndexTaskRunner extends SeekableStreamIndexTaskRunner<String
       log.debug("Got checkpoints from task context[%s]", checkpointsString);
       return toolbox.getJsonMapper().readValue(
           checkpointsString,
-          new TypeReference<TreeMap<Integer, Map<String, String>>>()
+          new TypeReference<>()
           {
           }
       );

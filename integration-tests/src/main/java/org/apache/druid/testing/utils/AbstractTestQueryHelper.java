@@ -117,7 +117,7 @@ public abstract class AbstractTestQueryHelper<QueryResultType extends AbstractQu
     List<QueryResultType> queries =
         jsonMapper.readValue(
             TestQueryHelper.class.getResourceAsStream(filePath),
-            new TypeReference<List<QueryResultType>>()
+            new TypeReference<>()
             {
             }
         );
@@ -131,7 +131,7 @@ public abstract class AbstractTestQueryHelper<QueryResultType extends AbstractQu
     List<QueryResultType> queries =
         jsonMapper.readValue(
             str,
-            new TypeReference<List<QueryResultType>>()
+            new TypeReference<>()
             {
             }
         );

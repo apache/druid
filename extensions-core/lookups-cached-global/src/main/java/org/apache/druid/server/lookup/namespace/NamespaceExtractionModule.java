@@ -66,10 +66,10 @@ public class NamespaceExtractionModule implements DruidModule
   {
     return MapBinder.newMapBinder(
         binder,
-        new TypeLiteral<Class<? extends ExtractionNamespace>>()
+        new TypeLiteral<>()
         {
         },
-        new TypeLiteral<CacheGenerator<?>>()
+        new TypeLiteral<>()
         {
         }
     );

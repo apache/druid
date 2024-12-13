@@ -39,7 +39,9 @@ public class DruidBinders
   {
     return MapBinder.newMapBinder(
         binder,
-        new TypeLiteral<Class<? extends Query>>() {},
+        new TypeLiteral<>()
+        {
+        },
         TypeLiteral.get(QueryRunnerFactory.class)
     );
   }
@@ -48,8 +50,12 @@ public class DruidBinders
   {
     return MapBinder.newMapBinder(
         binder,
-        new TypeLiteral<Class<? extends Query>>() {},
-        new TypeLiteral<QueryToolChest>() {}
+        new TypeLiteral<>()
+        {
+        },
+        new TypeLiteral<>()
+        {
+        }
     );
   }
 
@@ -57,8 +63,12 @@ public class DruidBinders
   {
     return MapBinder.newMapBinder(
         binder,
-        new TypeLiteral<Class<? extends Query>>() {},
-        new TypeLiteral<QueryLogic>() {}
+        new TypeLiteral<>()
+        {
+        },
+        new TypeLiteral<>()
+        {
+        }
     );
   }
 
@@ -91,20 +101,28 @@ public class DruidBinders
 
   public static Multibinder<KeyHolder<DruidNode>> discoveryAnnouncementBinder(Binder binder)
   {
-    return Multibinder.newSetBinder(binder, new TypeLiteral<KeyHolder<DruidNode>>() {});
+    return Multibinder.newSetBinder(binder, new TypeLiteral<>()
+    {
+    });
   }
 
   public static Multibinder<Class<? extends Monitor>> metricMonitorBinder(Binder binder)
   {
-    return Multibinder.newSetBinder(binder, new TypeLiteral<Class<? extends Monitor>>() {});
+    return Multibinder.newSetBinder(binder, new TypeLiteral<>()
+    {
+    });
   }
 
   public static MapBinder<Class<? extends DataSource>, SegmentWrangler> segmentWranglerBinder(Binder binder)
   {
     return MapBinder.newMapBinder(
         binder,
-        new TypeLiteral<Class<? extends DataSource>>() {},
-        new TypeLiteral<SegmentWrangler>() {}
+        new TypeLiteral<>()
+        {
+        },
+        new TypeLiteral<>()
+        {
+        }
     );
   }
 
@@ -112,7 +130,9 @@ public class DruidBinders
   {
     return Multibinder.newSetBinder(
         binder,
-        new TypeLiteral<JoinableFactory>() {}
+        new TypeLiteral<>()
+        {
+        }
     );
   }
 
@@ -120,8 +140,12 @@ public class DruidBinders
   {
     return MapBinder.newMapBinder(
         binder,
-        new TypeLiteral<Class<? extends JoinableFactory>>() {},
-        new TypeLiteral<Class<? extends DataSource>>() {}
+        new TypeLiteral<>()
+        {
+        },
+        new TypeLiteral<>()
+        {
+        }
     );
   }
 }

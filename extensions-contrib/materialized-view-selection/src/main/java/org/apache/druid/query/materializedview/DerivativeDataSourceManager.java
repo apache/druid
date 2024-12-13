@@ -219,33 +219,36 @@ public class DerivativeDataSourceManager
   private long getAvgSizePerGranularity(String datasource)
   {
     return connector.retryWithHandle(
-        new HandleCallback<Long>() {
+        new HandleCallback<>()
+        {
           Set<Interval> intervals = new HashSet<>();
           long totalSize = 0;
+
           @Override
           public Long withHandle(Handle handle)
           {
             handle.createQuery(
-                StringUtils.format("SELECT start,%1$send%1$s,payload FROM %2$s WHERE used = true AND dataSource = :dataSource",
-                connector.getQuoteString(), dbTables.get().getSegmentsTable()
-                )
-            )
-                .bind("dataSource", datasource)
-                .map(
-                    (int index, ResultSet r, StatementContext ctx) -> {
-                      intervals.add(
-                          Intervals.utc(
-                              DateTimes.of(r.getString("start")).getMillis(),
-                              DateTimes.of(r.getString("end")).getMillis()
-                          )
-                      );
-                      DataSegment segment =
-                          JacksonUtils.readValue(objectMapper, r.getBytes("payload"), DataSegment.class);
-                      totalSize += segment.getSize();
-                      return null;
-                    }
-                )
-                .list();
+                      StringUtils.format("SELECT start,%1$send%1$s,payload FROM %2$s WHERE used = true AND dataSource = :dataSource",
+                                         connector.getQuoteString(),
+                                         dbTables.get().getSegmentsTable()
+                      )
+                  )
+                  .bind("dataSource", datasource)
+                  .map(
+                      (int index, ResultSet r, StatementContext ctx) -> {
+                        intervals.add(
+                            Intervals.utc(
+                                DateTimes.of(r.getString("start")).getMillis(),
+                                DateTimes.of(r.getString("end")).getMillis()
+                            )
+                        );
+                        DataSegment segment =
+                            JacksonUtils.readValue(objectMapper, r.getBytes("payload"), DataSegment.class);
+                        totalSize += segment.getSize();
+                        return null;
+                      }
+                  )
+                  .list();
             return intervals.isEmpty() ? 0L : totalSize / intervals.size();
           }
         }

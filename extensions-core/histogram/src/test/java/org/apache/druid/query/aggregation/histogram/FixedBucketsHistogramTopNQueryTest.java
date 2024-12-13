@@ -113,91 +113,91 @@ public class FixedBucketsHistogramTopNQueryTest extends InitializedNullHandlingT
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Collections.singletonList(
-        new Result<TopNResultValue>(
+        new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             TopNResultValue.create(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
-                        .put(QueryRunnerTestHelper.MARKET_DIMENSION, "total_market")
-                        .put("rows", 186L)
-                        .put("index", 215679.82879638672D)
-                        .put("addRowsIndexConstant", 215866.82879638672D)
-                        .put(QueryRunnerTestHelper.dependentPostAggMetric, 216053.82879638672D)
-                        .put("uniques", QueryRunnerTestHelper.UNIQUES_2)
-                        .put("maxIndex", 1743.9217529296875D)
-                        .put("minIndex", 792.3260498046875D)
-                        .put("quantile", 1135.238f)
-                        .put(
-                            "histo",
-                            new FixedBucketsHistogram(
-                                0,
-                                2000,
-                                10,
-                                FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW,
-                                new long[]{0, 0, 0, 1, 21, 105, 42, 12, 5, 0},
-                                186,
-                                1743.92175,
-                                792.326066,
-                                0,
-                                0,
-                                0
-                            ).toString()
-                        )
-                        .build(),
+                                .put(QueryRunnerTestHelper.MARKET_DIMENSION, "total_market")
+                                .put("rows", 186L)
+                                .put("index", 215679.82879638672D)
+                                .put("addRowsIndexConstant", 215866.82879638672D)
+                                .put(QueryRunnerTestHelper.dependentPostAggMetric, 216053.82879638672D)
+                                .put("uniques", QueryRunnerTestHelper.UNIQUES_2)
+                                .put("maxIndex", 1743.9217529296875D)
+                                .put("minIndex", 792.3260498046875D)
+                                .put("quantile", 1135.238f)
+                                .put(
+                                    "histo",
+                                    new FixedBucketsHistogram(
+                                        0,
+                                        2000,
+                                        10,
+                                        FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW,
+                                        new long[]{0, 0, 0, 1, 21, 105, 42, 12, 5, 0},
+                                        186,
+                                        1743.92175,
+                                        792.326066,
+                                        0,
+                                        0,
+                                        0
+                                    ).toString()
+                                )
+                                .build(),
                     ImmutableMap.<String, Object>builder()
-                        .put(QueryRunnerTestHelper.MARKET_DIMENSION, "upfront")
-                        .put("rows", 186L)
-                        .put("index", 192046.1060180664D)
-                        .put("addRowsIndexConstant", 192233.1060180664D)
-                        .put(QueryRunnerTestHelper.dependentPostAggMetric, 192420.1060180664D)
-                        .put("uniques", QueryRunnerTestHelper.UNIQUES_2)
-                        .put("maxIndex", 1870.06103515625D)
-                        .put("minIndex", 545.9906005859375D)
-                        .put("quantile", 969.69696f)
-                        .put(
-                            "histo",
-                            new FixedBucketsHistogram(
-                                0,
-                                2000,
-                                10,
-                                FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW,
-                                new long[]{0, 0, 4, 33, 66, 35, 25, 11, 10, 2},
-                                186,
-                                1870.061029,
-                                545.990623,
-                                0,
-                                0,
-                                0
-                            ).toString()
-                        )
-                        .build(),
+                                .put(QueryRunnerTestHelper.MARKET_DIMENSION, "upfront")
+                                .put("rows", 186L)
+                                .put("index", 192046.1060180664D)
+                                .put("addRowsIndexConstant", 192233.1060180664D)
+                                .put(QueryRunnerTestHelper.dependentPostAggMetric, 192420.1060180664D)
+                                .put("uniques", QueryRunnerTestHelper.UNIQUES_2)
+                                .put("maxIndex", 1870.06103515625D)
+                                .put("minIndex", 545.9906005859375D)
+                                .put("quantile", 969.69696f)
+                                .put(
+                                    "histo",
+                                    new FixedBucketsHistogram(
+                                        0,
+                                        2000,
+                                        10,
+                                        FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW,
+                                        new long[]{0, 0, 4, 33, 66, 35, 25, 11, 10, 2},
+                                        186,
+                                        1870.061029,
+                                        545.990623,
+                                        0,
+                                        0,
+                                        0
+                                    ).toString()
+                                )
+                                .build(),
                     ImmutableMap.<String, Object>builder()
-                        .put(QueryRunnerTestHelper.MARKET_DIMENSION, "spot")
-                        .put("rows", 837L)
-                        .put("index", 95606.57232284546D)
-                        .put("addRowsIndexConstant", 96444.57232284546D)
-                        .put(QueryRunnerTestHelper.dependentPostAggMetric, 97282.57232284546D)
-                        .put("uniques", QueryRunnerTestHelper.UNIQUES_9)
-                        .put("maxIndex", 277.2735290527344D)
-                        .put("minIndex", 59.02102279663086D)
-                        .put("quantile", 100.23952f)
-                        .put(
-                            "histo",
-                            new FixedBucketsHistogram(
-                                0,
-                                2000,
-                                10,
-                                FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW,
-                                new long[]{835, 2, 0, 0, 0, 0, 0, 0, 0, 0},
-                                837,
-                                277.273533,
-                                59.021022,
-                                0,
-                                0,
-                                0
-                            ).toString()
-                        )
-                        .build()
+                                .put(QueryRunnerTestHelper.MARKET_DIMENSION, "spot")
+                                .put("rows", 837L)
+                                .put("index", 95606.57232284546D)
+                                .put("addRowsIndexConstant", 96444.57232284546D)
+                                .put(QueryRunnerTestHelper.dependentPostAggMetric, 97282.57232284546D)
+                                .put("uniques", QueryRunnerTestHelper.UNIQUES_9)
+                                .put("maxIndex", 277.2735290527344D)
+                                .put("minIndex", 59.02102279663086D)
+                                .put("quantile", 100.23952f)
+                                .put(
+                                    "histo",
+                                    new FixedBucketsHistogram(
+                                        0,
+                                        2000,
+                                        10,
+                                        FixedBucketsHistogram.OutlierHandlingMode.OVERFLOW,
+                                        new long[]{835, 2, 0, 0, 0, 0, 0, 0, 0, 0},
+                                        837,
+                                        277.273533,
+                                        59.021022,
+                                        0,
+                                        0,
+                                        0
+                                    ).toString()
+                                )
+                                .build()
                 )
             )
         )

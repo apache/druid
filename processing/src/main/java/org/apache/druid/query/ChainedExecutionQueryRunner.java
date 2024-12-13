@@ -81,8 +81,8 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
     final int priority = query.context().getPriority();
     final Ordering ordering = query.getResultOrdering();
     final QueryPlus<T> threadSafeQueryPlus = queryPlus.withoutThreadUnsafeState();
-    return new BaseSequence<T, Iterator<T>>(
-        new BaseSequence.IteratorMaker<T, Iterator<T>>()
+    return new BaseSequence<>(
+        new BaseSequence.IteratorMaker<>()
         {
           @Override
           public Iterator<T> make()
@@ -98,7 +98,7 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
                           }
 
                           return queryProcessingPool.submitRunnerTask(
-                              new AbstractPrioritizedQueryRunnerCallable<Iterable<T>, T>(priority, input)
+                              new AbstractPrioritizedQueryRunnerCallable<>(priority, input)
                               {
                                 @Override
                                 public Iterable<T> call()
@@ -144,8 +144,8 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
               final QueryContext context = query.context();
               return new MergeIterable<>(
                   context.hasTimeout() ?
-                      future.get(context.getTimeout(), TimeUnit.MILLISECONDS) :
-                      future.get(),
+                  future.get(context.getTimeout(), TimeUnit.MILLISECONDS) :
+                  future.get(),
                   ordering.nullsFirst()
               ).iterator();
             }

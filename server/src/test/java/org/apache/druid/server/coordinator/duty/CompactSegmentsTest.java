@@ -271,7 +271,7 @@ public class CompactSegmentsTest
     final TestOverlordClient overlordClient = new TestOverlordClient(JSON_MAPPER);
     final CompactSegments compactSegments = new CompactSegments(statusTracker, overlordClient);
 
-    final Supplier<String> expectedVersionSupplier = new Supplier<String>()
+    final Supplier<String> expectedVersionSupplier = new Supplier<>()
     {
       private int i = 0;
 
@@ -2175,7 +2175,7 @@ public class CompactSegmentsTest
           transformSpec = jsonMapper.readValue(
               jsonMapper.writeValueAsString(new TransformSpec(clientCompactionTaskQuery.getTransformSpec()
                                                                                        .getFilter(), null)),
-              new TypeReference<Map<String, Object>>()
+              new TypeReference<>()
               {
               }
           );
@@ -2187,7 +2187,9 @@ public class CompactSegmentsTest
 
       List<Object> metricsSpec = null;
       if (clientCompactionTaskQuery.getMetricsSpec() != null) {
-        metricsSpec = jsonMapper.convertValue(clientCompactionTaskQuery.getMetricsSpec(), new TypeReference<List<Object>>() {});
+        metricsSpec = jsonMapper.convertValue(clientCompactionTaskQuery.getMetricsSpec(), new TypeReference<>()
+        {
+        });
       }
 
       for (int i = 0; i < 2; i++) {

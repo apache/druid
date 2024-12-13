@@ -269,7 +269,7 @@ public class MsqTestQueryHelper extends AbstractTestQueryHelper<MsqQueryWithResu
     List<MsqQueryWithResults> queries =
         jsonMapper.readValue(
             TestQueryHelper.class.getResourceAsStream(filePath),
-            new TypeReference<List<MsqQueryWithResults>>()
+            new TypeReference<>()
             {
             }
         );

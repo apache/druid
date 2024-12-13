@@ -478,7 +478,7 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
           }
         },
         () -> ThreadLocalRandom.current().nextBoolean(),
-        new Supplier<String>()
+        new Supplier<>()
         {
           int counter = 1;
 

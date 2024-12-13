@@ -62,10 +62,10 @@ public class TimeBoundaryQueryQueryToolChest
 {
   private static final byte TIMEBOUNDARY_QUERY = 0x3;
 
-  private static final TypeReference<Result<TimeBoundaryResultValue>> TYPE_REFERENCE = new TypeReference<Result<TimeBoundaryResultValue>>()
+  private static final TypeReference<Result<TimeBoundaryResultValue>> TYPE_REFERENCE = new TypeReference<>()
   {
   };
-  private static final TypeReference<Object> OBJECT_TYPE_REFERENCE = new TypeReference<Object>()
+  private static final TypeReference<Object> OBJECT_TYPE_REFERENCE = new TypeReference<>()
   {
   };
 
@@ -104,7 +104,7 @@ public class TimeBoundaryQueryQueryToolChest
       final QueryRunner<Result<TimeBoundaryResultValue>> runner
   )
   {
-    return new BySegmentSkippingQueryRunner<Result<TimeBoundaryResultValue>>(runner)
+    return new BySegmentSkippingQueryRunner<>(runner)
     {
       @Override
       protected Sequence<Result<TimeBoundaryResultValue>> doRun(
@@ -176,7 +176,7 @@ public class TimeBoundaryQueryQueryToolChest
       @Nullable final ObjectMapper objectMapper
   )
   {
-    return new CacheStrategy<Result<TimeBoundaryResultValue>, Object, TimeBoundaryQuery>()
+    return new CacheStrategy<>()
     {
       @Override
       public boolean isCacheable(TimeBoundaryQuery query, boolean willMergeRunners, boolean bySegment)
@@ -209,7 +209,7 @@ public class TimeBoundaryQueryQueryToolChest
       @Override
       public Function<Result<TimeBoundaryResultValue>, Object> prepareForCache(boolean isResultLevelCache)
       {
-        return new Function<Result<TimeBoundaryResultValue>, Object>()
+        return new Function<>()
         {
           @Override
           public Object apply(Result<TimeBoundaryResultValue> input)
@@ -222,7 +222,7 @@ public class TimeBoundaryQueryQueryToolChest
       @Override
       public Function<Object, Result<TimeBoundaryResultValue>> pullFromCache(boolean isResultLevelCache)
       {
-        return new Function<Object, Result<TimeBoundaryResultValue>>()
+        return new Function<>()
         {
           @Override
           @SuppressWarnings("unchecked")

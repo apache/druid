@@ -741,7 +741,7 @@ public class TaskQueue
 
     Futures.addCallback(
         statusFuture,
-        new FutureCallback<TaskStatus>()
+        new FutureCallback<>()
         {
           @Override
           public void onSuccess(final TaskStatus status)

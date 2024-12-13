@@ -350,7 +350,7 @@ public class HttpLoadQueuePeonTest
       httpResponseHandler.handleResponse(httpResponse, null);
       try {
         List<DataSegmentChangeRequest> changeRequests = MAPPER.readValue(
-            request.getContent().array(), new TypeReference<List<DataSegmentChangeRequest>>()
+            request.getContent().array(), new TypeReference<>()
             {
             }
         );

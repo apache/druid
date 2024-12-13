@@ -107,7 +107,9 @@ public class DiscoveryModule implements Module
    */
   public static void registerDefault(Binder binder)
   {
-    registerKey(binder, Key.get(new TypeLiteral<DruidNode>(){}));
+    registerKey(binder, Key.get(new TypeLiteral<>()
+    {
+    }));
   }
 
   /**
@@ -121,7 +123,9 @@ public class DiscoveryModule implements Module
    */
   public static void register(Binder binder, Annotation annotation)
   {
-    registerKey(binder, Key.get(new TypeLiteral<DruidNode>(){}, annotation));
+    registerKey(binder, Key.get(new TypeLiteral<>()
+    {
+    }, annotation));
   }
 
   /**
@@ -136,7 +140,9 @@ public class DiscoveryModule implements Module
    */
   public static void register(Binder binder, Class<? extends Annotation> annotation)
   {
-    registerKey(binder, Key.get(new TypeLiteral<DruidNode>(){}, annotation));
+    registerKey(binder, Key.get(new TypeLiteral<>()
+    {
+    }, annotation));
   }
 
   /**

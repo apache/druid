@@ -102,7 +102,7 @@ public class DataServerClient
     closer.register(() -> resultStreamFuture.cancel(true));
     Futures.addCallback(
         resultStreamFuture,
-        new FutureCallback<InputStream>()
+        new FutureCallback<>()
         {
           @Override
           public void onSuccess(InputStream result)

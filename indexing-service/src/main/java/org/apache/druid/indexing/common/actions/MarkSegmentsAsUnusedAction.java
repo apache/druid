@@ -55,7 +55,7 @@ public class MarkSegmentsAsUnusedAction implements TaskAction<Integer>
   @Override
   public TypeReference<Integer> getReturnTypeReference()
   {
-    return new TypeReference<Integer>()
+    return new TypeReference<>()
     {
     };
   }

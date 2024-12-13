@@ -261,17 +261,17 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   public boolean setStatus(final String entryId, final boolean active, final StatusType status)
   {
     return connector.retryWithHandle(
-        new HandleCallback<Boolean>()
+        new HandleCallback<>()
         {
           @Override
           public Boolean withHandle(Handle handle) throws Exception
           {
             return handle.createStatement(
-                StringUtils.format(
-                    "UPDATE %s SET active = :active, status_payload = :status_payload WHERE id = :id AND active = TRUE",
-                    entryTable
-                )
-            )
+                             StringUtils.format(
+                                 "UPDATE %s SET active = :active, status_payload = :status_payload WHERE id = :id AND active = TRUE",
+                                 entryTable
+                             )
+                         )
                          .bind("id", entryId)
                          .bind("active", active)
                          .bind("status_payload", jsonMapper.writeValueAsBytes(status))
@@ -285,14 +285,14 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   public Optional<EntryType> getEntry(final String entryId)
   {
     return connector.retryWithHandle(
-        new HandleCallback<Optional<EntryType>>()
+        new HandleCallback<>()
         {
           @Override
           public Optional<EntryType> withHandle(Handle handle) throws Exception
           {
             byte[] res = handle.createQuery(
-                StringUtils.format("SELECT payload FROM %s WHERE id = :id", entryTable)
-            )
+                                   StringUtils.format("SELECT payload FROM %s WHERE id = :id", entryTable)
+                               )
                                .bind("id", entryId)
                                .map(ByteArrayMapper.FIRST)
                                .first();
@@ -310,14 +310,14 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   public Optional<StatusType> getStatus(final String entryId)
   {
     return connector.retryWithHandle(
-        new HandleCallback<Optional<StatusType>>()
+        new HandleCallback<>()
         {
           @Override
           public Optional<StatusType> withHandle(Handle handle) throws Exception
           {
             byte[] res = handle.createQuery(
-                StringUtils.format("SELECT status_payload FROM %s WHERE id = :id", entryTable)
-            )
+                                   StringUtils.format("SELECT status_payload FROM %s WHERE id = :id", entryTable)
+                               )
                                .bind("id", entryId)
                                .map(ByteArrayMapper.FIRST)
                                .first();
@@ -801,7 +801,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   public boolean addLock(final String entryId, final LockType lock)
   {
     return connector.retryWithHandle(
-        new HandleCallback<Boolean>()
+        new HandleCallback<>()
         {
           @Override
           public Boolean withHandle(Handle handle) throws Exception
@@ -889,17 +889,17 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   public Map<Long, LockType> getLocks(final String entryId)
   {
     return connector.retryWithHandle(
-        new HandleCallback<Map<Long, LockType>>()
+        new HandleCallback<>()
         {
           @Override
           public Map<Long, LockType> withHandle(Handle handle)
           {
             return handle.createQuery(
-                StringUtils.format(
-                    "SELECT id, lock_payload FROM %1$s WHERE %2$s_id = :entryId",
-                    lockTable, entryTypeName
-                )
-            )
+                             StringUtils.format(
+                                 "SELECT id, lock_payload FROM %1$s WHERE %2$s_id = :entryId",
+                                 lockTable, entryTypeName
+                             )
+                         )
                          .bind("entryId", entryId)
                          .map(
                              new ResultSetMapper<Pair<Long, LockType>>()

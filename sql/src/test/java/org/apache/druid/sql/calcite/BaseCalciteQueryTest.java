@@ -1369,7 +1369,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   private static List<DataSource> recursivelyClearDatasource(final List<DataSource> dataSources,
       ObjectMapper queryJsonMapper)
   {
-    List<DataSource> ret = new ArrayList<DataSource>();
+    List<DataSource> ret = new ArrayList<>();
     for (DataSource dataSource : dataSources) {
       ret.add(recursivelyClearContext(dataSource, queryJsonMapper));
     }

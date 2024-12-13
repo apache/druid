@@ -94,7 +94,9 @@ public class StatusResourceTest
 
     Set<String> hiddenProperties = new ObjectMapper().readValue(
         returnedProperties.get("druid.server.hiddenProperties"),
-        new TypeReference<Set<String>>() {});
+        new TypeReference<>()
+        {
+        });
 
     hiddenProperties.forEach(
         (property) -> {

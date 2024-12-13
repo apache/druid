@@ -622,7 +622,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   )
   {
     return getDBI().inTransaction(
-        new TransactionCallback<Void>()
+        new TransactionCallback<>()
         {
           @Override
           public Void inTransaction(Handle handle, TransactionStatus transactionStatus)
@@ -636,21 +636,21 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
                 .first();
             if (count == 0) {
               handle.createStatement(
-                  StringUtils.format(
-                      "INSERT INTO %1$s (%2$s, %3$s) VALUES (:key, :value)",
-                      tableName, keyColumn, valueColumn
-                  )
-              )
+                        StringUtils.format(
+                            "INSERT INTO %1$s (%2$s, %3$s) VALUES (:key, :value)",
+                            tableName, keyColumn, valueColumn
+                        )
+                    )
                     .bind("key", key)
                     .bind("value", value)
                     .execute();
             } else {
               handle.createStatement(
-                  StringUtils.format(
-                      "UPDATE %1$s SET %3$s=:value WHERE %2$s=:key",
-                      tableName, keyColumn, valueColumn
-                  )
-              )
+                        StringUtils.format(
+                            "UPDATE %1$s SET %3$s=:value WHERE %2$s=:key",
+                            tableName, keyColumn, valueColumn
+                        )
+                    )
                     .bind("key", key)
                     .bind("value", value)
                     .execute();
@@ -668,12 +668,12 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   {
     return getDBI().inTransaction(
         TransactionIsolationLevel.REPEATABLE_READ,
-        new TransactionCallback<Boolean>()
+        new TransactionCallback<>()
         {
           @Override
           public Boolean inTransaction(Handle handle, TransactionStatus transactionStatus)
           {
-            List<byte[]> currentValues = new ArrayList<byte[]>();
+            List<byte[]> currentValues = new ArrayList<>();
 
             // Compare
             for (MetadataCASUpdate update : updates) {
@@ -703,25 +703,25 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
 
               if (currentValue == null) {
                 handle.createStatement(
-                    StringUtils.format(
-                        "INSERT INTO %1$s (%2$s, %3$s) VALUES (:key, :value)",
-                        update.getTableName(),
-                        update.getKeyColumn(),
-                        update.getValueColumn()
-                    )
-                )
+                          StringUtils.format(
+                              "INSERT INTO %1$s (%2$s, %3$s) VALUES (:key, :value)",
+                              update.getTableName(),
+                              update.getKeyColumn(),
+                              update.getValueColumn()
+                          )
+                      )
                       .bind("key", update.getKey())
                       .bind("value", update.getNewValue())
                       .execute();
               } else {
                 handle.createStatement(
-                    StringUtils.format(
-                        "UPDATE %1$s SET %3$s=:value WHERE %2$s=:key",
-                        update.getTableName(),
-                        update.getKeyColumn(),
-                        update.getValueColumn()
-                    )
-                )
+                          StringUtils.format(
+                              "UPDATE %1$s SET %3$s=:value WHERE %2$s=:key",
+                              update.getTableName(),
+                              update.getKeyColumn(),
+                              update.getValueColumn()
+                          )
+                      )
                       .bind("key", update.getKey())
                       .bind("value", update.getNewValue())
                       .execute();
@@ -891,7 +891,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   )
   {
     return getDBI().withHandle(
-        new HandleCallback<T>()
+        new HandleCallback<>()
         {
           @Override
           public T withHandle(Handle handle) throws Exception

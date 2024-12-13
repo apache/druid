@@ -361,13 +361,17 @@ public class CliCoordinator extends ServerRunnable
           return new CoordinatorCustomDutyGroups(coordinatorCustomDutyGroups);
         }
         List<String> coordinatorCustomDutyGroupNames = jsonMapper.readValue(props.getProperty(
-            "druid.coordinator.dutyGroups"), new TypeReference<List<String>>() {});
+            "druid.coordinator.dutyGroups"), new TypeReference<>()
+        {
+        });
         for (String coordinatorCustomDutyGroupName : coordinatorCustomDutyGroupNames) {
           String dutyListProperty = StringUtils.format("druid.coordinator.%s.duties", coordinatorCustomDutyGroupName);
           if (Strings.isNullOrEmpty(props.getProperty(dutyListProperty))) {
             throw new IAE("Coordinator custom duty group given without any duty for group %s", coordinatorCustomDutyGroupName);
           }
-          List<String> dutyForGroup = jsonMapper.readValue(props.getProperty(dutyListProperty), new TypeReference<List<String>>() {});
+          List<String> dutyForGroup = jsonMapper.readValue(props.getProperty(dutyListProperty), new TypeReference<>()
+          {
+          });
           List<CoordinatorCustomDuty> coordinatorCustomDuties = new ArrayList<>();
           for (String dutyName : dutyForGroup) {
             final String dutyPropertyBase = StringUtils.format(
