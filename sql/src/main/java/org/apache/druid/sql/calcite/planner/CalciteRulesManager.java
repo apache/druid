@@ -553,7 +553,7 @@ public class CalciteRulesManager
     {
       final RelBuilder relBuilder = RelFactories.LOGICAL_BUILDER.create(rel.getCluster(), null);
       final RelNode decorrelatedRel = RelDecorrelator.decorrelateQuery(rel, relBuilder);
-      RelNode ret = new DruidRelFieldTrimmer(null, relBuilder, false).trim(decorrelatedRel);
+      RelNode ret = new DruidRelFieldTrimmer(null, relBuilder, true).trim(decorrelatedRel);
       return ret;
     }
 
