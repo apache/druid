@@ -21,16 +21,11 @@ package org.apache.druid.math.expr;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.logger.Logger;
 
 import javax.annotation.Nullable;
 
 public class ExpressionProcessingConfig
 {
-  private static final Logger LOG = new Logger(ExpressionProcessingConfig.class);
-
-  public static final String NULL_HANDLING_LEGACY_LOGICAL_OPS_STRING = "druid.expressions.useStrictBooleans";
   // Coerce arrays to multi value strings
   public static final String PROCESS_ARRAYS_AS_MULTIVALUE_STRINGS_CONFIG_STRING =
       "druid.expressions.processArraysAsMultiValueStrings";
@@ -38,9 +33,6 @@ public class ExpressionProcessingConfig
   public static final String HOMOGENIZE_NULL_MULTIVALUE_STRING_ARRAYS =
       "druid.expressions.homogenizeNullMultiValueStringArrays";
   public static final String ALLOW_VECTORIZE_FALLBACK = "druid.expressions.allowVectorizeFallback";
-
-  @JsonProperty("useStrictBooleans")
-  private final boolean useStrictBooleans;
 
   @JsonProperty("processArraysAsMultiValueStrings")
   private final boolean processArraysAsMultiValueStrings;
@@ -53,17 +45,11 @@ public class ExpressionProcessingConfig
 
   @JsonCreator
   public ExpressionProcessingConfig(
-      @JsonProperty("useStrictBooleans") @Nullable Boolean useStrictBooleans,
       @JsonProperty("processArraysAsMultiValueStrings") @Nullable Boolean processArraysAsMultiValueStrings,
       @JsonProperty("homogenizeNullMultiValueStringArrays") @Nullable Boolean homogenizeNullMultiValueStringArrays,
       @JsonProperty("allowVectorizeFallback") @Nullable Boolean allowVectorizeFallback
   )
   {
-    this.useStrictBooleans = getWithPropertyFallback(
-        useStrictBooleans,
-        NULL_HANDLING_LEGACY_LOGICAL_OPS_STRING,
-        "true"
-    );
     this.processArraysAsMultiValueStrings = getWithPropertyFallbackFalse(
         processArraysAsMultiValueStrings,
         PROCESS_ARRAYS_AS_MULTIVALUE_STRINGS_CONFIG_STRING
@@ -76,22 +62,6 @@ public class ExpressionProcessingConfig
         allowVectorizeFallback,
         ALLOW_VECTORIZE_FALLBACK
     );
-    String version = ExpressionProcessingConfig.class.getPackage().getImplementationVersion();
-    if (version == null || version.contains("SNAPSHOT")) {
-      version = "latest";
-    }
-    final String docsBaseFormat = "https://druid.apache.org/docs/%s/querying/sql-data-types#%s";
-    if (!this.useStrictBooleans) {
-      LOG.warn(
-          "druid.expressions.useStrictBooleans set to 'false', we recommend using 'true' if using SQL to query Druid for the most SQL compliant behavior, see %s for details",
-          StringUtils.format(docsBaseFormat, version, "boolean-logic")
-      );
-    }
-  }
-
-  public boolean isUseStrictBooleans()
-  {
-    return useStrictBooleans;
   }
 
   public boolean processArraysAsMultiValueStrings()
