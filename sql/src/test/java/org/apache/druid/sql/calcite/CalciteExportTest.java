@@ -80,7 +80,7 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
       );
     }
 
-    private final class LocalOverrideModule implements DruidModule
+    private static final class LocalOverrideModule implements DruidModule
     {
       @Override
       public List<? extends Module> getJacksonModules()
@@ -200,7 +200,6 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
         .expectTarget(ExportDestination.TYPE_KEY, RowSignature.builder().add("dim2", ColumnType.STRING).build())
         .verify();
   }
-
 
   @Test
   public void testInsertIntoExternParameterized()

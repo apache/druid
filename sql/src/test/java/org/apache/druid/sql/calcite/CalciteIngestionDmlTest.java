@@ -152,7 +152,7 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
     /**
      * Clone of MSQExternalDataSourceModule since it is not visible here.
      */
-    private final class ExternalDataSourceModule implements DruidModule
+    private static final class ExternalDataSourceModule implements DruidModule
     {
       @Override
       public List<? extends Module> getJacksonModules()
@@ -173,7 +173,7 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
     /**
      * Partial clone of MsqSqlModule, since that module is not visible to this one.
      */
-    private final class CustomInputSourceModule implements DruidModule
+    private static final class CustomInputSourceModule implements DruidModule
     {
       @Override
       public List<? extends Module> getJacksonModules()
@@ -200,7 +200,7 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
         SqlBindings.addOperatorConversion(binder, LocalOperatorConversion.class);
       }
     }
-}
+  }
 
   @AfterEach
   public void tearDown()
