@@ -94,6 +94,8 @@ Example:
 
 ### Min and max aggregators
 
+#### Numeric min and max aggregators
+
 | Property | Description | Required |
 | --- | --- | --- |
 | `type` | Must be "doubleMin", "doubleMax", "floatMin", "floatMax", "longMin", or "longMax". | Yes |
@@ -101,7 +103,7 @@ Example:
 | `fieldName` | Name of the input column to compute the minimum or maximum value over. | No. You must specify `fieldName` or `expression`. |
 | `expression` | You can specify an inline [expression](./math-expr.md) as an alternative to `fieldName`. | No. You must specify `fieldName` or `expression`. |
 
-#### `doubleMin` aggregator
+##### `doubleMin` aggregator
 
 `doubleMin` computes the minimum of all input values and null if `druid.generic.useDefaultValueForNull` is false or Double.POSITIVE_INFINITY if true.
 
@@ -110,7 +112,7 @@ Example:
 { "type" : "doubleMin", "name" : "maxDouble", "fieldName" : "aDouble" }
 ```
 
-#### `doubleMax` aggregator
+##### `doubleMax` aggregator
 
 `doubleMax` computes the maximum of all input values and null if `druid.generic.useDefaultValueForNull` is false or Double.NEGATIVE_INFINITY if true.
 
@@ -119,7 +121,7 @@ Example:
 { "type" : "doubleMax", "name" : "minDouble", "fieldName" : "aDouble" }
 ```
 
-#### `floatMin` aggregator
+##### `floatMin` aggregator
 
 `floatMin` computes the minimum of all input values and null if `druid.generic.useDefaultValueForNull` is false or Float.POSITIVE_INFINITY if true.
 
@@ -128,7 +130,7 @@ Example:
 { "type" : "floatMin", "name" : "minFloat", "fieldName" : "aFloat" }
 ```
 
-#### `floatMax` aggregator
+##### `floatMax` aggregator
 
 `floatMax` computes the maximum of all input values and null if `druid.generic.useDefaultValueForNull` is false or Float.NEGATIVE_INFINITY if true.
 
@@ -137,7 +139,7 @@ Example:
 { "type" : "floatMax", "name" : "maxFloat", "fieldName" : "aFloat" }
 ```
 
-#### `longMin` aggregator
+##### `longMin` aggregator
 
 `longMin` computes the minimum of all input values and null if `druid.generic.useDefaultValueForNull` is false or Long.MAX_VALUE if true.
 
@@ -146,13 +148,42 @@ Example:
 { "type" : "longMin", "name" : "minLong", "fieldName" : "aLong" }
 ```
 
-#### `longMax` aggregator
+##### `longMax` aggregator
 
 `longMax` computes the maximum of all metric values and null if `druid.generic.useDefaultValueForNull` is false or Long.MIN_VALUE if true.
 
 Example:
 ```json
 { "type" : "longMax", "name" : "maxLong", "fieldName" : "aLong" }
+```
+
+#### String min and max aggregators
+
+| Property | Description | Required |
+| --- | --- | --- |
+| `type` | Must be "stringMin" or "stringMax". | Yes |
+| `name` | Output name for the min or max value. | Yes |
+| `fieldName` | Name of the input column to compute the value over. | No. You must specify `fieldName` or `expression`. |
+| `expression`              | You can specify an inline [expression](./math-expr.md) as an alternative to `fieldName`. | No. You must specify `fieldName` or `expression`. |
+| `maxStringBytes`          | Maximum size of string values to accumulate when computing the first or last value per group. Values longer than this will be truncated. | No. Defaults to 1024. |
+| `aggregateMultipleValues` | `aggregateMultipleValues` is an optional boolean flag controls the behavior of aggregating a [multi-value dimension](./multi-value-dimensions.md). `aggregateMultipleValues` is set as true by default and returns the stringified array in case of a multi-value dimension. By setting it to false, function will return first value instead. | No. Defaults to true. |
+
+
+##### `stringMin` aggregator
+
+`stringMin` computes the maximum of all input values and null.
+
+Example:
+```json
+{ "type" : "stringMin", "name" : "minString", "fieldName" : "aString" }
+```
+##### `stringMax` aggregator
+
+`stringMax` computes the maximum of all metric values and null.
+
+Example:
+```json
+{ "type" : "stringMax", "name" : "maxString", "fieldName" : "aString" }
 ```
 
 ### `doubleMean` aggregator
