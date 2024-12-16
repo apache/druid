@@ -589,7 +589,8 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       String rightPrefix,
       String condition,
       JoinType joinType,
-      DimFilter filter
+      DimFilter filter,
+      JoinAlgorithm joinAlgorithm
   )
   {
     return JoinDataSource.create(
@@ -601,6 +602,26 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         filter,
         CalciteTests.createExprMacroTable(),
         CalciteTests.createJoinableFactoryWrapper(),
+        joinAlgorithm
+    );
+  }
+
+  public static JoinDataSource join(
+      DataSource left,
+      DataSource right,
+      String rightPrefix,
+      String condition,
+      JoinType joinType,
+      DimFilter filter
+  )
+  {
+    return join(
+        left,
+        right,
+        rightPrefix,
+        condition,
+        joinType,
+        filter,
         JoinAlgorithm.BROADCAST
     );
   }

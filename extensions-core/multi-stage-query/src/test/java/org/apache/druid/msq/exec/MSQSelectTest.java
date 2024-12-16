@@ -1043,7 +1043,9 @@ public class MSQSelectTest extends MSQTestBase
                                 DruidExpression.ofColumn(ColumnType.FLOAT, "m1"),
                                 DruidExpression.ofColumn(ColumnType.FLOAT, "j0.m1")
                             ),
-                            JoinType.INNER
+                            JoinType.INNER,
+                            null,
+                            joinAlgorithm
                         )
                     )
                     .setInterval(querySegmentSpec(Filtration.eternity()))
