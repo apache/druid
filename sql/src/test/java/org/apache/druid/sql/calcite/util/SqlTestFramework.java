@@ -51,12 +51,9 @@ import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.GlobalTableDataSource;
-import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.QuerySegmentWalker;
-import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.TestBufferPool;
 import org.apache.druid.query.groupby.DefaultGroupByQueryMetricsFactory;
@@ -105,9 +102,7 @@ import java.net.URI;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
@@ -217,10 +212,6 @@ public class SqlTestFramework
     Boolean isExplainSupported();
 
     QueryRunnerFactoryConglomerate wrapConglomerate(QueryRunnerFactoryConglomerate conglomerate, Closer resourceCloser);
-
-    Map<? extends Class<? extends Query>, ? extends QueryRunnerFactory> makeRunnerFactories(Injector injector);
-
-    Map<? extends Class<? extends Query>, ? extends QueryToolChest> makeToolChests(Injector injector);
   }
 
   public abstract static class QueryComponentSupplierDelegate implements QueryComponentSupplier
@@ -303,18 +294,6 @@ public class SqlTestFramework
         Closer resourceCloser)
     {
       return delegate.wrapConglomerate(conglomerate, resourceCloser);
-    }
-
-    @Override
-    public Map<? extends Class<? extends Query>, ? extends QueryRunnerFactory> makeRunnerFactories(Injector injector)
-    {
-      return delegate.makeRunnerFactories(injector);
-    }
-
-    @Override
-    public Map<? extends Class<? extends Query>, ? extends QueryToolChest> makeToolChests(Injector injector)
-    {
-      return delegate.makeToolChests(injector);
     }
   }
 
@@ -463,19 +442,6 @@ public class SqlTestFramework
         Closer resourceCloser)
     {
       return conglomerate;
-    }
-
-    @Override
-    public Map<? extends Class<? extends Query>, ? extends QueryRunnerFactory> makeRunnerFactories(Injector injector)
-    {
-      return Collections.emptyMap();
-    }
-
-    @Override
-    public Map<? extends Class<? extends Query>, ? extends QueryToolChest> makeToolChests(Injector injector)
-    {
-      return ImmutableMap.<Class<? extends Query>, QueryToolChest>builder()
-          .build();
     }
   }
 
@@ -676,8 +642,6 @@ public class SqlTestFramework
       return statementFactory;
     }
   }
-
-  public static final String SQL_TEST_FRAME_WORK = "sqlTestFrameWork";
 
   /**
    * Guice module to create the various query framework items. By creating items within
