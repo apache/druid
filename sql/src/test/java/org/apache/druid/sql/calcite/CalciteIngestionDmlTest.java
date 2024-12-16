@@ -140,9 +140,9 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
     }
 
     @Override
-    public void configureGuice(DruidInjectorBuilder builder)
+    public void configureGuice(DruidInjectorBuilder builder, List<com.google.inject.Module> overrideModules)
     {
-      super.configureGuice(builder);
+      super.configureGuice(builder, overrideModules);
 
       builder.addModule(new DruidModule() {
 
