@@ -153,8 +153,7 @@ DruidProject(dim2=[$0], EXPR$1=[$1], EXPR$2=[$3], EXPR$3=[$5], druid=[logical])
       },
       "rightPrefix" : "j0.",
       "condition" : "notdistinctfrom(\"d0\",\"j0._d0\")",
-      "joinType" : "INNER",
-      "joinAlgorithm" : "broadcast"
+      "joinType" : "INNER"
     },
     "right" : {
       "type" : "query",
@@ -226,8 +225,7 @@ DruidProject(dim2=[$0], EXPR$1=[$1], EXPR$2=[$3], EXPR$3=[$5], druid=[logical])
     },
     "rightPrefix" : "_j0.",
     "condition" : "notdistinctfrom(\"d0\",\"_j0._d0\")",
-    "joinType" : "INNER",
-    "joinAlgorithm" : "broadcast"
+    "joinType" : "INNER"
   },
   "intervals" : {
     "type" : "intervals",
