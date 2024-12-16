@@ -26,7 +26,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import org.apache.calcite.avatica.SqlType;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.Druids;
@@ -98,12 +97,6 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
       {
         binder.bind(StorageConfig.class).toInstance(new StorageConfig("/tmp/export"));
       }
-    }
-
-    @Override
-    public void configureGuice(DruidInjectorBuilder builder)
-    {
-      super.configureGuice(builder);
     }
   }
 

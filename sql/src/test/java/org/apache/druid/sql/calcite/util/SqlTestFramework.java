@@ -208,6 +208,13 @@ public class SqlTestFramework
     {
     }
 
+    /**
+     * Configures modules and overrides.
+     *
+     * New classes should use the {@link QueryComponentSupplier#getCoreModule()}
+     * and {@link QueryComponentSupplier#getOverrideModule()} methods.
+     */
+    @Deprecated
     void configureGuice(DruidInjectorBuilder injectorBuilder, List<Module> overrideModules);
 
     /**
@@ -379,10 +386,15 @@ public class SqlTestFramework
       return DruidModuleCollection.of();
     }
 
-    public void configureGuice(DruidInjectorBuilder builder)
+    /**
+     * Configures Guice modules (mostly).
+     *
+     * Deprecated; see: {@link QueryComponentSupplier#configureGuice(DruidInjectorBuilder, List)}
+     */
+    @Deprecated
+    protected void configureGuice(DruidInjectorBuilder builder)
     {
-      // This shell exists to minimize changes to child classes.  This method should probably be removed and
-      // places that extend this just updated, but that generates a lot of changes that could introduce conflicts
+
     }
 
     @Override
