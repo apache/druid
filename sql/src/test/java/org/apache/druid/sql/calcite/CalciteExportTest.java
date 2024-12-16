@@ -41,7 +41,7 @@ import org.apache.druid.sql.calcite.util.DruidModuleCollection;
 import org.apache.druid.sql.destination.ExportDestination;
 import org.apache.druid.sql.http.SqlParameter;
 import org.apache.druid.storage.StorageConfig;
-import org.apache.druid.storage.StorageConnector;
+import org.apache.druid.storage.StorageConnectorModule;
 import org.apache.druid.storage.StorageConnectorProvider;
 import org.apache.druid.storage.local.LocalFileExportStorageProvider;
 import org.apache.druid.storage.local.LocalFileStorageConnectorProvider;
@@ -64,45 +64,46 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
     }
 
     @Override
+    public DruidModule getCoreModule()
+    {
+      return DruidModuleCollection.of(
+          super.getCoreModule(),
+          new StorageConnectorModule()
+      );
+    }
+
+    @Override
+    public DruidModule getOverrideModule()
+    {
+      return DruidModuleCollection.of(
+          super.getOverrideModule(),
+          new LocalOverrideModule()
+      );
+    }
+
+    private final class LocalOverrideModule implements DruidModule
+    {
+      @Override
+      public List<? extends Module> getJacksonModules()
+      {
+        return ImmutableList.of(
+            new SimpleModule(StorageConnectorProvider.class.getSimpleName()).registerSubtypes(
+                new NamedType(LocalFileExportStorageProvider.class, CalciteTests.FORBIDDEN_DESTINATION)
+            )
+        );
+      }
+
+      @Override
+      public void configure(Binder binder)
+      {
+        binder.bind(StorageConfig.class).toInstance(new StorageConfig("/tmp/export"));
+      }
+    }
+
+    @Override
     public void configureGuice(DruidInjectorBuilder builder)
     {
       super.configureGuice(builder);
-      builder.addModule(
-          new DruidModule()
-          {
-            @Override
-            public void configure(Binder binder)
-            {
-            }
-
-            @Override
-            public List<? extends Module> getJacksonModules()
-            {
-              return ImmutableList.of(
-                  new SimpleModule(StorageConnectorProvider.class.getSimpleName()).registerSubtypes(
-                      new NamedType(LocalFileExportStorageProvider.class, CalciteTests.FORBIDDEN_DESTINATION)
-                  )
-              );
-            }
-          });
-      builder.addModule(new DruidModule()
-      {
-        @Override
-        public List<? extends Module> getJacksonModules()
-        {
-          return ImmutableList.of(
-              new SimpleModule(StorageConnector.class.getSimpleName())
-                  .registerSubtypes(LocalFileStorageConnectorProvider.class)
-                  .registerSubtypes(LocalFileExportStorageProvider.class)
-          );
-        }
-
-        @Override
-        public void configure(Binder binder)
-        {
-          binder.bind(StorageConfig.class).toInstance(new StorageConfig("/tmp/export"));
-        }
-      });
     }
   }
 
