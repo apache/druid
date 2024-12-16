@@ -20,7 +20,6 @@
 package org.apache.druid.sql.calcite.util;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Stopwatch;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
@@ -620,9 +619,6 @@ public class SqlTestFramework
     private final PlannerFactory plannerFactory;
     private final SqlStatementFactory statementFactory;
 
-    static Stopwatch stopwatch = Stopwatch.createUnstarted();
-    static Stopwatch stopwatch2 = Stopwatch.createUnstarted();
-
     public PlannerFixture(
         final SqlTestFramework framework,
         final PlannerComponentSupplier componentSupplier,
@@ -630,29 +626,18 @@ public class SqlTestFramework
         final AuthConfig authConfig
     )
     {
-      stopwatch .start();
-      stopwatch2 .start();
       this.viewManager = componentSupplier.createViewManager();
+      final DruidSchemaCatalog rootSchema = QueryFrameworkUtils.createMockRootSchema(
+          framework.injector,
+          framework.conglomerate(),
+          framework.walker(),
+          plannerConfig,
+          viewManager,
+          componentSupplier.createSchemaManager(),
+          framework.authorizerMapper,
+          framework.builder.catalogResolver
+      );
 
-
-//      DruidSchemaCatalog a;
-      DruidSchemaCatalog rootSchema ;//=framework.injector.getInstance(DruidSchemaCatalog.class);
-      if(true) {
-        rootSchema =framework.injector.getInstance(DruidSchemaCatalog.class);
-      }else {
-        rootSchema=QueryFrameworkUtils.createMockRootSchema(
-        framework.injector,
-        framework.conglomerate(),
-        framework.walker(),
-        plannerConfig,
-        viewManager,
-        componentSupplier.createSchemaManager(),
-        framework.authorizerMapper,
-        framework.builder.catalogResolver
-   );
-      }
-
-      stopwatch2.stop();
       this.plannerFactory = new PlannerFactory(
           rootSchema,
           framework.operatorTable(),
@@ -674,9 +659,6 @@ public class SqlTestFramework
           authConfig
       );
       componentSupplier.populateViews(viewManager, plannerFactory);
-      stopwatch.stop();
-      System.out.println(stopwatch);
-      System.out.println(stopwatch2);
     }
 
     public ViewManager viewManager()
