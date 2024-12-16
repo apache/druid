@@ -38,7 +38,6 @@ import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.InlineInputSource;
 import org.apache.druid.data.input.impl.SplittableInputSource;
-import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -65,6 +64,7 @@ import org.apache.druid.sql.calcite.planner.Calcites;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.calcite.util.DruidModuleCollection;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.apache.druid.sql.guice.SqlBindings;
 import org.apache.druid.sql.http.SqlParameter;
@@ -140,62 +140,67 @@ public class CalciteIngestionDmlTest extends BaseCalciteQueryTest
     }
 
     @Override
-    public void configureGuice(DruidInjectorBuilder builder)
+    public DruidModule getCoreModule()
     {
-      super.configureGuice(builder);
-
-      builder.addModule(new DruidModule() {
-
-        // Clone of MSQExternalDataSourceModule since it is not
-        // visible here.
-        @Override
-        public List<? extends Module> getJacksonModules()
-        {
-          return Collections.singletonList(
-              new SimpleModule(getClass().getSimpleName())
-                  .registerSubtypes(ExternalDataSource.class)
-          );
-        }
-
-        @Override
-        public void configure(Binder binder)
-        {
-          // Nothing to do.
-        }
-      });
-
-      builder.addModule(new DruidModule() {
-
-        // Partial clone of MsqSqlModule, since that module is not
-        // visible to this one.
-
-        @Override
-        public List<? extends Module> getJacksonModules()
-        {
-          // We want this module to bring input sources along for the ride.
-          List<Module> modules = new ArrayList<>(new InputSourceModule().getJacksonModules());
-          modules.add(new SimpleModule("test-module").registerSubtypes(TestFileInputSource.class));
-          return modules;
-        }
-
-        @Override
-        public void configure(Binder binder)
-        {
-          // We want this module to bring InputSourceModule along for the ride.
-          binder.install(new InputSourceModule());
-
-          // Set up the EXTERN macro.
-          SqlBindings.addOperatorConversion(binder, ExternalOperatorConversion.class);
-
-          // Enable the extended table functions for testing even though these
-          // are not enabled in production in Druid 26.
-          SqlBindings.addOperatorConversion(binder, HttpOperatorConversion.class);
-          SqlBindings.addOperatorConversion(binder, InlineOperatorConversion.class);
-          SqlBindings.addOperatorConversion(binder, LocalOperatorConversion.class);
-        }
-      });
+      return DruidModuleCollection.of(
+          super.getCoreModule(),
+          new ExternalDataSourceModule(),
+          new CustomInputSourceModule()
+        );
     }
-  }
+
+    /**
+     * Clone of MSQExternalDataSourceModule since it is not visible here.
+     */
+    private final class ExternalDataSourceModule implements DruidModule
+    {
+      @Override
+      public List<? extends Module> getJacksonModules()
+      {
+        return Collections.singletonList(
+            new SimpleModule(getClass().getSimpleName())
+                .registerSubtypes(ExternalDataSource.class)
+        );
+      }
+
+      @Override
+      public void configure(Binder binder)
+      {
+        // Nothing to do.
+      }
+    }
+
+    /**
+     * Partial clone of MsqSqlModule, since that module is not visible to this one.
+     */
+    private final class CustomInputSourceModule implements DruidModule
+    {
+      @Override
+      public List<? extends Module> getJacksonModules()
+      {
+        // We want this module to bring input sources along for the ride.
+        List<Module> modules = new ArrayList<>(new InputSourceModule().getJacksonModules());
+        modules.add(new SimpleModule("test-module").registerSubtypes(TestFileInputSource.class));
+        return modules;
+      }
+
+      @Override
+      public void configure(Binder binder)
+      {
+        // We want this module to bring InputSourceModule along for the ride.
+        binder.install(new InputSourceModule());
+
+        // Set up the EXTERN macro.
+        SqlBindings.addOperatorConversion(binder, ExternalOperatorConversion.class);
+
+        // Enable the extended table functions for testing even though these
+        // are not enabled in production in Druid 26.
+        SqlBindings.addOperatorConversion(binder, HttpOperatorConversion.class);
+        SqlBindings.addOperatorConversion(binder, InlineOperatorConversion.class);
+        SqlBindings.addOperatorConversion(binder, LocalOperatorConversion.class);
+      }
+    }
+}
 
   @AfterEach
   public void tearDown()

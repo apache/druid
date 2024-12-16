@@ -37,6 +37,7 @@ import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.calcite.CalciteExportTest.ExportComponentSupplier;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.calcite.util.DruidModuleCollection;
 import org.apache.druid.sql.destination.ExportDestination;
 import org.apache.druid.sql.http.SqlParameter;
 import org.apache.druid.storage.StorageConfig;
