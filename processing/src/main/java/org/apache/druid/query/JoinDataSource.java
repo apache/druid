@@ -100,19 +100,6 @@ public class JoinDataSource implements DataSource
   private static final Logger log = new Logger(JoinDataSource.class);
   private final DataSourceAnalysis analysis;
 
-//  private JoinDataSource()
-//  {
-//    analysis = null;
-//    leftFilter = null;
-//    joinableFactoryWrapper = null;
-//    joinAlgorithm = JoinAlgorithm.BROADCAST;
-//    conditionAnalysis = null;
-//    joinType = null;
-//    rightPrefix = null;
-//    right = null;
-//    left = null;
-//  }
-
   private JoinDataSource(
       DataSource left,
       DataSource right,
