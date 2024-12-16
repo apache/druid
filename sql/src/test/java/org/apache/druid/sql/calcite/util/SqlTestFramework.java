@@ -388,12 +388,6 @@ public class SqlTestFramework
     @Override
     public void configureGuice(DruidInjectorBuilder builder, List<Module> overrideModules)
     {
-
-      builder.addModules(
-          binder -> binder.bind(QuerySegmentWalker.class)
-                          .to(SpecificSegmentsQuerySegmentWalker.class)
-                          .in(LazySingleton.class)
-      );
       configureGuice(builder);
     }
 
@@ -728,6 +722,10 @@ public class SqlTestFramework
       binder.bind(new TypeLiteral<NonBlockingPool<ByteBuffer>>(){})
             .annotatedWith(Global.class)
             .to(TestBufferPool.class);
+
+      binder.bind(QuerySegmentWalker.class)
+            .to(SpecificSegmentsQuerySegmentWalker.class)
+            .in(LazySingleton.class);
 
     }
 
