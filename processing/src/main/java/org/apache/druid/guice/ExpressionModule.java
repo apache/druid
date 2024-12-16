@@ -82,6 +82,7 @@ public class ExpressionModule implements Module
                    .add(HyperUniqueExpressions.HllRoundEstimateExprMacro.class)
                    .add(NestedDataExpressions.JsonObjectExprMacro.class)
                    .add(NestedDataExpressions.JsonMergeExprMacro.class)
+                   .add(NestedDataExpressions.JsonMergeAggrExprMacro.class)
                    .add(NestedDataExpressions.JsonKeysExprMacro.class)
                    .add(NestedDataExpressions.JsonPathsExprMacro.class)
                    .add(NestedDataExpressions.JsonValueExprMacro.class)
