@@ -89,6 +89,7 @@ public class QueryContexts
   public static final String UNCOVERED_INTERVALS_LIMIT_KEY = "uncoveredIntervalsLimit";
   public static final String MIN_TOP_N_THRESHOLD = "minTopNThreshold";
   public static final String CATALOG_VALIDATION_ENABLED = "catalogValidationEnabled";
+  public static final String TOPN_USE_MULTI_PASS_POOLED_QUERY_GRANULARITY = "topNuseMultiPassPooledQueryGranularity";
   /**
    * Context parameter to enable/disable the extended filtered sum rewrite logic.
    *

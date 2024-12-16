@@ -19,8 +19,8 @@
                 }
             ],
             "context": {
-                "useCache": "true",
-                "populateCache": "true",
+                "useCache": "false",
+                "populateCache": "false",
                 "timeout": 60000
             }
         },
@@ -92,8 +92,8 @@
             },
             "threshold": 2,
             "context": {
-                "useCache": "true",
-                "populateCache": "true",
+                "useCache": "false",
+                "populateCache": "false",
                 "timeout": 60000
             }
         },
@@ -196,8 +196,8 @@
             },
             "threshold": 2,
             "context": {
-                "useCache": "true",
-                "populateCache": "true",
+                "useCache": "false",
+                "populateCache": "false",
                 "timeout": 60000
             }
         },
@@ -320,8 +320,8 @@
             },
             "threshold": 2,
             "context": {
-                "useCache": "true",
-                "populateCache": "true",
+                "useCache": "false",
+                "populateCache": "false",
                 "timeout": 60000
             }
         },
@@ -473,8 +473,8 @@
             },
             "limit": 3,
             "context": {
-                "useCache": "true",
-                "populateCache": "true",
+                "useCache": "false",
+                "populateCache": "false",
                 "timeout": 60000
             }
         },
@@ -739,8 +739,8 @@
             },
             "threshold": 2,
             "context": {
-                "useCache": "true",
-                "populateCache": "true",
+                "useCache": "false",
+                "populateCache": "false",
                 "timeout": 60000
             }
         },

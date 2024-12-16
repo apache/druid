@@ -24,6 +24,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.segment.ColumnValueSelector;
@@ -127,11 +128,6 @@ public class CursorGranularizer
     this.descending = descending;
   }
 
-  public Granularity getGranularity()
-  {
-    return granularity;
-  }
-
   public Iterable<Interval> getBucketIterable()
   {
     return bucketIterable;
@@ -140,6 +136,11 @@ public class CursorGranularizer
   public DateTime getBucketStart()
   {
     return DateTimes.utc(currentBucketStart);
+  }
+
+  public Interval getCurrentInterval()
+  {
+    return Intervals.utc(currentBucketStart, currentBucketEnd);
   }
 
   public boolean advanceToBucket(final Interval bucketInterval)

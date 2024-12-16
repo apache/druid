@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.ColumnSelectorPlus;
 import org.apache.druid.query.CursorGranularizer;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -270,19 +271,23 @@ public class TopNQueryEngine
       return false;
     }
 
-    if (Granularities.ALL.equals(query.getGranularity())) {
-      // all other requirements have been satisfied, ALL granularity can always use the pooled algorithms
-      return true;
-    }
-
-    // if not using ALL granularity, we can still potentially use the pooled algorithm if we are certain it doesn't
-    // need to make multiple passes (e.g. reset the cursor)
+    // num values per pass must be greater than 0 or else the pooled algorithm cannot progress
     try (final ResourceHolder<ByteBuffer> resultsBufHolder = bufferPool.take()) {
       final ByteBuffer resultsBuf = resultsBufHolder.get();
 
       final int numBytesToWorkWith = resultsBuf.capacity();
       final int numValuesPerPass = numBytesPerRecord > 0 ? numBytesToWorkWith / numBytesPerRecord : cardinality;
 
+      final boolean allowMultiPassPooled = query.context().getBoolean(
+          QueryContexts.TOPN_USE_MULTI_PASS_POOLED_QUERY_GRANULARITY,
+          false
+      );
+      if (Granularities.ALL.equals(query.getGranularity()) || allowMultiPassPooled) {
+        return numValuesPerPass > 0;
+      }
+
+      // if not using multi-pass for pooled + query granularity other than 'ALL', we must check that all values can fit
+      // in a single pass
       return numValuesPerPass >= cardinality;
     }
   }

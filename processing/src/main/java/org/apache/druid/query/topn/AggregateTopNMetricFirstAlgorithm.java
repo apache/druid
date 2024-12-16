@@ -113,6 +113,7 @@ public class AggregateTopNMetricFirstAlgorithm implements TopNAlgorithm<int[], T
     try {
       // reset cursor since we call run again
       params.getCursor().reset();
+      params.getGranularizer().advanceToBucket(params.getGranularizer().getCurrentInterval());
       // Run topN for all metrics for top N dimension values
       allMetricsParam = allMetricAlgo.makeInitParams(params.getSelectorPlus(), params.getCursor(), params.getGranularizer());
       allMetricAlgo.run(
