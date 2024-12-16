@@ -128,7 +128,7 @@ public enum ValueType implements TypeDescriptor
   @Override
   public boolean isPrimitive()
   {
-    return this.equals(STRING) || isNumeric(this);
+    return STRING.equals(this) || isNumeric(this);
   }
 
   @Nullable
