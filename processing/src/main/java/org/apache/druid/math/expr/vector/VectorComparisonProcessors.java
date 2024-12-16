@@ -23,7 +23,6 @@ import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprType;
-import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.segment.column.Types;
 
