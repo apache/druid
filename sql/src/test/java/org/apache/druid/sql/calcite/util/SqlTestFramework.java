@@ -678,6 +678,19 @@ public class SqlTestFramework
     }
   }
 
+  static class TestSegmentsOverseer implements DruidModule   {
+
+    @Override
+    public void configure(Binder binder)
+    {
+      binder.bind(QuerySegmentWalker.class)
+      .to(SpecificSegmentsQuerySegmentWalker.class)
+      .in(LazySingleton.class);
+
+    }
+
+  }
+
   /**
    * Guice module to create the various query framework items. By creating items within
    * a module, later items can depend on those created earlier by grabbing them from the
@@ -734,10 +747,6 @@ public class SqlTestFramework
       binder.bind(new TypeLiteral<NonBlockingPool<ByteBuffer>>(){})
             .annotatedWith(Global.class)
             .to(TestBufferPool.class);
-
-      binder.bind(QuerySegmentWalker.class)
-            .to(SpecificSegmentsQuerySegmentWalker.class)
-            .in(LazySingleton.class);
 
     }
 
@@ -938,7 +947,8 @@ public class SqlTestFramework
     ArrayList<Module> overrideModules = new ArrayList<>(builder.overrideModules);
 
     injectorBuilder.add(componentSupplier.getCoreModule());
-    overrideModules.add(testSetupModule());
+    overrideModules.add(new TestSetupModule(builder));
+    overrideModules.add(new TestSegmentsOverseer());
     overrideModules.add(componentSupplier.getOverrideModule());
     builder.componentSupplier.configureGuice(injectorBuilder, overrideModules);
 
@@ -949,11 +959,6 @@ public class SqlTestFramework
     this.engine = builder.componentSupplier.createEngine(queryLifecycleFactory(), queryJsonMapper(), injector);
     componentSupplier.configureJsonMapper(queryJsonMapper());
     componentSupplier.finalizeTestFramework(this);
-  }
-
-  public TestSetupModule testSetupModule()
-  {
-    return new TestSetupModule(builder);
   }
 
   public Injector injector()
