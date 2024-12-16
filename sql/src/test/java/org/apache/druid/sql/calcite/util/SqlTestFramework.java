@@ -394,7 +394,6 @@ public class SqlTestFramework
     @Deprecated
     protected void configureGuice(DruidInjectorBuilder builder)
     {
-
     }
 
     @Override
@@ -785,7 +784,7 @@ public class SqlTestFramework
 
     @Provides
     @LazySingleton
-    GroupByQueryMetricsFactory gfd()
+    GroupByQueryMetricsFactory groupByQueryMetricsFactory()
     {
       return DefaultGroupByQueryMetricsFactory.instance();
     }
@@ -794,7 +793,7 @@ public class SqlTestFramework
     @Provides
     @LazySingleton
     @Merging
-    GroupByResourcesReservationPool gfdg(
+    GroupByResourcesReservationPool makeMergingGroupByResourcesReservationPool(
         final GroupByResourcesReservationPool groupByResourcesReservationPool)
     {
       return groupByResourcesReservationPool;
