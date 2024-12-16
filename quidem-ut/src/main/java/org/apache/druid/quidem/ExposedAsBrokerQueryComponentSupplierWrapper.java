@@ -56,7 +56,6 @@ import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.LocalDataStorageDruidModule;
 import org.apache.druid.guice.MetadataConfigModule;
-import org.apache.druid.guice.QueryRunnerFactoryModule;
 import org.apache.druid.guice.SegmentWranglerModule;
 import org.apache.druid.guice.ServerModule;
 import org.apache.druid.guice.ServerTypeConfig;
@@ -124,7 +123,6 @@ public class ExposedAsBrokerQueryComponentSupplierWrapper extends QueryComponent
     super.configureGuice(builder, overrideModules);
 
     installForServerModules(builder);
-    builder.add(new QueryRunnerFactoryModule());
 
     builder.add(new BrokerProcessingModule());
     overrideModules.addAll(ExposedAsBrokerQueryComponentSupplierWrapper.brokerModules());
