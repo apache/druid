@@ -2525,7 +2525,9 @@ public class MSQSelectTest extends MSQTestBase
                 ),
                 "j0.",
                 "(CAST(floor(100), 'DOUBLE') == \"j0.d0\")",
-                JoinType.LEFT
+                JoinType.LEFT,
+                null,
+                JoinAlgorithm.SORT_MERGE
             )
         )
         .setAggregatorSpecs(
