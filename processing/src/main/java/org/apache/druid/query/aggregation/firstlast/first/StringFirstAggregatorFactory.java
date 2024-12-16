@@ -150,7 +150,7 @@ public class StringFirstAggregatorFactory extends AggregatorFactory
     this.fieldName = fieldName;
     this.timeColumn = timeColumn == null ? ColumnHolder.TIME_COLUMN_NAME : timeColumn;
     this.maxStringBytes = maxStringBytes == null
-                          ? StringFirstAggregatorFactory.DEFAULT_MAX_STRING_SIZE
+                          ? DEFAULT_MAX_STRING_SIZE
                           : maxStringBytes;
   }
 

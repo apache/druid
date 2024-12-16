@@ -205,7 +205,7 @@ public class MapOfColumnsRowsAndColumns implements RowsAndColumns
 
     public MapOfColumnsRowsAndColumns build()
     {
-      return MapOfColumnsRowsAndColumns.fromMap(cols);
+      return fromMap(cols);
     }
   }
 

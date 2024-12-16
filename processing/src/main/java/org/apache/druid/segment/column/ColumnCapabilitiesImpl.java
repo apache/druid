@@ -110,7 +110,7 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
    */
   public static ColumnCapabilitiesImpl createDefault()
   {
-    return ColumnCapabilitiesImpl.snapshot(new ColumnCapabilitiesImpl(), ALL_FALSE);
+    return snapshot(new ColumnCapabilitiesImpl(), ALL_FALSE);
   }
 
   /**

@@ -140,7 +140,7 @@ public class CompactionStatus
       Function<T, String> stringFunction
   )
   {
-    return CompactionStatus.incomplete(
+    return incomplete(
         "'%s' mismatch: required[%s], current[%s]",
         field,
         target == null ? null : stringFunction.apply(target),
@@ -298,7 +298,7 @@ public class CompactionStatus
     private CompactionStatus segmentsHaveBeenCompactedAtLeastOnce()
     {
       if (lastCompactionState == null) {
-        return CompactionStatus.incomplete("not compacted yet");
+        return incomplete("not compacted yet");
       } else {
         return COMPLETE;
       }
@@ -312,7 +312,7 @@ public class CompactionStatus
       if (allHaveSameCompactionState) {
         return COMPLETE;
       } else {
-        return CompactionStatus.incomplete("segments have different last compaction states");
+        return incomplete("segments have different last compaction states");
       }
     }
 
@@ -322,7 +322,7 @@ public class CompactionStatus
       if (existingPartionsSpec instanceof DimensionRangePartitionsSpec) {
         existingPartionsSpec = getEffectiveRangePartitionsSpec((DimensionRangePartitionsSpec) existingPartionsSpec);
       }
-      return CompactionStatus.completeIfEqual(
+      return completeIfEqual(
           "partitionsSpec",
           findPartitionsSpecFromConfig(tuningConfig),
           existingPartionsSpec,
@@ -332,7 +332,7 @@ public class CompactionStatus
 
     private CompactionStatus indexSpecIsUpToDate()
     {
-      return CompactionStatus.completeIfEqual(
+      return completeIfEqual(
           "indexSpec",
           Configs.valueOrDefault(tuningConfig.getIndexSpec(), IndexSpec.DEFAULT),
           objectMapper.convertValue(lastCompactionState.getIndexSpec(), IndexSpec.class),
@@ -360,13 +360,13 @@ public class CompactionStatus
             segment -> !configuredSegmentGranularity.isAligned(segment.getInterval())
         );
         if (needsCompaction) {
-          return CompactionStatus.incomplete(
+          return incomplete(
               "segmentGranularity: segments do not align with target[%s]",
               asString(configuredSegmentGranularity)
           );
         }
       } else {
-        return CompactionStatus.configChanged(
+        return configChanged(
             "segmentGranularity",
             configuredSegmentGranularity,
             existingSegmentGranularity,
@@ -382,7 +382,7 @@ public class CompactionStatus
       if (configuredGranularitySpec == null) {
         return COMPLETE;
       } else {
-        return CompactionStatus.completeIfEqual(
+        return completeIfEqual(
             "rollup",
             configuredGranularitySpec.isRollup(),
             existingGranularitySpec == null ? null : existingGranularitySpec.isRollup(),
@@ -396,7 +396,7 @@ public class CompactionStatus
       if (configuredGranularitySpec == null) {
         return COMPLETE;
       } else {
-        return CompactionStatus.completeIfEqual(
+        return completeIfEqual(
             "queryGranularity",
             configuredGranularitySpec.getQueryGranularity(),
             existingGranularitySpec == null ? null : existingGranularitySpec.getQueryGranularity(),
@@ -426,7 +426,7 @@ public class CompactionStatus
             compactionConfig.getTuningConfig() == null ? null : compactionConfig.getTuningConfig().getPartitionsSpec()
         );
         {
-          return CompactionStatus.completeIfEqual(
+          return completeIfEqual(
               "dimensionsSpec",
               configuredDimensions,
               existingDimensions,
@@ -449,7 +449,7 @@ public class CompactionStatus
             ? null : objectMapper.convertValue(metricSpecList, AggregatorFactory[].class);
 
       if (existingMetricsSpec == null || !Arrays.deepEquals(configuredMetricsSpec, existingMetricsSpec)) {
-        return CompactionStatus.configChanged(
+        return configChanged(
             "metricsSpec",
             configuredMetricsSpec,
             existingMetricsSpec,
@@ -470,7 +470,7 @@ public class CompactionStatus
           lastCompactionState.getTransformSpec(),
           ClientCompactionTaskTransformSpec.class
       );
-      return CompactionStatus.completeIfEqual(
+      return completeIfEqual(
           "transformSpec filter",
           compactionConfig.getTransformSpec().getFilter(),
           existingTransformSpec == null ? null : existingTransformSpec.getFilter(),

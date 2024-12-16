@@ -149,7 +149,7 @@ public class RowKeyReader
       newSignature.add(columnName, columnType);
     }
 
-    return RowKeyReader.create(newSignature.build());
+    return create(newSignature.build());
   }
 
   /**

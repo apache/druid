@@ -188,9 +188,9 @@ public class HadoopTuningConfig implements TuningConfig
     this.ignoreInvalidRows = Configs.valueOrDefault(ignoreInvalidRows, false);
     this.maxParseExceptions = Configs.valueOrDefault(
         maxParseExceptions,
-        this.ignoreInvalidRows ? TuningConfig.DEFAULT_MAX_PARSE_EXCEPTIONS : 0
+        this.ignoreInvalidRows ? DEFAULT_MAX_PARSE_EXCEPTIONS : 0
     );
-    this.logParseExceptions = Configs.valueOrDefault(logParseExceptions, TuningConfig.DEFAULT_LOG_PARSE_EXCEPTIONS);
+    this.logParseExceptions = Configs.valueOrDefault(logParseExceptions, DEFAULT_LOG_PARSE_EXCEPTIONS);
     this.useYarnRMJobStatusFallback = Configs.valueOrDefault(useYarnRMJobStatusFallback, true);
 
     if (awaitSegmentAvailabilityTimeoutMillis == null || awaitSegmentAvailabilityTimeoutMillis < 0) {

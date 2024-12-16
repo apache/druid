@@ -404,7 +404,7 @@ public class AuthorizationUtils
       throw new ISE("Request already had authorization check.");
     }
 
-    final AuthenticationResult authenticationResult = AuthorizationUtils.authenticationResultFromRequest(request);
+    final AuthenticationResult authenticationResult = authenticationResultFromRequest(request);
 
     Map<KeyType, List<ResType>> filteredResources = new HashMap<>();
     for (Map.Entry<KeyType, List<ResType>> entry : unfilteredResources.entrySet()) {
@@ -413,7 +413,7 @@ public class AuthorizationUtils
       }
 
       final List<ResType> filteredList = Lists.newArrayList(
-          AuthorizationUtils.filterAuthorizedResources(
+          filterAuthorizedResources(
               authenticationResult,
               entry.getValue(),
               resourceActionGenerator,
