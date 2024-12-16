@@ -19,10 +19,23 @@
 
 package org.apache.druid.storage.s3;
 
+import com.amazonaws.services.s3.AmazonS3Client;
+import com.amazonaws.services.s3.model.AccessControlList;
+import com.amazonaws.services.s3.model.AmazonS3Exception;
+import com.amazonaws.services.s3.model.CanonicalGrantee;
+import com.amazonaws.services.s3.model.CopyObjectRequest;
+import com.amazonaws.services.s3.model.CopyObjectResult;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
+import com.amazonaws.services.s3.model.Grant;
 import com.amazonaws.services.s3.model.ListObjectsV2Request;
 import com.amazonaws.services.s3.model.ListObjectsV2Result;
+import com.amazonaws.services.s3.model.Owner;
+import com.amazonaws.services.s3.model.Permission;
+import com.amazonaws.services.s3.model.PutObjectResult;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
+import com.amazonaws.services.s3.model.StorageClass;
+import com.amazonaws.services.s3.transfer.model.CopyResult;
+import com.google.common.base.Optional;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.easymock.EasyMock;
@@ -31,11 +44,14 @@ import org.easymock.IArgumentMatcher;
 import org.easymock.IExpectationSetters;
 import org.joda.time.DateTime;
 
+import java.io.File;
 import java.net.URI;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public class S3TestUtils extends EasyMockSupport
@@ -176,5 +192,133 @@ public class S3TestUtils extends EasyMockSupport
     objectSummary.setETag("etag");
     objectSummary.setSize(CONTENT.length);
     return objectSummary;
+  }
+
+  public static class MockAmazonS3Client extends ServerSideEncryptingAmazonS3
+  {
+    Map<String, Set<String>> storage = new HashMap<>();
+    boolean copied = false;
+    boolean deletedOld = false;
+    Optional<Boolean> usedTransferManager = Optional.absent();
+
+    MockAmazonS3Client()
+    {
+      super(new AmazonS3Client(), new NoopServerSideEncryption());
+    }
+
+    public boolean didMove()
+    {
+      return copied && deletedOld;
+    }
+
+    public boolean didCopy()
+    {
+      return copied && !deletedOld;
+    }
+
+    public boolean didUseTransferManager()
+    {
+      return usedTransferManager.get();
+    }
+
+    @Override
+    public AccessControlList getBucketAcl(String bucketName)
+    {
+      final AccessControlList acl = new AccessControlList();
+      acl.setOwner(new Owner("ownerId", "owner"));
+      acl.grantAllPermissions(new Grant(new CanonicalGrantee(acl.getOwner().getId()), Permission.FullControl));
+      return acl;
+    }
+
+    @Override
+    public boolean doesObjectExist(String bucketName, String objectKey)
+    {
+      Set<String> objects = storage.get(bucketName);
+      return (objects != null && objects.contains(objectKey));
+    }
+
+    @Override
+    public ListObjectsV2Result listObjectsV2(ListObjectsV2Request listObjectsV2Request)
+    {
+      final String bucketName = listObjectsV2Request.getBucketName();
+      final String objectKey = listObjectsV2Request.getPrefix();
+      if (doesObjectExist(bucketName, objectKey)) {
+        final S3ObjectSummary objectSummary = new S3ObjectSummary();
+        objectSummary.setBucketName(bucketName);
+        objectSummary.setKey(objectKey);
+        objectSummary.setStorageClass(StorageClass.Standard.name());
+
+        final ListObjectsV2Result result = new ListObjectsV2Result();
+        result.setBucketName(bucketName);
+        result.setPrefix(objectKey);
+        result.setKeyCount(1);
+        result.getObjectSummaries().add(objectSummary);
+        result.setTruncated(true);
+        return result;
+      } else {
+        return new ListObjectsV2Result();
+      }
+    }
+
+    @Override
+    public CopyObjectResult copyObject(CopyObjectRequest copyObjectRequest)
+    {
+      final String sourceBucketName = copyObjectRequest.getSourceBucketName();
+      final String sourceObjectKey = copyObjectRequest.getSourceKey();
+      final String destinationBucketName = copyObjectRequest.getDestinationBucketName();
+      final String destinationObjectKey = copyObjectRequest.getDestinationKey();
+      copied = true;
+      usedTransferManager = Optional.of(false);
+      if (doesObjectExist(sourceBucketName, sourceObjectKey)) {
+        storage.computeIfAbsent(destinationBucketName, k -> new HashSet<>())
+            .add(destinationObjectKey);
+        return new CopyObjectResult();
+      } else {
+        final AmazonS3Exception exception = new AmazonS3Exception("S3DataSegmentMoverTest");
+        exception.setErrorCode("NoSuchKey");
+        exception.setStatusCode(404);
+        throw exception;
+      }
+    }
+
+    @Override
+    public CopyResult copyObjectWithTransferManager(CopyObjectRequest copyObjectRequest)
+    {
+      final String sourceBucketName = copyObjectRequest.getSourceBucketName();
+      final String sourceObjectKey = copyObjectRequest.getSourceKey();
+      final String destinationBucketName = copyObjectRequest.getDestinationBucketName();
+      final String destinationObjectKey = copyObjectRequest.getDestinationKey();
+      copied = true;
+      usedTransferManager = Optional.of(true);
+      if (doesObjectExist(sourceBucketName, sourceObjectKey)) {
+        storage.computeIfAbsent(destinationBucketName, k -> new HashSet<>())
+            .add(destinationObjectKey);
+        return new CopyResult();
+      } else {
+        final AmazonS3Exception exception = new AmazonS3Exception("S3DataSegmentMoverTest");
+        exception.setErrorCode("NoSuchKey");
+        exception.setStatusCode(404);
+        throw exception;
+      }
+    }
+
+    @Override
+    public void deleteObject(String bucket, String objectKey)
+    {
+      deletedOld = true;
+      storage.get(bucket).remove(objectKey);
+    }
+
+    public PutObjectResult putObject(String bucketName, String key)
+    {
+      return putObject(bucketName, key, (File) null);
+    }
+
+    @Override
+    public PutObjectResult putObject(String bucketName, String key, File file)
+    {
+      storage.computeIfAbsent(bucketName, bName -> new HashSet<>()).add(key);
+      return new PutObjectResult();
+    }
   }
 }

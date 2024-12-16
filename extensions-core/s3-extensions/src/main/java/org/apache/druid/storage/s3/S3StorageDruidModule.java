@@ -100,6 +100,10 @@ public class S3StorageDruidModule implements DruidModule
            .addBinding(SCHEME_S3_ZIP)
            .to(S3DataSegmentKiller.class)
            .in(LazySingleton.class);
+    Binders.dataSegmentCopierBinder(binder)
+           .addBinding(SCHEME_S3_ZIP)
+           .to(S3DataSegmentCopier.class)
+           .in(LazySingleton.class);
     Binders.dataSegmentMoverBinder(binder)
            .addBinding(SCHEME_S3_ZIP)
            .to(S3DataSegmentMover.class)
