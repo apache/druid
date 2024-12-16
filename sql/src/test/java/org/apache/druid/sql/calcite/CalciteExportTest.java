@@ -63,9 +63,9 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
     }
 
     @Override
-    public void configureGuice(DruidInjectorBuilder builder, List<com.google.inject.Module> overrideModules)
+    public void configureGuice(DruidInjectorBuilder builder)
     {
-      super.configureGuice(builder, overrideModules);
+      super.configureGuice(builder);
       builder.addModule(
           new DruidModule()
           {

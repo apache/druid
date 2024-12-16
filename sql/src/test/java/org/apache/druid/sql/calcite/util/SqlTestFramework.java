@@ -344,6 +344,12 @@ public class SqlTestFramework
     {
     }
 
+    public void configureGuice(DruidInjectorBuilder builder)
+    {
+      // This shell exists to minimize changes to child classes.  This method should probably be removed and
+      // places that extend this just updated, but that generates a lot of changes that could introduce conflicts
+    }
+
     @Override
     public void configureGuice(DruidInjectorBuilder builder, List<Module> overrideModules)
     {
@@ -359,6 +365,7 @@ public class SqlTestFramework
                           .to(SpecificSegmentsQuerySegmentWalker.class)
                           .in(LazySingleton.class)
       );
+      configureGuice(builder);
     }
 
     @Override
