@@ -374,10 +374,10 @@ public class SqlTestFramework
     }
 
     @Override
-    public DruidModule getOverrideModule() {
+    public DruidModule getOverrideModule()
+    {
       return DruidModuleCollection.of();
     }
-
 
     public void configureGuice(DruidInjectorBuilder builder)
     {
@@ -706,7 +706,8 @@ public class SqlTestFramework
     }
 
     @Provides
-    GenericQueryMetricsFactory getGenericQueryMetricsFactory() {
+    GenericQueryMetricsFactory getGenericQueryMetricsFactory()
+    {
       return DefaultGenericQueryMetricsFactory.instance();
     }
 

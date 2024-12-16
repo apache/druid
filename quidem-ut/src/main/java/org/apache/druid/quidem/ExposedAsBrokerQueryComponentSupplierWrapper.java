@@ -58,7 +58,6 @@ import org.apache.druid.guice.LocalDataStorageDruidModule;
 import org.apache.druid.guice.MetadataConfigModule;
 import org.apache.druid.guice.SegmentWranglerModule;
 import org.apache.druid.guice.ServerModule;
-import org.apache.druid.guice.ServerTypeConfig;
 import org.apache.druid.guice.ServerViewModule;
 import org.apache.druid.guice.StartupLoggingModule;
 import org.apache.druid.guice.StorageNodeModule;
@@ -82,7 +81,6 @@ import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.ResponseContextConfig;
 import org.apache.druid.server.SubqueryGuardrailHelper;
 import org.apache.druid.server.SubqueryGuardrailHelperProvider;
-import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.emitter.EmitterModule;
 import org.apache.druid.server.http.BrokerResource;
 import org.apache.druid.server.http.SelfDiscoveryResource;
@@ -125,9 +123,9 @@ public class ExposedAsBrokerQueryComponentSupplierWrapper extends QueryComponent
     installForServerModules(builder);
 
     builder.add(new BrokerProcessingModule());
-    overrideModules.addAll(ExposedAsBrokerQueryComponentSupplierWrapper.brokerModules());
-    overrideModules.add(new BrokerTestModule());
+    builder.addAll(ExposedAsBrokerQueryComponentSupplierWrapper.brokerModules());
     builder.add(QuidemCaptureModule.class);
+    overrideModules.add(new BrokerTestModule());
   }
 
   public static class BrokerTestModule extends AbstractModule
@@ -252,7 +250,6 @@ public class ExposedAsBrokerQueryComponentSupplierWrapper extends QueryComponent
           LifecycleModule.register(binder, BrokerQueryResource.class);
 
           LifecycleModule.register(binder, Server.class);
-          binder.bind(ServerTypeConfig.class).toInstance(new ServerTypeConfig(ServerType.BROKER));
 
           binder.bind(String.class)
               .annotatedWith(DruidSchemaName.class)
