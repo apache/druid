@@ -191,6 +191,10 @@
             <artifactId>commons-collections4</artifactId>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>org.openjdk.nashorn</groupId>
+            <artifactId>nashorn-core</artifactId>
+        </dependency>
         <!-- Tests -->
         <dependency>
             <groupId>junit</groupId>
