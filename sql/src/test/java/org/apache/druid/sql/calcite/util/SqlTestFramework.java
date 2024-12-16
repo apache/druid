@@ -168,6 +168,12 @@ public class SqlTestFramework
     void gatherProperties(Properties properties);
 
 
+    DruidModule getOverrideModule();
+
+
+    DruidModule getCoreModule();
+
+
     SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
         QueryRunnerFactoryConglomerate conglomerate,
         JoinableFactoryWrapper joinableFactory,
@@ -295,6 +301,18 @@ public class SqlTestFramework
     {
       return delegate.wrapConglomerate(conglomerate, resourceCloser);
     }
+
+    @Override
+    public DruidModule getCoreModule()
+    {
+      return delegate.getCoreModule();
+    }
+
+    @Override
+    public DruidModule getOverrideModule()
+    {
+      return delegate.getOverrideModule();
+    }
   }
 
   public interface PlannerComponentSupplier
@@ -344,6 +362,23 @@ public class SqlTestFramework
     {
     }
 
+    @Override
+    public DruidModule getCoreModule()
+    {
+      return DruidModuleCollection.of(
+          new LookylooModule(),
+          new SegmentWranglerModule(),
+          new ExpressionModule(),
+          new QueryRunnerFactoryModule()
+      );
+    }
+
+    @Override
+    public DruidModule getOverrideModule() {
+      return DruidModuleCollection.of();
+    }
+
+
     public void configureGuice(DruidInjectorBuilder builder)
     {
       // This shell exists to minimize changes to child classes.  This method should probably be removed and
@@ -353,12 +388,6 @@ public class SqlTestFramework
     @Override
     public void configureGuice(DruidInjectorBuilder builder, List<Module> overrideModules)
     {
-      builder.addModules(
-          new LookylooModule(),
-          new SegmentWranglerModule(),
-          new ExpressionModule(),
-          new QueryRunnerFactoryModule()
-      );
 
       builder.addModules(
           binder -> binder.bind(QuerySegmentWalker.class)
@@ -897,7 +926,9 @@ public class SqlTestFramework
 
     ArrayList<Module> overrideModules = new ArrayList<>(builder.overrideModules);
 
+    injectorBuilder.add(componentSupplier.getCoreModule());
     overrideModules.add(testSetupModule());
+    overrideModules.add(componentSupplier.getOverrideModule());
     builder.componentSupplier.configureGuice(injectorBuilder, overrideModules);
 
     ServiceInjectorBuilder serviceInjector = new ServiceInjectorBuilder(injectorBuilder);
