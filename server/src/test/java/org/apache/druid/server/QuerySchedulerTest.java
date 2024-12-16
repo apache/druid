@@ -83,6 +83,9 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadLocalRandom;
 
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.MatcherAssert.assertThat;
+
 public class QuerySchedulerTest
 {
   private static final int NUM_QUERIES = 10000;
@@ -493,14 +496,9 @@ public class QuerySchedulerTest
     properties.setProperty(propertyPrefix + ".laning.strategy", "hilo");
     provider.inject(properties, injector.getInstance(JsonConfigurator.class));
     Throwable t = Assert.assertThrows(ProvisionException.class, () -> provider.get().get());
-    Assert.assertEquals(
-        "Unable to provision, see the following errors:\n"
-        + "\n"
-        + "1) Problem parsing object at prefix[druid.query.scheduler]: Cannot construct instance of `org.apache.druid.server.scheduling.HiLoQueryLaningStrategy`, problem: maxLowPercent must be set\n"
-        + " at [Source: UNKNOWN; line: -1, column: -1] (through reference chain: org.apache.druid.server.QuerySchedulerProvider[\"laning\"]).\n"
-        + "\n"
-        + "1 error",
-        t.getMessage()
+    assertThat(
+        t.getMessage(),
+        containsString("Cannot construct instance of `HiLoQueryLaningStrategy`, problem: maxLowPercent must be set")
     );
   }
 
@@ -550,14 +548,9 @@ public class QuerySchedulerTest
     properties.setProperty(propertyPrefix + ".prioritization.strategy", "threshold");
     provider.inject(properties, injector.getInstance(JsonConfigurator.class));
     Throwable t = Assert.assertThrows(ProvisionException.class, () -> provider.get().get());
-    Assert.assertEquals(
-        "Unable to provision, see the following errors:\n"
-        + "\n"
-        + "1) Problem parsing object at prefix[druid.query.scheduler]: Cannot construct instance of `org.apache.druid.server.scheduling.ThresholdBasedQueryPrioritizationStrategy`, problem: periodThreshold, durationThreshold, segmentCountThreshold or segmentRangeThreshold must be set\n"
-        + " at [Source: UNKNOWN; line: -1, column: -1] (through reference chain: org.apache.druid.server.QuerySchedulerProvider[\"prioritization\"]).\n"
-        + "\n"
-        + "1 error",
-        t.getMessage()
+    assertThat(
+        t.getMessage(),
+        containsString("Cannot construct instance of `ThresholdBasedQueryPrioritizationStrategy`, problem: periodThreshold, durationThreshold, segmentCountThreshold or segmentRangeThreshold must be set")
     );
   }
 
