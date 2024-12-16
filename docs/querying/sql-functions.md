@@ -729,15 +729,16 @@ Returns the following:
 
 ## CASE
 
-Returns a result based on given conditions:
-* Simple CASE compares an expression to a set of values or expressions.
-* Searched CASE evaluates a set of Boolean expressions.
+Returns a result based on given conditions.
+
+### Simple CASE
+
+Compares an expression to a set of values or expressions.
 
 * **Syntax:** `CASE expr WHEN value1 THEN result1 \[ WHEN value2 THEN result2 ... \] \[ ELSE resultN \] END`
-* **Syntax:** `CASE WHEN boolean_expr1 THEN result1 \[ WHEN boolean_expr2 THEN result2 ... \] \[ ELSE resultN \] END`
 * **Function type:** Scalar, other
 
-<details><summary>Examples</summary>
+<details><summary>Example</summary>
 
 The following example returns a UI type based on the value of `agent_category` from the `kttm` datasource.
 
@@ -758,6 +759,19 @@ Returns the following:
 | -- | -- |
 | `Personal computer` | `Large UI` |
 | `Smartphone` | `Mobile UI` |
+
+</details>
+
+[Lean more](sql-scalar.md#other-scalar-functions)
+
+### Searched CASE
+
+Evaluates a set of Boolean expressions.
+
+* **Syntax:** `CASE WHEN boolean_expr1 THEN result1 \[ WHEN boolean_expr2 THEN result2 ... \] \[ ELSE resultN \] END`
+* **Function type:** Scalar, other
+
+<details><summary>Example</summary>
 
 The following example returns the departure location corresponding to the value of the `OriginStateName` column from the `flight-carriers` datasource.
 
@@ -782,7 +796,6 @@ Returns the following:
 </details>
 
 [Lean more](sql-scalar.md#other-scalar-functions)
-
 
 ## CAST
 
