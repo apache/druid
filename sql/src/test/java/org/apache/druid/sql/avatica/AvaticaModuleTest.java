@@ -94,9 +94,7 @@ public class AvaticaModuleTest
   public void testAvaticaMonitorIsRegisterdWithMetricsModule()
   {
     Set<Class<? extends Monitor>> monitors =
-        injector.getInstance(Key.get(new TypeLiteral<>()
-        {
-        }));
+        injector.getInstance(Key.get(new TypeLiteral<>() {}));
     Assert.assertTrue(monitors.contains(AvaticaMonitor.class));
   }
 
@@ -199,19 +197,14 @@ public class AvaticaModuleTest
   public void testDruidAvaticaJsonHandlerIsRegisterdWithJerseyModule()
   {
     Set<Handler> handlers =
-        injector.getInstance(Key.get(new TypeLiteral<>()
-        {
-        }));
+        injector.getInstance(Key.get(new TypeLiteral<>() {}));
     Assert.assertTrue(handlers.stream().anyMatch(h -> DruidAvaticaJsonHandler.class.equals(h.getClass())));
   }
 
   @Test
   public void testDruidAvaticaProtobufHandlerIsRegisterdWithJerseyModule()
   {
-    Set<Handler> handlers =
-            injector.getInstance(Key.get(new TypeLiteral<>()
-            {
-            }));
+    Set<Handler> handlers = injector.getInstance(Key.get(new TypeLiteral<>() {}));
     Assert.assertTrue(handlers.stream().anyMatch(h -> DruidAvaticaProtobufHandler.class.equals(h.getClass())));
   }
 }

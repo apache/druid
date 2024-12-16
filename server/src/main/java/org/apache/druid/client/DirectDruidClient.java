@@ -215,11 +215,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         {
           final InputStreamHolder holder = queue.poll(checkQueryTimeout(), TimeUnit.MILLISECONDS);
           if (holder == null) {
-            throw new QueryTimeoutException(StringUtils.nonStrictFormat(
-                "Query[%s] url[%s] timed out.",
-                query.getId(),
-                url
-            ));
+            throw new QueryTimeoutException(StringUtils.nonStrictFormat("Query[%s] url[%s] timed out.", query.getId(), url));
           }
 
           final long currentQueuedByteCount = queuedByteCount.addAndGet(-holder.getLength());

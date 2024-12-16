@@ -144,8 +144,8 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
               final QueryContext context = query.context();
               return new MergeIterable<>(
                   context.hasTimeout() ?
-                  future.get(context.getTimeout(), TimeUnit.MILLISECONDS) :
-                  future.get(),
+                      future.get(context.getTimeout(), TimeUnit.MILLISECONDS) :
+                      future.get(),
                   ordering.nullsFirst()
               ).iterator();
             }

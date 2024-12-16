@@ -3197,15 +3197,15 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   )
   {
     return new SeekableStreamIndexTaskIOConfig<>(
-        groupId,
-        baseSequenceName,
-        new SeekableStreamStartSequenceNumbers<>(STREAM, startPartitions, exclusiveStartSequenceNumberPartitions),
-        new SeekableStreamEndSequenceNumbers<>(STREAM, endPartitions),
-        true,
-        minimumMessageTime,
-        maximumMessageTime,
-        ioConfig.getInputFormat(),
-        ioConfig.getTaskDuration().getStandardMinutes()
+            groupId,
+            baseSequenceName,
+            new SeekableStreamStartSequenceNumbers<>(STREAM, startPartitions, exclusiveStartSequenceNumberPartitions),
+            new SeekableStreamEndSequenceNumbers<>(STREAM, endPartitions),
+            true,
+            minimumMessageTime,
+            maximumMessageTime,
+            ioConfig.getInputFormat(),
+            ioConfig.getTaskDuration().getStandardMinutes()
     )
     {
     };

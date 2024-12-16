@@ -201,10 +201,7 @@ public class CompactionResourceTestClient
           response.getContent()
       );
     }
-    Map<String, List<Map<String, String>>> latestSnapshots = jsonMapper.readValue(
-        response.getContent(),
-        new TypeReference<>() {}
-    );
+    Map<String, List<Map<String, String>>> latestSnapshots = jsonMapper.readValue(response.getContent(), new TypeReference<>() {});
     return latestSnapshots.get("latestStatus").get(0);
   }
 }

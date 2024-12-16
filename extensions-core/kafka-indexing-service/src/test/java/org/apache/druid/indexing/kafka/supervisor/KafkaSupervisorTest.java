@@ -2668,14 +2668,13 @@ public class KafkaSupervisorTest extends EasyMockSupport
         new KafkaDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(
                 topic,
-                singlePartitionMap(
-                    topic,
-                    0,
-                    2L,
-                    1,
-                    2L,
-                    2,
-                    2L
+                singlePartitionMap(topic,
+                                   0,
+                                   2L,
+                                   1,
+                                   2L,
+                                   2,
+                                   2L
                 )
             )
         )
@@ -2727,14 +2726,13 @@ public class KafkaSupervisorTest extends EasyMockSupport
         new KafkaDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(
                 topic,
-                singlePartitionMap(
-                    topic,
-                    0,
-                    2L,
-                    1,
-                    2L,
-                    2,
-                    2L
+                singlePartitionMap(topic,
+                                   0,
+                                   2L,
+                                   1,
+                                   2L,
+                                   2,
+                                   2L
                 )
             )
         )
@@ -2788,14 +2786,13 @@ public class KafkaSupervisorTest extends EasyMockSupport
         new KafkaDataSourceMetadata(
             new SeekableStreamEndSequenceNumbers<>(
                 topic,
-                singlePartitionMap(
-                    topic,
-                    0,
-                    2L,
-                    1,
-                    2L,
-                    2,
-                    2L
+                singlePartitionMap(topic,
+                                   0,
+                                   2L,
+                                   1,
+                                   2L,
+                                   2,
+                                   2L
                 )
             )
         )

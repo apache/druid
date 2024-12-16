@@ -678,17 +678,17 @@ public class DataSourcesResourceTest
     segmentLoadInfo.addServer(createHistoricalServerMetadata("test"));
     VersionedIntervalTimeline<String, SegmentLoadInfo> timeline =
         new VersionedIntervalTimeline<>(null)
-        {
-          @Override
-          public List<TimelineObjectHolder<String, SegmentLoadInfo>> lookupWithIncompletePartitions(Interval interval)
-          {
-            PartitionHolder<SegmentLoadInfo> partitionHolder =
-                new PartitionHolder<>(new NumberedPartitionChunk<>(1, 1, segmentLoadInfo));
-            List<TimelineObjectHolder<String, SegmentLoadInfo>> ret = new ArrayList<>();
-            ret.add(new TimelineObjectHolder<>(Intervals.of(interval3), "v1", partitionHolder));
-            return ret;
-          }
-        };
+    {
+      @Override
+      public List<TimelineObjectHolder<String, SegmentLoadInfo>> lookupWithIncompletePartitions(Interval interval)
+      {
+        PartitionHolder<SegmentLoadInfo> partitionHolder =
+            new PartitionHolder<>(new NumberedPartitionChunk<>(1, 1, segmentLoadInfo));
+        List<TimelineObjectHolder<String, SegmentLoadInfo>> ret = new ArrayList<>();
+        ret.add(new TimelineObjectHolder<>(Intervals.of(interval3), "v1", partitionHolder));
+        return ret;
+      }
+    };
     EasyMock.reset(inventoryView, databaseRuleManager);
     EasyMock.expect(databaseRuleManager.getRulesWithDefault("dataSource1"))
             .andReturn(ImmutableList.of(loadRule, dropRule))

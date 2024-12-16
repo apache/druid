@@ -882,30 +882,30 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
             final Interval interval = Intervals.of(input);
             try {
               return DataSegment.builder()
-                                .dataSource("test_kill_task")
-                                .interval(interval)
-                                .loadSpec(
-                                    ImmutableMap.of(
-                                        "type",
-                                        "local",
-                                        "path",
-                                        tmpSegmentDir.getCanonicalPath()
-                                        + "/druid/localStorage/wikipedia/"
-                                        + interval.getStart()
-                                        + "-"
-                                        + interval.getEnd()
-                                        + "/"
-                                        + "2011-04-6T16:52:46.119-05:00"
-                                        + "/0/index.zip"
-                                    )
-                                )
-                                .version("2011-04-6T16:52:46.119-05:00")
-                                .dimensions(ImmutableList.of())
-                                .metrics(ImmutableList.of())
-                                .shardSpec(NoneShardSpec.instance())
-                                .binaryVersion(9)
-                                .size(0)
-                                .build();
+                  .dataSource("test_kill_task")
+                  .interval(interval)
+                  .loadSpec(
+                      ImmutableMap.of(
+                          "type",
+                          "local",
+                          "path",
+                          tmpSegmentDir.getCanonicalPath()
+                          + "/druid/localStorage/wikipedia/"
+                          + interval.getStart()
+                          + "-"
+                          + interval.getEnd()
+                          + "/"
+                          + "2011-04-6T16:52:46.119-05:00"
+                          + "/0/index.zip"
+                      )
+                  )
+                  .version("2011-04-6T16:52:46.119-05:00")
+                  .dimensions(ImmutableList.of())
+                  .metrics(ImmutableList.of())
+                  .shardSpec(NoneShardSpec.instance())
+                  .binaryVersion(9)
+                  .size(0)
+                  .build();
             }
             catch (IOException e) {
               throw new ISE(e, "Error creating segments");

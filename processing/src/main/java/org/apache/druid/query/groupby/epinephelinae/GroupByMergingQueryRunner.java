@@ -262,7 +262,7 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
                                       ) {
                                         // Return true if OK, false if resources were exhausted.
                                         return input.run(queryPlusForRunners, responseContext)
-                                                    .accumulate(AggregateResult.ok(), accumulator);
+                                            .accumulate(AggregateResult.ok(), accumulator);
                                       }
                                       catch (QueryInterruptedException | QueryTimeoutException e) {
                                         throw e;

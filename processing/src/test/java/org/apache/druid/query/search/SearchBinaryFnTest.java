@@ -376,28 +376,28 @@ public class SearchBinaryFnTest
   public void testMergeCountWithNull()
   {
     Result<SearchResultValue> r1 = new Result<>(
-        currTime,
-        new SearchResultValue(
-            ImmutableList.of(
-                new SearchHit(
-                    "blah",
-                    "foo"
-                )
+            currTime,
+            new SearchResultValue(
+                    ImmutableList.of(
+                            new SearchHit(
+                                    "blah",
+                                    "foo"
+                            )
+                    )
             )
-        )
     );
 
     Result<SearchResultValue> r2 = new Result<>(
-        currTime,
-        new SearchResultValue(
-            ImmutableList.of(
-                new SearchHit(
-                    "blah",
-                    "foo",
-                    3
-                )
+            currTime,
+            new SearchResultValue(
+                    ImmutableList.of(
+                            new SearchHit(
+                                    "blah",
+                                    "foo",
+                                    3
+                            )
+                    )
             )
-        )
     );
 
     Result<SearchResultValue> expected = r1;

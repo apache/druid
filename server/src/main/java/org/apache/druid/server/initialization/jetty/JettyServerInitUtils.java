@@ -67,18 +67,14 @@ public class JettyServerInitUtils
   public static void addQosFilters(ServletContextHandler handler, Injector injector)
   {
     final Set<JettyBindings.QosFilterHolder> filters =
-        injector.getInstance(Key.get(new TypeLiteral<>()
-        {
-        }));
+        injector.getInstance(Key.get(new TypeLiteral<>() {}));
     addFilters(handler, filters);
   }
 
   public static void addExtensionFilters(ServletContextHandler handler, Injector injector)
   {
     final Set<ServletFilterHolder> filters =
-        injector.getInstance(Key.get(new TypeLiteral<>()
-        {
-        }));
+        injector.getInstance(Key.get(new TypeLiteral<>() {}));
     addFilters(handler, filters);
   }
 

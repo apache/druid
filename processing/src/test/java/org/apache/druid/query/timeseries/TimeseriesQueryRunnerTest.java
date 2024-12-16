@@ -227,10 +227,8 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
             stubServiceEmitter,
             new TimeseriesQueryQueryToolChest(),
             runner,
-            (obj, lng) -> {
-            },
-            (metrics) -> {
-            }
+            (obj, lng) -> {},
+            (metrics) -> {}
         ).withWaitMeasuredFromNow();
     Iterable<Result<TimeseriesResultValue>> results = metricsEmittingQueryRunner.run(QueryPlus.wrap(query)).toList();
 

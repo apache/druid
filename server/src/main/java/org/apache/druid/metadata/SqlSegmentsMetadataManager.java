@@ -1099,10 +1099,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
           public List<DataSegment> inTransaction(Handle handle, TransactionStatus status)
           {
             return handle
-                .createQuery(StringUtils.format(
-                    "SELECT payload, schema_fingerprint, num_rows FROM %s WHERE used=true",
-                    getSegmentsTable()
-                ))
+                .createQuery(StringUtils.format("SELECT payload, schema_fingerprint, num_rows FROM %s WHERE used=true", getSegmentsTable()))
                 .setFetchSize(connector.getStreamingFetchSize())
                 .map(
                     (index, r, ctx) -> {

@@ -267,11 +267,11 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
           public Boolean withHandle(Handle handle) throws Exception
           {
             return handle.createStatement(
-                             StringUtils.format(
-                                 "UPDATE %s SET active = :active, status_payload = :status_payload WHERE id = :id AND active = TRUE",
-                                 entryTable
-                             )
-                         )
+                StringUtils.format(
+                    "UPDATE %s SET active = :active, status_payload = :status_payload WHERE id = :id AND active = TRUE",
+                    entryTable
+                )
+            )
                          .bind("id", entryId)
                          .bind("active", active)
                          .bind("status_payload", jsonMapper.writeValueAsBytes(status))
@@ -291,8 +291,8 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
           public Optional<EntryType> withHandle(Handle handle) throws Exception
           {
             byte[] res = handle.createQuery(
-                                   StringUtils.format("SELECT payload FROM %s WHERE id = :id", entryTable)
-                               )
+                StringUtils.format("SELECT payload FROM %s WHERE id = :id", entryTable)
+            )
                                .bind("id", entryId)
                                .map(ByteArrayMapper.FIRST)
                                .first();
@@ -316,8 +316,8 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
           public Optional<StatusType> withHandle(Handle handle) throws Exception
           {
             byte[] res = handle.createQuery(
-                                   StringUtils.format("SELECT status_payload FROM %s WHERE id = :id", entryTable)
-                               )
+                StringUtils.format("SELECT status_payload FROM %s WHERE id = :id", entryTable)
+            )
                                .bind("id", entryId)
                                .map(ByteArrayMapper.FIRST)
                                .first();
@@ -895,11 +895,11 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
           public Map<Long, LockType> withHandle(Handle handle)
           {
             return handle.createQuery(
-                             StringUtils.format(
-                                 "SELECT id, lock_payload FROM %1$s WHERE %2$s_id = :entryId",
-                                 lockTable, entryTypeName
-                             )
-                         )
+                StringUtils.format(
+                    "SELECT id, lock_payload FROM %1$s WHERE %2$s_id = :entryId",
+                    lockTable, entryTypeName
+                )
+            )
                          .bind("entryId", entryId)
                          .map(
                              new ResultSetMapper<Pair<Long, LockType>>()

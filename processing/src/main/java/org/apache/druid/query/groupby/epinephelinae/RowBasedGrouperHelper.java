@@ -1405,11 +1405,7 @@ public class RowBasedGrouperHelper
                 jp.currentToken() != JsonToken.END_ARRAY,
                 "Unexpected end of array when deserializing timestamp from the spilled files"
             );
-            objects[dimsReadSoFar] = JacksonUtils.readObjectUsingDeserializationContext(
-                jp,
-                deserializationContext,
-                Long.class
-            );
+            objects[dimsReadSoFar] = JacksonUtils.readObjectUsingDeserializationContext(jp, deserializationContext, Long.class);
 
             ++dimsReadSoFar;
             jp.nextToken();

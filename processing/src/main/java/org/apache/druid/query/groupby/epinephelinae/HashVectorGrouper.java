@@ -222,10 +222,7 @@ public class HashVectorGrouper implements VectorGrouper
     return new CloseableIterator<>()
     {
       final MemoryPointer reusableKey = new MemoryPointer();
-      final ReusableEntry<MemoryPointer> reusableEntry = new ReusableEntry<>(
-          reusableKey,
-          new Object[aggregators.size()]
-      );
+      final ReusableEntry<MemoryPointer> reusableEntry = new ReusableEntry<>(reusableKey, new Object[aggregators.size()]);
 
       @Override
       public boolean hasNext()

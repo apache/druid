@@ -39,9 +39,7 @@ public class DruidBinders
   {
     return MapBinder.newMapBinder(
         binder,
-        new TypeLiteral<>()
-        {
-        },
+        new TypeLiteral<>() {},
         TypeLiteral.get(QueryRunnerFactory.class)
     );
   }
@@ -50,12 +48,8 @@ public class DruidBinders
   {
     return MapBinder.newMapBinder(
         binder,
-        new TypeLiteral<>()
-        {
-        },
-        new TypeLiteral<>()
-        {
-        }
+        new TypeLiteral<>() {},
+        new TypeLiteral<>() {}
     );
   }
 
@@ -63,12 +57,8 @@ public class DruidBinders
   {
     return MapBinder.newMapBinder(
         binder,
-        new TypeLiteral<>()
-        {
-        },
-        new TypeLiteral<>()
-        {
-        }
+        new TypeLiteral<>() {},
+        new TypeLiteral<>() {}
     );
   }
 
@@ -101,28 +91,20 @@ public class DruidBinders
 
   public static Multibinder<KeyHolder<DruidNode>> discoveryAnnouncementBinder(Binder binder)
   {
-    return Multibinder.newSetBinder(binder, new TypeLiteral<>()
-    {
-    });
+    return Multibinder.newSetBinder(binder, new TypeLiteral<>() {});
   }
 
   public static Multibinder<Class<? extends Monitor>> metricMonitorBinder(Binder binder)
   {
-    return Multibinder.newSetBinder(binder, new TypeLiteral<>()
-    {
-    });
+    return Multibinder.newSetBinder(binder, new TypeLiteral<>() {});
   }
 
   public static MapBinder<Class<? extends DataSource>, SegmentWrangler> segmentWranglerBinder(Binder binder)
   {
     return MapBinder.newMapBinder(
         binder,
-        new TypeLiteral<>()
-        {
-        },
-        new TypeLiteral<>()
-        {
-        }
+        new TypeLiteral<>() {},
+        new TypeLiteral<>() {}
     );
   }
 
@@ -130,9 +112,7 @@ public class DruidBinders
   {
     return Multibinder.newSetBinder(
         binder,
-        new TypeLiteral<>()
-        {
-        }
+        new TypeLiteral<>() {}
     );
   }
 
@@ -140,12 +120,8 @@ public class DruidBinders
   {
     return MapBinder.newMapBinder(
         binder,
-        new TypeLiteral<>()
-        {
-        },
-        new TypeLiteral<>()
-        {
-        }
+        new TypeLiteral<>() {},
+        new TypeLiteral<>() {}
     );
   }
 }

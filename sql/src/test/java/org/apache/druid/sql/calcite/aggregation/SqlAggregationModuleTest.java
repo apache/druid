@@ -52,9 +52,7 @@ public class SqlAggregationModuleTest extends CalciteTestBase
   @Test
   public void testDefaultSqlAggregatorsAreBound()
   {
-    Set<SqlAggregator> sqlAggregators = injector.getInstance(Key.get(new TypeLiteral<>()
-    {
-    }));
+    Set<SqlAggregator> sqlAggregators = injector.getInstance(Key.get(new TypeLiteral<>() {}));
     Assert.assertNotNull(sqlAggregators);
     Assert.assertEquals(2, sqlAggregators.size());
 

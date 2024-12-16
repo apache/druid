@@ -377,7 +377,7 @@ public class InformationSchema extends AbstractSchema
                                       return generateColumnMetadata(
                                           schemaName,
                                           tableName,
-                                          table.getRowType(typeFactory),
+                                           table.getRowType(typeFactory),
                                           typeFactory
                                       );
                                     }
@@ -460,9 +460,7 @@ public class InformationSchema extends AbstractSchema
                   boolean isCharacter = SqlTypeName.CHAR_TYPES.contains(sqlTypeName);
                   boolean isDateTime = SqlTypeName.DATETIME_TYPES.contains(sqlTypeName);
 
-                  final String typeName = type instanceof RowSignatures.ComplexSqlType
-                                          ? ((RowSignatures.ComplexSqlType) type).asTypeString()
-                                          : sqlTypeName.toString();
+                  final String typeName = type instanceof RowSignatures.ComplexSqlType ? ((RowSignatures.ComplexSqlType) type).asTypeString() : sqlTypeName.toString();
                   return new Object[]{
                       CATALOG_NAME, // TABLE_CATALOG
                       schemaName, // TABLE_SCHEMA

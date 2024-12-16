@@ -89,7 +89,6 @@ public class IterableRowsCursorHelper
         new Iterable<>()
         {
           Yielder<Object[]> yielder = yielderParam;
-
           @Override
           public Iterator<Object[]> iterator()
           {
