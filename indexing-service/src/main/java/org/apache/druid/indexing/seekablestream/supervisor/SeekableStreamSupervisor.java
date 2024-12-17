@@ -1108,7 +1108,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   public ListenableFuture<Void> stopAsync(boolean stopGracefully)
   {
     ListeningExecutorService shutdownExec = MoreExecutors.listeningDecorator(
-        Execs.singleThreaded(StringUtils.encodeForFormat(supervisorId) + "-Shutdown-%d")
+        Execs.singleThreaded("supervisor-shutdown-" + StringUtils.encodeForFormat(supervisorId) + "--%d")
     );
     return shutdownExec.submit(() -> {
       stop(stopGracefully);
