@@ -33,7 +33,6 @@ import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.server.DruidNode;
-import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.avatica.AvaticaMonitor;
 import org.apache.druid.sql.avatica.DruidAvaticaJsonHandler;
 import org.apache.druid.sql.avatica.DruidMeta;
@@ -103,7 +102,6 @@ public class DruidAvaticaTestDriver implements Driver
         ObjectMapper objectMapper,
         DruidHookDispatcher druidHookDispatcher,
         @Named("isExplainSupported") Boolean isExplainSupported,
-        SpecificSegmentsQuerySegmentWalker walker,
         Injector injector
     )
     {
