@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.coordinator.loading;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -350,7 +349,8 @@ public class HttpLoadQueuePeonTest
       httpResponseHandler.handleResponse(httpResponse, null);
       try {
         List<DataSegmentChangeRequest> changeRequests = MAPPER.readValue(
-            request.getContent().array(), new TypeReference<>() {}
+            request.getContent().array(),
+            HttpLoadQueuePeon.REQUEST_ENTITY_TYPE_REF
         );
 
         List<DataSegmentChangeResponse> statuses = new ArrayList<>(changeRequests.size());

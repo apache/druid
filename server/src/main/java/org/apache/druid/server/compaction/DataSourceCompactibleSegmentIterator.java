@@ -491,10 +491,9 @@ public class DataSourceCompactibleSegmentIterator implements CompactionSegmentIt
         remainingStart = skipInterval.getEnd();
       } else {
         // Ignore this skipInterval
-        log.warn(
+        log.debug(
             "skipInterval[%s] is not contained in remainingInterval[%s]",
-            skipInterval,
-            new Interval(remainingStart, remainingEnd)
+            skipInterval, new Interval(remainingStart, remainingEnd)
         );
       }
     }
