@@ -25,8 +25,6 @@ import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.initialization.ServerInjectorBuilderTest.TestDruidModule;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.server.QuerySchedulerProvider;
-import org.apache.druid.server.log.RequestLogger;
-import org.apache.druid.server.log.TestRequestLogger;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.server.security.AuthenticatorMapper;
@@ -50,8 +48,6 @@ public class TestSqlModule extends TestDruidModule
         .annotatedWith(DruidSchemaName.class)
         .toInstance(CalciteTests.DRUID_SCHEMA_NAME);
     binder.bind(CalciteRulesManager.class).toInstance(new CalciteRulesManager(ImmutableSet.of()));
-    TestRequestLogger testRequestLogger = new TestRequestLogger();
-    binder.bind(RequestLogger.class).toInstance(testRequestLogger);
     binder.bind(CatalogResolver.class).toInstance(CatalogResolver.NULL_RESOLVER);
     binder.bind(ServiceEmitter.class).to(NoopServiceEmitter.class);
     binder.bind(QuerySchedulerProvider.class).in(LazySingleton.class);

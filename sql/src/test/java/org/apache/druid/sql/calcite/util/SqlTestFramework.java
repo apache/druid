@@ -34,7 +34,9 @@ import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.guice.ExpressionModule;
 import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.QueryRunnerFactoryModule;
+import org.apache.druid.guice.QueryableModule;
 import org.apache.druid.guice.SegmentWranglerModule;
 import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.guice.annotations.Global;
@@ -46,7 +48,6 @@ import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
-import org.apache.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.query.GenericQueryMetricsFactory;
 import org.apache.druid.query.GlobalTableDataSource;
@@ -71,6 +72,8 @@ import org.apache.druid.server.QueryLifecycle;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
+import org.apache.druid.server.log.RequestLogger;
+import org.apache.druid.server.log.TestRequestLogger;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.sql.SqlStatementFactory;
@@ -724,14 +727,13 @@ public class SqlTestFramework
       binder.bind(DataSegment.PruneSpecsHolder.class).toInstance(DataSegment.PruneSpecsHolder.DEFAULT);
       binder.bind(DefaultColumnFormatConfig.class).toInstance(new DefaultColumnFormatConfig(null, null));
 
-      binder.bind(QueryRunnerFactoryConglomerate.class)
-            .to(DefaultQueryRunnerFactoryConglomerate.class)
-            .in(LazySingleton.class);
-
       binder.bind(new TypeLiteral<NonBlockingPool<ByteBuffer>>(){})
             .annotatedWith(Global.class)
             .to(TestBufferPool.class);
 
+
+      TestRequestLogger testRequestLogger = new TestRequestLogger();
+      binder.bind(RequestLogger.class).toInstance(testRequestLogger);
     }
 
     @Provides
@@ -932,8 +934,10 @@ public class SqlTestFramework
     ArrayList<Module> overrideModules = new ArrayList<>(builder.overrideModules);
 
     injectorBuilder.add(componentSupplier.getCoreModule());
-    overrideModules.add(new BuiltInTypesModule());
+    injectorBuilder.add(new BuiltInTypesModule());
     injectorBuilder.add(new TestSqlModule());
+    injectorBuilder.add(new LifecycleModule());
+    injectorBuilder.add(new QueryableModule());
     overrideModules.add(new TestSetupModule(builder));
     overrideModules.add(new TestSegmentsOverseer());
     overrideModules.add(componentSupplier.getOverrideModule());
