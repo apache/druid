@@ -21,11 +21,15 @@ package org.apache.druid.math.expr;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.logger.Logger;
 
 import javax.annotation.Nullable;
 
 public class ExpressionProcessingConfig
 {
+  private static final Logger LOG = new Logger(ExpressionProcessingConfig.class);
+
   // Coerce arrays to multi value strings
   public static final String PROCESS_ARRAYS_AS_MULTIVALUE_STRINGS_CONFIG_STRING =
       "druid.expressions.processArraysAsMultiValueStrings";
@@ -45,6 +49,7 @@ public class ExpressionProcessingConfig
 
   @JsonCreator
   public ExpressionProcessingConfig(
+      @Deprecated @JsonProperty("useStrictBooleans") @Nullable Boolean useStrictBooleans,
       @JsonProperty("processArraysAsMultiValueStrings") @Nullable Boolean processArraysAsMultiValueStrings,
       @JsonProperty("homogenizeNullMultiValueStringArrays") @Nullable Boolean homogenizeNullMultiValueStringArrays,
       @JsonProperty("allowVectorizeFallback") @Nullable Boolean allowVectorizeFallback
@@ -62,6 +67,17 @@ public class ExpressionProcessingConfig
         allowVectorizeFallback,
         ALLOW_VECTORIZE_FALLBACK
     );
+    String version = ExpressionProcessingConfig.class.getPackage().getImplementationVersion();
+    if (version == null || version.contains("SNAPSHOT")) {
+      version = "latest";
+    }
+    final String docsBaseFormat = "https://druid.apache.org/docs/%s/querying/sql-data-types#%s";
+    if (useStrictBooleans != null && !useStrictBooleans) {
+      LOG.warn(
+          "druid.expressions.useStrictBooleans set to 'false', but has been removed from Druid and is always 'true' now for the most SQL compliant behavior, see %s for details",
+          StringUtils.format(docsBaseFormat, version, "boolean-logic")
+      );
+    }
   }
 
   public boolean processArraysAsMultiValueStrings()
