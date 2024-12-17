@@ -29,6 +29,10 @@ import org.hamcrest.core.AllOf;
 
 import java.util.ArrayList;
 
+/**
+ * A matcher for validating exceptions in unit tests, providing a fluent API for constructing matchers to allow
+ * matching of {@link Throwable} objects, such as verifying exception type, message content, and cause.
+ */
 public class ExceptionMatcher extends DiagnosingMatcher<Throwable>
 {
 
