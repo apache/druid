@@ -54,7 +54,7 @@ public class LegacySinglePhaseSubTask extends SinglePhaseSubTask
   @Override
   public String getType()
   {
-    return SinglePhaseSubTask.OLD_TYPE_NAME;
+    return OLD_TYPE_NAME;
   }
 
 }

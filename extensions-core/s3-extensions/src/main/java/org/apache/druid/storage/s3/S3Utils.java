@@ -327,7 +327,7 @@ public class S3Utils
       log.debug("Deleting keys from bucket: [%s], keys: [%s]", bucket, keys);
     }
     DeleteObjectsRequest deleteRequest = new DeleteObjectsRequest(bucket).withKeys(keysToDelete);
-    S3Utils.retryS3Operation(() -> {
+    retryS3Operation(() -> {
       s3Client.deleteObjects(deleteRequest);
       return null;
     }, retries);
@@ -353,7 +353,7 @@ public class S3Utils
     final PutObjectRequest putObjectRequest = new PutObjectRequest(bucket, key, file);
 
     if (!disableAcl) {
-      putObjectRequest.setAccessControlList(S3Utils.grantFullControlToBucketOwner(service, bucket));
+      putObjectRequest.setAccessControlList(grantFullControlToBucketOwner(service, bucket));
     }
     log.info("Pushing [%s] to bucket[%s] and key[%s].", file, bucket, key);
     service.putObject(putObjectRequest);

@@ -298,7 +298,7 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
         @Override
         public int getValueCardinality()
         {
-          return DimensionDictionarySelector.CARDINALITY_UNKNOWN;
+          return CARDINALITY_UNKNOWN;
         }
 
         @Override

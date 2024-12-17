@@ -83,12 +83,12 @@ public abstract class FrontCodedIndexed implements Indexed<ByteBuffer>
 
   public static byte validateVersion(byte version)
   {
-    if (version != FrontCodedIndexed.V0 && version != FrontCodedIndexed.V1) {
+    if (version != V0 && version != V1) {
       throw new IAE(
           "Unknown format version for FrontCodedIndexed [%s], must be [%s] or [%s]",
           version,
-          FrontCodedIndexed.V0,
-          FrontCodedIndexed.V1
+          V0,
+          V1
       );
     }
     return version;

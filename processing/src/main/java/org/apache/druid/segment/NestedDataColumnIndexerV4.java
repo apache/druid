@@ -73,7 +73,7 @@ public class NestedDataColumnIndexerV4 implements DimensionIndexer<StructuredDat
         ExprEval<?> eval = ExprEval.bestEffortOf(fieldValue);
         FieldIndexer fieldIndexer = fieldIndexers.get(fieldName);
         if (fieldIndexer == null) {
-          estimatedFieldKeySize += StructuredDataProcessor.estimateStringSize(fieldName);
+          estimatedFieldKeySize += estimateStringSize(fieldName);
           fieldIndexer = new FieldIndexer(globalDictionary);
           fieldIndexers.put(fieldName, fieldIndexer);
         }

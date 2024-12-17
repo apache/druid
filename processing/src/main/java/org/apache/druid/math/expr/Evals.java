@@ -82,11 +82,11 @@ public class Evals
     if (val instanceof Boolean) {
       return (Boolean) val;
     } else if (val instanceof String) {
-      return Evals.asBoolean((String) val);
+      return asBoolean((String) val);
     } else if (val instanceof Long) {
-      return Evals.asBoolean((Long) val);
+      return asBoolean((Long) val);
     } else if (val instanceof Number) {
-      return Evals.asBoolean(((Number) val).doubleValue());
+      return asBoolean(((Number) val).doubleValue());
     }
     return false;
   }

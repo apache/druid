@@ -812,7 +812,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
         throw new ISE("Unspecified interval[%s] in granularitySpec[%s]", interval, granularitySpec);
       }
 
-      version = AbstractBatchIndexTask.findVersion(versions, interval);
+      version = findVersion(versions, interval);
       if (version == null) {
         throw new ISE("Cannot find a version for interval[%s]", interval);
       }
@@ -820,7 +820,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       // We don't have explicit intervals. We can use the segment granularity to figure out what
       // interval we need, but we might not have already locked it.
       interval = granularitySpec.getSegmentGranularity().bucket(timestamp);
-      final String existingLockVersion = AbstractBatchIndexTask.findVersion(versions, interval);
+      final String existingLockVersion = findVersion(versions, interval);
       if (existingLockVersion == null) {
         if (ingestionSpec.getTuningConfig() instanceof ParallelIndexTuningConfig) {
           final int maxAllowedLockCount = ((ParallelIndexTuningConfig) ingestionSpec.getTuningConfig())

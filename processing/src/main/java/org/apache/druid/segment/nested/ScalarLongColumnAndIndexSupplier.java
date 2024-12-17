@@ -321,7 +321,7 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
         final List<Long> tailSet;
         final List<Long> baseSet = (List<Long>) sortedValues;
 
-        if (sortedValues.size() >= ValueSetIndexes.SIZE_WORTH_CHECKING_MIN) {
+        if (sortedValues.size() >= SIZE_WORTH_CHECKING_MIN) {
           final long minValueInColumn = dictionary.get(0) == null ? dictionary.get(1) : dictionary.get(0);
           final int position = Collections.binarySearch(
               sortedValues,
@@ -332,7 +332,7 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
         } else {
           tailSet = baseSet;
         }
-        if (tailSet.size() > ValueSetIndexes.SORTED_SCAN_RATIO_THRESHOLD * dictionary.size()) {
+        if (tailSet.size() > SORTED_SCAN_RATIO_THRESHOLD * dictionary.size()) {
           return ValueSetIndexes.buildBitmapColumnIndexFromSortedIteratorScan(
               bitmapFactory,
               ColumnType.LONG.getNullableStrategy(),

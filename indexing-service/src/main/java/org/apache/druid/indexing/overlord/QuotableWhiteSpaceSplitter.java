@@ -54,7 +54,7 @@ public class QuotableWhiteSpaceSplitter implements Iterable<String>
             if (inQuotes) {
               return false;
             }
-            return CharMatcher.breakingWhitespace().matches(c);
+            return breakingWhitespace().matches(c);
           }
         }
     ).omitEmptyStrings().split(string).iterator();
