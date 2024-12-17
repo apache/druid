@@ -24,7 +24,6 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
-import com.google.inject.util.Modules;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.LoadScope;
@@ -218,20 +217,6 @@ public class DruidInjectorBuilder
   public List<Module> modules()
   {
     return modules;
-  }
-
-  public DruidInjectorBuilder overrideCurrentGuiceModules(List<Module> overrides)
-  {
-    for (Module override : overrides) {
-      if (override instanceof DruidModule) {
-        registerJacksonModules((DruidModule) override);
-      }
-    }
-
-    final Module overriddenModule = Modules.override(modules).with(overrides);
-    modules.clear();
-    modules.add(overriddenModule);
-    return this;
   }
 
 

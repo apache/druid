@@ -61,10 +61,6 @@ public class DruidInjectorBuilderTest
   {
   }
 
-  public static class OverrideMockObjectExtension extends MockObject
-  {
-  }
-
   public interface MockInterface
   {
   }
@@ -239,51 +235,6 @@ public class DruidInjectorBuilderTest
         .build();
 
     verifyInjector(injector);
-  }
-
-  @Test
-  public void testOverrideAndUpdate() throws IOException
-  {
-    MockInterface mine = new MockComponent();
-
-    Injector injector = new CoreInjectorBuilder(
-        new StartupInjectorBuilder()
-            .forTests()
-            .withEmptyProperties()
-            .build()
-    )
-        .addAll(Arrays.asList(new MockGuiceModule(), new MockDruidModule()))
-        .overrideCurrentGuiceModules(List.of(
-            new DruidModule()
-            {
-              @Override
-              public void configure(Binder binder)
-              {
-                binder.bind(MockInterface.class).toInstance(mine);
-              }
-
-              @Override
-              public List<? extends Module> getJacksonModules()
-              {
-                return List.of(
-                    new SimpleModule("test-override")
-                        .registerSubtypes(
-                            new NamedType(OverrideMockObjectExtension.class, "override")
-                        )
-                );
-              }
-            }
-        ))
-        .build();
-
-    verifyInjector(injector);
-    Assert.assertSame(mine, injector.getInstance(MockInterface.class));
-
-    // And that the Druid module set up Jackson.
-    String json = "{\"type\": \"override\"}";
-    ObjectMapper om = injector.getInstance(Key.get(ObjectMapper.class, Json.class));
-    MockObject obj = om.readValue(json, MockObject.class);
-    assertTrue(obj instanceof OverrideMockObjectExtension);
   }
 
   /**
