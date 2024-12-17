@@ -80,13 +80,13 @@ abstract class KllSketchAggregatorFactory<SketchType extends KllSketch, ValueTyp
         && metricFactory.getColumnCapabilities(fieldName).isNumeric()) {
       final ColumnValueSelector<ValueType> selector = metricFactory.makeColumnValueSelector(fieldName);
       if (selector instanceof NilColumnValueSelector) {
-        return new KllSketchNoOpAggregator<SketchType>(getEmptySketch());
+        return new KllSketchNoOpAggregator<>(getEmptySketch());
       }
       return getBuildAggregator(selector);
     }
     final ColumnValueSelector<SketchType> selector = metricFactory.makeColumnValueSelector(fieldName);
     if (selector instanceof NilColumnValueSelector) {
-      return new KllSketchNoOpAggregator<SketchType>(getEmptySketch());
+      return new KllSketchNoOpAggregator<>(getEmptySketch());
     }
     return getMergeAggregator(selector);
   }
@@ -98,13 +98,13 @@ abstract class KllSketchAggregatorFactory<SketchType extends KllSketch, ValueTyp
         && metricFactory.getColumnCapabilities(fieldName).isNumeric()) {
       final ColumnValueSelector<ValueType> selector = metricFactory.makeColumnValueSelector(fieldName);
       if (selector instanceof NilColumnValueSelector) {
-        return new KllSketchNoOpBufferAggregator<SketchType>(getEmptySketch());
+        return new KllSketchNoOpBufferAggregator<>(getEmptySketch());
       }
       return getBuildBufferAggregator(selector);
     }
     final ColumnValueSelector<SketchType> selector = metricFactory.makeColumnValueSelector(fieldName);
     if (selector instanceof NilColumnValueSelector) {
-      return new KllSketchNoOpBufferAggregator<SketchType>(getEmptySketch());
+      return new KllSketchNoOpBufferAggregator<>(getEmptySketch());
     }
     return getMergeBufferAggregator(selector);
   }

@@ -219,7 +219,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
 
       Futures.addCallback(
           future,
-          new FutureCallback<InputStream>()
+          new FutureCallback<>()
           {
             @Override
             public void onSuccess(InputStream result)

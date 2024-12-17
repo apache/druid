@@ -114,7 +114,7 @@ public class FrameCursorUtils
   {
     throwIfColumnsHaveUnknownType(frameWriterFactory.signature());
 
-    return () -> new Iterator<Frame>()
+    return () -> new Iterator<>()
     {
       @Override
       public boolean hasNext()

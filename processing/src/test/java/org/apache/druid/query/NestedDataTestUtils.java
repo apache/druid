@@ -493,7 +493,7 @@ public class NestedDataTestUtils
   {
     final List<BiFunction<TemporaryFolder, Closer, List<Segment>>> segmentsGenerators =
         new ArrayList<>();
-    segmentsGenerators.add(new BiFunction<TemporaryFolder, Closer, List<Segment>>()
+    segmentsGenerators.add(new BiFunction<>()
     {
       @Override
       public List<Segment> apply(TemporaryFolder tempFolder, Closer closer)
@@ -522,7 +522,7 @@ public class NestedDataTestUtils
         return MIX_SEGMENTS_NAME;
       }
     });
-    segmentsGenerators.add(new BiFunction<TemporaryFolder, Closer, List<Segment>>()
+    segmentsGenerators.add(new BiFunction<>()
     {
       @Override
       public List<Segment> apply(TemporaryFolder tempFolder, Closer closer)
@@ -544,7 +544,7 @@ public class NestedDataTestUtils
         return INCREMENTAL_SEGMENTS_NAME;
       }
     });
-    segmentsGenerators.add(new BiFunction<TemporaryFolder, Closer, List<Segment>>()
+    segmentsGenerators.add(new BiFunction<>()
     {
       @Override
       public List<Segment> apply(TemporaryFolder tempFolder, Closer closer)
@@ -580,7 +580,7 @@ public class NestedDataTestUtils
         return DEFAULT_SEGMENTS_NAME;
       }
     });
-    segmentsGenerators.add(new BiFunction<TemporaryFolder, Closer, List<Segment>>()
+    segmentsGenerators.add(new BiFunction<>()
     {
       @Override
       public List<Segment> apply(TemporaryFolder tempFolder, Closer closer)

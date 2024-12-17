@@ -147,7 +147,7 @@ public class ServerManagerForQueryErrorTest extends ServerManager
         return new ReportTimelineMissingSegmentQueryRunner<>(descriptor);
       }
     } else if (queryContext.getBoolean(QUERY_TIMEOUT_TEST_CONTEXT_KEY, false)) {
-      return (queryPlus, responseContext) -> new Sequence<T>()
+      return (queryPlus, responseContext) -> new Sequence<>()
       {
         @Override
         public <OutType> OutType accumulate(OutType initValue, Accumulator<OutType, T> accumulator)
@@ -162,7 +162,7 @@ public class ServerManagerForQueryErrorTest extends ServerManager
         }
       };
     } else if (queryContext.getBoolean(QUERY_CAPACITY_EXCEEDED_TEST_CONTEXT_KEY, false)) {
-      return (queryPlus, responseContext) -> new Sequence<T>()
+      return (queryPlus, responseContext) -> new Sequence<>()
       {
         @Override
         public <OutType> OutType accumulate(OutType initValue, Accumulator<OutType, T> accumulator)
@@ -177,7 +177,7 @@ public class ServerManagerForQueryErrorTest extends ServerManager
         }
       };
     } else if (queryContext.getBoolean(QUERY_UNSUPPORTED_TEST_CONTEXT_KEY, false)) {
-      return (queryPlus, responseContext) -> new Sequence<T>()
+      return (queryPlus, responseContext) -> new Sequence<>()
       {
         @Override
         public <OutType> OutType accumulate(OutType initValue, Accumulator<OutType, T> accumulator)
@@ -192,7 +192,7 @@ public class ServerManagerForQueryErrorTest extends ServerManager
         }
       };
     } else if (queryContext.getBoolean(RESOURCE_LIMIT_EXCEEDED_TEST_CONTEXT_KEY, false)) {
-      return (queryPlus, responseContext) -> new Sequence<T>()
+      return (queryPlus, responseContext) -> new Sequence<>()
       {
         @Override
         public <OutType> OutType accumulate(OutType initValue, Accumulator<OutType, T> accumulator)
@@ -207,7 +207,7 @@ public class ServerManagerForQueryErrorTest extends ServerManager
         }
       };
     } else if (queryContext.getBoolean(QUERY_FAILURE_TEST_CONTEXT_KEY, false)) {
-      return (queryPlus, responseContext) -> new Sequence<T>()
+      return (queryPlus, responseContext) -> new Sequence<>()
       {
         @Override
         public <OutType> OutType accumulate(OutType initValue, Accumulator<OutType, T> accumulator)

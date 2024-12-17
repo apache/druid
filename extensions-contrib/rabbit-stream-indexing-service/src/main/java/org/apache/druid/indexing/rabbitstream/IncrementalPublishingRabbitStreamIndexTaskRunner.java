@@ -135,8 +135,7 @@ public class IncrementalPublishingRabbitStreamIndexTaskRunner
   @Override
   public TypeReference<List<SequenceMetadata<String, Long>>> getSequenceMetadataTypeReference()
   {
-    return new TypeReference<List<SequenceMetadata<String, Long>>>() {
-    };
+    return new TypeReference<>() {};
   }
 
   @Nullable
@@ -149,8 +148,8 @@ public class IncrementalPublishingRabbitStreamIndexTaskRunner
       log.debug("Got checkpoints from task context[%s].", checkpointsString);
       return toolbox.getJsonMapper().readValue(
           checkpointsString,
-          new TypeReference<TreeMap<Integer, Map<String, Long>>>() {
-          });
+          new TypeReference<>() {}
+      );
     } else {
       return null;
     }

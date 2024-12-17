@@ -82,7 +82,7 @@ public class IncrementalIndexMultiValueSpecTest extends InitializedNullHandlingT
                                                           .withDimensionsSpec(dimensionsSpec)
                                                           .withRollup(false)
                                                           .build();
-    Map<String, Object> map = new HashMap<String, Object>()
+    Map<String, Object> map = new HashMap<>()
     {
       @Override
       public Object get(Object key)

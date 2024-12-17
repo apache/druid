@@ -62,7 +62,7 @@ public class NumericTopNMetricSpec implements TopNMetricSpec
 
     final AggregatorFactory aggregator = Iterables.tryFind(
         aggregatorSpecs,
-        new Predicate<AggregatorFactory>()
+        new Predicate<>()
         {
           @Override
           public boolean apply(AggregatorFactory input)
@@ -74,7 +74,7 @@ public class NumericTopNMetricSpec implements TopNMetricSpec
 
     final PostAggregator postAggregator = Iterables.tryFind(
         postAggregatorSpecs,
-        new Predicate<PostAggregator>()
+        new Predicate<>()
         {
           @Override
           public boolean apply(PostAggregator input)

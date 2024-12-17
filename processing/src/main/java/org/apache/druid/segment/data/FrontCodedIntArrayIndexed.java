@@ -289,7 +289,7 @@ public final class FrontCodedIntArrayIndexed implements Indexed<int[]>
     copy.position(bucketsPosition);
     final int[][] firstBucket = readBucket(copy, numBuckets > 1 ? bucketSize : lastBucketNumValues);
     // iterator decodes and buffers a bucket at a time, paging through buckets as the iterator is consumed
-    return new Iterator<int[]>()
+    return new Iterator<>()
     {
       private int currIndex = 0;
       private int currentBucketIndex = 0;

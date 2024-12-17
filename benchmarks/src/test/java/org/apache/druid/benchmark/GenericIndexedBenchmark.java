@@ -67,7 +67,7 @@ public class GenericIndexedBenchmark
 
   public static final int ITERATIONS = 10000;
 
-  static final ObjectStrategy<byte[]> BYTE_ARRAY_STRATEGY = new ObjectStrategy<byte[]>()
+  static final ObjectStrategy<byte[]> BYTE_ARRAY_STRATEGY = new ObjectStrategy<>()
   {
     @Override
     public Class<byte[]> getClazz()

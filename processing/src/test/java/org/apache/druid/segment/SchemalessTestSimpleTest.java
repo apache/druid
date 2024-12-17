@@ -253,7 +253,7 @@ public class SchemalessTestSimpleTest extends InitializedNullHandlingTest
                               .build();
 
     List<Result<SearchResultValue>> expectedResults = Collections.singletonList(
-        new Result<SearchResultValue>(
+        new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new SearchResultValue(
                 Arrays.asList(
@@ -278,7 +278,7 @@ public class SchemalessTestSimpleTest extends InitializedNullHandlingTest
                                     .build();
 
     List<Result<TimeBoundaryResultValue>> expectedResults = Collections.singletonList(
-        new Result<TimeBoundaryResultValue>(
+        new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeBoundaryResultValue(
                 ImmutableMap.of(

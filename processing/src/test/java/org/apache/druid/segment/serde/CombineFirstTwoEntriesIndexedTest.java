@@ -150,7 +150,7 @@ public class CombineFirstTwoEntriesIndexedTest extends InitializedNullHandlingTe
 
   private <T> CombineFirstTwoEntriesIndexed<T> wrap(final Indexed<T> indexed, @Nullable final T newFirstValue)
   {
-    return new CombineFirstTwoEntriesIndexed<T>(indexed)
+    return new CombineFirstTwoEntriesIndexed<>(indexed)
     {
       @Override
       protected T newFirstValue()

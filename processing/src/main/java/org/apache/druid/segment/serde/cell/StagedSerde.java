@@ -66,7 +66,7 @@ public interface StagedSerde<T>
 {
   static StagedSerde<byte[]> forBytes()
   {
-    return new StagedSerde<byte[]>()
+    return new StagedSerde<>()
     {
       @Override
       public byte[] serialize(byte[] value)

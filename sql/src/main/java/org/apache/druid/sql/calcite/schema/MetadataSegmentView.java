@@ -210,9 +210,7 @@ public class MetadataSegmentView
 
     return SystemSchema.getThingsFromLeaderNode(
         queryBuilder.toString(),
-        new TypeReference<SegmentStatusInCluster>()
-        {
-        },
+        new TypeReference<>() {},
         coordinatorClient,
         jsonMapper
     );

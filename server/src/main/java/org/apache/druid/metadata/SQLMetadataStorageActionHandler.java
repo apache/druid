@@ -261,7 +261,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   public boolean setStatus(final String entryId, final boolean active, final StatusType status)
   {
     return connector.retryWithHandle(
-        new HandleCallback<Boolean>()
+        new HandleCallback<>()
         {
           @Override
           public Boolean withHandle(Handle handle) throws Exception
@@ -285,7 +285,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   public Optional<EntryType> getEntry(final String entryId)
   {
     return connector.retryWithHandle(
-        new HandleCallback<Optional<EntryType>>()
+        new HandleCallback<>()
         {
           @Override
           public Optional<EntryType> withHandle(Handle handle) throws Exception
@@ -310,7 +310,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   public Optional<StatusType> getStatus(final String entryId)
   {
     return connector.retryWithHandle(
-        new HandleCallback<Optional<StatusType>>()
+        new HandleCallback<>()
         {
           @Override
           public Optional<StatusType> withHandle(Handle handle) throws Exception
@@ -801,7 +801,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   public boolean addLock(final String entryId, final LockType lock)
   {
     return connector.retryWithHandle(
-        new HandleCallback<Boolean>()
+        new HandleCallback<>()
         {
           @Override
           public Boolean withHandle(Handle handle) throws Exception
@@ -889,7 +889,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   public Map<Long, LockType> getLocks(final String entryId)
   {
     return connector.retryWithHandle(
-        new HandleCallback<Map<Long, LockType>>()
+        new HandleCallback<>()
         {
           @Override
           public Map<Long, LockType> withHandle(Handle handle)

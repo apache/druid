@@ -223,7 +223,7 @@ public class TimeseriesQueryRunnerTest extends InitializedNullHandlingTest
 
     StubServiceEmitter stubServiceEmitter = new StubServiceEmitter("", "");
     MetricsEmittingQueryRunner<Result<TimeseriesResultValue>> metricsEmittingQueryRunner =
-        new MetricsEmittingQueryRunner<Result<TimeseriesResultValue>>(
+        new MetricsEmittingQueryRunner<>(
             stubServiceEmitter,
             new TimeseriesQueryQueryToolChest(),
             runner,
