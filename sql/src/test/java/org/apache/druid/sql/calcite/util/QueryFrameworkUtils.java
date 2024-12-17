@@ -117,6 +117,36 @@ public class QueryFrameworkUtils
     return new SqlStatementFactory(toolbox);
   }
 
+  public static DruidSchemaCatalog createMockRootSchema1(
+      final Injector injector,
+      final QueryRunnerFactoryConglomerate conglomerate,
+      final SpecificSegmentsQuerySegmentWalker walker,
+      final PlannerConfig plannerConfig,
+      @Nullable final ViewManager viewManager,
+      final DruidSchemaManager druidSchemaManager,
+      final AuthorizerMapper authorizerMapper,
+      final CatalogResolver catalogResolver
+  )
+  {
+    DruidSchema druidSchema = createMockSchema(
+        injector,
+        conglomerate,
+        walker,
+        druidSchemaManager,
+        catalogResolver
+    );
+    SystemSchema systemSchema =
+        CalciteTests.createMockSystemSchema(druidSchema, walker, authorizerMapper);
+
+    LookupSchema lookupSchema = createMockLookupSchema(injector);
+    DruidOperatorTable createOperatorTable = createOperatorTable(injector);
+
+    return createMockRootSchema(
+        plannerConfig, viewManager, authorizerMapper, druidSchema, systemSchema, lookupSchema, createOperatorTable
+    );
+  }
+
+
   public static DruidSchemaCatalog createMockRootSchema(
       final Injector injector,
       final QueryRunnerFactoryConglomerate conglomerate,
@@ -139,6 +169,23 @@ public class QueryFrameworkUtils
         CalciteTests.createMockSystemSchema(druidSchema, walker, authorizerMapper);
 
     LookupSchema lookupSchema = createMockLookupSchema(injector);
+    DruidOperatorTable createOperatorTable = createOperatorTable(injector);
+
+    return createMockRootSchema(
+        plannerConfig, viewManager, authorizerMapper, druidSchema, systemSchema, lookupSchema, createOperatorTable
+    );
+  }
+
+  private static DruidSchemaCatalog createMockRootSchema(
+      final PlannerConfig plannerConfig,
+      final ViewManager viewManager,
+      final AuthorizerMapper authorizerMapper,
+      DruidSchema druidSchema,
+      SystemSchema systemSchema,
+      LookupSchema lookupSchema,
+      DruidOperatorTable createOperatorTable
+  )
+  {
     ViewSchema viewSchema = viewManager != null ? new ViewSchema(viewManager) : null;
 
     SchemaPlus rootSchema = CalciteSchema.createRootSchema(false, false).plus();
@@ -159,7 +206,7 @@ public class QueryFrameworkUtils
         new InformationSchema(
             catalog,
             authorizerMapper,
-            createOperatorTable(injector)
+            createOperatorTable
         );
     rootSchema.add(CalciteTests.DRUID_SCHEMA_NAME, druidSchema);
     rootSchema.add(INFORMATION_SCHEMA_NAME, informationSchema);

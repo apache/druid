@@ -883,7 +883,7 @@ public class SqlTestFramework
         AuthorizerMapper authorizerMapper
     )
     {
-      final DruidSchemaCatalog rootSchema = QueryFrameworkUtils.createMockRootSchema(
+      final DruidSchemaCatalog rootSchema = QueryFrameworkUtils.createMockRootSchema1(
           injector,
           conglomerate,
           (SpecificSegmentsQuerySegmentWalker) walker,
