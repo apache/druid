@@ -23,7 +23,7 @@ ARG JDK_VERSION=17
 # This is because it's not able to build the distribution on arm64 due to dependency problem of web-console. See: https://github.com/apache/druid/issues/13012
 # Since only java jars are shipped in the final image, it's OK to build the distribution on x64.
 # Once the web-console dependency problem is resolved, we can remove the --platform directive.
-FROM --platform=linux/amd64 maven:3-openjdk-17-slim as builder
+FROM --platform=linux/amd64 maven:3.8.4-openjdk-17-slim as builder
 
 # Rebuild from source in this stage
 # This can be unset if the tarball was already built outside of Docker
@@ -40,7 +40,7 @@ RUN --mount=type=cache,target=/root/.m2 if [ "$BUILD_FROM_SOURCE" = "true" ]; th
       install \
       -Pdist,bundle-contrib-exts \
       -Pskip-static-checks,skip-tests \
-      -Dmaven.javadoc.skip=true -T1C \
+      -Dmaven.javadoc.skip=true -T1C -X \
       ; fi
 
 RUN --mount=type=cache,target=/root/.m2 VERSION=$(mvn -B -q org.apache.maven.plugins:maven-help-plugin:3.2.0:evaluate \
