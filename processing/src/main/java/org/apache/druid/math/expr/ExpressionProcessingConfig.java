@@ -72,7 +72,7 @@ public class ExpressionProcessingConfig
       version = "latest";
     }
     final String docsBaseFormat = "https://druid.apache.org/docs/%s/querying/sql-data-types#%s";
-    if (useStrictBooleans != null && !useStrictBooleans) {
+    if (!getWithPropertyFallback(useStrictBooleans, "druid.expressions.useStrictBooleans", "true")) {
       LOG.warn(
           "druid.expressions.useStrictBooleans set to 'false', but has been removed from Druid and is always 'true' now for the most SQL compliant behavior, see %s for details",
           StringUtils.format(docsBaseFormat, version, "boolean-logic")
