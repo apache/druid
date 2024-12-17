@@ -57,7 +57,6 @@ import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.LocalDataStorageDruidModule;
 import org.apache.druid.guice.MetadataConfigModule;
 import org.apache.druid.guice.SegmentWranglerModule;
-import org.apache.druid.guice.ServerModule;
 import org.apache.druid.guice.ServerViewModule;
 import org.apache.druid.guice.StartupLoggingModule;
 import org.apache.druid.guice.StorageNodeModule;
@@ -78,7 +77,6 @@ import org.apache.druid.segment.writeout.SegmentWriteOutMediumModule;
 import org.apache.druid.server.BrokerQueryResource;
 import org.apache.druid.server.ClientInfoResource;
 import org.apache.druid.server.DruidNode;
-import org.apache.druid.server.ResponseContextConfig;
 import org.apache.druid.server.SubqueryGuardrailHelper;
 import org.apache.druid.server.SubqueryGuardrailHelperProvider;
 import org.apache.druid.server.emitter.EmitterModule;
@@ -97,7 +95,6 @@ import org.apache.druid.sql.calcite.schema.DruidSchemaName;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.QueryComponentSupplier;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.QueryComponentSupplierDelegate;
-import org.apache.druid.sql.guice.SqlModule;
 import org.apache.druid.storage.StorageConnectorModule;
 import org.apache.druid.timeline.PruneLoadSpec;
 import org.eclipse.jetty.server.Server;
@@ -113,6 +110,16 @@ public class ExposedAsBrokerQueryComponentSupplierWrapper extends QueryComponent
   public ExposedAsBrokerQueryComponentSupplierWrapper(QueryComponentSupplier delegate)
   {
     super(delegate);
+  }
+
+  @Override
+  public void gatherProperties(Properties properties)
+  {
+    properties.put("druid.enableTlsPort", "false");
+    properties.put("druid.zk.service.enabled", "false");
+    properties.put("druid.plaintextPort", "12345");
+    properties.put("druid.host", "localhost");
+    properties.put("druid.broker.segment.awaitInitializationOnStart", "false");
   }
 
   @Override
@@ -144,19 +151,6 @@ public class ExposedAsBrokerQueryComponentSupplierWrapper extends QueryComponent
 
     @Provides
     @LazySingleton
-    public Properties getProps()
-    {
-      Properties localProps = new Properties();
-      localProps.put("druid.enableTlsPort", "false");
-      localProps.put("druid.zk.service.enabled", "false");
-      localProps.put("druid.plaintextPort", "12345");
-      localProps.put("druid.host", "localhost");
-      localProps.put("druid.broker.segment.awaitInitializationOnStart", "false");
-      return localProps;
-    }
-
-    @Provides
-    @LazySingleton
     DruidNodeDiscoveryProvider getDruidNodeDiscoveryProvider()
     {
       final DruidNode coordinatorNode = CalciteTests.mockCoordinatorNode();
@@ -183,7 +177,6 @@ public class ExposedAsBrokerQueryComponentSupplierWrapper extends QueryComponent
         new CuratorModule(),
         new AnnouncerModule(),
         new SegmentWriteOutMediumModule(),
-        new ServerModule(),
         new StorageNodeModule(),
         new JettyServerModule(),
         new ExpressionModule(),
@@ -203,7 +196,6 @@ public class ExposedAsBrokerQueryComponentSupplierWrapper extends QueryComponent
         new ExternalStorageAccessSecurityModule(),
         new ServiceClientModule(),
         new StorageConnectorModule(),
-        new SqlModule(),
         ServerInjectorBuilder.registerNodeRoleModule(ImmutableSet.of())
     );
   }
@@ -226,7 +218,6 @@ public class ExposedAsBrokerQueryComponentSupplierWrapper extends QueryComponent
           binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8082);
           binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(8282);
           binder.bindConstant().annotatedWith(PruneLoadSpec.class).to(true);
-          binder.bind(ResponseContextConfig.class).toInstance(ResponseContextConfig.newConfig(false));
 
           binder.bind(TimelineServerView.class).to(BrokerServerView.class).in(LazySingleton.class);
 

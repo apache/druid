@@ -38,6 +38,7 @@ import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.QueryRunnerFactoryModule;
 import org.apache.druid.guice.QueryableModule;
 import org.apache.druid.guice.SegmentWranglerModule;
+import org.apache.druid.guice.ServerModule;
 import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.guice.annotations.Merging;
@@ -99,10 +100,12 @@ import org.apache.druid.sql.calcite.schema.SystemSchema;
 import org.apache.druid.sql.calcite.view.DruidViewMacroFactory;
 import org.apache.druid.sql.calcite.view.InProcessViewManager;
 import org.apache.druid.sql.calcite.view.ViewManager;
+import org.apache.druid.sql.guice.SqlModule;
 import org.apache.druid.sql.hook.DruidHookDispatcher;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.inject.Named;
+
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.URI;
@@ -974,8 +977,10 @@ public class SqlTestFramework
     injectorBuilder.add(componentSupplier.getCoreModule());
     injectorBuilder.add(new BuiltInTypesModule());
     injectorBuilder.add(new TestSqlModule());
+    injectorBuilder.add(new ServerModule());
     injectorBuilder.add(new LifecycleModule());
     injectorBuilder.add(new QueryableModule());
+    injectorBuilder.add(new SqlModule());
     overrideModules.add(new TestSetupModule(builder));
     overrideModules.add(new TestSegmentsOverseer());
     overrideModules.add(componentSupplier.getOverrideModule());
