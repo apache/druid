@@ -29,9 +29,11 @@ import com.google.inject.name.Names;
 import org.apache.druid.cli.CliBroker;
 import org.apache.druid.cli.QueryJettyServerInitializer;
 import org.apache.druid.client.BrokerSegmentWatcherConfig;
+import org.apache.druid.client.BrokerServerView;
 import org.apache.druid.client.DirectDruidClientFactory;
 import org.apache.druid.client.InternalQueryConfig;
 import org.apache.druid.client.QueryableDruidServer;
+import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.selector.CustomTierSelectorStrategyConfig;
 import org.apache.druid.client.selector.ServerSelectorStrategy;
 import org.apache.druid.client.selector.TierSelectorStrategy;
@@ -90,6 +92,7 @@ import org.apache.druid.server.metrics.QueryCountStatsProvider;
 import org.apache.druid.server.metrics.SubqueryCountStatsProvider;
 import org.apache.druid.server.router.TieredBrokerConfig;
 import org.apache.druid.server.security.TLSCertificateCheckerModule;
+import org.apache.druid.sql.calcite.schema.BrokerSegmentMetadataCache;
 import org.apache.druid.sql.calcite.schema.DruidSchemaName;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.QueryComponentSupplier;
@@ -129,6 +132,13 @@ public class ExposedAsBrokerQueryComponentSupplierWrapper extends QueryComponent
     @Override
     protected void configure()
     {
+    }
+
+    @Provides
+    @LazySingleton
+    public BrokerSegmentMetadataCache provideCache()
+    {
+      return null;
     }
 
     @Provides
@@ -215,6 +225,8 @@ public class ExposedAsBrokerQueryComponentSupplierWrapper extends QueryComponent
           binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(8282);
           binder.bindConstant().annotatedWith(PruneLoadSpec.class).to(true);
           binder.bind(ResponseContextConfig.class).toInstance(ResponseContextConfig.newConfig(false));
+
+          binder.bind(TimelineServerView.class).to(BrokerServerView.class).in(LazySingleton.class);
 
           JsonConfigProvider.bind(binder, "druid.broker.select", TierSelectorStrategy.class);
           JsonConfigProvider.bind(binder, "druid.broker.select.tier.custom", CustomTierSelectorStrategyConfig.class);
