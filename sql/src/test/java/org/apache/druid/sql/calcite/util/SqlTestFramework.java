@@ -36,7 +36,6 @@ import org.apache.druid.guice.SegmentWranglerModule;
 import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.initialization.CoreInjectorBuilder;
 import org.apache.druid.initialization.DruidModule;
-import org.apache.druid.initialization.ServiceInjectorBuilder;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -905,10 +904,17 @@ public class SqlTestFramework
     overrideModules.add(testSetupModule());
     builder.componentSupplier.configureGuice(injectorBuilder, overrideModules);
 
-    ServiceInjectorBuilder serviceInjector = new ServiceInjectorBuilder(injectorBuilder);
-    serviceInjector.addAll(overrideModules);
+    // First override with the testSetupModule.  It would be better if the existing tests were updated to not require
+    // this step of override as this is actually an indication that the objects aren't managing their bindings
+    // properly.  This can cause obfuscation when trying to figure out where a binding/object is coming from, slowing
+    // developer productivity.  For expediency, we add this extra layer of overrides just to make things work while
+    // work can then be done to fix the problematic configurations.  It would be awesome if this override was no
+    // longer neede some day.
+    injectorBuilder.overrideCurrentGuiceModules(List.of(testSetupModule()));
 
-    this.injector = serviceInjector.build();
+    injectorBuilder.overrideCurrentGuiceModules(overrideModules);
+
+    this.injector = injectorBuilder.build();
     this.engine = builder.componentSupplier.createEngine(queryLifecycleFactory(), queryJsonMapper(), injector);
     componentSupplier.configureJsonMapper(queryJsonMapper());
     componentSupplier.finalizeTestFramework(this);

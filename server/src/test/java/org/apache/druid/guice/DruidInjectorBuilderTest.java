@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -35,6 +36,7 @@ import org.apache.druid.guice.annotations.LoadScope;
 import org.apache.druid.initialization.CoreInjectorBuilder;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.ISE;
+import org.junit.Assert;
 import org.junit.Test;
 
 import javax.inject.Inject;
@@ -56,6 +58,10 @@ public class DruidInjectorBuilderTest
 
   @JsonTypeName("extn")
   public static class MockObjectExtension extends MockObject
+  {
+  }
+
+  public static class OverrideMockObjectExtension extends MockObject
   {
   }
 
@@ -233,6 +239,51 @@ public class DruidInjectorBuilderTest
         .build();
 
     verifyInjector(injector);
+  }
+
+  @Test
+  public void testOverrideAndUpdate() throws IOException
+  {
+    MockInterface mine = new MockComponent();
+
+    Injector injector = new CoreInjectorBuilder(
+        new StartupInjectorBuilder()
+            .forTests()
+            .withEmptyProperties()
+            .build()
+    )
+        .addAll(Arrays.asList(new MockGuiceModule(), new MockDruidModule()))
+        .overrideCurrentGuiceModules(List.of(
+            new DruidModule()
+            {
+              @Override
+              public void configure(Binder binder)
+              {
+                binder.bind(MockInterface.class).toInstance(mine);
+              }
+
+              @Override
+              public List<? extends Module> getJacksonModules()
+              {
+                return List.of(
+                    new SimpleModule("test-override")
+                        .registerSubtypes(
+                            new NamedType(OverrideMockObjectExtension.class, "override")
+                        )
+                );
+              }
+            }
+        ))
+        .build();
+
+    verifyInjector(injector);
+    Assert.assertSame(mine, injector.getInstance(MockInterface.class));
+
+    // And that the Druid module set up Jackson.
+    String json = "{\"type\": \"override\"}";
+    ObjectMapper om = injector.getInstance(Key.get(ObjectMapper.class, Json.class));
+    MockObject obj = om.readValue(json, MockObject.class);
+    assertTrue(obj instanceof OverrideMockObjectExtension);
   }
 
   /**
