@@ -163,25 +163,19 @@ jobs:
       matrix:
         # Use JDK 21.0.4 to work around https://github.com/apache/druid/issues/17429
         jdk: [ '21.0.4' ]
-    name: "unit tests (jdk${{ matrix.jdk }}, sql-compat=true)"
+    name: "unit tests (jdk${{ matrix.jdk }})"
     uses: ./.github/workflows/unit-tests.yml
     needs: unit-tests
     if: ${{ always() && (needs.unit-tests.result == 'success' || needs.unit-tests.outputs.continue_tests) }}
     with:
       jdk: ${{ matrix.jdk }}
-      sql_compatibility: true
 
   unit-tests:
-    strategy:
-      fail-fast: false
-      matrix:
-        sql_compatibility: [ false, true ]
-    name: "unit tests (jdk17, sql-compat=${{ matrix.sql_compatibility }})"
+    name: "unit tests (jdk17)"
     uses: ./.github/workflows/unit-tests.yml
     needs: build
     with:
       jdk: 17
-      sql_compatibility: ${{ matrix.sql_compatibility }}
 
   standard-its:
     needs: unit-tests
