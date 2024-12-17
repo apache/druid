@@ -146,9 +146,9 @@ public class SingleStringInputDeferredEvaluationExpressionDimensionVectorSelecto
     }
 
     @Override
-    public <T> T[] getObjectVector(String name)
+    public Object[] getObjectVector(String name)
     {
-      return (T[]) currentValue;
+      return currentValue;
     }
 
     @Override

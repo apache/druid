@@ -29,6 +29,10 @@ public abstract class SymmetricalBivariateFunctionVectorProcessor<T> extends Biv
       ExprVectorProcessor<T> right
   )
   {
-    super(outputType, left, right);
+    super(
+        outputType,
+        CastToTypeVectorProcessor.cast(left, outputType),
+        CastToTypeVectorProcessor.cast(right, outputType)
+    );
   }
 }

@@ -578,7 +578,7 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
                  .toArray(String[][]::new);
   }
 
-  static class SettableVectorInputBinding implements Expr.VectorInputBinding
+  public static class SettableVectorInputBinding implements Expr.VectorInputBinding
   {
     private final Map<String, boolean[]> nulls;
     private final Map<String, long[]> longs;
@@ -590,7 +590,7 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
 
     private int id = 0;
 
-    SettableVectorInputBinding(int vectorSize)
+    public SettableVectorInputBinding(int vectorSize)
     {
       this.nulls = new HashMap<>();
       this.longs = new HashMap<>();
@@ -616,6 +616,7 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
     {
       assert longs.length == vectorSize;
       this.longs.put(name, longs);
+      this.doubles.put(name, Arrays.stream(longs).asDoubleStream().toArray());
       return addBinding(name, ExpressionType.LONG, nulls);
     }
 
@@ -628,10 +629,11 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
     {
       assert doubles.length == vectorSize;
       this.doubles.put(name, doubles);
+      this.longs.put(name, Arrays.stream(doubles).mapToLong(x -> (long) x).toArray());
       return addBinding(name, ExpressionType.DOUBLE, nulls);
     }
 
-    public SettableVectorInputBinding addString(String name, String[] strings)
+    public SettableVectorInputBinding addString(String name, Object[] strings)
     {
       assert strings.length == vectorSize;
       this.objects.put(name, strings);
@@ -639,9 +641,9 @@ public class VectorExprSanityTest extends InitializedNullHandlingTest
     }
 
     @Override
-    public <T> T[] getObjectVector(String name)
+    public Object[] getObjectVector(String name)
     {
-      return (T[]) objects.getOrDefault(name, new Object[getCurrentVectorSize()]);
+      return objects.getOrDefault(name, new Object[getCurrentVectorSize()]);
     }
 
     @Override

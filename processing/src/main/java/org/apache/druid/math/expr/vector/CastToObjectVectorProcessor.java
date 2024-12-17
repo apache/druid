@@ -31,14 +31,13 @@ public class CastToObjectVectorProcessor extends CastToTypeVectorProcessor<Objec
 
   public CastToObjectVectorProcessor(
       ExprVectorProcessor<?> delegate,
-      ExpressionType outputType,
-      int maxVectorSize
+      ExpressionType outputType
   )
   {
     super(delegate);
     this.delegateType = delegate.getOutputType();
     this.outputType = outputType;
-    this.output = new Object[maxVectorSize];
+    this.output = new Object[delegate.maxVectorSize()];
   }
 
   @Override
