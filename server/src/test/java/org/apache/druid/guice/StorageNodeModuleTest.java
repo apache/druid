@@ -176,22 +176,21 @@ public class StorageNodeModuleTest
   {
     return Initialization.makeInjectorWithModules(
         GuiceInjectors.makeStartupInjector(), (ImmutableList.of(Modules.override(
-                                                                    (binder) -> {
-                                                                      binder.bind(DruidNode.class).annotatedWith(Self.class).toInstance(self);
-                                                                      binder.bindConstant().annotatedWith(Names.named("serviceName")).to("test");
-                                                                      binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
-                                                                      binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
-                                                                      binder.bind(DruidProcessingConfig.class).toInstance(druidProcessingConfig);
-                                                                    },
-                                                                    target
-                                                                ).with(
-                                                                    (binder) -> {
-                                                                      binder.bind(SegmentLoaderConfig.class).toInstance(segmentLoaderConfig);
-                                                                      if (withServerTypeConfig) {
-                                                                        binder.bind(ServerTypeConfig.class).toInstance(serverTypeConfig);
-                                                                      }
-                                                                    }
-                                                                )
+            (binder) -> {
+              binder.bind(DruidNode.class).annotatedWith(Self.class).toInstance(self);
+              binder.bindConstant().annotatedWith(Names.named("serviceName")).to("test");
+              binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
+              binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
+              binder.bind(DruidProcessingConfig.class).toInstance(druidProcessingConfig);
+            },
+            target).with(
+                (binder) -> {
+                  binder.bind(SegmentLoaderConfig.class).toInstance(segmentLoaderConfig);
+                  if (withServerTypeConfig) {
+                    binder.bind(ServerTypeConfig.class).toInstance(serverTypeConfig);
+                  }
+                }
+                )
         )));
   }
 

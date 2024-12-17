@@ -501,7 +501,7 @@ public class QuerySchedulerTest
                 "Problem parsing object at prefix[druid.query.scheduler]:",
                 "problem: maxLowPercent must be set"
             ))
-        );
+      );
   }
 
   @Test
@@ -557,7 +557,7 @@ public class QuerySchedulerTest
                 "Problem parsing object at prefix[druid.query.scheduler]:",
                 "problem: periodThreshold, durationThreshold, segmentCountThreshold or segmentRangeThreshold must be set"
             ))
-        );
+      );
   }
 
 
