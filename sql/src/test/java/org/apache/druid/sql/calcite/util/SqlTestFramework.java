@@ -90,9 +90,12 @@ import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.rule.ExtensionCalciteRuleProvider;
 import org.apache.druid.sql.calcite.run.NativeSqlEngine;
 import org.apache.druid.sql.calcite.run.SqlEngine;
+import org.apache.druid.sql.calcite.schema.DruidSchema;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.schema.DruidSchemaManager;
+import org.apache.druid.sql.calcite.schema.LookupSchema;
 import org.apache.druid.sql.calcite.schema.NoopDruidSchemaManager;
+import org.apache.druid.sql.calcite.schema.SystemSchema;
 import org.apache.druid.sql.calcite.view.DruidViewMacroFactory;
 import org.apache.druid.sql.calcite.view.InProcessViewManager;
 import org.apache.druid.sql.calcite.view.ViewManager;
@@ -873,25 +876,44 @@ public class SqlTestFramework
 
     @Provides
     @LazySingleton
-    public DruidSchemaCatalog makeCatalog(
+    private DruidSchema makeDruidSchema(
         final Injector injector,
-        final PlannerConfig plannerConfig,
-        final AuthConfig authConfig,
-        final ViewManager viewManager,
         QueryRunnerFactoryConglomerate conglomerate,
-        QuerySegmentWalker walker,
-        AuthorizerMapper authorizerMapper
-    )
+        QuerySegmentWalker walker)
     {
-      final DruidSchemaCatalog rootSchema = QueryFrameworkUtils.createMockRootSchema1(
+      return QueryFrameworkUtils.createMockSchema(
           injector,
           conglomerate,
           (SpecificSegmentsQuerySegmentWalker) walker,
-          plannerConfig,
-          viewManager,
           componentSupplier.getPlannerComponentSupplier().createSchemaManager(),
-          authorizerMapper,
           builder.catalogResolver
+      );
+    }
+
+    @Provides
+    @LazySingleton
+    private SystemSchema makeSystemSchema(QuerySegmentWalker walker, AuthorizerMapper authorizerMapper,
+        DruidSchema druidSchema)
+    {
+      return CalciteTests
+          .createMockSystemSchema(druidSchema, (SpecificSegmentsQuerySegmentWalker) walker, authorizerMapper);
+    }
+
+    @Provides
+    @LazySingleton
+    private LookupSchema makeLookupSchema(final Injector injector)
+    {
+      return QueryFrameworkUtils.createMockLookupSchema(injector);
+    }
+
+    @Provides
+    @LazySingleton
+    private DruidSchemaCatalog makeCatalog(final PlannerConfig plannerConfig, final ViewManager viewManager,
+        AuthorizerMapper authorizerMapper, DruidSchema druidSchema, SystemSchema systemSchema,
+        LookupSchema lookupSchema, DruidOperatorTable createOperatorTable)
+    {
+      final DruidSchemaCatalog rootSchema = QueryFrameworkUtils.createMockRootSchema(
+          plannerConfig, viewManager, authorizerMapper, druidSchema, systemSchema, lookupSchema, createOperatorTable
       );
       return rootSchema;
     }
