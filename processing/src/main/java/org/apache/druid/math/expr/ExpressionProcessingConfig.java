@@ -30,6 +30,8 @@ public class ExpressionProcessingConfig
 {
   private static final Logger LOG = new Logger(ExpressionProcessingConfig.class);
 
+  @Deprecated
+  public static final String NULL_HANDLING_LEGACY_LOGICAL_OPS_STRING = "druid.expressions.useStrictBooleans";
   // Coerce arrays to multi value strings
   public static final String PROCESS_ARRAYS_AS_MULTIVALUE_STRINGS_CONFIG_STRING =
       "druid.expressions.processArraysAsMultiValueStrings";
@@ -47,6 +49,10 @@ public class ExpressionProcessingConfig
   @JsonProperty("allowVectorizeFallback")
   private final boolean allowVectorizeFallback;
 
+  @Deprecated
+  @JsonProperty("useStrictBooleans")
+  private final boolean useStrictBooleans;
+
   @JsonCreator
   public ExpressionProcessingConfig(
       @Deprecated @JsonProperty("useStrictBooleans") @Nullable Boolean useStrictBooleans,
@@ -55,6 +61,11 @@ public class ExpressionProcessingConfig
       @JsonProperty("allowVectorizeFallback") @Nullable Boolean allowVectorizeFallback
   )
   {
+    this.useStrictBooleans = getWithPropertyFallback(
+        useStrictBooleans,
+        NULL_HANDLING_LEGACY_LOGICAL_OPS_STRING,
+        "true"
+    );
     this.processArraysAsMultiValueStrings = getWithPropertyFallbackFalse(
         processArraysAsMultiValueStrings,
         PROCESS_ARRAYS_AS_MULTIVALUE_STRINGS_CONFIG_STRING
@@ -72,7 +83,7 @@ public class ExpressionProcessingConfig
       version = "latest";
     }
     final String docsBaseFormat = "https://druid.apache.org/docs/%s/querying/sql-data-types#%s";
-    if (!getWithPropertyFallback(useStrictBooleans, "druid.expressions.useStrictBooleans", "true")) {
+    if (!this.useStrictBooleans) {
       LOG.warn(
           "druid.expressions.useStrictBooleans set to 'false', but has been removed from Druid and is always 'true' now for the most SQL compliant behavior, see %s for details",
           StringUtils.format(docsBaseFormat, version, "boolean-logic")
