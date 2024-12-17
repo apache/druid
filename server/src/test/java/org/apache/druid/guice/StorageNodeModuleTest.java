@@ -76,6 +76,8 @@ public class StorageNodeModuleTest
 
     target = new StorageNodeModule();
     injector = makeInjector(INJECT_SERVER_TYPE_CONFIG);
+
+    Mockito.doReturn(ServerType.BROKER).when(serverTypeConfig).getServerType();
   }
 
   @Test
