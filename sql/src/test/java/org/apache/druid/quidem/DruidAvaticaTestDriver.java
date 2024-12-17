@@ -26,7 +26,6 @@ import com.google.inject.Provides;
 import com.google.inject.name.Named;
 import com.google.inject.name.Names;
 import org.apache.calcite.avatica.server.AbstractAvaticaHandler;
-import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.FileUtils;
@@ -39,6 +38,7 @@ import org.apache.druid.sql.avatica.DruidMeta;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig.ConfigurationInstance;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig.SqlTestFrameworkConfigStore;
+import org.apache.druid.sql.calcite.util.DruidModuleCollection;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.QueryComponentSupplier;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.QueryComponentSupplierDelegate;
 import org.apache.druid.sql.hook.DruidHookDispatcher;
@@ -53,7 +53,6 @@ import java.sql.Driver;
 import java.sql.DriverManager;
 import java.sql.DriverPropertyInfo;
 import java.sql.SQLException;
-import java.util.List;
 import java.util.Properties;
 import java.util.logging.Logger;
 
@@ -201,18 +200,25 @@ public class DruidAvaticaTestDriver implements Driver
     }
 
     @Override
-    public void configureGuice(DruidInjectorBuilder builder, List<com.google.inject.Module> overrideModules)
+    public DruidModule getCoreModule()
     {
-      super.configureGuice(builder, overrideModules);
-      builder.addModule(
+      return DruidModuleCollection.of(
+          super.getCoreModule(),
           binder -> {
             binder.bindConstant().annotatedWith(Names.named("serviceName")).to("test");
             binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
             binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
           }
       );
+    }
 
-      overrideModules.add(connectionModule);
+    @Override
+    public DruidModule getOverrideModule()
+    {
+      return DruidModuleCollection.of(
+          super.getOverrideModule(),
+          connectionModule
+      );
     }
 
     @Override
