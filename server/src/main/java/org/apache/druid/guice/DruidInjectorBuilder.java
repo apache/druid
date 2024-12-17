@@ -219,7 +219,6 @@ public class DruidInjectorBuilder
     return modules;
   }
 
-
   public Injector build()
   {
     return Guice.createInjector(modules);

@@ -908,7 +908,7 @@ public class SqlTestFramework
     ServiceInjectorBuilder serviceInjector = new ServiceInjectorBuilder(injectorBuilder);
     serviceInjector.addAll(overrideModules);
 
-    this.injector = injectorBuilder.build();
+    this.injector = serviceInjector.build();
     this.engine = builder.componentSupplier.createEngine(queryLifecycleFactory(), queryJsonMapper(), injector);
     componentSupplier.configureJsonMapper(queryJsonMapper());
     componentSupplier.finalizeTestFramework(this);
