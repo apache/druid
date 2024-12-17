@@ -40,7 +40,7 @@ public class TestSqlModule extends TestDruidModule
   public void configure(Binder binder)
   {
 
-    if(true) {
+    if(false) {
     binder.install(new SqlAggregationModule());
     binder.install(new SqlModule.SqlStatementFactoryModule());
     }

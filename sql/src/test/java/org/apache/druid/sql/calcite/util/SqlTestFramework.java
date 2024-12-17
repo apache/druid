@@ -30,6 +30,7 @@ import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.TypeLiteral;
 import org.apache.druid.collections.NonBlockingPool;
+import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.guice.ExpressionModule;
@@ -41,6 +42,7 @@ import org.apache.druid.guice.SegmentWranglerModule;
 import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.guice.annotations.Merging;
+import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.initialization.CoreInjectorBuilder;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.initialization.ServiceInjectorBuilder;
@@ -69,9 +71,11 @@ import org.apache.druid.query.topn.TopNQueryConfig;
 import org.apache.druid.quidem.TestSqlModule;
 import org.apache.druid.segment.DefaultColumnFormatConfig;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
+import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.QueryLifecycle;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.QueryStackTests;
+import org.apache.druid.server.ResponseContextConfig;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.log.TestRequestLogger;
@@ -99,10 +103,13 @@ import org.apache.druid.sql.calcite.schema.SystemSchema;
 import org.apache.druid.sql.calcite.view.DruidViewMacroFactory;
 import org.apache.druid.sql.calcite.view.InProcessViewManager;
 import org.apache.druid.sql.calcite.view.ViewManager;
+import org.apache.druid.sql.guice.SqlModule;
 import org.apache.druid.sql.hook.DruidHookDispatcher;
+import org.apache.druid.sql.http.SqlResourceTest;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.inject.Named;
+
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.URI;
@@ -747,7 +754,17 @@ public class SqlTestFramework
 
       TestRequestLogger testRequestLogger = new TestRequestLogger();
       binder.bind(RequestLogger.class).toInstance(testRequestLogger);
+
+      binder.bind(ResponseContextConfig.class).toInstance(ResponseContextConfig.newConfig(false));
+      binder.bind(DruidNode.class).annotatedWith(Self.class).toInstance(SqlResourceTest.DUMMY_DRUID_NODE);
     }
+
+    DruidNodeDiscoveryProvider getDruidNodeDiscoveryProvider()
+    {
+      final DruidNode coordinatorNode = CalciteTests.mockCoordinatorNode();
+      return CalciteTests.mockDruidNodeDiscoveryProvider(coordinatorNode);
+    }
+
 
     @Provides
     AuthorizerMapper getAuthorizerMapper()
@@ -974,6 +991,7 @@ public class SqlTestFramework
     injectorBuilder.add(componentSupplier.getCoreModule());
     injectorBuilder.add(new BuiltInTypesModule());
     injectorBuilder.add(new TestSqlModule());
+    injectorBuilder.add(new SqlModule());
     injectorBuilder.add(new LifecycleModule());
     injectorBuilder.add(new QueryableModule());
     overrideModules.add(new TestSetupModule(builder));
