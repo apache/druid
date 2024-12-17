@@ -45,6 +45,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.ArrayDeque;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -773,7 +774,7 @@ public class HttpPostEmitter implements Flushable, Closeable, Emitter
         request.setHeader(HttpHeaders.Names.AUTHORIZATION, "Basic " + encoded);
       }
 
-      request.setRequestTimeout(Ints.saturatedCast(timeoutMillis));
+      request.setRequestTimeout(Duration.ofMillis(Ints.saturatedCast(timeoutMillis)));
 
       ListenableFuture<Response> future = client.executeRequest(request);
       Response response;
