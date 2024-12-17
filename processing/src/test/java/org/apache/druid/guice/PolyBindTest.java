@@ -35,9 +35,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Properties;
 
-import static org.hamcrest.CoreMatchers.containsString;
-import static org.hamcrest.MatcherAssert.assertThat;
-
 /**
  */
 public class PolyBindTest
@@ -115,7 +112,7 @@ public class PolyBindTest
     }
     catch (Exception e) {
       Assert.assertTrue(e instanceof ProvisionException);
-      assertThat(e.getMessage(), containsString("Unknown provider [c] of Key[type=PolyBindTest$Gogo"));
+      Assert.assertTrue(e.getMessage().contains("Unknown provider [c] of Key[type=org.apache.druid.guice.PolyBindTest$Gogo"));
     }
     try {
       Assert.assertEquals("B", injector.getInstance(Key.get(Gogo.class, Names.named("reverse"))).go());
@@ -123,8 +120,7 @@ public class PolyBindTest
     }
     catch (Exception e) {
       Assert.assertTrue(e instanceof ProvisionException);
-      assertThat(e.getMessage(), containsString("Unknown provider [c] of Key[type=PolyBindTest$Gogo"));
-
+      Assert.assertTrue(e.getMessage().contains("Unknown provider [c] of Key[type=org.apache.druid.guice.PolyBindTest$Gogo"));
     }
 
     // test default property value
@@ -140,7 +136,7 @@ public class PolyBindTest
     }
     catch (Exception e) {
       Assert.assertTrue(e instanceof ProvisionException);
-      assertThat(e.getMessage(), containsString("Unknown provider [c] of Key[type=PolyBindTest$GogoSally"));
+      Assert.assertTrue(e.getMessage().contains("Unknown provider [c] of Key[type=org.apache.druid.guice.PolyBindTest$GogoSally"));
     }
   }
 
