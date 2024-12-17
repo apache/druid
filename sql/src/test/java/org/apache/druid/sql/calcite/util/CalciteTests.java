@@ -577,7 +577,7 @@ public class CalciteTests
   /**
    * A fake {@link ServerInventoryView} for {@link #createMockSystemSchema}.
    */
-  private static class FakeServerInventoryView implements FilteredServerInventoryView
+  public static class FakeServerInventoryView implements FilteredServerInventoryView
   {
     @Nullable
     @Override

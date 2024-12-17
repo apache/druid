@@ -96,6 +96,7 @@ import org.apache.druid.sql.calcite.schema.NoopDruidSchemaManager;
 import org.apache.druid.sql.calcite.view.DruidViewMacroFactory;
 import org.apache.druid.sql.calcite.view.InProcessViewManager;
 import org.apache.druid.sql.calcite.view.ViewManager;
+import org.apache.druid.sql.guice.SqlModule;
 import org.apache.druid.sql.hook.DruidHookDispatcher;
 import org.apache.druid.timeline.DataSegment;
 
@@ -744,7 +745,8 @@ public class SqlTestFramework
 
       TestRequestLogger testRequestLogger = new TestRequestLogger();
       binder.bind(RequestLogger.class).toInstance(testRequestLogger);
-    }
+
+}
 
     @Provides
     AuthorizerMapper getAuthorizerMapper()
@@ -896,6 +898,32 @@ public class SqlTestFramework
       return rootSchema;
     }
 
+//
+//    @Provides
+//    @LazySingleton
+//    public SystemSchema makeCatalog1(
+//        final Injector injector,
+//        final PlannerConfig plannerConfig,
+//        final AuthConfig authConfig,
+//        final ViewManager viewManager,
+//        QueryRunnerFactoryConglomerate conglomerate,
+//        QuerySegmentWalker walker,
+//        AuthorizerMapper authorizerMapper
+//    )
+//    {
+//      final DruidSchemaCatalog rootSchema = QueryFrameworkUtils.createMockRootSchema(
+//          injector,
+//          conglomerate,
+//          (SpecificSegmentsQuerySegmentWalker) walker,
+//          plannerConfig,
+//          viewManager,
+//          componentSupplier.getPlannerComponentSupplier().createSchemaManager(),
+//          authorizerMapper,
+//          builder.catalogResolver
+//      );
+//      return rootSchema;
+//    }
+
     @Provides
     SqlTestFrameworkConfig getTestConfig()
     {
@@ -952,6 +980,7 @@ public class SqlTestFramework
     injectorBuilder.add(componentSupplier.getCoreModule());
     injectorBuilder.add(new BuiltInTypesModule());
     injectorBuilder.add(new TestSqlModule());
+    injectorBuilder.add(new SqlModule());
     injectorBuilder.add(new LifecycleModule());
     injectorBuilder.add(new QueryableModule());
     overrideModules.add(new TestSetupModule(builder));
