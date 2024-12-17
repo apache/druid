@@ -66,7 +66,6 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.sql.calcite.external.ExternalDataSource;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -213,9 +212,7 @@ public class DataSourcePlan
       );
     } else if (dataSource instanceof JoinDataSource) {
       JoinDataSource joinDataSource = (JoinDataSource) dataSource;
-      final JoinAlgorithm preferredJoinAlgorithm = joinDataSource.getJoinAlgorithm() != null
-                                                   ? joinDataSource.getJoinAlgorithm()
-                                                   : PlannerContext.getJoinAlgorithm(queryContext);
+      final JoinAlgorithm preferredJoinAlgorithm = joinDataSource.getJoinAlgorithm();
       final JoinAlgorithm deducedJoinAlgorithm = deduceJoinAlgorithm(
           preferredJoinAlgorithm,
           joinDataSource

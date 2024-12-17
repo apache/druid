@@ -64,13 +64,13 @@ public class QueryUtils
     RelHint closestHint = null;
     for (RelHint hint : join.getHints()) {
       if ((closestHint == null || hint.inheritPath.size() < closestHint.inheritPath.size())
-          && JoinHint.isValidJoinAlgorithm(hint.hintName)) {
+          && DruidHint.DruidJoinHint.fromString(hint.hintName) != null) {
         closestHint = hint;
       }
     }
 
     if (closestHint != null) {
-      return JoinHint.fromString(closestHint.hintName).getJoinAlgorithm();
+      return DruidHint.DruidJoinHint.fromString(closestHint.hintName).asJoinAlgorithm();
     } else {
       return plannerContext.getJoinAlgorithm();
     }

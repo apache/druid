@@ -19,26 +19,20 @@
 
 package org.apache.druid.sql.calcite.planner;
 
+import org.apache.druid.query.JoinAlgorithm;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class JoinHintTest
+public class DruidHintTest
 {
-  @Test
-  public void testIsValidJoinAlgorithm()
-  {
-    Assert.assertTrue(JoinHint.isValidJoinAlgorithm("sort_merge"));
-    Assert.assertFalse(JoinHint.isValidJoinAlgorithm("hash"));
-    Assert.assertTrue(JoinHint.isValidJoinAlgorithm("broadcast"));
-  }
-
   @Test
   public void testFromString()
   {
-    Assert.assertEquals(JoinHint.fromString("sort_merge"), JoinHint.SORT_MERGE);
-    Assert.assertEquals(JoinHint.fromString("broadcast"), JoinHint.BROADCAST);
-    Assert.assertThrows(
-        IllegalArgumentException.class,
-        () -> JoinHint.fromString("hash"));
+    Assert.assertEquals(DruidHint.DruidJoinHint.fromString("sort_merge").id(), DruidHint.DruidJoinHint.SortMergeJoinHint.SORT_MERGE_JOIN);
+    Assert.assertEquals(DruidHint.DruidJoinHint.fromString("broadcast").id(), DruidHint.DruidJoinHint.BroadcastJoinHint.BROADCAST_JOIN);
+    Assert.assertNull(DruidHint.DruidJoinHint.fromString("hash"));
+
+    Assert.assertEquals(DruidHint.DruidJoinHint.fromString("sort_merge").asJoinAlgorithm(), JoinAlgorithm.SORT_MERGE);
+    Assert.assertEquals(DruidHint.DruidJoinHint.fromString("broadcast").asJoinAlgorithm(), JoinAlgorithm.BROADCAST);
   }
 }
