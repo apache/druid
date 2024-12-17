@@ -1428,7 +1428,7 @@ public class DruidQuery
         if (queryGranularity != null) {
           // group by more than one timestamp_floor
           // eg: group by timestamp_floor(__time to DAY),timestamp_floor(__time, to HOUR)
-          queryGranularity = null;
+          theContext.clear();
           break;
         }
         queryGranularity = granularity;
@@ -1449,7 +1449,13 @@ public class DruidQuery
         }
       }
     }
-    if (queryGranularity == null) {
+
+    if (grouping.getDimensions().isEmpty() && grouping.hasGroupingDimensionsDropped()) {
+      // GROUP BY ().
+      theContext.put(GroupByQuery.CTX_HAS_DROPPED_DIMENSIONS, grouping.hasGroupingDimensionsDropped());
+    }
+
+    if (theContext.isEmpty()) {
       return query;
     }
     return query.withOverriddenContext(theContext);

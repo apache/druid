@@ -986,7 +986,10 @@ public class GroupingEngine
         }));
   }
 
-  private static boolean summaryRowPreconditions(GroupByQuery query)
+  /**
+   * Whether a query should include a summary row. True for queries that correspond to SQL GROUP BY ().
+   */
+  public static boolean summaryRowPreconditions(GroupByQuery query)
   {
     LimitSpec limit = query.getLimitSpec();
     if (limit instanceof DefaultLimitSpec) {
@@ -995,7 +998,7 @@ public class GroupingEngine
         return false;
       }
     }
-    if (!query.getDimensions().isEmpty()) {
+    if (!query.getDimensions().isEmpty() || query.hasDroppedDimensions()) {
       return false;
     }
     if (query.getGranularity().isFinerThan(Granularities.ALL)) {
