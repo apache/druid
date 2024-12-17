@@ -135,10 +135,12 @@ public class DruidProcessingConfigTest
         props
     );
 
-    ExceptionMatcher.of(ProvisionException.class)
+    ExceptionMatcher
+        .of(ProvisionException.class)
         .expectMessageContains(
             "Cannot construct instance of `HumanReadableBytes`, problem: Invalid format of number: -1. Negative value is not allowed."
-        ).assertThrowsAndMatches(() -> injector.getInstance(DruidProcessingConfig.class));
+        )
+        .assertThrowsAndMatches(() -> injector.getInstance(DruidProcessingConfig.class));
   }
 
   @Test
