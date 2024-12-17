@@ -958,7 +958,7 @@ public class DeterminePartitionsJob implements Jobby
     @Override
     public void checkOutputSpecs(JobContext job) throws IOException
     {
-      Path outDir = FileOutputFormat.getOutputPath(job);
+      Path outDir = getOutputPath(job);
       if (outDir == null) {
         throw new InvalidJobConfException("Output directory not set.");
       }

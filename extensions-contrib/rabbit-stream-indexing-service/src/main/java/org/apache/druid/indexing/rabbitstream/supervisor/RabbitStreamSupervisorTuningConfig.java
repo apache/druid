@@ -173,9 +173,7 @@ public class RabbitStreamSupervisorTuningConfig extends RabbitStreamIndexTaskTun
   public Duration getRepartitionTransitionDuration()
   {
     // just return a default for now.
-    return SeekableStreamSupervisorTuningConfig.defaultDuration(
-        null,
-        SeekableStreamSupervisorTuningConfig.DEFAULT_REPARTITION_TRANSITION_DURATION);
+    return SeekableStreamSupervisorTuningConfig.defaultDuration(null, DEFAULT_REPARTITION_TRANSITION_DURATION);
   }
 
   @Override

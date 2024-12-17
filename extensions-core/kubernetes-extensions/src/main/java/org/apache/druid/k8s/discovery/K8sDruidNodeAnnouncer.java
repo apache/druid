@@ -208,8 +208,8 @@ public class K8sDruidNodeAnnouncer implements DruidNodeAnnouncer
         "%s=%s,%s=%s",
         getClusterIdentifierAnnouncementLabel(),
         discoveryConfig.getClusterIdentifier(),
-        K8sDruidNodeAnnouncer.getRoleAnnouncementLabel(nodeRole),
-        K8sDruidNodeAnnouncer.ANNOUNCEMENT_DONE
+        getRoleAnnouncementLabel(nodeRole),
+        ANNOUNCEMENT_DONE
     );
   }
 
@@ -219,9 +219,9 @@ public class K8sDruidNodeAnnouncer implements DruidNodeAnnouncer
         "%s=%s,%s=%s,%s=%s",
         getClusterIdentifierAnnouncementLabel(),
         discoveryConfig.getClusterIdentifier(),
-        K8sDruidNodeAnnouncer.getRoleAnnouncementLabel(nodeRole),
-        K8sDruidNodeAnnouncer.ANNOUNCEMENT_DONE,
-        K8sDruidNodeAnnouncer.getIdHashAnnouncementLabel(),
+        getRoleAnnouncementLabel(nodeRole),
+        ANNOUNCEMENT_DONE,
+        getIdHashAnnouncementLabel(),
         hashEncodeStringForLabelValue(node.getHostAndPortToUse())
     );
   }

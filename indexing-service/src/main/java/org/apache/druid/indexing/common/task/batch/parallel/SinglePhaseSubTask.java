@@ -38,8 +38,6 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.SurrogateTaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.stats.TaskRealtimeMetricsMonitor;
-import org.apache.druid.indexing.common.task.AbstractBatchIndexTask;
-import org.apache.druid.indexing.common.task.AbstractTask;
 import org.apache.druid.indexing.common.task.BatchAppenderators;
 import org.apache.druid.indexing.common.task.IndexTask;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
@@ -165,7 +163,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
         taskResource,
         ingestionSchema.getDataSchema().getDataSource(),
         context,
-        AbstractTask.computeBatchIngestionMode(ingestionSchema.getIOConfig()),
+        computeBatchIngestionMode(ingestionSchema.getIOConfig()),
         supervisorTaskId
     );
 
@@ -409,7 +407,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
     boolean exceptionOccurred = false;
     try (
         final BatchAppenderatorDriver driver = BatchAppenderators.newDriver(appenderator, toolbox, segmentAllocator);
-        final CloseableIterator<InputRow> inputRowIterator = AbstractBatchIndexTask.inputSourceReader(
+        final CloseableIterator<InputRow> inputRowIterator = inputSourceReader(
             tmpDir,
             dataSchema,
             inputSource,

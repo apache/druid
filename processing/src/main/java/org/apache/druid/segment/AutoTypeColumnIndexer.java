@@ -99,7 +99,7 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
         ExprEval<?> eval = ExprEval.bestEffortOf(fieldValue);
         FieldIndexer fieldIndexer = fieldIndexers.get(fieldName);
         if (fieldIndexer == null) {
-          estimatedFieldKeySize += StructuredDataProcessor.estimateStringSize(fieldName);
+          estimatedFieldKeySize += estimateStringSize(fieldName);
           fieldIndexer = new FieldIndexer(globalDictionary);
           fieldIndexers.put(fieldName, fieldIndexer);
         }
@@ -120,7 +120,7 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
         final String fieldName = NestedPathFinder.toNormalizedJsonPath(fieldPath);
         FieldIndexer fieldIndexer = fieldIndexers.get(fieldName);
         if (fieldIndexer == null) {
-          estimatedFieldKeySize += StructuredDataProcessor.estimateStringSize(fieldName);
+          estimatedFieldKeySize += estimateStringSize(fieldName);
           fieldIndexer = new FieldIndexer(globalDictionary);
           fieldIndexers.put(fieldName, fieldIndexer);
         }

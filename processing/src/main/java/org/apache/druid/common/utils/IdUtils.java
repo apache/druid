@@ -100,7 +100,7 @@ public class IdUtils
 
   public static String getRandomIdWithPrefix(String prefix)
   {
-    return UNDERSCORE_JOINER.join(prefix, IdUtils.getRandomId());
+    return UNDERSCORE_JOINER.join(prefix, getRandomId());
   }
 
   public static String newTaskId(String typeName, String dataSource, @Nullable Interval interval)

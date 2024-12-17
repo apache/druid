@@ -323,7 +323,7 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
         final List<Double> tailSet;
         final List<Double> baseSet = (List<Double>) sortedValues;
 
-        if (sortedValues.size() >= ValueSetIndexes.SIZE_WORTH_CHECKING_MIN) {
+        if (sortedValues.size() >= SIZE_WORTH_CHECKING_MIN) {
           final double minValueInColumn = dictionary.get(0) == null ? dictionary.get(1) : dictionary.get(0);
           final int position = Collections.binarySearch(
               sortedValues,
@@ -335,7 +335,7 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
         } else {
           tailSet = baseSet;
         }
-        if (tailSet.size() > ValueSetIndexes.SORTED_SCAN_RATIO_THRESHOLD * dictionary.size()) {
+        if (tailSet.size() > SORTED_SCAN_RATIO_THRESHOLD * dictionary.size()) {
           return ValueSetIndexes.buildBitmapColumnIndexFromSortedIteratorScan(
               bitmapFactory,
               ColumnType.DOUBLE.getNullableStrategy(),

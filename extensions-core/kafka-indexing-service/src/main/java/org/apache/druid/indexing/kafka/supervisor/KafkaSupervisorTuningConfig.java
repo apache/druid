@@ -169,7 +169,7 @@ public class KafkaSupervisorTuningConfig extends KafkaIndexTaskTuningConfig
     // just return a default for now.
     return SeekableStreamSupervisorTuningConfig.defaultDuration(
         null,
-        SeekableStreamSupervisorTuningConfig.DEFAULT_REPARTITION_TRANSITION_DURATION
+        DEFAULT_REPARTITION_TRANSITION_DURATION
     );
   }
 

@@ -103,7 +103,7 @@ public class JSONPathFieldSpec
   @JsonCreator
   public static JSONPathFieldSpec fromString(String name)
   {
-    return JSONPathFieldSpec.createRootField(name);
+    return createRootField(name);
   }
 
   public static JSONPathFieldSpec createNestedField(String name, String expr)

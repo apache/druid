@@ -252,7 +252,7 @@ public class ExpressionMultiValueDimensionSelector implements DimensionSelector
     @Override
     String getArrayValue(ExprEval evaluated, int i)
     {
-      return extractionFn.apply(ExpressionMultiValueDimensionSelector.getArrayElement(evaluated, i));
+      return extractionFn.apply(getArrayElement(evaluated, i));
     }
 
     @Override

@@ -81,7 +81,6 @@ import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.BatchIOConfig;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.IngestionSpec;
-import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.realtime.ChatHandler;
@@ -742,7 +741,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
         Comparators.intervalsByStartThenEnd()
     );
     final Granularity queryGranularity = granularitySpec.getQueryGranularity();
-    try (final CloseableIterator<InputRow> inputRowIterator = AbstractBatchIndexTask.inputSourceReader(
+    try (final CloseableIterator<InputRow> inputRowIterator = inputSourceReader(
         tmpDir,
         ingestionSchema.getDataSchema(),
         inputSource,
@@ -1070,7 +1069,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
         throw new IAE("Cannot use parser and inputSource together. Try using inputFormat instead of parser.");
       }
 
-      IngestionMode ingestionMode = AbstractTask.computeBatchIngestionMode(ioConfig);
+      IngestionMode ingestionMode = computeBatchIngestionMode(ioConfig);
 
       if (ingestionMode == IngestionMode.REPLACE && dataSchema.getGranularitySpec()
                                                               .inputIntervals()
@@ -1133,8 +1132,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
     {
       this.inputSource = inputSource;
       this.inputFormat = inputFormat;
-      this.appendToExisting = appendToExisting == null ? BatchIOConfig.DEFAULT_APPEND_EXISTING : appendToExisting;
-      this.dropExisting = dropExisting == null ? BatchIOConfig.DEFAULT_DROP_EXISTING : dropExisting;
+      this.appendToExisting = appendToExisting == null ? DEFAULT_APPEND_EXISTING : appendToExisting;
+      this.dropExisting = dropExisting == null ? DEFAULT_DROP_EXISTING : dropExisting;
     }
 
     @Nullable
@@ -1367,7 +1366,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
     )
     {
       this.appendableIndexSpec = appendableIndexSpec == null ? DEFAULT_APPENDABLE_INDEX : appendableIndexSpec;
-      this.maxRowsInMemory = maxRowsInMemory == null ? TuningConfig.DEFAULT_MAX_ROWS_IN_MEMORY_BATCH : maxRowsInMemory;
+      this.maxRowsInMemory = maxRowsInMemory == null ? DEFAULT_MAX_ROWS_IN_MEMORY_BATCH : maxRowsInMemory;
       // initializing this to 0, it will be lazily initialized to a value
       // @see #getMaxBytesInMemoryOrDefault()
       this.maxBytesInMemory = maxBytesInMemory == null ? 0 : maxBytesInMemory;
@@ -1395,14 +1394,14 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
         this.maxSavedParseExceptions = maxSavedParseExceptions == null ? 0 : Math.min(1, maxSavedParseExceptions);
       } else {
         this.maxParseExceptions = maxParseExceptions == null
-                                  ? TuningConfig.DEFAULT_MAX_PARSE_EXCEPTIONS
+                                  ? DEFAULT_MAX_PARSE_EXCEPTIONS
                                   : maxParseExceptions;
         this.maxSavedParseExceptions = maxSavedParseExceptions == null
-                                       ? TuningConfig.DEFAULT_MAX_SAVED_PARSE_EXCEPTIONS
+                                       ? DEFAULT_MAX_SAVED_PARSE_EXCEPTIONS
                                        : maxSavedParseExceptions;
       }
       this.logParseExceptions = logParseExceptions == null
-                                ? TuningConfig.DEFAULT_LOG_PARSE_EXCEPTIONS
+                                ? DEFAULT_LOG_PARSE_EXCEPTIONS
                                 : logParseExceptions;
       if (awaitSegmentAvailabilityTimeoutMillis == null || awaitSegmentAvailabilityTimeoutMillis < 0) {
         this.awaitSegmentAvailabilityTimeoutMillis = DEFAULT_AWAIT_SEGMENT_AVAILABILITY_TIMEOUT_MILLIS;

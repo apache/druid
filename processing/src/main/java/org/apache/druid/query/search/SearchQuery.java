@@ -94,7 +94,7 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
   @Override
   public String getType()
   {
-    return Query.SEARCH;
+    return SEARCH;
   }
 
   @Override

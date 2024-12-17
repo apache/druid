@@ -60,7 +60,7 @@ public class TaskLocation
 
   public static TaskLocation unknown()
   {
-    return TaskLocation.UNKNOWN;
+    return UNKNOWN;
   }
 
   @JsonCreator
