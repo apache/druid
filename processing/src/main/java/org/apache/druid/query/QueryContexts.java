@@ -89,6 +89,12 @@ public class QueryContexts
   public static final String UNCOVERED_INTERVALS_LIMIT_KEY = "uncoveredIntervalsLimit";
   public static final String MIN_TOP_N_THRESHOLD = "minTopNThreshold";
   public static final String CATALOG_VALIDATION_ENABLED = "catalogValidationEnabled";
+  // this flag controls whether the topN engine can use the 'pooled' algorithm when query granularity is set to
+  // anything other than 'ALL' and the cardinality + number of aggregators would require more size than is available
+  // in the buffers and so must reset the cursor to use multiple passes. This is likely slower than the default
+  // behavior of falling back to heap memory, but less dangerous since too large of a query can cause the heap to run
+  // out of memory
+  public static final String TOPN_USE_MULTI_PASS_POOLED_QUERY_GRANULARITY = "useTopNMultiPassPooledQueryGranularity";
   /**
    * Context parameter to enable/disable the extended filtered sum rewrite logic.
    *

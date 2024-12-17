@@ -98,7 +98,7 @@ public class NestedDataComplexTypeSerde extends ComplexMetricSerde
   @Override
   public ObjectStrategy getObjectStrategy()
   {
-    return new ObjectStrategy<Object>()
+    return new ObjectStrategy<>()
     {
       @Override
       public int compare(Object o1, Object o2)
@@ -206,7 +206,7 @@ public class NestedDataComplexTypeSerde extends ComplexMetricSerde
     return new ObjectStrategyComplexTypeStrategy<>(
         getObjectStrategy(),
         ColumnType.ofComplex(TYPE_NAME),
-        new Hash.Strategy<Object>()
+        new Hash.Strategy<>()
         {
           @Override
           public int hashCode(Object o)

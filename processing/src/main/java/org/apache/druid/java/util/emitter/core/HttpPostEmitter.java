@@ -659,7 +659,7 @@ public class HttpPostEmitter implements Flushable, Closeable, Emitter
       long deadLineMillis = System.currentTimeMillis() + computeTimeoutForSendRequestInMillis(lastBatchFillTimeMillis);
       try {
         RetryUtils.retry(
-            new RetryUtils.Task<Object>()
+            new RetryUtils.Task<>()
             {
               @Override
               public Void perform() throws Exception
@@ -668,7 +668,7 @@ public class HttpPostEmitter implements Flushable, Closeable, Emitter
                 return null;
               }
             },
-            new Predicate<Throwable>()
+            new Predicate<>()
             {
               @Override
               public boolean apply(Throwable e)

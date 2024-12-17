@@ -74,7 +74,7 @@ public abstract class BitmapOperationTestBase
     buf.rewind();
     final ImmutableConciseSet bitmap = new ImmutableConciseSet(buf.asIntBuffer());
 
-    return new ResourceHolder<ImmutableConciseSet>()
+    return new ResourceHolder<>()
     {
       @Override
       public ImmutableConciseSet get()
@@ -151,7 +151,7 @@ public abstract class BitmapOperationTestBase
     roaringCount++;
     final ImmutableRoaringBitmap bitmap = writeImmutable(r, buf);
 
-    return new ResourceHolder<ImmutableRoaringBitmap>()
+    return new ResourceHolder<>()
     {
       @Override
       public ImmutableRoaringBitmap get()

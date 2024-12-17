@@ -59,9 +59,7 @@ public class CoordinatorRuleManager
   private static final Logger LOG = new Logger(CoordinatorRuleManager.class);
 
   private static final TypeReference<Map<String, List<Rule>>> TYPE_REFERENCE =
-      new TypeReference<Map<String, List<Rule>>>()
-      {
-      };
+      new TypeReference<>() {};
 
   private final ObjectMapper jsonMapper;
   private final Supplier<TieredBrokerConfig> config;

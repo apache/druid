@@ -547,7 +547,7 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
         @Override
         public Iterable<ImmutableBitmap> getBitmapIterable()
         {
-          return () -> new Iterator<ImmutableBitmap>()
+          return () -> new Iterator<>()
           {
             final IntIterator rangeIterator = IntListUtils.fromTo(startIndex, endIndex).iterator();
 
@@ -587,7 +587,7 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
         @Override
         public Iterable<ImmutableBitmap> getBitmapIterable(boolean includeUnknown)
         {
-          return () -> new Iterator<ImmutableBitmap>()
+          return () -> new Iterator<>()
           {
             final Iterator<Double> iterator = doubleDictionarySupplier.get().iterator();
             final DruidDoublePredicate doublePredicate = matcherFactory.makeDoublePredicate();

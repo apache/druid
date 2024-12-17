@@ -113,7 +113,7 @@ public class ResultRowObjectMapperDecoratorUtil
     } else if (!arrayBasedRows && !dimensionsRequireConversion) {
       // We have to deserialize map based rows, however we don't have to deserialize the dimensions individually
       // Returns a deserializer that can deserialize both map and array based rows simultaneously
-      return new JsonDeserializer<ResultRow>()
+      return new JsonDeserializer<>()
       {
         @Override
         public ResultRow deserialize(final JsonParser jp, final DeserializationContext ctxt) throws IOException
@@ -129,7 +129,7 @@ public class ResultRowObjectMapperDecoratorUtil
 
     } else {
       // Dimensions need to be serialized individually because some of them require conversion to specialized types
-      return new JsonDeserializer<ResultRow>()
+      return new JsonDeserializer<>()
       {
         final JavaType[] javaTypes = createJavaTypesForResultRow(query);
 
@@ -192,7 +192,7 @@ public class ResultRowObjectMapperDecoratorUtil
       return null;
     } else {
       if (resultAsArray) {
-        return new JsonSerializer<ResultRow>()
+        return new JsonSerializer<>()
         {
           @Override
           public void serialize(ResultRow resultRow, JsonGenerator jsonGenerator, SerializerProvider serializerProvider)
@@ -203,7 +203,7 @@ public class ResultRowObjectMapperDecoratorUtil
         };
 
       } else {
-        return new JsonSerializer<ResultRow>()
+        return new JsonSerializer<>()
         {
           @Override
           public void serialize(ResultRow resultRow, JsonGenerator jsonGenerator, SerializerProvider serializerProvider)

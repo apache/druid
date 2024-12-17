@@ -184,7 +184,7 @@ public class ExportResultsFrameProcessorFactory implements FrameProcessorFactory
   @Override
   public TypeReference<Object> getResultTypeReference()
   {
-    return new TypeReference<Object>() {};
+    return new TypeReference<>() {};
   }
 
   @Override

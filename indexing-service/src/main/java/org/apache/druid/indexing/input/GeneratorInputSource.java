@@ -165,7 +165,7 @@ public class GeneratorInputSource extends AbstractInputSource implements Splitta
       @Override
       public CloseableIterator<InputRow> read(InputStats inputStats)
       {
-        return CloseableIterators.withEmptyBaggage(new Iterator<InputRow>()
+        return CloseableIterators.withEmptyBaggage(new Iterator<>()
         {
           int rowCount = 0;
           private final DataGenerator generator = makeGenerator();
@@ -191,7 +191,7 @@ public class GeneratorInputSource extends AbstractInputSource implements Splitta
       @Override
       public CloseableIterator<InputRowListPlusRawValues> sample()
       {
-        return CloseableIterators.withEmptyBaggage(new Iterator<InputRowListPlusRawValues>()
+        return CloseableIterators.withEmptyBaggage(new Iterator<>()
         {
           int rowCount = 0;
           private final DataGenerator generator = makeGenerator();

@@ -120,7 +120,7 @@ public class ScanQueryFrameProcessorTest extends FrameProcessorTestBase
             )
         ),
         Function.identity(),
-        new ResourceHolder<WritableFrameChannel>()
+        new ResourceHolder<>()
         {
           @Override
           public WritableFrameChannel get()
@@ -214,7 +214,7 @@ public class ScanQueryFrameProcessorTest extends FrameProcessorTestBase
         new DefaultObjectMapper(),
         ReadableInput.channel(inputChannel.readable(), FrameReader.create(signature), stagePartition),
         Function.identity(),
-        new ResourceHolder<WritableFrameChannel>()
+        new ResourceHolder<>()
         {
           @Override
           public WritableFrameChannel get()

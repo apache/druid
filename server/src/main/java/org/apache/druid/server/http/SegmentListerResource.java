@@ -174,7 +174,7 @@ public class SegmentListerResource
 
     Futures.addCallback(
         future,
-        new FutureCallback<ChangeRequestsSnapshot<DataSegmentChangeRequest>>()
+        new FutureCallback<>()
         {
           @Override
           public void onSuccess(ChangeRequestsSnapshot<DataSegmentChangeRequest> result)
@@ -287,7 +287,7 @@ public class SegmentListerResource
 
     Futures.addCallback(
         future,
-        new FutureCallback<List<DataSegmentChangeResponse>>()
+        new FutureCallback<>()
         {
           @Override
           public void onSuccess(List<DataSegmentChangeResponse> result)

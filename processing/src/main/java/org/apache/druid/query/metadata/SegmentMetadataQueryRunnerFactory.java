@@ -83,7 +83,7 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
   @Override
   public QueryRunner<SegmentAnalysis> createRunner(final Segment segment)
   {
-    return new QueryRunner<SegmentAnalysis>()
+    return new QueryRunner<>()
     {
       @Override
       public Sequence<SegmentAnalysis> run(QueryPlus<SegmentAnalysis> inQ, ResponseContext responseContext)
@@ -190,15 +190,15 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
       Iterable<QueryRunner<SegmentAnalysis>> queryRunners
   )
   {
-    return new ConcatQueryRunner<SegmentAnalysis>(
+    return new ConcatQueryRunner<>(
         Sequences.map(
             Sequences.simple(queryRunners),
-            new Function<QueryRunner<SegmentAnalysis>, QueryRunner<SegmentAnalysis>>()
+            new Function<>()
             {
               @Override
               public QueryRunner<SegmentAnalysis> apply(final QueryRunner<SegmentAnalysis> input)
               {
-                return new QueryRunner<SegmentAnalysis>()
+                return new QueryRunner<>()
                 {
                   @Override
                   public Sequence<SegmentAnalysis> run(
@@ -210,7 +210,7 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
                     final int priority = query.context().getPriority();
                     final QueryPlus<SegmentAnalysis> threadSafeQueryPlus = queryPlus.withoutThreadUnsafeState();
                     ListenableFuture<Sequence<SegmentAnalysis>> future = queryProcessingPool.submitRunnerTask(
-                        new AbstractPrioritizedQueryRunnerCallable<Sequence<SegmentAnalysis>, SegmentAnalysis>(priority, input)
+                        new AbstractPrioritizedQueryRunnerCallable<>(priority, input)
                         {
                           @Override
                           public Sequence<SegmentAnalysis> call()
@@ -239,7 +239,10 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
                     catch (TimeoutException e) {
                       log.info("Query timeout, cancelling pending results for query id [%s]", query.getId());
                       future.cancel(true);
-                      throw new QueryTimeoutException(StringUtils.nonStrictFormat("Query [%s] timed out", query.getId()));
+                      throw new QueryTimeoutException(StringUtils.nonStrictFormat(
+                          "Query [%s] timed out",
+                          query.getId()
+                      ));
                     }
                     catch (ExecutionException e) {
                       throw new RuntimeException(e);

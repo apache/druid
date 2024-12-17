@@ -57,7 +57,7 @@ public class SearchBinaryFnTest
   @Test
   public void testMerge()
   {
-    Result<SearchResultValue> r1 = new Result<SearchResultValue>(
+    Result<SearchResultValue> r1 = new Result<>(
         currTime,
         new SearchResultValue(
             ImmutableList.of(
@@ -69,7 +69,7 @@ public class SearchBinaryFnTest
         )
     );
 
-    Result<SearchResultValue> r2 = new Result<SearchResultValue>(
+    Result<SearchResultValue> r2 = new Result<>(
         currTime,
         new SearchResultValue(
             ImmutableList.of(
@@ -81,7 +81,7 @@ public class SearchBinaryFnTest
         )
     );
 
-    Result<SearchResultValue> expected = new Result<SearchResultValue>(
+    Result<SearchResultValue> expected = new Result<>(
         currTime,
         new SearchResultValue(
             ImmutableList.of(
@@ -105,7 +105,7 @@ public class SearchBinaryFnTest
   @Test
   public void testMergeDay()
   {
-    Result<SearchResultValue> r1 = new Result<SearchResultValue>(
+    Result<SearchResultValue> r1 = new Result<>(
         currTime,
         new SearchResultValue(
             ImmutableList.of(
@@ -117,7 +117,7 @@ public class SearchBinaryFnTest
         )
     );
 
-    Result<SearchResultValue> r2 = new Result<SearchResultValue>(
+    Result<SearchResultValue> r2 = new Result<>(
         currTime,
         new SearchResultValue(
             ImmutableList.of(
@@ -129,7 +129,7 @@ public class SearchBinaryFnTest
         )
     );
 
-    Result<SearchResultValue> expected = new Result<SearchResultValue>(
+    Result<SearchResultValue> expected = new Result<>(
         Granularities.DAY.bucketStart(currTime),
         new SearchResultValue(
             ImmutableList.of(
@@ -153,7 +153,7 @@ public class SearchBinaryFnTest
   @Test
   public void testMergeOneResultNull()
   {
-    Result<SearchResultValue> r1 = new Result<SearchResultValue>(
+    Result<SearchResultValue> r1 = new Result<>(
         currTime,
         new SearchResultValue(
             ImmutableList.of(
@@ -177,7 +177,7 @@ public class SearchBinaryFnTest
   @Test
   public void testMergeShiftedTimestamp()
   {
-    Result<SearchResultValue> r1 = new Result<SearchResultValue>(
+    Result<SearchResultValue> r1 = new Result<>(
         currTime,
         new SearchResultValue(
             ImmutableList.of(
@@ -189,7 +189,7 @@ public class SearchBinaryFnTest
         )
     );
 
-    Result<SearchResultValue> r2 = new Result<SearchResultValue>(
+    Result<SearchResultValue> r2 = new Result<>(
         currTime.plusHours(2),
         new SearchResultValue(
             ImmutableList.of(
@@ -201,7 +201,7 @@ public class SearchBinaryFnTest
         )
     );
 
-    Result<SearchResultValue> expected = new Result<SearchResultValue>(
+    Result<SearchResultValue> expected = new Result<>(
         currTime,
         new SearchResultValue(
             ImmutableList.of(
@@ -228,17 +228,17 @@ public class SearchBinaryFnTest
     SearchSortSpec searchSortSpec = new SearchSortSpec(StringComparators.STRLEN);
     Comparator<SearchHit> c = searchSortSpec.getComparator();
 
-    Result<SearchResultValue> r1 = new Result<SearchResultValue>(
+    Result<SearchResultValue> r1 = new Result<>(
         currTime,
         new SearchResultValue(toHits(c, "blah:thisislong"))
     );
 
-    Result<SearchResultValue> r2 = new Result<SearchResultValue>(
+    Result<SearchResultValue> r2 = new Result<>(
         currTime,
         new SearchResultValue(toHits(c, "blah:short"))
     );
 
-    Result<SearchResultValue> expected = new Result<SearchResultValue>(
+    Result<SearchResultValue> expected = new Result<>(
         currTime,
         new SearchResultValue(toHits(c, "blah:short", "blah:thisislong"))
     );
@@ -254,17 +254,17 @@ public class SearchBinaryFnTest
     SearchSortSpec searchSortSpec = new SearchSortSpec(StringComparators.STRLEN);
     Comparator<SearchHit> c = searchSortSpec.getComparator();
 
-    Result<SearchResultValue> r1 = new Result<SearchResultValue>(
+    Result<SearchResultValue> r1 = new Result<>(
         currTime,
         new SearchResultValue(toHits(c, "blah:short", "blah:thisislong", "blah2:thisislong"))
     );
 
-    Result<SearchResultValue> r2 = new Result<SearchResultValue>(
+    Result<SearchResultValue> r2 = new Result<>(
         currTime,
         new SearchResultValue(toHits(c, "blah:short", "blah2:thisislong"))
     );
 
-    Result<SearchResultValue> expected = new Result<SearchResultValue>(
+    Result<SearchResultValue> expected = new Result<>(
         currTime,
         new SearchResultValue(toHits(c, "blah:short", "blah:thisislong", "blah2:thisislong"))
     );
@@ -280,17 +280,17 @@ public class SearchBinaryFnTest
     SearchSortSpec searchSortSpec = new SearchSortSpec(StringComparators.ALPHANUMERIC);
     Comparator<SearchHit> c = searchSortSpec.getComparator();
 
-    Result<SearchResultValue> r1 = new Result<SearchResultValue>(
+    Result<SearchResultValue> r1 = new Result<>(
         currTime,
         new SearchResultValue(toHits(c, "blah:a100", "blah:a9", "alah:a100"))
     );
 
-    Result<SearchResultValue> r2 = new Result<SearchResultValue>(
+    Result<SearchResultValue> r2 = new Result<>(
         currTime,
         new SearchResultValue(toHits(c, "blah:b0", "alah:c3"))
     );
 
-    Result<SearchResultValue> expected = new Result<SearchResultValue>(
+    Result<SearchResultValue> expected = new Result<>(
         currTime,
         new SearchResultValue(toHits(c, "blah:a9", "alah:a100", "blah:a100", "blah:b0", "alah:c3"))
     );
@@ -319,7 +319,7 @@ public class SearchBinaryFnTest
   @Test
   public void testMergeUniqueResults()
   {
-    Result<SearchResultValue> r1 = new Result<SearchResultValue>(
+    Result<SearchResultValue> r1 = new Result<>(
         currTime,
         new SearchResultValue(
             ImmutableList.of(
@@ -343,7 +343,7 @@ public class SearchBinaryFnTest
   @Test
   public void testMergeLimit()
   {
-    Result<SearchResultValue> r1 = new Result<SearchResultValue>(
+    Result<SearchResultValue> r1 = new Result<>(
         currTime,
         new SearchResultValue(
             ImmutableList.of(
@@ -355,7 +355,7 @@ public class SearchBinaryFnTest
         )
     );
 
-    Result<SearchResultValue> r2 = new Result<SearchResultValue>(
+    Result<SearchResultValue> r2 = new Result<>(
         currTime,
         new SearchResultValue(
             ImmutableList.of(
@@ -375,7 +375,7 @@ public class SearchBinaryFnTest
   @Test
   public void testMergeCountWithNull()
   {
-    Result<SearchResultValue> r1 = new Result<SearchResultValue>(
+    Result<SearchResultValue> r1 = new Result<>(
             currTime,
             new SearchResultValue(
                     ImmutableList.of(
@@ -387,7 +387,7 @@ public class SearchBinaryFnTest
             )
     );
 
-    Result<SearchResultValue> r2 = new Result<SearchResultValue>(
+    Result<SearchResultValue> r2 = new Result<>(
             currTime,
             new SearchResultValue(
                     ImmutableList.of(

@@ -158,7 +158,7 @@ public class BloomFilterAggregatorTest extends InitializedNullHandlingTest
   private static List<String[]> dimensionValues(Object... values)
   {
     return Lists.transform(
-        Lists.newArrayList(values), new Function<Object, String[]>()
+        Lists.newArrayList(values), new Function<>()
         {
           @Nullable
           @Override

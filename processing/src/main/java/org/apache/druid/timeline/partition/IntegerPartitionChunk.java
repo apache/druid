@@ -32,7 +32,7 @@ public class IntegerPartitionChunk<T extends Overshadowable> implements Partitio
 
   public static <T extends Overshadowable> IntegerPartitionChunk<T> make(Integer start, Integer end, int chunkNumber, T obj)
   {
-    return new IntegerPartitionChunk<T>(start, end, chunkNumber, obj);
+    return new IntegerPartitionChunk<>(start, end, chunkNumber, obj);
   }
 
   public IntegerPartitionChunk(

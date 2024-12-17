@@ -38,7 +38,7 @@ public class ImmutableConciseSet
 {
   private static final int CHUNK_SIZE = 10000;
 
-  private static final Comparator<WordIterator> UNION_COMPARATOR = new Comparator<WordIterator>()
+  private static final Comparator<WordIterator> UNION_COMPARATOR = new Comparator<>()
   {
     // Comparison is first by index, then one fills < literals < zero fills
     // one fills are sorted by length (longer one fills have priority)
@@ -81,7 +81,7 @@ public class ImmutableConciseSet
     }
   };
 
-  private static final Comparator<WordIterator> INTERSECTION_COMPARATOR = new Comparator<WordIterator>()
+  private static final Comparator<WordIterator> INTERSECTION_COMPARATOR = new Comparator<>()
   {
     // Comparison is first by index, then zero fills < literals < one fills
     // zero fills are sorted by length (longer zero fills have priority)

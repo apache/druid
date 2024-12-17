@@ -541,7 +541,7 @@ public class RunWorkOrder
                 stageOutputChannelsFuture
             )
         ),
-        new FutureCallback<List<Object>>()
+        new FutureCallback<>()
         {
           @Override
           public void onSuccess(final List<Object> workerResultAndOutputChannelsResolved)
@@ -1086,7 +1086,7 @@ public class RunWorkOrder
 
       Futures.addCallback(
           clusterByStatisticsCollectorFuture,
-          new FutureCallback<ClusterByStatisticsCollector>()
+          new FutureCallback<>()
           {
             @Override
             public void onSuccess(final ClusterByStatisticsCollector result)

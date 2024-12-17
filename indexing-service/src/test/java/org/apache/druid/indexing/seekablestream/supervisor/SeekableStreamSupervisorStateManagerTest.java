@@ -372,9 +372,7 @@ public class SeekableStreamSupervisorStateManagerTest
 
     String serialized = defaultMapper.writeValueAsString(event);
 
-    Map<String, String> deserialized = defaultMapper.readValue(serialized, new TypeReference<Map<String, String>>()
-    {
-    });
+    Map<String, String> deserialized = defaultMapper.readValue(serialized, new TypeReference<>() {});
     Assert.assertNotNull(deserialized.get("timestamp"));
     Assert.assertEquals("java.lang.NullPointerException", deserialized.get("exceptionClass"));
     Assert.assertFalse(Boolean.getBoolean(deserialized.get("streamException")));

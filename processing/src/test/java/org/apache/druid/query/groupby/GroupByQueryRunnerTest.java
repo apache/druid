@@ -3889,7 +3889,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     final GroupByQuery allGranQuery = builder.copy().setGranularity(Granularities.ALL).build();
 
     QueryRunner mergedRunner = factory.getToolchest().mergeResults(
-        new QueryRunner<ResultRow>()
+        new QueryRunner<>()
         {
           @Override
           public Sequence<ResultRow> run(QueryPlus<ResultRow> queryPlus, ResponseContext responseContext)
@@ -4253,7 +4253,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
   )
   {
     QueryRunner mergedRunner = factory.getToolchest().mergeResults(
-        new QueryRunner<ResultRow>()
+        new QueryRunner<>()
         {
           @Override
           public Sequence<ResultRow> run(QueryPlus<ResultRow> queryPlus, ResponseContext responseContext)
@@ -5070,7 +5070,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     );
 
     QueryRunner mergedRunner = factory.getToolchest().mergeResults(
-        new QueryRunner<ResultRow>()
+        new QueryRunner<>()
         {
           @Override
           public Sequence<ResultRow> run(QueryPlus<ResultRow> queryPlus, ResponseContext responseContext)
@@ -5535,7 +5535,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     );
 
     QueryRunner mergedRunner = factory.getToolchest().mergeResults(
-        new QueryRunner<ResultRow>()
+        new QueryRunner<>()
         {
           @Override
           public Sequence<ResultRow> run(QueryPlus<ResultRow> queryPlus, ResponseContext responseContext)
@@ -5626,7 +5626,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     );
 
     QueryRunner mergedRunner = factory.getToolchest().mergeResults(
-        new QueryRunner<ResultRow>()
+        new QueryRunner<>()
         {
           @Override
           public Sequence<ResultRow> run(QueryPlus<ResultRow> queryPlus, ResponseContext responseContext)
@@ -11673,7 +11673,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     final GroupByQuery allGranQuery = builder.build();
 
     QueryRunner mergedRunner = factory.getToolchest().mergeResults(
-        new QueryRunner<ResultRow>()
+        new QueryRunner<>()
         {
           @Override
           public Sequence<ResultRow> run(QueryPlus<ResultRow> queryPlus, ResponseContext responseContext)
@@ -11739,7 +11739,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     final GroupByQuery allGranQuery = builder.build();
 
     QueryRunner mergedRunner = factory.getToolchest().mergeResults(
-        new QueryRunner<ResultRow>()
+        new QueryRunner<>()
         {
           @Override
           public Sequence<ResultRow> run(QueryPlus<ResultRow> queryPlus, ResponseContext responseContext)
@@ -11806,7 +11806,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     final GroupByQuery allGranQuery = builder.build();
 
     QueryRunner mergedRunner = factory.getToolchest().mergeResults(
-        new QueryRunner<ResultRow>()
+        new QueryRunner<>()
         {
           @Override
           public Sequence<ResultRow> run(QueryPlus<ResultRow> queryPlus, ResponseContext responseContext)
@@ -11880,7 +11880,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     final GroupByQuery allGranQuery = builder.build();
 
     QueryRunner mergedRunner = factory.getToolchest().mergeResults(
-        new QueryRunner<ResultRow>()
+        new QueryRunner<>()
         {
           @Override
           public Sequence<ResultRow> run(QueryPlus<ResultRow> queryPlus, ResponseContext responseContext)
@@ -11964,7 +11964,7 @@ public class GroupByQueryRunnerTest extends InitializedNullHandlingTest
     final GroupByQuery allGranQuery = builder.build();
 
     QueryRunner mergedRunner = factory.getToolchest().mergeResults(
-        new QueryRunner<ResultRow>()
+        new QueryRunner<>()
         {
           @Override
           public Sequence<ResultRow> run(QueryPlus<ResultRow> queryPlus, ResponseContext responseContext)

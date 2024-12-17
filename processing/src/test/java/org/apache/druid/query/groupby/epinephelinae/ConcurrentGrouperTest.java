@@ -127,7 +127,7 @@ public class ConcurrentGrouperTest extends InitializedNullHandlingTest
     this.concurrencyHint = concurrencyHint;
     this.parallelCombineThreads = parallelCombineThreads;
     this.mergeThreadLocal = mergeThreadLocal;
-    this.bufferSupplier = new Supplier<ByteBuffer>()
+    this.bufferSupplier = new Supplier<>()
     {
       private final AtomicBoolean called = new AtomicBoolean(false);
       private ByteBuffer buffer;
@@ -368,7 +368,7 @@ public class ConcurrentGrouperTest extends InitializedNullHandlingTest
     @Override
     public KeySerde<LongKey> factorize()
     {
-      return new KeySerde<LongKey>()
+      return new KeySerde<>()
       {
         final ByteBuffer buffer = ByteBuffer.allocate(8);
 

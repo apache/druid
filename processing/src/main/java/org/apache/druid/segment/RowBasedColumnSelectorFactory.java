@@ -448,7 +448,7 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
       final ValueType numberType =
           capabilities != null && capabilities.getType().isNumeric() ? capabilities.getType() : null;
 
-      return new ColumnValueSelector<Object>()
+      return new ColumnValueSelector<>()
       {
         private long currentValueId = RowIdSupplier.INIT;
         private long currentValueAsNumberId = RowIdSupplier.INIT;

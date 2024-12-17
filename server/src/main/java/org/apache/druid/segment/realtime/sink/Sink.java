@@ -443,7 +443,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
   {
     return Iterators.filter(
         hydrants.iterator(),
-        new Predicate<FireHydrant>()
+        new Predicate<>()
         {
           @Override
           public boolean apply(FireHydrant input)
