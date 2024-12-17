@@ -29,7 +29,6 @@ import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
 
 import javax.servlet.http.HttpServletRequest;
-import java.util.Objects;
 
 public class ChatHandlers
 {
@@ -50,11 +49,11 @@ public class ChatHandlers
         action
     );
 
-    AuthorizationResult access = AuthorizationUtils.authorizeResourceAction(req, resourceAction, authorizerMapper);
-    if (!access.isAllowed()) {
-      throw new ForbiddenException(Objects.requireNonNull(access.getFailureMessage()));
-    }
+    AuthorizationResult authResult = AuthorizationUtils.authorizeResourceAction(req, resourceAction, authorizerMapper);
+    authResult.getPermissionErrorMessage(true).ifPresent(error -> {
+      throw new ForbiddenException(error);
+    });
 
-    return access;
+    return authResult;
   }
 }

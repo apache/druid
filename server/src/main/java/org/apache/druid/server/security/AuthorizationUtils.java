@@ -227,14 +227,17 @@ public class AuthorizationUtils
       throw new ISE("Request already had authorization check.");
     }
 
-    AuthorizationResult access = authorizeAllResourceActions(
+    AuthorizationResult authResult = authorizeAllResourceActions(
         authenticationResultFromRequest(request),
         resourceActions,
         authorizerMapper
     );
 
-    request.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, access.isAllowed());
-    return access;
+    request.setAttribute(
+        AuthConfig.DRUID_AUTHORIZATION_CHECKED,
+        !authResult.getPermissionErrorMessage(false).isPresent()
+    );
+    return authResult;
   }
 
   /**

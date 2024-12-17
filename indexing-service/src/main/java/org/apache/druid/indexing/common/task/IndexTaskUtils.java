@@ -43,7 +43,6 @@ import javax.servlet.http.HttpServletRequest;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 public class IndexTaskUtils
 {
@@ -80,12 +79,11 @@ public class IndexTaskUtils
         action
     );
 
-    AuthorizationResult access = AuthorizationUtils.authorizeResourceAction(req, resourceAction, authorizerMapper);
-    if (!access.isAllowed()) {
-      throw new ForbiddenException(Objects.requireNonNull(access.getFailureMessage()));
-    }
-
-    return access;
+    AuthorizationResult authResult = AuthorizationUtils.authorizeResourceAction(req, resourceAction, authorizerMapper);
+    authResult.getPermissionErrorMessage(true).ifPresent(error -> {
+      throw new ForbiddenException(error);
+    });
+    return authResult;
   }
 
   public static void setTaskDimensions(final ServiceMetricEvent.Builder metricBuilder, final Task task)

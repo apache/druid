@@ -59,7 +59,6 @@ import javax.ws.rs.core.Response;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
@@ -582,9 +581,9 @@ public class CatalogResource
   private void authorize(String resource, String key, Action action, HttpServletRequest request)
   {
     final AuthorizationResult authResult = authorizeAccess(resource, key, action, request);
-    if (!authResult.isAllowed()) {
-      throw new ForbiddenException(Objects.requireNonNull(authResult.getFailureMessage()));
-    }
+    authResult.getPermissionErrorMessage(true).ifPresent(error -> {
+      throw new ForbiddenException(error);
+    });
   }
 
   private AuthorizationResult authorizeAccess(String resource, String key, Action action, HttpServletRequest request)

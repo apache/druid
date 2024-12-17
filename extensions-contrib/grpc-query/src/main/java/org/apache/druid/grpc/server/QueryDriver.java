@@ -148,7 +148,7 @@ public class QueryDriver
     try {
       queryLifecycle.initialize(query);
       AuthorizationResult authorizationResult = queryLifecycle.authorize(authResult);
-      if (!authorizationResult.isAllowed()) {
+      if (!authorizationResult.getPermissionErrorMessage(true).isPresent()) {
         throw new ForbiddenException(Access.DEFAULT_ERROR_MESSAGE);
       }
       queryResponse = queryLifecycle.execute();

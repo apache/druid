@@ -66,7 +66,6 @@ import javax.servlet.http.HttpServletRequest;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -156,10 +155,6 @@ public class QueryLifecycle
     final QueryResponse<T> queryResponse;
     try {
       preAuthorized(authenticationResult, authorizationResult);
-      if (!authorizationResult.isAllowed()) {
-        throw new ISE(Objects.requireNonNull(authorizationResult.getFailureMessage()));
-      }
-
       queryResponse = execute();
       results = queryResponse.getResults();
     }
@@ -280,9 +275,13 @@ public class QueryLifecycle
       final AuthorizationResult authorizationResult
   )
   {
-    // gotta transition those states, even if we are already authorized
+    // The authorization have already been checked previously (or skipped). This just follows the state transition
+    // process, should not throw unauthorized error.
     transition(State.INITIALIZED, State.AUTHORIZING);
     doAuthorize(authenticationResult, authorizationResult);
+    if (!state.equals(State.AUTHORIZED)) {
+      throw DruidException.defensive("Unexpected state [%s], expecting [%s].", state, State.AUTHORIZED);
+    }
   }
 
   private AuthorizationResult doAuthorize(
@@ -293,7 +292,7 @@ public class QueryLifecycle
     Preconditions.checkNotNull(authenticationResult, "authenticationResult");
     Preconditions.checkNotNull(authorizationResult, "authorizationResult");
 
-    if (!authorizationResult.isAllowed()) {
+    if (authorizationResult.getPermissionErrorMessage(false).isPresent()) {
       // Not authorized; go straight to Jail, do not pass Go.
       transition(State.AUTHORIZING, State.UNAUTHORIZED);
     } else {

@@ -40,7 +40,6 @@ import org.apache.druid.server.security.ResourceType;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.util.Objects;
 
 /**
  * Use this ResourceFilter when the datasource information is present after "task" segment in the request Path
@@ -99,9 +98,9 @@ public class TaskResourceFilter extends AbstractResourceFilter
         getAuthorizerMapper()
     );
 
-    if (!authResult.isAllowed()) {
-      throw new ForbiddenException(Objects.requireNonNull(authResult.getFailureMessage()));
-    }
+    authResult.getPermissionErrorMessage(true).ifPresent(error -> {
+      throw new ForbiddenException(error);
+    });
 
     return request;
   }

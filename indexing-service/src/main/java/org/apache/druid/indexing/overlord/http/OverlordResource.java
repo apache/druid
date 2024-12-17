@@ -101,7 +101,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -183,10 +182,9 @@ public class OverlordResource
         resourceActions,
         authorizerMapper
     );
-
-    if (!authResult.isAllowed()) {
-      throw new ForbiddenException(Objects.requireNonNull(authResult.getFailureMessage()));
-    }
+    authResult.getPermissionErrorMessage(true).ifPresent(error -> {
+      throw new ForbiddenException(error);
+    });
 
     return asLeaderWith(
         taskMaster.getTaskQueue(),
@@ -615,17 +613,15 @@ public class OverlordResource
           resourceAction,
           authorizerMapper
       );
-      if (!authResult.isAllowed()) {
+
+      authResult.getPermissionErrorMessage(true).ifPresent(error -> {
         throw new WebApplicationException(
             Response.status(Response.Status.FORBIDDEN)
                     .type(MediaType.TEXT_PLAIN)
-                    .entity(StringUtils.format(
-                        "Access-Check-Result: %s",
-                        Objects.requireNonNull(authResult.getFailureMessage())
-                    ))
+                    .entity(StringUtils.format("Access-Check-Result: %s", error))
                     .build()
         );
-      }
+      });
     }
 
     return asLeaderWith(
@@ -667,9 +663,9 @@ public class OverlordResource
         authorizerMapper
     );
 
-    if (!authResult.isAllowed()) {
-      throw new ForbiddenException(Objects.requireNonNull(authResult.getFailureMessage()));
-    }
+    authResult.getPermissionErrorMessage(true).ifPresent(error -> {
+      throw new ForbiddenException(error);
+    });
 
     if (overlord.isLeader()) {
       try {

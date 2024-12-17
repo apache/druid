@@ -224,7 +224,7 @@ public class QueryLifecycleTest
                                       .build();
     QueryLifecycle lifecycle = createLifecycle(authConfig);
     lifecycle.initialize(query);
-    Assert.assertTrue(lifecycle.authorize(authenticationResult).isAllowed());
+    Assert.assertTrue(lifecycle.authorize(authenticationResult).getPermissionErrorMessage(false).isEmpty());
     lifecycle.execute();
 
     lifecycle = createLifecycle(authConfig);
@@ -265,7 +265,7 @@ public class QueryLifecycleTest
                                       .build();
     QueryLifecycle lifecycle = createLifecycle(authConfig);
     lifecycle.initialize(query);
-    Assert.assertTrue(lifecycle.authorize(authenticationResult).isAllowed());
+    Assert.assertTrue(lifecycle.authorize(authenticationResult).getPermissionErrorMessage(false).isEmpty());
     lifecycle.execute();
 
     lifecycle = createLifecycle(authConfig);
@@ -310,7 +310,7 @@ public class QueryLifecycleTest
                                       .build();
     QueryLifecycle lifecycle = createLifecycle(authConfig);
     lifecycle.initialize(query);
-    Assert.assertTrue(lifecycle.authorize(authenticationResult).isAllowed());
+    Assert.assertTrue(lifecycle.authorize(authenticationResult).getPermissionErrorMessage(false).isEmpty());
     lifecycle.execute();
 
     lifecycle = createLifecycle(authConfig);
@@ -475,11 +475,11 @@ public class QueryLifecycleTest
         revisedContext
     );
 
-    Assert.assertTrue(lifecycle.authorize(mockRequest()).isAllowed());
+    Assert.assertTrue(lifecycle.authorize(mockRequest()).getPermissionErrorMessage(false).isEmpty());
 
     lifecycle = createLifecycle(authConfig);
     lifecycle.initialize(query);
-    Assert.assertTrue(lifecycle.authorize(authenticationResult).isAllowed());
+    Assert.assertTrue(lifecycle.authorize(authenticationResult).getPermissionErrorMessage(false).isEmpty());
   }
 
   @Test
@@ -521,11 +521,11 @@ public class QueryLifecycleTest
                                       .build();
     QueryLifecycle lifecycle = createLifecycle(authConfig);
     lifecycle.initialize(query);
-    Assert.assertFalse(lifecycle.authorize(mockRequest()).isAllowed());
+    Assert.assertFalse(lifecycle.authorize(mockRequest()).getPermissionErrorMessage(false).isEmpty());
 
     lifecycle = createLifecycle(authConfig);
     lifecycle.initialize(query);
-    Assert.assertFalse(lifecycle.authorize(authenticationResult).isAllowed());
+    Assert.assertFalse(lifecycle.authorize(authenticationResult).getPermissionErrorMessage(false).isEmpty());
   }
 
   @Test
@@ -571,11 +571,11 @@ public class QueryLifecycleTest
         revisedContext
     );
 
-    Assert.assertTrue(lifecycle.authorize(mockRequest()).isAllowed());
+    Assert.assertTrue(lifecycle.authorize(mockRequest()).getPermissionErrorMessage(false).isEmpty());
 
     lifecycle = createLifecycle(authConfig);
     lifecycle.initialize(query);
-    Assert.assertTrue(lifecycle.authorize(authenticationResult).isAllowed());
+    Assert.assertTrue(lifecycle.authorize(authenticationResult).getPermissionErrorMessage(false).isEmpty());
   }
 
   @Test
@@ -622,11 +622,11 @@ public class QueryLifecycleTest
         revisedContext
     );
 
-    Assert.assertTrue(lifecycle.authorize(mockRequest()).isAllowed());
+    Assert.assertTrue(lifecycle.authorize(mockRequest()).getPermissionErrorMessage(false).isEmpty());
 
     lifecycle = createLifecycle(authConfig);
     lifecycle.initialize(query);
-    Assert.assertTrue(lifecycle.authorize(authenticationResult).isAllowed());
+    Assert.assertTrue(lifecycle.authorize(authenticationResult).getPermissionErrorMessage(false).isEmpty());
   }
 
   @Test
@@ -671,11 +671,11 @@ public class QueryLifecycleTest
                                       .build();
     QueryLifecycle lifecycle = createLifecycle(authConfig);
     lifecycle.initialize(query);
-    Assert.assertFalse(lifecycle.authorize(mockRequest()).isAllowed());
+    Assert.assertFalse(lifecycle.authorize(mockRequest()).getPermissionErrorMessage(false).isEmpty());
 
     lifecycle = createLifecycle(authConfig);
     lifecycle.initialize(query);
-    Assert.assertFalse(lifecycle.authorize(authenticationResult).isAllowed());
+    Assert.assertFalse(lifecycle.authorize(authenticationResult).getPermissionErrorMessage(false).isEmpty());
   }
 
   @Test
@@ -731,11 +731,11 @@ public class QueryLifecycleTest
     Assert.assertTrue(revisedContext.containsKey("baz"));
     Assert.assertTrue(revisedContext.containsKey("queryId"));
 
-    Assert.assertTrue(lifecycle.authorize(mockRequest()).isAllowed());
+    Assert.assertTrue(lifecycle.authorize(mockRequest()).getPermissionErrorMessage(false).isEmpty());
 
     lifecycle = createLifecycle(authConfig);
     lifecycle.initialize(query);
-    Assert.assertTrue(lifecycle.authorize(mockRequest()).isAllowed());
+    Assert.assertTrue(lifecycle.authorize(mockRequest()).getPermissionErrorMessage(false).isEmpty());
   }
 
   public static Query<?> queryMatchDataSource(DataSource dataSource)

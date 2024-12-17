@@ -29,8 +29,6 @@ import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
 
-import java.util.Objects;
-
 /**
  * Use this ResourceFilter at end points where Druid Cluster configuration is read or written
  * Here are some example paths where this filter is used -
@@ -64,9 +62,9 @@ public class ConfigResourceFilter extends AbstractResourceFilter
         getAuthorizerMapper()
     );
 
-    if (!authResult.isAllowed()) {
-      throw new ForbiddenException(Objects.requireNonNull(authResult.getFailureMessage()));
-    }
+    authResult.getPermissionErrorMessage(true).ifPresent(error -> {
+      throw new ForbiddenException(error);
+    });
 
     return request;
   }

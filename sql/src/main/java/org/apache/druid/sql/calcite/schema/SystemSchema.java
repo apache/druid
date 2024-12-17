@@ -1147,15 +1147,15 @@ public class SystemSchema extends AbstractSchema
       AuthorizerMapper authorizerMapper
   )
   {
-    final AuthorizationResult stateAccess = AuthorizationUtils.authorizeAllResourceActions(
+    final AuthorizationResult authResult = AuthorizationUtils.authorizeAllResourceActions(
         authenticationResult,
         Collections.singletonList(new ResourceAction(Resource.STATE_RESOURCE, Action.READ)),
         authorizerMapper
     );
-    if (!stateAccess.isAllowed()) {
-      throw new ForbiddenException("Insufficient permission to view servers: "
-                                   + Objects.requireNonNull(stateAccess.getFailureMessage()));
-    }
+
+    authResult.getPermissionErrorMessage(true).ifPresent(error -> {
+      throw new ForbiddenException("Insufficient permission to view servers: " + error);
+    });
   }
 
   /**

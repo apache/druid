@@ -33,7 +33,6 @@ import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
 
 import javax.ws.rs.core.PathSegment;
-import java.util.Objects;
 
 
 /**
@@ -82,9 +81,9 @@ public class RulesResourceFilter extends AbstractResourceFilter
         getAuthorizerMapper()
     );
 
-    if (!authResult.isAllowed()) {
-      throw new ForbiddenException(Objects.requireNonNull(authResult.getFailureMessage()));
-    }
+    authResult.getPermissionErrorMessage(true).ifPresent(error -> {
+      throw new ForbiddenException(error);
+    });
 
     return request;
   }

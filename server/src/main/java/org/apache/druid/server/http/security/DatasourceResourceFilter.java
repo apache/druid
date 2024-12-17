@@ -33,7 +33,6 @@ import org.apache.druid.server.security.ResourceType;
 
 import javax.ws.rs.core.PathSegment;
 import java.util.List;
-import java.util.Objects;
 
 /**
  * Use this resource filter for API endpoints that contain {@link #DATASOURCES_PATH_SEGMENT} in their request path.
@@ -64,9 +63,9 @@ public class DatasourceResourceFilter extends AbstractResourceFilter
         getAuthorizerMapper()
     );
 
-    if (!authResult.isAllowed()) {
-      throw new ForbiddenException(Objects.requireNonNull(authResult.getFailureMessage()));
-    }
+    authResult.getPermissionErrorMessage(true).ifPresent(error -> {
+      throw new ForbiddenException(error);
+    });
 
     return request;
   }

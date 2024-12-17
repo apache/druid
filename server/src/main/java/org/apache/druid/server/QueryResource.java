@@ -74,7 +74,6 @@ import javax.ws.rs.core.Response.Status;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicLong;
@@ -159,9 +158,9 @@ public class QueryResource implements QueryCountStatsProvider
         authorizerMapper
     );
 
-    if (!authResult.isAllowed()) {
-      throw new ForbiddenException(Objects.requireNonNull(authResult.getFailureMessage()));
-    }
+    authResult.getPermissionErrorMessage(true).ifPresent(error -> {
+      throw new ForbiddenException(error);
+    });
 
     queryScheduler.cancelQuery(queryId);
     return Response.status(Response.Status.ACCEPTED).build();
@@ -215,9 +214,9 @@ public class QueryResource implements QueryCountStatsProvider
         return io.getResponseWriter().buildNonOkResponse(qe.getFailType().getExpectedStatus(), qe);
       }
 
-      if (!authResult.isAllowed()) {
-        throw new ForbiddenException(Objects.requireNonNull(authResult.getFailureMessage()));
-      }
+      authResult.getPermissionErrorMessage(true).ifPresent(error -> {
+        throw new ForbiddenException(error);
+      });
 
       final QueryResourceQueryResultPusher pusher = new QueryResourceQueryResultPusher(req, queryLifecycle, io);
       return pusher.push();

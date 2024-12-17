@@ -140,9 +140,9 @@ public class SqlResource
       return Response.status(Status.NOT_FOUND).build();
     }
 
-    final AuthorizationResult access = authorizeCancellation(req, lifecycles);
+    final AuthorizationResult authResult = authorizeCancellation(req, lifecycles);
 
-    if (access.isAllowed()) {
+    if (!authResult.getPermissionErrorMessage(true).isPresent()) {
       // should remove only the lifecycles in the snapshot.
       sqlLifecycleManager.removeAll(sqlQueryId, lifecycles);
       lifecycles.forEach(Cancelable::cancel);

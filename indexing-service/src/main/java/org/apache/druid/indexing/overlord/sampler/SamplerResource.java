@@ -40,7 +40,6 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import java.util.HashSet;
-import java.util.Objects;
 import java.util.Set;
 
 @Path("/druid/indexer/v1/sampler")
@@ -79,9 +78,9 @@ public class SamplerResource
         authorizerMapper
     );
 
-    if (!authResult.isAllowed()) {
-      throw new ForbiddenException(Objects.requireNonNull(authResult.getFailureMessage()));
-    }
+    authResult.getPermissionErrorMessage(true).ifPresent(error -> {
+      throw new ForbiddenException(error);
+    });
     return sampler.sample();
   }
 }

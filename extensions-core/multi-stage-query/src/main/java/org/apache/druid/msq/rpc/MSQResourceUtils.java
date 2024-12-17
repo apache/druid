@@ -27,7 +27,6 @@ import org.apache.druid.server.security.ResourceAction;
 
 import javax.servlet.http.HttpServletRequest;
 import java.util.List;
-import java.util.Objects;
 
 /**
  * Utility methods for MSQ resources such as {@link ControllerResource}.
@@ -42,15 +41,15 @@ public class MSQResourceUtils
   {
     final List<ResourceAction> resourceActions = permissionMapper.getAdminPermissions();
 
-    AuthorizationResult access = AuthorizationUtils.authorizeAllResourceActions(
+    AuthorizationResult authResult = AuthorizationUtils.authorizeAllResourceActions(
         request,
         resourceActions,
         authorizerMapper
     );
 
-    if (!access.isAllowed()) {
-      throw new ForbiddenException(Objects.requireNonNull(access.getFailureMessage()));
-    }
+    authResult.getPermissionErrorMessage(true).ifPresent(error -> {
+      throw new ForbiddenException(error);
+    });
   }
 
   public static void authorizeQueryRequest(
@@ -62,14 +61,14 @@ public class MSQResourceUtils
   {
     final List<ResourceAction> resourceActions = permissionMapper.getQueryPermissions(queryId);
 
-    AuthorizationResult access = AuthorizationUtils.authorizeAllResourceActions(
+    AuthorizationResult authResult = AuthorizationUtils.authorizeAllResourceActions(
         request,
         resourceActions,
         authorizerMapper
     );
 
-    if (!access.isAllowed()) {
-      throw new ForbiddenException(Objects.requireNonNull(access.getFailureMessage()));
-    }
+    authResult.getPermissionErrorMessage(true).ifPresent(error -> {
+      throw new ForbiddenException(error);
+    });
   }
 }

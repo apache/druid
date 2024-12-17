@@ -21,11 +21,13 @@ package org.apache.druid.server.security;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.filter.TrueDimFilter;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
@@ -98,23 +100,28 @@ public class AuthorizationResult
   )
   {
     return new AuthorizationResult(
-        isAllowed(),
-        getFailureMessage(),
+        isAllowed,
+        failureMessage,
         ImmutableMap.copyOf(getPolicyFilters()),
         sqlResourceActions,
         allResourceActions
     );
   }
 
-  public boolean isAllowed()
+  public Optional<String> getPermissionErrorMessage(boolean policyFilterNotPermitted)
   {
-    return isAllowed;
-  }
+    if (!isAllowed) {
+      return Optional.of(Objects.requireNonNull(failureMessage));
+    }
 
-  @Nullable
-  public String getFailureMessage()
-  {
-    return failureMessage;
+    if (policyFilterNotPermitted && policyFilters.values()
+                                                 .stream()
+                                                 .flatMap(Optional::stream)
+                                                 .anyMatch(filter -> !(filter instanceof TrueDimFilter))) {
+      return Optional.of(Access.DEFAULT_ERROR_MESSAGE);
+    }
+
+    return Optional.empty();
   }
 
   public Map<String, Optional<DimFilter>> getPolicyFilters()
