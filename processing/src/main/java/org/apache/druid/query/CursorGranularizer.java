@@ -95,12 +95,11 @@ public class CursorGranularizer
       timeSelector = cursor.getColumnSelectorFactory().makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME);
     }
 
-    return new CursorGranularizer(cursor, granularity, bucketIterable, timeSelector, timeOrder == Order.DESCENDING);
+    return new CursorGranularizer(cursor, bucketIterable, timeSelector, timeOrder == Order.DESCENDING);
   }
 
   private final Cursor cursor;
 
-  private final Granularity granularity;
 
   // Iterable that iterates over time buckets.
   private final Iterable<Interval> bucketIterable;
@@ -115,14 +114,12 @@ public class CursorGranularizer
 
   private CursorGranularizer(
       Cursor cursor,
-      Granularity granularity,
       Iterable<Interval> bucketIterable,
       @Nullable ColumnValueSelector timeSelector,
       boolean descending
   )
   {
     this.cursor = cursor;
-    this.granularity = granularity;
     this.bucketIterable = bucketIterable;
     this.timeSelector = timeSelector;
     this.descending = descending;
