@@ -218,7 +218,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
     final List<SinkSegmentReference> allSegmentReferences = new ArrayList<>();
     final Map<SegmentDescriptor, SegmentId> segmentIdMap = new HashMap<>();
     final LinkedHashMap<SegmentDescriptor, List<QueryRunner<T>>> allRunners = new LinkedHashMap<>();
-    final ConcurrentHashMap<String, ConcurrentHashMap<String, AtomicLong>> segmentMetricsAccumulator = new ConcurrentHashMap<>();
+    final ConcurrentHashMap<String, SinkMetricsEmittingQueryRunner.SegmentMetrics> segmentMetricsAccumulator = new ConcurrentHashMap<>();
 
     try {
       for (final SegmentDescriptor descriptor : specs) {
@@ -469,7 +469,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
     private final ServiceEmitter emitter;
     private final QueryToolChest<T, ? extends Query<T>> queryToolChest;
     private final QueryRunner<T> queryRunner;
-    private final ConcurrentHashMap<String, ConcurrentHashMap<String, AtomicLong>> segmentMetricsAccumulator;
+    private final ConcurrentHashMap<String, SegmentMetrics> segmentMetricsAccumulator;
     private final Set<String> metricsToCompute;
     @Nullable
     private final String segmentId;
@@ -479,7 +479,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
         ServiceEmitter emitter,
         QueryToolChest<T, ? extends Query<T>> queryToolChest,
         QueryRunner<T> queryRunner,
-        ConcurrentHashMap<String, ConcurrentHashMap<String, AtomicLong>> segmentMetricsAccumulator,
+        ConcurrentHashMap<String, SegmentMetrics> segmentMetricsAccumulator,
         Set<String> metricsToCompute,
         @Nullable String segmentId
     )
@@ -517,29 +517,31 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
             {
               if (segmentId != null) {
                 // accumulate metrics
-                for (String metric : metricsToCompute) {
-                  if (DefaultQueryMetrics.QUERY_WAIT_TIME.equals(metric)) {
-                    long waitTimeNs = startTimeNs - creationTimeNs;
-                    // segment wait time is the time taken to start processing the first FireHydrant for the Sink
-                    segmentMetricsAccumulator.computeIfAbsent(segmentId, metrics -> new ConcurrentHashMap<>())
-                                             .putIfAbsent(metric, new AtomicLong(waitTimeNs));
-                  } else {
-                    long timeTakenNs = System.nanoTime() - startTimeNs;
-                    segmentMetricsAccumulator.computeIfAbsent(segmentId, metrics -> new ConcurrentHashMap<>())
-                                             .computeIfAbsent(metric, value -> new AtomicLong(0))
-                                             .addAndGet(timeTakenNs);
-                  }
+                final SegmentMetrics metrics = segmentMetricsAccumulator.computeIfAbsent(segmentId, id -> new SegmentMetrics());
+                if (metricsToCompute.contains(DefaultQueryMetrics.QUERY_WAIT_TIME)) {
+                  metrics.setWaitTime(startTimeNs - creationTimeNs);
+                }
+                if (metricsToCompute.contains(DefaultQueryMetrics.QUERY_SEGMENT_TIME)) {
+                  metrics.addSegmentTime(System.nanoTime() - startTimeNs);
+                }
+                if (metricsToCompute.contains(DefaultQueryMetrics.QUERY_SEGMENT_AND_CACHE_TIME)) {
+                  metrics.addSegmentAndCacheTime(System.nanoTime() - startTimeNs);
                 }
               } else {
                 final QueryMetrics<?> queryMetrics = queryWithMetrics.getQueryMetrics();
                 // report accumulated metrics
-                for (Map.Entry<String, ConcurrentHashMap<String, AtomicLong>> segmentAndMetrics : segmentMetricsAccumulator.entrySet()) {
+                for (Map.Entry<String, SegmentMetrics> segmentAndMetrics : segmentMetricsAccumulator.entrySet()) {
                   queryMetrics.segment(segmentAndMetrics.getKey());
 
                   for (Map.Entry<String, ObjLongConsumer<? super QueryMetrics<?>>> reportMetric : METRICS_TO_REPORT.entrySet()) {
-                    String metricName = reportMetric.getKey();
-                    if (segmentAndMetrics.getValue().containsKey(metricName)) {
-                      reportMetric.getValue().accept(queryMetrics, segmentAndMetrics.getValue().get(metricName).get());
+                    final String metricName = reportMetric.getKey();
+                    switch (metricName) {
+                      case DefaultQueryMetrics.QUERY_SEGMENT_TIME:
+                        reportMetric.getValue().accept(queryMetrics, segmentAndMetrics.getValue().getSegmentTime());
+                      case DefaultQueryMetrics.QUERY_WAIT_TIME:
+                        reportMetric.getValue().accept(queryMetrics, segmentAndMetrics.getValue().getWaitTime());
+                      case DefaultQueryMetrics.QUERY_SEGMENT_AND_CACHE_TIME:
+                        reportMetric.getValue().accept(queryMetrics, segmentAndMetrics.getValue().getSegmentAndCacheTime());
                     }
                   }
 
@@ -555,6 +557,46 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
             }
           }
       );
+    }
+
+    /**
+     * Class to track segment related metrics during query execution.
+     */
+    private static class SegmentMetrics
+    {
+      private final AtomicLong querySegmentTime = new AtomicLong(0);
+      private final AtomicLong queryWaitTime = new AtomicLong(0);
+      private final AtomicLong querySegmentAndCacheTime = new AtomicLong(0);
+
+      private void addSegmentTime(long time)
+      {
+        querySegmentTime.addAndGet(time);
+      }
+
+      private void setWaitTime(long time)
+      {
+        queryWaitTime.set(time);
+      }
+
+      private void addSegmentAndCacheTime(long time)
+      {
+        querySegmentAndCacheTime.addAndGet(time);
+      }
+
+      private long getSegmentTime()
+      {
+        return querySegmentTime.get();
+      }
+
+      private long getWaitTime()
+      {
+        return queryWaitTime.get();
+      }
+
+      private long getSegmentAndCacheTime()
+      {
+        return querySegmentAndCacheTime.get();
+      }
     }
   }
   
