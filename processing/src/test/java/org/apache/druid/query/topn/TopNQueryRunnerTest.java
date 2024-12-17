@@ -1172,7 +1172,7 @@ public class TopNQueryRunnerTest extends InitializedNullHandlingTest
   public void testTopNBySegment()
   {
 
-    final HashMap<String, Object> specialContext = new HashMap<String, Object>();
+    final HashMap<String, Object> specialContext = new HashMap<>();
     specialContext.put(QueryContexts.BY_SEGMENT_KEY, "true");
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.DATA_SOURCE)

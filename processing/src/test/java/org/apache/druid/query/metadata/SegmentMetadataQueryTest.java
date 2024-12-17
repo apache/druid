@@ -1012,7 +1012,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
   @Test
   public void testBySegmentResults()
   {
-    Result<BySegmentResultValue> bySegmentResult = new Result<BySegmentResultValue>(
+    Result<BySegmentResultValue> bySegmentResult = new Result<>(
         expectedSegmentAnalysis1.getIntervals().get(0).getStart(),
         new BySegmentResultValueClass(
             Collections.singletonList(

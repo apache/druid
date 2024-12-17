@@ -199,7 +199,7 @@ public class GoogleStorageConnector extends ChunkingStorageConnector<GoogleInput
         config.getBucket(),
         objectPath(path)
     )));
-    builder.objectOpenFunction(new ObjectOpenFunction<GoogleInputRange>()
+    builder.objectOpenFunction(new ObjectOpenFunction<>()
     {
       @Override
       public InputStream open(GoogleInputRange googleInputRange) throws IOException

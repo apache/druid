@@ -153,7 +153,7 @@ public class JSONParseSpecTest
   @Test
   public void testSerde() throws IOException
   {
-    HashMap<String, Boolean> feature = new HashMap<String, Boolean>();
+    HashMap<String, Boolean> feature = new HashMap<>();
     feature.put("ALLOW_UNQUOTED_CONTROL_CHARS", true);
     JSONParseSpec spec = new JSONParseSpec(
         new TimestampSpec("timestamp", "iso", null),

@@ -278,7 +278,7 @@ public class FrameProcessorExecutor
 
         Futures.addCallback(
             cancelableFuture,
-            new FutureCallback<V>()
+            new FutureCallback<>()
             {
               @Override
               public void onSuccess(final V ignored)

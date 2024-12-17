@@ -70,7 +70,7 @@ public abstract class SeekableStreamIndexTaskClientFactory<PartitionIdType, Sequ
         tuningConfig.getChatRetries()
     );
 
-    return new SeekableStreamIndexTaskClientAsyncImpl<PartitionIdType, SequenceOffsetType>(
+    return new SeekableStreamIndexTaskClientAsyncImpl<>(
         dataSource,
         new ServiceClientFactoryImpl(httpClient, connectExec),
         taskInfoProvider,

@@ -283,7 +283,7 @@ public class CombiningSequenceTest
 
     Yielder<Pair<Integer, Integer>> yielder = seq.toYielder(
         null,
-        new YieldingAccumulator<Pair<Integer, Integer>, Pair<Integer, Integer>>()
+        new YieldingAccumulator<>()
         {
           int count = 0;
 
@@ -303,7 +303,7 @@ public class CombiningSequenceTest
 
     Iterator<Pair<Integer, Integer>> expectedVals = Iterators.filter(
         expected.iterator(),
-        new Predicate<Pair<Integer, Integer>>()
+        new Predicate<>()
         {
           int count = 0;
 

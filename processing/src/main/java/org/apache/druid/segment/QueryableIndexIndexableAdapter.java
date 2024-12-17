@@ -172,7 +172,7 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
     @SuppressWarnings("unchecked")
     DictionaryEncodedColumn<T> dict = (DictionaryEncodedColumn<T>) col;
 
-    return new CloseableIndexed<T>()
+    return new CloseableIndexed<>()
     {
 
       @Override

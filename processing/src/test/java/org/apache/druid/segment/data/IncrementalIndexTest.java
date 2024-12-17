@@ -192,7 +192,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
 
   public static MapBasedInputRow getRow(long timestamp, int rowID, int dimensionCount)
   {
-    List<String> dimensionList = new ArrayList<String>(dimensionCount);
+    List<String> dimensionList = new ArrayList<>(dimensionCount);
     ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
     for (int i = 0; i < dimensionCount; i++) {
       String dimName = StringUtils.format("Dim_%d", i);
@@ -204,7 +204,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
 
   private static MapBasedInputRow getLongRow(long timestamp, int dimensionCount)
   {
-    List<String> dimensionList = new ArrayList<String>(dimensionCount);
+    List<String> dimensionList = new ArrayList<>(dimensionCount);
     ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
     for (int i = 0; i < dimensionCount; i++) {
       String dimName = StringUtils.format("Dim_%d", i);
@@ -561,7 +561,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
 
                     Double[] results = sequence.accumulate(
                         new Double[0],
-                        new Accumulator<Double[], Result<TimeseriesResultValue>>()
+                        new Accumulator<>()
                         {
                           @Override
                           public Double[] accumulate(Double[] accumulated, Result<TimeseriesResultValue> in)

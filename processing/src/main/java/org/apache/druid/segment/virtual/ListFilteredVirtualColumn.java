@@ -322,7 +322,7 @@ public class ListFilteredVirtualColumn implements VirtualColumn
       boolean includeUnknown
   )
   {
-    return () -> new Iterator<ImmutableBitmap>()
+    return () -> new Iterator<>()
     {
       int currIndex = start;
       int found;

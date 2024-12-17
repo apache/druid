@@ -137,7 +137,7 @@ public class NumericArrayFieldWriter implements FieldWriter
     } else {
       // Create a columnValueSelector to write the individual elements re-using the NumericFieldWriter
       AtomicInteger index = new AtomicInteger(0);
-      ColumnValueSelector<Number> columnValueSelector = new ColumnValueSelector<Number>()
+      ColumnValueSelector<Number> columnValueSelector = new ColumnValueSelector<>()
       {
         @Override
         public double getDouble()

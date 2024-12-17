@@ -57,7 +57,7 @@ public class LookupSegment extends RowBasedSegment<Map.Entry<String, String>>
 
           return extractor.asMap().entrySet().iterator();
         }),
-        new RowAdapter<Map.Entry<String, String>>()
+        new RowAdapter<>()
         {
           @Override
           public ToLongFunction<Map.Entry<String, String>> timestampFunction()

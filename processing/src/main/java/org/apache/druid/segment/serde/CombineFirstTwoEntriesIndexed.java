@@ -68,7 +68,7 @@ public abstract class CombineFirstTwoEntriesIndexed<T> implements Indexed<T>
    */
   public static <T> CombineFirstTwoEntriesIndexed<T> returnNull(final Indexed<T> delegate)
   {
-    return new CombineFirstTwoEntriesIndexed<T>(delegate)
+    return new CombineFirstTwoEntriesIndexed<>(delegate)
     {
       @Nullable
       @Override
@@ -87,7 +87,7 @@ public abstract class CombineFirstTwoEntriesIndexed<T> implements Indexed<T>
       final Indexed<ImmutableBitmap> delegate
   )
   {
-    return new CombineFirstTwoEntriesIndexed<ImmutableBitmap>(delegate)
+    return new CombineFirstTwoEntriesIndexed<>(delegate)
     {
       @Nullable
       @Override

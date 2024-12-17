@@ -219,12 +219,12 @@ public class CompressedVSizeColumnarIntsSupplier implements WritableSupplier<Col
         chunkFactor,
         numBytes,
         GenericIndexed.ofCompressedByteBuffers(
-            new Iterable<ByteBuffer>()
+            new Iterable<>()
             {
               @Override
               public Iterator<ByteBuffer> iterator()
               {
-                return new Iterator<ByteBuffer>()
+                return new Iterator<>()
                 {
                   int position = 0;
                   private final ByteBuffer retVal =

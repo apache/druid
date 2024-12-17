@@ -103,7 +103,7 @@ public class DataSourceMetadataQueryRunnerFactory
       final DataSourceMetadataQuery legacyQuery = (DataSourceMetadataQuery) query;
 
       return new BaseSequence<>(
-          new BaseSequence.IteratorMaker<Result<DataSourceMetadataResultValue>, Iterator<Result<DataSourceMetadataResultValue>>>()
+          new BaseSequence.IteratorMaker<>()
           {
             @Override
             public Iterator<Result<DataSourceMetadataResultValue>> make()

@@ -310,8 +310,8 @@ public class SchemalessIndexTest
   {
     return getMergedIncrementalIndex(
         Arrays.asList(
-            new Pair<String, AggregatorFactory[]>("druid.sample.json.top", METRIC_AGGS_NO_UNIQ),
-            new Pair<String, AggregatorFactory[]>("druid.sample.json.bottom", METRIC_AGGS)
+            new Pair<>("druid.sample.json.top", METRIC_AGGS_NO_UNIQ),
+            new Pair<>("druid.sample.json.bottom", METRIC_AGGS)
         )
     );
   }
@@ -463,7 +463,7 @@ public class SchemalessIndexTest
               Lists.newArrayList(
                   Iterables.transform(
                       filesToMap,
-                      new Function<File, QueryableIndex>()
+                      new Function<>()
                       {
                         @Override
                         public QueryableIndex apply(@Nullable File input)

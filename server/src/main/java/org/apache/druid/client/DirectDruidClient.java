@@ -174,7 +174,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
       final long maxQueuedBytes = queryContext.getMaxQueuedBytes(0);
       final boolean usingBackpressure = maxQueuedBytes > 0;
 
-      final HttpResponseHandler<InputStream, InputStream> responseHandler = new HttpResponseHandler<InputStream, InputStream>()
+      final HttpResponseHandler<InputStream, InputStream> responseHandler = new HttpResponseHandler<>()
       {
         private final AtomicLong totalByteCount = new AtomicLong(0);
         private final AtomicLong queuedByteCount = new AtomicLong(0);
@@ -276,7 +276,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           totalByteCount.addAndGet(response.getContent().readableBytes());
           return ClientResponse.finished(
               new SequenceInputStream(
-                  new Enumeration<InputStream>()
+                  new Enumeration<>()
                   {
                     @Override
                     public boolean hasMoreElements()
@@ -480,7 +480,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
       queryWatcher.registerQueryFuture(query, future);
       Futures.addCallback(
           future,
-          new FutureCallback<InputStream>()
+          new FutureCallback<>()
           {
             @Override
             public void onSuccess(InputStream result)
@@ -511,7 +511,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           @Override
           public JsonParserIterator<T> make()
           {
-            return new JsonParserIterator<T>(
+            return new JsonParserIterator<>(
                 queryResultType,
                 future,
                 url,

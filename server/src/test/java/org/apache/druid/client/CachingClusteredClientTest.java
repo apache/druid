@@ -273,7 +273,7 @@ public class CachingClusteredClientTest
   {
     return Lists.transform(
         Lists.newArrayList(new RangeIterable(RANDOMNESS)),
-        new Function<Integer, Object[]>()
+        new Function<>()
         {
           @Override
           public Object[] apply(Integer input)
@@ -1900,7 +1900,7 @@ public class CachingClusteredClientTest
             results.add(expectation.getResults());
           }
           EasyMock.expect(queryable.run(EasyMock.capture(capture), EasyMock.capture(context)))
-                  .andAnswer(new IAnswer<Sequence>()
+                  .andAnswer(new IAnswer<>()
                   {
                     @Override
                     public Sequence answer()
@@ -2259,7 +2259,7 @@ public class CachingClusteredClientTest
               .trinaryTransform(
                   intervals,
                   results,
-                  new TrinaryFn<SegmentId, Interval, Iterable<Result<TimeseriesResultValue>>, Result<TimeseriesResultValue>>()
+                  new TrinaryFn<>()
                   {
                     @Override
                     @SuppressWarnings("unchecked")
@@ -2298,7 +2298,7 @@ public class CachingClusteredClientTest
             .trinaryTransform(
                 intervals,
                 results,
-                new TrinaryFn<SegmentId, Interval, Iterable<Result<TopNResultValue>>, Result<TopNResultValue>>()
+                new TrinaryFn<>()
                 {
                   @Override
                   @SuppressWarnings("unchecked")
@@ -2334,7 +2334,7 @@ public class CachingClusteredClientTest
             .trinaryTransform(
                 intervals,
                 results,
-                new TrinaryFn<SegmentId, Interval, Iterable<Result<SearchResultValue>>, Result<SearchResultValue>>()
+                new TrinaryFn<>()
                 {
                   @Override
                   @SuppressWarnings("unchecked")
@@ -2371,7 +2371,7 @@ public class CachingClusteredClientTest
             .trinaryTransform(
                 intervals,
                 results,
-                new TrinaryFn<SegmentId, Interval, Iterable<ResultRow>, Result>()
+                new TrinaryFn<>()
                 {
                   @Override
                   @SuppressWarnings("unchecked")
@@ -2415,7 +2415,7 @@ public class CachingClusteredClientTest
             .trinaryTransform(
                 intervals,
                 results,
-                new TrinaryFn<SegmentId, Interval, Iterable<Result<TimeBoundaryResultValue>>, Result<TimeBoundaryResultValue>>()
+                new TrinaryFn<>()
                 {
                   @Override
                   @SuppressWarnings("unchecked")

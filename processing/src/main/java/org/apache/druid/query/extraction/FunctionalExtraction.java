@@ -62,7 +62,7 @@ public abstract class FunctionalExtraction extends DimExtractionFn
     // This is intended to have the absolutely fastest code path possible and not have any extra logic in the function
     if (this.retainMissingValue) {
 
-      this.extractionFunction = new Function<String, String>()
+      this.extractionFunction = new Function<>()
       {
         @Nullable
         @Override
@@ -73,7 +73,7 @@ public abstract class FunctionalExtraction extends DimExtractionFn
         }
       };
     } else {
-      this.extractionFunction = new Function<String, String>()
+      this.extractionFunction = new Function<>()
       {
         @Nullable
         @Override

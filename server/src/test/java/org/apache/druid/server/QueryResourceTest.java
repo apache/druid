@@ -298,9 +298,7 @@ public class QueryResourceTest
 
     final List<Result<TimeBoundaryResultValue>> responses = jsonMapper.readValue(
         response.baos.toByteArray(),
-        new TypeReference<List<Result<TimeBoundaryResultValue>>>()
-        {
-        }
+        new TypeReference<>() {}
     );
 
     Assert.assertEquals(0, responses.size());
@@ -625,9 +623,7 @@ public class QueryResourceTest
 
     final List<Result<TimeBoundaryResultValue>> responses = jsonMapper.readValue(
         response.baos.toByteArray(),
-        new TypeReference<List<Result<TimeBoundaryResultValue>>>()
-        {
-        }
+        new TypeReference<>() {}
     );
 
     Assert.assertNotNull(response);
@@ -876,9 +872,7 @@ public class QueryResourceTest
 
     final List<Result<TimeBoundaryResultValue>> responses = jsonMapper.readValue(
         response.baos.toByteArray(),
-        new TypeReference<List<Result<TimeBoundaryResultValue>>>()
-        {
-        }
+        new TypeReference<>() {}
     );
 
     Assert.assertEquals(0, responses.size());

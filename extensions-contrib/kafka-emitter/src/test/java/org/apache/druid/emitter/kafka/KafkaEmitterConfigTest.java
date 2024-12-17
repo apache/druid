@@ -91,7 +91,7 @@ public class KafkaEmitterConfigTest
   @Test
   public void testSerDeserKafkaEmitterConfigNullMetricsTopic() throws IOException
   {
-    Set<KafkaEmitterConfig.EventType> eventTypeSet = new HashSet<KafkaEmitterConfig.EventType>();
+    Set<KafkaEmitterConfig.EventType> eventTypeSet = new HashSet<>();
     eventTypeSet.add(KafkaEmitterConfig.EventType.SEGMENT_METADATA);
     KafkaEmitterConfig kafkaEmitterConfig = new KafkaEmitterConfig(
         "hostname",
