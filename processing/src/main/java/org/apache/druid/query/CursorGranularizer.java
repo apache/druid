@@ -24,6 +24,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.segment.ColumnValueSelector;
@@ -94,10 +95,12 @@ public class CursorGranularizer
       timeSelector = cursor.getColumnSelectorFactory().makeColumnValueSelector(ColumnHolder.TIME_COLUMN_NAME);
     }
 
-    return new CursorGranularizer(cursor, bucketIterable, timeSelector, timeOrder == Order.DESCENDING);
+    return new CursorGranularizer(cursor, granularity, bucketIterable, timeSelector, timeOrder == Order.DESCENDING);
   }
 
   private final Cursor cursor;
+
+  private final Granularity granularity;
 
   // Iterable that iterates over time buckets.
   private final Iterable<Interval> bucketIterable;
@@ -112,12 +115,14 @@ public class CursorGranularizer
 
   private CursorGranularizer(
       Cursor cursor,
+      Granularity granularity,
       Iterable<Interval> bucketIterable,
       @Nullable ColumnValueSelector timeSelector,
       boolean descending
   )
   {
     this.cursor = cursor;
+    this.granularity = granularity;
     this.bucketIterable = bucketIterable;
     this.timeSelector = timeSelector;
     this.descending = descending;
@@ -133,13 +138,18 @@ public class CursorGranularizer
     return DateTimes.utc(currentBucketStart);
   }
 
+  public Interval getCurrentInterval()
+  {
+    return Intervals.utc(currentBucketStart, currentBucketEnd);
+  }
+
   public boolean advanceToBucket(final Interval bucketInterval)
   {
+    currentBucketStart = bucketInterval.getStartMillis();
+    currentBucketEnd = bucketInterval.getEndMillis();
     if (cursor.isDone()) {
       return false;
     }
-    currentBucketStart = bucketInterval.getStartMillis();
-    currentBucketEnd = bucketInterval.getEndMillis();
     if (timeSelector == null) {
       return true;
     }

@@ -94,23 +94,25 @@ public abstract class NullableNumericTopNColumnAggregatesProcessor<Selector exte
   )
   {
     long processedRows = 0;
-    while (!cursor.isDone()) {
-      if (hasNulls && selector.isNull()) {
-        if (nullValueAggregates == null) {
-          nullValueAggregates = BaseTopNAlgorithm.makeAggregators(cursor, query.getAggregatorSpecs());
+    if (granularizer.currentOffsetWithinBucket()) {
+      while (!cursor.isDone()) {
+        if (hasNulls && selector.isNull()) {
+          if (nullValueAggregates == null) {
+            nullValueAggregates = BaseTopNAlgorithm.makeAggregators(cursor, query.getAggregatorSpecs());
+          }
+          for (Aggregator aggregator : nullValueAggregates) {
+            aggregator.aggregate();
+          }
+        } else {
+          Aggregator[] valueAggregates = getValueAggregators(query, selector, cursor);
+          for (Aggregator aggregator : valueAggregates) {
+            aggregator.aggregate();
+          }
         }
-        for (Aggregator aggregator : nullValueAggregates) {
-          aggregator.aggregate();
+        processedRows++;
+        if (!granularizer.advanceCursorWithinBucket()) {
+          break;
         }
-      } else {
-        Aggregator[] valueAggregates = getValueAggregators(query, selector, cursor);
-        for (Aggregator aggregator : valueAggregates) {
-          aggregator.aggregate();
-        }
-      }
-      processedRows++;
-      if (!granularizer.advanceCursorWithinBucket()) {
-        break;
       }
     }
     return processedRows;
