@@ -180,7 +180,7 @@ public class RowBasedCursorFactoryTest
    * other columns return null.
    */
   private static final RowAdapter<Integer> ROW_ADAPTER =
-      new RowAdapter<Integer>()
+      new RowAdapter<>()
       {
         @Override
         public ToLongFunction<Integer> timestampFunction()
@@ -209,9 +209,10 @@ public class RowBasedCursorFactoryTest
       };
 
   private static final RowAdapter<Integer> SAME_TIME_ROW_ADAPTER =
-      new RowAdapter<Integer>()
+      new RowAdapter<>()
       {
         private DateTime startTime = DateTimes.nowUtc();
+
         @Override
         public ToLongFunction<Integer> timestampFunction()
         {

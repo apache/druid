@@ -58,13 +58,13 @@ public class RoaringBitmapFactory implements BitmapFactory
       final Iterable<ImmutableBitmap> b
   )
   {
-    return new Iterable<ImmutableRoaringBitmap>()
+    return new Iterable<>()
     {
       @Override
       public Iterator<ImmutableRoaringBitmap> iterator()
       {
         final Iterator<ImmutableBitmap> i = b.iterator();
-        return new Iterator<ImmutableRoaringBitmap>()
+        return new Iterator<>()
         {
           @Override
           public void remove()

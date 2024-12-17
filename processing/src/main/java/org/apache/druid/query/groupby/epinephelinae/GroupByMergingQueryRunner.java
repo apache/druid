@@ -238,7 +238,7 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
               List<ListenableFuture<AggregateResult>> futures = Lists.newArrayList(
                       Iterables.transform(
                           queryables,
-                          new Function<QueryRunner<ResultRow>, ListenableFuture<AggregateResult>>()
+                          new Function<>()
                           {
                             @Override
                             public ListenableFuture<AggregateResult> apply(final QueryRunner<ResultRow> input)
@@ -248,7 +248,7 @@ public class GroupByMergingQueryRunner implements QueryRunner<ResultRow>
                               }
 
                               ListenableFuture<AggregateResult> future = queryProcessingPool.submitRunnerTask(
-                                  new AbstractPrioritizedQueryRunnerCallable<AggregateResult, ResultRow>(priority, input)
+                                  new AbstractPrioritizedQueryRunnerCallable<>(priority, input)
                                   {
                                     @Override
                                     public AggregateResult call()

@@ -58,7 +58,7 @@ public class HyperUniquesSerde extends ComplexMetricSerde
   @Override
   public ComplexMetricExtractor<HyperLogLogCollector> getExtractor()
   {
-    return new ComplexMetricExtractor<HyperLogLogCollector>()
+    return new ComplexMetricExtractor<>()
     {
       @Override
       public Class<HyperLogLogCollector> extractedClass()

@@ -240,12 +240,12 @@ public class Frame
         );
       }
 
-      return Frame.wrap(dstBuffer);
+      return wrap(dstBuffer);
     } else {
       // Copy first, then decompress.
       final byte[] compressedFrame = new byte[compressedFrameLength];
       memory.getByteArray(frameStart, compressedFrame, 0, compressedFrameLength);
-      return Frame.wrap(LZ4_DECOMPRESSOR.decompress(compressedFrame, uncompressedFrameLength));
+      return wrap(LZ4_DECOMPRESSOR.decompress(compressedFrame, uncompressedFrameLength));
     }
   }
 

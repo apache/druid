@@ -343,7 +343,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
                   @Override
                   public QueryHandler.EnumeratorIterator<Object[]> make()
                   {
-                    return new QueryHandler.EnumeratorIterator<>(new Iterator<Object[]>()
+                    return new QueryHandler.EnumeratorIterator<>(new Iterator<>()
                     {
                       @Override
                       public boolean hasNext()

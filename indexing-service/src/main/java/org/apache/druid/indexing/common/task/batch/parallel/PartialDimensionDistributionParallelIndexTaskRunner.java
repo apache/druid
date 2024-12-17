@@ -295,7 +295,7 @@ class PartialDimensionDistributionParallelIndexTaskRunner
       ParallelIndexIngestionSpec subTaskIngestionSpec
   )
   {
-    return new SubTaskSpec<PartialDimensionDistributionTask>(
+    return new SubTaskSpec<>(
         id,
         groupId,
         supervisorTaskId,

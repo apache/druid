@@ -272,9 +272,7 @@ public class DeterminePartitionsJob implements Jobby
         }
         if (Utils.exists(dimSelectionJob, fileSystem, partitionInfoPath)) {
           List<ShardSpec> specs = HadoopDruidIndexerConfig.JSON_MAPPER.readValue(
-              Utils.openInputStream(dimSelectionJob, partitionInfoPath), new TypeReference<List<ShardSpec>>()
-              {
-              }
+              Utils.openInputStream(dimSelectionJob, partitionInfoPath), new TypeReference<>() {}
           );
 
           List<HadoopyShardSpec> actualSpecs = Lists.newArrayListWithExpectedSize(specs.size());
@@ -619,7 +617,7 @@ public class DeterminePartitionsJob implements Jobby
 
     private static Iterable<DimValueCount> combineRows(Iterable<Text> input)
     {
-      final Comparator<List<String>> dimsComparator = new Comparator<List<String>>()
+      final Comparator<List<String>> dimsComparator = new Comparator<>()
       {
         @Override
         public int compare(List<String> o1, List<String> o2)
@@ -958,7 +956,7 @@ public class DeterminePartitionsJob implements Jobby
     @Override
     public void checkOutputSpecs(JobContext job) throws IOException
     {
-      Path outDir = FileOutputFormat.getOutputPath(job);
+      Path outDir = getOutputPath(job);
       if (outDir == null) {
         throw new InvalidJobConfException("Output directory not set.");
       }

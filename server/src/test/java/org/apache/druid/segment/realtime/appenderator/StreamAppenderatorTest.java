@@ -812,7 +812,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
                                                   .build()) {
       final Appenderator appenderator = tester.getAppenderator();
       final AtomicInteger eventCount = new AtomicInteger(0);
-      final Supplier<Committer> committerSupplier = new Supplier<Committer>()
+      final Supplier<Committer> committerSupplier = new Supplier<>()
       {
         @Override
         public Committer get()
@@ -920,7 +920,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
       tuningConfig = tester.getTuningConfig();
 
       final AtomicInteger eventCount = new AtomicInteger(0);
-      final Supplier<Committer> committerSupplier = new Supplier<Committer>()
+      final Supplier<Committer> committerSupplier = new Supplier<>()
       {
         @Override
         public Committer get()
@@ -2352,7 +2352,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
 
   private static Supplier<Committer> committerSupplierFromConcurrentMap(final ConcurrentMap<String, String> map)
   {
-    return new Supplier<Committer>()
+    return new Supplier<>()
     {
       @Override
       public Committer get()

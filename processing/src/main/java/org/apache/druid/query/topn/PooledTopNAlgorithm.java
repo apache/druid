@@ -81,28 +81,28 @@ public class PooledTopNAlgorithm
   @VisibleForTesting
   static void setSpecializeGeneric1AggPooledTopN(boolean value)
   {
-    PooledTopNAlgorithm.SPECIALIZE_GENERIC_ONE_AGG_POOLED_TOPN = value;
+    SPECIALIZE_GENERIC_ONE_AGG_POOLED_TOPN = value;
     computeSpecializedScanAndAggregateImplementations();
   }
 
   @VisibleForTesting
   static void setSpecializeGeneric2AggPooledTopN(boolean value)
   {
-    PooledTopNAlgorithm.SPECIALIZE_GENERIC_TWO_AGG_POOLED_TOPN = value;
+    SPECIALIZE_GENERIC_TWO_AGG_POOLED_TOPN = value;
     computeSpecializedScanAndAggregateImplementations();
   }
 
   @VisibleForTesting
   static void setSpecializeHistorical1SimpleDoubleAggPooledTopN(boolean value)
   {
-    PooledTopNAlgorithm.SPECIALIZE_HISTORICAL_ONE_SIMPLE_DOUBLE_AGG_POOLED_TOPN = value;
+    SPECIALIZE_HISTORICAL_ONE_SIMPLE_DOUBLE_AGG_POOLED_TOPN = value;
     computeSpecializedScanAndAggregateImplementations();
   }
 
   @VisibleForTesting
   static void setSpecializeHistoricalSingleValueDimSelector1SimpleDoubleAggPooledTopN(boolean value)
   {
-    PooledTopNAlgorithm.SPECIALIZE_HISTORICAL_SINGLE_VALUE_DIM_SELECTOR_ONE_SIMPLE_DOUBLE_AGG_POOLED_TOPN = value;
+    SPECIALIZE_HISTORICAL_SINGLE_VALUE_DIM_SELECTOR_ONE_SIMPLE_DOUBLE_AGG_POOLED_TOPN = value;
     computeSpecializedScanAndAggregateImplementations();
   }
 
@@ -231,7 +231,7 @@ public class PooledTopNAlgorithm
       throw new UnsupportedOperationException("Cannot operate on a dimension with no dictionary");
     }
 
-    final TopNMetricSpecBuilder<int[]> arrayProvider = new BaseArrayProvider<int[]>(dimSelector, query, cursorInspector)
+    final TopNMetricSpecBuilder<int[]> arrayProvider = new BaseArrayProvider<>(dimSelector, query, cursorInspector)
     {
       private final int[] positions = new int[cardinality];
 

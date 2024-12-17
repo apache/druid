@@ -452,7 +452,7 @@ public class DruidJoinRule extends RelOptRule
     final List<RexNode> unSupportedSubConditions = new ArrayList<>();
     final Set<RexInputRef> rightColumns = new HashSet<>();
     final int numLeftFields = leftRowType.getFieldCount();
-    final List<String> errors = new ArrayList<String>();
+    final List<String> errors = new ArrayList<>();
 
     for (RexNode subCondition : subConditions) {
       if (RexUtil.isLiteral(subCondition, true)) {

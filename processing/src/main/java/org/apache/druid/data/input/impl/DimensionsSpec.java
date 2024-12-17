@@ -139,7 +139,7 @@ public class DimensionsSpec
     }
 
     for (SpatialDimensionSchema spatialSchema : spatialDims) {
-      DimensionSchema newSchema = DimensionsSpec.convertSpatialSchema(spatialSchema);
+      DimensionSchema newSchema = convertSpatialSchema(spatialSchema);
       this.dimensions.add(newSchema);
       dimensionSchemaMap.put(newSchema.getName(), newSchema);
     }
@@ -201,7 +201,7 @@ public class DimensionsSpec
 
     Iterable<SpatialDimensionSchema> transformedList = Iterables.transform(
         filteredList,
-        new Function<NewSpatialDimensionSchema, SpatialDimensionSchema>()
+        new Function<>()
         {
           @Nullable
           @Override
@@ -221,7 +221,7 @@ public class DimensionsSpec
   {
     return Lists.transform(
         dimensions,
-        new Function<DimensionSchema, String>()
+        new Function<>()
         {
           @Override
           public String apply(DimensionSchema input)
@@ -295,7 +295,7 @@ public class DimensionsSpec
 
     List<String> spatialDimNames = Lists.transform(
         spatialDimensions,
-        new Function<SpatialDimensionSchema, String>()
+        new Function<>()
         {
           @Override
           public String apply(SpatialDimensionSchema input)

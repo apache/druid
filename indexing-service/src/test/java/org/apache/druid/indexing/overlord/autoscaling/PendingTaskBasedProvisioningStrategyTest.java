@@ -101,7 +101,7 @@ public class PendingTaskBasedProvisioningStrategyTest
         config,
         DSuppliers.of(workerConfig),
         new ProvisioningSchedulerConfig(),
-        new Supplier<ScheduledExecutorService>()
+        new Supplier<>()
         {
           @Override
           public ScheduledExecutorService get()
@@ -127,7 +127,7 @@ public class PendingTaskBasedProvisioningStrategyTest
         config,
         DSuppliers.of(workerConfig),
         new ProvisioningSchedulerConfig(),
-        new Supplier<ScheduledExecutorService>()
+        new Supplier<>()
         {
           @Override
           public ScheduledExecutorService get()
@@ -155,7 +155,7 @@ public class PendingTaskBasedProvisioningStrategyTest
         config,
         DSuppliers.of(workerConfig),
         new ProvisioningSchedulerConfig(),
-        new Supplier<ScheduledExecutorService>()
+        new Supplier<>()
         {
           @Override
           public ScheduledExecutorService get()
@@ -278,7 +278,7 @@ public class PendingTaskBasedProvisioningStrategyTest
         config,
         DSuppliers.of(workerConfig),
         new ProvisioningSchedulerConfig(),
-        new Supplier<ScheduledExecutorService>()
+        new Supplier<>()
         {
           @Override
           public ScheduledExecutorService get()
@@ -329,7 +329,7 @@ public class PendingTaskBasedProvisioningStrategyTest
         config,
         DSuppliers.of(workerConfig),
         new ProvisioningSchedulerConfig(),
-        new Supplier<ScheduledExecutorService>()
+        new Supplier<>()
         {
           @Override
           public ScheduledExecutorService get()
@@ -493,7 +493,7 @@ public class PendingTaskBasedProvisioningStrategyTest
         config,
         DSuppliers.of(workerConfig),
         new ProvisioningSchedulerConfig(),
-        new Supplier<ScheduledExecutorService>()
+        new Supplier<>()
         {
           @Override
           public ScheduledExecutorService get()
@@ -568,7 +568,7 @@ public class PendingTaskBasedProvisioningStrategyTest
         config,
         DSuppliers.of(workerConfig),
         new ProvisioningSchedulerConfig(),
-        new Supplier<ScheduledExecutorService>()
+        new Supplier<>()
         {
           @Override
           public ScheduledExecutorService get()

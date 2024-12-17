@@ -95,7 +95,7 @@ public class VectorProcessors
     final Object[] objects = new Object[maxVectorSize];
     Arrays.fill(objects, constant);
     final ExprEvalObjectVector eval = new ExprEvalObjectVector(objects, type);
-    return new ExprVectorProcessor<T>()
+    return new ExprVectorProcessor<>()
     {
       @Override
       public ExprEvalVector<T> evalVector(Expr.VectorInputBinding bindings)
@@ -132,7 +132,7 @@ public class VectorProcessors
       Arrays.fill(doubles, constant);
     }
     final ExprEvalDoubleVector eval = new ExprEvalDoubleVector(doubles, nulls);
-    return new ExprVectorProcessor<T>()
+    return new ExprVectorProcessor<>()
     {
       @Override
       public ExprEvalVector<T> evalVector(Expr.VectorInputBinding bindings)
@@ -169,7 +169,7 @@ public class VectorProcessors
       Arrays.fill(longs, constant);
     }
     final ExprEvalLongVector eval = new ExprEvalLongVector(longs, nulls);
-    return new ExprVectorProcessor<T>()
+    return new ExprVectorProcessor<>()
     {
       @Override
       public ExprEvalVector<T> evalVector(Expr.VectorInputBinding bindings)

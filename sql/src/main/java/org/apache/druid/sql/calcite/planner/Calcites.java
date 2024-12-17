@@ -299,7 +299,7 @@ public class Calcites
       case VARCHAR:
         dataType = typeFactory.createTypeWithCharsetAndCollation(
             typeFactory.createSqlType(typeName),
-            Calcites.defaultCharset(),
+            defaultCharset(),
             SqlCollation.IMPLICIT
         );
         break;
@@ -566,7 +566,7 @@ public class Calcites
       if (SqlTypeUtil.isArray(type)) {
         return type;
       }
-      return Calcites.createSqlArrayTypeWithNullability(
+      return createSqlArrayTypeWithNullability(
           opBinding.getTypeFactory(),
           type.getSqlTypeName(),
           true
@@ -583,7 +583,7 @@ public class Calcites
       if (SqlTypeUtil.isArray(type)) {
         return type;
       }
-      return Calcites.createSqlArrayTypeWithNullability(
+      return createSqlArrayTypeWithNullability(
           opBinding.getTypeFactory(),
           type.getSqlTypeName(),
           true

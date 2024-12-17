@@ -535,7 +535,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
       String hadoopJobIdFile = getHadoopJobIdFileName();
 
       try {
-        ClassLoader loader = HadoopTask.buildClassLoader(
+        ClassLoader loader = buildClassLoader(
             getHadoopDependencyCoordinates(),
             taskConfig.getDefaultHadoopCoordinates()
         );
@@ -616,7 +616,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
 
     final ClassLoader oldLoader = Thread.currentThread().getContextClassLoader();
     try {
-      ClassLoader loader = HadoopTask.buildClassLoader(
+      ClassLoader loader = buildClassLoader(
           getHadoopDependencyCoordinates(),
           taskConfig.getDefaultHadoopCoordinates()
       );
@@ -921,9 +921,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
   public static class HadoopRenameSegmentIndexFilesRunner
   {
     TypeReference<List<DataSegmentAndIndexZipFilePath>> LIST_DATA_SEGMENT_AND_INDEX_ZIP_FILE_PATH =
-        new TypeReference<List<DataSegmentAndIndexZipFilePath>>()
-        {
-        };
+        new TypeReference<>() {};
 
     public void runTask(String[] args) throws Exception
     {
@@ -963,9 +961,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
   public static class HadoopIndexerGeneratorCleanupRunner
   {
     TypeReference<List<DataSegmentAndIndexZipFilePath>> LIST_DATA_SEGMENT_AND_INDEX_ZIP_FILE_PATH =
-        new TypeReference<List<DataSegmentAndIndexZipFilePath>>()
-        {
-        };
+        new TypeReference<>() {};
 
     public void runTask(String[] args) throws Exception
     {

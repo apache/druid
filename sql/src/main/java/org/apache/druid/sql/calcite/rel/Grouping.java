@@ -265,7 +265,7 @@ public class Grouping
       newSubtotals = subtotals;
     }
 
-    return Grouping.create(
+    return create(
         newDimensions,
         newSubtotals,
         newAggregations,

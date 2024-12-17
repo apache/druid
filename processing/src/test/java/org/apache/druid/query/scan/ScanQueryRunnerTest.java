@@ -103,7 +103,7 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
     List<String> lines = new ArrayList<>();
     try {
       sampleData.readLines(
-          new LineProcessor<Object>()
+          new LineProcessor<>()
           {
             int count = 0;
 
@@ -1155,7 +1155,7 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
 
   private Iterable<ScanResultValue> compactedListToRow(Iterable<ScanResultValue> results)
   {
-    return Lists.newArrayList(Iterables.transform(results, new Function<ScanResultValue, ScanResultValue>()
+    return Lists.newArrayList(Iterables.transform(results, new Function<>()
     {
       @Override
       public ScanResultValue apply(ScanResultValue input)

@@ -472,7 +472,7 @@ public class OshiSysMonitorTest
     m.stop();
     Assert.assertEquals(16, emitter.getEvents().size()); // 8 ticktype * 2 processors
 
-    Map<String, Object> userDims = new HashMap<String, Object>();
+    Map<String, Object> userDims = new HashMap<>();
     userDims.put("cpuName", "0");
     userDims.put("cpuTime", "user");
     List<Number> metricValues1 = emitter.getMetricValues("sys/cpu", userDims);

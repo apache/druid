@@ -120,7 +120,7 @@ public class TimeBoundaryQueryRunnerFactory
       final TimeBoundaryQuery query = (TimeBoundaryQuery) input;
 
       return new BaseSequence<>(
-          new BaseSequence.IteratorMaker<Result<TimeBoundaryResultValue>, Iterator<Result<TimeBoundaryResultValue>>>()
+          new BaseSequence.IteratorMaker<>()
           {
             @Override
             public Iterator<Result<TimeBoundaryResultValue>> make()

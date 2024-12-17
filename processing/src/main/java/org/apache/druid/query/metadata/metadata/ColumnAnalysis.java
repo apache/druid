@@ -38,7 +38,7 @@ public class ColumnAnalysis
 
   public static <T> Builder<T> builder()
   {
-    return new Builder<T>();
+    return new Builder<>();
   }
 
   public static ColumnAnalysis error(String reason)
@@ -151,7 +151,7 @@ public class ColumnAnalysis
     }
 
     if (isError() && rhs.isError()) {
-      return errorMessage.equals(rhs.getErrorMessage()) ? this : ColumnAnalysis.error("multiple_errors");
+      return errorMessage.equals(rhs.getErrorMessage()) ? this : error("multiple_errors");
     } else if (isError()) {
       return this;
     } else if (rhs.isError()) {
@@ -159,13 +159,13 @@ public class ColumnAnalysis
     }
 
     if (!Objects.equals(type, rhs.getType())) {
-      return ColumnAnalysis.error(
+      return error(
           StringUtils.format("cannot_merge_diff_types: [%s] and [%s]", type, rhs.getType())
       );
     }
 
     if (!Objects.equals(typeSignature, rhs.getTypeSignature())) {
-      return ColumnAnalysis.error(
+      return error(
           StringUtils.format(
               "cannot_merge_diff_types: [%s] and [%s]",
               typeSignature.asTypeString(),

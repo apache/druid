@@ -54,6 +54,7 @@ import org.apache.druid.sql.calcite.external.ExternalTableScanRule;
 import org.apache.druid.sql.calcite.rule.AggregatePullUpLookupRule;
 import org.apache.druid.sql.calcite.rule.CaseToCoalesceRule;
 import org.apache.druid.sql.calcite.rule.CoalesceLookupRule;
+import org.apache.druid.sql.calcite.rule.DruidAggregateCaseToFilterRule;
 import org.apache.druid.sql.calcite.rule.DruidLogicalValuesRule;
 import org.apache.druid.sql.calcite.rule.DruidRelToDruidRule;
 import org.apache.druid.sql.calcite.rule.DruidRules;
@@ -119,7 +120,6 @@ public class CalciteRulesManager
           CoreRules.FILTER_PROJECT_TRANSPOSE,
           CoreRules.JOIN_PUSH_EXPRESSIONS,
           CoreRules.AGGREGATE_EXPAND_WITHIN_DISTINCT,
-          CoreRules.AGGREGATE_CASE_TO_FILTER,
           CoreRules.FILTER_AGGREGATE_TRANSPOSE,
           CoreRules.PROJECT_WINDOW_TRANSPOSE,
           CoreRules.MATCH,
@@ -277,7 +277,7 @@ public class CalciteRulesManager
   private Program buildDecoupledLogicalOptimizationProgram(PlannerContext plannerContext)
   {
     final HepProgramBuilder builder = HepProgram.builder();
-    builder.addMatchLimit(CalciteRulesManager.HEP_DEFAULT_MATCH_LIMIT);
+    builder.addMatchLimit(HEP_DEFAULT_MATCH_LIMIT);
     builder.addRuleCollection(baseRuleSet(plannerContext));
     builder.addRuleInstance(CoreRules.UNION_MERGE);
     builder.addRuleInstance(JoinExtractFilterRule.Config.DEFAULT.toRule());
@@ -330,7 +330,7 @@ public class CalciteRulesManager
   private Program buildPreVolcanoManipulationProgram(final PlannerContext plannerContext)
   {
     final HepProgramBuilder builder = HepProgram.builder();
-    builder.addMatchLimit(CalciteRulesManager.HEP_DEFAULT_MATCH_LIMIT);
+    builder.addMatchLimit(HEP_DEFAULT_MATCH_LIMIT);
 
     // Apply FILTER_INTO_JOIN early, if using a join algorithm that requires subqueries anyway.
     if (plannerContext.getJoinAlgorithm().requiresSubquery()) {
@@ -350,7 +350,7 @@ public class CalciteRulesManager
   private Program buildReductionProgram(final PlannerContext plannerContext, final boolean isDruid)
   {
     final HepProgramBuilder builder = HepProgram.builder();
-    builder.addMatchLimit(CalciteRulesManager.HEP_DEFAULT_MATCH_LIMIT);
+    builder.addMatchLimit(HEP_DEFAULT_MATCH_LIMIT);
 
     if (isDruid) {
       // COALESCE rules must run before REDUCTION_RULES, since otherwise ReduceExpressionsRule#pushPredicateIntoCase may
@@ -495,6 +495,7 @@ public class CalciteRulesManager
     rules.addAll(BASE_RULES);
     rules.addAll(ABSTRACT_RULES);
     rules.addAll(ABSTRACT_RELATIONAL_RULES);
+    rules.add(new DruidAggregateCaseToFilterRule(plannerContext.queryContext().isExtendedFilteredSumRewrite()));
     rules.addAll(configurableRuleSet(plannerContext));
 
     if (plannerContext.getJoinAlgorithm().requiresSubquery()) {

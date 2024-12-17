@@ -139,7 +139,7 @@ public class DatasourceInputFormat extends InputFormat<NullWritable, InputRow>
     return new DatasourceRecordReader();
   }
 
-  private Supplier<org.apache.hadoop.mapred.InputFormat> supplier = new Supplier<org.apache.hadoop.mapred.InputFormat>()
+  private Supplier<org.apache.hadoop.mapred.InputFormat> supplier = new Supplier<>()
   {
     @Override
     public org.apache.hadoop.mapred.InputFormat get()
@@ -160,7 +160,7 @@ public class DatasourceInputFormat extends InputFormat<NullWritable, InputRow>
         {
           // to avoid globbing which needs input path should be hadoop-compatible (':' is not acceptable in path, etc.)
           List<FileStatus> statusList = new ArrayList<>();
-          for (Path path : FileInputFormat.getInputPaths(job)) {
+          for (Path path : getInputPaths(job)) {
             // load spec in segment points specifically zip file itself
             statusList.add(path.getFileSystem(job).getFileStatus(path));
           }
@@ -253,7 +253,7 @@ public class DatasourceInputFormat extends InputFormat<NullWritable, InputRow>
 
     return HadoopDruidIndexerConfig.JSON_MAPPER.readValue(
         currentDatasources,
-        new TypeReference<List<String>>() {}
+        new TypeReference<>() {}
     );
   }
 
@@ -286,7 +286,7 @@ public class DatasourceInputFormat extends InputFormat<NullWritable, InputRow>
   {
     return HadoopDruidIndexerConfig.JSON_MAPPER.readValue(
         conf.get(StringUtils.format("%s.%s", CONF_SEGMENTS, dataSource)),
-        new TypeReference<List<WindowedDataSegment>>() {}
+        new TypeReference<>() {}
     );
   }
 

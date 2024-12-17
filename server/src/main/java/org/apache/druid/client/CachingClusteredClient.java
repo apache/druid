@@ -179,7 +179,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
   @Override
   public <T> QueryRunner<T> getQueryRunnerForIntervals(final Query<T> query, final Iterable<Interval> intervals)
   {
-    return new QueryRunner<T>()
+    return new QueryRunner<>()
     {
       @Override
       public Sequence<T> run(final QueryPlus<T> queryPlus, final ResponseContext responseContext)
@@ -218,7 +218,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
   @Override
   public <T> QueryRunner<T> getQueryRunnerForSegments(final Query<T> query, final Iterable<SegmentDescriptor> specs)
   {
-    return new QueryRunner<T>()
+    return new QueryRunner<>()
     {
       @Override
       public Sequence<T> run(final QueryPlus<T> queryPlus, final ResponseContext responseContext)
@@ -629,7 +629,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
       for (Pair<Interval, byte[]> cachedResultPair : cachedResults) {
         final byte[] cachedResult = cachedResultPair.rhs;
         Sequence<Object> cachedSequence = new BaseSequence<>(
-            new BaseSequence.IteratorMaker<Object, Iterator<Object>>()
+            new BaseSequence.IteratorMaker<>()
             {
               @Override
               public Iterator<Object> make()

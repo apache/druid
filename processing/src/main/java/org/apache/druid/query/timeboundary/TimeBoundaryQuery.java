@@ -89,7 +89,7 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
   @Override
   public String getType()
   {
-    return Query.TIME_BOUNDARY;
+    return TIME_BOUNDARY;
   }
 
   @JsonProperty
