@@ -97,7 +97,6 @@ import org.apache.druid.sql.hook.DruidHookDispatcher;
 import org.apache.druid.timeline.DataSegment;
 
 import javax.inject.Named;
-
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.URI;
@@ -684,12 +683,14 @@ public class SqlTestFramework
     @Override
     public void configure(Binder binder)
     {
-      binder.bind(QuerySegmentWalker.class)
-      .to(SpecificSegmentsQuerySegmentWalker.class)
-      .in(LazySingleton.class);
-
     }
 
+    @Provides
+    @LazySingleton
+    public QuerySegmentWalker getQuerySegmentWalker(SpecificSegmentsQuerySegmentWalker walker)
+    {
+      return walker;
+    }
   }
 
   /**
