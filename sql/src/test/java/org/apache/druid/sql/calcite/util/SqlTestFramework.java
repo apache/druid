@@ -105,7 +105,6 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
@@ -165,20 +164,10 @@ public class SqlTestFramework
   public interface QueryComponentSupplier extends Closeable
   {
     /**
-     * Gather properties to be used within tests. Particularly useful when
-     * choosing among aggregator implementations: avoids the need to copy/paste
-     * code to select the desired implementation.
-     *
-     * {@deprecated} use modules; and a method like:
-     *
-     * <pre>
-     *   @ProvidesIntoSet
-     *   public Properties provideProperties() {}
-     * </pre>
-     *
-     * see {@link TestSqlModule#provideProperties()} for example.
+     * Gather properties to be used within tests. Particularly useful when choosing
+     * among aggregator implementations: avoids the need to copy/paste code to select
+     * the desired implementation.
      */
-    @Deprecated
     void gatherProperties(Properties properties);
 
 
@@ -727,20 +716,6 @@ public class SqlTestFramework
     public TestSetupModule(Builder builder)
     {
       this.builder = builder;
-    }
-
-    @Provides
-    @LazySingleton
-    Properties provideProperties(Set<Properties> props)
-    {
-      Properties properties = new Properties();
-      ArrayList<Properties> list = new ArrayList<>(props);
-      Collections.reverse(list);
-      for (Properties prop : list) {
-        properties.putAll(prop);
-      }
-      builder.componentSupplier.gatherProperties(properties);
-      return properties;
     }
 
     @Provides
