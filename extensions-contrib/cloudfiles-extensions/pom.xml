@@ -54,7 +54,13 @@
                     <artifactId>aopalliance</artifactId>
                 </exclusion>
             </exclusions>
+            <!--$NO-MVN-MAN-VER$ -->
+        </dependency>
+        <dependency>
+            <groupId>com.google.inject.extensions</groupId>
+            <artifactId>guice-multibindings</artifactId>
             <scope>provided</scope>
+            <!--$NO-MVN-MAN-VER$ -->
         </dependency>
         <dependency>
             <groupId>commons-io</groupId>
