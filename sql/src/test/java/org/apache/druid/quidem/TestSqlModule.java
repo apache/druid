@@ -40,18 +40,17 @@ public class TestSqlModule extends TestDruidModule
   public void configure(Binder binder)
   {
 
-    if(false) {
+    if(true) {
     binder.install(new SqlAggregationModule());
     binder.install(new SqlModule.SqlStatementFactoryModule());
     }
-    binder.install(new SqlModule());
 
     binder.bind(String.class)
         .annotatedWith(DruidSchemaName.class)
         .toInstance(CalciteTests.DRUID_SCHEMA_NAME);
     binder.bind(CalciteRulesManager.class).toInstance(new CalciteRulesManager(ImmutableSet.of()));
     binder.bind(CatalogResolver.class).toInstance(CatalogResolver.NULL_RESOLVER);
-//    binder.bind(ServiceEmitter.class).to(NoopServiceEmitter.class);
+    // binder.bind(ServiceEmitter.class).to(NoopServiceEmitter.class);
     binder.bind(QuerySchedulerProvider.class).in(LazySingleton.class);
     binder.bind(AuthenticatorMapper.class).toInstance(CalciteTests.TEST_AUTHENTICATOR_MAPPER);
     binder.bind(Escalator.class).toInstance(CalciteTests.TEST_AUTHENTICATOR_ESCALATOR);
