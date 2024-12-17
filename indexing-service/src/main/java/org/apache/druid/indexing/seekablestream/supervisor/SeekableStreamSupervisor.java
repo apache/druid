@@ -1105,17 +1105,18 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   }
 
   @Override
-  public ListenableFuture<Void> stopAsync(boolean stopGracefully)
+  public ListenableFuture<Void> stopAsync()
   {
     ListeningExecutorService shutdownExec = MoreExecutors.listeningDecorator(
         Execs.singleThreaded("supervisor-shutdown-" + StringUtils.encodeForFormat(supervisorId) + "--%d")
     );
     return shutdownExec.submit(() -> {
-      stop(stopGracefully);
+      stop(false);
       shutdownExec.shutdown();
       return null;
     });
   }
+
   @Override
   public void reset(@Nullable final DataSourceMetadata dataSourceMetadata)
   {

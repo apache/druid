@@ -46,11 +46,19 @@ public interface Supervisor
    */
   void stop(boolean stopGracefully);
 
-  default ListenableFuture<Void> stopAsync(boolean stopGracefully)
+  /**
+   * Starts non-graceful shutdown of the supervisor and returns a future that completes when shutdown is complete.
+   */
+  default ListenableFuture<Void> stopAsync()
   {
     SettableFuture<Void> stopFuture = SettableFuture.create();
-    stop(stopGracefully);
-    stopFuture.set(null);
+    try {
+      stop(false);
+      stopFuture.set(null);
+    }
+    catch (Exception e) {
+      stopFuture.setException(e);
+    }
     return stopFuture;
   }
 

@@ -221,7 +221,7 @@ public class SupervisorManager
       log.info("Stopping [%d] supervisors", supervisors.keySet().size());
       for (String id : supervisors.keySet()) {
         try {
-          stopFutures.add(supervisors.get(id).lhs.stopAsync(false));
+          stopFutures.add(supervisors.get(id).lhs.stopAsync());
           SupervisorTaskAutoScaler autoscaler = autoscalers.get(id);
           if (autoscaler != null) {
             autoscaler.stop();

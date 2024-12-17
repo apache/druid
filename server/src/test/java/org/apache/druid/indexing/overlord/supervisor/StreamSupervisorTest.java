@@ -165,7 +165,7 @@ public class StreamSupervisorTest
       }
     };
 
-    Future<Void> stopAsyncFuture = streamSupervisor.stopAsync(true);
+    Future<Void> stopAsyncFuture = streamSupervisor.stopAsync();
     Assert.assertTrue(stopAsyncFuture.isDone());
 
     // stop should be called by stopAsync

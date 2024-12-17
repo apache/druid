@@ -133,7 +133,7 @@ public class SupervisorManagerTest extends EasyMockSupport
     resetAll();
     SettableFuture<Void> stopFuture = SettableFuture.create();
     stopFuture.set(null);
-    EasyMock.expect(supervisor3.stopAsync(false)).andReturn(stopFuture);
+    EasyMock.expect(supervisor3.stopAsync()).andReturn(stopFuture);
     replayAll();
 
     manager.stop();
@@ -364,7 +364,7 @@ public class SupervisorManagerTest extends EasyMockSupport
 
     EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(existingSpecs);
     supervisor1.start();
-    supervisor1.stopAsync(false);
+    supervisor1.stopAsync();
     EasyMock.expectLastCall().andThrow(new RuntimeException("RTE"));
     replayAll();
 
@@ -516,7 +516,7 @@ public class SupervisorManagerTest extends EasyMockSupport
     resetAll();
     SettableFuture<Void> stopFuture = SettableFuture.create();
     stopFuture.set(null);
-    EasyMock.expect(supervisor3.stopAsync(false)).andReturn(stopFuture);
+    EasyMock.expect(supervisor3.stopAsync()).andReturn(stopFuture);
     replayAll();
 
     manager.stop();

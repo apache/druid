@@ -1017,7 +1017,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
     supervisor.start();
     supervisor.runInternal();
-    ListenableFuture<Void> stopFuture = supervisor.stopAsync(false);
+    ListenableFuture<Void> stopFuture = supervisor.stopAsync();
     stopFuture.get();
     verifyAll();
   }
