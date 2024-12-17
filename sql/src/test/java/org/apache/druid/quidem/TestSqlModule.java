@@ -23,12 +23,8 @@ import com.google.common.collect.ImmutableSet;
 import com.google.inject.Binder;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.initialization.ServerInjectorBuilderTest.TestDruidModule;
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.server.QuerySchedulerProvider;
-import org.apache.druid.server.metrics.NoopServiceEmitter;
-import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.server.security.AuthenticatorMapper;
-import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Escalator;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregationModule;
 import org.apache.druid.sql.calcite.planner.CalciteRulesManager;
@@ -39,20 +35,25 @@ import org.apache.druid.sql.guice.SqlModule;
 
 public class TestSqlModule extends TestDruidModule
 {
+
   @Override
   public void configure(Binder binder)
   {
+
+    if(false) {
     binder.install(new SqlAggregationModule());
     binder.install(new SqlModule.SqlStatementFactoryModule());
+    }
+    binder.install(new SqlModule());
+
     binder.bind(String.class)
         .annotatedWith(DruidSchemaName.class)
         .toInstance(CalciteTests.DRUID_SCHEMA_NAME);
     binder.bind(CalciteRulesManager.class).toInstance(new CalciteRulesManager(ImmutableSet.of()));
     binder.bind(CatalogResolver.class).toInstance(CatalogResolver.NULL_RESOLVER);
-    binder.bind(ServiceEmitter.class).to(NoopServiceEmitter.class);
+//    binder.bind(ServiceEmitter.class).to(NoopServiceEmitter.class);
     binder.bind(QuerySchedulerProvider.class).in(LazySingleton.class);
     binder.bind(AuthenticatorMapper.class).toInstance(CalciteTests.TEST_AUTHENTICATOR_MAPPER);
-    binder.bind(AuthorizerMapper.class).toInstance(AuthTestUtils.TEST_AUTHORIZER_MAPPER);
     binder.bind(Escalator.class).toInstance(CalciteTests.TEST_AUTHENTICATOR_ESCALATOR);
   }
 }

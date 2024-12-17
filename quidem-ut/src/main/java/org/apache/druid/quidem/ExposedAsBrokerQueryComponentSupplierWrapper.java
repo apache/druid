@@ -97,7 +97,6 @@ import org.apache.druid.sql.calcite.schema.DruidSchemaName;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.QueryComponentSupplier;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.QueryComponentSupplierDelegate;
-import org.apache.druid.sql.guice.SqlModule;
 import org.apache.druid.storage.StorageConnectorModule;
 import org.apache.druid.timeline.PruneLoadSpec;
 import org.eclipse.jetty.server.Server;
@@ -172,7 +171,6 @@ public class ExposedAsBrokerQueryComponentSupplierWrapper extends QueryComponent
 
     builder.add(
         new Log4jShutterDownerModule(),
-        new LifecycleModule(),
         ExtensionsModule.SecondaryModule.class,
         new DruidAuthModule(),
         TLSCertificateCheckerModule.class,
@@ -204,7 +202,6 @@ public class ExposedAsBrokerQueryComponentSupplierWrapper extends QueryComponent
         new ExternalStorageAccessSecurityModule(),
         new ServiceClientModule(),
         new StorageConnectorModule(),
-        new SqlModule(),
         ServerInjectorBuilder.registerNodeRoleModule(ImmutableSet.of())
     );
   }

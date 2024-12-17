@@ -46,6 +46,7 @@ import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.initialization.ServiceInjectorBuilder;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.DruidProcessingConfig;
@@ -74,7 +75,9 @@ import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.log.TestRequestLogger;
+import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.AuthConfig;
+import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
@@ -716,6 +719,12 @@ public class SqlTestFramework
     }
 
     @Provides
+    ServiceEmitter getServiceEmitter()
+    {
+      return NoopServiceEmitter.instance();
+    }
+
+    @Provides
     GenericQueryMetricsFactory getGenericQueryMetricsFactory()
     {
       return DefaultGenericQueryMetricsFactory.instance();
@@ -735,6 +744,12 @@ public class SqlTestFramework
 
       TestRequestLogger testRequestLogger = new TestRequestLogger();
       binder.bind(RequestLogger.class).toInstance(testRequestLogger);
+    }
+
+    @Provides
+    AuthorizerMapper getAuthorizerMapper()
+    {
+      return AuthTestUtils.TEST_AUTHORIZER_MAPPER;
     }
 
     @Provides
