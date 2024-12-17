@@ -22,7 +22,6 @@ package org.apache.druid.sql.calcite.util;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Binder;
@@ -101,7 +100,6 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
@@ -707,21 +705,10 @@ public class SqlTestFramework
   private class TestSetupModule implements DruidModule
   {
     private final Builder builder;
-    private final List<DruidModule> subModules = Arrays.asList(new BuiltInTypesModule(), new TestSqlModule());
 
     public TestSetupModule(Builder builder)
     {
       this.builder = builder;
-    }
-
-    @Override
-    public List<? extends com.fasterxml.jackson.databind.Module> getJacksonModules()
-    {
-      ImmutableList.Builder<com.fasterxml.jackson.databind.Module> builder = ImmutableList.builder();
-      for (DruidModule druidModule : subModules) {
-        builder.addAll(druidModule.getJacksonModules());
-      }
-      return builder.build();
     }
 
     @Provides
@@ -733,9 +720,6 @@ public class SqlTestFramework
     @Override
     public void configure(Binder binder)
     {
-      for (DruidModule module : subModules) {
-        binder.install(module);
-      }
       binder.bind(DruidOperatorTable.class).in(LazySingleton.class);
       binder.bind(DataSegment.PruneSpecsHolder.class).toInstance(DataSegment.PruneSpecsHolder.DEFAULT);
       binder.bind(DefaultColumnFormatConfig.class).toInstance(new DefaultColumnFormatConfig(null, null));
@@ -877,7 +861,8 @@ public class SqlTestFramework
         final AuthConfig authConfig,
         final ViewManager viewManager,
         QueryRunnerFactoryConglomerate conglomerate,
-        QuerySegmentWalker walker
+        QuerySegmentWalker walker,
+        AuthorizerMapper authorizerMapper
     )
     {
       final DruidSchemaCatalog rootSchema = QueryFrameworkUtils.createMockRootSchema(
@@ -947,6 +932,8 @@ public class SqlTestFramework
     ArrayList<Module> overrideModules = new ArrayList<>(builder.overrideModules);
 
     injectorBuilder.add(componentSupplier.getCoreModule());
+    overrideModules.add(new BuiltInTypesModule());
+    injectorBuilder.add(new TestSqlModule());
     overrideModules.add(new TestSetupModule(builder));
     overrideModules.add(new TestSegmentsOverseer());
     overrideModules.add(componentSupplier.getOverrideModule());
