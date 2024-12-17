@@ -77,17 +77,22 @@ public class DruidBinders
     MapBinderHelper<Class<? extends Query>, QueryRunnerFactory> queryRunnerFactoryBinder;
     MapBinderHelper<Class<? extends Query>, QueryToolChest> queryToolChestBinder;
 
-
     public QueryBinder(Binder binder)
     {
       queryLogicBinder = new MapBinderHelper<>(
-          binder, queryLogicBinderType(binder), ImmutableSet.of(LazySingleton.class)
+          binder,
+          queryLogicBinderType(binder),
+          ImmutableSet.of(LazySingleton.class)
       );
       queryRunnerFactoryBinder = new MapBinderHelper<>(
-          binder, queryRunnerFactoryBinder(binder), ImmutableSet.of(LazySingleton.class)
+          binder,
+          queryRunnerFactoryBinder(binder),
+          ImmutableSet.of(LazySingleton.class)
       );
       queryToolChestBinder = new MapBinderHelper<>(
-          binder, queryToolChestBinder(binder), ImmutableSet.of(LazySingleton.class)
+          binder,
+          queryToolChestBinder(binder),
+          ImmutableSet.of(LazySingleton.class)
       );
     }
 

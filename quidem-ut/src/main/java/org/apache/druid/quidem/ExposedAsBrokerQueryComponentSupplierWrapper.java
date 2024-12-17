@@ -130,7 +130,7 @@ public class ExposedAsBrokerQueryComponentSupplierWrapper extends QueryComponent
     installForServerModules(builder);
 
     builder.add(new BrokerProcessingModule());
-    builder.addAll(ExposedAsBrokerQueryComponentSupplierWrapper.brokerModules());
+    builder.addAll(brokerModules());
     builder.add(QuidemCaptureModule.class);
     overrideModules.add(new BrokerTestModule());
   }

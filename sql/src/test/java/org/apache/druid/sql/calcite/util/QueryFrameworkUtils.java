@@ -142,7 +142,13 @@ public class QueryFrameworkUtils
     DruidOperatorTable createOperatorTable = createOperatorTable(injector);
 
     return createMockRootSchema(
-        plannerConfig, viewManager, authorizerMapper, druidSchema, systemSchema, lookupSchema, createOperatorTable
+        plannerConfig,
+        viewManager,
+        authorizerMapper,
+        druidSchema,
+        systemSchema,
+        lookupSchema,
+        createOperatorTable
     );
   }
 

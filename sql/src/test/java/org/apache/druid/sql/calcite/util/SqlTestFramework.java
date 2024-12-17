@@ -687,8 +687,8 @@ public class SqlTestFramework
     }
   }
 
-  static class TestSegmentsOverseer implements DruidModule   {
-
+  static class TestSegmentsOverseer implements DruidModule
+  {
     @Override
     public void configure(Binder binder)
     {
@@ -916,7 +916,13 @@ public class SqlTestFramework
         LookupSchema lookupSchema, DruidOperatorTable createOperatorTable)
     {
       final DruidSchemaCatalog rootSchema = QueryFrameworkUtils.createMockRootSchema(
-          plannerConfig, viewManager, authorizerMapper, druidSchema, systemSchema, lookupSchema, createOperatorTable
+          plannerConfig,
+          viewManager,
+          authorizerMapper,
+          druidSchema,
+          systemSchema,
+          lookupSchema,
+          createOperatorTable
       );
       return rootSchema;
     }
