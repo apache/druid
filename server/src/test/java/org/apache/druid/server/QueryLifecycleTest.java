@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -41,7 +40,6 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.RestrictedDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
-import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.NullFilter;
 import org.apache.druid.query.filter.TrueDimFilter;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
@@ -203,7 +201,7 @@ public class QueryLifecycleTest
                 new Resource(DATASOURCE, ResourceType.DATASOURCE),
                 Action.READ
             ))
-            .andReturn(Access.allowWithRestriction(Optional.empty())).once();
+            .andReturn(Access.allowWithRestriction(Policy.NO_RESTRICTION)).once();
     EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject()))
             .andReturn(toolChest).times(2);
     EasyMock.expect(texasRanger.getQueryRunnerForIntervals(
@@ -235,7 +233,7 @@ public class QueryLifecycleTest
   @Test
   public void testAuthorizedWithAlwaysTruePolicyRestriction()
   {
-    Optional<DimFilter> alwaysTrueFilter = Optional.of(TrueDimFilter.instance());
+    Policy alwaysTrueFilter = Policy.fromRowFilter(TrueDimFilter.instance());
     EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
     EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
     EasyMock.expect(authenticationResult.getAuthorizerName()).andReturn(AUTHORIZER).anyTimes();
@@ -280,7 +278,7 @@ public class QueryLifecycleTest
   @Test
   public void testAuthorizedWithOnePolicyRestriction()
   {
-    Optional<DimFilter> rowFilter = Optional.of(new NullFilter("some-column", null));
+    Policy rowFilter = Policy.fromRowFilter(new NullFilter("some-column", null));
     final TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                         .dataSource(DATASOURCE)
                                         .intervals(ImmutableList.of(Intervals.ETERNITY))
@@ -299,7 +297,7 @@ public class QueryLifecycleTest
             .andReturn(toolChest).times(2);
     EasyMock.expect(texasRanger.getQueryRunnerForIntervals(queryMatchDataSource(RestrictedDataSource.create(
                 TableDataSource.create(DATASOURCE),
-                rowFilter.get()
+                rowFilter.getRowFilter().get()
             )), EasyMock.anyObject()))
             .andReturn(runner).times(2);
     EasyMock.expect(runner.run(EasyMock.anyObject(), EasyMock.anyObject())).andReturn(Sequences.empty()).times(2);
@@ -367,14 +365,14 @@ public class QueryLifecycleTest
   @Test
   public void testAuthorizedMultiplePolicyRestrictions()
   {
-    Optional<DimFilter> trueFilter = Optional.of(TrueDimFilter.instance());
-    Optional<DimFilter> columnFilter = Optional.of(new NullFilter("some-column", null));
-    Optional<DimFilter> columnFilter2 = Optional.of(new NullFilter("some-column2", null));
+    Policy trueFilter = Policy.fromRowFilter(TrueDimFilter.instance());
+    Policy columnFilter = Policy.fromRowFilter(new NullFilter("some-column", null));
+    Policy columnFilter2 = Policy.fromRowFilter(new NullFilter("some-column2", null));
 
     final TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                         .dataSource(RestrictedDataSource.create(
                                             TableDataSource.create(DATASOURCE),
-                                            columnFilter.get()
+                                            columnFilter.getRowFilter().get()
                                         ))
                                         .intervals(ImmutableList.of(Intervals.ETERNITY))
                                         .aggregators(new CountAggregatorFactory("chocula"))
