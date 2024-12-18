@@ -244,20 +244,6 @@ public class CalciteMSQTestsHelper
         new MSQIndexingModule()
     );
   }
-  @Deprecated
-  public static List<Module> fetchModules1(
-      Function<String, File> tempFolderProducer,
-      TestGroupByBuffers groupByBuffers
-  )
-  {
-    return ImmutableList.of(
-        new MSQTestModule(),
-        new IndexingServiceTuningConfigModule(),
-        new JoinableFactoryModule(),
-        new MSQExternalDataSourceModule(),
-        new MSQIndexingModule()
-    );
-  }
 
   private static DataServerQueryHandlerFactory getTestDataServerQueryHandlerFactory()
   {
