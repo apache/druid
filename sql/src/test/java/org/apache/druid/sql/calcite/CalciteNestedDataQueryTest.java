@@ -35,7 +35,6 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.guice.BuiltInTypesModule;
-import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -191,12 +190,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
     public NestedComponentSupplier(TempDirProducer tempFolderProducer)
     {
       super(tempFolderProducer);
-    }
-
-    @Override
-    public void configureGuice(DruidInjectorBuilder builder)
-    {
-      super.configureGuice(builder);
     }
 
     @SuppressWarnings("resource")
