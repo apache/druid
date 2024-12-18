@@ -132,6 +132,7 @@ import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationUtils;
 import org.apache.druid.server.security.Authenticator;
 import org.apache.druid.server.security.AuthenticatorMapper;
+import org.apache.druid.storage.local.LocalTmpStorage;
 import org.apache.druid.tasklogs.TaskLogStreamer;
 import org.apache.druid.tasklogs.TaskLogs;
 import org.eclipse.jetty.rewrite.handler.RewriteHandler;
@@ -317,6 +318,10 @@ public class CliOverlord extends ServerRunnable
 
             Jerseys.addResource(binder, SelfDiscoveryResource.class);
             LifecycleModule.registerKey(binder, Key.get(SelfDiscoveryResource.class));
+
+            binder.bind(LocalTmpStorage.class)
+                  .toProvider(new LocalTmpStorage.DefaultLocalTmpStorageProvider("overlord"))
+                  .in(LazySingleton.class);
           }
 
           private void configureTaskStorage(Binder binder)
