@@ -238,6 +238,8 @@ public class SqlTestFramework
     Boolean isExplainSupported();
 
     QueryRunnerFactoryConglomerate wrapConglomerate(QueryRunnerFactoryConglomerate conglomerate, Closer resourceCloser);
+
+    TempDirProducer getTempDirProducer();
   }
 
   public abstract static class QueryComponentSupplierDelegate implements QueryComponentSupplier
@@ -332,6 +334,12 @@ public class SqlTestFramework
     public DruidModule getOverrideModule()
     {
       return delegate.getOverrideModule();
+    }
+
+    @Override
+    public TempDirProducer getTempDirProducer()
+    {
+      return delegate.getTempDirProducer();
     }
   }
 
@@ -484,6 +492,12 @@ public class SqlTestFramework
         Closer resourceCloser)
     {
       return conglomerate;
+    }
+
+    @Override
+    public final TempDirProducer getTempDirProducer()
+    {
+      return tempDirProducer;
     }
   }
 
@@ -720,6 +734,12 @@ public class SqlTestFramework
     public TestSetupModule(Builder builder)
     {
       this.builder = builder;
+    }
+
+    @Provides
+    TempDirProducer getTempDirProducer()
+    {
+      return builder.componentSupplier.getTempDirProducer();
     }
 
     @Provides

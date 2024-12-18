@@ -85,6 +85,7 @@ import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.coordination.DataSegmentAnnouncer;
 import org.apache.druid.server.coordination.NoopDataSegmentAnnouncer;
 import org.apache.druid.sql.calcite.CalciteNestedDataQueryTest;
+import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.timeline.DataSegment;
@@ -126,19 +127,9 @@ public class CalciteMSQTestsHelper
 {
   public static final class MSQTestModule implements DruidModule
   {
-    private final Function<String, File> tempFolderProducer;
-
-    public MSQTestModule(Function<String, File> tempFolderProducer)
-    {
-      this.tempFolderProducer = tempFolderProducer;
-    }
-
     @Override
     public void configure(Binder binder)
     {
-      File cacheManagerDir = tempFolderProducer.apply("test");
-      File storageDir = tempFolderProducer.apply("localsegments");
-
       binder.bind(AppenderatorsManager.class).toProvider(() -> null);
 
       // Requirements of JoinableFactoryModule
@@ -160,6 +151,7 @@ public class CalciteMSQTestsHelper
       binder.bind(QueryProcessingPool.class)
             .toInstance(new ForwardingQueryProcessingPool(Execs.singleThreaded("Test-runner-processing-pool")));
 
+      if(false) {
       // Select queries donot require this
       Injector dummyInjector = GuiceInjectors.makeStartupInjectorWithModules(
           ImmutableList.of(
@@ -170,11 +162,12 @@ public class CalciteMSQTestsHelper
           )
       );
       ObjectMapper testMapper = MSQTestBase.setupObjectMapper(dummyInjector);
+      Function<String, File> tempFolderProducer = null;
       SegmentCacheManager segmentCacheManager = new SegmentCacheManagerFactory(TestIndex.INDEX_IO, testMapper)
-          .manufacturate(cacheManagerDir);
+          .manufacturate(tempFolderProducer.apply("test"));
       LocalDataSegmentPusherConfig config = new LocalDataSegmentPusherConfig();
       MSQTestSegmentManager segmentManager = new MSQTestSegmentManager(segmentCacheManager);
-      config.storageDirectory = storageDir;
+      config.storageDirectory = tempFolderProducer.apply("localsegments");
       binder.bind(DataSegmentPusher.class).toProvider(() -> new MSQTestDelegateDataSegmentPusher(
           new LocalDataSegmentPusher(config),
           segmentManager
@@ -183,8 +176,72 @@ public class CalciteMSQTestsHelper
       binder.bind(DataSegmentProvider.class)
             .toInstance((segmentId, channelCounters, isReindex) -> getSupplierForSegment(tempFolderProducer, segmentId));
       binder.bind(DataServerQueryHandlerFactory.class).toInstance(getTestDataServerQueryHandlerFactory());
+      }
 
       binder.bind(Bouncer.class).toInstance(new Bouncer(1));
+    }
+
+    @Provides
+    public SegmentCacheManager provideSegmentCacheManager(/*
+                                                           * ObjectMapper
+                                                           * testMapper,
+                                                           */ TempDirProducer tempDirProducer)
+    {
+
+      Injector dummyInjector = GuiceInjectors.makeStartupInjectorWithModules(
+          ImmutableList.of(
+              binder1 -> {
+                binder1.bind(ExprMacroTable.class).toInstance(CalciteTests.createExprMacroTable());
+                binder1.bind(DataSegment.PruneSpecsHolder.class).toInstance(DataSegment.PruneSpecsHolder.DEFAULT);
+              }
+          )
+      );
+      // FIXME: this is dodgy... we should not be creating a new ObjectMapper
+      // here
+      ObjectMapper testMapper = MSQTestBase.setupObjectMapper(dummyInjector);
+
+      return new SegmentCacheManagerFactory(TestIndex.INDEX_IO, testMapper)
+          .manufacturate(tempDirProducer.newTempFolder("test"));
+    }
+
+    @Provides
+    public LocalDataSegmentPusherConfig provideLocalDataSegmentPusherConfig(TempDirProducer tempDirProducer)
+    {
+      LocalDataSegmentPusherConfig config = new LocalDataSegmentPusherConfig();
+      config.storageDirectory = tempDirProducer.newTempFolder("localsegments");
+      return config;
+    }
+
+    @Provides
+    public MSQTestSegmentManager provideMSQTestSegmentManager(SegmentCacheManager segmentCacheManager)
+    {
+      return new MSQTestSegmentManager(segmentCacheManager);
+    }
+
+    @Provides
+    public DataSegmentPusher provideDataSegmentPusher(LocalDataSegmentPusherConfig config,
+        MSQTestSegmentManager segmentManager)
+    {
+      return new MSQTestDelegateDataSegmentPusher(new LocalDataSegmentPusher(config), segmentManager);
+    }
+
+    @Provides
+    public DataSegmentAnnouncer provideDataSegmentAnnouncer()
+    {
+      return new NoopDataSegmentAnnouncer();
+    }
+
+    @Provides
+    public DataSegmentProvider provideDataSegmentProvider(TempDirProducer tempDirProducer)
+    {
+      return (segmentId, channelCounters,
+          isReindex) -> getSupplierForSegment(tempDirProducer::newTempFolder, segmentId);
+    }
+
+    @Provides
+    public DataServerQueryHandlerFactory provideDataServerQueryHandlerFactory()
+    {
+      return getTestDataServerQueryHandlerFactory();
     }
 
     @Provides
@@ -207,7 +264,7 @@ public class CalciteMSQTestsHelper
   )
   {
     return ImmutableList.of(
-        new MSQTestModule(tempFolderProducer),
+        new MSQTestModule(),
         new IndexingServiceTuningConfigModule(),
         new JoinableFactoryModule(),
         new MSQExternalDataSourceModule(),
@@ -221,7 +278,7 @@ public class CalciteMSQTestsHelper
   )
   {
     return ImmutableList.of(
-        new MSQTestModule(tempFolderProducer),
+        new MSQTestModule(),
         new IndexingServiceTuningConfigModule(),
         new JoinableFactoryModule(),
         new MSQExternalDataSourceModule(),

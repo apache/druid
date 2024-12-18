@@ -68,7 +68,7 @@ public class MSQDrillWindowQueryTest extends DrillWindowQueryTest
     {
       return DruidModuleCollection.of(
             super.getCoreModule(),
-            new MSQTestModule(tempDirProducer::newTempFolder),
+            new MSQTestModule(),
             new IndexingServiceTuningConfigModule(),
             new JoinableFactoryModule(),
             new MSQExternalDataSourceModule(),

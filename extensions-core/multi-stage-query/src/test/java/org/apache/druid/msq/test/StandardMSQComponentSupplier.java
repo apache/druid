@@ -25,29 +25,46 @@ import com.google.inject.Module;
 import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.msq.exec.TestMSQSqlModule;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
-import org.apache.druid.query.groupby.TestGroupByBuffers;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.run.SqlEngine;
+import org.apache.druid.sql.calcite.util.SqlTestFramework.QueryComponentSupplier;
+import org.apache.druid.sql.calcite.util.SqlTestFramework.QueryComponentSupplierDelegate;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
+
+import java.util.List;
 
 public class StandardMSQComponentSupplier extends StandardComponentSupplier
 {
+  /**
+   * Upgrade an existing QueryComponentSupplier to support MSQ tests.
+   */
+  static class AbstractMSQComponentSupplierDelegate extends QueryComponentSupplierDelegate {
+
+    public AbstractMSQComponentSupplierDelegate(QueryComponentSupplier delegate)
+    {
+      super(delegate);
+    }
+
+    @Override
+    public void configureGuice(DruidInjectorBuilder builder, List<Module> overrideModules)
+    {
+      super.configureGuice(builder, overrideModules);
+//      builder.addModules(
+//          CalciteMSQTestsHelper.fetchModules(tempDirProducer::newTempFolder, TestGroupByBuffers.createDefault())
+//              .toArray(new Module[0])
+//      );
+      builder.addModule(new TestMSQSqlModule());
+    }
+
+
+  }
+
   public StandardMSQComponentSupplier(TempDirProducer tempFolderProducer)
   {
     super(tempFolderProducer);
   }
 
-  @Override
-  public void configureGuice(DruidInjectorBuilder builder)
-  {
-    super.configureGuice(builder);
-    builder.addModules(
-        CalciteMSQTestsHelper.fetchModules(tempDirProducer::newTempFolder, TestGroupByBuffers.createDefault())
-            .toArray(new Module[0])
-    );
-    builder.addModule(new TestMSQSqlModule());
-  }
 
   @Override
   public SqlEngine createEngine(
