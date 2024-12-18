@@ -19,30 +19,20 @@
 
 package org.apache.druid.msq.exec;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
-import com.google.inject.Injector;
-import org.apache.druid.guice.IndexingServiceTuningConfigModule;
-import org.apache.druid.guice.JoinableFactoryModule;
-import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.msq.exec.MSQDrillWindowQueryTest.DrillWindowQueryMSQComponentSupplier;
-import org.apache.druid.msq.guice.MSQExternalDataSourceModule;
-import org.apache.druid.msq.guice.MSQIndexingModule;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
-import org.apache.druid.msq.test.CalciteMSQTestsHelper.MSQTestModule;
 import org.apache.druid.msq.test.ExtractResultsFactory;
 import org.apache.druid.msq.test.MSQTestOverlordServiceClient;
+import org.apache.druid.msq.test.StandardMSQComponentSupplier.AbstractMSQComponentSupplierDelegate;
 import org.apache.druid.msq.test.VerifyMSQSupportedNativeQueriesPredicate;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.QueryContexts;
-import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.sql.calcite.DrillWindowQueryTest;
 import org.apache.druid.sql.calcite.QueryTestBuilder;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
 import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.planner.PlannerCaptureHook;
-import org.apache.druid.sql.calcite.run.SqlEngine;
-import org.apache.druid.sql.calcite.util.DruidModuleCollection;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
@@ -57,40 +47,12 @@ public class MSQDrillWindowQueryTest extends DrillWindowQueryTest
       MultiStageQueryContext.CTX_MAX_NUM_TASKS, 5
   ));
 
-  public static class DrillWindowQueryMSQComponentSupplier extends DrillComponentSupplier
+  public static class DrillWindowQueryMSQComponentSupplier extends AbstractMSQComponentSupplierDelegate
   {
-    public DrillWindowQueryMSQComponentSupplier(TempDirProducer tempFolderProducer)
-    {
-      super(tempFolderProducer);
-    }
 
-    public DruidModule getCoreModule()
+    public DrillWindowQueryMSQComponentSupplier(TempDirProducer tempDirProducer)
     {
-      return DruidModuleCollection.of(
-            super.getCoreModule(),
-            new MSQTestModule(),
-            new IndexingServiceTuningConfigModule(),
-            new JoinableFactoryModule(),
-            new MSQExternalDataSourceModule(),
-            new MSQIndexingModule(),
-            new TestMSQSqlModule()
-          );
-    }
-
-    @Override
-    public SqlEngine createEngine(
-        QueryLifecycleFactory qlf,
-        ObjectMapper queryJsonMapper,
-        Injector injector
-    )
-    {
-      return injector.getInstance(MSQTaskSqlEngine.class);
-    }
-
-    @Override
-    public Boolean isExplainSupported()
-    {
-      return false;
+      super(new DrillComponentSupplier(tempDirProducer));
     }
   }
 

@@ -23,41 +23,62 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import org.apache.druid.guice.DruidInjectorBuilder;
+import org.apache.druid.guice.IndexingServiceTuningConfigModule;
+import org.apache.druid.guice.JoinableFactoryModule;
+import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.msq.exec.TestMSQSqlModule;
+import org.apache.druid.msq.guice.MSQExternalDataSourceModule;
+import org.apache.druid.msq.guice.MSQIndexingModule;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
+import org.apache.druid.msq.test.CalciteMSQTestsHelper.MSQTestModule;
+import org.apache.druid.query.groupby.TestGroupByBuffers;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.run.SqlEngine;
+import org.apache.druid.sql.calcite.util.DruidModuleCollection;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.QueryComponentSupplier;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.QueryComponentSupplierDelegate;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
-
-import java.util.List;
 
 public class StandardMSQComponentSupplier extends StandardComponentSupplier
 {
   /**
    * Upgrade an existing QueryComponentSupplier to support MSQ tests.
    */
-  static class AbstractMSQComponentSupplierDelegate extends QueryComponentSupplierDelegate {
+  public static class AbstractMSQComponentSupplierDelegate extends QueryComponentSupplierDelegate {
 
     public AbstractMSQComponentSupplierDelegate(QueryComponentSupplier delegate)
     {
       super(delegate);
     }
 
-    @Override
-    public void configureGuice(DruidInjectorBuilder builder, List<Module> overrideModules)
+    public DruidModule getCoreModule()
     {
-      super.configureGuice(builder, overrideModules);
-//      builder.addModules(
-//          CalciteMSQTestsHelper.fetchModules(tempDirProducer::newTempFolder, TestGroupByBuffers.createDefault())
-//              .toArray(new Module[0])
-//      );
-      builder.addModule(new TestMSQSqlModule());
+      return DruidModuleCollection.of(
+            super.getCoreModule(),
+            new MSQTestModule(),
+            new IndexingServiceTuningConfigModule(),
+            new JoinableFactoryModule(),
+            new MSQExternalDataSourceModule(),
+            new MSQIndexingModule(),
+            new TestMSQSqlModule()
+          );
     }
 
+    @Override
+    public SqlEngine createEngine(
+        QueryLifecycleFactory qlf,
+        ObjectMapper queryJsonMapper,
+        Injector injector)
+    {
+      return injector.getInstance(MSQTaskSqlEngine.class);
+    }
 
+    @Override
+    public Boolean isExplainSupported()
+    {
+      return false;
+    }
   }
 
   public StandardMSQComponentSupplier(TempDirProducer tempFolderProducer)
@@ -65,6 +86,16 @@ public class StandardMSQComponentSupplier extends StandardComponentSupplier
     super(tempFolderProducer);
   }
 
+  @Override
+  public void configureGuice(DruidInjectorBuilder builder)
+  {
+    super.configureGuice(builder);
+    builder.addModules(
+        CalciteMSQTestsHelper.fetchModules(tempDirProducer::newTempFolder, TestGroupByBuffers.createDefault())
+            .toArray(new Module[0])
+    );
+    builder.addModule(new TestMSQSqlModule());
+  }
 
   @Override
   public SqlEngine createEngine(

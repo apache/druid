@@ -151,33 +151,6 @@ public class CalciteMSQTestsHelper
       binder.bind(QueryProcessingPool.class)
             .toInstance(new ForwardingQueryProcessingPool(Execs.singleThreaded("Test-runner-processing-pool")));
 
-      if(false) {
-      // Select queries donot require this
-      Injector dummyInjector = GuiceInjectors.makeStartupInjectorWithModules(
-          ImmutableList.of(
-              binder1 -> {
-                binder1.bind(ExprMacroTable.class).toInstance(CalciteTests.createExprMacroTable());
-                binder1.bind(DataSegment.PruneSpecsHolder.class).toInstance(DataSegment.PruneSpecsHolder.DEFAULT);
-              }
-          )
-      );
-      ObjectMapper testMapper = MSQTestBase.setupObjectMapper(dummyInjector);
-      Function<String, File> tempFolderProducer = null;
-      SegmentCacheManager segmentCacheManager = new SegmentCacheManagerFactory(TestIndex.INDEX_IO, testMapper)
-          .manufacturate(tempFolderProducer.apply("test"));
-      LocalDataSegmentPusherConfig config = new LocalDataSegmentPusherConfig();
-      MSQTestSegmentManager segmentManager = new MSQTestSegmentManager(segmentCacheManager);
-      config.storageDirectory = tempFolderProducer.apply("localsegments");
-      binder.bind(DataSegmentPusher.class).toProvider(() -> new MSQTestDelegateDataSegmentPusher(
-          new LocalDataSegmentPusher(config),
-          segmentManager
-      ));
-      binder.bind(DataSegmentAnnouncer.class).toInstance(new NoopDataSegmentAnnouncer());
-      binder.bind(DataSegmentProvider.class)
-            .toInstance((segmentId, channelCounters, isReindex) -> getSupplierForSegment(tempFolderProducer, segmentId));
-      binder.bind(DataServerQueryHandlerFactory.class).toInstance(getTestDataServerQueryHandlerFactory());
-      }
-
       binder.bind(Bouncer.class).toInstance(new Bouncer(1));
     }
 
