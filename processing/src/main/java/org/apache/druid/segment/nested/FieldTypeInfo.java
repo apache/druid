@@ -253,7 +253,7 @@ public class FieldTypeInfo
       byte typeByte = types.getByteValue();
       // adjust for empty array if needed
       if (types.hasUntypedArray()) {
-        Set<ColumnType> columnTypes = convertToSet(types.getByteValue());
+        Set<ColumnType> columnTypes = FieldTypeInfo.convertToSet(types.getByteValue());
         ColumnType leastRestrictive = null;
         for (ColumnType type : columnTypes) {
           leastRestrictive = ColumnType.leastRestrictiveType(leastRestrictive, type);

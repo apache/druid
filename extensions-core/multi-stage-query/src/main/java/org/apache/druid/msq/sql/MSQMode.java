@@ -50,7 +50,7 @@ public enum MSQMode
   @Nullable
   public static MSQMode fromString(String str)
   {
-    for (MSQMode msqMode : values()) {
+    for (MSQMode msqMode : MSQMode.values()) {
       if (msqMode.value.equalsIgnoreCase(str)) {
         return msqMode;
       }
@@ -66,12 +66,12 @@ public enum MSQMode
 
   public static void populateDefaultQueryContext(final String modeStr, final Map<String, Object> originalQueryContext)
   {
-    MSQMode mode = fromString(modeStr);
+    MSQMode mode = MSQMode.fromString(modeStr);
     if (mode == null) {
       throw new ISE(
           "%s is an unknown multi stage query mode. Acceptable modes: %s",
           modeStr,
-          Arrays.stream(values()).map(m -> m.value).collect(Collectors.toList())
+          Arrays.stream(MSQMode.values()).map(m -> m.value).collect(Collectors.toList())
       );
     }
     log.debug("Populating default query context with %s for the %s multi stage query mode", mode.defaultQueryContext, mode);

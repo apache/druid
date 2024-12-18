@@ -789,7 +789,7 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
      */
     public static ValuesSet of(@Nullable final String value)
     {
-      final ValuesSet retVal = create();
+      final ValuesSet retVal = ValuesSet.create();
       retVal.add(NullHandling.emptyToNullIfNeeded(value));
       return retVal;
     }

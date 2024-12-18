@@ -65,9 +65,9 @@ public class HdfsStorageDruidModule implements DruidModule
   {
     return Collections.singletonList(
         new SimpleModule().registerSubtypes(
-            new NamedType(HdfsLoadSpec.class, SCHEME),
-            new NamedType(HdfsInputSource.class, SCHEME),
-            new NamedType(HdfsInputSourceFactory.class, SCHEME)
+            new NamedType(HdfsLoadSpec.class, HdfsStorageDruidModule.SCHEME),
+            new NamedType(HdfsInputSource.class, HdfsStorageDruidModule.SCHEME),
+            new NamedType(HdfsInputSourceFactory.class, HdfsStorageDruidModule.SCHEME)
         )
     );
   }

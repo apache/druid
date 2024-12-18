@@ -53,7 +53,7 @@ public interface Indexed<T> extends Iterable<T>, HotLoopCallee
       @Override
       public T get(int index)
       {
-        checkIndex(index, 0);
+        Indexed.checkIndex(index, 0);
         return null;
       }
 

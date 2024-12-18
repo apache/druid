@@ -243,7 +243,7 @@ public class DefaultOperandTypeChecker implements SqlOperandTypeChecker
           operandNames,
           operandTypes,
           computedRequiredOperandCount,
-          buildNullableOperands(computedRequiredOperandCount, operandTypes.size(), notNullOperands),
+          DefaultOperandTypeChecker.buildNullableOperands(computedRequiredOperandCount, operandTypes.size(), notNullOperands),
           literalOperands
       );
     }

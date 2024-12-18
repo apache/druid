@@ -158,7 +158,7 @@ public enum CompressionStrategy
   static final Map<Byte, CompressionStrategy> ID_MAP = new HashMap<>();
 
   static {
-    for (CompressionStrategy strategy : values()) {
+    for (CompressionStrategy strategy : CompressionStrategy.values()) {
       ID_MAP.put(strategy.getId(), strategy);
     }
   }
@@ -171,7 +171,7 @@ public enum CompressionStrategy
   // TODO remove this method and change all its callers to use all CompressionStrategy values when NONE type is supported by all types
   public static CompressionStrategy[] noNoneValues()
   {
-    return (CompressionStrategy[]) ArrayUtils.removeElement(values(), NONE);
+    return (CompressionStrategy[]) ArrayUtils.removeElement(CompressionStrategy.values(), NONE);
   }
 
   public interface Decompressor

@@ -75,7 +75,7 @@ public class DruidBinders
     public QueryLogicBinder(Binder binder)
     {
       this.binder = binder;
-      queryLogicMapBinder = queryLogicBinderType(binder);
+      queryLogicMapBinder = DruidBinders.queryLogicBinderType(binder);
     }
 
     QueryLogicBinder bindQueryLogic(

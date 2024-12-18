@@ -111,7 +111,7 @@ public class QueryKitUtils
       return clusterBy;
     } else {
       final List<KeyColumn> newColumns = new ArrayList<>(clusterBy.getColumns().size() + 1);
-      newColumns.add(new KeyColumn(SEGMENT_GRANULARITY_COLUMN, KeyOrder.ASCENDING));
+      newColumns.add(new KeyColumn(QueryKitUtils.SEGMENT_GRANULARITY_COLUMN, KeyOrder.ASCENDING));
       newColumns.addAll(clusterBy.getColumns());
       return new ClusterBy(newColumns, 1);
     }
@@ -123,10 +123,10 @@ public class QueryKitUtils
    */
   public static void verifyRowSignature(final RowSignature signature)
   {
-    if (signature.contains(PARTITION_BOOST_COLUMN)) {
-      throw new MSQException(new ColumnNameRestrictedFault(PARTITION_BOOST_COLUMN));
-    } else if (signature.contains(SEGMENT_GRANULARITY_COLUMN)) {
-      throw new MSQException(new ColumnNameRestrictedFault(SEGMENT_GRANULARITY_COLUMN));
+    if (signature.contains(QueryKitUtils.PARTITION_BOOST_COLUMN)) {
+      throw new MSQException(new ColumnNameRestrictedFault(QueryKitUtils.PARTITION_BOOST_COLUMN));
+    } else if (signature.contains(QueryKitUtils.SEGMENT_GRANULARITY_COLUMN)) {
+      throw new MSQException(new ColumnNameRestrictedFault(QueryKitUtils.SEGMENT_GRANULARITY_COLUMN));
     }
   }
 
@@ -144,7 +144,7 @@ public class QueryKitUtils
     } else {
       return RowSignature.builder()
                          .addAll(signature)
-                         .add(SEGMENT_GRANULARITY_COLUMN, ColumnType.LONG)
+                         .add(QueryKitUtils.SEGMENT_GRANULARITY_COLUMN, ColumnType.LONG)
                          .build();
     }
   }
@@ -194,8 +194,8 @@ public class QueryKitUtils
   public static VirtualColumn makeSegmentGranularityVirtualColumn(final ObjectMapper jsonMapper, final QueryContext queryContext)
   {
     final Granularity segmentGranularity =
-        getSegmentGranularityFromContext(jsonMapper, queryContext.asMap());
-    final String timeColumnName = queryContext.getString(CTX_TIME_COLUMN_NAME);
+        QueryKitUtils.getSegmentGranularityFromContext(jsonMapper, queryContext.asMap());
+    final String timeColumnName = queryContext.getString(QueryKitUtils.CTX_TIME_COLUMN_NAME);
 
     if (timeColumnName == null || Granularities.ALL.equals(segmentGranularity)) {
       return null;
@@ -213,7 +213,7 @@ public class QueryKitUtils
     }
 
     return new ExpressionVirtualColumn(
-        SEGMENT_GRANULARITY_COLUMN,
+        QueryKitUtils.SEGMENT_GRANULARITY_COLUMN,
         StringUtils.format(
             "timestamp_floor(%s, %s)",
             CalciteSqlDialect.DEFAULT.quoteIdentifier(timeColumnName),

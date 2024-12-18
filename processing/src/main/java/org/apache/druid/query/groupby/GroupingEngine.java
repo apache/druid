@@ -502,7 +502,7 @@ public class GroupingEngine
     closer.register(bufferHolder);
     try {
       final String fudgeTimestampString = NullHandling.emptyToNullIfNeeded(
-          query.context().getString(CTX_KEY_FUDGE_TIMESTAMP)
+          query.context().getString(GroupingEngine.CTX_KEY_FUDGE_TIMESTAMP)
       );
 
       final DateTime fudgeTimestamp = fudgeTimestampString == null

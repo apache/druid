@@ -111,7 +111,7 @@ public class Either<L, R>
   public <T> Either<L, T> map(final Function<R, T> fn)
   {
     if (isValue()) {
-      return value(fn.apply(value));
+      return Either.value(fn.apply(value));
     } else {
       // Safe because the value is never going to be returned.
       //noinspection unchecked

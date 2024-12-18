@@ -1196,7 +1196,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
 
     public Builder queryId(String queryId)
     {
-      context = computeOverriddenContext(context, ImmutableMap.of(QUERY_ID, queryId));
+      context = BaseQuery.computeOverriddenContext(context, ImmutableMap.of(BaseQuery.QUERY_ID, queryId));
       return this;
     }
 

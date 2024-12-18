@@ -76,7 +76,7 @@ public class ParserUtils
       if (input.contains(listDelimiter)) {
         return StreamSupport.stream(listSplitter.split(input).spliterator(), false)
             .map(NullHandling::emptyToNullIfNeeded)
-            .map(value -> tryParseNumbers ? tryParseStringAsNumber(value) : value)
+            .map(value -> tryParseNumbers ? ParserUtils.tryParseStringAsNumber(value) : value)
             .collect(Collectors.toList());
       } else {
         return tryParseNumbers ?
