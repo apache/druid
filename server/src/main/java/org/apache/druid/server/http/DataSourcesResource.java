@@ -381,17 +381,16 @@ public class DataSourcesResource
         return ServletResourceUtils.buildErrorResponseFrom(e);
       }
       catch (Exception e) {
-        log.error(e, "Error occurred while updating segments for datasource[%s]", dataSourceName);
-
         final Throwable rootCause = Throwables.getRootCause(e);
         if (rootCause instanceof HttpResponseException) {
           HttpResponseStatus status = ((HttpResponseException) rootCause).getResponse().getStatus();
           if (status.getCode() == 404) {
-            // Overlord is probably still on old version, update metadata store directly
+            log.info("Could not update segments via Overlord API. Updating metadata store directly.");
             return performSegmentUpdate(dataSourceName, operation);
           }
         }
 
+        log.error(e, "Error occurred while updating segments for datasource[%s]", dataSourceName);
         return Response
             .serverError()
             .entity(ImmutableMap.of("error", "Unknown server error", "message", rootCause.toString()))
