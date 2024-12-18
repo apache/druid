@@ -418,6 +418,7 @@ public class SqlTestFramework
     }
 
     @Override
+    @Deprecated
     public void configureGuice(DruidInjectorBuilder builder, List<Module> overrideModules)
     {
       configureGuice(builder);
