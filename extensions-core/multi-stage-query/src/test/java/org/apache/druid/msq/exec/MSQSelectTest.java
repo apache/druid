@@ -269,6 +269,7 @@ public class MSQSelectTest extends MSQTestBase
                            .dataSource(SOME_DATASOURCE)
                            .intervals(querySegmentSpec(Filtration.eternity()))
                            .columns("cnt", "unique_dim1")
+                           .columnTypes(List.of(ColumnType.LONG, HyperUniquesAggregatorFactory.TYPE))
                            .context(contextToPut)
                            .build()
                    )
