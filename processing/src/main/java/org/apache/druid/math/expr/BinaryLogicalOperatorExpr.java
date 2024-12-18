@@ -340,9 +340,6 @@ class BinAndExpr extends BinaryOpExprBase
   public ExprEval eval(ObjectBinding bindings)
   {
     ExprEval leftVal = left.eval(bindings);
-    if (!ExpressionProcessing.useStrictBooleans()) {
-      return leftVal.asBoolean() ? right.eval(bindings) : leftVal;
-    }
 
     // if left is false, always false
     if (leftVal.value() != null && !leftVal.asBoolean()) {
@@ -376,9 +373,7 @@ class BinAndExpr extends BinaryOpExprBase
   @Override
   public boolean canVectorize(InputBindingInspector inspector)
   {
-    return ExpressionProcessing.useStrictBooleans() &&
-           inspector.areSameTypes(left, right) &&
-           inspector.canVectorize(left, right);
+    return inspector.areSameTypes(left, right) && inspector.canVectorize(left, right);
   }
 
   @Override
@@ -391,9 +386,6 @@ class BinAndExpr extends BinaryOpExprBase
   @Override
   public ExpressionType getOutputType(InputBindingInspector inspector)
   {
-    if (!ExpressionProcessing.useStrictBooleans()) {
-      return super.getOutputType(inspector);
-    }
     return ExpressionType.LONG;
   }
 }
@@ -415,9 +407,6 @@ class BinOrExpr extends BinaryOpExprBase
   public ExprEval eval(ObjectBinding bindings)
   {
     ExprEval leftVal = left.eval(bindings);
-    if (!ExpressionProcessing.useStrictBooleans()) {
-      return leftVal.asBoolean() ? leftVal : right.eval(bindings);
-    }
 
     // if left is true, always true
     if (leftVal.value() != null && leftVal.asBoolean()) {
@@ -454,9 +443,7 @@ class BinOrExpr extends BinaryOpExprBase
   public boolean canVectorize(InputBindingInspector inspector)
   {
 
-    return ExpressionProcessing.useStrictBooleans() &&
-           inspector.areSameTypes(left, right) &&
-           inspector.canVectorize(left, right);
+    return inspector.areSameTypes(left, right) && inspector.canVectorize(left, right);
   }
 
   @Override
@@ -469,9 +456,6 @@ class BinOrExpr extends BinaryOpExprBase
   @Override
   public ExpressionType getOutputType(InputBindingInspector inspector)
   {
-    if (!ExpressionProcessing.useStrictBooleans()) {
-      return super.getOutputType(inspector);
-    }
     return ExpressionType.LONG;
   }
 }
