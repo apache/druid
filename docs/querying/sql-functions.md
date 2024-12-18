@@ -40,14 +40,14 @@ The examples on this page use the following example datasources:
 * `flight-carriers` using `FlightCarrierOnTime (1 month)`
 * `taxi-trips` using `NYC Taxi cabs (3 files)`
 * `kttm` using `KoalasToTheMax one day`
-* `array_example` created with [SQL-based ingestion](../multi-stage-query/index.md)
+* `array-example` created with [SQL-based ingestion](../multi-stage-query/index.md)
 
-Use following query to create the `array_example` datasource:
+Use the following query to create the `array-example` datasource.
 
 <details><summary>Example query</summary>
 
 ```sql
-REPLACE INTO "array_example" OVERWRITE ALL
+REPLACE INTO "array-example" OVERWRITE ALL
 WITH "ext" AS (
   SELECT *
   FROM TABLE(
@@ -277,7 +277,7 @@ Constructs a SQL `ARRAY` literal from the expression arguments. The arguments mu
 
 <details><summary>Example</summary>
 
-The following example returns an array with the elements in the `agent_category`, `browser`, and `browser_version` columns from the `kttm` datasource.
+The following example constructs arrays using the values from the `agent_category`, `browser`, and `browser_version` columns in the `kttm` datasource.
 
 ```sql
 SELECT ARRAY["agent_category", "browser", "browser_version"] AS "user_agent_details"
@@ -308,7 +308,7 @@ Returns an array of all values of the specified expression. To collect only uniq
 
 <details><summary>Example</summary>
 
-The following example returns an array of unique `OriginState` values from the `flight-carriers` datasource, grouped by `Reporting_Airline`.
+The following example returns arrays of unique values from the `OriginState` column in the `flight-carriers` datasource, grouped by `Reporting_Airline`.
 
 ```sql
 SELECT "Reporting_Airline", ARRAY_AGG(DISTINCT "OriginState", 50000) AS "Origin"
@@ -327,7 +327,6 @@ Returns the following:
 | `CO` |`["AK","AL","AZ","CA","CO","CT","FL","GA","HI","IL","IN","LA","MA","MD","MI","MN","MO","MS","NC","NE","NH","NJ","NM","NV","NY","OH","OK","OR","PA","PR","RI","SC","TN","TX","UT","VA","VI","WA"]`|
 | `DH` |`["AL","CA","CT","FL","GA","IL","MA","ME","MI","NC","NH","NJ","NV","NY","OH","PA","RI","SC","TN","VA","VT","WA","WV"]`|
 
-
 </details>
 
 [Learn more](sql-aggregations.md)
@@ -341,11 +340,11 @@ Appends `expr` to `arr`. The type of `arr` determines the resulting array type.
 
 <details><summary>Example</summary>
 
-The following example appends `c` to the values in the `arrayString` column from the `array_example` datasource.
+The following example appends `c` to the values in the `arrayString` column from the `array-example` datasource.
 
 ```sql
 SELECT ARRAY_APPEND("arrayString",'c') AS "array_appended"
-FROM "array_example"
+FROM "array-example"
 ```
 
 Returns the following:
@@ -371,16 +370,16 @@ Concatenates `arr2` to `arr1`. The type of `arr1` determines the resulting array
 
 <details><summary>Example</summary>
 
-The following example concatenates the arrays in the `arrayLong` and `arrayDouble` columns from the `array_example` datasource.
+The following example concatenates the arrays in the `arrayLong` and `arrayDouble` columns from the `array-example` datasource.
 
 ```sql
-SELECT ARRAY_CONCAT("arrayLong", "arrayDouble") AS "array_concatenated" 
-FROM "array_example"
+SELECT ARRAY_CONCAT("arrayLong", "arrayDouble") AS "arrayConcatenated" 
+FROM "array-example"
 ```
 
 Returns the following:
 
-| `array_concatenated` |
+| `arrayConcatenated` |
 | -- |
 | `[1,null,3,1.1,2.2,null]` |
 | `null`|
@@ -401,11 +400,11 @@ Concatenates array inputs into a single array. To concatenate only unique values
 
 <details><summary>Example</summary>
 
-The following example concatenates the array inputs from the `arrayDouble` column of the `array_example` datasource into a single array.
+The following example concatenates the array inputs from the `arrayDouble` column of the `array-example` datasource into a single array.
 
 ```sql
 SELECT ARRAY_CONCAT_AGG( DISTINCT "arrayDouble") AS "array_concat_agg_distinct"
-FROM "array_example"
+FROM "array-example"
 ```
 
 Returns the following:
@@ -431,16 +430,16 @@ If `expr` is a scalar type, returns true if `arr` contains `expr`.
 
 <details><summary>Example</summary>
 
-The following example returns true if the `arraySring` column in the `array_example` datasource contains `a`.
+The following example returns true if the `arraySring` column from the `array-example` datasource contains `a`.
 
 ```sql
-SELECT "label", "arrayString", ARRAY_CONTAINS("arrayString", 'a') AS "array_contains_a"
-FROM "array_example"
+SELECT "label", "arrayString", ARRAY_CONTAINS("arrayString", 'a') AS "arrayContains"
+FROM "array-example"
 ```
 
 Returns the following:
 
-| `label` | `arrayString` | `array_contains_a` |
+| `label` | `arrayString` | `arrayContains` |
 | -- | --| -- |
 | `row1` | `["a","b"]` | `true` |
 | `row2`| `[null,"b"]` | `false` |
@@ -461,16 +460,16 @@ If `expr` is an array, returns true if `arr` contains all elements of `expr`.
 
 <details><summary>Example</summary>
 
-The following example returns true if the `arrayLong` column in the `array_example` datasource contains all elements of the provided expression.
+The following example returns true if the `arrayLong` column from the `array-example` datasource contains all elements of the provided expression.
 
 ```sql
-SELECT "label", "arrayLong", ARRAY_CONTAINS("arrayLong", ARRAY[1,2,3]) AS "array_contains_values"
-FROM "array_example"
+SELECT "label", "arrayLong", ARRAY_CONTAINS("arrayLong", ARRAY[1,2,3]) AS "arrayContains"
+FROM "array-example"
 ```
 
 Returns the following:
 
-| `label` | `arrayLong` | `array_contains_values` |
+| `label` | `arrayLong` | `arrayContains` |
 | -- | -- | -- |
 | `row1` | `[1,null,3]` | `false` |
 | `row2`| `null` | `null` |
@@ -491,16 +490,16 @@ Returns the length of the array.
 
 <details><summary>Example</summary>
 
-The following example returns the length of array expressions in the `arrayLong` column of the `array_example` datasource.
+The following example returns the length of array expressions in the `arrayDouble` column from the `array-example` datasource.
 
 ```sql
-SELECT "arrayDouble" AS "array", ARRAY_LENGTH("arrayDouble") AS "array_length"
-FROM "array_example"
+SELECT "arrayDouble" AS "array", ARRAY_LENGTH("arrayDouble") AS "arrayLength"
+FROM "array-example"
 ```
 
 Returns the following:
 
-| `larray` | `array_length` |
+| `larray` | `arrayLength` |
 | -- | -- |
 | `row1` | 3 |
 | `row2`| 3 |
@@ -521,16 +520,16 @@ Returns the array element at the specified zero-based index. Returns null if the
 
 <details><summary>Example</summary>
 
-The following example returns the element at the specified zero-based index from the arrays in the `arrayLong` column of the `array_example` datasource.
+The following example returns the element at the specified zero-based index from the arrays in the `arrayLong` column of the `array-example` datasource.
 
 ```sql
-SELECT "arrayLong" as "array", ARRAY_OFFSET("arrayLong", 2) AS "element_at_index"
-FROM "array_example"
+SELECT "arrayLong" as "array", ARRAY_OFFSET("arrayLong", 2) AS "elementAtIndex"
+FROM "array-example"
 ```
 
 Returns the following:
 
-| `array` | `element_at_index` |
+| `array` | `elementAtIndex` |
 | -- | -- |
 | `[1,null,3]` | 3 |
 | `null`| `null` |
@@ -544,18 +543,18 @@ Returns the following:
 
 ## ARRAY_OFFSET_OF
 
-Returns the zero-based index of the first occurrence of `expr` in the array. If the value isn't present in the array, returns `null` or `-1` if `druid.generic.useDefaultValueForNull=true` (deprecated legacy mode).
+Returns the zero-based index of the first occurrence of `expr` in the array. If the value isn't present in the array, returns null or `-1` if `druid.generic.useDefaultValueForNull=true` (deprecated legacy mode).
 
 * **Syntax**: `ARRAY_OFFSET_OF(arr, expr)`
 * **Function type:** Array
 
 <details><summary>Example</summary>
 
-The following example returns the zero-based index of the fist occurrence of `3` in the arrays in the `arrayLong` column of the `array_example` datasource.
+The following example returns the zero-based index of the fist occurrence of `3` in the arrays in the `arrayLong` column of the `array-example` datasource.
 
 ```sql
 SELECT "arrayLong" as "array", ARRAY_OFFSET_OF("arrayLong", 3) AS "offset"
-FROM "array_example"
+FROM "array-example"
 ```
 
 Returns the following:
@@ -581,16 +580,16 @@ Returns the array element at the specified one-based index. Returns null if the 
 
 <details><summary>Example</summary>
 
-The following example returns the element at the specified one-based index from the arrays in the `arrayLong` column of the `array_example` datasource.
+The following example returns the element at the specified one-based index from the arrays in the `arrayLong` column of the `array-example` datasource.
 
 ```sql
-SELECT "arrayLong" as "array", ARRAY_ORDINAL("arrayLong", 2) AS "element_at_index"
-FROM "array_example"
+SELECT "arrayLong" as "array", ARRAY_ORDINAL("arrayLong", 2) AS "elementAtIndex"
+FROM "array-example"
 ```
 
 Returns the following:
 
-| `array` | `element_at_index` |
+| `array` | `elementAtIndex` |
 | -- | -- |
 | `[1,null,3]` | `null` |
 | `null`| `null` |
@@ -604,18 +603,18 @@ Returns the following:
 
 ## ARRAY_ORDINAL_OF
 
-Returns the one-based index of the first occurrence of `expr` in the array. If the value isn't present in the array, returns `null` or `-1` if `druid.generic.useDefaultValueForNull=true` (deprecated legacy mode).
+Returns the one-based index of the first occurrence of `expr` in the array. If the value isn't present in the array, returns null or `-1` if `druid.generic.useDefaultValueForNull=true` (deprecated legacy mode).
 
 * **Syntax**: `ARRAY_ORDINAL_OF(arr, expr)`
 * **Function type:** Array
 
 <details><summary>Example</summary>
 
-The following example returns the one-based index of the fist occurrence of `3` in the arrays in the `arrayLong` column of the `array_example` datasource.
+The following example returns the one-based index of the fist occurrence of `3` in the arrays in the `arrayLong` column of the `array-example` datasource.
 
 ```sql
 SELECT "arrayLong" as "array", ARRAY_ORDINAL_OF("arrayLong", 3) AS "ordinal"
-FROM "array_example"
+FROM "array-example"
 ```
 
 Returns the following:
@@ -641,11 +640,11 @@ Returns true if `arr1` and `arr2` have any elements in common. Treats `NULL` val
 
 <details><summary>Example</summary>
 
-The following example returns true when columns `arrayString` and `arrayDouble` from the `array_example` datasource have common elements.
+The following example returns true if columns `arrayString` and `arrayDouble` from the `array-example` datasource have common elements.
 
 ```sql
 SELECT "arrayString", "arrayDouble",  ARRAY_OVERLAP("arrayString", "arrayDouble") AS "overlap"
-FROM "array_example"
+FROM "array-example"
 ```
 
 Returns the following:
@@ -671,7 +670,7 @@ Returns true if the scalar `expr` is present in `arr`. Returns false if the scal
 
 <details><summary>Example</summary>
 
-The following example returns true when 36 is present in the array generated from the values in the `DestStateFips` column of the `flight-carriers` datasource have common elements.
+The following example returns true if the value `36` is present in the array generated from the elements in the `DestStateFips` column from the `flight-carriers` datasource.
 
 ```sql
 SELECT "Reporting_Airline", ARRAY_AGG(DISTINCT "DestStateFips") AS "StateFipsArray", SCALAR_IN_ARRAY(36, ARRAY_AGG(DISTINCT "DestStateFips")) AS "ValueInArray"
@@ -703,16 +702,16 @@ Prepends `expr` to `arr`. The type of `arr` determines the resulting array type.
 
 <details><summary>Example</summary>
 
-The following example prepends `c` to the values in the `arrayString` column from the `array_example` datasource.
+The following example prepends `c` to the arrays in the `arrayString` column from the `array-example` datasource.
 
 ```sql
-SELECT ARRAY_PREPEND('c', "arrayString") AS "array_prepended"
-FROM "array_example"
+SELECT ARRAY_PREPEND('c', "arrayString") AS "arrayPrepended"
+FROM "array-example"
 ```
 
 Returns the following:
 
-| `array_prepended` |
+| `arrayPrepended` |
 | -- |
 | `[c, a, b]` |
 | `["c",null,"b"]`|
@@ -726,18 +725,18 @@ Returns the following:
 
 ## ARRAY_SLICE
 
-Returns an array containing a subset of elements from `arr`, from the zero-based index `start` (inclusive) to `end` (exclusive). Returns `null`, if `start` is less than 0, greater than the length of `arr`, or greater than `end`.
+Returns an array containing a subset of elements from `arr`, from the zero-based index `start` (inclusive) to `end` (exclusive). Returns null, if `start` is less than 0, greater than the length of `arr`, or greater than `end`.
 
 * **Syntax**: `ARRAY_SLICE(arr, start, end)`
 * **Function type:** Array
 
 <details><summary>Example</summary>
 
-The following example constructs a new array from the elements of arrays in the `arrayDouble` column of the `array_example` datasource.
+The following example constructs a new array from the elements of arrays in the `arrayDouble` column from the `array-example` datasource.
 
 ```sql
 SELECT "arrayDouble", ARRAY_SLICE("arrayDouble", 0, 2) AS "arrayNew"
-FROM "array_example"
+FROM "array-example"
 ```
 
 Returns the following:
@@ -763,11 +762,11 @@ Converts an array of any type into a [multi-value string](sql-data-types.md#mult
 
 <details><summary>Example</summary>
 
-The following example converts the arrays in the `arrayDouble` column of the `array_example` datasource into multi-value strings.
+The following example converts the arrays in the `arrayDouble` column from the `array-example` datasource into multi-value strings.
 
 ```sql
 SELECT ARRAY_TO_MV("arrayDouble") AS "multiValueString"
-FROM "array_example"
+FROM "array-example"
 ```
 
 Returns the following:
@@ -793,11 +792,11 @@ Joins all elements of `arr` by the delimiter specified by `str`.
 
 <details><summary>Example</summary>
 
-The following example returns the arrays from the `arrayDouble` column of the `array_example` datasource as concatenated strings.
+The following example converts the arrays in the `arrayDouble` column of the `array-example` datasource into concatenated strings.
 
 ```sql
 SELECT ARRAY_TO_STRING("arrayDouble", '') AS "notSeparated"
-FROM "array_example"
+FROM "array-example"
 ```
 
 Returns the following:
@@ -807,7 +806,7 @@ Returns the following:
 | `1.12.2null` |
 | `999.0null5.5` |
 | `null2.21.1` |
-| |
+| ` ` |
 | `null`|
 
 </details>
@@ -3296,7 +3295,7 @@ Returns the rank with gaps for a row within a window. For example, if two rows t
 
 ## REGEXP_EXTRACT
 
-Apply regular expression `pattern` to `expr` and extract the Nth capture group. If `N` is unspecified or zero, returns the first substring that matches the pattern. Returns `null` if there is no matching pattern.
+Apply regular expression `pattern` to `expr` and extract the Nth capture group. If `N` is unspecified or zero, returns the first substring that matches the pattern. Returns null if there is no matching pattern.
 
 * **Syntax:** `REGEXP_EXTRACT(expr, pattern[, N])`
 * **Function type:** Scalar, string 
