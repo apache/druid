@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import org.apache.druid.guice.DruidInjectorBuilder;
+import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.msq.exec.MSQDrillWindowQueryTest.DrillWindowQueryMSQComponentSupplier;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
 import org.apache.druid.msq.test.CalciteMSQTestsHelper;
@@ -40,6 +41,7 @@ import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
 import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.planner.PlannerCaptureHook;
 import org.apache.druid.sql.calcite.run.SqlEngine;
+import org.apache.druid.sql.calcite.util.DruidModuleCollection;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
@@ -61,15 +63,14 @@ public class MSQDrillWindowQueryTest extends DrillWindowQueryTest
       super(tempFolderProducer);
     }
 
-//    @Override
-//    public DruidModule getCoreModule()
-//    {
-//      return DruidModuleCollection.of(
-//            super.getCoreModule(),
-//            CalciteMSQTestsHelper.fetchModules(tempDirProducer::newTempFolder, TestGroupByBuffers.createDefault()).toArray(new Module[0]),
-//            new TestMSQSqlModule()
-//          );
-//    }
+    public DruidModule getCoreModule1()
+    {
+      return DruidModuleCollection.of(
+            super.getCoreModule(),
+
+            new TestMSQSqlModule()
+          );
+    }
 
     @Override
     public void configureGuice(DruidInjectorBuilder builder)

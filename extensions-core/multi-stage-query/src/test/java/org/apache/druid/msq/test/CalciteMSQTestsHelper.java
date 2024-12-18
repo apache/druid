@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Module;
+import com.google.inject.Provides;
 import com.google.inject.TypeLiteral;
 import org.apache.druid.collections.ReferenceCountingResourceHolder;
 import org.apache.druid.collections.ResourceHolder;
@@ -37,6 +38,7 @@ import org.apache.druid.frame.processor.Bouncer;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.IndexingServiceTuningConfigModule;
 import org.apache.druid.guice.JoinableFactoryModule;
+import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.initialization.DruidModule;
@@ -125,12 +127,10 @@ public class CalciteMSQTestsHelper
   private static final class DruidModuleImplementation implements DruidModule
   {
     private final Function<String, File> tempFolderProducer;
-    private final TestGroupByBuffers groupByBuffers;
 
-    private DruidModuleImplementation(Function<String, File> tempFolderProducer, TestGroupByBuffers groupByBuffers)
+    private DruidModuleImplementation(Function<String, File> tempFolderProducer)
     {
       this.tempFolderProducer = tempFolderProducer;
-      this.groupByBuffers = groupByBuffers;
     }
 
     @Override
@@ -184,23 +184,30 @@ public class CalciteMSQTestsHelper
             .toInstance((segmentId, channelCounters, isReindex) -> getSupplierForSegment(tempFolderProducer, segmentId));
       binder.bind(DataServerQueryHandlerFactory.class).toInstance(getTestDataServerQueryHandlerFactory());
 
-      GroupByQueryConfig groupByQueryConfig = new GroupByQueryConfig();
+      binder.bind(Bouncer.class).toInstance(new Bouncer(1));
+    }
+
+    @Provides
+    @LazySingleton
+    GroupingEngine getGroupingEngine(GroupByQueryConfig groupByQueryConfig, TestGroupByBuffers groupByBuffers)
+    {
       GroupingEngine groupingEngine = GroupByQueryRunnerTest.makeQueryRunnerFactory(
           groupByQueryConfig,
           groupByBuffers
       ).getGroupingEngine();
-      binder.bind(GroupingEngine.class).toInstance(groupingEngine);
-      binder.bind(Bouncer.class).toInstance(new Bouncer(1));
+      return groupingEngine;
     }
+
   }
 
+  @Deprecated
   public static List<Module> fetchModules(
       Function<String, File> tempFolderProducer,
       TestGroupByBuffers groupByBuffers
   )
   {
     return ImmutableList.of(
-        new DruidModuleImplementation(tempFolderProducer, groupByBuffers),
+        new DruidModuleImplementation(tempFolderProducer),
         new IndexingServiceTuningConfigModule(),
         new JoinableFactoryModule(),
         new MSQExternalDataSourceModule(),
