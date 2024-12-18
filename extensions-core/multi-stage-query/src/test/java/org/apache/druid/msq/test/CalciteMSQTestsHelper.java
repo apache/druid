@@ -22,6 +22,7 @@ package org.apache.druid.msq.test;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.TypeLiteral;
@@ -38,6 +39,7 @@ import org.apache.druid.guice.IndexingServiceTuningConfigModule;
 import org.apache.druid.guice.JoinableFactoryModule;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
+import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -120,71 +122,85 @@ import static org.mockito.Mockito.doThrow;
  */
 public class CalciteMSQTestsHelper
 {
+  private static final class DruidModuleImplementation implements DruidModule
+  {
+    private final Function<String, File> tempFolderProducer;
+    private final TestGroupByBuffers groupByBuffers;
+
+    private DruidModuleImplementation(Function<String, File> tempFolderProducer, TestGroupByBuffers groupByBuffers)
+    {
+      this.tempFolderProducer = tempFolderProducer;
+      this.groupByBuffers = groupByBuffers;
+    }
+
+    @Override
+    public void configure(Binder binder)
+    {
+      File cacheManagerDir = tempFolderProducer.apply("test");
+      File storageDir = tempFolderProducer.apply("localsegments");
+
+      binder.bind(AppenderatorsManager.class).toProvider(() -> null);
+
+      // Requirements of JoinableFactoryModule
+      binder.bind(SegmentManager.class).toInstance(EasyMock.createMock(SegmentManager.class));
+
+      binder.bind(new TypeLiteral<Set<NodeRole>>()
+      {
+      }).annotatedWith(Self.class).toInstance(ImmutableSet.of(NodeRole.PEON));
+
+      DruidProcessingConfig druidProcessingConfig = new DruidProcessingConfig()
+      {
+        @Override
+        public String getFormatString()
+        {
+          return "test";
+        }
+      };
+      binder.bind(DruidProcessingConfig.class).toInstance(druidProcessingConfig);
+      binder.bind(QueryProcessingPool.class)
+            .toInstance(new ForwardingQueryProcessingPool(Execs.singleThreaded("Test-runner-processing-pool")));
+
+      // Select queries donot require this
+      Injector dummyInjector = GuiceInjectors.makeStartupInjectorWithModules(
+          ImmutableList.of(
+              binder1 -> {
+                binder1.bind(ExprMacroTable.class).toInstance(CalciteTests.createExprMacroTable());
+                binder1.bind(DataSegment.PruneSpecsHolder.class).toInstance(DataSegment.PruneSpecsHolder.DEFAULT);
+              }
+          )
+      );
+      ObjectMapper testMapper = MSQTestBase.setupObjectMapper(dummyInjector);
+      SegmentCacheManager segmentCacheManager = new SegmentCacheManagerFactory(TestIndex.INDEX_IO, testMapper)
+          .manufacturate(cacheManagerDir);
+      LocalDataSegmentPusherConfig config = new LocalDataSegmentPusherConfig();
+      MSQTestSegmentManager segmentManager = new MSQTestSegmentManager(segmentCacheManager);
+      config.storageDirectory = storageDir;
+      binder.bind(DataSegmentPusher.class).toProvider(() -> new MSQTestDelegateDataSegmentPusher(
+          new LocalDataSegmentPusher(config),
+          segmentManager
+      ));
+      binder.bind(DataSegmentAnnouncer.class).toInstance(new NoopDataSegmentAnnouncer());
+      binder.bind(DataSegmentProvider.class)
+            .toInstance((segmentId, channelCounters, isReindex) -> getSupplierForSegment(tempFolderProducer, segmentId));
+      binder.bind(DataServerQueryHandlerFactory.class).toInstance(getTestDataServerQueryHandlerFactory());
+
+      GroupByQueryConfig groupByQueryConfig = new GroupByQueryConfig();
+      GroupingEngine groupingEngine = GroupByQueryRunnerTest.makeQueryRunnerFactory(
+          groupByQueryConfig,
+          groupByBuffers
+      ).getGroupingEngine();
+      binder.bind(GroupingEngine.class).toInstance(groupingEngine);
+      binder.bind(Bouncer.class).toInstance(new Bouncer(1));
+    }
+  }
+
   public static List<Module> fetchModules(
       Function<String, File> tempFolderProducer,
       TestGroupByBuffers groupByBuffers
   )
   {
-    File cacheManagerDir = tempFolderProducer.apply("test");
-    File storageDir = tempFolderProducer.apply("localsegments");
-
-    Module customBindings =
-        binder -> {
-          binder.bind(AppenderatorsManager.class).toProvider(() -> null);
-
-          // Requirements of JoinableFactoryModule
-          binder.bind(SegmentManager.class).toInstance(EasyMock.createMock(SegmentManager.class));
-
-          binder.bind(new TypeLiteral<Set<NodeRole>>()
-          {
-          }).annotatedWith(Self.class).toInstance(ImmutableSet.of(NodeRole.PEON));
-
-          DruidProcessingConfig druidProcessingConfig = new DruidProcessingConfig()
-          {
-            @Override
-            public String getFormatString()
-            {
-              return "test";
-            }
-          };
-          binder.bind(DruidProcessingConfig.class).toInstance(druidProcessingConfig);
-          binder.bind(QueryProcessingPool.class)
-                .toInstance(new ForwardingQueryProcessingPool(Execs.singleThreaded("Test-runner-processing-pool")));
-
-          // Select queries donot require this
-          Injector dummyInjector = GuiceInjectors.makeStartupInjectorWithModules(
-              ImmutableList.of(
-                  binder1 -> {
-                    binder1.bind(ExprMacroTable.class).toInstance(CalciteTests.createExprMacroTable());
-                    binder1.bind(DataSegment.PruneSpecsHolder.class).toInstance(DataSegment.PruneSpecsHolder.DEFAULT);
-                  }
-              )
-          );
-          ObjectMapper testMapper = MSQTestBase.setupObjectMapper(dummyInjector);
-          SegmentCacheManager segmentCacheManager = new SegmentCacheManagerFactory(TestIndex.INDEX_IO, testMapper)
-              .manufacturate(cacheManagerDir);
-          LocalDataSegmentPusherConfig config = new LocalDataSegmentPusherConfig();
-          MSQTestSegmentManager segmentManager = new MSQTestSegmentManager(segmentCacheManager);
-          config.storageDirectory = storageDir;
-          binder.bind(DataSegmentPusher.class).toProvider(() -> new MSQTestDelegateDataSegmentPusher(
-              new LocalDataSegmentPusher(config),
-              segmentManager
-          ));
-          binder.bind(DataSegmentAnnouncer.class).toInstance(new NoopDataSegmentAnnouncer());
-          binder.bind(DataSegmentProvider.class)
-                .toInstance((segmentId, channelCounters, isReindex) -> getSupplierForSegment(tempFolderProducer, segmentId));
-          binder.bind(DataServerQueryHandlerFactory.class).toInstance(getTestDataServerQueryHandlerFactory());
-
-          GroupByQueryConfig groupByQueryConfig = new GroupByQueryConfig();
-          GroupingEngine groupingEngine = GroupByQueryRunnerTest.makeQueryRunnerFactory(
-              groupByQueryConfig,
-              groupByBuffers
-          ).getGroupingEngine();
-          binder.bind(GroupingEngine.class).toInstance(groupingEngine);
-          binder.bind(Bouncer.class).toInstance(new Bouncer(1));
-        };
     return ImmutableList.of(
-        customBindings,
+        new DruidModuleImplementation(tempFolderProducer, groupByBuffers),
         new IndexingServiceTuningConfigModule(),
         new JoinableFactoryModule(),
         new MSQExternalDataSourceModule(),

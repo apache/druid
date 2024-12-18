@@ -61,6 +61,16 @@ public class MSQDrillWindowQueryTest extends DrillWindowQueryTest
       super(tempFolderProducer);
     }
 
+//    @Override
+//    public DruidModule getCoreModule()
+//    {
+//      return DruidModuleCollection.of(
+//            super.getCoreModule(),
+//            CalciteMSQTestsHelper.fetchModules(tempDirProducer::newTempFolder, TestGroupByBuffers.createDefault()).toArray(new Module[0]),
+//            new TestMSQSqlModule()
+//          );
+//    }
+
     @Override
     public void configureGuice(DruidInjectorBuilder builder)
     {
