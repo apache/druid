@@ -116,7 +116,7 @@ public class AuthorizationResult
 
     if (policyFilterNotPermitted && policyFilters.values()
                                                  .stream()
-                                                 .flatMap(Optional::stream)
+                                                 .map(v -> v.orElse(null))
                                                  .anyMatch(filter -> !(filter instanceof TrueDimFilter))) {
       return Optional.of(Access.DEFAULT_ERROR_MESSAGE);
     }
