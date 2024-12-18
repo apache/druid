@@ -22,18 +22,19 @@ package org.apache.druid.msq.exec;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Injector;
-import com.google.inject.Module;
-import org.apache.druid.guice.DruidInjectorBuilder;
+import org.apache.druid.guice.IndexingServiceTuningConfigModule;
+import org.apache.druid.guice.JoinableFactoryModule;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.msq.exec.MSQDrillWindowQueryTest.DrillWindowQueryMSQComponentSupplier;
+import org.apache.druid.msq.guice.MSQExternalDataSourceModule;
+import org.apache.druid.msq.guice.MSQIndexingModule;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
-import org.apache.druid.msq.test.CalciteMSQTestsHelper;
+import org.apache.druid.msq.test.CalciteMSQTestsHelper.MSQTestModule;
 import org.apache.druid.msq.test.ExtractResultsFactory;
 import org.apache.druid.msq.test.MSQTestOverlordServiceClient;
 import org.apache.druid.msq.test.VerifyMSQSupportedNativeQueriesPredicate;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.QueryContexts;
-import org.apache.druid.query.groupby.TestGroupByBuffers;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.sql.calcite.DrillWindowQueryTest;
 import org.apache.druid.sql.calcite.QueryTestBuilder;
@@ -63,21 +64,17 @@ public class MSQDrillWindowQueryTest extends DrillWindowQueryTest
       super(tempFolderProducer);
     }
 
-    public DruidModule getCoreModule1()
+    public DruidModule getCoreModule()
     {
       return DruidModuleCollection.of(
             super.getCoreModule(),
-
+            new MSQTestModule(tempDirProducer::newTempFolder),
+            new IndexingServiceTuningConfigModule(),
+            new JoinableFactoryModule(),
+            new MSQExternalDataSourceModule(),
+            new MSQIndexingModule(),
             new TestMSQSqlModule()
           );
-    }
-
-    @Override
-    public void configureGuice(DruidInjectorBuilder builder)
-    {
-      super.configureGuice(builder);
-      builder.addModules(CalciteMSQTestsHelper.fetchModules(tempDirProducer::newTempFolder, TestGroupByBuffers.createDefault()).toArray(new Module[0]));
-      builder.addModule(new TestMSQSqlModule());
     }
 
     @Override

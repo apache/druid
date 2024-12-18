@@ -124,11 +124,11 @@ import static org.mockito.Mockito.doThrow;
  */
 public class CalciteMSQTestsHelper
 {
-  private static final class DruidModuleImplementation implements DruidModule
+  public static final class MSQTestModule implements DruidModule
   {
     private final Function<String, File> tempFolderProducer;
 
-    private DruidModuleImplementation(Function<String, File> tempFolderProducer)
+    public MSQTestModule(Function<String, File> tempFolderProducer)
     {
       this.tempFolderProducer = tempFolderProducer;
     }
@@ -207,7 +207,21 @@ public class CalciteMSQTestsHelper
   )
   {
     return ImmutableList.of(
-        new DruidModuleImplementation(tempFolderProducer),
+        new MSQTestModule(tempFolderProducer),
+        new IndexingServiceTuningConfigModule(),
+        new JoinableFactoryModule(),
+        new MSQExternalDataSourceModule(),
+        new MSQIndexingModule()
+    );
+  }
+  @Deprecated
+  public static List<Module> fetchModules1(
+      Function<String, File> tempFolderProducer,
+      TestGroupByBuffers groupByBuffers
+  )
+  {
+    return ImmutableList.of(
+        new MSQTestModule(tempFolderProducer),
         new IndexingServiceTuningConfigModule(),
         new JoinableFactoryModule(),
         new MSQExternalDataSourceModule(),
