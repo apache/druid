@@ -30,6 +30,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Stream;
 
 public class AuthorizationResult
 {
@@ -116,7 +117,9 @@ public class AuthorizationResult
 
     if (policyFilterNotPermitted && policyFilters.values()
                                                  .stream()
-                                                 .map(v -> v.orElse(null))
+                                                 .flatMap(v -> v.isPresent()
+                                                               ? Stream.of(v.get())
+                                                               : Stream.empty()) // Can be replaced by Optional:stream in Java 11
                                                  .anyMatch(filter -> !(filter instanceof TrueDimFilter))) {
       return Optional.of(Access.DEFAULT_ERROR_MESSAGE);
     }
