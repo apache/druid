@@ -516,7 +516,8 @@ public class JoinDataSourceTest
         JoinType.LEFT,
         null,
         ExprMacroTable.nil(),
-        null
+        null,
+        JoinAlgorithm.BROADCAST
     );
     DataSourceAnalysis analysis = dataSource.getAnalysis();
     Assert.assertEquals("table1", analysis.getBaseDataSource().getTableNames().iterator().next());

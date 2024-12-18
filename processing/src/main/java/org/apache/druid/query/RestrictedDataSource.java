@@ -112,7 +112,7 @@ public class RestrictedDataSource implements DataSource
       throw new IAE("Expected [1] child, got [%d]", children.size());
     }
 
-    return RestrictedDataSource.create(children.get(0), rowFilter);
+    return create(children.get(0), rowFilter);
   }
 
   @Override
@@ -151,7 +151,7 @@ public class RestrictedDataSource implements DataSource
   @Override
   public DataSource withUpdatedDataSource(DataSource newSource)
   {
-    return RestrictedDataSource.create(newSource, rowFilter);
+    return create(newSource, rowFilter);
   }
 
   @Override
