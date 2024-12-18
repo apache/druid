@@ -34,6 +34,7 @@ import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.AsyncFunction;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import it.unimi.dsi.fastutil.ints.Int2ObjectLinkedOpenHashMap;
@@ -1101,6 +1102,19 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
            .emit();
       }
     }
+  }
+
+  @Override
+  public ListenableFuture<Void> stopAsync()
+  {
+    ListeningExecutorService shutdownExec = MoreExecutors.listeningDecorator(
+        Execs.singleThreaded("supervisor-shutdown-" + StringUtils.encodeForFormat(supervisorId) + "--%d")
+    );
+    return shutdownExec.submit(() -> {
+      stop(false);
+      shutdownExec.shutdown();
+      return null;
+    });
   }
 
   @Override
