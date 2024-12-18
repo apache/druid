@@ -22,9 +22,9 @@ package org.apache.druid.msq.exec;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.msq.exec.MSQDrillWindowQueryTest.DrillWindowQueryMSQComponentSupplier;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
+import org.apache.druid.msq.test.AbstractMSQComponentSupplierDelegate;
 import org.apache.druid.msq.test.ExtractResultsFactory;
 import org.apache.druid.msq.test.MSQTestOverlordServiceClient;
-import org.apache.druid.msq.test.StandardMSQComponentSupplier.AbstractMSQComponentSupplierDelegate;
 import org.apache.druid.msq.test.VerifyMSQSupportedNativeQueriesPredicate;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.QueryContexts;
@@ -49,7 +49,6 @@ public class MSQDrillWindowQueryTest extends DrillWindowQueryTest
 
   public static class DrillWindowQueryMSQComponentSupplier extends AbstractMSQComponentSupplierDelegate
   {
-
     public DrillWindowQueryMSQComponentSupplier(TempDirProducer tempDirProducer)
     {
       super(new DrillComponentSupplier(tempDirProducer));
