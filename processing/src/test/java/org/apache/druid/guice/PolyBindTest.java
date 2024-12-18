@@ -112,7 +112,7 @@ public class PolyBindTest
     }
     catch (Exception e) {
       Assert.assertTrue(e instanceof ProvisionException);
-      Assert.assertTrue(e.getMessage().contains("Unknown provider [c] of Key[type=org.apache.druid.guice.PolyBindTest$Gogo"));
+      Assert.assertTrue(e.getMessage().contains("Unknown provider [c] of Key[type=PolyBindTest$Gogo"));
     }
     try {
       Assert.assertEquals("B", injector.getInstance(Key.get(Gogo.class, Names.named("reverse"))).go());
@@ -120,7 +120,7 @@ public class PolyBindTest
     }
     catch (Exception e) {
       Assert.assertTrue(e instanceof ProvisionException);
-      Assert.assertTrue(e.getMessage().contains("Unknown provider [c] of Key[type=org.apache.druid.guice.PolyBindTest$Gogo"));
+      Assert.assertTrue(e.getMessage().contains("Unknown provider [c] of Key[type=PolyBindTest$Gogo"));
     }
 
     // test default property value
@@ -136,7 +136,7 @@ public class PolyBindTest
     }
     catch (Exception e) {
       Assert.assertTrue(e instanceof ProvisionException);
-      Assert.assertTrue(e.getMessage().contains("Unknown provider [c] of Key[type=org.apache.druid.guice.PolyBindTest$GogoSally"));
+      Assert.assertTrue(e.getMessage().contains("Unknown provider [c] of Key[type=PolyBindTest$GogoSally"));
     }
   }
 

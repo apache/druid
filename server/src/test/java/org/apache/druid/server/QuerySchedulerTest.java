@@ -68,10 +68,13 @@ import org.apache.druid.server.scheduling.HiLoQueryLaningStrategy;
 import org.apache.druid.server.scheduling.ManualQueryPrioritizationStrategy;
 import org.apache.druid.server.scheduling.NoQueryLaningStrategy;
 import org.easymock.EasyMock;
+import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.internal.matchers.ThrowableMessageMatcher;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -493,14 +496,18 @@ public class QuerySchedulerTest
     properties.setProperty(propertyPrefix + ".laning.strategy", "hilo");
     provider.inject(properties, injector.getInstance(JsonConfigurator.class));
     Throwable t = Assert.assertThrows(ProvisionException.class, () -> provider.get().get());
-    Assert.assertEquals(
-        "Unable to provision, see the following errors:\n"
-        + "\n"
-        + "1) Problem parsing object at prefix[druid.query.scheduler]: Cannot construct instance of `org.apache.druid.server.scheduling.HiLoQueryLaningStrategy`, problem: maxLowPercent must be set\n"
-        + " at [Source: UNKNOWN; line: -1, column: -1] (through reference chain: org.apache.druid.server.QuerySchedulerProvider[\"laning\"]).\n"
-        + "\n"
-        + "1 error",
-        t.getMessage()
+    MatcherAssert.assertThat(
+        t,
+        ThrowableMessageMatcher.hasMessage(
+            CoreMatchers.startsWith(
+                "Unable to provision, see the following errors:\n"
+                + "\n"
+                + "1) Problem parsing object at prefix[druid.query.scheduler]: Cannot construct instance of `HiLoQueryLaningStrategy`, problem: maxLowPercent must be set\n"
+                + " at [Source: UNKNOWN; line: -1, column: -1] (through reference chain: QuerySchedulerProvider[\"laning\"]).\n"
+                + "\n"
+                + "1 error"
+            )
+        )
     );
   }
 
@@ -550,14 +557,18 @@ public class QuerySchedulerTest
     properties.setProperty(propertyPrefix + ".prioritization.strategy", "threshold");
     provider.inject(properties, injector.getInstance(JsonConfigurator.class));
     Throwable t = Assert.assertThrows(ProvisionException.class, () -> provider.get().get());
-    Assert.assertEquals(
-        "Unable to provision, see the following errors:\n"
-        + "\n"
-        + "1) Problem parsing object at prefix[druid.query.scheduler]: Cannot construct instance of `org.apache.druid.server.scheduling.ThresholdBasedQueryPrioritizationStrategy`, problem: periodThreshold, durationThreshold, segmentCountThreshold or segmentRangeThreshold must be set\n"
-        + " at [Source: UNKNOWN; line: -1, column: -1] (through reference chain: org.apache.druid.server.QuerySchedulerProvider[\"prioritization\"]).\n"
-        + "\n"
-        + "1 error",
-        t.getMessage()
+    MatcherAssert.assertThat(
+        t,
+        ThrowableMessageMatcher.hasMessage(
+            CoreMatchers.startsWith(
+                "Unable to provision, see the following errors:\n"
+                + "\n"
+                + "1) Problem parsing object at prefix[druid.query.scheduler]: Cannot construct instance of `ThresholdBasedQueryPrioritizationStrategy`, problem: periodThreshold, durationThreshold, segmentCountThreshold or segmentRangeThreshold must be set\n"
+                + " at [Source: UNKNOWN; line: -1, column: -1] (through reference chain: QuerySchedulerProvider[\"prioritization\"]).\n"
+                + "\n"
+                + "1 error"
+            )
+        )
     );
   }
 

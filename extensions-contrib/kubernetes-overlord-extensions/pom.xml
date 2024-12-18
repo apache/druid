@@ -212,11 +212,7 @@
       <artifactId>jackson-databind</artifactId>
       <scope>provided</scope>
     </dependency>
-    <dependency>
-      <groupId>com.google.inject.extensions</groupId>
-      <artifactId>guice-multibindings</artifactId>
-      <scope>provided</scope>
-    </dependency>
+
     <dependency>
       <groupId>joda-time</groupId>
       <artifactId>joda-time</artifactId>

@@ -139,7 +139,7 @@ public class DruidProcessingConfigTest
     );
     Assert.assertTrue(
         t.getMessage()
-         .contains("Cannot construct instance of `org.apache.druid.java.util.common.HumanReadableBytes`, problem: Invalid format of number: -1. Negative value is not allowed.")
+         .contains("Cannot construct instance of `HumanReadableBytes`, problem: Invalid format of number: -1. Negative value is not allowed.")
     );
   }
 
