@@ -39,6 +39,7 @@ import org.apache.druid.query.BySegmentResultValueClass;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.InlineDataSource;
+import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.Query;
@@ -1037,7 +1038,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
   @Test
   public void testBySegmentResults()
   {
-    Result<BySegmentResultValue> bySegmentResult = new Result<BySegmentResultValue>(
+    Result<BySegmentResultValue> bySegmentResult = new Result<>(
         expectedSegmentAnalysis1.getIntervals().get(0).getStart(),
         new BySegmentResultValueClass(
             Collections.singletonList(
@@ -1626,7 +1627,8 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                     JoinType.LEFT,
                     null,
                     ExprMacroTable.nil(),
-                    null
+                    null,
+                    JoinAlgorithm.BROADCAST
                 ),
                 new LegacySegmentSpec("2015-01-01/2015-01-02"),
                 null,
@@ -1641,7 +1643,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
         DruidExceptionMatcher
             .invalidInput()
             .expectMessageIs(
-                "Invalid dataSource type [JoinDataSource{left=table1, right=table2, rightPrefix='j.', condition=x == \"j.x\", joinType=LEFT, leftFilter=null}]. SegmentMetadataQuery only supports table or union datasources.")
+                "Invalid dataSource type [JoinDataSource{left=table1, right=table2, rightPrefix='j.', condition=x == \"j.x\", joinType=LEFT, leftFilter=null, joinAlgorithm=null}]. SegmentMetadataQuery only supports table or union datasources.")
     );
   }
 

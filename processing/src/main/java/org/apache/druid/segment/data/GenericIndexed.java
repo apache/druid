@@ -103,7 +103,7 @@ public abstract class GenericIndexed<T> implements CloseableIndexed<T>, Serializ
    * The compare method of this instance uses {@link StringUtils#compareUtf8UsingJavaStringOrdering(byte[], byte[])}
    * so that behavior is consistent with {@link #STRING_STRATEGY}.
    */
-  public static final ObjectStrategy<ByteBuffer> UTF8_STRATEGY = new ObjectStrategy<ByteBuffer>()
+  public static final ObjectStrategy<ByteBuffer> UTF8_STRATEGY = new ObjectStrategy<>()
   {
     @Override
     public Class<ByteBuffer> getClazz()
@@ -141,7 +141,7 @@ public abstract class GenericIndexed<T> implements CloseableIndexed<T>, Serializ
     }
   };
 
-  public static final ObjectStrategy<String> STRING_STRATEGY = new ObjectStrategy<String>()
+  public static final ObjectStrategy<String> STRING_STRATEGY = new ObjectStrategy<>()
   {
     @Override
     public Class<String> getClazz()

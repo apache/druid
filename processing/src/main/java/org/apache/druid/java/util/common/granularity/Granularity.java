@@ -41,7 +41,7 @@ import java.util.regex.Pattern;
 
 public abstract class Granularity implements Cacheable
 {
-  public static final Comparator<Granularity> IS_FINER_THAN = new Comparator<Granularity>()
+  public static final Comparator<Granularity> IS_FINER_THAN = new Comparator<>()
   {
     @Override
     /**

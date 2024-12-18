@@ -49,7 +49,7 @@ public class SemanticCreatorUsageTest
   @Parameters(name = "{0}")
   public static List<Object[]> getParameters()
   {
-    List<Object[]> params = new ArrayList<Object[]>();
+    List<Object[]> params = new ArrayList<>();
     Set<Method> methodsAnnotatedWith = new Reflections("org.apache", new MethodAnnotationsScanner())
         .getMethodsAnnotatedWith(SemanticCreator.class);
 

@@ -241,7 +241,7 @@ public class DartQueryMaker implements QueryMaker
 
     // Return a sequence that reads one row (the report) from reportFuture.
     return new BaseSequence<>(
-        new BaseSequence.IteratorMaker<Object[], Iterator<Object[]>>()
+        new BaseSequence.IteratorMaker<>()
         {
           @Override
           public Iterator<Object[]> make()

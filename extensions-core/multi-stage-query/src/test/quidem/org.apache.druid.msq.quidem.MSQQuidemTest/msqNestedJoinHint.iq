@@ -1,0 +1,913 @@
+!use druidtest://?componentSupplier=DrillWindowQueryMSQComponentSupplier
+!set outputformat mysql
+
+select w1.cityName, w2.countryName
+from
+(
+  select w3.cityName AS cityName, w4.countryName AS countryName from wikipedia w3 LEFT JOIN wikipedia w4 ON w3.regionName = w4.regionName
+) w1
+JOIN wikipedia w2 ON w1.cityName = w2.cityName
+where w1.cityName='New York';
+
+[ {
+  "stageNumber" : 0,
+  "definition" : {
+    "id" : "<taskId>_0",
+    "input" : [ {
+      "type" : "table",
+      "dataSource" : "wikipedia",
+      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+    } ],
+    "processor" : {
+      "type" : "scan",
+      "query" : {
+        "queryType" : "scan",
+        "dataSource" : {
+          "type" : "inputNumber",
+          "inputNumber" : 0
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "resultFormat" : "compactedList",
+        "columns" : [ "regionName" ],
+        "context" : {
+          "scanSignature" : "[{\"name\":\"regionName\",\"type\":\"STRING\"}]",
+          "sqlInsertSegmentGranularity" : null,
+          "sqlQueryId" : __SQL_QUERY_ID__
+          "sqlStringifyArrays" : false
+        },
+        "columnTypes" : [ "STRING" ],
+        "granularity" : {
+          "type" : "all"
+        },
+        "legacy" : false
+      }
+    },
+    "signature" : [ {
+      "name" : "__boost",
+      "type" : "LONG"
+    }, {
+      "name" : "regionName",
+      "type" : "STRING"
+    } ],
+    "shuffleSpec" : {
+      "type" : "maxCount",
+      "clusterBy" : {
+        "columns" : [ {
+          "columnName" : "__boost",
+          "order" : "ASCENDING"
+        } ]
+      },
+      "partitions" : 1
+    },
+    "maxWorkerCount" : 1
+  },
+  "phase" : "FINISHED",
+  "workerCount" : 1,
+  "partitionCount" : 1,
+  "shuffle" : "globalSort",
+  "output" : "localStorage",
+  "startTime" : __TIMESTAMP__
+  "duration" : __DURATION__
+  "sort" : true
+}, {
+  "stageNumber" : 1,
+  "definition" : {
+    "id" : "<taskId>_1",
+    "input" : [ {
+      "type" : "table",
+      "dataSource" : "wikipedia",
+      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+    } ],
+    "processor" : {
+      "type" : "scan",
+      "query" : {
+        "queryType" : "scan",
+        "dataSource" : {
+          "type" : "inputNumber",
+          "inputNumber" : 0
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "resultFormat" : "compactedList",
+        "columns" : [ "cityName", "countryName" ],
+        "context" : {
+          "scanSignature" : "[{\"name\":\"cityName\",\"type\":\"STRING\"},{\"name\":\"countryName\",\"type\":\"STRING\"}]",
+          "sqlInsertSegmentGranularity" : null,
+          "sqlQueryId" : __SQL_QUERY_ID__
+          "sqlStringifyArrays" : false
+        },
+        "columnTypes" : [ "STRING", "STRING" ],
+        "granularity" : {
+          "type" : "all"
+        },
+        "legacy" : false
+      }
+    },
+    "signature" : [ {
+      "name" : "__boost",
+      "type" : "LONG"
+    }, {
+      "name" : "cityName",
+      "type" : "STRING"
+    }, {
+      "name" : "countryName",
+      "type" : "STRING"
+    } ],
+    "shuffleSpec" : {
+      "type" : "maxCount",
+      "clusterBy" : {
+        "columns" : [ {
+          "columnName" : "__boost",
+          "order" : "ASCENDING"
+        } ]
+      },
+      "partitions" : 1
+    },
+    "maxWorkerCount" : 1
+  },
+  "phase" : "FINISHED",
+  "workerCount" : 1,
+  "partitionCount" : 1,
+  "shuffle" : "globalSort",
+  "output" : "localStorage",
+  "startTime" : __TIMESTAMP__
+  "duration" : __DURATION__
+  "sort" : true
+}, {
+  "stageNumber" : 2,
+  "definition" : {
+    "id" : "<taskId>_2",
+    "input" : [ {
+      "type" : "table",
+      "dataSource" : "wikipedia",
+      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ],
+      "filter" : {
+        "type" : "equals",
+        "column" : "cityName",
+        "matchValueType" : "STRING",
+        "matchValue" : "New York"
+      },
+      "filterFields" : [ "cityName" ]
+    }, {
+      "type" : "stage",
+      "stage" : 0
+    }, {
+      "type" : "stage",
+      "stage" : 1
+    } ],
+    "broadcast" : [ 1, 2 ],
+    "processor" : {
+      "type" : "scan",
+      "query" : {
+        "queryType" : "scan",
+        "dataSource" : {
+          "type" : "join",
+          "left" : {
+            "type" : "join",
+            "left" : {
+              "type" : "inputNumber",
+              "inputNumber" : 0
+            },
+            "right" : {
+              "type" : "inputNumber",
+              "inputNumber" : 1
+            },
+            "rightPrefix" : "j0.",
+            "condition" : "(\"regionName\" == \"j0.regionName\")",
+            "joinType" : "LEFT"
+          },
+          "right" : {
+            "type" : "inputNumber",
+            "inputNumber" : 2
+          },
+          "rightPrefix" : "_j0.",
+          "condition" : "(\"cityName\" == \"_j0.cityName\")",
+          "joinType" : "INNER"
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "virtualColumns" : [ {
+          "type" : "expression",
+          "name" : "v0",
+          "expression" : "'New York'",
+          "outputType" : "STRING"
+        } ],
+        "resultFormat" : "compactedList",
+        "filter" : {
+          "type" : "equals",
+          "column" : "cityName",
+          "matchValueType" : "STRING",
+          "matchValue" : "New York"
+        },
+        "columns" : [ "v0", "_j0.countryName" ],
+        "context" : {
+          "__user" : null,
+          "finalize" : true,
+          "maxParseExceptions" : 0,
+          "scanSignature" : "[{\"name\":\"v0\",\"type\":\"STRING\"},{\"name\":\"_j0.countryName\",\"type\":\"STRING\"}]",
+          "sqlQueryId" : __SQL_QUERY_ID__
+          "sqlStringifyArrays" : false,
+          "windowFunctionOperatorTransformation" : true
+        },
+        "columnTypes" : [ "STRING", "STRING" ],
+        "granularity" : {
+          "type" : "all"
+        },
+        "legacy" : false
+      }
+    },
+    "signature" : [ {
+      "name" : "__boost",
+      "type" : "LONG"
+    }, {
+      "name" : "v0",
+      "type" : "STRING"
+    }, {
+      "name" : "_j0.countryName",
+      "type" : "STRING"
+    } ],
+    "shuffleSpec" : {
+      "type" : "maxCount",
+      "clusterBy" : {
+        "columns" : [ {
+          "columnName" : "__boost",
+          "order" : "ASCENDING"
+        } ]
+      },
+      "partitions" : 1
+    },
+    "maxWorkerCount" : 1
+  },
+  "phase" : "FINISHED",
+  "workerCount" : 1,
+  "partitionCount" : 1,
+  "shuffle" : "globalSort",
+  "output" : "localStorage",
+  "startTime" : __TIMESTAMP__
+  "duration" : __DURATION__
+  "sort" : true
+} ]
+!msqPlan
+
+select w1.cityName, w2.countryName
+from
+(
+  select /*+ sort_merge */ w3.cityName AS cityName, w4.countryName AS countryName from wikipedia w3 LEFT JOIN wikipedia w4 ON w3.regionName = w4.regionName
+) w1
+JOIN wikipedia w2 ON w1.cityName = w2.cityName
+where w1.cityName='New York';
+
+LogicalJoin:[[sort_merge inheritPath:[0]]]
+
+!hints
+
+[ {
+  "stageNumber" : 0,
+  "definition" : {
+    "id" : "<taskId>_0",
+    "input" : [ {
+      "type" : "table",
+      "dataSource" : "wikipedia",
+      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+    } ],
+    "processor" : {
+      "type" : "scan",
+      "query" : {
+        "queryType" : "scan",
+        "dataSource" : {
+          "type" : "inputNumber",
+          "inputNumber" : 0
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "resultFormat" : "compactedList",
+        "columns" : [ "cityName", "regionName" ],
+        "context" : {
+          "scanSignature" : "[{\"name\":\"cityName\",\"type\":\"STRING\"},{\"name\":\"regionName\",\"type\":\"STRING\"}]",
+          "sqlInsertSegmentGranularity" : null,
+          "sqlQueryId" : __SQL_QUERY_ID__
+          "sqlStringifyArrays" : false
+        },
+        "columnTypes" : [ "STRING", "STRING" ],
+        "granularity" : {
+          "type" : "all"
+        },
+        "legacy" : false
+      }
+    },
+    "signature" : [ {
+      "name" : "__boost",
+      "type" : "LONG"
+    }, {
+      "name" : "cityName",
+      "type" : "STRING"
+    }, {
+      "name" : "regionName",
+      "type" : "STRING"
+    } ],
+    "shuffleSpec" : {
+      "type" : "maxCount",
+      "clusterBy" : {
+        "columns" : [ {
+          "columnName" : "__boost",
+          "order" : "ASCENDING"
+        } ]
+      },
+      "partitions" : 1
+    },
+    "maxWorkerCount" : 1
+  },
+  "phase" : "FINISHED",
+  "workerCount" : 1,
+  "partitionCount" : 1,
+  "shuffle" : "globalSort",
+  "output" : "localStorage",
+  "startTime" : __TIMESTAMP__
+  "duration" : __DURATION__
+  "sort" : true
+}, {
+  "stageNumber" : 1,
+  "definition" : {
+    "id" : "<taskId>_1",
+    "input" : [ {
+      "type" : "table",
+      "dataSource" : "wikipedia",
+      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+    } ],
+    "processor" : {
+      "type" : "scan",
+      "query" : {
+        "queryType" : "scan",
+        "dataSource" : {
+          "type" : "inputNumber",
+          "inputNumber" : 0
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "resultFormat" : "compactedList",
+        "columns" : [ "regionName" ],
+        "context" : {
+          "scanSignature" : "[{\"name\":\"regionName\",\"type\":\"STRING\"}]",
+          "sqlInsertSegmentGranularity" : null,
+          "sqlQueryId" : __SQL_QUERY_ID__
+          "sqlStringifyArrays" : false
+        },
+        "columnTypes" : [ "STRING" ],
+        "granularity" : {
+          "type" : "all"
+        },
+        "legacy" : false
+      }
+    },
+    "signature" : [ {
+      "name" : "__boost",
+      "type" : "LONG"
+    }, {
+      "name" : "regionName",
+      "type" : "STRING"
+    } ],
+    "shuffleSpec" : {
+      "type" : "maxCount",
+      "clusterBy" : {
+        "columns" : [ {
+          "columnName" : "__boost",
+          "order" : "ASCENDING"
+        } ]
+      },
+      "partitions" : 1
+    },
+    "maxWorkerCount" : 1
+  },
+  "phase" : "FINISHED",
+  "workerCount" : 1,
+  "partitionCount" : 1,
+  "shuffle" : "globalSort",
+  "output" : "localStorage",
+  "startTime" : __TIMESTAMP__
+  "duration" : __DURATION__
+  "sort" : true
+}, {
+  "stageNumber" : 2,
+  "definition" : {
+    "id" : "<taskId>_2",
+    "input" : [ {
+      "type" : "table",
+      "dataSource" : "wikipedia",
+      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+    } ],
+    "processor" : {
+      "type" : "scan",
+      "query" : {
+        "queryType" : "scan",
+        "dataSource" : {
+          "type" : "inputNumber",
+          "inputNumber" : 0
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "resultFormat" : "compactedList",
+        "columns" : [ "cityName", "countryName" ],
+        "context" : {
+          "scanSignature" : "[{\"name\":\"cityName\",\"type\":\"STRING\"},{\"name\":\"countryName\",\"type\":\"STRING\"}]",
+          "sqlInsertSegmentGranularity" : null,
+          "sqlQueryId" : __SQL_QUERY_ID__
+          "sqlStringifyArrays" : false
+        },
+        "columnTypes" : [ "STRING", "STRING" ],
+        "granularity" : {
+          "type" : "all"
+        },
+        "legacy" : false
+      }
+    },
+    "signature" : [ {
+      "name" : "__boost",
+      "type" : "LONG"
+    }, {
+      "name" : "cityName",
+      "type" : "STRING"
+    }, {
+      "name" : "countryName",
+      "type" : "STRING"
+    } ],
+    "shuffleSpec" : {
+      "type" : "maxCount",
+      "clusterBy" : {
+        "columns" : [ {
+          "columnName" : "__boost",
+          "order" : "ASCENDING"
+        } ]
+      },
+      "partitions" : 1
+    },
+    "maxWorkerCount" : 1
+  },
+  "phase" : "FINISHED",
+  "workerCount" : 1,
+  "partitionCount" : 1,
+  "shuffle" : "globalSort",
+  "output" : "localStorage",
+  "startTime" : __TIMESTAMP__
+  "duration" : __DURATION__
+  "sort" : true
+}, {
+  "stageNumber" : 3,
+  "definition" : {
+    "id" : "<taskId>_3",
+    "input" : [ {
+      "type" : "stage",
+      "stage" : 0
+    }, {
+      "type" : "stage",
+      "stage" : 1
+    }, {
+      "type" : "stage",
+      "stage" : 2
+    } ],
+    "broadcast" : [ 1, 2 ],
+    "processor" : {
+      "type" : "scan",
+      "query" : {
+        "queryType" : "scan",
+        "dataSource" : {
+          "type" : "join",
+          "left" : {
+            "type" : "join",
+            "left" : {
+              "type" : "inputNumber",
+              "inputNumber" : 0
+            },
+            "right" : {
+              "type" : "inputNumber",
+              "inputNumber" : 1
+            },
+            "rightPrefix" : "j0.",
+            "condition" : "(\"regionName\" == \"j0.regionName\")",
+            "joinType" : "LEFT",
+            "joinAlgorithm" : "sortMerge"
+          },
+          "right" : {
+            "type" : "inputNumber",
+            "inputNumber" : 2
+          },
+          "rightPrefix" : "_j0.",
+          "condition" : "(\"cityName\" == \"_j0.cityName\")",
+          "joinType" : "INNER"
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "virtualColumns" : [ {
+          "type" : "expression",
+          "name" : "v0",
+          "expression" : "'New York'",
+          "outputType" : "STRING"
+        } ],
+        "resultFormat" : "compactedList",
+        "filter" : {
+          "type" : "equals",
+          "column" : "cityName",
+          "matchValueType" : "STRING",
+          "matchValue" : "New York"
+        },
+        "columns" : [ "v0", "_j0.countryName" ],
+        "context" : {
+          "__user" : null,
+          "finalize" : true,
+          "maxParseExceptions" : 0,
+          "scanSignature" : "[{\"name\":\"v0\",\"type\":\"STRING\"},{\"name\":\"_j0.countryName\",\"type\":\"STRING\"}]",
+          "sqlQueryId" : __SQL_QUERY_ID__
+          "sqlStringifyArrays" : false,
+          "windowFunctionOperatorTransformation" : true
+        },
+        "columnTypes" : [ "STRING", "STRING" ],
+        "granularity" : {
+          "type" : "all"
+        },
+        "legacy" : false
+      }
+    },
+    "signature" : [ {
+      "name" : "__boost",
+      "type" : "LONG"
+    }, {
+      "name" : "v0",
+      "type" : "STRING"
+    }, {
+      "name" : "_j0.countryName",
+      "type" : "STRING"
+    } ],
+    "shuffleSpec" : {
+      "type" : "maxCount",
+      "clusterBy" : {
+        "columns" : [ {
+          "columnName" : "__boost",
+          "order" : "ASCENDING"
+        } ]
+      },
+      "partitions" : 1
+    },
+    "maxWorkerCount" : 1
+  },
+  "phase" : "FINISHED",
+  "workerCount" : 1,
+  "partitionCount" : 1,
+  "shuffle" : "globalSort",
+  "output" : "localStorage",
+  "startTime" : __TIMESTAMP__
+  "duration" : __DURATION__
+  "sort" : true
+} ]
+!msqPlan
+
+select /*+ sort_merge */ w1.cityName, w2.countryName
+from
+(
+  select /*+ broadcast */ w3.cityName AS cityName, w4.countryName AS countryName from wikipedia w3 LEFT JOIN wikipedia w4 ON w3.regionName = w4.regionName
+) w1
+JOIN wikipedia w2 ON w1.cityName = w2.cityName
+where w1.cityName='New York';
+
+[ {
+  "stageNumber" : 0,
+  "definition" : {
+    "id" : "<taskId>_0",
+    "input" : [ {
+      "type" : "table",
+      "dataSource" : "wikipedia",
+      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+    } ],
+    "processor" : {
+      "type" : "scan",
+      "query" : {
+        "queryType" : "scan",
+        "dataSource" : {
+          "type" : "inputNumber",
+          "inputNumber" : 0
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "resultFormat" : "compactedList",
+        "columns" : [ "regionName" ],
+        "context" : {
+          "scanSignature" : "[{\"name\":\"regionName\",\"type\":\"STRING\"}]",
+          "sqlInsertSegmentGranularity" : null,
+          "sqlQueryId" : __SQL_QUERY_ID__
+          "sqlStringifyArrays" : false
+        },
+        "columnTypes" : [ "STRING" ],
+        "granularity" : {
+          "type" : "all"
+        },
+        "legacy" : false
+      }
+    },
+    "signature" : [ {
+      "name" : "__boost",
+      "type" : "LONG"
+    }, {
+      "name" : "regionName",
+      "type" : "STRING"
+    } ],
+    "shuffleSpec" : {
+      "type" : "maxCount",
+      "clusterBy" : {
+        "columns" : [ {
+          "columnName" : "__boost",
+          "order" : "ASCENDING"
+        } ]
+      },
+      "partitions" : 1
+    },
+    "maxWorkerCount" : 1
+  },
+  "phase" : "FINISHED",
+  "workerCount" : 1,
+  "partitionCount" : 1,
+  "shuffle" : "globalSort",
+  "output" : "localStorage",
+  "startTime" : __TIMESTAMP__
+  "duration" : __DURATION__
+  "sort" : true
+}, {
+  "stageNumber" : 1,
+  "definition" : {
+    "id" : "<taskId>_1",
+    "input" : [ {
+      "type" : "table",
+      "dataSource" : "wikipedia",
+      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+    }, {
+      "type" : "stage",
+      "stage" : 0
+    } ],
+    "broadcast" : [ 1 ],
+    "processor" : {
+      "type" : "scan",
+      "query" : {
+        "queryType" : "scan",
+        "dataSource" : {
+          "type" : "join",
+          "left" : {
+            "type" : "inputNumber",
+            "inputNumber" : 0
+          },
+          "right" : {
+            "type" : "inputNumber",
+            "inputNumber" : 1
+          },
+          "rightPrefix" : "j0.",
+          "condition" : "(\"regionName\" == \"j0.regionName\")",
+          "joinType" : "LEFT"
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "resultFormat" : "compactedList",
+        "columns" : [ "cityName" ],
+        "context" : {
+          "scanSignature" : "[{\"name\":\"cityName\",\"type\":\"STRING\"}]",
+          "sqlInsertSegmentGranularity" : null,
+          "sqlQueryId" : __SQL_QUERY_ID__
+          "sqlStringifyArrays" : false
+        },
+        "columnTypes" : [ "STRING" ],
+        "granularity" : {
+          "type" : "all"
+        },
+        "legacy" : false
+      }
+    },
+    "signature" : [ {
+      "name" : "cityName",
+      "type" : "STRING"
+    }, {
+      "name" : "__boost",
+      "type" : "LONG"
+    } ],
+    "shuffleSpec" : {
+      "type" : "hash",
+      "clusterBy" : {
+        "columns" : [ {
+          "columnName" : "cityName",
+          "order" : "ASCENDING"
+        } ]
+      },
+      "partitions" : 1
+    },
+    "maxWorkerCount" : 1
+  },
+  "phase" : "FINISHED",
+  "workerCount" : 1,
+  "partitionCount" : 1,
+  "shuffle" : "hashLocalSort",
+  "output" : "localStorage",
+  "startTime" : __TIMESTAMP__
+  "duration" : __DURATION__
+  "sort" : true
+}, {
+  "stageNumber" : 2,
+  "definition" : {
+    "id" : "<taskId>_2",
+    "input" : [ {
+      "type" : "table",
+      "dataSource" : "wikipedia",
+      "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+    } ],
+    "processor" : {
+      "type" : "scan",
+      "query" : {
+        "queryType" : "scan",
+        "dataSource" : {
+          "type" : "inputNumber",
+          "inputNumber" : 0
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "resultFormat" : "compactedList",
+        "columns" : [ "cityName", "countryName" ],
+        "context" : {
+          "scanSignature" : "[{\"name\":\"cityName\",\"type\":\"STRING\"},{\"name\":\"countryName\",\"type\":\"STRING\"}]",
+          "sqlInsertSegmentGranularity" : null,
+          "sqlQueryId" : __SQL_QUERY_ID__
+          "sqlStringifyArrays" : false
+        },
+        "columnTypes" : [ "STRING", "STRING" ],
+        "granularity" : {
+          "type" : "all"
+        },
+        "legacy" : false
+      }
+    },
+    "signature" : [ {
+      "name" : "cityName",
+      "type" : "STRING"
+    }, {
+      "name" : "__boost",
+      "type" : "LONG"
+    }, {
+      "name" : "countryName",
+      "type" : "STRING"
+    } ],
+    "shuffleSpec" : {
+      "type" : "hash",
+      "clusterBy" : {
+        "columns" : [ {
+          "columnName" : "cityName",
+          "order" : "ASCENDING"
+        } ]
+      },
+      "partitions" : 1
+    },
+    "maxWorkerCount" : 1
+  },
+  "phase" : "FINISHED",
+  "workerCount" : 1,
+  "partitionCount" : 1,
+  "shuffle" : "hashLocalSort",
+  "output" : "localStorage",
+  "startTime" : __TIMESTAMP__
+  "duration" : __DURATION__
+  "sort" : true
+}, {
+  "stageNumber" : 3,
+  "definition" : {
+    "id" : "<taskId>_3",
+    "input" : [ {
+      "type" : "stage",
+      "stage" : 1
+    }, {
+      "type" : "stage",
+      "stage" : 2
+    } ],
+    "processor" : {
+      "type" : "sortMergeJoin",
+      "rightPrefix" : "_j0.",
+      "condition" : "(\"cityName\" == \"_j0.cityName\")",
+      "joinType" : "INNER"
+    },
+    "signature" : [ {
+      "name" : "cityName",
+      "type" : "STRING"
+    }, {
+      "name" : "__boost",
+      "type" : "LONG"
+    }, {
+      "name" : "_j0.cityName",
+      "type" : "STRING"
+    }, {
+      "name" : "_j0.__boost",
+      "type" : "LONG"
+    }, {
+      "name" : "_j0.countryName",
+      "type" : "STRING"
+    } ],
+    "maxWorkerCount" : 1
+  },
+  "phase" : "FINISHED",
+  "workerCount" : 1,
+  "partitionCount" : 1,
+  "output" : "localStorage",
+  "startTime" : __TIMESTAMP__
+  "duration" : __DURATION__
+}, {
+  "stageNumber" : 4,
+  "definition" : {
+    "id" : "<taskId>_4",
+    "input" : [ {
+      "type" : "stage",
+      "stage" : 3
+    } ],
+    "processor" : {
+      "type" : "scan",
+      "query" : {
+        "queryType" : "scan",
+        "dataSource" : {
+          "type" : "inputNumber",
+          "inputNumber" : 0
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "virtualColumns" : [ {
+          "type" : "expression",
+          "name" : "v0",
+          "expression" : "'New York'",
+          "outputType" : "STRING"
+        } ],
+        "resultFormat" : "compactedList",
+        "filter" : {
+          "type" : "equals",
+          "column" : "cityName",
+          "matchValueType" : "STRING",
+          "matchValue" : "New York"
+        },
+        "columns" : [ "v0", "_j0.countryName" ],
+        "context" : {
+          "__user" : null,
+          "finalize" : true,
+          "maxParseExceptions" : 0,
+          "scanSignature" : "[{\"name\":\"v0\",\"type\":\"STRING\"},{\"name\":\"_j0.countryName\",\"type\":\"STRING\"}]",
+          "sqlQueryId" : __SQL_QUERY_ID__
+          "sqlStringifyArrays" : false,
+          "windowFunctionOperatorTransformation" : true
+        },
+        "columnTypes" : [ "STRING", "STRING" ],
+        "granularity" : {
+          "type" : "all"
+        },
+        "legacy" : false
+      }
+    },
+    "signature" : [ {
+      "name" : "__boost",
+      "type" : "LONG"
+    }, {
+      "name" : "v0",
+      "type" : "STRING"
+    }, {
+      "name" : "_j0.countryName",
+      "type" : "STRING"
+    } ],
+    "shuffleSpec" : {
+      "type" : "maxCount",
+      "clusterBy" : {
+        "columns" : [ {
+          "columnName" : "__boost",
+          "order" : "ASCENDING"
+        } ]
+      },
+      "partitions" : 1
+    },
+    "maxWorkerCount" : 1
+  },
+  "phase" : "FINISHED",
+  "workerCount" : 1,
+  "partitionCount" : 1,
+  "shuffle" : "globalSort",
+  "output" : "localStorage",
+  "startTime" : __TIMESTAMP__
+  "duration" : __DURATION__
+  "sort" : true
+} ]
+!msqPlan

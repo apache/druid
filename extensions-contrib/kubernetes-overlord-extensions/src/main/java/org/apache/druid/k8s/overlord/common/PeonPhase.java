@@ -34,7 +34,7 @@ public enum PeonPhase
   UNKNOWN("Unknown"),
   RUNNING("Running");
 
-  private static final Map<String, PeonPhase> PHASE_MAP = Arrays.stream(PeonPhase.values())
+  private static final Map<String, PeonPhase> PHASE_MAP = Arrays.stream(values())
                                                                 .collect(Collectors.toMap(
                                                                     PeonPhase::getPhase,
                                                                     Function.identity()

@@ -27,7 +27,7 @@ public class YieldingAccumulators
       final Accumulator<AccumulatedType, InType> accumulator
   )
   {
-    return new YieldingAccumulator<AccumulatedType, InType>()
+    return new YieldingAccumulator<>()
     {
       @Override
       public AccumulatedType accumulate(AccumulatedType accumulated, InType in)

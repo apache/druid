@@ -234,7 +234,7 @@ public class AggregationTestHelper implements Closeable
 
     final CloseableStupidPool<ByteBuffer> pool = new CloseableStupidPool<>(
         "TopNQueryRunnerFactory-bufferPool",
-        new Supplier<ByteBuffer>()
+        new Supplier<>()
         {
           @Override
           public ByteBuffer get()
@@ -471,9 +471,7 @@ public class AggregationTestHelper implements Closeable
       LineIterator iter = IOUtils.lineIterator(inputDataStream, "UTF-8");
       List<AggregatorFactory> aggregatorSpecs = mapper.readValue(
           aggregators,
-          new TypeReference<List<AggregatorFactory>>()
-          {
-          }
+          new TypeReference<>() {}
       );
 
       createIndex(
@@ -673,7 +671,7 @@ public class AggregationTestHelper implements Closeable
   {
     final List<Segment> segments = Lists.transform(
         segmentDirs,
-        new Function<File, Segment>()
+        new Function<>()
         {
           @Override
           public Segment apply(File segmentDir)
@@ -743,7 +741,7 @@ public class AggregationTestHelper implements Closeable
       final QueryRunner<ResultRow> baseRunner
   )
   {
-    return new QueryRunner<ResultRow>()
+    return new QueryRunner<>()
     {
       @Override
       public Sequence<ResultRow> run(QueryPlus<ResultRow> queryPlus, ResponseContext map)

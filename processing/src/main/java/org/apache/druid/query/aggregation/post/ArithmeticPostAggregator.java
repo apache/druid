@@ -265,7 +265,7 @@ public class ArithmeticPostAggregator implements PostAggregator
     private static final Map<String, Ops> LOOKUP_MAP = new HashMap<>();
 
     static {
-      for (Ops op : Ops.values()) {
+      for (Ops op : values()) {
         LOOKUP_MAP.put(op.getFn(), op);
       }
     }

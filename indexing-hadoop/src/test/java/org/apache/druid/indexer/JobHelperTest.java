@@ -311,7 +311,7 @@ public class JobHelperTest
   private static class HadoopDruidIndexerConfigSpy extends HadoopDruidIndexerConfig
   {
 
-    private Map<String, String> jobProperties = new HashMap<String, String>();
+    private Map<String, String> jobProperties = new HashMap<>();
 
     public HadoopDruidIndexerConfigSpy(HadoopDruidIndexerConfig delegate)
     {

@@ -734,7 +734,7 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
       final Class<T> clazz
   )
   {
-    return new TestObjectColumnSelector<T>()
+    return new TestObjectColumnSelector<>()
     {
       @Override
       public Class<T> classOfObject()

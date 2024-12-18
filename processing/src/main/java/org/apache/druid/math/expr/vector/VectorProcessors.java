@@ -25,7 +25,6 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprType;
-import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.Exprs;
 import org.apache.druid.segment.column.Types;
@@ -95,7 +94,7 @@ public class VectorProcessors
     final Object[] objects = new Object[maxVectorSize];
     Arrays.fill(objects, constant);
     final ExprEvalObjectVector eval = new ExprEvalObjectVector(objects, type);
-    return new ExprVectorProcessor<T>()
+    return new ExprVectorProcessor<>()
     {
       @Override
       public ExprEvalVector<T> evalVector(Expr.VectorInputBinding bindings)
@@ -132,7 +131,7 @@ public class VectorProcessors
       Arrays.fill(doubles, constant);
     }
     final ExprEvalDoubleVector eval = new ExprEvalDoubleVector(doubles, nulls);
-    return new ExprVectorProcessor<T>()
+    return new ExprVectorProcessor<>()
     {
       @Override
       public ExprEvalVector<T> evalVector(Expr.VectorInputBinding bindings)
@@ -169,7 +168,7 @@ public class VectorProcessors
       Arrays.fill(longs, constant);
     }
     final ExprEvalLongVector eval = new ExprEvalLongVector(longs, nulls);
-    return new ExprVectorProcessor<T>()
+    return new ExprVectorProcessor<>()
     {
       @Override
       public ExprEvalVector<T> evalVector(Expr.VectorInputBinding bindings)
@@ -658,25 +657,14 @@ public class VectorProcessors
         }
       };
     } else if (Types.is(inputType, ExprType.DOUBLE)) {
-      if (!ExpressionProcessing.useStrictBooleans()) {
-        processor = new DoubleOutDoubleInFunctionVectorValueProcessor(expr.asVectorProcessor(inspector), maxVectorSize)
+      processor = new LongOutDoubleInFunctionVectorValueProcessor(expr.asVectorProcessor(inspector), maxVectorSize)
+      {
+        @Override
+        public long apply(double input)
         {
-          @Override
-          public double apply(double input)
-          {
-            return Evals.asDouble(!Evals.asBoolean(input));
-          }
-        };
-      } else {
-        processor = new LongOutDoubleInFunctionVectorValueProcessor(expr.asVectorProcessor(inspector), maxVectorSize)
-        {
-          @Override
-          public long apply(double input)
-          {
-            return Evals.asLong(!Evals.asBoolean(input));
-          }
-        };
-      }
+          return Evals.asLong(!Evals.asBoolean(input));
+        }
+      };
     }
     if (processor == null) {
       throw Exprs.cannotVectorize();

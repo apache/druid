@@ -105,7 +105,7 @@ public class CuratorLoadQueuePeonTest extends CuratorTestBase
             "2014-10-24T00:00:00Z/P1D",
             "2014-10-23T00:00:00Z/P1D",
             "2014-10-22T00:00:00Z/P1D"
-        ), new Function<String, DataSegment>()
+        ), new Function<>()
         {
           @Override
           public DataSegment apply(String intervalStr)
@@ -135,7 +135,7 @@ public class CuratorLoadQueuePeonTest extends CuratorTestBase
             "2014-10-31T00:00:00Z/P1D",
             "2014-10-30T00:00:00Z/P1D",
             "2014-10-28T00:00:00Z/P1D"
-        ), new Function<String, DataSegment>()
+        ), new Function<>()
         {
           @Override
           public DataSegment apply(String intervalStr)

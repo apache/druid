@@ -711,7 +711,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
               if (isPersistRequired) {
                 Futures.addCallback(
                     driver.persistAsync(committerSupplier.get()),
-                    new FutureCallback<Object>()
+                    new FutureCallback<>()
                     {
                       @Override
                       public void onSuccess(@Nullable Object result)
@@ -1030,7 +1030,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
     Futures.addCallback(
         publishFuture,
-        new FutureCallback<SegmentsAndCommitMetadata>()
+        new FutureCallback<>()
         {
           @Override
           public void onSuccess(SegmentsAndCommitMetadata publishedSegmentsAndCommitMetadata)

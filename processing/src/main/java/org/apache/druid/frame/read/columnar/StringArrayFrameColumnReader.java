@@ -178,7 +178,7 @@ public class StringArrayFrameColumnReader implements FrameColumnReader
     @Override
     public ColumnValueSelector<?> makeColumnValueSelector(ReadableOffset offset)
     {
-      return new ObjectColumnSelector<Object>()
+      return new ObjectColumnSelector<>()
       {
         @Override
         public void inspectRuntimeShape(RuntimeShapeInspector inspector)

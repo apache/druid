@@ -64,7 +64,7 @@ public class SupervisorResourceFilter extends AbstractResourceFilter
                .get(
                    Iterables.indexOf(
                        request.getPathSegments(),
-                       new Predicate<PathSegment>()
+                       new Predicate<>()
                        {
                          @Override
                          public boolean apply(PathSegment input)

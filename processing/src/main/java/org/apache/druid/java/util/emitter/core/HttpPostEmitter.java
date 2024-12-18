@@ -524,7 +524,7 @@ public class HttpPostEmitter implements Flushable, Closeable, Emitter
 
     private boolean needsToShutdown()
     {
-      boolean needsToShutdown = Thread.interrupted() || shuttingDown;
+      boolean needsToShutdown = interrupted() || shuttingDown;
       if (needsToShutdown) {
         Object lastBatch = concurrentBatch.getAndSet(null);
         if (lastBatch instanceof Batch) {
@@ -659,7 +659,7 @@ public class HttpPostEmitter implements Flushable, Closeable, Emitter
       long deadLineMillis = System.currentTimeMillis() + computeTimeoutForSendRequestInMillis(lastBatchFillTimeMillis);
       try {
         RetryUtils.retry(
-            new RetryUtils.Task<Object>()
+            new RetryUtils.Task<>()
             {
               @Override
               public Void perform() throws Exception
@@ -668,7 +668,7 @@ public class HttpPostEmitter implements Flushable, Closeable, Emitter
                 return null;
               }
             },
-            new Predicate<Throwable>()
+            new Predicate<>()
             {
               @Override
               public boolean apply(Throwable e)
@@ -722,7 +722,7 @@ public class HttpPostEmitter implements Flushable, Closeable, Emitter
       final long backoffCheckDelayMillis = config.getMinHttpTimeoutMillis() / 5;
 
       try {
-        Thread.sleep(backoffCheckDelayMillis);
+        sleep(backoffCheckDelayMillis);
       }
       catch (InterruptedException ignored) {
         return;

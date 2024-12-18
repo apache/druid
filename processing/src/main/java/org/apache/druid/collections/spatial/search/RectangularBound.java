@@ -139,7 +139,7 @@ public class RectangularBound implements Bound<float[], ImmutableFloatPoint>
   {
     return Iterables.filter(
         points,
-        new Predicate<ImmutableFloatPoint>()
+        new Predicate<>()
         {
           @Override
           public boolean apply(ImmutableFloatPoint immutablePoint)

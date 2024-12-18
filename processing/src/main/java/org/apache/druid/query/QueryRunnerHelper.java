@@ -32,7 +32,7 @@ public class QueryRunnerHelper
 
   public static <T> QueryRunner<T> makeClosingQueryRunner(final QueryRunner<T> runner, final Closeable closeable)
   {
-    return new QueryRunner<T>()
+    return new QueryRunner<>()
     {
       @Override
       public Sequence<T> run(QueryPlus<T> queryPlus, ResponseContext responseContext)

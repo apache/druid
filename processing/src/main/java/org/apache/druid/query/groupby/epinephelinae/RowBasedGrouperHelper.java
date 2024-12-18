@@ -379,7 +379,7 @@ public class RowBasedGrouperHelper
     final RowSignature signature = query.getResultRowSignature(finalization);
 
     final RowAdapter<ResultRow> adapter =
-        new RowAdapter<ResultRow>()
+        new RowAdapter<>()
         {
           @Override
           public ToLongFunction<ResultRow> timestampFunction()
@@ -449,7 +449,7 @@ public class RowBasedGrouperHelper
     final ColumnSelectorFactory columnSelectorFactory =
         query.getVirtualColumns()
              .wrap(
-                 RowBasedGrouperHelper.createResultRowBasedColumnSelectorFactory(
+                 createResultRowBasedColumnSelectorFactory(
                      subquery,
                      rowSupplier,
                      RowSignature.Finalization.UNKNOWN
@@ -1382,7 +1382,7 @@ public class RowBasedGrouperHelper
     public ObjectMapper decorateObjectMapper(ObjectMapper spillMapper)
     {
 
-      final JsonDeserializer<RowBasedKey> deserializer = new JsonDeserializer<RowBasedKey>()
+      final JsonDeserializer<RowBasedKey> deserializer = new JsonDeserializer<>()
       {
         @Override
         public RowBasedKey deserialize(

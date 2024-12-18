@@ -146,7 +146,7 @@ public class TaskLockbox
         }
       }
       // Sort locks by version, so we add them back in the order they were acquired.
-      final Ordering<Pair<Task, TaskLock>> byVersionOrdering = new Ordering<Pair<Task, TaskLock>>()
+      final Ordering<Pair<Task, TaskLock>> byVersionOrdering = new Ordering<>()
       {
         @Override
         public int compare(Pair<Task, TaskLock> left, Pair<Task, TaskLock> right)

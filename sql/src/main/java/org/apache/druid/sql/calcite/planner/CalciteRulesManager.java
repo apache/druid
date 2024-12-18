@@ -50,6 +50,7 @@ import org.apache.calcite.tools.Program;
 import org.apache.calcite.tools.Programs;
 import org.apache.calcite.tools.RelBuilder;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.sql.calcite.external.ExternalTableScanRule;
 import org.apache.druid.sql.calcite.rule.AggregatePullUpLookupRule;
 import org.apache.druid.sql.calcite.rule.CaseToCoalesceRule;
@@ -277,7 +278,7 @@ public class CalciteRulesManager
   private Program buildDecoupledLogicalOptimizationProgram(PlannerContext plannerContext)
   {
     final HepProgramBuilder builder = HepProgram.builder();
-    builder.addMatchLimit(CalciteRulesManager.HEP_DEFAULT_MATCH_LIMIT);
+    builder.addMatchLimit(HEP_DEFAULT_MATCH_LIMIT);
     builder.addRuleCollection(baseRuleSet(plannerContext));
     builder.addRuleInstance(CoreRules.UNION_MERGE);
     builder.addRuleInstance(JoinExtractFilterRule.Config.DEFAULT.toRule());
@@ -330,7 +331,7 @@ public class CalciteRulesManager
   private Program buildPreVolcanoManipulationProgram(final PlannerContext plannerContext)
   {
     final HepProgramBuilder builder = HepProgram.builder();
-    builder.addMatchLimit(CalciteRulesManager.HEP_DEFAULT_MATCH_LIMIT);
+    builder.addMatchLimit(HEP_DEFAULT_MATCH_LIMIT);
 
     // Apply FILTER_INTO_JOIN early, if using a join algorithm that requires subqueries anyway.
     if (plannerContext.getJoinAlgorithm().requiresSubquery()) {
@@ -350,7 +351,7 @@ public class CalciteRulesManager
   private Program buildReductionProgram(final PlannerContext plannerContext, final boolean isDruid)
   {
     final HepProgramBuilder builder = HepProgram.builder();
-    builder.addMatchLimit(CalciteRulesManager.HEP_DEFAULT_MATCH_LIMIT);
+    builder.addMatchLimit(HEP_DEFAULT_MATCH_LIMIT);
 
     if (isDruid) {
       // COALESCE rules must run before REDUCTION_RULES, since otherwise ReduceExpressionsRule#pushPredicateIntoCase may

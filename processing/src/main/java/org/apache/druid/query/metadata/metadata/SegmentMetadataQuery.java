@@ -168,7 +168,7 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
   @Override
   public String getType()
   {
-    return Query.SEGMENT_METADATA;
+    return SEGMENT_METADATA;
   }
 
   @JsonProperty

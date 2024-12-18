@@ -81,28 +81,28 @@ public class PooledTopNAlgorithm
   @VisibleForTesting
   static void setSpecializeGeneric1AggPooledTopN(boolean value)
   {
-    PooledTopNAlgorithm.SPECIALIZE_GENERIC_ONE_AGG_POOLED_TOPN = value;
+    SPECIALIZE_GENERIC_ONE_AGG_POOLED_TOPN = value;
     computeSpecializedScanAndAggregateImplementations();
   }
 
   @VisibleForTesting
   static void setSpecializeGeneric2AggPooledTopN(boolean value)
   {
-    PooledTopNAlgorithm.SPECIALIZE_GENERIC_TWO_AGG_POOLED_TOPN = value;
+    SPECIALIZE_GENERIC_TWO_AGG_POOLED_TOPN = value;
     computeSpecializedScanAndAggregateImplementations();
   }
 
   @VisibleForTesting
   static void setSpecializeHistorical1SimpleDoubleAggPooledTopN(boolean value)
   {
-    PooledTopNAlgorithm.SPECIALIZE_HISTORICAL_ONE_SIMPLE_DOUBLE_AGG_POOLED_TOPN = value;
+    SPECIALIZE_HISTORICAL_ONE_SIMPLE_DOUBLE_AGG_POOLED_TOPN = value;
     computeSpecializedScanAndAggregateImplementations();
   }
 
   @VisibleForTesting
   static void setSpecializeHistoricalSingleValueDimSelector1SimpleDoubleAggPooledTopN(boolean value)
   {
-    PooledTopNAlgorithm.SPECIALIZE_HISTORICAL_SINGLE_VALUE_DIM_SELECTOR_ONE_SIMPLE_DOUBLE_AGG_POOLED_TOPN = value;
+    SPECIALIZE_HISTORICAL_SINGLE_VALUE_DIM_SELECTOR_ONE_SIMPLE_DOUBLE_AGG_POOLED_TOPN = value;
     computeSpecializedScanAndAggregateImplementations();
   }
 
@@ -231,7 +231,7 @@ public class PooledTopNAlgorithm
       throw new UnsupportedOperationException("Cannot operate on a dimension with no dictionary");
     }
 
-    final TopNMetricSpecBuilder<int[]> arrayProvider = new BaseArrayProvider<int[]>(dimSelector, query, cursorInspector)
+    final TopNMetricSpecBuilder<int[]> arrayProvider = new BaseArrayProvider<>(dimSelector, query, cursorInspector)
     {
       private final int[] positions = new int[cardinality];
 
@@ -477,13 +477,105 @@ public class PooledTopNAlgorithm
     final int aggExtra = aggSize % AGG_UNROLL_COUNT;
     int currentPosition = 0;
     long processedRows = 0;
-    while (!cursor.isDoneOrInterrupted()) {
-      final IndexedInts dimValues = dimSelector.getRow();
+    if (granularizer.currentOffsetWithinBucket()) {
+      while (!cursor.isDoneOrInterrupted()) {
+        final IndexedInts dimValues = dimSelector.getRow();
 
-      final int dimSize = dimValues.size();
-      final int dimExtra = dimSize % AGG_UNROLL_COUNT;
-      switch (dimExtra) {
-        case 7:
+        final int dimSize = dimValues.size();
+        final int dimExtra = dimSize % AGG_UNROLL_COUNT;
+        switch (dimExtra) {
+          case 7:
+            currentPosition = aggregateDimValue(
+                positions,
+                theAggregators,
+                resultsBuf,
+                numBytesPerRecord,
+                aggregatorOffsets,
+                aggSize,
+                aggExtra,
+                dimValues.get(6),
+                currentPosition
+            );
+            // fall through
+          case 6:
+            currentPosition = aggregateDimValue(
+                positions,
+                theAggregators,
+                resultsBuf,
+                numBytesPerRecord,
+                aggregatorOffsets,
+                aggSize,
+                aggExtra,
+                dimValues.get(5),
+                currentPosition
+            );
+            // fall through
+          case 5:
+            currentPosition = aggregateDimValue(
+                positions,
+                theAggregators,
+                resultsBuf,
+                numBytesPerRecord,
+                aggregatorOffsets,
+                aggSize,
+                aggExtra,
+                dimValues.get(4),
+                currentPosition
+            );
+            // fall through
+          case 4:
+            currentPosition = aggregateDimValue(
+                positions,
+                theAggregators,
+                resultsBuf,
+                numBytesPerRecord,
+                aggregatorOffsets,
+                aggSize,
+                aggExtra,
+                dimValues.get(3),
+                currentPosition
+            );
+            // fall through
+          case 3:
+            currentPosition = aggregateDimValue(
+                positions,
+                theAggregators,
+                resultsBuf,
+                numBytesPerRecord,
+                aggregatorOffsets,
+                aggSize,
+                aggExtra,
+                dimValues.get(2),
+                currentPosition
+            );
+            // fall through
+          case 2:
+            currentPosition = aggregateDimValue(
+                positions,
+                theAggregators,
+                resultsBuf,
+                numBytesPerRecord,
+                aggregatorOffsets,
+                aggSize,
+                aggExtra,
+                dimValues.get(1),
+                currentPosition
+            );
+            // fall through
+          case 1:
+            currentPosition = aggregateDimValue(
+                positions,
+                theAggregators,
+                resultsBuf,
+                numBytesPerRecord,
+                aggregatorOffsets,
+                aggSize,
+                aggExtra,
+                dimValues.get(0),
+                currentPosition
+            );
+        }
+        for (int i = dimExtra; i < dimSize; i += AGG_UNROLL_COUNT) {
           currentPosition = aggregateDimValue(
               positions,
               theAggregators,
@@ -492,11 +584,9 @@ public class PooledTopNAlgorithm
               aggregatorOffsets,
               aggSize,
               aggExtra,
-              dimValues.get(6),
+              dimValues.get(i),
               currentPosition
           );
-          // fall through
-        case 6:
           currentPosition = aggregateDimValue(
               positions,
               theAggregators,
@@ -505,11 +595,9 @@ public class PooledTopNAlgorithm
               aggregatorOffsets,
               aggSize,
               aggExtra,
-              dimValues.get(5),
+              dimValues.get(i + 1),
               currentPosition
           );
-          // fall through
-        case 5:
           currentPosition = aggregateDimValue(
               positions,
               theAggregators,
@@ -518,11 +606,9 @@ public class PooledTopNAlgorithm
               aggregatorOffsets,
               aggSize,
               aggExtra,
-              dimValues.get(4),
+              dimValues.get(i + 2),
               currentPosition
           );
-          // fall through
-        case 4:
           currentPosition = aggregateDimValue(
               positions,
               theAggregators,
@@ -531,11 +617,9 @@ public class PooledTopNAlgorithm
               aggregatorOffsets,
               aggSize,
               aggExtra,
-              dimValues.get(3),
+              dimValues.get(i + 3),
               currentPosition
           );
-          // fall through
-        case 3:
           currentPosition = aggregateDimValue(
               positions,
               theAggregators,
@@ -544,11 +628,9 @@ public class PooledTopNAlgorithm
               aggregatorOffsets,
               aggSize,
               aggExtra,
-              dimValues.get(2),
+              dimValues.get(i + 4),
               currentPosition
           );
-          // fall through
-        case 2:
           currentPosition = aggregateDimValue(
               positions,
               theAggregators,
@@ -557,11 +639,9 @@ public class PooledTopNAlgorithm
               aggregatorOffsets,
               aggSize,
               aggExtra,
-              dimValues.get(1),
+              dimValues.get(i + 5),
               currentPosition
           );
-          // fall through
-        case 1:
           currentPosition = aggregateDimValue(
               positions,
               theAggregators,
@@ -570,103 +650,25 @@ public class PooledTopNAlgorithm
               aggregatorOffsets,
               aggSize,
               aggExtra,
-              dimValues.get(0),
+              dimValues.get(i + 6),
               currentPosition
           );
-      }
-      for (int i = dimExtra; i < dimSize; i += AGG_UNROLL_COUNT) {
-        currentPosition = aggregateDimValue(
-            positions,
-            theAggregators,
-            resultsBuf,
-            numBytesPerRecord,
-            aggregatorOffsets,
-            aggSize,
-            aggExtra,
-            dimValues.get(i),
-            currentPosition
-        );
-        currentPosition = aggregateDimValue(
-            positions,
-            theAggregators,
-            resultsBuf,
-            numBytesPerRecord,
-            aggregatorOffsets,
-            aggSize,
-            aggExtra,
-            dimValues.get(i + 1),
-            currentPosition
-        );
-        currentPosition = aggregateDimValue(
-            positions,
-            theAggregators,
-            resultsBuf,
-            numBytesPerRecord,
-            aggregatorOffsets,
-            aggSize,
-            aggExtra,
-            dimValues.get(i + 2),
-            currentPosition
-        );
-        currentPosition = aggregateDimValue(
-            positions,
-            theAggregators,
-            resultsBuf,
-            numBytesPerRecord,
-            aggregatorOffsets,
-            aggSize,
-            aggExtra,
-            dimValues.get(i + 3),
-            currentPosition
-        );
-        currentPosition = aggregateDimValue(
-            positions,
-            theAggregators,
-            resultsBuf,
-            numBytesPerRecord,
-            aggregatorOffsets,
-            aggSize,
-            aggExtra,
-            dimValues.get(i + 4),
-            currentPosition
-        );
-        currentPosition = aggregateDimValue(
-            positions,
-            theAggregators,
-            resultsBuf,
-            numBytesPerRecord,
-            aggregatorOffsets,
-            aggSize,
-            aggExtra,
-            dimValues.get(i + 5),
-            currentPosition
-        );
-        currentPosition = aggregateDimValue(
-            positions,
-            theAggregators,
-            resultsBuf,
-            numBytesPerRecord,
-            aggregatorOffsets,
-            aggSize,
-            aggExtra,
-            dimValues.get(i + 6),
-            currentPosition
-        );
-        currentPosition = aggregateDimValue(
-            positions,
-            theAggregators,
-            resultsBuf,
-            numBytesPerRecord,
-            aggregatorOffsets,
-            aggSize,
-            aggExtra,
-            dimValues.get(i + 7),
-            currentPosition
-        );
-      }
-      processedRows++;
-      if (!granularizer.advanceCursorWithinBucketUninterruptedly()) {
-        break;
+          currentPosition = aggregateDimValue(
+              positions,
+              theAggregators,
+              resultsBuf,
+              numBytesPerRecord,
+              aggregatorOffsets,
+              aggSize,
+              aggExtra,
+              dimValues.get(i + 7),
+              currentPosition
+          );
+        }
+        processedRows++;
+        if (!granularizer.advanceCursorWithinBucketUninterruptedly()) {
+          break;
+        }
       }
     }
     return processedRows;

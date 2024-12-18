@@ -21,11 +21,6 @@ on:
         required: true
         type: string
         description: 'JDK version used to test Druid'
-      sql_compatibility:
-        required: false
-        type: boolean
-        default: true
-        description: 'For SQL compatibility'
     outputs:
       continue_tests:
         description: 'Flag to decide if next tests need to run incase coverage issue failures'
@@ -72,7 +67,6 @@ jobs:
     uses: ./.github/workflows/reusable-unit-tests.yml
     with:
       jdk: ${{ inputs.jdk }}
-      sql_compatibility: ${{ inputs.sql_compatibility }}
       module: indexing
       maven_projects: 'indexing-hadoop,indexing-service,extensions-core/kafka-indexing-service,extensions-core/kinesis-indexing-service'
 
@@ -82,7 +76,6 @@ jobs:
     uses: ./.github/workflows/reusable-unit-tests.yml
     with:
       jdk: ${{ inputs.jdk }}
-      sql_compatibility: ${{ inputs.sql_compatibility }}
       module: processing
       maven_projects: 'processing'
 
@@ -92,7 +85,6 @@ jobs:
     uses: ./.github/workflows/reusable-unit-tests.yml
     with:
       jdk: ${{ inputs.jdk }}
-      sql_compatibility: ${{ inputs.sql_compatibility }}
       module: server
       maven_projects: 'server'
 
@@ -100,6 +92,5 @@ jobs:
     uses: ./.github/workflows/reusable-unit-tests.yml
     with:
       jdk: ${{ inputs.jdk }}
-      sql_compatibility: ${{ inputs.sql_compatibility }}
       module: other
       maven_projects: '!processing,!indexing-hadoop,!indexing-service,!extensions-core/kafka-indexing-service,!extensions-core/kinesis-indexing-service,!server,!web-console,!integration-tests,!:druid-it-tools,!:druid-it-image,!:druid-it-cases'

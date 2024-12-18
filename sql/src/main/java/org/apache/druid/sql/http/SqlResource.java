@@ -211,7 +211,7 @@ public class SqlResource
           jsonMapper,
           responseContextConfig,
           selfNode,
-          SqlResource.QUERY_METRIC_COUNTER,
+          QUERY_METRIC_COUNTER,
           sqlQueryId,
           MediaType.APPLICATION_JSON_TYPE,
           headers

@@ -99,7 +99,7 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
         ExprEval<?> eval = ExprEval.bestEffortOf(fieldValue);
         FieldIndexer fieldIndexer = fieldIndexers.get(fieldName);
         if (fieldIndexer == null) {
-          estimatedFieldKeySize += StructuredDataProcessor.estimateStringSize(fieldName);
+          estimatedFieldKeySize += estimateStringSize(fieldName);
           fieldIndexer = new FieldIndexer(globalDictionary);
           fieldIndexers.put(fieldName, fieldIndexer);
         }
@@ -120,7 +120,7 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
         final String fieldName = NestedPathFinder.toNormalizedJsonPath(fieldPath);
         FieldIndexer fieldIndexer = fieldIndexers.get(fieldName);
         if (fieldIndexer == null) {
-          estimatedFieldKeySize += StructuredDataProcessor.estimateStringSize(fieldName);
+          estimatedFieldKeySize += estimateStringSize(fieldName);
           fieldIndexer = new FieldIndexer(globalDictionary);
           fieldIndexers.put(fieldName, fieldIndexer);
         }
@@ -361,7 +361,7 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
       return rootLiteralSelector;
     }
 
-    return new ColumnValueSelector<Object>()
+    return new ColumnValueSelector<>()
     {
       @Override
       public double getDouble()
@@ -593,7 +593,7 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
       return null;
     }
     final Object defaultValue = getDefaultValueForType(getLogicalType());
-    return new ColumnValueSelector<Object>()
+    return new ColumnValueSelector<>()
     {
       @Override
       public boolean isNull()

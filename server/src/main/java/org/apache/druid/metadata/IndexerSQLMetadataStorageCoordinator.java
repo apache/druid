@@ -658,7 +658,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
     try {
       return connector.retryTransaction(
-          new TransactionCallback<SegmentPublishResult>()
+          new TransactionCallback<>()
           {
             @Override
             public SegmentPublishResult inTransaction(

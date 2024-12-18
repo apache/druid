@@ -234,9 +234,7 @@ public class MovingAverageQueryTest extends InitializedNullHandlingTest
 
   private TypeReference<List<MapBasedRow>> getExpectedResultType()
   {
-    return new TypeReference<List<MapBasedRow>>()
-    {
-    };
+    return new TypeReference<>() {};
   }
 
   /**

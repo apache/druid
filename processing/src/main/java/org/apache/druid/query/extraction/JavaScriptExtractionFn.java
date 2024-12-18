@@ -50,7 +50,7 @@ public class JavaScriptExtractionFn implements ExtractionFn
     Context.exit();
 
 
-    return new Function<Object, String>()
+    return new Function<>()
     {
       @Override
       public String apply(Object input)

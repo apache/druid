@@ -411,7 +411,7 @@ public class ValueMatchers
       final int nullId = lookup.lookupId(null);
       if (nullId < 0) {
         // column doesn't have null value so no unknowns, can safely return always false matcher
-        return ValueMatchers.allFalse();
+        return allFalse();
       }
       if (multiValue) {
         return new ValueMatcher()

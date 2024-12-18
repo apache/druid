@@ -53,7 +53,7 @@ public class ResponseCookieHandler<Intermediate, Final> implements HttpResponseH
   {
     try {
       final HttpHeaders headers = httpResponse.headers();
-      manager.put(uri, Maps.asMap(headers.names(), new Function<String, List<String>>()
+      manager.put(uri, Maps.asMap(headers.names(), new Function<>()
       {
         @Override
         public List<String> apply(String input)

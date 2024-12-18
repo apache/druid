@@ -147,9 +147,7 @@ public class OverlordResourceTestClient
       LOG.debug("Index status response" + response.getContent());
       TaskStatusResponse taskStatusResponse = jsonMapper.readValue(
           response.getContent(),
-          new TypeReference<TaskStatusResponse>()
-          {
-          }
+          new TypeReference<>() {}
       );
       return taskStatusResponse.getStatus();
     }
@@ -236,9 +234,7 @@ public class OverlordResourceTestClient
         LOG.debug("Tasks %s response %s", identifier, response.getContent());
       }
       return jsonMapper.readValue(
-          response.getContent(), new TypeReference<List<TaskResponseObject>>()
-          {
-          }
+          response.getContent(), new TypeReference<>() {}
       );
     }
     catch (Exception e) {
@@ -257,9 +253,7 @@ public class OverlordResourceTestClient
         LOG.debug("Task %s response %s", taskId, response.getContent());
       }
       return jsonMapper.readValue(
-          response.getContent(), new TypeReference<TaskPayloadResponse>()
-          {
-          }
+          response.getContent(), new TypeReference<>() {}
       );
     }
     catch (ISE e) {
@@ -350,9 +344,7 @@ public class OverlordResourceTestClient
       ).get();
       return jsonMapper.readValue(
           response.getContent(),
-          new TypeReference<Map<String, List<Interval>>>()
-          {
-          }
+          new TypeReference<>() {}
       );
     }
     catch (Exception e) {
@@ -368,7 +360,7 @@ public class OverlordResourceTestClient
   public void waitUntilTaskCompletes(final String taskID, final long millisEach, final int numTimes)
   {
     ITRetryUtil.retryUntil(
-        new Callable<Boolean>()
+        new Callable<>()
         {
           @Override
           public Boolean call()
@@ -398,7 +390,7 @@ public class OverlordResourceTestClient
   public void waitUntilTaskFails(final String taskID, final long millisEach, final int numTimes)
   {
     ITRetryUtil.retryUntil(
-        new Callable<Boolean>()
+        new Callable<>()
         {
           @Override
           public Boolean call()
@@ -758,9 +750,7 @@ public class OverlordResourceTestClient
         );
       }
       List<Object> responseData = jsonMapper.readValue(
-          response.getContent(), new TypeReference<List<Object>>()
-          {
-          }
+          response.getContent(), new TypeReference<>() {}
       );
       return responseData;
     }

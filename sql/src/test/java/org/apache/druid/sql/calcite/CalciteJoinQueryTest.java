@@ -39,6 +39,7 @@ import org.apache.druid.query.Druids;
 import org.apache.druid.query.FilteredDataSource;
 import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.InlineDataSource;
+import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.Order;
@@ -163,7 +164,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         JoinType.INNER,
                         null,
                         ExprMacroTable.nil(),
-                        CalciteTests.createJoinableFactoryWrapper()
+                        CalciteTests.createJoinableFactoryWrapper(),
+                        JoinAlgorithm.BROADCAST
                     )
                 )
                 .columns("d0")
@@ -222,7 +224,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         JoinType.INNER,
                         null,
                         ExprMacroTable.nil(),
-                        CalciteTests.createJoinableFactoryWrapper()
+                        CalciteTests.createJoinableFactoryWrapper(),
+                        JoinAlgorithm.BROADCAST
                     )
                 )
                 .context(context)
@@ -3624,7 +3627,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         JoinType.LEFT,
                         null,
                         ExprMacroTable.nil(),
-                        CalciteTests.createJoinableFactoryWrapper()
+                        CalciteTests.createJoinableFactoryWrapper(),
+                        JoinAlgorithm.BROADCAST
                     )
                 )
                 .setInterval(querySegmentSpec(Filtration.eternity()))
@@ -5725,7 +5729,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                           JoinType.INNER,
                           null,
                           ExprMacroTable.nil(),
-                          CalciteTests.createJoinableFactoryWrapper()
+                          CalciteTests.createJoinableFactoryWrapper(),
+                          JoinAlgorithm.BROADCAST
                       )
                   )
                   .columns("l1")
@@ -5973,7 +5978,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                         JoinType.INNER,
                         null,
                         ExprMacroTable.nil(),
-                        CalciteTests.createJoinableFactoryWrapper()
+                        CalciteTests.createJoinableFactoryWrapper(),
+                        JoinAlgorithm.BROADCAST
                     )
                 )
                 .columns("__time")

@@ -156,7 +156,7 @@ public class WorkerSketchFetcher implements AutoCloseable
 
     SettableFuture<Boolean> kernelActionFuture = SettableFuture.create();
 
-    Futures.addCallback(fetchFuture, new FutureCallback<ClusterByStatisticsSnapshot>()
+    Futures.addCallback(fetchFuture, new FutureCallback<>()
     {
       @Override
       public void onSuccess(@Nullable ClusterByStatisticsSnapshot result)

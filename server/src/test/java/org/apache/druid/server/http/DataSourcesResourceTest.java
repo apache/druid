@@ -677,7 +677,7 @@ public class DataSourcesResourceTest
     SegmentLoadInfo segmentLoadInfo = new SegmentLoadInfo(createSegment(Intervals.of(interval3), "v1", 1));
     segmentLoadInfo.addServer(createHistoricalServerMetadata("test"));
     VersionedIntervalTimeline<String, SegmentLoadInfo> timeline =
-        new VersionedIntervalTimeline<String, SegmentLoadInfo>(null)
+        new VersionedIntervalTimeline<>(null)
     {
       @Override
       public List<TimelineObjectHolder<String, SegmentLoadInfo>> lookupWithIncompletePartitions(Interval interval)

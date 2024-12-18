@@ -1666,6 +1666,9 @@
                                 <ignore>sun.misc.Unsafe</ignore>
                                 <!-- ignore java reflection polymorphic api signatures -->
                                 <ignore>java.lang.invoke.MethodHandle</ignore>
+                                <!-- For ignoring java.lang.ClassLoader#getPlatformClassLoader since that's present in java 9+.
+                                Need to be added since animal sniffer is using JDK8 signature currently. -->
+                                <ignore>java.lang.ClassLoader</ignore>
                                 <!--
                                  For the following java.nio.* classes, we get errors like: "Undefined reference: java.nio.ByteBuffer java.nio.ByteBuffer.clear()"
                                  GitHub issue: https://github.com/mojohaus/animal-sniffer/issues/4
@@ -1729,9 +1732,9 @@
                 </configuration>
             </plugin>
             <plugin>
-                <groupId>pl.project13.maven</groupId>
-                <artifactId>git-commit-id-plugin</artifactId>
-                <version>4.9.10</version>
+                <groupId>io.github.git-commit-id</groupId>
+                <artifactId>git-commit-id-maven-plugin</artifactId>
+                <version>9.0.1</version>
                 <executions>
                     <execution>
                         <goals>

@@ -57,7 +57,7 @@ public class OssUtils
     return !badStatusCode && (isIOException || isTimeout);
   }
 
-  public static final Predicate<Throwable> RETRYABLE = new Predicate<Throwable>()
+  public static final Predicate<Throwable> RETRYABLE = new Predicate<>()
   {
     @Override
     public boolean apply(Throwable e)
@@ -227,7 +227,7 @@ public class OssUtils
       throws Exception
   {
     DeleteObjectsRequest deleteRequest = new DeleteObjectsRequest(bucket).withKeys(keysToDelete);
-    OssUtils.retry(() -> {
+    retry(() -> {
       client.deleteObjects(deleteRequest);
       return null;
     });

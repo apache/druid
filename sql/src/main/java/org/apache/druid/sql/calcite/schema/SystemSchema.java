@@ -851,7 +851,7 @@ public class SystemSchema extends AbstractSchema
         @Override
         public Enumerator<Object[]> enumerator()
         {
-          return new Enumerator<Object[]>()
+          return new Enumerator<>()
           {
             @Override
             public Object[] current()
@@ -981,7 +981,7 @@ public class SystemSchema extends AbstractSchema
         @Override
         public Enumerator<Object[]> enumerator()
         {
-          return new Enumerator<Object[]>()
+          return new Enumerator<>()
           {
             @Override
             public Object[] current()
@@ -1098,7 +1098,7 @@ public class SystemSchema extends AbstractSchema
 
   private static <T> CloseableIterator<T> wrap(Iterator<T> iterator, Closeable closer)
   {
-    return new CloseableIterator<T>()
+    return new CloseableIterator<>()
     {
       @Override
       public boolean hasNext()

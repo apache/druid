@@ -39,7 +39,7 @@ public class FrameChannelSequence extends BaseSequence<Frame, FrameChannelSequen
   public FrameChannelSequence(final ReadableFrameChannel channel)
   {
     super(
-        new IteratorMaker<Frame, FrameChannelIterator>()
+        new IteratorMaker<>()
         {
           @Override
           public FrameChannelIterator make()

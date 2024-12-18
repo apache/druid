@@ -30,7 +30,6 @@ import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
-import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.AndDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
@@ -208,68 +207,31 @@ public class TransformSpecTest extends InitializedNullHandlingTest
   @Test
   public void testBoolTransforms()
   {
-    try {
-      ExpressionProcessing.initializeForStrictBooleansTests(true);
-      final TransformSpec transformSpec = new TransformSpec(
-          null,
-          ImmutableList.of(
-              new ExpressionTransform("truthy1", "bool", TestExprMacroTable.INSTANCE),
-              new ExpressionTransform("truthy2", "if(bool,1,0)", TestExprMacroTable.INSTANCE)
-          )
-      );
+    final TransformSpec transformSpec = new TransformSpec(
+        null,
+        ImmutableList.of(
+            new ExpressionTransform("truthy1", "bool", TestExprMacroTable.INSTANCE),
+            new ExpressionTransform("truthy2", "if(bool,1,0)", TestExprMacroTable.INSTANCE)
+        )
+    );
 
-      Assert.assertEquals(
-          ImmutableSet.of("bool"),
-          transformSpec.getRequiredColumns()
-      );
+    Assert.assertEquals(
+        ImmutableSet.of("bool"),
+        transformSpec.getRequiredColumns()
+    );
 
-      final InputRowParser<Map<String, Object>> parser = transformSpec.decorate(PARSER);
-      final InputRow row = parser.parseBatch(ROW1).get(0);
+    final InputRowParser<Map<String, Object>> parser = transformSpec.decorate(PARSER);
+    final InputRow row = parser.parseBatch(ROW1).get(0);
 
-      Assert.assertNotNull(row);
-      Assert.assertEquals(1L, row.getRaw("truthy1"));
-      Assert.assertEquals(1L, row.getRaw("truthy2"));
+    Assert.assertNotNull(row);
+    Assert.assertEquals(1L, row.getRaw("truthy1"));
+    Assert.assertEquals(1L, row.getRaw("truthy2"));
 
-      final InputRow row2 = parser.parseBatch(ROW2).get(0);
+    final InputRow row2 = parser.parseBatch(ROW2).get(0);
 
-      Assert.assertNotNull(row2);
-      Assert.assertEquals(0L, row2.getRaw("truthy1"));
-      Assert.assertEquals(0L, row2.getRaw("truthy2"));
-    }
-    finally {
-      ExpressionProcessing.initializeForTests();
-    }
-    try {
-      ExpressionProcessing.initializeForStrictBooleansTests(false);
-      final TransformSpec transformSpec = new TransformSpec(
-          null,
-          ImmutableList.of(
-              new ExpressionTransform("truthy1", "bool", TestExprMacroTable.INSTANCE),
-              new ExpressionTransform("truthy2", "if(bool,1,0)", TestExprMacroTable.INSTANCE)
-              )
-      );
-
-      Assert.assertEquals(
-          ImmutableSet.of("bool"),
-          transformSpec.getRequiredColumns()
-      );
-
-      final InputRowParser<Map<String, Object>> parser = transformSpec.decorate(PARSER);
-      final InputRow row = parser.parseBatch(ROW1).get(0);
-
-      Assert.assertNotNull(row);
-      Assert.assertEquals("true", row.getRaw("truthy1"));
-      Assert.assertEquals(1L, row.getRaw("truthy2"));
-
-      final InputRow row2 = parser.parseBatch(ROW2).get(0);
-
-      Assert.assertNotNull(row2);
-      Assert.assertEquals("false", row2.getRaw("truthy1"));
-      Assert.assertEquals(0L, row2.getRaw("truthy2"));
-    }
-    finally {
-      ExpressionProcessing.initializeForTests();
-    }
+    Assert.assertNotNull(row2);
+    Assert.assertEquals(0L, row2.getRaw("truthy1"));
+    Assert.assertEquals(0L, row2.getRaw("truthy2"));
   }
 
   @Test

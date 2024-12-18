@@ -323,7 +323,7 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
       @Override
       public Iterable<ImmutableBitmap> getBitmapIterable()
       {
-        return () -> new Iterator<ImmutableBitmap>()
+        return () -> new Iterator<>()
         {
           final IntIterator rangeIterator = IntListUtils.fromTo(startIndex, endIndex).iterator();
 
@@ -550,7 +550,7 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
         @Override
         public Iterable<ImmutableBitmap> getBitmapIterable()
         {
-          return () -> new Iterator<ImmutableBitmap>()
+          return () -> new Iterator<>()
           {
             int currIndex = start;
             int found;
@@ -620,7 +620,7 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
         @Override
         public Iterable<ImmutableBitmap> getBitmapIterable(boolean includeUnknown)
         {
-          return () -> new Iterator<ImmutableBitmap>()
+          return () -> new Iterator<>()
           {
             final Indexed<ByteBuffer> stringDictionary = globalStringDictionarySupplier.get();
             final DruidObjectPredicate<String> stringPredicate = matcherFactory.makeStringPredicate();
@@ -914,7 +914,7 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
         @Override
         public Iterable<ImmutableBitmap> getBitmapIterable(boolean includeUnknown)
         {
-          return () -> new Iterator<ImmutableBitmap>()
+          return () -> new Iterator<>()
           {
             final FixedIndexed<Long> longDictionary = globalLongDictionarySupplier.get();
             final DruidLongPredicate longPredicate = matcherFactory.makeLongPredicate();
@@ -1194,7 +1194,7 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
         @Override
         public Iterable<ImmutableBitmap> getBitmapIterable(boolean includeUnknown)
         {
-          return () -> new Iterator<ImmutableBitmap>()
+          return () -> new Iterator<>()
           {
             final FixedIndexed<Integer> localDictionary = localDictionarySupplier.get();
             final FixedIndexed<Double> doubleDictionary = globalDoubleDictionarySupplier.get();
@@ -1314,7 +1314,7 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
         @Override
         public int estimatedComputeCost()
         {
-          return NestedVariantIndexes.INDEX_COMPUTE_SCALE;
+          return INDEX_COMPUTE_SCALE;
         }
 
         @Override
@@ -1357,10 +1357,10 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
         @Override
         public int estimatedComputeCost()
         {
-          if (values.size() >= Integer.MAX_VALUE / NestedVariantIndexes.INDEX_COMPUTE_SCALE) {
+          if (values.size() >= Integer.MAX_VALUE / INDEX_COMPUTE_SCALE) {
             return Integer.MAX_VALUE;
           }
-          return values.size() * NestedVariantIndexes.INDEX_COMPUTE_SCALE;
+          return values.size() * INDEX_COMPUTE_SCALE;
         }
 
         @Override
@@ -1430,7 +1430,7 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
         @Override
         public Iterable<ImmutableBitmap> getBitmapIterable(boolean includeUnknown)
         {
-          return () -> new Iterator<ImmutableBitmap>()
+          return () -> new Iterator<>()
           {
             final DruidObjectPredicate<String> stringPredicate = matcherFactory.makeStringPredicate();
             final DruidLongPredicate longPredicate = matcherFactory.makeLongPredicate();

@@ -97,12 +97,14 @@ public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Pa
     }
     boolean hasDimValSelector = (dimValSelector != null);
 
-    int cardinality = params.getCardinality();
+    final int cardinality = params.getCardinality();
+    final int numValuesPerPass = params.getNumValuesPerPass();
     int numProcessed = 0;
     long processedRows = 0;
     while (numProcessed < cardinality) {
       final int numToProcess;
-      int maxNumToProcess = Math.min(params.getNumValuesPerPass(), cardinality - numProcessed);
+      int maxNumToProcess = Math.min(numValuesPerPass, cardinality - numProcessed);
+
 
       DimValSelector theDimValSelector;
       if (!hasDimValSelector) {
@@ -125,6 +127,7 @@ public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Pa
       numProcessed += numToProcess;
       if (numProcessed < cardinality) {
         params.getCursor().reset();
+        params.getGranularizer().advanceToBucket(params.getGranularizer().getCurrentInterval());
       }
     }
     if (queryMetrics != null) {

@@ -22,7 +22,6 @@ package org.apache.druid.common.config;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.inject.Inject;
-import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.ValueMatcher;
@@ -129,9 +128,8 @@ public class NullHandling
    */
   public static boolean useThreeValueLogic()
   {
-    return NullHandling.sqlCompatible() &&
-           INSTANCE.isUseThreeValueLogicForNativeFilters() &&
-           ExpressionProcessing.useStrictBooleans();
+    return sqlCompatible() &&
+           INSTANCE.isUseThreeValueLogicForNativeFilters();
   }
 
   @Nullable
@@ -268,7 +266,7 @@ public class NullHandling
    */
   public static boolean mustCombineNullAndEmptyInDictionary(final Indexed<ByteBuffer> dictionaryUtf8)
   {
-    return NullHandling.replaceWithDefault()
+    return replaceWithDefault()
            && dictionaryUtf8.size() >= 2
            && isNullOrEquivalent(dictionaryUtf8.get(0))
            && isNullOrEquivalent(dictionaryUtf8.get(1));
@@ -285,7 +283,7 @@ public class NullHandling
    */
   public static boolean mustReplaceFirstValueWithNullInDictionary(final Indexed<ByteBuffer> dictionaryUtf8)
   {
-    if (NullHandling.replaceWithDefault() && dictionaryUtf8.size() >= 1) {
+    if (replaceWithDefault() && dictionaryUtf8.size() >= 1) {
       final ByteBuffer firstValue = dictionaryUtf8.get(0);
       return firstValue != null && firstValue.remaining() == 0;
     }

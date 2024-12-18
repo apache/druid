@@ -425,7 +425,7 @@ public class CalciteTests
           @Nullable Integer maxCompletedTasks
       )
       {
-        List<TaskStatusPlus> tasks = new ArrayList<TaskStatusPlus>();
+        List<TaskStatusPlus> tasks = new ArrayList<>();
         tasks.add(createTaskStatus("id1", DATASOURCE1, 10L));
         tasks.add(createTaskStatus("id1", DATASOURCE1, 1L));
         tasks.add(createTaskStatus("id2", DATASOURCE2, 20L));
