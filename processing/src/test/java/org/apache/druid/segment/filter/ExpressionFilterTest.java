@@ -36,7 +36,6 @@ import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.ExpressionDimFilter;
 import org.apache.druid.query.filter.Filter;
@@ -46,10 +45,8 @@ import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -126,22 +123,10 @@ public class ExpressionFilterTest extends BaseFilterTest
     );
   }
 
-  @Before
-  public void setup()
-  {
-    ExpressionProcessing.initializeForStrictBooleansTests(true);
-  }
-
-  @After
-  public void teardown()
-  {
-    ExpressionProcessing.initializeForTests();
-  }
-
   @AfterClass
   public static void tearDown() throws Exception
   {
-    BaseFilterTest.tearDown(ColumnComparisonFilterTest.class.getName());
+    BaseFilterTest.tearDown(ExpressionFilterTest.class.getName());
   }
 
   @Test
