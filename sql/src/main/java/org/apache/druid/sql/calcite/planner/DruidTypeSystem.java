@@ -28,7 +28,7 @@ import org.apache.calcite.sql.type.SqlTypeName;
 public class DruidTypeSystem implements RelDataTypeSystem
 {
   public static final DruidTypeSystem INSTANCE = new DruidTypeSystem();
-  public static final RelDataTypeFactory TYPE_FACTORY = new SqlTypeFactoryImpl(INSTANCE);
+  public static final RelDataTypeFactory TYPE_FACTORY = new SqlTypeFactoryImpl(DruidTypeSystem.INSTANCE);
 
   /**
    * Druid uses millisecond precision for timestamps internally. This is also the default at the SQL layer.
@@ -43,7 +43,7 @@ public class DruidTypeSystem implements RelDataTypeSystem
   @Override
   public int getMaxScale(final SqlTypeName typeName)
   {
-    return DEFAULT.getMaxScale(typeName);
+    return RelDataTypeSystem.DEFAULT.getMaxScale(typeName);
   }
 
   @Override
@@ -54,7 +54,7 @@ public class DruidTypeSystem implements RelDataTypeSystem
       case TIMESTAMP_WITH_LOCAL_TIME_ZONE:
         return DEFAULT_TIMESTAMP_PRECISION;
       default:
-        return DEFAULT.getDefaultPrecision(typeName);
+        return RelDataTypeSystem.DEFAULT.getDefaultPrecision(typeName);
     }
   }
 
@@ -64,44 +64,44 @@ public class DruidTypeSystem implements RelDataTypeSystem
     if (typeName == SqlTypeName.TIME || typeName == SqlTypeName.TIMESTAMP) {
       return DEFAULT_TIMESTAMP_PRECISION;
     } else {
-      return DEFAULT.getMaxPrecision(typeName);
+      return RelDataTypeSystem.DEFAULT.getMaxPrecision(typeName);
     }
   }
 
   @Override
   public int getMaxNumericScale()
   {
-    return DEFAULT.getMaxNumericScale();
+    return RelDataTypeSystem.DEFAULT.getMaxNumericScale();
   }
 
   @Override
   public int getMaxNumericPrecision()
   {
-    return DEFAULT.getMaxNumericPrecision();
+    return RelDataTypeSystem.DEFAULT.getMaxNumericPrecision();
   }
 
   @Override
   public String getLiteral(final SqlTypeName typeName, final boolean isPrefix)
   {
-    return DEFAULT.getLiteral(typeName, isPrefix);
+    return RelDataTypeSystem.DEFAULT.getLiteral(typeName, isPrefix);
   }
 
   @Override
   public boolean isCaseSensitive(final SqlTypeName typeName)
   {
-    return DEFAULT.isCaseSensitive(typeName);
+    return RelDataTypeSystem.DEFAULT.isCaseSensitive(typeName);
   }
 
   @Override
   public boolean isAutoincrement(final SqlTypeName typeName)
   {
-    return DEFAULT.isAutoincrement(typeName);
+    return RelDataTypeSystem.DEFAULT.isAutoincrement(typeName);
   }
 
   @Override
   public int getNumTypeRadix(final SqlTypeName typeName)
   {
-    return DEFAULT.getNumTypeRadix(typeName);
+    return RelDataTypeSystem.DEFAULT.getNumTypeRadix(typeName);
   }
 
   @Override
@@ -132,25 +132,25 @@ public class DruidTypeSystem implements RelDataTypeSystem
       final RelDataType arg1Type
   )
   {
-    return DEFAULT.deriveCovarType(typeFactory, arg0Type, arg1Type);
+    return RelDataTypeSystem.DEFAULT.deriveCovarType(typeFactory, arg0Type, arg1Type);
   }
 
   @Override
   public RelDataType deriveFractionalRankType(final RelDataTypeFactory typeFactory)
   {
-    return DEFAULT.deriveFractionalRankType(typeFactory);
+    return RelDataTypeSystem.DEFAULT.deriveFractionalRankType(typeFactory);
   }
 
   @Override
   public RelDataType deriveRankType(final RelDataTypeFactory typeFactory)
   {
-    return DEFAULT.deriveRankType(typeFactory);
+    return RelDataTypeSystem.DEFAULT.deriveRankType(typeFactory);
   }
 
   @Override
   public boolean isSchemaCaseSensitive()
   {
-    return DEFAULT.isSchemaCaseSensitive();
+    return RelDataTypeSystem.DEFAULT.isSchemaCaseSensitive();
   }
 
   @Override

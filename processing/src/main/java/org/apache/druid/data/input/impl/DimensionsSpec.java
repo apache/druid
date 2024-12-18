@@ -139,7 +139,7 @@ public class DimensionsSpec
     }
 
     for (SpatialDimensionSchema spatialSchema : spatialDims) {
-      DimensionSchema newSchema = convertSpatialSchema(spatialSchema);
+      DimensionSchema newSchema = DimensionsSpec.convertSpatialSchema(spatialSchema);
       this.dimensions.add(newSchema);
       dimensionSchemaMap.put(newSchema.getName(), newSchema);
     }

@@ -32,6 +32,7 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.LockListAction;
 import org.apache.druid.indexing.common.actions.SurrogateAction;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.task.AbstractBatchIndexTask;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
@@ -292,7 +293,7 @@ abstract class PartialSegmentMergeTask<S extends ShardSpec> extends PerfectRollu
                 getDataSource(),
                 interval,
                 Preconditions.checkNotNull(
-                    findVersion(intervalToVersion, interval),
+                    AbstractBatchIndexTask.findVersion(intervalToVersion, interval),
                     "version for interval[%s]",
                     interval
                 ),

@@ -320,7 +320,7 @@ public class JoinDataSource implements DataSource
     DimFilter joinBaseFilter = analysis.getJoinBaseTableFilter().orElse(null);
 
     for (final PreJoinableClause clause : analysis.getPreJoinableClauses()) {
-      current = create(
+      current = JoinDataSource.create(
           current,
           clause.getDataSource(),
           clause.getPrefix(),

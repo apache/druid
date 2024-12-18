@@ -125,7 +125,7 @@ public class DimensionRangePartitionsSpec implements DimensionBasedPartitionsSpe
     return resolvedMaxRowPerSegment;  // NOTE: This returns the *resolved* value
   }
 
-  @JsonProperty(MAX_ROWS_PER_SEGMENT)
+  @JsonProperty(PartitionsSpec.MAX_ROWS_PER_SEGMENT)
   protected Integer getMaxRowsPerSegmentForJson()
   {
     return maxRowsPerSegment;

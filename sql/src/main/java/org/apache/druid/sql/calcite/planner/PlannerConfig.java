@@ -430,7 +430,7 @@ public class PlannerConfig
       );
     }
 
-    PlannerConfig newConfig = builder().withOverrides(overrides).build();
+    PlannerConfig newConfig = PlannerConfig.builder().withOverrides(overrides).build();
     if (!equals(newConfig)) {
       throw DruidException.defensive(
           "Not all PlannerConfig options are not persistable as QueryContext keys!\nold: %s\nnew: %s",

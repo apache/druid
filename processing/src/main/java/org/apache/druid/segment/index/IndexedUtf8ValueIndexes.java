@@ -241,7 +241,7 @@ public final class IndexedUtf8ValueIndexes<TDictionary extends Indexed<ByteBuffe
       } else {
         tailSet = baseSet;
       }
-      if (tailSet.size() > SORTED_SCAN_RATIO_THRESHOLD * dictionary.size()) {
+      if (tailSet.size() > ValueSetIndexes.SORTED_SCAN_RATIO_THRESHOLD * dictionary.size()) {
         return ValueSetIndexes.buildBitmapColumnIndexFromSortedIteratorScan(
             bitmapFactory,
             ByteBufferUtils.utf8Comparator(),

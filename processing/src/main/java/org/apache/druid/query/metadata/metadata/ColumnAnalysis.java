@@ -151,7 +151,7 @@ public class ColumnAnalysis
     }
 
     if (isError() && rhs.isError()) {
-      return errorMessage.equals(rhs.getErrorMessage()) ? this : error("multiple_errors");
+      return errorMessage.equals(rhs.getErrorMessage()) ? this : ColumnAnalysis.error("multiple_errors");
     } else if (isError()) {
       return this;
     } else if (rhs.isError()) {
@@ -159,13 +159,13 @@ public class ColumnAnalysis
     }
 
     if (!Objects.equals(type, rhs.getType())) {
-      return error(
+      return ColumnAnalysis.error(
           StringUtils.format("cannot_merge_diff_types: [%s] and [%s]", type, rhs.getType())
       );
     }
 
     if (!Objects.equals(typeSignature, rhs.getTypeSignature())) {
-      return error(
+      return ColumnAnalysis.error(
           StringUtils.format(
               "cannot_merge_diff_types: [%s] and [%s]",
               typeSignature.asTypeString(),

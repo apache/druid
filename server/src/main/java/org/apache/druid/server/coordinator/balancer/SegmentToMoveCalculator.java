@@ -70,8 +70,10 @@ public class SegmentToMoveCalculator
     ).sum();
 
     // Move at least some segments to ensure that the cluster is always balancing itself
-    final int minSegmentsToMove = computeMinSegmentsToMoveInTier(totalSegments);
-    final int segmentsToMoveToFixDeviation = computeNumSegmentsToMoveToBalanceTier(tier, historicals);
+    final int minSegmentsToMove = SegmentToMoveCalculator
+        .computeMinSegmentsToMoveInTier(totalSegments);
+    final int segmentsToMoveToFixDeviation = SegmentToMoveCalculator
+        .computeNumSegmentsToMoveToBalanceTier(tier, historicals);
     log.info(
         "Need to move [%,d] segments in tier[%s] to attain balance. Allowed values are [min=%d, max=%d].",
         segmentsToMoveToFixDeviation, tier, minSegmentsToMove, maxSegmentsToMoveInTier

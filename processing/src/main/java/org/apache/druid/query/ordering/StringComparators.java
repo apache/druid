@@ -98,7 +98,7 @@ public class StringComparators
     @Override
     public String toString()
     {
-      return LEXICOGRAPHIC_NAME;
+      return StringComparators.LEXICOGRAPHIC_NAME;
     }
 
     @Override
@@ -286,7 +286,7 @@ public class StringComparators
     @Override
     public String toString()
     {
-      return ALPHANUMERIC_NAME;
+      return StringComparators.ALPHANUMERIC_NAME;
     }
 
     @Override
@@ -340,7 +340,7 @@ public class StringComparators
     @Override
     public String toString()
     {
-      return STRLEN_NAME;
+      return StringComparators.STRLEN_NAME;
     }
 
     @Override
@@ -404,7 +404,7 @@ public class StringComparators
 
       if (bd1 == null && bd2 == null) {
         // both Strings are unparseable, just compare lexicographically to have a well-defined ordering
-        return LEXICOGRAPHIC.compare(o1, o2);
+        return StringComparators.LEXICOGRAPHIC.compare(o1, o2);
       }
 
       if (bd1 == null) {
@@ -417,7 +417,7 @@ public class StringComparators
     @Override
     public String toString()
     {
-      return NUMERIC_NAME;
+      return StringComparators.NUMERIC_NAME;
     }
 
     @Override
@@ -469,7 +469,7 @@ public class StringComparators
     @Override
     public String toString()
     {
-      return VERSION_NAME;
+      return StringComparators.VERSION_NAME;
     }
 
     @Override
@@ -520,7 +520,7 @@ public class StringComparators
     @Override
     public String toString()
     {
-      return NATURAL_NAME;
+      return StringComparators.NATURAL_NAME;
     }
 
     @Override

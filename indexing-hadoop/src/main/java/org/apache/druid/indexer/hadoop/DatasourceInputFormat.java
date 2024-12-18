@@ -160,7 +160,7 @@ public class DatasourceInputFormat extends InputFormat<NullWritable, InputRow>
         {
           // to avoid globbing which needs input path should be hadoop-compatible (':' is not acceptable in path, etc.)
           List<FileStatus> statusList = new ArrayList<>();
-          for (Path path : getInputPaths(job)) {
+          for (Path path : FileInputFormat.getInputPaths(job)) {
             // load spec in segment points specifically zip file itself
             statusList.add(path.getFileSystem(job).getFileStatus(path));
           }

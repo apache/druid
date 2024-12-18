@@ -1314,7 +1314,7 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
         @Override
         public int estimatedComputeCost()
         {
-          return INDEX_COMPUTE_SCALE;
+          return NestedVariantIndexes.INDEX_COMPUTE_SCALE;
         }
 
         @Override
@@ -1357,10 +1357,10 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
         @Override
         public int estimatedComputeCost()
         {
-          if (values.size() >= Integer.MAX_VALUE / INDEX_COMPUTE_SCALE) {
+          if (values.size() >= Integer.MAX_VALUE / NestedVariantIndexes.INDEX_COMPUTE_SCALE) {
             return Integer.MAX_VALUE;
           }
-          return values.size() * INDEX_COMPUTE_SCALE;
+          return values.size() * NestedVariantIndexes.INDEX_COMPUTE_SCALE;
         }
 
         @Override
