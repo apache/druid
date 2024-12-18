@@ -32,8 +32,8 @@ public class Access
   public static final String DEFAULT_ERROR_MESSAGE = "Unauthorized";
   public static final String DEFAULT_AUTHORIZED_MESSAGE = "Authorized";
 
-  public static final Access OK = Access.allow();
-  public static final Access DENIED = Access.deny("");
+  public static final Access OK = allow();
+  public static final Access DENIED = deny("");
 
   private final boolean allowed;
   private final String message;

@@ -22,6 +22,7 @@ package org.apache.druid.server;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.guava.Sequences;
@@ -173,8 +174,8 @@ public class QueryLifecycleTest
   @Test
   public void testRunSimpleUnauthorized()
   {
-    expectedException.expect(ISE.class);
-    expectedException.expectMessage(Access.DEFAULT_ERROR_MESSAGE);
+    expectedException.expect(DruidException.class);
+    expectedException.expectMessage("Unexpected state [UNAUTHORIZED], expecting [AUTHORIZED]");
 
     EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
     EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
