@@ -176,12 +176,15 @@ public class SqlTestFramework
      */
     void gatherProperties(Properties properties);
 
-
-    DruidModule getOverrideModule();
-
-
+    /**
+     * Should return a module which provides the core Druid components.
+     */
     DruidModule getCoreModule();
 
+    /**
+     * Provides the overrides the core Druid components.
+     */
+    DruidModule getOverrideModule();
 
     SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
         QueryRunnerFactoryConglomerate conglomerate,
@@ -206,7 +209,7 @@ public class SqlTestFramework
      * @see #configureGuice(DruidInjectorBuilder, List) for the preferred solution.
      */
     @Deprecated
-    void configureJsonMapper(ObjectMapper mapper);
+    default void configureJsonMapper(ObjectMapper mapper) {}
 
     JoinableFactoryWrapper createJoinableFactoryWrapper(LookupExtractorFactoryContainerProvider lookupProvider);
 
@@ -439,11 +442,6 @@ public class SqlTestFramework
           qlf,
           objectMapper
       );
-    }
-
-    @Override
-    public void configureJsonMapper(ObjectMapper mapper)
-    {
     }
 
     @Override
