@@ -52,13 +52,12 @@ WITH "ext" AS (
   SELECT *
   FROM TABLE(
     EXTERN(
-      '{"type":"inline","data":"{\"timestamp\": \"2023-01-01T00:00:00\", \"label\": \"row1\", \"amount\":100, \"arrayString\": [\"a\", \"b\"],  \"arrayLong\":[1, null,3], \"arrayDouble\":[1.1, 2.2, null]}\n{\"timestamp\": \"2023-01-01T00:00:00\", \"label\": \"row2\", \"amount\":150, \"arrayString\": [null, \"b\"], \"arrayLong\":null, \"arrayDouble\":[999, null, 5.5]}\n{\"timestamp\": \"2023-01-01T00:00:00\", \"label\": \"row3\", \"amount\":100, \"arrayString\": [], \"arrayLong\":[1, 2, 3],   \"arrayDouble\":[null, 2.2, 1.1]} \n{\"timestamp\": \"2023-01-01T00:00:00\", \"label\": \"row4\", \"amount\":200, \"arrayString\": [\"a\", \"b\"],  \"arrayLong\":[1, 2, 3],   \"arrayDouble\":[]}\n{\"timestamp\": \"2023-01-01T00:00:00\", \"label\": \"row5\", \"amount\":200, \"arrayString\": null, \"arrayLong\":[], \"arrayDouble\":null}"}',
+      '{"type":"inline","data":"{\"timestamp\": \"2023-01-01T00:00:00\", \"label\": \"row1\", \"arrayString\": [\"a\", \"b\"],  \"arrayLong\":[1, null,3], \"arrayDouble\":[1.1, 2.2, null]}\n{\"timestamp\": \"2023-01-01T00:00:00\", \"label\": \"row2\", \"arrayString\": [null, \"b\"], \"arrayLong\":null,        \"arrayDouble\":[999, null, 5.5]}\n{\"timestamp\": \"2023-01-01T00:00:00\", \"label\": \"row3\", \"arrayString\": [],          \"arrayLong\":[1, 2, 3],   \"arrayDouble\":[null, 2.2, 1.1]} \n{\"timestamp\": \"2023-01-01T00:00:00\", \"label\": \"row4\", \"arrayString\": [\"a\", \"b\"],  \"arrayLong\":[1, 2, 3],   \"arrayDouble\":[]}\n{\"timestamp\": \"2023-01-01T00:00:00\", \"label\": \"row5\", \"arrayString\": null,        \"arrayLong\":[],          \"arrayDouble\":null}"}',
       '{"type":"json"}'
     )
   ) EXTEND (
     "timestamp" VARCHAR,
     "label" VARCHAR,
-    "amount" INTEGER,
     "arrayString" VARCHAR ARRAY,
     "arrayLong" BIGINT ARRAY,
     "arrayDouble" DOUBLE ARRAY
@@ -67,7 +66,6 @@ WITH "ext" AS (
 SELECT
     TIME_PARSE("timestamp") AS "__time",
     "label",
-    "amount",
     "arrayString",
     "arrayLong",
     "arrayDouble"
@@ -310,21 +308,25 @@ Returns an array of all values of the specified expression. To collect only uniq
 
 <details><summary>Example</summary>
 
-The following example returns an array of all `label` values from the `array_example` datasource, grouped by `amount`.
+The following example returns an array of unique `OriginState` values from the `flight-carriers` datasource, grouped by `Reporting_Airline`.
 
 ```sql
-SELECT "amount", ARRAY_AGG("label") AS "array_of_labels"
-FROM "array_example"
-GROUP BY "amount"
+SELECT "Reporting_Airline", ARRAY_AGG(DISTINCT "OriginState", 50000) AS "Origin"
+FROM "flight-carriers"
+GROUP BY "Reporting_Airline"
+LIMIT 5
 ```
 
 Returns the following:
 
-| `amount` | `array_of_labels` |
-| -- ||
-| 100 |`[row1, row3]`|
-| 150|`[row2]`|
-| 200 |`[row4, row5]`|
+| `Reporting_Airline` | `Origin` |
+| -- | -- |
+| `AA` |`["AL","AR","AZ","CA","CO","CT","FL","GA","HI","IL","IN","KS","KY","LA","MA","MD","MI","MN","MO","NC","NE","NJ","NM","NV","NY","OH","OK","OR","PA","PR","RI","TN","TX","UT","VA","VI","WA"]`|
+| `AS` |`["AK","AZ","CA","CO","FL","ID","IL","MA","NJ","NV","OR","TX","VA","WA"]`|
+| `B6` |`["AZ","CA","CO","FL","LA","MA","NJ","NV","NY","OR","PR","UT","VA","VT","WA"]`|
+| `CO` |`["AK","AL","AZ","CA","CO","CT","FL","GA","HI","IL","IN","LA","MA","MD","MI","MN","MO","MS","NC","NE","NH","NJ","NM","NV","NY","OH","OK","OR","PA","PR","RI","SC","TN","TX","UT","VA","VI","WA"]`|
+| `DH` |`["AL","CA","CT","FL","GA","IL","MA","ME","MI","NC","NH","NJ","NV","NY","OH","PA","RI","SC","TN","VA","VT","WA","WV"]`|
+
 
 </details>
 
@@ -542,75 +544,243 @@ Returns the following:
 
 ## ARRAY_OFFSET_OF
 
-Returns the 0-based index of the first occurrence of `expr` in the array. If no matching elements exist in the array, returns `null` or `-1` if `druid.generic.useDefaultValueForNull=true` (deprecated legacy mode).
+Returns the zero-based index of the first occurrence of `expr` in the array. If the value isn't present in the array, returns `null` or `-1` if `druid.generic.useDefaultValueForNull=true` (deprecated legacy mode).
 
 * **Syntax**: `ARRAY_OFFSET_OF(arr, expr)`
 * **Function type:** Array
+
+<details><summary>Example</summary>
+
+The following example returns the zero-based index of the fist occurrence of `3` in the arrays in the `arrayLong` column of the `array_example` datasource.
+
+```sql
+SELECT "arrayLong" as "array", ARRAY_OFFSET_OF("arrayLong", 3) AS "offset"
+FROM "array_example"
+```
+
+Returns the following:
+
+| `array` | `offset` |
+| -- | -- |
+| `[1,null,3]` | 2 |
+| `null`| `null` |
+| `[1,2,3]`| 2 |
+| `[1,2,3]`| 2 |
+| `[]`| `null` |
+
+</details>
 
 [Learn more](sql-array-functions.md)
 
 ## ARRAY_ORDINAL
 
-Returns the array element at the 1-based index supplied, or null for an out of range index.
+Returns the array element at the specified one-based index. Returns null if the index is out of bounds.
 
 * **Syntax**: `ARRAY_ORDINAL(arr, long)`
 * **Function type:** Array
+
+<details><summary>Example</summary>
+
+The following example returns the element at the specified one-based index from the arrays in the `arrayLong` column of the `array_example` datasource.
+
+```sql
+SELECT "arrayLong" as "array", ARRAY_ORDINAL("arrayLong", 2) AS "element_at_index"
+FROM "array_example"
+```
+
+Returns the following:
+
+| `array` | `element_at_index` |
+| -- | -- |
+| `[1,null,3]` | `null` |
+| `null`| `null` |
+| `[1,2,3]`| 2 |
+| `[1,2,3]`| 2 |
+| `[]`| `null` |
+
+</details>
 
 [Learn more](sql-array-functions.md)
 
 ## ARRAY_ORDINAL_OF
 
-Returns the 1-based index of the first occurrence of `expr` in the array. If no matching elements exist in the array, returns `null` or `-1` if `druid.generic.useDefaultValueForNull=true` (deprecated legacy mode).
+Returns the one-based index of the first occurrence of `expr` in the array. If the value isn't present in the array, returns `null` or `-1` if `druid.generic.useDefaultValueForNull=true` (deprecated legacy mode).
 
 * **Syntax**: `ARRAY_ORDINAL_OF(arr, expr)`
 * **Function type:** Array
+
+<details><summary>Example</summary>
+
+The following example returns the one-based index of the fist occurrence of `3` in the arrays in the `arrayLong` column of the `array_example` datasource.
+
+```sql
+SELECT "arrayLong" as "array", ARRAY_ORDINAL_OF("arrayLong", 3) AS "ordinal"
+FROM "array_example"
+```
+
+Returns the following:
+
+| `array` | `ordinal` |
+| -- | -- |
+| `[1,null,3]` | 3 |
+| `null`| `null` |
+| `[1,2,3]`| 3 |
+| `[1,2,3]`| 3 |
+| `[]`| `null` |
+
+</details>
 
 [Learn more](sql-array-functions.md)
 
 ## ARRAY_OVERLAP
 
-Returns true if `arr1` and `arr2` have any elements in common, else false.
+Returns true if `arr1` and `arr2` have any elements in common. Treats `NULL` values as known values.
 
 * **Syntax**: `ARRAY_OVERLAP(arr1, arr2)`
 * **Function type:** Array
+
+<details><summary>Example</summary>
+
+The following example returns true when columns `arrayString` and `arrayDouble` from the `array_example` datasource have common elements.
+
+```sql
+SELECT "arrayString", "arrayDouble",  ARRAY_OVERLAP("arrayString", "arrayDouble") AS "overlap"
+FROM "array_example"
+```
+
+Returns the following:
+
+| `arrayString` | `arrayDouble` | `overlap`|
+| -- | -- | -- |
+| `["a","b"]` | `[1.1,2.2,null]` | false |
+| `[null,"b"]`| `[999,null,5.5]` | true |
+| `[]`| `[null,2.2,1.1]` | false |
+| `["a","b"]`| `[]` | false |
+| `null`| `null` | `null` |
+
+</details>
 
 [Learn more](sql-array-functions.md)
 
 ## SCALAR_IN_ARRAY
 
-Returns true if the scalar `expr` is present in `arr`. Otherwise, returns false if the scalar `expr` is non-null or `UNKNOWN` if the scalar `expr` is `NULL`.
+Returns true if the scalar `expr` is present in `arr`. Returns false if the scalar `expr` is non-null, or `UNKNOWN` if the scalar `expr` is `NULL`. Returns `UNKNOWN` if `arr` is `NULL`.
 
 * **Syntax**: `SCALAR_IN_ARRAY(expr, arr)`
 * **Function type:** Array
 
-[Learn more](sql-array-functions.md)
+<details><summary>Example</summary>
 
-Returns `UNKNOWN` if `arr` is `NULL`.
+The following example returns true when 36 is present in the array generated from the values in the `DestStateFips` column of the `flight-carriers` datasource have common elements.
+
+```sql
+SELECT "Reporting_Airline", ARRAY_AGG(DISTINCT "DestStateFips") AS "StateFipsArray", SCALAR_IN_ARRAY(36, ARRAY_AGG(DISTINCT "DestStateFips")) AS "ValueInArray"
+FROM "flight-carriers"
+GROUP BY "Reporting_Airline"
+LIMIT 5
+```
+
+Returns the following:
+
+| `Reporting_Airline` | `StateFipsArray` | `ValueInArray`|
+| -- | -- | -- |
+| `AA` | `[1,4,5,6,8,9,12,13,15,17,18,20,21,22,24,25,26,27,29,31,32,34,35,36,37,39,40,41,42,44,47,48,49,51,53,72,78]` | true |
+| `AS`| `[2,4,6,8,12,16,17,25,32,34,41,48,51,53]` | false |
+| `B6`| `[4,6,8,12,22,25,32,34,36,41,49,50,51,53,72]` | true |
+| `CO`| `[1,2,4,6,8,9,12,13,15,17,18,22,24,25,26,27,28,29,31,32,33,34,35,36,37,39,40,41,42,44,45,47,48,49,51,53,72,78]` | true |
+| `DH`| `[1,6,9,12,13,17,23,25,26,32,33,34,36,37,39,42,44,45,47,50,51,53,54]` | true |
+
+</details>
+
+[Learn more](sql-array-functions.md)
 
 ## ARRAY_PREPEND
 
-Prepends `expr` to `arr` at the beginning, the resulting array type determined by the type of `arr`.
+Prepends `expr` to `arr`. The type of `arr` determines the resulting array type.
 
 * **Syntax**: `ARRAY_PREPEND(expr, arr)`
 * **Function type:** Array
+
+<details><summary>Example</summary>
+
+The following example prepends `c` to the values in the `arrayString` column from the `array_example` datasource.
+
+```sql
+SELECT ARRAY_PREPEND('c', "arrayString") AS "array_prepended"
+FROM "array_example"
+```
+
+Returns the following:
+
+| `array_prepended` |
+| -- |
+| `[c, a, b]` |
+| `["c",null,"b"]`|
+| `[c]`|
+| `[c,a,b]`|
+| `null`|
+
+</details>
 
 [Learn more](sql-array-functions.md)
 
 ## ARRAY_SLICE
 
-Returns the subarray of `arr` from the 0-based index `start` (inclusive) to `end` (exclusive). Returns `null`, if `start` is less than 0, greater than length of `arr`, or greater than `end`.
+Returns an array containing a subset of elements from `arr`, from the zero-based index `start` (inclusive) to `end` (exclusive). Returns `null`, if `start` is less than 0, greater than the length of `arr`, or greater than `end`.
 
 * **Syntax**: `ARRAY_SLICE(arr, start, end)`
 * **Function type:** Array
+
+<details><summary>Example</summary>
+
+The following example constructs a new array from the elements of arrays in the `arrayDouble` column of the `array_example` datasource.
+
+```sql
+SELECT "arrayDouble", ARRAY_SLICE("arrayDouble", 0, 2) AS "arrayNew"
+FROM "array_example"
+```
+
+Returns the following:
+
+| `arrayDouble` | `arrayNew` |
+| -- | -- |
+| `[1.1,2.2,null]` | `[1.1,2.2]` |
+| `[999,null,5.5]`| `[999,null]` |
+| `[null,2.2,1.1]`| `[null,2.2]` |
+| `[]`| `[null,null]` |
+| `null`| `null` |
+
+</details>
 
 [Learn more](sql-array-functions.md)
 
 ## ARRAY_TO_MV
 
-Converts an `ARRAY` of any type into a multi-value string `VARCHAR`.
+Converts an array of any type into a [multi-value string](sql-data-types.md#multi-value-strings).
 
 * **Syntax**: `ARRAY_TO_MV(arr)`
 * **Function type:** Array
+
+<details><summary>Example</summary>
+
+The following example converts the arrays in the `arrayDouble` column of the `array_example` datasource into multi-value strings.
+
+```sql
+SELECT ARRAY_TO_MV("arrayDouble") AS "multiValueString"
+FROM "array_example"
+```
+
+Returns the following:
+
+| `multiValueString` |
+| -- |
+| `["1.1","2.2",null]` |
+| `["999.0",null,"5.5"]`|
+| `[null,"2.2","1.1"]`|
+| `[]`|
+| `null`|
+
+</details>
 
 [Learn more](sql-array-functions.md)
 
@@ -620,6 +790,27 @@ Joins all elements of `arr` by the delimiter specified by `str`.
 
 * **Syntax**: `ARRAY_TO_STRING(arr, str)`
 * **Function type:** Array
+
+<details><summary>Example</summary>
+
+The following example returns the arrays from the `arrayDouble` column of the `array_example` datasource as concatenated strings.
+
+```sql
+SELECT ARRAY_TO_STRING("arrayDouble", '') AS "notSeparated"
+FROM "array_example"
+```
+
+Returns the following:
+
+| `multiValueString` |
+| -- |
+| `1.12.2null` |
+| `999.0null5.5` |
+| `null2.21.1` |
+| |
+| `null`|
+
+</details>
 
 [Learn more](sql-array-functions.md)
 
