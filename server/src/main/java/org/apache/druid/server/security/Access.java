@@ -22,6 +22,7 @@ package org.apache.druid.server.security;
 import com.google.common.base.Strings;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.server.Policy;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
@@ -39,7 +40,7 @@ public class Access
   private final String message;
   // A row-level policy filter on top of table-level read access. It should be empty if there are no policy restrictions
   // or if access is requested for an action other than reading the table.
-  private final Optional<DimFilter> rowFilter;
+  private final Policy rowFilter;
 
   /**
    * @deprecated use {@link #allow()} or {@link #deny(String)} instead
@@ -47,10 +48,10 @@ public class Access
   @Deprecated
   public Access(boolean allowed)
   {
-    this(allowed, "", Optional.empty());
+    this(allowed, "", Policy.NO_RESTRICTION);
   }
 
-  Access(boolean allowed, String message, Optional<DimFilter> rowFilter)
+  Access(boolean allowed, String message, Policy rowFilter)
   {
     this.allowed = allowed;
     this.message = message;
@@ -59,17 +60,17 @@ public class Access
 
   public static Access allow()
   {
-    return new Access(true, "", Optional.empty());
+    return new Access(true, "", Policy.NO_RESTRICTION);
   }
 
   public static Access deny(@Nullable String message)
   {
-    return new Access(false, Objects.isNull(message) ? "" : message, Optional.empty());
+    return new Access(false, Objects.isNull(message) ? "" : message, null);
   }
 
-  public static Access allowWithRestriction(Optional<DimFilter> rowFilter)
+  public static Access allowWithRestriction(Policy policy)
   {
-    return new Access(true, "", rowFilter);
+    return new Access(true, "", policy);
   }
 
   public boolean isAllowed()
@@ -77,7 +78,7 @@ public class Access
     return allowed;
   }
 
-  public Optional<DimFilter> getRowFilter()
+  public Policy getPolicy()
   {
     return rowFilter;
   }
@@ -90,9 +91,9 @@ public class Access
       stringBuilder.append(", ");
       stringBuilder.append(message);
     }
-    if (allowed && rowFilter.isPresent()) {
+    if (allowed && rowFilter.getRowFilter().isPresent()) {
       stringBuilder.append(", with restriction ");
-      stringBuilder.append(rowFilter.get());
+      stringBuilder.append(rowFilter.getRowFilter().get());
     }
     return stringBuilder.toString();
   }

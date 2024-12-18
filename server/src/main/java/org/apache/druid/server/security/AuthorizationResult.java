@@ -22,10 +22,12 @@ package org.apache.druid.server.security;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.TrueDimFilter;
+import org.apache.druid.server.Policy;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -61,7 +63,7 @@ public class AuthorizationResult
   @Nullable
   private final String failureMessage;
 
-  private final Map<String, Optional<DimFilter>> policyFilters;
+  private final Map<String, Policy> policyFilters;
 
   @Nullable
   private final Set<ResourceAction> sqlResourceActions;
@@ -72,7 +74,7 @@ public class AuthorizationResult
   AuthorizationResult(
       boolean isAllowed,
       @Nullable String failureMessage,
-      Map<String, Optional<DimFilter>> policyFilters,
+      Map<String, Policy> policyFilters,
       @Nullable Set<ResourceAction> sqlResourceActions,
       @Nullable Set<ResourceAction> allResourceActions
   )
@@ -89,7 +91,7 @@ public class AuthorizationResult
     return new AuthorizationResult(false, failureMessage, Collections.emptyMap(), null, null);
   }
 
-  public static AuthorizationResult allowWithRestriction(Map<String, Optional<DimFilter>> policyFilters)
+  public static AuthorizationResult allowWithRestriction(Map<String, Policy> policyFilters)
   {
     return new AuthorizationResult(true, null, policyFilters, null, null);
   }
@@ -102,7 +104,7 @@ public class AuthorizationResult
     return new AuthorizationResult(
         isAllowed,
         failureMessage,
-        ImmutableMap.copyOf(getPolicyFilters()),
+        ImmutableMap.copyOf(getPolicy()),
         sqlResourceActions,
         allResourceActions
     );
@@ -115,7 +117,7 @@ public class AuthorizationResult
     }
 
     if (policyFilterNotPermitted && policyFilters.values()
-                                                 .stream()
+                                                 .stream().map(Policy::getRowFilter)
                                                  .flatMap(Optional::stream)
                                                  .anyMatch(filter -> !(filter instanceof TrueDimFilter))) {
       return Optional.of(Access.DEFAULT_ERROR_MESSAGE);
@@ -124,9 +126,18 @@ public class AuthorizationResult
     return Optional.empty();
   }
 
-  public Map<String, Optional<DimFilter>> getPolicyFilters()
+  public Map<String, Policy> getPolicy()
   {
     return policyFilters;
+  }
+
+  public Map<String, Optional<DimFilter>> getPolicyFilters()
+  {
+    Map<String, Optional<DimFilter>> filters = new HashMap<>();
+    for (Map.Entry<String, Policy> entry : policyFilters.entrySet()) {
+      filters.put(entry.getKey(), entry.getValue().getRowFilter());
+    }
+    return filters;
   }
 
   @Nullable

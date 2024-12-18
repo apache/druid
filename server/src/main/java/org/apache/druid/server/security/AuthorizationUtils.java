@@ -29,6 +29,7 @@ import org.apache.druid.audit.RequestInfo;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.server.Policy;
 
 import javax.servlet.http.HttpServletRequest;
 import java.util.ArrayList;
@@ -168,7 +169,7 @@ public class AuthorizationUtils
 
     // this method returns on first failure, so only successful Access results are kept in the cache
     final Set<ResourceAction> resultCache = new HashSet<>();
-    final Map<String, Optional<DimFilter>> policyFilters = new HashMap<>();
+    final Map<String, Policy> policyFilters = new HashMap<>();
 
     for (ResourceAction resourceAction : resourceActions) {
       if (resultCache.contains(resourceAction)) {
@@ -185,8 +186,8 @@ public class AuthorizationUtils
         resultCache.add(resourceAction);
         if (resourceAction.getAction().equals(Action.READ)
             && RESTRICTION_APPLICABLE_RESOURCE_TYPES.contains(resourceAction.getResource().getType())) {
-          policyFilters.put(resourceAction.getResource().getName(), access.getRowFilter());
-        } else if (access.getRowFilter().isPresent()) {
+          policyFilters.put(resourceAction.getResource().getName(), access.getPolicy());
+        } else if (access.getPolicy().getRowFilter().isPresent()) {
           throw DruidException.defensive(
               "Row policy should only present when reading a table, but was present for %s",
               resourceAction

@@ -202,7 +202,7 @@ public class QueryLifecycleTest
                 new Resource(DATASOURCE, ResourceType.DATASOURCE),
                 Action.READ
             ))
-            .andReturn(Access.allowWithRestriction(Optional.empty())).once();
+            .andReturn(Access.allowWithRestriction(Policy.NO_RESTRICTION)).once();
     EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject()))
             .andReturn(toolChest).times(2);
     EasyMock.expect(texasRanger.getQueryRunnerForIntervals(
@@ -243,7 +243,7 @@ public class QueryLifecycleTest
                 new Resource(DATASOURCE, ResourceType.DATASOURCE),
                 Action.READ
             ))
-            .andReturn(Access.allowWithRestriction(alwaysTrueFilter)).once();
+            .andReturn(Access.allowWithRestriction(Policy.fromRowFilter(alwaysTrueFilter.get()))).once();
     EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject()))
             .andReturn(toolChest).times(2);
     EasyMock.expect(texasRanger.getQueryRunnerForIntervals(queryMatchDataSource(RestrictedDataSource.create(
@@ -293,7 +293,7 @@ public class QueryLifecycleTest
                 new Resource(DATASOURCE, ResourceType.DATASOURCE),
                 Action.READ
             ))
-            .andReturn(Access.allowWithRestriction(rowFilter)).times(1);
+            .andReturn(Access.allowWithRestriction(Policy.fromRowFilter(rowFilter.get()))).times(1);
     EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject()))
             .andReturn(toolChest).times(2);
     EasyMock.expect(texasRanger.getQueryRunnerForIntervals(queryMatchDataSource(RestrictedDataSource.create(
