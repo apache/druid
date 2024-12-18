@@ -137,4 +137,11 @@ public interface DataSource
    * @return The {@link DataSourceAnalysis} object for the callee data source
    */
   DataSourceAnalysis getAnalysis();
+
+  /**
+   * Returns true if there's time filter for the datasource. For complex datasources such as Join and Union,
+   * composing datasources are also inspected to ensure all of those also have valid time filter
+   * @return true if the datasource has a time filter
+   */
+  boolean hasTimeFilter();
 }
