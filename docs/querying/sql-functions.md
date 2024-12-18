@@ -37,9 +37,45 @@ This page provides a reference of Apache Druid&circledR; SQL functions in alphab
 * [Window functions](sql-window-functions.md)
 
 The examples on this page use the following example datasources:
-* `flight-carriers` using `FlightCarrierOnTime (1 month)` 
+* `flight-carriers` using `FlightCarrierOnTime (1 month)`
 * `taxi-trips` using `NYC Taxi cabs (3 files)`
 * `kttm` using `KoalasToTheMax one day`
+* `array_example` created with [SQL-based ingestion](../multi-stage-query/index.md)
+
+Use following query to create the `array_example` datasource:
+
+<details><summary>Example query</summary>
+
+```sql
+REPLACE INTO "array_example" OVERWRITE ALL
+WITH "ext" AS (
+  SELECT *
+  FROM TABLE(
+    EXTERN(
+      '{"type":"inline","data":"{\"timestamp\": \"2023-01-01T00:00:00\", \"label\": \"row1\", \"amount\":100, \"arrayString\": [\"a\", \"b\"],  \"arrayLong\":[1, null,3], \"arrayDouble\":[1.1, 2.2, null]}\n{\"timestamp\": \"2023-01-01T00:00:00\", \"label\": \"row2\", \"amount\":150, \"arrayString\": [null, \"b\"], \"arrayLong\":null, \"arrayDouble\":[999, null, 5.5]}\n{\"timestamp\": \"2023-01-01T00:00:00\", \"label\": \"row3\", \"amount\":100, \"arrayString\": [], \"arrayLong\":[1, 2, 3],   \"arrayDouble\":[null, 2.2, 1.1]} \n{\"timestamp\": \"2023-01-01T00:00:00\", \"label\": \"row4\", \"amount\":200, \"arrayString\": [\"a\", \"b\"],  \"arrayLong\":[1, 2, 3],   \"arrayDouble\":[]}\n{\"timestamp\": \"2023-01-01T00:00:00\", \"label\": \"row5\", \"amount\":200, \"arrayString\": null, \"arrayLong\":[], \"arrayDouble\":null}"}',
+      '{"type":"json"}'
+    )
+  ) EXTEND (
+    "timestamp" VARCHAR,
+    "label" VARCHAR,
+    "amount" INTEGER,
+    "arrayString" VARCHAR ARRAY,
+    "arrayLong" BIGINT ARRAY,
+    "arrayDouble" DOUBLE ARRAY
+  )
+)
+SELECT
+    TIME_PARSE("timestamp") AS "__time",
+    "label",
+    "amount",
+    "arrayString",
+    "arrayLong",
+    "arrayDouble"
+FROM "ext"
+PARTITIONED BY DAY
+```
+
+</details>
 
 ## ABS
 
@@ -189,7 +225,6 @@ Computes approximate quantiles on a Quantiles sketch column or a regular numeric
 * **Syntax:** `APPROX_QUANTILE_DS(expr, probability, [k])`
 * **Function type:** Aggregation
 
-
 <details><summary>Example</summary>
 
 The following example approximates the median of the `Distance` column from the `flight-carriers` datasource. The query may return a different approximation on each execution.
@@ -216,7 +251,6 @@ Computes approximate quantiles on fixed buckets histogram column or a regular nu
 * **Syntax:** `APPROX_QUANTILE_FIXED_BUCKETS(expr, probability, numBuckets, lowerLimit, upperLimit, [outlierHandlingMode])`
 * **Function type:** Aggregation
 
-
 <details><summary>Example</summary>
 
 The following example approximates the median of a histogram on the `Distance` column from the `flight-carriers` datasource. The histogram has 10 buckets, a lower limit of zero, an upper limit of 2500, and ignores outlier values. 
@@ -236,76 +270,273 @@ Returns the following:
 
 [Learn more](sql-aggregations.md)
 
-## ARRAY[]
+## ARRAY
 
-Constructs a SQL ARRAY literal from the expression arguments. The arguments must be of the same type.
+Constructs a SQL `ARRAY` literal from the expression arguments. The arguments must be of the same type.
 
 * **Syntax**: `ARRAY[expr1, expr2, ...]`
 * **Function type:** Array
+
+<details><summary>Example</summary>
+
+The following example returns an array with the elements in the `agent_category`, `browser`, and `browser_version` columns from the `kttm` datasource.
+
+```sql
+SELECT ARRAY["agent_category", "browser", "browser_version"] AS "user_agent_details"
+FROM "kttm"
+LIMIT 5
+```
+
+Returns the following:
+
+| `user_agent_details` |
+| -- |
+| `["Personal computer","Chrome","76.0.3809.100"]` |
+| `["Smartphone","Chrome Mobile","50.0.2661.89"]` |
+| `["Personal computer","Chrome","76.0.3809.100"]` |
+| `["Personal computer","Opera","62.0.3331.116"]` |
+| `["Smartphone","Mobile Safari","12.0"]` |
+
+</details>
 
 [Learn more](sql-array-functions.md)
 
 ## ARRAY_AGG
 
-Returns an array of all values of the specified expression.
+Returns an array of all values of the specified expression. To collect only unique values, specify `DISTINCT`.
 
-* **Syntax**: `ARRAY_AGG([DISTINCT] expr, [<NUMERIC>])`
+* **Syntax**: `ARRAY_AGG([DISTINCT] expr, [size])`
 * **Function type:** Aggregation
+
+<details><summary>Example</summary>
+
+The following example returns an array of all `label` values from the `array_example` datasource, grouped by `amount`.
+
+```sql
+SELECT "amount", ARRAY_AGG("label") AS "array_of_labels"
+FROM "array_example"
+GROUP BY "amount"
+```
+
+Returns the following:
+
+| `amount` | `array_of_labels` |
+| -- ||
+| 100 |`[row1, row3]`|
+| 150|`[row2]`|
+| 200 |`[row4, row5]`|
+
+</details>
 
 [Learn more](sql-aggregations.md)
 
 ## ARRAY_APPEND
 
-Appends `expr` to `arr`, the resulting array type determined by the type of `arr1`.
+Appends `expr` to `arr`. The type of `arr` determines the resulting array type.
 
-* **Syntax**: `ARRAY_APPEND(arr1, expr)`
+* **Syntax**: `ARRAY_APPEND(arr, expr)`
 * **Function type:** Array
+
+<details><summary>Example</summary>
+
+The following example appends `c` to the values in the `arrayString` column from the `array_example` datasource.
+
+```sql
+SELECT ARRAY_APPEND("arrayString",'c') AS "array_appended"
+FROM "array_example"
+```
+
+Returns the following:
+
+| `array_appended` |
+| -- |
+| `[a, b, c]` |
+| `[null,"b","c"]`|
+| `[c]` |
+| `[a, b, c]`|
+| `null` |
+
+</details>
 
 [Learn more](sql-array-functions.md)
 
 ## ARRAY_CONCAT
 
-Concatenates `arr2` to `arr1`. The resulting array type is determined by the type of `arr1`.
+Concatenates `arr2` to `arr1`. The type of `arr1` determines the resulting array type.
 
 * **Syntax**: `ARRAY_CONCAT(arr1, arr2)`
 * **Function type:** Array
+
+<details><summary>Example</summary>
+
+The following example concatenates the arrays in the `arrayLong` and `arrayDouble` columns from the `array_example` datasource.
+
+```sql
+SELECT ARRAY_CONCAT("arrayLong", "arrayDouble") AS "array_concatenated" 
+FROM "array_example"
+```
+
+Returns the following:
+
+| `array_concatenated` |
+| -- |
+| `[1,null,3,1.1,2.2,null]` |
+| `null`|
+| `[1,2,3,null,2.2,1.1]` |
+| `[1,2,3]`|
+| `null` |
+
+</details>
 
 [Learn more](sql-array-functions.md)
 
 ## ARRAY_CONCAT_AGG
 
-Concatenates array inputs into a single array.
+Concatenates array inputs into a single array. To concatenate only unique values, specify `DISTINCT`.
 
-* **Syntax**: `ARRAY_CONCAT_AGG([DISTINCT] expr, [<NUMERIC>])`
+* **Syntax**: `ARRAY_CONCAT_AGG([DISTINCT] expr, [size])`
 * **Function type:** Aggregation
+
+<details><summary>Example</summary>
+
+The following example concatenates the array inputs from the `arrayDouble` column of the `array_example` datasource into a single array.
+
+```sql
+SELECT ARRAY_CONCAT_AGG( DISTINCT "arrayDouble") AS "array_concat_agg_distinct"
+FROM "array_example"
+```
+
+Returns the following:
+
+| `array_concat_agg_distinct` |
+| -- |
+| `[null,1.1,2.2,5.5,999]` |
+
+</details>
 
 [Learn more](sql-aggregations.md)
 
 ## ARRAY_CONTAINS
 
-If `expr` is a scalar type, returns true if `arr` contains `expr`. If `expr` is an array, returns 1 if `arr` contains all elements of `expr`. Otherwise returns false.
+Returns true if `arr` contains `expr`.
+
+### Scalar
+
+If `expr` is a scalar type, returns true if `arr` contains `expr`.
 
 * **Syntax**: `ARRAY_CONTAINS(arr, expr)`
 * **Function type:** Array
 
+<details><summary>Example</summary>
+
+The following example returns true if the `arraySring` column in the `array_example` datasource contains `a`.
+
+```sql
+SELECT "label", "arrayString", ARRAY_CONTAINS("arrayString", 'a') AS "array_contains_a"
+FROM "array_example"
+```
+
+Returns the following:
+
+| `label` | `arrayString` | `array_contains_a` |
+| -- | --| -- |
+| `row1` | `["a","b"]` | `true` |
+| `row2`| `[null,"b"]` | `false` |
+| `row3`| `[]` |  `false` |
+| `row4`| `["a","b"]` | `true` |
+| `row5`| `null` | `null` |
+
+</details>
+
 [Learn more](sql-array-functions.md)
 
+### Array
+
+If `expr` is an array, returns true if `arr` contains all elements of `expr`.
+
+* **Syntax**: `ARRAY_CONTAINS(arr, expr)`
+* **Function type:** Array
+
+<details><summary>Example</summary>
+
+The following example returns true if the `arrayLong` column in the `array_example` datasource contains all elements of the provided expression.
+
+```sql
+SELECT "label", "arrayLong", ARRAY_CONTAINS("arrayLong", ARRAY[1,2,3]) AS "array_contains_values"
+FROM "array_example"
+```
+
+Returns the following:
+
+| `label` | `arrayLong` | `array_contains_values` |
+| -- | -- | -- |
+| `row1` | `[1,null,3]` | `false` |
+| `row2`| `null` | `null` |
+| `row3`| `[1,2,3]` | `true` |
+| `row4`| `[1,2,3]` | `true` |
+| `row5`| `[]` | `false` |
+
+</details>
+
+[Learn more](sql-array-functions.md)
 
 ## ARRAY_LENGTH
 
-Returns length of the array expression.
+Returns the length of the array.
 
 * **Syntax**: `ARRAY_LENGTH(arr)`
 * **Function type:** Array
+
+<details><summary>Example</summary>
+
+The following example returns the length of array expressions in the `arrayLong` column of the `array_example` datasource.
+
+```sql
+SELECT "arrayDouble" AS "array", ARRAY_LENGTH("arrayDouble") AS "array_length"
+FROM "array_example"
+```
+
+Returns the following:
+
+| `larray` | `array_length` |
+| -- | -- |
+| `row1` | 3 |
+| `row2`| 3 |
+| `row3`| 3 |
+| `row4`| 0 |
+| `row5`| `null` |
+
+</details>
 
 [Learn more](sql-array-functions.md)
 
 ## ARRAY_OFFSET
 
-Returns the array element at the 0-based index supplied, or null for an out of range index.
+Returns the array element at the specified zero-based index. Returns null if the index is out of bounds.
 
 * **Syntax**: `ARRAY_OFFSET(arr, long)`
 * **Function type:** Array
+
+<details><summary>Example</summary>
+
+The following example returns the element at the specified zero-based index from the arrays in the `arrayLong` column of the `array_example` datasource.
+
+```sql
+SELECT "arrayLong" as "array", ARRAY_OFFSET("arrayLong", 2) AS "element_at_index"
+FROM "array_example"
+```
+
+Returns the following:
+
+| `array` | `element_at_index` |
+| -- | -- |
+| `[1,null,3]` | 3 |
+| `null`| `null` |
+| `[1,2,3]`| 3 |
+| `[1,2,3]`| 3 |
+| `[]`| `null` |
+
+</details>
 
 [Learn more](sql-array-functions.md)
 
@@ -1636,7 +1867,7 @@ Returns the value evaluated for the expression for the first row within the wind
 
 Rounds down a timestamp by a given time unit. 
 
-* **Syntax:** `FLOOR(timestamp_expr TO unit>)`
+* **Syntax:** `FLOOR(timestamp_expr TO unit)`
 * **Function type:** Scalar, date and time
 
 <details><summary>Example</summary>
@@ -1665,7 +1896,7 @@ Returns the following:
 
 Calculates the largest integer less than or equal to the numeric expression.
 
-* **Syntax:** `FLOOR(<NUMERIC>)`
+* **Syntax:** `FLOOR(expr)`
 * **Function type:** Scalar, numeric
 
 <details><summary>Example</summary>

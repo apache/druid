@@ -48,7 +48,9 @@ The following table describes array functions. To learn more about array aggrega
 
 |Function|Description|
 |--------|-----|
-|`ARRAY[expr1, expr2, ...]`|Constructs a SQL `ARRAY` literal from the expression arguments, using the type of the first argument as the output array type.|
+|`ARRAY[expr1, expr2, ...]`|Constructs a SQL `ARRAY` literal from the expression arguments. The arguments must be of the same type.|
+|`ARRAY_APPEND(arr, expr)`|Appends `expr` to `arr`. The type of `arr` determines the resulting array type.|
+|`ARRAY_CONCAT(arr1, arr2)`|Concatenates `arr2` to `arr1`. The type of `arr1` determines the resulting array type.|
 |`ARRAY_LENGTH(arr)`|Returns length of the array expression.|
 |`ARRAY_OFFSET(arr, long)`|Returns the array element at the 0-based index supplied, or null for an out of range index.|
 |`ARRAY_ORDINAL(arr, long)`|Returns the array element at the 1-based index supplied, or null for an out of range index.|
@@ -58,8 +60,6 @@ The following table describes array functions. To learn more about array aggrega
 |`ARRAY_OFFSET_OF(arr, expr)`|Returns the 0-based index of the first occurrence of `expr` in the array. If no matching elements exist in the array, returns `null` or `-1` if `druid.generic.useDefaultValueForNull=true` (deprecated legacy mode).|
 |`ARRAY_ORDINAL_OF(arr, expr)`|Returns the 1-based index of the first occurrence of `expr` in the array. If no matching elements exist in the array, returns `null` or `-1` if `druid.generic.useDefaultValueForNull=true` (deprecated legacy mode).|
 |`ARRAY_PREPEND(expr, arr)`|Adds `expr` to the beginning of `arr`, the resulting array type determined by the type of `arr`.|
-|`ARRAY_APPEND(arr, expr)`|Appends `expr` to `arr`, the resulting array type determined by the type of `arr`.|
-|`ARRAY_CONCAT(arr1, arr2)`|Concatenates `arr2` to `arr1`. The resulting array type is determined by the type of `arr1`.|
 |`ARRAY_SLICE(arr, start, end)`|Returns the subarray of `arr` from the 0-based index `start` (inclusive) to `end` (exclusive). Returns `null`, if `start` is less than 0, greater than length of `arr`, or greater than `end`.|
 |`ARRAY_TO_STRING(arr, str)`|Joins all elements of `arr` by the delimiter specified by `str`.|
 |`STRING_TO_ARRAY(str1, str2)`|Splits `str1` into an array on the delimiter specified by `str2`, which is a regular expression.|
