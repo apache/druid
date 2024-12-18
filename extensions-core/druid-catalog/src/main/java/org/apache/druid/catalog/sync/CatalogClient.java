@@ -59,13 +59,9 @@ public class CatalogClient implements CatalogSource
 {
   public static final String SCHEMA_SYNC_PATH = CatalogResource.ROOT_PATH + CatalogResource.SCHEMA_SYNC;
   public static final String TABLE_SYNC_PATH = CatalogResource.ROOT_PATH + CatalogResource.TABLE_SYNC;
-  private static final TypeReference<List<TableMetadata>> LIST_OF_TABLE_METADATA_TYPE = new TypeReference<List<TableMetadata>>()
-  {
-  };
+  private static final TypeReference<List<TableMetadata>> LIST_OF_TABLE_METADATA_TYPE = new TypeReference<>() {};
   // Not strictly needed as a TypeReference, but doing so makes the code simpler.
-  private static final TypeReference<TableMetadata> TABLE_METADATA_TYPE = new TypeReference<TableMetadata>()
-  {
-  };
+  private static final TypeReference<TableMetadata> TABLE_METADATA_TYPE = new TypeReference<>() {};
 
   private final DruidLeaderClient coordClient;
   private final ObjectMapper smileMapper;
@@ -86,7 +82,7 @@ public class CatalogClient implements CatalogSource
   @Override
   public List<TableMetadata> tablesForSchema(String dbSchema)
   {
-    String url = StringUtils.replace(SCHEMA_SYNC_PATH, "{schema}", dbSchema);
+    String url = StringUtils.replace(SCHEMA_SYNC_PATH, "{schema}", StringUtils.urlEncode(dbSchema));
     List<TableMetadata> results = send(url, LIST_OF_TABLE_METADATA_TYPE);
 
     // Not found for a list is an empty list.
@@ -96,8 +92,8 @@ public class CatalogClient implements CatalogSource
   @Override
   public TableMetadata table(TableId id)
   {
-    String url = StringUtils.replace(TABLE_SYNC_PATH, "{schema}", id.schema());
-    url = StringUtils.replace(url, "{name}", id.name());
+    String url = StringUtils.replace(TABLE_SYNC_PATH, "{schema}", StringUtils.urlEncode(id.schema()));
+    url = StringUtils.replace(url, "{name}", StringUtils.urlEncode(id.name()));
     return send(url, TABLE_METADATA_TYPE);
   }
 

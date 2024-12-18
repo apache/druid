@@ -1,0 +1,81 @@
+# testUnnestExtractionFn@NullHandling=default case-crc:33ee4d88
+# quidem testcase reason: UNNEST_SUBSTRING_EMPTY
+!set debug true
+!set defaultTimeout 300000
+!set maxScatterGatherBytes 9223372036854775807
+!set plannerStrategy DECOUPLED
+!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
+!set sqlQueryId dummy
+!set sqlStringifyArrays false
+!set outputformat mysql
+!use druidtest:///
+SELECT substring(d3,1) FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3) WHERE substring(d3,1) <> 'b';
++--------+
+| EXPR$0 |
++--------+
+| a      |
+| c      |
+| d      |
++--------+
+(3 rows)
+
+!ok
+LogicalProject(EXPR$0=[SUBSTRING($18, 1)])
+  LogicalUnnest(unnestExpr=[MV_TO_ARRAY($3)], filter=[<>(SUBSTRING($0, 1), 'b')])
+    LogicalProject(__time=[$0], dim1=[$1], dim2=[$2], dim3=[$3], dim4=[$4], dim5=[$5], dim6=[$6], dbl1=[$7], dbl2=[$8], f1=[$9], f2=[$10], l1=[$11], l2=[$12], cnt=[$13], m1=[$14], m2=[$15], unique_dim1=[$16], __time0=[$0])
+      LogicalTableScan(table=[[druid, numfoo]])
+
+!logicalPlan
+DruidProject(EXPR$0=[SUBSTRING($18, 1)], druid=[logical])
+  DruidUnnest(unnestExpr=[MV_TO_ARRAY($3)], filter=[<>(SUBSTRING($0, 1), 'b')])
+    DruidProject(__time=[$0], dim1=[$1], dim2=[$2], dim3=[$3], dim4=[$4], dim5=[$5], dim6=[$6], dbl1=[$7], dbl2=[$8], f1=[$9], f2=[$10], l1=[$11], l2=[$12], cnt=[$13], m1=[$14], m2=[$15], unique_dim1=[$16], __time0=[$0], druid=[logical])
+      DruidTableScan(table=[[druid, numfoo]], druid=[logical])
+
+!druidPlan
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "unnest",
+    "base" : {
+      "type" : "table",
+      "name" : "numfoo"
+    },
+    "virtualColumn" : {
+      "type" : "expression",
+      "name" : "j0.unnest",
+      "expression" : "mv_to_array(\"dim3\")",
+      "outputType" : "ARRAY<STRING>"
+    },
+    "unnestFilter" : {
+      "type" : "not",
+      "field" : {
+        "type" : "selector",
+        "dimension" : "j0.unnest",
+        "value" : "b",
+        "extractionFn" : {
+          "type" : "substring",
+          "index" : 0,
+          "length" : null
+        }
+      }
+    }
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "substring(\"j0.unnest\", 0, -1)",
+    "outputType" : "STRING"
+  } ],
+  "resultFormat" : "compactedList",
+  "columns" : [ "v0" ],
+  "columnTypes" : [ "STRING" ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "legacy" : false
+}
+!nativePlan

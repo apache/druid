@@ -75,12 +75,10 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   private final ObjectMapper jsonMapper;
   private final TypeReference<EntryType> entryType;
   private final TypeReference<StatusType> statusType;
-  private final TypeReference<LogType> logType;
   private final TypeReference<LockType> lockType;
 
   private final String entryTypeName;
   private final String entryTable;
-  private final String logTable;
   private final String lockTable;
 
   private final TaskInfoMapper<EntryType, StatusType> taskInfoMapper;
@@ -90,7 +88,11 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
 
   private Future<Boolean> taskMigrationCompleteFuture;
 
-  @SuppressWarnings("PMD.UnnecessaryFullyQualifiedName")
+  /**
+   * @deprecated Use the other constructor without {@code logTable} argument
+   * since this argument is now unused.
+   */
+  @Deprecated
   public SQLMetadataStorageActionHandler(
       final SQLMetadataConnector connector,
       final ObjectMapper jsonMapper,
@@ -101,6 +103,19 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
       final String lockTable
   )
   {
+    this(connector, jsonMapper, types, entryTypeName, entryTable, lockTable);
+  }
+
+  @SuppressWarnings("PMD.UnnecessaryFullyQualifiedName")
+  public SQLMetadataStorageActionHandler(
+      final SQLMetadataConnector connector,
+      final ObjectMapper jsonMapper,
+      final MetadataStorageActionHandlerTypes<EntryType, StatusType, LogType, LockType> types,
+      final String entryTypeName,
+      final String entryTable,
+      final String lockTable
+  )
+  {
     this.connector = connector;
     //fully qualified references required below due to identical package names across project modules.
     //noinspection UnnecessaryFullyQualifiedName
@@ -108,11 +123,9 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
             org.apache.druid.metadata.PasswordProviderRedactionMixIn.class);
     this.entryType = types.getEntryType();
     this.statusType = types.getStatusType();
-    this.logType = types.getLogType();
     this.lockType = types.getLockType();
     this.entryTypeName = entryTypeName;
     this.entryTable = entryTable;
-    this.logTable = logTable;
     this.lockTable = lockTable;
     this.taskInfoMapper = new TaskInfoMapper<>(jsonMapper, entryType, statusType);
     this.taskStatusMapper = new TaskStatusMapper(jsonMapper);
@@ -142,7 +155,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
 
   protected String getLogTable()
   {
-    return logTable;
+    throw new UnsupportedOperationException("'tasklogs' table is not used anymore");
   }
 
   protected String getEntryTypeName()
@@ -248,7 +261,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   public boolean setStatus(final String entryId, final boolean active, final StatusType status)
   {
     return connector.retryWithHandle(
-        new HandleCallback<Boolean>()
+        new HandleCallback<>()
         {
           @Override
           public Boolean withHandle(Handle handle) throws Exception
@@ -272,7 +285,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   public Optional<EntryType> getEntry(final String entryId)
   {
     return connector.retryWithHandle(
-        new HandleCallback<Optional<EntryType>>()
+        new HandleCallback<>()
         {
           @Override
           public Optional<EntryType> withHandle(Handle handle) throws Exception
@@ -297,7 +310,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   public Optional<StatusType> getStatus(final String entryId)
   {
     return connector.retryWithHandle(
-        new HandleCallback<Optional<StatusType>>()
+        new HandleCallback<>()
         {
           @Override
           public Optional<StatusType> withHandle(Handle handle) throws Exception
@@ -430,7 +443,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   }
 
   /**
-   * Wraps the given error in a user friendly DruidException.
+   * Wraps the given error in a user-friendly DruidException.
    */
   private DruidException wrapInDruidException(String taskId, Throwable t)
   {
@@ -788,7 +801,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   public boolean addLock(final String entryId, final LockType lock)
   {
     return connector.retryWithHandle(
-        new HandleCallback<Boolean>()
+        new HandleCallback<>()
         {
           @Override
           public Boolean withHandle(Handle handle) throws Exception
@@ -855,21 +868,13 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   {
     DateTime dateTime = DateTimes.utc(timestamp);
     connector.retryWithHandle(
-        handle -> {
-          handle.createStatement(getSqlRemoveLogsOlderThan())
-                .bind("date_time", dateTime.toString())
-                .execute();
+        handle ->
           handle.createStatement(
               StringUtils.format(
                   "DELETE FROM %s WHERE created_date < :date_time AND active = false",
                   entryTable
               )
-          )
-                .bind("date_time", dateTime.toString())
-                .execute();
-
-          return null;
-        }
+          ).bind("date_time", dateTime.toString()).execute()
     );
   }
 
@@ -881,82 +886,10 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
   }
 
   @Override
-  public boolean addLog(final String entryId, final LogType log)
-  {
-    return connector.retryWithHandle(
-        new HandleCallback<Boolean>()
-        {
-          @Override
-          public Boolean withHandle(Handle handle) throws Exception
-          {
-            return handle.createStatement(
-                StringUtils.format(
-                    "INSERT INTO %1$s (%2$s_id, log_payload) VALUES (:entryId, :payload)",
-                    logTable, entryTypeName
-                )
-            )
-                         .bind("entryId", entryId)
-                         .bind("payload", jsonMapper.writeValueAsBytes(log))
-                         .execute() == 1;
-          }
-        }
-    );
-  }
-
-  @Override
-  public List<LogType> getLogs(final String entryId)
-  {
-    return connector.retryWithHandle(
-        new HandleCallback<List<LogType>>()
-        {
-          @Override
-          public List<LogType> withHandle(Handle handle)
-          {
-            return handle
-                .createQuery(
-                    StringUtils.format(
-                        "SELECT log_payload FROM %1$s WHERE %2$s_id = :entryId",
-                        logTable, entryTypeName
-                    )
-                )
-                .bind("entryId", entryId)
-                .map(ByteArrayMapper.FIRST)
-                .fold(
-                    new ArrayList<>(),
-                    (List<LogType> list, byte[] bytes, FoldController control, StatementContext ctx) -> {
-                      try {
-                        list.add(jsonMapper.readValue(bytes, logType));
-                        return list;
-                      }
-                      catch (IOException e) {
-                        log.makeAlert(e, "Failed to deserialize log")
-                           .addData("entryId", entryId)
-                           .addData("payload", StringUtils.fromUtf8(bytes))
-                           .emit();
-                        throw new SQLException(e);
-                      }
-                    }
-                );
-          }
-        }
-    );
-  }
-
-  @Deprecated
-  public String getSqlRemoveLogsOlderThan()
-  {
-    return StringUtils.format(
-        "DELETE a FROM %s a INNER JOIN %s b ON a.%s_id = b.id "
-        + "WHERE b.created_date < :date_time and b.active = false",
-        logTable, entryTable, entryTypeName
-    );
-  }
-
-  @Override
   public Map<Long, LockType> getLocks(final String entryId)
   {
     return connector.retryWithHandle(
-        new HandleCallback<Map<Long, LockType>>()
+        new HandleCallback<>()
         {
           @Override
           public Map<Long, LockType> withHandle(Handle handle)

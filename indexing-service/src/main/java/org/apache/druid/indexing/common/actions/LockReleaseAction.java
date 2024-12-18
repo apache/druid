@@ -46,7 +46,7 @@ public class LockReleaseAction implements TaskAction<Void>
   @Override
   public TypeReference<Void> getReturnTypeReference()
   {
-    return new TypeReference<Void>() {};
+    return new TypeReference<>() {};
   }
 
   @Override
@@ -54,12 +54,6 @@ public class LockReleaseAction implements TaskAction<Void>
   {
     toolbox.getTaskLockbox().unlock(task, interval);
     return null;
-  }
-
-  @Override
-  public boolean isAudited()
-  {
-    return false;
   }
 
   @Override

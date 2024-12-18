@@ -16,8 +16,7 @@
  * limitations under the License.
  */
 
-import React from 'react';
-
+import { DEFAULT_SERVER_QUERY_CONTEXT } from '../../../druid-models';
 import { shallow } from '../../../utils/shallow-renderer';
 
 import { MaxTasksButton } from './max-tasks-button';
@@ -25,7 +24,12 @@ import { MaxTasksButton } from './max-tasks-button';
 describe('MaxTasksButton', () => {
   it('matches snapshot', () => {
     const comp = shallow(
-      <MaxTasksButton clusterCapacity={6} queryContext={{}} changeQueryContext={() => {}} />,
+      <MaxTasksButton
+        clusterCapacity={6}
+        queryContext={{}}
+        changeQueryContext={() => {}}
+        defaultQueryContext={DEFAULT_SERVER_QUERY_CONTEXT}
+      />,
     );
 
     expect(comp).toMatchSnapshot();

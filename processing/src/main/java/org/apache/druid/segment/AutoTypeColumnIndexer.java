@@ -27,6 +27,7 @@ import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.parsers.ParseException;
 import org.apache.druid.math.expr.Evals;
@@ -98,7 +99,7 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
         ExprEval<?> eval = ExprEval.bestEffortOf(fieldValue);
         FieldIndexer fieldIndexer = fieldIndexers.get(fieldName);
         if (fieldIndexer == null) {
-          estimatedFieldKeySize += StructuredDataProcessor.estimateStringSize(fieldName);
+          estimatedFieldKeySize += estimateStringSize(fieldName);
           fieldIndexer = new FieldIndexer(globalDictionary);
           fieldIndexers.put(fieldName, fieldIndexer);
         }
@@ -119,7 +120,7 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
         final String fieldName = NestedPathFinder.toNormalizedJsonPath(fieldPath);
         FieldIndexer fieldIndexer = fieldIndexers.get(fieldName);
         if (fieldIndexer == null) {
-          estimatedFieldKeySize += StructuredDataProcessor.estimateStringSize(fieldName);
+          estimatedFieldKeySize += estimateStringSize(fieldName);
           fieldIndexer = new FieldIndexer(globalDictionary);
           fieldIndexers.put(fieldName, fieldIndexer);
         }
@@ -360,8 +361,42 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
       return rootLiteralSelector;
     }
 
-    return new ObjectColumnSelector<StructuredData>()
+    return new ColumnValueSelector<>()
     {
+      @Override
+      public double getDouble()
+      {
+        Object o = StructuredData.unwrap(getObject());
+        return Numbers.tryParseDouble(o, 0.0);
+      }
+
+      @Override
+      public float getFloat()
+      {
+        Object o = StructuredData.unwrap(getObject());
+        return Numbers.tryParseFloat(o, 0.0f);
+      }
+
+      @Override
+      public long getLong()
+      {
+        Object o = StructuredData.unwrap(getObject());
+        return Numbers.tryParseLong(o, 0L);
+      }
+
+      @Override
+      public boolean isNull()
+      {
+        final Object o = StructuredData.unwrap(getObject());
+        if (o instanceof Number) {
+          return false;
+        }
+        if (o instanceof String) {
+          return GuavaUtils.tryParseLong((String) o) == null && Doubles.tryParse((String) o) == null;
+        }
+        return true;
+      }
+
       @Override
       public void inspectRuntimeShape(RuntimeShapeInspector inspector)
       {
@@ -558,7 +593,7 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
       return null;
     }
     final Object defaultValue = getDefaultValueForType(getLogicalType());
-    return new ColumnValueSelector<Object>()
+    return new ColumnValueSelector<>()
     {
       @Override
       public boolean isNull()

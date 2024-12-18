@@ -75,11 +75,11 @@ DruidProject(dim3=[$0], dim30=[$2], druid=[logical])
         } ],
         "resultFormat" : "compactedList",
         "columns" : [ "dim3", "v0" ],
-        "legacy" : false,
         "columnTypes" : [ "STRING", "STRING" ],
         "granularity" : {
           "type" : "all"
-        }
+        },
+        "legacy" : false
       }
     },
     "right" : {
@@ -114,11 +114,11 @@ DruidProject(dim3=[$0], dim30=[$2], druid=[logical])
               } ],
               "resultFormat" : "compactedList",
               "columns" : [ "dim3", "v0" ],
-              "legacy" : false,
               "columnTypes" : [ "STRING", "STRING" ],
               "granularity" : {
                 "type" : "all"
-              }
+              },
+              "legacy" : false
             }
           },
           "right" : {
@@ -147,11 +147,11 @@ DruidProject(dim3=[$0], dim30=[$2], druid=[logical])
               } ],
               "resultFormat" : "compactedList",
               "columns" : [ "v0" ],
-              "legacy" : false,
               "columnTypes" : [ "STRING" ],
               "granularity" : {
                 "type" : "all"
-              }
+              },
+              "legacy" : false
             }
           },
           "rightPrefix" : "j0.",
@@ -175,12 +175,12 @@ DruidProject(dim3=[$0], dim30=[$2], druid=[logical])
           "isAllowList" : true
         } ],
         "resultFormat" : "compactedList",
-        "columns" : [ "_v0", "dim3" ],
-        "legacy" : false,
+        "columns" : [ "dim3", "_v0" ],
         "columnTypes" : [ "STRING", "STRING" ],
         "granularity" : {
           "type" : "all"
-        }
+        },
+        "legacy" : false
       }
     },
     "rightPrefix" : "_j0.",
@@ -192,11 +192,11 @@ DruidProject(dim3=[$0], dim30=[$2], druid=[logical])
     "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
   },
   "resultFormat" : "compactedList",
-  "columns" : [ "_j0.dim3", "dim3" ],
-  "legacy" : false,
+  "columns" : [ "dim3", "_j0.dim3" ],
   "columnTypes" : [ "STRING", "STRING" ],
   "granularity" : {
     "type" : "all"
-  }
+  },
+  "legacy" : false
 }
 !nativePlan

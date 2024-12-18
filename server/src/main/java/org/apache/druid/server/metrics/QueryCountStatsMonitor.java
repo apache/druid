@@ -36,15 +36,18 @@ public class QueryCountStatsMonitor extends AbstractMonitor
   private final KeyedDiff keyedDiff = new KeyedDiff();
   private final QueryCountStatsProvider statsProvider;
   private final BlockingPool<ByteBuffer> mergeBufferPool;
+  private final boolean emitMergeBufferPendingRequests;
 
   @Inject
   public QueryCountStatsMonitor(
       QueryCountStatsProvider statsProvider,
+      MonitorsConfig monitorsConfig,
       @Merging BlockingPool<ByteBuffer> mergeBufferPool
   )
   {
     this.statsProvider = statsProvider;
     this.mergeBufferPool = mergeBufferPool;
+    this.emitMergeBufferPendingRequests = !monitorsConfig.getMonitors().contains(GroupByStatsMonitor.class);
   }
 
   @Override
@@ -72,9 +75,11 @@ public class QueryCountStatsMonitor extends AbstractMonitor
       }
     }
 
-    long pendingQueries = this.mergeBufferPool.getPendingRequests();
-    emitter.emit(builder.setMetric("mergeBuffer/pendingRequests", pendingQueries));
+    if (emitMergeBufferPendingRequests) {
+      long pendingQueries = this.mergeBufferPool.getPendingRequests();
+      emitter.emit(builder.setMetric("mergeBuffer/pendingRequests", pendingQueries));
+    }
+
     return true;
   }
-
 }

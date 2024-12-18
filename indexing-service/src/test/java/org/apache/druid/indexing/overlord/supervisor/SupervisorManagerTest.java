@@ -23,6 +23,9 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.util.concurrent.SettableFuture;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
@@ -41,6 +44,7 @@ import org.easymock.EasyMock;
 import org.easymock.EasyMockRunner;
 import org.easymock.EasyMockSupport;
 import org.easymock.Mock;
+import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -60,10 +64,10 @@ public class SupervisorManagerTest extends EasyMockSupport
   private MetadataSupervisorManager metadataSupervisorManager;
 
   @Mock
-  private Supervisor supervisor1;
+  private StreamSupervisor supervisor1;
 
   @Mock
-  private Supervisor supervisor2;
+  private StreamSupervisor supervisor2;
 
   @Mock
   private Supervisor supervisor3;
@@ -127,7 +131,9 @@ public class SupervisorManagerTest extends EasyMockSupport
     verifyAll();
 
     resetAll();
-    supervisor3.stop(false);
+    SettableFuture<Void> stopFuture = SettableFuture.create();
+    stopFuture.set(null);
+    EasyMock.expect(supervisor3.stopAsync()).andReturn(stopFuture);
     replayAll();
 
     manager.stop();
@@ -262,6 +268,33 @@ public class SupervisorManagerTest extends EasyMockSupport
   }
 
   @Test
+  public void testHandoffTaskGroupsEarlyOnNonStreamSupervisor()
+  {
+    final Map<String, SupervisorSpec> existingSpecs = ImmutableMap.of(
+        "id3", new TestSupervisorSpec("id3", supervisor3)
+    );
+
+    EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(existingSpecs);
+    supervisor3.start();
+
+    replayAll();
+
+    manager.start();
+
+    MatcherAssert.assertThat(
+        Assert.assertThrows(DruidException.class, () -> manager.handoffTaskGroupsEarly("id3", ImmutableList.of(1))),
+        new DruidExceptionMatcher(
+            DruidException.Persona.USER,
+            DruidException.Category.UNSUPPORTED,
+            "general"
+        ).expectMessageIs(
+                "Operation[handoff] is not supported by supervisor[id3] of type[TestSupervisorSpec]."
+        )
+    );
+    verifyAll();
+  }
+
+  @Test
   public void testStartAlreadyStarted()
   {
     EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(ImmutableMap.of());
@@ -331,7 +364,7 @@ public class SupervisorManagerTest extends EasyMockSupport
 
     EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(existingSpecs);
     supervisor1.start();
-    supervisor1.stop(false);
+    supervisor1.stopAsync();
     EasyMock.expectLastCall().andThrow(new RuntimeException("RTE"));
     replayAll();
 
@@ -355,6 +388,33 @@ public class SupervisorManagerTest extends EasyMockSupport
     manager.start();
     Assert.assertTrue("resetValidSupervisor", manager.resetSupervisor("id1", null));
     Assert.assertFalse("resetInvalidSupervisor", manager.resetSupervisor("nobody_home", null));
+
+    verifyAll();
+  }
+
+  @Test
+  public void testResetOnNonStreamSupervisor()
+  {
+    final Map<String, SupervisorSpec> existingSpecs = ImmutableMap.of(
+        "id3", new TestSupervisorSpec("id3", supervisor3)
+    );
+
+    EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(existingSpecs);
+    supervisor3.start();
+    replayAll();
+
+    manager.start();
+
+    MatcherAssert.assertThat(
+        Assert.assertThrows(DruidException.class, () -> manager.resetSupervisor("id3", null)),
+        new DruidExceptionMatcher(
+            DruidException.Persona.USER,
+            DruidException.Category.UNSUPPORTED,
+            "general"
+        ).expectMessageIs(
+            "Operation[reset] is not supported by supervisor[id3] of type[TestSupervisorSpec]."
+        )
+    );
 
     verifyAll();
   }
@@ -454,7 +514,9 @@ public class SupervisorManagerTest extends EasyMockSupport
 
     // mock manager shutdown to ensure supervisor 3 stops
     resetAll();
-    supervisor3.stop(false);
+    SettableFuture<Void> stopFuture = SettableFuture.create();
+    stopFuture.set(null);
+    EasyMock.expect(supervisor3.stopAsync()).andReturn(stopFuture);
     replayAll();
 
     manager.stop();
@@ -670,7 +732,7 @@ public class SupervisorManagerTest extends EasyMockSupport
     @Override
     public String getType()
     {
-      return null;
+      return "TestSupervisorSpec";
     }
 
     @Override

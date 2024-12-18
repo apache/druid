@@ -65,6 +65,7 @@ public class CalciteScanSignatureTest extends BaseCalciteQueryTest
                     ColumnType.STRING
                 ))
                 .columns("v0")
+                .columnTypes(ColumnType.STRING)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(context)
                 .build()
@@ -91,6 +92,7 @@ public class CalciteScanSignatureTest extends BaseCalciteQueryTest
                 .dataSource(CalciteTests.DATASOURCE2)
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("v0")
+                .columnTypes(ColumnType.LONG)
                 .virtualColumns(expressionVirtualColumn(
                     "v0",
                     "CAST(\"dim1\", 'LONG')",
@@ -155,13 +157,21 @@ public class CalciteScanSignatureTest extends BaseCalciteQueryTest
       }
 
       @Override
-      public RelDataType resultTypeForSelect(RelDataTypeFactory typeFactory, RelDataType validatedRowType)
+      public RelDataType resultTypeForSelect(
+          RelDataTypeFactory typeFactory,
+          RelDataType validatedRowType,
+          Map<String, Object> queryContext
+      )
       {
         return validatedRowType;
       }
 
       @Override
-      public RelDataType resultTypeForInsert(RelDataTypeFactory typeFactory, RelDataType validatedRowType)
+      public RelDataType resultTypeForInsert(
+          RelDataTypeFactory typeFactory,
+          RelDataType validatedRowType,
+          Map<String, Object> queryContext
+      )
       {
         throw new UnsupportedOperationException();
       }

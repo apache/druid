@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment.nested;
 
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
@@ -31,9 +30,11 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.ColumnarDoublesSerializer;
 import org.apache.druid.segment.data.CompressionFactory;
 import org.apache.druid.segment.data.FixedIndexedWriter;
+import org.apache.druid.segment.serde.ColumnSerializerUtils;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
 import javax.annotation.Nullable;
+import java.io.File;
 import java.io.IOException;
 import java.nio.ByteOrder;
 
@@ -65,7 +66,7 @@ public class ScalarDoubleColumnSerializer extends ScalarNestedCommonFormatColumn
   }
 
   @Override
-  public void openDictionaryWriter() throws IOException
+  public void openDictionaryWriter(File segmentBaseDir) throws IOException
   {
     dictionaryWriter = new FixedIndexedWriter<>(
         segmentWriteOutMedium,
@@ -78,7 +79,7 @@ public class ScalarDoubleColumnSerializer extends ScalarNestedCommonFormatColumn
     dictionaryIdLookup = closer.register(
         new DictionaryIdLookup(
             name,
-            FileUtils.getTempDir(),
+            segmentBaseDir,
             null,
             null,
             dictionaryWriter,
@@ -129,16 +130,25 @@ public class ScalarDoubleColumnSerializer extends ScalarNestedCommonFormatColumn
   @Override
   protected void writeValueColumn(FileSmoosher smoosher) throws IOException
   {
-    writeInternal(smoosher, doublesSerializer, DOUBLE_VALUE_COLUMN_FILE_NAME);
+    writeInternal(smoosher, doublesSerializer, ColumnSerializerUtils.DOUBLE_VALUE_COLUMN_FILE_NAME);
   }
 
   @Override
   protected void writeDictionaryFile(FileSmoosher smoosher) throws IOException
   {
-    if (dictionaryIdLookup.getDoubleBuffer() != null) {
-      writeInternal(smoosher, dictionaryIdLookup.getDoubleBuffer(), DOUBLE_DICTIONARY_FILE_NAME);
+    if (dictionaryIdLookup.getDoubleBufferMapper() != null) {
+      copyFromTempSmoosh(smoosher, dictionaryIdLookup.getDoubleBufferMapper());
     } else {
-      writeInternal(smoosher, dictionaryWriter, DOUBLE_DICTIONARY_FILE_NAME);
+      writeInternal(smoosher, dictionaryWriter, ColumnSerializerUtils.DOUBLE_DICTIONARY_FILE_NAME);
     }
+  }
+
+  @Override
+  public int getCardinality()
+  {
+    if (writeDictionary) {
+      return dictionaryWriter.getCardinality();
+    }
+    return dictionaryIdLookup.getDoubleCardinality();
   }
 }

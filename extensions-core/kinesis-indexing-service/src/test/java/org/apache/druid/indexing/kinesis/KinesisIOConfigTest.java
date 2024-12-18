@@ -35,6 +35,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.segment.indexing.IOConfig;
 import org.hamcrest.CoreMatchers;
 import org.joda.time.DateTime;
+import org.joda.time.Duration;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -267,7 +268,8 @@ public class KinesisIOConfigTest
         "endpoint",
         2000,
         "awsAssumedRoleArn",
-        "awsExternalId"
+        "awsExternalId",
+        Duration.standardHours(2).getStandardMinutes()
     );
 
     final byte[] json = mapper.writeValueAsBytes(currentConfig);

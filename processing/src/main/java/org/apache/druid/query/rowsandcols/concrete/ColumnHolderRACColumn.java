@@ -91,7 +91,7 @@ public class ColumnHolderRACColumn implements Column, Closeable
       public boolean isNull(int rowNum)
       {
         offset.set(rowNum);
-        return valueSelector.isNull();
+        return valueSelector.getObject() == null;
       }
 
       @Nullable

@@ -73,7 +73,7 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
     this.cache = cache;
     this.cacheConfig = cacheConfig;
     this.query = query;
-    this.strategy = queryToolChest.getCacheStrategy(query);
+    this.strategy = queryToolChest.getCacheStrategy(query, objectMapper);
     this.populateResultCache = CacheUtil.isPopulateResultCache(
         query,
         strategy,
@@ -120,7 +120,7 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
         return Sequences.wrap(
             Sequences.map(
                 resultFromClient,
-                new Function<T, T>()
+                new Function<>()
                 {
                   @Override
                   public T apply(T input)

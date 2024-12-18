@@ -553,7 +553,7 @@ public class QuerySchedulerTest
     Assert.assertEquals(
         "Unable to provision, see the following errors:\n"
         + "\n"
-        + "1) Problem parsing object at prefix[druid.query.scheduler]: Cannot construct instance of `org.apache.druid.server.scheduling.ThresholdBasedQueryPrioritizationStrategy`, problem: periodThreshold, durationThreshold, or segmentCountThreshold must be set\n"
+        + "1) Problem parsing object at prefix[druid.query.scheduler]: Cannot construct instance of `org.apache.druid.server.scheduling.ThresholdBasedQueryPrioritizationStrategy`, problem: periodThreshold, durationThreshold, segmentCountThreshold or segmentRangeThreshold must be set\n"
         + " at [Source: UNKNOWN; line: -1, column: -1] (through reference chain: org.apache.druid.server.QuerySchedulerProvider[\"prioritization\"]).\n"
         + "\n"
         + "1 error",
@@ -667,12 +667,12 @@ public class QuerySchedulerTest
   {
     return new LazySequence<>(() -> {
       return new BaseSequence<>(
-          new BaseSequence.IteratorMaker<Integer, Iterator<Integer>>()
+          new BaseSequence.IteratorMaker<>()
           {
             @Override
             public Iterator<Integer> make()
             {
-              return new Iterator<Integer>()
+              return new Iterator<>()
               {
                 int rowCounter = 0;
 
@@ -705,12 +705,12 @@ public class QuerySchedulerTest
   {
     final int explodeAt = explodeAfter + 1;
     return new BaseSequence<>(
-        new BaseSequence.IteratorMaker<Integer, Iterator<Integer>>()
+        new BaseSequence.IteratorMaker<>()
         {
           @Override
           public Iterator<Integer> make()
           {
-            return new Iterator<Integer>()
+            return new Iterator<>()
             {
               int rowCounter = 0;
 

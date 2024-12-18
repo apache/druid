@@ -174,6 +174,16 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
   }
 
   /**
+   * Execute refresh on the broker in each cycle if CentralizedDatasourceSchema is enabled
+   * else if there are segments or datasources to be refreshed.
+   */
+  @Override
+  protected boolean shouldRefresh()
+  {
+    return centralizedDatasourceSchemaConfig.isEnabled() || super.shouldRefresh();
+  }
+
+  /**
    * Refreshes the set of segments in two steps:
    * <ul>
    *  <li>Polls the coordinator for the datasource schema.</li>
@@ -195,6 +205,11 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
     // prebuilt datasources
     // segmentMetadataInfo keys should be a superset of all other sets including datasources to refresh
     final Set<String> dataSourcesToQuery = new HashSet<>(segmentMetadataInfo.keySet());
+
+    // this is the complete set of datasources polled from the Coordinator
+    final Set<String> polledDatasources = queryDataSources();
+
+    dataSourcesToQuery.addAll(polledDatasources);
 
     log.debug("Querying schema for [%s] datasources from Coordinator.", dataSourcesToQuery);
 
@@ -227,14 +242,7 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
       // Remove those datasource for which we received schema from the Coordinator.
       dataSourcesToRebuild.removeAll(polledDataSourceMetadata.keySet());
 
-      if (centralizedDatasourceSchemaConfig.isEnabled()) {
-        // this is a hacky way to ensure refresh is executed even if there are no new segments to refresh
-        // once, CentralizedDatasourceSchema feature is GA, brokers should simply poll schema for all datasources
-        dataSourcesNeedingRebuild.addAll(segmentMetadataInfo.keySet());
-      } else {
-        dataSourcesNeedingRebuild.clear();
-      }
-      log.debug("DatasourcesNeedingRebuild are [%s]", dataSourcesNeedingRebuild);
+      dataSourcesNeedingRebuild.clear();
     }
 
     // Rebuild the datasources.
@@ -265,6 +273,23 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
   protected void removeSegmentAction(SegmentId segmentId)
   {
     // noop, no additional action needed when segment is removed.
+  }
+
+  private Set<String> queryDataSources()
+  {
+    Set<String> dataSources = new HashSet<>();
+
+    try {
+      Set<String> polled = FutureUtils.getUnchecked(coordinatorClient.fetchDataSourcesWithUsedSegments(), true);
+      if (polled != null) {
+        dataSources.addAll(polled);
+      }
+    }
+    catch (Exception e) {
+      log.debug(e, "Failed to query datasources from the Coordinator.");
+    }
+
+    return dataSources;
   }
 
   private Map<String, PhysicalDatasourceMetadata> queryDataSourceInformation(Set<String> dataSourcesToQuery)

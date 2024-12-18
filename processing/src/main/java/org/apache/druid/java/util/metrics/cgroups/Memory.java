@@ -37,8 +37,6 @@ public class Memory
   private static final Logger LOG = new Logger(Memory.class);
   private static final String CGROUP = "memory";
   private static final String CGROUP_MEMORY_FILE = "memory.stat";
-  private static final String MEMORY_USAGE_FILE = "memory.usage_in_bytes";
-  private static final String MEMORY_LIMIT_FILE = "memory.limit_in_bytes";
   private static final String CGROUP_MEMORY_NUMA_FILE = "memory.numa_stat";
   private final CgroupDiscoverer cgroupDiscoverer;
 
@@ -47,11 +45,11 @@ public class Memory
     this.cgroupDiscoverer = cgroupDiscoverer;
   }
 
-  public MemoryStat snapshot()
+  public MemoryStat snapshot(String memoryUsageFile, String memoryLimitFile)
   {
     final MemoryStat memoryStat = new MemoryStat();
-    memoryStat.usage = CgroupUtil.readLongValue(cgroupDiscoverer, CGROUP, MEMORY_USAGE_FILE, -1);
-    memoryStat.limit = CgroupUtil.readLongValue(cgroupDiscoverer, CGROUP, MEMORY_LIMIT_FILE, -1);
+    memoryStat.usage = CgroupUtil.readLongValue(cgroupDiscoverer, CGROUP, memoryUsageFile, -1);
+    memoryStat.limit = CgroupUtil.readLongValue(cgroupDiscoverer, CGROUP, memoryLimitFile, -1);
 
     try (final BufferedReader reader = Files.newBufferedReader(
         Paths.get(cgroupDiscoverer.discover(CGROUP).toString(), CGROUP_MEMORY_FILE)

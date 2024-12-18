@@ -20,7 +20,6 @@
 package org.apache.druid.segment;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.inject.ImplementedBy;
@@ -29,6 +28,7 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.utils.CollectionUtils;
@@ -53,12 +53,18 @@ public interface IndexMerger
   int INVALID_ROW = -1;
   int UNLIMITED_MAX_COLUMNS_TO_MERGE = -1;
 
+  /**
+   * Returns merged dimensions, not including {@link ColumnHolder#TIME_COLUMN_NAME}, from a set of indexes.
+   */
   static List<String> getMergedDimensionsFromQueryableIndexes(
       List<QueryableIndex> indexes,
       @Nullable DimensionsSpec dimensionsSpec
   )
   {
-    return getMergedDimensions(toIndexableAdapters(indexes), dimensionsSpec);
+    return getMergedDimensionsWithTime(toIndexableAdapters(indexes), dimensionsSpec)
+        .stream()
+        .filter(column -> !ColumnHolder.TIME_COLUMN_NAME.equals(column))
+        .collect(Collectors.toList());
   }
 
   static List<IndexableAdapter> toIndexableAdapters(List<QueryableIndex> indexes)
@@ -66,12 +72,16 @@ public interface IndexMerger
     return indexes.stream().map(QueryableIndexIndexableAdapter::new).collect(Collectors.toList());
   }
 
-  static List<String> getMergedDimensions(
+  /**
+   * Returns a merged list of dimensions, including {@link ColumnHolder#TIME_COLUMN_NAME}, that will be used
+   * to build {@link TimeAndDimsPointer}.
+   */
+  static List<String> getMergedDimensionsWithTime(
       List<IndexableAdapter> indexes,
       @Nullable DimensionsSpec dimensionsSpec
   )
   {
-    if (indexes.size() == 0) {
+    if (indexes.isEmpty()) {
       return ImmutableList.of();
     }
     List<String> commonDimOrder = getLongestSharedDimOrder(indexes, dimensionsSpec);
@@ -84,6 +94,9 @@ public interface IndexMerger
     }
   }
 
+  /**
+   * Gets the longest shared dimension order, including both {@link ColumnHolder#TIME_COLUMN_NAME} and dimensions.
+   */
   @Nullable
   static List<String> getLongestSharedDimOrder(
       List<IndexableAdapter> indexes,
@@ -93,10 +106,10 @@ public interface IndexMerger
     int maxSize = 0;
     Iterable<String> orderingCandidate = null;
     for (IndexableAdapter index : indexes) {
-      int iterSize = index.getDimensionNames().size();
+      int iterSize = index.getDimensionNames(true).size();
       if (iterSize > maxSize) {
         maxSize = iterSize;
-        orderingCandidate = index.getDimensionNames();
+        orderingCandidate = index.getDimensionNames(true);
       }
     }
 
@@ -113,11 +126,16 @@ public interface IndexMerger
         log.info("Cannot fall back on dimension ordering from ingestionSpec as it does not exist");
         return null;
       }
-      List<String> candidate = new ArrayList<>(dimensionsSpec.getDimensionNames());
+      List<String> candidate = new ArrayList<>();
+      if (!dimensionsSpec.getDimensionNames().contains(ColumnHolder.TIME_COLUMN_NAME)) {
+        candidate.add(ColumnHolder.TIME_COLUMN_NAME);
+      }
+      candidate.addAll(dimensionsSpec.getDimensionNames());
       // Remove all dimensions that does not exist within the indexes from the candidate
-      Set<String> allValidDimensions = indexes.stream()
-                                         .flatMap(indexableAdapter -> indexableAdapter.getDimensionNames().stream())
-                                         .collect(Collectors.toSet());
+      Set<String> allValidDimensions =
+          indexes.stream()
+                 .flatMap(indexableAdapter -> indexableAdapter.getDimensionNames(true).stream())
+                 .collect(Collectors.toSet());
       candidate.retainAll(allValidDimensions);
       // Sanity check that there is no extra/missing columns
       if (candidate.size() != allValidDimensions.size()) {
@@ -141,7 +159,7 @@ public interface IndexMerger
   {
     for (IndexableAdapter index : indexes) {
       Iterator<String> candidateIter = orderingCandidate.iterator();
-      for (String matchDim : index.getDimensionNames()) {
+      for (String matchDim : index.getDimensionNames(true)) {
         boolean matched = false;
         while (candidateIter.hasNext()) {
           String nextDim = candidateIter.next();
@@ -158,21 +176,15 @@ public interface IndexMerger
     return true;
   }
 
+  /**
+   * Returns {@link ColumnHolder#TIME_COLUMN_NAME} followed by a merged list of dimensions in lexicographic order.
+   */
   static List<String> getLexicographicMergedDimensions(List<IndexableAdapter> indexes)
   {
-    return mergeIndexed(
-        Lists.transform(
-            indexes,
-            new Function<IndexableAdapter, Iterable<String>>()
-            {
-              @Override
-              public Iterable<String> apply(@Nullable IndexableAdapter input)
-              {
-                return input.getDimensionNames();
-              }
-            }
-        )
-    );
+    final List<String> retVal = new ArrayList<>();
+    retVal.add(ColumnHolder.TIME_COLUMN_NAME);
+    retVal.addAll(mergeIndexed(Lists.transform(indexes, input -> input.getDimensionNames(false))));
+    return retVal;
   }
 
   static <T extends Comparable<? super T>> ArrayList<T> mergeIndexed(List<Iterable<T>> indexedLists)
@@ -342,7 +354,7 @@ public interface IndexMerger
       // type of column doesn't have any kind of special per-index encoding that needs to be converted to the "global"
       // encoding. E. g. it's always true for subclasses of NumericDimensionMergerV9.
       //noinspection ObjectEquality
-      anySelectorChanged |= convertedDimensionSelector != sourceDimensionSelector;
+      anySelectorChanged = anySelectorChanged || convertedDimensionSelector != sourceDimensionSelector;
 
       convertedMarkedDimensionSelectors[i] = mergers.get(i).convertSortedSegmentRowValuesToMergedRowValues(
           indexNumber,

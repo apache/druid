@@ -27,6 +27,7 @@ import io.fabric8.kubernetes.api.model.ObjectMeta;
 import io.fabric8.kubernetes.api.model.PodTemplate;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.k8s.overlord.taskadapter.PodTemplateWithName;
 import org.apache.druid.segment.TestHelper;
 import org.junit.Assert;
 import org.junit.Before;
@@ -97,7 +98,10 @@ public class SelectorBasedPodTemplateSelectStrategyTest
     List<Selector> emptySelectors = Collections.emptyList();
     SelectorBasedPodTemplateSelectStrategy strategy = new SelectorBasedPodTemplateSelectStrategy(emptySelectors);
     Task task = NoopTask.create();
-    Assert.assertEquals("base", strategy.getPodTemplateForTask(task, templates).getMetadata().getName());
+    PodTemplateWithName podTemplateWithName = strategy.getPodTemplateForTask(task, templates);
+    Assert.assertEquals("base", podTemplateWithName.getName());
+    Assert.assertEquals("base", podTemplateWithName.getPodTemplate().getMetadata().getName());
+
   }
 
   @Test
@@ -107,7 +111,9 @@ public class SelectorBasedPodTemplateSelectStrategyTest
     List<Selector> selectors = Collections.singletonList(noMatchSelector);
     SelectorBasedPodTemplateSelectStrategy strategy = new SelectorBasedPodTemplateSelectStrategy(selectors);
     Task task = NoopTask.create();
-    Assert.assertEquals("base", strategy.getPodTemplateForTask(task, templates).getMetadata().getName());
+    PodTemplateWithName podTemplateWithName = strategy.getPodTemplateForTask(task, templates);
+    Assert.assertEquals("base", podTemplateWithName.getName());
+    Assert.assertEquals("base", podTemplateWithName.getPodTemplate().getMetadata().getName());
   }
 
   @Test
@@ -124,7 +130,9 @@ public class SelectorBasedPodTemplateSelectStrategyTest
     );
     SelectorBasedPodTemplateSelectStrategy strategy = new SelectorBasedPodTemplateSelectStrategy(selectors);
     Task task = NoopTask.create();
-    Assert.assertEquals("match", strategy.getPodTemplateForTask(task, templates).getMetadata().getName());
+    PodTemplateWithName podTemplateWithName = strategy.getPodTemplateForTask(task, templates);
+    Assert.assertEquals("match", podTemplateWithName.getName());
+    Assert.assertEquals("match", podTemplateWithName.getPodTemplate().getMetadata().getName());
   }
 
   @Test

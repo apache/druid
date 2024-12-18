@@ -26,7 +26,7 @@ import {
   SqlTable,
   SqlWithPart,
   T,
-} from '@druid-toolkit/query';
+} from 'druid-query-toolkit';
 
 import { filterMap, oneOf } from '../../utils';
 import type { ExternalConfig } from '../external-config/external-config';

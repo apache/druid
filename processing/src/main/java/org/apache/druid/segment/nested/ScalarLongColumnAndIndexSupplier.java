@@ -49,8 +49,10 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.TypeSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
+import org.apache.druid.segment.data.ColumnarInts;
 import org.apache.druid.segment.data.ColumnarLongs;
 import org.apache.druid.segment.data.CompressedColumnarLongsSupplier;
+import org.apache.druid.segment.data.CompressedVSizeColumnarIntsSupplier;
 import org.apache.druid.segment.data.FixedIndexed;
 import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.VByte;
@@ -69,6 +71,7 @@ import org.apache.druid.segment.index.semantic.NumericRangeIndexes;
 import org.apache.druid.segment.index.semantic.StringValueSetIndexes;
 import org.apache.druid.segment.index.semantic.ValueIndexes;
 import org.apache.druid.segment.index.semantic.ValueSetIndexes;
+import org.apache.druid.segment.serde.ColumnSerializerUtils;
 import org.apache.druid.segment.serde.NestedCommonFormatColumnPartSerde;
 
 import javax.annotation.Nonnull;
@@ -89,7 +92,8 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
       BitmapSerdeFactory bitmapSerdeFactory,
       ByteBuffer bb,
       ColumnBuilder columnBuilder,
-      ColumnConfig columnConfig
+      ColumnConfig columnConfig,
+      @Nullable ScalarLongColumnAndIndexSupplier parent
   )
   {
     final byte version = bb.get();
@@ -101,20 +105,20 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
 
         final SmooshedFileMapper mapper = columnBuilder.getFileMapper();
 
-        final ByteBuffer longDictionaryBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
+        final ByteBuffer encodedValuesBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
             mapper,
             columnName,
-            NestedCommonFormatColumnSerializer.LONG_DICTIONARY_FILE_NAME
+            ColumnSerializerUtils.ENCODED_VALUE_COLUMN_FILE_NAME
         );
         final ByteBuffer longsValueColumn = NestedCommonFormatColumnPartSerde.loadInternalFile(
             mapper,
             columnName,
-            NestedCommonFormatColumnSerializer.LONG_VALUE_COLUMN_FILE_NAME
+            ColumnSerializerUtils.LONG_VALUE_COLUMN_FILE_NAME
         );
         final ByteBuffer valueIndexBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
             mapper,
             columnName,
-            NestedCommonFormatColumnSerializer.BITMAP_INDEX_FILE_NAME
+            ColumnSerializerUtils.BITMAP_INDEX_FILE_NAME
         );
         GenericIndexed<ImmutableBitmap> rBitmaps = GenericIndexed.read(
             valueIndexBuffer,
@@ -122,11 +126,28 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
             columnBuilder.getFileMapper()
         );
 
-        final Supplier<FixedIndexed<Long>> longDictionarySupplier = FixedIndexed.read(
-            longDictionaryBuffer,
-            ColumnType.LONG.getStrategy(),
+
+        final Supplier<FixedIndexed<Long>> longDictionarySupplier;
+        if (parent != null) {
+          longDictionarySupplier = parent.longDictionarySupplier;
+        } else {
+          final ByteBuffer longDictionaryBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
+              mapper,
+              columnName,
+              ColumnSerializerUtils.LONG_DICTIONARY_FILE_NAME
+          );
+          longDictionarySupplier = FixedIndexed.read(
+              longDictionaryBuffer,
+              ColumnType.LONG.getStrategy(),
+              byteOrder,
+              Long.BYTES
+          );
+        }
+
+        final CompressedVSizeColumnarIntsSupplier encodedCol = CompressedVSizeColumnarIntsSupplier.fromByteBuffer(
+            encodedValuesBuffer,
             byteOrder,
-            Long.BYTES
+            columnBuilder.getFileMapper()
         );
 
         final Supplier<ColumnarLongs> longs = CompressedColumnarLongsSupplier.fromByteBuffer(
@@ -135,6 +156,7 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
         );
         return new ScalarLongColumnAndIndexSupplier(
             longDictionarySupplier,
+            encodedCol,
             longs,
             rBitmaps,
             bitmapSerdeFactory.getBitmapFactory(),
@@ -151,6 +173,7 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
 
   private final Supplier<FixedIndexed<Long>> longDictionarySupplier;
 
+  private final Supplier<ColumnarInts> encodedValuesSupplier;
   private final Supplier<ColumnarLongs> valueColumnSupplier;
 
   private final GenericIndexed<ImmutableBitmap> valueIndexes;
@@ -162,6 +185,7 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
 
   private ScalarLongColumnAndIndexSupplier(
       Supplier<FixedIndexed<Long>> longDictionarySupplier,
+      Supplier<ColumnarInts> encodedValuesSupplier,
       Supplier<ColumnarLongs> valueColumnSupplier,
       GenericIndexed<ImmutableBitmap> valueIndexes,
       BitmapFactory bitmapFactory,
@@ -169,6 +193,7 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
   )
   {
     this.longDictionarySupplier = longDictionarySupplier;
+    this.encodedValuesSupplier = encodedValuesSupplier;
     this.valueColumnSupplier = valueColumnSupplier;
     this.valueIndexes = valueIndexes;
     this.bitmapFactory = bitmapFactory;
@@ -181,8 +206,10 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
   {
     return new ScalarLongColumn(
         longDictionarySupplier.get(),
+        encodedValuesSupplier,
         valueColumnSupplier.get(),
-        nullValueBitmap
+        nullValueBitmap,
+        bitmapFactory
     );
   }
 
@@ -246,6 +273,12 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
         final FixedIndexed<Long> dictionary = longDictionarySupplier.get();
 
         @Override
+        public int estimatedComputeCost()
+        {
+          return 1;
+        }
+
+        @Override
         public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
         {
           final int id = dictionary.indexOf(longValue);
@@ -288,7 +321,7 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
         final List<Long> tailSet;
         final List<Long> baseSet = (List<Long>) sortedValues;
 
-        if (sortedValues.size() >= ValueSetIndexes.SIZE_WORTH_CHECKING_MIN) {
+        if (sortedValues.size() >= SIZE_WORTH_CHECKING_MIN) {
           final long minValueInColumn = dictionary.get(0) == null ? dictionary.get(1) : dictionary.get(0);
           final int position = Collections.binarySearch(
               sortedValues,
@@ -299,11 +332,12 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
         } else {
           tailSet = baseSet;
         }
-        if (tailSet.size() > ValueSetIndexes.SORTED_SCAN_RATIO_THRESHOLD * dictionary.size()) {
+        if (tailSet.size() > SORTED_SCAN_RATIO_THRESHOLD * dictionary.size()) {
           return ValueSetIndexes.buildBitmapColumnIndexFromSortedIteratorScan(
               bitmapFactory,
               ColumnType.LONG.getNullableStrategy(),
               tailSet,
+              tailSet.size(),
               dictionary,
               valueIndexes,
               unknownsIndex
@@ -313,6 +347,7 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
         return ValueSetIndexes.buildBitmapColumnIndexFromSortedIteratorBinarySearch(
             bitmapFactory,
             tailSet,
+            tailSet.size(),
             dictionary,
             valueIndexes,
             unknownsIndex
@@ -325,6 +360,7 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
                 sortedValues,
                 DimensionHandlerUtils::convertObjectToLong
             ),
+            sortedValues.size(),
             dictionary,
             valueIndexes,
             unknownsIndex
@@ -345,6 +381,11 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
       final Long longValue = GuavaUtils.tryParseLong(value);
       return new SimpleBitmapColumnIndex()
       {
+        @Override
+        public int estimatedComputeCost()
+        {
+          return 1;
+        }
 
         @Override
         public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
@@ -389,6 +430,12 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
     {
       return new SimpleImmutableBitmapDelegatingIterableIndex()
       {
+        @Override
+        public int estimatedComputeCost()
+        {
+          return values.size();
+        }
+
         @Override
         public Iterable<ImmutableBitmap> getBitmapIterable()
         {
@@ -509,7 +556,7 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
         @Override
         public Iterable<ImmutableBitmap> getBitmapIterable()
         {
-          return () -> new Iterator<ImmutableBitmap>()
+          return () -> new Iterator<>()
           {
             final IntIterator rangeIterator = IntListUtils.fromTo(startIndex, endIndex).iterator();
 
@@ -549,13 +596,12 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
         @Override
         public Iterable<ImmutableBitmap> getBitmapIterable(boolean includeUnknown)
         {
-          return () -> new Iterator<ImmutableBitmap>()
+          return () -> new Iterator<>()
           {
             final Iterator<Long> iterator = dictionary.iterator();
             final DruidLongPredicate longPredicate = matcherFactory.makeLongPredicate();
 
-            int next;
-            int index = 0;
+            int index = -1;
             boolean nextSet = false;
 
             @Override
@@ -578,13 +624,14 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
               }
               nextSet = false;
 
-              return getBitmap(next);
+              return getBitmap(index);
             }
 
             private void findNext()
             {
               while (!nextSet && iterator.hasNext()) {
                 Long nextValue = iterator.next();
+                index++;
                 if (nextValue == null) {
                   if (NullHandling.sqlCompatible()) {
                     nextSet = longPredicate.applyNull().matches(includeUnknown);
@@ -594,10 +641,6 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
                 } else {
                   nextSet = longPredicate.applyLong(nextValue).matches(includeUnknown);
                 }
-                if (nextSet) {
-                  next = index;
-                }
-                index++;
               }
             }
           };

@@ -19,17 +19,23 @@
 
 package org.apache.druid.msq.indexing;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.Futures;
 import com.google.inject.Injector;
+import com.google.inject.Key;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.msq.exec.Worker;
+import org.apache.druid.msq.guice.MultiStageQuery;
 import org.apache.druid.rpc.ServiceLocation;
 import org.apache.druid.rpc.ServiceLocations;
 import org.apache.druid.rpc.ServiceLocator;
+import org.apache.druid.storage.NilStorageConnector;
+import org.apache.druid.storage.StorageConnectorProvider;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
+import org.mockito.quality.Strictness;
 
 import java.util.Collections;
 
@@ -43,10 +49,20 @@ public class IndexerWorkerContextTest
     final Injector injectorMock = Mockito.mock(Injector.class);
     Mockito.when(injectorMock.getInstance(SegmentCacheManagerFactory.class))
            .thenReturn(Mockito.mock(SegmentCacheManagerFactory.class));
+    Mockito.when(injectorMock.getInstance(Key.get(StorageConnectorProvider.class, MultiStageQuery.class)))
+           .thenReturn(defaultTempDir -> NilStorageConnector.getInstance());
+
+    final MSQWorkerTask task =
+        Mockito.mock(MSQWorkerTask.class, Mockito.withSettings().strictness(Strictness.STRICT_STUBS));
+    Mockito.when(task.getContext()).thenReturn(ImmutableMap.of());
 
     indexerWorkerContext = new IndexerWorkerContext(
+        task,
         Mockito.mock(TaskToolbox.class),
         injectorMock,
+        null,
+        null,
+        null,
         null,
         null,
         null,

@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.rel.RelNode;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -31,6 +32,7 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.LookupDataSource;
+import org.apache.druid.query.Order;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
@@ -91,8 +93,8 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                     )
                 )
                 .columns("v0")
+                .columnTypes(ColumnType.STRING)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                .legacy(false)
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
         ),
@@ -125,8 +127,8 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                     )
                 )
                 .columns("v0")
+                .columnTypes(ColumnType.STRING_ARRAY)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                .legacy(false)
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
         ),
@@ -175,8 +177,8 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                 )
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("EXPR$0", "EXPR$1")
+                .columnTypes(ColumnType.STRING, ColumnType.STRING)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                .legacy(false)
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
         ),
@@ -203,8 +205,8 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                 )
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("EXPR$0", "EXPR$1")
+                .columnTypes(ColumnType.STRING, ColumnType.STRING)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                .legacy(false)
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
         ),
@@ -231,8 +233,8 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                 )
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("EXPR$0", "EXPR$1")
+                .columnTypes(ColumnType.LONG, ColumnType.STRING)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                .legacy(false)
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
         ),
@@ -269,8 +271,8 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                 )
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("EXPR$0", "EXPR$1", "EXPR$2", "EXPR$3", "EXPR$4")
+                .columnTypes(ColumnType.LONG, ColumnType.LONG, ColumnType.LONG, ColumnType.LONG, ColumnType.LONG)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                .legacy(false)
                 .build()
         ),
         ImmutableList.of(
@@ -303,7 +305,8 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                                 .build()
                 ))
                 .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Intervals.ETERNITY)))
-                .columns(ImmutableList.of("EXPR$0", "EXPR$1", "EXPR$2"))
+                .columns("EXPR$0", "EXPR$1", "EXPR$2")
+                .columnTypes(ColumnType.LONG, ColumnType.LONG, ColumnType.LONG)
                 .build()
         ),
         ImmutableList.of(
@@ -326,7 +329,8 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                 .dataSource(CalciteTests.DATASOURCE1)
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .virtualColumns(expressionVirtualColumn("v0", "2", ColumnType.LONG))
-                .columns("dim1", "v0")
+                .columns("v0", "dim1")
+                .columnTypes(ColumnType.LONG, ColumnType.STRING)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .limit(1)
                 .context(QUERY_CONTEXT_DEFAULT)
@@ -477,7 +481,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
             + "BITWISE_COMPLEMENT(l1),\n"
             + "BITWISE_SHIFT_LEFT(l1, 2),\n"
             + "BITWISE_SHIFT_RIGHT(l1, 2),\n"
-            + "BITWISE_CONVERT_DOUBLE_TO_LONG_BITS(d1),\n"
+            + "BITWISE_CONVERT_DOUBLE_TO_LONG_BITS(dbl1),\n"
             + "BITWISE_CONVERT_LONG_BITS_TO_DOUBLE(l1)\n"
             + "FROM numfoo",
         ImmutableList.of(
@@ -485,6 +489,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                 .dataSource(CalciteTests.DATASOURCE3)
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("v0", "v1", "v2", "v3", "v4", "v5", "v6", "v7")
+                .columnTypes(ColumnType.LONG, ColumnType.LONG, ColumnType.LONG, ColumnType.LONG, ColumnType.LONG, ColumnType.LONG, ColumnType.LONG, ColumnType.DOUBLE)
                 .virtualColumns(
                     expressionVirtualColumn("v0", "bitwiseAnd(\"l1\",\"l2\")", ColumnType.LONG),
                     expressionVirtualColumn("v1", "bitwiseOr(\"l1\",\"l2\")", ColumnType.LONG),
@@ -492,12 +497,11 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                     expressionVirtualColumn("v3", "bitwiseComplement(\"l1\")", ColumnType.LONG),
                     expressionVirtualColumn("v4", "bitwiseShiftLeft(\"l1\",2)", ColumnType.LONG),
                     expressionVirtualColumn("v5", "bitwiseShiftRight(\"l1\",2)", ColumnType.LONG),
-                    expressionVirtualColumn("v6", "bitwiseConvertDoubleToLongBits(\"d1\")", ColumnType.LONG),
+                    expressionVirtualColumn("v6", "bitwiseConvertDoubleToLongBits(\"dbl1\")", ColumnType.LONG),
                     expressionVirtualColumn("v7", "bitwiseConvertLongBitsToDouble(\"l1\")", ColumnType.DOUBLE)
                 )
                 .context(QUERY_CONTEXT_DEFAULT)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                .legacy(false)
                 .build()
         ),
         expected
@@ -525,6 +529,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                   )
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .columns("v0", "v1", "v2", "v3", "v4")
+                  .columnTypes(ColumnType.LONG, ColumnType.DOUBLE, ColumnType.DOUBLE, ColumnType.DOUBLE, ColumnType.LONG)
                   .virtualColumns(
                       expressionVirtualColumn("v0", NullHandling.sqlCompatible() ? "null" : "0", ColumnType.LONG),
                       expressionVirtualColumn("v1", "4.0", ColumnType.DOUBLE),
@@ -533,7 +538,6 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                       expressionVirtualColumn("v4", "5", ColumnType.LONG)
                   )
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                  .legacy(false)
                   .context(context)
                   .build()
         ),
@@ -575,7 +579,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
         "SELECT\n"
             + "SAFE_DIVIDE(f1, f2),\n"
             + "SAFE_DIVIDE(l1, l2),\n"
-            + "SAFE_DIVIDE(d2, d1),\n"
+            + "SAFE_DIVIDE(dbl2, dbl1),\n"
             + "SAFE_DIVIDE(l1, f1)\n"
             + "FROM numfoo",
         ImmutableList.of(
@@ -583,15 +587,15 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                 .dataSource(CalciteTests.DATASOURCE3)
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("v0", "v1", "v2", "v3")
+                .columnTypes(ColumnType.FLOAT, ColumnType.LONG, ColumnType.DOUBLE, ColumnType.FLOAT)
                 .virtualColumns(
                     expressionVirtualColumn("v0", "safe_divide(\"f1\",\"f2\")", ColumnType.FLOAT),
                     expressionVirtualColumn("v1", "safe_divide(\"l1\",\"l2\")", ColumnType.LONG),
-                    expressionVirtualColumn("v2", "safe_divide(\"d2\",\"d1\")", ColumnType.DOUBLE),
+                    expressionVirtualColumn("v2", "safe_divide(\"dbl2\",\"dbl1\")", ColumnType.DOUBLE),
                     expressionVirtualColumn("v3", "safe_divide(\"l1\",\"f1\")", ColumnType.FLOAT)
                 )
                 .context(QUERY_CONTEXT_DEFAULT)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                .legacy(false)
                 .build()
         ),
         expected
@@ -604,36 +608,10 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
     // Skip vectorization since otherwise the "context" will change for each subtest.
     skipVectorize();
     final String query = "EXPLAIN PLAN FOR SELECT 1 + 1";
-    final String explanation = "[{"
-                               + "\"query\":{\"queryType\":\"scan\","
-                               + "\"dataSource\":{\"type\":\"inline\",\"columnNames\":[\"EXPR$0\"],\"columnTypes\":[\"LONG\"],\"rows\":[[2]]},"
-                               + "\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},"
-                               + "\"resultFormat\":\"compactedList\","
-                               + "\"columns\":[\"EXPR$0\"],"
-                               + "\"legacy\":false,"
-                               + "\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},"
-                               + "\"columnTypes\":[\"LONG\"],\"granularity\":{\"type\":\"all\"}},"
-                               + "\"signature\":[{\"name\":\"EXPR$0\",\"type\":\"LONG\"}],"
-                               + "\"columnMappings\":[{\"queryColumn\":\"EXPR$0\",\"outputColumn\":\"EXPR$0\"}]"
-                               + "}]";
-    final String legacyExplanation = "DruidQueryRel(query=[{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"inline\",\"columnNames\":[\"EXPR$0\"],\"columnTypes\":[\"LONG\"],\"rows\":[[2]]},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"resultFormat\":\"compactedList\",\"columns\":[\"EXPR$0\"],\"legacy\":false,\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},"
-        + "\"columnTypes\":[\"LONG\"],\"granularity\":{\"type\":\"all\"}}], signature=[{EXPR$0:LONG}])\n";
+    final String explanation = "[{\"query\":{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"inline\",\"columnNames\":[\"EXPR$0\"],\"columnTypes\":[\"LONG\"],\"rows\":[[2]]},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"resultFormat\":\"compactedList\",\"columns\":[\"EXPR$0\"],\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},\"columnTypes\":[\"LONG\"],\"granularity\":{\"type\":\"all\"},\"legacy\":false},\"signature\":[{\"name\":\"EXPR$0\",\"type\":\"LONG\"}],\"columnMappings\":[{\"queryColumn\":\"EXPR$0\",\"outputColumn\":\"EXPR$0\"}]}]";
     final String resources = "[]";
     final String attributes = "{\"statementType\":\"SELECT\"}";
 
-    testQuery(
-        PLANNER_CONFIG_LEGACY_QUERY_EXPLAIN,
-        query,
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
-        ImmutableList.of(),
-        ImmutableList.of(
-            new Object[]{
-                legacyExplanation,
-                resources,
-                attributes
-            }
-        )
-    );
     testQuery(
         PLANNER_CONFIG_NATIVE_QUERY_EXPLAIN,
         query,
@@ -653,7 +631,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   public void testSelectStarWithDimFilter()
   {
     testQuery(
-        PLANNER_CONFIG_DEFAULT_NO_COMPLEX_SERDE,
+        PLANNER_CONFIG_DEFAULT,
         QUERY_CONTEXT_DEFAULT,
         "SELECT * FROM druid.foo WHERE dim1 > 'd' OR dim2 = 'a'",
         CalciteTests.REGULAR_USER_AUTH_RESULT,
@@ -667,15 +645,16 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                         equality("dim2", "a", ColumnType.STRING)
                     )
                 )
-                .columns("__time", "cnt", "dim1", "dim2", "dim3", "m1", "m2", "unique_dim1")
+                .columns("__time", "dim1", "dim2", "dim3", "cnt", "m1", "m2", "unique_dim1")
+                .columnTypes(ColumnType.LONG, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.LONG, ColumnType.FLOAT, ColumnType.DOUBLE, ColumnType.ofComplex("hyperUnique"))
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
         ),
         ImmutableList.of(
-            new Object[]{timestamp("2000-01-01"), "", "a", "[\"a\",\"b\"]", 1L, 1.0f, 1.0d, HLLC_STRING},
-            new Object[]{timestamp("2001-01-01"), "1", "a", "", 1L, 4.0f, 4.0d, HLLC_STRING},
-            new Object[]{timestamp("2001-01-02"), "def", "abc", NULL_STRING, 1L, 5.0f, 5.0d, HLLC_STRING}
+            new Object[]{timestamp("2000-01-01"), "", "a", "[\"a\",\"b\"]", 1L, 1.0f, 1.0d, "\"AQAAAEAAAA==\""},
+            new Object[]{timestamp("2001-01-01"), "1", "a", "", 1L, 4.0f, 4.0d, "\"AQAAAQAAAAFREA==\""},
+            new Object[]{timestamp("2001-01-02"), "def", "abc", NULL_STRING, 1L, 5.0f, 5.0d, "\"AQAAAQAAAACyEA==\""}
         )
     );
   }
@@ -683,6 +662,9 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSelectDistinctWithCascadeExtractionFilter()
   {
+    if (NullHandling.sqlCompatible()) {
+      cannotVectorizeUnlessFallback();
+    }
     testQuery(
         "SELECT distinct dim1 FROM druid.foo WHERE substring(substring(dim1, 2), 1, 1) = 'e' OR dim2 = 'a'",
         ImmutableList.of(
@@ -727,6 +709,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSelectDistinctWithStrlenFilter()
   {
+    cannotVectorizeUnlessFallback();
     testQuery(
         "SELECT distinct dim1 FROM druid.foo "
             + "WHERE CHARACTER_LENGTH(dim1) = 3 OR CAST(CHARACTER_LENGTH(dim1) AS varchar) = 3",
@@ -895,8 +878,8 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                 )
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("dim2")
+                .columnTypes(ColumnType.STRING)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                .legacy(false)
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
         ),
@@ -921,8 +904,8 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                 )
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("dim2")
+                .columnTypes(ColumnType.STRING)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                .legacy(false)
                 .build()
         ),
         ImmutableList.of()
@@ -946,8 +929,8 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                 )
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("dim2")
+                .columnTypes(ColumnType.STRING)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                .legacy(false)
                 .build()
         ),
         ImmutableList.of()
@@ -1010,9 +993,9 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                     )
                 )
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .columns("CURRENT_DATE", "CURRENT_TIMESTAMP", "EXPR$1", "EXPR$2", "EXPR$3", "EXPR$4", "EXPR$6")
+                .columns("CURRENT_TIMESTAMP", "EXPR$1", "EXPR$2", "EXPR$3", "EXPR$4", "CURRENT_DATE", "EXPR$6")
+                .columnTypes(ColumnType.LONG, ColumnType.LONG, ColumnType.LONG, ColumnType.LONG, ColumnType.LONG, ColumnType.LONG, ColumnType.LONG)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                .legacy(false)
                 .context(context)
                 .build()
         ),
@@ -1140,6 +1123,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                 .dataSource(new LookupDataSource("lookyloo"))
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("k", "v")
+                .columnTypes(ColumnType.STRING, ColumnType.STRING)
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
         ),
@@ -1156,7 +1140,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   public void testSelectStar()
   {
     testQuery(
-        PLANNER_CONFIG_DEFAULT_NO_COMPLEX_SERDE,
+        PLANNER_CONFIG_DEFAULT,
         QUERY_CONTEXT_DEFAULT,
         "SELECT * FROM druid.foo",
         CalciteTests.REGULAR_USER_AUTH_RESULT,
@@ -1164,18 +1148,19 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
             newScanQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE1)
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .columns("__time", "cnt", "dim1", "dim2", "dim3", "m1", "m2", "unique_dim1")
+                .columns("__time", "dim1", "dim2", "dim3", "cnt", "m1", "m2", "unique_dim1")
+                .columnTypes(ColumnType.LONG, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.LONG, ColumnType.FLOAT, ColumnType.DOUBLE, ColumnType.ofComplex("hyperUnique"))
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
         ),
         ImmutableList.of(
-            new Object[]{timestamp("2000-01-01"), "", "a", "[\"a\",\"b\"]", 1L, 1f, 1.0, HLLC_STRING},
-            new Object[]{timestamp("2000-01-02"), "10.1", NULL_STRING, "[\"b\",\"c\"]", 1L, 2f, 2.0, HLLC_STRING},
-            new Object[]{timestamp("2000-01-03"), "2", "", "d", 1L, 3f, 3.0, HLLC_STRING},
-            new Object[]{timestamp("2001-01-01"), "1", "a", "", 1L, 4f, 4.0, HLLC_STRING},
-            new Object[]{timestamp("2001-01-02"), "def", "abc", NULL_STRING, 1L, 5f, 5.0, HLLC_STRING},
-            new Object[]{timestamp("2001-01-03"), "abc", NULL_STRING, NULL_STRING, 1L, 6f, 6.0, HLLC_STRING}
+            new Object[]{timestamp("2000-01-01"), "", "a", "[\"a\",\"b\"]", 1L, 1f, 1.0, "\"AQAAAEAAAA==\""},
+            new Object[]{timestamp("2000-01-02"), "10.1", NULL_STRING, "[\"b\",\"c\"]", 1L, 2f, 2.0, "\"AQAAAQAAAAHNBA==\""},
+            new Object[]{timestamp("2000-01-03"), "2", "", "d", 1L, 3f, 3.0, "\"AQAAAQAAAAOzAg==\""},
+            new Object[]{timestamp("2001-01-01"), "1", "a", "", 1L, 4f, 4.0, "\"AQAAAQAAAAFREA==\""},
+            new Object[]{timestamp("2001-01-02"), "def", "abc", NULL_STRING, 1L, 5f, 5.0, "\"AQAAAQAAAACyEA==\""},
+            new Object[]{timestamp("2001-01-03"), "abc", NULL_STRING, NULL_STRING, 1L, 6f, 6.0, "\"AQAAAQAAAAEkAQ==\""}
         )
     );
   }
@@ -1196,7 +1181,8 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
             newScanQueryBuilder()
                 .dataSource(CalciteTests.FORBIDDEN_DATASOURCE)
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .columns("__time", "cnt", "dim1", "dim2", "m1", "m2", "unique_dim1")
+                .columns("__time", "dim1", "dim2", "cnt", "m1", "m2", "unique_dim1")
+                .columnTypes(ColumnType.LONG, ColumnType.STRING, ColumnType.STRING, ColumnType.LONG, ColumnType.FLOAT, ColumnType.DOUBLE, ColumnType.ofComplex("hyperUnique"))
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
@@ -1246,6 +1232,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                 )
                 .filters(equality("dim2", "a", ColumnType.STRING))
                 .columns("__time", "v0", "v1")
+                .columnTypes(ColumnType.LONG, ColumnType.STRING, ColumnType.STRING)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
@@ -1278,6 +1265,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                 .filters(equality("dim2", "a", ColumnType.STRING))
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("__time", "dim1", "dim2", "m1")
+                .columnTypes(ColumnType.LONG, ColumnType.STRING, ColumnType.STRING, ColumnType.FLOAT)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
@@ -1302,6 +1290,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .filters(equality("dim2", "a", ColumnType.STRING))
                 .columns("__time", "dim1", "dim2", "m1")
+                .columnTypes(ColumnType.LONG, ColumnType.STRING, ColumnType.STRING, ColumnType.FLOAT)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
@@ -1344,34 +1333,10 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
     skipVectorize();
 
     final String query = "EXPLAIN PLAN FOR SELECT * FROM druid.foo";
-    final String legacyExplanation = "DruidQueryRel(query=[{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"resultFormat\":\"compactedList\",\"columns\":[\"__time\",\"cnt\",\"dim1\",\"dim2\",\"dim3\",\"m1\",\"m2\",\"unique_dim1\"],\"legacy\":false,\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},\"columnTypes\":[\"LONG\",\"LONG\",\"STRING\",\"STRING\",\"STRING\",\"FLOAT\",\"DOUBLE\",\"COMPLEX<hyperUnique>\"],\"granularity\":{\"type\":\"all\"}}], signature=[{__time:LONG, dim1:STRING, dim2:STRING, dim3:STRING, cnt:LONG, m1:FLOAT, m2:DOUBLE, unique_dim1:COMPLEX<hyperUnique>}])\n";
-    final String explanation = "[{"
-                               + "\"query\":{\"queryType\":\"scan\","
-                               + "\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},"
-                               + "\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},"
-                               + "\"resultFormat\":\"compactedList\","
-                               + "\"columns\":[\"__time\",\"cnt\",\"dim1\",\"dim2\",\"dim3\",\"m1\",\"m2\",\"unique_dim1\"],"
-                               + "\"legacy\":false,"
-                               + "\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},"
-                               + "\"columnTypes\":[\"LONG\",\"LONG\",\"STRING\",\"STRING\",\"STRING\",\"FLOAT\",\"DOUBLE\",\"COMPLEX<hyperUnique>\"],\"granularity\":{\"type\":\"all\"}},"
-                               + "\"signature\":[{\"name\":\"__time\",\"type\":\"LONG\"},{\"name\":\"dim1\",\"type\":\"STRING\"},{\"name\":\"dim2\",\"type\":\"STRING\"},{\"name\":\"dim3\",\"type\":\"STRING\"},{\"name\":\"cnt\",\"type\":\"LONG\"},{\"name\":\"m1\",\"type\":\"FLOAT\"},{\"name\":\"m2\",\"type\":\"DOUBLE\"},{\"name\":\"unique_dim1\",\"type\":\"COMPLEX<hyperUnique>\"}],"
-                               + "\"columnMappings\":[{\"queryColumn\":\"__time\",\"outputColumn\":\"__time\"},{\"queryColumn\":\"dim1\",\"outputColumn\":\"dim1\"},{\"queryColumn\":\"dim2\",\"outputColumn\":\"dim2\"},{\"queryColumn\":\"dim3\",\"outputColumn\":\"dim3\"},{\"queryColumn\":\"cnt\",\"outputColumn\":\"cnt\"},{\"queryColumn\":\"m1\",\"outputColumn\":\"m1\"},{\"queryColumn\":\"m2\",\"outputColumn\":\"m2\"},{\"queryColumn\":\"unique_dim1\",\"outputColumn\":\"unique_dim1\"}]}]";
+    final String explanation = "[{\"query\":{\"queryType\":\"scan\",\"dataSource\":{\"type\":\"table\",\"name\":\"foo\"},\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z\"]},\"resultFormat\":\"compactedList\",\"columns\":[\"__time\",\"dim1\",\"dim2\",\"dim3\",\"cnt\",\"m1\",\"m2\",\"unique_dim1\"],\"context\":{\"defaultTimeout\":300000,\"maxScatterGatherBytes\":9223372036854775807,\"sqlCurrentTimestamp\":\"2000-01-01T00:00:00Z\",\"sqlQueryId\":\"dummy\",\"vectorize\":\"false\",\"vectorizeVirtualColumns\":\"false\"},\"columnTypes\":[\"LONG\",\"STRING\",\"STRING\",\"STRING\",\"LONG\",\"FLOAT\",\"DOUBLE\",\"COMPLEX<hyperUnique>\"],\"granularity\":{\"type\":\"all\"},\"legacy\":false},\"signature\":[{\"name\":\"__time\",\"type\":\"LONG\"},{\"name\":\"dim1\",\"type\":\"STRING\"},{\"name\":\"dim2\",\"type\":\"STRING\"},{\"name\":\"dim3\",\"type\":\"STRING\"},{\"name\":\"cnt\",\"type\":\"LONG\"},{\"name\":\"m1\",\"type\":\"FLOAT\"},{\"name\":\"m2\",\"type\":\"DOUBLE\"},{\"name\":\"unique_dim1\",\"type\":\"COMPLEX<hyperUnique>\"}],\"columnMappings\":[{\"queryColumn\":\"__time\",\"outputColumn\":\"__time\"},{\"queryColumn\":\"dim1\",\"outputColumn\":\"dim1\"},{\"queryColumn\":\"dim2\",\"outputColumn\":\"dim2\"},{\"queryColumn\":\"dim3\",\"outputColumn\":\"dim3\"},{\"queryColumn\":\"cnt\",\"outputColumn\":\"cnt\"},{\"queryColumn\":\"m1\",\"outputColumn\":\"m1\"},{\"queryColumn\":\"m2\",\"outputColumn\":\"m2\"},{\"queryColumn\":\"unique_dim1\",\"outputColumn\":\"unique_dim1\"}]}]";
     final String resources = "[{\"name\":\"foo\",\"type\":\"DATASOURCE\"}]";
     final String attributes = "{\"statementType\":\"SELECT\"}";
 
-    testQuery(
-        PLANNER_CONFIG_LEGACY_QUERY_EXPLAIN,
-        query,
-        CalciteTests.REGULAR_USER_AUTH_RESULT,
-        ImmutableList.of(),
-        ImmutableList.of(
-            new Object[]{
-                legacyExplanation,
-                resources,
-                attributes
-            }
-        )
-    );
     testQuery(
         PLANNER_CONFIG_NATIVE_QUERY_EXPLAIN,
         query,
@@ -1391,7 +1356,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   public void testSelectStarWithLimit()
   {
     testQuery(
-        PLANNER_CONFIG_DEFAULT_NO_COMPLEX_SERDE,
+        PLANNER_CONFIG_DEFAULT,
         QUERY_CONTEXT_DEFAULT,
         "SELECT * FROM druid.foo LIMIT 2",
         CalciteTests.REGULAR_USER_AUTH_RESULT,
@@ -1399,15 +1364,16 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
             newScanQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE1)
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .columns("__time", "cnt", "dim1", "dim2", "dim3", "m1", "m2", "unique_dim1")
+                .columns("__time", "dim1", "dim2", "dim3", "cnt", "m1", "m2", "unique_dim1")
+                .columnTypes(ColumnType.LONG, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.LONG, ColumnType.FLOAT, ColumnType.DOUBLE, ColumnType.ofComplex("hyperUnique"))
                 .limit(2)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
         ),
         ImmutableList.of(
-            new Object[]{timestamp("2000-01-01"), "", "a", "[\"a\",\"b\"]", 1L, 1.0f, 1.0, HLLC_STRING},
-            new Object[]{timestamp("2000-01-02"), "10.1", NULL_STRING, "[\"b\",\"c\"]", 1L, 2.0f, 2.0, HLLC_STRING}
+            new Object[]{timestamp("2000-01-01"), "", "a", "[\"a\",\"b\"]", 1L, 1.0f, 1.0, "\"AQAAAEAAAA==\""},
+            new Object[]{timestamp("2000-01-02"), "10.1", NULL_STRING, "[\"b\",\"c\"]", 1L, 2.0f, 2.0, "\"AQAAAQAAAAHNBA==\""}
         )
     );
   }
@@ -1416,7 +1382,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   public void testSelectStarWithLimitAndOffset()
   {
     testQuery(
-        PLANNER_CONFIG_DEFAULT_NO_COMPLEX_SERDE,
+        PLANNER_CONFIG_DEFAULT,
         QUERY_CONTEXT_DEFAULT,
         "SELECT * FROM druid.foo LIMIT 2 OFFSET 1",
         CalciteTests.REGULAR_USER_AUTH_RESULT,
@@ -1424,7 +1390,8 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
             newScanQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE1)
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .columns("__time", "cnt", "dim1", "dim2", "dim3", "m1", "m2", "unique_dim1")
+                .columns("__time", "dim1", "dim2", "dim3", "cnt", "m1", "m2", "unique_dim1")
+                .columnTypes(ColumnType.LONG, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.LONG, ColumnType.FLOAT, ColumnType.DOUBLE, ColumnType.ofComplex("hyperUnique"))
                 .offset(1)
                 .limit(2)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
@@ -1432,8 +1399,8 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                 .build()
         ),
         ImmutableList.of(
-            new Object[]{timestamp("2000-01-02"), "10.1", NULL_STRING, "[\"b\",\"c\"]", 1L, 2.0f, 2.0, HLLC_STRING},
-            new Object[]{timestamp("2000-01-03"), "2", "", "d", 1L, 3f, 3.0, HLLC_STRING}
+            new Object[]{timestamp("2000-01-02"), "10.1", NULL_STRING, "[\"b\",\"c\"]", 1L, 2.0f, 2.0, "\"AQAAAQAAAAHNBA==\""},
+            new Object[]{timestamp("2000-01-03"), "2", "", "d", 1L, 3f, 3.0, "\"AQAAAQAAAAOzAg==\""}
         )
     );
   }
@@ -1451,6 +1418,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                     expressionVirtualColumn("v0", "substring(\"dim2\", 0, 1)", ColumnType.STRING)
                 )
                 .columns("v0")
+                .columnTypes(ColumnType.STRING)
                 .limit(2)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(QUERY_CONTEXT_DEFAULT)
@@ -1481,6 +1449,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                     : equality("v0", 7.0, ColumnType.FLOAT)
                 )
                 .columns("dim1")
+                .columnTypes(ColumnType.STRING)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
@@ -1495,7 +1464,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   public void testSelectStarWithLimitTimeDescending()
   {
     testQuery(
-        PLANNER_CONFIG_DEFAULT_NO_COMPLEX_SERDE,
+        PLANNER_CONFIG_DEFAULT,
         QUERY_CONTEXT_DEFAULT,
         "SELECT * FROM druid.foo ORDER BY __time DESC LIMIT 2",
         CalciteTests.REGULAR_USER_AUTH_RESULT,
@@ -1503,16 +1472,17 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
             newScanQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE1)
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .columns(ImmutableList.of("__time", "cnt", "dim1", "dim2", "dim3", "m1", "m2", "unique_dim1"))
+                .columns("__time", "dim1", "dim2", "dim3", "cnt", "m1", "m2", "unique_dim1")
+                .columnTypes(ColumnType.LONG, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.LONG, ColumnType.FLOAT, ColumnType.DOUBLE, ColumnType.ofComplex("hyperUnique"))
                 .limit(2)
-                .order(ScanQuery.Order.DESCENDING)
+                .order(Order.DESCENDING)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
         ),
         ImmutableList.of(
-            new Object[]{timestamp("2001-01-03"), "abc", NULL_STRING, NULL_STRING, 1L, 6f, 6d, HLLC_STRING},
-            new Object[]{timestamp("2001-01-02"), "def", "abc", NULL_STRING, 1L, 5f, 5d, HLLC_STRING}
+            new Object[]{timestamp("2001-01-03"), "abc", NULL_STRING, NULL_STRING, 1L, 6f, 6d, "\"AQAAAQAAAAEkAQ==\""},
+            new Object[]{timestamp("2001-01-02"), "def", "abc", NULL_STRING, 1L, 5f, 5d, "\"AQAAAQAAAACyEA==\""}
         )
     );
   }
@@ -1521,7 +1491,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   public void testSelectStarWithoutLimitTimeAscending()
   {
     testQuery(
-        PLANNER_CONFIG_DEFAULT_NO_COMPLEX_SERDE,
+        PLANNER_CONFIG_DEFAULT,
         QUERY_CONTEXT_DEFAULT,
         "SELECT * FROM druid.foo ORDER BY __time",
         CalciteTests.REGULAR_USER_AUTH_RESULT,
@@ -1529,20 +1499,21 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
             newScanQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE1)
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .columns(ImmutableList.of("__time", "cnt", "dim1", "dim2", "dim3", "m1", "m2", "unique_dim1"))
+                .columns("__time", "dim1", "dim2", "dim3", "cnt", "m1", "m2", "unique_dim1")
+                .columnTypes(ColumnType.LONG, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.LONG, ColumnType.FLOAT, ColumnType.DOUBLE, ColumnType.ofComplex("hyperUnique"))
                 .limit(Long.MAX_VALUE)
-                .order(ScanQuery.Order.ASCENDING)
+                .order(Order.ASCENDING)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
         ),
         ImmutableList.of(
-            new Object[]{timestamp("2000-01-01"), "", "a", "[\"a\",\"b\"]", 1L, 1f, 1.0, HLLC_STRING},
-            new Object[]{timestamp("2000-01-02"), "10.1", NULL_STRING, "[\"b\",\"c\"]", 1L, 2f, 2.0, HLLC_STRING},
-            new Object[]{timestamp("2000-01-03"), "2", "", "d", 1L, 3f, 3.0, HLLC_STRING},
-            new Object[]{timestamp("2001-01-01"), "1", "a", "", 1L, 4f, 4.0, HLLC_STRING},
-            new Object[]{timestamp("2001-01-02"), "def", "abc", NULL_STRING, 1L, 5f, 5.0, HLLC_STRING},
-            new Object[]{timestamp("2001-01-03"), "abc", NULL_STRING, NULL_STRING, 1L, 6f, 6.0, HLLC_STRING}
+            new Object[]{timestamp("2000-01-01"), "", "a", "[\"a\",\"b\"]", 1L, 1f, 1.0, "\"AQAAAEAAAA==\""},
+            new Object[]{timestamp("2000-01-02"), "10.1", NULL_STRING, "[\"b\",\"c\"]", 1L, 2f, 2.0, "\"AQAAAQAAAAHNBA==\""},
+            new Object[]{timestamp("2000-01-03"), "2", "", "d", 1L, 3f, 3.0, "\"AQAAAQAAAAOzAg==\""},
+            new Object[]{timestamp("2001-01-01"), "1", "a", "", 1L, 4f, 4.0, "\"AQAAAQAAAAFREA==\""},
+            new Object[]{timestamp("2001-01-02"), "def", "abc", NULL_STRING, 1L, 5f, 5.0, "\"AQAAAQAAAACyEA==\""},
+            new Object[]{timestamp("2001-01-03"), "abc", NULL_STRING, NULL_STRING, 1L, 6f, 6.0, "\"AQAAAQAAAAEkAQ==\""}
         )
     );
   }
@@ -1558,6 +1529,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                 .dataSource(CalciteTests.DATASOURCE1)
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("dim2")
+                .columnTypes(ColumnType.STRING)
                 .limit(2)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(QUERY_CONTEXT_DEFAULT)
@@ -1579,9 +1551,10 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
             newScanQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE1)
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .columns(ImmutableList.of("__time", "dim1"))
+                .columns("dim1", "__time")
+                .columnTypes(ColumnType.STRING, ColumnType.LONG)
                 .limit(2)
-                .order(ScanQuery.Order.DESCENDING)
+                .order(Order.DESCENDING)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
@@ -1605,9 +1578,10 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
             newScanQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE1)
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .columns(ImmutableList.of("dim1"))
+                .columns("dim1")
+                .columnTypes(ColumnType.STRING)
                 .limit(2)
-                .order(ScanQuery.Order.NONE)
+                .order(Order.NONE)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
@@ -1629,9 +1603,10 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
             newScanQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE1)
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .columns(ImmutableList.of("__time", "dim1"))
+                .columns("dim1", "__time")
+                .columnTypes(ColumnType.STRING, ColumnType.LONG)
                 .limit(2)
-                .order(ScanQuery.Order.DESCENDING)
+                .order(Order.DESCENDING)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(OUTER_LIMIT_CONTEXT)
                 .build()
@@ -1653,10 +1628,11 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
             newScanQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE1)
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .columns(ImmutableList.of("__time", "dim1"))
+                .columns("dim1", "__time")
+                .columnTypes(ColumnType.STRING, ColumnType.LONG)
                 .offset(1)
                 .limit(2)
-                .order(ScanQuery.Order.DESCENDING)
+                .order(Order.DESCENDING)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(OUTER_LIMIT_CONTEXT)
                 .build()
@@ -1678,10 +1654,11 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
             newScanQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE1)
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .columns(ImmutableList.of("__time", "dim1"))
+                .columns("dim1", "__time")
+                .columnTypes(ColumnType.STRING, ColumnType.LONG)
                 .offset(1)
                 .limit(1)
-                .order(ScanQuery.Order.DESCENDING)
+                .order(Order.DESCENDING)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(OUTER_LIMIT_CONTEXT)
                 .build()
@@ -1702,10 +1679,11 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
             newScanQueryBuilder()
                 .dataSource(CalciteTests.DATASOURCE1)
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .columns(ImmutableList.of("__time", "dim1"))
+                .columns("dim1", "__time")
+                .columnTypes(ColumnType.STRING, ColumnType.LONG)
                 .offset(1)
                 .limit(2)
-                .order(ScanQuery.Order.DESCENDING)
+                .order(Order.DESCENDING)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(OUTER_LIMIT_CONTEXT)
                 .build()
@@ -1739,22 +1717,21 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                 .dataSource(CalciteTests.DATASOURCE5)
                 .intervals(querySegmentSpec(Intervals.of("1990-01-01T00:00:00.000Z/146140482-04-24T15:36:27.903Z")))
                 .columns(
-                    ImmutableList.<String>builder()
-                        .add("__time")
-                        .add("count")
-                        .add("dimHyperUnique")
-                        .add("dimMultivalEnumerated")
-                        .add("dimMultivalEnumerated2")
-                        .add("dimMultivalSequentialWithNulls")
-                        .add("dimSequential")
-                        .add("dimSequentialHalfNull")
-                        .add("dimUniform")
-                        .add("dimZipf")
-                        .add("metFloatNormal")
-                        .add("metFloatZipf")
-                        .add("metLongSequential")
-                        .build()
+                    "__time",
+                    "count",
+                    "dimHyperUnique",
+                    "dimMultivalEnumerated",
+                    "dimMultivalEnumerated2",
+                    "dimMultivalSequentialWithNulls",
+                    "dimSequential",
+                    "dimSequentialHalfNull",
+                    "dimUniform",
+                    "dimZipf",
+                    "metFloatNormal",
+                    "metFloatZipf",
+                    "metLongSequential"
                 )
+                .columnTypes(ColumnType.LONG, ColumnType.LONG, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING)
                 .limit(2)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(OUTER_LIMIT_CONTEXT)
@@ -1806,23 +1783,22 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                 .dataSource(CalciteTests.DATASOURCE5)
                 .intervals(querySegmentSpec(Intervals.of("1990-01-01T00:00:00.000Z/146140482-04-24T15:36:27.903Z")))
                 .columns(
-                    ImmutableList.<String>builder()
-                        .add("__time")
-                        .add("count")
-                        .add("dimHyperUnique")
-                        .add("dimMultivalEnumerated")
-                        .add("dimMultivalEnumerated2")
-                        .add("dimMultivalSequentialWithNulls")
-                        .add("dimSequential")
-                        .add("dimSequentialHalfNull")
-                        .add("dimUniform")
-                        .add("dimZipf")
-                        .add("metFloatNormal")
-                        .add("metFloatZipf")
-                        .add("metLongSequential")
-                        .add("metLongUniform")
-                        .build()
+                    "__time",
+                    "count",
+                    "dimHyperUnique",
+                    "dimMultivalEnumerated",
+                    "dimMultivalEnumerated2",
+                    "dimMultivalSequentialWithNulls",
+                    "dimSequential",
+                    "dimSequentialHalfNull",
+                    "dimUniform",
+                    "dimZipf",
+                    "metFloatNormal",
+                    "metFloatZipf",
+                    "metLongSequential",
+                    "metLongUniform"
                 )
+                .columnTypes(ColumnType.LONG, ColumnType.LONG, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING)
                 .limit(2)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(OUTER_LIMIT_CONTEXT)
@@ -1875,9 +1851,10 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                 .dataSource(CalciteTests.DATASOURCE1)
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .virtualColumns(expressionVirtualColumn("v0", "concat('beep ',\"dim1\")", ColumnType.STRING))
-                .columns(ImmutableList.of("__time", "v0"))
+                .columns("v0", "__time")
+                .columnTypes(ColumnType.STRING, ColumnType.STRING)
                 .limit(2)
-                .order(ScanQuery.Order.DESCENDING)
+                .order(Order.DESCENDING)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
@@ -1904,8 +1881,9 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                 .dataSource(CalciteTests.DATASOURCE1)
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .virtualColumns(expressionVirtualColumn("v0", "concat('beep ',\"dim1\")", ColumnType.STRING))
-                .columns(ImmutableList.of("v0"))
-                .order(ScanQuery.Order.NONE)
+                .columns("v0")
+                .columnTypes(ColumnType.STRING)
+                .order(Order.NONE)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
@@ -1931,9 +1909,10 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                 .dataSource(CalciteTests.DATASOURCE1)
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .virtualColumns(expressionVirtualColumn("v0", "concat('beep ',\"dim1\")", ColumnType.STRING))
-                .columns(ImmutableList.of("__time", "v0"))
+                .columns("v0", "__time")
+                .columnTypes(ColumnType.STRING, ColumnType.STRING)
                 .limit(2)
-                .order(ScanQuery.Order.DESCENDING)
+                .order(Order.DESCENDING)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
@@ -1959,16 +1938,18 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
                         newScanQueryBuilder()
                             .dataSource(CalciteTests.DATASOURCE1)
                             .intervals(querySegmentSpec(Filtration.eternity()))
-                            .columns(ImmutableList.of("__time", "dim1"))
+                            .columns("__time", "dim1")
+                            .columnTypes(ColumnType.LONG, ColumnType.STRING)
                             .limit(4)
-                            .order(ScanQuery.Order.DESCENDING)
+                            .order(Order.DESCENDING)
                             .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                             .context(QUERY_CONTEXT_DEFAULT)
                             .build()
                     )
                 )
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .columns(ImmutableList.of("dim1"))
+                .columns("dim1")
+                .columnTypes(ColumnType.STRING)
                 .filters(in("dim1", Arrays.asList("abc", "def")))
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(QUERY_CONTEXT_DEFAULT)
@@ -2077,6 +2058,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testCountDistinctNonApproximateWithFilter()
   {
+    cannotVectorizeUnlessFallback();
     testQuery(
         PLANNER_CONFIG_DEFAULT.withOverrides(
             ImmutableMap.of(
@@ -2115,6 +2097,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   @Test
   public void testCountDistinctNonApproximateWithFilterHaving()
   {
+    cannotVectorizeUnlessFallback();
     testQuery(
         PLANNER_CONFIG_DEFAULT.withOverrides(
             ImmutableMap.of(
@@ -2160,7 +2143,7 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
     // possibly pollute the cache
     // https://github.com/apache/druid/issues/16552
     testBuilder()
-        .sql("select dim1,d1 from numfoo where 0.0 < d1 and d1 < 1.25 group by dim1,d1")
+        .sql("select dim1,dbl1 from numfoo where 0.0 < dbl1 and dbl1 < 1.25 group by dim1,dbl1")
         .expectedResults(
             ImmutableList.of(
                 new Object[] {"", 1.0D}
@@ -2169,11 +2152,52 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
         .run();
 
     testBuilder()
-        .sql("select dim1,d1 from numfoo where 0.0 < d1 and d1 < 1.75 group by dim1,d1")
+        .sql("select dim1,dbl1 from numfoo where 0.0 < dbl1 and dbl1 < 1.75 group by dim1,dbl1")
         .expectedResults(
             ImmutableList.of(
                 new Object[] {"", 1.0D},
                 new Object[] {"10.1", 1.7D}
+            )
+        )
+        .run();
+  }
+
+  @SqlTestFrameworkConfig.ResultCache(ResultCacheMode.ENABLED)
+  @Test
+  public void testTimseriesResultCachePullConsistency()
+  {
+    skipVectorize();
+
+    String query = "SELECT \n"
+                   + "  (t1.\"__time\") AS \"__time\", \n"
+                   + "  (ANY_VALUE(t1.\"added\")) AS \"added\" \n"
+                   + "FROM \n"
+                   + "  (\n"
+                   + "    SELECT \n"
+                   + "      (time_floor(\"__time\", 'PT1H')) AS \"__time\", \n"
+                   + "      (SUM(added)) AS \"added\" \n"
+                   + "    FROM \"wikipedia\" \n"
+                   + "    GROUP BY 1 \n"
+                   + "    ORDER BY \"__time\" \n"
+                   + "    LIMIT 1\n"
+                   + "  ) t1 \n"
+                   + "GROUP BY 1 \n"
+                   + "ORDER BY \"__time\"";
+
+    testBuilder()
+        .sql(query)
+        .expectedResults(
+            ImmutableList.of(
+                new Object[]{1442016000000L, 32251L}
+            )
+        )
+        .run();
+
+    testBuilder()
+        .sql(query)
+        .expectedResults(
+            ImmutableList.of(
+                new Object[]{1442016000000L, 32251L}
             )
         )
         .run();
@@ -2201,5 +2225,21 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
             )
         )
         .run();
+  }
+
+  @Test
+  public void testRejectHavingWithWindowExpression()
+  {
+    assertEquals(
+        "1.37.0",
+        RelNode.class.getPackage().getImplementationVersion(),
+        "Calcite version changed; check if CALCITE-6473 is fixed and remove:\n * this assertion\n * DruidSqlValidator#validateHavingClause"
+    );
+
+    testQueryThrows(
+        "SELECT cityName,sum(1) OVER () as w FROM wikipedia group by cityName HAVING w > 10",
+        DruidException.class,
+        invalidSqlContains("Window functions are not allowed in HAVING")
+    );
   }
 }

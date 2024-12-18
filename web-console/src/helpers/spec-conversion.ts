@@ -25,7 +25,7 @@ import {
   SqlExpression,
   SqlType,
   T,
-} from '@druid-toolkit/query';
+} from 'druid-query-toolkit';
 import * as JSONBig from 'json-bigint-native';
 
 import type {
@@ -84,6 +84,14 @@ export function convertSpecToSql(spec: any): QueryWithContext {
 
   if (getArrayMode(spec, 'multi-values') === 'arrays') {
     context.arrayIngestMode = 'array';
+  }
+
+  const forceSegmentSortByTime = deepGet(
+    spec,
+    'spec.dataSchema.dimensionsSpec.forceSegmentSortByTime',
+  );
+  if (typeof forceSegmentSortByTime !== 'undefined') {
+    context.forceSegmentSortByTime = forceSegmentSortByTime;
   }
 
   const indexSpec = deepGet(spec, 'spec.tuningConfig.indexSpec');

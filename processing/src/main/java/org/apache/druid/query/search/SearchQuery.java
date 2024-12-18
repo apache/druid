@@ -68,7 +68,7 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
       @JsonProperty("context") Map<String, Object> context
   )
   {
-    super(dataSource, querySegmentSpec, false, context, Granularities.nullToAll(granularity));
+    super(dataSource, querySegmentSpec, context, Granularities.nullToAll(granularity));
     Preconditions.checkNotNull(querySegmentSpec, "Must specify an interval");
 
     this.dimFilter = dimFilter;
@@ -94,7 +94,7 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
   @Override
   public String getType()
   {
-    return Query.SEARCH;
+    return SEARCH;
   }
 
   @Override

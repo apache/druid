@@ -30,7 +30,6 @@ import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.utils.JvmUtils;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -111,7 +110,6 @@ public class HadoopTaskTest
         new TaskConfigBuilder()
             .setBaseDir(temporaryFolder.newFolder().toString())
             .setDefaultHadoopCoordinates(ImmutableList.of("something:hadoop:1"))
-            .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
             .build()
     ).once();
     EasyMock.replay(toolbox);
@@ -132,13 +130,8 @@ public class HadoopTaskTest
 
   public static void assertClassLoaderIsSingular(ClassLoader classLoader)
   {
-    if (JvmUtils.isIsJava9Compatible()) {
-      // See also https://docs.oracle.com/en/java/javase/11/migrate/index.html#JSMIG-GUID-A868D0B9-026F-4D46-B979-901834343F9E
-      Assert.assertEquals("PlatformClassLoader", classLoader.getParent().getClass().getSimpleName());
-    } else {
-      // This is a check against the current HadoopTask which creates a single URLClassLoader with null parent
-      Assert.assertNull(classLoader.getParent());
-    }
+    // See also https://docs.oracle.com/en/java/javase/11/migrate/index.html#JSMIG-GUID-A868D0B9-026F-4D46-B979-901834343F9E
+    Assert.assertEquals("PlatformClassLoader", classLoader.getParent().getClass().getSimpleName());
     Assert.assertFalse(classLoader.getClass().getSimpleName().equals("ApplicationClassLoader"));
     Assert.assertTrue(classLoader instanceof URLClassLoader);
 

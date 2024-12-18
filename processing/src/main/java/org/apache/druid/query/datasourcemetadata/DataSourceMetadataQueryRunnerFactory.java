@@ -33,8 +33,9 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.segment.MaxIngestedEventTimeInspector;
 import org.apache.druid.segment.Segment;
-import org.apache.druid.segment.StorageAdapter;
+import org.joda.time.Interval;
 
 import java.util.Iterator;
 
@@ -79,11 +80,13 @@ public class DataSourceMetadataQueryRunnerFactory
 
   private static class DataSourceMetadataQueryRunner implements QueryRunner<Result<DataSourceMetadataResultValue>>
   {
-    private final StorageAdapter adapter;
+    private final Interval segmentInterval;
+    private final MaxIngestedEventTimeInspector inspector;
 
     public DataSourceMetadataQueryRunner(Segment segment)
     {
-      this.adapter = segment.asStorageAdapter();
+      this.segmentInterval = segment.getDataInterval();
+      this.inspector = segment.as(MaxIngestedEventTimeInspector.class);
     }
 
     @Override
@@ -100,20 +103,14 @@ public class DataSourceMetadataQueryRunnerFactory
       final DataSourceMetadataQuery legacyQuery = (DataSourceMetadataQuery) query;
 
       return new BaseSequence<>(
-          new BaseSequence.IteratorMaker<Result<DataSourceMetadataResultValue>, Iterator<Result<DataSourceMetadataResultValue>>>()
+          new BaseSequence.IteratorMaker<>()
           {
             @Override
             public Iterator<Result<DataSourceMetadataResultValue>> make()
             {
-              if (adapter == null) {
-                throw new ISE(
-                    "Null storage adapter found. Probably trying to issue a query against a segment being memory unmapped."
-                );
-              }
-
               return legacyQuery.buildResult(
-                  adapter.getInterval().getStart(),
-                  adapter.getMaxIngestedEventTime()
+                  segmentInterval.getStart(),
+                  (inspector != null ? inspector.getMaxIngestedEventTime() : null)
               ).iterator();
             }
 

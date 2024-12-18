@@ -74,10 +74,7 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
   protected static final Granularity SEGMENT_GRANULARITY = Granularities.DAY;
 
   private static final ScanQueryRunnerFactory SCAN_QUERY_RUNNER_FACTORY = new ScanQueryRunnerFactory(
-      new ScanQueryQueryToolChest(
-          new ScanQueryConfig().setLegacy(false),
-          DefaultGenericQueryMetricsFactory.instance()
-      ),
+      new ScanQueryQueryToolChest(DefaultGenericQueryMetricsFactory.instance()),
       new ScanQueryEngine(),
       new ScanQueryConfig()
   );
@@ -218,42 +215,38 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
     if (useInputFormatApi) {
       Preconditions.checkArgument(parseSpec == null);
       ParallelIndexIOConfig ioConfig = new ParallelIndexIOConfig(
-          null,
           new LocalInputSource(inputDirectory, filter),
           inputFormat,
           appendToExisting,
           dropExisting
       );
       ingestionSpec = new ParallelIndexIngestionSpec(
-          new DataSchema(
-              DATASOURCE,
-              timestampSpec,
-              dimensionsSpec,
-              DEFAULT_METRICS_SPEC,
-              granularitySpec,
-              null
-          ),
+          DataSchema.builder()
+                    .withDataSource(DATASOURCE)
+                    .withTimestamp(timestampSpec)
+                    .withDimensions(dimensionsSpec)
+                    .withAggregators(DEFAULT_METRICS_SPEC)
+                    .withGranularity(granularitySpec)
+                    .build(),
           ioConfig,
           tuningConfig
       );
     } else {
       Preconditions.checkArgument(inputFormat == null && parseSpec != null);
       ParallelIndexIOConfig ioConfig = new ParallelIndexIOConfig(
-          null,
           new LocalInputSource(inputDirectory, filter),
           createInputFormatFromParseSpec(parseSpec),
           appendToExisting,
           dropExisting
       );
       ingestionSpec = new ParallelIndexIngestionSpec(
-          new DataSchema(
-              DATASOURCE,
-              parseSpec.getTimestampSpec(),
-              parseSpec.getDimensionsSpec(),
-              DEFAULT_METRICS_SPEC,
-              granularitySpec,
-              null
-          ),
+          DataSchema.builder()
+                    .withDataSource(DATASOURCE)
+                    .withTimestamp(parseSpec.getTimestampSpec())
+                    .withDimensions(parseSpec.getDimensionsSpec())
+                    .withAggregators(DEFAULT_METRICS_SPEC)
+                    .withGranularity(granularitySpec)
+                    .build(),
           ioConfig,
           tuningConfig
       );
@@ -293,7 +286,6 @@ abstract class AbstractMultiPhaseParallelIndexingTest extends AbstractParallelIn
                 null,
                 null,
                 columns,
-                false,
                 null,
                 null
             )

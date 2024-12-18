@@ -48,9 +48,7 @@ public class UpdateLocationAction implements TaskAction<Void>
   @Override
   public TypeReference<Void> getReturnTypeReference()
   {
-    return new TypeReference<Void>()
-    {
-    };
+    return new TypeReference<>() {};
   }
 
   @Override
@@ -61,12 +59,6 @@ public class UpdateLocationAction implements TaskAction<Void>
       taskRunner.get().updateLocation(task, taskLocation);
     }
     return null;
-  }
-
-  @Override
-  public boolean isAudited()
-  {
-    return true;
   }
 
   @Override

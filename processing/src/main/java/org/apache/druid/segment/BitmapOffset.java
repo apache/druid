@@ -23,13 +23,13 @@ import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.bitmap.MutableBitmap;
 import org.apache.druid.collections.bitmap.RoaringBitmapFactory;
 import org.apache.druid.collections.bitmap.WrappedImmutableRoaringBitmap;
-import org.apache.druid.extendedset.intset.EmptyIntIterator;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.data.Offset;
 import org.apache.druid.segment.data.ReadableOffset;
 import org.roaringbitmap.IntIterator;
 
+import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.HashSet;
 
@@ -126,6 +126,9 @@ public class BitmapOffset extends Offset
   private final IntIterator iteratorForReset;
   private final int valueForReset;
   private int value;
+  @Nullable
+  private IntIterator iteratorForMark;
+  private int valueForMark;
 
   public static IntIterator getReverseBitmapOffsetIterator(ImmutableBitmap bitmapIndex)
   {
@@ -153,7 +156,7 @@ public class BitmapOffset extends Offset
     increment();
     // It's important to set iteratorForReset and valueForReset after calling increment(), because only after that the
     // iterator and the value are in proper initial state.
-    this.iteratorForReset = safeClone(iterator);
+    this.iteratorForReset = iterator.clone();
     this.valueForReset = value;
   }
 
@@ -169,13 +172,21 @@ public class BitmapOffset extends Offset
   /**
    * Constructor for {@link #clone()}.
    */
-  private BitmapOffset(String fullness, IntIterator iterator, int value)
+  private BitmapOffset(
+      String fullness,
+      IntIterator iterator,
+      int value,
+      @Nullable IntIterator iteratorForMark,
+      int markValue
+  )
   {
     this.fullness = fullness;
     this.iterator = iterator;
-    this.iteratorForReset = safeClone(iterator);
+    this.iteratorForReset = iterator.clone();
     this.valueForReset = value;
     this.value = value;
+    this.iteratorForMark = iteratorForMark;
+    this.valueForMark = markValue;
   }
 
   @Override
@@ -197,8 +208,10 @@ public class BitmapOffset extends Offset
   @Override
   public void reset()
   {
-    iterator = safeClone(iteratorForReset);
+    iterator = iteratorForReset.clone();
     value = valueForReset;
+    valueForMark = valueForReset;
+    iteratorForMark = null;
   }
 
   @Override
@@ -211,7 +224,13 @@ public class BitmapOffset extends Offset
   @Override
   public Offset clone()
   {
-    return new BitmapOffset(fullness, safeClone(iterator), value);
+    return new BitmapOffset(
+        fullness,
+        iterator.clone(),
+        value,
+        iteratorForMark != null ? iteratorForMark.clone() : null,
+        valueForMark
+    );
   }
 
   @Override
@@ -225,12 +244,5 @@ public class BitmapOffset extends Offset
   {
     inspector.visit("iterator", iterator);
     inspector.visit("fullness", fullness);
-  }
-
-  private static IntIterator safeClone(IntIterator iterator)
-  {
-    // Calling clone() on empty iterators from RoaringBitmap library sometimes fails with NPE,
-    // see https://github.com/apache/druid/issues/4709, https://github.com/RoaringBitmap/RoaringBitmap/issues/177
-    return iterator.hasNext() ? iterator.clone() : EmptyIntIterator.instance();
   }
 }

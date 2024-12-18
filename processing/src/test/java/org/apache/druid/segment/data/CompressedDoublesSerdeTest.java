@@ -172,9 +172,7 @@ public class CompressedDoublesSerdeTest
     );
     serializer.open();
 
-    for (double value : values) {
-      serializer.add(value);
-    }
+    serializer.addAll(values, 0, values.length);
     Assert.assertEquals(values.length, serializer.size());
 
     final ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -236,7 +234,7 @@ public class CompressedDoublesSerdeTest
       final double[] vals
   ) throws Exception
   {
-    final AtomicReference<String> reason = new AtomicReference<String>("none");
+    final AtomicReference<String> reason = new AtomicReference<>("none");
 
     final int numRuns = 1000;
     final CountDownLatch startLatch = new CountDownLatch(1);

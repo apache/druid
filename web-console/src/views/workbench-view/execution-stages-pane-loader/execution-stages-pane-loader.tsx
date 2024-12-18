@@ -35,10 +35,10 @@ export const ExecutionStagesPaneLoader = React.memo(function ExecutionStagesPane
   const { id, goToTask } = props;
 
   const [executionState, queryManager] = useQueryManager<string, Execution>({
-    processQuery: (id: string) => {
-      return getTaskExecution(id);
-    },
     initQuery: id,
+    processQuery: (id, cancelToken) => {
+      return getTaskExecution(id, undefined, cancelToken);
+    },
   });
 
   useInterval(() => {

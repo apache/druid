@@ -372,6 +372,39 @@ public class QueryContextTest
     assertTrue(QueryContext.of(ImmutableMap.of(QueryContexts.ENABLE_DEBUG, true)).isDebug());
   }
 
+  @Test
+  public void testIsDecoupled()
+  {
+    assertFalse(QueryContext.empty().isDecoupledMode());
+    assertTrue(
+        QueryContext.of(
+            ImmutableMap.of(
+                QueryContexts.CTX_NATIVE_QUERY_SQL_PLANNING_MODE,
+                QueryContexts.NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED
+            )
+        ).isDecoupledMode()
+    );
+    assertFalse(
+        QueryContext.of(
+            ImmutableMap.of(
+                QueryContexts.CTX_NATIVE_QUERY_SQL_PLANNING_MODE,
+                "garbage"
+            )
+        ).isDecoupledMode()
+    );
+  }
+
+  @Test
+  public void testExtendedFilteredSumRewrite()
+  {
+    assertTrue(QueryContext.empty().isExtendedFilteredSumRewrite());
+    assertFalse(
+        QueryContext
+            .of(ImmutableMap.of(QueryContexts.EXTENDED_FILTERED_SUM_REWRITE_ENABLED, false))
+            .isExtendedFilteredSumRewrite()
+    );
+  }
+
   // This test is a bit silly. It is retained because another test uses the
   // LegacyContextQuery test.
   @Test
@@ -462,12 +495,6 @@ public class QueryContextTest
     public Map<String, Object> getContext()
     {
       return context;
-    }
-
-    @Override
-    public boolean isDescending()
-    {
-      return false;
     }
 
     @Override

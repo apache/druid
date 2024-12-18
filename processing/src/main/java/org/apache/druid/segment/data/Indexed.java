@@ -41,7 +41,7 @@ public interface Indexed<T> extends Iterable<T>, HotLoopCallee
 {
   static <T> Indexed<T> empty()
   {
-    return new Indexed<T>()
+    return new Indexed<>()
     {
       @Override
       public int size()
@@ -53,7 +53,7 @@ public interface Indexed<T> extends Iterable<T>, HotLoopCallee
       @Override
       public T get(int index)
       {
-        Indexed.checkIndex(index, 0);
+        checkIndex(index, 0);
         return null;
       }
 

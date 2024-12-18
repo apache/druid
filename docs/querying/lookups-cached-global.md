@@ -377,11 +377,11 @@ The JDBC lookups will poll a database to populate its local cache. If the `tsCol
 :::info
  If using JDBC, you will need to add your database's client JAR files to the extension's directory.
  For Postgres, the connector JAR is already included.
- See the MySQL extension documentation for instructions to obtain [MySQL](../development/extensions-core/mysql.md#installing-the-mysql-connector-library) or [MariaDB](../development/extensions-core/mysql.md#alternative-installing-the-mariadb-connector-library) connector libraries.
+ See the MySQL extension documentation for instructions to obtain [MySQL](../development/extensions-core/mysql.md#install-mysql-connectorj) or [MariaDB](../development/extensions-core/mysql.md#install-mariadb-connectorj) connector libraries.
  The connector JAR should reside in the classpath of Druid's main class loader.
  To add the connector JAR to the classpath, you can copy the downloaded file to `lib/` under the distribution root directory. Alternatively, create a symbolic link to the connector in the `lib` directory.
 :::
 
 ## Introspection
 
-Globally cached lookups have introspection points at `/keys` and `/values` which return a complete set of the keys and values (respectively) in the lookup. Introspection to `/` returns the entire map. Introspection to `/version` returns the version indicator for the lookup.
+Globally cached lookups have introspection points at `/keys` and `/values`, which return the complete set of keys and values respectively in the lookup as a JSON object. Introspection to `/` returns the entire map as a JSON object. Introspection to `/version` provides the internal version indicating when the lookup cache was last updated. See [Introspect A Lookup](./lookups.md#Introspect a Lookup) for examples.

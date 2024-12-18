@@ -31,7 +31,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
-import org.apache.commons.lang.BooleanUtils;
+import org.apache.commons.lang3.BooleanUtils;
 import org.apache.druid.indexer.DataSegmentAndIndexZipFilePath;
 import org.apache.druid.indexer.HadoopDruidDetermineConfigurationJob;
 import org.apache.druid.indexer.HadoopDruidIndexerConfig;
@@ -59,8 +59,8 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
-import org.apache.druid.segment.realtime.firehose.ChatHandler;
-import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
+import org.apache.druid.segment.realtime.ChatHandler;
+import org.apache.druid.segment.realtime.ChatHandlerProvider;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Resource;
@@ -535,7 +535,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
       String hadoopJobIdFile = getHadoopJobIdFileName();
 
       try {
-        ClassLoader loader = HadoopTask.buildClassLoader(
+        ClassLoader loader = buildClassLoader(
             getHadoopDependencyCoordinates(),
             taskConfig.getDefaultHadoopCoordinates()
         );
@@ -616,7 +616,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
 
     final ClassLoader oldLoader = Thread.currentThread().getContextClassLoader();
     try {
-      ClassLoader loader = HadoopTask.buildClassLoader(
+      ClassLoader loader = buildClassLoader(
           getHadoopDependencyCoordinates(),
           taskConfig.getDefaultHadoopCoordinates()
       );
@@ -677,7 +677,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
 
   private TaskReport.ReportMap getTaskCompletionReports()
   {
-    return buildIngestionStatsReport(ingestionState, errorMsg, null, null);
+    return buildIngestionStatsAndContextReport(ingestionState, errorMsg, null, null);
   }
 
   @Override
@@ -921,9 +921,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
   public static class HadoopRenameSegmentIndexFilesRunner
   {
     TypeReference<List<DataSegmentAndIndexZipFilePath>> LIST_DATA_SEGMENT_AND_INDEX_ZIP_FILE_PATH =
-        new TypeReference<List<DataSegmentAndIndexZipFilePath>>()
-        {
-        };
+        new TypeReference<>() {};
 
     public void runTask(String[] args) throws Exception
     {
@@ -963,9 +961,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
   public static class HadoopIndexerGeneratorCleanupRunner
   {
     TypeReference<List<DataSegmentAndIndexZipFilePath>> LIST_DATA_SEGMENT_AND_INDEX_ZIP_FILE_PATH =
-        new TypeReference<List<DataSegmentAndIndexZipFilePath>>()
-        {
-        };
+        new TypeReference<>() {};
 
     public void runTask(String[] args) throws Exception
     {

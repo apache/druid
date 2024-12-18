@@ -22,14 +22,17 @@ import {
   ButtonGroup,
   Callout,
   FormGroup,
+  Icon,
   Intent,
   Menu,
   MenuDivider,
   MenuItem,
+  Popover,
   Tag,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { Popover2 } from '@blueprintjs/popover2';
+import classNames from 'classnames';
+import { select, selectAll } from 'd3-selection';
 import {
   C,
   Column,
@@ -39,13 +42,17 @@ import {
   SqlExpression,
   SqlQuery,
   SqlType,
-} from '@druid-toolkit/query';
-import classNames from 'classnames';
-import { select, selectAll } from 'd3-selection';
+} from 'druid-query-toolkit';
 import type { JSX } from 'react';
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
-import { ClearableInput, LearnMore, Loader } from '../../../components';
+import {
+  ClearableInput,
+  ENABLE_DISABLE_OPTIONS_TEXT,
+  LearnMore,
+  Loader,
+  MenuBoolean,
+} from '../../../components';
 import { AsyncActionDialog } from '../../../dialogs';
 import type { Execution, ExternalConfig, IngestQueryPattern } from '../../../druid-models';
 import {
@@ -99,6 +106,8 @@ import { PreviewTable } from './preview-table/preview-table';
 import { RollupAnalysisPane } from './rollup-analysis-pane/rollup-analysis-pane';
 
 import './schema-step.scss';
+
+const EXPERIMENTAL_ICON = <Icon icon={IconNames.WARNING_SIGN} title="Experimental" />;
 
 const queryRunner = new QueryRunner();
 
@@ -248,6 +257,8 @@ interface EditorColumn {
 export interface SchemaStepProps {
   queryString: string;
   onQueryStringChange(queryString: string): void;
+  forceSegmentSortByTime: boolean;
+  changeForceSegmentSortByTime(forceSegmentSortByTime: boolean): void;
   enableAnalyze: boolean;
   goToQuery: () => void;
   onBack(): void;
@@ -259,6 +270,8 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
   const {
     queryString,
     onQueryStringChange,
+    forceSegmentSortByTime,
+    changeForceSegmentSortByTime,
     enableAnalyze,
     goToQuery,
     onBack,
@@ -394,12 +407,15 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
 
   const [existingTableState] = useQueryManager<string, string[]>({
     initQuery: '',
-    processQuery: async (_: string, _cancelToken) => {
+    processQuery: async (_, cancelToken) => {
       // Check if datasource already exists
-      const tables = await queryDruidSql({
-        query: `SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = 'druid' ORDER BY TABLE_NAME ASC`,
-        resultFormat: 'array',
-      });
+      const tables = await queryDruidSql(
+        {
+          query: `SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = 'druid' ORDER BY TABLE_NAME ASC`,
+          resultFormat: 'array',
+        },
+        cancelToken,
+      );
 
       return tables.map(t => t[0]);
     },
@@ -413,7 +429,7 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
 
   const [sampleState] = useQueryManager<ExternalConfig, QueryResult, Execution>({
     query: sampleExternalConfig,
-    processQuery: async sampleExternalConfig => {
+    processQuery: async (sampleExternalConfig, cancelToken) => {
       const sampleResponse = await postToSampler(
         {
           type: 'index_parallel',
@@ -456,6 +472,7 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
           },
         },
         'sample',
+        cancelToken,
       );
 
       const columns = getHeaderFromSampleResponse(sampleResponse).map(({ name, type }) => {
@@ -555,7 +572,7 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
       subtitle="Configure schema"
       toolbar={
         <>
-          <Popover2
+          <Popover
             position="bottom"
             content={
               <Menu>
@@ -586,9 +603,9 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
                 {ingestQueryPattern ? ingestQueryPattern.filters.length : '?'}
               </Tag>
             </Button>
-          </Popover2>
+          </Popover>
           {ingestQueryPattern && (
-            <Popover2
+            <Popover
               position="bottom"
               content={
                 <Menu>
@@ -624,10 +641,10 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
                     : ingestQueryPattern.partitionedBy}
                 </Tag>
               </Button>
-            </Popover2>
+            </Popover>
           )}
           {ingestQueryPattern && (
-            <Popover2
+            <Popover
               position="bottom"
               content={
                 <Menu>
@@ -640,6 +657,7 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
                       <MenuItem
                         icon={IconNames.CROSS}
                         text="Remove"
+                        shouldDismissPopover={false}
                         onClick={() =>
                           updatePattern({
                             ...ingestQueryPattern,
@@ -652,17 +670,13 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
                   <MenuItem icon={IconNames.PLUS} text="Add column clustering">
                     {filterMap(ingestQueryPattern.dimensions, (dimension, i) => {
                       const outputName = dimension.getOutputName();
-                      if (
-                        outputName === TIME_COLUMN ||
-                        ingestQueryPattern.clusteredBy.includes(i)
-                      ) {
-                        return;
-                      }
+                      if (ingestQueryPattern.clusteredBy.includes(i)) return;
 
                       return (
                         <MenuItem
                           key={i}
                           text={outputName}
+                          disabled={outputName === TIME_COLUMN && forceSegmentSortByTime}
                           onClick={() =>
                             updatePattern({
                               ...ingestQueryPattern,
@@ -674,6 +688,15 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
                       );
                     })}
                   </MenuItem>
+                  <MenuDivider />
+                  <MenuBoolean
+                    icon={IconNames.GEOTIME}
+                    text="Force segment sort by time"
+                    value={forceSegmentSortByTime}
+                    onValueChange={v => changeForceSegmentSortByTime(Boolean(v))}
+                    optionsText={ENABLE_DISABLE_OPTIONS_TEXT}
+                    optionsLabelElement={{ false: EXPERIMENTAL_ICON }}
+                  />
                 </Menu>
               }
             >
@@ -683,7 +706,7 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
                   {ingestQueryPattern.clusteredBy.length}
                 </Tag>
               </Button>
-            </Popover2>
+            </Popover>
           )}
           <Button
             icon={IconNames.COMPRESSED}
@@ -751,7 +774,7 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
           </div>
           {effectiveMode !== 'sql' && ingestQueryPattern && (
             <div className="control-line right">
-              <Popover2
+              <Popover
                 className="add-column-control"
                 position="bottom"
                 content={
@@ -805,7 +828,7 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
                 }
               >
                 <Button className="add-column" icon={IconNames.PLUS} text="Add column" />
-              </Popover2>
+              </Popover>
               <ClearableInput
                 className="column-filter-control"
                 value={columnSearch}

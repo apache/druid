@@ -1,0 +1,92 @@
+# testTimeFilterOnSubquery@NullHandling=default case-crc:73448efc
+# quidem testcase reason: EQUIV_PLAN_EXTRA_COLUMNS
+!set debug true
+!set defaultTimeout 300000
+!set maxScatterGatherBytes 9223372036854775807
+!set plannerStrategy DECOUPLED
+!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
+!set sqlQueryId dummy
+!set outputformat mysql
+!use druidtest:///
+SELECT __time, m1 FROM (SELECT * FROM "foo" LIMIT 100)
+WHERE TIME_IN_INTERVAL(__time, '2000/P1D') OR TIME_IN_INTERVAL(__time, '2001/P1D');
++-------------------------+-----+
+| __time                  | m1  |
++-------------------------+-----+
+| 2000-01-01 00:00:00.000 | 1.0 |
+| 2001-01-01 00:00:00.000 | 4.0 |
++-------------------------+-----+
+(2 rows)
+
+!ok
+LogicalProject(__time=[$0], m1=[$5])
+  LogicalFilter(condition=[SEARCH($0, Sarg[[2000-01-01 00:00:00:TIMESTAMP(3)..2000-01-02 00:00:00:TIMESTAMP(3)), [2001-01-01 00:00:00:TIMESTAMP(3)..2001-01-02 00:00:00:TIMESTAMP(3))]:TIMESTAMP(3))])
+    LogicalSort(fetch=[100])
+      LogicalTableScan(table=[[druid, foo]])
+
+!logicalPlan
+DruidProject(__time=[$0], m1=[$5], druid=[logical])
+  DruidFilter(condition=[SEARCH($0, Sarg[[2000-01-01 00:00:00:TIMESTAMP(3)..2000-01-02 00:00:00:TIMESTAMP(3)), [2001-01-01 00:00:00:TIMESTAMP(3)..2001-01-02 00:00:00:TIMESTAMP(3))]:TIMESTAMP(3))])
+    DruidSort(fetch=[100], druid=[logical])
+      DruidTableScan(table=[[druid, foo]], druid=[logical])
+
+!druidPlan
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "query",
+    "query" : {
+      "queryType" : "scan",
+      "dataSource" : {
+        "type" : "table",
+        "name" : "foo"
+      },
+      "intervals" : {
+        "type" : "intervals",
+        "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+      },
+      "resultFormat" : "compactedList",
+      "limit" : 100,
+      "columns" : [ "__time", "dim1", "dim2", "dim3", "cnt", "m1", "m2", "unique_dim1" ],
+      "columnTypes" : [ "LONG", "STRING", "STRING", "STRING", "LONG", "FLOAT", "DOUBLE", "COMPLEX<hyperUnique>" ],
+      "granularity" : {
+        "type" : "all"
+      },
+      "legacy" : false
+    }
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "resultFormat" : "compactedList",
+  "filter" : {
+    "type" : "or",
+    "fields" : [ {
+      "type" : "bound",
+      "dimension" : "__time",
+      "lower" : "946684800000",
+      "upper" : "946771200000",
+      "upperStrict" : true,
+      "ordering" : {
+        "type" : "numeric"
+      }
+    }, {
+      "type" : "bound",
+      "dimension" : "__time",
+      "lower" : "978307200000",
+      "upper" : "978393600000",
+      "upperStrict" : true,
+      "ordering" : {
+        "type" : "numeric"
+      }
+    } ]
+  },
+  "columns" : [ "__time", "m1" ],
+  "columnTypes" : [ "LONG", "FLOAT" ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "legacy" : false
+}
+!nativePlan

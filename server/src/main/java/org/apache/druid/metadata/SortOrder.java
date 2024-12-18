@@ -53,14 +53,14 @@ public enum SortOrder
   @JsonCreator
   public static SortOrder fromValue(String value)
   {
-    for (SortOrder b : SortOrder.values()) {
+    for (SortOrder b : values()) {
       if (String.valueOf(b.value).equalsIgnoreCase(String.valueOf(value))) {
         return b;
       }
     }
     throw InvalidInput.exception(StringUtils.format(
         "Unexpected value[%s] for SortOrder. Possible values are: %s",
-        value, Arrays.stream(SortOrder.values()).map(SortOrder::toString).collect(Collectors.toList())
+        value, Arrays.stream(values()).map(SortOrder::toString).collect(Collectors.toList())
     ));
   }
 }

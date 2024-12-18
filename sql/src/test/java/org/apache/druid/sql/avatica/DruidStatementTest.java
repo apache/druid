@@ -47,6 +47,7 @@ import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.hook.DruidHookDispatcher;
 import org.junit.Assert;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -112,7 +113,8 @@ public class DruidStatementTest extends CalciteTestBase
         new CalciteRulesManager(ImmutableSet.of()),
         joinableFactoryWrapper,
         CatalogResolver.NULL_RESOLVER,
-        new AuthConfig()
+        new AuthConfig(),
+        new DruidHookDispatcher()
     );
     this.sqlStatementFactory = CalciteTests.createSqlStatementFactory(
         CalciteTests.createMockSqlEngine(walker, conglomerate),

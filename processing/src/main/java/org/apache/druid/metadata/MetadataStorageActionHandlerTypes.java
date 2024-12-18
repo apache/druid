@@ -25,6 +25,5 @@ public interface MetadataStorageActionHandlerTypes<EntryType, StatusType, LogTyp
 {
   TypeReference<EntryType> getEntryType();
   TypeReference<StatusType> getStatusType();
-  TypeReference<LogType> getLogType();
   TypeReference<LockType> getLockType();
 }

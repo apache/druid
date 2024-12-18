@@ -22,6 +22,7 @@ package org.apache.druid.query.aggregation;
 import it.unimi.dsi.fastutil.Hash;
 import org.apache.druid.collections.SerializablePair;
 import org.apache.druid.segment.GenericColumnSerializer;
+import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ObjectStrategyComplexTypeStrategy;
@@ -58,7 +59,11 @@ public class SerializablePairLongFloatComplexMetricSerde extends AbstractSeriali
   }
 
   @Override
-  public GenericColumnSerializer<SerializablePairLongFloat> getSerializer(SegmentWriteOutMedium segmentWriteOutMedium, String column)
+  public GenericColumnSerializer<SerializablePairLongFloat> getSerializer(
+      SegmentWriteOutMedium segmentWriteOutMedium,
+      String column,
+      IndexSpec indexSpec
+  )
   {
     return new SerializablePairLongFloatColumnSerializer(
         segmentWriteOutMedium,
@@ -80,7 +85,7 @@ public class SerializablePairLongFloatComplexMetricSerde extends AbstractSeriali
   @Override
   public ObjectStrategy<SerializablePairLongFloat> getObjectStrategy()
   {
-    return new ObjectStrategy<SerializablePairLongFloat>()
+    return new ObjectStrategy<>()
     {
       @Override
       public int compare(SerializablePairLongFloat o1, SerializablePairLongFloat o2)
@@ -109,6 +114,12 @@ public class SerializablePairLongFloatComplexMetricSerde extends AbstractSeriali
       {
         return SERDE.serialize(inPair);
       }
+
+      @Override
+      public boolean readRetainsBufferReference()
+      {
+        return false;
+      }
     };
   }
 
@@ -118,7 +129,7 @@ public class SerializablePairLongFloatComplexMetricSerde extends AbstractSeriali
     return new ObjectStrategyComplexTypeStrategy<>(
         getObjectStrategy(),
         ColumnType.ofComplex(getTypeName()),
-        new Hash.Strategy<SerializablePairLongFloat>()
+        new Hash.Strategy<>()
         {
           @Override
           public int hashCode(SerializablePairLongFloat o)

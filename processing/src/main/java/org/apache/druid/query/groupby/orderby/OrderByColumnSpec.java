@@ -55,7 +55,7 @@ public class OrderByColumnSpec
     private static final Map<String, Direction> STUPID_ENUM_MAP;
     static {
       final ImmutableMap.Builder<String, Direction> bob = ImmutableMap.builder();
-      for (Direction direction : Direction.values()) {
+      for (Direction direction : values()) {
         bob.put(direction.name(), direction);
       }
       STUPID_ENUM_MAP = bob.build();
@@ -75,7 +75,7 @@ public class OrderByColumnSpec
       Direction direction = STUPID_ENUM_MAP.get(upperName);
 
       if (direction == null) {
-        for (Direction dir : Direction.values()) {
+        for (Direction dir : values()) {
           if (dir.name().startsWith(upperName)) {
             if (direction != null) {
               throw new ISE("Ambiguous directions[%s] and [%s]", direction, dir);
@@ -122,7 +122,7 @@ public class OrderByColumnSpec
   {
     return Lists.transform(
         Arrays.asList(dimension),
-        new Function<String, OrderByColumnSpec>()
+        new Function<>()
         {
           @Override
           public OrderByColumnSpec apply(@Nullable String input)
@@ -142,7 +142,7 @@ public class OrderByColumnSpec
   {
     return Lists.transform(
         Arrays.asList(dimension),
-        new Function<String, OrderByColumnSpec>()
+        new Function<>()
         {
           @Override
           public OrderByColumnSpec apply(@Nullable String input)

@@ -173,20 +173,21 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
       );
     }
     final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
+    GroupByStatsProvider groupByStatsProvider = new GroupByStatsProvider();
     GroupByResourcesReservationPool groupByResourcesReservationPool =
         new GroupByResourcesReservationPool(bufferPools.getMergePool(), config);
     final GroupingEngine groupingEngine = new GroupingEngine(
         processingConfig,
         configSupplier,
-        bufferPools.getProcessingPool(),
         groupByResourcesReservationPool,
         TestHelper.makeJsonMapper(),
         mapper,
-        QueryRunnerTestHelper.NOOP_QUERYWATCHER
+        QueryRunnerTestHelper.NOOP_QUERYWATCHER,
+        groupByStatsProvider
     );
     final GroupByQueryQueryToolChest toolChest =
         new GroupByQueryQueryToolChest(groupingEngine, groupByResourcesReservationPool);
-    return new GroupByQueryRunnerFactory(groupingEngine, toolChest);
+    return new GroupByQueryRunnerFactory(groupingEngine, toolChest, bufferPools.getProcessingPool());
   }
 
   @Parameterized.Parameters(name = "{0}")

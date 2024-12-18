@@ -20,6 +20,7 @@
 package org.apache.druid.segment;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.collections.BlockingPool;
 import org.apache.druid.collections.DefaultBlockingPool;
 import org.apache.druid.collections.StupidPool;
 import org.apache.druid.common.config.NullHandling;
@@ -44,6 +45,7 @@ import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryQueryToolChest;
 import org.apache.druid.query.groupby.GroupByQueryRunnerFactory;
 import org.apache.druid.query.groupby.GroupByResourcesReservationPool;
+import org.apache.druid.query.groupby.GroupByStatsProvider;
 import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
@@ -70,8 +72,14 @@ public class MapVirtualColumnGroupByTest extends InitializedNullHandlingTest
   {
     final IncrementalIndex incrementalIndex = MapVirtualColumnTestBase.generateIndex();
     final GroupByQueryConfig config = new GroupByQueryConfig();
+
+    final BlockingPool<ByteBuffer> mergePool =
+        new DefaultBlockingPool<>(() -> ByteBuffer.allocate(1024), 1);
+    final GroupByStatsProvider groupByStatsProvider = new GroupByStatsProvider();
+
     final GroupByResourcesReservationPool groupByResourcesReservationPool =
-        new GroupByResourcesReservationPool(new DefaultBlockingPool<>(() -> ByteBuffer.allocate(1024), 1), config);
+        new GroupByResourcesReservationPool(mergePool, config);
+
     final GroupingEngine groupingEngine = new GroupingEngine(
         new DruidProcessingConfig()
         {
@@ -99,17 +107,18 @@ public class MapVirtualColumnGroupByTest extends InitializedNullHandlingTest
             return 1;
           }
         },
-        () -> config,
-        new StupidPool<>("map-virtual-column-groupby-test", () -> ByteBuffer.allocate(1024)),
+        GroupByQueryConfig::new,
         groupByResourcesReservationPool,
         TestHelper.makeJsonMapper(),
         new DefaultObjectMapper(),
-        QueryRunnerTestHelper.NOOP_QUERYWATCHER
+        QueryRunnerTestHelper.NOOP_QUERYWATCHER,
+        groupByStatsProvider
     );
 
     final GroupByQueryRunnerFactory factory = new GroupByQueryRunnerFactory(
         groupingEngine,
-        new GroupByQueryQueryToolChest(groupingEngine, groupByResourcesReservationPool)
+        new GroupByQueryQueryToolChest(groupingEngine, groupByResourcesReservationPool),
+        new StupidPool<>("map-virtual-column-groupby-test", () -> ByteBuffer.allocate(1024))
     );
 
     runner = QueryRunnerTestHelper.makeQueryRunner(

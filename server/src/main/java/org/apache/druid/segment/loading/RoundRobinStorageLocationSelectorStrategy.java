@@ -47,7 +47,7 @@ public class RoundRobinStorageLocationSelectorStrategy implements StorageLocatio
   @Override
   public Iterator<StorageLocation> getLocations()
   {
-    return new Iterator<StorageLocation>()
+    return new Iterator<>()
     {
 
       private final int numStorageLocations = storageLocations.size();

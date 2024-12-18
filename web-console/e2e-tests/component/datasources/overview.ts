@@ -125,13 +125,13 @@ export class DatasourcesOverview {
       throw new Error(`Could not find datasource: ${datasourceName}`);
     }
 
-    const editActions = await this.page.$$('.action-cell span[icon=more]');
+    const editActions = await this.page.$$('.action-cell span.bp5-icon-more');
     await editActions[index].click();
     await this.waitForPopupMenu();
   }
 
   private async waitForPopupMenu(): Promise<void> {
-    await this.page.waitForSelector('ul.bp4-menu');
+    await this.page.waitForSelector('ul.bp5-menu');
   }
 
   async triggerCompaction(): Promise<void> {

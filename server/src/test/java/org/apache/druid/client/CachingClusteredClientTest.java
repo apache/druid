@@ -63,7 +63,6 @@ import org.apache.druid.java.util.common.guava.MergeIterable;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.guava.nary.TrinaryFn;
-import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.BrokerParallelMergeConfig;
 import org.apache.druid.query.BySegmentResultValueClass;
 import org.apache.druid.query.Druids;
@@ -74,7 +73,6 @@ import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
-import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -116,6 +114,7 @@ import org.apache.druid.query.topn.TopNQueryQueryToolChest;
 import org.apache.druid.query.topn.TopNResultValue;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.server.QueryScheduler;
+import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -138,15 +137,14 @@ import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
 import org.joda.time.Period;
-import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import javax.annotation.Nullable;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -252,10 +250,9 @@ public class CachingClusteredClientTest
   private static final DateTimeZone TIMEZONE = DateTimes.inferTzFromString("America/Los_Angeles");
   private static final Granularity PT1H_TZ_GRANULARITY = new PeriodGranularity(new Period("PT1H"), null, TIMEZONE);
   private static final String TOP_DIM = "a_dim";
-  private static final Pair<QueryToolChestWarehouse, Closer> WAREHOUSE_AND_CLOSER =
-      CachingClusteredClientTestUtils.createWarehouse();
-  private static final QueryToolChestWarehouse WAREHOUSE = WAREHOUSE_AND_CLOSER.lhs;
-  private static final Closer RESOURCE_CLOSER = WAREHOUSE_AND_CLOSER.rhs;
+
+  @ClassRule
+  public static QueryStackTests.Junit4ConglomerateRule conglomerateRule = new QueryStackTests.Junit4ConglomerateRule();
 
   private final Random random;
 
@@ -276,7 +273,7 @@ public class CachingClusteredClientTest
   {
     return Lists.transform(
         Lists.newArrayList(new RangeIterable(RANDOMNESS)),
-        new Function<Integer, Object[]>()
+        new Function<>()
         {
           @Override
           public Object[] apply(Integer input)
@@ -285,12 +282,6 @@ public class CachingClusteredClientTest
           }
         }
     );
-  }
-
-  @AfterClass
-  public static void tearDownClass() throws IOException
-  {
-    RESOURCE_CLOSER.close();
   }
 
   @Before
@@ -1909,7 +1900,7 @@ public class CachingClusteredClientTest
             results.add(expectation.getResults());
           }
           EasyMock.expect(queryable.run(EasyMock.capture(capture), EasyMock.capture(context)))
-                  .andAnswer(new IAnswer<Sequence>()
+                  .andAnswer(new IAnswer<>()
                   {
                     @Override
                     public Sequence answer()
@@ -2268,7 +2259,7 @@ public class CachingClusteredClientTest
               .trinaryTransform(
                   intervals,
                   results,
-                  new TrinaryFn<SegmentId, Interval, Iterable<Result<TimeseriesResultValue>>, Result<TimeseriesResultValue>>()
+                  new TrinaryFn<>()
                   {
                     @Override
                     @SuppressWarnings("unchecked")
@@ -2307,7 +2298,7 @@ public class CachingClusteredClientTest
             .trinaryTransform(
                 intervals,
                 results,
-                new TrinaryFn<SegmentId, Interval, Iterable<Result<TopNResultValue>>, Result<TopNResultValue>>()
+                new TrinaryFn<>()
                 {
                   @Override
                   @SuppressWarnings("unchecked")
@@ -2343,7 +2334,7 @@ public class CachingClusteredClientTest
             .trinaryTransform(
                 intervals,
                 results,
-                new TrinaryFn<SegmentId, Interval, Iterable<Result<SearchResultValue>>, Result<SearchResultValue>>()
+                new TrinaryFn<>()
                 {
                   @Override
                   @SuppressWarnings("unchecked")
@@ -2380,7 +2371,7 @@ public class CachingClusteredClientTest
             .trinaryTransform(
                 intervals,
                 results,
-                new TrinaryFn<SegmentId, Interval, Iterable<ResultRow>, Result>()
+                new TrinaryFn<>()
                 {
                   @Override
                   @SuppressWarnings("unchecked")
@@ -2424,7 +2415,7 @@ public class CachingClusteredClientTest
             .trinaryTransform(
                 intervals,
                 results,
-                new TrinaryFn<SegmentId, Interval, Iterable<Result<TimeBoundaryResultValue>>, Result<TimeBoundaryResultValue>>()
+                new TrinaryFn<>()
                 {
                   @Override
                   @SuppressWarnings("unchecked")
@@ -2637,7 +2628,7 @@ public class CachingClusteredClientTest
   )
   {
     return new CachingClusteredClient(
-        WAREHOUSE,
+        conglomerateRule.getConglomerate(),
         new TimelineServerView()
         {
           @Override

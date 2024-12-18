@@ -41,7 +41,7 @@ public class ConcatQueryRunner<T> implements QueryRunner<T>
     return Sequences.concat(
         Sequences.map(
             queryRunners,
-            new Function<QueryRunner<T>, Sequence<T>>()
+            new Function<>()
             {
               @Override
               public Sequence<T> apply(final QueryRunner<T> input)

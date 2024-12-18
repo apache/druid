@@ -82,7 +82,7 @@ public class SqlResource
   private final DruidNode selfNode;
 
   @Inject
-  SqlResource(
+  protected SqlResource(
       final ObjectMapper jsonMapper,
       final AuthorizerMapper authorizerMapper,
       final @NativeQuery SqlStatementFactory sqlStatementFactory,
@@ -140,19 +140,7 @@ public class SqlResource
       return Response.status(Status.NOT_FOUND).build();
     }
 
-    // Considers only datasource and table resources; not context
-    // key resources when checking permissions. This means that a user's
-    // permission to cancel a query depends on the datasource, not the
-    // context variables used in the query.
-    Set<ResourceAction> resources = lifecycles
-        .stream()
-        .flatMap(lifecycle -> lifecycle.resources().stream())
-        .collect(Collectors.toSet());
-    Access access = AuthorizationUtils.authorizeAllResourceActions(
-        req,
-        resources,
-        authorizerMapper
-    );
+    final Access access = authorizeCancellation(req, lifecycles);
 
     if (access.isAllowed()) {
       // should remove only the lifecycles in the snapshot.
@@ -223,7 +211,7 @@ public class SqlResource
           jsonMapper,
           responseContextConfig,
           selfNode,
-          SqlResource.QUERY_METRIC_COUNTER,
+          QUERY_METRIC_COUNTER,
           sqlQueryId,
           MediaType.APPLICATION_JSON_TYPE,
           headers
@@ -340,5 +328,24 @@ public class SqlResource
       }
       out.write(jsonMapper.writeValueAsBytes(ex));
     }
+  }
+
+  /**
+   * Authorize a query cancellation operation.
+   *
+   * Considers only datasource and table resources; not context key resources when checking permissions. This means
+   * that a user's permission to cancel a query depends on the datasource, not the context variables used in the query.
+   */
+  public Access authorizeCancellation(final HttpServletRequest req, final List<Cancelable> cancelables)
+  {
+    Set<ResourceAction> resources = cancelables
+        .stream()
+        .flatMap(lifecycle -> lifecycle.resources().stream())
+        .collect(Collectors.toSet());
+    return AuthorizationUtils.authorizeAllResourceActions(
+        req,
+        resources,
+        authorizerMapper
+    );
   }
 }

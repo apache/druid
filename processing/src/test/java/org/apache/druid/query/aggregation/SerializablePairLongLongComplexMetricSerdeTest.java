@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.GenericColumnSerializer;
+import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ComplexColumn;
@@ -147,7 +148,7 @@ public class SerializablePairLongLongComplexMetricSerdeTest
     SegmentWriteOutMedium writeOutMedium = new OnHeapMemorySegmentWriteOutMedium();
     ByteBuffer compressedBuffer = serializeAllValuesToByteBuffer(
         expected,
-        COMPRESSED_SERDE.getSerializer(writeOutMedium, "not-used"),
+        COMPRESSED_SERDE.getSerializer(writeOutMedium, "not-used", IndexSpec.DEFAULT),
         expectedCompressedSize
     ).asReadOnlyBuffer();
 
@@ -193,7 +194,7 @@ public class SerializablePairLongLongComplexMetricSerdeTest
 
     final AtomicReference<SerializablePairLongLong> reference = new AtomicReference<>(null);
     ColumnValueSelector<SerializablePairLongLong> valueSelector =
-        new SingleObjectColumnValueSelector<SerializablePairLongLong>(
+        new SingleObjectColumnValueSelector<>(
             SerializablePairLongLong.class
         )
         {

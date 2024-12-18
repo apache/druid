@@ -70,7 +70,7 @@ DruidProject(t1=['dummy'], t2=[$0], druid=[logical])
       "dimensions" : [ {
         "type" : "default",
         "dimension" : "dim4",
-        "outputName" : "_d0",
+        "outputName" : "d0",
         "outputType" : "STRING"
       } ],
       "limitSpec" : {
@@ -85,7 +85,7 @@ DruidProject(t1=['dummy'], t2=[$0], druid=[logical])
   "virtualColumns" : [ {
     "type" : "expression",
     "name" : "v0",
-    "expression" : "case_searched((\"_d0\" == 'b'),\"_d0\",null)",
+    "expression" : "case_searched((\"d0\" == 'b'),\"d0\",null)",
     "outputType" : "STRING"
   } ],
   "granularity" : {
@@ -94,7 +94,7 @@ DruidProject(t1=['dummy'], t2=[$0], druid=[logical])
   "dimensions" : [ {
     "type" : "default",
     "dimension" : "v0",
-    "outputName" : "d0",
+    "outputName" : "_d0",
     "outputType" : "STRING"
   } ],
   "postAggregations" : [ {

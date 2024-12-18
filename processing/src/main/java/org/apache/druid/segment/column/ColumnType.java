@@ -124,6 +124,12 @@ public class ColumnType extends BaseTypeSignature<ValueType>
     return Types.fromString(ColumnTypeFactory.getInstance(), typeName);
   }
 
+  @Nullable
+  public static ColumnType fromCapabilities(@Nullable ColumnCapabilities capabilities)
+  {
+    return capabilities != null ? capabilities.toColumnType() : null;
+  }
+
   public static ColumnType ofArray(ColumnType elementType)
   {
     return ColumnTypeFactory.getInstance().ofArray(elementType);
@@ -173,8 +179,8 @@ public class ColumnType extends BaseTypeSignature<ValueType>
     }
     // if either is nested data, use nested data, otherwise error
     if (type.is(ValueType.COMPLEX) || other.is(ValueType.COMPLEX)) {
-      if (ColumnType.NESTED_DATA.equals(type) || ColumnType.NESTED_DATA.equals(other)) {
-        return ColumnType.NESTED_DATA;
+      if (NESTED_DATA.equals(type) || NESTED_DATA.equals(other)) {
+        return NESTED_DATA;
       }
       throw new Types.IncompatibleTypeException(type, other);
     }
@@ -192,14 +198,14 @@ public class ColumnType extends BaseTypeSignature<ValueType>
             (ColumnType) other.getElementType()
         );
 
-        return ColumnType.ofArray(commonElementType);
+        return ofArray(commonElementType);
       } else {
         commonElementType = leastRestrictiveType(
             (ColumnType) type.getElementType(),
             other
         );
       }
-      return ColumnType.ofArray(commonElementType);
+      return ofArray(commonElementType);
     }
     if (other.isArray()) {
       if (type.equals(type.getElementType())) {
@@ -211,22 +217,22 @@ public class ColumnType extends BaseTypeSignature<ValueType>
           type,
           (ColumnType) other.getElementType()
       );
-      return ColumnType.ofArray(commonElementType);
+      return ofArray(commonElementType);
     }
     // if either argument is a string, type becomes a string
     if (Types.is(type, ValueType.STRING) || Types.is(other, ValueType.STRING)) {
-      return ColumnType.STRING;
+      return STRING;
     }
 
     // all numbers win over longs
     if (Types.is(type, ValueType.LONG) && Types.isNullOr(other, ValueType.LONG)) {
-      return ColumnType.LONG;
+      return LONG;
     }
     // doubles win over floats
     if (Types.is(type, ValueType.FLOAT) && Types.isNullOr(other, ValueType.FLOAT)) {
-      return ColumnType.FLOAT;
+      return FLOAT;
     }
-    return ColumnType.DOUBLE;
+    return DOUBLE;
   }
 
 }

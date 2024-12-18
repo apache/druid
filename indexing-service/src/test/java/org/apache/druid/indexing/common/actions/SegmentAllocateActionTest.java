@@ -27,6 +27,7 @@ import com.google.common.collect.Iterables;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.SegmentLock;
 import org.apache.druid.indexing.common.TaskLock;
+import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
@@ -34,6 +35,7 @@ import org.apache.druid.indexing.overlord.TaskLockbox;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
@@ -61,11 +63,18 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -84,21 +93,28 @@ public class SegmentAllocateActionTest
 
   private SegmentAllocationQueue allocationQueue;
 
-  @Parameterized.Parameters(name = "granularity = {0}, useBatch = {1}")
+  @Parameterized.Parameters(name = "granularity = {0}, useBatch = {1}, skipSegmentPayloadFetchForAllocation = {2}")
   public static Iterable<Object[]> constructorFeeder()
   {
     return ImmutableList.of(
-        new Object[]{LockGranularity.SEGMENT, true},
-        new Object[]{LockGranularity.SEGMENT, false},
-        new Object[]{LockGranularity.TIME_CHUNK, true},
-        new Object[]{LockGranularity.TIME_CHUNK, false}
+        new Object[]{LockGranularity.SEGMENT, true, true},
+        new Object[]{LockGranularity.SEGMENT, true, false},
+        new Object[]{LockGranularity.SEGMENT, false, false},
+        new Object[]{LockGranularity.TIME_CHUNK, true, true},
+        new Object[]{LockGranularity.TIME_CHUNK, true, false},
+        new Object[]{LockGranularity.TIME_CHUNK, false, false}
     );
   }
 
-  public SegmentAllocateActionTest(LockGranularity lockGranularity, boolean useBatch)
+  public SegmentAllocateActionTest(
+      LockGranularity lockGranularity,
+      boolean useBatch,
+      boolean skipSegmentPayloadFetchForAllocation
+  )
   {
     this.lockGranularity = lockGranularity;
     this.useBatch = useBatch;
+    this.taskActionTestKit.setSkipSegmentPayloadFetchForAllocation(skipSegmentPayloadFetchForAllocation);
   }
 
   @Before
@@ -120,6 +136,63 @@ public class SegmentAllocateActionTest
     if (allocationQueue != null) {
       allocationQueue.stop();
     }
+  }
+
+  @Test
+  public void testManySegmentsSameInterval_noLineageCheck() throws Exception
+  {
+    if (lockGranularity == LockGranularity.SEGMENT) {
+      return;
+    }
+
+    final Task task = NoopTask.create();
+    final int numTasks = 2;
+    final int numRequests = 200;
+
+    taskActionTestKit.getTaskLockbox().add(task);
+
+    ExecutorService allocatorService = Execs.multiThreaded(4, "allocator-%d");
+
+    final List<Callable<SegmentIdWithShardSpec>> allocateTasks = new ArrayList<>();
+    for (int i = 0; i < numRequests; i++) {
+      final String sequence = "sequence_" + (i % numTasks);
+      allocateTasks.add(() -> allocateWithoutLineageCheck(
+          task,
+          PARTY_TIME,
+          Granularities.NONE,
+          Granularities.HOUR,
+          sequence,
+          TaskLockType.APPEND
+      ));
+    }
+
+    Set<SegmentIdWithShardSpec> allocatedIds = new HashSet<>();
+    for (Future<SegmentIdWithShardSpec> future : allocatorService.invokeAll(allocateTasks)) {
+      allocatedIds.add(future.get());
+    }
+
+    Thread.sleep(1_000);
+    for (Future<SegmentIdWithShardSpec> future : allocatorService.invokeAll(allocateTasks)) {
+      allocatedIds.add(future.get());
+    }
+
+
+    final TaskLock lock = Iterables.getOnlyElement(
+        FluentIterable.from(taskActionTestKit.getTaskLockbox().findLocksForTask(task))
+                      .filter(input -> input.getInterval().contains(PARTY_TIME))
+    );
+    Set<SegmentIdWithShardSpec> expectedIds = new HashSet<>();
+    for (int i = 0; i < numTasks; i++) {
+      expectedIds.add(
+          new SegmentIdWithShardSpec(
+              DATA_SOURCE,
+              Granularities.HOUR.bucket(PARTY_TIME),
+              lock.getVersion(),
+              new NumberedShardSpec(i, 0)
+          )
+      );
+    }
+    Assert.assertEquals(expectedIds, allocatedIds);
   }
 
   @Test
@@ -1120,6 +1193,41 @@ public class SegmentAllocateActionTest
         sequencePreviousId,
         NumberedPartialShardSpec.instance()
     );
+  }
+
+  private SegmentIdWithShardSpec allocateWithoutLineageCheck(
+      final Task task,
+      final DateTime timestamp,
+      final Granularity queryGranularity,
+      final Granularity preferredSegmentGranularity,
+      final String sequenceName,
+      final TaskLockType taskLockType
+  )
+  {
+    final SegmentAllocateAction action = new SegmentAllocateAction(
+        DATA_SOURCE,
+        timestamp,
+        queryGranularity,
+        preferredSegmentGranularity,
+        sequenceName,
+        // prevSegmentId can vary across replicas and isn't deterministic
+        "random_" + ThreadLocalRandom.current().nextInt(),
+        true,
+        NumberedPartialShardSpec.instance(),
+        lockGranularity,
+        taskLockType
+    );
+
+    try {
+      if (useBatch) {
+        return action.performAsync(task, taskActionTestKit.getTaskActionToolbox()).get();
+      } else {
+        return action.perform(task, taskActionTestKit.getTaskActionToolbox());
+      }
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
   }
 
   private SegmentIdWithShardSpec allocate(

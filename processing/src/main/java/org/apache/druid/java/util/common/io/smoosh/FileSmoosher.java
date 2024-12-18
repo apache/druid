@@ -31,6 +31,7 @@ import org.apache.druid.java.util.common.MappedByteBufferHandler;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.segment.serde.Serializer;
 
 import java.io.BufferedWriter;
 import java.io.Closeable;
@@ -158,6 +159,13 @@ public class FileSmoosher implements Closeable
       for (ByteBuffer buffer : bufferToAdd) {
         out.write(buffer);
       }
+    }
+  }
+
+  public void serializeAs(String name, Serializer serializer) throws IOException
+  {
+    try (SmooshedWriter smooshChannel = addWithSmooshedWriter(name, serializer.getSerializedSize())) {
+      serializer.writeTo(smooshChannel, this);
     }
   }
 

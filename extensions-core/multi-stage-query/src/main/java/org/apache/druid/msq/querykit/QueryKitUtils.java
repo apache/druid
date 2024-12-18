@@ -34,7 +34,7 @@ import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.msq.indexing.error.ColumnNameRestrictedFault;
 import org.apache.druid.msq.indexing.error.MSQException;
-import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.expression.TimestampFloorExprMacro;
 import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.column.ColumnType;
@@ -111,7 +111,7 @@ public class QueryKitUtils
       return clusterBy;
     } else {
       final List<KeyColumn> newColumns = new ArrayList<>(clusterBy.getColumns().size() + 1);
-      newColumns.add(new KeyColumn(QueryKitUtils.SEGMENT_GRANULARITY_COLUMN, KeyOrder.ASCENDING));
+      newColumns.add(new KeyColumn(SEGMENT_GRANULARITY_COLUMN, KeyOrder.ASCENDING));
       newColumns.addAll(clusterBy.getColumns());
       return new ClusterBy(newColumns, 1);
     }
@@ -123,10 +123,10 @@ public class QueryKitUtils
    */
   public static void verifyRowSignature(final RowSignature signature)
   {
-    if (signature.contains(QueryKitUtils.PARTITION_BOOST_COLUMN)) {
-      throw new MSQException(new ColumnNameRestrictedFault(QueryKitUtils.PARTITION_BOOST_COLUMN));
-    } else if (signature.contains(QueryKitUtils.SEGMENT_GRANULARITY_COLUMN)) {
-      throw new MSQException(new ColumnNameRestrictedFault(QueryKitUtils.SEGMENT_GRANULARITY_COLUMN));
+    if (signature.contains(PARTITION_BOOST_COLUMN)) {
+      throw new MSQException(new ColumnNameRestrictedFault(PARTITION_BOOST_COLUMN));
+    } else if (signature.contains(SEGMENT_GRANULARITY_COLUMN)) {
+      throw new MSQException(new ColumnNameRestrictedFault(SEGMENT_GRANULARITY_COLUMN));
     }
   }
 
@@ -144,7 +144,7 @@ public class QueryKitUtils
     } else {
       return RowSignature.builder()
                          .addAll(signature)
-                         .add(QueryKitUtils.SEGMENT_GRANULARITY_COLUMN, ColumnType.LONG)
+                         .add(SEGMENT_GRANULARITY_COLUMN, ColumnType.LONG)
                          .build();
     }
   }
@@ -191,11 +191,11 @@ public class QueryKitUtils
    * @throws IllegalArgumentException if the provided granularity is not supported
    */
   @Nullable
-  public static VirtualColumn makeSegmentGranularityVirtualColumn(final ObjectMapper jsonMapper, final Query<?> query)
+  public static VirtualColumn makeSegmentGranularityVirtualColumn(final ObjectMapper jsonMapper, final QueryContext queryContext)
   {
     final Granularity segmentGranularity =
-        QueryKitUtils.getSegmentGranularityFromContext(jsonMapper, query.getContext());
-    final String timeColumnName = query.context().getString(QueryKitUtils.CTX_TIME_COLUMN_NAME);
+        getSegmentGranularityFromContext(jsonMapper, queryContext.asMap());
+    final String timeColumnName = queryContext.getString(CTX_TIME_COLUMN_NAME);
 
     if (timeColumnName == null || Granularities.ALL.equals(segmentGranularity)) {
       return null;
@@ -213,7 +213,7 @@ public class QueryKitUtils
     }
 
     return new ExpressionVirtualColumn(
-        QueryKitUtils.SEGMENT_GRANULARITY_COLUMN,
+        SEGMENT_GRANULARITY_COLUMN,
         StringUtils.format(
             "timestamp_floor(%s, %s)",
             CalciteSqlDialect.DEFAULT.quoteIdentifier(timeColumnName),

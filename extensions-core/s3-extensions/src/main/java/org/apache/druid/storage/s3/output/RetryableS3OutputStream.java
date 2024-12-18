@@ -212,11 +212,10 @@ public class RetryableS3OutputStream extends OutputStream
     // Closeables are closed in LIFO order
     closer.register(() -> {
       org.apache.commons.io.FileUtils.forceDelete(chunkStorePath);
-      LOG.info("Deleted chunkStorePath[%s]", chunkStorePath);
 
       final long totalBytesUploaded = (currentChunk.id - 1) * chunkSize + currentChunk.length();
       final long totalUploadTimeMillis = pushStopwatch.elapsed(TimeUnit.MILLISECONDS);
-      LOG.info(
+      LOG.debug(
           "Pushed total [%d] parts containing [%d] bytes in [%d]ms for s3Key[%s], uploadId[%s].",
           futures.size(),
           totalBytesUploaded,

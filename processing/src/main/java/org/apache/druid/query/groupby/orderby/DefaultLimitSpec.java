@@ -344,7 +344,7 @@ public class DefaultLimitSpec implements LimitSpec
     final Ordering<ResultRow> timeOrdering;
 
     if (hasTimestamp) {
-      timeOrdering = new Ordering<ResultRow>()
+      timeOrdering = new Ordering<>()
       {
         @Override
         public int compare(ResultRow left, ResultRow right)
@@ -468,7 +468,7 @@ public class DefaultLimitSpec implements LimitSpec
                 DimensionHandlerUtils.coerceToStringArray(o2)
             );
           }
-          return new DimensionComparisonUtils.ArrayComparator<String>(stringComparator)
+          return new DimensionComparisonUtils.ArrayComparator<>(stringComparator)
               .compare(
                   DimensionHandlerUtils.coerceToStringArray(o1),
                   DimensionHandlerUtils.coerceToStringArray(o2)

@@ -250,11 +250,12 @@ public class SqlStatementResourceHelper
       TaskStatusResponse taskResponse,
       TaskStatusPlus statusPlus,
       SqlStatementState sqlStatementState,
-      TaskReport.ReportMap msqPayload,
-      ObjectMapper jsonMapper
+      MSQTaskReportPayload msqTaskReportPayload,
+      ObjectMapper jsonMapper,
+      boolean detail
   )
   {
-    final MSQErrorReport exceptionDetails = getQueryExceptionDetails(getPayload(msqPayload));
+    final MSQErrorReport exceptionDetails = getQueryExceptionDetails(msqTaskReportPayload);
     final MSQFault fault = exceptionDetails == null ? null : exceptionDetails.getFault();
     if (exceptionDetails == null || fault == null) {
       return Optional.of(new SqlStatementResult(
@@ -267,7 +268,10 @@ public class SqlStatementResourceHelper
           DruidException.forPersona(DruidException.Persona.DEVELOPER)
                         .ofCategory(DruidException.Category.UNCATEGORIZED)
                         .build("%s", taskResponse.getStatus().getErrorMsg())
-                        .toErrorResponse()
+                        .toErrorResponse(),
+          detail ? getQueryStagesReport(msqTaskReportPayload) : null,
+          detail ? getQueryCounters(msqTaskReportPayload) : null,
+          detail ? getQueryWarningDetails(msqTaskReportPayload) : null
       ));
     }
 
@@ -293,7 +297,10 @@ public class SqlStatementResourceHelper
             ex.withContext(exceptionContext);
             return ex;
           }
-        }).toErrorResponse()
+        }).toErrorResponse(),
+        detail ? getQueryStagesReport(msqTaskReportPayload) : null,
+        detail ? getQueryCounters(msqTaskReportPayload) : null,
+        detail ? getQueryWarningDetails(msqTaskReportPayload) : null
     ));
   }
 
@@ -314,7 +321,7 @@ public class SqlStatementResourceHelper
                             .map(mapping -> columnSelectorFactory.makeColumnValueSelector(mapping.getQueryColumn()))
                             .collect(Collectors.toList());
 
-    final Iterable<Object[]> retVal = () -> new Iterator<Object[]>()
+    final Iterable<Object[]> retVal = () -> new Iterator<>()
     {
       @Override
       public boolean hasNext()
@@ -353,7 +360,7 @@ public class SqlStatementResourceHelper
   }
 
   @Nullable
-  public static MSQStagesReport.Stage getFinalStage(MSQTaskReportPayload msqTaskReportPayload)
+  public static MSQStagesReport.Stage getFinalStage(@Nullable MSQTaskReportPayload msqTaskReportPayload)
   {
     if (msqTaskReportPayload == null || msqTaskReportPayload.getStages().getStages() == null) {
       return null;
@@ -369,9 +376,27 @@ public class SqlStatementResourceHelper
   }
 
   @Nullable
-  private static MSQErrorReport getQueryExceptionDetails(MSQTaskReportPayload payload)
+  private static MSQErrorReport getQueryExceptionDetails(@Nullable MSQTaskReportPayload payload)
   {
     return payload == null ? null : payload.getStatus().getErrorReport();
+  }
+
+  @Nullable
+  public static List<MSQErrorReport> getQueryWarningDetails(@Nullable MSQTaskReportPayload payload)
+  {
+    return payload == null ? null : new ArrayList<>(payload.getStatus().getWarningReports());
+  }
+
+  @Nullable
+  public static MSQStagesReport getQueryStagesReport(@Nullable MSQTaskReportPayload payload)
+  {
+    return payload == null ? null : payload.getStages();
+  }
+
+  @Nullable
+  public static CounterSnapshotsTree getQueryCounters(@Nullable MSQTaskReportPayload payload)
+  {
+    return payload == null ? null : payload.getCounters();
   }
 
   @Nullable

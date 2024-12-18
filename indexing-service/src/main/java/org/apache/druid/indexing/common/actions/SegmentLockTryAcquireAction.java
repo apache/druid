@@ -86,9 +86,7 @@ public class SegmentLockTryAcquireAction implements TaskAction<List<LockResult>>
   @Override
   public TypeReference<List<LockResult>> getReturnTypeReference()
   {
-    return new TypeReference<List<LockResult>>()
-    {
-    };
+    return new TypeReference<>() {};
   }
 
   @Override
@@ -100,12 +98,6 @@ public class SegmentLockTryAcquireAction implements TaskAction<List<LockResult>>
                            new SpecificSegmentLockRequest(type, task, interval, version, partitionId)
                        ))
                        .collect(Collectors.toList());
-  }
-
-  @Override
-  public boolean isAudited()
-  {
-    return false;
   }
 
   @Override

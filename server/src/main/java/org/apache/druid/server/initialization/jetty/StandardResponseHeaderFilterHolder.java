@@ -21,7 +21,7 @@ package org.apache.druid.server.initialization.jetty;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Inject;
-import org.apache.commons.lang.CharUtils;
+import org.apache.commons.lang3.CharUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.eclipse.jetty.client.api.Response;
@@ -73,7 +73,7 @@ public class StandardResponseHeaderFilterHolder implements ServletFilterHolder
       final Response serverResponse
   )
   {
-    for (final String headerName : StandardResponseHeaderFilterHolder.STANDARD_HEADERS) {
+    for (final String headerName : STANDARD_HEADERS) {
       if (serverResponse.getHeaders().containsKey(headerName) && proxyResponse.containsHeader(headerName)) {
         ((org.eclipse.jetty.server.Response) proxyResponse).getHttpFields().remove(headerName);
       }

@@ -16,10 +16,13 @@
  * limitations under the License.
  */
 
-import type { ExpressionMeta } from '@druid-toolkit/visuals-core';
+import type { Column } from 'druid-query-toolkit';
+
+import type { Measure } from './models';
 
 export class DragHelper {
-  static dragColumn: ExpressionMeta | undefined;
+  static dragColumn: Column | undefined;
+  static dragMeasure: Measure | undefined;
 
   static createDragGhost(dataTransfer: DataTransfer, text: string): void {
     const dragGhost = document.createElement('div');

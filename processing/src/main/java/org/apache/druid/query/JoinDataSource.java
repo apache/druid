@@ -96,6 +96,7 @@ public class JoinDataSource implements DataSource
   private final DimFilter leftFilter;
   @Nullable
   private final JoinableFactoryWrapper joinableFactoryWrapper;
+  private final JoinAlgorithm joinAlgorithm;
   private static final Logger log = new Logger(JoinDataSource.class);
   private final DataSourceAnalysis analysis;
 
@@ -106,7 +107,8 @@ public class JoinDataSource implements DataSource
       JoinConditionAnalysis conditionAnalysis,
       JoinType joinType,
       @Nullable DimFilter leftFilter,
-      @Nullable JoinableFactoryWrapper joinableFactoryWrapper
+      @Nullable JoinableFactoryWrapper joinableFactoryWrapper,
+      JoinAlgorithm joinAlgorithm
   )
   {
     this.left = Preconditions.checkNotNull(left, "left");
@@ -116,6 +118,7 @@ public class JoinDataSource implements DataSource
     this.joinType = Preconditions.checkNotNull(joinType, "joinType");
     this.leftFilter = validateLeftFilter(left, leftFilter);
     this.joinableFactoryWrapper = joinableFactoryWrapper;
+    this.joinAlgorithm = JoinAlgorithm.BROADCAST.equals(joinAlgorithm) ? null : joinAlgorithm;
 
     this.analysis = this.getAnalysisForDataSource();
   }
@@ -132,7 +135,8 @@ public class JoinDataSource implements DataSource
       @JsonProperty("joinType") JoinType joinType,
       @Nullable @JsonProperty("leftFilter") DimFilter leftFilter,
       @JacksonInject ExprMacroTable macroTable,
-      @Nullable @JacksonInject JoinableFactoryWrapper joinableFactoryWrapper
+      @Nullable @JacksonInject JoinableFactoryWrapper joinableFactoryWrapper,
+      @Nullable @JsonProperty("joinAlgorithm") JoinAlgorithm joinAlgorithm
   )
   {
     return new JoinDataSource(
@@ -146,7 +150,8 @@ public class JoinDataSource implements DataSource
         ),
         joinType,
         leftFilter,
-        joinableFactoryWrapper
+        joinableFactoryWrapper,
+        joinAlgorithm
     );
   }
 
@@ -160,7 +165,8 @@ public class JoinDataSource implements DataSource
       final JoinConditionAnalysis conditionAnalysis,
       final JoinType joinType,
       final DimFilter leftFilter,
-      @Nullable final JoinableFactoryWrapper joinableFactoryWrapper
+      @Nullable final JoinableFactoryWrapper joinableFactoryWrapper,
+      @Nullable final JoinAlgorithm joinAlgorithm
   )
   {
     return new JoinDataSource(
@@ -170,10 +176,10 @@ public class JoinDataSource implements DataSource
         conditionAnalysis,
         joinType,
         leftFilter,
-        joinableFactoryWrapper
+        joinableFactoryWrapper,
+        joinAlgorithm
     );
   }
-
 
   @Override
   public Set<String> getTableNames()
@@ -253,7 +259,8 @@ public class JoinDataSource implements DataSource
         conditionAnalysis,
         joinType,
         leftFilter,
-        joinableFactoryWrapper
+        joinableFactoryWrapper,
+        joinAlgorithm
     );
   }
 
@@ -313,14 +320,15 @@ public class JoinDataSource implements DataSource
     DimFilter joinBaseFilter = analysis.getJoinBaseTableFilter().orElse(null);
 
     for (final PreJoinableClause clause : analysis.getPreJoinableClauses()) {
-      current = JoinDataSource.create(
+      current = create(
           current,
           clause.getDataSource(),
           clause.getPrefix(),
           clause.getCondition(),
           clause.getJoinType(),
           joinBaseFilter,
-          this.joinableFactoryWrapper
+          this.joinableFactoryWrapper,
+          clause.getJoinAlgorithm()
       );
       joinBaseFilter = null;
     }
@@ -363,6 +371,18 @@ public class JoinDataSource implements DataSource
     return analysis;
   }
 
+  @JsonProperty("joinAlgorithm")
+  @JsonInclude(Include.NON_NULL)
+  private JoinAlgorithm getJoinAlgorithmForSerialization()
+  {
+    return joinAlgorithm;
+  }
+
+  public JoinAlgorithm getJoinAlgorithm()
+  {
+    return joinAlgorithm == null ? JoinAlgorithm.BROADCAST : joinAlgorithm;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -378,13 +398,14 @@ public class JoinDataSource implements DataSource
            Objects.equals(rightPrefix, that.rightPrefix) &&
            Objects.equals(conditionAnalysis, that.conditionAnalysis) &&
            Objects.equals(leftFilter, that.leftFilter) &&
+           joinAlgorithm == that.joinAlgorithm &&
            joinType == that.joinType;
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(left, right, rightPrefix, conditionAnalysis, joinType, leftFilter);
+    return Objects.hash(left, right, rightPrefix, conditionAnalysis, joinType, leftFilter, joinAlgorithm);
   }
 
   @Override
@@ -397,6 +418,7 @@ public class JoinDataSource implements DataSource
            ", condition=" + conditionAnalysis +
            ", joinType=" + joinType +
            ", leftFilter=" + leftFilter +
+           ", joinAlgorithm=" + joinAlgorithm +
            '}';
   }
 
@@ -539,7 +561,8 @@ public class JoinDataSource implements DataSource
                 joinDataSource.getRightPrefix(),
                 joinDataSource.getRight(),
                 joinDataSource.getJoinType(),
-                joinDataSource.getConditionAnalysis()
+                joinDataSource.getConditionAnalysis(),
+                joinDataSource.getJoinAlgorithm()
             )
         );
       } else if (current instanceof UnnestDataSource) {

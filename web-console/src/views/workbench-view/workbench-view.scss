@@ -19,35 +19,51 @@
 @import '../../variables';
 
 $column-tree-width: 250px;
-$recent-query-task-panel-width: 250px;
 
 .workbench-view {
   height: 100%;
   width: 100%;
+
+  .workbench-splitter {
+    height: 100%;
+
+    & > .layout-splitter:hover {
+      background: black;
+      opacity: 0.1;
+      border-radius: 2px;
+    }
+  }
 
   .column-tree {
     position: absolute;
     top: 0;
     left: 0;
     height: 100%;
-    width: $column-tree-width;
+    width: 100%;
     @include card-like;
   }
 
-  .recent-query-task-panel {
+  .recent-panel {
     position: absolute;
     top: 0;
     right: 0;
     height: 100%;
-    width: $recent-query-task-panel-width;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+
+    .recent-query-task-panel,
+    .current-dart-panel {
+      flex: 1;
+    }
   }
 
   .center-panel {
     position: absolute;
     top: 0;
     height: 100%;
-    left: $column-tree-width + $thin-padding;
-    right: $recent-query-task-panel-width + $thin-padding;
+    width: 100%;
 
     .tab-and-tool-bar {
       position: absolute;
@@ -94,7 +110,7 @@ $recent-query-task-panel-width: 250px;
           }
         }
 
-        .add-tab {
+        .new-tab {
           display: inline-block;
           vertical-align: top;
           padding: 6px 14px;
@@ -116,7 +132,7 @@ $recent-query-task-panel-width: 250px;
     left: 0;
   }
 
-  &.hide-work-history .center-panel {
+  &.hide-right-panel .center-panel {
     right: 0;
   }
 }

@@ -25,7 +25,7 @@ import org.apache.druid.metadata.ReplaceTaskLock;
 import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.partition.PartialShardSpec;
+import org.apache.druid.timeline.SegmentTimeline;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -179,6 +179,8 @@ public interface IndexerMetadataStorageCoordinator
    *                                Should be set to false if replica tasks would index events in same order
    * @param requests                Requests for which to allocate segments. All
    *                                the requests must share the same partition space.
+   * @param reduceMetadataIO        If true, try to use the segment ids instead of fetching every segment
+   *                                payload from the metadata store
    * @return Map from request to allocated segment id. The map does not contain
    * entries for failed requests.
    */
@@ -186,7 +188,20 @@ public interface IndexerMetadataStorageCoordinator
       String dataSource,
       Interval interval,
       boolean skipSegmentLineageCheck,
-      List<SegmentCreateRequest> requests
+      List<SegmentCreateRequest> requests,
+      boolean reduceMetadataIO
+  );
+
+  /**
+   * Return a segment timeline of all used segments including overshadowed ones for a given datasource and interval
+   * if skipSegmentPayloadFetchForAllocation is set to true, do not fetch all the segment payloads for allocation
+   * Instead fetch all the ids and numCorePartitions using exactly one segment per version per interval
+   * return a dummy DataSegment for each id that holds only the SegmentId and a NumberedShardSpec with numCorePartitions
+   */
+  SegmentTimeline getSegmentTimelineForAllocation(
+      String dataSource,
+      Interval interval,
+      boolean skipSegmentPayloadFetchForAllocation
   );
 
   /**
@@ -199,34 +214,23 @@ public interface IndexerMetadataStorageCoordinator
    * Note that a segment sequence may include segments with a variety of different intervals and versions.
    *
    * @param dataSource              dataSource for which to allocate a segment
-   * @param sequenceName            name of the group of ingestion tasks producing a segment series
-   * @param previousSegmentId       previous segment in the series; may be null or empty, meaning this is the first
-   *                                segment
    * @param interval                interval for which to allocate a segment
-   * @param partialShardSpec        partialShardSpec containing all necessary information to create a shardSpec for the
-   *                                new segmentId
-   * @param maxVersion              use this version if we have no better version to use. The returned segment
-   *                                identifier may have a version lower than this one, but will not have one higher.
    * @param skipSegmentLineageCheck if true, perform lineage validation using previousSegmentId for this sequence.
    *                                Should be set to false if replica tasks would index events in same order
-   * @param taskAllocatorId         The task allocator id with which the pending segment is associated
    * @return the pending segment identifier, or null if it was impossible to allocate a new segment
    */
+  @Nullable
   SegmentIdWithShardSpec allocatePendingSegment(
       String dataSource,
-      String sequenceName,
-      @Nullable String previousSegmentId,
       Interval interval,
-      PartialShardSpec partialShardSpec,
-      String maxVersion,
       boolean skipSegmentLineageCheck,
-      String taskAllocatorId
+      SegmentCreateRequest createRequest
   );
 
   /**
    * Delete pending segments created in the given interval belonging to the given data source from the pending segments
    * table. The {@code created_date} field of the pending segments table is checked to find segments to be deleted.
-   *
+   * <p>
    * Note that the semantic of the interval (for `created_date`s) is different from the semantic of the interval
    * parameters in some other methods in this class, such as {@link #retrieveUsedSegmentsForInterval} (where the
    * interval is about the time column value in rows belonging to the segment).
@@ -253,7 +257,7 @@ public interface IndexerMetadataStorageCoordinator
    * <p/>
    * If startMetadata and endMetadata are set, this insertion will be atomic with a compare-and-swap on dataSource
    * commit metadata.
-   *
+   * <p>
    * If segmentsToDrop is not null and not empty, this insertion will be atomic with a insert-and-drop on inserting
    * {@param segments} and dropping {@param segmentsToDrop}.
    *
@@ -410,7 +414,7 @@ public interface IndexerMetadataStorageCoordinator
    * Similar to {@link #commitSegments}, but meant for streaming ingestion tasks for handling
    * the case where the task ingested no records and created no segments, but still needs to update the metadata
    * with the progress that the task made.
-   *
+   * <p>
    * The metadata should undergo the same validation checks as performed by {@link #commitSegments}.
    *
    *
@@ -473,4 +477,21 @@ public interface IndexerMetadataStorageCoordinator
    * @return List of pending segment records
    */
   List<PendingSegmentRecord> getPendingSegments(String datasource, Interval interval);
+
+  /**
+   * Map from a segment ID to the segment ID from which it was upgraded
+   * There should be no entry in the map for an original non-upgraded segment
+   * @param dataSource data source
+   * @param segmentIds ids of segments
+   */
+  Map<String, String> retrieveUpgradedFromSegmentIds(String dataSource, Set<String> segmentIds);
+
+  /**
+   * Map from a segment ID to a set containing
+   * 1) all segment IDs that were upgraded from it AND are still present in the metadata store
+   * 2) the segment ID itself if and only if it is still present in the metadata store
+   * @param dataSource data source
+   * @param segmentIds ids of the first segments which had the corresponding load spec
+   */
+  Map<String, Set<String>> retrieveUpgradedToSegmentIds(String dataSource, Set<String> segmentIds);
 }

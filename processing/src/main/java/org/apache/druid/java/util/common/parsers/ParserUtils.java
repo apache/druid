@@ -22,6 +22,9 @@ package org.apache.druid.java.util.common.parsers;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Splitter;
+import com.google.common.primitives.Doubles;
+import com.google.common.primitives.Longs;
+import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.druid.common.config.NullHandling;
 import org.joda.time.DateTimeZone;
 
@@ -52,20 +55,60 @@ public class ParserUtils
     }
   }
 
-  public static Function<String, Object> getMultiValueFunction(
+  /**
+   * @return a transformation function on an input value. The function performs the following transformations on the input string:
+   * <li> Splits it into multiple values using the {@code listSplitter} if the {@code list delimiter} is present in the input. </li>
+   * <li> If {@code tryParseNumbers} is true, the function will also attempt to parse any numeric values present in the input:
+   * integers as {@code Long} and floating-point numbers as {@code Double}. If the input is not a number or parsing fails, the input
+   * is returned as-is as a string. </li>
+   */
+  public static Function<String, Object> getTransformationFunction(
       final String listDelimiter,
-      final Splitter listSplitter
+      final Splitter listSplitter,
+      final boolean tryParseNumbers
   )
   {
     return (input) -> {
-      if (input != null && input.contains(listDelimiter)) {
-        return StreamSupport.stream(listSplitter.split(input).spliterator(), false)
-                            .map(NullHandling::emptyToNullIfNeeded)
-                            .collect(Collectors.toList());
-      } else {
+      if (input == null) {
         return NullHandling.emptyToNullIfNeeded(input);
       }
+
+      if (input.contains(listDelimiter)) {
+        return StreamSupport.stream(listSplitter.split(input).spliterator(), false)
+            .map(NullHandling::emptyToNullIfNeeded)
+            .map(value -> tryParseNumbers ? tryParseStringAsNumber(value) : value)
+            .collect(Collectors.toList());
+      } else {
+        return tryParseNumbers ?
+            tryParseStringAsNumber(input) :
+            NullHandling.emptyToNullIfNeeded(input);
+
+      }
     };
+  }
+
+  /**
+   * Attempts to parse the input string into a numeric value, if applicable. If the input is a number, the method first
+   * tries to parse the input number as a {@code Long}. If parsing as a {@code Long} fails, it then attempts to parse
+   * the input number as a {@code Double}. For all other scenarios, the input is returned as-is as a {@code String} type.
+   */
+  @Nullable
+  private static Object tryParseStringAsNumber(@Nullable final String input)
+  {
+    if (!NumberUtils.isCreatable(input)) {
+      return NullHandling.emptyToNullIfNeeded(input);
+    }
+
+    final Long l = Longs.tryParse(input);
+    if (l != null) {
+      return l;
+    }
+    final Double d = Doubles.tryParse(input);
+    if (d != null) {
+      return d;
+    }
+    // fall back to given input if we cannot parse the input as a Long & Double for whatever reason
+    return input;
   }
 
   public static ArrayList<String> generateFieldNames(int length)

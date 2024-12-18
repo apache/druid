@@ -20,14 +20,15 @@
 package org.apache.druid.query.topn.types;
 
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.query.CursorGranularizer;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.topn.BaseTopNAlgorithm;
+import org.apache.druid.query.topn.TopNCursorInspector;
 import org.apache.druid.query.topn.TopNParams;
 import org.apache.druid.query.topn.TopNQuery;
 import org.apache.druid.query.topn.TopNResultBuilder;
 import org.apache.druid.segment.BaseNullableColumnValueSelector;
 import org.apache.druid.segment.Cursor;
-import org.apache.druid.segment.StorageAdapter;
 
 import java.util.Map;
 import java.util.function.Function;
@@ -78,7 +79,7 @@ public abstract class NullableNumericTopNColumnAggregatesProcessor<Selector exte
   }
 
   @Override
-  public Aggregator[][] getRowSelector(TopNQuery query, TopNParams params, StorageAdapter storageAdapter)
+  public Aggregator[][] getRowSelector(TopNQuery query, TopNParams params, TopNCursorInspector cursorInspector)
   {
     return null;
   }
@@ -88,26 +89,31 @@ public abstract class NullableNumericTopNColumnAggregatesProcessor<Selector exte
       TopNQuery query,
       Selector selector,
       Cursor cursor,
+      CursorGranularizer granularizer,
       Aggregator[][] rowSelector
   )
   {
     long processedRows = 0;
-    while (!cursor.isDone()) {
-      if (hasNulls && selector.isNull()) {
-        if (nullValueAggregates == null) {
-          nullValueAggregates = BaseTopNAlgorithm.makeAggregators(cursor, query.getAggregatorSpecs());
+    if (granularizer.currentOffsetWithinBucket()) {
+      while (!cursor.isDone()) {
+        if (hasNulls && selector.isNull()) {
+          if (nullValueAggregates == null) {
+            nullValueAggregates = BaseTopNAlgorithm.makeAggregators(cursor, query.getAggregatorSpecs());
+          }
+          for (Aggregator aggregator : nullValueAggregates) {
+            aggregator.aggregate();
+          }
+        } else {
+          Aggregator[] valueAggregates = getValueAggregators(query, selector, cursor);
+          for (Aggregator aggregator : valueAggregates) {
+            aggregator.aggregate();
+          }
         }
-        for (Aggregator aggregator : nullValueAggregates) {
-          aggregator.aggregate();
-        }
-      } else {
-        Aggregator[] valueAggregates = getValueAggregators(query, selector, cursor);
-        for (Aggregator aggregator : valueAggregates) {
-          aggregator.aggregate();
+        processedRows++;
+        if (!granularizer.advanceCursorWithinBucket()) {
+          break;
         }
       }
-      cursor.advance();
-      processedRows++;
     }
     return processedRows;
   }

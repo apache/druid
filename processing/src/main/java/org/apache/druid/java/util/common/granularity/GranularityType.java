@@ -176,7 +176,7 @@ public enum GranularityType
    */
   public static boolean isStandard(Granularity granularity)
   {
-    final GranularityType[] values = GranularityType.values();
+    final GranularityType[] values = values();
     for (GranularityType value : values) {
       if (value.getDefaultGranularity().equals(granularity)) {
         return true;
@@ -205,42 +205,42 @@ public enum GranularityType
 
     switch (index) {
       case 0:
-        return GranularityType.YEAR;
+        return YEAR;
       case 1:
         if (vals[index] == 3) {
-          return GranularityType.QUARTER;
+          return QUARTER;
         } else if (vals[index] == 1) {
-          return GranularityType.MONTH;
+          return MONTH;
         }
         break;
       case 2:
-        return GranularityType.WEEK;
+        return WEEK;
       case 3:
-        return GranularityType.DAY;
+        return DAY;
       case 4:
         if (vals[index] == 8) {
-          return GranularityType.EIGHT_HOUR;
+          return EIGHT_HOUR;
         } else if (vals[index] == 6) {
-          return GranularityType.SIX_HOUR;
+          return SIX_HOUR;
         } else if (vals[index] == 1) {
-          return GranularityType.HOUR;
+          return HOUR;
         }
         break;
       case 5:
         if (vals[index] == 30) {
-          return GranularityType.THIRTY_MINUTE;
+          return THIRTY_MINUTE;
         } else if (vals[index] == 15) {
-          return GranularityType.FIFTEEN_MINUTE;
+          return FIFTEEN_MINUTE;
         } else if (vals[index] == 10) {
-          return GranularityType.TEN_MINUTE;
+          return TEN_MINUTE;
         } else if (vals[index] == 5) {
-          return GranularityType.FIVE_MINUTE;
+          return FIVE_MINUTE;
         } else if (vals[index] == 1) {
-          return GranularityType.MINUTE;
+          return MINUTE;
         }
         break;
       case 6:
-        return GranularityType.SECOND;
+        return SECOND;
       default:
         break;
     }

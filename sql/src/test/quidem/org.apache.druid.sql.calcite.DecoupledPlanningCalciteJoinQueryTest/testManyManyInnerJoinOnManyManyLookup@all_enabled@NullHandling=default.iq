@@ -1,0 +1,400 @@
+# testManyManyInnerJoinOnManyManyLookup@all_enabled@NullHandling=default case-crc:0a05a3f9
+# quidem testcase reason: IMPROVED_PLAN
+!set debug true
+!set defaultTimeout 300000
+!set enableJoinFilterRewrite true
+!set enableJoinFilterRewriteValueColumnFilters true
+!set enableRewriteJoinToFilter true
+!set maxScatterGatherBytes 9223372036854775807
+!set plannerStrategy DECOUPLED
+!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
+!set sqlQueryId dummy
+!set outputformat mysql
+!use druidtest:///
+SELECT dim1
+FROM foo
+INNER JOIN lookup.lookyloo l ON foo.dim2 = l.k
+INNER JOIN lookup.lookyloo l2 ON foo.dim2 = l2.k
+INNER JOIN lookup.lookyloo l3 ON foo.dim2 = l3.k
+INNER JOIN lookup.lookyloo l4 ON foo.dim2 = l4.k
+INNER JOIN lookup.lookyloo l5 ON foo.dim2 = l5.k
+INNER JOIN lookup.lookyloo l6 ON foo.dim2 = l6.k
+INNER JOIN lookup.lookyloo l7 ON foo.dim2 = l7.k
+INNER JOIN lookup.lookyloo l8 ON foo.dim2 = l8.k
+INNER JOIN lookup.lookyloo l9 ON foo.dim2 = l9.k
+INNER JOIN lookup.lookyloo l10 ON foo.dim2 = l10.k
+INNER JOIN lookup.lookyloo l11 ON foo.dim2 = l11.k
+INNER JOIN lookup.lookyloo l12 ON foo.dim2 = l12.k
+INNER JOIN lookup.lookyloo l13 ON foo.dim2 = l13.k
+INNER JOIN lookup.lookyloo l14 ON foo.dim2 = l14.k
+INNER JOIN lookup.lookyloo l15 ON foo.dim2 = l15.k
+INNER JOIN lookup.lookyloo l16 ON foo.dim2 = l16.k
+INNER JOIN lookup.lookyloo l17 ON foo.dim2 = l17.k
+INNER JOIN lookup.lookyloo l18 ON foo.dim2 = l18.k
+INNER JOIN lookup.lookyloo l19 ON foo.dim2 = l19.k
+WHERE l.v = 'xa'
+;
++------+
+| dim1 |
++------+
+|      |
+| 1    |
++------+
+(2 rows)
+
+!ok
+LogicalProject(dim1=[$0])
+  LogicalJoin(condition=[=($1, $21)], joinType=[inner])
+    LogicalJoin(condition=[=($1, $20)], joinType=[inner])
+      LogicalJoin(condition=[=($1, $19)], joinType=[inner])
+        LogicalJoin(condition=[=($1, $18)], joinType=[inner])
+          LogicalJoin(condition=[=($1, $17)], joinType=[inner])
+            LogicalJoin(condition=[=($1, $16)], joinType=[inner])
+              LogicalJoin(condition=[=($1, $15)], joinType=[inner])
+                LogicalJoin(condition=[=($1, $14)], joinType=[inner])
+                  LogicalJoin(condition=[=($1, $13)], joinType=[inner])
+                    LogicalJoin(condition=[=($1, $12)], joinType=[inner])
+                      LogicalJoin(condition=[=($1, $11)], joinType=[inner])
+                        LogicalJoin(condition=[=($1, $10)], joinType=[inner])
+                          LogicalJoin(condition=[=($1, $9)], joinType=[inner])
+                            LogicalJoin(condition=[=($1, $8)], joinType=[inner])
+                              LogicalJoin(condition=[=($1, $7)], joinType=[inner])
+                                LogicalJoin(condition=[=($1, $6)], joinType=[inner])
+                                  LogicalJoin(condition=[=($1, $5)], joinType=[inner])
+                                    LogicalJoin(condition=[=($1, $4)], joinType=[inner])
+                                      LogicalJoin(condition=[=($1, $2)], joinType=[inner])
+                                        LogicalProject(dim1=[$1], dim2=[$2])
+                                          LogicalTableScan(table=[[druid, foo]])
+                                        LogicalFilter(condition=[=($1, 'xa')])
+                                          LogicalTableScan(table=[[lookup, lookyloo]])
+                                      LogicalProject(k=[$0])
+                                        LogicalTableScan(table=[[lookup, lookyloo]])
+                                    LogicalProject(k=[$0])
+                                      LogicalTableScan(table=[[lookup, lookyloo]])
+                                  LogicalProject(k=[$0])
+                                    LogicalTableScan(table=[[lookup, lookyloo]])
+                                LogicalProject(k=[$0])
+                                  LogicalTableScan(table=[[lookup, lookyloo]])
+                              LogicalProject(k=[$0])
+                                LogicalTableScan(table=[[lookup, lookyloo]])
+                            LogicalProject(k=[$0])
+                              LogicalTableScan(table=[[lookup, lookyloo]])
+                          LogicalProject(k=[$0])
+                            LogicalTableScan(table=[[lookup, lookyloo]])
+                        LogicalProject(k=[$0])
+                          LogicalTableScan(table=[[lookup, lookyloo]])
+                      LogicalProject(k=[$0])
+                        LogicalTableScan(table=[[lookup, lookyloo]])
+                    LogicalProject(k=[$0])
+                      LogicalTableScan(table=[[lookup, lookyloo]])
+                  LogicalProject(k=[$0])
+                    LogicalTableScan(table=[[lookup, lookyloo]])
+                LogicalProject(k=[$0])
+                  LogicalTableScan(table=[[lookup, lookyloo]])
+              LogicalProject(k=[$0])
+                LogicalTableScan(table=[[lookup, lookyloo]])
+            LogicalProject(k=[$0])
+              LogicalTableScan(table=[[lookup, lookyloo]])
+          LogicalProject(k=[$0])
+            LogicalTableScan(table=[[lookup, lookyloo]])
+        LogicalProject(k=[$0])
+          LogicalTableScan(table=[[lookup, lookyloo]])
+      LogicalProject(k=[$0])
+        LogicalTableScan(table=[[lookup, lookyloo]])
+    LogicalProject(k=[$0])
+      LogicalTableScan(table=[[lookup, lookyloo]])
+
+!logicalPlan
+DruidProject(dim1=[$0], druid=[logical])
+  DruidJoin(condition=[=($1, $21)], joinType=[inner])
+    DruidJoin(condition=[=($1, $20)], joinType=[inner])
+      DruidJoin(condition=[=($1, $19)], joinType=[inner])
+        DruidJoin(condition=[=($1, $18)], joinType=[inner])
+          DruidJoin(condition=[=($1, $17)], joinType=[inner])
+            DruidJoin(condition=[=($1, $16)], joinType=[inner])
+              DruidJoin(condition=[=($1, $15)], joinType=[inner])
+                DruidJoin(condition=[=($1, $14)], joinType=[inner])
+                  DruidJoin(condition=[=($1, $13)], joinType=[inner])
+                    DruidJoin(condition=[=($1, $12)], joinType=[inner])
+                      DruidJoin(condition=[=($1, $11)], joinType=[inner])
+                        DruidJoin(condition=[=($1, $10)], joinType=[inner])
+                          DruidJoin(condition=[=($1, $9)], joinType=[inner])
+                            DruidJoin(condition=[=($1, $8)], joinType=[inner])
+                              DruidJoin(condition=[=($1, $7)], joinType=[inner])
+                                DruidJoin(condition=[=($1, $6)], joinType=[inner])
+                                  DruidJoin(condition=[=($1, $5)], joinType=[inner])
+                                    DruidJoin(condition=[=($1, $4)], joinType=[inner])
+                                      DruidJoin(condition=[=($1, $2)], joinType=[inner])
+                                        DruidProject(dim1=[$1], dim2=[$2], druid=[logical])
+                                          DruidTableScan(table=[[druid, foo]], druid=[logical])
+                                        DruidFilter(condition=[=($1, 'xa')])
+                                          DruidTableScan(table=[[lookup, lookyloo]], druid=[logical])
+                                      DruidProject(k=[$0], druid=[logical])
+                                        DruidTableScan(table=[[lookup, lookyloo]], druid=[logical])
+                                    DruidProject(k=[$0], druid=[logical])
+                                      DruidTableScan(table=[[lookup, lookyloo]], druid=[logical])
+                                  DruidProject(k=[$0], druid=[logical])
+                                    DruidTableScan(table=[[lookup, lookyloo]], druid=[logical])
+                                DruidProject(k=[$0], druid=[logical])
+                                  DruidTableScan(table=[[lookup, lookyloo]], druid=[logical])
+                              DruidProject(k=[$0], druid=[logical])
+                                DruidTableScan(table=[[lookup, lookyloo]], druid=[logical])
+                            DruidProject(k=[$0], druid=[logical])
+                              DruidTableScan(table=[[lookup, lookyloo]], druid=[logical])
+                          DruidProject(k=[$0], druid=[logical])
+                            DruidTableScan(table=[[lookup, lookyloo]], druid=[logical])
+                        DruidProject(k=[$0], druid=[logical])
+                          DruidTableScan(table=[[lookup, lookyloo]], druid=[logical])
+                      DruidProject(k=[$0], druid=[logical])
+                        DruidTableScan(table=[[lookup, lookyloo]], druid=[logical])
+                    DruidProject(k=[$0], druid=[logical])
+                      DruidTableScan(table=[[lookup, lookyloo]], druid=[logical])
+                  DruidProject(k=[$0], druid=[logical])
+                    DruidTableScan(table=[[lookup, lookyloo]], druid=[logical])
+                DruidProject(k=[$0], druid=[logical])
+                  DruidTableScan(table=[[lookup, lookyloo]], druid=[logical])
+              DruidProject(k=[$0], druid=[logical])
+                DruidTableScan(table=[[lookup, lookyloo]], druid=[logical])
+            DruidProject(k=[$0], druid=[logical])
+              DruidTableScan(table=[[lookup, lookyloo]], druid=[logical])
+          DruidProject(k=[$0], druid=[logical])
+            DruidTableScan(table=[[lookup, lookyloo]], druid=[logical])
+        DruidProject(k=[$0], druid=[logical])
+          DruidTableScan(table=[[lookup, lookyloo]], druid=[logical])
+      DruidProject(k=[$0], druid=[logical])
+        DruidTableScan(table=[[lookup, lookyloo]], druid=[logical])
+    DruidProject(k=[$0], druid=[logical])
+      DruidTableScan(table=[[lookup, lookyloo]], druid=[logical])
+
+!druidPlan
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "join",
+    "left" : {
+      "type" : "join",
+      "left" : {
+        "type" : "join",
+        "left" : {
+          "type" : "join",
+          "left" : {
+            "type" : "join",
+            "left" : {
+              "type" : "join",
+              "left" : {
+                "type" : "join",
+                "left" : {
+                  "type" : "join",
+                  "left" : {
+                    "type" : "join",
+                    "left" : {
+                      "type" : "join",
+                      "left" : {
+                        "type" : "join",
+                        "left" : {
+                          "type" : "join",
+                          "left" : {
+                            "type" : "join",
+                            "left" : {
+                              "type" : "join",
+                              "left" : {
+                                "type" : "join",
+                                "left" : {
+                                  "type" : "join",
+                                  "left" : {
+                                    "type" : "join",
+                                    "left" : {
+                                      "type" : "join",
+                                      "left" : {
+                                        "type" : "join",
+                                        "left" : {
+                                          "type" : "table",
+                                          "name" : "foo"
+                                        },
+                                        "right" : {
+                                          "type" : "query",
+                                          "query" : {
+                                            "queryType" : "scan",
+                                            "dataSource" : {
+                                              "type" : "lookup",
+                                              "lookup" : "lookyloo"
+                                            },
+                                            "intervals" : {
+                                              "type" : "intervals",
+                                              "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+                                            },
+                                            "resultFormat" : "compactedList",
+                                            "filter" : {
+                                              "type" : "selector",
+                                              "dimension" : "v",
+                                              "value" : "xa"
+                                            },
+                                            "columns" : [ "k", "v" ],
+                                            "columnTypes" : [ "STRING", "STRING" ],
+                                            "granularity" : {
+                                              "type" : "all"
+                                            },
+                                            "legacy" : false
+                                          }
+                                        },
+                                        "rightPrefix" : "j0.",
+                                        "condition" : "(\"dim2\" == \"j0.k\")",
+                                        "joinType" : "INNER"
+                                      },
+                                      "right" : {
+                                        "type" : "lookup",
+                                        "lookup" : "lookyloo"
+                                      },
+                                      "rightPrefix" : "_j0.",
+                                      "condition" : "(\"dim2\" == \"_j0.k\")",
+                                      "joinType" : "INNER"
+                                    },
+                                    "right" : {
+                                      "type" : "lookup",
+                                      "lookup" : "lookyloo"
+                                    },
+                                    "rightPrefix" : "__j0.",
+                                    "condition" : "(\"dim2\" == \"__j0.k\")",
+                                    "joinType" : "INNER"
+                                  },
+                                  "right" : {
+                                    "type" : "lookup",
+                                    "lookup" : "lookyloo"
+                                  },
+                                  "rightPrefix" : "___j0.",
+                                  "condition" : "(\"dim2\" == \"___j0.k\")",
+                                  "joinType" : "INNER"
+                                },
+                                "right" : {
+                                  "type" : "lookup",
+                                  "lookup" : "lookyloo"
+                                },
+                                "rightPrefix" : "____j0.",
+                                "condition" : "(\"dim2\" == \"____j0.k\")",
+                                "joinType" : "INNER"
+                              },
+                              "right" : {
+                                "type" : "lookup",
+                                "lookup" : "lookyloo"
+                              },
+                              "rightPrefix" : "_____j0.",
+                              "condition" : "(\"dim2\" == \"_____j0.k\")",
+                              "joinType" : "INNER"
+                            },
+                            "right" : {
+                              "type" : "lookup",
+                              "lookup" : "lookyloo"
+                            },
+                            "rightPrefix" : "______j0.",
+                            "condition" : "(\"dim2\" == \"______j0.k\")",
+                            "joinType" : "INNER"
+                          },
+                          "right" : {
+                            "type" : "lookup",
+                            "lookup" : "lookyloo"
+                          },
+                          "rightPrefix" : "_______j0.",
+                          "condition" : "(\"dim2\" == \"_______j0.k\")",
+                          "joinType" : "INNER"
+                        },
+                        "right" : {
+                          "type" : "lookup",
+                          "lookup" : "lookyloo"
+                        },
+                        "rightPrefix" : "________j0.",
+                        "condition" : "(\"dim2\" == \"________j0.k\")",
+                        "joinType" : "INNER"
+                      },
+                      "right" : {
+                        "type" : "lookup",
+                        "lookup" : "lookyloo"
+                      },
+                      "rightPrefix" : "_________j0.",
+                      "condition" : "(\"dim2\" == \"_________j0.k\")",
+                      "joinType" : "INNER"
+                    },
+                    "right" : {
+                      "type" : "lookup",
+                      "lookup" : "lookyloo"
+                    },
+                    "rightPrefix" : "__________j0.",
+                    "condition" : "(\"dim2\" == \"__________j0.k\")",
+                    "joinType" : "INNER"
+                  },
+                  "right" : {
+                    "type" : "lookup",
+                    "lookup" : "lookyloo"
+                  },
+                  "rightPrefix" : "___________j0.",
+                  "condition" : "(\"dim2\" == \"___________j0.k\")",
+                  "joinType" : "INNER"
+                },
+                "right" : {
+                  "type" : "lookup",
+                  "lookup" : "lookyloo"
+                },
+                "rightPrefix" : "____________j0.",
+                "condition" : "(\"dim2\" == \"____________j0.k\")",
+                "joinType" : "INNER"
+              },
+              "right" : {
+                "type" : "lookup",
+                "lookup" : "lookyloo"
+              },
+              "rightPrefix" : "_____________j0.",
+              "condition" : "(\"dim2\" == \"_____________j0.k\")",
+              "joinType" : "INNER"
+            },
+            "right" : {
+              "type" : "lookup",
+              "lookup" : "lookyloo"
+            },
+            "rightPrefix" : "______________j0.",
+            "condition" : "(\"dim2\" == \"______________j0.k\")",
+            "joinType" : "INNER"
+          },
+          "right" : {
+            "type" : "lookup",
+            "lookup" : "lookyloo"
+          },
+          "rightPrefix" : "_______________j0.",
+          "condition" : "(\"dim2\" == \"_______________j0.k\")",
+          "joinType" : "INNER"
+        },
+        "right" : {
+          "type" : "lookup",
+          "lookup" : "lookyloo"
+        },
+        "rightPrefix" : "________________j0.",
+        "condition" : "(\"dim2\" == \"________________j0.k\")",
+        "joinType" : "INNER"
+      },
+      "right" : {
+        "type" : "lookup",
+        "lookup" : "lookyloo"
+      },
+      "rightPrefix" : "_________________j0.",
+      "condition" : "(\"dim2\" == \"_________________j0.k\")",
+      "joinType" : "INNER"
+    },
+    "right" : {
+      "type" : "lookup",
+      "lookup" : "lookyloo"
+    },
+    "rightPrefix" : "__________________j0.",
+    "condition" : "(\"dim2\" == \"__________________j0.k\")",
+    "joinType" : "INNER"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "resultFormat" : "compactedList",
+  "columns" : [ "dim1" ],
+  "columnTypes" : [ "STRING" ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "legacy" : false
+}
+!nativePlan

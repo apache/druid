@@ -20,9 +20,11 @@
 package org.apache.druid.query.aggregation.datasketches.theta;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.aggregation.AggregatorAndSize;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.theta.oldapi.OldSketchBuildAggregatorFactory;
 import org.apache.druid.query.aggregation.datasketches.theta.oldapi.OldSketchMergeAggregatorFactory;
@@ -32,10 +34,15 @@ import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.TestColumnSelectorFactory;
+import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.vector.TestVectorColumnSelectorFactory;
+import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
 import org.easymock.EasyMock;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 public class SketchAggregatorFactoryTest
@@ -45,6 +52,17 @@ public class SketchAggregatorFactoryTest
 
   private static final SketchMergeAggregatorFactory AGGREGATOR_32768 =
       new SketchMergeAggregatorFactory("x", "x", 32768, null, false, null);
+
+  private ColumnSelectorFactory metricFactory;
+  private VectorColumnSelectorFactory vectorFactory;
+
+  @Before
+  public void setup()
+  {
+    final ColumnCapabilitiesImpl columnCapabilities = ColumnCapabilitiesImpl.createDefault().setType(ColumnType.NESTED_DATA);
+    metricFactory = new TestColumnSelectorFactory().addCapabilities("x", columnCapabilities);
+    vectorFactory = new TestVectorColumnSelectorFactory().addCapabilities("x", columnCapabilities);
+  }
 
   @Test
   public void testGuessAggregatorHeapFootprint()
@@ -167,5 +185,47 @@ public class SketchAggregatorFactoryTest
   {
     Assert.assertEquals(AGGREGATOR_16384, AGGREGATOR_16384.withName("x"));
     Assert.assertEquals("newTest", AGGREGATOR_16384.withName("newTest").getName());
+  }
+
+  @Test
+  public void testFactorizeOnUnsupportedComplexColumn()
+  {
+    Throwable exception = Assert.assertThrows(DruidException.class, () -> AGGREGATOR_16384.factorize(metricFactory));
+    Assert.assertEquals("Unsupported input [x] of type [COMPLEX<json>] for aggregator [COMPLEX<thetaSketchBuild>].", exception.getMessage());
+  }
+
+  @Test
+  public void testFactorizeWithSizeOnUnsupportedComplexColumn()
+  {
+    Throwable exception = Assert.assertThrows(DruidException.class, () -> AGGREGATOR_16384.factorizeWithSize(metricFactory));
+    Assert.assertEquals("Unsupported input [x] of type [COMPLEX<json>] for aggregator [COMPLEX<thetaSketchBuild>].", exception.getMessage());
+  }
+
+  @Test
+  public void testFactorizeBufferedOnUnsupportedComplexColumn()
+  {
+    Throwable exception = Assert.assertThrows(DruidException.class, () -> AGGREGATOR_16384.factorizeBuffered(metricFactory));
+    Assert.assertEquals("Unsupported input [x] of type [COMPLEX<json>] for aggregator [COMPLEX<thetaSketchBuild>].", exception.getMessage());
+  }
+
+  @Test
+  public void testFactorizeVectorOnUnsupportedComplexColumn()
+  {
+    Throwable exception = Assert.assertThrows(DruidException.class, () -> AGGREGATOR_16384.factorizeVector(vectorFactory));
+    Assert.assertEquals("Unsupported input [x] of type [COMPLEX<json>] for aggregator [COMPLEX<thetaSketchBuild>].", exception.getMessage());
+  }
+
+  @Test
+  public void testCanSubstitute()
+  {
+    AggregatorFactory sketch1 = new SketchMergeAggregatorFactory("sketch", "x", 16, true, false, 2);
+    AggregatorFactory sketch2 = new SketchMergeAggregatorFactory("other", "x", null, false, false, null);
+    AggregatorFactory sketch3 = new SketchMergeAggregatorFactory("sketch", "x", null, false, false, 3);
+    AggregatorFactory sketch4 = new SketchMergeAggregatorFactory("sketch", "y", null, false, false, null);
+
+    Assert.assertNotNull(sketch1.substituteCombiningFactory(sketch2));
+    Assert.assertNotNull(sketch1.substituteCombiningFactory(sketch3));
+    Assert.assertNull(sketch1.substituteCombiningFactory(sketch4));
+    Assert.assertNull(sketch2.substituteCombiningFactory(sketch1));
   }
 }

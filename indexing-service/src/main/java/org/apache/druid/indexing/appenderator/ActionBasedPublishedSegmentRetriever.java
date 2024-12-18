@@ -79,7 +79,7 @@ public class ActionBasedPublishedSegmentRetriever implements PublishedSegmentRet
     catch (Exception e) {
       log.warn(
           e,
-          "Could not retrieve published segment IDs[%s] using task action[segmentListById]."
+          "Could not retrieve published segment IDs[%s] using task action[retrieveSegmentsById]."
           + " Overlord maybe on an older version, retrying with action[segmentListUsed]."
           + " This task may fail to publish segments if there is a concurrent replace happening.",
           serializedSegmentIds

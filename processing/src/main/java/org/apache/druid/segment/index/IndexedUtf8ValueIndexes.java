@@ -83,6 +83,11 @@ public final class IndexedUtf8ValueIndexes<TDictionary extends Indexed<ByteBuffe
     final ByteBuffer utf8 = StringUtils.toUtf8ByteBuffer(value);
     return new SimpleBitmapColumnIndex()
     {
+      @Override
+      public int estimatedComputeCost()
+      {
+        return 1;
+      }
 
       @Override
       public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
@@ -122,10 +127,7 @@ public final class IndexedUtf8ValueIndexes<TDictionary extends Indexed<ByteBuffe
   public BitmapColumnIndex forSortedValues(SortedSet<String> values)
   {
     return getBitmapColumnIndexForSortedIterableUtf8(
-        Iterables.transform(
-            values,
-            StringUtils::toUtf8ByteBuffer
-        ),
+        Iterables.transform(values, StringUtils::toUtf8ByteBuffer),
         values.size(),
         values.contains(null)
     );
@@ -181,6 +183,7 @@ public final class IndexedUtf8ValueIndexes<TDictionary extends Indexed<ByteBuffe
           bitmapFactory,
           COMPARATOR,
           valuesUtf8,
+          size,
           dictionary,
           bitmaps,
           () -> {
@@ -197,6 +200,7 @@ public final class IndexedUtf8ValueIndexes<TDictionary extends Indexed<ByteBuffe
     return ValueSetIndexes.buildBitmapColumnIndexFromSortedIteratorBinarySearch(
         bitmapFactory,
         valuesUtf8,
+        size,
         dictionary,
         bitmaps,
         () -> {
@@ -237,11 +241,12 @@ public final class IndexedUtf8ValueIndexes<TDictionary extends Indexed<ByteBuffe
       } else {
         tailSet = baseSet;
       }
-      if (tailSet.size() > ValueSetIndexes.SORTED_SCAN_RATIO_THRESHOLD * dictionary.size()) {
+      if (tailSet.size() > SORTED_SCAN_RATIO_THRESHOLD * dictionary.size()) {
         return ValueSetIndexes.buildBitmapColumnIndexFromSortedIteratorScan(
             bitmapFactory,
             ByteBufferUtils.utf8Comparator(),
             Iterables.transform(tailSet, StringUtils::toUtf8ByteBuffer),
+            tailSet.size(),
             dictionary,
             bitmaps,
             unknownsIndex
@@ -251,6 +256,7 @@ public final class IndexedUtf8ValueIndexes<TDictionary extends Indexed<ByteBuffe
       return ValueSetIndexes.buildBitmapColumnIndexFromSortedIteratorBinarySearch(
           bitmapFactory,
           Iterables.transform(tailSet, StringUtils::toUtf8ByteBuffer),
+          tailSet.size(),
           dictionary,
           bitmaps,
           unknownsIndex
@@ -262,6 +268,7 @@ public final class IndexedUtf8ValueIndexes<TDictionary extends Indexed<ByteBuffe
               sortedValues,
               x -> StringUtils.toUtf8ByteBuffer(DimensionHandlerUtils.convertObjectToString(x))
           ),
+          sortedValues.size(),
           dictionary,
           bitmaps,
           unknownsIndex

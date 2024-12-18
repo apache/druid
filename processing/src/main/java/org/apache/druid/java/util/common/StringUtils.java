@@ -54,7 +54,7 @@ public class StringUtils
   private static final Base64.Decoder BASE64_DECODER = Base64.getDecoder();
 
   // should be used only for estimation
-  // returns the same result with StringUtils.fromUtf8(value).length for valid string values
+  // returns the same result with fromUtf8(value).length for valid string values
   // does not check validity of format and returns over-estimated result for invalid string (see UT)
   public static int estimatedBinaryLengthAsUTF8(String value)
   {
@@ -257,7 +257,7 @@ public class StringUtils
    */
   public static String fromUtf8(final ByteBuffer buffer)
   {
-    return StringUtils.fromUtf8(buffer, buffer.remaining());
+    return fromUtf8(buffer, buffer.remaining());
   }
 
   /**
@@ -273,7 +273,7 @@ public class StringUtils
     if (buffer == null) {
       return null;
     }
-    return StringUtils.fromUtf8(buffer, buffer.remaining());
+    return fromUtf8(buffer, buffer.remaining());
   }
 
   /**
@@ -390,7 +390,7 @@ public class StringUtils
     if (s == null) {
       return null;
     } else {
-      return StringUtils.replaceChar(s, '%', "%%");
+      return replaceChar(s, '%', "%%");
     }
   }
 
@@ -422,7 +422,7 @@ public class StringUtils
     }
 
     try {
-      return StringUtils.replace(URLEncoder.encode(s, "UTF-8"), "+", "%20");
+      return replace(URLEncoder.encode(s, "UTF-8"), "+", "%20");
     }
     catch (UnsupportedEncodingException e) {
       throw new RuntimeException(e);
@@ -792,7 +792,7 @@ public class StringUtils
     } else {
       // Shorten firstValue to what could fit in maxBytes as UTF-8.
       final byte[] bytes = new byte[maxBytes];
-      final int len = StringUtils.toUtf8WithLimit(s, ByteBuffer.wrap(bytes));
+      final int len = toUtf8WithLimit(s, ByteBuffer.wrap(bytes));
       return new String(bytes, 0, len, StandardCharsets.UTF_8);
     }
   }
@@ -823,5 +823,14 @@ public class StringUtils
     catch (IOException e) {
       throw new ISE(e, "Cannot load resource: [%s]", resource);
     }
+  }
+
+  /**
+   This method is removed from commons lang3.
+   https://commons.apache.org/proper/commons-lang/article3_0.html
+   */
+  public static String escapeSql(String str)
+  {
+    return str == null ? null : replace(str, "'", "''");
   }
 }

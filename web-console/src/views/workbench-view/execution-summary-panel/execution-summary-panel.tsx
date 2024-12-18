@@ -16,9 +16,8 @@
  * limitations under the License.
  */
 
-import { Button, ButtonGroup, Menu, MenuItem, Position } from '@blueprintjs/core';
+import { Button, ButtonGroup, Menu, MenuItem, Popover, Position } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { Popover2 } from '@blueprintjs/popover2';
 import type { JSX } from 'react';
 import React, { useState } from 'react';
 
@@ -29,6 +28,7 @@ import {
   downloadQueryResults,
   formatDurationHybrid,
   formatInteger,
+  oneOf,
   pluralIfNeeded,
 } from '../../../utils';
 import { DestinationPagesDialog } from '../destination-pages-dialog/destination-pages-dialog';
@@ -96,7 +96,7 @@ export const ExecutionSummaryPanel = React.memo(function ExecutionSummaryPanel(
         }
         onClick={() => {
           if (!execution) return;
-          if (execution.engine === 'sql-msq-task') {
+          if (oneOf(execution.engine, 'sql-msq-task', 'sql-msq-dart')) {
             onExecutionDetail();
           }
         }}
@@ -105,11 +105,12 @@ export const ExecutionSummaryPanel = React.memo(function ExecutionSummaryPanel(
         <Button
           key="download"
           icon={IconNames.DOWNLOAD}
+          data-tooltip="Download data"
           minimal
           onClick={() => setShowDestinationPages(true)}
         />
       ) : (
-        <Popover2
+        <Popover
           key="download"
           className="download-button"
           content={
@@ -130,14 +131,22 @@ export const ExecutionSummaryPanel = React.memo(function ExecutionSummaryPanel(
           }
           position={Position.BOTTOM_RIGHT}
         >
-          <Button icon={IconNames.DOWNLOAD} minimal />
-        </Popover2>
+          <Button icon={IconNames.DOWNLOAD} data-tooltip="Download data in view" minimal />
+        </Popover>
       ),
     );
   }
 
   if (onReset) {
-    buttons.push(<Button key="reset" icon={IconNames.CROSS} minimal onClick={onReset} />);
+    buttons.push(
+      <Button
+        key="reset"
+        icon={IconNames.CROSS}
+        data-tooltip="Clear output"
+        minimal
+        onClick={onReset}
+      />,
+    );
   }
 
   return (

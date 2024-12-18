@@ -519,7 +519,7 @@ public class TaskQueueTest extends IngestionTestBase
     final String password = "AbCd_1234";
     final ObjectMapper mapper = getObjectMapper();
 
-    final HttpInputSourceConfig httpInputSourceConfig = new HttpInputSourceConfig(Collections.singleton("http"));
+    final HttpInputSourceConfig httpInputSourceConfig = new HttpInputSourceConfig(Collections.singleton("http"), null);
     mapper.setInjectableValues(new InjectableValues.Std()
                                    .addValue(HttpInputSourceConfig.class, httpInputSourceConfig)
                                    .addValue(ObjectMapper.class, new DefaultObjectMapper())
@@ -549,19 +549,20 @@ public class TaskQueueTest extends IngestionTestBase
         new NoopTaskContextEnricher()
     );
 
-    final DataSchema dataSchema = new DataSchema(
-        "DS",
-        new TimestampSpec(null, null, null),
-        new DimensionsSpec(null),
-        null,
-        new UniformGranularitySpec(Granularities.YEAR, Granularities.DAY, null),
-        null
-    );
+    final DataSchema dataSchema =
+        DataSchema.builder()
+                  .withDataSource("DS")
+                  .withTimestamp(new TimestampSpec(null, null, null))
+                  .withDimensions(DimensionsSpec.builder().build())
+                  .withGranularity(
+                      new UniformGranularitySpec(Granularities.YEAR, Granularities.DAY, null)
+                  )
+                  .build();
     final ParallelIndexIOConfig ioConfig = new ParallelIndexIOConfig(
-        null,
         new HttpInputSource(Collections.singletonList(URI.create("http://host.org")),
                             "user",
                             new DefaultPasswordProvider(password),
+                            null,
                             null,
                             httpInputSourceConfig),
         new NoopInputFormat(),

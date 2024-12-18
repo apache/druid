@@ -42,7 +42,7 @@ public class SegmentToMoveCalculator
 {
   /**
    * At least this number of segments must be picked for moving in every cycle
-   * to keep the cluster well balanced.
+   * to keep the cluster well-balanced.
    */
   private static final int MIN_SEGMENTS_TO_MOVE = 100;
 
@@ -70,10 +70,8 @@ public class SegmentToMoveCalculator
     ).sum();
 
     // Move at least some segments to ensure that the cluster is always balancing itself
-    final int minSegmentsToMove = SegmentToMoveCalculator
-        .computeMinSegmentsToMoveInTier(totalSegments);
-    final int segmentsToMoveToFixDeviation = SegmentToMoveCalculator
-        .computeNumSegmentsToMoveToBalanceTier(tier, historicals);
+    final int minSegmentsToMove = computeMinSegmentsToMoveInTier(totalSegments);
+    final int segmentsToMoveToFixDeviation = computeNumSegmentsToMoveToBalanceTier(tier, historicals);
     log.info(
         "Need to move [%,d] segments in tier[%s] to attain balance. Allowed values are [min=%d, max=%d].",
         segmentsToMoveToFixDeviation, tier, minSegmentsToMove, maxSegmentsToMoveInTier
@@ -150,7 +148,7 @@ public class SegmentToMoveCalculator
     int maxComputationsInThousands = (numBalancerThreads * num30sPeriods) << 20;
     int maxSegmentsToMove = (maxComputationsInThousands / totalSegments) * 1000;
 
-    if (upperBound < lowerBound) {
+    if (upperBound < lowerBound || maxSegmentsToMove < lowerBound) {
       return Math.min(lowerBound, totalSegments);
     } else {
       return Math.min(maxSegmentsToMove, upperBound);

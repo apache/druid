@@ -30,7 +30,6 @@ import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.config.TaskLockConfig;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.metadata.MetadataStorageConnectorConfig;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
@@ -59,6 +58,8 @@ public class TaskActionTestKit extends ExternalResource
   private SegmentSchemaManager segmentSchemaManager;
   private SegmentSchemaCache segmentSchemaCache;
 
+  private boolean skipSegmentPayloadFetchForAllocation = new TaskLockConfig().isBatchAllocationReduceMetadataIO();
+
   public TaskLockbox getTaskLockbox()
   {
     return taskLockbox;
@@ -77,6 +78,11 @@ public class TaskActionTestKit extends ExternalResource
   public TaskActionToolbox getTaskActionToolbox()
   {
     return taskActionToolbox;
+  }
+
+  public void setSkipSegmentPayloadFetchForAllocation(boolean skipSegmentPayloadFetchForAllocation)
+  {
+    this.skipSegmentPayloadFetchForAllocation = skipSegmentPayloadFetchForAllocation;
   }
 
   @Override
@@ -104,16 +110,16 @@ public class TaskActionTestKit extends ExternalResource
       }
     };
     taskLockbox = new TaskLockbox(taskStorage, metadataStorageCoordinator);
-    segmentSchemaCache = new SegmentSchemaCache(new NoopServiceEmitter());
+    segmentSchemaCache = new SegmentSchemaCache(NoopServiceEmitter.instance());
     segmentsMetadataManager = new SqlSegmentsMetadataManager(
         objectMapper,
         Suppliers.ofInstance(new SegmentsMetadataManagerConfig()),
         Suppliers.ofInstance(metadataStorageTablesConfig),
         testDerbyConnector,
         segmentSchemaCache,
-        CentralizedDatasourceSchemaConfig.create()
+        CentralizedDatasourceSchemaConfig.create(),
+        NoopServiceEmitter.instance()
     );
-    final ServiceEmitter noopEmitter = new NoopServiceEmitter();
     final TaskLockConfig taskLockConfig = new TaskLockConfig()
     {
       @Override
@@ -127,6 +133,12 @@ public class TaskActionTestKit extends ExternalResource
       {
         return 10L;
       }
+
+      @Override
+      public boolean isBatchAllocationReduceMetadataIO()
+      {
+        return skipSegmentPayloadFetchForAllocation;
+      }
     };
 
     taskActionToolbox = new TaskActionToolbox(
@@ -137,10 +149,10 @@ public class TaskActionTestKit extends ExternalResource
             taskLockbox,
             taskLockConfig,
             metadataStorageCoordinator,
-            noopEmitter,
+            NoopServiceEmitter.instance(),
             ScheduledExecutors::fixed
         ),
-        noopEmitter,
+        NoopServiceEmitter.instance(),
         EasyMock.createMock(SupervisorManager.class),
         objectMapper
     );

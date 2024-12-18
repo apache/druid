@@ -116,6 +116,13 @@ public class SqlQueryPlus
     return new SqlQueryPlus(sql, queryContext, parameters, authResult);
   }
 
+  @Override
+  public String toString()
+  {
+    return "SqlQueryPlus {queryContext=" + queryContext + ", parameters=" + parameters
+        + ", authResult=" + authResult + ", sql=" + sql + " }";
+  }
+
   public static class Builder
   {
     private String sql;

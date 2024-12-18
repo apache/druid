@@ -169,9 +169,7 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
   @Override
   public TypeReference<SegmentPublishResult> getReturnTypeReference()
   {
-    return new TypeReference<SegmentPublishResult>()
-    {
-    };
+    return new TypeReference<>() {};
   }
 
   /**
@@ -302,12 +300,6 @@ public class SegmentTransactionalInsertAction implements TaskAction<SegmentPubli
       }
     }));
     return segmentsMap;
-  }
-
-  @Override
-  public boolean isAudited()
-  {
-    return true;
   }
 
   @Override

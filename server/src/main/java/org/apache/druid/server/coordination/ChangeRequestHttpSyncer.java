@@ -256,7 +256,7 @@ public class ChangeRequestHttpSyncer<T>
 
       Futures.addCallback(
           syncRequestFuture,
-          new FutureCallback<InputStream>()
+          new FutureCallback<>()
           {
             @Override
             public void onSuccess(InputStream stream)

@@ -62,8 +62,9 @@ import org.joda.time.Interval;
 public interface AppenderatorsManager
 {
   /**
-   * Creates an Appenderator suited for realtime ingestion. Note that this method's parameters include objects
-   * used for query processing.
+   * Creates an {@link StreamAppenderator} suited for realtime ingestion. Note that this method's parameters include
+   * objects used for query processing. Intermediary segments are persisted to disk and memory mapped to be available
+   * for query processing.
    */
   Appenderator createRealtimeAppenderatorForTask(
       SegmentLoaderConfig segmentLoaderConfig,
@@ -90,39 +91,11 @@ public interface AppenderatorsManager
   );
 
   /**
-   * Creates an Appenderator suited for batch ingestion.
+   * Creates a {@link BatchAppenderator} suitable for batch ingestion with no ability to process queries against
+   * the processed data. Intermediary segments are persisted to temporary disk and then merged into the final set of
+   * segments at publishing time.
    */
-  Appenderator createOpenSegmentsOfflineAppenderatorForTask(
-      String taskId,
-      DataSchema schema,
-      AppenderatorConfig config,
-      SegmentGenerationMetrics metrics,
-      DataSegmentPusher dataSegmentPusher,
-      ObjectMapper objectMapper,
-      IndexIO indexIO,
-      IndexMerger indexMerger,
-      RowIngestionMeters rowIngestionMeters,
-      ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates,
-      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
-  );
-
-  Appenderator createClosedSegmentsOfflineAppenderatorForTask(
-      String taskId,
-      DataSchema schema,
-      AppenderatorConfig config,
-      SegmentGenerationMetrics metrics,
-      DataSegmentPusher dataSegmentPusher,
-      ObjectMapper objectMapper,
-      IndexIO indexIO,
-      IndexMerger indexMerger,
-      RowIngestionMeters rowIngestionMeters,
-      ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates,
-      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
-  );
-
-  Appenderator createOfflineAppenderatorForTask(
+  Appenderator createBatchAppenderatorForTask(
       String taskId,
       DataSchema schema,
       AppenderatorConfig config,

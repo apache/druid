@@ -53,21 +53,13 @@ public class ResetDataSourceMetadataAction implements TaskAction<Boolean>
   @Override
   public TypeReference<Boolean> getReturnTypeReference()
   {
-    return new TypeReference<Boolean>()
-    {
-    };
+    return new TypeReference<>() {};
   }
 
   @Override
   public Boolean perform(Task task, TaskActionToolbox toolbox)
   {
     return toolbox.getSupervisorManager().resetSupervisor(dataSource, resetMetadata);
-  }
-
-  @Override
-  public boolean isAudited()
-  {
-    return true;
   }
 
   @Override

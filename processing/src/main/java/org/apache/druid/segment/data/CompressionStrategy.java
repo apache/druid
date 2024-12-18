@@ -27,7 +27,7 @@ import com.ning.compress.lzf.LZFDecoder;
 import com.ning.compress.lzf.LZFEncoder;
 import net.jpountz.lz4.LZ4Factory;
 import net.jpountz.lz4.LZ4SafeDecompressor;
-import org.apache.commons.lang.ArrayUtils;
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.java.util.common.ByteBufferUtils;
 import org.apache.druid.java.util.common.StringUtils;
@@ -158,7 +158,7 @@ public enum CompressionStrategy
   static final Map<Byte, CompressionStrategy> ID_MAP = new HashMap<>();
 
   static {
-    for (CompressionStrategy strategy : CompressionStrategy.values()) {
+    for (CompressionStrategy strategy : values()) {
       ID_MAP.put(strategy.getId(), strategy);
     }
   }
@@ -171,7 +171,7 @@ public enum CompressionStrategy
   // TODO remove this method and change all its callers to use all CompressionStrategy values when NONE type is supported by all types
   public static CompressionStrategy[] noNoneValues()
   {
-    return (CompressionStrategy[]) ArrayUtils.removeElement(CompressionStrategy.values(), NONE);
+    return (CompressionStrategy[]) ArrayUtils.removeElement(values(), NONE);
   }
 
   public interface Decompressor

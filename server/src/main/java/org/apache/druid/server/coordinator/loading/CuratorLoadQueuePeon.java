@@ -27,7 +27,6 @@ import org.apache.curator.utils.ZKPaths;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.server.coordination.SegmentChangeRequestNoop;
-import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
@@ -85,7 +84,7 @@ public class CuratorLoadQueuePeon implements LoadQueuePeon
    * {@link #stop()}.
    */
   private final ConcurrentSkipListMap<DataSegment, SegmentHolder> segmentsToLoad
-      = new ConcurrentSkipListMap<>(DruidCoordinator.SEGMENT_COMPARATOR_RECENT_FIRST);
+      = new ConcurrentSkipListMap<>(SegmentHolder.NEWEST_SEGMENT_FIRST);
 
   /**
    * Needs to be thread safe since it can be concurrently accessed via
@@ -93,7 +92,7 @@ public class CuratorLoadQueuePeon implements LoadQueuePeon
    * {@link #getSegmentsToDrop()} and {@link #stop()}
    */
   private final ConcurrentSkipListMap<DataSegment, SegmentHolder> segmentsToDrop
-      = new ConcurrentSkipListMap<>(DruidCoordinator.SEGMENT_COMPARATOR_RECENT_FIRST);
+      = new ConcurrentSkipListMap<>(SegmentHolder.NEWEST_SEGMENT_FIRST);
 
   /**
    * Needs to be thread safe since it can be concurrently accessed via
@@ -101,7 +100,7 @@ public class CuratorLoadQueuePeon implements LoadQueuePeon
    * and {@link #getSegmentsToDrop()}
    */
   private final ConcurrentSkipListSet<DataSegment> segmentsMarkedToDrop
-      = new ConcurrentSkipListSet<>(DruidCoordinator.SEGMENT_COMPARATOR_RECENT_FIRST);
+      = new ConcurrentSkipListSet<>(SegmentHolder.NEWEST_SEGMENT_FIRST);
 
   /**
    * Needs to be thread safe since it can be concurrently accessed via
@@ -109,7 +108,7 @@ public class CuratorLoadQueuePeon implements LoadQueuePeon
    * {@link #getTimedOutSegments()} and {@link #stop()}
    */
   private final ConcurrentSkipListSet<DataSegment> timedOutSegments =
-      new ConcurrentSkipListSet<>(DruidCoordinator.SEGMENT_COMPARATOR_RECENT_FIRST);
+      new ConcurrentSkipListSet<>(SegmentHolder.NEWEST_SEGMENT_FIRST);
 
   public CuratorLoadQueuePeon(
       CuratorFramework curator,
@@ -171,6 +170,12 @@ public class CuratorLoadQueuePeon implements LoadQueuePeon
   }
 
   @Override
+  public long getLoadRateKbps()
+  {
+    return 0;
+  }
+
+  @Override
   public CoordinatorRunStats getAndResetStats()
   {
     return stats.getAndSet(new CoordinatorRunStats());
@@ -179,7 +184,7 @@ public class CuratorLoadQueuePeon implements LoadQueuePeon
   @Override
   public void loadSegment(final DataSegment segment, SegmentAction action, @Nullable final LoadPeonCallback callback)
   {
-    SegmentHolder segmentHolder = new SegmentHolder(segment, action, callback);
+    SegmentHolder segmentHolder = new SegmentHolder(segment, action, Duration.ZERO, callback);
     final SegmentHolder existingHolder = segmentsToLoad.putIfAbsent(segment, segmentHolder);
     if (existingHolder != null) {
       existingHolder.addCallback(callback);
@@ -193,7 +198,7 @@ public class CuratorLoadQueuePeon implements LoadQueuePeon
   @Override
   public void dropSegment(final DataSegment segment, @Nullable final LoadPeonCallback callback)
   {
-    SegmentHolder segmentHolder = new SegmentHolder(segment, SegmentAction.DROP, callback);
+    SegmentHolder segmentHolder = new SegmentHolder(segment, SegmentAction.DROP, Duration.ZERO, callback);
     final SegmentHolder existingHolder = segmentsToDrop.putIfAbsent(segment, segmentHolder);
     if (existingHolder != null) {
       existingHolder.addCallback(callback);

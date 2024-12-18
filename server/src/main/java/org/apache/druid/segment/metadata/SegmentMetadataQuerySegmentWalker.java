@@ -35,9 +35,9 @@ import org.apache.druid.query.Queries;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
+import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChest;
-import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.server.SetAndVerifyContextQueryRunner;
@@ -67,22 +67,22 @@ public class SegmentMetadataQuerySegmentWalker implements QuerySegmentWalker
   private static final EmittingLogger log = new EmittingLogger(SegmentMetadataQuerySegmentWalker.class);
   private final CoordinatorServerView serverView;
   private final DruidHttpClientConfig httpClientConfig;
-  private final QueryToolChestWarehouse warehouse;
-  private final ServerConfig serverConfig;
   private final ServiceEmitter emitter;
+  protected final QueryRunnerFactoryConglomerate conglomerate;
+  protected final ServerConfig serverConfig;
 
   @Inject
   public SegmentMetadataQuerySegmentWalker(
       final CoordinatorServerView serverView,
       final DruidHttpClientConfig httpClientConfig,
-      final QueryToolChestWarehouse warehouse,
+      final QueryRunnerFactoryConglomerate conglomerate,
       final ServerConfig serverConfig,
       final ServiceEmitter emitter
   )
   {
     this.serverView = serverView;
     this.httpClientConfig = httpClientConfig;
-    this.warehouse = warehouse;
+    this.conglomerate = conglomerate;
     this.emitter = emitter;
     this.serverConfig = serverConfig;
   }
@@ -96,7 +96,7 @@ public class SegmentMetadataQuerySegmentWalker implements QuerySegmentWalker
   @Override
   public <T> QueryRunner<T> getQueryRunnerForSegments(Query<T> query, Iterable<SegmentDescriptor> specs)
   {
-    return decorateRunner(query, new QueryRunner<T>()
+    return decorateRunner(query, new QueryRunner<>()
     {
       @Override
       public Sequence<T> run(final QueryPlus<T> queryPlus, final ResponseContext responseContext)
@@ -112,7 +112,7 @@ public class SegmentMetadataQuerySegmentWalker implements QuerySegmentWalker
 
   private <T> QueryRunner<T> decorateRunner(Query<T> query, QueryRunner<T> baseClusterRunner)
   {
-    final QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
+    final QueryToolChest<T, Query<T>> toolChest = conglomerate.getToolChest(query);
 
     final SetAndVerifyContextQueryRunner<T> baseRunner = new SetAndVerifyContextQueryRunner<>(
         serverConfig,
@@ -141,7 +141,7 @@ public class SegmentMetadataQuerySegmentWalker implements QuerySegmentWalker
 
     final TimelineLookup<String, SegmentLoadInfo> timelineLookup = timelineConverter.apply(timeline);
 
-    QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
+    QueryToolChest<T, Query<T>> toolChest = conglomerate.getToolChest(query);
     Set<Pair<SegmentDescriptor, SegmentLoadInfo>> segmentAndServers = computeSegmentsToQuery(timelineLookup, query, toolChest);
 
     queryPlus = queryPlus.withQueryMetrics(toolChest);

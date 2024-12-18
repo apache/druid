@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import type { QueryResult } from '@druid-toolkit/query';
+import type { QueryResult } from 'druid-query-toolkit';
 import FileSaver from 'file-saver';
 import * as JSONBig from 'json-bigint-native';
 
@@ -43,6 +43,8 @@ export function downloadUrl(url: string, filename: string) {
 }
 
 export function formatForFormat(s: null | string | number | Date, format: 'csv' | 'tsv'): string {
+  if (s == null) return '';
+
   // stringify and remove line break
   const str = stringifyValue(s).replace(/(?:\r\n|\r|\n)/g, ' ');
 

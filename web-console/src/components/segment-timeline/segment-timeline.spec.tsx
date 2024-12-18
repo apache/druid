@@ -16,41 +16,42 @@
  * limitations under the License.
  */
 
-import { sane } from '@druid-toolkit/query';
 import { render } from '@testing-library/react';
-import React from 'react';
 
 import { Capabilities } from '../../helpers';
+import { QueryState } from '../../utils';
 
 import { SegmentTimeline } from './segment-timeline';
 
-jest.useFakeTimers('modern').setSystemTime(Date.parse('2021-06-08T12:34:56Z'));
+jest.useFakeTimers('modern').setSystemTime(Date.parse('2024-11-19T12:34:56Z'));
+
+jest.mock('../../hooks', () => {
+  return {
+    useQueryManager: (options: any) => {
+      if (options.initQuery instanceof Capabilities) {
+        // This is a query for data sources
+        return [new QueryState({ data: ['ds1', 'ds2'] })];
+      }
+
+      if (options.query === null) {
+        // This is a query for the data source time range
+        return [
+          new QueryState({
+            data: [new Date('2024-11-01 00:00:00Z'), new Date('2024-11-18 00:00:00Z')],
+          }),
+        ];
+      }
+
+      return new QueryState({ error: new Error('not covered') });
+    },
+  };
+});
 
 describe('SegmentTimeline', () => {
-  it('.getSqlQuery', () => {
-    expect(
-      SegmentTimeline.getSqlQuery(
-        new Date('2020-01-01T00:00:00Z'),
-        new Date('2021-02-01T00:00:00Z'),
-      ),
-    ).toEqual(sane`
-      SELECT
-        "start", "end", "datasource",
-        COUNT(*) AS "count",
-        SUM("size") AS "size"
-      FROM sys.segments
-      WHERE
-        '2020-01-01T00:00:00.000Z' <= "start" AND
-        "end" <= '2021-02-01T00:00:00.000Z' AND
-        is_published = 1 AND
-        is_overshadowed = 0
-      GROUP BY 1, 2, 3
-      ORDER BY "start" DESC
-    `);
-  });
-
   it('matches snapshot', () => {
-    const segmentTimeline = <SegmentTimeline capabilities={Capabilities.FULL} />;
+    const segmentTimeline = (
+      <SegmentTimeline capabilities={Capabilities.FULL} datasource={undefined} />
+    );
     const { container } = render(segmentTimeline);
     expect(container.firstChild).toMatchSnapshot();
   });

@@ -293,7 +293,6 @@ public class GroupByQueryConfig
     return vectorize;
   }
 
-  @SuppressWarnings("unused")
   public boolean isIntermediateResultAsMapCompat()
   {
     return intermediateResultAsMapCompat;
@@ -371,7 +370,7 @@ public class GroupByQueryConfig
         isMultiValueUnnestingEnabled()
     );
 
-    logger.debug("Override config for GroupBy query %s - %s", query.getId(), newConfig.toString());
+    logger.debug("Override config for GroupBy query %s - %s", query.getId(), newConfig);
     return newConfig;
   }
 

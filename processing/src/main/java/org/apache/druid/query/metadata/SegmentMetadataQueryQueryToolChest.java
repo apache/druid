@@ -20,6 +20,7 @@
 package org.apache.druid.query.metadata;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
@@ -62,6 +63,7 @@ import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -74,9 +76,7 @@ import java.util.function.BinaryOperator;
 
 public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAnalysis, SegmentMetadataQuery>
 {
-  private static final TypeReference<SegmentAnalysis> TYPE_REFERENCE = new TypeReference<SegmentAnalysis>()
-  {
-  };
+  private static final TypeReference<SegmentAnalysis> TYPE_REFERENCE = new TypeReference<>() {};
   private static final byte SEGMENT_METADATA_CACHE_PREFIX = 0x4;
   private static final byte SEGMENT_METADATA_QUERY = 0x16;
   private static final Function<SegmentAnalysis, SegmentAnalysis> MERGE_TRANSFORM_FN =
@@ -104,7 +104,7 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
   @Override
   public QueryRunner<SegmentAnalysis> mergeResults(final QueryRunner<SegmentAnalysis> runner)
   {
-    return new BySegmentSkippingQueryRunner<SegmentAnalysis>(runner)
+    return new BySegmentSkippingQueryRunner<>(runner)
     {
       @Override
       public Sequence<SegmentAnalysis> doRun(
@@ -185,7 +185,16 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
   @Override
   public CacheStrategy<SegmentAnalysis, SegmentAnalysis, SegmentMetadataQuery> getCacheStrategy(final SegmentMetadataQuery query)
   {
-    return new CacheStrategy<SegmentAnalysis, SegmentAnalysis, SegmentMetadataQuery>()
+    return getCacheStrategy(query, null);
+  }
+
+  @Override
+  public CacheStrategy<SegmentAnalysis, SegmentAnalysis, SegmentMetadataQuery> getCacheStrategy(
+      final SegmentMetadataQuery query,
+      @Nullable final ObjectMapper objectMapper
+  )
+  {
+    return new CacheStrategy<>()
     {
       @Override
       public boolean isCacheable(SegmentMetadataQuery query, boolean willMergeRunners, boolean bySegment)

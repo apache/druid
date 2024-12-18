@@ -107,7 +107,7 @@ public class RetrieveUsedSegmentsAction implements TaskAction<Collection<DataSeg
   @Override
   public TypeReference<Collection<DataSegment>> getReturnTypeReference()
   {
-    return new TypeReference<Collection<DataSegment>>() {};
+    return new TypeReference<>() {};
   }
 
   @Override
@@ -184,12 +184,6 @@ public class RetrieveUsedSegmentsAction implements TaskAction<Collection<DataSeg
   {
     return toolbox.getIndexerMetadataStorageCoordinator()
                   .retrieveUsedSegmentsForIntervals(dataSource, intervals, visibility);
-  }
-
-  @Override
-  public boolean isAudited()
-  {
-    return false;
   }
 
   @Override

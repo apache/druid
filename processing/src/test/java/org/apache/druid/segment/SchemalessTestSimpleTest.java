@@ -83,7 +83,7 @@ public class SchemalessTestSimpleTest extends InitializedNullHandlingTest
     for (SegmentWriteOutMediumFactory segmentWriteOutMediumFactory : SegmentWriteOutMediumFactory.builtInFactories()) {
       SchemalessIndexTest schemalessIndexTest = new SchemalessIndexTest(segmentWriteOutMediumFactory);
       final IncrementalIndex incrementalIndex = SchemalessIndexTest.getIncrementalIndex();
-      final QueryableIndex persistedIncrementalIndex = TestIndex.persistRealtimeAndLoadMMapped(incrementalIndex);
+      final QueryableIndex persistedIncrementalIndex = TestIndex.persistAndMemoryMap(incrementalIndex);
       final QueryableIndex mergedIncrementalIndex = schemalessIndexTest.getMergedIncrementalIndex();
       argumentArrays.add(new Object[] {new IncrementalIndexSegment(incrementalIndex, null), false});
       argumentArrays.add(new Object[] {new QueryableIndexSegment(persistedIncrementalIndex, null), false});
@@ -253,7 +253,7 @@ public class SchemalessTestSimpleTest extends InitializedNullHandlingTest
                               .build();
 
     List<Result<SearchResultValue>> expectedResults = Collections.singletonList(
-        new Result<SearchResultValue>(
+        new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new SearchResultValue(
                 Arrays.asList(
@@ -278,7 +278,7 @@ public class SchemalessTestSimpleTest extends InitializedNullHandlingTest
                                     .build();
 
     List<Result<TimeBoundaryResultValue>> expectedResults = Collections.singletonList(
-        new Result<TimeBoundaryResultValue>(
+        new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeBoundaryResultValue(
                 ImmutableMap.of(

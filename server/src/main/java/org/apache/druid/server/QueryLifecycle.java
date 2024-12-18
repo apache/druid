@@ -19,7 +19,7 @@
 
 package org.apache.druid.server;
 
-import com.fasterxml.jackson.databind.ObjectWriter;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
@@ -42,10 +42,10 @@ import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryInterruptedException;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryPlus;
+import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryToolChest;
-import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.server.QueryResource.ResourceIOReaderWriter;
 import org.apache.druid.server.log.RequestLogger;
@@ -62,7 +62,6 @@ import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
-
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -87,7 +86,7 @@ public class QueryLifecycle
 {
   private static final Logger log = new Logger(QueryLifecycle.class);
 
-  private final QueryToolChestWarehouse warehouse;
+  private final QueryRunnerFactoryConglomerate conglomerate;
   private final QuerySegmentWalker texasRanger;
   private final GenericQueryMetricsFactory queryMetricsFactory;
   private final ServiceEmitter emitter;
@@ -108,7 +107,7 @@ public class QueryLifecycle
   private Set<String> userContextKeys;
 
   public QueryLifecycle(
-      final QueryToolChestWarehouse warehouse,
+      final QueryRunnerFactoryConglomerate conglomerate,
       final QuerySegmentWalker texasRanger,
       final GenericQueryMetricsFactory queryMetricsFactory,
       final ServiceEmitter emitter,
@@ -120,7 +119,7 @@ public class QueryLifecycle
       final long startNs
   )
   {
-    this.warehouse = warehouse;
+    this.conglomerate = conglomerate;
     this.texasRanger = texasRanger;
     this.queryMetricsFactory = queryMetricsFactory;
     this.emitter = emitter;
@@ -174,7 +173,7 @@ public class QueryLifecycle
      * cannot be moved into execute().  We leave this as an exercise for the future, however as this oddity
      * was discovered while just trying to expose HTTP response headers
      */
-    return new QueryResponse<T>(
+    return new QueryResponse<>(
         Sequences.wrap(
             results,
             new SequenceWrapper()
@@ -208,7 +207,7 @@ public class QueryLifecycle
     Map<String, Object> mergedUserAndConfigContext = QueryContexts.override(defaultQueryConfig.getContext(), baseQuery.getContext());
     mergedUserAndConfigContext.put(BaseQuery.QUERY_ID, queryId);
     this.baseQuery = baseQuery.withOverriddenContext(mergedUserAndConfigContext);
-    this.toolChest = warehouse.getToolChest(this.baseQuery);
+    this.toolChest = conglomerate.getToolChest(this.baseQuery);
   }
 
   /**
@@ -315,7 +314,7 @@ public class QueryLifecycle
                                   .withIdentity(authenticationResult.getIdentity())
                                   .run(texasRanger, responseContext);
 
-    return new QueryResponse<T>(res == null ? Sequences.empty() : res, responseContext);
+    return new QueryResponse<>(res == null ? Sequences.empty() : res, responseContext);
   }
 
   /**
@@ -434,7 +433,7 @@ public class QueryLifecycle
            || (!shouldFinalize && queryContext.isSerializeDateTimeAsLongInner(false));
   }
 
-  public ObjectWriter newOutputWriter(ResourceIOReaderWriter ioReaderWriter)
+  public ObjectMapper newOutputWriter(ResourceIOReaderWriter ioReaderWriter)
   {
     return ioReaderWriter.getResponseWriter().newOutputWriter(
         getToolChest(),

@@ -51,11 +51,10 @@ import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.QueryableModule;
+import org.apache.druid.guice.SupervisorCleanupModule;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.guice.http.JettyHttpClientModule;
-import org.apache.druid.indexing.overlord.TaskMaster;
-import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -89,7 +88,6 @@ import org.apache.druid.query.metadata.SegmentMetadataQueryConfig;
 import org.apache.druid.query.metadata.SegmentMetadataQueryQueryToolChest;
 import org.apache.druid.query.metadata.SegmentMetadataQueryRunnerFactory;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
-import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.CoordinatorSegmentMetadataCache;
 import org.apache.druid.segment.metadata.SegmentMetadataCacheConfig;
@@ -97,13 +95,11 @@ import org.apache.druid.segment.metadata.SegmentMetadataQuerySegmentWalker;
 import org.apache.druid.segment.metadata.SegmentSchemaCache;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.QuerySchedulerProvider;
+import org.apache.druid.server.compaction.CompactionStatusTracker;
 import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.DruidCoordinator;
 import org.apache.druid.server.coordinator.MetadataManager;
 import org.apache.druid.server.coordinator.balancer.BalancerStrategyFactory;
-import org.apache.druid.server.coordinator.balancer.CachingCostBalancerStrategyConfig;
-import org.apache.druid.server.coordinator.compact.CompactionSegmentSearchPolicy;
-import org.apache.druid.server.coordinator.compact.NewestSegmentFirstPolicy;
 import org.apache.druid.server.coordinator.config.CoordinatorKillConfigs;
 import org.apache.druid.server.coordinator.config.CoordinatorPeriodConfig;
 import org.apache.druid.server.coordinator.config.CoordinatorRunConfig;
@@ -114,8 +110,8 @@ import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroup;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroups;
 import org.apache.druid.server.coordinator.loading.LoadQueueTaskMaster;
 import org.apache.druid.server.http.ClusterResource;
-import org.apache.druid.server.http.CompactionResource;
 import org.apache.druid.server.http.CoordinatorCompactionConfigsResource;
+import org.apache.druid.server.http.CoordinatorCompactionResource;
 import org.apache.druid.server.http.CoordinatorDynamicConfigsResource;
 import org.apache.druid.server.http.CoordinatorRedirectInfo;
 import org.apache.druid.server.http.CoordinatorResource;
@@ -223,11 +219,6 @@ public class CliCoordinator extends ServerRunnable
             JsonConfigProvider.bind(binder, "druid.coordinator.loadqueuepeon.http", HttpLoadQueuePeonConfig.class);
             JsonConfigProvider.bind(binder, "druid.coordinator.balancer", BalancerStrategyFactory.class);
             JsonConfigProvider.bind(binder, "druid.coordinator.segment", CoordinatorSegmentWatcherConfig.class);
-            JsonConfigProvider.bind(
-                binder,
-                "druid.coordinator.balancer.cachingCost",
-                CachingCostBalancerStrategyConfig.class
-            );
             JsonConfigProvider.bind(binder, "druid.coordinator.segmentMetadataCache", SegmentMetadataCacheConfig.class);
             binder.bind(DruidCoordinatorConfig.class);
 
@@ -258,6 +249,7 @@ public class CliCoordinator extends ServerRunnable
             binder.bind(CoordinatorConfigManager.class);
             binder.bind(MetadataManager.class);
             binder.bind(DruidCoordinator.class);
+            binder.bind(CompactionStatusTracker.class).in(LazySingleton.class);
 
             LifecycleModule.register(binder, MetadataStorage.class);
             LifecycleModule.register(binder, DruidCoordinator.class);
@@ -266,7 +258,7 @@ public class CliCoordinator extends ServerRunnable
                   .to(CoordinatorJettyServerInitializer.class);
 
             Jerseys.addResource(binder, CoordinatorResource.class);
-            Jerseys.addResource(binder, CompactionResource.class);
+            Jerseys.addResource(binder, CoordinatorCompactionResource.class);
             Jerseys.addResource(binder, CoordinatorDynamicConfigsResource.class);
             Jerseys.addResource(binder, CoordinatorCompactionConfigsResource.class);
             Jerseys.addResource(binder, TiersResource.class);
@@ -282,19 +274,6 @@ public class CliCoordinator extends ServerRunnable
             LifecycleModule.register(binder, Server.class);
             LifecycleModule.register(binder, DataSourcesResource.class);
 
-            if (properties.containsKey("druid.coordinator.merge.on")) {
-              throw new UnsupportedOperationException(
-                  "'druid.coordinator.merge.on' is not supported anymore. "
-                  + "Please consider using Coordinator's automatic compaction instead. "
-                  + "See https://druid.apache.org/docs/latest/operations/segment-optimization.html and "
-                  + "https://druid.apache.org/docs/latest/api-reference/api-reference.html#compaction-configuration "
-                  + "for more details about compaction."
-              );
-            }
-
-            //TODO: make this configurable when there are multiple search policies
-            binder.bind(CompactionSegmentSearchPolicy.class).to(NewestSegmentFirstPolicy.class);
-
             bindAnnouncer(
                 binder,
                 Coordinator.class,
@@ -305,10 +284,6 @@ public class CliCoordinator extends ServerRunnable
             LifecycleModule.registerKey(binder, Key.get(SelfDiscoveryResource.class));
 
             if (!beOverlord) {
-              // These are needed to deserialize SupervisorSpec for Supervisor Auto Cleanup
-              binder.bind(TaskStorage.class).toProvider(Providers.of(null));
-              binder.bind(TaskMaster.class).toProvider(Providers.of(null));
-              binder.bind(RowIngestionMetersFactory.class).toProvider(Providers.of(null));
               // Bind HeartbeatSupplier only when the service operates independently of Overlord.
               binder.bind(new TypeLiteral<Supplier<Map<String, Object>>>() {})
                   .annotatedWith(Names.named(ServiceStatusMonitor.HEARTBEAT_TAGS_BINDING))
@@ -351,6 +326,7 @@ public class CliCoordinator extends ServerRunnable
       // Only add LookupSerdeModule if !beOverlord, since CliOverlord includes it, and having two copies causes
       // the injector to get confused due to having multiple bindings for the same classes.
       modules.add(new LookupSerdeModule());
+      modules.add(new SupervisorCleanupModule());
     }
 
     return modules;
@@ -385,13 +361,13 @@ public class CliCoordinator extends ServerRunnable
           return new CoordinatorCustomDutyGroups(coordinatorCustomDutyGroups);
         }
         List<String> coordinatorCustomDutyGroupNames = jsonMapper.readValue(props.getProperty(
-            "druid.coordinator.dutyGroups"), new TypeReference<List<String>>() {});
+            "druid.coordinator.dutyGroups"), new TypeReference<>() {});
         for (String coordinatorCustomDutyGroupName : coordinatorCustomDutyGroupNames) {
           String dutyListProperty = StringUtils.format("druid.coordinator.%s.duties", coordinatorCustomDutyGroupName);
           if (Strings.isNullOrEmpty(props.getProperty(dutyListProperty))) {
             throw new IAE("Coordinator custom duty group given without any duty for group %s", coordinatorCustomDutyGroupName);
           }
-          List<String> dutyForGroup = jsonMapper.readValue(props.getProperty(dutyListProperty), new TypeReference<List<String>>() {});
+          List<String> dutyForGroup = jsonMapper.readValue(props.getProperty(dutyListProperty), new TypeReference<>() {});
           List<CoordinatorCustomDuty> coordinatorCustomDuties = new ArrayList<>();
           for (String dutyName : dutyForGroup) {
             final String dutyPropertyBase = StringUtils.format(
@@ -475,6 +451,7 @@ public class CliCoordinator extends ServerRunnable
       final MapBinder<Class<? extends Query>, QueryRunnerFactory> queryFactoryBinder =
           DruidBinders.queryRunnerFactoryBinder(binder);
       queryFactoryBinder.addBinding(SegmentMetadataQuery.class).to(SegmentMetadataQueryRunnerFactory.class);
+      DruidBinders.queryLogicBinder(binder);
       binder.bind(SegmentMetadataQueryRunnerFactory.class).in(LazySingleton.class);
 
       binder.bind(GenericQueryMetricsFactory.class).to(DefaultGenericQueryMetricsFactory.class);

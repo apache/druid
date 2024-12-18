@@ -58,7 +58,7 @@ public class FilteredSequence<T> implements Sequence<T>
       final Yielder<OutType> yielder, final FilteringYieldingAccumulator<OutType, T> accumulator
   )
   {
-    return new Yielder<OutType>()
+    return new Yielder<>()
     {
       @Override
       public OutType get()

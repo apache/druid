@@ -23,9 +23,11 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.Order;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -38,7 +40,7 @@ import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 
 @RunWith(Parameterized.class)
-public class ScanQueryLimitRowIteratorTest
+public class ScanQueryLimitRowIteratorTest extends InitializedNullHandlingTest
 {
   private static final int NUM_ELEMENTS = 1000;
   private final int batchSize;
@@ -104,7 +106,7 @@ public class ScanQueryLimitRowIteratorTest
   {
     ScanQuery query = Druids.newScanQueryBuilder()
                             .limit(limit)
-                            .order(ScanQuery.Order.NONE)
+                            .order(Order.NONE)
                             .dataSource("some datasource")
                             .batchSize(batchSize)
                             .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
@@ -145,7 +147,7 @@ public class ScanQueryLimitRowIteratorTest
   {
     ScanQuery query = Druids.newScanQueryBuilder()
                             .limit(limit)
-                            .order(ScanQuery.Order.DESCENDING)
+                            .order(Order.DESCENDING)
                             .dataSource("some datasource")
                             .batchSize(batchSize)
                             .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
@@ -184,7 +186,7 @@ public class ScanQueryLimitRowIteratorTest
   {
     ScanQuery query = Druids.newScanQueryBuilder()
                             .limit(limit)
-                            .order(ScanQuery.Order.DESCENDING)
+                            .order(Order.DESCENDING)
                             .dataSource("some datasource")
                             .batchSize(batchSize)
                             .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)

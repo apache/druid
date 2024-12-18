@@ -60,11 +60,11 @@ DruidProject(dim1=[$0], dim2=[$1], k=[$3], v=[$4], druid=[logical])
         } ],
         "resultFormat" : "compactedList",
         "columns" : [ "dim1", "dim2", "v0" ],
-        "legacy" : false,
         "columnTypes" : [ "STRING", "STRING", "STRING" ],
         "granularity" : {
           "type" : "all"
-        }
+        },
+        "legacy" : false
       }
     },
     "right" : {
@@ -81,10 +81,10 @@ DruidProject(dim1=[$0], dim2=[$1], k=[$3], v=[$4], druid=[logical])
   },
   "resultFormat" : "compactedList",
   "columns" : [ "dim1", "dim2", "j0.k", "j0.v" ],
-  "legacy" : false,
   "columnTypes" : [ "STRING", "STRING", "STRING", "STRING" ],
   "granularity" : {
     "type" : "all"
-  }
+  },
+  "legacy" : false
 }
 !nativePlan

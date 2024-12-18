@@ -76,18 +76,19 @@ import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervi
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.PendingSegmentRecord;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
+import org.apache.druid.segment.realtime.ChatHandler;
 import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorDriverAddResult;
 import org.apache.druid.segment.realtime.appenderator.SegmentsAndCommitMetadata;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderator;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderatorDriver;
-import org.apache.druid.segment.realtime.firehose.ChatHandler;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizerMapper;
@@ -127,6 +128,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -246,6 +248,10 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
   private final Map<PartitionIdType, Long> partitionsThroughput = new HashMap<>();
 
+  private volatile DateTime minMessageTime;
+  private volatile DateTime maxMessageTime;
+  private final ScheduledExecutorService rejectionPeriodUpdaterExec;
+
   public SeekableStreamIndexTaskRunner(
       final SeekableStreamIndexTask<PartitionIdType, SequenceOffsetType, RecordType> task,
       @Nullable final InputRowParser<ByteBuffer> parser,
@@ -267,6 +273,18 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     this.ingestionState = IngestionState.NOT_STARTED;
     this.lockGranularityToUse = lockGranularityToUse;
 
+    minMessageTime = ioConfig.getMinimumMessageTime().or(DateTimes.MIN);
+    maxMessageTime = ioConfig.getMaximumMessageTime().or(DateTimes.MAX);
+    rejectionPeriodUpdaterExec = Execs.scheduledSingleThreaded("RejectionPeriodUpdater-Exec--%d");
+
+    if (ioConfig.getRefreshRejectionPeriodsInMinutes() != null) {
+      rejectionPeriodUpdaterExec
+           .scheduleWithFixedDelay(
+               this::refreshMinMaxMessageTime,
+               ioConfig.getRefreshRejectionPeriodsInMinutes(),
+               ioConfig.getRefreshRejectionPeriodsInMinutes(),
+               TimeUnit.MINUTES);
+    }
     resetNextCheckpointTime();
   }
 
@@ -388,7 +406,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
         inputRowSchema,
         task.getDataSchema().getTransformSpec(),
         toolbox.getIndexingTmpDir(),
-        row -> row != null && task.withinMinMaxRecordTime(row),
+        row -> row != null && withinMinMaxRecordTime(row),
         rowIngestionMeters,
         parseExceptionHandler
     );
@@ -627,6 +645,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
           stillReading = !assignment.isEmpty();
 
           SequenceMetadata<PartitionIdType, SequenceOffsetType> sequenceToCheckpoint = null;
+          AppenderatorDriverAddResult pushTriggeringAddResult = null;
           for (OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType, RecordType> record : records) {
             final boolean shouldProcess = verifyRecordInRange(record.getPartitionId(), record.getSequenceNumber());
 
@@ -677,6 +696,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                                   .getMaxTotalRowsOr(DynamicPartitionsSpec.DEFAULT_MAX_TOTAL_ROWS)
                   );
                   if (isPushRequired && !sequenceToUse.isCheckpointed()) {
+                    pushTriggeringAddResult = addResult;
                     sequenceToCheckpoint = sequenceToUse;
                   }
                   isPersistRequired |= addResult.isPersistRequired();
@@ -691,7 +711,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
               if (isPersistRequired) {
                 Futures.addCallback(
                     driver.persistAsync(committerSupplier.get()),
-                    new FutureCallback<Object>()
+                    new FutureCallback<>()
                     {
                       @Override
                       public void onSuccess(@Nullable Object result)
@@ -739,6 +759,10 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
           if (System.currentTimeMillis() > nextCheckpointTime) {
             sequenceToCheckpoint = getLastSequenceMetadata();
+            log.info("Next checkpoint time, updating sequenceToCheckpoint, SequenceToCheckpoint: [%s]", sequenceToCheckpoint);
+          }
+          if (pushTriggeringAddResult != null) {
+            log.info("Hit the row limit updating sequenceToCheckpoint, SequenceToCheckpoint: [%s], rowInSegment: [%s], TotalRows: [%s]", sequenceToCheckpoint, pushTriggeringAddResult.getNumRowsInSegment(), pushTriggeringAddResult.getTotalNumRowsInAppenderator());
           }
 
           if (sequenceToCheckpoint != null && stillReading) {
@@ -768,7 +792,6 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
             }
           }
         }
-        ingestionState = IngestionState.COMPLETED;
       }
       catch (Exception e) {
         // (1) catch all exceptions while reading from kafka
@@ -835,6 +858,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       // failed to persist sequences. It might also return null if handoff failed, but was recoverable.
       // See publishAndRegisterHandoff() for details.
       List<SegmentsAndCommitMetadata> handedOffList = Collections.emptyList();
+      ingestionState = IngestionState.SEGMENT_AVAILABILITY_WAIT;
       if (tuningConfig.getHandoffConditionTimeout() == 0) {
         handedOffList = Futures.allAsList(handOffWaitList).get();
       } else {
@@ -918,6 +942,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
           toolbox.getDruidNodeAnnouncer().unannounce(discoveryDruidNode);
           toolbox.getDataSegmentServerAnnouncer().unannounce();
         }
+        rejectionPeriodUpdaterExec.shutdown();
       }
       catch (Throwable e) {
         if (caughtExceptionOuter != null) {
@@ -928,6 +953,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       }
     }
 
+    ingestionState = IngestionState.COMPLETED;
     toolbox.getTaskReportFileWriter().write(task.getId(), getTaskCompletionReports(null, handoffWaitMs));
     return TaskStatus.success(task.getId());
   }
@@ -996,7 +1022,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
     Futures.addCallback(
         publishFuture,
-        new FutureCallback<SegmentsAndCommitMetadata>()
+        new FutureCallback<>()
         {
           @Override
           public void onSuccess(SegmentsAndCommitMetadata publishedSegmentsAndCommitMetadata)
@@ -2085,4 +2111,35 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   protected abstract boolean isEndOffsetExclusive();
 
   protected abstract TypeReference<List<SequenceMetadata<PartitionIdType, SequenceOffsetType>>> getSequenceMetadataTypeReference();
+
+  private void refreshMinMaxMessageTime()
+  {
+    minMessageTime = minMessageTime.plusMinutes(ioConfig.getRefreshRejectionPeriodsInMinutes().intValue());
+    maxMessageTime = maxMessageTime.plusMinutes(ioConfig.getRefreshRejectionPeriodsInMinutes().intValue());
+
+    log.info(StringUtils.format("Updated min and max messsage times to %s and %s respectively.", minMessageTime, maxMessageTime));
+  }
+
+  public boolean withinMinMaxRecordTime(final InputRow row)
+  {
+    final boolean beforeMinimumMessageTime = minMessageTime.isAfter(row.getTimestamp());
+    final boolean afterMaximumMessageTime = maxMessageTime.isBefore(row.getTimestamp());
+
+    if (log.isDebugEnabled()) {
+      if (beforeMinimumMessageTime) {
+        log.debug(
+            "CurrentTimeStamp[%s] is before MinimumMessageTime[%s]",
+            row.getTimestamp(),
+            minMessageTime
+        );
+      } else if (afterMaximumMessageTime) {
+        log.debug(
+            "CurrentTimeStamp[%s] is after MaximumMessageTime[%s]",
+            row.getTimestamp(),
+            maxMessageTime
+        );
+      }
+    }
+    return !beforeMinimumMessageTime && !afterMaximumMessageTime;
+  }
 }

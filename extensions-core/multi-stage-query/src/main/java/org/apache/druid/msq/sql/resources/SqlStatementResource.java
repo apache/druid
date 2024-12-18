@@ -91,6 +91,7 @@ import org.apache.druid.sql.http.SqlQuery;
 import org.apache.druid.sql.http.SqlResource;
 import org.apache.druid.storage.NilStorageConnector;
 import org.apache.druid.storage.StorageConnector;
+import org.apache.druid.storage.StorageConnectorProvider;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import javax.servlet.http.HttpServletRequest;
@@ -134,14 +135,14 @@ public class SqlStatementResource
       final @MultiStageQuery SqlStatementFactory msqSqlStatementFactory,
       final ObjectMapper jsonMapper,
       final OverlordClient overlordClient,
-      final @MultiStageQuery StorageConnector storageConnector,
+      final @MultiStageQuery StorageConnectorProvider storageConnectorProvider,
       final AuthorizerMapper authorizerMapper
   )
   {
     this.msqSqlStatementFactory = msqSqlStatementFactory;
     this.jsonMapper = jsonMapper;
     this.overlordClient = overlordClient;
-    this.storageConnector = storageConnector;
+    this.storageConnector = storageConnectorProvider.createStorageConnector(null);
     this.authorizerMapper = authorizerMapper;
   }
 
@@ -231,7 +232,9 @@ public class SqlStatementResource
   @Path("/{id}")
   @Produces(MediaType.APPLICATION_JSON)
   public Response doGetStatus(
-      @PathParam("id") final String queryId, @Context final HttpServletRequest req
+      @PathParam("id") final String queryId,
+      @QueryParam("detail") boolean detail,
+      @Context final HttpServletRequest req
   )
   {
     try {
@@ -242,7 +245,8 @@ public class SqlStatementResource
           queryId,
           authenticationResult,
           true,
-          Action.READ
+          Action.READ,
+          detail
       );
 
       if (sqlStatementResult.isPresent()) {
@@ -369,7 +373,8 @@ public class SqlStatementResource
           queryId,
           authenticationResult,
           false,
-          Action.WRITE
+          Action.WRITE,
+          false
       );
       if (sqlStatementResult.isPresent()) {
         switch (sqlStatementResult.get().getState()) {
@@ -479,7 +484,7 @@ public class SqlStatementResource
     }
     String taskId = String.valueOf(firstRow[0]);
 
-    Optional<SqlStatementResult> statementResult = getStatementStatus(taskId, authenticationResult, true, Action.READ);
+    Optional<SqlStatementResult> statementResult = getStatementStatus(taskId, authenticationResult, true, Action.READ, false);
 
     if (statementResult.isPresent()) {
       return Response.status(Response.Status.OK).entity(statementResult.get()).build();
@@ -565,7 +570,8 @@ public class SqlStatementResource
       String queryId,
       AuthenticationResult authenticationResult,
       boolean withResults,
-      Action forAction
+      Action forAction,
+      boolean detail
   ) throws DruidException
   {
     TaskStatusResponse taskResponse = contactOverlord(overlordClient.taskStatus(queryId), queryId);
@@ -582,14 +588,29 @@ public class SqlStatementResource
     MSQControllerTask msqControllerTask = getMSQControllerTaskAndCheckPermission(queryId, authenticationResult, forAction);
     SqlStatementState sqlStatementState = SqlStatementResourceHelper.getSqlStatementState(statusPlus);
 
+    MSQTaskReportPayload taskReportPayload = null;
+    if (detail || SqlStatementState.FAILED == sqlStatementState) {
+      try {
+        taskReportPayload = SqlStatementResourceHelper.getPayload(
+            contactOverlord(overlordClient.taskReportAsMap(queryId), queryId)
+        );
+      }
+      catch (DruidException e) {
+        if (!e.getErrorCode().equals("notFound") && !e.getMessage().contains("Unable to contact overlord")) {
+          throw e;
+        }
+      }
+    }
+
     if (SqlStatementState.FAILED == sqlStatementState) {
       return SqlStatementResourceHelper.getExceptionPayload(
           queryId,
           taskResponse,
           statusPlus,
           sqlStatementState,
-          contactOverlord(overlordClient.taskReportAsMap(queryId), queryId),
-          jsonMapper
+          taskReportPayload,
+          jsonMapper,
+          detail
       );
     } else {
       Optional<List<ColumnNameAndTypes>> signature = SqlStatementResourceHelper.getSignature(msqControllerTask);
@@ -605,7 +626,10 @@ public class SqlStatementResource
               sqlStatementState,
               msqControllerTask.getQuerySpec().getDestination()
           ).orElse(null) : null,
-          null
+          null,
+          SqlStatementResourceHelper.getQueryStagesReport(taskReportPayload),
+          SqlStatementResourceHelper.getQueryCounters(taskReportPayload),
+          SqlStatementResourceHelper.getQueryWarningDetails(taskReportPayload)
       ));
     }
   }

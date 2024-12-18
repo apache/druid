@@ -201,9 +201,6 @@
   "zk/connected" : { "dimensions" : [], "type" : "gauge", "help":  "Indicator of connection status to zookeeper."},
   "zk/reconnect/time" : { "dimensions" : [], "type" : "timer", "conversionFactor": 1000.0, "help": "Amount of time, in seconds, that a server was disconnected from ZooKeeper before reconnecting." },
 
-  "ingest/events/buffered" : { "dimensions" : ["serviceName", "dataSource", "bufferCapacity"], "type" : "gauge", "help": "Number of events queued in the EventReceiverFirehose's buffer"},
-  "ingest/bytes/received" : { "dimensions" : ["serviceName", "dataSource"], "type" : "gauge", "help": "Number of bytes received by the EventReceiverFirehose."},
-
   "sys/swap/free" : { "dimensions" : [], "type" : "gauge", "help": "Free swap"},
   "sys/swap/max" : { "dimensions" : [], "type" : "gauge", "help": "Max swap"},
   "sys/swap/pageIn" : { "dimensions" : [], "type" : "gauge", "help": "Paged in swap"},

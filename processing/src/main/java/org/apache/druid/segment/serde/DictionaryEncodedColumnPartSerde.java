@@ -29,8 +29,10 @@ import org.apache.druid.collections.spatial.ImmutableRTree;
 import org.apache.druid.io.Channels;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
+import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnConfig;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.StringEncodingStrategies;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.BitmapSerde;
@@ -89,7 +91,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
 
     public static VERSION fromByte(byte b)
     {
-      final VERSION[] values = VERSION.values();
+      final VERSION[] values = values();
       Preconditions.checkArgument(b < values.length, "Unsupported dictionary column version[%s]", b);
       return values[b];
     }
@@ -292,7 +294,12 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
     return new Deserializer()
     {
       @Override
-      public void read(ByteBuffer buffer, ColumnBuilder builder, ColumnConfig columnConfig)
+      public void read(
+          ByteBuffer buffer,
+          ColumnBuilder builder,
+          ColumnConfig columnConfig,
+          @Nullable ColumnHolder parent
+      )
       {
         final VERSION rVersion = VERSION.fromByte(buffer.get());
         final int rFlags;
@@ -309,12 +316,17 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
 
         builder.setType(ValueType.STRING);
 
-        final Supplier<? extends Indexed<ByteBuffer>> dictionarySupplier =
-            StringEncodingStrategies.getStringDictionarySupplier(
-                builder.getFileMapper(),
-                buffer,
-                byteOrder
-            );
+        final Supplier<? extends Indexed<ByteBuffer>> dictionarySupplier;
+        if (parent != null) {
+          final Supplier<? extends BaseColumn> parentSupplier = parent.getColumnSupplier();
+          dictionarySupplier = ((StringUtf8DictionaryEncodedColumnSupplier<?>) parentSupplier).getDictionary();
+        } else {
+          dictionarySupplier = StringEncodingStrategies.getStringDictionarySupplier(
+              builder.getFileMapper(),
+              buffer,
+              byteOrder
+          );
+        }
 
         final WritableSupplier<ColumnarInts> rSingleValuedColumn;
         final WritableSupplier<ColumnarMultiInts> rMultiValuedColumn;
@@ -332,7 +344,8 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
         final StringUtf8DictionaryEncodedColumnSupplier<?> supplier = new StringUtf8DictionaryEncodedColumnSupplier<>(
             dictionarySupplier,
             rSingleValuedColumn,
-            rMultiValuedColumn
+            rMultiValuedColumn,
+            bitmapSerdeFactory.getBitmapFactory()
         );
         builder.setHasMultipleValues(hasMultipleValues)
                .setHasNulls(hasNulls)

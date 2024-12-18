@@ -24,7 +24,7 @@ public class Limits
   /**
    * Maximum number of columns that can appear in a frame signature.
    * <p>
-   * Somewhat less than {@link WorkerMemoryParameters#STANDARD_FRAME_SIZE} divided by typical minimum column size:
+   * Somewhat less than {@link WorkerMemoryParameters#DEFAULT_FRAME_SIZE} divided by typical minimum column size:
    * {@link org.apache.druid.frame.allocation.AppendableMemory#DEFAULT_INITIAL_ALLOCATION_SIZE}.
    */
   public static final int MAX_FRAME_COLUMNS = 2000;

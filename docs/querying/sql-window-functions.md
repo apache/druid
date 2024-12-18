@@ -28,13 +28,6 @@ description: Reference for window functions
 Apache Druid supports two query languages: [Druid SQL](sql.md) and [native queries](querying.md).
 This document describes the SQL language.
 
-Window functions are an [experimental](../development/experimental.md) feature.
-Development and testing are still at early stage. Feel free to try window functions and provide your feedback.
-Windows functions are not currently supported by multi-stage-query engine so you cannot use them in SQL-based ingestion. 
-
-
-Set the context parameter `enableWindowing: true` to use window functions.
-
 :::
 
 Window functions in Apache Druid produce values based upon the relationship of one row within a window of rows to the other rows within the same window. A window is a group of related rows within a result set. For example, rows with the same value for a specific dimension.
@@ -246,10 +239,7 @@ Druid has guardrail logic to prevent you from executing window function queries 
 
 For example:
 - You cannot set expressions as bounds for window frames.
-- You cannot use two FOLLOWING expressions in the window frame. For example: `ROWS BETWEEN 2 ROWS FOLLOWING and 3 ROWS FOLLOWING`.
 - You can only use a RANGE frames when both endpoints are unbounded or current row.
-
-If you write a query that violates one of these conditions, Druid throws an error: "The query contains a window frame which may return incorrect results. To disregard this warning, set `windowingStrictValidation` to false in the query context."
 
 ## Window function reference
 
@@ -430,8 +420,4 @@ The number of rows considered for the `moving5` window for the `count5` column:
 
 The following are known issues with window functions:
 
--  Aggregates with ORDER BY specified are processed in the window: ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW  
-     This behavior differs from other databases that use the default of RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW.  
-     In cases where the order column is unique there is no difference between RANGE / ROWS; windows with RANGE specifications are handled as ROWS.
-- LEAD/LAG ignores the default value
-- LAST_VALUE returns the last value of the window even when you include an ORDER BY clause
+- SELECT * queries without a WHERE clause are not supported. If you want to retrieve all columns in this case, specify the column names.

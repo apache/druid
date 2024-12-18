@@ -19,7 +19,7 @@ exports[`AutoForm matches snapshot 1`] = `
   <Memo(FormGroupWithInfo)
     label="Test size bytes"
   >
-    <Blueprint4.NumericInput
+    <Blueprint5.NumericInput
       allowNumericCharactersOnly={true}
       buttonPosition="right"
       clampValueOnBlur={false}
@@ -77,42 +77,50 @@ exports[`AutoForm matches snapshot 1`] = `
   <Memo(FormGroupWithInfo)
     label="Test boolean"
   >
-    <Blueprint4.ButtonGroup>
-      <Blueprint4.Button
-        active={false}
-        disabled={false}
-        onClick={[Function]}
-      >
-        False
-      </Blueprint4.Button>
-      <Blueprint4.Button
-        active={false}
-        disabled={false}
-        onClick={[Function]}
-      >
-        True
-      </Blueprint4.Button>
-    </Blueprint4.ButtonGroup>
+    <Blueprint5.SegmentedControl
+      intent="none"
+      onValueChange={[Function]}
+      options={
+        [
+          {
+            "disabled": false,
+            "label": "False",
+            "value": "false",
+          },
+          {
+            "disabled": false,
+            "label": "True",
+            "value": "true",
+          },
+        ]
+      }
+      small={true}
+      value="undefined"
+    />
   </Memo(FormGroupWithInfo)>
   <Memo(FormGroupWithInfo)
     label="Test boolean with default"
   >
-    <Blueprint4.ButtonGroup>
-      <Blueprint4.Button
-        active={true}
-        disabled={false}
-        onClick={[Function]}
-      >
-        False
-      </Blueprint4.Button>
-      <Blueprint4.Button
-        active={false}
-        disabled={false}
-        onClick={[Function]}
-      >
-        True
-      </Blueprint4.Button>
-    </Blueprint4.ButtonGroup>
+    <Blueprint5.SegmentedControl
+      intent="none"
+      onValueChange={[Function]}
+      options={
+        [
+          {
+            "disabled": false,
+            "label": "False",
+            "value": "false",
+          },
+          {
+            "disabled": false,
+            "label": "True",
+            "value": "true",
+          },
+        ]
+      }
+      small={true}
+      value="false"
+    />
   </Memo(FormGroupWithInfo)>
   <Memo(FormGroupWithInfo)
     label="Test string array"
@@ -160,14 +168,13 @@ exports[`AutoForm matches snapshot 1`] = `
       value=""
     />
   </Memo(FormGroupWithInfo)>
-  <Blueprint4.FormGroup>
-    <Blueprint4.Button
-      fill={true}
+  <Blueprint5.FormGroup>
+    <Blueprint5.Button
       minimal={true}
       onClick={[Function]}
       rightIcon="chevron-down"
       text="Show more"
     />
-  </Blueprint4.FormGroup>
+  </Blueprint5.FormGroup>
 </div>
 `;

@@ -28,6 +28,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import org.apache.druid.frame.processor.OutputChannelFactory;
 import org.apache.druid.frame.processor.OutputChannels;
+import org.apache.druid.frame.processor.manager.ConcurrencyLimitedProcessorManager;
 import org.apache.druid.frame.processor.manager.ProcessorManagers;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
@@ -150,7 +151,7 @@ public class SegmentGeneratorFrameProcessorFactory
     final Sequence<Pair<Integer, ReadableInput>> inputSequence =
         Sequences.simple(Iterables.transform(
             inputSliceReader.attach(0, slice, counters, warningPublisher),
-            new Function<ReadableInput, Pair<Integer, ReadableInput>>()
+            new Function<>()
             {
               int i = 0;
 
@@ -177,9 +178,8 @@ public class SegmentGeneratorFrameProcessorFactory
 
           // Create directly, without using AppenderatorsManager, because we need different memory overrides due to
           // using one Appenderator per processing thread instead of per task.
-          // Note: "createOffline" ignores the batchProcessingMode and always acts like CLOSED_SEGMENTS_SINKS.
           final Appenderator appenderator =
-              Appenderators.createOffline(
+              Appenderators.createBatch(
                   idString,
                   dataSchema,
                   makeAppenderatorConfig(
@@ -211,25 +211,33 @@ public class SegmentGeneratorFrameProcessorFactory
     );
 
     return new ProcessorsAndChannels<>(
-        ProcessorManagers.of(workers)
-                         .withAccumulation(
-                             new HashSet<>(),
-                             (acc, segment) -> {
-                               if (segment != null) {
-                                 acc.add(segment);
-                               }
+        // Run at most one segmentGenerator per work order, since segment generation memory is carved out
+        // per-worker, not per-processor. See WorkerMemoryParameters for how the memory limits are calculated.
+        new ConcurrencyLimitedProcessorManager<>(ProcessorManagers.of(workers), 1)
+            .withAccumulation(
+                new HashSet<>(),
+                (acc, segment) -> {
+                  if (segment != null) {
+                    acc.add(segment);
+                  }
 
-                               return acc;
-                             }
-                         ),
+                  return acc;
+                }
+            ),
         OutputChannels.none()
     );
   }
 
   @Override
+  public boolean usesProcessingBuffers()
+  {
+    return false;
+  }
+
+  @Override
   public TypeReference<Set<DataSegment>> getResultTypeReference()
   {
-    return new TypeReference<Set<DataSegment>>() {};
+    return new TypeReference<>() {};
   }
 
   @Nullable
@@ -279,7 +287,7 @@ public class SegmentGeneratorFrameProcessorFactory
       @Override
       public AppendableIndexSpec getAppendableIndexSpec()
       {
-        return TuningConfig.DEFAULT_APPENDABLE_INDEX;
+        return DEFAULT_APPENDABLE_INDEX;
       }
 
       @Override
@@ -338,7 +346,7 @@ public class SegmentGeneratorFrameProcessorFactory
       @Override
       public boolean isSkipBytesInMemoryOverheadCheck()
       {
-        return TuningConfig.DEFAULT_SKIP_BYTES_IN_MEMORY_OVERHEAD_CHECK;
+        return DEFAULT_SKIP_BYTES_IN_MEMORY_OVERHEAD_CHECK;
       }
 
       @Override

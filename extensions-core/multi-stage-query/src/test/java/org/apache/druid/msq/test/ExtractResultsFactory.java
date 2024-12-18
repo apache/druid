@@ -20,10 +20,9 @@
 package org.apache.druid.msq.test;
 
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.msq.indexing.report.MSQResultsReport;
+import org.apache.druid.msq.indexing.report.MSQResultsReport.ColumnAndType;
 import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
-import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.sql.calcite.QueryTestBuilder;
 import org.apache.druid.sql.calcite.QueryTestRunner;
 import org.junit.Assert;
@@ -57,7 +56,6 @@ public class ExtractResultsFactory implements QueryTestRunner.QueryRunStepFactor
     return new QueryTestRunner.BaseExecuteQuery(builder)
     {
       final List<QueryTestRunner.QueryResults> extractedResults = new ArrayList<>();
-      final RowSignature resultsSignature = null;
 
       final MSQTestOverlordServiceClient overlordClient = overlordClientSupplier.get();
 
@@ -104,7 +102,7 @@ public class ExtractResultsFactory implements QueryTestRunner.QueryRunStepFactor
           }
           extractedResults.add(
               results.withSignatureAndResults(
-                  convertColumnAndTypeToRowSignature(payload.getResults().getSignature()), resultRows)
+                  ColumnAndType.toRowSignature(payload.getResults().getSignature()), resultRows)
           );
         }
       }
@@ -113,15 +111,6 @@ public class ExtractResultsFactory implements QueryTestRunner.QueryRunStepFactor
       public List<QueryTestRunner.QueryResults> results()
       {
         return extractedResults;
-      }
-
-      private RowSignature convertColumnAndTypeToRowSignature(final List<MSQResultsReport.ColumnAndType> columnAndTypes)
-      {
-        final RowSignature.Builder builder = RowSignature.builder();
-        for (MSQResultsReport.ColumnAndType columnAndType : columnAndTypes) {
-          builder.add(columnAndType.getName(), columnAndType.getType());
-        }
-        return builder.build();
       }
     };
   }

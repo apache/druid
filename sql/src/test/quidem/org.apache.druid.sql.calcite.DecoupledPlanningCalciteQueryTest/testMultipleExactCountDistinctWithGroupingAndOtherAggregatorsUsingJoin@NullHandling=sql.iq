@@ -232,11 +232,11 @@ DruidProject(dim2=[$0], EXPR$1=[$1], EXPR$2=[$3], EXPR$3=[$5], druid=[logical])
     "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
   },
   "resultFormat" : "compactedList",
-  "columns" : [ "_j0.a0", "a0", "d0", "j0.a0" ],
-  "legacy" : false,
-  "columnTypes" : [ "LONG", "LONG", "STRING", "LONG" ],
+  "columns" : [ "d0", "a0", "j0.a0", "_j0.a0" ],
+  "columnTypes" : [ "STRING", "LONG", "LONG", "LONG" ],
   "granularity" : {
     "type" : "all"
-  }
+  },
+  "legacy" : false
 }
 !nativePlan

@@ -100,12 +100,12 @@ select v.*,e.* from v inner join e on (e.cityName = v.cityName);
     "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
   },
   "resultFormat" : "compactedList",
-  "columns" : [ "a0", "d0", "j0.a0", "j0.d0" ],
-  "legacy" : false,
-  "columnTypes" : [ "LONG", "STRING", "LONG", "STRING" ],
+  "columns" : [ "d0", "a0", "j0.d0", "j0.a0" ],
+  "columnTypes" : [ "STRING", "LONG", "STRING", "LONG" ],
   "granularity" : {
     "type" : "all"
-  }
+  },
+  "legacy" : false
 }
 !nativePlan
 LogicalProject(cityName=[$0], cnt=[$1], cityName0=[$2], cnt0=[$3])

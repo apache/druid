@@ -221,17 +221,12 @@ public class MultiStageQueryContextTest
   @Test
   public void arrayIngestMode_unset_returnsDefaultValue()
   {
-    Assert.assertEquals(ArrayIngestMode.MVD, MultiStageQueryContext.getArrayIngestMode(QueryContext.empty()));
+    Assert.assertEquals(ArrayIngestMode.ARRAY, MultiStageQueryContext.getArrayIngestMode(QueryContext.empty()));
   }
 
   @Test
   public void arrayIngestMode_set_returnsCorrectValue()
   {
-    Assert.assertEquals(
-        ArrayIngestMode.NONE,
-        MultiStageQueryContext.getArrayIngestMode(QueryContext.of(ImmutableMap.of(CTX_ARRAY_INGEST_MODE, "none")))
-    );
-
     Assert.assertEquals(
         ArrayIngestMode.MVD,
         MultiStageQueryContext.getArrayIngestMode(QueryContext.of(ImmutableMap.of(CTX_ARRAY_INGEST_MODE, "mvd")))

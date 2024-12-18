@@ -1747,8 +1747,8 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
                 .virtualColumns(
                     expressionVirtualColumn("v0", "null", ColumnType.STRING)
                 )
+                .columnTypes(ColumnType.STRING)
                 .columns("v0")
-                .legacy(false)
                 .filters(isNull("dim2"))
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(QUERY_CONTEXT_DEFAULT)
@@ -1784,8 +1784,8 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
                 .virtualColumns(
                     expressionVirtualColumn("v0", "null", ColumnType.STRING)
                 )
+                .columnTypes(ColumnType.STRING)
                 .columns("v0")
-                .legacy(false)
                 .filters(isNull("dim2"))
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(QUERY_CONTEXT_DEFAULT)
@@ -1938,6 +1938,9 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
   @Test
   public void testDontPullUpLookupWhenUsedByAggregation()
   {
+    if (NullHandling.sqlCompatible()) {
+      cannotVectorizeUnlessFallback();
+    }
     testQuery(
         "SELECT LOOKUP(dim1, 'lookyloo121'), COUNT(LOOKUP(dim1, 'lookyloo121')) FROM druid.foo GROUP BY 1",
         ImmutableList.of(
@@ -2137,10 +2140,10 @@ public class CalciteLookupFunctionQueryTest extends BaseCalciteQueryTest
                               .build()
               ))
               .intervals(querySegmentSpec(Filtration.eternity()))
-              .columns("$f1", "EXPR$0")
+              .columns("EXPR$0", "$f1")
+              .columnTypes(ColumnType.STRING, ColumnType.LONG)
               .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
               .context(QUERY_CONTEXT)
-              .legacy(false)
               .build()
     );
   }

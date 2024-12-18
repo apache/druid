@@ -43,7 +43,7 @@ import java.util.Objects;
  */
 public class IndexSpec
 {
-  public static IndexSpec DEFAULT = IndexSpec.builder().build();
+  public static final IndexSpec DEFAULT = builder().build();
 
   public static Builder builder()
   {
@@ -55,7 +55,8 @@ public class IndexSpec
   private final StringEncodingStrategy stringDictionaryEncoding;
   private final CompressionStrategy metricCompression;
   private final CompressionFactory.LongEncodingStrategy longEncoding;
-
+  @Nullable
+  private final CompressionStrategy complexMetricCompression;
   @Nullable
   private final CompressionStrategy jsonCompression;
   @Nullable
@@ -84,6 +85,7 @@ public class IndexSpec
       @JsonProperty("stringDictionaryEncoding") @Nullable StringEncodingStrategy stringDictionaryEncoding,
       @JsonProperty("metricCompression") @Nullable CompressionStrategy metricCompression,
       @JsonProperty("longEncoding") @Nullable CompressionFactory.LongEncodingStrategy longEncoding,
+      @JsonProperty("complexMetricCompression") @Nullable CompressionStrategy complexMetricCompression,
       @JsonProperty("jsonCompression") @Nullable CompressionStrategy jsonCompression,
       @JsonProperty("segmentLoader") @Nullable SegmentizerFactory segmentLoader
   )
@@ -101,6 +103,7 @@ public class IndexSpec
     this.metricCompression = metricCompression == null
                              ? CompressionStrategy.DEFAULT_COMPRESSION_STRATEGY
                              : metricCompression;
+    this.complexMetricCompression = complexMetricCompression;
     this.longEncoding = longEncoding == null
                         ? CompressionFactory.DEFAULT_LONG_ENCODING_STRATEGY
                         : longEncoding;
@@ -141,6 +144,14 @@ public class IndexSpec
   @JsonProperty
   @JsonInclude(JsonInclude.Include.NON_NULL)
   @Nullable
+  public CompressionStrategy getComplexMetricCompression()
+  {
+    return complexMetricCompression;
+  }
+
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  @Nullable
   public SegmentizerFactory getSegmentLoader()
   {
     return segmentLoader;
@@ -158,9 +169,7 @@ public class IndexSpec
   {
     return objectMapper.convertValue(
         this,
-        new TypeReference<Map<String, Object>>()
-        {
-        }
+        new TypeReference<>() {}
     );
   }
 
@@ -179,6 +188,7 @@ public class IndexSpec
            Objects.equals(stringDictionaryEncoding, indexSpec.stringDictionaryEncoding) &&
            metricCompression == indexSpec.metricCompression &&
            longEncoding == indexSpec.longEncoding &&
+           Objects.equals(complexMetricCompression, indexSpec.complexMetricCompression) &&
            Objects.equals(jsonCompression, indexSpec.jsonCompression) &&
            Objects.equals(segmentLoader, indexSpec.segmentLoader);
   }
@@ -192,6 +202,7 @@ public class IndexSpec
         stringDictionaryEncoding,
         metricCompression,
         longEncoding,
+        complexMetricCompression,
         jsonCompression,
         segmentLoader
     );
@@ -206,6 +217,7 @@ public class IndexSpec
            ", stringDictionaryEncoding=" + stringDictionaryEncoding +
            ", metricCompression=" + metricCompression +
            ", longEncoding=" + longEncoding +
+           ", complexMetricCompression=" + complexMetricCompression +
            ", jsonCompression=" + jsonCompression +
            ", segmentLoader=" + segmentLoader +
            '}';
@@ -223,6 +235,8 @@ public class IndexSpec
     private CompressionStrategy metricCompression;
     @Nullable
     private CompressionFactory.LongEncodingStrategy longEncoding;
+    @Nullable
+    private CompressionStrategy complexMetricCompression;
     @Nullable
     private CompressionStrategy jsonCompression;
     @Nullable
@@ -252,6 +266,12 @@ public class IndexSpec
       return this;
     }
 
+    public Builder withComplexMetricCompression(CompressionStrategy complexMetricCompression)
+    {
+      this.complexMetricCompression = complexMetricCompression;
+      return this;
+    }
+
     public Builder withLongEncoding(CompressionFactory.LongEncodingStrategy longEncoding)
     {
       this.longEncoding = longEncoding;
@@ -278,6 +298,7 @@ public class IndexSpec
           stringDictionaryEncoding,
           metricCompression,
           longEncoding,
+          complexMetricCompression,
           jsonCompression,
           segmentLoader
       );

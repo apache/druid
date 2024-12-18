@@ -97,7 +97,7 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
       @JsonProperty("aggregatorMergeStrategy") AggregatorMergeStrategy aggregatorMergeStrategy
   )
   {
-    super(dataSource, querySegmentSpec == null ? DEFAULT_SEGMENT_SPEC : querySegmentSpec, false, context);
+    super(dataSource, querySegmentSpec == null ? DEFAULT_SEGMENT_SPEC : querySegmentSpec, context);
 
     if (querySegmentSpec == null) {
       this.usingDefaultInterval = true;
@@ -164,7 +164,7 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
   @Override
   public String getType()
   {
-    return Query.SEGMENT_METADATA;
+    return SEGMENT_METADATA;
   }
 
   @JsonProperty

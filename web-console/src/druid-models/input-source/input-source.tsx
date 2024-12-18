@@ -17,7 +17,6 @@
  */
 
 import { Code } from '@blueprintjs/core';
-import React from 'react';
 
 import type { Field } from '../../components';
 import { ExternalLink } from '../../components';
@@ -508,7 +507,7 @@ export const INPUT_SOURCE_FIELDS: Field<InputSource>[] = [
         </p>
         <p>
           For more information, refer to the documentation for{' '}
-          <ExternalLink href="https://docs.oracle.com/javase/8/docs/api/java/nio/file/FileSystem#getPathMatcher-java.lang.String-">
+          <ExternalLink href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/nio/file/FileSystem.html#getPathMatcher(java.lang.String)">
             FileSystem#getPathMatcher
           </ExternalLink>
           .
@@ -641,25 +640,32 @@ export const INPUT_SOURCE_FIELDS: Field<InputSource>[] = [
     placeholder: '/path/to/deltaTable',
     defined: typeIsKnown(KNOWN_TYPES, 'delta'),
     required: true,
-    info: (
-      <>
-        <p>A full path to the Delta Lake table.</p>
-      </>
-    ),
+    info: <p>A full path to the Delta Lake table.</p>,
   },
   {
     name: 'filter',
     label: 'Delta filter',
     type: 'json',
     placeholder: '{"type": "=", "column": "name", "value": "foo"}',
-    defined: inputSource => inputSource.type === 'delta' && deepGet(inputSource, 'filter'),
-    required: false,
+    defined: typeIsKnown(KNOWN_TYPES, 'delta'),
     info: (
       <>
         <ExternalLink href={`${getLink('DOCS')}/ingestion/input-sources/#delta-filter-object`}>
           filter
         </ExternalLink>
         <p>A Delta filter json object to filter Delta Lake scan files.</p>
+      </>
+    ),
+  },
+  {
+    name: 'snapshotVersion',
+    label: 'Delta snapshot version',
+    type: 'number',
+    placeholder: '(latest)',
+    defined: typeIsKnown(KNOWN_TYPES, 'delta'),
+    info: (
+      <>
+        The snapshot version to read from the Delta table. By default, the latest snapshot is read.
       </>
     ),
   },

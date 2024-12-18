@@ -94,7 +94,8 @@ public class SearchQueryRunnerTest extends InitializedNullHandlingTest
                 SELECTOR,
                 TOOL_CHEST,
                 QueryRunnerTestHelper.NOOP_QUERYWATCHER
-            )
+            ),
+            true
         )
     );
   }
@@ -165,7 +166,7 @@ public class SearchQueryRunnerTest extends InitializedNullHandlingTest
 
     // double the value
     QueryRunner mergedRunner = TOOL_CHEST.mergeResults(
-        new QueryRunner<Result<SearchResultValue>>()
+        new QueryRunner<>()
         {
           @Override
           public Sequence<Result<SearchResultValue>> run(
@@ -765,7 +766,7 @@ public class SearchQueryRunnerTest extends InitializedNullHandlingTest
         QueryRunnerTestHelper.NOOP_QUERYWATCHER
     );
     QueryRunner runner = factory.createRunner(
-        new QueryableIndexSegment(TestIndex.persistRealtimeAndLoadMMapped(index), SegmentId.dummy("asdf"))
+        new QueryableIndexSegment(TestIndex.persistAndMemoryMap(index), SegmentId.dummy("asdf"))
     );
     List<SearchHit> expectedHits = new ArrayList<>();
     expectedHits.add(new SearchHit("table", "table", 1));

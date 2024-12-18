@@ -62,9 +62,7 @@ public class RetrieveSegmentsByIdAction implements TaskAction<Set<DataSegment>>
   @Override
   public TypeReference<Set<DataSegment>> getReturnTypeReference()
   {
-    return new TypeReference<Set<DataSegment>>()
-    {
-    };
+    return new TypeReference<>() {};
   }
 
   @Override
@@ -72,12 +70,6 @@ public class RetrieveSegmentsByIdAction implements TaskAction<Set<DataSegment>>
   {
     return toolbox.getIndexerMetadataStorageCoordinator()
                   .retrieveSegmentsById(dataSource, segmentIds);
-  }
-
-  @Override
-  public boolean isAudited()
-  {
-    return false;
   }
 
   @Override

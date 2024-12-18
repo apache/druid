@@ -83,7 +83,7 @@ public class UnifiedIndexerAppenderatorsManagerTest extends InitializedNullHandl
       new CachePopulatorStats(),
       TestHelper.makeJsonMapper(),
       new NoopServiceEmitter(),
-      () -> new DefaultQueryRunnerFactoryConglomerate(ImmutableMap.of())
+      () -> DefaultQueryRunnerFactoryConglomerate.buildFromQueryRunnerFactories(ImmutableMap.of())
   );
 
   private AppenderatorConfig appenderatorConfig;
@@ -96,16 +96,13 @@ public class UnifiedIndexerAppenderatorsManagerTest extends InitializedNullHandl
     EasyMock.expect(appenderatorConfig.getMaxPendingPersists()).andReturn(0);
     EasyMock.expect(appenderatorConfig.isSkipBytesInMemoryOverheadCheck()).andReturn(false);
     EasyMock.replay(appenderatorConfig);
-    appenderator = manager.createClosedSegmentsOfflineAppenderatorForTask(
+    appenderator = manager.createBatchAppenderatorForTask(
         "taskId",
-        new DataSchema(
-            "myDataSource",
-            new TimestampSpec("__time", "millis", null),
-            null,
-            null,
-            new UniformGranularitySpec(Granularities.HOUR, Granularities.HOUR, false, Collections.emptyList()),
-            null
-        ),
+        DataSchema.builder()
+                  .withDataSource("myDataSource")
+                  .withTimestamp(new TimestampSpec("__time", "millis", null))
+                  .withGranularity(new UniformGranularitySpec(Granularities.HOUR, Granularities.HOUR, false, Collections.emptyList()))
+                  .build(),
         appenderatorConfig,
         new SegmentGenerationMetrics(),
         new NoopDataSegmentPusher(),

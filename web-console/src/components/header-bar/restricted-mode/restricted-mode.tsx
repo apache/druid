@@ -16,9 +16,8 @@
  * limitations under the License.
  */
 
-import { Button, Intent, Position } from '@blueprintjs/core';
+import { Button, Intent, Popover, Position } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { Popover2 } from '@blueprintjs/popover2';
 import React, { type JSX } from 'react';
 
 import { Capabilities } from '../../../helpers';
@@ -120,7 +119,7 @@ export const RestrictedMode = React.memo(function RestrictedMode(props: Restrict
   }
 
   return (
-    <Popover2
+    <Popover
       className="restricted-mode"
       content={
         <PopoverText>
@@ -179,6 +178,6 @@ export const RestrictedMode = React.memo(function RestrictedMode(props: Restrict
       position={Position.BOTTOM_RIGHT}
     >
       <Button icon={IconNames.WARNING_SIGN} text={label} intent={Intent.WARNING} minimal />
-    </Popover2>
+    </Popover>
   );
 });

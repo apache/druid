@@ -20,18 +20,29 @@
 package org.apache.druid.quidem;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.sql.hook.DruidHookDispatcher;
+
+import java.sql.Connection;
 
 public interface DruidConnectionExtras
 {
   ObjectMapper getObjectMapper();
 
+  DruidHookDispatcher getDruidHookDispatcher();
+
+  boolean isExplainSupported();
+
   class DruidConnectionExtrasImpl implements DruidConnectionExtras
   {
     private final ObjectMapper objectMapper;
+    private final DruidHookDispatcher druidHookDispatcher;
+    private final boolean isExplainSupported;
 
-    public DruidConnectionExtrasImpl(ObjectMapper objectMapper)
+    public DruidConnectionExtrasImpl(ObjectMapper objectMapper, DruidHookDispatcher druidHookDispatcher, boolean isExplainSupported)
     {
       this.objectMapper = objectMapper;
+      this.druidHookDispatcher = druidHookDispatcher;
+      this.isExplainSupported = isExplainSupported;
     }
 
     @Override
@@ -39,5 +50,26 @@ public interface DruidConnectionExtras
     {
       return objectMapper;
     }
+
+    @Override
+    public DruidHookDispatcher getDruidHookDispatcher()
+    {
+      return druidHookDispatcher;
+    }
+
+    @Override
+    public boolean isExplainSupported()
+    {
+      return isExplainSupported;
+    }
   }
+
+  static DruidConnectionExtras unwrapOrThrow(Connection connection)
+  {
+    if (connection instanceof DruidConnectionExtras) {
+      return (DruidConnectionExtras) connection;
+    }
+    throw new UnsupportedOperationException("Expected DruidConnectionExtras to be implemented by connection!");
+  }
+
 }

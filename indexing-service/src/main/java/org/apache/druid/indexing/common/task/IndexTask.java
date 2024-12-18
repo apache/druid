@@ -21,8 +21,6 @@ package org.apache.druid.indexing.common.task;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -34,7 +32,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputSource;
@@ -84,9 +81,9 @@ import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.BatchIOConfig;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.IngestionSpec;
-import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
+import org.apache.druid.segment.realtime.ChatHandler;
 import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorConfig;
@@ -95,7 +92,6 @@ import org.apache.druid.segment.realtime.appenderator.BatchAppenderatorDriver;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.realtime.appenderator.SegmentsAndCommitMetadata;
 import org.apache.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
-import org.apache.druid.segment.realtime.firehose.ChatHandler;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizerMapper;
@@ -312,9 +308,6 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
   @Override
   public Set<ResourceAction> getInputSourceResources()
   {
-    if (ingestionSchema.getIOConfig().firehoseFactory != null) {
-      throw getInputSecurityOnFirehoseUnsupportedError();
-    }
     return getIngestionSchema().getIOConfig().getInputSource() != null ?
            getIngestionSchema().getIOConfig().getInputSource().getTypes()
                .stream()
@@ -543,7 +536,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
 
   private void updateAndWriteCompletionReports(TaskToolbox toolbox, Long segmentsRead, Long segmentsPublished)
   {
-    completionReports = buildIngestionStatsReport(ingestionState, errorMsg, segmentsRead, segmentsPublished);
+    completionReports = buildIngestionStatsAndContextReport(ingestionState, errorMsg, segmentsRead, segmentsPublished);
     if (isStandAloneTask) {
       toolbox.getTaskReportFileWriter().write(getId(), completionReports);
     }
@@ -748,7 +741,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
         Comparators.intervalsByStartThenEnd()
     );
     final Granularity queryGranularity = granularitySpec.getQueryGranularity();
-    try (final CloseableIterator<InputRow> inputRowIterator = AbstractBatchIndexTask.inputSourceReader(
+    try (final CloseableIterator<InputRow> inputRowIterator = inputSourceReader(
         tmpDir,
         ingestionSchema.getDataSchema(),
         inputSource,
@@ -1076,7 +1069,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
         throw new IAE("Cannot use parser and inputSource together. Try using inputFormat instead of parser.");
       }
 
-      IngestionMode ingestionMode = AbstractTask.computeBatchIngestionMode(ioConfig);
+      IngestionMode ingestionMode = computeBatchIngestionMode(ioConfig);
 
       if (ingestionMode == IngestionMode.REPLACE && dataSchema.getGranularitySpec()
                                                               .inputIntervals()
@@ -1123,8 +1116,6 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
   @JsonTypeName("index")
   public static class IndexIOConfig implements BatchIOConfig
   {
-
-    private final FirehoseFactory firehoseFactory;
     private final InputSource inputSource;
     private final AtomicReference<InputSource> inputSourceWithToolbox = new AtomicReference<>();
     private final InputFormat inputFormat;
@@ -1133,40 +1124,16 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
 
     @JsonCreator
     public IndexIOConfig(
-        @Deprecated @JsonProperty("firehose") @Nullable FirehoseFactory firehoseFactory,
         @JsonProperty("inputSource") @Nullable InputSource inputSource,
         @JsonProperty("inputFormat") @Nullable InputFormat inputFormat,
         @JsonProperty("appendToExisting") @Nullable Boolean appendToExisting,
         @JsonProperty("dropExisting") @Nullable Boolean dropExisting
     )
     {
-      Checks.checkOneNotNullOrEmpty(
-          ImmutableList.of(new Property<>("firehose", firehoseFactory), new Property<>("inputSource", inputSource))
-      );
-      if (firehoseFactory != null && inputFormat != null) {
-        throw new IAE("Cannot use firehose and inputFormat together. Try using inputSource instead of firehose.");
-      }
-      this.firehoseFactory = firehoseFactory;
       this.inputSource = inputSource;
       this.inputFormat = inputFormat;
-      this.appendToExisting = appendToExisting == null ? BatchIOConfig.DEFAULT_APPEND_EXISTING : appendToExisting;
-      this.dropExisting = dropExisting == null ? BatchIOConfig.DEFAULT_DROP_EXISTING : dropExisting;
-    }
-
-    // old constructor for backward compatibility
-    @Deprecated
-    public IndexIOConfig(FirehoseFactory firehoseFactory, @Nullable Boolean appendToExisting, @Nullable Boolean dropExisting)
-    {
-      this(firehoseFactory, null, null, appendToExisting, dropExisting);
-    }
-
-    @Nullable
-    @JsonProperty("firehose")
-    @JsonInclude(Include.NON_NULL)
-    @Deprecated
-    public FirehoseFactory getFirehoseFactory()
-    {
-      return firehoseFactory;
+      this.appendToExisting = appendToExisting == null ? DEFAULT_APPEND_EXISTING : appendToExisting;
+      this.dropExisting = dropExisting == null ? DEFAULT_DROP_EXISTING : dropExisting;
     }
 
     @Nullable
@@ -1399,7 +1366,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
     )
     {
       this.appendableIndexSpec = appendableIndexSpec == null ? DEFAULT_APPENDABLE_INDEX : appendableIndexSpec;
-      this.maxRowsInMemory = maxRowsInMemory == null ? TuningConfig.DEFAULT_MAX_ROWS_IN_MEMORY_BATCH : maxRowsInMemory;
+      this.maxRowsInMemory = maxRowsInMemory == null ? DEFAULT_MAX_ROWS_IN_MEMORY_BATCH : maxRowsInMemory;
       // initializing this to 0, it will be lazily initialized to a value
       // @see #getMaxBytesInMemoryOrDefault()
       this.maxBytesInMemory = maxBytesInMemory == null ? 0 : maxBytesInMemory;
@@ -1427,14 +1394,14 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
         this.maxSavedParseExceptions = maxSavedParseExceptions == null ? 0 : Math.min(1, maxSavedParseExceptions);
       } else {
         this.maxParseExceptions = maxParseExceptions == null
-                                  ? TuningConfig.DEFAULT_MAX_PARSE_EXCEPTIONS
+                                  ? DEFAULT_MAX_PARSE_EXCEPTIONS
                                   : maxParseExceptions;
         this.maxSavedParseExceptions = maxSavedParseExceptions == null
-                                       ? TuningConfig.DEFAULT_MAX_SAVED_PARSE_EXCEPTIONS
+                                       ? DEFAULT_MAX_SAVED_PARSE_EXCEPTIONS
                                        : maxSavedParseExceptions;
       }
       this.logParseExceptions = logParseExceptions == null
-                                ? TuningConfig.DEFAULT_LOG_PARSE_EXCEPTIONS
+                                ? DEFAULT_LOG_PARSE_EXCEPTIONS
                                 : logParseExceptions;
       if (awaitSegmentAvailabilityTimeoutMillis == null || awaitSegmentAvailabilityTimeoutMillis < 0) {
         this.awaitSegmentAvailabilityTimeoutMillis = DEFAULT_AWAIT_SEGMENT_AVAILABILITY_TIMEOUT_MILLIS;
@@ -1461,31 +1428,6 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
           reportParseExceptions,
           pushTimeout,
           dir,
-          segmentWriteOutMediumFactory,
-          logParseExceptions,
-          maxParseExceptions,
-          maxSavedParseExceptions,
-          maxColumnsToMerge,
-          awaitSegmentAvailabilityTimeoutMillis,
-          numPersistThreads
-      );
-    }
-
-    public IndexTuningConfig withPartitionsSpec(PartitionsSpec partitionsSpec)
-    {
-      return new IndexTuningConfig(
-          appendableIndexSpec,
-          maxRowsInMemory,
-          maxBytesInMemory,
-          skipBytesInMemoryOverheadCheck,
-          partitionsSpec,
-          indexSpec,
-          indexSpecForIntermediatePersists,
-          maxPendingPersists,
-          forceGuaranteedRollup,
-          reportParseExceptions,
-          pushTimeout,
-          basePersistDirectory,
           segmentWriteOutMediumFactory,
           logParseExceptions,
           maxParseExceptions,

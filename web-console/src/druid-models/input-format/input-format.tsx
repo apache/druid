@@ -17,7 +17,6 @@
  */
 
 import { Code } from '@blueprintjs/core';
-import React from 'react';
 
 import type { Field } from '../../components';
 import { AutoForm, ExternalLink } from '../../components';
@@ -60,16 +59,29 @@ const KNOWN_TYPES = [
   'avro_stream',
   'protobuf',
   'regex',
-  'kafka',
   'javascript',
+  'kafka',
+  'kinesis',
 ];
+
 function generateInputFormatFields(streaming: boolean) {
   return compact([
     {
       name: 'type',
       label: 'Input format',
       type: 'string',
-      suggestions: KNOWN_TYPES,
+      suggestions: [
+        'json',
+        'csv',
+        'tsv',
+        'parquet',
+        'orc',
+        'avro_ocf',
+        'avro_stream',
+        'protobuf',
+        'regex',
+        'javascript',
+      ],
       required: true,
       info: (
         <>
@@ -606,12 +618,35 @@ export const KAFKA_METADATA_INPUT_FORMAT_FIELDS: Field<InputFormat>[] = [
   },
 ];
 
+export const KINESIS_METADATA_INPUT_FORMAT_FIELDS: Field<InputFormat>[] = [
+  {
+    name: 'timestampColumnName',
+    label: 'Kinesis timestamp column name',
+    type: 'string',
+    defaultValue: 'kinesis.timestamp',
+    defined: typeIsKnown(KNOWN_TYPES, 'kinesis'),
+    info: `The name of the column for the Kinesis timestamp.`,
+  },
+  {
+    name: 'partitionKeyColumnName',
+    label: 'Kinesis partition key column name',
+    type: 'string',
+    defaultValue: 'kinesis.partitionKey',
+    defined: typeIsKnown(KNOWN_TYPES, 'kinesis'),
+    info: `The name of the column for the Kinesis partition key. This field is useful when ingesting data from multiple partitions into the same datasource.`,
+  },
+];
+
 export function issueWithInputFormat(inputFormat: InputFormat | undefined): string | undefined {
   return AutoForm.issueWithModel(inputFormat, BATCH_INPUT_FORMAT_FIELDS);
 }
 
+export function isKafkaOrKinesis(type: string | undefined): type is 'kafka' | 'kinesis' {
+  return type === 'kafka' || type === 'kinesis';
+}
+
 export function inputFormatCanProduceNestedData(inputFormat: InputFormat): boolean {
-  if (inputFormat.type === 'kafka') {
+  if (isKafkaOrKinesis(inputFormat.type)) {
     return Boolean(
       inputFormat.valueFormat && inputFormatCanProduceNestedData(inputFormat.valueFormat),
     );

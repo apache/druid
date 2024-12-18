@@ -33,16 +33,19 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidException.Category;
 import org.apache.druid.error.DruidException.Persona;
 import org.apache.druid.error.DruidExceptionMatcher;
-import org.apache.druid.hll.VersionOneHyperLogLogCollector;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.Evals;
+import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
@@ -75,6 +78,7 @@ import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
+import org.apache.druid.query.union.UnionQuery;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -141,7 +145,6 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public static String NULL_STRING;
   public static Float NULL_FLOAT;
   public static Long NULL_LONG;
-  public static final String HLLC_STRING = VersionOneHyperLogLogCollector.class.getName();
 
   @BeforeAll
   public static void setupNullValues()
@@ -154,8 +157,6 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public static final Logger log = new Logger(BaseCalciteQueryTest.class);
 
   public static final PlannerConfig PLANNER_CONFIG_DEFAULT = new PlannerConfig();
-  public static final PlannerConfig PLANNER_CONFIG_DEFAULT_NO_COMPLEX_SERDE =
-      PlannerConfig.builder().serializeComplexValues(false).build();
 
   public static final PlannerConfig PLANNER_CONFIG_REQUIRE_TIME_CONDITION =
       PlannerConfig.builder().requireTimeCondition(true).build();
@@ -280,6 +281,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   final boolean useDefault = NullHandling.replaceWithDefault();
 
   public boolean cannotVectorize = false;
+  public boolean cannotVectorizeUnlessFallback = false;
   public boolean skipVectorize = false;
 
   static {
@@ -558,13 +560,33 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     return new ExpressionVirtualColumn(name, expression, outputType, CalciteTests.createExprMacroTable());
   }
 
+  /**
+   * Optionally updates the VC defintion for the one planned by the decoupled planner.
+   *
+   * Compared to original plans; decoupled planner:
+   *  * moves the mv_to_array into the VC
+   *  * the type is an ARRAY
+   */
+  public ExpressionVirtualColumn nestedExpressionVirtualColumn(
+      String name,
+      String expression,
+      ColumnType outputType)
+  {
+    if (testBuilder().isDecoupledMode()) {
+      expression = StringUtils.format("mv_to_array(%s)", expression);
+      outputType = ColumnType.ofArray(outputType);
+    }
+    return expressionVirtualColumn(name, expression, outputType);
+  }
+
   public static JoinDataSource join(
       DataSource left,
       DataSource right,
       String rightPrefix,
       String condition,
       JoinType joinType,
-      DimFilter filter
+      DimFilter filter,
+      JoinAlgorithm joinAlgorithm
   )
   {
     return JoinDataSource.create(
@@ -575,7 +597,28 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         joinType,
         filter,
         CalciteTests.createExprMacroTable(),
-        CalciteTests.createJoinableFactoryWrapper()
+        CalciteTests.createJoinableFactoryWrapper(),
+        joinAlgorithm
+    );
+  }
+
+  public static JoinDataSource join(
+      DataSource left,
+      DataSource right,
+      String rightPrefix,
+      String condition,
+      JoinType joinType,
+      DimFilter filter
+  )
+  {
+    return join(
+        left,
+        right,
+        rightPrefix,
+        condition,
+        joinType,
+        filter,
+        JoinAlgorithm.BROADCAST
     );
   }
 
@@ -608,8 +651,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
 
   public static Druids.ScanQueryBuilder newScanQueryBuilder()
   {
-    return new Druids.ScanQueryBuilder().resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                                        .legacy(false);
+    return new Druids.ScanQueryBuilder().resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST);
   }
 
   protected static DruidExceptionMatcher invalidSqlIs(String s)
@@ -623,7 +665,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   }
 
   @RegisterExtension
-  static SqlTestFrameworkConfig.Rule queryFrameworkRule = new SqlTestFrameworkConfig.Rule();
+  protected static SqlTestFrameworkConfig.Rule queryFrameworkRule = new SqlTestFrameworkConfig.Rule();
 
   public SqlTestFramework queryFramework()
   {
@@ -668,7 +710,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     if (testBuilder().isDecoupledMode()) {
       return new DruidExceptionMatcher(Persona.USER, Category.INVALID_INPUT, "invalidInput");
     } else {
-      return new DruidExceptionMatcher(Persona.ADMIN, Category.INVALID_INPUT, "general");
+      return new DruidExceptionMatcher(Persona.USER, Category.INVALID_INPUT, "general");
     }
   }
 
@@ -868,8 +910,15 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   protected QueryTestBuilder testBuilder()
   {
     return new QueryTestBuilder(new CalciteTestConfig())
-        .cannotVectorize(cannotVectorize)
+        .cannotVectorize(
+            cannotVectorize || (!ExpressionProcessing.allowVectorizeFallback() && cannotVectorizeUnlessFallback)
+        )
         .skipVectorize(skipVectorize);
+  }
+
+  public CalciteTestConfig createCalciteTestConfig()
+  {
+    return new CalciteTestConfig();
   }
 
   public class CalciteTestConfig implements QueryTestBuilder.QueryTestConfig
@@ -885,6 +934,12 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     public CalciteTestConfig(boolean isRunningMSQ)
     {
       this();
+      this.isRunningMSQ = isRunningMSQ;
+    }
+
+    public CalciteTestConfig(Map<String, Object> baseQueryContext, boolean isRunningMSQ)
+    {
+      this(baseQueryContext);
       this.isRunningMSQ = isRunningMSQ;
     }
 
@@ -977,23 +1032,55 @@ public class BaseCalciteQueryTest extends CalciteTestBase
               mismatchMessage(row, column),
               (Float) expectedCell,
               (Float) resultCell,
-              ASSERTION_EPSILON);
+              ASSERTION_EPSILON
+          );
         } else if (expectedCell instanceof Double) {
           assertEquals(
               mismatchMessage(row, column),
               (Double) expectedCell,
               (Double) resultCell,
-              ASSERTION_EPSILON);
+              ASSERTION_EPSILON
+          );
+        } else if (expectedCell instanceof Object[] || expectedCell instanceof List) {
+          final Object[] expectedCellCasted = homogenizeArray(expectedCell);
+          final Object[] resultCellCasted = homogenizeArray(resultCell);
+          if (expectedCellCasted.length != resultCellCasted.length) {
+            throw new RE(
+                "Mismatched array lengths: expected[%s] with length[%d], actual[%s] with length[%d]",
+                Arrays.toString(expectedCellCasted),
+                expectedCellCasted.length,
+                Arrays.toString(resultCellCasted),
+                resultCellCasted.length
+            );
+          }
+          for (int i = 0; i < expectedCellCasted.length; ++i) {
+            validate(row, column, type, expectedCellCasted[i], resultCellCasted[i]);
+          }
         } else {
           EQUALS.validate(row, column, type, expectedCell, resultCell);
         }
       }
     },
+
+    RELAX_NULLS_EPS {
+      @Override
+      void validate(int row, int column, ValueType type, Object expectedCell, Object resultCell)
+      {
+        if (expectedCell == null) {
+          if (resultCell == null) {
+            return;
+          }
+          expectedCell = NullHandling.defaultValueForType(type);
+        }
+        EQUALS_EPS.validate(row, column, type, expectedCell, resultCell);
+      }
+    },
+
     /**
      * Comparision which accepts 1000 units of least precision.
      */
     EQUALS_RELATIVE_1000_ULPS {
-      static final int ASSERTION_ERROR_ULPS = 1000;
+      private static final int ASSERTION_ERROR_ULPS = 1000;
 
       @Override
       void validate(int row, int column, ValueType type, Object expectedCell, Object resultCell)
@@ -1014,9 +1101,42 @@ public class BaseCalciteQueryTest extends CalciteTestBase
               (Double) resultCell,
               eps
           );
+        } else if (expectedCell instanceof Object[] || expectedCell instanceof List) {
+          final Object[] expectedCellCasted = homogenizeArray(expectedCell);
+          final Object[] resultCellCasted = homogenizeArray(resultCell);
+
+          if (expectedCellCasted.length != resultCellCasted.length) {
+            throw new RE(
+                "Mismatched array lengths: expected[%s] with length[%d], actual[%s] with length[%d]",
+                Arrays.toString(expectedCellCasted),
+                expectedCellCasted.length,
+                Arrays.toString(resultCellCasted),
+                resultCellCasted.length
+            );
+          }
+          for (int i = 0; i < expectedCellCasted.length; ++i) {
+            validate(row, column, type, expectedCellCasted[i], resultCellCasted[i]);
+          }
         } else {
           EQUALS.validate(row, column, type, expectedCell, resultCell);
         }
+      }
+    },
+
+    /**
+     * Relax nulls which accepts 1000 units of least precision.
+     */
+    RELAX_NULLS_RELATIVE_1000_ULPS {
+      @Override
+      void validate(int row, int column, ValueType type, Object expectedCell, Object resultCell)
+      {
+        if (expectedCell == null) {
+          if (resultCell == null) {
+            return;
+          }
+          expectedCell = NullHandling.defaultValueForType(type);
+        }
+        EQUALS_RELATIVE_1000_ULPS.validate(row, column, type, expectedCell, resultCell);
       }
     };
 
@@ -1027,6 +1147,15 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       return StringUtils.format("column content mismatch at %d,%d", row, column);
     }
 
+    private static Object[] homogenizeArray(Object array)
+    {
+      if (array instanceof Object[]) {
+        return (Object[]) array;
+      } else if (array instanceof List) {
+        return ExprEval.coerceListToArray((List) array, true).rhs;
+      }
+      throw new ISE("Found array[%s] of type[%s] which is not handled", array.toString(), array.getClass().getName());
+    }
   }
 
   /**
@@ -1207,6 +1336,11 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     cannotVectorize = true;
   }
 
+  protected void cannotVectorizeUnlessFallback()
+  {
+    cannotVectorizeUnlessFallback = true;
+  }
+
   protected void skipVectorize()
   {
     skipVectorize = true;
@@ -1238,7 +1372,14 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public static <T> Query<?> recursivelyClearContext(final Query<T> query, ObjectMapper queryJsonMapper)
   {
     try {
-      Query<T> newQuery = query.withDataSource(recursivelyClearContext(query.getDataSource(), queryJsonMapper));
+      Query<T> newQuery;
+      if (query instanceof UnionQuery) {
+        UnionQuery unionQuery = (UnionQuery) query;
+        newQuery = (Query<T>) unionQuery
+            .withDataSources(recursivelyClearDatasource(unionQuery.getDataSources(), queryJsonMapper));
+      } else {
+        newQuery = query.withDataSource(recursivelyClearContext(query.getDataSource(), queryJsonMapper));
+      }
       final JsonNode newQueryNode = queryJsonMapper.valueToTree(newQuery);
       ((ObjectNode) newQueryNode).remove("context");
       return queryJsonMapper.treeToValue(newQueryNode, Query.class);
@@ -1246,6 +1387,16 @@ public class BaseCalciteQueryTest extends CalciteTestBase
     catch (Exception e) {
       throw new RuntimeException(e);
     }
+  }
+
+  private static List<DataSource> recursivelyClearDatasource(final List<DataSource> dataSources,
+      ObjectMapper queryJsonMapper)
+  {
+    List<DataSource> ret = new ArrayList<>();
+    for (DataSource dataSource : dataSources) {
+      ret.add(recursivelyClearContext(dataSource, queryJsonMapper));
+    }
+    return ret;
   }
 
   /**
