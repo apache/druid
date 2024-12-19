@@ -99,6 +99,9 @@ public class DruidRelFieldTrimmer extends RelFieldTrimmer
     return result(input, mapping);
   }
 
+  /**
+   * Should be unnecesarry in versions having CALCITE-6715
+   */
   public TrimResult trimFields(LogicalCorrelate correlate,
       ImmutableBitSet fieldsUsed,
       Set<RelDataTypeField> extraFields)
