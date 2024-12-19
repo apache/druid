@@ -128,7 +128,7 @@ public class Utils
       boolean strictNumberParse
   )
   {
-    CompressedBigDecimal compressedBigDecimal = objToCompressedBigDecimal(obj, strictNumberParse);
+    CompressedBigDecimal compressedBigDecimal = Utils.objToCompressedBigDecimal(obj, strictNumberParse);
 
     if (compressedBigDecimal != null) {
       return scaleIfNeeded(compressedBigDecimal, scale);

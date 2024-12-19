@@ -88,7 +88,7 @@ public abstract class NestedCommonFormatColumnSerializer implements GenericColum
 
   public static void writeV0Header(WritableByteChannel channel, ByteBuffer columnNameBuffer) throws IOException
   {
-    channel.write(ByteBuffer.wrap(new byte[]{V0}));
+    channel.write(ByteBuffer.wrap(new byte[]{NestedCommonFormatColumnSerializer.V0}));
     channel.write(columnNameBuffer);
   }
 

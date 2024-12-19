@@ -37,6 +37,7 @@ import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.SurrogateTaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.task.AbstractBatchIndexTask;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
@@ -181,7 +182,7 @@ public class PartialDimensionCardinalityTask extends PerfectRollupWorkerTask
         tuningConfig.getMaxSavedParseExceptions()
     );
     try (
-        final CloseableIterator<InputRow> inputRowIterator = inputSourceReader(
+        final CloseableIterator<InputRow> inputRowIterator = AbstractBatchIndexTask.inputSourceReader(
             toolbox.getIndexingTmpDir(),
             dataSchema,
             inputSource,

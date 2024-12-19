@@ -159,7 +159,7 @@ public class ExprMacroTable
           macro.name(),
           args.size() == 1
           ? args.get(0).stringify()
-          : ARG_JOINER.join(args.stream().map(Expr::stringify).iterator())
+          : Expr.ARG_JOINER.join(args.stream().map(Expr::stringify).iterator())
       );
     }
 

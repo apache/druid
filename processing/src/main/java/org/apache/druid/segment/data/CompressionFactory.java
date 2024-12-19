@@ -203,7 +203,7 @@ public class CompressionFactory
     static final Map<Byte, LongEncodingFormat> ID_MAP = new HashMap<>();
 
     static {
-      for (LongEncodingFormat format : values()) {
+      for (LongEncodingFormat format : LongEncodingFormat.values()) {
         ID_MAP.put(format.getId(), format);
       }
     }

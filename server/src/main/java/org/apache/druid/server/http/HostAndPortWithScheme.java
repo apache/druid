@@ -47,12 +47,12 @@ public class HostAndPortWithScheme
       if (colonIndex == -1) {
         throw new IAE("Invalid host with scheme string: [%s]", hostPortMaybeSchemeString);
       }
-      return fromString(
+      return HostAndPortWithScheme.fromString(
           hostPortMaybeSchemeString.substring(0, colonIndex),
           hostPortMaybeSchemeString.substring(colonIndex + 1)
       );
     }
-    return fromString("http", hostPortMaybeSchemeString);
+    return HostAndPortWithScheme.fromString("http", hostPortMaybeSchemeString);
   }
 
   public static HostAndPortWithScheme fromString(String scheme, String hostPortString)

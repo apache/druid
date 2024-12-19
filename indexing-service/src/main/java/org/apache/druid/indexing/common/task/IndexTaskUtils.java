@@ -137,12 +137,12 @@ public class IndexTaskUtils
   )
   {
     final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
-    setTaskDimensions(metricBuilder, task);
+    IndexTaskUtils.setTaskDimensions(metricBuilder, task);
 
     if (publishResult.isSuccess()) {
       toolbox.getEmitter().emit(metricBuilder.setMetric("segment/txn/success", 1));
       for (DataSegment segment : publishResult.getSegments()) {
-        setSegmentDimensions(metricBuilder, segment);
+        IndexTaskUtils.setSegmentDimensions(metricBuilder, segment);
         toolbox.getEmitter().emit(metricBuilder.setMetric("segment/added/bytes", segment.getSize()));
         toolbox.getEmitter().emit(SegmentMetadataEvent.create(segment, DateTimes.nowUtc()));
       }

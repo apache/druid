@@ -128,7 +128,7 @@ public class NullHandling
    */
   public static boolean useThreeValueLogic()
   {
-    return sqlCompatible() &&
+    return NullHandling.sqlCompatible() &&
            INSTANCE.isUseThreeValueLogicForNativeFilters();
   }
 
@@ -266,7 +266,7 @@ public class NullHandling
    */
   public static boolean mustCombineNullAndEmptyInDictionary(final Indexed<ByteBuffer> dictionaryUtf8)
   {
-    return replaceWithDefault()
+    return NullHandling.replaceWithDefault()
            && dictionaryUtf8.size() >= 2
            && isNullOrEquivalent(dictionaryUtf8.get(0))
            && isNullOrEquivalent(dictionaryUtf8.get(1));
@@ -283,7 +283,7 @@ public class NullHandling
    */
   public static boolean mustReplaceFirstValueWithNullInDictionary(final Indexed<ByteBuffer> dictionaryUtf8)
   {
-    if (replaceWithDefault() && dictionaryUtf8.size() >= 1) {
+    if (NullHandling.replaceWithDefault() && dictionaryUtf8.size() >= 1) {
       final ByteBuffer firstValue = dictionaryUtf8.get(0);
       return firstValue != null && firstValue.remaining() == 0;
     }

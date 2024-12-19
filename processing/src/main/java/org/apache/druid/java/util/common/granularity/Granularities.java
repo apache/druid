@@ -68,7 +68,7 @@ public class Granularities
 
   public static Granularity nullToAll(Granularity granularity)
   {
-    return granularity == null ? ALL : granularity;
+    return granularity == null ? Granularities.ALL : granularity;
   }
 
   /**

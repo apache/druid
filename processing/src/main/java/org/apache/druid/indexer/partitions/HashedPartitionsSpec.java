@@ -93,7 +93,7 @@ public class HashedPartitionsSpec implements DimensionBasedPartitionsSpec
     // Supply default for targetRowsPerSegment if needed
     if (target.getValue() == null) {
       //noinspection VariableNotUsedInsideIf (false positive for this.numShards)
-      this.maxRowsPerSegment = (this.numShards == null ? DEFAULT_MAX_ROWS_PER_SEGMENT : null);
+      this.maxRowsPerSegment = (this.numShards == null ? PartitionsSpec.DEFAULT_MAX_ROWS_PER_SEGMENT : null);
     } else {
       this.maxRowsPerSegment = target.getValue();
     }

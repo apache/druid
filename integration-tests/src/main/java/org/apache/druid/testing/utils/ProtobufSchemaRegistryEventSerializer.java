@@ -68,7 +68,7 @@ public class ProtobufSchemaRegistryEventSerializer extends ProtobufEventSerializ
     try {
       RetryUtils.retry(
           () -> {
-            schemaId = client.register(topic, new ProtobufSchema(SCHEMA.newMessageBuilder("Wikipedia").getDescriptorForType()));
+            schemaId = client.register(topic, new ProtobufSchema(ProtobufEventSerializer.SCHEMA.newMessageBuilder("Wikipedia").getDescriptorForType()));
             return 0;
           },
           (e) -> true,

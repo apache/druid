@@ -1232,7 +1232,7 @@ public class IndexMergerV9 implements IndexMerger
 
     List<File> tempDirs = new ArrayList<>();
 
-    if (maxColumnsToMerge == UNLIMITED_MAX_COLUMNS_TO_MERGE) {
+    if (maxColumnsToMerge == IndexMerger.UNLIMITED_MAX_COLUMNS_TO_MERGE) {
       return merge(
           indexes,
           rollup,
