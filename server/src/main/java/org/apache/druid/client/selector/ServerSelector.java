@@ -22,8 +22,8 @@ package org.apache.druid.client.selector;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import it.unimi.dsi.fastutil.ints.Int2ObjectRBTreeMap;
 import org.apache.druid.client.DataSegmentInterner;
+import org.apache.druid.client.QueryableDruidServer;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryRunner;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
@@ -167,7 +167,7 @@ public class ServerSelector implements Overshadowable<ServerSelector>
   }
 
   @Nullable
-  public <T> QueryableDruidServer<? extends QueryRunner<T>> pick(@Nullable Query<T> query)
+  public <T> QueryableDruidServer pick(@Nullable Query<T> query)
   {
     synchronized (this) {
       if (!historicalServers.isEmpty()) {
