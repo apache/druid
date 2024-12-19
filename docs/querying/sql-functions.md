@@ -235,7 +235,7 @@ FROM "flight-carriers"
 Returns a result similar to the following:
 
 | `estimate_median` |
-| -- | 
+| -- |
 | `569` |
 
 </details>
@@ -261,7 +261,7 @@ FROM "flight-carriers"
 Returns the following:
 
 | `estimate_median` |
-| -- | 
+| -- |
 | `571.6983032226562` |
 
 </details>
@@ -270,7 +270,7 @@ Returns the following:
 
 ## ARRAY
 
-Constructs a SQL `ARRAY` literal from the expression arguments. The arguments must be of the same type.
+Constructs a SQL `ARRAY` literal from the provided expression arguments. All arguments must be of the same type.
 
 * **Syntax**: `ARRAY[expr1, expr2, ...]`
 * **Function type:** Array
@@ -301,7 +301,7 @@ Returns the following:
 
 ## ARRAY_AGG
 
-Returns an array of all values of the specified expression. To collect only unique values, specify `DISTINCT`.
+Returns an array of all values of the specified expression. To include only unique values, specify `DISTINCT`.
 
 * **Syntax**: `ARRAY_AGG([DISTINCT] expr, [size])`
 * **Function type:** Aggregation
@@ -333,7 +333,7 @@ Returns the following:
 
 ## ARRAY_APPEND
 
-Appends `expr` to `arr`. The type of `arr` determines the resulting array type.
+Appends the expression to the array. The source array type determines the resulting array type.
 
 * **Syntax**: `ARRAY_APPEND(arr, expr)`
 * **Function type:** Array
@@ -363,7 +363,7 @@ Returns the following:
 
 ## ARRAY_CONCAT
 
-Concatenates `arr2` to `arr1`. The type of `arr1` determines the resulting array type.
+Concatenates two arrays. The type of `arr1` determines the resulting array type.
 
 * **Syntax**: `ARRAY_CONCAT(arr1, arr2)`
 * **Function type:** Array
@@ -393,7 +393,7 @@ Returns the following:
 
 ## ARRAY_CONCAT_AGG
 
-Concatenates array inputs into a single array. To concatenate only unique values, specify `DISTINCT`.
+Concatenates array inputs into a single array. To include only unique values, specify `DISTINCT`.
 
 * **Syntax**: `ARRAY_CONCAT_AGG([DISTINCT] expr, [size])`
 * **Function type:** Aggregation
@@ -419,33 +419,33 @@ Returns the following:
 
 ## ARRAY_CONTAINS
 
-Returns true if `arr` contains `expr`.
+Checks if the array contains the specified expression.
 
 ### Scalar
 
-If `expr` is a scalar type, returns true if `arr` contains `expr`.
+If the specified expression is a scalar value, returns true if the source array contains the value.
 
 * **Syntax**: `ARRAY_CONTAINS(arr, expr)`
 * **Function type:** Array
 
 <details><summary>Example</summary>
 
-The following example returns true if the `arraySring` column from the `array-example` datasource contains `a`.
+The following example returns true if the `arraySring` column from the `array-example` datasource contains `2`.
 
 ```sql
-SELECT "label", "arrayString", ARRAY_CONTAINS("arrayString", 'a') AS "arrayContains"
+SELECT "arrayLong", ARRAY_CONTAINS("arrayLong", 2) AS "arrayContains"
 FROM "array-example"
 ```
 
 Returns the following:
 
-| `label` | `arrayString` | `arrayContains` |
-| -- | --| -- |
-| `row1` | `["a","b"]` | `true` |
-| `row2`| `[null,"b"]` | `false` |
-| `row3`| `[]` |  `false` |
-| `row4`| `["a","b"]` | `true` |
-| `row5`| `null` | `null` |
+| `arrayLong` | `arrayContains` |
+| -- | --|
+| `[1,null,3]` | `false` |
+| `null` | `null` |
+| `[1,2,3]` |  `true` |
+| `[1,2,3]` | `true` |
+| `[]` | `false` |
 
 </details>
 
@@ -453,7 +453,7 @@ Returns the following:
 
 ### Array
 
-If `expr` is an array, returns true if `arr` contains all elements of `expr`.
+If the specified expression is an array, returns true if the source array contains all elements of the expression.
 
 * **Syntax**: `ARRAY_CONTAINS(arr, expr)`
 * **Function type:** Array
@@ -543,7 +543,7 @@ Returns the following:
 
 ## ARRAY_OFFSET_OF
 
-Returns the zero-based index of the first occurrence of `expr` in the array. If the value isn't present in the array, returns null or `-1` if `druid.generic.useDefaultValueForNull=true` (deprecated legacy mode).
+Returns the zero-based index of the first occurrence of the expression in the array. Returns null if the value isn't present, or `-1` if `druid.generic.useDefaultValueForNull=true` (deprecated legacy mode).
 
 * **Syntax**: `ARRAY_OFFSET_OF(arr, expr)`
 * **Function type:** Array
@@ -603,7 +603,7 @@ Returns the following:
 
 ## ARRAY_ORDINAL_OF
 
-Returns the one-based index of the first occurrence of `expr` in the array. If the value isn't present in the array, returns null or `-1` if `druid.generic.useDefaultValueForNull=true` (deprecated legacy mode).
+Returns the one-based index of the first occurrence of the expression in the array. Returns null if the value isn't present, or `-1` if `druid.generic.useDefaultValueForNull=true` (deprecated legacy mode).
 
 * **Syntax**: `ARRAY_ORDINAL_OF(arr, expr)`
 * **Function type:** Array
@@ -633,7 +633,7 @@ Returns the following:
 
 ## ARRAY_OVERLAP
 
-Returns true if `arr1` and `arr2` have any elements in common. Treats `NULL` values as known values.
+Returns true if two arrays have any elements in common. Treats `NULL` values as known elements.
 
 * **Syntax**: `ARRAY_OVERLAP(arr1, arr2)`
 * **Function type:** Array
@@ -663,7 +663,7 @@ Returns the following:
 
 ## SCALAR_IN_ARRAY
 
-Returns true if the scalar `expr` is present in `arr`. Returns false if the scalar `expr` is non-null, or `UNKNOWN` if the scalar `expr` is `NULL`. Returns `UNKNOWN` if `arr` is `NULL`.
+Checks if the scalar value is present in the array. Returns false if the value is non-null, or `UNKNOWN` if the value is `NULL`. Returns `UNKNOWN` if the array is `NULL`.
 
 * **Syntax**: `SCALAR_IN_ARRAY(expr, arr)`
 * **Function type:** Array
@@ -695,7 +695,7 @@ Returns the following:
 
 ## ARRAY_PREPEND
 
-Prepends `expr` to `arr`. The type of `arr` determines the resulting array type.
+Prepends the expression to the array. The source array type determines the resulting array type.
 
 * **Syntax**: `ARRAY_PREPEND(expr, arr)`
 * **Function type:** Array
@@ -725,7 +725,7 @@ Returns the following:
 
 ## ARRAY_SLICE
 
-Returns an array containing a subset of elements from `arr`, from the zero-based index `start` (inclusive) to `end` (exclusive). Returns null, if `start` is less than 0, greater than the length of `arr`, or greater than `end`.
+Returns a subset of the array from the zero-based index `start` (inclusive) to `end` (exclusive). Returns null if `start` is less than 0, greater than the length of the array, or greater than `end`.
 
 * **Syntax**: `ARRAY_SLICE(arr, start, end)`
 * **Function type:** Array
@@ -785,9 +785,9 @@ Returns the following:
 
 ## ARRAY_TO_STRING
 
-Joins all elements of `arr` by the delimiter specified by `str`.
+Joins all elements of the array into a string using the specified delimiter.
 
-* **Syntax**: `ARRAY_TO_STRING(arr, str)`
+* **Syntax**: `ARRAY_TO_STRING(arr, delimiter)`
 * **Function type:** Array
 
 <details><summary>Example</summary>
@@ -3692,9 +3692,9 @@ Collects all values of an expression into a single string.
 
 ## STRING_TO_ARRAY
 
-Splits `str1` into an array on the delimiter specified by `str2`, which is a regular expression.
+Splits the string into an array of substrings using the specified delimiter. The delimiter must be a valid regular expression.
 
-* **Syntax**: `STRING_TO_ARRAY(str1, str2)`
+* **Syntax**: `STRING_TO_ARRAY(string, delimiter)`
 * **Function type:** Array
 
 [Learn more](sql-array-functions.md)
