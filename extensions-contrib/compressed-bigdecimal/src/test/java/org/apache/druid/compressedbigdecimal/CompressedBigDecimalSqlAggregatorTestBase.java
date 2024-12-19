@@ -19,9 +19,6 @@
 
 package org.apache.druid.compressedbigdecimal;
 
-import com.fasterxml.jackson.databind.MapperFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Injector;
 import org.apache.druid.compressedbigdecimal.CompressedBigDecimalSqlAggregatorTestBase.CompressedBigDecimalComponentSupplier;
@@ -118,13 +115,6 @@ public abstract class CompressedBigDecimalSqlAggregatorTestBase extends BaseCalc
                      .build(),
           index
       );
-    }
-
-    @Override
-    public void configureJsonMapper(ObjectMapper objectMapper)
-    {
-      objectMapper.configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS, true);
-      objectMapper.configure(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY, true);
     }
   }
 

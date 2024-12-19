@@ -67,6 +67,7 @@ import org.apache.druid.guice.security.AuthenticatorModule;
 import org.apache.druid.guice.security.AuthorizerModule;
 import org.apache.druid.guice.security.DruidAuthModule;
 import org.apache.druid.initialization.CoreInjectorBuilder;
+import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.initialization.Log4jShutterDownerModule;
 import org.apache.druid.initialization.ServerInjectorBuilder;
 import org.apache.druid.initialization.TombstoneDataStorageModule;
@@ -93,6 +94,7 @@ import org.apache.druid.server.security.TLSCertificateCheckerModule;
 import org.apache.druid.sql.calcite.schema.BrokerSegmentMetadataCache;
 import org.apache.druid.sql.calcite.schema.DruidSchemaName;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.calcite.util.DruidModuleCollection;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.QueryComponentSupplier;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.QueryComponentSupplierDelegate;
 import org.apache.druid.storage.StorageConnectorModule;
@@ -132,7 +134,15 @@ public class ExposedAsBrokerQueryComponentSupplierWrapper extends QueryComponent
     builder.add(new BrokerProcessingModule());
     builder.addAll(brokerModules());
     builder.add(QuidemCaptureModule.class);
-    overrideModules.add(new BrokerTestModule());
+  }
+
+  @Override
+  public DruidModule getOverrideModule()
+  {
+    return DruidModuleCollection.of(
+        super.getOverrideModule(),
+        new BrokerTestModule()
+    );
   }
 
   public static class BrokerTestModule extends AbstractModule

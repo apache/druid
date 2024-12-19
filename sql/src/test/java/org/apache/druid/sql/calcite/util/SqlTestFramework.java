@@ -206,7 +206,7 @@ public class SqlTestFramework
     /**
      * Configure the JSON mapper.
      *
-     * @see #configureGuice(DruidInjectorBuilder, List) for the preferred solution.
+     * @see #configureGuice(DruidInjectorBuilder) for the preferred solution.
      */
     @Deprecated
     default void configureJsonMapper(ObjectMapper mapper) {}
