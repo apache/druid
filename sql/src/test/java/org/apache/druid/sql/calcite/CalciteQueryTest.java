@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.apache.calcite.rel.RelNode;
+import org.apache.calcite.rel.logical.LogicalCorrelate;
 import org.apache.calcite.runtime.CalciteContextException;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
@@ -41,7 +42,6 @@ import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.InlineDataSource;
-import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.OperatorFactoryBuilders;
@@ -15893,6 +15893,17 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
 
     assertThat(e, invalidSqlContains("DISTINCT is not supported for window functions"));
   }
+
+  @Test
+  public void testRelFieldTrimmerUpgrade()
+  {
+    assertEquals(
+        "1.37.0",
+        RelNode.class.getPackage().getImplementationVersion(),
+        "Calcite version changed; check if DruidRelFieldTrimmer#trimFields(LogicalCorrelate correlate,...) is still needed or not!"
+    );
+  }
+
 
   @Test
   public void testUnSupportedAggInSelectWindow()

@@ -50,6 +50,11 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
+/**
+ * DruidRelFieldTrimmer is a subclass of RelFieldTrimmer that provides additional support for Druid specific RelNodes.
+ *
+ * It is used to trim fields from Druid specific RelNodes like LogicalUnnest.
+ */
 public class DruidRelFieldTrimmer extends RelFieldTrimmer
 {
   private final RelBuilder relBuilder;
