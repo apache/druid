@@ -47,6 +47,8 @@ import org.apache.druid.rpc.ServiceClient;
 import org.apache.druid.rpc.ServiceRetryPolicy;
 import org.apache.druid.server.compaction.CompactionProgressResponse;
 import org.apache.druid.server.compaction.CompactionStatusResponse;
+import org.apache.druid.server.http.SegmentsToUpdateFilter;
+import org.apache.druid.timeline.SegmentId;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.Interval;
 
@@ -332,6 +334,112 @@ public class OverlordClientImpl implements OverlordClient
             holder.getContent(),
             CompactionStatusResponse.class
         )
+    );
+  }
+
+  @Override
+  public ListenableFuture<SegmentUpdateResponse> markNonOvershadowedSegmentsAsUsed(String dataSource)
+  {
+    final String path = StringUtils.format(
+        "/druid/indexer/v1/datasources/%s",
+        StringUtils.urlEncode(dataSource)
+    );
+    return FutureUtils.transform(
+        client.asyncRequest(
+            new RequestBuilder(HttpMethod.POST, path),
+            new BytesFullResponseHandler()
+        ),
+        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), SegmentUpdateResponse.class)
+    );
+  }
+
+  @Override
+  public ListenableFuture<SegmentUpdateResponse> markNonOvershadowedSegmentsAsUsed(
+      String dataSource,
+      SegmentsToUpdateFilter filter
+  )
+  {
+    final String path = StringUtils.format(
+        "/druid/indexer/v1/datasources/%s/markUsed",
+        StringUtils.urlEncode(dataSource)
+    );
+    return FutureUtils.transform(
+        client.asyncRequest(
+            new RequestBuilder(HttpMethod.POST, path)
+                .jsonContent(jsonMapper, filter),
+            new BytesFullResponseHandler()
+        ),
+        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), SegmentUpdateResponse.class)
+    );
+  }
+
+  @Override
+  public ListenableFuture<SegmentUpdateResponse> markSegmentAsUsed(SegmentId segmentId)
+  {
+    final String path = StringUtils.format(
+        "/druid/indexer/v1/datasources/%s/segments/%s",
+        StringUtils.urlEncode(segmentId.getDataSource()),
+        StringUtils.urlEncode(segmentId.toString())
+    );
+    return FutureUtils.transform(
+        client.asyncRequest(
+            new RequestBuilder(HttpMethod.POST, path),
+            new BytesFullResponseHandler()
+        ),
+        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), SegmentUpdateResponse.class)
+    );
+  }
+
+  @Override
+  public ListenableFuture<SegmentUpdateResponse> markSegmentsAsUnused(String dataSource)
+  {
+    final String path = StringUtils.format(
+        "/druid/indexer/v1/datasources/%s",
+        StringUtils.urlEncode(dataSource)
+    );
+    return FutureUtils.transform(
+        client.asyncRequest(
+            new RequestBuilder(HttpMethod.DELETE, path),
+            new BytesFullResponseHandler()
+        ),
+        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), SegmentUpdateResponse.class)
+    );
+  }
+
+  @Override
+  public ListenableFuture<SegmentUpdateResponse> markSegmentsAsUnused(
+      String dataSource,
+      SegmentsToUpdateFilter filter
+  )
+  {
+    final String path = StringUtils.format(
+        "/druid/indexer/v1/datasources/%s/markUnused",
+        StringUtils.urlEncode(dataSource)
+    );
+    return FutureUtils.transform(
+        client.asyncRequest(
+            new RequestBuilder(HttpMethod.POST, path)
+                .jsonContent(jsonMapper, filter),
+            new BytesFullResponseHandler()
+        ),
+        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), SegmentUpdateResponse.class)
+    );
+  }
+
+  @Override
+  public ListenableFuture<SegmentUpdateResponse> markSegmentAsUnused(SegmentId segmentId)
+  {
+    final String path = StringUtils.format(
+        "/druid/indexer/v1/datasources/%s/segments/%s",
+        StringUtils.urlEncode(segmentId.getDataSource()),
+        StringUtils.urlEncode(segmentId.toString())
+    );
+    return FutureUtils.transform(
+        client.asyncRequest(
+            new RequestBuilder(HttpMethod.DELETE, path),
+            new BytesFullResponseHandler()
+        ),
+        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), SegmentUpdateResponse.class)
     );
   }
 
