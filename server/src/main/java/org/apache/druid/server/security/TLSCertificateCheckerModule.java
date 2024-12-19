@@ -38,47 +38,29 @@ public class TLSCertificateCheckerModule implements Module
 {
   private static final String CHECKER_TYPE_PROPERTY = "druid.tls.certificateChecker";
 
-  private final Properties props;
-
-  @Inject
-  public TLSCertificateCheckerModule(
-      Properties props
-  )
-  {
-    this.props = props;
-  }
-
   @Override
   public void configure(Binder binder)
   {
-    String checkerType = props.getProperty(CHECKER_TYPE_PROPERTY, DefaultTLSCertificateCheckerModule.DEFAULT_CHECKER_TYPE);
 
     binder.install(new DefaultTLSCertificateCheckerModule());
 
     binder.bind(TLSCertificateChecker.class)
-          .toProvider(new TLSCertificateCheckerProvider(checkerType))
+          .toProvider(new TLSCertificateCheckerProvider())
           .in(LazySingleton.class);
   }
 
   public static class TLSCertificateCheckerProvider implements Provider<TLSCertificateChecker>
   {
-    private final String checkerType;
-
     private TLSCertificateChecker checker = null;
 
-    public TLSCertificateCheckerProvider(
-        String checkerType
-    )
-    {
-      this.checkerType = checkerType;
-    }
-
     @Inject
-    public void inject(Injector injector)
+    public void inject(Injector injector, Properties props)
     {
       final List<Binding<TLSCertificateChecker>> checkerBindings = injector.findBindingsByType(new TypeLiteral<>()
       {
       });
+
+      String checkerType = props.getProperty(CHECKER_TYPE_PROPERTY, DefaultTLSCertificateCheckerModule.DEFAULT_CHECKER_TYPE);
 
       checker = findChecker(checkerType, checkerBindings);
       if (checker == null) {

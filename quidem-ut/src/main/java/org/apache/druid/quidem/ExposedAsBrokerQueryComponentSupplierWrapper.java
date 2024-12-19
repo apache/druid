@@ -178,7 +178,7 @@ public class ExposedAsBrokerQueryComponentSupplierWrapper extends QueryComponent
         new Log4jShutterDownerModule(),
         ExtensionsModule.SecondaryModule.class,
         new DruidAuthModule(),
-        TLSCertificateCheckerModule.class,
+        new TLSCertificateCheckerModule(),
         EmitterModule.class,
         HttpClientModule.global(),
         HttpClientModule.escalatedGlobal(),
