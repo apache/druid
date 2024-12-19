@@ -130,6 +130,7 @@ import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManagerConfig;
 import org.apache.druid.server.metrics.ServiceStatusMonitor;
 import org.apache.druid.server.router.TieredBrokerConfig;
+import org.apache.druid.storage.local.LocalTmpStorage;
 import org.eclipse.jetty.server.Server;
 import org.joda.time.Duration;
 
@@ -292,6 +293,10 @@ public class CliCoordinator extends ServerRunnable
 
             binder.bind(CoordinatorCustomDutyGroups.class)
                   .toProvider(new CoordinatorCustomDutyGroupsProvider())
+                  .in(LazySingleton.class);
+
+            binder.bind(LocalTmpStorage.class)
+                  .toProvider(new LocalTmpStorage.DefaultLocalTmpStorageProvider("coordinator"))
                   .in(LazySingleton.class);
           }
 
