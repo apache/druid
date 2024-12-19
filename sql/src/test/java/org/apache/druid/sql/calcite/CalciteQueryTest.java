@@ -15895,7 +15895,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testRelFieldTrimmerUpgrade()
+  public void testLogicalCorrelateTrimFieldsStillNeeded()
   {
     assertEquals(
         "1.37.0",
