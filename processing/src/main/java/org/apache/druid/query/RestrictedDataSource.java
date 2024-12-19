@@ -22,17 +22,14 @@ package org.apache.druid.query;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.query.filter.DimFilter;
-import org.apache.druid.query.filter.TrueDimFilter;
 import org.apache.druid.query.planning.DataSourceAnalysis;
+import org.apache.druid.query.policy.Policy;
 import org.apache.druid.segment.RestrictedSegment;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.utils.JvmUtils;
 
-import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -51,8 +48,7 @@ import java.util.function.Function;
 public class RestrictedDataSource implements DataSource
 {
   private final TableDataSource base;
-  @Nullable
-  private final DimFilter rowFilter;
+  private final Policy policy;
 
   @JsonProperty("base")
   public TableDataSource getBase()
@@ -60,37 +56,31 @@ public class RestrictedDataSource implements DataSource
     return base;
   }
 
-  /**
-   * Returns true if the row-level filter imposes no restrictions.
-   */
-  public boolean allowAll()
+  @JsonProperty("policy")
+  public Policy getPolicy()
   {
-    return Objects.isNull(rowFilter) || rowFilter.equals(TrueDimFilter.instance());
+    return policy;
   }
 
-  @Nullable
-  @JsonProperty("filter")
-  public DimFilter getFilter()
-  {
-    return rowFilter;
-  }
-
-  RestrictedDataSource(TableDataSource base, @Nullable DimFilter rowFilter)
+  RestrictedDataSource(TableDataSource base, Policy policy)
   {
     this.base = base;
-    this.rowFilter = rowFilter;
+    this.policy = policy;
   }
 
   @JsonCreator
   public static RestrictedDataSource create(
       @JsonProperty("base") DataSource base,
-      @Nullable @JsonProperty("filter") DimFilter rowFilter
+      @JsonProperty("policy") Policy policy
   )
   {
     if (!(base instanceof TableDataSource)) {
       throw new IAE("Expected a TableDataSource, got [%s]", base.getClass());
     }
-    return new RestrictedDataSource((TableDataSource) base, rowFilter);
+    if (Objects.isNull(policy)) {
+      throw new IAE("Policy can't be null for RestrictedDataSource");
+    }
+    return new RestrictedDataSource((TableDataSource) base, policy);
   }
 
   @Override
@@ -112,7 +102,7 @@ public class RestrictedDataSource implements DataSource
       throw new IAE("Expected [1] child, got [%d]", children.size());
     }
 
-    return create(children.get(0), rowFilter);
+    return create(children.get(0), policy);
   }
 
   @Override
@@ -144,53 +134,45 @@ public class RestrictedDataSource implements DataSource
         () -> base.createSegmentMapFunction(
             query,
             cpuTimeAccumulator
-        ).andThen((segment) -> (new RestrictedSegment(segment, rowFilter)))
+        ).andThen((segment) -> (new RestrictedSegment(segment, policy.getRowFilter())))
     );
   }
 
   @Override
   public DataSource withUpdatedDataSource(DataSource newSource)
   {
-    return create(newSource, rowFilter);
+    return create(newSource, policy);
   }
 
   @Override
-  public DataSource mapWithRestriction(Map<String, Optional<DimFilter>> rowFilters, boolean enableStrictPolicyCheck)
+  public DataSource mapWithRestriction(Map<String, Optional<Policy>> policies, boolean enableStrictPolicyCheck)
   {
-    if (!rowFilters.containsKey(this.base.getName()) && enableStrictPolicyCheck) {
-      throw DruidException.defensive("Missing row filter for table [%s]", this.base.getName());
+    if (!policies.containsKey(base.getName()) && enableStrictPolicyCheck) {
+      throw new ISE("Missing policy check result for table [%s]", base.getName());
     }
 
-    Optional<DimFilter> newFilter = rowFilters.getOrDefault(this.base.getName(), Optional.empty());
-    if (!newFilter.isPresent()) {
-      throw DruidException.defensive(
+    Optional<Policy> newPolicy = policies.getOrDefault(base.getName(), Optional.empty());
+    if (!newPolicy.isPresent()) {
+      throw new ISE(
           "No restriction found on table [%s], but had %s before.",
-          this.base.getName(),
-          this.rowFilter
+          base.getName(),
+          policy
       );
     }
-    if (newFilter.get().equals(TrueDimFilter.instance())) {
-      // The internal druid_system always has a TrueDimFilter, whic can be applied in conjunction with an external user's filter.
-      return this;
-    } else if (newFilter.get().equals(rowFilter)) {
-      // This likely occurs when we perform an authentication check for the same user more than once, which is not ideal.
+    if (newPolicy.get().hasNoRestriction()) {
+      // The internal druid_system could use NO_RESTRICTION policy.
       return this;
     } else {
-      throw new ISE("Incompatible restrictions on [%s]: %s and %s", this.base.getName(), rowFilter, newFilter.get());
+      throw new ISE("Incompatible restrictions on [%s]: %s and %s", base.getName(), policy, newPolicy.get());
     }
   }
 
   @Override
   public String toString()
   {
-    try {
-      return "RestrictedDataSource{" +
-             "base=" + base +
-             ", filter='" + rowFilter + '}';
-    }
-    catch (Exception e) {
-      throw new RuntimeException(e);
-    }
+    return "RestrictedDataSource{" +
+           "base=" + base +
+           ", policy='" + policy + '}';
   }
 
   @Override
@@ -216,12 +198,12 @@ public class RestrictedDataSource implements DataSource
       return false;
     }
     RestrictedDataSource that = (RestrictedDataSource) o;
-    return Objects.equals(base, that.base) && Objects.equals(rowFilter, that.rowFilter);
+    return Objects.equals(base, that.base) && Objects.equals(policy, that.policy);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(base, rowFilter);
+    return Objects.hash(base, policy);
   }
 }

@@ -159,6 +159,10 @@ public class AuthConfig
     return enableInputSourceSecurity;
   }
 
+  /**
+   * When enabled, {@link org.apache.druid.server.QueryLifecycle} checks a policy entry in {@link AuthorizationResult#getPolicy()}
+   * for all tables in the query, and throws exception when there's no entry.
+   */
   public boolean isEnableStrictPolicyCheck()
   {
     return enableStrictPolicyCheck;

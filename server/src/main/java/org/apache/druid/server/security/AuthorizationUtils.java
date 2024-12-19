@@ -28,7 +28,7 @@ import org.apache.druid.audit.AuditManager;
 import org.apache.druid.audit.RequestInfo;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.server.Policy;
+import org.apache.druid.query.policy.Policy;
 
 import javax.servlet.http.HttpServletRequest;
 import java.util.ArrayList;
@@ -37,6 +37,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -167,7 +168,7 @@ public class AuthorizationUtils
 
     // this method returns on first failure, so only successful Access results are kept in the cache
     final Set<ResourceAction> resultCache = new HashSet<>();
-    final Map<String, Policy> policyFilters = new HashMap<>();
+    final Map<String, Optional<Policy>> policyFilters = new HashMap<>();
 
     for (ResourceAction resourceAction : resourceActions) {
       if (resultCache.contains(resourceAction)) {
@@ -185,9 +186,9 @@ public class AuthorizationUtils
         if (resourceAction.getAction().equals(Action.READ)
             && RESTRICTION_APPLICABLE_RESOURCE_TYPES.contains(resourceAction.getResource().getType())) {
           policyFilters.put(resourceAction.getResource().getName(), access.getPolicy());
-        } else if (access.getPolicy().getRowFilter().isPresent()) {
+        } else if (access.getPolicy().isPresent()) {
           throw DruidException.defensive(
-              "Row policy should only present when reading a table, but was present for %s",
+              "Policy should only present when reading a table, but was present for %s",
               resourceAction
           );
         } else {

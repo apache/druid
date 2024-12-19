@@ -30,6 +30,7 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.TrueDimFilter;
 import org.apache.druid.query.planning.DataSourceAnalysis;
+import org.apache.druid.query.policy.Policy;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
@@ -508,7 +509,7 @@ public class JoinDataSourceTest
     JoinDataSource dataSource = JoinDataSource.create(
         RestrictedDataSource.create(
             new TableDataSource("table1"),
-            TrueDimFilter.instance()
+            Policy.NO_RESTRICTION
         ),
         new TableDataSource("table2"),
         "j.",

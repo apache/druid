@@ -119,7 +119,7 @@ public abstract class SQLMetadataStorageActionHandler<EntryType, StatusType, Log
     this.connector = connector;
     //fully qualified references required below due to identical package names across project modules.
     //noinspection UnnecessaryFullyQualifiedName
-    this.jsonMapper = jsonMapper.copy().addMixIn(PasswordProvider.class,PasswordProviderRedactionMixIn.class);
+    this.jsonMapper = jsonMapper.copy().addMixIn(PasswordProvider.class, PasswordProviderRedactionMixIn.class);
     this.entryType = types.getEntryType();
     this.statusType = types.getStatusType();
     this.lockType = types.getLockType();

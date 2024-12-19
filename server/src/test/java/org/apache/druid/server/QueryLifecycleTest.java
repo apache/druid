@@ -42,6 +42,7 @@ import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.filter.NullFilter;
 import org.apache.druid.query.filter.TrueDimFilter;
+import org.apache.druid.query.policy.Policy;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.security.Access;
@@ -233,7 +234,7 @@ public class QueryLifecycleTest
   @Test
   public void testAuthorizedWithAlwaysTruePolicyRestriction()
   {
-    Policy alwaysTrueFilter = Policy.fromRowFilter(TrueDimFilter.instance());
+    Policy alwaysTruePolicy = Policy.fromRowFilter(TrueDimFilter.instance());
     EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
     EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
     EasyMock.expect(authenticationResult.getAuthorizerName()).andReturn(AUTHORIZER).anyTimes();
@@ -242,7 +243,7 @@ public class QueryLifecycleTest
                 new Resource(DATASOURCE, ResourceType.DATASOURCE),
                 Action.READ
             ))
-            .andReturn(Access.allowWithRestriction(alwaysTrueFilter)).once();
+            .andReturn(Access.allowWithRestriction(alwaysTruePolicy)).once();
     EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject()))
             .andReturn(toolChest).times(2);
     EasyMock.expect(texasRanger.getQueryRunnerForIntervals(queryMatchDataSource(RestrictedDataSource.create(
@@ -271,14 +272,14 @@ public class QueryLifecycleTest
     lifecycle.runSimple(
         query,
         authenticationResult,
-        AuthorizationResult.allowWithRestriction(ImmutableMap.of(DATASOURCE, alwaysTrueFilter))
+        AuthorizationResult.allowWithRestriction(ImmutableMap.of(DATASOURCE, Optional.of(alwaysTruePolicy)))
     );
   }
 
   @Test
   public void testAuthorizedWithOnePolicyRestriction()
   {
-    Policy rowFilter = Policy.fromRowFilter(new NullFilter("some-column", null));
+    Policy rowFilterPolicy = Policy.fromRowFilter(new NullFilter("some-column", null));
     final TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                         .dataSource(DATASOURCE)
                                         .intervals(ImmutableList.of(Intervals.ETERNITY))
@@ -292,12 +293,12 @@ public class QueryLifecycleTest
                 new Resource(DATASOURCE, ResourceType.DATASOURCE),
                 Action.READ
             ))
-            .andReturn(Access.allowWithRestriction(rowFilter)).times(1);
+            .andReturn(Access.allowWithRestriction(rowFilterPolicy)).times(1);
     EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject()))
             .andReturn(toolChest).times(2);
     EasyMock.expect(texasRanger.getQueryRunnerForIntervals(queryMatchDataSource(RestrictedDataSource.create(
                 TableDataSource.create(DATASOURCE),
-                rowFilter.getRowFilter().get()
+                rowFilterPolicy
             )), EasyMock.anyObject()))
             .andReturn(runner).times(2);
     EasyMock.expect(runner.run(EasyMock.anyObject(), EasyMock.anyObject())).andReturn(Sequences.empty()).times(2);
@@ -316,7 +317,7 @@ public class QueryLifecycleTest
     lifecycle.runSimple(
         query,
         authenticationResult,
-        AuthorizationResult.allowWithRestriction(ImmutableMap.of(DATASOURCE, rowFilter))
+        AuthorizationResult.allowWithRestriction(ImmutableMap.of(DATASOURCE, Optional.of(rowFilterPolicy)))
     );
   }
 
@@ -331,8 +332,8 @@ public class QueryLifecycleTest
                                         .build();
     final TimeseriesQuery queryOnRestrictedDS = (TimeseriesQuery) query.withPolicyRestrictions(ImmutableMap.of(
         DATASOURCE,
-        Optional.of(TrueDimFilter.instance())
-    ));
+        Optional.of(Policy.NO_RESTRICTION)
+    ), true);
     Assume.assumeTrue(queryOnRestrictedDS.getDataSource() instanceof RestrictedDataSource);
     EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
     EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject())).andReturn(toolChest).anyTimes();
@@ -365,14 +366,14 @@ public class QueryLifecycleTest
   @Test
   public void testAuthorizedMultiplePolicyRestrictions()
   {
-    Policy trueFilter = Policy.fromRowFilter(TrueDimFilter.instance());
-    Policy columnFilter = Policy.fromRowFilter(new NullFilter("some-column", null));
-    Policy columnFilter2 = Policy.fromRowFilter(new NullFilter("some-column2", null));
+    Policy alwaysTruePolicy = Policy.fromRowFilter(TrueDimFilter.instance());
+    Policy filterPolicy = Policy.fromRowFilter(new NullFilter("some-column", null));
+    Policy filterPolicy2 = Policy.fromRowFilter(new NullFilter("some-column2", null));
 
     final TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                         .dataSource(RestrictedDataSource.create(
                                             TableDataSource.create(DATASOURCE),
-                                            columnFilter.getRowFilter().get()
+                                            filterPolicy
                                         ))
                                         .intervals(ImmutableList.of(Intervals.ETERNITY))
                                         .aggregators(new CountAggregatorFactory("chocula"))
@@ -397,7 +398,7 @@ public class QueryLifecycleTest
         lifecycle.runSimple(
             query,
             authenticationResult,
-            AuthorizationResult.allowWithRestriction(ImmutableMap.of(DATASOURCE, columnFilter2))
+            AuthorizationResult.allowWithRestriction(ImmutableMap.of(DATASOURCE, Optional.of(filterPolicy2)))
         ));
     Assert.assertEquals(
         "Incompatible restrictions on [some_datasource]: some-column IS NULL and some-column2 IS NULL",
@@ -405,11 +406,11 @@ public class QueryLifecycleTest
     );
 
     QueryLifecycle lifecycle2 = createLifecycle(authConfig);
-    // trueFilter is a compatible restriction
+    // alwaysTruePolicy is a compatible restriction
     lifecycle2.runSimple(
         query,
         authenticationResult,
-        AuthorizationResult.allowWithRestriction(ImmutableMap.of(DATASOURCE, trueFilter))
+        AuthorizationResult.allowWithRestriction(ImmutableMap.of(DATASOURCE, Optional.of(alwaysTruePolicy)))
     );
 
     lifecycle2 = createLifecycle(authConfig);
@@ -417,7 +418,7 @@ public class QueryLifecycleTest
     lifecycle2.runSimple(
         query,
         authenticationResult,
-        AuthorizationResult.allowWithRestriction(ImmutableMap.of(DATASOURCE, columnFilter))
+        AuthorizationResult.allowWithRestriction(ImmutableMap.of(DATASOURCE, Optional.of(filterPolicy)))
     );
   }
 

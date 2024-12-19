@@ -80,6 +80,9 @@ import java.util.concurrent.TimeUnit;
  * <li>Execution ({@link #execute()}</li>
  * <li>Logging ({@link #emitLogsAndMetrics(Throwable, String, long)}</li>
  * </ol>
+ * Alternatively, if the request is already authenticated and authorized, just call
+ * {@link #runSimple(Query, AuthenticationResult, AuthorizationResult)}.
+ *
  * <p>
  * This object is not thread-safe.
  */
@@ -136,11 +139,14 @@ public class QueryLifecycle
    * For callers who have already authorized their query, and where simplicity is desired over flexibility. This method
    * does it all in one call. Logs and metrics are emitted when the Sequence is either fully iterated or throws an
    * exception.
+   * <p>
+   * The {@code state} transitions from NEW, to INITIALIZED, to AUTHORIZING, to AUTHORIZED, to EXECUTING, then DONE.
    *
    * @param query                the query
    * @param authenticationResult authentication result indicating identity of the requester
    * @param authorizationResult  authorization result of requester
    * @return results
+   * @throws DruidException if the given authorizationResult deny access, which indicates a bug
    */
   public <T> QueryResponse<T> runSimple(
       final Query<T> query,
@@ -187,8 +193,11 @@ public class QueryLifecycle
 
   /**
    * Initializes this object to execute a specific query. Does not actually execute the query.
+   * <p>
+   * The {@code state} transitions from NEW, to INITIALIZED.
    *
    * @param baseQuery the query
+   * @throws DruidException if the current state is not NEW, which indicates a bug
    */
   public void initialize(final Query<?> baseQuery)
   {
@@ -210,11 +219,18 @@ public class QueryLifecycle
   }
 
   /**
-   * Authorize the query. Will return an Access object denoting whether the query is authorized or not.
+   * Returns {@link AuthorizationResult} based on {@code DRUID_AUTHENTICATION_RESULT} in the given request, base query
+   * would be transformed with restrictions on the AuthorizationResult.
+   * <p>
+   * The {@code state} transitions from INITIALIZED, to AUTHORIZING, then to AUTHORIZED or UNAUTHORIZED.
+   * <p>
+   * Note this won't throw exception if authorization deny access or impose policy restrictions. It is the caller's
+   * responsibility to throw exception on denial and impose policy restriction.
    *
-   * @param req HTTP request object of the request. If provided, the auth-related fields in the HTTP request
-   *            will be automatically set.
-   * @return authorization result
+   * @param req HTTP request to be authorized. The auth-related fields in the HTTP request will be set.
+   * @return authorization result denoting whether the query is authorized or not, along with policy restrictions
+   * @throws IllegalStateException if the request was not authenticated
+   * @throws DruidException        if the current state is not INITIALIZED, which indicates a bug
    */
   public AuthorizationResult authorize(HttpServletRequest req)
   {
@@ -240,12 +256,19 @@ public class QueryLifecycle
   }
 
   /**
-   * Authorize the query using the authentication result.
-   * Will return an Access object denoting whether the query is authorized or not.
+   * Returns {@link AuthorizationResult} based on the given {@link AuthenticationResult}, base query would be
+   * transformed with restrictions on the AuthorizationResult.
+   * <p>
+   * The {@code state} transitions from INITIALIZED, to AUTHORIZING, then to AUTHORIZED or UNAUTHORIZED.
+   * <p>
+   * Note this won't throw exception if authorization deny access or impose policy restrictions. It is the caller's
+   * responsibility to throw exception on denial and impose policy restriction.
+   * <p>
    * This method is to be used by the grpc-query-extension.
    *
    * @param authenticationResult authentication result indicating identity of the requester
-   * @return authorization result of requester
+   * @return authorization result denoting whether the query is authorized or not, along with policy restrictions.
+   * @throws DruidException if the current state is not INITIALIZED, which indicates a bug
    */
   public AuthorizationResult authorize(AuthenticationResult authenticationResult)
   {
@@ -299,23 +322,27 @@ public class QueryLifecycle
       transition(State.AUTHORIZING, State.AUTHORIZED);
       if (!authorizationResult.equals(AuthorizationResult.ALLOW_ALL)) {
         this.baseQuery = this.baseQuery.withPolicyRestrictions(
-            authorizationResult.getPolicyFilters(),
+            authorizationResult.getPolicy(),
             authConfig.isEnableStrictPolicyCheck()
         );
       }
     }
 
     this.authenticationResult = authenticationResult;
-
     return authorizationResult;
   }
 
   /**
-   * Execute the query. Can only be called if the query has been authorized. Note that query logs and metrics will
-   * not be emitted automatically when the Sequence is fully iterated. It is the caller's responsibility to call
-   * {@link #emitLogsAndMetrics(Throwable, String, long)} to emit logs and metrics.
+   * Executes the query.
+   * <p>
+   * Note that query logs and metrics will not be emitted automatically when the Sequence is fully iterated withou. It
+   * is the caller's responsibility to call {@link #emitLogsAndMetrics(Throwable, String, long)} to emit logs and
+   * metrics.
+   * <p>
+   * The {@code state} transitions from AUTHORIZED, to EXECUTING.
    *
    * @return result sequence and response context
+   * @throws DruidException if the current state is not AUTHORIZED, which indicates a bug
    */
   public <T> QueryResponse<T> execute()
   {
@@ -332,7 +359,11 @@ public class QueryLifecycle
   }
 
   /**
-   * Emit logs and metrics for this query.
+   * Emits logs and metrics for this query.
+   * <p>
+   * The {@code state} transitions to DONE. The initial state can be anything, but it likely shouldn't be set to DONE.
+   * <p>
+   * If {@code baseQuery} is null, likely because {@link #initialize(Query)} was never call, do nothing.
    *
    * @param e             exception that occurred while processing this query
    * @param remoteAddress remote address, for logging; or null if unknown

@@ -26,10 +26,10 @@ import com.google.common.collect.Lists;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
-import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.NullFilter;
 import org.apache.druid.query.filter.TrueDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.query.policy.Policy;
 import org.apache.druid.segment.TestHelper;
 import org.junit.Assert;
 import org.junit.Before;
@@ -130,24 +130,25 @@ public class DataSourceTest
     TableDataSource table2 = TableDataSource.create("table2");
     TableDataSource table3 = TableDataSource.create("table3");
     UnionDataSource unionDataSource = new UnionDataSource(Lists.newArrayList(table1, table2, table3));
-    ImmutableMap<String, Optional<DimFilter>> restrictions = ImmutableMap.of(
+    ImmutableMap<String, Optional<Policy>> restrictions = ImmutableMap.of(
         "table1",
-        Optional.of(TrueDimFilter.instance()),
+        Optional.of(Policy.NO_RESTRICTION),
         "table2",
         Optional.empty(),
         "table3",
-        Optional.of(new NullFilter(
+        Optional.of(Policy.fromRowFilter(new NullFilter(
             "some-column",
             null
-        ))
+        )))
     );
 
     Assert.assertEquals(
-        unionDataSource.mapWithRestriction(restrictions),
+        unionDataSource.mapWithRestriction(restrictions, true),
         new UnionDataSource(Lists.newArrayList(
             RestrictedDataSource.create(table1, null),
             table2,
-            RestrictedDataSource.create(table3, new NullFilter("some-column", null))
+            RestrictedDataSource.create(table3, Policy.fromRowFilter(new NullFilter("some-column", null))
+            )
         ))
     );
   }
@@ -158,12 +159,15 @@ public class DataSourceTest
     TableDataSource table1 = TableDataSource.create("table1");
     TableDataSource table2 = TableDataSource.create("table2");
     UnionDataSource unionDataSource = new UnionDataSource(Lists.newArrayList(table1, table2));
-    ImmutableMap<String, Optional<DimFilter>> restrictions = ImmutableMap.of(
+    ImmutableMap<String, Optional<Policy>> restrictions = ImmutableMap.of(
         "table1",
-        Optional.of(TrueDimFilter.instance())
+        Optional.of(Policy.fromRowFilter(TrueDimFilter.instance()))
     );
 
-    Exception e = Assert.assertThrows(RuntimeException.class, () -> unionDataSource.mapWithRestriction(restrictions));
+    Exception e = Assert.assertThrows(
+        RuntimeException.class,
+        () -> unionDataSource.mapWithRestriction(restrictions, true)
+    );
     Assert.assertEquals(e.getMessage(), "Need to check row-level policy for all tables, missing [table2]");
   }
 
@@ -171,16 +175,17 @@ public class DataSourceTest
   public void testMapWithRestrictionThrowsWithIncompatibleRestriction() throws Exception
   {
     RestrictedDataSource restrictedDataSource = RestrictedDataSource.create(TableDataSource.create("table1"), null);
-    ImmutableMap<String, Optional<DimFilter>> restrictions = ImmutableMap.of(
+    ImmutableMap<String, Optional<Policy>> restrictions = ImmutableMap.of(
         "table1",
-        Optional.of(new NullFilter("some-column", null))
+        Optional.of(Policy.fromRowFilter(new NullFilter("some-column", null)))
     );
 
-    Assert.assertThrows(RuntimeException.class, () -> restrictedDataSource.mapWithRestriction(restrictions));
-    Assert.assertThrows(RuntimeException.class, () -> restrictedDataSource.mapWithRestriction(ImmutableMap.of()));
+    Assert.assertThrows(RuntimeException.class, () -> restrictedDataSource.mapWithRestriction(restrictions, true));
+    Assert.assertThrows(RuntimeException.class, () -> restrictedDataSource.mapWithRestriction(restrictions, false));
+    Assert.assertThrows(RuntimeException.class, () -> restrictedDataSource.mapWithRestriction(ImmutableMap.of(), true));
     Assert.assertThrows(
         RuntimeException.class,
-        () -> restrictedDataSource.mapWithRestriction(ImmutableMap.of("table1", Optional.empty()))
+        () -> restrictedDataSource.mapWithRestriction(ImmutableMap.of("table1", Optional.empty()), true)
     );
   }
 }

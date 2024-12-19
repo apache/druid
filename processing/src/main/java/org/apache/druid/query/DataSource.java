@@ -21,9 +21,9 @@ package org.apache.druid.query;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.planning.PreJoinableClause;
+import org.apache.druid.query.policy.Policy;
 import org.apache.druid.segment.SegmentReference;
 
 import java.util.List;
@@ -123,23 +123,27 @@ public interface DataSource
    */
   DataSource withUpdatedDataSource(DataSource newSource);
 
-  default DataSource mapWithRestriction(Map<String, Optional<DimFilter>> rowFilters)
-  {
-    return mapWithRestriction(rowFilters, true);
-  }
-
   /**
-   * Returns an updated datasource based on the policy restrictions on tables. If this datasource contains no table, no
-   * changes should occur.
+   * Returns an updated datasource based on the policy restrictions on tables.
+   * <p>
+   * If this datasource contains no table, no changes should occur. If {@code enableStrictPolicyCheck}, every table must
+   * have an entry in the {@code policyMap}, the value could be {@code Optional.empty()} meaning no restriction is
+   * enforced on this table.
    *
-   * @param rowFilters a mapping of table names to row filters, every table in the datasource tree must have an entry
+   * @param policyMap               a mapping of table names to policy restrictions, every table in the datasource tree must have an entry
+   * @param enableStrictPolicyCheck a boolean denoting that, every table should have an entry in the policies map.
    * @return the updated datasource, with restrictions applied in the datasource tree
+   * @throws IllegalStateException in one of following conditions:
+   *                               <ul>
+   *                                 <li>table doesn't exist in {@code policyMap} and {@code enableStrictPolicyCheck}
+   *                                 <li>the policy the policyMap is not compatible with existing policy, see {@link RestrictedDataSource#mapWithRestriction(Map, boolean)}
+   *                               </ul>
    */
-  default DataSource mapWithRestriction(Map<String, Optional<DimFilter>> rowFilters, boolean enableStrictPolicyCheck)
+  default DataSource mapWithRestriction(Map<String, Optional<Policy>> policyMap, boolean enableStrictPolicyCheck)
   {
     List<DataSource> children = this.getChildren()
                                     .stream()
-                                    .map(child -> child.mapWithRestriction(rowFilters, enableStrictPolicyCheck))
+                                    .map(child -> child.mapWithRestriction(policyMap, enableStrictPolicyCheck))
                                     .collect(Collectors.toList());
     return this.withChildren(children);
   }

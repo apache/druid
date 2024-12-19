@@ -22,6 +22,9 @@ package org.apache.druid.query;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.query.filter.TrueDimFilter;
+import org.apache.druid.query.policy.Policy;
 import org.apache.druid.segment.TestHelper;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -37,8 +40,21 @@ public class RestrictedDataSourceTest
 
   private final TableDataSource fooDataSource = new TableDataSource("foo");
   private final TableDataSource barDataSource = new TableDataSource("bar");
-  private final RestrictedDataSource restrictedFooDataSource = RestrictedDataSource.create(fooDataSource, null);
-  private final RestrictedDataSource restrictedBarDataSource = RestrictedDataSource.create(barDataSource, null);
+  private final RestrictedDataSource restrictedFooDataSource = RestrictedDataSource.create(
+      fooDataSource,
+      Policy.NO_RESTRICTION
+  );
+  private final RestrictedDataSource restrictedBarDataSource = RestrictedDataSource.create(
+      barDataSource,
+      Policy.NO_RESTRICTION
+  );
+
+  @Test
+  public void test_creation_failWithNullPolicy()
+  {
+    IAE e = Assert.assertThrows(IAE.class, () -> RestrictedDataSource.create(fooDataSource, null));
+    Assert.assertEquals(e.getMessage(), "Policy can't be null for RestrictedDataSource");
+  }
 
   @Test
   public void test_getTableNames()
@@ -130,12 +146,16 @@ public class RestrictedDataSourceTest
   {
     final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
     final RestrictedDataSource deserializedRestrictedDataSource = jsonMapper.readValue(
-        "{\"type\":\"restrict\",\"base\":{\"type\":\"table\",\"name\":\"foo\"},\"filter\":null}",
+        "{\"type\":\"restrict\",\"base\":{\"type\":\"table\",\"name\":\"foo\"},\"policy\":{\"rowFilter\":{\"type\":\"true\"}}}",
         RestrictedDataSource.class
     );
 
-    Assert.assertEquals(restrictedFooDataSource, deserializedRestrictedDataSource);
+    Assert.assertEquals(
+        deserializedRestrictedDataSource,
+        RestrictedDataSource.create(fooDataSource, Policy.fromRowFilter(TrueDimFilter.instance()))
+    );
   }
+
 
   @Test
   public void test_serialize() throws Exception
@@ -143,7 +163,10 @@ public class RestrictedDataSourceTest
     final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
     final String s = jsonMapper.writeValueAsString(restrictedFooDataSource);
 
-    Assert.assertEquals("{\"type\":\"restrict\",\"base\":{\"type\":\"table\",\"name\":\"foo\"},\"filter\":null}", s);
+    Assert.assertEquals(
+        "{\"type\":\"restrict\",\"base\":{\"type\":\"table\",\"name\":\"foo\"},\"policy\":{\"rowFilter\":null}}",
+        s
+    );
   }
 
   @Test

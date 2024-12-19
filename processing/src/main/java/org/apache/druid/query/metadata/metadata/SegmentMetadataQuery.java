@@ -224,7 +224,8 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
   @Override
   public Query<SegmentAnalysis> withDataSource(DataSource dataSource)
   {
-    if (dataSource instanceof RestrictedDataSource && ((RestrictedDataSource) dataSource).allowAll()) {
+    if (dataSource instanceof RestrictedDataSource && ((RestrictedDataSource) dataSource).getPolicy()
+                                                                                         .hasNoRestriction()) {
       return Druids.SegmentMetadataQueryBuilder.copy(this)
                                                .dataSource(((RestrictedDataSource) dataSource).getBase())
                                                .build();

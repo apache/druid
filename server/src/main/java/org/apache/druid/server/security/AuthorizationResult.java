@@ -20,18 +20,27 @@
 package org.apache.druid.server.security;
 
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.query.filter.DimFilter;
-import org.apache.druid.server.Policy;
+import org.apache.druid.query.policy.Policy;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Stream;
 
+/**
+ * Represents the outcoming of performing authorization check on required resource accesses on a query or http requests.
+ * It contains:
+ * <ul>
+ *   <li>a boolean allow or deny access results for checking permissions on a list of resource actions.
+ *   <li>a failure message if deny access. It's null when access is allowed.
+ *   <li>a map of table name with optional {@link Policy} restriction. An empty value means there's no restriction
+ *   enforced on the table.
+ * </ul>
+ */
 public class AuthorizationResult
 {
   /**
@@ -62,7 +71,7 @@ public class AuthorizationResult
   @Nullable
   private final String failureMessage;
 
-  private final Map<String, Policy> policyFilters;
+  private final Map<String, Optional<Policy>> policyRestrictions;
 
   @Nullable
   private final Set<ResourceAction> sqlResourceActions;
@@ -73,14 +82,14 @@ public class AuthorizationResult
   AuthorizationResult(
       boolean isAllowed,
       @Nullable String failureMessage,
-      Map<String, Policy> policyFilters,
+      Map<String, Optional<Policy>> policyRestrictions,
       @Nullable Set<ResourceAction> sqlResourceActions,
       @Nullable Set<ResourceAction> allResourceActions
   )
   {
     this.isAllowed = isAllowed;
     this.failureMessage = failureMessage;
-    this.policyFilters = policyFilters;
+    this.policyRestrictions = policyRestrictions;
     this.sqlResourceActions = sqlResourceActions;
     this.allResourceActions = allResourceActions;
   }
@@ -90,9 +99,9 @@ public class AuthorizationResult
     return new AuthorizationResult(false, failureMessage, Collections.emptyMap(), null, null);
   }
 
-  public static AuthorizationResult allowWithRestriction(Map<String, Policy> policyFilters)
+  public static AuthorizationResult allowWithRestriction(Map<String, Optional<Policy>> policyRestrictions)
   {
-    return new AuthorizationResult(true, null, policyFilters, null, null);
+    return new AuthorizationResult(true, null, policyRestrictions, null, null);
   }
 
   public AuthorizationResult withResourceActions(
@@ -109,33 +118,40 @@ public class AuthorizationResult
     );
   }
 
-  public Optional<String> getPermissionErrorMessage(boolean policyFilterNotPermitted)
+  /**
+   * Returns a permission error string if the AuthorizationResult doesn't permit all requried access. Otherwise, returns
+   * empty. When {@code policyRestrictionsNotPermitted} set to true, it requests unrestricted full access. The caller
+   * can use this method to retrieve the error string, and throw a {@link ForbiddenException} with the error message.
+   * <p>
+   * It first checks if all permissions (e.x. {@link org.apache.druid.security.basic.authorization.entity.BasicAuthorizerPermission})
+   * have been granted access. If not, returns the {@code failureMessage}. Then if {@code policyRestrictionsNotPermitted},
+   * it checks for 'actual' policy restrictions (i.e. {@link Policy#hasNoRestriction} returns false). If 'actual' policy
+   * restrictions exist, returns {@link Access#DEFAULT_ERROR_MESSAGE}.
+   *
+   * @param policyRestrictionsNotPermitted true if policy restrictions are considered as not permitted
+   * @return optional permission error message
+   */
+  public Optional<String> getPermissionErrorMessage(boolean policyRestrictionsNotPermitted)
   {
     if (!isAllowed) {
       return Optional.of(Objects.requireNonNull(failureMessage));
     }
 
-    if (policyFilterNotPermitted && policyFilters.values()
-                                                 .stream()
-                                                 .anyMatch(Policy.NO_RESTRICTION::equals)) {
+    if (policyRestrictionsNotPermitted && policyRestrictions.values()
+                                                            .stream()
+                                                            .flatMap(policy -> policy.isPresent()
+                                                                               ? Stream.of(policy.get())
+                                                                               : Stream.empty()) // Can be replaced by Optional.stream after Java 11
+                                                            .anyMatch(Policy::hasNoRestriction)) {
       return Optional.of(Access.DEFAULT_ERROR_MESSAGE);
     }
 
     return Optional.empty();
   }
 
-  public Map<String, Policy> getPolicy()
+  public Map<String, Optional<Policy>> getPolicy()
   {
-    return policyFilters;
-  }
-
-  public Map<String, Optional<DimFilter>> getPolicyFilters()
-  {
-    Map<String, Optional<DimFilter>> filters = new HashMap<>();
-    for (Map.Entry<String, Policy> entry : policyFilters.entrySet()) {
-      filters.put(entry.getKey(), entry.getValue().getRowFilter());
-    }
-    return filters;
+    return policyRestrictions;
   }
 
   @Nullable
