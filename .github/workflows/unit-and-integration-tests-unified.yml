@@ -173,16 +173,11 @@ jobs:
 
   unit-tests:
     if: false
-    strategy:
-      fail-fast: false
-      matrix:
-        sql_compatibility: [ false, true ]
-    name: "unit tests (jdk17, sql-compat=${{ matrix.sql_compatibility }})"
+    name: "unit tests (jdk17)"
     uses: ./.github/workflows/unit-tests.yml
     needs: build
     with:
       jdk: 17
-      sql_compatibility: ${{ matrix.sql_compatibility }}
 
   standard-its:
     needs: build
