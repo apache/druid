@@ -412,7 +412,10 @@ public class SqlTestFramework
     @Override
     public DruidModule getOverrideModule()
     {
-      return DruidModuleCollection.of();
+      return DruidModuleCollection.of(
+          new TestSetupModule(),
+          new TestSchemaSetupModule()
+      );
     }
 
     /**
@@ -760,7 +763,6 @@ public class SqlTestFramework
             .annotatedWith(Global.class)
             .to(TestBufferPool.class);
 
-
       TestRequestLogger testRequestLogger = new TestRequestLogger();
       binder.bind(RequestLogger.class).toInstance(testRequestLogger);
     }
@@ -862,19 +864,6 @@ public class SqlTestFramework
 
     @Provides
     @LazySingleton
-    public SpecificSegmentsQuerySegmentWalker specificSegmentsQuerySegmentWalker(final Injector injector, Builder builder)
-    {
-      SpecificSegmentsQuerySegmentWalker walker = builder.componentSupplier.createQuerySegmentWalker(
-          injector.getInstance(QueryRunnerFactoryConglomerate.class),
-          injector.getInstance(JoinableFactoryWrapper.class),
-          injector
-      );
-      builder.resourceCloser.register(walker);
-      return walker;
-    }
-
-    @Provides
-    @LazySingleton
     public QueryLifecycleFactory queryLifecycleFactory(final Injector injector)
     {
       return QueryFrameworkUtils.createMockQueryLifecycleFactory(
@@ -889,6 +878,36 @@ public class SqlTestFramework
     {
       return builder.componentSupplier.getPlannerComponentSupplier().createViewManager();
     }
+
+    @Provides
+    SqlTestFrameworkConfig getTestConfig(Builder builder)
+    {
+      return builder.config;
+    }
+
+    @Provides
+    @Named("quidem")
+    public URI getDruidTestURI(SqlTestFrameworkConfig config)
+    {
+      return config.getDruidTestURI();
+    }
+
+    @Provides
+    @Named("isExplainSupported")
+    public Boolean isExplainSupported(Builder builder)
+    {
+      return builder.componentSupplier.isExplainSupported();
+    }
+
+    @Provides
+    public QueryWatcher getQueryWatcher()
+    {
+      return QueryRunnerTestHelper.NOOP_QUERYWATCHER;
+    }
+  }
+
+  public static class TestSchemaSetupModule implements DruidModule
+  {
 
     @Provides
     @LazySingleton
@@ -942,29 +961,22 @@ public class SqlTestFramework
     }
 
     @Provides
-    SqlTestFrameworkConfig getTestConfig(Builder builder)
+    @LazySingleton
+    public SpecificSegmentsQuerySegmentWalker specificSegmentsQuerySegmentWalker(final Injector injector, Builder builder)
     {
-      return builder.config;
+      SpecificSegmentsQuerySegmentWalker walker = builder.componentSupplier.createQuerySegmentWalker(
+          injector.getInstance(QueryRunnerFactoryConglomerate.class),
+          injector.getInstance(JoinableFactoryWrapper.class),
+          injector
+      );
+      builder.resourceCloser.register(walker);
+      return walker;
     }
 
-    @Provides
-    @Named("quidem")
-    public URI getDruidTestURI(SqlTestFrameworkConfig config)
-    {
-      return config.getDruidTestURI();
-    }
 
-    @Provides
-    @Named("isExplainSupported")
-    public Boolean isExplainSupported(Builder builder)
+    @Override
+    public void configure(Binder binder)
     {
-      return builder.componentSupplier.isExplainSupported();
-    }
-
-    @Provides
-    public QueryWatcher getQueryWatcher()
-    {
-      return QueryRunnerTestHelper.NOOP_QUERYWATCHER;
     }
   }
 
@@ -995,7 +1007,6 @@ public class SqlTestFramework
 
     injectorBuilder.add(componentSupplier.getCoreModule());
     injectorBuilder.addModule(binder -> binder.bind(Builder.class).toInstance(builder));
-    overrideModules.add(new TestSetupModule());
     overrideModules.add(componentSupplier.getOverrideModule());
     builder.componentSupplier.configureGuice(injectorBuilder, overrideModules);
 
