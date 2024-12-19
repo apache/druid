@@ -74,7 +74,7 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
     @Override
     public DruidModule getCoreModule()
     {
-      return new DruidModuleCollection(super.getCoreModule(), new TDigestSketchModule());
+      return DruidModuleCollection.of(super.getCoreModule(), new TDigestSketchModule());
     }
 
     @Override

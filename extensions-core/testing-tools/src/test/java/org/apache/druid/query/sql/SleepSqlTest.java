@@ -50,7 +50,7 @@ public class SleepSqlTest extends BaseCalciteQueryTest
     @Override
     public DruidModule getCoreModule()
     {
-      return new DruidModuleCollection(super.getCoreModule(), new SleepModule());
+      return DruidModuleCollection.of(super.getCoreModule(), new SleepModule());
     }
   }
 

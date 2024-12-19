@@ -19,6 +19,7 @@
 
 package org.apache.druid.sql.calcite.util;
 
+import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
@@ -26,15 +27,16 @@ import com.google.inject.Module;
 import org.apache.druid.initialization.DruidModule;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class DruidModuleCollection implements DruidModule
 {
-  private Module[] subModules;
+  private List<Module> subModules;
 
-  public DruidModuleCollection(Module... modules)
+  public DruidModuleCollection(List<Module> modules)
   {
-    this.subModules = modules;
+    this.subModules = ImmutableList.copyOf(modules);
   }
 
   @Inject
@@ -67,6 +69,11 @@ public class DruidModuleCollection implements DruidModule
   }
 
   public static DruidModule of(Module... modules)
+  {
+    return new DruidModuleCollection(Arrays.asList(modules));
+  }
+
+  public static DruidModule of(List<Module> modules)
   {
     return new DruidModuleCollection(modules);
   }

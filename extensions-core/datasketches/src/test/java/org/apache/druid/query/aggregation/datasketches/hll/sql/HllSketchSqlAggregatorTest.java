@@ -263,7 +263,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
     @Override
     public DruidModule getCoreModule()
     {
-      return new DruidModuleCollection(super.getCoreModule(), new HllSketchModule());
+      return DruidModuleCollection.of(super.getCoreModule(), new HllSketchModule());
     }
 
     @SuppressWarnings("resource")

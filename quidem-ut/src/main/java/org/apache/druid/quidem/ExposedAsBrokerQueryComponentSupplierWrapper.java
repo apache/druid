@@ -45,7 +45,6 @@ import org.apache.druid.guice.AnnouncerModule;
 import org.apache.druid.guice.BrokerProcessingModule;
 import org.apache.druid.guice.BrokerServiceModule;
 import org.apache.druid.guice.CoordinatorDiscoveryModule;
-import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.guice.ExpressionModule;
 import org.apache.druid.guice.ExtensionsModule;
 import org.apache.druid.guice.JacksonConfigManagerModule;
@@ -126,16 +125,18 @@ public class ExposedAsBrokerQueryComponentSupplierWrapper extends QueryComponent
   }
 
   @Override
-  public void configureGuice(DruidInjectorBuilder builder, List<Module> overrideModules)
+  public DruidModule getCoreModule()
   {
-    super.configureGuice(builder, overrideModules);
-    Builder<Object> modules = ImmutableList.builder();
-    modules.addAll(forServerModules(builder));
+    Builder<Module> modules = ImmutableList.builder();
+    modules.add(super.getCoreModule());
+    modules.addAll(forServerModules());
 
     modules.add(new BrokerProcessingModule());
     modules.addAll(brokerModules());
-    modules.add(QuidemCaptureModule.class);
-    builder.addAll(modules.build());
+    modules.add(new QuidemCaptureModule());
+
+    return DruidModuleCollection.of(modules.build());
+
   }
 
   @Override
@@ -173,7 +174,7 @@ public class ExposedAsBrokerQueryComponentSupplierWrapper extends QueryComponent
   /**
    * Closely related to {@link CoreInjectorBuilder#forServer()}
    */
-  private List<Module> forServerModules(DruidInjectorBuilder builder)
+  private List<Module> forServerModules()
   {
     return ImmutableList.of(
         new Log4jShutterDownerModule(),
