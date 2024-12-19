@@ -20,6 +20,7 @@
 package org.apache.druid.quidem;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableList.Builder;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.AbstractModule;
 import com.google.inject.Key;
@@ -128,12 +129,13 @@ public class ExposedAsBrokerQueryComponentSupplierWrapper extends QueryComponent
   public void configureGuice(DruidInjectorBuilder builder, List<Module> overrideModules)
   {
     super.configureGuice(builder, overrideModules);
+    Builder<Object> modules = ImmutableList.builder();
+    modules.addAll(forServerModules(builder));
 
-    installForServerModules(builder);
-
-    builder.add(new BrokerProcessingModule());
-    builder.addAll(brokerModules());
-    builder.add(QuidemCaptureModule.class);
+    modules.add(new BrokerProcessingModule());
+    modules.addAll(brokerModules());
+    modules.add(QuidemCaptureModule.class);
+    builder.addAll(modules.build());
   }
 
   @Override
@@ -171,15 +173,14 @@ public class ExposedAsBrokerQueryComponentSupplierWrapper extends QueryComponent
   /**
    * Closely related to {@link CoreInjectorBuilder#forServer()}
    */
-  private void installForServerModules(DruidInjectorBuilder builder)
+  private List<Module> forServerModules(DruidInjectorBuilder builder)
   {
-
-    builder.add(
+    return ImmutableList.of(
         new Log4jShutterDownerModule(),
-        ExtensionsModule.SecondaryModule.class,
+        new ExtensionsModule.SecondaryModule(),
         new DruidAuthModule(),
-        TLSCertificateCheckerModule.class,
-        EmitterModule.class,
+        new TLSCertificateCheckerModule(),
+        new EmitterModule(),
         HttpClientModule.global(),
         HttpClientModule.escalatedGlobal(),
         new HttpClientModule("druid.broker.http", Client.class, true),
