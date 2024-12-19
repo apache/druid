@@ -20,6 +20,8 @@
 package org.apache.druid.sql.calcite.util;
 
 import com.google.inject.Binder;
+import com.google.inject.Inject;
+import com.google.inject.Injector;
 import com.google.inject.Module;
 import org.apache.druid.initialization.DruidModule;
 
@@ -33,6 +35,14 @@ public class DruidModuleCollection implements DruidModule
   public DruidModuleCollection(Module... modules)
   {
     this.subModules = modules;
+  }
+
+  @Inject
+  public void cascadeInject(Injector injector)
+  {
+    for (Module module : subModules) {
+      injector.injectMembers(module);
+    }
   }
 
   @Override

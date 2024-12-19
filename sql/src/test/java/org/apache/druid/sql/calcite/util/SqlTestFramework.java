@@ -397,7 +397,13 @@ public class SqlTestFramework
           new LookylooModule(),
           new SegmentWranglerModule(),
           new ExpressionModule(),
-          new QueryRunnerFactoryModule()
+          new QueryRunnerFactoryModule(),
+          new BuiltInTypesModule(),
+          new TestSqlModule(),
+          new ServerModule(),
+          new LifecycleModule(),
+          new QueryableModule(),
+          new SqlModule()
       );
     }
 
@@ -1000,12 +1006,6 @@ public class SqlTestFramework
     ArrayList<Module> overrideModules = new ArrayList<>(builder.overrideModules);
 
     injectorBuilder.add(componentSupplier.getCoreModule());
-    injectorBuilder.add(new BuiltInTypesModule());
-    injectorBuilder.add(new TestSqlModule());
-    injectorBuilder.add(new ServerModule());
-    injectorBuilder.add(new LifecycleModule());
-    injectorBuilder.add(new QueryableModule());
-    injectorBuilder.add(new SqlModule());
     overrideModules.add(new TestSetupModule(builder));
     overrideModules.add(new TestSegmentsOverseer());
     overrideModules.add(componentSupplier.getOverrideModule());
