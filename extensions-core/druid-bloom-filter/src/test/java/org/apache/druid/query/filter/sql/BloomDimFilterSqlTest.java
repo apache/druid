@@ -59,6 +59,7 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
       super(tempFolderProducer);
     }
 
+    @Override
     public DruidModule getCoreModule()
     {
       return DruidModuleCollection.of(

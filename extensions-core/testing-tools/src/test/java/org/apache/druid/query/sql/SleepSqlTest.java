@@ -47,11 +47,12 @@ public class SleepSqlTest extends BaseCalciteQueryTest
       super(tempFolderProducer);
     }
 
+    @Override
     public DruidModule getCoreModule()
     {
       return new DruidModuleCollection(super.getCoreModule(), new SleepModule());
     }
- }
+  }
 
   @Test
   public void testSleepFunction()

@@ -91,6 +91,7 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
       super(tempFolderProducer);
     }
 
+    @Override
     public DruidModule getCoreModule()
     {
       return DruidModuleCollection.of(super.getCoreModule(), new DoublesSketchModule());

@@ -77,6 +77,7 @@ public abstract class CompressedBigDecimalSqlAggregatorTestBase extends BaseCalc
     private static final List<InputRow> ROWS1 =
         TestDataBuilder.RAW_ROWS1.stream().map(m -> TestDataBuilder.createRow(m, SCHEMA)).collect(Collectors.toList());
 
+    @Override
     public DruidModule getCoreModule()
     {
       return DruidModuleCollection.of(super.getCoreModule(), new CompressedBigDecimalModule());

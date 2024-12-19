@@ -260,6 +260,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
       properties.put(SqlModule.PROPERTY_SQL_APPROX_COUNT_DISTINCT_CHOICE, HllSketchApproxCountDistinctSqlAggregator.NAME);
     }
 
+    @Override
     public DruidModule getCoreModule()
     {
       return new DruidModuleCollection(super.getCoreModule(), new HllSketchModule());

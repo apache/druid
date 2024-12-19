@@ -86,6 +86,7 @@ public class VarianceSqlAggregatorTest extends BaseCalciteQueryTest
       super(tempFolderProducer);
     }
 
+    @Override
     public DruidModule getCoreModule()
     {
       return DruidModuleCollection.of(super.getCoreModule(), new DruidStatsModule());

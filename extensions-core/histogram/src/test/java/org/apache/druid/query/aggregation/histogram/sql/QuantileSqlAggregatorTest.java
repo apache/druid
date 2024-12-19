@@ -74,6 +74,7 @@ public class QuantileSqlAggregatorTest extends BaseCalciteQueryTest
       super(tempFolderProducer);
     }
 
+    @Override
     public DruidModule getCoreModule()
     {
       return new DruidModuleCollection(super.getCoreModule(), new ApproximateHistogramDruidModule());
