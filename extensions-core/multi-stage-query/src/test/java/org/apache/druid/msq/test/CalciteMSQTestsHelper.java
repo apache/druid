@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Binder;
-import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.TypeLiteral;
@@ -35,7 +34,6 @@ import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.frame.processor.Bouncer;
-import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.IndexingServiceTuningConfigModule;
 import org.apache.druid.guice.JoinableFactoryModule;
 import org.apache.druid.guice.LazySingleton;
@@ -46,7 +44,6 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.msq.exec.DataServerQueryHandler;
 import org.apache.druid.msq.exec.DataServerQueryHandlerFactory;
 import org.apache.druid.msq.guice.MSQExternalDataSourceModule;
@@ -155,24 +152,8 @@ public class CalciteMSQTestsHelper
     }
 
     @Provides
-    public SegmentCacheManager provideSegmentCacheManager(/*
-                                                           * ObjectMapper
-                                                           * testMapper,
-                                                           */ TempDirProducer tempDirProducer)
+    public SegmentCacheManager provideSegmentCacheManager(ObjectMapper testMapper, TempDirProducer tempDirProducer)
     {
-
-      Injector dummyInjector = GuiceInjectors.makeStartupInjectorWithModules(
-          ImmutableList.of(
-              binder1 -> {
-                binder1.bind(ExprMacroTable.class).toInstance(CalciteTests.createExprMacroTable());
-                binder1.bind(DataSegment.PruneSpecsHolder.class).toInstance(DataSegment.PruneSpecsHolder.DEFAULT);
-              }
-          )
-      );
-      // FIXME: this is dodgy... we should not be creating a new ObjectMapper
-      // here
-      ObjectMapper testMapper = MSQTestBase.setupObjectMapper(dummyInjector);
-
       return new SegmentCacheManagerFactory(TestIndex.INDEX_IO, testMapper)
           .manufacturate(tempDirProducer.newTempFolder("test"));
     }

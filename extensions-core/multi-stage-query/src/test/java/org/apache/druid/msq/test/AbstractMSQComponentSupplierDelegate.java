@@ -38,24 +38,26 @@ import org.apache.druid.sql.calcite.util.SqlTestFramework.QueryComponentSupplier
 /**
  * Upgrade an existing QueryComponentSupplier to support MSQ tests.
  */
-public class AbstractMSQComponentSupplierDelegate extends QueryComponentSupplierDelegate {
+public class AbstractMSQComponentSupplierDelegate extends QueryComponentSupplierDelegate
+{
 
   public AbstractMSQComponentSupplierDelegate(QueryComponentSupplier delegate)
   {
     super(delegate);
   }
 
+  @Override
   public DruidModule getCoreModule()
   {
     return DruidModuleCollection.of(
-          super.getCoreModule(),
-          new MSQTestModule(),
-          new IndexingServiceTuningConfigModule(),
-          new JoinableFactoryModule(),
-          new MSQExternalDataSourceModule(),
-          new MSQIndexingModule(),
-          new TestMSQSqlModule()
-        );
+        super.getCoreModule(),
+        new MSQTestModule(),
+        new IndexingServiceTuningConfigModule(),
+        new JoinableFactoryModule(),
+        new MSQExternalDataSourceModule(),
+        new MSQIndexingModule(),
+        new TestMSQSqlModule()
+    );
   }
 
   @Override
