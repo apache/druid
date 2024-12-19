@@ -244,9 +244,25 @@ public interface Query<T>
 
   Query<T> withDataSource(DataSource dataSource);
 
-  default Query<T> withPolicyRestrictions(Map<String, Optional<Policy>> restrictions, boolean enableStrictPolicyCheck)
+  /**
+   * Returns the query with an updated datasource based on the policy restrictions on tables.
+   * <p>
+   * If this datasource contains no table, no changes should occur. If {@code enableStrictPolicyCheck}, every table must
+   * have an entry in the {@code policyMap}, the value could be {@code Optional.empty()} meaning no restriction is
+   * enforced on this table.
+   *
+   * @param policyMap               a mapping of table names to policy restrictions, every table in the datasource tree must have an entry
+   * @param enableStrictPolicyCheck a boolean denoting that, every table should have an entry in the policies map.
+   * @return the updated datasource, with restrictions applied in the datasource tree
+   * @throws IllegalStateException in one of following conditions:
+   *                               <ul>
+   *                                 <li>table doesn't exist in {@code policyMap} and {@code enableStrictPolicyCheck}
+   *                                 <li>the policy the policyMap is not compatible with existing policy, see {@link RestrictedDataSource#mapWithRestriction(Map, boolean)}
+   *                               </ul>
+   */
+  default Query<T> withPolicyRestrictions(Map<String, Optional<Policy>> policyMap, boolean enableStrictPolicyCheck)
   {
-    return this.withDataSource(this.getDataSource().mapWithRestriction(restrictions, enableStrictPolicyCheck));
+    return this.withDataSource(this.getDataSource().mapWithRestriction(policyMap, enableStrictPolicyCheck));
   }
 
   default Query<T> optimizeForSegment(PerSegmentQueryOptimizationContext optimizationContext)

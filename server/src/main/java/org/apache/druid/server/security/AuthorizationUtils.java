@@ -46,8 +46,7 @@ import java.util.Set;
 public class AuthorizationUtils
 {
   static final ImmutableSet<String> RESTRICTION_APPLICABLE_RESOURCE_TYPES = ImmutableSet.of(
-      ResourceType.DATASOURCE,
-      ResourceType.VIEW
+      ResourceType.DATASOURCE
   );
 
   /**

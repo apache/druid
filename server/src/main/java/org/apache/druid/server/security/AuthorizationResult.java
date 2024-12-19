@@ -142,7 +142,7 @@ public class AuthorizationResult
                                                             .flatMap(policy -> policy.isPresent()
                                                                                ? Stream.of(policy.get())
                                                                                : Stream.empty()) // Can be replaced by Optional.stream after Java 11
-                                                            .anyMatch(Policy::hasNoRestriction)) {
+                                                            .anyMatch(p -> !p.hasNoRestriction())) {
       return Optional.of(Access.DEFAULT_ERROR_MESSAGE);
     }
 
@@ -164,5 +164,44 @@ public class AuthorizationResult
   public Set<ResourceAction> getAllResourceActions()
   {
     return allResourceActions;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    AuthorizationResult that = (AuthorizationResult) o;
+    return Objects.equals(isAllowed, that.isAllowed) &&
+           Objects.equals(failureMessage, that.failureMessage) &&
+           Objects.equals(policyRestrictions, that.policyRestrictions) &&
+           Objects.equals(sqlResourceActions, that.sqlResourceActions) &&
+           Objects.equals(allResourceActions, that.allResourceActions);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(isAllowed, failureMessage, policyRestrictions, sqlResourceActions, allResourceActions);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "AuthorizationResult [isAllowed="
+           + isAllowed
+           + ", failureMessage="
+           + failureMessage
+           + ", policyRestrictions="
+           + policyRestrictions
+           + ", sqlResourceActions="
+           + sqlResourceActions
+           + ", allResourceActions="
+           + allResourceActions
+           + "]";
   }
 }

@@ -53,6 +53,7 @@ import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
+import org.apache.druid.query.policy.Policy;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
@@ -75,6 +76,7 @@ import org.apache.druid.server.security.Escalator;
 import org.apache.druid.server.security.NoopEscalator;
 import org.apache.druid.server.security.ResourceType;
 import org.apache.druid.sql.SqlStatementFactory;
+import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregationModule;
 import org.apache.druid.sql.calcite.planner.DruidOperatorTable;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
@@ -117,6 +119,7 @@ public class CalciteTests
   public static final String ARRAYS_DATASOURCE = "arrays";
   public static final String BROADCAST_DATASOURCE = "broadcast";
   public static final String FORBIDDEN_DATASOURCE = "forbiddenDatasource";
+  public static final String RESTRICTED_DATASOURCE = "restrictedDatasource_m1_is_6";
   public static final String FORBIDDEN_DESTINATION = "forbiddenDestination";
   public static final String SOME_DATASOURCE = "some_datasource";
   public static final String SOME_DATSOURCE_ESCAPED = "some\\_datasource";
@@ -133,22 +136,27 @@ public class CalciteTests
   public static final String BENCHMARK_DATASOURCE = "benchmark_ds";
 
   public static final String TEST_SUPERUSER_NAME = "testSuperuser";
+  public static final Policy POLICY_NO_RESTRICTION_SUPERUSER = Policy.NO_RESTRICTION;
+  public static final Policy POLICY_RESTRICTION = Policy.fromRowFilter(BaseCalciteQueryTest.numericSelector("m1", "6"));
   public static final AuthorizerMapper TEST_AUTHORIZER_MAPPER = new AuthorizerMapper(null)
   {
     @Override
     public Authorizer getAuthorizer(String name)
     {
       return (authenticationResult, resource, action) -> {
+        boolean isRestrictedTable = resource.getName().equals(RESTRICTED_DATASOURCE);
+
         if (TEST_SUPERUSER_NAME.equals(authenticationResult.getIdentity())) {
-          return Access.OK;
+          return isRestrictedTable ? Access.allowWithRestriction(POLICY_NO_RESTRICTION_SUPERUSER) : Access.OK;
         }
 
         switch (resource.getType()) {
           case ResourceType.DATASOURCE:
-            if (FORBIDDEN_DATASOURCE.equals(resource.getName())) {
-              return Access.DENIED;
-            } else {
-              return Access.OK;
+            switch (resource.getName()) {
+              case FORBIDDEN_DATASOURCE:
+                return Access.DENIED;
+              default:
+                return isRestrictedTable ? Access.allowWithRestriction(POLICY_RESTRICTION) : Access.OK;
             }
           case ResourceType.VIEW:
             if ("forbiddenView".equals(resource.getName())) {
@@ -180,20 +188,22 @@ public class CalciteTests
     public Authorizer getAuthorizer(String name)
     {
       return (authenticationResult, resource, action) -> {
+        boolean isRestrictedTable = resource.getName().equals(RESTRICTED_DATASOURCE);
+
         if (TEST_SUPERUSER_NAME.equals(authenticationResult.getIdentity())) {
-          return Access.OK;
+          return isRestrictedTable ? Access.allowWithRestriction(POLICY_NO_RESTRICTION_SUPERUSER) : Access.OK;
         }
 
         switch (resource.getType()) {
           case ResourceType.DATASOURCE:
             if (FORBIDDEN_DATASOURCE.equals(resource.getName())) {
-              return new Access(false);
+              return Access.DENIED;
             } else {
-              return Access.OK;
+              return isRestrictedTable ? Access.allowWithRestriction(POLICY_RESTRICTION) : Access.OK;
             }
           case ResourceType.VIEW:
             if ("forbiddenView".equals(resource.getName())) {
-              return new Access(false);
+              return Access.DENIED;
             } else {
               return Access.OK;
             }
@@ -201,7 +211,7 @@ public class CalciteTests
           case ResourceType.EXTERNAL:
             return Access.OK;
           default:
-            return new Access(false);
+            return Access.DENIED;
         }
       };
     }
@@ -254,10 +264,10 @@ public class CalciteTests
   );
 
   public static final Injector INJECTOR = QueryStackTests.defaultInjectorBuilder()
-      .addModule(new LookylooModule())
-      .addModule(new SqlAggregationModule())
-      .addModule(new CalciteTestOperatorModule())
-      .build();
+                                                         .addModule(new LookylooModule())
+                                                         .addModule(new SqlAggregationModule())
+                                                         .addModule(new CalciteTestOperatorModule())
+                                                         .build();
 
   private CalciteTests()
   {
@@ -398,7 +408,8 @@ public class CalciteTests
         provider,
         NodeRole.COORDINATOR,
         "/simple/leader"
-    ) {
+    )
+    {
       @Override
       public String findCurrentLeader()
       {
@@ -406,7 +417,8 @@ public class CalciteTests
       }
     };
 
-    final OverlordClient overlordClient = new NoopOverlordClient() {
+    final OverlordClient overlordClient = new NoopOverlordClient()
+    {
       @Override
       public ListenableFuture<URI> findCurrentLeader()
       {
@@ -481,7 +493,8 @@ public class CalciteTests
         conglomerate,
         walker,
         plannerConfig,
-        authorizerMapper);
+        authorizerMapper
+    );
   }
 
   /**

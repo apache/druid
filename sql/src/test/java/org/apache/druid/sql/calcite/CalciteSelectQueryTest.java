@@ -1166,6 +1166,46 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testCountRestrictedTable_shouldFilterOnPolicy()
+  {
+    testQuery(
+        PLANNER_CONFIG_DEFAULT,
+        "SELECT COUNT(*) FROM druid.restrictedDatasource_m1_is_6",
+        CalciteTests.SUPER_USER_AUTH_RESULT,
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.RESTRICTED_DATASOURCE)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .aggregators(aggregators(new CountAggregatorFactory("a0")))
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{6L} // superuser can see all records
+        )
+    );
+
+    testQuery(
+        PLANNER_CONFIG_DEFAULT,
+        "SELECT COUNT(*) FROM druid.restrictedDatasource_m1_is_6",
+        CalciteTests.REGULAR_USER_AUTH_RESULT,
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.RESTRICTED_DATASOURCE)
+                  .intervals(querySegmentSpec(Filtration.eternity()))
+                  .granularity(Granularities.ALL)
+                  .aggregators(aggregators(new CountAggregatorFactory("a0")))
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(
+            new Object[]{1L} // regular user can only see 1 record based on the policy
+        )
+    );
+  }
+
+  @Test
   public void testSelectStarOnForbiddenTable()
   {
     assertQueryIsForbidden(

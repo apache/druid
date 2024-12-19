@@ -77,6 +77,7 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
+import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.external.ExternalDataSource;
 import org.apache.druid.sql.calcite.filtration.Filtration;
@@ -796,6 +797,20 @@ public class MSQSelectTest extends MSQTestBase
         .setExpectedResultRows(ImmutableList.of(new Object[]{1L, 6L}))
         .verifyResults();
 
+  }
+
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testSelectRestricted(String contextName, Map<String, Object> context)
+  {
+    testSelectQuery()
+        .setSql("select count(*) from druid.restrictedDatasource_m1_is_6")
+        .setQueryContext(context)
+        .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
+            CoreMatchers.instanceOf(ForbiddenException.class),
+            ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("Unauthorized"))
+        ))
+        .verifyExecutionError();
   }
 
   @MethodSource("data")
