@@ -25,7 +25,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.inject.Injector;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.guice.DruidInjectorBuilder;
+import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringEncoding;
 import org.apache.druid.java.util.common.StringUtils;
@@ -82,6 +82,7 @@ import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CacheTestHelperModule.ResultCacheMode;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.calcite.util.DruidModuleCollection;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.sql.guice.SqlModule;
@@ -259,11 +260,9 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
       properties.put(SqlModule.PROPERTY_SQL_APPROX_COUNT_DISTINCT_CHOICE, HllSketchApproxCountDistinctSqlAggregator.NAME);
     }
 
-    @Override
-    public void configureGuice(DruidInjectorBuilder builder)
+    public DruidModule getCoreModule()
     {
-      super.configureGuice(builder);
-      builder.addModule(new HllSketchModule());
+      return new DruidModuleCollection(super.getCoreModule(), new HllSketchModule());
     }
 
     @SuppressWarnings("resource")
