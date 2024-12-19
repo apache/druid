@@ -145,9 +145,13 @@ public class RestrictedDataSource implements DataSource
   }
 
   @Override
-  public DataSource mapWithRestriction(Map<String, Optional<Policy>> policies, boolean enableStrictPolicyCheck)
+  public DataSource mapWithRestriction(
+      Map<String, Optional<Policy>> policies,
+      Policy.TablePolicySecurityLevel tablePolicySecurityLevel
+  )
   {
-    if (!policies.containsKey(base.getName()) && enableStrictPolicyCheck) {
+    // This method always throws, since we should only put restrictions once. When query is being passed by druid-system, it should use SUPERUSER AuthorizationResults.
+    if (!policies.containsKey(base.getName())) {
       throw new ISE("Missing policy check result for table [%s]", base.getName());
     }
 
@@ -159,12 +163,7 @@ public class RestrictedDataSource implements DataSource
           policy
       );
     }
-    if (newPolicy.get().hasNoRestriction()) {
-      // The internal druid_system could use NO_RESTRICTION policy.
-      return this;
-    } else {
-      throw new ISE("Incompatible restrictions on [%s]: %s and %s", base.getName(), policy, newPolicy.get());
-    }
+    throw new ISE("Multiple restrictions on [%s]: %s and %s", base.getName(), policy, newPolicy.get());
   }
 
   @Override

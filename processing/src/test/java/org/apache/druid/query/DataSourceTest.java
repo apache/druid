@@ -23,7 +23,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
+import junitparams.JUnitParamsRunner;
+import junitparams.Parameters;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.filter.NullFilter;
@@ -34,10 +37,12 @@ import org.apache.druid.segment.TestHelper;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 
 import java.io.IOException;
 import java.util.Optional;
 
+@RunWith(JUnitParamsRunner.class)
 public class DataSourceTest
 {
   private static final ObjectMapper JSON_MAPPER = TestHelper.makeJsonMapper();
@@ -127,7 +132,12 @@ public class DataSourceTest
   }
 
   @Test
-  public void testMapWithRestriction() throws Exception
+  @Parameters({
+      "APPLY_WHEN_APPLICABLE",
+      "POLICY_CHECKED_ON_ALL_TABLES_ALLOW_EMPTY",
+      "POLICY_CHECKED_ON_ALL_TABLES_POLICY_MUST_EXIST"
+  })
+  public void testMapWithRestriction(Policy.TablePolicySecurityLevel securityLevel)
   {
     TableDataSource table1 = TableDataSource.create("table1");
     TableDataSource table2 = TableDataSource.create("table2");
@@ -137,7 +147,7 @@ public class DataSourceTest
         "table1",
         Optional.of(Policy.NO_RESTRICTION),
         "table2",
-        Optional.empty(),
+        Optional.of(Policy.NO_RESTRICTION),
         "table3",
         Optional.of(Policy.fromRowFilter(new NullFilter(
             "some-column",
@@ -146,10 +156,10 @@ public class DataSourceTest
     );
 
     Assert.assertEquals(
-        unionDataSource.mapWithRestriction(restrictions, true),
+        unionDataSource.mapWithRestriction(restrictions, securityLevel),
         new UnionDataSource(Lists.newArrayList(
             RestrictedDataSource.create(table1, Policy.NO_RESTRICTION),
-            table2,
+            RestrictedDataSource.create(table2, Policy.NO_RESTRICTION),
             RestrictedDataSource.create(table3, Policy.fromRowFilter(new NullFilter("some-column", null))
             )
         ))
@@ -157,7 +167,15 @@ public class DataSourceTest
   }
 
   @Test
-  public void testMapWithRestrictionThrowsWhenMissingRestriction() throws Exception
+  @Parameters({
+      "APPLY_WHEN_APPLICABLE, ",
+      "POLICY_CHECKED_ON_ALL_TABLES_ALLOW_EMPTY, Need to check row-level policy for all tables missing [table2]",
+      "POLICY_CHECKED_ON_ALL_TABLES_POLICY_MUST_EXIST, Need to check row-level policy for all tables missing [table2]"
+  })
+  public void testMapWithRestriction_tableMissingRestriction(
+      Policy.TablePolicySecurityLevel securityLevel,
+      String error
+  )
   {
     TableDataSource table1 = TableDataSource.create("table1");
     TableDataSource table2 = TableDataSource.create("table2");
@@ -167,31 +185,93 @@ public class DataSourceTest
         Optional.of(Policy.fromRowFilter(TrueDimFilter.instance()))
     );
 
-    Exception e = Assert.assertThrows(
-        RuntimeException.class,
-        () -> unionDataSource.mapWithRestriction(restrictions, true)
-    );
-    Assert.assertEquals(e.getMessage(), "Need to check row-level policy for all tables, missing [table2]");
+    if (error.isEmpty()) {
+      unionDataSource.mapWithRestriction(restrictions, securityLevel);
+    } else {
+      ISE e = Assert.assertThrows(ISE.class, () -> unionDataSource.mapWithRestriction(restrictions, securityLevel));
+      Assert.assertEquals(e.getMessage(), error);
+    }
   }
 
   @Test
-  public void testMapWithRestrictionThrowsWithIncompatibleRestriction() throws Exception
+  @Parameters({
+      "APPLY_WHEN_APPLICABLE, ",
+      "POLICY_CHECKED_ON_ALL_TABLES_ALLOW_EMPTY, ",
+      "POLICY_CHECKED_ON_ALL_TABLES_POLICY_MUST_EXIST, Every table must have a policy restriction attached missing [table2]"
+  })
+  public void testMapWithRestriction_tableWithEmptyPolicy(Policy.TablePolicySecurityLevel securityLevel, String error)
+  {
+    TableDataSource table1 = TableDataSource.create("table1");
+    TableDataSource table2 = TableDataSource.create("table2");
+    UnionDataSource unionDataSource = new UnionDataSource(Lists.newArrayList(table1, table2));
+    ImmutableMap<String, Optional<Policy>> restrictions = ImmutableMap.of(
+        "table1",
+        Optional.of(Policy.NO_RESTRICTION),
+        "table2",
+        Optional.empty()
+    );
+
+    if (error.isEmpty()) {
+      Assert.assertEquals(
+          unionDataSource.mapWithRestriction(restrictions, securityLevel),
+          new UnionDataSource(Lists.newArrayList(RestrictedDataSource.create(table1, Policy.NO_RESTRICTION), table2))
+      );
+    } else {
+      ISE e = Assert.assertThrows(
+          ISE.class,
+          () -> unionDataSource.mapWithRestriction(
+              restrictions,
+              securityLevel
+          )
+      );
+      Assert.assertEquals(e.getMessage(), error);
+    }
+  }
+
+  @Test
+  @Parameters({
+      "APPLY_WHEN_APPLICABLE",
+      "POLICY_CHECKED_ON_ALL_TABLES_ALLOW_EMPTY",
+      "POLICY_CHECKED_ON_ALL_TABLES_POLICY_MUST_EXIST"
+  })
+  public void testMapWithRestriction_onRestrictedDataSource_alwaysThrows(Policy.TablePolicySecurityLevel securityLevel)
   {
     RestrictedDataSource restrictedDataSource = RestrictedDataSource.create(
         TableDataSource.create("table1"),
         Policy.NO_RESTRICTION
     );
-    ImmutableMap<String, Optional<Policy>> restrictions = ImmutableMap.of(
+    ImmutableMap<String, Optional<Policy>> anotherRestrictions = ImmutableMap.of(
         "table1",
         Optional.of(Policy.fromRowFilter(new NullFilter("some-column", null)))
     );
+    ImmutableMap<String, Optional<Policy>> noRestrictions = ImmutableMap.of("table1", Optional.empty());
+    ImmutableMap<String, Optional<Policy>> emptyPolicyMap = ImmutableMap.of();
 
-    Assert.assertThrows(RuntimeException.class, () -> restrictedDataSource.mapWithRestriction(restrictions, true));
-    Assert.assertThrows(RuntimeException.class, () -> restrictedDataSource.mapWithRestriction(restrictions, false));
-    Assert.assertThrows(RuntimeException.class, () -> restrictedDataSource.mapWithRestriction(ImmutableMap.of(), true));
-    Assert.assertThrows(
-        RuntimeException.class,
-        () -> restrictedDataSource.mapWithRestriction(ImmutableMap.of("table1", Optional.empty()), true)
+    ISE e = Assert.assertThrows(
+        ISE.class,
+        () -> restrictedDataSource.mapWithRestriction(anotherRestrictions, securityLevel)
+    );
+    Assert.assertEquals(
+        "Multiple restrictions on [table1]: Policy{rowFilter=null} and Policy{rowFilter=some-column IS NULL}",
+        e.getMessage()
+    );
+
+    ISE e2 = Assert.assertThrows(
+        ISE.class,
+        () -> restrictedDataSource.mapWithRestriction(noRestrictions, securityLevel)
+    );
+    Assert.assertEquals(
+        "No restriction found on table [table1], but had Policy{rowFilter=null} before.",
+        e2.getMessage()
+    );
+
+    ISE e3 = Assert.assertThrows(
+        ISE.class,
+        () -> restrictedDataSource.mapWithRestriction(emptyPolicyMap, securityLevel)
+    );
+    Assert.assertEquals(
+        "Missing policy check result for table [table1]",
+        e3.getMessage()
     );
   }
 }

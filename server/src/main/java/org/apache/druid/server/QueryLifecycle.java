@@ -320,10 +320,11 @@ public class QueryLifecycle
       transition(State.AUTHORIZING, State.UNAUTHORIZED);
     } else {
       transition(State.AUTHORIZING, State.AUTHORIZED);
-      if (!authorizationResult.equals(AuthorizationResult.ALLOW_ALL)) {
+      if (!AuthorizationResult.SUPERUSER.equals(authorizationResult)) {
+        // Unless this request comes from superuser or druid-internal, we need to map the query with restrictions.
         this.baseQuery = this.baseQuery.withPolicyRestrictions(
             authorizationResult.getPolicy(),
-            authConfig.isEnableStrictPolicyCheck()
+            authConfig.getTablePolicySecurityLevel()
         );
       }
     }

@@ -247,22 +247,19 @@ public interface Query<T>
   /**
    * Returns the query with an updated datasource based on the policy restrictions on tables.
    * <p>
-   * If this datasource contains no table, no changes should occur. If {@code enableStrictPolicyCheck}, every table must
-   * have an entry in the {@code policyMap}, the value could be {@code Optional.empty()} meaning no restriction is
-   * enforced on this table.
+   * If this datasource contains no table, no changes should occur.
    *
-   * @param policyMap               a mapping of table names to policy restrictions, every table in the datasource tree must have an entry
-   * @param enableStrictPolicyCheck a boolean denoting that, every table should have an entry in the policies map.
+   * @param policyMap                a mapping of table names to policy restrictions
+   * @param tablePolicySecurityLevel an enum denoting that, how strict we need to enforce the policy on tables
    * @return the updated datasource, with restrictions applied in the datasource tree
-   * @throws IllegalStateException in one of following conditions:
-   *                               <ul>
-   *                                 <li>table doesn't exist in {@code policyMap} and {@code enableStrictPolicyCheck}
-   *                                 <li>the policy the policyMap is not compatible with existing policy, see {@link RestrictedDataSource#mapWithRestriction(Map, boolean)}
-   *                               </ul>
+   * @throws IllegalStateException if {@code policyMap} is not compatible with {@code tablePolicySecurityLevel}
    */
-  default Query<T> withPolicyRestrictions(Map<String, Optional<Policy>> policyMap, boolean enableStrictPolicyCheck)
+  default Query<T> withPolicyRestrictions(
+      Map<String, Optional<Policy>> policyMap,
+      Policy.TablePolicySecurityLevel tablePolicySecurityLevel
+  )
   {
-    return this.withDataSource(this.getDataSource().mapWithRestriction(policyMap, enableStrictPolicyCheck));
+    return this.withDataSource(this.getDataSource().mapWithRestriction(policyMap, tablePolicySecurityLevel));
   }
 
   default Query<T> optimizeForSegment(PerSegmentQueryOptimizationContext optimizationContext)

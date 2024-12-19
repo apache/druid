@@ -343,16 +343,16 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
         Optional.of(Policy.fromRowFilter(
             new NullFilter("some-column", null)))
     );
-    List<?> results1 = runner1.run(QueryPlus.wrap(testQuery.withPolicyRestrictions(noRestriction, true)))
+    List<?> results1 = runner1.run(QueryPlus.wrap(testQuery.withPolicyRestrictions(noRestriction, Policy.TablePolicySecurityLevel.POLICY_CHECKED_ON_ALL_TABLES_POLICY_MUST_EXIST)))
                               .toList();
-    List<?> results2 = runner1.run(QueryPlus.wrap(testQuery.withPolicyRestrictions(alwaysTrueRestriction, true)))
+    List<?> results2 = runner1.run(QueryPlus.wrap(testQuery.withPolicyRestrictions(alwaysTrueRestriction, Policy.TablePolicySecurityLevel.POLICY_CHECKED_ON_ALL_TABLES_POLICY_MUST_EXIST)))
                               .toList();
 
     Assert.assertEquals(Collections.singletonList(expectedSegmentAnalysis1), results1);
     Assert.assertEquals(Collections.singletonList(expectedSegmentAnalysis1), results2);
     Assert.assertThrows(
         RuntimeException.class,
-        () -> runner1.run(QueryPlus.wrap(testQuery.withPolicyRestrictions(withRestriction, true)))
+        () -> runner1.run(QueryPlus.wrap(testQuery.withPolicyRestrictions(withRestriction, Policy.TablePolicySecurityLevel.POLICY_CHECKED_ON_ALL_TABLES_POLICY_MUST_EXIST)))
     );
   }
 

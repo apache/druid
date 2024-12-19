@@ -23,11 +23,13 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.policy.Policy;
 import org.apache.druid.utils.CollectionUtils;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 
 public class AuthConfig
@@ -63,7 +65,7 @@ public class AuthConfig
 
   public AuthConfig()
   {
-    this(null, null, null, false, false, null, null, false, false);
+    this(null, null, null, false, false, null, null, false, Policy.TablePolicySecurityLevel.APPLY_WHEN_APPLICABLE);
   }
 
   @JsonProperty
@@ -101,7 +103,7 @@ public class AuthConfig
   private final boolean enableInputSourceSecurity;
 
   @JsonProperty
-  private final boolean enableStrictPolicyCheck;
+  private final Policy.TablePolicySecurityLevel tablePolicySecurityLevel;
 
   @JsonCreator
   public AuthConfig(
@@ -113,7 +115,7 @@ public class AuthConfig
       @JsonProperty("unsecuredContextKeys") Set<String> unsecuredContextKeys,
       @JsonProperty("securedContextKeys") Set<String> securedContextKeys,
       @JsonProperty("enableInputSourceSecurity") boolean enableInputSourceSecurity,
-      @JsonProperty("enableStrictPolicyCheck") boolean enableStrictPolicyCheck
+      @JsonProperty("tablePolicySecurityLevel") Policy.TablePolicySecurityLevel tablePolicySecurityLevel
   )
   {
     this.authenticatorChain = authenticatorChain;
@@ -126,7 +128,7 @@ public class AuthConfig
                                 : unsecuredContextKeys;
     this.securedContextKeys = securedContextKeys;
     this.enableInputSourceSecurity = enableInputSourceSecurity;
-    this.enableStrictPolicyCheck = enableStrictPolicyCheck;
+    this.tablePolicySecurityLevel = tablePolicySecurityLevel;
   }
 
   public List<String> getAuthenticatorChain()
@@ -163,9 +165,9 @@ public class AuthConfig
    * When enabled, {@link org.apache.druid.server.QueryLifecycle} checks a policy entry in {@link AuthorizationResult#getPolicy()}
    * for all tables in the query, and throws exception when there's no entry.
    */
-  public boolean isEnableStrictPolicyCheck()
+  public Policy.TablePolicySecurityLevel getTablePolicySecurityLevel()
   {
-    return enableStrictPolicyCheck;
+    return tablePolicySecurityLevel;
   }
 
   /**
@@ -216,7 +218,7 @@ public class AuthConfig
            && Objects.equals(unsecuredContextKeys, that.unsecuredContextKeys)
            && Objects.equals(securedContextKeys, that.securedContextKeys)
            && Objects.equals(enableInputSourceSecurity, that.enableInputSourceSecurity)
-           && Objects.equals(enableStrictPolicyCheck, that.enableStrictPolicyCheck);
+           && Objects.equals(tablePolicySecurityLevel, that.tablePolicySecurityLevel);
   }
 
   @Override
@@ -231,7 +233,7 @@ public class AuthConfig
         unsecuredContextKeys,
         securedContextKeys,
         enableInputSourceSecurity,
-        enableStrictPolicyCheck
+        tablePolicySecurityLevel
     );
   }
 
@@ -247,7 +249,7 @@ public class AuthConfig
            ", unsecuredContextKeys=" + unsecuredContextKeys +
            ", securedContextKeys=" + securedContextKeys +
            ", enableInputSourceSecurity=" + enableInputSourceSecurity +
-           ", enableStrictPolicyCheck=" + enableStrictPolicyCheck +
+           ", tablePolicySecurityLevel=" + tablePolicySecurityLevel +
            '}';
   }
 
@@ -269,7 +271,7 @@ public class AuthConfig
     private Set<String> unsecuredContextKeys;
     private Set<String> securedContextKeys;
     private boolean enableInputSourceSecurity;
-    private boolean enableStrictPolicyCheck;
+    private Policy.TablePolicySecurityLevel tablePolicySecurityLevel;
 
     public Builder setAuthenticatorChain(List<String> authenticatorChain)
     {
@@ -319,9 +321,9 @@ public class AuthConfig
       return this;
     }
 
-    public Builder setEnableStrictPolicyCheck(boolean enableStrictPolicyCheck)
+    public Builder setTablePolicySecurityLevel(Policy.TablePolicySecurityLevel tablePolicySecurityLevel)
     {
-      this.enableStrictPolicyCheck = enableStrictPolicyCheck;
+      this.tablePolicySecurityLevel = tablePolicySecurityLevel;
       return this;
     }
 
@@ -336,7 +338,7 @@ public class AuthConfig
           unsecuredContextKeys,
           securedContextKeys,
           enableInputSourceSecurity,
-          enableStrictPolicyCheck
+          Optional.ofNullable(tablePolicySecurityLevel).orElse(Policy.TablePolicySecurityLevel.APPLY_WHEN_APPLICABLE)
       );
     }
   }

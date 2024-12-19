@@ -20,6 +20,7 @@
 package org.apache.druid.server.security;
 
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.query.policy.Policy;
 
 import javax.annotation.Nonnull;
@@ -44,11 +45,22 @@ import java.util.stream.Stream;
 public class AuthorizationResult
 {
   /**
-   * Provides unrestricted access to all resources. This should be limited to Druid internal systems or superusers,
-   * except in cases where ACL considerations are not a priority.
+   * Provides unrestricted superuser access to all resources. This should be limited to Druid internal systems or
+   * superusers, except in cases where ACL considerations are not a priority.
    */
-  public static final AuthorizationResult ALLOW_ALL = new AuthorizationResult(
-      true,
+  public static final AuthorizationResult SUPERUSER = new AuthorizationResult(
+      PERMISSION.SUPERUSER,
+      null,
+      Collections.emptyMap(),
+      null,
+      null
+  );
+
+  /**
+   * Provides access with no restrictions to all resources.
+   */
+  public static final AuthorizationResult ALLOW_NO_RESTRICTION = new AuthorizationResult(
+      PERMISSION.ALLOW_NO_RESTRICTION,
       null,
       Collections.emptyMap(),
       null,
@@ -59,14 +71,22 @@ public class AuthorizationResult
    * Provides a default deny access result.
    */
   public static final AuthorizationResult DENY = new AuthorizationResult(
-      false,
+      PERMISSION.DENY,
       Access.DENIED.getMessage(),
       Collections.emptyMap(),
       null,
       null
   );
 
-  private final boolean isAllowed;
+  enum PERMISSION
+  {
+    SUPERUSER,
+    ALLOW_NO_RESTRICTION,
+    ALLOW_WITH_RESTRICTION,
+    DENY
+  }
+
+  private final PERMISSION permission;
 
   @Nullable
   private final String failureMessage;
@@ -80,28 +100,44 @@ public class AuthorizationResult
   private final Set<ResourceAction> allResourceActions;
 
   AuthorizationResult(
-      boolean isAllowed,
+      PERMISSION permission,
       @Nullable String failureMessage,
       Map<String, Optional<Policy>> policyRestrictions,
       @Nullable Set<ResourceAction> sqlResourceActions,
       @Nullable Set<ResourceAction> allResourceActions
   )
   {
-    this.isAllowed = isAllowed;
+    this.permission = permission;
     this.failureMessage = failureMessage;
     this.policyRestrictions = policyRestrictions;
     this.sqlResourceActions = sqlResourceActions;
     this.allResourceActions = allResourceActions;
+
+    // sanity check
+    if (failureMessage != null && !PERMISSION.DENY.equals(permission)) {
+      throw DruidException.defensive("Failure message should only be set for DENY permission");
+    } else if (PERMISSION.DENY.equals(permission) && failureMessage == null) {
+      throw DruidException.defensive("Failure message must be set for DENY permission");
+    }
+
+    if (!policyRestrictions.isEmpty() && !PERMISSION.ALLOW_WITH_RESTRICTION.equals(permission)) {
+      throw DruidException.defensive("Policy restrictions should only be set for ALLOW_WITH_RESTRICTION permission");
+    } else if (PERMISSION.ALLOW_WITH_RESTRICTION.equals(permission) && policyRestrictions.isEmpty()) {
+      throw DruidException.defensive("Policy restrictions must be set for ALLOW_WITH_RESTRICTION permission");
+    }
   }
 
   public static AuthorizationResult deny(@Nonnull String failureMessage)
   {
-    return new AuthorizationResult(false, failureMessage, Collections.emptyMap(), null, null);
+    return new AuthorizationResult(PERMISSION.DENY, failureMessage, Collections.emptyMap(), null, null);
   }
 
   public static AuthorizationResult allowWithRestriction(Map<String, Optional<Policy>> policyRestrictions)
   {
-    return new AuthorizationResult(true, null, policyRestrictions, null, null);
+    if (policyRestrictions.isEmpty()) {
+      return ALLOW_NO_RESTRICTION;
+    }
+    return new AuthorizationResult(PERMISSION.ALLOW_WITH_RESTRICTION, null, policyRestrictions, null, null);
   }
 
   public AuthorizationResult withResourceActions(
@@ -110,7 +146,7 @@ public class AuthorizationResult
   )
   {
     return new AuthorizationResult(
-        isAllowed,
+        permission,
         failureMessage,
         ImmutableMap.copyOf(getPolicy()),
         sqlResourceActions,
@@ -133,20 +169,25 @@ public class AuthorizationResult
    */
   public Optional<String> getPermissionErrorMessage(boolean policyRestrictionsNotPermitted)
   {
-    if (!isAllowed) {
-      return Optional.of(Objects.requireNonNull(failureMessage));
+    switch (permission) {
+      case SUPERUSER:
+      case ALLOW_NO_RESTRICTION:
+        return Optional.empty();
+      case DENY:
+        return Optional.of(Objects.requireNonNull(failureMessage));
+      case ALLOW_WITH_RESTRICTION:
+        if (policyRestrictionsNotPermitted && policyRestrictions.values()
+                                                                .stream()
+                                                                .flatMap(policy -> policy.isPresent()
+                                                                                   ? Stream.of(policy.get())
+                                                                                   : Stream.empty()) // Can be replaced by Optional.stream after Java 11
+                                                                .anyMatch(p -> !p.hasNoRestriction())) {
+          return Optional.of(Access.DEFAULT_ERROR_MESSAGE);
+        }
+        return Optional.empty();
+      default:
+        throw DruidException.defensive("unreachable");
     }
-
-    if (policyRestrictionsNotPermitted && policyRestrictions.values()
-                                                            .stream()
-                                                            .flatMap(policy -> policy.isPresent()
-                                                                               ? Stream.of(policy.get())
-                                                                               : Stream.empty()) // Can be replaced by Optional.stream after Java 11
-                                                            .anyMatch(p -> !p.hasNoRestriction())) {
-      return Optional.of(Access.DEFAULT_ERROR_MESSAGE);
-    }
-
-    return Optional.empty();
   }
 
   public Map<String, Optional<Policy>> getPolicy()
@@ -176,7 +217,7 @@ public class AuthorizationResult
       return false;
     }
     AuthorizationResult that = (AuthorizationResult) o;
-    return Objects.equals(isAllowed, that.isAllowed) &&
+    return Objects.equals(permission, that.permission) &&
            Objects.equals(failureMessage, that.failureMessage) &&
            Objects.equals(policyRestrictions, that.policyRestrictions) &&
            Objects.equals(sqlResourceActions, that.sqlResourceActions) &&
@@ -186,14 +227,14 @@ public class AuthorizationResult
   @Override
   public int hashCode()
   {
-    return Objects.hash(isAllowed, failureMessage, policyRestrictions, sqlResourceActions, allResourceActions);
+    return Objects.hash(permission, failureMessage, policyRestrictions, sqlResourceActions, allResourceActions);
   }
 
   @Override
   public String toString()
   {
-    return "AuthorizationResult [isAllowed="
-           + isAllowed
+    return "AuthorizationResult [permission="
+           + permission
            + ", failureMessage="
            + failureMessage
            + ", policyRestrictions="

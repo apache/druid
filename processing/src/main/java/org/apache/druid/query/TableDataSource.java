@@ -117,15 +117,22 @@ public class TableDataSource implements DataSource
   }
 
   @Override
-  public DataSource mapWithRestriction(Map<String, Optional<Policy>> policyMap, boolean enableStrictPolicyCheck)
+  public DataSource mapWithRestriction(
+      Map<String, Optional<Policy>> policyMap,
+      Policy.TablePolicySecurityLevel tablePolicySecurityLevel
+  )
   {
-    if (!policyMap.containsKey(name) && enableStrictPolicyCheck) {
-      throw new ISE("Need to check row-level policy for all tables, missing [%s]", name);
+    if (!policyMap.containsKey(name) && tablePolicySecurityLevel.policyMustBeCheckedOnAllTables()) {
+      throw new ISE("Need to check row-level policy for all tables missing [%s]", name);
     }
     Optional<Policy> policy = policyMap.getOrDefault(name, Optional.empty());
     if (!policy.isPresent()) {
-      // Skip adding restriction on table if there's no policy restriction found.
-      return this;
+      if (tablePolicySecurityLevel.policyMustBeCheckedAndExistOnAllTables()) {
+        throw new ISE("Every table must have a policy restriction attached missing [%s]", name);
+      } else {
+        // Skip adding restriction on table if there's no policy restriction found.
+        return this;
+      }
     }
     return RestrictedDataSource.create(this, policy.get());
   }

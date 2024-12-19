@@ -975,7 +975,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
 
     return queryLifecycleFactory
         .factorize()
-        .runSimple(segmentMetadataQuery, escalator.createEscalatedAuthenticationResult(), AuthorizationResult.ALLOW_ALL)
+        .runSimple(segmentMetadataQuery, escalator.createEscalatedAuthenticationResult(), AuthorizationResult.SUPERUSER)
         .getResults();
   }
 

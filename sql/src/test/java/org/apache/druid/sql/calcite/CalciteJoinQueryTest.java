@@ -5191,7 +5191,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
         .build();
 
     QueryLifecycle ql = queryFramework().queryLifecycle();
-    Sequence seq = ql.runSimple(query, CalciteTests.SUPER_USER_AUTH_RESULT, AuthorizationResult.ALLOW_ALL).getResults();
+    Sequence seq = ql.runSimple(query, CalciteTests.SUPER_USER_AUTH_RESULT, AuthorizationResult.SUPERUSER).getResults();
     List<Object> results = seq.toList();
     Assert.assertEquals(
         ImmutableList.of(ResultRow.of("def")),

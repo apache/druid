@@ -68,7 +68,7 @@ public class AuthorizationResultTest
         )
     );
     assertEquals(
-        "AuthorizationResult [isAllowed=true, failureMessage=null, policyRestrictions={table1=Optional[Policy{rowFilter=null}], table2=Optional[Policy{rowFilter=column1 = val1}]}, sqlResourceActions=null, allResourceActions=null]",
+        "AuthorizationResult [permission=ALLOW_WITH_RESTRICTION, failureMessage=null, policyRestrictions={table1=Optional[Policy{rowFilter=null}], table2=Optional[Policy{rowFilter=column1 = val1}]}, sqlResourceActions=null, allResourceActions=null]",
         result.toString()
     );
   }

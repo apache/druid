@@ -137,7 +137,7 @@ public class PlannerFactory extends PlannerToolbox
     thePlanner.getPlannerContext()
               .setAuthenticationResult(NoopEscalator.getInstance().createEscalatedAuthenticationResult());
     thePlanner.validate();
-    thePlanner.authorize(ra -> AuthorizationResult.ALLOW_ALL, ImmutableSet.of());
+    thePlanner.authorize(ra -> AuthorizationResult.SUPERUSER, ImmutableSet.of());
     return thePlanner;
   }
 

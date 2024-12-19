@@ -1067,7 +1067,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     EasyMock.expect(lifecycleMock.runSimple(
                 expectedMetadataQuery,
                 AllowAllAuthenticator.ALLOW_ALL_RESULT,
-                AuthorizationResult.ALLOW_ALL
+                AuthorizationResult.SUPERUSER
             ))
             .andReturn(QueryResponse.withEmptyContext(Sequences.empty()));
 
@@ -2306,7 +2306,7 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     EasyMock.expect(lifecycleMock.runSimple(
                 expectedMetadataQuery,
                 AllowAllAuthenticator.ALLOW_ALL_RESULT,
-                AuthorizationResult.ALLOW_ALL
+                AuthorizationResult.SUPERUSER
             ))
             .andReturn(QueryResponse.withEmptyContext(Sequences.empty())).once();
 
