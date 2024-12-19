@@ -535,7 +535,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
       String hadoopJobIdFile = getHadoopJobIdFileName();
 
       try {
-        ClassLoader loader = buildClassLoader(
+        ClassLoader loader = HadoopTask.buildClassLoader(
             getHadoopDependencyCoordinates(),
             taskConfig.getDefaultHadoopCoordinates()
         );
@@ -616,7 +616,7 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
 
     final ClassLoader oldLoader = Thread.currentThread().getContextClassLoader();
     try {
-      ClassLoader loader = buildClassLoader(
+      ClassLoader loader = HadoopTask.buildClassLoader(
           getHadoopDependencyCoordinates(),
           taskConfig.getDefaultHadoopCoordinates()
       );

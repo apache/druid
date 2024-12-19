@@ -318,7 +318,7 @@ public class FrameWriterUtils
         return buf;
       }
     } else {
-      return getUtf8ByteBufferFromString(selector.lookupName(dictionaryId));
+      return FrameWriterUtils.getUtf8ByteBufferFromString(selector.lookupName(dictionaryId));
     }
   }
 

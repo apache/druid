@@ -209,7 +209,7 @@ public class ImmutableConciseSet
         }
       }
       ConciseSet newSet = new ConciseSet(words, false);
-      return newImmutableFromMutable(newSet);
+      return ImmutableConciseSet.newImmutableFromMutable(newSet);
     }
 
     IntList retVal = new IntList();

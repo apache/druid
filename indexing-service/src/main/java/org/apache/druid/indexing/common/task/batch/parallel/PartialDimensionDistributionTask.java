@@ -40,6 +40,7 @@ import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.SurrogateTaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.task.AbstractBatchIndexTask;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringDistribution;
 import org.apache.druid.indexing.common.task.batch.parallel.distribution.StringSketch;
@@ -228,7 +229,7 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
         tuningConfig.getMaxSavedParseExceptions()
     );
     try (
-        final CloseableIterator<InputRow> inputRowIterator = inputSourceReader(
+        final CloseableIterator<InputRow> inputRowIterator = AbstractBatchIndexTask.inputSourceReader(
             toolbox.getIndexingTmpDir(),
             dataSchema,
             inputSource,

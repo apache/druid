@@ -149,7 +149,7 @@ public class ConvertSelectorsToIns extends BottomUpTransform
     @Override
     protected Pair<SelectorDimFilter, List<DimFilter>> getCollectibleComparison(DimFilter filter)
     {
-      return splitAnd(
+      return ConvertSelectorsToIns.splitAnd(
           filter,
           SelectorDimFilter.class,
 
@@ -217,7 +217,7 @@ public class ConvertSelectorsToIns extends BottomUpTransform
     @Override
     protected Pair<EqualityFilter, List<DimFilter>> getCollectibleComparison(DimFilter filter)
     {
-      return splitAnd(
+      return ConvertSelectorsToIns.splitAnd(
           filter,
           EqualityFilter.class,
 
@@ -275,7 +275,7 @@ public class ConvertSelectorsToIns extends BottomUpTransform
     @Override
     protected Pair<EqualityFilter, List<DimFilter>> getCollectibleComparison(DimFilter filter)
     {
-      return splitAnd(
+      return ConvertSelectorsToIns.splitAnd(
           filter,
           EqualityFilter.class,
 

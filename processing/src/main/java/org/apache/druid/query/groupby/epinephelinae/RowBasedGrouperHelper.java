@@ -449,7 +449,7 @@ public class RowBasedGrouperHelper
     final ColumnSelectorFactory columnSelectorFactory =
         query.getVirtualColumns()
              .wrap(
-                 createResultRowBasedColumnSelectorFactory(
+                 RowBasedGrouperHelper.createResultRowBasedColumnSelectorFactory(
                      subquery,
                      rowSupplier,
                      RowSignature.Finalization.UNKNOWN

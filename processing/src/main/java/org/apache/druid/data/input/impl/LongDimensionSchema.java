@@ -40,7 +40,7 @@ public class LongDimensionSchema extends DimensionSchema
   @Override
   public String getTypeName()
   {
-    return LONG_TYPE_NAME;
+    return DimensionSchema.LONG_TYPE_NAME;
   }
 
   @Override

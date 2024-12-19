@@ -119,7 +119,7 @@ public interface ColumnCapabilities extends TypeSignature<ValueType>
 
     public Capable coerceUnknownToBoolean(boolean unknownIsTrue)
     {
-      return this == UNKNOWN ? of(unknownIsTrue) : this;
+      return this == UNKNOWN ? Capable.of(unknownIsTrue) : this;
     }
 
     public Capable and(Capable other)
@@ -146,7 +146,7 @@ public interface ColumnCapabilities extends TypeSignature<ValueType>
     @JsonCreator
     public static Capable ofNullable(@Nullable Boolean bool)
     {
-      return bool == null ? UNKNOWN : of(bool);
+      return bool == null ? Capable.UNKNOWN : of(bool);
     }
 
     @JsonValue

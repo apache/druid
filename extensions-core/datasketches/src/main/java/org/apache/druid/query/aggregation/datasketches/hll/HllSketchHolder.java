@@ -38,15 +38,15 @@ public class HllSketchHolder
     if (obj instanceof HllSketchHolder) {
       return (HllSketchHolder) obj;
     } else if (obj instanceof HllSketch) {
-      return of((HllSketch) obj);
+      return HllSketchHolder.of((HllSketch) obj);
     } else if (obj instanceof Union) {
-      return of((Union) obj);
+      return HllSketchHolder.of((Union) obj);
     } else if (obj instanceof byte[]) {
-      return of(HllSketch.heapify((byte[]) obj));
+      return HllSketchHolder.of(HllSketch.heapify((byte[]) obj));
     } else if (obj instanceof Memory) {
-      return of(HllSketch.wrap((Memory) obj));
+      return HllSketchHolder.of(HllSketch.wrap((Memory) obj));
     } else if (obj instanceof String) {
-      return of(HllSketch.heapify(StringUtils.decodeBase64(StringUtils.toUtf8((String) obj))));
+      return HllSketchHolder.of(HllSketch.heapify(StringUtils.decodeBase64(StringUtils.toUtf8((String) obj))));
     }
 
     throw new ISE("Object is not of a type[%s] that can be deserialized to sketch.", obj.getClass());

@@ -264,25 +264,25 @@ public class DruidVolcanoCost implements RelOptCost
     @Override
     public RelOptCost makeHugeCost()
     {
-      return HUGE;
+      return DruidVolcanoCost.HUGE;
     }
 
     @Override
     public RelOptCost makeInfiniteCost()
     {
-      return INFINITY;
+      return DruidVolcanoCost.INFINITY;
     }
 
     @Override
     public RelOptCost makeTinyCost()
     {
-      return TINY;
+      return DruidVolcanoCost.TINY;
     }
 
     @Override
     public RelOptCost makeZeroCost()
     {
-      return ZERO;
+      return DruidVolcanoCost.ZERO;
     }
   }
 }

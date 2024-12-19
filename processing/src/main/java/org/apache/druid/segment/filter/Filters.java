@@ -164,7 +164,7 @@ public class Filters
     }
     boolean useCNF = query.context().getBoolean(QueryContexts.USE_FILTER_CNF_KEY, QueryContexts.DEFAULT_USE_FILTER_CNF);
     try {
-      return useCNF ? toCnf(filter) : filter;
+      return useCNF ? Filters.toCnf(filter) : filter;
     }
     catch (CNFFilterExplosionException cnfFilterExplosionException) {
       return filter; // cannot convert to CNF, return the filter as is
@@ -321,7 +321,7 @@ public class Filters
    */
   public static List<Filter> toNormalizedOrClauses(Filter filter) throws CNFFilterExplosionException
   {
-    Filter normalizedFilter = toCnf(filter);
+    Filter normalizedFilter = Filters.toCnf(filter);
 
     // List of candidates for pushdown
     // CNF normalization will generate either
