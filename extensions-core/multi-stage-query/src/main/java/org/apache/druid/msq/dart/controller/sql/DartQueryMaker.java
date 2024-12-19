@@ -52,6 +52,7 @@ import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.msq.sql.MSQTaskQueryMaker;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.server.QueryResponse;
+import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.run.QueryMaker;
@@ -127,6 +128,9 @@ public class DartQueryMaker implements QueryMaker
   @Override
   public QueryResponse<Object[]> runQuery(DruidQuery druidQuery)
   {
+    plannerContext.getAuthorizationResult().getPermissionErrorMessage(true).ifPresent(error -> {
+      throw new ForbiddenException(error);
+    });
     final MSQSpec querySpec = MSQTaskQueryMaker.makeQuerySpec(
         null,
         druidQuery,
