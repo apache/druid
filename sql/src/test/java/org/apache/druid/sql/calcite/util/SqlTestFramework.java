@@ -209,7 +209,9 @@ public class SqlTestFramework
      * @see #configureGuice(DruidInjectorBuilder) for the preferred solution.
      */
     @Deprecated
-    default void configureJsonMapper(ObjectMapper mapper) {}
+    default void configureJsonMapper(ObjectMapper mapper)
+    {
+    }
 
     JoinableFactoryWrapper createJoinableFactoryWrapper(LookupExtractorFactoryContainerProvider lookupProvider);
 
