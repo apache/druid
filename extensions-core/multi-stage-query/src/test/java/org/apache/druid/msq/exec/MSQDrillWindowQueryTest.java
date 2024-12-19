@@ -19,27 +19,20 @@
 
 package org.apache.druid.msq.exec;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
-import com.google.inject.Injector;
-import com.google.inject.Module;
-import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.msq.exec.MSQDrillWindowQueryTest.DrillWindowQueryMSQComponentSupplier;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
-import org.apache.druid.msq.test.CalciteMSQTestsHelper;
+import org.apache.druid.msq.test.AbstractMSQComponentSupplierDelegate;
 import org.apache.druid.msq.test.ExtractResultsFactory;
 import org.apache.druid.msq.test.MSQTestOverlordServiceClient;
 import org.apache.druid.msq.test.VerifyMSQSupportedNativeQueriesPredicate;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.QueryContexts;
-import org.apache.druid.query.groupby.TestGroupByBuffers;
-import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.sql.calcite.DrillWindowQueryTest;
 import org.apache.druid.sql.calcite.QueryTestBuilder;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
 import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.planner.PlannerCaptureHook;
-import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
@@ -54,35 +47,11 @@ public class MSQDrillWindowQueryTest extends DrillWindowQueryTest
       MultiStageQueryContext.CTX_MAX_NUM_TASKS, 5
   ));
 
-  public static class DrillWindowQueryMSQComponentSupplier extends DrillComponentSupplier
+  public static class DrillWindowQueryMSQComponentSupplier extends AbstractMSQComponentSupplierDelegate
   {
-    public DrillWindowQueryMSQComponentSupplier(TempDirProducer tempFolderProducer)
+    public DrillWindowQueryMSQComponentSupplier(TempDirProducer tempDirProducer)
     {
-      super(tempFolderProducer);
-    }
-
-    @Override
-    public void configureGuice(DruidInjectorBuilder builder)
-    {
-      super.configureGuice(builder);
-      builder.addModules(CalciteMSQTestsHelper.fetchModules(tempDirProducer::newTempFolder, TestGroupByBuffers.createDefault()).toArray(new Module[0]));
-      builder.addModule(new TestMSQSqlModule());
-    }
-
-    @Override
-    public SqlEngine createEngine(
-        QueryLifecycleFactory qlf,
-        ObjectMapper queryJsonMapper,
-        Injector injector
-    )
-    {
-      return injector.getInstance(MSQTaskSqlEngine.class);
-    }
-
-    @Override
-    public Boolean isExplainSupported()
-    {
-      return false;
+      super(new DrillComponentSupplier(tempDirProducer));
     }
   }
 
