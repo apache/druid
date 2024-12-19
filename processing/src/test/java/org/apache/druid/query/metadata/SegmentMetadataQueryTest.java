@@ -52,11 +52,13 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.filter.NullFilter;
 import org.apache.druid.query.metadata.metadata.AggregatorMergeStrategy;
 import org.apache.druid.query.metadata.metadata.ColumnAnalysis;
 import org.apache.druid.query.metadata.metadata.ListColumnIncluderator;
 import org.apache.druid.query.metadata.metadata.SegmentAnalysis;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
+import org.apache.druid.query.policy.Policy;
 import org.apache.druid.query.spec.LegacySegmentSpec;
 import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.QueryableIndex;
@@ -86,6 +88,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -327,6 +330,30 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
     List<SegmentAnalysis> results = runner1.run(QueryPlus.wrap(testQuery)).toList();
 
     Assert.assertEquals(Collections.singletonList(expectedSegmentAnalysis1), results);
+  }
+
+  @Test
+  public void testSegmentMetadataQueryWorksWithRestrictions() throws Exception
+  {
+    ImmutableMap<String, Optional<Policy>> noRestriction = ImmutableMap.of(DATASOURCE, Optional.empty());
+    ImmutableMap<String, Optional<Policy>> alwaysTrueRestriction = ImmutableMap.of(DATASOURCE, Optional.of(
+        Policy.NO_RESTRICTION));
+    ImmutableMap<String, Optional<Policy>> withRestriction = ImmutableMap.of(
+        DATASOURCE,
+        Optional.of(Policy.fromRowFilter(
+            new NullFilter("some-column", null)))
+    );
+    List<?> results1 = runner1.run(QueryPlus.wrap(testQuery.withPolicyRestrictions(noRestriction, true)))
+                              .toList();
+    List<?> results2 = runner1.run(QueryPlus.wrap(testQuery.withPolicyRestrictions(alwaysTrueRestriction, true)))
+                              .toList();
+
+    Assert.assertEquals(Collections.singletonList(expectedSegmentAnalysis1), results1);
+    Assert.assertEquals(Collections.singletonList(expectedSegmentAnalysis1), results2);
+    Assert.assertThrows(
+        RuntimeException.class,
+        () -> runner1.run(QueryPlus.wrap(testQuery.withPolicyRestrictions(withRestriction, true)))
+    );
   }
 
   @Test

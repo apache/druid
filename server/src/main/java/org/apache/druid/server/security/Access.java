@@ -21,26 +21,67 @@ package org.apache.druid.server.security;
 
 import com.google.common.base.Strings;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.query.policy.Policy;
 
+import javax.annotation.Nullable;
+import java.util.Optional;
+
+/**
+ * Represents the outcome of verifying permissions to perform an {@link Action} on a {@link Resource}, along with any
+ * policy restrictions.
+ */
 public class Access
 {
   public static final String DEFAULT_ERROR_MESSAGE = "Unauthorized";
+  public static final String DEFAULT_AUTHORIZED_MESSAGE = "Authorized";
 
-  public static final Access OK = new Access(true);
-  public static final Access DENIED = new Access(false);
+  public static final Access OK = allow();
+  public static final Access DENIED = deny("");
 
   private final boolean allowed;
   private final String message;
+  // A policy restriction on top of table-level read access. It should be empty if there are no policy restrictions
+  // or if access is requested for an action other than reading the table.
+  private final Optional<Policy> policy;
 
+  /**
+   * @deprecated use {@link #allow()} or {@link #deny(String)} instead
+   */
+  @Deprecated
   public Access(boolean allowed)
   {
-    this(allowed, "");
+    this(allowed, "", Optional.empty());
   }
 
+  /**
+   * @deprecated use {@link #allow()} or {@link #deny(String)} instead
+   */
+  @Deprecated
   public Access(boolean allowed, String message)
+  {
+    this(allowed, message, Optional.empty());
+  }
+
+  Access(boolean allowed, String message, Optional<Policy> policy)
   {
     this.allowed = allowed;
     this.message = message;
+    this.policy = policy;
+  }
+
+  public static Access allow()
+  {
+    return new Access(true, "", Optional.empty());
+  }
+
+  public static Access deny(@Nullable String message)
+  {
+    return new Access(false, StringUtils.nullToEmptyNonDruidDataString(message), null);
+  }
+
+  public static Access allowWithRestriction(Policy policy)
+  {
+    return new Access(true, "", Optional.of(policy));
   }
 
   public boolean isAllowed()
@@ -48,25 +89,30 @@ public class Access
     return allowed;
   }
 
-  public String getMessage()
+  public Optional<Policy> getPolicy()
   {
-    return message;
+    return policy;
   }
 
-  public String toMessage()
+  public String getMessage()
   {
+    StringBuilder stringBuilder = new StringBuilder();
+    stringBuilder.append(allowed ? DEFAULT_AUTHORIZED_MESSAGE : DEFAULT_ERROR_MESSAGE);
     if (!Strings.isNullOrEmpty(message)) {
-      return toString();
-    } else if (allowed) {
-      return "Authorized";
-    } else {
-      return DEFAULT_ERROR_MESSAGE;
+      stringBuilder.append(", ");
+      stringBuilder.append(message);
     }
+    if (allowed && policy.isPresent()) {
+      stringBuilder.append(", with restriction ");
+      stringBuilder.append(policy.get());
+    }
+    return stringBuilder.toString();
   }
 
   @Override
   public String toString()
   {
-    return StringUtils.format("Allowed:%s, Message:%s", allowed, message);
+    return StringUtils.format("Allowed:%s, Message:%s, Policy: %s", allowed, message, policy);
   }
+
 }

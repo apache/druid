@@ -103,7 +103,7 @@ public class SqlExecutionReporter
         // datasources.
         metricBuilder.setDimension(
             "dataSource",
-            stmt.authResult.sqlResourceActions
+            stmt.authResult.getSqlResourceActions()
                             .stream()
                             .map(action -> action.getResource().getName())
                             .collect(Collectors.toList())

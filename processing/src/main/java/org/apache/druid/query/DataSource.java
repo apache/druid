@@ -23,12 +23,16 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.planning.PreJoinableClause;
+import org.apache.druid.query.policy.Policy;
 import org.apache.druid.segment.SegmentReference;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * Represents a source... of data... for a query. Analogous to the "FROM" clause in SQL.
@@ -43,7 +47,8 @@ import java.util.function.Function;
     @JsonSubTypes.Type(value = InlineDataSource.class, name = "inline"),
     @JsonSubTypes.Type(value = GlobalTableDataSource.class, name = "globalTable"),
     @JsonSubTypes.Type(value = UnnestDataSource.class, name = "unnest"),
-    @JsonSubTypes.Type(value = FilteredDataSource.class, name = "filter")
+    @JsonSubTypes.Type(value = FilteredDataSource.class, name = "filter"),
+    @JsonSubTypes.Type(value = RestrictedDataSource.class, name = "restrict")
 })
 public interface DataSource
 {
@@ -88,11 +93,11 @@ public interface DataSource
 
   /**
    * Returns true if this datasource can be the base datasource of query processing.
-   *
+   * <p>
    * Base datasources drive query processing. If the base datasource is {@link TableDataSource}, for example, queries
    * are processed in parallel on data servers. If the base datasource is {@link InlineDataSource}, queries are
    * processed on the Broker. See {@link DataSourceAnalysis#getBaseDataSource()} for further discussion.
-   *
+   * <p>
    * Datasources that are *not* concrete must be pre-processed in some way before they can be processed by the main
    * query stack. For example, {@link QueryDataSource} must be executed first and substituted with its results.
    *
@@ -117,6 +122,31 @@ public interface DataSource
    * @return the updated datasource to be used
    */
   DataSource withUpdatedDataSource(DataSource newSource);
+
+  /**
+   * Returns an updated datasource based on the policy restrictions on tables.
+   * <p>
+   * If this datasource contains no table, no changes should occur. If {@code enableStrictPolicyCheck}, every table must
+   * have an entry in the {@code policyMap}, the value could be {@code Optional.empty()} meaning no restriction is
+   * enforced on this table.
+   *
+   * @param policyMap               a mapping of table names to policy restrictions, every table in the datasource tree must have an entry
+   * @param enableStrictPolicyCheck a boolean denoting that, every table should have an entry in the policies map.
+   * @return the updated datasource, with restrictions applied in the datasource tree
+   * @throws IllegalStateException in one of following conditions:
+   *                               <ul>
+   *                                 <li>table doesn't exist in {@code policyMap} and {@code enableStrictPolicyCheck}
+   *                                 <li>the policy the policyMap is not compatible with existing policy, see {@link RestrictedDataSource#mapWithRestriction(Map, boolean)}
+   *                               </ul>
+   */
+  default DataSource mapWithRestriction(Map<String, Optional<Policy>> policyMap, boolean enableStrictPolicyCheck)
+  {
+    List<DataSource> children = this.getChildren()
+                                    .stream()
+                                    .map(child -> child.mapWithRestriction(policyMap, enableStrictPolicyCheck))
+                                    .collect(Collectors.toList());
+    return this.withChildren(children);
+  }
 
   /**
    * Compute a cache key prefix for a data source. This includes the data sources that participate in the RHS of a

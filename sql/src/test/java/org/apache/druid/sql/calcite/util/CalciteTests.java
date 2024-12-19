@@ -146,13 +146,13 @@ public class CalciteTests
         switch (resource.getType()) {
           case ResourceType.DATASOURCE:
             if (FORBIDDEN_DATASOURCE.equals(resource.getName())) {
-              return new Access(false);
+              return Access.DENIED;
             } else {
               return Access.OK;
             }
           case ResourceType.VIEW:
             if ("forbiddenView".equals(resource.getName())) {
-              return new Access(false);
+              return Access.DENIED;
             } else {
               return Access.OK;
             }
@@ -161,14 +161,14 @@ public class CalciteTests
           case ResourceType.EXTERNAL:
             if (Action.WRITE.equals(action)) {
               if (FORBIDDEN_DESTINATION.equals(resource.getName())) {
-                return new Access(false);
+                return Access.DENIED;
               } else {
                 return Access.OK;
               }
             }
-            return new Access(false);
+            return Access.DENIED;
           default:
-            return new Access(false);
+            return Access.DENIED;
         }
       };
     }

@@ -24,12 +24,16 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.planning.DataSourceAnalysis;
+import org.apache.druid.query.policy.Policy;
 import org.apache.druid.segment.SegmentReference;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
@@ -110,6 +114,20 @@ public class TableDataSource implements DataSource
   public DataSource withUpdatedDataSource(DataSource newSource)
   {
     return newSource;
+  }
+
+  @Override
+  public DataSource mapWithRestriction(Map<String, Optional<Policy>> policyMap, boolean enableStrictPolicyCheck)
+  {
+    if (!policyMap.containsKey(name) && enableStrictPolicyCheck) {
+      throw new ISE("Need to check row-level policy for all tables, missing [%s]", name);
+    }
+    Optional<Policy> policy = policyMap.getOrDefault(name, Optional.empty());
+    if (!policy.isPresent()) {
+      // Skip adding restriction on table if there's no policy restriction found.
+      return this;
+    }
+    return RestrictedDataSource.create(this, policy.get());
   }
 
   @Override
