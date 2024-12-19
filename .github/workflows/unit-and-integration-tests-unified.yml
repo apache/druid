@@ -172,7 +172,6 @@ jobs:
       sql_compatibility: true
 
   unit-tests:
-    if: false
     name: "unit tests (jdk17)"
     uses: ./.github/workflows/unit-tests.yml
     needs: build
