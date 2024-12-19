@@ -666,7 +666,7 @@ public class QuerySchedulerTest
   {
     return new LazySequence<>(() -> {
       return new BaseSequence<>(
-          new BaseSequence.IteratorMaker<>()
+          new BaseSequence.IteratorMaker<Integer, Iterator<Integer>>()
           {
             @Override
             public Iterator<Integer> make()
