@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
@@ -192,7 +193,7 @@ public class QueryLifecycleTest
   }
 
   @Test
-  public void testAuthorizedWithNoPolicyRestriction()
+  public void testAuthorizedWithNoPolicyOnTable()
   {
     EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
     EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
@@ -202,7 +203,7 @@ public class QueryLifecycleTest
                 new Resource(DATASOURCE, ResourceType.DATASOURCE),
                 Action.READ
             ))
-            .andReturn(Access.allowWithRestriction(Policy.NO_RESTRICTION)).once();
+            .andReturn(Access.allow()).once();
     EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject()))
             .andReturn(toolChest).times(2);
     EasyMock.expect(texasRanger.getQueryRunnerForIntervals(
@@ -248,7 +249,7 @@ public class QueryLifecycleTest
             .andReturn(toolChest).times(2);
     EasyMock.expect(texasRanger.getQueryRunnerForIntervals(queryMatchDataSource(RestrictedDataSource.create(
                 TableDataSource.create(DATASOURCE),
-                null
+                alwaysTruePolicy
             )), EasyMock.anyObject()))
             .andReturn(runner).times(2);
     EasyMock.expect(runner.run(EasyMock.anyObject(), EasyMock.anyObject())).andReturn(Sequences.empty()).times(2);
@@ -360,7 +361,7 @@ public class QueryLifecycleTest
             authenticationResult,
             AuthorizationResult.allowWithRestriction(ImmutableMap.of())
         ));
-    Assert.assertEquals("Missing row filter for table [some_datasource]", e2.getMessage());
+    Assert.assertEquals("Missing policy check result for table [some_datasource]", e2.getMessage());
   }
 
   @Test
@@ -394,14 +395,14 @@ public class QueryLifecycleTest
                                       .build();
 
     QueryLifecycle lifecycle = createLifecycle(authConfig);
-    RuntimeException e = Assert.assertThrows(RuntimeException.class, () ->
+    ISE e = Assert.assertThrows(ISE.class, () ->
         lifecycle.runSimple(
             query,
             authenticationResult,
             AuthorizationResult.allowWithRestriction(ImmutableMap.of(DATASOURCE, Optional.of(filterPolicy2)))
         ));
     Assert.assertEquals(
-        "Incompatible restrictions on [some_datasource]: some-column IS NULL and some-column2 IS NULL",
+        "Incompatible restrictions on [some_datasource]: Policy{rowFilter=some-column IS NULL} and Policy{rowFilter=some-column2 IS NULL}",
         e.getMessage()
     );
 
@@ -414,11 +415,11 @@ public class QueryLifecycleTest
     );
 
     lifecycle2 = createLifecycle(authConfig);
-    // the same filter, compatible
+    // no restriction, compatible
     lifecycle2.runSimple(
         query,
         authenticationResult,
-        AuthorizationResult.allowWithRestriction(ImmutableMap.of(DATASOURCE, Optional.of(filterPolicy)))
+        AuthorizationResult.allowWithRestriction(ImmutableMap.of(DATASOURCE, Optional.of(Policy.NO_RESTRICTION)))
     );
   }
 

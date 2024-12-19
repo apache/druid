@@ -78,10 +78,13 @@ public class DataSourceTest
   public void testRestrictedDataSource() throws IOException
   {
     DataSource dataSource = JSON_MAPPER.readValue(
-        "{\"type\":\"restrict\",\"base\":{\"type\":\"table\",\"name\":\"somedatasource\"},\"filter\":null}",
+        "{\"type\":\"restrict\",\"base\":{\"type\":\"table\",\"name\":\"somedatasource\"},\"policy\":{\"rowFilter\":null}}",
         DataSource.class
     );
-    Assert.assertEquals(RestrictedDataSource.create(TableDataSource.create("somedatasource"), null), dataSource);
+    Assert.assertEquals(
+        RestrictedDataSource.create(TableDataSource.create("somedatasource"), Policy.NO_RESTRICTION),
+        dataSource
+    );
   }
 
   @Test
@@ -145,7 +148,7 @@ public class DataSourceTest
     Assert.assertEquals(
         unionDataSource.mapWithRestriction(restrictions, true),
         new UnionDataSource(Lists.newArrayList(
-            RestrictedDataSource.create(table1, null),
+            RestrictedDataSource.create(table1, Policy.NO_RESTRICTION),
             table2,
             RestrictedDataSource.create(table3, Policy.fromRowFilter(new NullFilter("some-column", null))
             )
@@ -174,7 +177,10 @@ public class DataSourceTest
   @Test
   public void testMapWithRestrictionThrowsWithIncompatibleRestriction() throws Exception
   {
-    RestrictedDataSource restrictedDataSource = RestrictedDataSource.create(TableDataSource.create("table1"), null);
+    RestrictedDataSource restrictedDataSource = RestrictedDataSource.create(
+        TableDataSource.create("table1"),
+        Policy.NO_RESTRICTION
+    );
     ImmutableMap<String, Optional<Policy>> restrictions = ImmutableMap.of(
         "table1",
         Optional.of(Policy.fromRowFilter(new NullFilter("some-column", null)))
