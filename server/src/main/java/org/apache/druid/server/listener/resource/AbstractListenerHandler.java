@@ -87,7 +87,7 @@ public abstract class AbstractListenerHandler<ObjType> implements ListenerHandle
       // Now do the ACTUAL conversion
       inObjMap = ImmutableMap.copyOf(Maps.transformValues(
           tempMap,
-          new Function<Object, ObjType>()
+          new Function<>()
           {
             @Override
             public ObjType apply(Object input)

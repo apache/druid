@@ -51,7 +51,7 @@ public final class CollectionUtils
    */
   public static <E> Collection<E> createLazyCollectionFromStream(Supplier<Stream<E>> sequentialStreamSupplier, int size)
   {
-    return new AbstractCollection<E>()
+    return new AbstractCollection<>()
     {
       @Override
       public Iterator<E> iterator()

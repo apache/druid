@@ -173,7 +173,7 @@ public class QueryLifecycle
      * cannot be moved into execute().  We leave this as an exercise for the future, however as this oddity
      * was discovered while just trying to expose HTTP response headers
      */
-    return new QueryResponse<T>(
+    return new QueryResponse<>(
         Sequences.wrap(
             results,
             new SequenceWrapper()
@@ -314,7 +314,7 @@ public class QueryLifecycle
                                   .withIdentity(authenticationResult.getIdentity())
                                   .run(texasRanger, responseContext);
 
-    return new QueryResponse<T>(res == null ? Sequences.empty() : res, responseContext);
+    return new QueryResponse<>(res == null ? Sequences.empty() : res, responseContext);
   }
 
   /**

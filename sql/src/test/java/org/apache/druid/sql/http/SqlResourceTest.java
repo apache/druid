@@ -1905,7 +1905,7 @@ public class SqlResourceTest extends CalciteTestBase
     Assert.assertEquals(1, testRequestLogger.getSqlQueryLogs().size());
 
     final Map<String, Object> stats = testRequestLogger.getSqlQueryLogs().get(0).getQueryStats().getStats();
-    final Map<String, Object> queryContext = (Map<String, Object>) stats.get("context");
+    final Map<String, Object> queryContext = (Map<String, Object>) testRequestLogger.getSqlQueryLogs().get(0).getSqlQueryContext();
     Assert.assertEquals(success, stats.get("success"));
     Assert.assertEquals(CalciteTests.REGULAR_USER_AUTH_RESULT.getIdentity(), stats.get("identity"));
     Assert.assertTrue(stats.containsKey("sqlQuery/time"));

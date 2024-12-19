@@ -52,7 +52,7 @@ public class FunctionalExtractionTest
     }
   }
 
-  private static final Function<String, String> NULL_FN = new Function<String, String>()
+  private static final Function<String, String> NULL_FN = new Function<>()
   {
     @Nullable
     @Override
@@ -62,7 +62,7 @@ public class FunctionalExtractionTest
     }
   };
 
-  private static final Function<String, String> TURTLE_FN = new Function<String, String>()
+  private static final Function<String, String> TURTLE_FN = new Function<>()
   {
     @Nullable
     @Override
@@ -72,7 +72,7 @@ public class FunctionalExtractionTest
     }
   };
 
-  private static final Function<String, String> EMPTY_STR_FN = new Function<String, String>()
+  private static final Function<String, String> EMPTY_STR_FN = new Function<>()
   {
     @Nullable
     @Override
@@ -82,7 +82,7 @@ public class FunctionalExtractionTest
     }
   };
 
-  private static final Function<String, String> IDENTITY_FN = new Function<String, String>()
+  private static final Function<String, String> IDENTITY_FN = new Function<>()
   {
     @Nullable
     @Override
@@ -92,7 +92,7 @@ public class FunctionalExtractionTest
     }
   };
 
-  private static final Function<String, String> ONLY_PRESENT = new Function<String, String>()
+  private static final Function<String, String> ONLY_PRESENT = new Function<>()
   {
     @Nullable
     @Override

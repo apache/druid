@@ -76,7 +76,7 @@ public class TimewarpOperator<T> implements PostProcessingOperator<T>
 
   public QueryRunner<T> postProcess(final QueryRunner<T> baseRunner, final long now)
   {
-    return new QueryRunner<T>()
+    return new QueryRunner<>()
     {
       @Override
       public Sequence<T> run(final QueryPlus<T> queryPlus, final ResponseContext responseContext)
@@ -99,7 +99,7 @@ public class TimewarpOperator<T> implements PostProcessingOperator<T>
                 ),
                 responseContext
             ),
-            new Function<T, T>()
+            new Function<>()
             {
               @Override
               public T apply(T input)

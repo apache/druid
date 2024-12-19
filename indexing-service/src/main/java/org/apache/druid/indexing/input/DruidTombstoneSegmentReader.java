@@ -47,7 +47,7 @@ public class DruidTombstoneSegmentReader extends IntermediateRowParsingReader<Ma
   @Override
   protected CloseableIterator<Map<String, Object>> intermediateRowIterator()
   {
-    return new CloseableIterator<Map<String, Object>>()
+    return new CloseableIterator<>()
     {
       @Override
       public void close()

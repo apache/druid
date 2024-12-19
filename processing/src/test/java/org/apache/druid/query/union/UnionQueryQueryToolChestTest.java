@@ -112,7 +112,7 @@ public class UnionQueryQueryToolChestTest
   static class TestScanQuery
   {
     final ScanQuery query;
-    final List<Object[]> results = new ArrayList<Object[]>();
+    final List<Object[]> results = new ArrayList<>();
 
     public TestScanQuery(String sourceName, RowSignature signature)
     {
@@ -143,7 +143,7 @@ public class UnionQueryQueryToolChestTest
 
     private List<List<Object>> convertResultsToListOfLists()
     {
-      List<List<Object>> resultsRows = new ArrayList<List<Object>>();
+      List<List<Object>> resultsRows = new ArrayList<>();
       for (Object[] objects : results) {
         resultsRows.add(Arrays.asList(objects));
       }

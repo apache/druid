@@ -71,7 +71,7 @@ public class HttpPostEmitterStressTest
       final List<List<Batch>> eventBatchesPerThread = new ArrayList<>(nThreads);
       for (int i = 0; i < nThreads; i++) {
         eventsPerThread.add(new IntArrayList());
-        eventBatchesPerThread.add(new ArrayList<Batch>());
+        eventBatchesPerThread.add(new ArrayList<>());
       }
       for (int i = 0; i < N; i++) {
         eventsPerThread.get(ThreadLocalRandom.current().nextInt(nThreads)).add(i);

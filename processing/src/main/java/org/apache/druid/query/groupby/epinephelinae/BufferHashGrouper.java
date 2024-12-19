@@ -165,7 +165,7 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
 
     if (sorted) {
       @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
-      final List<Integer> wrappedOffsets = new AbstractList<Integer>()
+      final List<Integer> wrappedOffsets = new AbstractList<>()
       {
         @Override
         public Integer get(int index)
@@ -212,7 +212,7 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
           }
       );
 
-      return new CloseableIterator<Entry<KeyType>>()
+      return new CloseableIterator<>()
       {
         final ReusableEntry<KeyType> reusableEntry = ReusableEntry.create(keySerde, aggregators.size());
 
@@ -248,7 +248,7 @@ public class BufferHashGrouper<KeyType> extends AbstractBufferHashGrouper<KeyTyp
       };
     } else {
       // Unsorted iterator
-      return new CloseableIterator<Entry<KeyType>>()
+      return new CloseableIterator<>()
       {
         final ReusableEntry<KeyType> reusableEntry = ReusableEntry.create(keySerde, aggregators.size());
 

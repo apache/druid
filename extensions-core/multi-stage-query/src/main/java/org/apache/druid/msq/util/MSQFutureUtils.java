@@ -47,7 +47,7 @@ public class MSQFutureUtils
     if (cancelOnErrorOrInterrupt) {
       Futures.addCallback(
           retVal,
-          new FutureCallback<List<T>>()
+          new FutureCallback<>()
           {
             @Override
             public void onSuccess(@Nullable List<T> result)

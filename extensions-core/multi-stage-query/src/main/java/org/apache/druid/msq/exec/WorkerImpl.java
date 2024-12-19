@@ -867,7 +867,7 @@ public class WorkerImpl implements Worker
           @Override
           public <T> Callable<T> decorateCallable(Callable<T> callable)
           {
-            return new PrioritizedCallable<T>()
+            return new PrioritizedCallable<>()
             {
               @Override
               public int getPriority()

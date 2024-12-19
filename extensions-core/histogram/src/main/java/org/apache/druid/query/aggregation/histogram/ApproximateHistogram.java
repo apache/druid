@@ -1659,7 +1659,7 @@ public class ApproximateHistogram
 
     final float cutoff = 0.1f;
 
-    final ArrayList<Float> breaks = new ArrayList<Float>();
+    final ArrayList<Float> breaks = new ArrayList<>();
 
     // to deal with left inclusivity when the min is the same as a break
     final float bottomBreak = minFloor - bucketSize;

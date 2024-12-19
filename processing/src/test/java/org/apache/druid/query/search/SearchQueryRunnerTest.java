@@ -166,7 +166,7 @@ public class SearchQueryRunnerTest extends InitializedNullHandlingTest
 
     // double the value
     QueryRunner mergedRunner = TOOL_CHEST.mergeResults(
-        new QueryRunner<Result<SearchResultValue>>()
+        new QueryRunner<>()
         {
           @Override
           public Sequence<Result<SearchResultValue>> run(

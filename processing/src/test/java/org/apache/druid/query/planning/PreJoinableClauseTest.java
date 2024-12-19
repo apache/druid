@@ -33,7 +33,8 @@ public class PreJoinableClauseTest
       "j.",
       new TableDataSource("foo"),
       JoinType.LEFT,
-      JoinConditionAnalysis.forExpression("x == \"j.x\"", "j.", ExprMacroTable.nil())
+      JoinConditionAnalysis.forExpression("x == \"j.x\"", "j.", ExprMacroTable.nil()),
+      null
   );
 
   @Test

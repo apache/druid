@@ -35,7 +35,7 @@ public class QueryResponse<T>
 
   public static <T> QueryResponse<T> withEmptyContext(Sequence<T> results)
   {
-    return new QueryResponse<T>(results, ResponseContext.createEmpty());
+    return new QueryResponse<>(results, ResponseContext.createEmpty());
   }
 
   public Sequence<T> getResults()

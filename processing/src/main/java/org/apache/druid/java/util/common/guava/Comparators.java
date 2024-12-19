@@ -31,7 +31,7 @@ import java.util.Comparator;
  */
 public class Comparators
 {
-  private static final Ordering<Object> ALWAYS_EQUAL = new Ordering<Object>()
+  private static final Ordering<Object> ALWAYS_EQUAL = new Ordering<>()
   {
     @SuppressWarnings("ComparatorMethodParameterNotUsed")
     @Override
@@ -75,7 +75,7 @@ public class Comparators
     return NATURAL_NULLS_FIRST;
   }
 
-  private static final Comparator<Interval> INTERVAL_BY_START_THEN_END = new Comparator<Interval>()
+  private static final Comparator<Interval> INTERVAL_BY_START_THEN_END = new Comparator<>()
   {
     private final DateTimeComparator dateTimeComp = DateTimeComparator.getInstance();
 
@@ -97,7 +97,7 @@ public class Comparators
     }
   };
 
-  private static final Comparator<Interval> INTERVAL_BY_END_THEN_START = new Comparator<Interval>()
+  private static final Comparator<Interval> INTERVAL_BY_END_THEN_START = new Comparator<>()
   {
     private final DateTimeComparator dateTimeComp = DateTimeComparator.getInstance();
 

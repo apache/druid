@@ -397,7 +397,7 @@ public class BatchAppenderator implements Appenderator
 
       Futures.addCallback(
           persistAll(null),
-          new FutureCallback<Object>()
+          new FutureCallback<>()
           {
             @Override
             public void onSuccess(@Nullable Object result)

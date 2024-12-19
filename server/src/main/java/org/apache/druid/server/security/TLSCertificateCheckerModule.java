@@ -76,7 +76,9 @@ public class TLSCertificateCheckerModule implements Module
     @Inject
     public void inject(Injector injector)
     {
-      final List<Binding<TLSCertificateChecker>> checkerBindings = injector.findBindingsByType(new TypeLiteral<TLSCertificateChecker>(){});
+      final List<Binding<TLSCertificateChecker>> checkerBindings = injector.findBindingsByType(new TypeLiteral<>()
+      {
+      });
 
       checker = findChecker(checkerType, checkerBindings);
       if (checker == null) {

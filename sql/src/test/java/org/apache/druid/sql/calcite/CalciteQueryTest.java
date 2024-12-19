@@ -41,6 +41,7 @@ import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.InlineDataSource;
+import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.OperatorFactoryBuilders;
@@ -15581,7 +15582,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         JoinType.INNER,
                         null,
                         ExprMacroTable.nil(),
-                        CalciteTests.createJoinableFactoryWrapper()
+                        CalciteTests.createJoinableFactoryWrapper(),
+                        JoinAlgorithm.BROADCAST
                     )
                 )
                 .context(QUERY_CONTEXT_DEFAULT)
@@ -15624,7 +15626,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         JoinType.INNER,
                         null,
                         ExprMacroTable.nil(),
-                        CalciteTests.createJoinableFactoryWrapper()
+                        CalciteTests.createJoinableFactoryWrapper(),
+                        JoinAlgorithm.BROADCAST
                     )
                 )
                 .context(QUERY_CONTEXT_DEFAULT)

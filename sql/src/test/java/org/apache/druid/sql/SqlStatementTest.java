@@ -115,7 +115,7 @@ public class SqlStatementTest
       {
         return super.run(
             query,
-            new LazySequence<T>(() -> resultSequence)
+            new LazySequence<>(() -> resultSequence)
         );
       }
     };
