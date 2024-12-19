@@ -706,21 +706,6 @@ public class SqlTestFramework
     }
   }
 
-  static class TestSegmentsOverseer implements DruidModule
-  {
-    @Override
-    public void configure(Binder binder)
-    {
-    }
-
-    @Provides
-    @LazySingleton
-    public QuerySegmentWalker getQuerySegmentWalker(SpecificSegmentsQuerySegmentWalker walker)
-    {
-      return walker;
-    }
-  }
-
   /**
    * Guice module to create the various query framework items. By creating items within
    * a module, later items can depend on those created earlier by grabbing them from the
@@ -753,6 +738,13 @@ public class SqlTestFramework
     ServiceEmitter getServiceEmitter()
     {
       return NoopServiceEmitter.instance();
+    }
+
+    @Provides
+    @LazySingleton
+    public QuerySegmentWalker getQuerySegmentWalker(SpecificSegmentsQuerySegmentWalker walker)
+    {
+      return walker;
     }
 
     @Provides
@@ -1007,7 +999,6 @@ public class SqlTestFramework
 
     injectorBuilder.add(componentSupplier.getCoreModule());
     overrideModules.add(new TestSetupModule(builder));
-    overrideModules.add(new TestSegmentsOverseer());
     overrideModules.add(componentSupplier.getOverrideModule());
     builder.componentSupplier.configureGuice(injectorBuilder, overrideModules);
 
