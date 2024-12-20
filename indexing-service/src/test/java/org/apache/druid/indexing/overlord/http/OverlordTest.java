@@ -216,7 +216,7 @@ public class OverlordTest
     taskCompletionCountDownLatches.put(badTaskId, new CountDownLatch(1));
     taskCompletionCountDownLatches.put(goodTaskId, new CountDownLatch(1));
 
-    TaskRunnerFactory<MockTaskRunner> taskRunnerFactory = new TaskRunnerFactory<MockTaskRunner>()
+    TaskRunnerFactory<MockTaskRunner> taskRunnerFactory = new TaskRunnerFactory<>()
     {
       private MockTaskRunner runner;
 
@@ -442,7 +442,7 @@ public class OverlordTest
               "noop_test_task_exec_%s"
           )
       ).submit(
-          new Callable<TaskStatus>()
+          new Callable<>()
           {
             @Override
             public TaskStatus call() throws Exception
@@ -501,7 +501,7 @@ public class OverlordTest
     {
       return Lists.transform(
           runningTasks,
-          new Function<String, TaskRunnerWorkItem>()
+          new Function<>()
           {
             @Nullable
             @Override

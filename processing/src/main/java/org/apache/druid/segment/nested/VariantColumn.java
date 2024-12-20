@@ -174,7 +174,7 @@ public class VariantColumn<TStringDictionary extends Indexed<ByteBuffer>>
   @Override
   public Indexed<Object[]> getArrayDictionary()
   {
-    Iterable<Object[]> arrays = () -> new Iterator<Object[]>()
+    Iterable<Object[]> arrays = () -> new Iterator<>()
     {
       final Iterator<int[]> delegate = arrayDictionary.iterator();
 
@@ -213,7 +213,7 @@ public class VariantColumn<TStringDictionary extends Indexed<ByteBuffer>>
         throw new IAE("Unknown id [%s]", id);
       }
     };
-    return new Indexed<Object[]>()
+    return new Indexed<>()
     {
       @Override
       public int size()
@@ -620,7 +620,7 @@ public class VariantColumn<TStringDictionary extends Indexed<ByteBuffer>>
   @Override
   public ColumnValueSelector<?> makeColumnValueSelector(ReadableOffset offset)
   {
-    return new ColumnValueSelector<Object>()
+    return new ColumnValueSelector<>()
     {
       private PeekableIntIterator nullIterator = nullValueBitmap.peekableIterator();
       private int nullMark = -1;

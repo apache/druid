@@ -42,6 +42,7 @@ import org.apache.druid.query.Druids;
 import org.apache.druid.query.FrameBasedInlineDataSource;
 import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.InlineDataSource;
+import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
@@ -552,7 +553,8 @@ public class ClientQuerySegmentWalkerTest
                                            new JoinableFactoryWrapper(QueryStackTests.makeJoinableFactoryFromDefault(
                                                null,
                                                null,
-                                               null))
+                                               null)),
+                                           JoinAlgorithm.BROADCAST
                                        )
                                    )
                                    .setGranularity(Granularities.ALL)
@@ -624,7 +626,8 @@ public class ClientQuerySegmentWalkerTest
                                            new JoinableFactoryWrapper(QueryStackTests.makeJoinableFactoryFromDefault(
                                                null,
                                                null,
-                                               null))
+                                               null)),
+                                           JoinAlgorithm.BROADCAST
                                        )
                                    )
                                    .setGranularity(Granularities.ALL)
@@ -801,7 +804,8 @@ public class ClientQuerySegmentWalkerTest
                                            JoinType.INNER,
                                            null,
                                            ExprMacroTable.nil(),
-                                           null
+                                           null,
+                                           JoinAlgorithm.BROADCAST
                                        )
                                    )
                                    .setGranularity(Granularities.ALL)

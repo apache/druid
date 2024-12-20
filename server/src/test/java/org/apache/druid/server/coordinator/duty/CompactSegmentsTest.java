@@ -39,7 +39,6 @@ import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.client.indexing.ClientMSQContext;
 import org.apache.druid.client.indexing.ClientTaskQuery;
 import org.apache.druid.client.indexing.IndexingTotalWorkerCapacityInfo;
-import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -66,6 +65,7 @@ import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.indexing.BatchIOConfig;
@@ -105,7 +105,6 @@ import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
 import javax.annotation.Nullable;
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -271,7 +270,7 @@ public class CompactSegmentsTest
     final TestOverlordClient overlordClient = new TestOverlordClient(JSON_MAPPER);
     final CompactSegments compactSegments = new CompactSegments(statusTracker, overlordClient);
 
-    final Supplier<String> expectedVersionSupplier = new Supplier<String>()
+    final Supplier<String> expectedVersionSupplier = new Supplier<>()
     {
       private int i = 0;
 
@@ -2081,12 +2080,6 @@ public class CompactSegmentsTest
     }
 
     @Override
-    public ListenableFuture<URI> findCurrentLeader()
-    {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
     public ListenableFuture<Void> runTask(String taskId, Object taskObject)
     {
       final ClientTaskQuery taskQuery = jsonMapper.convertValue(taskObject, ClientTaskQuery.class);
@@ -2175,9 +2168,7 @@ public class CompactSegmentsTest
           transformSpec = jsonMapper.readValue(
               jsonMapper.writeValueAsString(new TransformSpec(clientCompactionTaskQuery.getTransformSpec()
                                                                                        .getFilter(), null)),
-              new TypeReference<Map<String, Object>>()
-              {
-              }
+              new TypeReference<>() {}
           );
         }
       }
@@ -2187,7 +2178,7 @@ public class CompactSegmentsTest
 
       List<Object> metricsSpec = null;
       if (clientCompactionTaskQuery.getMetricsSpec() != null) {
-        metricsSpec = jsonMapper.convertValue(clientCompactionTaskQuery.getMetricsSpec(), new TypeReference<List<Object>>() {});
+        metricsSpec = jsonMapper.convertValue(clientCompactionTaskQuery.getMetricsSpec(), new TypeReference<>() {});
       }
 
       for (int i = 0; i < 2; i++) {

@@ -78,7 +78,7 @@ public final class IndexedUtf8LexicographicalRangeIndexes<TDictionary extends In
       {
         final IntIntPair range = getRange(startValue, startStrict, endValue, endStrict);
         final int start = range.leftInt(), end = range.rightInt();
-        return () -> new Iterator<ImmutableBitmap>()
+        return () -> new Iterator<>()
         {
           final IntIterator rangeIterator = IntListUtils.fromTo(start, end).iterator();
 
@@ -125,7 +125,7 @@ public final class IndexedUtf8LexicographicalRangeIndexes<TDictionary extends In
       @Override
       public Iterable<ImmutableBitmap> getBitmapIterable()
       {
-        return () -> new Iterator<ImmutableBitmap>()
+        return () -> new Iterator<>()
         {
           int currIndex = start;
           int found;

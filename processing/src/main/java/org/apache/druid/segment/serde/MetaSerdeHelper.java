@@ -55,7 +55,7 @@ public final class MetaSerdeHelper<T>
   public MetaSerdeHelper<T> maybeWriteByte(Predicate<T> condition, ByteFieldWriter<T> fieldWriter)
   {
     return writeSomething(
-        new FieldWriter<T>()
+        new FieldWriter<>()
         {
           @Override
           public void writeTo(ByteBuffer buffer, T x)
@@ -77,7 +77,7 @@ public final class MetaSerdeHelper<T>
   public MetaSerdeHelper<T> writeByteArray(Function<T, byte[]> getByteArray)
   {
     return writeSomething(
-        new FieldWriter<T>()
+        new FieldWriter<>()
         {
           @Override
           public void writeTo(ByteBuffer buffer, T x)

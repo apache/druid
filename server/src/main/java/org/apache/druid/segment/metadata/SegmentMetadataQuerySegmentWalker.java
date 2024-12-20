@@ -96,7 +96,7 @@ public class SegmentMetadataQuerySegmentWalker implements QuerySegmentWalker
   @Override
   public <T> QueryRunner<T> getQueryRunnerForSegments(Query<T> query, Iterable<SegmentDescriptor> specs)
   {
-    return decorateRunner(query, new QueryRunner<T>()
+    return decorateRunner(query, new QueryRunner<>()
     {
       @Override
       public Sequence<T> run(final QueryPlus<T> queryPlus, final ResponseContext responseContext)

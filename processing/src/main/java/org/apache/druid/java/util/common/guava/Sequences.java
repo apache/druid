@@ -106,7 +106,7 @@ public class Sequences
     // instead of extending YieldingSequenceBase, it's not possible to distinguish exception thrown during elements
     // processing in accumulate() of the underlying seq, from exception thrown after all elements are processed,
     // in close().
-    return new YieldingSequenceBase<T>()
+    return new YieldingSequenceBase<>()
     {
       @Override
       public <OutType> Yielder<OutType> toYielder(OutType initValue, YieldingAccumulator<OutType, T> accumulator)

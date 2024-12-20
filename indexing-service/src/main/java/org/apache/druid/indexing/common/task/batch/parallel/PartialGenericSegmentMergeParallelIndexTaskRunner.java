@@ -83,7 +83,7 @@ class PartialGenericSegmentMergeParallelIndexTaskRunner
         getTuningConfig()
     );
     final String subtaskSpecId = getBaseSubtaskSpecName() + "_" + getAndIncrementNextSpecId();
-    return new SubTaskSpec<PartialGenericSegmentMergeTask>(
+    return new SubTaskSpec<>(
         subtaskSpecId,
         getGroupId(),
         getTaskId(),

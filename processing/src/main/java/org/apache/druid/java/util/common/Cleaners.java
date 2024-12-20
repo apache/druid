@@ -19,8 +19,6 @@
 
 package org.apache.druid.java.util.common;
 
-import org.apache.druid.utils.JvmUtils;
-
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
@@ -62,11 +60,7 @@ public class Cleaners
   {
     final MethodHandles.Lookup lookup = MethodHandles.lookup();
     try {
-      if (JvmUtils.isIsJava9Compatible()) {
-        return lookupCleanerJava9(lookup);
-      } else {
-        return lookupCleanerJava8(lookup);
-      }
+      return lookupCleaner(lookup);
     }
     catch (ReflectiveOperationException | RuntimeException e) {
       throw new UnsupportedOperationException("Cleaning is not support on this platform, because internal " +
@@ -74,7 +68,7 @@ public class Cleaners
     }
   }
 
-  private static Cleaner lookupCleanerJava9(MethodHandles.Lookup lookup) throws ReflectiveOperationException
+  private static Cleaner lookupCleaner(MethodHandles.Lookup lookup) throws ReflectiveOperationException
   {
     Class<?> cleaner = Class.forName("java.lang.ref.Cleaner");
     Class<?> cleanable = Class.forName("java.lang.ref.Cleaner$Cleanable");
@@ -97,19 +91,6 @@ public class Cleaners
 
     MethodHandle clean = lookup.findVirtual(cleanable, "clean", MethodType.methodType(void.class));
 
-    return new CleanerImpl(register, clean);
-  }
-
-  private static Cleaner lookupCleanerJava8(MethodHandles.Lookup lookup) throws ReflectiveOperationException
-  {
-    Class<?> cleaner = Class.forName("sun.misc.Cleaner");
-    MethodHandle register = lookup.findStatic(
-        cleaner,
-        "create",
-        MethodType.methodType(cleaner, Object.class, Runnable.class)
-    );
-
-    MethodHandle clean = lookup.findVirtual(cleaner, "clean", MethodType.methodType(void.class));
     return new CleanerImpl(register, clean);
   }
 

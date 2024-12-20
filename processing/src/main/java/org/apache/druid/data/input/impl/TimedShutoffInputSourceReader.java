@@ -72,7 +72,7 @@ public class TimedShutoffInputSourceReader implements InputSourceReader
     final Closer closer = Closer.create();
     closer.register(delegateIterator);
     closer.register(exec::shutdownNow);
-    final CloseableIterator<T> wrappingIterator = new CloseableIterator<T>()
+    final CloseableIterator<T> wrappingIterator = new CloseableIterator<>()
     {
       /**
        * Indicates this iterator has been closed or not.

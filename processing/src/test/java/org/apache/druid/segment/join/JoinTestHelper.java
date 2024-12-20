@@ -121,7 +121,7 @@ public class JoinTestHelper
                   .build();
 
   private static final ColumnProcessorFactory<Supplier<Object>> SIMPLE_READER =
-      new ColumnProcessorFactory<Supplier<Object>>()
+      new ColumnProcessorFactory<>()
       {
         @Override
         public ColumnType defaultType()
@@ -174,7 +174,7 @@ public class JoinTestHelper
 
   private static RowAdapter<Map<String, Object>> createMapRowAdapter(final RowSignature signature)
   {
-    return new RowAdapter<Map<String, Object>>()
+    return new RowAdapter<>()
     {
       @Override
       public ToLongFunction<Map<String, Object>> timestampFunction()

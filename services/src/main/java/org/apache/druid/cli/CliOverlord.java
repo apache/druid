@@ -95,6 +95,7 @@ import org.apache.druid.indexing.overlord.duty.TaskLogAutoCleanerConfig;
 import org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunnerFactory;
 import org.apache.druid.indexing.overlord.hrtr.HttpRemoteTaskRunnerResource;
 import org.apache.druid.indexing.overlord.http.OverlordCompactionResource;
+import org.apache.druid.indexing.overlord.http.OverlordDataSourcesResource;
 import org.apache.druid.indexing.overlord.http.OverlordRedirectInfo;
 import org.apache.druid.indexing.overlord.http.OverlordResource;
 import org.apache.druid.indexing.overlord.sampler.SamplerModule;
@@ -301,6 +302,7 @@ public class CliOverlord extends ServerRunnable
             Jerseys.addResource(binder, SupervisorResource.class);
             Jerseys.addResource(binder, HttpRemoteTaskRunnerResource.class);
             Jerseys.addResource(binder, OverlordCompactionResource.class);
+            Jerseys.addResource(binder, OverlordDataSourcesResource.class);
 
 
             binder.bind(AppenderatorsManager.class)

@@ -74,7 +74,7 @@ public class ProcessingBuffersSet
       throw DruidException.defensive("Processing buffers not available");
     }
 
-    return new ResourceHolder<ProcessingBuffers>()
+    return new ResourceHolder<>()
     {
       @Override
       public ProcessingBuffers get()

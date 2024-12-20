@@ -70,7 +70,7 @@ public class S3Utils
    */
   public static final String ERROR_ENTITY_TOO_LARGE = "EntityTooLarge";
 
-  public static final Predicate<Throwable> S3RETRY = new Predicate<Throwable>()
+  public static final Predicate<Throwable> S3RETRY = new Predicate<>()
   {
     @Override
     public boolean apply(Throwable e)

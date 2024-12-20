@@ -55,7 +55,7 @@ public class ArithmeticPostAggregatorTest extends InitializedNullHandlingTest
     agg.aggregate();
     agg.aggregate();
     agg.aggregate();
-    Map<String, Object> metricValues = new HashMap<String, Object>();
+    Map<String, Object> metricValues = new HashMap<>();
     metricValues.put(aggName, agg.get());
 
     List<PostAggregator> postAggregatorList =

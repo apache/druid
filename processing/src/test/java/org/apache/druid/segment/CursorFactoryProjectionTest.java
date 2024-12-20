@@ -1238,7 +1238,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
   private static Set<Object[]> makeArrayResultSet()
   {
     Set<Object[]> resultsInNoParticularOrder = new ObjectOpenCustomHashSet<>(
-        new Hash.Strategy<Object[]>()
+        new Hash.Strategy<>()
         {
           @Override
           public int hashCode(Object[] o)

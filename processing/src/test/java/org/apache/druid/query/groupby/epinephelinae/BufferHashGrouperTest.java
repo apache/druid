@@ -206,7 +206,7 @@ public class BufferHashGrouperTest extends InitializedNullHandlingTest
 
     grouper.init();
 
-    return new ResourceHolder<Grouper<IntKey>>()
+    return new ResourceHolder<>()
     {
       @Override
       public BufferHashGrouper<IntKey> get()

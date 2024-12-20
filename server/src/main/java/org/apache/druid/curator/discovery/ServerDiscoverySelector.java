@@ -53,7 +53,7 @@ public class ServerDiscoverySelector implements DiscoverySelector<Server>
     this.name = name;
   }
 
-  private static final Function<ServiceInstance, Server> TO_SERVER = new Function<ServiceInstance, Server>()
+  private static final Function<ServiceInstance, Server> TO_SERVER = new Function<>()
   {
     @Override
     public Server apply(final ServiceInstance instance)

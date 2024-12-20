@@ -33,7 +33,6 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidException.Category;
 import org.apache.druid.error.DruidException.Persona;
 import org.apache.druid.error.DruidExceptionMatcher;
-import org.apache.druid.hll.VersionOneHyperLogLogCollector;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
@@ -46,6 +45,7 @@ import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
@@ -145,7 +145,6 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public static String NULL_STRING;
   public static Float NULL_FLOAT;
   public static Long NULL_LONG;
-  public static final String HLLC_STRING = VersionOneHyperLogLogCollector.class.getName();
 
   @BeforeAll
   public static void setupNullValues()
@@ -158,8 +157,6 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   public static final Logger log = new Logger(BaseCalciteQueryTest.class);
 
   public static final PlannerConfig PLANNER_CONFIG_DEFAULT = new PlannerConfig();
-  public static final PlannerConfig PLANNER_CONFIG_DEFAULT_NO_COMPLEX_SERDE =
-      PlannerConfig.builder().serializeComplexValues(false).build();
 
   public static final PlannerConfig PLANNER_CONFIG_REQUIRE_TIME_CONDITION =
       PlannerConfig.builder().requireTimeCondition(true).build();
@@ -588,7 +585,8 @@ public class BaseCalciteQueryTest extends CalciteTestBase
       String rightPrefix,
       String condition,
       JoinType joinType,
-      DimFilter filter
+      DimFilter filter,
+      JoinAlgorithm joinAlgorithm
   )
   {
     return JoinDataSource.create(
@@ -599,7 +597,28 @@ public class BaseCalciteQueryTest extends CalciteTestBase
         joinType,
         filter,
         CalciteTests.createExprMacroTable(),
-        CalciteTests.createJoinableFactoryWrapper()
+        CalciteTests.createJoinableFactoryWrapper(),
+        joinAlgorithm
+    );
+  }
+
+  public static JoinDataSource join(
+      DataSource left,
+      DataSource right,
+      String rightPrefix,
+      String condition,
+      JoinType joinType,
+      DimFilter filter
+  )
+  {
+    return join(
+        left,
+        right,
+        rightPrefix,
+        condition,
+        joinType,
+        filter,
+        JoinAlgorithm.BROADCAST
     );
   }
 
@@ -1373,7 +1392,7 @@ public class BaseCalciteQueryTest extends CalciteTestBase
   private static List<DataSource> recursivelyClearDatasource(final List<DataSource> dataSources,
       ObjectMapper queryJsonMapper)
   {
-    List<DataSource> ret = new ArrayList<DataSource>();
+    List<DataSource> ret = new ArrayList<>();
     for (DataSource dataSource : dataSources) {
       ret.add(recursivelyClearContext(dataSource, queryJsonMapper));
     }

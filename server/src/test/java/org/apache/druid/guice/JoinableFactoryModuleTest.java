@@ -72,10 +72,10 @@ public class JoinableFactoryModuleTest
   public void testInjectDefaultBindingsShouldBeInjected()
   {
     final Set<JoinableFactory> factories =
-        injector.getInstance(Key.get(new TypeLiteral<Set<JoinableFactory>>() {}));
+        injector.getInstance(Key.get(new TypeLiteral<>() {}));
     Assert.assertEquals(JoinableFactoryModule.FACTORY_MAPPINGS.size(), factories.size());
     Map<Class<? extends JoinableFactory>, Class<? extends DataSource>> joinableFactoriesMappings = injector.getInstance(
-        Key.get(new TypeLiteral<Map<Class<? extends JoinableFactory>, Class<? extends DataSource>>>() {})
+        Key.get(new TypeLiteral<>() {})
     );
     assertDefaultFactories(joinableFactoriesMappings);
   }
@@ -90,9 +90,9 @@ public class JoinableFactoryModuleTest
         }
     );
     Map<Class<? extends JoinableFactory>, Class<? extends DataSource>> joinableFactoriesMappings = injector.getInstance(
-        Key.get(new TypeLiteral<Map<Class<? extends JoinableFactory>, Class<? extends DataSource>>>() {})
+        Key.get(new TypeLiteral<>() {})
     );
-    Set<JoinableFactory> factories = injector.getInstance(Key.get(new TypeLiteral<Set<JoinableFactory>>() {}));
+    Set<JoinableFactory> factories = injector.getInstance(Key.get(new TypeLiteral<>() {}));
 
     Assert.assertEquals(JoinableFactoryModule.FACTORY_MAPPINGS.size() + 1, factories.size());
     Assert.assertEquals(NoopDataSource.class, joinableFactoriesMappings.get(NoopJoinableFactory.class));

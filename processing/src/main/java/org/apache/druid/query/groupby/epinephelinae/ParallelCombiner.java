@@ -212,7 +212,7 @@ public class ParallelCombiner<KeyType>
       int sliceSize
   )
   {
-    return new Supplier<ByteBuffer>()
+    return new Supplier<>()
     {
       private int i = 0;
 
@@ -473,7 +473,7 @@ public class ParallelCombiner<KeyType>
     @Override
     public ColumnValueSelector<Object> makeColumnValueSelector(String columnName)
     {
-      return new ObjectBasedColumnSelector<Object>()
+      return new ObjectBasedColumnSelector<>()
       {
         @Override
         public void inspectRuntimeShape(RuntimeShapeInspector inspector)

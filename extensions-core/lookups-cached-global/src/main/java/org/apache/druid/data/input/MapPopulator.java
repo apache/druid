@@ -124,7 +124,7 @@ public class MapPopulator<K, V>
   ) throws IOException
   {
     return source.asCharSource(StandardCharsets.UTF_8).readLines(
-        new LineProcessor<PopulateResult>()
+        new LineProcessor<>()
         {
           private int lines = 0;
           private int entries = 0;

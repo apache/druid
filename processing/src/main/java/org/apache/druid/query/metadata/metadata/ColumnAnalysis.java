@@ -38,7 +38,7 @@ public class ColumnAnalysis
 
   public static <T> Builder<T> builder()
   {
-    return new Builder<T>();
+    return new Builder<>();
   }
 
   public static ColumnAnalysis error(String reason)

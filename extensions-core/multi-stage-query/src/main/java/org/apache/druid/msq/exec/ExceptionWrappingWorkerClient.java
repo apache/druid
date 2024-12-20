@@ -147,7 +147,7 @@ public class ExceptionWrappingWorkerClient implements WorkerClient
 
     Futures.addCallback(
         clientFuture,
-        new FutureCallback<T>()
+        new FutureCallback<>()
         {
           @Override
           public void onSuccess(@Nullable T result)

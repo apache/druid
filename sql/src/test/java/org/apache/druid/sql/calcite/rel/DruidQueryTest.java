@@ -24,6 +24,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.DataSource;
+import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.expression.TestExprMacroTable;
@@ -214,7 +215,8 @@ public class DruidQueryTest
         joinType,
         filter,
         ExprMacroTable.nil(),
-        CalciteTests.createJoinableFactoryWrapper()
+        CalciteTests.createJoinableFactoryWrapper(),
+        JoinAlgorithm.BROADCAST
     );
   }
 

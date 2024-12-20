@@ -30,7 +30,6 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.NestedDataTestUtils;
 import org.apache.druid.query.Query;
@@ -46,6 +45,7 @@ import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.Segment;
+import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.segment.virtual.NestedFieldVirtualColumn;
@@ -135,7 +135,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
             tempFolder,
             closer,
             NestedDataTestUtils.NUMERIC_DATA_FILE,
-            NestedDataTestUtils.DEFAULT_JSON_INPUT_FORMAT,
+            TestIndex.DEFAULT_JSON_INPUT_FORMAT,
             NestedDataTestUtils.TIMESTAMP_SPEC,
             NestedDataTestUtils.AUTO_DISCOVERY,
             TransformSpec.NONE,
@@ -512,7 +512,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
         NestedDataTestUtils.createIncrementalIndex(
             tempFolder,
             NestedDataTestUtils.TYPES_DATA_FILE,
-            NestedDataTestUtils.DEFAULT_JSON_INPUT_FORMAT,
+            TestIndex.DEFAULT_JSON_INPUT_FORMAT,
             NestedDataTestUtils.TIMESTAMP_SPEC,
             NestedDataTestUtils.AUTO_DISCOVERY,
             TransformSpec.NONE,
@@ -525,7 +525,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
         tempFolder,
         closer,
         NestedDataTestUtils.TYPES_DATA_FILE,
-        NestedDataTestUtils.DEFAULT_JSON_INPUT_FORMAT,
+        TestIndex.DEFAULT_JSON_INPUT_FORMAT,
         NestedDataTestUtils.TIMESTAMP_SPEC,
         NestedDataTestUtils.AUTO_DISCOVERY,
         TransformSpec.NONE,
@@ -575,7 +575,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
         NestedDataTestUtils.createIncrementalIndex(
             tempFolder,
             NestedDataTestUtils.TYPES_DATA_FILE,
-            NestedDataTestUtils.DEFAULT_JSON_INPUT_FORMAT,
+            TestIndex.DEFAULT_JSON_INPUT_FORMAT,
             NestedDataTestUtils.TIMESTAMP_SPEC,
             spec,
             TransformSpec.NONE,
@@ -588,7 +588,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
         tempFolder,
         closer,
         NestedDataTestUtils.TYPES_DATA_FILE,
-        NestedDataTestUtils.DEFAULT_JSON_INPUT_FORMAT,
+        TestIndex.DEFAULT_JSON_INPUT_FORMAT,
         NestedDataTestUtils.TIMESTAMP_SPEC,
         spec,
         TransformSpec.NONE,
@@ -631,7 +631,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
         NestedDataTestUtils.createIncrementalIndex(
             tempFolder,
             NestedDataTestUtils.ARRAY_TYPES_DATA_FILE,
-            NestedDataTestUtils.DEFAULT_JSON_INPUT_FORMAT,
+            TestIndex.DEFAULT_JSON_INPUT_FORMAT,
             NestedDataTestUtils.TIMESTAMP_SPEC,
             NestedDataTestUtils.AUTO_DISCOVERY,
             TransformSpec.NONE,
@@ -644,7 +644,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
         tempFolder,
         closer,
         NestedDataTestUtils.ARRAY_TYPES_DATA_FILE,
-        NestedDataTestUtils.DEFAULT_JSON_INPUT_FORMAT,
+        TestIndex.DEFAULT_JSON_INPUT_FORMAT,
         NestedDataTestUtils.TIMESTAMP_SPEC,
         NestedDataTestUtils.AUTO_DISCOVERY,
         TransformSpec.NONE,
@@ -668,76 +668,6 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void testIngestAndScanSegmentsRealtimeSchemaDiscoveryMoreArrayTypesNonStrictBooleans() throws Exception
-  {
-
-    try {
-      ExpressionProcessing.initializeForStrictBooleansTests(false);
-      Druids.ScanQueryBuilder builder = Druids.newScanQueryBuilder()
-                                              .dataSource("test_datasource")
-                                              .intervals(
-                                                  new MultipleIntervalSegmentSpec(
-                                                      Collections.singletonList(Intervals.ETERNITY)
-                                                  )
-                                              )
-                                              .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                                              .limit(100)
-                                              .context(ImmutableMap.of());
-      Query<ScanResultValue> scanQuery = builder.build();
-      final AggregatorFactory[] aggs = new AggregatorFactory[]{new CountAggregatorFactory("count")};
-      List<Segment> realtimeSegs = ImmutableList.of(
-          NestedDataTestUtils.createIncrementalIndex(
-              tempFolder,
-              NestedDataTestUtils.ARRAY_TYPES_DATA_FILE_2,
-              NestedDataTestUtils.DEFAULT_JSON_INPUT_FORMAT,
-              NestedDataTestUtils.TIMESTAMP_SPEC,
-              NestedDataTestUtils.AUTO_DISCOVERY,
-              TransformSpec.NONE,
-              aggs,
-              Granularities.NONE,
-              true
-          )
-      );
-      List<Segment> segs = NestedDataTestUtils.createSegments(
-          tempFolder,
-          closer,
-          NestedDataTestUtils.ARRAY_TYPES_DATA_FILE_2,
-          NestedDataTestUtils.DEFAULT_JSON_INPUT_FORMAT,
-          NestedDataTestUtils.TIMESTAMP_SPEC,
-          NestedDataTestUtils.AUTO_DISCOVERY,
-          TransformSpec.NONE,
-          aggs,
-          Granularities.NONE,
-          true,
-          IndexSpec.DEFAULT
-      );
-
-
-      final Sequence<ScanResultValue> seq = helper.runQueryOnSegmentsObjs(realtimeSegs, scanQuery);
-      final Sequence<ScanResultValue> seq2 = helper.runQueryOnSegmentsObjs(segs, scanQuery);
-
-      List<ScanResultValue> resultsRealtime = seq.toList();
-      List<ScanResultValue> resultsSegments = seq2.toList();
-      logResults(resultsSegments);
-      logResults(resultsRealtime);
-      Assert.assertEquals(1, resultsRealtime.size());
-      Assert.assertEquals(resultsRealtime.size(), resultsSegments.size());
-      Assert.assertEquals(
-          "["
-          + "[978652800000, [A, A], [null, null], [1, 1], [0.1, 0.1], [true, true], [null, null], {s_str1=[A, A], s_str2=[null, null], s_num_int=[1, 1], s_num_float=[0.1, 0.1], s_bool=[true, true], s_null=[null, null]}, 1], "
-          + "[978739200000, [A, A], [null, null], [1, 1], [0.1, 0.1], [true, true], [null, null], {s_str1=[A, A], s_str2=[null, null], s_num_int=[1, 1], s_num_float=[0.1, 0.1], s_bool=[true, true], s_null=[null, null]}, 1], "
-          + "[978825600000, [A, A], [null, null], [1, 1], [0.1, 0.1], [true, true], [null, null], {s_str1=[A, A], s_str2=[null, null], s_num_int=[1, 1], s_num_float=[0.1, 0.1], s_bool=[true, true], s_null=[null, null]}, 1], "
-          + "[978912000000, [A, A], [null, null], [1, 1], [0.1, 0.1], [true, true], [null, null], {s_str1=[A, A], s_str2=[null, null], s_num_int=[1, 1], s_num_float=[0.1, 0.1], s_bool=[true, true], s_null=[null, null]}, 1]]",
-          resultsSegments.get(0).getEvents().toString()
-      );
-      Assert.assertEquals(resultsSegments.get(0).getEvents().toString(), resultsRealtime.get(0).getEvents().toString());
-    }
-    finally {
-      ExpressionProcessing.initializeForTests();
-    }
-  }
-
-  @Test
   public void testIngestAndScanSegmentsRealtimeSchemaDiscoveryMoreArrayTypesStrictBooleans() throws Exception
   {
     Druids.ScanQueryBuilder builder = Druids.newScanQueryBuilder()
@@ -756,7 +686,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
         NestedDataTestUtils.createIncrementalIndex(
             tempFolder,
             NestedDataTestUtils.ARRAY_TYPES_DATA_FILE_2,
-            NestedDataTestUtils.DEFAULT_JSON_INPUT_FORMAT,
+            TestIndex.DEFAULT_JSON_INPUT_FORMAT,
             NestedDataTestUtils.TIMESTAMP_SPEC,
             NestedDataTestUtils.AUTO_DISCOVERY,
             TransformSpec.NONE,
@@ -769,7 +699,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
         tempFolder,
         closer,
         NestedDataTestUtils.ARRAY_TYPES_DATA_FILE_2,
-        NestedDataTestUtils.DEFAULT_JSON_INPUT_FORMAT,
+        TestIndex.DEFAULT_JSON_INPUT_FORMAT,
         NestedDataTestUtils.TIMESTAMP_SPEC,
         NestedDataTestUtils.AUTO_DISCOVERY,
         TransformSpec.NONE,
@@ -819,7 +749,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
         NestedDataTestUtils.createIncrementalIndex(
             tempFolder,
             NestedDataTestUtils.ALL_TYPES_TEST_DATA_FILE,
-            NestedDataTestUtils.DEFAULT_JSON_INPUT_FORMAT,
+            TestIndex.DEFAULT_JSON_INPUT_FORMAT,
             NestedDataTestUtils.TIMESTAMP_SPEC,
             NestedDataTestUtils.AUTO_DISCOVERY,
             TransformSpec.NONE,
@@ -832,7 +762,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
         tempFolder,
         closer,
         NestedDataTestUtils.ALL_TYPES_TEST_DATA_FILE,
-        NestedDataTestUtils.DEFAULT_JSON_INPUT_FORMAT,
+        TestIndex.DEFAULT_JSON_INPUT_FORMAT,
         NestedDataTestUtils.TIMESTAMP_SPEC,
         NestedDataTestUtils.AUTO_DISCOVERY,
         TransformSpec.NONE,
@@ -1003,7 +933,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
         NestedDataTestUtils.createIncrementalIndex(
             tempFolder,
             NestedDataTestUtils.ALL_TYPES_TEST_DATA_FILE,
-            NestedDataTestUtils.DEFAULT_JSON_INPUT_FORMAT,
+            TestIndex.DEFAULT_JSON_INPUT_FORMAT,
             NestedDataTestUtils.TIMESTAMP_SPEC,
             NestedDataTestUtils.AUTO_DISCOVERY,
             TransformSpec.NONE,
@@ -1016,7 +946,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
         tempFolder,
         closer,
         NestedDataTestUtils.ALL_TYPES_TEST_DATA_FILE,
-        NestedDataTestUtils.DEFAULT_JSON_INPUT_FORMAT,
+        TestIndex.DEFAULT_JSON_INPUT_FORMAT,
         NestedDataTestUtils.TIMESTAMP_SPEC,
         NestedDataTestUtils.AUTO_DISCOVERY,
         TransformSpec.NONE,

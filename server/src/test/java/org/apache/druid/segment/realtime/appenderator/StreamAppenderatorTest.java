@@ -34,6 +34,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.metadata.PendingSegmentRecord;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.Order;
@@ -70,8 +71,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
@@ -812,7 +815,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
                                                   .build()) {
       final Appenderator appenderator = tester.getAppenderator();
       final AtomicInteger eventCount = new AtomicInteger(0);
-      final Supplier<Committer> committerSupplier = new Supplier<Committer>()
+      final Supplier<Committer> committerSupplier = new Supplier<>()
       {
         @Override
         public Committer get()
@@ -920,7 +923,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
       tuningConfig = tester.getTuningConfig();
 
       final AtomicInteger eventCount = new AtomicInteger(0);
-      final Supplier<Committer> committerSupplier = new Supplier<Committer>()
+      final Supplier<Committer> committerSupplier = new Supplier<>()
       {
         @Override
         public Committer get()
@@ -1861,9 +1864,11 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
   public void testQueryByIntervals() throws Exception
   {
     try (
+        final StubServiceEmitter serviceEmitter = new StubServiceEmitter();
         final StreamAppenderatorTester tester =
             new StreamAppenderatorTester.Builder().maxRowsInMemory(2)
                                                   .basePersistDirectory(temporaryFolder.newFolder())
+                                                  .withServiceEmitter(serviceEmitter)
                                                   .build()) {
       final Appenderator appenderator = tester.getAppenderator();
 
@@ -1902,35 +1907,17 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
           results1
       );
 
-      // Query2: 2000/2002
-      final TimeseriesQuery query2 = Druids.newTimeseriesQueryBuilder()
-                                           .dataSource(StreamAppenderatorTester.DATASOURCE)
-                                           .intervals(ImmutableList.of(Intervals.of("2000/2002")))
-                                           .aggregators(
-                                               Arrays.asList(
-                                                   new LongSumAggregatorFactory("count", "count"),
-                                                   new LongSumAggregatorFactory("met", "met")
-                                               )
-                                           )
-                                           .granularity(Granularities.DAY)
-                                           .build();
-
-      final List<Result<TimeseriesResultValue>> results2 =
-          QueryPlus.wrap(query2).run(appenderator, ResponseContext.createEmpty()).toList();
-      Assert.assertEquals(
-          "query2",
-          ImmutableList.of(
-              new Result<>(
-                  DateTimes.of("2000"),
-                  new TimeseriesResultValue(ImmutableMap.of("count", 3L, "met", 7L))
-              ),
-              new Result<>(
-                  DateTimes.of("2001"),
-                  new TimeseriesResultValue(ImmutableMap.of("count", 4L, "met", 120L))
+      verifySinkMetrics(
+          serviceEmitter,
+          new HashSet<>(
+              Arrays.asList(
+                  IDENTIFIERS.get(0).asSegmentId().toString(),
+                  IDENTIFIERS.get(1).asSegmentId().toString()
               )
-          ),
-          results2
+          )
       );
+
+      serviceEmitter.flush();
 
       // Query3: 2000/2001T01
       final TimeseriesQuery query3 = Druids.newTimeseriesQueryBuilder()
@@ -1960,6 +1947,19 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
           ),
           results3
       );
+
+      verifySinkMetrics(
+          serviceEmitter,
+          new HashSet<>(
+              Arrays.asList(
+                  IDENTIFIERS.get(0).asSegmentId().toString(),
+                  IDENTIFIERS.get(1).asSegmentId().toString(),
+                  IDENTIFIERS.get(2).asSegmentId().toString()
+              )
+          )
+      );
+
+      serviceEmitter.flush();
 
       // Query4: 2000/2001T01, 2001T03/2001T04
       final TimeseriesQuery query4 = Druids.newTimeseriesQueryBuilder()
@@ -1994,6 +1994,16 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
           ),
           results4
       );
+      verifySinkMetrics(
+          serviceEmitter,
+          new HashSet<>(
+              Arrays.asList(
+                  IDENTIFIERS.get(0).asSegmentId().toString(),
+                  IDENTIFIERS.get(1).asSegmentId().toString(),
+                  IDENTIFIERS.get(2).asSegmentId().toString()
+              )
+          )
+      );
     }
   }
 
@@ -2001,9 +2011,11 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
   public void testQueryBySegments() throws Exception
   {
     try (
+        StubServiceEmitter serviceEmitter = new StubServiceEmitter();
         final StreamAppenderatorTester tester =
             new StreamAppenderatorTester.Builder().maxRowsInMemory(2)
                                                   .basePersistDirectory(temporaryFolder.newFolder())
+                                                  .withServiceEmitter(serviceEmitter)
                                                   .build()) {
       final Appenderator appenderator = tester.getAppenderator();
 
@@ -2052,6 +2064,17 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
           results1
       );
 
+      verifySinkMetrics(
+          serviceEmitter,
+          new HashSet<>(
+              Collections.singletonList(
+                  IDENTIFIERS.get(2).asSegmentId().toString()
+              )
+          )
+      );
+
+      serviceEmitter.flush();
+
       // Query2: segment #2, partial
       final TimeseriesQuery query2 = Druids.newTimeseriesQueryBuilder()
                                            .dataSource(StreamAppenderatorTester.DATASOURCE)
@@ -2087,6 +2110,17 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
           ),
           results2
       );
+
+      verifySinkMetrics(
+          serviceEmitter,
+          new HashSet<>(
+              Collections.singletonList(
+                  IDENTIFIERS.get(2).asSegmentId().toString()
+              )
+          )
+      );
+
+      serviceEmitter.flush();
 
       // Query3: segment #2, two disjoint intervals
       final TimeseriesQuery query3 = Druids.newTimeseriesQueryBuilder()
@@ -2129,6 +2163,17 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
           results3
       );
 
+      verifySinkMetrics(
+          serviceEmitter,
+          new HashSet<>(
+              Collections.singletonList(
+                  IDENTIFIERS.get(2).asSegmentId().toString()
+              )
+          )
+      );
+
+      serviceEmitter.flush();
+
       final ScanQuery query4 = Druids.newScanQueryBuilder()
                                      .dataSource(StreamAppenderatorTester.DATASOURCE)
                                      .intervals(
@@ -2164,6 +2209,33 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
           new Object[]{DateTimes.of("2001T03").getMillis(), "foo", 1L, 64L},
           ((List<Object>) ((List<Object>) results4.get(1).getEvents()).get(0)).toArray()
       );
+
+      verifySinkMetrics(
+          serviceEmitter,
+          new HashSet<>(
+              Collections.singletonList(
+                  IDENTIFIERS.get(2).asSegmentId().toString()
+              )
+          )
+      );
+
+      serviceEmitter.flush();
+    }
+  }
+
+  private void verifySinkMetrics(StubServiceEmitter emitter, Set<String> segmentIds)
+  {
+    Map<String, List<StubServiceEmitter.ServiceMetricEventSnapshot>> events = emitter.getMetricEvents();
+    int segments = segmentIds.size();
+    Assert.assertEquals(4, events.size());
+    Assert.assertTrue(events.containsKey("query/cpu/time"));
+    Assert.assertEquals(segments, events.get("query/segment/time").size());
+    Assert.assertEquals(segments, events.get("query/segmentAndCache/time").size());
+    Assert.assertEquals(segments, events.get("query/wait/time").size());
+    for (String id : segmentIds) {
+      Assert.assertTrue(events.get("query/segment/time").stream().anyMatch(value -> value.getUserDims().containsValue(id)));
+      Assert.assertTrue(events.get("query/segmentAndCache/time").stream().anyMatch(value -> value.getUserDims().containsValue(id)));
+      Assert.assertTrue(events.get("query/wait/time").stream().anyMatch(value -> value.getUserDims().containsValue(id)));
     }
   }
 
@@ -2352,7 +2424,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
 
   private static Supplier<Committer> committerSupplierFromConcurrentMap(final ConcurrentMap<String, String> map)
   {
-    return new Supplier<Committer>()
+    return new Supplier<>()
     {
       @Override
       public Committer get()

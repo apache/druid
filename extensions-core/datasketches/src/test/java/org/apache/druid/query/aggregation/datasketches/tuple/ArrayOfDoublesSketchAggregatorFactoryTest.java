@@ -56,7 +56,9 @@ public class ArrayOfDoublesSketchAggregatorFactoryTest
     sketch2.update("b", new double[] {1});
     sketch2.update("c", new double[] {1});
 
-    TestObjectColumnSelector<ArrayOfDoublesSketch> selector = new TestObjectColumnSelector<ArrayOfDoublesSketch>(new ArrayOfDoublesSketch[] {sketch1, sketch2});
+    TestObjectColumnSelector<ArrayOfDoublesSketch> selector = new TestObjectColumnSelector<>(
+        new ArrayOfDoublesSketch[]{sketch1, sketch2}
+    );
 
     combiner.reset(selector);
     Assert.assertEquals(1, combiner.getObject().getEstimate(), 0);

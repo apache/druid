@@ -25,7 +25,6 @@ import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.CursorHolder;
-import org.apache.druid.segment.NestedDataColumnIndexerV4;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnType;
@@ -61,13 +60,13 @@ public class IncrementalIndexCursorFactory implements CursorFactory
         @Override
         public boolean multipleValues()
         {
-          return true;
+          return false;
         }
 
         @Override
         public boolean hasNulls()
         {
-          return true;
+          return false;
         }
       };
 
@@ -133,26 +132,6 @@ public class IncrementalIndexCursorFactory implements CursorFactory
 
   static ColumnCapabilities snapshotColumnCapabilities(IncrementalIndexRowSelector selector, String column)
   {
-    IncrementalIndex.DimensionDesc desc = selector.getDimension(column);
-    // nested column indexer is a liar, and behaves like any type if it only processes unnested literals of a single
-    // type, so force it to use nested column type
-    if (desc != null && desc.getIndexer() instanceof NestedDataColumnIndexerV4) {
-      return ColumnCapabilitiesImpl.createDefault().setType(ColumnType.NESTED_DATA);
-    }
-
-    // Different from index.getColumnCapabilities because, in a way, IncrementalIndex's string-typed dimensions
-    // are always potentially multi-valued at query time. (Missing / null values for a row can potentially be
-    // represented by an empty array; see StringDimensionIndexer.IndexerDimensionSelector's getRow method.)
-    //
-    // We don't want to represent this as having-multiple-values in index.getCapabilities, because that's used
-    // at index-persisting time to determine if we need a multi-value column or not. However, that means we
-    // need to tweak the capabilities here in the CursorFactory (a query-time construct), so at query time
-    // they appear multi-valued.
-    //
-    // Note that this could be improved if we snapshot the capabilities at cursor creation time and feed those through
-    // to the StringDimensionIndexer so the selector built on top of it can produce values from the snapshot state of
-    // multi-valuedness at cursor creation time, instead of the latest state, and getSnapshotColumnCapabilities could
-    // be removed.
     return ColumnCapabilitiesImpl.snapshot(
         selector.getColumnCapabilities(column),
         COERCE_LOGIC

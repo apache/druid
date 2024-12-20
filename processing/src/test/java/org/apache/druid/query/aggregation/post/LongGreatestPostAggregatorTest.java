@@ -51,7 +51,7 @@ public class LongGreatestPostAggregatorTest
     agg.aggregate();
     agg.aggregate();
     agg.aggregate();
-    Map<String, Object> metricValues = new HashMap<String, Object>();
+    Map<String, Object> metricValues = new HashMap<>();
     metricValues.put(aggName, agg.get());
 
     List<PostAggregator> postAggregatorList =
@@ -74,7 +74,7 @@ public class LongGreatestPostAggregatorTest
     final String aggName = "rows";
     LongGreatestPostAggregator greatestPostAggregator;
     CountAggregator agg = new CountAggregator();
-    Map<String, Object> metricValues = new HashMap<String, Object>();
+    Map<String, Object> metricValues = new HashMap<>();
     metricValues.put(aggName, agg.get());
 
     List<PostAggregator> postAggregatorList =

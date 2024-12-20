@@ -100,7 +100,7 @@ public class S3DataSegmentMover implements DataSegmentMover
               .putAll(
                   Maps.filterKeys(
                       loadSpec,
-                      new Predicate<String>()
+                      new Predicate<>()
                       {
                         @Override
                         public boolean apply(String input)

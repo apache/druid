@@ -85,11 +85,6 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>com.google.inject.extensions</groupId>
-            <artifactId>guice-multibindings</artifactId>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
             <groupId>org.jdbi</groupId>
             <artifactId>jdbi</artifactId>
             <scope>provided</scope>

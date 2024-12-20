@@ -242,11 +242,7 @@ public abstract class ExprEval<T>
     if (Number.class.isAssignableFrom(next) || next == String.class || next == Boolean.class) {
       // coerce booleans
       if (next == Boolean.class) {
-        if (ExpressionProcessing.useStrictBooleans()) {
-          next = Long.class;
-        } else {
-          next = String.class;
-        }
+        next = Long.class;
       }
       if (existing == null) {
         return next;
@@ -351,28 +347,6 @@ public abstract class ExprEval<T>
   }
 
   /**
-   * Convert a boolean back into native expression type
-   *
-   * Do not use this method unless {@link ExpressionProcessing#useStrictBooleans()} is set to false.
-   * {@link ExpressionType#LONG} is the Druid boolean unless this mode is enabled, so use {@link #ofLongBoolean}
-   * instead.
-   */
-  @Deprecated
-  public static ExprEval ofBoolean(boolean value, ExpressionType type)
-  {
-    switch (type.getType()) {
-      case DOUBLE:
-        return ExprEval.of(Evals.asDouble(value));
-      case LONG:
-        return ofLongBoolean(value);
-      case STRING:
-        return ExprEval.of(String.valueOf(value));
-      default:
-        throw new Types.InvalidCastBooleanException(type);
-    }
-  }
-
-  /**
    * Convert a boolean into a long expression type
    */
   public static ExprEval ofLongBoolean(boolean value)
@@ -421,10 +395,7 @@ public abstract class ExprEval<T>
       return new LongExprEval((Number) val);
     }
     if (val instanceof Boolean) {
-      if (ExpressionProcessing.useStrictBooleans()) {
-        return ofLongBoolean((Boolean) val);
-      }
-      return new StringExprEval(String.valueOf(val));
+      return ofLongBoolean((Boolean) val);
     }
     if (val instanceof Long[]) {
       final Long[] inputArray = (Long[]) val;
