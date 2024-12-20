@@ -60,13 +60,16 @@ public class ScheduledBatchTaskManager
   private final ServiceEmitter emitter;
 
   /**
+   * Single-threaded shared executor to schedule different jobs across scheduled batch supervisors.
+   */
+  private final ScheduledExecutorService jobsExecutor;
+  /**
    * Single-threaded executor to process the cron jobs queue.
    */
   private final ScheduledExecutorService cronExecutor;
 
   private final ConcurrentHashMap<String, SchedulerManager> supervisorToManager
       = new ConcurrentHashMap<>();
-  private final ScheduledExecutorFactory executorFactory;
 
   @Inject
   public ScheduledBatchTaskManager(
@@ -78,11 +81,12 @@ public class ScheduledBatchTaskManager
   )
   {
     this.taskMaster = taskMaster;
-    this.executorFactory = executorFactory;
     this.cronExecutor = executorFactory.create(1, "ScheduledBatchScheduler-%s");
     this.brokerClient = brokerClient;
     this.emitter = emitter;
     this.statusTracker = statusTracker;
+
+    this.jobsExecutor = executorFactory.create(1, "ScheduledBatchJobsExecutor-%s");
 
     this.taskRunnerListener = new TaskRunnerListener()
     {
@@ -122,7 +126,7 @@ public class ScheduledBatchTaskManager
         "Starting scheduled batch ingestion for supervisorId[%s] with datasource[%s], cronSchedule[%s] and spec[%s].",
         supervisorId, dataSource, cronSchedulerConfig, spec
     );
-    final SchedulerManager manager = new SchedulerManager(supervisorId, dataSource, cronSchedulerConfig, spec, executorFactory);
+    final SchedulerManager manager = new SchedulerManager(supervisorId, dataSource, cronSchedulerConfig, spec);
     manager.startScheduling();
     supervisorToManager.put(supervisorId, manager);
   }
@@ -202,7 +206,6 @@ public class ScheduledBatchTaskManager
     private final String supervisorId;
     private final String dataSource;
     private final ClientSqlQuery spec;
-    private final ScheduledExecutorService managerExecutor;
     private final CronSchedulerConfig cronSchedulerConfig;
 
     private ScheduledBatchSupervisorSnapshot.BatchSupervisorStatus status;
@@ -218,20 +221,18 @@ public class ScheduledBatchTaskManager
         final String supervisorId,
         final String dataSource,
         final CronSchedulerConfig cronSchedulerConfig,
-        final ClientSqlQuery spec,
-        final ScheduledExecutorFactory executorFactory
+        final ClientSqlQuery spec
     )
     {
       this.supervisorId = supervisorId;
       this.dataSource = dataSource;
       this.cronSchedulerConfig = cronSchedulerConfig;
       this.spec = spec;
-      this.managerExecutor = executorFactory.create(1, "scheduler-" + supervisorId + "-%d");
     }
 
     private synchronized void startScheduling()
     {
-      if (managerExecutor.isTerminated() || managerExecutor.isShutdown()) {
+      if (jobsExecutor.isTerminated() || jobsExecutor.isShutdown()) {
         return;
       }
 
@@ -242,20 +243,19 @@ public class ScheduledBatchTaskManager
         return;
       }
 
-      managerExecutor.schedule(
+      jobsExecutor.schedule(
           () -> {
             enqueueTask(() -> {
               try {
                 lastTaskSubmittedTime = DateTimes.nowUtc();
                 submitSqlTask(supervisorId, spec);
                 emitMetric("batchSupervisor/tasks/submit/success", 1);
-              }
-              catch (Exception e) {
+              } catch (Exception e) {
                 emitMetric("batchSupervisor/tasks/submit/failed", 1);
                 log.error(e, "Error submitting task for supervisor[%s]. Continuing schedule.", supervisorId);
               }
             });
-            startScheduling();
+            startScheduling(); // schedule the next task
           },
           timeUntilNextSubmission.getMillis(),
           TimeUnit.MILLISECONDS
@@ -264,17 +264,6 @@ public class ScheduledBatchTaskManager
 
     private synchronized void stopScheduling()
     {
-      managerExecutor.shutdown();
-      try {
-        if (!managerExecutor.awaitTermination(2, TimeUnit.SECONDS)) {
-          managerExecutor.shutdownNow();
-        }
-      }
-      catch (InterruptedException e) {
-        log.error(e, "Forcing shutdown of executor service for supervisor[%s].", supervisorId);
-        managerExecutor.shutdownNow();
-        Thread.currentThread().interrupt();
-      }
       status = ScheduledBatchSupervisorSnapshot.BatchSupervisorStatus.SCHEDULER_SHUTDOWN;
     }
 
