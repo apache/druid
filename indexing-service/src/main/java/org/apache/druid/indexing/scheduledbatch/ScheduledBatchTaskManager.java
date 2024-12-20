@@ -238,6 +238,10 @@ public class ScheduledBatchTaskManager
       jobsExecutor.schedule(
           () -> {
             try {
+              // Check status inside the runnable again before submitting any tasks
+              if (status == ScheduledBatchSupervisorSnapshot.BatchSupervisorStatus.SCHEDULER_SHUTDOWN) {
+                return;
+              }
               lastTaskSubmittedTime = DateTimes.nowUtc();
               submitSqlTask(supervisorId, spec);
               emitMetric("batchSupervisor/tasks/submit/success", 1);
@@ -264,7 +268,7 @@ public class ScheduledBatchTaskManager
           ServiceMetricEvent.builder()
                             .setDimension("supervisorId", supervisorId)
                             .setDimension("dataSource", dataSource)
-                            .setMetric(metricName, 1)
+                            .setMetric(metricName, value)
       );
     }
 

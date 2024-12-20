@@ -220,7 +220,7 @@ public class ScheduledBatchTaskManagerTest
     serviceEmitter.verifyEmitted(
         "batchSupervisor/tasks/submit/success",
         ImmutableMap.of("supervisorId", SUPERVISOR_ID_FOO),
-        2
+        1
     );
   }
 
