@@ -219,7 +219,7 @@ public class AuthorizationUtils
   )
   {
     if (request.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH) != null) {
-      return AuthorizationResult.SUPERUSER;
+      return AuthorizationResult.ALLOW_NO_RESTRICTION;
     }
 
     if (request.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED) != null) {

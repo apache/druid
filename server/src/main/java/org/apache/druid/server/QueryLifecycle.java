@@ -48,6 +48,7 @@ import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryTimeoutException;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.server.QueryResource.ResourceIOReaderWriter;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.security.Action;
@@ -320,8 +321,9 @@ public class QueryLifecycle
       transition(State.AUTHORIZING, State.UNAUTHORIZED);
     } else {
       transition(State.AUTHORIZING, State.AUTHORIZED);
-      if (!AuthorizationResult.SUPERUSER.equals(authorizationResult)) {
-        // Unless this request comes from superuser or druid-internal, we need to map the query with restrictions.
+      if (this.baseQuery instanceof SegmentMetadataQuery && authorizationResult.isUserWithNoRestriction()) {
+        // skip restrictions mapping for SegmentMetadataQuery from user with no restriction
+      } else {
         this.baseQuery = this.baseQuery.withPolicyRestrictions(
             authorizationResult.getPolicy(),
             authConfig.getTablePolicySecurityLevel()

@@ -146,16 +146,15 @@ public class RestrictedDataSource implements DataSource
 
   @Override
   public DataSource mapWithRestriction(
-      Map<String, Optional<Policy>> policies,
+      Map<String, Optional<Policy>> policyMap,
       Policy.TablePolicySecurityLevel tablePolicySecurityLevel
   )
   {
-    // This method always throws, since we should only put restrictions once. When query is being passed by druid-system, it should use SUPERUSER AuthorizationResults.
-    if (!policies.containsKey(base.getName())) {
+    if (!policyMap.containsKey(base.getName())) {
       throw new ISE("Missing policy check result for table [%s]", base.getName());
     }
 
-    Optional<Policy> newPolicy = policies.getOrDefault(base.getName(), Optional.empty());
+    Optional<Policy> newPolicy = policyMap.getOrDefault(base.getName(), Optional.empty());
     if (!newPolicy.isPresent()) {
       throw new ISE(
           "No restriction found on table [%s], but had %s before.",
@@ -163,7 +162,12 @@ public class RestrictedDataSource implements DataSource
           policy
       );
     }
-    throw new ISE("Multiple restrictions on [%s]: %s and %s", base.getName(), policy, newPolicy.get());
+    if (!Policy.NO_RESTRICTION.equals(newPolicy.get())) {
+      throw new ISE("Multiple restrictions on [%s]: %s and %s", base.getName(), policy, newPolicy.get());
+    }
+    // The only happy path is, newPolicy is Policy.NO_RESTRICTION, which means this comes from an anthenticated and
+    // authorized druid-internal request.
+    return this;
   }
 
   @Override

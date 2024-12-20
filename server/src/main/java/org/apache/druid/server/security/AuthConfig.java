@@ -29,7 +29,6 @@ import org.apache.druid.utils.CollectionUtils;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.Set;
 
 public class AuthConfig
@@ -65,7 +64,7 @@ public class AuthConfig
 
   public AuthConfig()
   {
-    this(null, null, null, false, false, null, null, false, Policy.TablePolicySecurityLevel.APPLY_WHEN_APPLICABLE);
+    this(null, null, null, false, false, null, null, false, null);
   }
 
   @JsonProperty
@@ -128,7 +127,7 @@ public class AuthConfig
                                 : unsecuredContextKeys;
     this.securedContextKeys = securedContextKeys;
     this.enableInputSourceSecurity = enableInputSourceSecurity;
-    this.tablePolicySecurityLevel = tablePolicySecurityLevel;
+    this.tablePolicySecurityLevel = tablePolicySecurityLevel == null ? Policy.TablePolicySecurityLevel.APPLY_WHEN_APPLICABLE : tablePolicySecurityLevel;
   }
 
   public List<String> getAuthenticatorChain()
@@ -338,7 +337,7 @@ public class AuthConfig
           unsecuredContextKeys,
           securedContextKeys,
           enableInputSourceSecurity,
-          Optional.ofNullable(tablePolicySecurityLevel).orElse(Policy.TablePolicySecurityLevel.APPLY_WHEN_APPLICABLE)
+          tablePolicySecurityLevel
       );
     }
   }

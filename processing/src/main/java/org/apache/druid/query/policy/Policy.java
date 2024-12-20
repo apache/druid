@@ -22,7 +22,6 @@ package org.apache.druid.query.policy;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.query.filter.DimFilter;
-import org.apache.druid.query.filter.TrueDimFilter;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -73,6 +72,10 @@ public class Policy
     }
   }
 
+  /**
+   * A special kind of policy restriction, indicating that this table is restricted, but doesn't impose any restriction
+   * to a user.
+   */
   public static final Policy NO_RESTRICTION = new Policy(null);
 
   @JsonProperty("rowFilter")
@@ -101,8 +104,6 @@ public class Policy
   public boolean hasNoRestriction()
   {
     if (NO_RESTRICTION.equals(this)) {
-      return true;
-    } else if (rowFilter == null || rowFilter instanceof TrueDimFilter) {
       return true;
     }
     return false;

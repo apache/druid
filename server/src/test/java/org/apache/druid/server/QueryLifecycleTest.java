@@ -158,13 +158,10 @@ public class QueryLifecycleTest
   }
 
   @Test
-  @Parameters({
-      "APPLY_WHEN_APPLICABLE",
-      "POLICY_CHECKED_ON_ALL_TABLES_ALLOW_EMPTY",
-      "POLICY_CHECKED_ON_ALL_TABLES_POLICY_MUST_EXIST"
-  })
+  @Parameters({"APPLY_WHEN_APPLICABLE"})
   public void testRunSimple_preauthorizedAsSuperuser(Policy.TablePolicySecurityLevel securityLevel)
   {
+    // A simple path with the lowest security level configed.
     EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
     EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
     EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject()))
@@ -179,7 +176,7 @@ public class QueryLifecycleTest
     QueryLifecycle lifecycle = createLifecycle(AuthConfig.newBuilder()
                                                          .setTablePolicySecurityLevel(securityLevel)
                                                          .build());
-    lifecycle.runSimple(query, authenticationResult, AuthorizationResult.SUPERUSER);
+    lifecycle.runSimple(query, authenticationResult, AuthorizationResult.ALLOW_NO_RESTRICTION);
   }
 
   @Test
@@ -208,6 +205,7 @@ public class QueryLifecycleTest
   })
   public void testRunSimple_withPolicyRestriction(Policy.TablePolicySecurityLevel securityLevel)
   {
+    // Test the path when an external client send a sql query to broker, through runSimple.
     Policy rowFilterPolicy = Policy.fromRowFilter(new NullFilter("some-column", null));
     Access access = Access.allowWithRestriction(rowFilterPolicy);
     AuthorizationResult authorizationResult = AuthorizationResult.allowWithRestriction(ImmutableMap.of(
@@ -256,11 +254,14 @@ public class QueryLifecycleTest
   )
   {
     // When AuthorizationResult is ALLOW_NO_RESTRICTION, this means policy restriction has never been checked.
+    // Either it's calling from a mis-behave druid node, or somehow the path has bypassed the policy checks.
+    // This is only allowed at APPLY_WHEN_APPLICABLE, the lowest security level.
     if (!error.isEmpty()) {
       expectedException.expect(ISE.class);
       expectedException.expectMessage(error);
     }
 
+    AuthorizationResult authorizationResult = AuthorizationResult.ALLOW_NO_RESTRICTION;
     EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
     EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
     EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject()))
@@ -276,7 +277,7 @@ public class QueryLifecycleTest
     QueryLifecycle lifecycle = createLifecycle(AuthConfig.newBuilder()
                                                          .setTablePolicySecurityLevel(securityLevel)
                                                          .build());
-    lifecycle.runSimple(query, authenticationResult, AuthorizationResult.ALLOW_NO_RESTRICTION);
+    lifecycle.runSimple(query, authenticationResult, authorizationResult);
   }
 
   @Test
@@ -291,7 +292,8 @@ public class QueryLifecycleTest
       expectedException.expect(ISE.class);
       expectedException.expectMessage(error);
     }
-    // AuthorizationResult indicates there's no policy restriction on the table.
+    // AuthorizationResult indicates there's no policy restriction on the table
+    // This is not allowed at the highest security level
     AuthorizationResult authorizationResult = AuthorizationResult.allowWithRestriction(ImmutableMap.of(
         DATASOURCE,
         Optional.empty()
@@ -323,6 +325,8 @@ public class QueryLifecycleTest
   })
   public void testRunSimple_foundMultiplePolicyRestrictions(Policy.TablePolicySecurityLevel securityLevel)
   {
+    // Multiple policy restrictions indicates most likely the system is trying to double-authorizing the request
+    // This is not allowed in any case.
     expectedException.expect(ISE.class);
     expectedException.expectMessage(
         "Multiple restrictions on [some_datasource]: Policy{rowFilter=some-column IS NULL} and Policy{rowFilter=some-column2 IS NULL}");
@@ -383,7 +387,7 @@ public class QueryLifecycleTest
     );
 
     // The query is built on a restricted data source, but we didn't find any policy, which could be one of:
-    // 1. policy restriction might have been been removed
+    // 1. policy restriction might have been removed
     // 2. some bug in the system
     // In this case, we throw an exception to be safe.
     AuthorizationResult authorizationResult = AuthorizationResult.allowWithRestriction(ImmutableMap.of(
@@ -421,50 +425,10 @@ public class QueryLifecycleTest
       "POLICY_CHECKED_ON_ALL_TABLES_ALLOW_EMPTY",
       "POLICY_CHECKED_ON_ALL_TABLES_POLICY_MUST_EXIST"
   })
-  public void testRunSimple_queryWithRestrictedDataSource_runWithSuperUserPermission(Policy.TablePolicySecurityLevel securityLevel)
-  {
-    DimFilter originalFilterOnRDS = new NullFilter("some-column", null);
-    Policy originalFilterPolicy = Policy.fromRowFilter(originalFilterOnRDS);
-    DataSource restrictedDataSource = RestrictedDataSource.create(
-        TableDataSource.create(DATASOURCE),
-        originalFilterPolicy
-    );
 
-    // Internal druid system could be passing the query on restricted data source (e.x. broker calling historical), this must be allowed
-    AuthorizationResult authorizationResult = AuthorizationResult.SUPERUSER;
-
-    final TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
-                                        .dataSource(restrictedDataSource)
-                                        .intervals(ImmutableList.of(Intervals.ETERNITY))
-                                        .aggregators(new CountAggregatorFactory("chocula"))
-                                        .build();
-    EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
-    EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
-    EasyMock.expect(authenticationResult.getAuthorizerName()).andReturn(AUTHORIZER).anyTimes();
-    EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject())).andReturn(toolChest).anyTimes();
-    EasyMock.expect(toolChest.makeMetrics(EasyMock.anyObject())).andReturn(metrics).anyTimes();
-    EasyMock.expect(texasRanger.getQueryRunnerForIntervals(EasyMock.anyObject(), EasyMock.anyObject()))
-            .andReturn(runner).anyTimes();
-    EasyMock.expect(runner.run(EasyMock.anyObject(), EasyMock.anyObject())).andReturn(Sequences.empty()).anyTimes();
-    replayAll();
-
-    AuthConfig authConfig = AuthConfig.newBuilder()
-                                      .setAuthorizeQueryContextParams(true)
-                                      .setTablePolicySecurityLevel(securityLevel)
-                                      .build();
-
-    QueryLifecycle lifecycle = createLifecycle(authConfig);
-    lifecycle.runSimple(query, authenticationResult, authorizationResult);
-  }
-
-  @Test
-  @Parameters({
-      "APPLY_WHEN_APPLICABLE",
-      "POLICY_CHECKED_ON_ALL_TABLES_ALLOW_EMPTY",
-      "POLICY_CHECKED_ON_ALL_TABLES_POLICY_MUST_EXIST"
-  })
   public void testAuthorized_withPolicyRestriction(Policy.TablePolicySecurityLevel securityLevel)
   {
+    // Test the path broker receives a native json query from external client, should add restriction on data source
     Policy rowFilterPolicy = Policy.fromRowFilter(new NullFilter("some-column", null));
     Access access = Access.allowWithRestriction(rowFilterPolicy);
 
@@ -486,6 +450,52 @@ public class QueryLifecycleTest
     // Any other DataSource would throw AssertionError.
     EasyMock.expect(texasRanger.getQueryRunnerForIntervals(
                 queryMatchDataSource(expectedDataSource),
+                EasyMock.anyObject()
+            ))
+            .andReturn(runner).anyTimes();
+    EasyMock.expect(runner.run(EasyMock.anyObject(), EasyMock.anyObject())).andReturn(Sequences.empty()).anyTimes();
+    replayAll();
+
+    AuthConfig authConfig = AuthConfig.newBuilder()
+                                      .setAuthorizeQueryContextParams(true)
+                                      .setTablePolicySecurityLevel(securityLevel)
+                                      .build();
+    QueryLifecycle lifecycle = createLifecycle(authConfig);
+    lifecycle.initialize(query);
+    Assert.assertTrue(lifecycle.authorize(authenticationResult).getPermissionErrorMessage(false).isEmpty());
+    lifecycle.execute();
+  }
+
+  @Test
+  @Parameters({
+      "APPLY_WHEN_APPLICABLE",
+      "POLICY_CHECKED_ON_ALL_TABLES_ALLOW_EMPTY",
+      "POLICY_CHECKED_ON_ALL_TABLES_POLICY_MUST_EXIST"
+  })
+  public void testAuthorized_queryWithRestrictedDataSource_runWithSuperUserPermission(Policy.TablePolicySecurityLevel securityLevel)
+  {
+    // Test the path historical receives a native json query from broker, query already has restriction on data source
+    Policy rowFilterPolicy = Policy.fromRowFilter(new NullFilter("some-column", null));
+    // Internal druid system would get a NO_RESTRICTION on a restricted data source.
+    Access access = Access.allowWithRestriction(Policy.NO_RESTRICTION);
+
+    DataSource restrictedDataSource = RestrictedDataSource.create(TableDataSource.create(DATASOURCE), rowFilterPolicy);
+
+    final TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+                                        .dataSource(restrictedDataSource)
+                                        .intervals(ImmutableList.of(Intervals.ETERNITY))
+                                        .aggregators(new CountAggregatorFactory("chocula"))
+                                        .build();
+    EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
+    EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
+    EasyMock.expect(authenticationResult.getAuthorizerName()).andReturn(AUTHORIZER).anyTimes();
+    EasyMock.expect(authorizer.authorize(authenticationResult, RESOURCE, Action.READ))
+            .andReturn(access).anyTimes();
+    EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject()))
+            .andReturn(toolChest).anyTimes();
+    // We're expecting the data source in the query to be the same RestrictedDataSource.
+    EasyMock.expect(texasRanger.getQueryRunnerForIntervals(
+                queryMatchDataSource(restrictedDataSource),
                 EasyMock.anyObject()
             ))
             .andReturn(runner).anyTimes();

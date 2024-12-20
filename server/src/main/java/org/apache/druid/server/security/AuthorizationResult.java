@@ -45,19 +45,8 @@ import java.util.stream.Stream;
 public class AuthorizationResult
 {
   /**
-   * Provides unrestricted superuser access to all resources. This should be limited to Druid internal systems or
-   * superusers, except in cases where ACL considerations are not a priority.
-   */
-  public static final AuthorizationResult SUPERUSER = new AuthorizationResult(
-      PERMISSION.SUPERUSER,
-      null,
-      Collections.emptyMap(),
-      null,
-      null
-  );
-
-  /**
-   * Provides access with no restrictions to all resources.
+   * Provides access with no restrictions to all resources.This should be limited to Druid internal systems or
+   * superusers, except in cases where granular ACL considerations are not a priority.
    */
   public static final AuthorizationResult ALLOW_NO_RESTRICTION = new AuthorizationResult(
       PERMISSION.ALLOW_NO_RESTRICTION,
@@ -80,7 +69,6 @@ public class AuthorizationResult
 
   enum PERMISSION
   {
-    SUPERUSER,
     ALLOW_NO_RESTRICTION,
     ALLOW_WITH_RESTRICTION,
     DENY
@@ -154,6 +142,16 @@ public class AuthorizationResult
     );
   }
 
+  public boolean isUserWithNoRestriction()
+  {
+    return policyRestrictions.values()
+                             .stream()
+                             .flatMap(policy -> policy.isPresent()
+                                                ? Stream.of(policy.get())
+                                                : Stream.empty()) // Can be replaced by Optional.stream after Java 11
+                             .allMatch(Policy::hasNoRestriction);
+  }
+
   /**
    * Returns a permission error string if the AuthorizationResult doesn't permit all requried access. Otherwise, returns
    * empty. When {@code policyRestrictionsNotPermitted} set to true, it requests unrestricted full access. The caller
@@ -170,7 +168,6 @@ public class AuthorizationResult
   public Optional<String> getPermissionErrorMessage(boolean policyRestrictionsNotPermitted)
   {
     switch (permission) {
-      case SUPERUSER:
       case ALLOW_NO_RESTRICTION:
         return Optional.empty();
       case DENY:

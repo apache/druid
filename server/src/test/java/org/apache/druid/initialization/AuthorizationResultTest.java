@@ -25,7 +25,6 @@ import junitparams.Parameters;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.filter.EqualityFilter;
-import org.apache.druid.query.filter.TrueDimFilter;
 import org.apache.druid.query.policy.Policy;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.server.security.AuthorizationResult;
@@ -97,20 +96,12 @@ public class AuthorizationResultTest
         "table1",
         Optional.of(Policy.NO_RESTRICTION)
     ));
-    AuthorizationResult resultWithTrueFilterRestrictionPolicy = AuthorizationResult.allowWithRestriction(ImmutableMap.of(
-        "table1",
-        Optional.of(Policy.fromRowFilter(TrueDimFilter.instance()))
-    ));
 
     assertEquals(Optional.empty(), result.getPermissionErrorMessage(policyRestrictionsNotPermitted));
     assertEquals(Optional.empty(), resultWithEmptyPolicy.getPermissionErrorMessage(policyRestrictionsNotPermitted));
     assertEquals(
         Optional.empty(),
         resultWithNoRestrictionPolicy.getPermissionErrorMessage(policyRestrictionsNotPermitted)
-    );
-    assertEquals(
-        Optional.empty(),
-        resultWithTrueFilterRestrictionPolicy.getPermissionErrorMessage(policyRestrictionsNotPermitted)
     );
   }
 

@@ -234,40 +234,64 @@ public class DataSourceTest
       "POLICY_CHECKED_ON_ALL_TABLES_ALLOW_EMPTY",
       "POLICY_CHECKED_ON_ALL_TABLES_POLICY_MUST_EXIST"
   })
+  public void testMapWithRestriction_onRestrictedDataSource_fromDruidSystem(Policy.TablePolicySecurityLevel securityLevel)
+  {
+    RestrictedDataSource restrictedDataSource = RestrictedDataSource.create(
+        TableDataSource.create("table1"),
+        Policy.fromRowFilter(new NullFilter("some-column", null))
+    );
+    // The druid-system should get a NO_RESTRICTION policy attached on a table.
+    ImmutableMap<String, Optional<Policy>> noRestrictionPolicy = ImmutableMap.of(
+        "table1",
+        Optional.of(Policy.NO_RESTRICTION)
+    );
+
+    Assert.assertEquals(
+        restrictedDataSource,
+        restrictedDataSource.mapWithRestriction(noRestrictionPolicy, securityLevel)
+    );
+  }
+
+  @Test
+  @Parameters({
+      "APPLY_WHEN_APPLICABLE",
+      "POLICY_CHECKED_ON_ALL_TABLES_ALLOW_EMPTY",
+      "POLICY_CHECKED_ON_ALL_TABLES_POLICY_MUST_EXIST"
+  })
   public void testMapWithRestriction_onRestrictedDataSource_alwaysThrows(Policy.TablePolicySecurityLevel securityLevel)
   {
     RestrictedDataSource restrictedDataSource = RestrictedDataSource.create(
         TableDataSource.create("table1"),
-        Policy.NO_RESTRICTION
+        Policy.fromRowFilter(new NullFilter("random-column", null))
     );
     ImmutableMap<String, Optional<Policy>> anotherRestrictions = ImmutableMap.of(
         "table1",
         Optional.of(Policy.fromRowFilter(new NullFilter("some-column", null)))
     );
-    ImmutableMap<String, Optional<Policy>> noRestrictions = ImmutableMap.of("table1", Optional.empty());
-    ImmutableMap<String, Optional<Policy>> emptyPolicyMap = ImmutableMap.of();
+    ImmutableMap<String, Optional<Policy>> noPolicyFound = ImmutableMap.of("table1", Optional.empty());
+    ImmutableMap<String, Optional<Policy>> policyWasNotChecked = ImmutableMap.of();
 
     ISE e = Assert.assertThrows(
         ISE.class,
         () -> restrictedDataSource.mapWithRestriction(anotherRestrictions, securityLevel)
     );
     Assert.assertEquals(
-        "Multiple restrictions on [table1]: Policy{rowFilter=null} and Policy{rowFilter=some-column IS NULL}",
+        "Multiple restrictions on [table1]: Policy{rowFilter=random-column IS NULL} and Policy{rowFilter=some-column IS NULL}",
         e.getMessage()
     );
 
     ISE e2 = Assert.assertThrows(
         ISE.class,
-        () -> restrictedDataSource.mapWithRestriction(noRestrictions, securityLevel)
+        () -> restrictedDataSource.mapWithRestriction(noPolicyFound, securityLevel)
     );
     Assert.assertEquals(
-        "No restriction found on table [table1], but had Policy{rowFilter=null} before.",
+        "No restriction found on table [table1], but had Policy{rowFilter=random-column IS NULL} before.",
         e2.getMessage()
     );
 
     ISE e3 = Assert.assertThrows(
         ISE.class,
-        () -> restrictedDataSource.mapWithRestriction(emptyPolicyMap, securityLevel)
+        () -> restrictedDataSource.mapWithRestriction(policyWasNotChecked, securityLevel)
     );
     Assert.assertEquals(
         "Missing policy check result for table [table1]",

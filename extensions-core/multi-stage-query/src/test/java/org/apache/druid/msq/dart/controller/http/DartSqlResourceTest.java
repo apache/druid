@@ -561,7 +561,7 @@ public class DartSqlResourceTest extends MSQTestBase
     );
     Assertions.assertNull(sqlResource.doPost(sqlQuery, httpServletRequest));
     // Super user can run a dart query, but we don't support it yet.
-    Assertions.assertEquals(Response.Status.INTERNAL_SERVER_ERROR, asyncResponse.getStatus());
+    Assertions.assertEquals(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), asyncResponse.getStatus());
   }
 
   @Test

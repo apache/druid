@@ -30,7 +30,6 @@ import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.RestrictedDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.filter.DimFilter;
@@ -224,12 +223,6 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
   @Override
   public Query<SegmentAnalysis> withDataSource(DataSource dataSource)
   {
-    if (dataSource instanceof RestrictedDataSource && ((RestrictedDataSource) dataSource).getPolicy()
-                                                                                         .hasNoRestriction()) {
-      return Druids.SegmentMetadataQueryBuilder.copy(this)
-                                               .dataSource(((RestrictedDataSource) dataSource).getBase())
-                                               .build();
-    }
     return Druids.SegmentMetadataQueryBuilder.copy(this).dataSource(dataSource).build();
   }
 

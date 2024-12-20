@@ -324,7 +324,7 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheTe
     EasyMock.expect(lifecycleMock.runSimple(
                 expectedMetadataQuery,
                 AllowAllAuthenticator.ALLOW_ALL_RESULT,
-                AuthorizationResult.SUPERUSER
+                AuthorizationResult.ALLOW_NO_RESTRICTION
             ))
             .andReturn(QueryResponse.withEmptyContext(Sequences.empty()));
 
@@ -1072,7 +1072,7 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheTe
     EasyMock.expect(lifecycleMock.runSimple(
                 expectedMetadataQuery,
                 AllowAllAuthenticator.ALLOW_ALL_RESULT,
-                AuthorizationResult.SUPERUSER
+                AuthorizationResult.ALLOW_NO_RESTRICTION
             ))
             .andReturn(QueryResponse.withEmptyContext(Sequences.empty()));
 
@@ -1255,7 +1255,7 @@ public class BrokerSegmentMetadataCacheTest extends BrokerSegmentMetadataCacheTe
     EasyMock.expect(lifecycleMock.runSimple(
                 expectedMetadataQuery,
                 AllowAllAuthenticator.ALLOW_ALL_RESULT,
-                AuthorizationResult.SUPERUSER
+                AuthorizationResult.ALLOW_NO_RESTRICTION
             ))
             .andReturn(QueryResponse.withEmptyContext(Sequences.empty()));
 
