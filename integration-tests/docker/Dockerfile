@@ -36,7 +36,7 @@ RUN for i in $(seq 1 $SETUP_RETRIES); do \
     done; \
     rm -f /root/base-setup.sh; \
     if [ "$i" -eq "$SETUP_RETRIES" ]; then \
-        exit 1; \
+        exit $?; \
     fi; \
 
 FROM druidbase
