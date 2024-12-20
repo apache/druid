@@ -114,13 +114,13 @@ public class SupervisorResourceTest extends EasyMockSupport
               } else {
                 if (resource.getType().equals(ResourceType.DATASOURCE)) {
                   if (resource.getName().equals("datasource2")) {
-                    return new Access(false, "not authorized.");
+                    return Access.deny("not authorized.");
                   } else {
                     return Access.OK;
                   }
                 } else if (resource.getType().equals(ResourceType.EXTERNAL)) {
                   if (resource.getName().equals("test")) {
-                    return new Access(false, "not authorized.");
+                    return Access.deny("not authorized.");
                   } else {
                     return Access.OK;
                   }

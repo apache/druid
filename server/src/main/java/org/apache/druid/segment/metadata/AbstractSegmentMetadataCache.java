@@ -57,7 +57,7 @@ import org.apache.druid.segment.column.Types;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
-import org.apache.druid.server.security.Access;
+import org.apache.druid.server.security.AuthorizationResult;
 import org.apache.druid.server.security.Escalator;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
@@ -975,7 +975,8 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
 
     return queryLifecycleFactory
         .factorize()
-        .runSimple(segmentMetadataQuery, escalator.createEscalatedAuthenticationResult(), Access.OK).getResults();
+        .runSimple(segmentMetadataQuery, escalator.createEscalatedAuthenticationResult(), AuthorizationResult.ALLOW_NO_RESTRICTION)
+        .getResults();
   }
 
   @VisibleForTesting
