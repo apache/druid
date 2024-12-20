@@ -60,13 +60,9 @@ public class ScheduledBatchTaskManager
   private final ServiceEmitter emitter;
 
   /**
-   * Single-threaded shared executor to schedule different jobs across scheduled batch supervisors.
+   * Single-threaded executor to schedule jobs that is shared across scheduled batch supervisors.
    */
   private final ScheduledExecutorService jobsExecutor;
-  /**
-   * Single-threaded executor to process the cron jobs queue.
-   */
-  private final ScheduledExecutorService cronExecutor;
 
   private final ConcurrentHashMap<String, SchedulerManager> supervisorToManager
       = new ConcurrentHashMap<>();
@@ -81,7 +77,6 @@ public class ScheduledBatchTaskManager
   )
   {
     this.taskMaster = taskMaster;
-    this.cronExecutor = executorFactory.create(1, "ScheduledBatchScheduler-%s");
     this.brokerClient = brokerClient;
     this.emitter = emitter;
     this.statusTracker = statusTracker;
@@ -188,15 +183,10 @@ public class ScheduledBatchTaskManager
     );
   }
 
-  private void enqueueTask(final Runnable runnable)
-  {
-    cronExecutor.submit(runnable);
-  }
-
   private void submitSqlTask(final String supervisorId, final ClientSqlQuery spec)
       throws ExecutionException, InterruptedException
   {
-    log.debug("Submitting a new task with spec[%s] for supervisor[%s].", spec, supervisorId);
+    log.info("Submitting a new task with spec[%s] for supervisor[%s].", spec, supervisorId);
     final SqlTaskStatus taskStatus = FutureUtils.get(brokerClient.submitSqlTask(spec), true);
     statusTracker.onTaskSubmitted(supervisorId, taskStatus);
   }
@@ -245,17 +235,15 @@ public class ScheduledBatchTaskManager
 
       jobsExecutor.schedule(
           () -> {
-            enqueueTask(() -> {
-              try {
-                lastTaskSubmittedTime = DateTimes.nowUtc();
-                submitSqlTask(supervisorId, spec);
-                emitMetric("batchSupervisor/tasks/submit/success", 1);
-              } catch (Exception e) {
-                emitMetric("batchSupervisor/tasks/submit/failed", 1);
-                log.error(e, "Error submitting task for supervisor[%s]. Continuing schedule.", supervisorId);
-              }
-            });
-            startScheduling(); // schedule the next task
+            try {
+              lastTaskSubmittedTime = DateTimes.nowUtc();
+              submitSqlTask(supervisorId, spec);
+              emitMetric("batchSupervisor/tasks/submit/success", 1);
+            } catch (Exception e) {
+              emitMetric("batchSupervisor/tasks/submit/failed", 1);
+              log.error(e, "Error submitting task for supervisor[%s]. Continuing schedule.", supervisorId);
+            }
+            startScheduling(); // Schedule the next task
           },
           timeUntilNextSubmission.getMillis(),
           TimeUnit.MILLISECONDS

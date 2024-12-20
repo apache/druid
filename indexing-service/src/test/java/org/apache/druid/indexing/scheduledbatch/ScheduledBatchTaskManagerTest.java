@@ -126,7 +126,7 @@ public class ScheduledBatchTaskManagerTest
     scheduler.startScheduledIngestion(SUPERVISOR_ID_FOO, DATASOURCE, IMMEDIATE_SCHEDULER_CONFIG, query1);
     verifySchedulerSnapshot(SUPERVISOR_ID_FOO, ScheduledBatchSupervisorSnapshot.BatchSupervisorStatus.SCHEDULER_RUNNING);
 
-    executor.finishNextPendingTasks(2);
+    executor.finishNextPendingTasks(1);
     verifySchedulerSnapshotWithTasks(
         SUPERVISOR_ID_FOO,
         ScheduledBatchSupervisorSnapshot.BatchSupervisorStatus.SCHEDULER_RUNNING,
@@ -169,7 +169,7 @@ public class ScheduledBatchTaskManagerTest
     scheduler.startScheduledIngestion(SUPERVISOR_ID_FOO, DATASOURCE, IMMEDIATE_SCHEDULER_CONFIG, query1);
     verifySchedulerSnapshot(SUPERVISOR_ID_FOO, ScheduledBatchSupervisorSnapshot.BatchSupervisorStatus.SCHEDULER_RUNNING);
 
-    executor.finishNextPendingTasks(2);
+    executor.finishNextPendingTasks(1);
     scheduler.stopScheduledIngestion(SUPERVISOR_ID_FOO);
     verifySchedulerSnapshot(
         SUPERVISOR_ID_FOO,
@@ -208,7 +208,7 @@ public class ScheduledBatchTaskManagerTest
     verifySchedulerSnapshot(SUPERVISOR_ID_FOO, ScheduledBatchSupervisorSnapshot.BatchSupervisorStatus.SCHEDULER_RUNNING);
     verifySchedulerSnapshot(SUPERVISOR_ID_BAR, ScheduledBatchSupervisorSnapshot.BatchSupervisorStatus.SCHEDULER_RUNNING);
 
-    executor.finishNextPendingTasks(3);
+    executor.finishNextPendingTasks(2);
 
     verifySchedulerSnapshotWithTasks(
         SUPERVISOR_ID_FOO,
@@ -217,7 +217,7 @@ public class ScheduledBatchTaskManagerTest
         ImmutableMap.of(expectedFooTask1.getTaskId(), TaskStatus.success(expectedFooTask1.getTaskId()))
     );
 
-    executor.finishNextPendingTasks(6);
+    executor.finishNextPendingTasks(4);
     scheduler.stopScheduledIngestion(SUPERVISOR_ID_FOO);
     verifySchedulerSnapshotWithTasks(
         SUPERVISOR_ID_FOO,
@@ -242,12 +242,12 @@ public class ScheduledBatchTaskManagerTest
     serviceEmitter.verifyEmitted(
         "batchSupervisor/tasks/submit/success",
         ImmutableMap.of("supervisorId", SUPERVISOR_ID_FOO),
-        2
+        3
     );
     serviceEmitter.verifyEmitted(
         "batchSupervisor/tasks/submit/success",
         ImmutableMap.of("supervisorId", SUPERVISOR_ID_BAR),
-        2
+        3
     );
   }
 
