@@ -277,7 +277,7 @@ Constructs a SQL `ARRAY` literal from the provided expression arguments. All arg
 
 <details><summary>Example</summary>
 
-The following example constructs arrays using the values from the `agent_category`, `browser`, and `browser_version` columns in the `kttm` datasource.
+The following example constructs arrays from the values of the `agent_category`, `browser`, and `browser_version` columns in the `kttm` datasource.
 
 ```sql
 SELECT ARRAY["agent_category", "browser", "browser_version"] AS "user_agent_details"
