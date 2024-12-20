@@ -108,7 +108,8 @@ public class ScheduledBatchTaskManager
   }
 
   /**
-   * Starts scheduled ingestion for the specified {@code supervisorId}
+   * Initializes and starts scheduled ingestion for the specified {@code supervisorId}, scheduling tasks
+   * using the provided {@code spec} and {@code cronSchedulerConfig}.
    */
   public void startScheduledIngestion(
       final String supervisorId,
@@ -127,8 +128,8 @@ public class ScheduledBatchTaskManager
   }
 
   /**
-   *
-   * @param supervisorId
+   * Stops the scheduler for the specified {@code supervisorId}, pausing task submissions
+   * while retaining the ability to track the supervisor's status.
    */
   public void stopScheduledIngestion(final String supervisorId)
   {
@@ -222,7 +223,8 @@ public class ScheduledBatchTaskManager
 
     private synchronized void startScheduling()
     {
-      if (jobsExecutor.isTerminated() || jobsExecutor.isShutdown() || status == ScheduledBatchSupervisorSnapshot.BatchSupervisorStatus.SCHEDULER_SHUTDOWN) {
+      if (jobsExecutor.isTerminated() || jobsExecutor.isShutdown()
+          || status == ScheduledBatchSupervisorSnapshot.BatchSupervisorStatus.SCHEDULER_SHUTDOWN) {
         return;
       }
 
@@ -239,7 +241,8 @@ public class ScheduledBatchTaskManager
               lastTaskSubmittedTime = DateTimes.nowUtc();
               submitSqlTask(supervisorId, spec);
               emitMetric("batchSupervisor/tasks/submit/success", 1);
-            } catch (Exception e) {
+            }
+            catch (Exception e) {
               emitMetric("batchSupervisor/tasks/submit/failed", 1);
               log.error(e, "Error submitting task for supervisor[%s]. Continuing schedule.", supervisorId);
             }

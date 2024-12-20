@@ -25,8 +25,6 @@ import com.cronutils.model.time.ExecutionTime;
 import com.cronutils.parser.CronParser;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.vavr.control.Validation;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
@@ -53,8 +51,7 @@ public class QuartzCronSchedulerConfig implements CronSchedulerConfig
       this.executionTime = ExecutionTime.forCron(QUARTZ_PARSER.parse(schedule));
       this.schedule = schedule;
     }
-    catch (IllegalArgumentException e)
-    {
+    catch (IllegalArgumentException e) {
       throw InvalidInput.exception("Quartz schedule[%s] is invalid: [%s]", schedule, e.getMessage());
     }
   }

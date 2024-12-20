@@ -67,8 +67,7 @@ public class UnixCronSchedulerConfig implements CronSchedulerConfig
       this.executionTime = ExecutionTime.forCron(UNIX_PARSER.parse(schedule));
       this.schedule = schedule;
     }
-    catch (IllegalArgumentException e)
-    {
+    catch (IllegalArgumentException e) {
       throw InvalidInput.exception("Unix schedule[%s] is invalid: [%s]", schedule, e.getMessage());
     }
   }
