@@ -142,6 +142,11 @@ public class AuthorizationResult
     );
   }
 
+  /**
+   * Returns true if the policy restrictions indicates that all resources are one of the following:
+   * <li> no policy found
+   * <li> the user has a no-restriction policy
+   */
   public boolean isUserWithNoRestriction()
   {
     return policyRestrictions.values()
@@ -173,12 +178,7 @@ public class AuthorizationResult
       case DENY:
         return Optional.of(Objects.requireNonNull(failureMessage));
       case ALLOW_WITH_RESTRICTION:
-        if (policyRestrictionsNotPermitted && policyRestrictions.values()
-                                                                .stream()
-                                                                .flatMap(policy -> policy.isPresent()
-                                                                                   ? Stream.of(policy.get())
-                                                                                   : Stream.empty()) // Can be replaced by Optional.stream after Java 11
-                                                                .anyMatch(p -> !p.hasNoRestriction())) {
+        if (policyRestrictionsNotPermitted && !isUserWithNoRestriction()) {
           return Optional.of(Access.DEFAULT_ERROR_MESSAGE);
         }
         return Optional.empty();
