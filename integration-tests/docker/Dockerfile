@@ -34,9 +34,10 @@ RUN for i in $(seq 1 $SETUP_RETRIES); do \
             sleep 2; \
         }; \
     done; \
+    LAST_EXIT_CODE=$?; \
     rm -f /root/base-setup.sh; \
     if [ "$i" -eq "$SETUP_RETRIES" ]; then \
-        exit $?; \
+        exit LAST_EXIT_CODE; \
     fi; \
 
 FROM druidbase
