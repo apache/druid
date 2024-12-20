@@ -33,8 +33,7 @@ public class ScheduledBatchSupervisorSnapshot
   public enum BatchSupervisorStatus
   {
     SCHEDULER_RUNNING,
-    SCHEDULER_SHUTDOWN,
-    SCHEDULER_ERROR
+    SCHEDULER_SHUTDOWN
   }
 
   @JsonProperty

@@ -92,10 +92,8 @@ public class ScheduledBatchSupervisor implements Supervisor
 
   public enum State implements SupervisorStateManager.State
   {
-    SCHEDULER_STOPPED(true),
     RUNNING(true),
-    SUSPENDED(true),
-    UNHEALTHY(false);
+    SUSPENDED(true);
 
     private final boolean healthy;
 
