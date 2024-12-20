@@ -46,6 +46,7 @@ import org.mockito.Mockito;
 import java.nio.charset.StandardCharsets;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 
@@ -182,6 +183,44 @@ public class ScheduledBatchTaskManagerTest
         "batchSupervisor/tasks/submit/failed",
         ImmutableMap.of("supervisorId", SUPERVISOR_ID_FOO),
         1
+    );
+  }
+
+  @Test
+  public void testSupervisorStopsSubmittingJobsWhenSuspended()
+  {
+    final SqlTaskStatus expectedTaskStatus = new SqlTaskStatus(TASK_ID_FOO1, TaskState.SUCCESS, null);
+    Mockito.when(brokerClient.submitSqlTask(query1))
+           .thenReturn(Futures.immediateFuture(expectedTaskStatus));
+
+    scheduler.start();
+    scheduler.startScheduledIngestion(SUPERVISOR_ID_FOO, DATASOURCE, IMMEDIATE_SCHEDULER_CONFIG, query1);
+    verifySchedulerSnapshot(SUPERVISOR_ID_FOO, ScheduledBatchSupervisorSnapshot.BatchSupervisorStatus.SCHEDULER_RUNNING);
+
+    executor.finishNextPendingTasks(1);
+    verifySchedulerSnapshotWithTasks(
+        SUPERVISOR_ID_FOO,
+        ScheduledBatchSupervisorSnapshot.BatchSupervisorStatus.SCHEDULER_RUNNING,
+        ImmutableMap.of(),
+        ImmutableMap.of(expectedTaskStatus.getTaskId(), TaskStatus.success(expectedTaskStatus.getTaskId()))
+    );
+
+    scheduler.stopScheduledIngestion(SUPERVISOR_ID_FOO);
+    executor.finishNextPendingTask();
+    verifySchedulerSnapshotWithTasks(
+        SUPERVISOR_ID_FOO,
+        ScheduledBatchSupervisorSnapshot.BatchSupervisorStatus.SCHEDULER_SHUTDOWN,
+        ImmutableMap.of(),
+        ImmutableMap.of(expectedTaskStatus.getTaskId(), TaskStatus.success(expectedTaskStatus.getTaskId()))
+    );
+    assertFalse(executor.hasPendingTasks());
+
+    scheduler.stop();
+    assertNull(scheduler.getSchedulerSnapshot(SUPERVISOR_ID_FOO));
+    serviceEmitter.verifyEmitted(
+        "batchSupervisor/tasks/submit/success",
+        ImmutableMap.of("supervisorId", SUPERVISOR_ID_FOO),
+        2
     );
   }
 

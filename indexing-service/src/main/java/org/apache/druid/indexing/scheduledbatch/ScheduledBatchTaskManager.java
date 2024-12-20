@@ -186,7 +186,7 @@ public class ScheduledBatchTaskManager
   private void submitSqlTask(final String supervisorId, final ClientSqlQuery spec)
       throws ExecutionException, InterruptedException
   {
-    log.info("Submitting a new task with spec[%s] for supervisor[%s].", spec, supervisorId);
+    log.debug("Submitting a new task with spec[%s] for supervisor[%s].", spec, supervisorId);
     final SqlTaskStatus taskStatus = FutureUtils.get(brokerClient.submitSqlTask(spec), true);
     statusTracker.onTaskSubmitted(supervisorId, taskStatus);
   }
@@ -222,7 +222,7 @@ public class ScheduledBatchTaskManager
 
     private synchronized void startScheduling()
     {
-      if (jobsExecutor.isTerminated() || jobsExecutor.isShutdown()) {
+      if (jobsExecutor.isTerminated() || jobsExecutor.isShutdown() || status == ScheduledBatchSupervisorSnapshot.BatchSupervisorStatus.SCHEDULER_SHUTDOWN) {
         return;
       }
 
