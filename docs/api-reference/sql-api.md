@@ -85,20 +85,15 @@ The request body takes the following properties:
 
 * `context`: JSON object containing optional [SQL query context parameters](../querying/sql-query-context.md), such as to set the query ID, time zone, and whether to use an approximation algorithm for distinct count.
 
-* `parameters`: List of query parameters for parameterized queries. Each parameter in the array should be a JSON object containing the parameter's SQL data type and parameter value. For a list of supported SQL types, see [Data types](../querying/sql-data-types.md).
+* `parameters`: List of query parameters for parameterized queries. Each parameter in the array should be a JSON object containing the parameter's SQL data type and parameter value. For more information on using dynamic parameters, see [Dynamic parameters](../querying/sql.md#dynamic-parameters). For a list of supported SQL types, see [Data types](../querying/sql-data-types.md).
 
     For example:
+
     ```json
-    "parameters": [
-        {
-            "type": "VARCHAR",
-            "value": "bar"
-        },
-        {
-            "type": "ARRAY",
-            "value": [-25.7, null, 36.85]
-        }
-    ]
+    {
+        "query": "SELECT \"arrayDouble\" FROM \"array_example\" WHERE ARRAY_CONTAINS(\"arrayDouble\", ?)",
+        "parameters": [{"type": "ARRAY", "value": [999, null, 5.5]}]
+    }
     ```
 
 #### Responses
@@ -154,7 +149,6 @@ For line-oriented formats, Druid includes a newline character as the final chara
 If you detect a truncated response, treat it as an error.
 
 ---
-
 
 #### Sample request
 
