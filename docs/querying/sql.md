@@ -432,7 +432,7 @@ SELECT arrayColumn from druid.table where ARRAY_CONTAINS(arrayColumn, ?)
 ```
 
 You can replace an IN filter with many values by dynamically passing a parameter into [SCALAR_IN_ARRAY](sql-functions.md#scalar_in_array).
-For sample java queries, see [Dynamic parameters](../api-reference/sql-jdbc.md#dynamic-parameters).
+For example Java queries, see [Dynamic parameters](../api-reference/sql-jdbc.md#dynamic-parameters).
 
 ```sql
 SELECT count(city) from druid.table where SCALAR_IN_ARRAY(city, ?)

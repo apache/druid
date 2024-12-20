@@ -92,7 +92,7 @@ The request body takes the following properties:
     ```json
     {
         "query": "SELECT \"arrayDouble\" FROM \"array_example\" WHERE ARRAY_CONTAINS(\"arrayDouble\", ?)",
-        "parameters": [{"type": "ARRAY", "value": [999, null, 5.5]}]
+        "parameters": [{"type": "ARRAY", "value": [999.0, null, 5.5]},{"type":"VARCHAR","value":"bar"}]
     }
     ```
 
