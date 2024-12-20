@@ -192,11 +192,6 @@
             <artifactId>cron-utils</artifactId>
             <version>9.2.0</version>
         </dependency>
-        <dependency>
-            <groupId>org.apache.calcite.avatica</groupId>
-            <artifactId>avatica-core</artifactId>
-            <scope>provided</scope>
-        </dependency>
         <!-- Tests -->
         <dependency>
             <groupId>junit</groupId>
