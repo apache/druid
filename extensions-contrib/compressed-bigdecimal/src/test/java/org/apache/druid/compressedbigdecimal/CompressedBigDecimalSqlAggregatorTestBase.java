@@ -19,9 +19,6 @@
 
 package org.apache.druid.compressedbigdecimal;
 
-import com.fasterxml.jackson.databind.MapperFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Injector;
 import org.apache.druid.compressedbigdecimal.CompressedBigDecimalSqlAggregatorTestBase.CompressedBigDecimalComponentSupplier;
@@ -29,7 +26,7 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
-import org.apache.druid.guice.DruidInjectorBuilder;
+import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Druids;
@@ -48,6 +45,7 @@ import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
 import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.calcite.util.DruidModuleCollection;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.timeline.DataSegment;
@@ -80,10 +78,9 @@ public abstract class CompressedBigDecimalSqlAggregatorTestBase extends BaseCalc
         TestDataBuilder.RAW_ROWS1.stream().map(m -> TestDataBuilder.createRow(m, SCHEMA)).collect(Collectors.toList());
 
     @Override
-    public void configureGuice(DruidInjectorBuilder builder)
+    public DruidModule getCoreModule()
     {
-      super.configureGuice(builder);
-      builder.addModule(new CompressedBigDecimalModule());
+      return DruidModuleCollection.of(super.getCoreModule(), new CompressedBigDecimalModule());
     }
 
     @Override
@@ -119,13 +116,6 @@ public abstract class CompressedBigDecimalSqlAggregatorTestBase extends BaseCalc
                      .build(),
           index
       );
-    }
-
-    @Override
-    public void configureJsonMapper(ObjectMapper objectMapper)
-    {
-      objectMapper.configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS, true);
-      objectMapper.configure(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY, true);
     }
   }
 
