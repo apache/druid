@@ -36,7 +36,7 @@ RUN for i in $(seq 1 $SETUP_RETRIES); do \
     done; \
     LAST_EXIT_CODE=$?; \
     rm -f /root/base-setup.sh; \
-    if [ "$i" -eq "$SETUP_RETRIES" ]; then \
+    if [ "$i" -eq "$SETUP_RETRIES" ] && [ "$LAST_EXIT_CODE" -ne 0 ]; then \
         exit LAST_EXIT_CODE; \
     fi; \
 
