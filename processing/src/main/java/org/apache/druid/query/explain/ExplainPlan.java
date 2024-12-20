@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.sql.http;
+package org.apache.druid.query.explain;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -26,7 +26,6 @@ import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import org.apache.druid.sql.calcite.planner.ExplainAttributes;
 
 import java.io.IOException;
 import java.util.Objects;

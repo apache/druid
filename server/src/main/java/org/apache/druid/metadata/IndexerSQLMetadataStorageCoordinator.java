@@ -2943,7 +2943,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           = versionIntervalToSmallestSegmentId.computeIfAbsent(segmentId.getVersion(), v -> new HashMap<>());
       final SegmentId value = map.get(segmentId.getInterval());
       if (value == null || value.getPartitionNum() > segmentId.getPartitionNum()) {
-        map.put(interval, segmentId);
+        map.put(segmentId.getInterval(), segmentId);
       }
     }
 

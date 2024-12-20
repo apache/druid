@@ -84,7 +84,7 @@ public class BroadcastJoinableMMappedQueryableSegmentizerFactoryTest extends Ini
         KEY_COLUMNS
     );
     Interval testInterval = Intervals.of("2011-01-12T00:00:00.000Z/2011-05-01T00:00:00.000Z");
-    IncrementalIndex data = TestIndex.makeRealtimeIndex("druid.sample.numeric.tsv");
+    IncrementalIndex data = TestIndex.makeSampleNumericIncrementalIndex();
 
     List<String> columnNames = data.getColumnNames();
     File segment = new File(temporaryFolder.newFolder(), "segment");

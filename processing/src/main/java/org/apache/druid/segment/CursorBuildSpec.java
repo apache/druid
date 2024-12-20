@@ -32,6 +32,7 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 public class CursorBuildSpec
 {
@@ -62,13 +63,17 @@ public class CursorBuildSpec
   private final boolean isAggregate;
 
   @Nullable
+  private final Set<String> physicalColumns;
+
+  @Nullable
   private final QueryMetrics<?> queryMetrics;
 
   public CursorBuildSpec(
       @Nullable Filter filter,
       Interval interval,
-      @Nullable List<String> groupingColumns,
+      @Nullable Set<String> physicalColumns,
       VirtualColumns virtualColumns,
+      @Nullable List<String> groupingColumns,
       @Nullable List<AggregatorFactory> aggregators,
       List<OrderBy> preferredOrdering,
       QueryContext queryContext,
@@ -77,8 +82,9 @@ public class CursorBuildSpec
   {
     this.filter = filter;
     this.interval = Preconditions.checkNotNull(interval, "interval");
-    this.groupingColumns = groupingColumns;
     this.virtualColumns = Preconditions.checkNotNull(virtualColumns, "virtualColumns");
+    this.physicalColumns = physicalColumns;
+    this.groupingColumns = groupingColumns;
     this.aggregators = aggregators;
     this.preferredOrdering = Preconditions.checkNotNull(preferredOrdering, "preferredOrdering");
     this.queryContext = Preconditions.checkNotNull(queryContext, "queryContext");
@@ -107,14 +113,13 @@ public class CursorBuildSpec
   }
 
   /**
-   * Any columns which will be used for grouping by a query engine for the {@link CursorHolder}, useful for
-   * specializing the {@link Cursor} or {@link org.apache.druid.segment.vector.VectorCursor} if any pre-aggregated
-   * data is available.
+   * Set of physical columns required from a cursor. If null, and {@link #groupingColumns} is null or empty and
+   * {@link #aggregators} is null or empty, then a {@link CursorHolder} must assume that ALL columns are required
    */
   @Nullable
-  public List<String> getGroupingColumns()
+  public Set<String> getPhysicalColumns()
   {
-    return groupingColumns;
+    return physicalColumns;
   }
 
   /**
@@ -124,6 +129,17 @@ public class CursorBuildSpec
   public VirtualColumns getVirtualColumns()
   {
     return virtualColumns;
+  }
+
+  /**
+   * Any columns which will be used for grouping by a query engine for the {@link CursorHolder}, useful for
+   * specializing the {@link Cursor} or {@link org.apache.druid.segment.vector.VectorCursor} if any pre-aggregated
+   * data is available.
+   */
+  @Nullable
+  public List<String> getGroupingColumns()
+  {
+    return groupingColumns;
   }
 
   /**
@@ -208,10 +224,12 @@ public class CursorBuildSpec
     @Nullable
     private Filter filter;
     private Interval interval = Intervals.ETERNITY;
+    private VirtualColumns virtualColumns = VirtualColumns.EMPTY;
+    @Nullable
+    private Set<String> physicalColumns;
 
     @Nullable
     private List<String> groupingColumns;
-    private VirtualColumns virtualColumns = VirtualColumns.EMPTY;
     @Nullable
     private List<AggregatorFactory> aggregators;
     private List<OrderBy> preferredOrdering = Collections.emptyList();
@@ -229,8 +247,9 @@ public class CursorBuildSpec
     {
       this.filter = buildSpec.filter;
       this.interval = buildSpec.interval;
-      this.groupingColumns = buildSpec.groupingColumns;
+      this.physicalColumns = buildSpec.physicalColumns;
       this.virtualColumns = buildSpec.virtualColumns;
+      this.groupingColumns = buildSpec.groupingColumns;
       this.aggregators = buildSpec.aggregators;
       this.preferredOrdering = buildSpec.preferredOrdering;
       this.queryContext = buildSpec.queryContext;
@@ -256,13 +275,11 @@ public class CursorBuildSpec
     }
 
     /**
-     * @see CursorBuildSpec#getGroupingColumns()
+     * @see CursorBuildSpec#getPhysicalColumns()
      */
-    public CursorBuildSpecBuilder setGroupingColumns(
-        @Nullable List<String> groupingColumns
-    )
+    public CursorBuildSpecBuilder setPhysicalColumns(@Nullable Set<String> physicalColumns)
     {
-      this.groupingColumns = groupingColumns;
+      this.physicalColumns = physicalColumns;
       return this;
     }
 
@@ -272,6 +289,15 @@ public class CursorBuildSpec
     public CursorBuildSpecBuilder setVirtualColumns(VirtualColumns virtualColumns)
     {
       this.virtualColumns = virtualColumns;
+      return this;
+    }
+
+    /**
+     * @see CursorBuildSpec#getGroupingColumns()
+     */
+    public CursorBuildSpecBuilder setGroupingColumns(@Nullable List<String> groupingColumns)
+    {
+      this.groupingColumns = groupingColumns;
       return this;
     }
 
@@ -316,8 +342,9 @@ public class CursorBuildSpec
       return new CursorBuildSpec(
           filter,
           interval,
-          groupingColumns,
+          physicalColumns,
           virtualColumns,
+          groupingColumns,
           aggregators,
           preferredOrdering,
           queryContext,
