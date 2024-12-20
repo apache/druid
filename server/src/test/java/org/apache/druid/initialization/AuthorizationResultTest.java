@@ -35,6 +35,8 @@ import org.junit.runner.RunWith;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 
 @RunWith(JUnitParamsRunner.class)
@@ -81,6 +83,7 @@ public class AuthorizationResultTest
         Optional.of("this data source is not permitted"),
         result.getPermissionErrorMessage(policyRestrictionsNotPermitted)
     );
+    assertFalse(result.isUserWithNoRestriction());
   }
 
   @Test
@@ -98,11 +101,16 @@ public class AuthorizationResultTest
     ));
 
     assertEquals(Optional.empty(), result.getPermissionErrorMessage(policyRestrictionsNotPermitted));
+    assertTrue(result.isUserWithNoRestriction());
+
     assertEquals(Optional.empty(), resultWithEmptyPolicy.getPermissionErrorMessage(policyRestrictionsNotPermitted));
+    assertTrue(resultWithEmptyPolicy.isUserWithNoRestriction());
+
     assertEquals(
         Optional.empty(),
         resultWithNoRestrictionPolicy.getPermissionErrorMessage(policyRestrictionsNotPermitted)
     );
+    assertTrue(resultWithNoRestrictionPolicy.isUserWithNoRestriction());
   }
 
   @Test
@@ -122,5 +130,6 @@ public class AuthorizationResultTest
         )))
     ));
     assertEquals(error, result.getPermissionErrorMessage(policyRestrictionsNotPermitted).toString());
+    assertFalse(result.isUserWithNoRestriction());
   }
 }

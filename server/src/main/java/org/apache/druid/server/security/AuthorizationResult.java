@@ -19,6 +19,8 @@
 
 package org.apache.druid.server.security;
 
+import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.query.policy.Policy;
@@ -30,7 +32,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Stream;
 
 /**
  * Represents the outcoming of performing authorization check on required resource accesses on a query or http requests.
@@ -102,16 +103,21 @@ public class AuthorizationResult
     this.allResourceActions = allResourceActions;
 
     // sanity check
-    if (failureMessage != null && !PERMISSION.DENY.equals(permission)) {
-      throw DruidException.defensive("Failure message should only be set for DENY permission");
-    } else if (PERMISSION.DENY.equals(permission) && failureMessage == null) {
-      throw DruidException.defensive("Failure message must be set for DENY permission");
-    }
-
-    if (!policyRestrictions.isEmpty() && !PERMISSION.ALLOW_WITH_RESTRICTION.equals(permission)) {
-      throw DruidException.defensive("Policy restrictions should only be set for ALLOW_WITH_RESTRICTION permission");
-    } else if (PERMISSION.ALLOW_WITH_RESTRICTION.equals(permission) && policyRestrictions.isEmpty()) {
-      throw DruidException.defensive("Policy restrictions must be set for ALLOW_WITH_RESTRICTION permission");
+    switch (permission) {
+      case DENY:
+        validateFailureMessageIsSet();
+        validatePolicyRestrictionEmpty();
+        return;
+      case ALLOW_WITH_RESTRICTION:
+        validateFailureMessageNull();
+        validatePolicyRestrictionNonEmpty();
+        return;
+      case ALLOW_NO_RESTRICTION:
+        validateFailureMessageNull();
+        validatePolicyRestrictionEmpty();
+        return;
+      default:
+        throw DruidException.defensive("unreachable");
     }
   }
 
@@ -143,18 +149,18 @@ public class AuthorizationResult
   }
 
   /**
-   * Returns true if the policy restrictions indicates that all resources are one of the following:
+   * Returns true if user has the correct permission, and the policy restrictions indicates one of the following:
    * <li> no policy found
    * <li> the user has a no-restriction policy
    */
   public boolean isUserWithNoRestriction()
   {
-    return policyRestrictions.values()
-                             .stream()
-                             .flatMap(policy -> policy.isPresent()
-                                                ? Stream.of(policy.get())
-                                                : Stream.empty()) // Can be replaced by Optional.stream after Java 11
-                             .allMatch(Policy::hasNoRestriction);
+    return PERMISSION.ALLOW_NO_RESTRICTION.equals(permission) || (PERMISSION.ALLOW_WITH_RESTRICTION.equals(permission)
+                                                                  && policyRestrictions.values()
+                                                                                       .stream()
+                                                                                       .map(p -> p.orElse(null))
+                                                                                       .filter(Objects::nonNull) // Can be replaced by Optional::stream after java 11
+                                                                                       .allMatch(Policy::hasNoRestriction));
   }
 
   /**
@@ -241,5 +247,41 @@ public class AuthorizationResult
            + ", allResourceActions="
            + allResourceActions
            + "]";
+  }
+
+  private void validateFailureMessageIsSet()
+  {
+    Preconditions.checkArgument(
+        !Strings.isNullOrEmpty(failureMessage),
+        "Failure message must be set for permission[%s]",
+        permission
+    );
+  }
+
+  private void validateFailureMessageNull()
+  {
+    Preconditions.checkArgument(
+        failureMessage == null,
+        "Failure message must be null for permission[%s]",
+        permission
+    );
+  }
+
+  private void validatePolicyRestrictionEmpty()
+  {
+    Preconditions.checkArgument(
+        policyRestrictions.isEmpty(),
+        "Policy restrictions not allowed for permission[%s]",
+        permission
+    );
+  }
+
+  private void validatePolicyRestrictionNonEmpty()
+  {
+    Preconditions.checkArgument(
+        !policyRestrictions.isEmpty(),
+        "Policy restrictions must exist for permission[%s]",
+        permission
+    );
   }
 }
