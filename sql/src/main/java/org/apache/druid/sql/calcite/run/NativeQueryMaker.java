@@ -27,7 +27,6 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.runtime.Hook;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -39,7 +38,6 @@ import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.ordering.StringComparators;
-import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.server.QueryLifecycle;
@@ -52,7 +50,7 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.CannotBuildQueryException;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.hook.DruidHook;
-import org.joda.time.Interval;
+import org.apache.druid.utils.DatasourceUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -85,9 +83,8 @@ public class NativeQueryMaker implements QueryMaker
   {
     final Query<?> query = druidQuery.getQuery();
 
-    if (plannerContext.getPlannerConfig().isRequireTimeCondition()
-        && !(druidQuery.getDataSource() instanceof InlineDataSource)) {
-      if (Intervals.ONLY_ETERNITY.equals(findBaseDataSourceIntervals(query))) {
+    if (plannerContext.getPlannerConfig().isRequireTimeCondition()) {
+      if (!DatasourceUtils.queryHasTimeFilter(query)) {
         throw new CannotBuildQueryException(
             "requireTimeCondition is enabled, all queries must include a filter condition on the __time column"
         );
@@ -155,15 +152,6 @@ public class NativeQueryMaker implements QueryMaker
         mapColumnList(columnTypes, fieldMapping)
     );
   }
-
-  private List<Interval> findBaseDataSourceIntervals(Query<?> query)
-  {
-    return query.getDataSource().getAnalysis()
-                .getBaseQuerySegmentSpec()
-                .map(QuerySegmentSpec::getIntervals)
-                .orElseGet(query::getIntervals);
-  }
-
   @SuppressWarnings("unchecked")
   private <T> QueryResponse<Object[]> execute(
       Query<?> query, // Not final: may be reassigned with query ID added

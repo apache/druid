@@ -120,6 +120,12 @@ public class InputNumberDataSource implements DataSource
     return new DataSourceAnalysis(this, null, null, Collections.emptyList());
   }
 
+  @Override
+  public boolean hasTimeFilter()
+  {
+    return false;
+  }
+
   @JsonProperty
   public int getInputNumber()
   {
