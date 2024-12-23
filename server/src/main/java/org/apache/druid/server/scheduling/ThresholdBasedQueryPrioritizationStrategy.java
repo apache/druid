@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.client.SegmentServerSelector;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.server.QueryPrioritizationStrategy;
@@ -34,6 +35,7 @@ import org.joda.time.base.AbstractInterval;
 
 import javax.annotation.Nullable;
 
+import java.util.Collections;
 import java.util.Optional;
 import java.util.Set;
 
@@ -51,6 +53,7 @@ public class ThresholdBasedQueryPrioritizationStrategy implements QueryPrioritiz
   private final Optional<Duration> periodThreshold;
   private final Optional<Duration> durationThreshold;
   private final Optional<Duration> segmentRangeThreshold;
+  private final Set<String> exemptDatasources;
 
   @JsonCreator
   public ThresholdBasedQueryPrioritizationStrategy(
@@ -58,6 +61,7 @@ public class ThresholdBasedQueryPrioritizationStrategy implements QueryPrioritiz
       @JsonProperty("durationThreshold") @Nullable String durationThresholdString,
       @JsonProperty("segmentCountThreshold") @Nullable Integer segmentCountThreshold,
       @JsonProperty("segmentRangeThreshold") @Nullable String segmentRangeThresholdString,
+      @JsonProperty("exemptDatasources") @Nullable Set<String> exemptDatasources,
       @JsonProperty("adjustment") @Nullable Integer adjustment
   )
   {
@@ -72,6 +76,7 @@ public class ThresholdBasedQueryPrioritizationStrategy implements QueryPrioritiz
     this.segmentRangeThreshold = segmentRangeThresholdString == null
                                  ? Optional.empty()
                                  : Optional.of(new Period(segmentRangeThresholdString).toStandardDuration());
+    this.exemptDatasources = (exemptDatasources == null) ? Collections.emptySet() : exemptDatasources;
     Preconditions.checkArgument(
         segmentCountThreshold != null || periodThreshold.isPresent() || durationThreshold.isPresent() || segmentRangeThreshold.isPresent(),
         "periodThreshold, durationThreshold, segmentCountThreshold or segmentRangeThreshold must be set"
@@ -82,6 +87,15 @@ public class ThresholdBasedQueryPrioritizationStrategy implements QueryPrioritiz
   public <T> Optional<Integer> computePriority(QueryPlus<T> query, Set<SegmentServerSelector> segments)
   {
     Query<T> theQuery = query.getQuery();
+    DataSource datasource = theQuery.getDataSource();
+
+    if (!exemptDatasources.isEmpty()) {
+      boolean isExempt = exemptDatasources.containsAll(datasource.getTableNames());
+      if (isExempt) {
+        return Optional.empty();
+      }
+    }
+
     final boolean violatesPeriodThreshold = periodThreshold.map(duration -> {
       final DateTime periodThresholdStartDate = DateTimes.nowUtc().minus(duration);
       return theQuery.getIntervals()
