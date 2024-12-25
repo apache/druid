@@ -253,7 +253,8 @@ public class QueryResourceTest
         new AuthConfig(),
         null,
         responseContextConfig,
-        DRUID_NODE
+        DRUID_NODE,
+        new BaseQueryCountResource()
     );
   }
 
@@ -288,7 +289,8 @@ public class QueryResourceTest
         new AuthConfig(),
         null,
         ResponseContextConfig.newConfig(true),
-        DRUID_NODE
+        DRUID_NODE,
+        new BaseQueryCountResource()
     );
 
     expectPermissiveHappyPathAuth();
@@ -360,7 +362,8 @@ public class QueryResourceTest
         new AuthConfig(),
         null,
         ResponseContextConfig.newConfig(true),
-        DRUID_NODE
+        DRUID_NODE,
+        new BaseQueryCountResource()
     );
 
     expectPermissiveHappyPathAuth();
@@ -448,7 +451,8 @@ public class QueryResourceTest
       new AuthConfig(),
       null,
       ResponseContextConfig.newConfig(true),
-      DRUID_NODE
+      DRUID_NODE,
+      new BaseQueryCountResource()
     );
 
     expectPermissiveHappyPathAuth();
@@ -490,7 +494,8 @@ public class QueryResourceTest
         new AuthConfig(),
         null,
         ResponseContextConfig.newConfig(true),
-        DRUID_NODE
+        DRUID_NODE,
+        new BaseQueryCountResource()
     );
 
     expectPermissiveHappyPathAuth();
@@ -572,7 +577,8 @@ public class QueryResourceTest
         new AuthConfig(),
         null,
         ResponseContextConfig.newConfig(true),
-        DRUID_NODE
+        DRUID_NODE,
+        new BaseQueryCountResource()
     );
 
     expectPermissiveHappyPathAuth();
@@ -614,7 +620,8 @@ public class QueryResourceTest
         new AuthConfig(),
         null,
         ResponseContextConfig.newConfig(true),
-        DRUID_NODE
+        DRUID_NODE,
+        new BaseQueryCountResource()
     );
 
     expectPermissiveHappyPathAuth();
@@ -655,7 +662,7 @@ public class QueryResourceTest
         SIMPLE_TIMESERIES_QUERY.getBytes(StandardCharsets.UTF_8),
         queryResource
     );
-    Assert.assertEquals(1, queryResource.getInterruptedQueryCount());
+    Assert.assertEquals(1, queryResource.counter.getInterruptedQueryCount());
     Assert.assertEquals(HttpStatus.SC_INTERNAL_SERVER_ERROR, response.getStatus());
     final String expectedException = new QueryInterruptedException(
         new TruncatedResponseContextException("Serialized response context exceeds the max size[0]"),
@@ -849,7 +856,8 @@ public class QueryResourceTest
         new AuthConfig(),
         authMapper,
         ResponseContextConfig.newConfig(true),
-        DRUID_NODE
+        DRUID_NODE,
+        new BaseQueryCountResource()
     );
 
 
@@ -922,7 +930,8 @@ public class QueryResourceTest
         new AuthConfig(),
         null,
         ResponseContextConfig.newConfig(true),
-        DRUID_NODE
+        DRUID_NODE,
+        new BaseQueryCountResource()
     );
     expectPermissiveHappyPathAuth();
 
@@ -951,7 +960,7 @@ public class QueryResourceTest
     Assert.assertEquals("Query did not complete within configured timeout period. You can " +
                         "increase query timeout or tune the performance of query.", ex.getMessage());
     Assert.assertEquals(QueryException.QUERY_TIMEOUT_ERROR_CODE, ex.getErrorCode());
-    Assert.assertEquals(1, timeoutQueryResource.getTimedOutQueryCount());
+    Assert.assertEquals(1, timeoutQueryResource.counter.getTimedOutQueryCount());
 
   }
 
@@ -1018,7 +1027,8 @@ public class QueryResourceTest
         new AuthConfig(),
         authMapper,
         ResponseContextConfig.newConfig(true),
-        DRUID_NODE
+        DRUID_NODE,
+        new BaseQueryCountResource()
     );
 
     final String queryString = "{\"queryType\":\"timeBoundary\", \"dataSource\":\"allow\","
@@ -1125,7 +1135,8 @@ public class QueryResourceTest
         new AuthConfig(),
         authMapper,
         ResponseContextConfig.newConfig(true),
-        DRUID_NODE
+        DRUID_NODE,
+        new BaseQueryCountResource()
     );
 
     final String queryString = "{\"queryType\":\"timeBoundary\", \"dataSource\":\"allow\","
@@ -1479,7 +1490,8 @@ public class QueryResourceTest
         new AuthConfig(),
         null,
         ResponseContextConfig.newConfig(true),
-        DRUID_NODE
+        DRUID_NODE,
+        new BaseQueryCountResource()
     );
   }
 

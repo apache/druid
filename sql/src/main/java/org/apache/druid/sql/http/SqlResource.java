@@ -27,8 +27,8 @@ import org.apache.druid.guice.annotations.NativeQuery;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.server.BaseQueryCountResource;
 import org.apache.druid.server.DruidNode;
-import org.apache.druid.server.QueryResource;
 import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.QueryResultPusher;
 import org.apache.druid.server.ResponseContextConfig;
@@ -71,7 +71,6 @@ public class SqlResource
   public static final String SQL_HEADER_RESPONSE_HEADER = "X-Druid-SQL-Header-Included";
   public static final String SQL_HEADER_VALUE = "yes";
   private static final Logger log = new Logger(SqlResource.class);
-  public static final SqlResourceQueryMetricCounter QUERY_METRIC_COUNTER = new SqlResourceQueryMetricCounter();
 
   private final ObjectMapper jsonMapper;
   private final AuthorizerMapper authorizerMapper;
@@ -81,6 +80,8 @@ public class SqlResource
   private final ResponseContextConfig responseContextConfig;
   private final DruidNode selfNode;
 
+  final BaseQueryCountResource counter;
+
   @Inject
   protected SqlResource(
       final ObjectMapper jsonMapper,
@@ -89,7 +90,8 @@ public class SqlResource
       final SqlLifecycleManager sqlLifecycleManager,
       final ServerConfig serverConfig,
       ResponseContextConfig responseContextConfig,
-      @Self DruidNode selfNode
+      @Self DruidNode selfNode,
+      final BaseQueryCountResource counter
   )
   {
     this.jsonMapper = Preconditions.checkNotNull(jsonMapper, "jsonMapper");
@@ -99,6 +101,7 @@ public class SqlResource
     this.serverConfig = Preconditions.checkNotNull(serverConfig, "serverConfig");
     this.responseContextConfig = responseContextConfig;
     this.selfNode = selfNode;
+    this.counter = counter;
   }
 
   @POST
@@ -152,33 +155,6 @@ public class SqlResource
     }
   }
 
-  /**
-   * The SqlResource only generates metrics and doesn't keep track of aggregate counts of successful/failed/interrupted
-   * queries, so this implementation is effectively just a noop.
-   */
-  private static class SqlResourceQueryMetricCounter implements QueryResource.QueryMetricCounter
-  {
-    @Override
-    public void incrementSuccess()
-    {
-    }
-
-    @Override
-    public void incrementFailed()
-    {
-    }
-
-    @Override
-    public void incrementInterrupted()
-    {
-    }
-
-    @Override
-    public void incrementTimedOut()
-    {
-    }
-  }
-
   private SqlResourceQueryResultPusher makePusher(HttpServletRequest req, HttpStatement stmt, SqlQuery sqlQuery)
   {
     final String sqlQueryId = stmt.sqlQueryId();
@@ -211,7 +187,7 @@ public class SqlResource
           jsonMapper,
           responseContextConfig,
           selfNode,
-          SqlResource.QUERY_METRIC_COUNTER,
+          SqlResource.this.counter,
           sqlQueryId,
           MediaType.APPLICATION_JSON_TYPE,
           headers
