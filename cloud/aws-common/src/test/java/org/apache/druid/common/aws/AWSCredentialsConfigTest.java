@@ -129,14 +129,14 @@ public class AWSCredentialsConfigTest
     ObjectMapper mapper = new ObjectMapper();
     String jsonSecret = mapper.writeValueAsString(new DefaultPasswordProvider(SOME_SECRET));
     properties.put(PROPERTY_PREFIX + ".accessKey", jsonSecret);
-    properties.put(PROPERTY_PREFIX + ".secretKey", SOME_SECRET + "2");
+    properties.put(PROPERTY_PREFIX + ".secretKey", SOME_SECRET + "randomKey");
     properties.put(PROPERTY_PREFIX + ".fileSessionCredentials", "/path/to/credentials");
 
     final Injector injector = createInjector();
     final AWSCredentialsConfig config = injector.getInstance(AWSCredentialsConfig.class);
 
     Assert.assertEquals(SOME_SECRET, config.getAccessKey().getPassword());
-    Assert.assertEquals(SOME_SECRET + "2", config.getSecretKey().getPassword());
+    Assert.assertEquals(SOME_SECRET + "randomKey", config.getSecretKey().getPassword());
     Assert.assertEquals("/path/to/credentials", config.getFileSessionCredentials());
   }
 }
