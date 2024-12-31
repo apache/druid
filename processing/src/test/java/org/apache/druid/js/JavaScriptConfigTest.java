@@ -89,7 +89,8 @@ public class JavaScriptConfigTest
   }
 
   @Test
-  public void testToString() {
+  public void testToString()
+  {
     JavaScriptConfig javaScriptConfig = new JavaScriptConfig(true);
     Assert.assertEquals("JavaScriptConfig{enabled=true}", javaScriptConfig.toString());
   }
