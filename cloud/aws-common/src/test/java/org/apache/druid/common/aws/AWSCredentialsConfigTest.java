@@ -61,24 +61,38 @@ public class AWSCredentialsConfigTest
     properties.clear();
   }
 
+  private Injector createInjector()
+  {
+    return Guice.createInjector(
+      binder -> {
+        binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/test/redis");
+        binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
+        binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
+        binder.bind(Validator.class).toInstance(Validation.buildDefaultValidatorFactory().getValidator());
+        binder.bindScope(LazySingleton.class, Scopes.SINGLETON);
+        binder.bind(JsonConfigurator.class).in(LazySingleton.class);
+        binder.bind(Properties.class).toInstance(properties);
+        JsonConfigProvider.bind(binder, PROPERTY_PREFIX, AWSCredentialsConfig.class);
+      }
+    );
+  }
+
+  @Test
+  public void testDefaultValues()
+  {
+    final Injector injector = createInjector();
+    final AWSCredentialsConfig credentialsConfig = injector.getInstance(AWSCredentialsConfig.class);
+    Assert.assertEquals("", credentialsConfig.getAccessKey().getPassword());
+    Assert.assertEquals("", credentialsConfig.getSecretKey().getPassword());
+  }
+
   @Test
   public void testStringProperty()
   {
     properties.put(PROPERTY_PREFIX + ".accessKey", SOME_SECRET);
     properties.put(PROPERTY_PREFIX + ".secretKey", SOME_SECRET);
 
-    final Injector injector = Guice.createInjector(
-        binder -> {
-          binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/test/redis");
-          binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
-          binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
-          binder.bind(Validator.class).toInstance(Validation.buildDefaultValidatorFactory().getValidator());
-          binder.bindScope(LazySingleton.class, Scopes.SINGLETON);
-          binder.bind(JsonConfigurator.class).in(LazySingleton.class);
-          binder.bind(Properties.class).toInstance(properties);
-          JsonConfigProvider.bind(binder, PROPERTY_PREFIX, AWSCredentialsConfig.class);
-        }
-    );
+    final Injector injector = createInjector();
     final AWSCredentialsConfig credentialsConfig = injector.getInstance(AWSCredentialsConfig.class);
     Assert.assertEquals(SOME_SECRET, credentialsConfig.getAccessKey().getPassword());
     Assert.assertEquals(SOME_SECRET, credentialsConfig.getSecretKey().getPassword());
@@ -91,20 +105,38 @@ public class AWSCredentialsConfigTest
     properties.put(PROPERTY_PREFIX + ".accessKey", someSecret);
     properties.put(PROPERTY_PREFIX + ".secretKey", someSecret);
 
-    final Injector injector = Guice.createInjector(
-        binder -> {
-          binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/test/redis");
-          binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
-          binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
-          binder.bind(Validator.class).toInstance(Validation.buildDefaultValidatorFactory().getValidator());
-          binder.bindScope(LazySingleton.class, Scopes.SINGLETON);
-          binder.bind(JsonConfigurator.class).in(LazySingleton.class);
-          binder.bind(Properties.class).toInstance(properties);
-          JsonConfigProvider.bind(binder, PROPERTY_PREFIX, AWSCredentialsConfig.class);
-        }
-    );
+    final Injector injector = createInjector();
     final AWSCredentialsConfig credentialsConfig = injector.getInstance(AWSCredentialsConfig.class);
     Assert.assertEquals(SOME_SECRET, credentialsConfig.getAccessKey().getPassword());
     Assert.assertEquals(SOME_SECRET, credentialsConfig.getSecretKey().getPassword());
+  }
+
+  @Test
+  public void testFileSessionCredentials()
+  {
+    String filePath = "/path/to/credentials";
+    properties.put(PROPERTY_PREFIX + ".fileSessionCredentials", filePath);
+
+    final Injector injector = createInjector();
+    final AWSCredentialsConfig config = injector.getInstance(AWSCredentialsConfig.class);
+
+    Assert.assertEquals(filePath, config.getFileSessionCredentials());
+  }
+
+  @Test
+  public void testMixedConfiguration() throws Exception
+  {
+    ObjectMapper mapper = new ObjectMapper();
+    String jsonSecret = mapper.writeValueAsString(new DefaultPasswordProvider(SOME_SECRET));
+    properties.put(PROPERTY_PREFIX + ".accessKey", jsonSecret);
+    properties.put(PROPERTY_PREFIX + ".secretKey", SOME_SECRET + "randomKey");
+    properties.put(PROPERTY_PREFIX + ".fileSessionCredentials", "/path/to/credentials");
+
+    final Injector injector = createInjector();
+    final AWSCredentialsConfig config = injector.getInstance(AWSCredentialsConfig.class);
+
+    Assert.assertEquals(SOME_SECRET, config.getAccessKey().getPassword());
+    Assert.assertEquals(SOME_SECRET + "randomKey", config.getSecretKey().getPassword());
+    Assert.assertEquals("/path/to/credentials", config.getFileSessionCredentials());
   }
 }
