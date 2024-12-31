@@ -117,8 +117,8 @@ public class AWSCredentialsConfigTest
     String filePath = "/path/to/credentials";
     properties.put(PROPERTY_PREFIX + ".fileSessionCredentials", filePath);
 
-    Injector injector = createInjector();
-    AWSCredentialsConfig config = injector.getInstance(AWSCredentialsConfig.class);
+    final Injector injector = createInjector();
+    final AWSCredentialsConfig config = injector.getInstance(AWSCredentialsConfig.class);
 
     Assert.assertEquals(filePath, config.getFileSessionCredentials());
   }
@@ -132,8 +132,8 @@ public class AWSCredentialsConfigTest
     properties.put(PROPERTY_PREFIX + ".secretKey", SOME_SECRET + "2");
     properties.put(PROPERTY_PREFIX + ".fileSessionCredentials", "/path/to/credentials");
 
-    Injector injector = createInjector();
-    AWSCredentialsConfig config = injector.getInstance(AWSCredentialsConfig.class);
+    final Injector injector = createInjector();
+    final AWSCredentialsConfig config = injector.getInstance(AWSCredentialsConfig.class);
 
     Assert.assertEquals(SOME_SECRET, config.getAccessKey().getPassword());
     Assert.assertEquals(SOME_SECRET + "2", config.getSecretKey().getPassword());
