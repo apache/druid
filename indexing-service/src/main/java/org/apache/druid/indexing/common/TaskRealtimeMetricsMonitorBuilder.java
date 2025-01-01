@@ -19,14 +19,12 @@
 
 package org.apache.druid.indexing.common;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.indexing.common.stats.TaskRealtimeMetricsMonitor;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
-import org.apache.druid.segment.realtime.FireDepartment;
-import org.apache.druid.segment.realtime.RealtimeMetricsMonitor;
+import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
 
 public class TaskRealtimeMetricsMonitorBuilder
 {
@@ -34,31 +32,21 @@ public class TaskRealtimeMetricsMonitorBuilder
   {
   }
 
-  public static RealtimeMetricsMonitor build(Task task, FireDepartment fireDepartment)
-  {
-    return new RealtimeMetricsMonitor(
-        ImmutableList.of(fireDepartment),
-        ImmutableMap.of(
-            DruidMetrics.TASK_ID, new String[]{task.getId()},
-            DruidMetrics.TASK_TYPE, new String[]{task.getType()}
-        )
-    );
-  }
-
   public static TaskRealtimeMetricsMonitor build(
       Task task,
-      FireDepartment fireDepartment,
+      SegmentGenerationMetrics metrics,
       RowIngestionMeters meters
   )
   {
     return new TaskRealtimeMetricsMonitor(
-        fireDepartment,
+        metrics,
         meters,
         ImmutableMap.of(
+            DruidMetrics.DATASOURCE, new String[]{task.getDataSource()},
             DruidMetrics.TASK_ID, new String[]{task.getId()},
             DruidMetrics.TASK_TYPE, new String[]{task.getType()},
             DruidMetrics.GROUP_ID, new String[]{task.getGroupId()}
-            ),
+        ),
         task.getContextValue(DruidMetrics.TAGS)
     );
   }

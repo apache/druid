@@ -28,8 +28,8 @@ import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.http.client.Request;
 import org.apache.druid.java.util.http.client.response.StatusResponseHandler;
 import org.apache.druid.java.util.http.client.response.StatusResponseHolder;
-import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
+import org.apache.druid.server.coordinator.DruidCompactionConfig;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.guice.TestClient;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -86,7 +86,7 @@ public class CompactionResourceTestClient
     }
   }
 
-  public void deleteCompactionConfig(final String dataSource) throws Exception
+  public void deleteDataSourceCompactionConfig(final String dataSource) throws Exception
   {
     String url = StringUtils.format("%sconfig/compaction/%s", getCoordinatorURL(), StringUtils.urlEncode(dataSource));
     StatusResponseHolder response = httpClient.go(new Request(HttpMethod.DELETE, new URL(url)), responseHandler).get();
@@ -100,7 +100,7 @@ public class CompactionResourceTestClient
     }
   }
 
-  public CoordinatorCompactionConfig getCoordinatorCompactionConfigs() throws Exception
+  public DruidCompactionConfig getCompactionConfig() throws Exception
   {
     String url = StringUtils.format("%sconfig/compaction", getCoordinatorURL());
     StatusResponseHolder response = httpClient.go(
@@ -113,7 +113,7 @@ public class CompactionResourceTestClient
           response.getContent()
       );
     }
-    return jsonMapper.readValue(response.getContent(), new TypeReference<CoordinatorCompactionConfig>() {});
+    return jsonMapper.readValue(response.getContent(), new TypeReference<>() {});
   }
 
   public DataSourceCompactionConfig getDataSourceCompactionConfig(String dataSource) throws Exception
@@ -129,7 +129,7 @@ public class CompactionResourceTestClient
           response.getContent()
       );
     }
-    return jsonMapper.readValue(response.getContent(), new TypeReference<DataSourceCompactionConfig>() {});
+    return jsonMapper.readValue(response.getContent(), new TypeReference<>() {});
   }
 
   public void forceTriggerAutoCompaction() throws Exception
@@ -183,7 +183,7 @@ public class CompactionResourceTestClient
           response.getContent()
       );
     }
-    return jsonMapper.readValue(response.getContent(), new TypeReference<Map<String, String>>() {});
+    return jsonMapper.readValue(response.getContent(), new TypeReference<>() {});
   }
 
   public Map<String, String> getCompactionStatus(String dataSource) throws Exception
@@ -201,7 +201,7 @@ public class CompactionResourceTestClient
           response.getContent()
       );
     }
-    Map<String, List<Map<String, String>>> latestSnapshots = jsonMapper.readValue(response.getContent(), new TypeReference<Map<String, List<Map<String, String>>>>() {});
+    Map<String, List<Map<String, String>>> latestSnapshots = jsonMapper.readValue(response.getContent(), new TypeReference<>() {});
     return latestSnapshots.get("latestStatus").get(0);
   }
 }

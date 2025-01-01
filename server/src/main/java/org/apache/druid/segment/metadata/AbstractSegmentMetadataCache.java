@@ -40,8 +40,6 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Yielder;
 import org.apache.druid.java.util.common.guava.Yielders;
-import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
-import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
@@ -69,6 +67,7 @@ import java.io.IOException;
 import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -82,6 +81,7 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -102,6 +102,13 @@ import java.util.stream.StreamSupport;
  * <p>
  * This class has an abstract method {@link #refresh(Set, Set)} which the child class must override
  * with the logic to build and cache table schema.
+ * <p>
+ * Note on handling tombstone segments:
+ * These segments lack data or column information.
+ * Additionally, segment metadata queries, which are not yet implemented for tombstone segments
+ * (see: https://github.com/apache/druid/pull/12137) do not provide metadata for tombstones,
+ * leading to indefinite refresh attempts for these segments.
+ * Therefore, these segments are never added to the set of segments being refreshed.
  *
  * @param <T> The type of information associated with the data source, which must extend {@link DataSourceInformation}.
  */
@@ -116,10 +123,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
   // Escalator, so we can attach an authentication result to queries we generate.
   private final Escalator escalator;
 
-  private final ExecutorService cacheExec;
-
   private final ColumnTypeMergePolicy columnTypeMergePolicy;
-
 
   // For awaitInitialization.
   private final CountDownLatch initialized = new CountDownLatch(1);
@@ -192,6 +196,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
   protected final ConcurrentHashMap<String, ConcurrentSkipListMap<SegmentId, AvailableSegmentMetadata>> segmentMetadataInfo
       = new ConcurrentHashMap<>();
 
+  protected final ExecutorService cacheExec;
   protected final ExecutorService callbackExec;
 
   @GuardedBy("lock")
@@ -203,14 +208,14 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
    * Map of datasource and generic object extending DataSourceInformation.
    * This structure can be accessed by {@link #cacheExec} and {@link #callbackExec} threads.
    */
-  protected final ConcurrentMap<String, T> tables = new ConcurrentHashMap<>();
+  protected final ConcurrentHashMap<String, T> tables = new ConcurrentHashMap<>();
 
   /**
    * This lock coordinates the access from multiple threads to those variables guarded by this lock.
    * Currently, there are 2 threads that can access these variables.
    *
-   * - {@link #callbackExec} executes the timeline callbacks whenever BrokerServerView changes.
-   * - {@link #cacheExec} periodically refreshes segment metadata and {@link DataSourceInformation} if necessary
+   * - {@link #callbackExec} executes the timeline callbacks whenever ServerView changes.
+   * - {@code cacheExec} periodically refreshes segment metadata and {@link DataSourceInformation} if necessary
    *   based on the information collected via timeline callbacks.
    */
   protected final Object lock = new Object();
@@ -245,101 +250,109 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
     this.emitter = emitter;
   }
 
-  private void startCacheExec()
+  protected void cacheExecLoop()
   {
-    cacheExec.submit(
-        () -> {
-          final Stopwatch stopwatch = Stopwatch.createStarted();
-          long lastRefresh = 0L;
-          long lastFailure = 0L;
+    final Stopwatch stopwatch = Stopwatch.createStarted();
+    long lastRefresh = 0L;
+    long lastFailure = 0L;
 
-          try {
-            while (!Thread.currentThread().isInterrupted()) {
-              final Set<SegmentId> segmentsToRefresh = new TreeSet<>();
-              final Set<String> dataSourcesToRebuild = new TreeSet<>();
+    try {
+      refreshWaitCondition();
+      while (!Thread.currentThread().isInterrupted()) {
+        final Set<SegmentId> segmentsToRefresh = new TreeSet<>();
+        final Set<String> dataSourcesToRebuild = new TreeSet<>();
 
-              try {
-                synchronized (lock) {
-                  final long nextRefreshNoFuzz = DateTimes
-                      .utc(lastRefresh)
-                      .plus(config.getMetadataRefreshPeriod())
-                      .getMillis();
+        try {
+          synchronized (lock) {
+            final long nextRefreshNoFuzz = DateTimes
+                .utc(lastRefresh)
+                .plus(config.getMetadataRefreshPeriod())
+                .getMillis();
 
-                  // Fuzz a bit to spread load out when we have multiple brokers.
-                  final long nextRefresh = nextRefreshNoFuzz + (long) ((nextRefreshNoFuzz - lastRefresh) * 0.10);
+            // Fuzz a bit to spread load out when we have multiple brokers.
+            final long nextRefresh = nextRefreshNoFuzz + (long) ((nextRefreshNoFuzz - lastRefresh) * 0.10);
 
-                  while (true) {
-                    // Do not refresh if it's too soon after a failure (to avoid rapid cycles of failure).
-                    final boolean wasRecentFailure = DateTimes.utc(lastFailure)
-                                                              .plus(config.getMetadataRefreshPeriod())
-                                                              .isAfterNow();
+            while (true) {
+              // Do not refresh if it's too soon after a failure (to avoid rapid cycles of failure).
+              final boolean wasRecentFailure = DateTimes.utc(lastFailure)
+                                                        .plus(config.getMetadataRefreshPeriod())
+                                                        .isAfterNow();
 
-                    if (isServerViewInitialized &&
-                        !wasRecentFailure &&
-                        (!segmentsNeedingRefresh.isEmpty() || !dataSourcesNeedingRebuild.isEmpty()) &&
-                        (refreshImmediately || nextRefresh < System.currentTimeMillis())) {
-                      // We need to do a refresh. Break out of the waiting loop.
-                      break;
-                    }
+              if (isServerViewInitialized &&
+                  !wasRecentFailure &&
+                  shouldRefresh() &&
+                  (refreshImmediately || nextRefresh < System.currentTimeMillis())) {
+                // We need to do a refresh. Break out of the waiting loop.
+                break;
+              }
 
-                    // lastFailure != 0L means exceptions happened before and there're some refresh work was not completed.
-                    // so that even if ServerView is initialized, we can't let broker complete initialization.
-                    if (isServerViewInitialized && lastFailure == 0L) {
-                      // Server view is initialized, but we don't need to do a refresh. Could happen if there are
-                      // no segments in the system yet. Just mark us as initialized, then.
-                      setInitializedAndReportInitTime(stopwatch);
-                    }
-
-                    // Wait some more, we'll wake up when it might be time to do another refresh.
-                    lock.wait(Math.max(1, nextRefresh - System.currentTimeMillis()));
-                  }
-
-                  segmentsToRefresh.addAll(segmentsNeedingRefresh);
-                  segmentsNeedingRefresh.clear();
-
-                  // Mutable segments need a refresh every period, since new columns could be added dynamically.
-                  segmentsNeedingRefresh.addAll(mutableSegments);
-
-                  lastFailure = 0L;
-                  lastRefresh = System.currentTimeMillis();
-                  refreshImmediately = false;
-                }
-
-                refresh(segmentsToRefresh, dataSourcesToRebuild);
-
+              // lastFailure != 0L means exceptions happened before and there're some refresh work was not completed.
+              // so that even if ServerView is initialized, we can't let broker complete initialization.
+              if (isServerViewInitialized && lastFailure == 0L) {
+                // Server view is initialized, but we don't need to do a refresh. Could happen if there are
+                // no segments in the system yet. Just mark us as initialized, then.
                 setInitializedAndReportInitTime(stopwatch);
               }
-              catch (InterruptedException e) {
-                // Fall through.
-                throw e;
-              }
-              catch (Exception e) {
-                log.warn(e, "Metadata refresh failed, trying again soon.");
 
-                synchronized (lock) {
-                  // Add our segments and datasources back to their refresh and rebuild lists.
-                  segmentsNeedingRefresh.addAll(segmentsToRefresh);
-                  dataSourcesNeedingRebuild.addAll(dataSourcesToRebuild);
-                  lastFailure = System.currentTimeMillis();
-                }
-              }
+              // Wait some more, we'll wake up when it might be time to do another refresh.
+              lock.wait(Math.max(1, nextRefresh - System.currentTimeMillis()));
             }
+
+            segmentsToRefresh.addAll(segmentsNeedingRefresh);
+            segmentsNeedingRefresh.clear();
+
+            // Mutable segments need a refresh every period, since new columns could be added dynamically.
+            segmentsNeedingRefresh.addAll(mutableSegments);
+
+            lastFailure = 0L;
+            lastRefresh = System.currentTimeMillis();
+            refreshImmediately = false;
           }
-          catch (InterruptedException e) {
-            // Just exit.
-          }
-          catch (Throwable e) {
-            // Throwables that fall out to here (not caught by an inner try/catch) are potentially gnarly, like
-            // OOMEs. Anyway, let's just emit an alert and stop refreshing metadata.
-            log.makeAlert(e, "Metadata refresh failed permanently").emit();
-            throw e;
-          }
-          finally {
-            log.info("Metadata refresh stopped.");
+
+          refresh(segmentsToRefresh, dataSourcesToRebuild);
+
+          setInitializedAndReportInitTime(stopwatch);
+        }
+        catch (InterruptedException e) {
+          // Fall through.
+          throw e;
+        }
+        catch (Exception e) {
+          log.warn(e, "Metadata refresh failed, trying again soon.");
+
+          synchronized (lock) {
+            // Add our segments and datasources back to their refresh and rebuild lists.
+            segmentsNeedingRefresh.addAll(segmentsToRefresh);
+            dataSourcesNeedingRebuild.addAll(dataSourcesToRebuild);
+            lastFailure = System.currentTimeMillis();
           }
         }
-    );
+      }
+    }
+    catch (InterruptedException e) {
+      // Just exit.
+    }
+    catch (Throwable e) {
+      // Throwables that fall out to here (not caught by an inner try/catch) are potentially gnarly, like
+      // OOMEs. Anyway, let's just emit an alert and stop refreshing metadata.
+      log.makeAlert(e, "Metadata refresh failed permanently").emit();
+      throw e;
+    }
+    finally {
+      log.info("Metadata refresh stopped.");
+    }
   }
+
+
+  /**
+   * Lifecycle start method.
+   */
+  public abstract void start() throws InterruptedException;
+
+  /**
+   * Lifecycle stop method.
+   */
+  public abstract void stop();
 
   private void setInitializedAndReportInitTime(Stopwatch stopwatch)
   {
@@ -353,22 +366,18 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
     initialized.countDown();
   }
 
-  @LifecycleStart
-  public void start() throws InterruptedException
+  public void refreshWaitCondition() throws InterruptedException
   {
-    log.info("%s starting cache initialization.", getClass().getSimpleName());
-    startCacheExec();
-
-    if (config.isAwaitInitializationOnStart()) {
-      awaitInitialization();
-    }
+    // noop
   }
 
-  @LifecycleStop
-  public void stop()
+  /**
+   * Refresh is executed only when there are segments or datasources needing refresh.
+   */
+  @SuppressWarnings("GuardedBy")
+  protected boolean shouldRefresh()
   {
-    cacheExec.shutdownNow();
-    callbackExec.shutdownNow();
+    return (!segmentsNeedingRefresh.isEmpty() || !dataSourcesNeedingRebuild.isEmpty());
   }
 
   public void awaitInitialization() throws InterruptedException
@@ -383,6 +392,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
    *
    * @return schema information for the given datasource
    */
+  @Nullable
   public T getDatasource(String name)
   {
     return tables.get(name);
@@ -411,11 +421,26 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
    */
   public Map<SegmentId, AvailableSegmentMetadata> getSegmentMetadataSnapshot()
   {
-    final Map<SegmentId, AvailableSegmentMetadata> segmentMetadata = Maps.newHashMapWithExpectedSize(totalSegments);
-    for (ConcurrentSkipListMap<SegmentId, AvailableSegmentMetadata> val : segmentMetadataInfo.values()) {
-      segmentMetadata.putAll(val);
+    final Map<SegmentId, AvailableSegmentMetadata> segmentMetadata = Maps.newHashMapWithExpectedSize(getTotalSegments());
+    final Iterator<AvailableSegmentMetadata> it = iterateSegmentMetadata();
+    while (it.hasNext()) {
+      final AvailableSegmentMetadata availableSegmentMetadata = it.next();
+      segmentMetadata.put(availableSegmentMetadata.getSegment().getId(), availableSegmentMetadata);
     }
     return segmentMetadata;
+  }
+
+  /**
+   * Get metadata for all the cached segments, which includes information like RowSignature, realtime & numRows etc.
+   * This is a lower-overhead method than {@link #getSegmentMetadataSnapshot()}.
+   *
+   * @return iterator of metadata.
+   */
+  public Iterator<AvailableSegmentMetadata> iterateSegmentMetadata()
+  {
+    return FluentIterable.from(segmentMetadataInfo.values())
+                         .transformAndConcat(Map::values)
+                         .iterator();
   }
 
   /**
@@ -429,10 +454,14 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
   @Nullable
   public AvailableSegmentMetadata getAvailableSegmentMetadata(String datasource, SegmentId segmentId)
   {
-    if (!segmentMetadataInfo.containsKey(datasource)) {
+    final ConcurrentSkipListMap<SegmentId, AvailableSegmentMetadata> dataSourceMap =
+        segmentMetadataInfo.get(datasource);
+
+    if (dataSourceMap == null) {
       return null;
+    } else {
+      return dataSourceMap.get(segmentId);
     }
-    return segmentMetadataInfo.get(datasource).get(segmentId);
   }
 
   /**
@@ -482,7 +511,11 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
                       segmentMetadata = AvailableSegmentMetadata
                           .builder(segment, isRealtime, ImmutableSet.of(server), null, DEFAULT_NUM_ROWS) // Added without needing a refresh
                           .build();
-                      markSegmentAsNeedRefresh(segment.getId());
+                      if (segment.isTombstone()) {
+                        log.debug("Skipping refresh for tombstone segment.");
+                      } else {
+                        markSegmentAsNeedRefresh(segment.getId());
+                      }
                       if (!server.isSegmentReplicationTarget()) {
                         log.debug("Added new mutable segment [%s].", segment.getId());
                         markSegmentAsMutable(segment.getId());
@@ -547,6 +580,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
               } else {
                 totalSegments--;
               }
+              removeSegmentAction(segment.getId());
               if (segmentsMap.isEmpty()) {
                 tables.remove(segment.getDataSource());
                 log.info("dataSource [%s] no longer exists, all metadata removed.", segment.getDataSource());
@@ -562,6 +596,11 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
       lock.notifyAll();
     }
   }
+
+  /**
+   * This method should be overridden by child classes to execute any action on segment removal.
+   */
+  protected abstract void removeSegmentAction(SegmentId segmentId);
 
   @VisibleForTesting
   public void removeServerSegment(final DruidServerMetadata server, final DataSegment segment)
@@ -626,7 +665,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
     }
   }
 
-  private void markSegmentAsNeedRefresh(SegmentId segmentId)
+  protected void markSegmentAsNeedRefresh(SegmentId segmentId)
   {
     synchronized (lock) {
       segmentsNeedingRefresh.add(segmentId);
@@ -640,7 +679,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
     }
   }
 
-  private void unmarkSegmentAsMutable(SegmentId segmentId)
+  protected void unmarkSegmentAsMutable(SegmentId segmentId)
   {
     synchronized (lock) {
       mutableSegments.remove(segmentId);
@@ -701,7 +740,7 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
    * Attempt to refresh "segmentSignatures" for a set of segments for a particular dataSource. Returns the set of
    * segments actually refreshed, which may be a subset of the asked-for set.
    */
-  private Set<SegmentId> refreshSegmentsForDataSource(final String dataSource, final Set<SegmentId> segments)
+  public Set<SegmentId> refreshSegmentsForDataSource(final String dataSource, final Set<SegmentId> segments)
       throws IOException
   {
     final Stopwatch stopwatch = Stopwatch.createStarted();
@@ -722,6 +761,9 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
     final Map<String, SegmentId> segmentIdMap = Maps.uniqueIndex(segments, SegmentId::toString);
 
     final Set<SegmentId> retVal = new HashSet<>();
+
+    logSegmentsToRefresh(dataSource, segments);
+
     final Sequence<SegmentAnalysis> sequence = runSegmentMetadataQuery(
         Iterables.limit(segments, MAX_SEGMENTS_PER_QUERY)
     );
@@ -738,44 +780,10 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
         } else {
           final RowSignature rowSignature = analysisToRowSignature(analysis);
           log.debug("Segment[%s] has signature[%s].", segmentId, rowSignature);
-          segmentMetadataInfo.compute(
-              dataSource,
-              (datasourceKey, dataSourceSegments) -> {
-                if (dataSourceSegments == null) {
-                  // Datasource may have been removed or become unavailable while this refresh was ongoing.
-                  log.warn(
-                      "No segment map found with datasource [%s], skipping refresh of segment [%s]",
-                      datasourceKey,
-                      segmentId
-                  );
-                  return null;
-                } else {
-                  dataSourceSegments.compute(
-                      segmentId,
-                      (segmentIdKey, segmentMetadata) -> {
-                        if (segmentMetadata == null) {
-                          log.warn("No segment [%s] found, skipping refresh", segmentId);
-                          return null;
-                        } else {
-                          final AvailableSegmentMetadata updatedSegmentMetadata = AvailableSegmentMetadata
-                              .from(segmentMetadata)
-                              .withRowSignature(rowSignature)
-                              .withNumRows(analysis.getNumRows())
-                              .build();
-                          retVal.add(segmentId);
-                          return updatedSegmentMetadata;
-                        }
-                      }
-                  );
 
-                  if (dataSourceSegments.isEmpty()) {
-                    return null;
-                  } else {
-                    return dataSourceSegments;
-                  }
-                }
-              }
-          );
+          if (segmentMetadataQueryResultHandler(dataSource, segmentId, rowSignature, analysis)) {
+            retVal.add(segmentId);
+          }
         }
 
         yielder = yielder.next(null);
@@ -798,6 +806,68 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
     );
 
     return retVal;
+  }
+
+  /**
+   * Log the segment details for a datasource to be refreshed for debugging purpose.
+   */
+  void logSegmentsToRefresh(String dataSource, Set<SegmentId> ids)
+  {
+    // no-op
+  }
+
+  /**
+   * Action to be executed on the result of Segment metadata query.
+   * Returns if the segment metadata was updated.
+   */
+  protected boolean segmentMetadataQueryResultHandler(
+      String dataSource,
+      SegmentId segmentId,
+      RowSignature rowSignature,
+      SegmentAnalysis analysis
+  )
+  {
+    AtomicBoolean added = new AtomicBoolean(false);
+    segmentMetadataInfo.compute(
+        dataSource,
+        (datasourceKey, dataSourceSegments) -> {
+          if (dataSourceSegments == null) {
+            // Datasource may have been removed or become unavailable while this refresh was ongoing.
+            log.warn(
+                "No segment map found with datasource [%s], skipping refresh of segment [%s]",
+                datasourceKey,
+                segmentId
+            );
+            return null;
+          } else {
+            dataSourceSegments.compute(
+                segmentId,
+                (segmentIdKey, segmentMetadata) -> {
+                  if (segmentMetadata == null) {
+                    log.warn("No segment [%s] found, skipping refresh", segmentId);
+                    return null;
+                  } else {
+                    final AvailableSegmentMetadata updatedSegmentMetadata = AvailableSegmentMetadata
+                        .from(segmentMetadata)
+                        .withRowSignature(rowSignature)
+                        .withNumRows(analysis.getNumRows())
+                        .build();
+                    added.set(true);
+                    return updatedSegmentMetadata;
+                  }
+                }
+            );
+
+            if (dataSourceSegments.isEmpty()) {
+              return null;
+            } else {
+              return dataSourceSegments;
+            }
+          }
+        }
+    );
+
+    return added.get();
   }
 
   @VisibleForTesting
@@ -857,6 +927,11 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
     }
   }
 
+  protected boolean fetchAggregatorsInSegmentMetadataQuery()
+  {
+    return false;
+  }
+
   /**
    * Execute a SegmentMetadata query and return a {@link Sequence} of {@link SegmentAnalysis}.
    *
@@ -890,7 +965,9 @@ public abstract class AbstractSegmentMetadataCache<T extends DataSourceInformati
             QueryContexts.BROKER_PARALLEL_MERGE_KEY,
             false
         ),
-        EnumSet.noneOf(SegmentMetadataQuery.AnalysisType.class),
+        fetchAggregatorsInSegmentMetadataQuery()
+        ? EnumSet.of(SegmentMetadataQuery.AnalysisType.AGGREGATORS)
+        : EnumSet.noneOf(SegmentMetadataQuery.AnalysisType.class),
         false,
         null,
         null // we don't care about merging strategy because merge is false

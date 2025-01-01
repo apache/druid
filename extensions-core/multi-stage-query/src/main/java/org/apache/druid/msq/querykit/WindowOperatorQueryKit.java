@@ -20,231 +20,434 @@
 package org.apache.druid.msq.querykit;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableMap;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.frame.key.KeyOrder;
-import org.apache.druid.msq.exec.Limits;
+import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.input.stage.StageInputSpec;
 import org.apache.druid.msq.kernel.HashShuffleSpec;
+import org.apache.druid.msq.kernel.MixShuffleSpec;
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.QueryDefinitionBuilder;
 import org.apache.druid.msq.kernel.ShuffleSpec;
 import org.apache.druid.msq.kernel.StageDefinition;
+import org.apache.druid.msq.kernel.StageDefinitionBuilder;
 import org.apache.druid.msq.util.MultiStageQueryContext;
-import org.apache.druid.query.Query;
+import org.apache.druid.query.operator.AbstractPartitioningOperatorFactory;
+import org.apache.druid.query.operator.AbstractSortOperatorFactory;
 import org.apache.druid.query.operator.ColumnWithDirection;
-import org.apache.druid.query.operator.NaivePartitioningOperatorFactory;
-import org.apache.druid.query.operator.NaiveSortOperatorFactory;
+import org.apache.druid.query.operator.GlueingPartitioningOperatorFactory;
 import org.apache.druid.query.operator.OperatorFactory;
+import org.apache.druid.query.operator.PartitionSortOperatorFactory;
 import org.apache.druid.query.operator.WindowOperatorQuery;
 import org.apache.druid.query.operator.window.WindowOperatorFactory;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 public class WindowOperatorQueryKit implements QueryKit<WindowOperatorQuery>
 {
+  private static final Logger log = new Logger(WindowOperatorQueryKit.class);
   private final ObjectMapper jsonMapper;
+  private final boolean isOperatorTransformationEnabled;
 
-  public WindowOperatorQueryKit(ObjectMapper jsonMapper)
+  public WindowOperatorQueryKit(ObjectMapper jsonMapper, boolean isOperatorTransformationEnabled)
   {
     this.jsonMapper = jsonMapper;
+    this.isOperatorTransformationEnabled = isOperatorTransformationEnabled;
   }
 
   @Override
   public QueryDefinition makeQueryDefinition(
-      String queryId,
+      QueryKitSpec queryKitSpec,
       WindowOperatorQuery originalQuery,
-      QueryKit<Query<?>> queryKit,
       ShuffleSpecFactory resultShuffleSpecFactory,
-      int maxWorkerCount,
       int minStageNumber
   )
   {
-    // need to validate query first
-    // populate the group of operators to be processed as each stage
-    // the size of the operators is the number of serialized stages
-    // later we should also check if these can be parallelized
-    // check there is an empty over clause or not
-    List<List<OperatorFactory>> operatorList = new ArrayList<>();
-    boolean isEmptyOverFound = ifEmptyOverPresentInWindowOperstors(originalQuery, operatorList);
-
-    ShuffleSpec nextShuffleSpec = findShuffleSpecForNextWindow(operatorList.get(0), maxWorkerCount);
-    // add this shuffle spec to the last stage of the inner query
-
-    final QueryDefinitionBuilder queryDefBuilder = QueryDefinition.builder().queryId(queryId);
-    if (nextShuffleSpec != null) {
-      final ClusterBy windowClusterBy = nextShuffleSpec.clusterBy();
-      originalQuery = (WindowOperatorQuery) originalQuery.withOverriddenContext(ImmutableMap.of(
-          MultiStageQueryContext.NEXT_WINDOW_SHUFFLE_COL,
-          windowClusterBy
-      ));
-    }
     final DataSourcePlan dataSourcePlan = DataSourcePlan.forDataSource(
-        queryKit,
-        queryId,
+        queryKitSpec,
         originalQuery.context(),
         originalQuery.getDataSource(),
         originalQuery.getQuerySegmentSpec(),
         originalQuery.getFilter(),
         null,
-        maxWorkerCount,
         minStageNumber,
         false
     );
+    final RowSignature signatureFromInput = dataSourcePlan.getSubQueryDefBuilder()
+                                                          .get()
+                                                          .build()
+                                                          .getFinalStageDefinition()
+                                                          .getSignature();
 
-    dataSourcePlan.getSubQueryDefBuilder().ifPresent(queryDefBuilder::addAll);
+    final WindowStages windowStages = new WindowStages(
+        originalQuery,
+        jsonMapper,
+        queryKitSpec.getNumPartitionsForShuffle(),
+        queryKitSpec.getMaxNonLeafWorkerCount(),
+        resultShuffleSpecFactory,
+        signatureFromInput,
+        isOperatorTransformationEnabled
+    );
 
-    final int firstStageNumber = Math.max(minStageNumber, queryDefBuilder.getNextStageNumber());
-    final WindowOperatorQuery queryToRun = (WindowOperatorQuery) originalQuery.withDataSource(dataSourcePlan.getNewDataSource());
-    final int maxRowsMaterialized;
-    RowSignature rowSignature = queryToRun.getRowSignature();
-    if (originalQuery.context() != null && originalQuery.context().containsKey(MultiStageQueryContext.MAX_ROWS_MATERIALIZED_IN_WINDOW)) {
-      maxRowsMaterialized = (int) originalQuery.context()
-                                                         .get(MultiStageQueryContext.MAX_ROWS_MATERIALIZED_IN_WINDOW);
-    } else {
-      maxRowsMaterialized = Limits.MAX_ROWS_MATERIALIZED_IN_WINDOW;
+    final ShuffleSpec nextShuffleSpec = windowStages.getStages().get(0).findShuffleSpec(queryKitSpec.getNumPartitionsForShuffle());
+    final QueryDefinitionBuilder queryDefBuilder = makeQueryDefinitionBuilder(queryKitSpec.getQueryId(), dataSourcePlan, nextShuffleSpec);
+    final int firstWindowStageNumber = Math.max(minStageNumber, queryDefBuilder.getNextStageNumber());
+
+    log.info("Row signature received from last stage is [%s].", signatureFromInput);
+
+    // Iterate over the list of window stages, and add the definition for each window stage to QueryDefinitionBuilder.
+    for (int i = 0; i < windowStages.getStages().size(); i++) {
+      queryDefBuilder.add(windowStages.getStageDefinitionBuilder(firstWindowStageNumber + i, i));
     }
-
-
-    if (isEmptyOverFound) {
-      // empty over clause found
-      // moving everything to a single partition
-      queryDefBuilder.add(
-          StageDefinition.builder(firstStageNumber)
-                         .inputs(new StageInputSpec(firstStageNumber - 1))
-                         .signature(rowSignature)
-                         .maxWorkerCount(maxWorkerCount)
-                         .shuffleSpec(null)
-                         .processorFactory(new WindowOperatorQueryFrameProcessorFactory(
-                             queryToRun,
-                             queryToRun.getOperators(),
-                             rowSignature,
-                             true,
-                             maxRowsMaterialized
-                         ))
-      );
-    } else {
-      // there are multiple windows present in the query
-      // Create stages for each window in the query
-      // These stages will be serialized
-      // the partition by clause of the next window will be the shuffle key for the previous window
-      RowSignature.Builder bob = RowSignature.builder();
-      final int numberOfWindows = operatorList.size();
-      final int baseSize = rowSignature.size() - numberOfWindows;
-      for (int i = 0; i < baseSize; i++) {
-        bob.add(rowSignature.getColumnName(i), rowSignature.getColumnType(i).get());
-      }
-
-      for (int i = 0; i < numberOfWindows; i++) {
-        bob.add(rowSignature.getColumnName(baseSize + i), rowSignature.getColumnType(baseSize + i).get()).build();
-        // find the shuffle spec of the next stage
-        // if it is the last stage set the next shuffle spec to single partition
-        if (i + 1 == numberOfWindows) {
-          nextShuffleSpec = ShuffleSpecFactories.singlePartition()
-                                                .build(ClusterBy.none(), false);
-        } else {
-          nextShuffleSpec = findShuffleSpecForNextWindow(operatorList.get(i + 1), maxWorkerCount);
-        }
-
-        final RowSignature intermediateSignature = bob.build();
-        final RowSignature stageRowSignature;
-        if (nextShuffleSpec == null) {
-          stageRowSignature = intermediateSignature;
-        } else {
-          stageRowSignature = QueryKitUtils.sortableSignature(
-              intermediateSignature,
-              nextShuffleSpec.clusterBy().getColumns()
-          );
-        }
-
-        queryDefBuilder.add(
-            StageDefinition.builder(firstStageNumber + i)
-                           .inputs(new StageInputSpec(firstStageNumber + i - 1))
-                           .signature(stageRowSignature)
-                           .maxWorkerCount(maxWorkerCount)
-                           .shuffleSpec(nextShuffleSpec)
-                           .processorFactory(new WindowOperatorQueryFrameProcessorFactory(
-                               queryToRun,
-                               operatorList.get(i),
-                               stageRowSignature,
-                               false,
-                               maxRowsMaterialized
-                           ))
-        );
-      }
-    }
-    return queryDefBuilder.queryId(queryId).build();
+    return queryDefBuilder.build();
   }
 
   /**
-   *
-   * @param originalQuery
-   * @param operatorList
-   * @return true if the operator List has a partitioning operator with an empty OVER clause, false otherwise
+   * Represents the window stages to be added to {@link QueryDefinitionBuilder}.
+   * This class is responsible for creating the window stages.
    */
-  private boolean ifEmptyOverPresentInWindowOperstors(
-      WindowOperatorQuery originalQuery,
-      List<List<OperatorFactory>> operatorList
-  )
+  private static class WindowStages
   {
-    final List<OperatorFactory> operators = originalQuery.getOperators();
-    List<OperatorFactory> operatorFactoryList = new ArrayList<>();
-    for (OperatorFactory of : operators) {
-      operatorFactoryList.add(of);
-      if (of instanceof WindowOperatorFactory) {
-        operatorList.add(operatorFactoryList);
-        operatorFactoryList = new ArrayList<>();
-      } else if (of instanceof NaivePartitioningOperatorFactory) {
-        if (((NaivePartitioningOperatorFactory) of).getPartitionColumns().isEmpty()) {
-          operatorList.clear();
-          operatorList.add(originalQuery.getOperators());
-          return true;
+    private final List<WindowStage> stages;
+    private final WindowOperatorQuery query;
+    private final int numPartitionsForShuffle;
+    private final int maxNonLeafWorkerCount;
+    private final ShuffleSpec finalWindowStageShuffleSpec;
+    private final RowSignature finalWindowStageRowSignature;
+    private final RowSignature.Builder rowSignatureBuilder;
+    private final boolean isOperatorTransformationEnabled;
+
+    private WindowStages(
+        WindowOperatorQuery query,
+        ObjectMapper jsonMapper,
+        int numPartitionsForShuffle,
+        int maxNonLeafWorkerCount,
+        ShuffleSpecFactory resultShuffleSpecFactory,
+        RowSignature signatureFromInput,
+        boolean isOperatorTransformationEnabled
+    )
+    {
+      this.stages = new ArrayList<>();
+      this.query = query;
+      this.numPartitionsForShuffle = numPartitionsForShuffle;
+      this.maxNonLeafWorkerCount = maxNonLeafWorkerCount;
+      this.isOperatorTransformationEnabled = isOperatorTransformationEnabled;
+
+      final Granularity segmentGranularity = QueryKitUtils.getSegmentGranularityFromContext(
+          jsonMapper,
+          query.getContext()
+      );
+      final ClusterBy finalWindowClusterBy = computeClusterByForFinalWindowStage(segmentGranularity);
+      this.finalWindowStageShuffleSpec = computeShuffleSpecForFinalWindowStage(
+          resultShuffleSpecFactory,
+          finalWindowClusterBy
+      );
+      this.finalWindowStageRowSignature = computeSignatureForFinalWindowStage(
+          query.getRowSignature(),
+          finalWindowClusterBy,
+          segmentGranularity
+      );
+
+      this.rowSignatureBuilder = RowSignature.builder().addAll(signatureFromInput);
+      populateStages();
+    }
+
+    private void populateStages()
+    {
+      WindowStage currentStage = new WindowStage(getMaxRowsMaterialized());
+      for (OperatorFactory of : query.getOperators()) {
+        if (!currentStage.canAccept(of)) {
+          stages.add(currentStage);
+          currentStage = new WindowStage(getMaxRowsMaterialized());
+        }
+        currentStage.addOperatorFactory(of);
+      }
+      if (!currentStage.getOperatorFactories().isEmpty()) {
+        stages.add(currentStage);
+      }
+
+      log.info("Created window stages: [%s]", stages);
+    }
+
+    private List<WindowStage> getStages()
+    {
+      return stages;
+    }
+
+    private RowSignature getRowSignatureForStage(int windowStageIndex, ShuffleSpec shuffleSpec)
+    {
+      if (windowStageIndex == stages.size() - 1) {
+        return finalWindowStageRowSignature;
+      }
+
+      final WindowStage stage = stages.get(windowStageIndex);
+      for (WindowOperatorFactory operatorFactory : stage.getWindowOperatorFactories()) {
+        for (String columnName : operatorFactory.getProcessor().getOutputColumnNames()) {
+          int indexInRowSignature = query.getRowSignature().indexOf(columnName);
+          if (indexInRowSignature != -1 && rowSignatureBuilder.build().indexOf(columnName) == -1) {
+            ColumnType columnType = query.getRowSignature().getColumnType(indexInRowSignature).get();
+            rowSignatureBuilder.add(columnName, columnType);
+          }
         }
       }
+
+      final RowSignature intermediateSignature = rowSignatureBuilder.build();
+
+      final RowSignature stageRowSignature;
+      if (shuffleSpec == null) {
+        stageRowSignature = intermediateSignature;
+      } else {
+        stageRowSignature = QueryKitUtils.sortableSignature(
+            intermediateSignature,
+            shuffleSpec.clusterBy().getColumns()
+        );
+      }
+
+      log.info("Using row signature [%s] for window stage.", stageRowSignature);
+      return stageRowSignature;
     }
-    return false;
+
+    private StageDefinitionBuilder getStageDefinitionBuilder(int stageNumber, int windowStageIndex)
+    {
+      final WindowStage stage = stages.get(windowStageIndex);
+      final ShuffleSpec shuffleSpec = (windowStageIndex == stages.size() - 1) ?
+                                      finalWindowStageShuffleSpec :
+                                      stages.get(windowStageIndex + 1).findShuffleSpec(numPartitionsForShuffle);
+
+      final RowSignature stageRowSignature = getRowSignatureForStage(windowStageIndex, shuffleSpec);
+      final List<OperatorFactory> operatorFactories = isOperatorTransformationEnabled
+                                                      ? stage.getTransformedOperatorFactories()
+                                                      : stage.getOperatorFactories();
+
+      return StageDefinition.builder(stageNumber)
+                            .inputs(new StageInputSpec(stageNumber - 1))
+                            .signature(stageRowSignature)
+                            .maxWorkerCount(maxNonLeafWorkerCount)
+                            .shuffleSpec(shuffleSpec)
+                            .processorFactory(new WindowOperatorQueryFrameProcessorFactory(
+                                query,
+                                operatorFactories,
+                                stageRowSignature,
+                                getMaxRowsMaterialized(),
+                                stage.getPartitionColumns()
+                            ));
+    }
+
+    /**
+     * Computes the ClusterBy for the final window stage. We don't have to take the CLUSTERED BY columns into account,
+     * as they are handled as {@link org.apache.druid.query.scan.ScanQuery#orderBys}.
+     */
+    private ClusterBy computeClusterByForFinalWindowStage(Granularity segmentGranularity)
+    {
+      final List<KeyColumn> clusterByColumns = Collections.singletonList(new KeyColumn(
+          QueryKitUtils.PARTITION_BOOST_COLUMN,
+          KeyOrder.ASCENDING
+      ));
+      return QueryKitUtils.clusterByWithSegmentGranularity(new ClusterBy(clusterByColumns, 0), segmentGranularity);
+    }
+
+    /**
+     * Computes the signature for the final window stage. The finalWindowClusterBy will always have the
+     * partition boost column as computed in {@link #computeClusterByForFinalWindowStage(Granularity)}.
+     */
+    private RowSignature computeSignatureForFinalWindowStage(
+        RowSignature rowSignature,
+        ClusterBy finalWindowClusterBy,
+        Granularity segmentGranularity
+    )
+    {
+      final RowSignature.Builder finalWindowStageRowSignatureBuilder = RowSignature.builder()
+                                                                                   .addAll(rowSignature)
+                                                                                   .add(
+                                                                                       QueryKitUtils.PARTITION_BOOST_COLUMN,
+                                                                                       ColumnType.LONG
+                                                                                   );
+      return QueryKitUtils.sortableSignature(
+          QueryKitUtils.signatureWithSegmentGranularity(
+              finalWindowStageRowSignatureBuilder.build(),
+              segmentGranularity
+          ),
+          finalWindowClusterBy.getColumns()
+      );
+    }
+
+    private ShuffleSpec computeShuffleSpecForFinalWindowStage(
+        ShuffleSpecFactory resultShuffleSpecFactory,
+        ClusterBy finalWindowClusterBy
+    )
+    {
+      return resultShuffleSpecFactory.build(finalWindowClusterBy, false);
+    }
+
+    private int getMaxRowsMaterialized()
+    {
+      return MultiStageQueryContext.getMaxRowsMaterializedInWindow(query.context());
+    }
   }
 
-  private ShuffleSpec findShuffleSpecForNextWindow(List<OperatorFactory> operatorFactories, int maxWorkerCount)
+  /**
+   * Represents a window stage in a query execution.
+   * Each stage can contain a sort operator, a partition operator, and multiple window operators.
+   */
+  private static class WindowStage
   {
-    NaivePartitioningOperatorFactory partition = null;
-    NaiveSortOperatorFactory sort = null;
-    List<KeyColumn> keyColsOfWindow = new ArrayList<>();
-    for (OperatorFactory of : operatorFactories) {
-      if (of instanceof NaivePartitioningOperatorFactory) {
-        partition = (NaivePartitioningOperatorFactory) of;
-      } else if (of instanceof NaiveSortOperatorFactory) {
-        sort = (NaiveSortOperatorFactory) of;
-      }
+    private AbstractSortOperatorFactory sortOperatorFactory;
+    private AbstractPartitioningOperatorFactory partitioningOperatorFactory;
+    private final List<WindowOperatorFactory> windowOperatorFactories;
+    private final int maxRowsMaterialized;
+
+    private WindowStage(int maxRowsMaterialized)
+    {
+      this.windowOperatorFactories = new ArrayList<>();
+      this.maxRowsMaterialized = maxRowsMaterialized;
     }
-    Map<String, ColumnWithDirection.Direction> colMap = new HashMap<>();
-    if (sort != null) {
-      for (ColumnWithDirection sortColumn : sort.getSortColumns()) {
-        colMap.put(sortColumn.getColumn(), sortColumn.getDirection());
-      }
-    }
-    assert partition != null;
-    if (partition.getPartitionColumns().isEmpty()) {
-      return null;
-    }
-    for (String partitionColumn : partition.getPartitionColumns()) {
-      KeyColumn kc;
-      if (colMap.containsKey(partitionColumn)) {
-        if (colMap.get(partitionColumn) == ColumnWithDirection.Direction.ASC) {
-          kc = new KeyColumn(partitionColumn, KeyOrder.ASCENDING);
-        } else {
-          kc = new KeyColumn(partitionColumn, KeyOrder.DESCENDING);
-        }
+
+    private void addOperatorFactory(OperatorFactory op)
+    {
+      if (op instanceof AbstractSortOperatorFactory) {
+        this.sortOperatorFactory = (AbstractSortOperatorFactory) op;
+      } else if (op instanceof AbstractPartitioningOperatorFactory) {
+        this.partitioningOperatorFactory = (AbstractPartitioningOperatorFactory) op;
       } else {
-        kc = new KeyColumn(partitionColumn, KeyOrder.ASCENDING);
+        this.windowOperatorFactories.add((WindowOperatorFactory) op);
       }
-      keyColsOfWindow.add(kc);
     }
-    return new HashShuffleSpec(new ClusterBy(keyColsOfWindow, 0), maxWorkerCount);
+
+    private List<OperatorFactory> getOperatorFactories()
+    {
+      List<OperatorFactory> operatorFactories = new ArrayList<>();
+      if (sortOperatorFactory != null) {
+        operatorFactories.add(sortOperatorFactory);
+      }
+      if (partitioningOperatorFactory != null) {
+        operatorFactories.add(partitioningOperatorFactory);
+      }
+      operatorFactories.addAll(windowOperatorFactories);
+      return operatorFactories;
+    }
+
+    /**
+     * This method converts the operator chain received from native plan into MSQ plan.
+     * (NaiveSortOperator -> Naive/GlueingPartitioningOperator -> WindowOperator) is converted into (GlueingPartitioningOperator -> PartitionSortOperator -> WindowOperator).
+     * We rely on MSQ's shuffling to do the clustering on partitioning keys for us at every stage.
+     * This conversion allows us to blindly read N rows from input channel and push them into the operator chain, and repeat until the input channel isn't finished.
+     * @return
+     */
+    private List<OperatorFactory> getTransformedOperatorFactories()
+    {
+      List<OperatorFactory> operatorFactories = new ArrayList<>();
+      if (partitioningOperatorFactory != null) {
+        operatorFactories.add(new GlueingPartitioningOperatorFactory(partitioningOperatorFactory.getPartitionColumns(), maxRowsMaterialized));
+      }
+      if (sortOperatorFactory != null) {
+        operatorFactories.add(new PartitionSortOperatorFactory(sortOperatorFactory.getSortColumns()));
+      }
+      operatorFactories.addAll(windowOperatorFactories);
+      return operatorFactories;
+    }
+
+    private List<WindowOperatorFactory> getWindowOperatorFactories()
+    {
+      return windowOperatorFactories;
+    }
+
+    private ShuffleSpec findShuffleSpec(int partitionCount)
+    {
+      Map<String, ColumnWithDirection.Direction> sortColumnsMap = new HashMap<>();
+      if (sortOperatorFactory != null) {
+        for (ColumnWithDirection sortColumn : sortOperatorFactory.getSortColumns()) {
+          sortColumnsMap.put(sortColumn.getColumn(), sortColumn.getDirection());
+        }
+      }
+
+      if (partitioningOperatorFactory == null) {
+        // If the window stage doesn't have any partitioning factory, then we should keep the shuffle spec from previous stage.
+        // This indicates that we already have the data partitioned correctly, and hence we don't need to do any shuffling.
+        return null;
+      }
+
+      if (partitioningOperatorFactory.getPartitionColumns().isEmpty()) {
+        return MixShuffleSpec.instance();
+      }
+
+      final List<KeyColumn> keyColsOfWindow = new ArrayList<>();
+      for (String partitionColumn : partitioningOperatorFactory.getPartitionColumns()) {
+        KeyColumn kc = new KeyColumn(
+            partitionColumn,
+            sortColumnsMap.get(partitionColumn) == ColumnWithDirection.Direction.DESC
+            ? KeyOrder.DESCENDING
+            : KeyOrder.ASCENDING
+        );
+        keyColsOfWindow.add(kc);
+      }
+
+      return new HashShuffleSpec(new ClusterBy(keyColsOfWindow, 0), partitionCount);
+    }
+
+    private boolean canAccept(OperatorFactory operatorFactory)
+    {
+      if (getOperatorFactories().isEmpty()) {
+        return true;
+      }
+      if (operatorFactory instanceof AbstractSortOperatorFactory) {
+        return false;
+      }
+      if (operatorFactory instanceof WindowOperatorFactory) {
+        return true;
+      }
+      if (operatorFactory instanceof AbstractPartitioningOperatorFactory) {
+        return sortOperatorFactory != null;
+      }
+      throw new ISE("Encountered unexpected operatorFactory type: [%s]", operatorFactory.getClass().getName());
+    }
+
+    private List<String> getPartitionColumns()
+    {
+      return partitioningOperatorFactory == null ? new ArrayList<>() : partitioningOperatorFactory.getPartitionColumns();
+    }
+
+    @Override
+    public String toString()
+    {
+      return "WindowStage{" +
+             "sortOperatorFactory=" + sortOperatorFactory +
+             ", partitioningOperatorFactory=" + partitioningOperatorFactory +
+             ", windowOperatorFactories=" + windowOperatorFactories +
+             '}';
+    }
+  }
+
+  /**
+   * Override the shuffle spec of the last stage based on the shuffling required by the first window stage.
+   * @param queryId
+   * @param dataSourcePlan
+   * @param shuffleSpec
+   * @return
+   */
+  private QueryDefinitionBuilder makeQueryDefinitionBuilder(String queryId, DataSourcePlan dataSourcePlan, ShuffleSpec shuffleSpec)
+  {
+    final QueryDefinitionBuilder queryDefBuilder = QueryDefinition.builder(queryId);
+    int previousStageNumber = dataSourcePlan.getSubQueryDefBuilder().get().build().getFinalStageDefinition().getStageNumber();
+    for (final StageDefinition stageDef : dataSourcePlan.getSubQueryDefBuilder().get().build().getStageDefinitions()) {
+      if (stageDef.getStageNumber() == previousStageNumber) {
+        RowSignature rowSignature = QueryKitUtils.sortableSignature(
+            stageDef.getSignature(),
+            shuffleSpec.clusterBy().getColumns()
+        );
+        queryDefBuilder.add(StageDefinition.builder(stageDef).shuffleSpec(shuffleSpec).signature(rowSignature));
+      } else {
+        queryDefBuilder.add(StageDefinition.builder(stageDef));
+      }
+    }
+    return queryDefBuilder;
   }
 }

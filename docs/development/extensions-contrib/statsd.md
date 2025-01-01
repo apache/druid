@@ -44,6 +44,10 @@ All the configuration parameters for the StatsD emitter are under `druid.emitter
 |`druid.emitter.statsd.includeHost`|Flag to include the hostname as part of the metric name.|no|false|
 |`druid.emitter.statsd.dimensionMapPath`|JSON file defining the StatsD type, and desired dimensions for every Druid metric|no|Default mapping provided. See below.|
 |`druid.emitter.statsd.blankHolder`|The blank character replacement as StatsD does not support path with blank character|no|"-"|
+|`druid.emitter.statsd.queueSize`|Maximum number of unprocessed messages in the message queue.|no|Default value of StatsD Client(4096)|
+|`druid.emitter.statsd.poolSize`|Network packet buffer pool size.|no|Default value of StatsD Client(512)|
+|`druid.emitter.statsd.processorWorkers`|The number of processor worker threads assembling buffers for submission.|no|Default value of StatsD Client(1)|
+|`druid.emitter.statsd.senderWorkers`|	The number of sender worker threads submitting buffers to the socket.|no|Default value of StatsD Client(1)|
 |`druid.emitter.statsd.dogstatsd`|Flag to enable [DogStatsD](https://docs.datadoghq.com/developers/dogstatsd/) support. Causes dimensions to be included as tags, not as a part of the metric name. `convertRange` fields will be ignored.|no|false|
 |`druid.emitter.statsd.dogstatsdConstantTags`|If `druid.emitter.statsd.dogstatsd` is true, the tags in the JSON list of strings will be sent with every event.|no|[]|
 |`druid.emitter.statsd.dogstatsdServiceAsTag`|If `druid.emitter.statsd.dogstatsd` and `druid.emitter.statsd.dogstatsdServiceAsTag` are true, druid service (e.g. `druid/broker`, `druid/coordinator`, etc) is reported as a tag (e.g. `druid_service:druid/broker`) instead of being included in metric name (e.g. `druid.broker.query.time`) and `druid` is used as metric prefix (e.g. `druid.query.time`).|no|false|

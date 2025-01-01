@@ -1,0 +1,139 @@
+# testUsingSubqueryWithExtractionFns@filter-rewrites@NullHandling=default case-crc:59cbfae8
+# quidem testcase reason: JOIN_FILTER_LOCATIONS
+!set debug true
+!set defaultTimeout 300000
+!set enableJoinFilterRewrite true
+!set enableJoinFilterRewriteValueColumnFilters true
+!set enableRewriteJoinToFilter false
+!set maxScatterGatherBytes 9223372036854775807
+!set plannerStrategy DECOUPLED
+!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
+!set sqlQueryId dummy
+!set outputformat mysql
+!use druidtest:///
+SELECT dim2, COUNT(*) FROM druid.foo WHERE substring(dim2, 1, 1) IN (SELECT substring(dim1, 1, 1) FROM druid.foo WHERE dim1 <> '')group by dim2;
++------+--------+
+| dim2 | EXPR$1 |
++------+--------+
+| a    |      2 |
+| abc  |      1 |
++------+--------+
+(2 rows)
+
+!ok
+LogicalAggregate(group=[{0}], EXPR$1=[COUNT()])
+  LogicalJoin(condition=[=($1, $2)], joinType=[inner])
+    LogicalProject(dim2=[$2], $f1=[SUBSTRING($2, 1, 1)])
+      LogicalTableScan(table=[[druid, foo]])
+    LogicalAggregate(group=[{0}])
+      LogicalProject(EXPR$0=[SUBSTRING($1, 1, 1)])
+        LogicalFilter(condition=[<>($1, '')])
+          LogicalTableScan(table=[[druid, foo]])
+
+!logicalPlan
+DruidAggregate(group=[{0}], EXPR$1=[COUNT()], druid=[logical])
+  DruidJoin(condition=[=($1, $2)], joinType=[inner])
+    DruidProject(dim2=[$2], $f1=[SUBSTRING($2, 1, 1)], druid=[logical])
+      DruidTableScan(table=[[druid, foo]], druid=[logical])
+    DruidAggregate(group=[{0}], druid=[logical])
+      DruidProject(EXPR$0=[SUBSTRING($1, 1, 1)], druid=[logical])
+        DruidFilter(condition=[<>($1, '')])
+          DruidTableScan(table=[[druid, foo]], druid=[logical])
+
+!druidPlan
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "join",
+    "left" : {
+      "type" : "query",
+      "query" : {
+        "queryType" : "scan",
+        "dataSource" : {
+          "type" : "table",
+          "name" : "foo"
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "virtualColumns" : [ {
+          "type" : "expression",
+          "name" : "v0",
+          "expression" : "substring(\"dim2\", 0, 1)",
+          "outputType" : "STRING"
+        } ],
+        "resultFormat" : "compactedList",
+        "columns" : [ "dim2", "v0" ],
+        "columnTypes" : [ "STRING", "STRING" ],
+        "granularity" : {
+          "type" : "all"
+        },
+        "legacy" : false
+      }
+    },
+    "right" : {
+      "type" : "query",
+      "query" : {
+        "queryType" : "groupBy",
+        "dataSource" : {
+          "type" : "table",
+          "name" : "foo"
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "filter" : {
+          "type" : "not",
+          "field" : {
+            "type" : "selector",
+            "dimension" : "dim1",
+            "value" : null
+          }
+        },
+        "granularity" : {
+          "type" : "all"
+        },
+        "dimensions" : [ {
+          "type" : "extraction",
+          "dimension" : "dim1",
+          "outputName" : "d0",
+          "outputType" : "STRING",
+          "extractionFn" : {
+            "type" : "substring",
+            "index" : 0,
+            "length" : 1
+          }
+        } ],
+        "limitSpec" : {
+          "type" : "NoopLimitSpec"
+        }
+      }
+    },
+    "rightPrefix" : "j0.",
+    "condition" : "(\"v0\" == \"j0.d0\")",
+    "joinType" : "INNER"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "dim2",
+    "outputName" : "d0",
+    "outputType" : "STRING"
+  } ],
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  } ],
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  }
+}
+!nativePlan

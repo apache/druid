@@ -19,16 +19,12 @@
 
 package org.apache.druid.storage.s3.output;
 
-import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.s3.model.AbortMultipartUploadRequest;
 import com.amazonaws.services.s3.model.CompleteMultipartUploadRequest;
 import com.amazonaws.services.s3.model.InitiateMultipartUploadRequest;
 import com.amazonaws.services.s3.model.InitiateMultipartUploadResult;
-import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.PartETag;
-import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.services.s3.model.UploadPartResult;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Stopwatch;
 import com.google.common.io.CountingOutputStream;
 import it.unimi.dsi.fastutil.io.FastBufferedOutputStream;
@@ -36,6 +32,7 @@ import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.storage.s3.S3Utils;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
 
@@ -49,6 +46,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -72,6 +70,11 @@ import java.util.concurrent.TimeUnit;
  */
 public class RetryableS3OutputStream extends OutputStream
 {
+  // Metric related constants.
+  private static final String METRIC_PREFIX = "s3/upload/total/";
+  private static final String METRIC_TOTAL_UPLOAD_TIME = METRIC_PREFIX + "time";
+  private static final String METRIC_TOTAL_UPLOAD_BYTES = METRIC_PREFIX + "bytes";
+
   private static final Logger LOG = new Logger(RetryableS3OutputStream.class);
 
   private final S3OutputConfig config;
@@ -81,7 +84,6 @@ public class RetryableS3OutputStream extends OutputStream
   private final File chunkStorePath;
   private final long chunkSize;
 
-  private final List<PartETag> pushResults = new ArrayList<>();
   private final byte[] singularBuffer = new byte[1];
 
   // metric
@@ -89,12 +91,6 @@ public class RetryableS3OutputStream extends OutputStream
 
   private Chunk currentChunk;
   private int nextChunkId = 1; // multipart upload requires partNumber to be in the range between 1 and 10000
-  private int numChunksPushed;
-  /**
-   * Total size of all chunks. This size is updated whenever the chunk is ready for push,
-   * not when {@link #write(byte[], int, int)} is called.
-   */
-  private long resultsSize;
 
   /**
    * A flag indicating whether there was an upload error.
@@ -103,27 +99,28 @@ public class RetryableS3OutputStream extends OutputStream
   private boolean error;
   private boolean closed;
 
+  /**
+   * Helper class for calculating maximum number of simultaneous chunks allowed on local disk.
+   */
+  private final S3UploadManager uploadManager;
+
+  /**
+   * A list of futures to allow us to wait for completion of all uploadPart() calls
+   * before hitting {@link ServerSideEncryptingAmazonS3#completeMultipartUpload(CompleteMultipartUploadRequest)}.
+   */
+  private final List<Future<UploadPartResult>> futures = new ArrayList<>();
+
   public RetryableS3OutputStream(
       S3OutputConfig config,
       ServerSideEncryptingAmazonS3 s3,
-      String s3Key
-  ) throws IOException
-  {
-
-    this(config, s3, s3Key, true);
-  }
-
-  @VisibleForTesting
-  protected RetryableS3OutputStream(
-      S3OutputConfig config,
-      ServerSideEncryptingAmazonS3 s3,
       String s3Key,
-      boolean chunkValidation
+      S3UploadManager uploadManager
   ) throws IOException
   {
     this.config = config;
     this.s3 = s3;
     this.s3Key = s3Key;
+    this.uploadManager = uploadManager;
 
     final InitiateMultipartUploadResult result;
     try {
@@ -138,9 +135,7 @@ public class RetryableS3OutputStream extends OutputStream
     this.chunkStorePath = new File(config.getTempDir(), uploadId + UUID.randomUUID());
     FileUtils.mkdirp(this.chunkStorePath);
     this.chunkSize = config.getChunkSize();
-    this.pushStopwatch = Stopwatch.createUnstarted();
-    this.pushStopwatch.reset();
-
+    this.pushStopwatch = Stopwatch.createStarted();
     this.currentChunk = new Chunk(nextChunkId, new File(chunkStorePath, String.valueOf(nextChunkId++)));
   }
 
@@ -172,7 +167,6 @@ public class RetryableS3OutputStream extends OutputStream
 
       while (remainingBytesToWrite > 0) {
         final int writtenBytes = writeToCurrentChunk(b, offsetToWrite, remainingBytesToWrite);
-
         if (currentChunk.length() >= chunkSize) {
           pushCurrentChunk();
           currentChunk = new Chunk(nextChunkId, new File(chunkStorePath, String.valueOf(nextChunkId++)));
@@ -199,62 +193,11 @@ public class RetryableS3OutputStream extends OutputStream
   {
     currentChunk.close();
     final Chunk chunk = currentChunk;
-    try {
-      if (chunk.length() > 0) {
-        resultsSize += chunk.length();
-
-        pushStopwatch.start();
-        pushResults.add(push(chunk));
-        pushStopwatch.stop();
-        numChunksPushed++;
-      }
-    }
-    finally {
-      if (!chunk.delete()) {
-        LOG.warn("Failed to delete chunk [%s]", chunk.getAbsolutePath());
-      }
-    }
-  }
-
-  private PartETag push(Chunk chunk) throws IOException
-  {
-    try {
-      return RetryUtils.retry(
-          () -> uploadPartIfPossible(uploadId, config.getBucket(), s3Key, chunk),
-          S3Utils.S3RETRY,
-          config.getMaxRetry()
+    if (chunk.length() > 0) {
+      futures.add(
+          uploadManager.queueChunkForUpload(s3, s3Key, chunk.id, chunk.file, uploadId, config)
       );
     }
-    catch (AmazonServiceException e) {
-      throw new IOException(e);
-    }
-    catch (Exception e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  private PartETag uploadPartIfPossible(
-      String uploadId,
-      String bucket,
-      String key,
-      Chunk chunk
-  )
-  {
-    final ObjectMetadata objectMetadata = new ObjectMetadata();
-    objectMetadata.setContentLength(resultsSize);
-    final UploadPartRequest uploadPartRequest = new UploadPartRequest()
-        .withUploadId(uploadId)
-        .withBucketName(bucket)
-        .withKey(key)
-        .withFile(chunk.file)
-        .withPartNumber(chunk.id)
-        .withPartSize(chunk.length());
-
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Pushing chunk [%s] to bucket[%s] and key[%s].", chunk, bucket, key);
-    }
-    UploadPartResult uploadResult = s3.uploadPart(uploadPartRequest);
-    return uploadResult.getPartETag();
   }
 
   @Override
@@ -268,53 +211,73 @@ public class RetryableS3OutputStream extends OutputStream
 
     // Closeables are closed in LIFO order
     closer.register(() -> {
-      // This should be emitted as a metric
-      LOG.info(
-          "Pushed total [%d] parts containing [%d] bytes in [%d]ms.",
-          numChunksPushed,
-          resultsSize,
-          pushStopwatch.elapsed(TimeUnit.MILLISECONDS)
+      org.apache.commons.io.FileUtils.forceDelete(chunkStorePath);
+
+      final long totalBytesUploaded = (currentChunk.id - 1) * chunkSize + currentChunk.length();
+      final long totalUploadTimeMillis = pushStopwatch.elapsed(TimeUnit.MILLISECONDS);
+      LOG.debug(
+          "Pushed total [%d] parts containing [%d] bytes in [%d]ms for s3Key[%s], uploadId[%s].",
+          futures.size(),
+          totalBytesUploaded,
+          totalUploadTimeMillis,
+          s3Key,
+          uploadId
       );
-    });
 
-    closer.register(() -> org.apache.commons.io.FileUtils.forceDelete(chunkStorePath));
-
-    closer.register(() -> {
-      try {
-        if (resultsSize > 0 && isAllPushSucceeded()) {
-          RetryUtils.retry(
-              () -> s3.completeMultipartUpload(
-                  new CompleteMultipartUploadRequest(config.getBucket(), s3Key, uploadId, pushResults)
-              ),
-              S3Utils.S3RETRY,
-              config.getMaxRetry()
-          );
-        } else {
-          RetryUtils.retry(
-              () -> {
-                s3.cancelMultiPartUpload(new AbortMultipartUploadRequest(config.getBucket(), s3Key, uploadId));
-                return null;
-              },
-              S3Utils.S3RETRY,
-              config.getMaxRetry()
-          );
-        }
-      }
-      catch (Exception e) {
-        throw new IOException(e);
-      }
+      final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder().setDimension("uploadId", uploadId);
+      uploadManager.emitMetric(builder.setMetric(METRIC_TOTAL_UPLOAD_TIME, totalUploadTimeMillis));
+      uploadManager.emitMetric(builder.setMetric(METRIC_TOTAL_UPLOAD_BYTES, totalBytesUploaded));
     });
 
     try (Closer ignored = closer) {
       if (!error) {
         pushCurrentChunk();
+        completeMultipartUpload();
       }
     }
   }
 
-  private boolean isAllPushSucceeded()
+  private void completeMultipartUpload()
   {
-    return !error && !pushResults.isEmpty() && numChunksPushed == pushResults.size();
+    final List<PartETag> pushResults = new ArrayList<>();
+    for (Future<UploadPartResult> future : futures) {
+      if (error) {
+        future.cancel(true);
+      }
+      try {
+        UploadPartResult result = future.get(1, TimeUnit.HOURS);
+        pushResults.add(result.getPartETag());
+      }
+      catch (Exception e) {
+        error = true;
+        LOG.error(e, "Error in uploading part for upload ID [%s]", uploadId);
+      }
+    }
+
+    try {
+      boolean isAllPushSucceeded = !error && !pushResults.isEmpty() && futures.size() == pushResults.size();
+      if (isAllPushSucceeded) {
+        RetryUtils.retry(
+            () -> s3.completeMultipartUpload(
+                new CompleteMultipartUploadRequest(config.getBucket(), s3Key, uploadId, pushResults)
+            ),
+            S3Utils.S3RETRY,
+            config.getMaxRetry()
+        );
+      } else {
+        RetryUtils.retry(
+            () -> {
+              s3.cancelMultiPartUpload(new AbortMultipartUploadRequest(config.getBucket(), s3Key, uploadId));
+              return null;
+            },
+            S3Utils.S3RETRY,
+            config.getMaxRetry()
+        );
+      }
+    }
+    catch (Exception e) {
+      throw new RuntimeException(e);
+    }
   }
 
   private static class Chunk implements Closeable
@@ -334,16 +297,6 @@ public class RetryableS3OutputStream extends OutputStream
     private long length()
     {
       return outputStream.getCount();
-    }
-
-    private boolean delete()
-    {
-      return file.delete();
-    }
-
-    private String getAbsolutePath()
-    {
-      return file.getAbsolutePath();
     }
 
     @Override

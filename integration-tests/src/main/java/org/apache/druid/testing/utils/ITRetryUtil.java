@@ -69,7 +69,10 @@ public class ITRetryUtil
 
       LOG.info(
           "Attempt[%d/%d] did not pass: Task %s still not complete. Next retry in %d ms",
-          currentTry, retryCount, taskMessage, delayInMillis
+          currentTry,
+          retryCount,
+          taskMessage,
+          delayInMillis
       );
       try {
         Thread.sleep(delayInMillis);
@@ -83,10 +86,10 @@ public class ITRetryUtil
     if (currentTry > retryCount) {
       if (lastException != null) {
         throw new ISE(
+            lastException,
             "Max number of retries[%d] exceeded for Task[%s]. Failing.",
             retryCount,
-            taskMessage,
-            lastException
+            taskMessage
         );
       } else {
         throw new ISE(

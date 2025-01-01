@@ -197,7 +197,7 @@ public class BlockingQueueFrameChannel
     {
       synchronized (lock) {
         final Optional<Either<Throwable, FrameWithPartition>> lastElement = queue.peekLast();
-        return lastElement != null && END_MARKER.equals(lastElement);
+        return END_MARKER.equals(lastElement);
       }
     }
   }

@@ -100,10 +100,8 @@ data: {
     # "dataTypeParserMethods".
     implementationFiles: [
       "common.ftl"
-      "insert.ftl"
       "explain.ftl"
       "replace.ftl"
-      "from.ftl"
     ]
   }
 }

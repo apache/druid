@@ -22,8 +22,7 @@ import React from 'react';
 import { PluralPairIfNeeded } from '../../../components';
 import type { Capabilities } from '../../../helpers';
 import { useQueryManager } from '../../../hooks';
-import { Api } from '../../../singletons';
-import { lookupBy, queryDruidSql } from '../../../utils';
+import { getApiArray, lookupBy, queryDruidSql } from '../../../utils';
 import { HomeViewCard } from '../home-view-card/home-view-card';
 
 export interface ServiceCounts {
@@ -43,24 +42,27 @@ export interface ServicesCardProps {
 
 export const ServicesCard = React.memo(function ServicesCard(props: ServicesCardProps) {
   const [serviceCountState] = useQueryManager<Capabilities, ServiceCounts>({
-    processQuery: async capabilities => {
+    processQuery: async (capabilities, cancelToken) => {
       if (capabilities.hasSql()) {
-        const serviceCountsFromQuery: {
+        const serviceCountsFromQuery = await queryDruidSql<{
           service_type: string;
           count: number;
-        }[] = await queryDruidSql({
-          query: `SELECT server_type AS "service_type", COUNT(*) as "count" FROM sys.servers GROUP BY 1`,
-        });
+        }>(
+          {
+            query: `SELECT server_type AS "service_type", COUNT(*) as "count" FROM sys.servers GROUP BY 1`,
+          },
+          cancelToken,
+        );
         return lookupBy(
           serviceCountsFromQuery,
           x => x.service_type,
           x => x.count,
         );
       } else if (capabilities.hasCoordinatorAccess()) {
-        const services = (await Api.instance.get('/druid/coordinator/v1/servers?simple')).data;
+        const services = await getApiArray('/druid/coordinator/v1/servers?simple', cancelToken);
 
         const middleManager = capabilities.hasOverlordAccess()
-          ? (await Api.instance.get('/druid/indexer/v1/workers')).data
+          ? await getApiArray('/druid/indexer/v1/workers', cancelToken)
           : [];
 
         return {

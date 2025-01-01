@@ -29,15 +29,18 @@ import org.apache.druid.msq.exec.Worker;
 import org.apache.druid.msq.exec.WorkerClient;
 import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.msq.kernel.WorkOrder;
+import org.apache.druid.msq.rpc.SketchEncoding;
 import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
 
 import java.io.InputStream;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class MSQTestWorkerClient implements WorkerClient
 {
   private final Map<String, Worker> inMemoryWorkers;
+  private final AtomicBoolean closed = new AtomicBoolean();
 
   public MSQTestWorkerClient(Map<String, Worker> inMemoryWorkers)
   {
@@ -54,24 +57,24 @@ public class MSQTestWorkerClient implements WorkerClient
   @Override
   public ListenableFuture<ClusterByStatisticsSnapshot> fetchClusterByStatisticsSnapshot(
       String workerTaskId,
-      String queryId,
-      int stageNumber
+      StageId stageId,
+      SketchEncoding sketchEncoding
   )
   {
-    StageId stageId = new StageId(queryId, stageNumber);
     return Futures.immediateFuture(inMemoryWorkers.get(workerTaskId).fetchStatisticsSnapshot(stageId));
   }
 
   @Override
   public ListenableFuture<ClusterByStatisticsSnapshot> fetchClusterByStatisticsSnapshotForTimeChunk(
       String workerTaskId,
-      String queryId,
-      int stageNumber,
-      long timeChunk
+      StageId stageId,
+      long timeChunk,
+      SketchEncoding sketchEncoding
   )
   {
-    StageId stageId = new StageId(queryId, stageNumber);
-    return Futures.immediateFuture(inMemoryWorkers.get(workerTaskId).fetchStatisticsSnapshotForTimeChunk(stageId, timeChunk));
+    return Futures.immediateFuture(
+        inMemoryWorkers.get(workerTaskId).fetchStatisticsSnapshotForTimeChunk(stageId, timeChunk)
+    );
   }
 
   @Override
@@ -82,11 +85,7 @@ public class MSQTestWorkerClient implements WorkerClient
   )
   {
     try {
-      inMemoryWorkers.get(workerTaskId).postResultPartitionBoundaries(
-          partitionBoundaries,
-          stageId.getQueryId(),
-          stageId.getStageNumber()
-      );
+      inMemoryWorkers.get(workerTaskId).postResultPartitionBoundaries(stageId, partitionBoundaries);
       return Futures.immediateFuture(null);
     }
     catch (Exception e) {
@@ -123,30 +122,29 @@ public class MSQTestWorkerClient implements WorkerClient
       final ReadableByteChunksFrameChannel channel
   )
   {
-    try (InputStream inputStream = inMemoryWorkers.get(workerTaskId).readChannel(
-        stageId.getQueryId(),
-        stageId.getStageNumber(),
-        partitionNumber,
-        offset
-    )) {
+    try (InputStream inputStream =
+             inMemoryWorkers.get(workerTaskId).readStageOutput(stageId, partitionNumber, offset).get()) {
       byte[] buffer = new byte[8 * 1024];
+      boolean didRead = false;
       int bytesRead;
       while ((bytesRead = inputStream.read(buffer)) != -1) {
         channel.addChunk(Arrays.copyOf(buffer, bytesRead));
+        didRead = true;
       }
       inputStream.close();
 
-      return Futures.immediateFuture(true);
+      return Futures.immediateFuture(!didRead);
     }
     catch (Exception e) {
       throw new ISE(e, "Error reading frame file channel");
     }
-
   }
 
   @Override
   public void close()
   {
-    inMemoryWorkers.forEach((k, v) -> v.stopGracefully());
+    if (closed.compareAndSet(false, true)) {
+      inMemoryWorkers.forEach((k, v) -> v.stop());
+    }
   }
 }

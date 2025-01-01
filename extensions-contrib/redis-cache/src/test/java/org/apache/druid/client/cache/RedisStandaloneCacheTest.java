@@ -43,13 +43,12 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.UUID;
 
-public class RedisStandaloneCacheTest
+public class RedisStandaloneCacheTest extends CacheTestBase<RedisStandaloneCache>
 {
   private static final byte[] HI = StringUtils.toUtf8("hiiiiiiiiiiiiiiiiiii");
   private static final byte[] HO = StringUtils.toUtf8("hooooooooooooooooooo");
 
   private RedisServer server;
-  private RedisStandaloneCache cache;
   private final RedisCacheConfig cacheConfig = new RedisCacheConfig()
   {
     @Override

@@ -24,7 +24,9 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Preconditions;
+import org.apache.druid.msq.exec.OutputChannelMode;
 import org.apache.druid.msq.kernel.QueryDefinition;
+import org.apache.druid.msq.kernel.ShuffleKind;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.kernel.controller.ControllerStagePhase;
 import org.joda.time.DateTime;
@@ -52,7 +54,8 @@ public class MSQStagesReport
       final Map<Integer, ControllerStagePhase> stagePhaseMap,
       final Map<Integer, Interval> stageRuntimeMap,
       final Map<Integer, Integer> stageWorkerCountMap,
-      final Map<Integer, Integer> stagePartitionCountMap
+      final Map<Integer, Integer> stagePartitionCountMap,
+      final Map<Integer, OutputChannelMode> stageOutputChannelModeMap
   )
   {
     final List<Stage> stages = new ArrayList<>();
@@ -76,6 +79,8 @@ public class MSQStagesReport
           stagePhaseMap.get(stageNumber),
           workerCount,
           partitionCount,
+          stageDef.doesShuffle() ? stageDef.getShuffleSpec().kind() : null,
+          stageOutputChannelModeMap.get(stageNumber),
           stageStartTime,
           stageDuration
       );
@@ -126,6 +131,8 @@ public class MSQStagesReport
     private final ControllerStagePhase phase;
     private final int workerCount;
     private final int partitionCount;
+    private final ShuffleKind shuffleKind;
+    private final OutputChannelMode outputChannelMode;
     private final DateTime startTime;
     private final long duration;
 
@@ -136,7 +143,9 @@ public class MSQStagesReport
         @JsonProperty("phase") @Nullable final ControllerStagePhase phase,
         @JsonProperty("workerCount") final int workerCount,
         @JsonProperty("partitionCount") final int partitionCount,
-        @JsonProperty("startTime") @Nullable final DateTime startTime,
+        @JsonProperty("shuffle") final ShuffleKind shuffleKind,
+        @JsonProperty("output") final OutputChannelMode outputChannelMode,
+        @JsonProperty("startTime")@Nullable final DateTime startTime,
         @JsonProperty("duration") final long duration
     )
     {
@@ -145,6 +154,8 @@ public class MSQStagesReport
       this.phase = phase;
       this.workerCount = workerCount;
       this.partitionCount = partitionCount;
+      this.shuffleKind = shuffleKind;
+      this.outputChannelMode = outputChannelMode;
       this.startTime = startTime;
       this.duration = duration;
     }
@@ -182,6 +193,20 @@ public class MSQStagesReport
     public int getPartitionCount()
     {
       return partitionCount;
+    }
+
+    @JsonProperty("shuffle")
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public ShuffleKind getShuffleKind()
+    {
+      return shuffleKind;
+    }
+
+    @JsonProperty("output")
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public OutputChannelMode getOutputChannelMode()
+    {
+      return outputChannelMode;
     }
 
     @JsonProperty("sort")

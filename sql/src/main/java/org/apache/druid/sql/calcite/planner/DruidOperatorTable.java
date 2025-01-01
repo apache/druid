@@ -81,6 +81,7 @@ import org.apache.druid.sql.calcite.expression.builtin.ConcatOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ContainsOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.DateTruncOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.DecodeBase64UTFOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.DivOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ExtractOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.FloorOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.GreatestOperatorConversion;
@@ -110,6 +111,7 @@ import org.apache.druid.sql.calcite.expression.builtin.RepeatOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.ReverseOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.RightOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.SafeDivideOperatorConversion;
+import org.apache.druid.sql.calcite.expression.builtin.ScalarInArrayOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.SearchOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.StringFormatOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.StringToArrayOperatorConversion;
@@ -262,6 +264,7 @@ public class DruidOperatorTable implements SqlOperatorTable
                    .add(new ArrayToStringOperatorConversion())
                    .add(new StringToArrayOperatorConversion())
                    .add(new ArrayToMultiValueStringOperatorConversion())
+                   .add(new ScalarInArrayOperatorConversion())
                    .build();
 
   private static final List<SqlOperatorConversion> MULTIVALUE_STRING_OPERATOR_CONVERSIONS =
@@ -350,6 +353,7 @@ public class DruidOperatorTable implements SqlOperatorTable
                    .add(new NestedDataOperatorConversions.JsonValueReturningArrayDoubleOperatorConversion())
                    .add(new NestedDataOperatorConversions.JsonValueReturningArrayVarcharOperatorConversion())
                    .add(new NestedDataOperatorConversions.JsonObjectOperatorConversion())
+                   .add(new NestedDataOperatorConversions.JsonMergeOperatorConversion())
                    .add(new NestedDataOperatorConversions.ToJsonStringOperatorConversion())
                    .add(new NestedDataOperatorConversions.ParseJsonOperatorConversion())
                    .add(new NestedDataOperatorConversions.TryParseJsonOperatorConversion())
@@ -367,6 +371,7 @@ public class DruidOperatorTable implements SqlOperatorTable
                    .add(new AliasedOperatorConversion(CHARACTER_LENGTH_CONVERSION, "STRLEN"))
                    .add(new DirectOperatorConversion(SqlStdOperatorTable.CONCAT, "concat"))
                    .add(new DirectOperatorConversion(SqlStdOperatorTable.EXP, "exp"))
+                   .add(new DivOperatorConversion())
                    .add(new DirectOperatorConversion(SqlStdOperatorTable.DIVIDE_INTEGER, "div"))
                    .add(new DirectOperatorConversion(SqlStdOperatorTable.LN, "log"))
                    .add(new DirectOperatorConversion(SqlStdOperatorTable.LOWER, "lower"))

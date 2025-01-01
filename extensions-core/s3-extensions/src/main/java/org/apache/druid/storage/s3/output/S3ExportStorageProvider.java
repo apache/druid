@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Joiner;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
 import org.apache.druid.data.input.s3.S3InputSource;
 import org.apache.druid.error.DruidException;
@@ -43,6 +44,8 @@ import java.util.List;
 public class S3ExportStorageProvider implements ExportStorageProvider
 {
   public static final String TYPE_NAME = S3InputSource.TYPE_KEY;
+  private static final String DELIM = "/";
+  private static final Joiner JOINER = Joiner.on(DELIM).skipNulls();
   @JsonProperty
   private final String bucket;
   @JsonProperty
@@ -52,6 +55,9 @@ public class S3ExportStorageProvider implements ExportStorageProvider
   S3ExportConfig s3ExportConfig;
   @JacksonInject
   ServerSideEncryptingAmazonS3 s3;
+
+  @JacksonInject
+  S3UploadManager s3UploadManager;
 
   @JsonCreator
   public S3ExportStorageProvider(
@@ -63,14 +69,14 @@ public class S3ExportStorageProvider implements ExportStorageProvider
     this.prefix = prefix;
   }
 
+
   @Override
-  public StorageConnector get()
+  public StorageConnector createStorageConnector(File taskTempDir)
   {
-    final String tempDir = s3ExportConfig.getTempLocalDir();
-    if (tempDir == null) {
-      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
-                          .ofCategory(DruidException.Category.NOT_FOUND)
-                          .build("The runtime property `druid.export.storage.s3.tempLocalDir` must be configured for S3 export.");
+    final String exportConfigTempDir = s3ExportConfig.getTempLocalDir();
+    final File tempDirFile = exportConfigTempDir != null ? new File(exportConfigTempDir) : taskTempDir;
+    if (tempDirFile == null) {
+      throw DruidException.defensive("Couldn't find temporary directory for export.");
     }
     final List<String> allowedExportPaths = s3ExportConfig.getAllowedExportPaths();
     if (allowedExportPaths == null) {
@@ -83,11 +89,11 @@ public class S3ExportStorageProvider implements ExportStorageProvider
     final S3OutputConfig s3OutputConfig = new S3OutputConfig(
         bucket,
         prefix,
-        new File(tempDir),
+        tempDirFile,
         s3ExportConfig.getChunkSize(),
         s3ExportConfig.getMaxRetry()
     );
-    return new S3StorageConnector(s3OutputConfig, s3);
+    return new S3StorageConnector(s3OutputConfig, s3, s3UploadManager);
   }
 
   @VisibleForTesting
@@ -142,5 +148,11 @@ public class S3ExportStorageProvider implements ExportStorageProvider
   public String getBasePath()
   {
     return new CloudObjectLocation(bucket, prefix).toUri(S3StorageDruidModule.SCHEME).toString();
+  }
+
+  @Override
+  public String getFilePathForManifest(String fileName)
+  {
+    return new CloudObjectLocation(bucket, JOINER.join(prefix, fileName)).toUri(S3StorageDruidModule.SCHEME).toString();
   }
 }

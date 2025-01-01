@@ -1,0 +1,140 @@
+# testJoinOuterGroupByAndSubqueryHasLimit@NullHandling=sql case-crc:2e733a5b
+# quidem testcase reason: EQUIV_PLAN_EXTRA_COLUMNS
+!set debug true
+!set defaultTimeout 300000
+!set maxScatterGatherBytes 9223372036854775807
+!set plannerStrategy DECOUPLED
+!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
+!set sqlQueryId dummy
+!set outputformat mysql
+!use druidtest:///
+SELECT dim2, AVG(m2) FROM (SELECT * FROM foo AS t1 INNER JOIN foo AS t2 ON t1.m1 = t2.m1 LIMIT 10) AS t3 GROUP BY dim2;
++------+--------+
+| dim2 | EXPR$1 |
++------+--------+
+|      |    3.0 |
+| a    |    2.5 |
+| abc  |    5.0 |
+|      |    4.0 |
++------+--------+
+(4 rows)
+
+!ok
+LogicalAggregate(group=[{0}], EXPR$1=[AVG($2)])
+  LogicalSort(fetch=[10])
+    LogicalJoin(condition=[=($1, $3)], joinType=[inner])
+      LogicalProject(dim2=[$2], m1=[$5], m2=[$6])
+        LogicalTableScan(table=[[druid, foo]])
+      LogicalProject(m1=[$5])
+        LogicalTableScan(table=[[druid, foo]])
+
+!logicalPlan
+DruidAggregate(group=[{0}], EXPR$1=[AVG($2)], druid=[logical])
+  DruidSort(fetch=[10], druid=[logical])
+    DruidJoin(condition=[=($1, $3)], joinType=[inner])
+      DruidProject(dim2=[$2], m1=[$5], m2=[$6], druid=[logical])
+        DruidTableScan(table=[[druid, foo]], druid=[logical])
+      DruidProject(m1=[$5], druid=[logical])
+        DruidTableScan(table=[[druid, foo]], druid=[logical])
+
+!druidPlan
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "query",
+    "query" : {
+      "queryType" : "scan",
+      "dataSource" : {
+        "type" : "join",
+        "left" : {
+          "type" : "table",
+          "name" : "foo"
+        },
+        "right" : {
+          "type" : "query",
+          "query" : {
+            "queryType" : "scan",
+            "dataSource" : {
+              "type" : "table",
+              "name" : "foo"
+            },
+            "intervals" : {
+              "type" : "intervals",
+              "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+            },
+            "resultFormat" : "compactedList",
+            "columns" : [ "m1" ],
+            "columnTypes" : [ "FLOAT" ],
+            "granularity" : {
+              "type" : "all"
+            },
+            "legacy" : false
+          }
+        },
+        "rightPrefix" : "j0.",
+        "condition" : "(\"m1\" == \"j0.m1\")",
+        "joinType" : "INNER"
+      },
+      "intervals" : {
+        "type" : "intervals",
+        "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+      },
+      "resultFormat" : "compactedList",
+      "limit" : 10,
+      "columns" : [ "dim2", "m1", "m2", "j0.m1" ],
+      "columnTypes" : [ "STRING", "FLOAT", "DOUBLE", "FLOAT" ],
+      "granularity" : {
+        "type" : "all"
+      },
+      "legacy" : false
+    }
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "dim2",
+    "outputName" : "d0",
+    "outputType" : "STRING"
+  } ],
+  "aggregations" : [ {
+    "type" : "doubleSum",
+    "name" : "a0:sum",
+    "fieldName" : "m2"
+  }, {
+    "type" : "filtered",
+    "aggregator" : {
+      "type" : "count",
+      "name" : "a0:count"
+    },
+    "filter" : {
+      "type" : "not",
+      "field" : {
+        "type" : "null",
+        "column" : "m2"
+      }
+    },
+    "name" : "a0:count"
+  } ],
+  "postAggregations" : [ {
+    "type" : "arithmetic",
+    "name" : "a0",
+    "fn" : "quotient",
+    "fields" : [ {
+      "type" : "fieldAccess",
+      "fieldName" : "a0:sum"
+    }, {
+      "type" : "fieldAccess",
+      "fieldName" : "a0:count"
+    } ]
+  } ],
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  }
+}
+!nativePlan

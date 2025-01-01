@@ -20,14 +20,12 @@ import type { CoordinatorDynamicConfig } from './coordinator-dynamic-config';
 
 export const DEFAULT_COORDINATOR_DYNAMIC_CONFIG: CoordinatorDynamicConfig = {
   millisToWaitBeforeDeleting: 900000,
-  mergeBytesLimit: 524288000,
-  mergeSegmentsLimit: 100,
   maxSegmentsToMove: 100,
   replicantLifetime: 15,
   replicationThrottleLimit: 500,
   balancerComputeThreads: 1,
   killDataSourceWhitelist: [],
-  killTaskSlotRatio: 1,
+  killTaskSlotRatio: 0.1,
   maxKillTaskSlots: 2147483647,
   killPendingSegmentsSkipList: [],
   maxSegmentsInNodeLoadingQueue: 500,

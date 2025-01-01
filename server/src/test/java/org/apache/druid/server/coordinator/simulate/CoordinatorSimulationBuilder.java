@@ -22,6 +22,8 @@ package org.apache.druid.server.coordinator.simulate;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.audit.AuditInfo;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.common.config.JacksonConfigManager;
@@ -36,27 +38,35 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.java.util.metrics.MetricsVerifier;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
-import org.apache.druid.server.coordinator.CoordinatorCompactionConfig;
+import org.apache.druid.metadata.SegmentsMetadataManager;
+import org.apache.druid.rpc.indexing.NoopOverlordClient;
+import org.apache.druid.rpc.indexing.SegmentUpdateResponse;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
+import org.apache.druid.server.compaction.CompactionStatusTracker;
 import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
+import org.apache.druid.server.coordinator.DruidCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCoordinator;
-import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.MetadataManager;
-import org.apache.druid.server.coordinator.TestDruidCoordinatorConfig;
 import org.apache.druid.server.coordinator.balancer.BalancerStrategyFactory;
 import org.apache.druid.server.coordinator.balancer.CachingCostBalancerStrategyConfig;
 import org.apache.druid.server.coordinator.balancer.CachingCostBalancerStrategyFactory;
 import org.apache.druid.server.coordinator.balancer.CostBalancerStrategyFactory;
 import org.apache.druid.server.coordinator.balancer.DiskNormalizedCostBalancerStrategyFactory;
 import org.apache.druid.server.coordinator.balancer.RandomBalancerStrategyFactory;
-import org.apache.druid.server.coordinator.compact.CompactionSegmentSearchPolicy;
-import org.apache.druid.server.coordinator.compact.NewestSegmentFirstPolicy;
+import org.apache.druid.server.coordinator.config.CoordinatorKillConfigs;
+import org.apache.druid.server.coordinator.config.CoordinatorPeriodConfig;
+import org.apache.druid.server.coordinator.config.CoordinatorRunConfig;
+import org.apache.druid.server.coordinator.config.DruidCoordinatorConfig;
+import org.apache.druid.server.coordinator.config.HttpLoadQueuePeonConfig;
 import org.apache.druid.server.coordinator.duty.CoordinatorCustomDutyGroups;
 import org.apache.druid.server.coordinator.loading.LoadQueueTaskMaster;
 import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.rules.Rule;
+import org.apache.druid.server.http.SegmentsToUpdateFilter;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.easymock.EasyMock;
 import org.joda.time.Duration;
 
@@ -64,8 +74,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -83,8 +95,6 @@ public class CoordinatorSimulationBuilder
               DataSegment.PruneSpecsHolder.DEFAULT
           )
       );
-  private static final CompactionSegmentSearchPolicy COMPACTION_SEGMENT_SEARCH_POLICY =
-      new NewestSegmentFirstPolicy(OBJECT_MAPPER);
   private String balancerStrategy;
   private CoordinatorDynamicConfig dynamicConfig = CoordinatorDynamicConfig.builder().build();
   private List<DruidServer> servers;
@@ -181,7 +191,8 @@ public class CoordinatorSimulationBuilder
         serverInventoryView,
         dynamicConfig,
         loadImmediately,
-        autoSyncInventory
+        autoSyncInventory,
+        balancerStrategy
     );
 
     if (segments != null) {
@@ -199,53 +210,20 @@ public class CoordinatorSimulationBuilder
         env.coordinatorInventoryView,
         env.serviceEmitter,
         env.executorFactory,
-        null,
+        new SimOverlordClient(env.metadataManager.segments()),
         env.loadQueueTaskMaster,
         env.loadQueueManager,
         new ServiceAnnouncer.Noop(),
         null,
         new CoordinatorCustomDutyGroups(Collections.emptySet()),
-        createBalancerStrategy(env),
         env.lookupCoordinatorManager,
         env.leaderSelector,
-        COMPACTION_SEGMENT_SEARCH_POLICY
+        null,
+        CentralizedDatasourceSchemaConfig.create(),
+        new CompactionStatusTracker(OBJECT_MAPPER)
     );
 
     return new SimulationImpl(coordinator, env);
-  }
-
-  private BalancerStrategyFactory createBalancerStrategy(Environment env)
-  {
-    if (balancerStrategy == null) {
-      return new CostBalancerStrategyFactory();
-    }
-
-    switch (balancerStrategy) {
-      case "cost":
-        return new CostBalancerStrategyFactory();
-      case "cachingCost":
-        return buildCachingCostBalancerStrategy(env);
-      case "diskNormalized":
-        return new DiskNormalizedCostBalancerStrategyFactory();
-      case "random":
-        return new RandomBalancerStrategyFactory();
-      default:
-        throw new IAE("Unknown balancer stratgy: " + balancerStrategy);
-    }
-  }
-
-  private BalancerStrategyFactory buildCachingCostBalancerStrategy(Environment env)
-  {
-    try {
-      return new CachingCostBalancerStrategyFactory(
-          env.coordinatorInventoryView,
-          env.lifecycle,
-          new CachingCostBalancerStrategyConfig()
-      );
-    }
-    catch (Exception e) {
-      throw new ISE(e, "Error building balancer strategy");
-    }
   }
 
   /**
@@ -452,21 +430,13 @@ public class CoordinatorSimulationBuilder
         TestServerInventoryView clusterInventory,
         CoordinatorDynamicConfig dynamicConfig,
         boolean loadImmediately,
-        boolean autoSyncInventory
+        boolean autoSyncInventory,
+        String balancerStrategy
     )
     {
       this.inventory = clusterInventory;
       this.loadImmediately = loadImmediately;
       this.autoSyncInventory = autoSyncInventory;
-
-      this.coordinatorConfig = new TestDruidCoordinatorConfig.Builder()
-          .withCoordinatorStartDelay(new Duration(1L))
-          .withCoordinatorPeriod(Duration.standardMinutes(1))
-          .withCoordinatorKillPeriod(Duration.millis(100))
-          .withLoadQueuePeonType("http")
-          .withCoordinatorKillIgnoreDurationToRetain(false)
-          .build();
-
       this.executorFactory = new ExecutorFactory(loadImmediately);
       this.coordinatorInventoryView = autoSyncInventory
                                       ? clusterInventory
@@ -477,14 +447,19 @@ public class CoordinatorSimulationBuilder
           executorFactory.create(1, ExecutorFactory.HISTORICAL_LOADER)
       );
 
+      this.coordinatorConfig = new DruidCoordinatorConfig(
+          new CoordinatorRunConfig(new Duration(1L), Duration.standardMinutes(1)),
+          new CoordinatorPeriodConfig(null, null),
+          CoordinatorKillConfigs.DEFAULT,
+          createBalancerStrategy(balancerStrategy),
+          new HttpLoadQueuePeonConfig(null, null, null)
+      );
       this.loadQueueTaskMaster = new LoadQueueTaskMaster(
-          null,
           OBJECT_MAPPER,
           executorFactory.create(1, ExecutorFactory.LOAD_QUEUE_EXECUTOR),
           executorFactory.create(1, ExecutorFactory.LOAD_CALLBACK_EXECUTOR),
-          coordinatorConfig,
-          httpClient,
-          null
+          coordinatorConfig.getHttpLoadQueuePeonConfig(),
+          httpClient
       );
       this.loadQueueManager =
           new SegmentLoadQueueManager(coordinatorInventoryView, loadQueueTaskMaster);
@@ -502,6 +477,7 @@ public class CoordinatorSimulationBuilder
           segmentManager,
           null,
           ruleManager,
+          null,
           null
       );
     }
@@ -542,13 +518,47 @@ public class CoordinatorSimulationBuilder
 
       EasyMock.expect(
           jacksonConfigManager.watch(
-              EasyMock.eq(CoordinatorCompactionConfig.CONFIG_KEY),
-              EasyMock.eq(CoordinatorCompactionConfig.class),
+              EasyMock.eq(DruidCompactionConfig.CONFIG_KEY),
+              EasyMock.eq(DruidCompactionConfig.class),
               EasyMock.anyObject()
           )
-      ).andReturn(new AtomicReference<>(CoordinatorCompactionConfig.empty())).anyTimes();
+      ).andReturn(new AtomicReference<>(DruidCompactionConfig.empty())).anyTimes();
 
       return jacksonConfigManager;
+    }
+
+    private BalancerStrategyFactory createBalancerStrategy(String strategyName)
+    {
+      if (strategyName == null) {
+        return new CostBalancerStrategyFactory();
+      }
+
+      switch (strategyName) {
+        case "cost":
+          return new CostBalancerStrategyFactory();
+        case "cachingCost":
+          return buildCachingCostBalancerStrategy();
+        case "diskNormalized":
+          return new DiskNormalizedCostBalancerStrategyFactory();
+        case "random":
+          return new RandomBalancerStrategyFactory();
+        default:
+          throw new IAE("Unknown balancer stratgy: " + strategyName);
+      }
+    }
+
+    private BalancerStrategyFactory buildCachingCostBalancerStrategy()
+    {
+      try {
+        return new CachingCostBalancerStrategyFactory(
+            this.coordinatorInventoryView,
+            this.lifecycle,
+            new CachingCostBalancerStrategyConfig()
+        );
+      }
+      catch (Exception e) {
+        throw new ISE(e, "Error building balancer strategy");
+      }
     }
   }
 
@@ -606,6 +616,35 @@ public class CoordinatorSimulationBuilder
     private void tearDown()
     {
       blockingExecutors.values().forEach(BlockingExecutorService::shutdown);
+    }
+  }
+
+  private static class SimOverlordClient extends NoopOverlordClient
+  {
+    private final SegmentsMetadataManager segmentsMetadataManager;
+
+    private SimOverlordClient(SegmentsMetadataManager segmentsMetadataManager)
+    {
+      this.segmentsMetadataManager = segmentsMetadataManager;
+    }
+
+    @Override
+    public ListenableFuture<SegmentUpdateResponse> markSegmentsAsUnused(
+        String dataSource,
+        SegmentsToUpdateFilter filter
+    )
+    {
+      final Set<SegmentId> segmentsToUpdate = new HashSet<>();
+      if (filter.getSegmentIds() != null) {
+        for (String idString : filter.getSegmentIds()) {
+          SegmentId segmentId = SegmentId.tryParse(dataSource, idString);
+          if (segmentId != null) {
+            segmentsToUpdate.add(segmentId);
+          }
+        }
+      }
+      int numUpdatedSegments = segmentsMetadataManager.markSegmentsAsUnused(segmentsToUpdate);
+      return Futures.immediateFuture(new SegmentUpdateResponse(numUpdatedSegments));
     }
   }
 

@@ -130,7 +130,9 @@ public class EmitterModule implements Module
     @Inject
     public void inject(Injector injector)
     {
-      final List<Binding<Emitter>> emitterBindings = injector.findBindingsByType(new TypeLiteral<Emitter>() {});
+      final List<Binding<Emitter>> emitterBindings = injector.findBindingsByType(new TypeLiteral<>()
+      {
+      });
 
       if (Strings.isNullOrEmpty(emitterType)) {
         // If the emitter is unspecified, we want to default to the no-op emitter. Include empty string here too, just

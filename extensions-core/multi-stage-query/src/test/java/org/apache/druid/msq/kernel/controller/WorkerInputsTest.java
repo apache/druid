@@ -25,10 +25,13 @@ import it.unimi.dsi.fastutil.ints.Int2IntMaps;
 import it.unimi.dsi.fastutil.ints.Int2ObjectAVLTreeMap;
 import it.unimi.dsi.fastutil.ints.IntAVLTreeSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
+import it.unimi.dsi.fastutil.ints.IntSortedSet;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 import it.unimi.dsi.fastutil.longs.LongList;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.msq.exec.Limits;
+import org.apache.druid.msq.exec.OutputChannelMode;
 import org.apache.druid.msq.input.InputSlice;
 import org.apache.druid.msq.input.InputSpec;
 import org.apache.druid.msq.input.InputSpecSlicer;
@@ -74,7 +77,7 @@ public class WorkerInputsTest
     final WorkerInputs inputs = WorkerInputs.create(
         stageDef,
         Int2IntMaps.EMPTY_MAP,
-        new TestInputSpecSlicer(true),
+        new TestInputSpecSlicer(denseWorkers(4), true),
         WorkerAssignmentStrategy.MAX,
         Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
     );
@@ -85,6 +88,35 @@ public class WorkerInputsTest
                     .put(1, Collections.singletonList(new TestInputSlice(2)))
                     .put(2, Collections.singletonList(new TestInputSlice(3)))
                     .put(3, Collections.singletonList(new TestInputSlice()))
+                    .build(),
+        inputs.assignmentsMap()
+    );
+  }
+
+  @Test
+  public void test_max_threeInputs_fourWorkers_withGaps()
+  {
+    final StageDefinition stageDef =
+        StageDefinition.builder(0)
+                       .inputs(new TestInputSpec(1, 2, 3))
+                       .maxWorkerCount(4)
+                       .processorFactory(new OffsetLimitFrameProcessorFactory(0, 0L))
+                       .build(QUERY_ID);
+
+    final WorkerInputs inputs = WorkerInputs.create(
+        stageDef,
+        Int2IntMaps.EMPTY_MAP,
+        new TestInputSpecSlicer(new IntAVLTreeSet(new int[]{1, 3, 4, 5}), true),
+        WorkerAssignmentStrategy.MAX,
+        Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
+    );
+
+    Assert.assertEquals(
+        ImmutableMap.<Integer, List<InputSlice>>builder()
+                    .put(1, Collections.singletonList(new TestInputSlice(1)))
+                    .put(3, Collections.singletonList(new TestInputSlice(2)))
+                    .put(4, Collections.singletonList(new TestInputSlice(3)))
+                    .put(5, Collections.singletonList(new TestInputSlice()))
                     .build(),
         inputs.assignmentsMap()
     );
@@ -103,7 +135,7 @@ public class WorkerInputsTest
     final WorkerInputs inputs = WorkerInputs.create(
         stageDef,
         Int2IntMaps.EMPTY_MAP,
-        new TestInputSpecSlicer(true),
+        new TestInputSpecSlicer(denseWorkers(4), true),
         WorkerAssignmentStrategy.MAX,
         Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
     );
@@ -132,7 +164,7 @@ public class WorkerInputsTest
     final WorkerInputs inputs = WorkerInputs.create(
         stageDef,
         Int2IntMaps.EMPTY_MAP,
-        new TestInputSpecSlicer(true),
+        new TestInputSpecSlicer(denseWorkers(4), true),
         WorkerAssignmentStrategy.AUTO,
         Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
     );
@@ -158,7 +190,7 @@ public class WorkerInputsTest
     final WorkerInputs inputs = WorkerInputs.create(
         stageDef,
         Int2IntMaps.EMPTY_MAP,
-        new TestInputSpecSlicer(true),
+        new TestInputSpecSlicer(denseWorkers(4), true),
         WorkerAssignmentStrategy.AUTO,
         Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
     );
@@ -185,7 +217,7 @@ public class WorkerInputsTest
     final WorkerInputs inputs = WorkerInputs.create(
         stageDef,
         Int2IntMaps.EMPTY_MAP,
-        new TestInputSpecSlicer(true),
+        new TestInputSpecSlicer(denseWorkers(4), true),
         WorkerAssignmentStrategy.AUTO,
         Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
     );
@@ -211,7 +243,7 @@ public class WorkerInputsTest
     final WorkerInputs inputs = WorkerInputs.create(
         stageDef,
         Int2IntMaps.EMPTY_MAP,
-        new TestInputSpecSlicer(true),
+        new TestInputSpecSlicer(denseWorkers(4), true),
         WorkerAssignmentStrategy.AUTO,
         Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
     );
@@ -238,7 +270,8 @@ public class WorkerInputsTest
         stageDef,
         new Int2IntAVLTreeMap(ImmutableMap.of(0, 2)),
         new StageInputSpecSlicer(
-            new Int2ObjectAVLTreeMap<>(ImmutableMap.of(0, ReadablePartitions.striped(0, 2, 3)))
+            new Int2ObjectAVLTreeMap<>(ImmutableMap.of(0, ReadablePartitions.striped(0, 2, 3))),
+            new Int2ObjectAVLTreeMap<>(ImmutableMap.of(0, OutputChannelMode.LOCAL_STORAGE))
         ),
         WorkerAssignmentStrategy.AUTO,
         Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
@@ -251,7 +284,8 @@ public class WorkerInputsTest
                         Collections.singletonList(
                             new StageInputSlice(
                                 0,
-                                new StripedReadablePartitions(0, 2, new IntAVLTreeSet(new int[]{0, 2}))
+                                new StripedReadablePartitions(0, 2, new IntAVLTreeSet(new int[]{0, 2})),
+                                OutputChannelMode.LOCAL_STORAGE
                             )
                         )
                     )
@@ -260,7 +294,8 @@ public class WorkerInputsTest
                         Collections.singletonList(
                             new StageInputSlice(
                                 0,
-                                new StripedReadablePartitions(0, 2, new IntAVLTreeSet(new int[]{1}))
+                                new StripedReadablePartitions(0, 2, new IntAVLTreeSet(new int[]{1})),
+                                OutputChannelMode.LOCAL_STORAGE
                             )
                         )
                     )
@@ -283,7 +318,8 @@ public class WorkerInputsTest
         stageDef,
         new Int2IntAVLTreeMap(ImmutableMap.of(0, 2)),
         new StageInputSpecSlicer(
-            new Int2ObjectAVLTreeMap<>(ImmutableMap.of(0, ReadablePartitions.striped(0, 2, 3)))
+            new Int2ObjectAVLTreeMap<>(ImmutableMap.of(0, ReadablePartitions.striped(0, 2, 3))),
+            new Int2ObjectAVLTreeMap<>(ImmutableMap.of(0, OutputChannelMode.LOCAL_STORAGE))
         ),
         WorkerAssignmentStrategy.AUTO,
         Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
@@ -296,7 +332,8 @@ public class WorkerInputsTest
                         Collections.singletonList(
                             new StageInputSlice(
                                 0,
-                                new StripedReadablePartitions(0, 2, new IntAVLTreeSet(new int[]{0, 1, 2}))
+                                new StripedReadablePartitions(0, 2, new IntAVLTreeSet(new int[]{0, 1, 2})),
+                                OutputChannelMode.LOCAL_STORAGE
                             )
                         )
                     )
@@ -318,7 +355,7 @@ public class WorkerInputsTest
     final WorkerInputs inputs = WorkerInputs.create(
         stageDef,
         Int2IntMaps.EMPTY_MAP,
-        new TestInputSpecSlicer(true),
+        new TestInputSpecSlicer(denseWorkers(4), true),
         WorkerAssignmentStrategy.AUTO,
         Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
     );
@@ -345,7 +382,7 @@ public class WorkerInputsTest
     final WorkerInputs inputs = WorkerInputs.create(
         stageDef,
         Int2IntMaps.EMPTY_MAP,
-        new TestInputSpecSlicer(true),
+        new TestInputSpecSlicer(denseWorkers(2), true),
         WorkerAssignmentStrategy.AUTO,
         Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
     );
@@ -378,7 +415,7 @@ public class WorkerInputsTest
     final WorkerInputs inputs = WorkerInputs.create(
         stageDef,
         Int2IntMaps.EMPTY_MAP,
-        new TestInputSpecSlicer(true),
+        new TestInputSpecSlicer(denseWorkers(1), true),
         WorkerAssignmentStrategy.AUTO,
         Limits.DEFAULT_MAX_INPUT_BYTES_PER_WORKER
     );
@@ -405,7 +442,7 @@ public class WorkerInputsTest
                        .processorFactory(new OffsetLimitFrameProcessorFactory(0, 0L))
                        .build(QUERY_ID);
 
-    TestInputSpecSlicer testInputSpecSlicer = spy(new TestInputSpecSlicer(true));
+    TestInputSpecSlicer testInputSpecSlicer = spy(new TestInputSpecSlicer(denseWorkers(3), true));
 
     final WorkerInputs inputs = WorkerInputs.create(
         stageDef,
@@ -449,7 +486,7 @@ public class WorkerInputsTest
                        .processorFactory(new OffsetLimitFrameProcessorFactory(0, 0L))
                        .build(QUERY_ID);
 
-    TestInputSpecSlicer testInputSpecSlicer = spy(new TestInputSpecSlicer(true));
+    TestInputSpecSlicer testInputSpecSlicer = spy(new TestInputSpecSlicer(denseWorkers(3), true));
 
     final WorkerInputs inputs = WorkerInputs.create(
         stageDef,
@@ -492,7 +529,7 @@ public class WorkerInputsTest
                        .processorFactory(new OffsetLimitFrameProcessorFactory(0, 0L))
                        .build(QUERY_ID);
 
-    TestInputSpecSlicer testInputSpecSlicer = spy(new TestInputSpecSlicer(true));
+    TestInputSpecSlicer testInputSpecSlicer = spy(new TestInputSpecSlicer(denseWorkers(3), true));
 
     final WorkerInputs inputs = WorkerInputs.create(
         stageDef,
@@ -579,11 +616,23 @@ public class WorkerInputsTest
 
   private static class TestInputSpecSlicer implements InputSpecSlicer
   {
+    private final IntSortedSet workers;
     private final boolean canSliceDynamic;
 
-    public TestInputSpecSlicer(boolean canSliceDynamic)
+    /**
+     * Create a test slicer.
+     *
+     * @param workers         Set of workers to consider assigning work to.
+     * @param canSliceDynamic Whether this slicer can slice dynamically.
+     */
+    public TestInputSpecSlicer(final IntSortedSet workers, final boolean canSliceDynamic)
     {
+      this.workers = workers;
       this.canSliceDynamic = canSliceDynamic;
+
+      if (workers.isEmpty()) {
+        throw DruidException.defensive("Need more than one worker in workers[%s]", workers);
+      }
     }
 
     @Override
@@ -600,9 +649,9 @@ public class WorkerInputsTest
           SlicerUtils.makeSlicesStatic(
               testInputSpec.values.iterator(),
               i -> i,
-              maxNumSlices
+              Math.min(maxNumSlices, workers.size())
           );
-      return makeSlices(assignments);
+      return makeSlices(workers, assignments);
     }
 
     @Override
@@ -618,24 +667,39 @@ public class WorkerInputsTest
           SlicerUtils.makeSlicesDynamic(
               testInputSpec.values.iterator(),
               i -> i,
-              maxNumSlices,
+              Math.min(maxNumSlices, workers.size()),
               maxFilesPerSlice,
               maxBytesPerSlice
           );
-      return makeSlices(assignments);
+      return makeSlices(workers, assignments);
     }
 
     private static List<InputSlice> makeSlices(
+        final IntSortedSet workers,
         final List<List<Long>> assignments
     )
     {
       final List<InputSlice> retVal = new ArrayList<>(assignments.size());
-
-      for (final List<Long> assignment : assignments) {
-        retVal.add(new TestInputSlice(new LongArrayList(assignment)));
+      for (int assignment = 0, workerNumber = 0;
+           workerNumber <= workers.lastInt() && assignment < assignments.size();
+           workerNumber++) {
+        if (workers.contains(workerNumber)) {
+          retVal.add(new TestInputSlice(new LongArrayList(assignments.get(assignment++))));
+        } else {
+          retVal.add(NilInputSlice.INSTANCE);
+        }
       }
 
       return retVal;
     }
+  }
+
+  private static IntSortedSet denseWorkers(final int numWorkers)
+  {
+    final IntAVLTreeSet workers = new IntAVLTreeSet();
+    for (int i = 0; i < numWorkers; i++) {
+      workers.add(i);
+    }
+    return workers;
   }
 }

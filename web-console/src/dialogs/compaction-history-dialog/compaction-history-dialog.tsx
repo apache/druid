@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Button, Callout, Classes, Code, Dialog, Tab, Tabs } from '@blueprintjs/core';
+import { Button, Callout, Classes, Dialog, Tab, Tabs, TabsExpander, Tag } from '@blueprintjs/core';
 import * as JSONBig from 'json-bigint-native';
 import React, { useState } from 'react';
 
@@ -24,7 +24,7 @@ import { Loader, ShowValue } from '../../components';
 import type { CompactionConfig } from '../../druid-models';
 import { useQueryManager } from '../../hooks';
 import { Api } from '../../singletons';
-import { formatInteger, formatPercent } from '../../utils';
+import { formatInteger, formatPercent, getApiArray } from '../../utils';
 import { DiffDialog } from '../diff-dialog/diff-dialog';
 
 import './compaction-history-dialog.scss';
@@ -63,12 +63,12 @@ export const CompactionHistoryDialog = React.memo(function CompactionHistoryDial
   const [diffIndex, setDiffIndex] = useState(-1);
   const [historyState] = useQueryManager<string, CompactionHistoryEntry[]>({
     initQuery: datasource,
-    processQuery: async datasource => {
+    processQuery: async (datasource, cancelToken) => {
       try {
-        const resp = await Api.instance.get(
+        return await getApiArray<CompactionHistoryEntry>(
           `/druid/coordinator/v1/config/compaction/${Api.encodePath(datasource)}/history?count=20`,
+          cancelToken,
         );
-        return resp.data;
       } catch (e) {
         if (e.response?.status === 404) return [];
         throw e;
@@ -113,11 +113,11 @@ export const CompactionHistoryDialog = React.memo(function CompactionHistoryDial
                   }
                 />
               ))}
-              <Tabs.Expander />
+              <TabsExpander />
             </Tabs>
           ) : (
             <div>
-              There is no compaction history for <Code>{datasource}</Code>.
+              There is no compaction history for <Tag minimal>{datasource}</Tag>.
             </div>
           )
         ) : historyState.loading ? (
@@ -135,8 +135,8 @@ export const CompactionHistoryDialog = React.memo(function CompactionHistoryDial
         <DiffDialog
           title="Compaction config diff"
           versions={historyData.map(s => ({ label: s.auditTime, value: s.compactionConfig }))}
-          initLeftIndex={diffIndex + 1}
-          initRightIndex={diffIndex}
+          initOldIndex={diffIndex + 1}
+          initNewIndex={diffIndex}
           onClose={() => setDiffIndex(-1)}
         />
       )}

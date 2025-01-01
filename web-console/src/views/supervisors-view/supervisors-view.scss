@@ -28,5 +28,18 @@
     top: $view-control-bar-height + $standard-padding;
     bottom: 0;
     width: 100%;
+
+    .title-button {
+      cursor: pointer;
+    }
+
+    .detail-line {
+      font-style: italic;
+      opacity: 0.6;
+    }
+
+    .warning-line {
+      color: $orange4;
+    }
   }
 }

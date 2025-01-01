@@ -77,11 +77,7 @@ SqlNode DruidSqlReplaceEof() :
       clusteredBy = ClusteredBy()
     ]
     {
-        if (clusteredBy != null && partitionedBy == null) {
-          throw org.apache.druid.sql.calcite.parser.DruidSqlParserUtils.problemParsing(
-            "CLUSTERED BY found before PARTITIONED BY, CLUSTERED BY must come after the PARTITIONED BY clause"
-          );
-        }
+
     }
     // EOF is also present in SqlStmtEof but EOF is a special case and a single EOF can be consumed multiple times.
     // The reason for adding EOF here is to ensure that we create a DruidSqlReplace node after the syntax has been

@@ -232,9 +232,7 @@ public class ResponseContextTest
             "string-value")),
         ctx1.serializeWith(mapper, Integer.MAX_VALUE).getResult());
 
-    final ResponseContext ctx2 = ResponseContext.createEmpty();
-    // Add two non-header fields, and one that will be in the header
-    ctx2.putEntityTag("not in header");
+    final ResponseContext ctx2 = ResponseContext.createEmpty(); // Add two non-header fields, and one that will be in the header ctx2.putEntityTag("not in header");
     ctx2.addCpuNanos(100);
     ctx2.add(EXTN_COUNTER_KEY, 100);
     Assert.assertEquals(

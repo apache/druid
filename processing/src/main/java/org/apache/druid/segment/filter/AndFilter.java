@@ -72,11 +72,70 @@ public class AndFilter implements BooleanFilter
     this(new LinkedHashSet<>(filters));
   }
 
+  public static ValueMatcher makeMatcher(final ValueMatcher[] baseMatchers)
+  {
+    Preconditions.checkState(baseMatchers.length > 0);
+    if (baseMatchers.length == 1) {
+      return baseMatchers[0];
+    }
+
+    return new ValueMatcher()
+    {
+      @Override
+      public boolean matches(boolean includeUnknown)
+      {
+        for (ValueMatcher matcher : baseMatchers) {
+          if (!matcher.matches(includeUnknown)) {
+            return false;
+          }
+        }
+        return true;
+      }
+
+      @Override
+      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
+      {
+        inspector.visit("firstBaseMatcher", baseMatchers[0]);
+        inspector.visit("secondBaseMatcher", baseMatchers[1]);
+        // Don't inspect the 3rd and all consequent baseMatchers, cut runtime shape combinations at this point.
+        // Anyway if the filter is so complex, Hotspot won't inline all calls because of the inline limit.
+      }
+    };
+  }
+
+  public static VectorValueMatcher makeVectorMatcher(final VectorValueMatcher[] baseMatchers)
+  {
+    Preconditions.checkState(baseMatchers.length > 0);
+    if (baseMatchers.length == 1) {
+      return baseMatchers[0];
+    }
+
+    return new BaseVectorValueMatcher(baseMatchers[0])
+    {
+      @Override
+      public ReadableVectorMatch match(final ReadableVectorMatch mask, boolean includeUnknown)
+      {
+        ReadableVectorMatch match = mask;
+
+        for (VectorValueMatcher matcher : baseMatchers) {
+          if (match.isAllFalse()) {
+            // Short-circuit if the entire vector is false.
+            break;
+          }
+          match = matcher.match(match, includeUnknown);
+        }
+
+        assert match.isValid(mask);
+        return match;
+      }
+    };
+  }
+
   @Override
   public <T> FilterBundle makeFilterBundle(
-      ColumnIndexSelector columnIndexSelector,
+      FilterBundle.Builder filterBundleBuilder,
       BitmapResultFactory<T> bitmapResultFactory,
-      int selectionRowCount,
+      int applyRowCount,
       int totalRowCount,
       boolean includeUnknown
   )
@@ -85,7 +144,7 @@ public class AndFilter implements BooleanFilter
     final List<FilterBundle.MatcherBundle> matcherBundles = new ArrayList<>();
     final List<FilterBundle.MatcherBundleInfo> matcherBundleInfos = new ArrayList<>();
 
-    int selectionCount = selectionRowCount;
+    int indexIntersectionSize = totalRowCount;
     ImmutableBitmap index = null;
     ColumnIndexCapabilities merged = new SimpleColumnIndexCapabilities(true, true);
     // AND filter can be partitioned into a bundle that has both indexes and value matchers. The filters which support
@@ -97,20 +156,21 @@ public class AndFilter implements BooleanFilter
     // a nested AND filter might also partition itself into indexes and bundles, and since it is part of a logical AND
     // operation, this is valid (and even preferable).
     final long bitmapConstructionStartNs = System.nanoTime();
-    for (Filter subfilter : filters) {
-      final FilterBundle subBundle = subfilter.makeFilterBundle(
-          columnIndexSelector,
+    for (FilterBundle.Builder subFilterBundleBuilder : filterBundleBuilder.getChildBuilders()) {
+      final FilterBundle subBundle = subFilterBundleBuilder.build(
           bitmapResultFactory,
-          selectionCount,
+          Math.min(applyRowCount, indexIntersectionSize),
           totalRowCount,
           includeUnknown
       );
-      if (subBundle.getIndex() != null) {
+      if (subBundle.hasIndex()) {
         if (subBundle.getIndex().getBitmap().isEmpty()) {
           // if nothing matches for any sub filter, short-circuit, because nothing can possibly match
           return FilterBundle.allFalse(
               System.nanoTime() - bitmapConstructionStartNs,
-              columnIndexSelector.getBitmapFactory().makeEmptyImmutableBitmap()
+              subFilterBundleBuilder.getColumnIndexSelector()
+                                    .getBitmapFactory()
+                                    .makeEmptyImmutableBitmap()
           );
         }
         merged = merged.merge(subBundle.getIndex().getIndexCapabilities());
@@ -120,9 +180,9 @@ public class AndFilter implements BooleanFilter
         } else {
           index = index.intersection(subBundle.getIndex().getBitmap());
         }
-        selectionCount = index.size();
+        indexIntersectionSize = index.size();
       }
-      if (subBundle.getMatcherBundle() != null) {
+      if (subBundle.hasMatcher()) {
         matcherBundles.add(subBundle.getMatcherBundle());
         matcherBundleInfos.add(subBundle.getMatcherBundle().getMatcherInfo());
       }
@@ -131,16 +191,12 @@ public class AndFilter implements BooleanFilter
     final FilterBundle.IndexBundle indexBundle;
     if (index != null) {
       if (indexBundleInfos.size() == 1) {
-        indexBundle = new FilterBundle.SimpleIndexBundle(
-            indexBundleInfos.get(0),
-            index,
-            merged
-        );
+        indexBundle = new FilterBundle.SimpleIndexBundle(indexBundleInfos.get(0), index, merged);
       } else {
         indexBundle = new FilterBundle.SimpleIndexBundle(
             new FilterBundle.IndexBundleInfo(
                 () -> "AND",
-                selectionCount,
+                indexIntersectionSize,
                 System.nanoTime() - bitmapConstructionStartNs,
                 indexBundleInfos
             ),
@@ -162,11 +218,7 @@ public class AndFilter implements BooleanFilter
           if (matcherBundles.size() == 1) {
             return matcherBundleInfos.get(0);
           }
-          return new FilterBundle.MatcherBundleInfo(
-              () -> "AND",
-              null,
-              matcherBundleInfos
-          );
+          return new FilterBundle.MatcherBundleInfo(() -> "AND", null, matcherBundleInfos);
         }
 
         @Override
@@ -180,7 +232,10 @@ public class AndFilter implements BooleanFilter
         }
 
         @Override
-        public VectorValueMatcher vectorMatcher(VectorColumnSelectorFactory selectorFactory, ReadableVectorOffset baseOffset)
+        public VectorValueMatcher vectorMatcher(
+            VectorColumnSelectorFactory selectorFactory,
+            ReadableVectorOffset baseOffset
+        )
         {
           final VectorValueMatcher[] vectorMatchers = new VectorValueMatcher[matcherBundles.size()];
           for (int i = 0; i < matcherBundles.size(); i++) {
@@ -188,15 +243,23 @@ public class AndFilter implements BooleanFilter
           }
           return makeVectorMatcher(vectorMatchers);
         }
+
+        @Override
+        public boolean canVectorize()
+        {
+          for (FilterBundle.MatcherBundle bundle : matcherBundles) {
+            if (!bundle.canVectorize()) {
+              return false;
+            }
+          }
+          return true;
+        }
       };
     } else {
       matcherBundle = null;
     }
 
-    return new FilterBundle(
-        indexBundle,
-        matcherBundle
-    );
+    return new FilterBundle(indexBundle, matcherBundle);
   }
 
   @Nullable
@@ -229,6 +292,13 @@ public class AndFilter implements BooleanFilter
       }
 
       @Override
+      public int estimatedComputeCost()
+      {
+        // There's no additional cost on AND filter, cost in child filters would be summed.
+        return 0;
+      }
+
+      @Override
       public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
       {
         final List<T> bitmapResults = new ArrayList<>(bitmapColumnIndices.size());
@@ -247,7 +317,7 @@ public class AndFilter implements BooleanFilter
       @Override
       public <T> T computeBitmapResult(
           BitmapResultFactory<T> bitmapResultFactory,
-          int selectionRowCount,
+          int applyRowCount,
           int totalRowCount,
           boolean includeUnknown
       )
@@ -256,7 +326,7 @@ public class AndFilter implements BooleanFilter
         for (final BitmapColumnIndex index : bitmapColumnIndices) {
           final T bitmapResult = index.computeBitmapResult(
               bitmapResultFactory,
-              selectionRowCount,
+              applyRowCount,
               totalRowCount,
               includeUnknown
           );
@@ -337,65 +407,6 @@ public class AndFilter implements BooleanFilter
   public String toString()
   {
     return StringUtils.format("(%s)", AND_JOINER.join(filters));
-  }
-
-  public static ValueMatcher makeMatcher(final ValueMatcher[] baseMatchers)
-  {
-    Preconditions.checkState(baseMatchers.length > 0);
-    if (baseMatchers.length == 1) {
-      return baseMatchers[0];
-    }
-
-    return new ValueMatcher()
-    {
-      @Override
-      public boolean matches(boolean includeUnknown)
-      {
-        for (ValueMatcher matcher : baseMatchers) {
-          if (!matcher.matches(includeUnknown)) {
-            return false;
-          }
-        }
-        return true;
-      }
-
-      @Override
-      public void inspectRuntimeShape(RuntimeShapeInspector inspector)
-      {
-        inspector.visit("firstBaseMatcher", baseMatchers[0]);
-        inspector.visit("secondBaseMatcher", baseMatchers[1]);
-        // Don't inspect the 3rd and all consequent baseMatchers, cut runtime shape combinations at this point.
-        // Anyway if the filter is so complex, Hotspot won't inline all calls because of the inline limit.
-      }
-    };
-  }
-
-  public static VectorValueMatcher makeVectorMatcher(final VectorValueMatcher[] baseMatchers)
-  {
-    Preconditions.checkState(baseMatchers.length > 0);
-    if (baseMatchers.length == 1) {
-      return baseMatchers[0];
-    }
-
-    return new BaseVectorValueMatcher(baseMatchers[0])
-    {
-      @Override
-      public ReadableVectorMatch match(final ReadableVectorMatch mask, boolean includeUnknown)
-      {
-        ReadableVectorMatch match = mask;
-
-        for (VectorValueMatcher matcher : baseMatchers) {
-          if (match.isAllFalse()) {
-            // Short-circuit if the entire vector is false.
-            break;
-          }
-          match = matcher.match(match, includeUnknown);
-        }
-
-        assert match.isValid(mask);
-        return match;
-      }
-    };
   }
 
   @Override

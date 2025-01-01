@@ -20,6 +20,8 @@
 package org.apache.druid.sql.calcite;
 
 import org.apache.druid.error.DruidException;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.sql.calcite.CalciteStrictInsertTest.StrictInsertComponentSupplier;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.planner.CatalogResolver;
 import org.apache.druid.sql.calcite.planner.CatalogResolver.NullCatalogResolver;
@@ -30,18 +32,27 @@ import org.junit.jupiter.api.Test;
  * to only work with existing datasources. The strict option is a config option which
  * we enable only for this one test.
  */
+@SqlTestFrameworkConfig.ComponentSupplier(StrictInsertComponentSupplier.class)
 public class CalciteStrictInsertTest extends CalciteIngestionDmlTest
 {
-  @Override
-  public CatalogResolver createCatalogResolver()
+  static class StrictInsertComponentSupplier extends IngestionDmlComponentSupplier
   {
-    return new NullCatalogResolver() {
-      @Override
-      public boolean ingestRequiresExistingTable()
-      {
-        return true;
-      }
-    };
+    public StrictInsertComponentSupplier(TempDirProducer tempFolderProducer)
+    {
+      super(tempFolderProducer);
+    }
+
+    @Override
+    public CatalogResolver createCatalogResolver()
+    {
+      return new NullCatalogResolver() {
+        @Override
+        public boolean ingestRequiresExistingTable()
+        {
+          return true;
+        }
+      };
+    }
   }
 
   @Test
@@ -64,7 +75,8 @@ public class CalciteStrictInsertTest extends CalciteIngestionDmlTest
             newScanQueryBuilder()
                 .dataSource("foo")
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .columns("__time", "cnt", "dim1", "dim2", "dim3", "m1", "m2", "unique_dim1")
+                .columns("__time", "dim1", "dim2", "dim3", "cnt", "m1", "m2", "unique_dim1")
+                .columnTypes(ColumnType.LONG, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.LONG, ColumnType.FLOAT, ColumnType.DOUBLE, ColumnType.ofComplex("hyperUnique"))
                 .context(PARTITIONED_BY_ALL_TIME_QUERY_CONTEXT)
                 .build()
         )

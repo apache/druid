@@ -276,7 +276,7 @@ public class RunAllFullyWidget<T, ResultType>
 
         Futures.addCallback(
             future,
-            new FutureCallback<T>()
+            new FutureCallback<>()
             {
               @Override
               public void onSuccess(T result)
@@ -306,9 +306,11 @@ public class RunAllFullyWidget<T, ResultType>
                 }
 
                 if (isDone) {
-                  finished.compareAndSet(null, Either.value(processorManager.result()));
-
                   synchronized (runAllFullyLock) {
+                    if (finished.get() == null) {
+                      finished.compareAndSet(null, Either.value(processorManager.result()));
+                    }
+
                     cleanupIfNoMoreProcessors();
                   }
                 } else {

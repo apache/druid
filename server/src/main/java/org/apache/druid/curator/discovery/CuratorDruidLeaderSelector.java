@@ -37,6 +37,7 @@ import org.apache.druid.utils.CloseableUtils;
 import javax.annotation.Nullable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -58,7 +59,7 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
   private final AtomicReference<LeaderLatch> leaderLatch = new AtomicReference<>();
 
   private volatile boolean leader = false;
-  private volatile int term = 0;
+  private final AtomicInteger term = new AtomicInteger(0);
 
   public CuratorDruidLeaderSelector(CuratorFramework curator, @Self DruidNode self, String latchPath)
   {
@@ -88,36 +89,24 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
           public void isLeader()
           {
             try {
+              if (newLeaderLatch.getState().equals(LeaderLatch.State.CLOSED)) {
+                log.warn("I'm being asked to become leader, but the latch is CLOSED. Ignored event.");
+                return;
+              }
+
               if (leader) {
                 log.warn("I'm being asked to become leader. But I am already the leader. Ignored event.");
                 return;
               }
 
               leader = true;
-              term++;
+              term.incrementAndGet();
               listener.becomeLeader();
             }
             catch (Exception ex) {
               log.makeAlert(ex, "listener becomeLeader() failed. Unable to become leader").emit();
-
-              // give others a chance to become leader.
-              CloseableUtils.closeAndSuppressExceptions(
-                  createNewLeaderLatchWithListener(),
-                  e -> log.warn("Could not close old leader latch; continuing with new one anyway.")
-              );
-
-              leader = false;
-              try {
-                //Small delay before starting the latch so that others waiting are chosen to become leader.
-                Thread.sleep(ThreadLocalRandom.current().nextInt(1000, 5000));
-                leaderLatch.get().start();
-              }
-              catch (Exception e) {
-                // If an exception gets thrown out here, then the node will zombie out 'cause it won't be looking for
-                // the latch anymore.  I don't believe it's actually possible for an Exception to throw out here, but
-                // Curator likes to have "throws Exception" on methods so it might happen...
-                log.makeAlert(e, "I am a zombie").emit();
-              }
+              stopAndCreateNewLeaderLatch();
+              startLeaderLatch();
             }
           }
 
@@ -131,7 +120,10 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
               }
 
               leader = false;
+              // give others a chance to become leader.
+              stopAndCreateNewLeaderLatch();
               listener.stopBeingLeader();
+              startLeaderLatch();
             }
             catch (Exception ex) {
               log.makeAlert(ex, "listener.stopBeingLeader() failed. Unable to stopBeingLeader").emit();
@@ -172,7 +164,7 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
   @Override
   public int localTerm()
   {
-    return term;
+    return term.get();
   }
 
   @Override
@@ -214,5 +206,30 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
 
     CloseableUtils.closeAndSuppressExceptions(leaderLatch.get(), e -> log.warn(e, "Failed to close LeaderLatch."));
     listenerExecutor.shutdownNow();
+  }
+
+  private void stopAndCreateNewLeaderLatch()
+  {
+    CloseableUtils.closeAndSuppressExceptions(
+        createNewLeaderLatchWithListener(),
+        e -> log.warn("Could not close old leader latch; continuing with new one anyway.")
+    );
+
+    leader = false;
+  }
+
+  private void startLeaderLatch()
+  {
+    try {
+      //Small delay before starting the latch so that others waiting are chosen to become leader.
+      Thread.sleep(ThreadLocalRandom.current().nextInt(1000, 5000));
+      leaderLatch.get().start();
+    }
+    catch (Exception e) {
+      // If an exception gets thrown out here, then the node will zombie out 'cause it won't be looking for
+      // the latch anymore.  I don't believe it's actually possible for an Exception to throw out here, but
+      // Curator likes to have "throws Exception" on methods so it might happen...
+      log.makeAlert(e, "I am a zombie").emit();
+    }
   }
 }

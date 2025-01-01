@@ -62,7 +62,7 @@ public class NotYetSupportedUsageTest
 
   static class ReportEntry
   {
-    public static final Comparator<ReportEntry> CLASS_NCASES_MODE_COMPARATOR = new Comparator<ReportEntry>()
+    public static final Comparator<ReportEntry> CLASS_NCASES_MODE_COMPARATOR = new Comparator<>()
     {
       @Override
       public int compare(ReportEntry l, ReportEntry r)

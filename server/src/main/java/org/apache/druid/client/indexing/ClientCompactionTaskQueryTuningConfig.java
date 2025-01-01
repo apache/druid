@@ -28,6 +28,7 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.incremental.AppendableIndexSpec;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
+import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
 import org.joda.time.Duration;
 
@@ -78,6 +79,17 @@ public class ClientCompactionTaskQueryTuningConfig
   private final Integer maxColumnsToMerge;
   @Nullable
   private final AppendableIndexSpec appendableIndexSpec;
+
+  public static ClientCompactionTaskQueryTuningConfig from(
+      DataSourceCompactionConfig compactionConfig
+  )
+  {
+    if (compactionConfig == null) {
+      return from(null, null, null);
+    } else {
+      return from(compactionConfig.getTuningConfig(), compactionConfig.getMaxRowsPerSegment(), null);
+    }
+  }
 
   public static ClientCompactionTaskQueryTuningConfig from(
       @Nullable UserCompactionTaskQueryTuningConfig userCompactionTaskQueryTuningConfig,

@@ -54,9 +54,7 @@ public class ChangeRequestHttpSyncerTest
   public void testSimple() throws Exception
   {
     ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
-    TypeReference<ChangeRequestsSnapshot<String>> typeRef = new TypeReference<ChangeRequestsSnapshot<String>>()
-    {
-    };
+    TypeReference<ChangeRequestsSnapshot<String>> typeRef = new TypeReference<>() {};
 
     TestHttpClient httpClient = new TestHttpClient(
         ImmutableList.of(

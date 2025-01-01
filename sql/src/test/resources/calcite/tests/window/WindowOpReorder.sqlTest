@@ -1,0 +1,39 @@
+type: "operatorValidation"
+
+sql: |
+    SELECT
+      m1,
+      m2,
+      SUM(m1) OVER(PARTITION BY m2) as sum1,
+      SUM(m2) OVER() as sum2
+    from druid.numfoo
+    GROUP BY m1,m2
+
+expectedOperators:
+  - type: "naivePartition"
+    partitionColumns: [ ]
+  - type: "window"
+    processor:
+      type: "framedAgg"
+      frame: { type: "rows" }
+      aggregations:
+        - { "type": "doubleSum", "name": "w1", "fieldName": "d1" }
+  - type: "naiveSort"
+    columns:
+      - column: "d1"
+        direction: "ASC"
+  - type: "naivePartition"
+    partitionColumns: [ "d1" ]
+  - type: "window"
+    processor:
+      type: "framedAgg"
+      frame: { type: "rows" }
+      aggregations:
+        - { "type": "doubleSum", "name": "w0", "fieldName": "d0" }
+expectedResults:
+  - [1.0, 1.0, 1.0, 21.0]
+  - [2.0, 2.0, 2.0, 21.0]
+  - [3.0, 3.0, 3.0, 21.0]
+  - [4.0, 4.0, 4.0, 21.0]
+  - [5.0, 5.0, 5.0, 21.0]
+  - [6.0, 6.0, 6.0, 21.0]

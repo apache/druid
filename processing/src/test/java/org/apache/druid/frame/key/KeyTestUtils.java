@@ -22,7 +22,6 @@ package org.apache.druid.frame.key;
 import org.apache.datasketches.memory.Memory;
 import org.apache.datasketches.memory.WritableMemory;
 import org.apache.druid.frame.Frame;
-import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.HeapMemoryAllocator;
 import org.apache.druid.frame.allocation.SingleMemoryAllocatorFactory;
 import org.apache.druid.frame.write.FrameWriter;
@@ -31,13 +30,11 @@ import org.apache.druid.frame.write.FrameWriters;
 import org.apache.druid.frame.write.RowBasedFrameWriter;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.RowBasedColumnSelectorFactory;
-import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 
 public class KeyTestUtils
 {
@@ -57,10 +54,10 @@ public class KeyTestUtils
     final RowSignature.Builder builder = RowSignature.builder();
 
     for (final KeyColumn keyColumn : keyColumns) {
-      final ColumnCapabilities capabilities = inspector.getColumnCapabilities(keyColumn.columnName());
-      final ColumnType columnType =
-          Optional.ofNullable(capabilities).map(ColumnCapabilities::toColumnType).orElse(null);
-      builder.add(keyColumn.columnName(), columnType);
+      builder.add(
+          keyColumn.columnName(),
+          ColumnType.fromCapabilities(inspector.getColumnCapabilities(keyColumn.columnName()))
+      );
     }
 
     return builder.build();
@@ -93,11 +90,11 @@ public class KeyTestUtils
         false
     );
 
-    final FrameWriterFactory writerFactory = FrameWriters.makeFrameWriterFactory(
-        FrameType.ROW_BASED,
+    final FrameWriterFactory writerFactory = FrameWriters.makeRowBasedFrameWriterFactory(
         new SingleMemoryAllocatorFactory(HeapMemoryAllocator.unlimited()),
         keySignature,
-        Collections.emptyList()
+        Collections.emptyList(),
+        false
     );
 
     try (final FrameWriter writer = writerFactory.newFrameWriter(columnSelectorFactory)) {

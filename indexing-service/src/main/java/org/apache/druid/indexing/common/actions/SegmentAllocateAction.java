@@ -23,8 +23,10 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Preconditions;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskLockType;
+import org.apache.druid.indexing.common.task.PendingSegmentAllocatingTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.LockRequestForNewSegment;
@@ -182,9 +184,7 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
   @Override
   public TypeReference<SegmentIdWithShardSpec> getReturnTypeReference()
   {
-    return new TypeReference<SegmentIdWithShardSpec>()
-    {
-    };
+    return new TypeReference<>() {};
   }
 
   @Override
@@ -210,6 +210,12 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
       final TaskActionToolbox toolbox
   )
   {
+    if (!(task instanceof PendingSegmentAllocatingTask)) {
+      throw DruidException.defensive(
+          "Task[%s] of type[%s] cannot allocate segments as it does not implement PendingSegmentAllocatingTask.",
+          task.getId(), task.getType()
+      );
+    }
     int attempt = 0;
     while (true) {
       attempt++;
@@ -376,12 +382,6 @@ public class SegmentAllocateAction implements TaskAction<SegmentIdWithShardSpec>
       }
       return null;
     }
-  }
-
-  @Override
-  public boolean isAudited()
-  {
-    return false;
   }
 
   @Override

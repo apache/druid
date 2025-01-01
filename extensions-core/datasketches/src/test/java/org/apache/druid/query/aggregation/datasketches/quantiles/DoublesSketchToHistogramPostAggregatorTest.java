@@ -56,9 +56,10 @@ public class DoublesSketchToHistogramPostAggregatorTest
         null
     );
     DefaultObjectMapper mapper = new DefaultObjectMapper();
-    DoublesSketchToHistogramPostAggregator andBackAgain = mapper.readValue(
+    mapper.registerModules(new DoublesSketchModule().getJacksonModules());
+    PostAggregator andBackAgain = mapper.readValue(
         mapper.writeValueAsString(there),
-        DoublesSketchToHistogramPostAggregator.class
+        PostAggregator.class
     );
 
     Assert.assertEquals(there, andBackAgain);

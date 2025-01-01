@@ -21,11 +21,6 @@ on:
         required: true
         type: string
         description: 'JDK version used to test Druid'
-      sql_compatibility:
-        required: false
-        type: boolean
-        default: true
-        description: 'For SQL compatibility'
       module:
         required: true
         type: string
@@ -84,13 +79,6 @@ jobs:
         run: |
           export base_ref=${{ github.base_ref }}
           echo "GITHUB_BASE_REF=${base_ref}" >> $GITHUB_ENV
-          # If sql_compatibilty is true, we want to set default_value_for_null
-          # which enables compatibility mode
-          if (${{ inputs.sql_compatibility }} == true); then
-            echo "DRUID_USE_DEFAULT_VALUE_FOR_NULL=false" >> $GITHUB_ENV
-          else
-            echo "DRUID_USE_DEFAULT_VALUE_FOR_NULL=true" >> $GITHUB_ENV
-          fi
 
       - name: test profiling
         run: | 
@@ -116,6 +104,31 @@ jobs:
         env:
           MAVEN_PROJECTS: ${{ inputs.maven_projects }}
         run: ./.github/scripts/unit_tests_script.sh
+
+      - name: Check for dumps on failure
+        if: ${{ failure() }}
+        id: check_for_dumps
+        run: |
+          if test -n "$(find "${GITHUB_WORKSPACE}" \( -name '*.hprof' -or -name 'hs_err_pid*' -or -name 'replay_pid*' -or -regex '.*/core\.[0-9]*' \))"
+          then
+            echo "found_dumps=true" >> "$GITHUB_ENV"
+          else
+            echo "found_dumps=false" >> "$GITHUB_ENV"
+          fi
+
+      - name: Collect dumps if they exist on failure
+        if: ${{ failure() && env.found_dumps == 'true' }}
+        run: |
+          find "${GITHUB_WORKSPACE}" \
+            \( -name '*.hprof' -or -name 'hs_err_pid*' -or -name 'replay_pid*' -or -regex '.*/core\.[0-9]*' \) \
+            -exec tar -cvzf ${RUNNER_TEMP}/failure-dumps.tar.gz {} +
+
+      - name: Upload dumps to GitHub if they exist on failure
+        if: ${{ failure() && env.found_dumps == 'true' }}
+        uses: actions/upload-artifact@master
+        with:
+          name: Failure-${{ inputs.group }} failure dumps (Compile=jdk${{ inputs.build_jdk }}, Run=jdk${{ inputs.runtime_jdk }})
+          path: ${{ runner.temp }}/failure-dumps.tar.gz
 
       - name: set outputs on failure
         id: set_outputs

@@ -19,7 +19,6 @@
 
 package org.apache.druid.curator.discovery;
 
-import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import org.apache.curator.x.discovery.ServiceDiscovery;
@@ -49,27 +48,21 @@ public class ServiceAnnouncerTest extends CuratorTestBase
     curator.blockUntilConnected();
     List<String> serviceNames = ImmutableList.of(
         "druid/overlord",
-        "druid/coordinator",
-        "druid/firehose/tranquility_test-50-0000-0000"
+        "druid/coordinator"
     );
     final ServiceDiscovery serviceDiscovery = createAndAnnounceServices(serviceNames);
     Assert.assertTrue(
         Iterators.all(
             serviceNames.iterator(),
-            new Predicate<String>()
-            {
-              @Override
-              public boolean apply(String input)
-              {
-                try {
-                  return serviceDiscovery.queryForInstances(input.replace('/', ':')).size() == 1;
-                }
-                catch (Exception e) {
-                  throw new ISE(
-                      "Something went wrong while finding instance with name [%s] in Service Discovery",
-                      input
-                  );
-                }
+            input -> {
+              try {
+                return serviceDiscovery.queryForInstances(input.replace('/', ':')).size() == 1;
+              }
+              catch (Exception e) {
+                throw new ISE(
+                    "Something went wrong while finding instance with name [%s] in Service Discovery",
+                    input
+                );
               }
             }
         )

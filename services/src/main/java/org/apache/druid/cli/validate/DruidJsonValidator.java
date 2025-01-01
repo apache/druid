@@ -40,8 +40,6 @@ import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.guice.DruidProcessingModule;
 import org.apache.druid.guice.ExtensionsLoader;
-import org.apache.druid.guice.FirehoseModule;
-import org.apache.druid.guice.IndexingServiceFirehoseModule;
 import org.apache.druid.guice.IndexingServiceInputSourceModule;
 import org.apache.druid.guice.LocalDataStorageDruidModule;
 import org.apache.druid.guice.QueryRunnerFactoryModule;
@@ -130,9 +128,7 @@ public class DruidJsonValidator extends GuiceRunnable
         Iterables.concat(
             extnLoader.getModules(),
             Arrays.asList(
-                new FirehoseModule(),
                 new IndexingHadoopModule(),
-                new IndexingServiceFirehoseModule(),
                 new IndexingServiceInputSourceModule(),
                 new LocalDataStorageDruidModule()
             )
@@ -231,7 +227,7 @@ public class DruidJsonValidator extends GuiceRunnable
       throws IOException
   {
     return source.readLines(
-        new LineProcessor<Void>()
+        new LineProcessor<>()
         {
           private final StringBuilder builder = new StringBuilder();
 

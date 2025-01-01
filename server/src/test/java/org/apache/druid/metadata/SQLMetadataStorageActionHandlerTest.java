@@ -34,7 +34,6 @@ import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.metadata.TaskLookup.ActiveTaskLookup;
 import org.apache.druid.metadata.TaskLookup.CompleteTaskLookup;
 import org.joda.time.DateTime;
@@ -73,51 +72,37 @@ public class SQLMetadataStorageActionHandlerTest
     TestDerbyConnector connector = derbyConnectorRule.getConnector();
 
     final String entryType = "entry";
-    final String logTable = "logs";
     final String lockTable = "locks";
 
     connector.prepareTaskEntryTable(entryTable);
     connector.createLockTable(lockTable, entryType);
-    connector.createLogTable(logTable, entryType);
 
     handler = new DerbyMetadataStorageActionHandler<>(
         connector,
         JSON_MAPPER,
-        new MetadataStorageActionHandlerTypes<Map<String, Object>, Map<String, Object>, Map<String, String>, Map<String, Object>>()
+        new MetadataStorageActionHandlerTypes<>()
         {
           @Override
           public TypeReference<Map<String, Object>> getEntryType()
           {
-            return new TypeReference<Map<String, Object>>()
-            {
-            };
+            return new TypeReference<>() {};
           }
 
           @Override
           public TypeReference<Map<String, Object>> getStatusType()
           {
-            return new TypeReference<Map<String, Object>>()
-            {
-            };
-          }
-
-          @Override
-          public TypeReference<Map<String, String>> getLogType()
-          {
-            return JacksonUtils.TYPE_REFERENCE_MAP_STRING_STRING;
+            return new TypeReference<>() {};
           }
 
           @Override
           public TypeReference<Map<String, Object>> getLockType()
           {
-            return new TypeReference<Map<String, Object>>()
-            {
-            };
+            return new TypeReference<>() {};
           }
         },
         entryType,
         entryTable,
-        logTable,
+        null,
         lockTable
     );
   }
@@ -247,36 +232,30 @@ public class SQLMetadataStorageActionHandlerTest
   }
 
   @Test
-  public void testLogs()
+  public void testAddLogThrowsUnsupportedException()
   {
-    final String entryId = "abcd";
-    Map<String, Object> entry = ImmutableMap.of("a", 1);
-    Map<String, Object> status = ImmutableMap.of("count", 42);
-
-    handler.insert(entryId, DateTimes.of("2014-01-01"), "test", entry, true, status, "type", "group");
-
-    Assert.assertEquals(
-        ImmutableList.of(),
-        handler.getLogs("non_exist_entry")
+    Exception exception = Assert.assertThrows(
+        DruidException.class,
+        () -> handler.addLog("abcd", ImmutableMap.of("logentry", "created"))
     );
-
     Assert.assertEquals(
-        ImmutableMap.of(),
-        handler.getLocks(entryId)
-    );
-
-    final ImmutableMap<String, String> log1 = ImmutableMap.of("logentry", "created");
-    final ImmutableMap<String, String> log2 = ImmutableMap.of("logentry", "updated");
-
-    Assert.assertTrue(handler.addLog(entryId, log1));
-    Assert.assertTrue(handler.addLog(entryId, log2));
-
-    Assert.assertEquals(
-        ImmutableList.of(log1, log2),
-        handler.getLogs(entryId)
+        "Task actions are not logged anymore.",
+        exception.getMessage()
     );
   }
 
+  @Test
+  public void testGetLogsThrowsUnsupportedException()
+  {
+    Exception exception = Assert.assertThrows(
+        DruidException.class,
+        () -> handler.getLogs("abcd")
+    );
+    Assert.assertEquals(
+        "Task actions are not logged anymore.",
+        exception.getMessage()
+    );
+  }
 
   @Test
   public void testLocks()
@@ -388,19 +367,16 @@ public class SQLMetadataStorageActionHandlerTest
     Map<String, Object> entry1 = ImmutableMap.of("numericId", 1234);
     Map<String, Object> status1 = ImmutableMap.of("count", 42, "temp", 1);
     handler.insert(entryId1, DateTimes.of("2014-01-01T00:00:00.123"), "testDataSource", entry1, false, status1, "type", "group");
-    Assert.assertTrue(handler.addLog(entryId1, ImmutableMap.of("logentry", "created")));
 
     final String entryId2 = "ABC123";
     Map<String, Object> entry2 = ImmutableMap.of("a", 1);
     Map<String, Object> status2 = ImmutableMap.of("count", 42);
     handler.insert(entryId2, DateTimes.of("2014-01-01T00:00:00.123"), "test", entry2, true, status2, "type", "group");
-    Assert.assertTrue(handler.addLog(entryId2, ImmutableMap.of("logentry", "created")));
 
     final String entryId3 = "DEF5678";
     Map<String, Object> entry3 = ImmutableMap.of("numericId", 5678);
     Map<String, Object> status3 = ImmutableMap.of("count", 21, "temp", 2);
     handler.insert(entryId3, DateTimes.of("2014-01-02T12:00:00.123"), "testDataSource", entry3, false, status3, "type", "group");
-    Assert.assertTrue(handler.addLog(entryId3, ImmutableMap.of("logentry", "created")));
 
     Assert.assertEquals(Optional.of(entry1), handler.getEntry(entryId1));
     Assert.assertEquals(Optional.of(entry2), handler.getEntry(entryId2));
@@ -438,10 +414,6 @@ public class SQLMetadataStorageActionHandlerTest
                .collect(Collectors.toList())
 
     );
-    // tasklogs
-    Assert.assertEquals(0, handler.getLogs(entryId1).size());
-    Assert.assertEquals(1, handler.getLogs(entryId2).size());
-    Assert.assertEquals(1, handler.getLogs(entryId3).size());
   }
 
   @Test

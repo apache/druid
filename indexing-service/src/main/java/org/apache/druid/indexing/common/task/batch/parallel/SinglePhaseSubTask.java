@@ -32,8 +32,8 @@ import org.apache.druid.data.input.InputSource;
 import org.apache.druid.indexer.IngestionState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
+import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.common.TaskRealtimeMetricsMonitorBuilder;
-import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.SurrogateTaskActionClient;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
@@ -51,21 +51,22 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
+import org.apache.druid.segment.DataSegmentsWithSchemas;
+import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.indexing.RealtimeIOConfig;
 import org.apache.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
-import org.apache.druid.segment.realtime.FireDepartment;
-import org.apache.druid.segment.realtime.FireDepartmentMetrics;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
+import org.apache.druid.segment.realtime.ChatHandler;
+import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorDriverAddResult;
 import org.apache.druid.segment.realtime.appenderator.BaseAppenderatorDriver;
 import org.apache.druid.segment.realtime.appenderator.BatchAppenderatorDriver;
 import org.apache.druid.segment.realtime.appenderator.SegmentsAndCommitMetadata;
-import org.apache.druid.segment.realtime.firehose.ChatHandler;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Resource;
@@ -197,9 +198,6 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
   @Override
   public Set<ResourceAction> getInputSourceResources()
   {
-    if (getIngestionSchema().getIOConfig().getFirehoseFactory() != null) {
-      throw getInputSecurityOnFirehoseUnsupportedError();
-    }
     return getIngestionSchema().getIOConfig().getInputSource() != null ?
            getIngestionSchema().getIOConfig().getInputSource().getTypes()
                                .stream()
@@ -266,7 +264,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
           ingestionSchema.getTuningConfig().getChatHandlerNumRetries()
       );
       ingestionState = IngestionState.BUILD_SEGMENTS;
-      final Set<DataSegment> pushedSegments = generateAndPushSegments(
+      final DataSegmentsWithSchemas dataSegmentsWithSchemas = generateAndPushSegments(
           toolbox,
           taskClient,
           inputSource,
@@ -275,7 +273,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
       
       // Find inputSegments overshadowed by pushedSegments
       final Set<DataSegment> allSegments = new HashSet<>(getTaskLockHelper().getLockedExistingSegments());
-      allSegments.addAll(pushedSegments);
+      allSegments.addAll(dataSegmentsWithSchemas.getSegments());
       final SegmentTimeline timeline = SegmentTimeline.forSegments(allSegments);
       final Set<DataSegment> oldSegments = FluentIterable.from(timeline.findFullyOvershadowed())
                                                          .transformAndConcat(TimelineObjectHolder::getObject)
@@ -283,7 +281,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
                                                          .toSet();
 
       TaskReport.ReportMap taskReport = getTaskCompletionReports();
-      taskClient.report(new PushedSegmentsReport(getId(), oldSegments, pushedSegments, taskReport));
+      taskClient.report(new PushedSegmentsReport(getId(), oldSegments, dataSegmentsWithSchemas.getSegments(), taskReport, dataSegmentsWithSchemas.getSegmentSchemaMapping()));
 
       toolbox.getTaskReportFileWriter().write(getId(), taskReport);
 
@@ -356,7 +354,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
    *
    * @return true if generated segments are successfully published, otherwise false
    */
-  private Set<DataSegment> generateAndPushSegments(
+  private DataSegmentsWithSchemas generateAndPushSegments(
       final TaskToolbox toolbox,
       final ParallelIndexSupervisorTaskClient taskClient,
       final InputSource inputSource,
@@ -365,15 +363,9 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
   {
     final DataSchema dataSchema = ingestionSchema.getDataSchema();
     final GranularitySpec granularitySpec = dataSchema.getGranularitySpec();
-    final FireDepartment fireDepartmentForMetrics =
-        new FireDepartment(dataSchema, new RealtimeIOConfig(null, null), null);
-    final FireDepartmentMetrics fireDepartmentMetrics = fireDepartmentForMetrics.getMetrics();
-
-    TaskRealtimeMetricsMonitor metricsMonitor = TaskRealtimeMetricsMonitorBuilder.build(
-        this,
-        fireDepartmentForMetrics,
-        rowIngestionMeters
-    );
+    final SegmentGenerationMetrics segmentGenerationMetrics = new SegmentGenerationMetrics();
+    final TaskRealtimeMetricsMonitor metricsMonitor =
+        TaskRealtimeMetricsMonitorBuilder.build(this, segmentGenerationMetrics, rowIngestionMeters);
     toolbox.addMonitor(metricsMonitor);
 
     final ParallelIndexTuningConfig tuningConfig = ingestionSchema.getTuningConfig();
@@ -406,7 +398,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
     final Appenderator appenderator = BatchAppenderators.newAppenderator(
         getId(),
         toolbox.getAppenderatorsManager(),
-        fireDepartmentMetrics,
+        segmentGenerationMetrics,
         toolbox,
         dataSchema,
         tuningConfig,
@@ -430,6 +422,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
       driver.startJob();
 
       final Set<DataSegment> pushedSegments = new HashSet<>();
+      final SegmentSchemaMapping segmentSchemaMapping = new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION);
 
       while (inputRowIterator.hasNext()) {
         final InputRow inputRow = inputRowIterator.next();
@@ -449,23 +442,25 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
             // which makes the size of segments smaller.
             final SegmentsAndCommitMetadata pushed = driver.pushAllAndClear(pushTimeout);
             pushedSegments.addAll(pushed.getSegments());
-            LOG.info("Pushed [%s] segments", pushed.getSegments().size());
+            segmentSchemaMapping.merge(pushed.getSegmentSchemaMapping());
+            LOG.info("Pushed [%s] segments and [%s] schemas", pushed.getSegments().size(), segmentSchemaMapping.getSchemaCount());
             LOG.infoSegments(pushed.getSegments(), "Pushed segments");
+            LOG.info("SegmentSchema is [%s]", segmentSchemaMapping);
           }
         } else {
           throw new ISE("Failed to add a row with timestamp[%s]", inputRow.getTimestamp());
         }
-
-        fireDepartmentMetrics.incrementProcessed();
       }
 
       final SegmentsAndCommitMetadata pushed = driver.pushAllAndClear(pushTimeout);
       pushedSegments.addAll(pushed.getSegments());
-      LOG.info("Pushed [%s] segments", pushed.getSegments().size());
+      segmentSchemaMapping.merge(pushed.getSegmentSchemaMapping());
+      LOG.info("Pushed [%s] segments and [%s] schemas", pushed.getSegments().size(), segmentSchemaMapping.getSchemaCount());
       LOG.infoSegments(pushed.getSegments(), "Pushed segments");
+      LOG.info("SegmentSchema is [%s]", segmentSchemaMapping);
       appenderator.close();
 
-      return pushedSegments;
+      return new DataSegmentsWithSchemas(pushedSegments, segmentSchemaMapping.isNonEmpty() ? segmentSchemaMapping : null);
     }
     catch (TimeoutException | ExecutionException e) {
       exceptionOccurred = true;
@@ -542,7 +537,7 @@ public class SinglePhaseSubTask extends AbstractBatchSubtask implements ChatHand
     return Response.ok(doGetRowStats(full != null)).build();
   }
 
-  private TaskReport.ReportMap doGetLiveReports(boolean isFullReport)
+  TaskReport.ReportMap doGetLiveReports(boolean isFullReport)
   {
     return buildLiveIngestionStatsReport(
         ingestionState,

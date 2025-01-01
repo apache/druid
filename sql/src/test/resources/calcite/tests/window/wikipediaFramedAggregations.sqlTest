@@ -2,10 +2,10 @@ type: "operatorValidation"
 
 sql: |
     SELECT
-      countryIsoCode, 
+      countryIsoCode,
       CAST (FLOOR(__time TO HOUR) AS BIGINT) t,
       SUM(delta) delta, 
-      SUM(SUM(delta)) OVER (PARTITION BY countryIsoCode ORDER BY CAST (FLOOR(__time TO HOUR) AS BIGINT) RANGE BETWEEN 3 PRECEDING AND 2 FOLLOWING) windowedDelta
+      SUM(SUM(delta)) OVER (PARTITION BY countryIsoCode ORDER BY CAST (FLOOR(__time TO HOUR) AS BIGINT) ROWS BETWEEN 3 PRECEDING AND 2 FOLLOWING) windowedDelta
     FROM wikipedia
     GROUP BY 1, 2
 
@@ -15,12 +15,10 @@ expectedOperators:
     processor:
       type: "framedAgg"
       frame:
-          peerType: "RANGE"
-          lowUnbounded: false
-          lowOffset: 3
-          uppUnbounded: false
-          uppOffset: 2
-          orderBy: [ {column: "d1", direction: ASC} ]
+          type: "rows"
+          lowerOffset: -3
+          upperOffset: 2
+          orderBy: null
       aggregations:
         - { type: "longSum", name: "w0", fieldName: "a0" }
 

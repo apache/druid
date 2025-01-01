@@ -81,7 +81,8 @@ public class GroupByPostShuffleFrameProcessorFactory extends BaseFrameProcessorF
       FrameContext frameContext,
       int maxOutstandingProcessors,
       CounterTracker counters,
-      Consumer<Throwable> warningPublisher
+      Consumer<Throwable> warningPublisher,
+      boolean removeNullBytes
   )
   {
     // Expecting a single input slice from some prior stage.
@@ -116,7 +117,7 @@ public class GroupByPostShuffleFrameProcessorFactory extends BaseFrameProcessorF
               engine,
               readableInput.getChannel(),
               outputChannel.getWritableChannel(),
-              stageDefinition.createFrameWriterFactory(outputChannel.getFrameMemoryAllocator()),
+              stageDefinition.createFrameWriterFactory(outputChannel.getFrameMemoryAllocator(), removeNullBytes),
               readableInput.getChannelFrameReader(),
               frameContext.jsonMapper()
           );
@@ -127,5 +128,11 @@ public class GroupByPostShuffleFrameProcessorFactory extends BaseFrameProcessorF
         ProcessorManagers.of(processors),
         OutputChannels.wrapReadOnly(ImmutableList.copyOf(outputChannels.values()))
     );
+  }
+
+  @Override
+  public boolean usesProcessingBuffers()
+  {
+    return false;
   }
 }

@@ -17,6 +17,12 @@
  */
 
 export * from './date-format';
+export * from './filter-pattern-helpers';
+export * from './general';
 export * from './get-auto-granularity';
+export * from './known-aggregations';
+export * from './max-time-for-table';
 export * from './misc';
-export * from './snap-to-granularity';
+export * from './query-log';
+export * from './table-query';
+export * from './time-manipulation';

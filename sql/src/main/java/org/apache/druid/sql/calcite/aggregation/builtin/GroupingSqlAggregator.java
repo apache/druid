@@ -90,7 +90,19 @@ public class GroupingSqlAggregator implements SqlAggregator
         }
       }
     }
-    AggregatorFactory factory = new GroupingAggregatorFactory(name, arguments);
+    AggregatorFactory factory;
+    try {
+      factory = new GroupingAggregatorFactory(name, arguments);
+    }
+    catch (Exception e) {
+      plannerContext.setPlanningError(
+          "Initialisation of Grouping Aggregator Factory in case of [%s] threw [%s]",
+          aggregateCall,
+          e.getMessage()
+      );
+      return null;
+    }
+
     return Aggregation.create(factory);
   }
 

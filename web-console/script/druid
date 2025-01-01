@@ -56,15 +56,18 @@ function _build_distribution() {
   (
     # Add HEAD as an allowed HTTP method since this is how we check when the Druid service is ready.
     cd "$(_get_code_root)" \
-    && mvn -Pdist,skip-static-checks,skip-tests -Dmaven.javadoc.skip=true -q -T1C install \
+    && mvn -Pdist,bundle-contrib-exts,skip-static-checks,skip-tests -Dforbiddenapis.skip=true -Dcheckstyle.skip=true -Dpmd.skip=true -Dmaven.javadoc.skip=true -Danimal.sniffer.skip=true -Denforcer.skip=true -Dcyclonedx.skip=true -q -T1C install \
     && cd distribution/target \
     && tar xzf "apache-druid-$(_get_druid_version)-bin.tar.gz" \
     && cd apache-druid-$(_get_druid_version) \
     && mkdir -p extensions/druid-testing-tools \
     && cp "$(_get_code_root)/extensions-core/testing-tools/target/druid-testing-tools-$(_get_druid_version).jar" extensions/druid-testing-tools/ \
-    && echo -e "\n\ndruid.extensions.loadList=[\"druid-hdfs-storage\", \"druid-kafka-indexing-service\", \"druid-datasketches\", \"druid-multi-stage-query\", \"druid-testing-tools\"]" >> conf/druid/single-server/micro-quickstart/_common/common.runtime.properties \
-    && echo -e "\n\ndruid.server.http.allowedHttpMethods=[\"HEAD\"]" >> conf/druid/single-server/micro-quickstart/_common/common.runtime.properties \
-    && echo -e "\n\ndruid.generic.useDefaultValueForNull=false" >> conf/druid/single-server/micro-quickstart/_common/common.runtime.properties \
+    && mkdir -p extensions/druid-compressed-bigdecimal \
+    && cp "$(_get_code_root)/extensions-contrib/compressed-bigdecimal/target/druid-compressed-bigdecimal-$(_get_druid_version).jar" extensions/druid-compressed-bigdecimal/ \
+    && echo -e "\n\ndruid.extensions.loadList=[\"druid-hdfs-storage\", \"druid-kafka-indexing-service\", \"druid-multi-stage-query\", \"druid-testing-tools\", \"druid-bloom-filter\", \"druid-datasketches\", \"druid-histogram\", \"druid-stats\", \"druid-compressed-bigdecimal\", \"druid-parquet-extensions\", \"druid-deltalake-extensions\"]" >> conf/druid/auto/_common/common.runtime.properties \
+    && echo -e "\n\ndruid.server.http.allowedHttpMethods=[\"HEAD\"]" >> conf/druid/auto/_common/common.runtime.properties \
+    && echo -e "\n\ndruid.export.storage.baseDir=/" >> conf/druid/auto/_common/common.runtime.properties \
+    && echo -e "\n\ndruid.msq.dart.enabled=true" >> conf/druid/auto/_common/common.runtime.properties \
   )
 }
 
@@ -107,7 +110,7 @@ function start() {
   fi
 
   export DRUID_SKIP_JAVA_CHECK=1 # Make it simpler to develop the web console when localhost is on JDK11
-  "$(_get_code_root)/distribution/target/apache-druid-$(_get_druid_version)/bin/start-micro-quickstart" > /dev/null &
+  "$(_get_code_root)/distribution/target/apache-druid-$(_get_druid_version)/bin/start-druid" -m 16g > /dev/null &
   local pid="$!"
   echo "$pid" > "$DRUID_PID_FILE"
   _log "Druid started with pid ${pid}"

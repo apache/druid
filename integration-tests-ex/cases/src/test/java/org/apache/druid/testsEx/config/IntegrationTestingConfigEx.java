@@ -62,13 +62,13 @@ class IntegrationTestingConfigEx implements IntegrationTestingConfig
   @Override
   public String getKafkaHost()
   {
-    return config.requireKafka().instance().clientHost();
+    return config.requireKafka().instance().clientHost() + ":" + config.requireKafka().instance().clientPort();
   }
 
   @Override
   public String getKafkaInternalHost()
   {
-    return config.requireKafka().instance().host();
+    return config.requireKafka().instance().host() + ":" + config.requireKafka().instance().port();
   }
 
   @Override

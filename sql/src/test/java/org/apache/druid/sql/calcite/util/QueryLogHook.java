@@ -67,4 +67,11 @@ public class QueryLogHook
       r.run();
     }
   }
+
+  public void logQueriesForGlobal(Runnable r)
+  {
+    try (final Hook.Closeable unhook = Hook.QUERY_PLAN.add(this::accept)) {
+      r.run();
+    }
+  }
 }

@@ -25,7 +25,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.DimensionSchema;
-import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
@@ -59,7 +58,6 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.metrics.DruidMonitorSchedulerConfig;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.query.DruidMetrics;
-import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
@@ -190,7 +188,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
         SeekableStreamSupervisorIOConfig ioConfig
     )
     {
-      return new SeekableStreamIndexTaskIOConfig<String, String>(
+      return new SeekableStreamIndexTaskIOConfig<>(
           groupId,
           baseSequenceName,
           new SeekableStreamStartSequenceNumbers<>(STREAM, startPartitions, exclusiveStartSequenceNumberPartitions),
@@ -198,7 +196,8 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
           true,
           minimumMessageTime,
           maximumMessageTime,
-          ioConfig.getInputFormat()
+          ioConfig.getInputFormat(),
+          ioConfig.getTaskDuration().getStandardMinutes()
       )
       {
       };
@@ -248,7 +247,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     @Override
     protected OrderedSequenceNumber<String> makeSequenceNumber(String seq, boolean isExclusive)
     {
-      return new OrderedSequenceNumber<String>(seq, isExclusive)
+      return new OrderedSequenceNumber<>(seq, isExclusive)
       {
         @Override
         public int compareTo(OrderedSequenceNumber<String> o)
@@ -282,7 +281,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
         boolean includeOffsets
     )
     {
-      return new SeekableStreamSupervisorReportPayload<String, String>(
+      return new SeekableStreamSupervisorReportPayload<>(
           DATASOURCE,
           STREAM,
           1,
@@ -502,6 +501,7 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
       public SeekableStreamIndexTaskTuningConfig convertToTaskTuningConfig()
       {
         return new SeekableStreamIndexTaskTuningConfig(
+            null,
             null,
             null,
             null,
@@ -994,6 +994,58 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
   }
 
   @Test
+  public void testSeekableStreamSupervisorSpecWithScaleInThresholdGreaterThanPartitions() throws InterruptedException
+  {
+    EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
+    EasyMock.expect(spec.getDataSchema()).andReturn(getDataSchema()).anyTimes();
+    EasyMock.expect(spec.getIoConfig()).andReturn(getIOConfig(2, false)).anyTimes();
+    EasyMock.expect(spec.getTuningConfig()).andReturn(getTuningConfig()).anyTimes();
+    EasyMock.expect(spec.getEmitter()).andReturn(emitter).anyTimes();
+    EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
+    EasyMock.replay(spec);
+
+    EasyMock.expect(ingestionSchema.getIOConfig()).andReturn(seekableStreamSupervisorIOConfig).anyTimes();
+    EasyMock.expect(ingestionSchema.getDataSchema()).andReturn(dataSchema).anyTimes();
+    EasyMock.expect(ingestionSchema.getTuningConfig()).andReturn(seekableStreamSupervisorTuningConfig).anyTimes();
+    EasyMock.replay(ingestionSchema);
+
+    EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.absent()).anyTimes();
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.absent()).anyTimes();
+    EasyMock.replay(taskMaster);
+
+    TestSeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor(10);
+    Map<String, Object> modifiedScaleInProps = getScaleInProperties();
+
+    modifiedScaleInProps.put("taskCountMax", 20);
+    modifiedScaleInProps.put("taskCountMin", 15);
+
+    LagBasedAutoScaler autoScaler = new LagBasedAutoScaler(
+        supervisor,
+        DATASOURCE,
+        mapper.convertValue(
+            modifiedScaleInProps,
+            LagBasedAutoScalerConfig.class
+        ),
+        spec,
+        emitter
+    );
+
+    // enable autoscaler so that taskcount config will be ignored and init value of taskCount will use taskCountMin.
+    Assert.assertEquals(1, (int) supervisor.getIoConfig().getTaskCount());
+    supervisor.getIoConfig().setTaskCount(2);
+    supervisor.start();
+    autoScaler.start();
+    supervisor.runInternal();
+
+    Assert.assertEquals(2, (int) supervisor.getIoConfig().getTaskCount());
+    Thread.sleep(2000);
+    Assert.assertEquals(10, (int) supervisor.getIoConfig().getTaskCount());
+
+    autoScaler.reset();
+    autoScaler.stop();
+  }
+
+  @Test
   public void testSeekableStreamSupervisorSpecWithScaleInAlreadyAtMin() throws InterruptedException
   {
     EasyMock.expect(spec.getSupervisorStateManagerConfig()).andReturn(supervisorConfig).anyTimes();
@@ -1260,18 +1312,19 @@ public class SeekableStreamSupervisorSpecTest extends EasyMockSupport
     dimensions.add(StringDimensionSchema.create("dim1"));
     dimensions.add(StringDimensionSchema.create("dim2"));
 
-    return new DataSchema(
-        DATASOURCE,
-        new TimestampSpec("timestamp", "iso", null),
-        new DimensionsSpec(dimensions),
-        new AggregatorFactory[]{new CountAggregatorFactory("rows")},
-        new UniformGranularitySpec(
-            Granularities.HOUR,
-            Granularities.NONE,
-            ImmutableList.of()
-        ),
-        null
-    );
+    return DataSchema.builder()
+                     .withDataSource(DATASOURCE)
+                     .withTimestamp(new TimestampSpec("timestamp", "iso", null))
+                     .withDimensions(dimensions)
+                     .withAggregators(new CountAggregatorFactory("rows"))
+                     .withGranularity(
+                         new UniformGranularitySpec(
+                             Granularities.HOUR,
+                             Granularities.NONE,
+                             ImmutableList.of()
+                         )
+                     )
+                     .build();
   }
 
   private SeekableStreamSupervisorIOConfig getIOConfig(int taskCount, boolean scaleOut)

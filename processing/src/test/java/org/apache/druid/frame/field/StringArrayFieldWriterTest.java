@@ -50,7 +50,7 @@ public class StringArrayFieldWriterTest extends InitializedNullHandlingTest
   public MockitoRule mockitoRule = MockitoJUnit.rule().strictness(Strictness.STRICT_STUBS);
 
   @Mock
-  public BaseObjectColumnValueSelector<List<String>> selector;
+  public BaseObjectColumnValueSelector<Object[]> selector;
 
   private WritableMemory memory;
   private FieldWriter fieldWriter;
@@ -59,7 +59,7 @@ public class StringArrayFieldWriterTest extends InitializedNullHandlingTest
   public void setUp()
   {
     memory = WritableMemory.allocate(1000);
-    fieldWriter = new StringArrayFieldWriter(selector);
+    fieldWriter = new StringArrayFieldWriter(selector, false);
   }
 
   @After
@@ -115,7 +115,8 @@ public class StringArrayFieldWriterTest extends InitializedNullHandlingTest
 
   private void mockSelector(@Nullable final List<String> values)
   {
-    Mockito.when(selector.getObject()).thenReturn(values);
+    final Object[] arr = values == null ? null : values.toArray();
+    Mockito.when(selector.getObject()).thenReturn(arr);
   }
 
   private long writeToMemory(final FieldWriter writer)

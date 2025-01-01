@@ -22,7 +22,6 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
-import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -34,7 +33,6 @@ import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.coordinator.NoopCoordinatorClient;
-import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.MaxSizeSplitHintSpec;
@@ -49,13 +47,13 @@ import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
-import org.apache.druid.indexing.common.IngestionStatsAndErrors;
-import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
+import org.apache.druid.indexer.report.IngestionStatsAndErrors;
+import org.apache.druid.indexer.report.IngestionStatsAndErrorsTaskReport;
+import org.apache.druid.indexer.report.SingleFileTaskReportFileWriter;
+import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.common.RetryPolicyConfig;
 import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
-import org.apache.druid.indexing.common.SingleFileTaskReportFileWriter;
-import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
@@ -65,9 +63,9 @@ import org.apache.druid.indexing.common.stats.DropwizardRowIngestionMetersFactor
 import org.apache.druid.indexing.common.task.CompactionTask;
 import org.apache.druid.indexing.common.task.IngestionTestBase;
 import org.apache.druid.indexing.common.task.Task;
-import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
+import org.apache.druid.indexing.common.task.TuningConfigBuilder;
 import org.apache.druid.indexing.overlord.Segments;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.indexing.worker.shuffle.IntermediaryDataManager;
@@ -84,7 +82,10 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.expression.LookupEnabledTestExprMacroTable;
+import org.apache.druid.rpc.indexing.NoopOverlordClient;
+import org.apache.druid.segment.DataSegmentsWithSchemas;
 import org.apache.druid.segment.IndexIO;
+import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.incremental.RowIngestionMetersTotals;
@@ -94,10 +95,11 @@ import org.apache.druid.segment.loading.LocalDataSegmentPusher;
 import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
 import org.apache.druid.segment.loading.NoopDataSegmentKiller;
 import org.apache.druid.segment.loading.StorageLocationConfig;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
+import org.apache.druid.segment.realtime.ChatHandlerProvider;
+import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
-import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
-import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthTestUtils;
@@ -119,8 +121,8 @@ import org.junit.rules.TestName;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -128,6 +130,7 @@ import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
@@ -160,43 +163,14 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
       null,
       false,
       false,
-      0
+      0,
+      null
   );
   public static final ParallelIndexTuningConfig DEFAULT_TUNING_CONFIG_FOR_PARALLEL_INDEXING =
-      new ParallelIndexTuningConfig(
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          2,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          5,
-          null,
-          null,
-          null,
-          null
-      );
+      TuningConfigBuilder.forParallelIndexTask()
+                         .withMaxNumConcurrentSubTasks(2)
+                         .withMaxSavedParseExceptions(5)
+                         .build();
 
   protected static final double DEFAULT_TRANSIENT_TASK_FAILURE_RATE = 0.2;
   protected static final double DEFAULT_TRANSIENT_API_FAILURE_RATE = 0.2;
@@ -252,7 +226,6 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
     indexingServiceClient = new LocalOverlordClient(objectMapper, taskRunner);
     final TaskConfig taskConfig = new TaskConfigBuilder()
         .setShuffleDataLocations(ImmutableList.of(new StorageLocationConfig(temporaryFolder.newFolder(), null, null)))
-        .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
         .build();
     intermediaryDataManager = new LocalIntermediaryDataManager(new WorkerConfig(), taskConfig, null);
     remoteApiExecutor = Execs.singleThreaded("coordinator-api-executor");
@@ -274,40 +247,13 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
       boolean forceGuaranteedRollup
   )
   {
-    return new ParallelIndexTuningConfig(
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        new MaxSizeSplitHintSpec(null, 1),
-        partitionsSpec,
-        null,
-        null,
-        null,
-        forceGuaranteedRollup,
-        null,
-        null,
-        null,
-        null,
-        maxNumConcurrentSubTasks,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        5,
-        null,
-        null,
-        null,
-        null
-    );
+    return TuningConfigBuilder.forParallelIndexTask()
+                              .withSplitHintSpec(new MaxSizeSplitHintSpec(null, 1))
+                              .withPartitionsSpec(partitionsSpec)
+                              .withForceGuaranteedRollup(forceGuaranteedRollup)
+                              .withMaxNumConcurrentSubTasks(maxNumConcurrentSubTasks)
+                              .withMaxParseExceptions(5)
+                              .build();
   }
 
   protected LocalOverlordClient getIndexingServiceClient()
@@ -356,6 +302,8 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
 
     private final ScheduledExecutorService taskKiller = Execs.scheduledSingleThreaded("simple-threading-task-killer");
     private final Set<String> killedSubtaskSpecs = new HashSet<>();
+    private volatile boolean useTaskFinishLatches = false;
+    private final List<CountDownLatch> allTaskLatches = new ArrayList<>();
 
     SimpleThreadingTaskRunner(String threadNameBase)
     {
@@ -390,12 +338,6 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
     {
       service.shutdownNow();
       taskKiller.shutdownNow();
-    }
-
-    public String run(Task task)
-    {
-      runTask(task);
-      return task.getId();
     }
 
     private TaskStatus runAndWait(Task task)
@@ -439,8 +381,28 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
       return tasks.get(taskId);
     }
 
+    private void setUseTaskFinishLatches(boolean useLatches)
+    {
+      this.useTaskFinishLatches = useLatches;
+      if (!useLatches) {
+        countDownAllTaskLatches();
+      }
+    }
+
+    private void countDownAllTaskLatches()
+    {
+      allTaskLatches.forEach(latch -> {
+        if (latch.getCount() > 0) {
+          latch.countDown();
+        }
+      });
+    }
+
     private Future<TaskStatus> runTask(Task task)
     {
+      final CountDownLatch taskFinishLatch = useTaskFinishLatches ? new CountDownLatch(1) : new CountDownLatch(0);
+      allTaskLatches.add(taskFinishLatch);
+
       final TaskContainer taskContainer = new TaskContainer(task);
       if (tasks.put(task.getId(), taskContainer) != null) {
         throw new ISE("Duplicate task ID[%s]", task.getId());
@@ -457,7 +419,9 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
               final TaskToolbox toolbox = createTaskToolbox(task, actionClient);
               taskContainer.setActionClient(actionClient);
               if (task.isReady(toolbox.getTaskActionClient())) {
-                return task.run(toolbox);
+                TaskStatus status = task.run(toolbox);
+                taskFinishLatch.await();
+                return status;
               } else {
                 getTaskStorage().setStatus(TaskStatus.failure(task.getId(), "Dummy task status failure for testing"));
                 throw new ISE("task[%s] is not ready", task.getId());
@@ -472,7 +436,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
       taskContainer.setStatusFuture(statusFuture);
       final ListenableFuture<TaskStatus> cleanupFuture = Futures.transform(
           statusFuture,
-          (Function<TaskStatus, TaskStatus>) status -> {
+          status -> {
             shutdownTask(task);
             return status;
           },
@@ -481,15 +445,11 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
       return cleanupFuture;
     }
 
-    @Nullable
-    public String cancel(String taskId)
+    private void cancel(String taskId)
     {
       final TaskContainer taskContainer = tasks.remove(taskId);
       if (taskContainer != null && taskContainer.statusFuture != null) {
         taskContainer.statusFuture.cancel(true);
-        return taskId;
-      } else {
-        return null;
       }
     }
 
@@ -516,13 +476,13 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
       }
     }
 
-    public Set<DataSegment> getPublishedSegments(String taskId)
+    public DataSegmentsWithSchemas getPublishedSegmentsWithSchemas(String taskId)
     {
       final TaskContainer taskContainer = tasks.get(taskId);
       if (taskContainer == null || taskContainer.actionClient == null) {
-        return Collections.emptySet();
+        return new DataSegmentsWithSchemas(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION);
       } else {
-        return taskContainer.actionClient.getPublishedSegments();
+        return new DataSegmentsWithSchemas(taskContainer.actionClient.getPublishedSegments(), taskContainer.actionClient.getSegmentSchemas());
       }
     }
   }
@@ -542,28 +502,44 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
     public ListenableFuture<Void> runTask(String taskId, Object taskObject)
     {
       final Task task = (Task) taskObject;
-      taskRunner.run(injectIfNeeded(task));
+      taskRunner.runTask(injectIfNeeded(task));
       return Futures.immediateFuture(null);
     }
 
     @Override
-    public ListenableFuture<Map<String, Object>> taskReportAsMap(String taskId)
+    public ListenableFuture<TaskReport.ReportMap> taskReportAsMap(String taskId)
     {
-      return Futures.immediateFuture(null);
+      return Futures.immediateFuture(getLiveReportsForTask(taskId));
     }
 
-    public TaskReport.ReportMap getLiveReportsForTask(String taskId)
+    private TaskReport.ReportMap getLiveReportsForTask(String taskId)
     {
-      final Optional<Task> task = getTaskStorage().getTask(taskId);
-      if (!task.isPresent()) {
+      final Optional<Task> taskOptional = getTaskStorage().getTask(taskId);
+      if (!taskOptional.isPresent()) {
         return null;
       }
-      return ((ParallelIndexSupervisorTask) task.get()).doGetLiveReports(true);
+
+      final Task task = taskOptional.get();
+      if (task instanceof SinglePhaseSubTask) {
+        return ((SinglePhaseSubTask) task).doGetLiveReports(true);
+      } else {
+        return ((ParallelIndexSupervisorTask) task).doGetLiveReports(true);
+      }
     }
 
     public TaskContainer getTaskContainer(String taskId)
     {
       return taskRunner.getTaskContainer(taskId);
+    }
+
+    public void keepTasksRunning()
+    {
+      taskRunner.setUseTaskFinishLatches(true);
+    }
+
+    public void allowTasksToFinish()
+    {
+      taskRunner.setUseTaskFinishLatches(false);
     }
 
     public TaskStatus runAndWait(Task task)
@@ -631,16 +607,15 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
       }
     }
 
-    public Set<DataSegment> getPublishedSegments(Task task)
+    public DataSegmentsWithSchemas getSegmentAndSchemas(Task task)
     {
-      return taskRunner.getPublishedSegments(task.getId());
+      return taskRunner.getPublishedSegmentsWithSchemas(task.getId());
     }
   }
 
   public void prepareObjectMapper(ObjectMapper objectMapper, IndexIO indexIO)
   {
     final TaskConfig taskConfig = new TaskConfigBuilder()
-        .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
         .build();
 
     objectMapper.setInjectableValues(
@@ -657,7 +632,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
             .addValue(AppenderatorsManager.class, TestUtils.APPENDERATORS_MANAGER)
             .addValue(LocalDataSegmentPuller.class, new LocalDataSegmentPuller())
             .addValue(CoordinatorClient.class, coordinatorClient)
-            .addValue(SegmentCacheManagerFactory.class, new SegmentCacheManagerFactory(objectMapper))
+            .addValue(SegmentCacheManagerFactory.class, new SegmentCacheManagerFactory(TestIndex.INDEX_IO, objectMapper))
             .addValue(RetryPolicyFactory.class, new RetryPolicyFactory(new RetryPolicyConfig()))
             .addValue(TaskConfig.class, taskConfig)
     );
@@ -676,8 +651,8 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
   protected TaskToolbox createTaskToolbox(Task task, TaskActionClient actionClient) throws IOException
   {
     TaskConfig config = new TaskConfigBuilder()
-        .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
         .build();
+    CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig = CentralizedDatasourceSchemaConfig.create(true);
     return new TaskToolbox.Builder()
         .config(config)
         .taskExecutorNode(new DruidNode("druid/middlemanager", "localhost", false, 8091, null, true, false))
@@ -714,26 +689,8 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
         .taskLogPusher(null)
         .attemptId("1")
         .emitter(new StubServiceEmitter())
+        .centralizedTableSchemaConfig(centralizedDatasourceSchemaConfig)
         .build();
-  }
-
-  static class TestParallelIndexSupervisorTask extends ParallelIndexSupervisorTask
-  {
-    TestParallelIndexSupervisorTask(
-        String id,
-        TaskResource taskResource,
-        ParallelIndexIngestionSpec ingestionSchema,
-        Map<String, Object> context
-    )
-    {
-      super(
-          id,
-          null,
-          taskResource,
-          ingestionSchema,
-          context
-      );
-    }
   }
 
   static class LocalShuffleClient implements ShuffleClient<GenericPartitionLocation>
@@ -837,7 +794,6 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
   {
     Map<String, Object> unparseableEvents = ImmutableMap.of("buildSegments", expectedUnparseableEvents);
     Map<String, Object> rowStats = ImmutableMap.of("totals", ImmutableMap.of("buildSegments", expectedTotals));
-
     return TaskReport.buildTaskReports(
         new IngestionStatsAndErrorsTaskReport(
             taskId,
@@ -861,9 +817,9 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
       TaskReport.ReportMap actualReports
   )
   {
-    final Optional<IngestionStatsAndErrorsTaskReport> expectedReportOptional
+    final java.util.Optional<IngestionStatsAndErrorsTaskReport> expectedReportOptional
         = expectedReports.findReport("ingestionStatsAndErrors");
-    final Optional<IngestionStatsAndErrorsTaskReport> actualReportOptional
+    final java.util.Optional<IngestionStatsAndErrorsTaskReport> actualReportOptional
         = actualReports.findReport("ingestionStatsAndErrors");
 
     Assert.assertTrue(expectedReportOptional.isPresent());

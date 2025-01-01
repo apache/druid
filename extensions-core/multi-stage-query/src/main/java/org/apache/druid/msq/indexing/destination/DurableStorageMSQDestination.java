@@ -20,6 +20,7 @@
 package org.apache.druid.msq.indexing.destination;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import org.apache.druid.msq.exec.Limits;
 import org.apache.druid.msq.indexing.MSQControllerTask;
 import org.apache.druid.msq.querykit.ShuffleSpecFactories;
 import org.apache.druid.msq.querykit.ShuffleSpecFactory;
@@ -62,5 +63,17 @@ public class DurableStorageMSQDestination implements MSQDestination
   public Optional<Resource> getDestinationResource()
   {
     return Optional.of(new Resource(MSQControllerTask.DUMMY_DATASOURCE_FOR_SELECT, ResourceType.DATASOURCE));
+  }
+
+  @Override
+  public long getRowsInTaskReport()
+  {
+    return Limits.MAX_SELECT_RESULT_ROWS;
+  }
+
+  @Override
+  public MSQSelectDestination toSelectDestination()
+  {
+    return MSQSelectDestination.DURABLESTORAGE;
   }
 }

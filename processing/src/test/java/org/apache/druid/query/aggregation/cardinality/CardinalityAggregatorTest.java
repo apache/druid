@@ -91,7 +91,7 @@ public class CardinalityAggregatorTest extends InitializedNullHandlingTest
       this.column = Lists.newArrayList(
           Iterables.transform(
               values,
-              new Function<String[], Integer[]>()
+              new Function<>()
               {
                 @Nullable
                 @Override
@@ -229,7 +229,7 @@ public class CardinalityAggregatorTest extends InitializedNullHandlingTest
   private static List<String[]> dimensionValues(Object... values)
   {
     return Lists.transform(
-        Lists.newArrayList(values), new Function<Object, String[]>()
+        Lists.newArrayList(values), new Function<>()
         {
           @Nullable
           @Override
@@ -295,12 +295,12 @@ public class CardinalityAggregatorTest extends InitializedNullHandlingTest
     dim2 = new TestDimensionSelector(VALUES2, null);
 
     dimInfoList = Lists.newArrayList(
-        new ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>(
+        new ColumnSelectorPlus<>(
             dimSpec1.getDimension(),
             dimSpec1.getOutputName(),
             new StringCardinalityAggregatorColumnSelectorStrategy(), dim1
         ),
-        new ColumnSelectorPlus<CardinalityAggregatorColumnSelectorStrategy>(
+        new ColumnSelectorPlus<>(
             dimSpec2.getDimension(),
             dimSpec2.getOutputName(),
             new StringCardinalityAggregatorColumnSelectorStrategy(), dim2

@@ -1,6 +1,6 @@
 ---
 id: postgresql
-title: "PostgreSQL Metadata Store"
+title: "PostgreSQL metadata store"
 ---
 
 <!--
@@ -25,7 +25,9 @@ title: "PostgreSQL Metadata Store"
 
 To use this Apache Druid extension, [include](../../configuration/extensions.md#loading-extensions) `postgresql-metadata-storage` in the extensions load list.
 
-## Setting up PostgreSQL
+With the  PostgreSQL extension, you can use PostgreSQL as a metadata store or ingest from a PostgreSQL database.
+
+## Set up PostgreSQL
 
 To avoid issues with upgrades that require schema changes to a large metadata table, consider a PostgreSQL version that supports instant ADD COLUMN semantics.
 
@@ -69,7 +71,7 @@ To avoid issues with upgrades that require schema changes to a large metadata ta
   druid.metadata.storage.connector.password=diurd
   ```
 
-## Configuration
+## Configuration properties
 
 In most cases, the configuration options map directly to the [postgres JDBC connection options](https://jdbc.postgresql.org/documentation/use/#connecting-to-the-database).
 
@@ -87,9 +89,10 @@ In most cases, the configuration options map directly to the [postgres JDBC conn
 | `druid.metadata.postgres.ssl.sslPasswordCallback` | The classname of the SSL password provider. | none | no |
 | `druid.metadata.postgres.dbTableSchema` | druid meta table schema | `public` | no |
 
-### PostgreSQL Firehose
+## PostgreSQL input source
 
-The PostgreSQL extension provides an implementation of an [SQL input source](../../ingestion/input-sources.md) which can be used to ingest data into Druid from a PostgreSQL database.
+The PostgreSQL extension provides an implementation of an SQL input source to ingest data into Druid from a PostgreSQL database.
+For more information on the input source parameters, see [SQL input source](../../ingestion/input-sources.md#sql-input-source).
 
 ```json
 {

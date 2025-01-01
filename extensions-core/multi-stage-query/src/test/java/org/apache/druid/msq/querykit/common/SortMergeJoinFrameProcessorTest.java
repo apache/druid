@@ -21,15 +21,11 @@ package org.apache.druid.msq.querykit.common;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.guava.FutureUtils;
-import org.apache.druid.frame.Frame;
-import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocator;
 import org.apache.druid.frame.allocation.SingleMemoryAllocatorFactory;
 import org.apache.druid.frame.channel.BlockingQueueFrameChannel;
@@ -37,39 +33,30 @@ import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.ReadableNilFrameChannel;
 import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.frame.key.KeyOrder;
-import org.apache.druid.frame.processor.FrameProcessorExecutor;
 import org.apache.druid.frame.read.FrameReader;
-import org.apache.druid.frame.segment.FrameStorageAdapter;
-import org.apache.druid.frame.testutil.FrameSequenceBuilder;
 import org.apache.druid.frame.testutil.FrameTestUtil;
 import org.apache.druid.frame.write.FrameWriterFactory;
 import org.apache.druid.frame.write.FrameWriters;
-import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Unit;
-import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.indexing.error.TooManyRowsWithSameKeyFault;
 import org.apache.druid.msq.input.ReadableInput;
-import org.apache.druid.msq.kernel.StageId;
-import org.apache.druid.msq.kernel.StagePartition;
+import org.apache.druid.msq.querykit.FrameProcessorTestBase;
 import org.apache.druid.msq.test.LimitedFrameWriterFactory;
+import org.apache.druid.segment.CursorFactory;
 import org.apache.druid.segment.RowBasedSegment;
-import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinTestHelper;
 import org.apache.druid.segment.join.JoinType;
-import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.SegmentId;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
-import org.junit.After;
 import org.junit.Assert;
 import org.junit.Assume;
-import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -82,18 +69,14 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
 @RunWith(Parameterized.class)
-public class SortMergeJoinFrameProcessorTest extends InitializedNullHandlingTest
+public class SortMergeJoinFrameProcessorTest extends FrameProcessorTestBase
 {
-  private static final StagePartition STAGE_PARTITION = new StagePartition(new StageId("q", 0), 0);
   private static final long MAX_BUFFERED_BYTES = 10_000_000;
 
   private final int rowsPerInputFrame;
   private final int rowsPerOutputFrame;
-
-  private FrameProcessorExecutor exec;
 
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
@@ -116,19 +99,6 @@ public class SortMergeJoinFrameProcessorTest extends InitializedNullHandlingTest
     }
 
     return constructors;
-  }
-
-  @Before
-  public void setUp()
-  {
-    exec = new FrameProcessorExecutor(MoreExecutors.listeningDecorator(Execs.singleThreaded("test-exec")));
-  }
-
-  @After
-  public void tearDown() throws Exception
-  {
-    exec.getExecutorService().shutdownNow();
-    exec.getExecutorService().awaitTermination(10, TimeUnit.MINUTES);
   }
 
   @Test
@@ -1521,60 +1491,27 @@ public class SortMergeJoinFrameProcessorTest extends InitializedNullHandlingTest
             signature
         )
     )) {
-      final StorageAdapter adapter = segment.asStorageAdapter();
-      return makeChannelFromAdapter(adapter, keyColumns);
+      final CursorFactory cursorFactory = segment.asCursorFactory();
+      return makeChannelFromCursorFactory(cursorFactory, keyColumns);
     }
   }
 
-  private ReadableInput makeChannelFromAdapter(
-      final StorageAdapter adapter,
+  private ReadableInput makeChannelFromCursorFactory(
+      final CursorFactory cursorFactory,
       final List<KeyColumn> keyColumns
   ) throws IOException
   {
-    // Create a single, sorted frame.
-    final FrameSequenceBuilder singleFrameBuilder =
-        FrameSequenceBuilder.fromAdapter(adapter)
-                            .frameType(FrameType.ROW_BASED)
-                            .maxRowsPerFrame(Integer.MAX_VALUE)
-                            .sortBy(keyColumns);
-
-    final RowSignature signature = singleFrameBuilder.signature();
-    final Frame frame = Iterables.getOnlyElement(singleFrameBuilder.frames().toList());
-
-    // Split it up into frames that match rowsPerFrame. Set max size enough to hold all rows we might ever want to use.
-    final BlockingQueueFrameChannel channel = new BlockingQueueFrameChannel(10_000);
-
-    final FrameReader frameReader = FrameReader.create(signature);
-
-    final FrameSequenceBuilder frameSequenceBuilder =
-        FrameSequenceBuilder.fromAdapter(new FrameStorageAdapter(frame, frameReader, Intervals.ETERNITY))
-                            .frameType(FrameType.ROW_BASED)
-                            .maxRowsPerFrame(rowsPerInputFrame);
-
-    final Sequence<Frame> frames = frameSequenceBuilder.frames();
-    frames.forEach(
-        f -> {
-          try {
-            channel.writable().write(f);
-          }
-          catch (IOException e) {
-            throw new RuntimeException(e);
-          }
-        }
-    );
-
-    channel.writable().close();
-    return ReadableInput.channel(channel.readable(), FrameReader.create(signature), STAGE_PARTITION);
+    return makeChannelFromCursorFactory(cursorFactory, keyColumns, rowsPerInputFrame);
   }
 
   private FrameWriterFactory makeFrameWriterFactory(final RowSignature signature)
   {
     return new LimitedFrameWriterFactory(
-        FrameWriters.makeFrameWriterFactory(
-            FrameType.ROW_BASED,
+        FrameWriters.makeRowBasedFrameWriterFactory(
             new SingleMemoryAllocatorFactory(ArenaMemoryAllocator.createOnHeap(1_000_000)),
             signature,
-            Collections.emptyList()
+            Collections.emptyList(),
+            false
         ),
         rowsPerOutputFrame
     );

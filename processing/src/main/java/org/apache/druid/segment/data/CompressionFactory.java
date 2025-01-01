@@ -233,6 +233,14 @@ public class CompressionFactory
 
     void write(long value) throws IOException;
 
+    @SuppressWarnings("unused")
+    default void write(long[] values, int offset, int length) throws IOException
+    {
+      for (int i = offset; i < length; ++i) {
+        write(values[i]);
+      }
+    }
+
     /**
      * Flush the unwritten content to the current output.
      */
@@ -262,7 +270,7 @@ public class CompressionFactory
       Function<T, CompressionStrategy> getCompressionStrategy
   )
   {
-    return new MetaSerdeHelper.FieldWriter<T>()
+    return new MetaSerdeHelper.FieldWriter<>()
     {
       @Override
       public void writeTo(ByteBuffer buffer, T x)
@@ -294,6 +302,8 @@ public class CompressionFactory
      * various duplicates.
      */
     LongEncodingReader duplicate();
+
+    LongEncodingStrategy getStrategy();
   }
 
   public static Supplier<ColumnarLongs> getLongSupplier(

@@ -44,6 +44,7 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTask;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskIOConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTuningConfig;
+import org.apache.druid.indexing.seekablestream.SeekableStreamSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
@@ -63,12 +64,14 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -82,9 +85,7 @@ import java.util.stream.Collectors;
 public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartition, Long, KafkaRecordEntity>
 {
   public static final TypeReference<TreeMap<Integer, Map<KafkaTopicPartition, Long>>> CHECKPOINTS_TYPE_REF =
-      new TypeReference<TreeMap<Integer, Map<KafkaTopicPartition, Long>>>()
-      {
-      };
+      new TypeReference<>() {};
 
   private static final EmittingLogger log = new EmittingLogger(KafkaSupervisor.class);
   private static final Long NOT_SET = -1L;
@@ -92,6 +93,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
 
   private final ServiceEmitter emitter;
   private final DruidMonitorSchedulerConfig monitorSchedulerConfig;
+  private final Pattern pattern;
   private volatile Map<KafkaTopicPartition, Long> latestSequenceFromStream;
 
 
@@ -122,6 +124,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
     this.spec = spec;
     this.emitter = spec.getEmitter();
     this.monitorSchedulerConfig = spec.getMonitorSchedulerConfig();
+    this.pattern = getIoConfig().isMultiTopic() ? Pattern.compile(getIoConfig().getStream()) : null;
   }
 
 
@@ -213,7 +216,8 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
         maximumMessageTime,
         ioConfig.getInputFormat(),
         kafkaIoConfig.getConfigOverrides(),
-        kafkaIoConfig.isMultiTopic()
+        kafkaIoConfig.isMultiTopic(),
+        ioConfig.getTaskDuration().getStandardMinutes()
     );
   }
 
@@ -443,5 +447,80 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
   public KafkaSupervisorTuningConfig getTuningConfig()
   {
     return spec.getTuningConfig();
+  }
+
+  protected boolean isMultiTopic()
+  {
+    return getIoConfig().isMultiTopic() && pattern != null;
+  }
+
+  /**
+   * Gets the offsets as stored in the metadata store. The map returned will only contain
+   * offsets from topic partitions that match the current supervisor config stream. This
+   * override is needed because in the case of multi-topic, a user could have updated the supervisor
+   * config from single topic to mult-topic, where the new multi-topic pattern regex matches the
+   * old config single topic. Without this override, the previously stored metadata for the single
+   * topic would be deemed as different from the currently configure stream, and not be included in
+   * the offset map returned. This implementation handles these cases appropriately.
+   *
+   * @return the previoulsy stored offsets from metadata storage, possibly updated with offsets removed
+   * for topics that do not match the currently configured supervisor topic. Topic partition keys may also be
+   * updated to single topic or multi-topic depending on the supervisor config, as needed.
+   */
+  @Override
+  protected Map<KafkaTopicPartition, Long> getOffsetsFromMetadataStorage()
+  {
+    final DataSourceMetadata dataSourceMetadata = retrieveDataSourceMetadata();
+    if (checkSourceMetadataMatch(dataSourceMetadata)) {
+      @SuppressWarnings("unchecked")
+      SeekableStreamSequenceNumbers<KafkaTopicPartition, Long> partitions = ((KafkaDataSourceMetadata) dataSourceMetadata)
+          .getSeekableStreamSequenceNumbers();
+      if (partitions != null && partitions.getPartitionSequenceNumberMap() != null) {
+        Map<KafkaTopicPartition, Long> partitionOffsets = new HashMap<>();
+        Set<String> topicMisMatchLogged = new HashSet<>();
+        partitions.getPartitionSequenceNumberMap().forEach((kafkaTopicPartition, value) -> {
+          final String matchValue;
+          // previous offsets are from multi-topic config
+          if (kafkaTopicPartition.topic().isPresent()) {
+            matchValue = kafkaTopicPartition.topic().get();
+          } else {
+            // previous offsets are from single topic config
+            matchValue = partitions.getStream();
+          }
+
+          KafkaTopicPartition matchingTopicPartition = getMatchingKafkaTopicPartition(kafkaTopicPartition, matchValue);
+
+          if (matchingTopicPartition == null && !topicMisMatchLogged.contains(matchValue)) {
+            log.warn(
+                "Topic/stream in metadata storage [%s] doesn't match spec topic/stream [%s], ignoring stored sequences",
+                matchValue,
+                getIoConfig().getStream()
+            );
+            topicMisMatchLogged.add(matchValue);
+          }
+          if (matchingTopicPartition != null) {
+            partitionOffsets.put(matchingTopicPartition, value);
+          }
+        });
+        return partitionOffsets;
+      }
+    }
+
+    return Collections.emptyMap();
+  }
+
+  @Nullable
+  private KafkaTopicPartition getMatchingKafkaTopicPartition(
+      final KafkaTopicPartition kafkaTopicPartition,
+      final String streamMatchValue
+  )
+  {
+    final boolean match;
+
+    match = pattern != null
+        ? pattern.matcher(streamMatchValue).matches()
+        : getIoConfig().getStream().equals(streamMatchValue);
+
+    return match ? new KafkaTopicPartition(isMultiTopic(), streamMatchValue, kafkaTopicPartition.partition()) : null;
   }
 }

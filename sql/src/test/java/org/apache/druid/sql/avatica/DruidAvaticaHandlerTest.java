@@ -89,6 +89,7 @@ import org.apache.druid.sql.calcite.schema.NamedSchema;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.guice.SqlModule;
+import org.apache.druid.sql.hook.DruidHookDispatcher;
 import org.eclipse.jetty.server.Server;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
@@ -1048,7 +1049,8 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
             new CalciteRulesManager(ImmutableSet.of()),
             CalciteTests.createJoinableFactoryWrapper(),
             CatalogResolver.NULL_RESOLVER,
-            new AuthConfig()
+            new AuthConfig(),
+            new DruidHookDispatcher()
         )
     );
   }
@@ -1387,7 +1389,6 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
           ),
           rows
       );
-      Assert.assertEquals(rows, rows);
     }
   }
 
@@ -1599,7 +1600,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
   public void testArrayStuff() throws SQLException
   {
     try (PreparedStatement statement = client.prepareStatement(
-        "SELECT ARRAY_AGG(dim2) AS arr1, ARRAY_AGG(l1) AS arr2, ARRAY_AGG(d1)  AS arr3, ARRAY_AGG(f1) AS arr4 FROM druid.numfoo")) {
+        "SELECT ARRAY_AGG(dim2) AS arr1, ARRAY_AGG(l1) AS arr2, ARRAY_AGG(dbl1)  AS arr3, ARRAY_AGG(f1) AS arr4 FROM druid.numfoo")) {
       final ResultSet resultSet = statement.executeQuery();
       final List<Map<String, Object>> rows = getRows(resultSet);
       Assert.assertEquals(1, rows.size());

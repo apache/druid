@@ -1,0 +1,94 @@
+# testUnnestWithFiltersWithExpressionInInnerQuery@NullHandling=sql case-crc:fa9be8db
+# quidem testcase reason: UNNEST_EXTRA_SCAN
+!set debug true
+!set defaultTimeout 300000
+!set maxScatterGatherBytes 9223372036854775807
+!set plannerStrategy DECOUPLED
+!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
+!set sqlQueryId dummy
+!set sqlStringifyArrays false
+!set outputformat mysql
+!use druidtest:///
+SELECT t,d3 FROM (select FLOOR(__time to hour) t, dim3 from druid.numfoo where dim2='a'), UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3);
++-------------------------+----+
+| t                       | d3 |
++-------------------------+----+
+| 2000-01-01 00:00:00.000 | a  |
+| 2000-01-01 00:00:00.000 | b  |
+| 2001-01-01 00:00:00.000 |    |
++-------------------------+----+
+(3 rows)
+
+!ok
+LogicalProject(t=[$0], d3=[$3])
+  LogicalUnnest(unnestExpr=[MV_TO_ARRAY($1)])
+    LogicalProject($f0=[FLOOR($0, FLAG(HOUR))], dim3=[$3], __time=[$0])
+      LogicalFilter(condition=[=($2, 'a')])
+        LogicalTableScan(table=[[druid, numfoo]])
+
+!logicalPlan
+DruidProject(t=[$0], d3=[$3], druid=[logical])
+  DruidUnnest(unnestExpr=[MV_TO_ARRAY($1)])
+    DruidProject($f0=[FLOOR($0, FLAG(HOUR))], dim3=[$3], __time=[$0], druid=[logical])
+      DruidFilter(condition=[=($2, 'a')])
+        DruidTableScan(table=[[druid, numfoo]], druid=[logical])
+
+!druidPlan
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "unnest",
+    "base" : {
+      "type" : "query",
+      "query" : {
+        "queryType" : "scan",
+        "dataSource" : {
+          "type" : "table",
+          "name" : "numfoo"
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "virtualColumns" : [ {
+          "type" : "expression",
+          "name" : "v0",
+          "expression" : "timestamp_floor(\"__time\",'PT1H',null,'UTC')",
+          "outputType" : "LONG"
+        } ],
+        "resultFormat" : "compactedList",
+        "filter" : {
+          "type" : "equals",
+          "column" : "dim2",
+          "matchValueType" : "STRING",
+          "matchValue" : "a"
+        },
+        "columns" : [ "v0", "dim3", "__time" ],
+        "columnTypes" : [ "LONG", "STRING", "LONG" ],
+        "granularity" : {
+          "type" : "all"
+        },
+        "legacy" : false
+      }
+    },
+    "virtualColumn" : {
+      "type" : "expression",
+      "name" : "j0.unnest",
+      "expression" : "mv_to_array(\"dim3\")",
+      "outputType" : "ARRAY<STRING>"
+    },
+    "unnestFilter" : null
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "resultFormat" : "compactedList",
+  "columns" : [ "v0", "j0.unnest" ],
+  "columnTypes" : [ "LONG", "STRING" ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "legacy" : false
+}
+!nativePlan

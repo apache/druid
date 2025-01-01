@@ -19,10 +19,18 @@
 .execution-details-pane {
   .main-section {
     overflow: auto;
+
+    & > * {
+      height: 100%;
+    }
   }
 
-  .flexible-query-input,
-  .result-table-pane {
-    height: 100%;
+  .execution-details-pane-general {
+    display: flex;
+    flex-direction: column;
+
+    .execution-stages-pane {
+      flex: 1;
+    }
   }
 }

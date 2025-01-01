@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.InlineDataSource;
+import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.QueryDataSource;
@@ -73,6 +74,7 @@ public class DataSourceAnalysisTest
     Assert.assertEquals(Optional.empty(), analysis.getBaseQuery());
     Assert.assertEquals(Optional.empty(), analysis.getBaseQuerySegmentSpec());
     Assert.assertEquals(Collections.emptyList(), analysis.getPreJoinableClauses());
+    Assert.assertFalse(analysis.isGlobal());
     Assert.assertFalse(analysis.isJoin());
     Assert.assertTrue(analysis.isBaseColumn("foo"));
   }
@@ -92,6 +94,7 @@ public class DataSourceAnalysisTest
     Assert.assertEquals(Optional.empty(), analysis.getBaseQuery());
     Assert.assertEquals(Optional.empty(), analysis.getBaseQuerySegmentSpec());
     Assert.assertEquals(Collections.emptyList(), analysis.getPreJoinableClauses());
+    Assert.assertEquals(unionDataSource.isGlobal(), analysis.isGlobal());
     Assert.assertFalse(analysis.isJoin());
     Assert.assertTrue(analysis.isBaseColumn("foo"));
   }
@@ -114,6 +117,7 @@ public class DataSourceAnalysisTest
         analysis.getBaseQuerySegmentSpec()
     );
     Assert.assertEquals(Collections.emptyList(), analysis.getPreJoinableClauses());
+    Assert.assertFalse(analysis.isGlobal());
     Assert.assertFalse(analysis.isJoin());
     Assert.assertFalse(analysis.isBaseColumn("foo"));
   }
@@ -137,6 +141,7 @@ public class DataSourceAnalysisTest
         analysis.getBaseQuerySegmentSpec()
     );
     Assert.assertEquals(Collections.emptyList(), analysis.getPreJoinableClauses());
+    Assert.assertFalse(analysis.isGlobal());
     Assert.assertFalse(analysis.isJoin());
     Assert.assertFalse(analysis.isBaseColumn("foo"));
   }
@@ -155,6 +160,7 @@ public class DataSourceAnalysisTest
     Assert.assertEquals(Optional.empty(), analysis.getBaseQuery());
     Assert.assertEquals(Optional.empty(), analysis.getBaseQuerySegmentSpec());
     Assert.assertEquals(Collections.emptyList(), analysis.getPreJoinableClauses());
+    Assert.assertTrue(analysis.isGlobal());
     Assert.assertFalse(analysis.isJoin());
     Assert.assertTrue(analysis.isBaseColumn("foo"));
   }
@@ -177,6 +183,7 @@ public class DataSourceAnalysisTest
         analysis.getBaseQuerySegmentSpec()
     );
     Assert.assertEquals(Collections.emptyList(), analysis.getPreJoinableClauses());
+    Assert.assertTrue(analysis.isGlobal());
     Assert.assertFalse(analysis.isJoin());
     Assert.assertFalse(analysis.isBaseColumn("foo"));
   }
@@ -195,6 +202,8 @@ public class DataSourceAnalysisTest
     Assert.assertEquals(Optional.empty(), analysis.getBaseQuery());
     Assert.assertEquals(Optional.empty(), analysis.getBaseQuerySegmentSpec());
     Assert.assertEquals(Collections.emptyList(), analysis.getPreJoinableClauses());
+    Assert.assertEquals(INLINE.isGlobal(), analysis.isGlobal());
+    Assert.assertTrue(analysis.isGlobal());
     Assert.assertFalse(analysis.isJoin());
     Assert.assertTrue(analysis.isBaseColumn("foo"));
   }
@@ -237,12 +246,14 @@ public class DataSourceAnalysisTest
     Assert.assertEquals(Optional.empty(), analysis.getBaseQuerySegmentSpec());
     Assert.assertEquals(
         ImmutableList.of(
-            new PreJoinableClause("1.", LOOKUP_LOOKYLOO, JoinType.INNER, joinClause("1.")),
-            new PreJoinableClause("2.", INLINE, JoinType.LEFT, joinClause("2.")),
-            new PreJoinableClause("3.", subquery(LOOKUP_LOOKYLOO), JoinType.FULL, joinClause("3."))
+            new PreJoinableClause("1.", LOOKUP_LOOKYLOO, JoinType.INNER, joinClause("1."), JoinAlgorithm.BROADCAST),
+            new PreJoinableClause("2.", INLINE, JoinType.LEFT, joinClause("2."), JoinAlgorithm.BROADCAST),
+            new PreJoinableClause("3.", subquery(LOOKUP_LOOKYLOO), JoinType.FULL, joinClause("3."), JoinAlgorithm.BROADCAST)
         ),
         analysis.getPreJoinableClauses()
     );
+    Assert.assertEquals(joinDataSource.isGlobal(), analysis.isGlobal());
+    Assert.assertFalse(analysis.isGlobal());
     Assert.assertTrue(analysis.isJoin());
     Assert.assertTrue(analysis.isBaseColumn("foo"));
     Assert.assertFalse(analysis.isBaseColumn("1.foo"));
@@ -286,12 +297,14 @@ public class DataSourceAnalysisTest
     Assert.assertEquals(Optional.empty(), analysis.getBaseQuerySegmentSpec());
     Assert.assertEquals(
         ImmutableList.of(
-            new PreJoinableClause("1.", LOOKUP_LOOKYLOO, JoinType.INNER, joinClause("1.")),
-            new PreJoinableClause("2.", INLINE, JoinType.LEFT, joinClause("2.")),
-            new PreJoinableClause("3.", subquery(LOOKUP_LOOKYLOO), JoinType.FULL, joinClause("3."))
+            new PreJoinableClause("1.", LOOKUP_LOOKYLOO, JoinType.INNER, joinClause("1."), JoinAlgorithm.BROADCAST),
+            new PreJoinableClause("2.", INLINE, JoinType.LEFT, joinClause("2."), JoinAlgorithm.BROADCAST),
+            new PreJoinableClause("3.", subquery(LOOKUP_LOOKYLOO), JoinType.FULL, joinClause("3."), JoinAlgorithm.BROADCAST)
         ),
         analysis.getPreJoinableClauses()
     );
+    Assert.assertEquals(joinDataSource.isGlobal(), analysis.isGlobal());
+    Assert.assertFalse(analysis.isGlobal());
     Assert.assertTrue(analysis.isJoin());
     Assert.assertTrue(analysis.isBaseColumn("foo"));
     Assert.assertFalse(analysis.isBaseColumn("1.foo"));
@@ -341,10 +354,11 @@ public class DataSourceAnalysisTest
     Assert.assertEquals(Optional.empty(), analysis.getBaseQuerySegmentSpec());
     Assert.assertEquals(
         ImmutableList.of(
-            new PreJoinableClause("3.", rightLeaningJoinStack, JoinType.RIGHT, joinClause("3."))
+            new PreJoinableClause("3.", rightLeaningJoinStack, JoinType.RIGHT, joinClause("3."), JoinAlgorithm.BROADCAST)
         ),
         analysis.getPreJoinableClauses()
     );
+    Assert.assertFalse(analysis.isGlobal());
     Assert.assertTrue(analysis.isJoin());
     Assert.assertTrue(analysis.isBaseColumn("foo"));
     Assert.assertTrue(analysis.isBaseColumn("1.foo"));
@@ -390,10 +404,11 @@ public class DataSourceAnalysisTest
     Assert.assertEquals(Optional.empty(), analysis.getBaseQuerySegmentSpec());
     Assert.assertEquals(
         ImmutableList.of(
-            new PreJoinableClause("3.", rightLeaningJoinStack, JoinType.RIGHT, joinClause("3."))
+            new PreJoinableClause("3.", rightLeaningJoinStack, JoinType.RIGHT, joinClause("3."), JoinAlgorithm.BROADCAST)
         ),
         analysis.getPreJoinableClauses()
     );
+    Assert.assertFalse(analysis.isGlobal());
     Assert.assertTrue(analysis.isJoin());
     Assert.assertTrue(analysis.isBaseColumn("foo"));
     Assert.assertTrue(analysis.isBaseColumn("1.foo"));
@@ -423,10 +438,11 @@ public class DataSourceAnalysisTest
     Assert.assertEquals(Optional.empty(), analysis.getBaseUnionDataSource());
     Assert.assertEquals(
         ImmutableList.of(
-            new PreJoinableClause("1.", subquery(TABLE_FOO), JoinType.INNER, joinClause("1."))
+            new PreJoinableClause("1.", subquery(TABLE_FOO), JoinType.INNER, joinClause("1."), JoinAlgorithm.BROADCAST)
         ),
         analysis.getPreJoinableClauses()
     );
+    Assert.assertFalse(analysis.isGlobal());
     Assert.assertTrue(analysis.isJoin());
     Assert.assertTrue(analysis.isBaseColumn("foo"));
     Assert.assertFalse(analysis.isBaseColumn("1.foo"));
@@ -456,10 +472,11 @@ public class DataSourceAnalysisTest
     Assert.assertEquals(Optional.empty(), analysis.getBaseQuerySegmentSpec());
     Assert.assertEquals(
         ImmutableList.of(
-            new PreJoinableClause("1.", LOOKUP_LOOKYLOO, JoinType.INNER, joinClause("1."))
+            new PreJoinableClause("1.", LOOKUP_LOOKYLOO, JoinType.INNER, joinClause("1."), JoinAlgorithm.BROADCAST)
         ),
         analysis.getPreJoinableClauses()
     );
+    Assert.assertFalse(analysis.isGlobal());
     Assert.assertTrue(analysis.isJoin());
     Assert.assertTrue(analysis.isBaseColumn("foo"));
     Assert.assertFalse(analysis.isBaseColumn("1.foo"));
@@ -510,10 +527,11 @@ public class DataSourceAnalysisTest
     );
     Assert.assertEquals(
         ImmutableList.of(
-            new PreJoinableClause("1.", LOOKUP_LOOKYLOO, JoinType.INNER, joinClause("1."))
+            new PreJoinableClause("1.", LOOKUP_LOOKYLOO, JoinType.INNER, joinClause("1."), JoinAlgorithm.BROADCAST)
         ),
         analysis.getPreJoinableClauses()
     );
+    Assert.assertFalse(analysis.isGlobal());
     Assert.assertTrue(analysis.isJoin());
     Assert.assertFalse(analysis.isBaseColumn("foo"));
     Assert.assertFalse(analysis.isBaseColumn("1.foo"));
@@ -542,10 +560,11 @@ public class DataSourceAnalysisTest
     Assert.assertEquals(Optional.empty(), analysis.getJoinBaseTableFilter());
     Assert.assertEquals(
         ImmutableList.of(
-            new PreJoinableClause("1.", LOOKUP_LOOKYLOO, JoinType.INNER, joinClause("1."))
+            new PreJoinableClause("1.", LOOKUP_LOOKYLOO, JoinType.INNER, joinClause("1."), JoinAlgorithm.BROADCAST)
         ),
         analysis.getPreJoinableClauses()
     );
+    Assert.assertTrue(analysis.isGlobal());
     Assert.assertTrue(analysis.isJoin());
     Assert.assertTrue(analysis.isBaseColumn("foo"));
     Assert.assertFalse(analysis.isBaseColumn("1.foo"));
@@ -574,10 +593,11 @@ public class DataSourceAnalysisTest
     Assert.assertEquals(Optional.empty(), analysis.getJoinBaseTableFilter());
     Assert.assertEquals(
         ImmutableList.of(
-            new PreJoinableClause("1.", TABLE_FOO, JoinType.INNER, joinClause("1."))
+            new PreJoinableClause("1.", TABLE_FOO, JoinType.INNER, joinClause("1."), JoinAlgorithm.BROADCAST)
         ),
         analysis.getPreJoinableClauses()
     );
+    Assert.assertFalse(analysis.isGlobal());
     Assert.assertTrue(analysis.isJoin());
     Assert.assertTrue(analysis.isBaseColumn("foo"));
     Assert.assertFalse(analysis.isBaseColumn("1.foo"));
@@ -614,7 +634,8 @@ public class DataSourceAnalysisTest
         joinType,
         dimFilter,
         ExprMacroTable.nil(),
-        null
+        null,
+        JoinAlgorithm.BROADCAST
     );
   }
 

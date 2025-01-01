@@ -129,18 +129,19 @@ public class SqlParameterizerShuttle extends SqlShuttle
     List<SqlNode> args = new ArrayList<>(list.size());
     for (int i = 0, listSize = list.size(); i < listSize; i++) {
       Object element = list.get(i);
-      if (element == null) {
-        throw InvalidSqlInput.exception("parameter [%d] is an array, with an illegal null at index [%d]", posn + 1, i);
-      }
       SqlNode node;
-      if (element instanceof String) {
+      if (element == null) {
+        node = SqlLiteral.createNull(SqlParserPos.ZERO);
+      } else if (element instanceof String) {
         node = SqlLiteral.createCharString((String) element, SqlParserPos.ZERO);
       } else if (element instanceof Integer || element instanceof Long) {
         // No direct way to create a literal from an Integer or Long, have
         // to parse a string, sadly.
         node = SqlLiteral.createExactNumeric(element.toString(), SqlParserPos.ZERO);
+      } else if (element instanceof Double || element instanceof Float) {
+        node = SqlLiteral.createApproxNumeric(element.toString(), SqlParserPos.ZERO);
       } else if (element instanceof Boolean) {
-        node = SqlLiteral.createBoolean((Boolean) value, SqlParserPos.ZERO);
+        node = SqlLiteral.createBoolean((Boolean) element, SqlParserPos.ZERO);
       } else {
         throw InvalidSqlInput.exception(
             "parameter [%d] is an array, with an illegal value of type [%s] at index [%d]",

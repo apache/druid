@@ -101,7 +101,7 @@ public class BrokerClientTest extends BaseJettyTest
   }
 
   @Test
-  public void testError() throws Exception
+  public void testRetryableError() throws Exception
   {
     DruidNodeDiscovery druidNodeDiscovery = EasyMock.createMock(DruidNodeDiscovery.class);
     EasyMock.expect(druidNodeDiscovery.getAllNodes()).andReturn(ImmutableList.of(discoveryDruidNode)).anyTimes();
@@ -119,6 +119,26 @@ public class BrokerClientTest extends BaseJettyTest
     Request request = brokerClient.makeRequest(HttpMethod.POST, "/simple/flakey");
     request.setContent("hello".getBytes(StandardCharsets.UTF_8));
     Assert.assertEquals("hello", brokerClient.sendQuery(request));
+  }
+
+  @Test
+  public void testNonRetryableError() throws Exception
+  {
+    DruidNodeDiscovery druidNodeDiscovery = EasyMock.createMock(DruidNodeDiscovery.class);
+    EasyMock.expect(druidNodeDiscovery.getAllNodes()).andReturn(ImmutableList.of(discoveryDruidNode)).anyTimes();
+
+    DruidNodeDiscoveryProvider druidNodeDiscoveryProvider = EasyMock.createMock(DruidNodeDiscoveryProvider.class);
+    EasyMock.expect(druidNodeDiscoveryProvider.getForNodeRole(NodeRole.BROKER)).andReturn(druidNodeDiscovery);
+
+    EasyMock.replay(druidNodeDiscovery, druidNodeDiscoveryProvider);
+
+    BrokerClient brokerClient = new BrokerClient(
+        httpClient,
+        druidNodeDiscoveryProvider
+    );
+
+    Request request = brokerClient.makeRequest(HttpMethod.POST, "/simple/error");
+    Assert.assertEquals("", brokerClient.sendQuery(request));
   }
 
   @Path("/simple")
@@ -149,6 +169,14 @@ public class BrokerClientTest extends BaseJettyTest
         attempt += 1;
         return Response.status(504).build();
       }
+    }
+
+    @POST
+    @Path("/error")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response error()
+    {
+      return Response.status(404).build();
     }
   }
 }

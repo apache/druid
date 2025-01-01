@@ -20,26 +20,41 @@
 package org.apache.druid.delta.input;
 
 import io.delta.kernel.Scan;
-import io.delta.kernel.TableNotFoundException;
 import io.delta.kernel.data.Row;
-import io.delta.kernel.defaults.client.DefaultTableClient;
+import io.delta.kernel.defaults.engine.DefaultEngine;
+import io.delta.kernel.exceptions.TableNotFoundException;
 import org.apache.hadoop.conf.Configuration;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+
+import java.util.Arrays;
+import java.util.Collection;
 
 public class RowSerdeTest
 {
-  @Test
-  public void testSerializeDeserializeRoundtrip() throws TableNotFoundException
+  public static Collection<Object[]> data()
   {
-    final DefaultTableClient tableClient = DefaultTableClient.create(new Configuration());
-    final Scan scan = DeltaTestUtils.getScan(tableClient);
-    final Row scanState = scan.getScanState(tableClient);
-
-    final String rowJson = RowSerde.serializeRowToJson(scanState);
-    final Row row = RowSerde.deserializeRowFromJson(tableClient, rowJson);
-
-    Assert.assertEquals(scanState.getSchema(), row.getSchema());
+    Object[][] data = new Object[][]{
+        {NonPartitionedDeltaTable.DELTA_TABLE_PATH},
+        {PartitionedDeltaTable.DELTA_TABLE_PATH},
+        {ComplexTypesDeltaTable.DELTA_TABLE_PATH},
+        {SnapshotDeltaTable.DELTA_TABLE_PATH}
+    };
+    return Arrays.asList(data);
   }
 
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testSerializeDeserializeRoundtrip(final String tablePath) throws TableNotFoundException
+  {
+    final DefaultEngine engine = DefaultEngine.create(new Configuration());
+    final Scan scan = DeltaTestUtils.getScan(engine, tablePath);
+    final Row scanState = scan.getScanState(engine);
+
+    final String rowJson = RowSerde.serializeRowToJson(scanState);
+    final Row row = RowSerde.deserializeRowFromJson(engine, rowJson);
+
+    Assertions.assertEquals(scanState.getSchema(), row.getSchema());
+  }
 }

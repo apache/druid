@@ -28,7 +28,7 @@ import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
-import org.apache.commons.lang.mutable.MutableBoolean;
+import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.concurrent.LifecycleLock;
 import org.apache.druid.discovery.DruidLeaderClient;
@@ -45,6 +45,8 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
+import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
+import org.apache.druid.server.metrics.DataSourceTaskIdHolder;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
@@ -70,6 +72,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.LockSupport;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * This class provide a basic {@link LookupExtractorFactory} references manager. It allows basic operations fetching,
@@ -87,9 +90,7 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
   private static final EmittingLogger LOG = new EmittingLogger(LookupReferencesManager.class);
 
   private static final TypeReference<Map<String, Object>> LOOKUPS_ALL_GENERIC_REFERENCE =
-      new TypeReference<Map<String, Object>>()
-      {
-      };
+      new TypeReference<>() {};
 
   // Lookups state (loaded/to-be-loaded/to-be-dropped etc) is managed by immutable LookupUpdateState instance.
   // Any update to state is done by creating updated LookupUpdateState instance and atomically setting that
@@ -167,7 +168,7 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
       if (!Strings.isNullOrEmpty(lookupConfig.getSnapshotWorkingDir())) {
         FileUtils.mkdirp(new File(lookupConfig.getSnapshotWorkingDir()));
       }
-      loadAllLookupsAndInitStateRef();
+      loadLookupsAndInitStateRef();
       if (!testMode) {
         mainThread = Execs.makeThread(
             "LookupExtractorFactoryContainerProvider-MainThread",
@@ -329,6 +330,12 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
     return stateRef.get().lookupMap.keySet();
   }
 
+  @Override
+  public String getCanonicalLookupName(String lookupName)
+  {
+    return lookupName;
+  }
+
   // Note that this should ensure that "toLoad" and "toDrop" are disjoint.
   LookupsState<LookupExtractorFactoryContainer> getAllLookupsState()
   {
@@ -373,10 +380,26 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
     }
   }
 
-  private void loadAllLookupsAndInitStateRef()
+  /**
+   * Load a set of lookups based on the injected value in {@link DataSourceTaskIdHolder#getLookupLoadingSpec()}.
+   */
+  private void loadLookupsAndInitStateRef()
   {
-    List<LookupBean> lookupBeanList = getLookupsList();
-    if (lookupBeanList != null) {
+    LookupLoadingSpec lookupLoadingSpec = lookupListeningAnnouncerConfig.getLookupLoadingSpec();
+    LOG.info("Loading lookups using spec[%s].", lookupLoadingSpec);
+    List<LookupBean> lookupBeanList;
+    if (lookupLoadingSpec.getMode() == LookupLoadingSpec.Mode.NONE) {
+      lookupBeanList = Collections.emptyList();
+    } else {
+      lookupBeanList = getLookupsList();
+      if (lookupLoadingSpec.getMode() == LookupLoadingSpec.Mode.ONLY_REQUIRED && lookupBeanList != null) {
+        lookupBeanList = lookupBeanList.stream()
+                                       .filter(lookupBean -> lookupLoadingSpec.getLookupsToLoad().contains(lookupBean.getName()))
+                                       .collect(Collectors.toList());
+      }
+    }
+
+    if (lookupBeanList != null && !lookupBeanList.isEmpty()) {
       startLookups(lookupBeanList);
     } else {
       LOG.debug("No lookups to be loaded at this point.");
@@ -394,7 +417,7 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
     if (lookupConfig.getEnableLookupSyncOnStartup()) {
       lookupBeanList = getLookupListFromCoordinator(lookupListeningAnnouncerConfig.getLookupTier());
       if (lookupBeanList == null) {
-        LOG.info("Coordinator is unavailable. Loading saved snapshot instead");
+        LOG.info("Could not fetch lookups from the coordinator. Loading saved snapshot instead");
         lookupBeanList = getLookupListFromSnapshot();
       }
     } else {

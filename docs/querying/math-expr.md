@@ -81,7 +81,7 @@ The following built-in functions are available.
 |name|description|
 |----|-----------|
 |concat|concat(expr, expr...) concatenate a list of strings|
-|format|format(pattern[, args...]) returns a string formatted in the manner of Java's [String.format](https://docs.oracle.com/javase/8/docs/api/java/lang/String.html#format-java.lang.String-java.lang.Object...-).|
+|format|format(pattern[, args...]) returns a string formatted in the manner of Java's [String.format](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/String.html#format(java.lang.String,java.lang.Object...)).|
 |like|like(expr, pattern[, escape]) is equivalent to SQL `expr LIKE pattern`|
 |lookup|lookup(expr, lookup-name[,replaceMissingValueWith]) looks up expr in a registered,`replaceMissingValueWith` is an optional constant string [query-time lookup](../querying/lookups.md)|
 |parse_long|parse_long(string[, radix]) parses a string as a long with the given radix, or 10 (decimal) if a radix is not provided.|
@@ -184,6 +184,7 @@ See javadoc of java.lang.Math for detailed explanation for each function.
 | array_ordinal(arr,long) | returns the array element at the 1 based index supplied, or null for an out of range index |
 | array_contains(arr,expr) | returns 1 if the array contains the element specified by expr, or contains all elements specified by expr if expr is an array, else 0 |
 | array_overlap(arr1,arr2) | returns 1 if arr1 and arr2 have any elements in common, else 0 |
+| scalar_in_array(expr, arr) | returns 1 if the scalar is present in the array, else 0 if the expr is non-null, or null if the expr is null |
 | array_offset_of(arr,expr) | returns the 0 based index of the first occurrence of expr in the array, or `null` or `-1` if `druid.generic.useDefaultValueForNull=true` (deprecated legacy mode) if no matching elements exist in the array. |
 | array_ordinal_of(arr,expr) | returns the 1 based index of the first occurrence of expr in the array, or `null` or `-1` if `druid.generic.useDefaultValueForNull=true` (deprecated legacy mode) if no matching elements exist in the array. |
 | array_prepend(expr,arr) | adds expr to arr at the beginning, the resulting array type determined by the type of the array |
@@ -245,6 +246,7 @@ JSON functions provide facilities to extract, transform, and create `COMPLEX<jso
 | to_json_string(expr) | Convert `expr` into a JSON `STRING` value |
 | json_keys(expr, path) | Get array of field names from `expr` at the specified JSONPath `path`, or null if the data does not exist or have any fields |
 | json_paths(expr) | Get array of all JSONPath paths available from `expr` |
+| json_merge(expr1, expr2[, expr3 ...]) | Merges two or more JSON `STRING` or `COMPLEX<json>` into one. Preserves the rightmost value when there are key overlaps. |
 
 ### JSONPath syntax
 

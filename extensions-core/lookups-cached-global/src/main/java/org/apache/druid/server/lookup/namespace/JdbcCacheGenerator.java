@@ -204,18 +204,20 @@ public final class JdbcCacheGenerator implements CacheGenerator<JdbcExtractionNa
     if (tsColumn == null) {
       return null;
     }
-    final Timestamp update = dbi.withHandle(
-        handle -> {
-          final String query = StringUtils.format(
-              "SELECT MAX(%s) FROM %s",
-              tsColumn, table
-          );
-          return handle
-              .createQuery(query)
-              .map(TimestampMapper.FIRST)
-              .first();
-        }
+    final String query = StringUtils.format(
+        "SELECT MAX(%s) FROM %s",
+        tsColumn, table
     );
+    final Timestamp update = dbi.withHandle(
+        handle -> handle
+            .createQuery(query)
+            .map(TimestampMapper.FIRST)
+            .first()
+    );
+    if (update == null) {
+      LOG.info("Lookup table[%s] is empty. No rows returned for the query[%s].", table, query);
+      return null;
+    }
     return update.getTime();
   }
 }

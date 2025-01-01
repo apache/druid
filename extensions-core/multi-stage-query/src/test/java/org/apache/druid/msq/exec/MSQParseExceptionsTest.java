@@ -32,6 +32,7 @@ import org.apache.druid.msq.indexing.error.CannotParseExternalDataFault;
 import org.apache.druid.msq.indexing.error.InvalidNullByteFault;
 import org.apache.druid.msq.querykit.scan.ExternalColumnSelectorFactory;
 import org.apache.druid.msq.test.MSQTestBase;
+import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.scan.ScanQuery;
@@ -156,7 +157,7 @@ public class MSQParseExceptionsTest extends MSQTestBase
             .dataSource(
                 new ExternalDataSource(
                     new LocalInputSource(null, null, ImmutableList.of(toRead), SystemFields.none()),
-                    new CsvInputFormat(null, null, null, true, 0),
+                    new CsvInputFormat(null, null, null, true, 0, null),
                     RowSignature.builder()
                                 .add("timestamp", ColumnType.STRING)
                                 .add("agent_category", ColumnType.STRING)
@@ -179,6 +180,7 @@ public class MSQParseExceptionsTest extends MSQTestBase
                 )
             )
             .columns("v0", "v1")
+            .columnTypes(ColumnType.LONG, ColumnType.STRING)
             .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
             .context(defaultScanQueryContext(
                 context,
@@ -224,10 +226,104 @@ public class MSQParseExceptionsTest extends MSQTestBase
                         new ColumnMapping("v1", "agent_category")
                     )
                 ))
-                .destination(new DataSourceMSQDestination("foo1", Granularities.ALL, null, null))
+                .destination(new DataSourceMSQDestination("foo1", Granularities.ALL, null, null, null, null))
                 .tuningConfig(MSQTuningConfig.defaultConfig())
                 .build())
         .setQueryContext(DEFAULT_MSQ_CONTEXT)
+        .verifyResults();
+  }
+
+  @Test
+  public void testIngestWithSanitizedNullByteUsingContextParameter() throws IOException
+  {
+    final File toRead = getResourceAsTemporaryFile("/unparseable-null-byte-string.csv");
+    final String toReadAsJson = queryFramework().queryJsonMapper().writeValueAsString(toRead.getAbsolutePath());
+
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .add("agent_category", ColumnType.STRING)
+                                            .build();
+
+    Map<String, Object> context = new HashMap<>(DEFAULT_MSQ_CONTEXT);
+    context.put("sqlInsertSegmentGranularity", "{\"type\":\"all\"}");
+    context.put(MultiStageQueryContext.CTX_REMOVE_NULL_BYTES, true);
+
+    Map<String, Object> runtimeContext = new HashMap<>(DEFAULT_MSQ_CONTEXT);
+    runtimeContext.put(MultiStageQueryContext.CTX_REMOVE_NULL_BYTES, true);
+
+    final ScanQuery expectedQuery =
+        newScanQueryBuilder()
+            .dataSource(
+                new ExternalDataSource(
+                    new LocalInputSource(null, null, ImmutableList.of(toRead), SystemFields.none()),
+                    new CsvInputFormat(null, null, null, true, 0, null),
+                    RowSignature.builder()
+                                .add("timestamp", ColumnType.STRING)
+                                .add("agent_category", ColumnType.STRING)
+                                .add("agent_type", ColumnType.STRING)
+                                .add("browser", ColumnType.STRING)
+                                .build()
+                )
+            )
+            .intervals(querySegmentSpec(Filtration.eternity()))
+            .virtualColumns(
+                expressionVirtualColumn(
+                    "v0",
+                    "timestamp_floor(timestamp_parse(\"timestamp\",null,'UTC'),'PT1M',null,'UTC')",
+                    ColumnType.LONG
+                )
+            )
+            .columns("v0", "agent_category")
+            .columnTypes(ColumnType.LONG, ColumnType.STRING)
+            .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
+            .context(defaultScanQueryContext(
+                context,
+                RowSignature.builder()
+                            .add("v0", ColumnType.LONG)
+                            .add("agent_category", ColumnType.STRING)
+                            .build()
+            ))
+            .build();
+
+
+    testIngestQuery()
+        .setSql("INSERT INTO foo1\n"
+                + "WITH\n"
+                + "kttm_data AS (\n"
+                + "SELECT * FROM TABLE(\n"
+                + "  EXTERN(\n"
+                + "    '{ \"files\": [" + toReadAsJson + "],\"type\":\"local\"}',\n"
+                + "    '{\"type\":\"csv\", \"findColumnsFromHeader\":true}',\n"
+                + "    '[{\"name\":\"timestamp\",\"type\":\"string\"},{\"name\":\"agent_category\",\"type\":\"string\"},{\"name\":\"agent_type\",\"type\":\"string\"},{\"name\":\"browser\",\"type\":\"string\"}]'\n"
+                + "  )\n"
+                + "))\n"
+                + "\n"
+                + "SELECT\n"
+                + "  FLOOR(TIME_PARSE(\"timestamp\") TO MINUTE) AS __time,\n"
+                + "  agent_category\n"
+                + "FROM kttm_data\n"
+                + "PARTITIONED BY ALL")
+        .setExpectedRowSignature(rowSignature)
+        .setExpectedResultRows(ImmutableList.of(
+            new Object[]{1566691200000L, "Personal computer"},
+            new Object[]{1566691200000L, "Personal computer"},
+            new Object[]{1566691200000L, "Smartphone"}
+        ))
+        .setExpectedDataSource("foo1")
+        .setExpectedMSQSpec(
+            MSQSpec
+                .builder()
+                .query(expectedQuery)
+                .columnMappings(new ColumnMappings(
+                    ImmutableList.of(
+                        new ColumnMapping("v0", "__time"),
+                        new ColumnMapping("agent_category", "agent_category")
+                    )
+                ))
+                .destination(new DataSourceMSQDestination("foo1", Granularities.ALL, null, null, null, null))
+                .tuningConfig(MSQTuningConfig.defaultConfig())
+                .build())
+        .setQueryContext(runtimeContext)
         .verifyResults();
   }
 

@@ -21,6 +21,8 @@ package org.apache.druid.segment.column;
 
 import org.apache.druid.segment.data.GenericIndexed;
 
+import javax.annotation.Nullable;
+
 /**
  * Implementation of {@link ComplexColumn} to be used when complex column serialization is done by using
  * {@link GenericIndexed} by using default implementations of "writeToXXX" methods in
@@ -50,6 +52,7 @@ public class GenericIndexedBasedComplexColumn implements ComplexColumn
   }
 
   @Override
+  @Nullable
   public Object getRowValue(int rowNum)
   {
     return index.get(rowNum);

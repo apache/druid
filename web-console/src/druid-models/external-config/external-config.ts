@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import type { SqlQuery } from '@druid-toolkit/query';
+import type { SqlQuery } from 'druid-query-toolkit';
 import {
   C,
   F,
@@ -28,7 +28,7 @@ import {
   SqlLiteral,
   SqlStar,
   SqlType,
-} from '@druid-toolkit/query';
+} from 'druid-query-toolkit';
 import * as JSONBig from 'json-bigint-native';
 
 import { nonEmptyArray } from '../../utils';
@@ -131,7 +131,7 @@ export function externalConfigToInitDimensions(
   timeExpression: SqlExpression | undefined,
   arrayMode: ArrayMode,
 ): SqlExpression[] {
-  return (timeExpression ? [timeExpression.as('__time')] : [])
+  return (timeExpression ? [timeExpression.setAlias('__time')] : [])
     .concat(
       filterMap(config.signature, columnDeclaration => {
         const columnName = columnDeclaration.getColumnName();

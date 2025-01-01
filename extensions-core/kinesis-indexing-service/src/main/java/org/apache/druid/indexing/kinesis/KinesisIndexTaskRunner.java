@@ -21,8 +21,8 @@ package org.apache.druid.indexing.kinesis;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.InputRowParser;
+import org.apache.druid.data.input.kinesis.KinesisRecordEntity;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.seekablestream.SeekableStreamDataSourceMetadata;
@@ -49,7 +49,7 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentMap;
 
-public class KinesisIndexTaskRunner extends SeekableStreamIndexTaskRunner<String, String, ByteEntity>
+public class KinesisIndexTaskRunner extends SeekableStreamIndexTaskRunner<String, String, KinesisRecordEntity>
 {
   private static final EmittingLogger log = new EmittingLogger(KinesisIndexTaskRunner.class);
   private static final long POLL_TIMEOUT = 100;
@@ -81,8 +81,8 @@ public class KinesisIndexTaskRunner extends SeekableStreamIndexTaskRunner<String
 
   @Nonnull
   @Override
-  protected List<OrderedPartitionableRecord<String, String, ByteEntity>> getRecords(
-      RecordSupplier<String, String, ByteEntity> recordSupplier, TaskToolbox toolbox
+  protected List<OrderedPartitionableRecord<String, String, KinesisRecordEntity>> getRecords(
+      RecordSupplier<String, String, KinesisRecordEntity> recordSupplier, TaskToolbox toolbox
   )
   {
     return recordSupplier.poll(POLL_TIMEOUT);
@@ -119,7 +119,7 @@ public class KinesisIndexTaskRunner extends SeekableStreamIndexTaskRunner<String
   @Override
   protected void possiblyResetDataSourceMetadata(
       TaskToolbox toolbox,
-      RecordSupplier<String, String, ByteEntity> recordSupplier,
+      RecordSupplier<String, String, KinesisRecordEntity> recordSupplier,
       Set<StreamPartition<String>> assignment
   )
   {
@@ -181,9 +181,7 @@ public class KinesisIndexTaskRunner extends SeekableStreamIndexTaskRunner<String
   @Override
   public TypeReference<List<SequenceMetadata<String, String>>> getSequenceMetadataTypeReference()
   {
-    return new TypeReference<List<SequenceMetadata<String, String>>>()
-    {
-    };
+    return new TypeReference<>() {};
   }
 
   @Nullable
@@ -197,9 +195,7 @@ public class KinesisIndexTaskRunner extends SeekableStreamIndexTaskRunner<String
       log.debug("Got checkpoints from task context[%s]", checkpointsString);
       return toolbox.getJsonMapper().readValue(
           checkpointsString,
-          new TypeReference<TreeMap<Integer, Map<String, String>>>()
-          {
-          }
+          new TypeReference<>() {}
       );
     } else {
       return null;

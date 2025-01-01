@@ -20,6 +20,7 @@
 package org.apache.druid.segment.serde;
 
 import com.google.common.base.Supplier;
+import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.segment.column.DictionaryEncodedColumn;
 import org.apache.druid.segment.column.StringUtf8DictionaryEncodedColumn;
@@ -38,16 +39,24 @@ public class StringUtf8DictionaryEncodedColumnSupplier<TIndexed extends Indexed<
   private final Supplier<TIndexed> utf8Dictionary;
   private final @Nullable Supplier<ColumnarInts> singleValuedColumn;
   private final @Nullable Supplier<ColumnarMultiInts> multiValuedColumn;
+  private final BitmapFactory bitmapFactory;
 
   public StringUtf8DictionaryEncodedColumnSupplier(
       Supplier<TIndexed> utf8Dictionary,
       @Nullable Supplier<ColumnarInts> singleValuedColumn,
-      @Nullable Supplier<ColumnarMultiInts> multiValuedColumn
+      @Nullable Supplier<ColumnarMultiInts> multiValuedColumn,
+      BitmapFactory bitmapFactory
   )
   {
     this.utf8Dictionary = utf8Dictionary;
     this.singleValuedColumn = singleValuedColumn;
     this.multiValuedColumn = multiValuedColumn;
+    this.bitmapFactory = bitmapFactory;
+  }
+
+  public Supplier<TIndexed> getDictionary()
+  {
+    return utf8Dictionary;
   }
 
   @Override
@@ -59,19 +68,22 @@ public class StringUtf8DictionaryEncodedColumnSupplier<TIndexed extends Indexed<
       return new StringUtf8DictionaryEncodedColumn(
           singleValuedColumn != null ? new CombineFirstTwoValuesColumnarInts(singleValuedColumn.get()) : null,
           multiValuedColumn != null ? new CombineFirstTwoValuesColumnarMultiInts(multiValuedColumn.get()) : null,
-          CombineFirstTwoEntriesIndexed.returnNull(suppliedUtf8Dictionary)
+          CombineFirstTwoEntriesIndexed.returnNull(suppliedUtf8Dictionary),
+          bitmapFactory
       );
     } else if (NullHandling.mustReplaceFirstValueWithNullInDictionary(suppliedUtf8Dictionary)) {
       return new StringUtf8DictionaryEncodedColumn(
           singleValuedColumn != null ? singleValuedColumn.get() : null,
           multiValuedColumn != null ? multiValuedColumn.get() : null,
-          new ReplaceFirstValueWithNullIndexed<>(suppliedUtf8Dictionary)
+          new ReplaceFirstValueWithNullIndexed<>(suppliedUtf8Dictionary),
+          bitmapFactory
       );
     } else {
       return new StringUtf8DictionaryEncodedColumn(
           singleValuedColumn != null ? singleValuedColumn.get() : null,
           multiValuedColumn != null ? multiValuedColumn.get() : null,
-          suppliedUtf8Dictionary
+          suppliedUtf8Dictionary,
+          bitmapFactory
       );
     }
   }

@@ -19,4 +19,4 @@
 kafka:
   instances:
     - port: 9092
-      proxyPort: 9093
+      proxyPort: 9094

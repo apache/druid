@@ -21,7 +21,7 @@ package org.apache.druid.segment.vector;
 
 import org.apache.druid.collections.bitmap.WrappedRoaringBitmap;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.segment.QueryableIndexStorageAdapter;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Test;
@@ -35,7 +35,7 @@ public class NilVectorSelectorTest extends InitializedNullHandlingTest
   @Test
   public void testDefaultSizedVector()
   {
-    testVectorSize(QueryableIndexStorageAdapter.DEFAULT_VECTOR_SIZE);
+    testVectorSize(QueryContexts.DEFAULT_VECTOR_SIZE);
   }
 
   @Test

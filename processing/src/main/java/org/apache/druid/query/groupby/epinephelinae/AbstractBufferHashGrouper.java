@@ -170,7 +170,7 @@ public abstract class AbstractBufferHashGrouper<KeyType> implements Grouper<KeyT
   public void close()
   {
     keySerde.reset();
-    aggregators.close();
+    aggregators.reset();
   }
 
   /**

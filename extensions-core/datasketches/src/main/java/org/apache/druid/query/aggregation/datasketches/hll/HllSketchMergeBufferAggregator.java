@@ -75,7 +75,7 @@ public class HllSketchMergeBufferAggregator implements BufferAggregator
   @Override
   public void close()
   {
-    helper.close();
+    helper.clear();
   }
 
   @Override

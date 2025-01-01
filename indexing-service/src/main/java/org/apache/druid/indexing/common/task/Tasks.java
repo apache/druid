@@ -21,16 +21,9 @@ package org.apache.druid.indexing.common.task;
 
 import org.apache.curator.shaded.com.google.common.base.Verify;
 import org.apache.druid.indexing.common.TaskLockType;
-import org.apache.druid.java.util.common.JodaUtils;
-import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.duty.CompactSegments;
-import org.joda.time.Interval;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.SortedSet;
-import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
 
 public class Tasks
@@ -63,44 +56,19 @@ public class Tasks
    * Context flag denoting if maximum possible values should be used to estimate
    * on-heap memory usage while indexing. Refer to OnHeapIncrementalIndex for
    * more details.
-   *
+   * <p>
    * The value of this flag is true by default which corresponds to the old method
    * of estimation.
    */
   public static final String USE_MAX_MEMORY_ESTIMATES = "useMaxMemoryEstimates";
 
   /**
-   * This context is used in compaction. When it is set in the context, the segments created by the task
-   * will fill 'lastCompactionState' in its metadata. This will be used to track what segments are compacted or not.
-   * See {@link org.apache.druid.timeline.DataSegment} and {@link
-   * org.apache.druid.server.coordinator.compact.NewestSegmentFirstIterator} for more details.
+   * Context flag to denote if segments published to metadata by a task should
+   * have the {@code lastCompactionState} field set.
    */
   public static final String STORE_COMPACTION_STATE_KEY = "storeCompactionState";
 
   static {
     Verify.verify(STORE_COMPACTION_STATE_KEY.equals(CompactSegments.STORE_COMPACTION_STATE_KEY));
-  }
-
-  public static SortedSet<Interval> computeCondensedIntervals(SortedSet<Interval> intervals)
-  {
-    final SortedSet<Interval> condensedIntervals = new TreeSet<>(Comparators.intervalsByStartThenEnd());
-    List<Interval> toBeAccumulated = new ArrayList<>();
-    for (Interval interval : intervals) {
-      if (toBeAccumulated.size() == 0) {
-        toBeAccumulated.add(interval);
-      } else {
-        if (toBeAccumulated.get(toBeAccumulated.size() - 1).abuts(interval)) {
-          toBeAccumulated.add(interval);
-        } else {
-          condensedIntervals.add(JodaUtils.umbrellaInterval(toBeAccumulated));
-          toBeAccumulated.clear();
-          toBeAccumulated.add(interval);
-        }
-      }
-    }
-    if (toBeAccumulated.size() > 0) {
-      condensedIntervals.add(JodaUtils.umbrellaInterval(toBeAccumulated));
-    }
-    return condensedIntervals;
   }
 }

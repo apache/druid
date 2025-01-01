@@ -59,7 +59,6 @@ import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -84,8 +83,7 @@ import java.util.stream.Collectors;
  */
 public class RabbitStreamSupervisor extends SeekableStreamSupervisor<String, Long, ByteEntity>
 {
-  public static final TypeReference<TreeMap<Integer, Map<String, Long>>> CHECKPOINTS_TYPE_REF = new TypeReference<TreeMap<Integer, Map<String, Long>>>() {
-  };
+  public static final TypeReference<TreeMap<Integer, Map<String, Long>>> CHECKPOINTS_TYPE_REF = new TypeReference<>() {};
 
   private static final EmittingLogger log = new EmittingLogger(RabbitStreamSupervisor.class);
   private static final Long NOT_SET = -1L;
@@ -202,7 +200,9 @@ public class RabbitStreamSupervisor extends SeekableStreamSupervisor<String, Lon
         minimumMessageTime,
         maximumMessageTime,
         ioConfig.getInputFormat(),
-        rabbitConfig.getUri());
+        rabbitConfig.getUri(),
+        ioConfig.getTaskDuration().getStandardMinutes()
+    );
   }
 
   @Override

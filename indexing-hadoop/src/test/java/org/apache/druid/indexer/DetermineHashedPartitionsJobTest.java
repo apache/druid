@@ -32,7 +32,6 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
-import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
@@ -158,46 +157,45 @@ public class DetermineHashedPartitionsJobTest
     }
 
     HadoopIngestionSpec ingestionSpec = new HadoopIngestionSpec(
-        new DataSchema(
-            "test_schema",
-            HadoopDruidIndexerConfig.JSON_MAPPER.convertValue(
-                new StringInputRowParser(
-                    new DelimitedParseSpec(
-                        new TimestampSpec("ts", null, null),
-                        new DimensionsSpec(
-                            DimensionsSpec.getDefaultSchemas(ImmutableList.of(
-                                "market",
-                                "quality",
-                                "placement",
-                                "placementish"
-                            ))
-                        ),
-                        "\t",
-                        null,
-                        Arrays.asList(
-                            "ts",
-                            "market",
-                            "quality",
-                            "placement",
-                            "placementish",
-                            "index"
-                        ),
-                        false,
-                        0
-                    ),
-                    null
-                ),
-                Map.class
-            ),
-            new AggregatorFactory[]{new DoubleSumAggregatorFactory("index", "index")},
-            new UniformGranularitySpec(
-                segmentGranularity,
-                Granularities.NONE,
-                intervals
-            ),
-            null,
-            HadoopDruidIndexerConfig.JSON_MAPPER
-        ),
+        DataSchema.builder()
+                  .withDataSource("test_schema")
+                  .withParserMap(HadoopDruidIndexerConfig.JSON_MAPPER.convertValue(
+                      new StringInputRowParser(
+                          new DelimitedParseSpec(
+                              new TimestampSpec("ts", null, null),
+                              new DimensionsSpec(
+                                  DimensionsSpec.getDefaultSchemas(ImmutableList.of(
+                                      "market",
+                                      "quality",
+                                      "placement",
+                                      "placementish"
+                                  ))
+                              ),
+                              "\t",
+                              null,
+                              Arrays.asList(
+                                  "ts",
+                                  "market",
+                                  "quality",
+                                  "placement",
+                                  "placementish",
+                                  "index"
+                              ),
+                              false,
+                              0
+                          ),
+                          null
+                      ),
+                      Map.class
+                  ))
+                  .withAggregators(new DoubleSumAggregatorFactory("index", "index"))
+                  .withGranularity(new UniformGranularitySpec(
+                      segmentGranularity,
+                      Granularities.NONE,
+                      intervals
+                  ))
+                  .withObjectMapper(HadoopDruidIndexerConfig.JSON_MAPPER)
+                  .build(),
         new HadoopIOConfig(
             ImmutableMap.of(
                 "paths",
@@ -216,6 +214,7 @@ public class DetermineHashedPartitionsJobTest
             null,
             null,
             null,
+            false,
             false,
             false,
             false,

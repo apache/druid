@@ -30,18 +30,34 @@ import org.apache.druid.indexing.overlord.CriticalAction;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.metadata.PendingSegmentRecord;
 import org.apache.druid.metadata.ReplaceTaskLock;
+import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.SegmentUtils;
-import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
 
-import java.util.Map;
+import javax.annotation.Nullable;
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
  * Replace segments in metadata storage. The segment versions must all be less than or equal to a lock held by
  * your task for the segment intervals.
+ *
+ * <pre>
+ *  Pseudo code (for a single interval)
+ *- For a replace lock held over an interval:
+ *     transaction {
+ *       commit input segments contained within interval
+ *       upgrade ids in the upgradeSegments table corresponding to this task to the replace lock's version and commit them
+ *       fetch payload, task_allocator_id for pending segments
+ *       upgrade each such pending segment to the replace lock's version with the corresponding root segment
+ *     }
+ * For every pending segment with version == replace lock version:
+ *    Fetch payload, group_id or the pending segment and relay them to the supervisor
+ *    The supervisor relays the payloads to all the tasks with the corresponding group_id to serve realtime queries
+ * </pre>
  */
 public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPublishResult>
 {
@@ -52,19 +68,25 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
    */
   private final Set<DataSegment> segments;
 
+  @Nullable
+  private final SegmentSchemaMapping segmentSchemaMapping;
+
   public static SegmentTransactionalReplaceAction create(
-      Set<DataSegment> segmentsToPublish
+      Set<DataSegment> segmentsToPublish,
+      SegmentSchemaMapping segmentSchemaMapping
   )
   {
-    return new SegmentTransactionalReplaceAction(segmentsToPublish);
+    return new SegmentTransactionalReplaceAction(segmentsToPublish, segmentSchemaMapping);
   }
 
   @JsonCreator
   private SegmentTransactionalReplaceAction(
-      @JsonProperty("segments") Set<DataSegment> segments
+      @JsonProperty("segments") Set<DataSegment> segments,
+      @JsonProperty("segmentSchemaMapping") @Nullable SegmentSchemaMapping segmentSchemaMapping
   )
   {
     this.segments = ImmutableSet.copyOf(segments);
+    this.segmentSchemaMapping = segmentSchemaMapping;
   }
 
   @JsonProperty
@@ -73,12 +95,17 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
     return segments;
   }
 
+  @JsonProperty
+  @Nullable
+  public SegmentSchemaMapping getSegmentSchemaMapping()
+  {
+    return segmentSchemaMapping;
+  }
+
   @Override
   public TypeReference<SegmentPublishResult> getReturnTypeReference()
   {
-    return new TypeReference<SegmentPublishResult>()
-    {
-    };
+    return new TypeReference<>() {};
   }
 
   /**
@@ -101,7 +128,7 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
           CriticalAction.<SegmentPublishResult>builder()
               .onValidLocks(
                   () -> toolbox.getIndexerMetadataStorageCoordinator()
-                               .commitReplaceSegments(segments, replaceLocksForTask)
+                               .commitReplaceSegments(segments, replaceLocksForTask, segmentSchemaMapping)
               )
               .onInvalidLocks(
                   () -> SegmentPublishResult.fail(
@@ -123,7 +150,7 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
     // failure to upgrade pending segments does not affect success of the commit
     if (publishResult.isSuccess() && toolbox.getSupervisorManager() != null) {
       try {
-        tryUpgradeOverlappingPendingSegments(task, toolbox);
+        registerUpgradedPendingSegmentsOnSupervisor(task, toolbox, publishResult.getUpgradedPendingSegments());
       }
       catch (Exception e) {
         log.error(e, "Error while upgrading pending segments for task[%s]", task.getId());
@@ -134,41 +161,28 @@ public class SegmentTransactionalReplaceAction implements TaskAction<SegmentPubl
   }
 
   /**
-   * Tries to upgrade any pending segments that overlap with the committed segments.
+   * Registers upgraded pending segments on the active supervisor, if any
    */
-  private void tryUpgradeOverlappingPendingSegments(Task task, TaskActionToolbox toolbox)
+  private void registerUpgradedPendingSegmentsOnSupervisor(
+      Task task,
+      TaskActionToolbox toolbox,
+      List<PendingSegmentRecord> upgradedPendingSegments
+  )
   {
     final SupervisorManager supervisorManager = toolbox.getSupervisorManager();
     final Optional<String> activeSupervisorIdWithAppendLock =
         supervisorManager.getActiveSupervisorIdForDatasourceWithAppendLock(task.getDataSource());
+
     if (!activeSupervisorIdWithAppendLock.isPresent()) {
       return;
     }
 
-    final Set<String> activeRealtimeSequencePrefixes
-        = supervisorManager.getActiveRealtimeSequencePrefixes(activeSupervisorIdWithAppendLock.get());
-    Map<SegmentIdWithShardSpec, SegmentIdWithShardSpec> upgradedPendingSegments =
-        toolbox.getIndexerMetadataStorageCoordinator()
-               .upgradePendingSegmentsOverlappingWith(segments, activeRealtimeSequencePrefixes);
-    log.info(
-        "Upgraded [%d] pending segments for REPLACE task[%s]: [%s]",
-        upgradedPendingSegments.size(), task.getId(), upgradedPendingSegments
-    );
-
     upgradedPendingSegments.forEach(
-        (oldId, newId) -> toolbox.getSupervisorManager()
-                                 .registerNewVersionOfPendingSegmentOnSupervisor(
-                                     activeSupervisorIdWithAppendLock.get(),
-                                     oldId,
-                                     newId
-                                 )
+        upgradedPendingSegment -> supervisorManager.registerUpgradedPendingSegmentOnSupervisor(
+            activeSupervisorIdWithAppendLock.get(),
+            upgradedPendingSegment
+        )
     );
-  }
-
-  @Override
-  public boolean isAudited()
-  {
-    return true;
   }
 
   @Override

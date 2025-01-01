@@ -47,7 +47,7 @@ by range using the [`single_dim` partitionsSpec](../ingestion/native-batch.md#pa
 the dimension used for partitioning.
 
 3. The Broker, having pruned the list of segments for the query, forwards the query to data servers (like Historicals
-and tasks running on MiddleManagers) that are currently serving those segments.
+and tasks running on Middle Managers) that are currently serving those segments.
 
 4. For all query types except [Scan](scan-query.md), data servers process each segment in parallel and generate partial
 results for each segment. The specific processing that is done depends on the query type. These partial results may be
@@ -93,9 +93,9 @@ cannot exceed the [`druid.server.http.maxSubqueryRows`](../configuration/index.m
 [`druid.server.http.maxSubqueryBytes`](../configuration/index.md) if set. Otherwise, Druid throws a resource limit exceeded 
 exception.
 
-There is one exception: if the outer query and all subqueries are the [groupBy](groupbyquery.md) type, then subquery
-results can be processed in a streaming fashion and the `druid.server.http.maxSubqueryRows` and `druid.server.http.maxSubqueryBytes` 
-limits do not apply.
+There is one exception: if the outer query is of type [`groupBy`](groupbyquery.md), and has a `dataSource` of type
+`query` that is itself another `groupBy`, then subquery results can be processed in a streaming fashion. In this case
+the `druid.server.http.maxSubqueryRows` and `druid.server.http.maxSubqueryBytes` limits do not apply.
 
 ### `join`
 

@@ -24,6 +24,7 @@ import com.google.inject.Inject;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.testing.clients.CoordinatorResourceTestClient;
 import org.apache.druid.testing.guice.DruidTestModuleFactory;
@@ -41,7 +42,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
-@Test(groups = {TestNGGroup.BATCH_INDEX, TestNGGroup.QUICKSTART_COMPATIBLE})
+@Test(groups = {TestNGGroup.BATCH_INDEX, TestNGGroup.QUICKSTART_COMPATIBLE, TestNGGroup.CDS_TASK_SCHEMA_PUBLISH_DISABLED, TestNGGroup.CDS_COORDINATOR_METADATA_QUERY_DISABLED})
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITIndexerTest extends AbstractITBatchIndexTest
 {
@@ -342,12 +343,12 @@ public class ITIndexerTest extends AbstractITBatchIndexTest
       submitIndexTask(INDEX_TASK, datasourceName);
 
       // Wait until it acquires a lock
-      final Map<String, Integer> minTaskPriority = Collections.singletonMap(datasourceName, 0);
+      final List<LockFilterPolicy> lockFilterPolicies = Collections.singletonList(new LockFilterPolicy(datasourceName, 0, null, null));
       final Map<String, List<Interval>> lockedIntervals = new HashMap<>();
       ITRetryUtil.retryUntilFalse(
           () -> {
             lockedIntervals.clear();
-            lockedIntervals.putAll(indexer.getLockedIntervals(minTaskPriority));
+            lockedIntervals.putAll(indexer.getLockedIntervals(lockFilterPolicies));
             return lockedIntervals.isEmpty();
           },
           "Verify Intervals are Locked"

@@ -61,7 +61,11 @@ public class ConfigManager
   private volatile PollingCallable poller;
 
   @Inject
-  public ConfigManager(MetadataStorageConnector dbConnector, Supplier<MetadataStorageTablesConfig> dbTables, Supplier<ConfigManagerConfig> config)
+  public ConfigManager(
+      MetadataStorageConnector dbConnector,
+      Supplier<MetadataStorageTablesConfig> dbTables,
+      Supplier<ConfigManagerConfig> config
+  )
   {
     this.dbConnector = dbConnector;
     this.config = config;
@@ -137,20 +141,20 @@ public class ConfigManager
               public ConfigHolder<T> call()
               {
                 if (!started) {
-                  watchedConfigs.put(key, new ConfigHolder<T>(null, serde));
+                  watchedConfigs.put(key, new ConfigHolder<>(null, serde));
                 } else {
                   try {
                     // Multiple of these callables can be submitted at the same time, but the callables themselves
                     // are executed serially, so double check that it hasn't already been populated.
                     if (!watchedConfigs.containsKey(key)) {
                       byte[] value = dbConnector.lookup(configTable, "name", "payload", key);
-                      ConfigHolder<T> holder = new ConfigHolder<T>(value, serde);
+                      ConfigHolder<T> holder = new ConfigHolder<>(value, serde);
                       watchedConfigs.put(key, holder);
                     }
                   }
                   catch (Exception e) {
                     log.warn(e, "Failed loading config for key[%s]", key);
-                    watchedConfigs.put(key, new ConfigHolder<T>(null, serde));
+                    watchedConfigs.put(key, new ConfigHolder<>(null, serde));
                   }
                 }
 
@@ -287,9 +291,9 @@ public class ConfigManager
         ConfigSerde<T> serde
     )
     {
-      this.rawBytes = new AtomicReference<byte[]>(rawBytes);
+      this.rawBytes = new AtomicReference<>(rawBytes);
       this.serde = serde;
-      this.reference = new AtomicReference<T>(serde.deserialize(rawBytes));
+      this.reference = new AtomicReference<>(serde.deserialize(rawBytes));
     }
 
     public AtomicReference<T> getReference()

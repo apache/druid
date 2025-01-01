@@ -96,6 +96,7 @@ public class GroupByQueryRunnerFactoryTest
           @Override
           public Sequence run(QueryPlus queryPlus, ResponseContext responseContext)
           {
+            //noinspection unchecked
             return factory.getToolchest().mergeResults(
                 new QueryRunner()
                 {
@@ -108,8 +109,8 @@ public class GroupByQueryRunnerFactoryTest
                           query.getResultOrdering(),
                           Sequences.simple(
                               Arrays.asList(
-                                  factory.createRunner(createSegment()).run(queryPlus, responseContext),
-                                  factory.createRunner(createSegment()).run(queryPlus, responseContext)
+                                  Sequences.simple(factory.createRunner(createSegment()).run(queryPlus, responseContext).toList()),
+                                  Sequences.simple(factory.createRunner(createSegment()).run(queryPlus, responseContext).toList())
                               )
                           )
                       );
@@ -118,13 +119,17 @@ public class GroupByQueryRunnerFactoryTest
                       throw new RuntimeException(e);
                     }
                   }
-                }
-            ).run(queryPlus, responseContext);
+                },
+                false
+            ).run(GroupByQueryRunnerTestHelper.populateResourceId(queryPlus), responseContext);
           }
         }
     );
 
-    Sequence<ResultRow> result = mergedRunner.run(QueryPlus.wrap(query), ResponseContext.createEmpty());
+    Sequence<ResultRow> result = mergedRunner.run(
+        QueryPlus.wrap(GroupByQueryRunnerTestHelper.populateResourceId(query)),
+        ResponseContext.createEmpty()
+    );
 
     List<ResultRow> expectedResults = Arrays.asList(
         GroupByQueryRunnerTestHelper.createExpectedRow(query, "1970-01-01T00:00:00.000Z", "tags", "t1", "count", 2L),

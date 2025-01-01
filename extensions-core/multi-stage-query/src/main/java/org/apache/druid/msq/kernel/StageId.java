@@ -21,8 +21,8 @@ package org.apache.druid.msq.kernel;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
-import com.google.common.base.Strings;
 import org.apache.druid.common.guava.GuavaUtils;
+import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 
@@ -31,6 +31,9 @@ import java.util.Objects;
 
 /**
  * Globally unique stage identifier: query ID plus stage number.
+ *
+ * Note: Versions till Druid 30 had a bug in the QueryKits which populated the {@link #queryId} field with random
+ * UUIDs. Therefore, all usage of the field must be vetted instead of assuming that it will be the expected query id
  */
 public class StageId implements Comparable<StageId>
 {
@@ -43,15 +46,11 @@ public class StageId implements Comparable<StageId>
 
   public StageId(final String queryId, final int stageNumber)
   {
-    if (Strings.isNullOrEmpty(queryId)) {
-      throw new IAE("Null or empty queryId");
-    }
-
     if (stageNumber < 0) {
       throw new IAE("Invalid stageNumber [%s]", stageNumber);
     }
 
-    this.queryId = queryId;
+    this.queryId = IdUtils.validateId("queryId", queryId);
     this.stageNumber = stageNumber;
   }
 

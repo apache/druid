@@ -20,6 +20,7 @@
 package org.apache.druid.msq.test;
 
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.msq.indexing.report.MSQResultsReport.ColumnAndType;
 import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
 import org.apache.druid.sql.calcite.QueryTestBuilder;
@@ -99,7 +100,10 @@ public class ExtractResultsFactory implements QueryTestRunner.QueryRunStepFactor
           if (resultRows == null) {
             throw new ISE("Results report not present in the task's report payload");
           }
-          extractedResults.add(results.withResults(resultRows));
+          extractedResults.add(
+              results.withSignatureAndResults(
+                  ColumnAndType.toRowSignature(payload.getResults().getSignature()), resultRows)
+          );
         }
       }
 

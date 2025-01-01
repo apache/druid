@@ -22,7 +22,6 @@ package org.apache.druid.common.config;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.inject.Inject;
-import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.ValueMatcher;
@@ -130,8 +129,7 @@ public class NullHandling
   public static boolean useThreeValueLogic()
   {
     return NullHandling.sqlCompatible() &&
-           INSTANCE.isUseThreeValueLogicForNativeFilters() &&
-           ExpressionProcessing.useStrictBooleans();
+           INSTANCE.isUseThreeValueLogicForNativeFilters();
   }
 
   @Nullable
@@ -140,6 +138,33 @@ public class NullHandling
     //CHECKSTYLE.OFF: Regexp
     return replaceWithDefault() ? Strings.nullToEmpty(value) : value;
     //CHECKSTYLE.ON: Regexp
+  }
+
+  @Nullable
+  public static Long nullToEmptyIfNeeded(@Nullable Long value)
+  {
+    if (replaceWithDefault() && value == null) {
+      return defaultLongValue();
+    }
+    return value;
+  }
+
+  @Nullable
+  public static Float nullToEmptyIfNeeded(@Nullable Float value)
+  {
+    if (replaceWithDefault() && value == null) {
+      return defaultFloatValue();
+    }
+    return value;
+  }
+
+  @Nullable
+  public static Double nullToEmptyIfNeeded(@Nullable Double value)
+  {
+    if (replaceWithDefault() && value == null) {
+      return defaultDoubleValue();
+    }
+    return value;
   }
 
   @Nullable

@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.coordination;
 
-import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
@@ -59,8 +58,7 @@ public class LoadableDataSegment extends DataSegment
       @JsonProperty("shardSpec") @Nullable ShardSpec shardSpec,
       @JsonProperty("lastCompactionState") @Nullable CompactionState lastCompactionState,
       @JsonProperty("binaryVersion") Integer binaryVersion,
-      @JsonProperty("size") long size,
-      @JacksonInject PruneSpecsHolder pruneSpecsHolder
+      @JsonProperty("size") long size
   )
   {
     super(

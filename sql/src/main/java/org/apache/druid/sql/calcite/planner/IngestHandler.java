@@ -37,6 +37,7 @@ import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.granularity.Granularity;
+import org.apache.druid.query.explain.ExplainAttributes;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
@@ -186,7 +187,8 @@ public abstract class IngestHandler extends QueryHandler
     final RelDataTypeFactory typeFactory = rootQueryRel.rel.getCluster().getTypeFactory();
     return handlerContext.engine().resultTypeForInsert(
         typeFactory,
-        rootQueryRel.validatedRowType
+        rootQueryRel.validatedRowType,
+        handlerContext.queryContextMap()
     );
   }
 
@@ -341,7 +343,6 @@ public abstract class IngestHandler extends QueryHandler
     protected static DruidSqlReplace convertQuery(DruidSqlReplace sqlNode)
     {
       SqlNode query = convertSourceQuery(sqlNode);
-
       return DruidSqlReplace.create(
           new SqlInsert(
               sqlNode.getParserPosition(),

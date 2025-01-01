@@ -17,7 +17,6 @@
  */
 
 import { render } from '@testing-library/react';
-import React from 'react';
 
 import { FlexibleQueryInput } from './flexible-query-input';
 
@@ -29,15 +28,5 @@ describe('FlexibleQueryInput', () => {
 
     const { container } = render(sqlControl);
     expect(container.firstChild).toMatchSnapshot();
-  });
-
-  it('correctly formats helper HTML', () => {
-    expect(
-      FlexibleQueryInput.makeDocHtml({
-        name: 'COUNT',
-        syntax: 'COUNT(*)',
-        description: 'Counts the number of things',
-      }),
-    ).toMatchSnapshot();
   });
 });

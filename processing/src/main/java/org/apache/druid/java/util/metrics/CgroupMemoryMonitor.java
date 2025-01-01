@@ -25,6 +25,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.java.util.metrics.cgroups.CgroupDiscoverer;
 import org.apache.druid.java.util.metrics.cgroups.Memory;
+import org.apache.druid.java.util.metrics.cgroups.ProcSelfCgroupDiscoverer;
 
 import java.util.Map;
 
@@ -42,7 +43,7 @@ public class CgroupMemoryMonitor extends FeedDefiningMonitor
 
   public CgroupMemoryMonitor(final Map<String, String[]> dimensions, String feed)
   {
-    this(null, dimensions, feed);
+    this(new ProcSelfCgroupDiscoverer(), dimensions, feed);
   }
 
   public CgroupMemoryMonitor(final Map<String, String[]> dimensions)
@@ -59,19 +60,31 @@ public class CgroupMemoryMonitor extends FeedDefiningMonitor
   public boolean doMonitor(ServiceEmitter emitter)
   {
     final Memory memory = new Memory(cgroupDiscoverer);
-    final Memory.MemoryStat stat = memory.snapshot();
+    final Memory.MemoryStat stat = memory.snapshot(memoryUsageFile(), memoryLimitFile());
+    final ServiceMetricEvent.Builder builder = builder();
+    MonitorUtils.addDimensionsToBuilder(builder, dimensions);
+    emitter.emit(builder.setMetric("cgroup/memory/usage/bytes", stat.getUsage()));
+    emitter.emit(builder.setMetric("cgroup/memory/limit/bytes", stat.getLimit()));
+
     stat.getMemoryStats().forEach((key, value) -> {
-      final ServiceMetricEvent.Builder builder = builder();
-      MonitorUtils.addDimensionsToBuilder(builder, dimensions);
       // See https://www.kernel.org/doc/Documentation/cgroup-v1/memory.txt
       // There are inconsistent units for these. Most are bytes.
       emitter.emit(builder.setMetric(StringUtils.format("cgroup/memory/%s", key), value));
     });
     stat.getNumaMemoryStats().forEach((key, value) -> {
-      final ServiceMetricEvent.Builder builder = builder().setDimension("numaZone", Long.toString(key));
-      MonitorUtils.addDimensionsToBuilder(builder, dimensions);
+      builder().setDimension("numaZone", Long.toString(key));
       value.forEach((k, v) -> emitter.emit(builder.setMetric(StringUtils.format("cgroup/memory_numa/%s/pages", k), v)));
     });
     return true;
+  }
+
+  public String memoryUsageFile()
+  {
+    return "memory.usage_in_bytes";
+  }
+
+  public String memoryLimitFile()
+  {
+    return "memory.limit_in_bytes";
   }
 }

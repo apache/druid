@@ -102,7 +102,7 @@ public class HllSketchMergeVectorAggregator implements VectorAggregator
   @Override
   public void close()
   {
-    helper.close();
+    helper.clear();
   }
 
   @Override

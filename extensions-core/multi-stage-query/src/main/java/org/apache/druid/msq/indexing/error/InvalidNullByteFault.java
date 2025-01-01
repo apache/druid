@@ -64,7 +64,8 @@ public class InvalidNullByteFault extends BaseMSQFault
     super(
         CODE,
         "Invalid null byte at source[%s], rowNumber[%d], column[%s], value[%s], position[%d]. "
-        + "Consider sanitizing the input string column using REPLACE(\"%s\", U&'\\0000', '') AS %s",
+        + "Consider sanitizing the input string column using \"REPLACE(\"%s\", U&'\\0000', '') AS %s\" or setting 'removeNullBytes' "
+        + "to true in the query context.",
         source,
         rowNumber,
         column,

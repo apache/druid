@@ -27,6 +27,7 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.storage.ExportStorageProvider;
 import org.apache.druid.storage.StorageConfig;
 import org.apache.druid.storage.StorageConnector;
@@ -53,7 +54,7 @@ public class LocalFileExportStorageProvider implements ExportStorageProvider
   }
 
   @Override
-  public StorageConnector get()
+  public StorageConnector createStorageConnector(File taskTempDir)
   {
     final File exportDestination = validateAndGetPath(storageConfig.getBaseDir(), exportPath);
     try {
@@ -81,6 +82,13 @@ public class LocalFileExportStorageProvider implements ExportStorageProvider
   public String getBasePath()
   {
     return exportPath;
+  }
+
+  @Override
+  public String getFilePathForManifest(String fileName)
+  {
+    final File exportFile = new File(exportPath, fileName);
+    return StringUtils.format("file:%s", exportFile.toPath().normalize());
   }
 
   @Override

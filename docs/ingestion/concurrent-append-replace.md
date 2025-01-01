@@ -22,10 +22,6 @@ title: Concurrent append and replace
   ~ under the License.
   -->
 
-:::info
-Concurrent append and replace is an [experimental feature](../development/experimental.md) available for JSON-based batch and streaming. It is not currently available for SQL-based ingestion.
-:::
-
 Concurrent append and replace safely replaces the existing data in an interval of a datasource while new data is being appended to that interval. One of the most common applications of this feature is appending new data (such as with streaming ingestion) to an interval while compaction of that interval is already in progress. Druid segments the data ingested during this time dynamically. The subsequent compaction run segments the data into the  granularity you specified.
 
 To set up concurrent append and replace, use the context flag `useConcurrentLocks`. Druid will then determine the correct lock type for you, either append or replace. Although you can set the type of lock manually, we don't recommend it. 
@@ -38,7 +34,7 @@ If you want to append data to a datasource while compaction is running, you need
 
 In the **Compaction config** for a datasource, enable  **Use concurrent locks (experimental)**.
 
-For details on accessing the compaction config in the UI, see [Enable automatic compaction with the web console](../data-management/automatic-compaction.md#web-console).
+For details on accessing the compaction config in the UI, see [Enable automatic compaction with the web console](../data-management/automatic-compaction.md#manage-auto-compaction-using-the-web-console).
 
 ### Update the compaction settings with the API
  

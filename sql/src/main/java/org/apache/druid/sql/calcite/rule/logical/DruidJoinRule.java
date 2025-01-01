@@ -24,6 +24,8 @@ import org.apache.calcite.plan.RelTraitSet;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.convert.ConverterRule;
 import org.apache.calcite.rel.core.Join;
+import org.apache.calcite.rel.core.JoinRelType;
+import org.apache.calcite.rex.RexNode;
 import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.sql.calcite.rel.logical.DruidJoin;
 import org.apache.druid.sql.calcite.rel.logical.DruidLogicalConvention;
@@ -54,7 +56,6 @@ public class DruidJoinRule extends ConverterRule
       // reject the query in case the anaysis detected any issues
       throw InvalidSqlInput.exception(analysis.errorStr);
     }
-
     return new DruidJoin(
         join.getCluster(),
         newTrait,
@@ -67,10 +68,19 @@ public class DruidJoinRule extends ConverterRule
             join.getRight(),
             DruidLogicalConvention.instance()
         ),
-        join.getCondition(),
+        analysis.getConditionWithUnsupportedSubConditionsIgnored(join.getCluster().getRexBuilder()),
         join.getVariablesSet(),
         join.getJoinType()
     );
   }
 
+  public static boolean isSupportedPredicate(Join join, JoinRelType joinType, RexNode exp)
+  {
+    ConditionAnalysis analysis = org.apache.druid.sql.calcite.rule.DruidJoinRule.analyzeCondition(
+        exp,
+        join.getLeft().getRowType(),
+        join.getCluster().getRexBuilder()
+    );
+    return analysis.errorStr == null;
+  }
 }

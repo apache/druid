@@ -21,6 +21,7 @@ package org.apache.druid.timeline.partition;
 
 /**
  * ShardSpec for non-first-generation segments.
+ * This shardSpec is created only by overwriting tasks using segment locks.
  * This shardSpec is allocated a partitionId between {@link PartitionIds#NON_ROOT_GEN_START_PARTITION_ID} and
  * {@link PartitionIds#NON_ROOT_GEN_END_PARTITION_ID}.
  *

@@ -51,8 +51,6 @@ public class CoordinatorDynamicConfig
   public static final String CONFIG_KEY = "coordinator.config";
 
   private final long markSegmentAsUnusedDelayMillis;
-  private final long mergeBytesLimit;
-  private final int mergeSegmentsLimit;
   private final int maxSegmentsToMove;
   private final int replicantLifetime;
   private final int replicationThrottleLimit;
@@ -98,8 +96,6 @@ public class CoordinatorDynamicConfig
       // updated to Jackson 2.9 it could be changed, see https://github.com/apache/druid/issues/7152
       @JsonProperty("millisToWaitBeforeDeleting")
           long markSegmentAsUnusedDelayMillis,
-      @JsonProperty("mergeBytesLimit") long mergeBytesLimit,
-      @JsonProperty("mergeSegmentsLimit") int mergeSegmentsLimit,
       @JsonProperty("maxSegmentsToMove") int maxSegmentsToMove,
       @JsonProperty("replicantLifetime") int replicantLifetime,
       @JsonProperty("replicationThrottleLimit") int replicationThrottleLimit,
@@ -127,8 +123,6 @@ public class CoordinatorDynamicConfig
   {
     this.markSegmentAsUnusedDelayMillis =
         markSegmentAsUnusedDelayMillis;
-    this.mergeBytesLimit = mergeBytesLimit;
-    this.mergeSegmentsLimit = mergeSegmentsLimit;
     this.maxSegmentsToMove = maxSegmentsToMove;
     this.smartSegmentLoading = Builder.valueOrDefault(smartSegmentLoading, Defaults.SMART_SEGMENT_LOADING);
 
@@ -143,14 +137,14 @@ public class CoordinatorDynamicConfig
           killTaskSlotRatio
       );
     }
-    this.killTaskSlotRatio = killTaskSlotRatio != null ? killTaskSlotRatio : Defaults.KILL_TASK_SLOT_RATIO;
+    this.killTaskSlotRatio = Builder.valueOrDefault(killTaskSlotRatio, Defaults.KILL_TASK_SLOT_RATIO);
     if (null != maxKillTaskSlots && maxKillTaskSlots < 0) {
       throw InvalidInput.exception(
           "maxKillTaskSlots [%d] is invalid. It must be >= 0.",
           maxKillTaskSlots
       );
     }
-    this.maxKillTaskSlots = maxKillTaskSlots != null ? maxKillTaskSlots : Defaults.MAX_KILL_TASK_SLOTS;
+    this.maxKillTaskSlots = Builder.valueOrDefault(maxKillTaskSlots, Defaults.MAX_KILL_TASK_SLOTS);
     this.dataSourcesToNotKillStalePendingSegmentsIn
         = parseJsonStringOrArray(dataSourcesToNotKillStalePendingSegmentsIn);
     this.maxSegmentsInNodeLoadingQueue = Builder.valueOrDefault(
@@ -213,18 +207,6 @@ public class CoordinatorDynamicConfig
   }
 
   @JsonProperty
-  public long getMergeBytesLimit()
-  {
-    return mergeBytesLimit;
-  }
-
-  @JsonProperty
-  public int getMergeSegmentsLimit()
-  {
-    return mergeSegmentsLimit;
-  }
-
-  @JsonProperty
   public int getMaxSegmentsToMove()
   {
     return maxSegmentsToMove;
@@ -266,12 +248,6 @@ public class CoordinatorDynamicConfig
     return maxKillTaskSlots;
   }
 
-  @JsonIgnore
-  public boolean isKillUnusedSegmentsInAllDataSources()
-  {
-    return specificDataSourcesToKillUnusedSegmentsIn.isEmpty();
-  }
-
   @JsonProperty("killPendingSegmentsSkipList")
   public Set<String> getDataSourcesToNotKillStalePendingSegmentsIn()
   {
@@ -300,7 +276,7 @@ public class CoordinatorDynamicConfig
    * List of historical servers to 'decommission'. Coordinator will not assign new segments to 'decommissioning'
    * servers, and segments will be moved away from them to be placed on non-decommissioning servers.
    *
-   * @return list of host:port entries
+   * @return Set of host:port entries
    */
   @JsonProperty
   public Set<String> getDecommissioningNodes()
@@ -338,8 +314,6 @@ public class CoordinatorDynamicConfig
     return "CoordinatorDynamicConfig{" +
            "leadingTimeMillisBeforeCanMarkAsUnusedOvershadowedSegments="
            + markSegmentAsUnusedDelayMillis +
-           ", mergeBytesLimit=" + mergeBytesLimit +
-           ", mergeSegmentsLimit=" + mergeSegmentsLimit +
            ", maxSegmentsToMove=" + maxSegmentsToMove +
            ", replicantLifetime=" + replicantLifetime +
            ", replicationThrottleLimit=" + replicationThrottleLimit +
@@ -368,8 +342,6 @@ public class CoordinatorDynamicConfig
     CoordinatorDynamicConfig that = (CoordinatorDynamicConfig) o;
 
     return markSegmentAsUnusedDelayMillis == that.markSegmentAsUnusedDelayMillis
-           && mergeBytesLimit == that.mergeBytesLimit
-           && mergeSegmentsLimit == that.mergeSegmentsLimit
            && maxSegmentsToMove == that.maxSegmentsToMove
            && balancerComputeThreads == that.balancerComputeThreads
            && replicantLifetime == that.replicantLifetime
@@ -395,8 +367,6 @@ public class CoordinatorDynamicConfig
   {
     return Objects.hash(
         markSegmentAsUnusedDelayMillis,
-        mergeBytesLimit,
-        mergeSegmentsLimit,
         maxSegmentsToMove,
         replicantLifetime,
         replicationThrottleLimit,
@@ -429,8 +399,6 @@ public class CoordinatorDynamicConfig
   private static class Defaults
   {
     static final long LEADING_MILLIS_BEFORE_MARK_UNUSED = TimeUnit.MINUTES.toMillis(15);
-    static final long MERGE_BYTES_LIMIT = 524_288_000L;
-    static final int MERGE_SEGMENTS_LIMIT = 100;
     static final int MAX_SEGMENTS_TO_MOVE = 100;
     static final int REPLICANT_LIFETIME = 15;
     static final int REPLICATION_THROTTLE_LIMIT = 500;
@@ -440,19 +408,13 @@ public class CoordinatorDynamicConfig
     static final boolean USE_ROUND_ROBIN_ASSIGNMENT = true;
     static final boolean SMART_SEGMENT_LOADING = true;
 
-    // The following default values for killTaskSlotRatio and maxKillTaskSlots
-    // are to preserve the behavior before Druid 0.28 and a future version may
-    // want to consider better defaults so that kill tasks can not eat up all
-    // the capacity in the cluster would be nice
-    static final double KILL_TASK_SLOT_RATIO = 1.0;
+    static final double KILL_TASK_SLOT_RATIO = 0.1;
     static final int MAX_KILL_TASK_SLOTS = Integer.MAX_VALUE;
   }
 
   public static class Builder
   {
     private Long markSegmentAsUnusedDelayMillis;
-    private Long mergeBytesLimit;
-    private Integer mergeSegmentsLimit;
     private Integer maxSegmentsToMove;
     private Integer replicantLifetime;
     private Integer replicationThrottleLimit;
@@ -476,8 +438,6 @@ public class CoordinatorDynamicConfig
     @JsonCreator
     public Builder(
         @JsonProperty("millisToWaitBeforeDeleting") @Nullable Long markSegmentAsUnusedDelayMillis,
-        @JsonProperty("mergeBytesLimit") @Nullable Long mergeBytesLimit,
-        @JsonProperty("mergeSegmentsLimit") @Nullable Integer mergeSegmentsLimit,
         @JsonProperty("maxSegmentsToMove") @Nullable Integer maxSegmentsToMove,
         @JsonProperty("replicantLifetime") @Nullable Integer replicantLifetime,
         @JsonProperty("replicationThrottleLimit") @Nullable Integer replicationThrottleLimit,
@@ -496,8 +456,6 @@ public class CoordinatorDynamicConfig
     )
     {
       this.markSegmentAsUnusedDelayMillis = markSegmentAsUnusedDelayMillis;
-      this.mergeBytesLimit = mergeBytesLimit;
-      this.mergeSegmentsLimit = mergeSegmentsLimit;
       this.maxSegmentsToMove = maxSegmentsToMove;
       this.replicantLifetime = replicantLifetime;
       this.replicationThrottleLimit = replicationThrottleLimit;
@@ -610,8 +568,6 @@ public class CoordinatorDynamicConfig
               markSegmentAsUnusedDelayMillis,
               Defaults.LEADING_MILLIS_BEFORE_MARK_UNUSED
           ),
-          valueOrDefault(mergeBytesLimit, Defaults.MERGE_BYTES_LIMIT),
-          valueOrDefault(mergeSegmentsLimit, Defaults.MERGE_SEGMENTS_LIMIT),
           valueOrDefault(maxSegmentsToMove, Defaults.MAX_SEGMENTS_TO_MOVE),
           valueOrDefault(replicantLifetime, Defaults.REPLICANT_LIFETIME),
           valueOrDefault(replicationThrottleLimit, Defaults.REPLICATION_THROTTLE_LIMIT),
@@ -642,8 +598,6 @@ public class CoordinatorDynamicConfig
               markSegmentAsUnusedDelayMillis,
               defaults.getMarkSegmentAsUnusedDelayMillis()
           ),
-          valueOrDefault(mergeBytesLimit, defaults.getMergeBytesLimit()),
-          valueOrDefault(mergeSegmentsLimit, defaults.getMergeSegmentsLimit()),
           valueOrDefault(maxSegmentsToMove, defaults.getMaxSegmentsToMove()),
           valueOrDefault(replicantLifetime, defaults.getReplicantLifetime()),
           valueOrDefault(replicationThrottleLimit, defaults.getReplicationThrottleLimit()),

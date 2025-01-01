@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.io.Closer;
@@ -36,6 +37,7 @@ import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
+import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.generator.GeneratorBasicSchemas;
 import org.apache.druid.segment.generator.GeneratorSchemaInfo;
 import org.apache.druid.segment.generator.SegmentGenerator;
@@ -53,6 +55,7 @@ import org.apache.druid.sql.calcite.planner.PlannerResult;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.hook.DruidHookDispatcher;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -200,11 +203,12 @@ public class InPlanningBenchmark
         new CalciteRulesManager(ImmutableSet.of()),
         CalciteTests.createJoinableFactoryWrapper(),
         CatalogResolver.NULL_RESOLVER,
-        new AuthConfig()
+        new AuthConfig(),
+        new DruidHookDispatcher()
     );
 
     String prefix = ("explain plan for select long1 from foo where long1 in ");
-    final String sql = createQuery(prefix, inClauseLiteralsCount);
+    final String sql = createQuery(prefix, inClauseLiteralsCount, ValueType.LONG);
 
     final Sequence<Object[]> resultSequence = getPlan(sql, null);
     final Object[] planResult = resultSequence.toList().get(0);
@@ -222,12 +226,13 @@ public class InPlanningBenchmark
     closer.close();
   }
 
+  @Benchmark
   @BenchmarkMode(Mode.AverageTime)
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
   public void queryInSql(Blackhole blackhole)
   {
     String prefix = "explain plan for select long1 from foo where long1 in ";
-    final String sql = createQuery(prefix, inClauseLiteralsCount);
+    final String sql = createQuery(prefix, inClauseLiteralsCount, ValueType.LONG);
     getPlan(sql, blackhole);
   }
 
@@ -238,7 +243,7 @@ public class InPlanningBenchmark
   {
     String prefix =
         "explain plan for select long1 from foo where string1 = '7' or long1 in ";
-    final String sql = createQuery(prefix, inClauseLiteralsCount);
+    final String sql = createQuery(prefix, inClauseLiteralsCount, ValueType.LONG);
     getPlan(sql, blackhole);
   }
 
@@ -250,7 +255,40 @@ public class InPlanningBenchmark
   {
     String prefix =
         "explain plan for select long1 from foo where string1 = '7' or string1 = '8' or long1 in ";
-    final String sql = createQuery(prefix, inClauseLiteralsCount);
+    final String sql = createQuery(prefix, inClauseLiteralsCount, ValueType.LONG);
+    getPlan(sql, blackhole);
+  }
+
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @OutputTimeUnit(TimeUnit.MILLISECONDS)
+  public void queryStringFunctionInSql(Blackhole blackhole)
+  {
+    String prefix =
+        "explain plan for select count(*) from foo where long1 = 8 or lower(string1) in ";
+    final String sql = createQuery(prefix, inClauseLiteralsCount, ValueType.STRING);
+    getPlan(sql, blackhole);
+  }
+
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @OutputTimeUnit(TimeUnit.MILLISECONDS)
+  public void queryStringFunctionIsNotNullAndNotInSql(Blackhole blackhole)
+  {
+    String prefix =
+        "explain plan for select count(*) from foo where long1 = 8 and lower(string1) is not null and lower(string1) not in ";
+    final String sql = createQuery(prefix, inClauseLiteralsCount, ValueType.STRING);
+    getPlan(sql, blackhole);
+  }
+
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @OutputTimeUnit(TimeUnit.MILLISECONDS)
+  public void queryStringFunctionIsNullOrInSql(Blackhole blackhole)
+  {
+    String prefix =
+        "explain plan for select count(*) from foo where long1 = 8 and (lower(string1) is null or lower(string1) in ";
+    final String sql = createQuery(prefix, inClauseLiteralsCount, ValueType.STRING) + ')';
     getPlan(sql, blackhole);
   }
 
@@ -259,19 +297,32 @@ public class InPlanningBenchmark
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
   public void queryJoinEqualOrInSql(Blackhole blackhole)
   {
-
     String prefix =
         "explain plan for select foo.long1, fooright.string1 from foo inner join foo as fooright on foo.string1 = fooright.string1 where fooright.string1 = '7' or foo.long1 in ";
-    final String sql = createQuery(prefix, inClauseLiteralsCount);
+    final String sql = createQuery(prefix, inClauseLiteralsCount, ValueType.LONG);
     getPlan(sql, blackhole);
   }
 
-  private String createQuery(String prefix, int inClauseLiteralsCount)
+  private String createQuery(String prefix, int inClauseLiteralsCount, ValueType type)
   {
     StringBuilder sqlBuilder = new StringBuilder();
     sqlBuilder.append(prefix).append('(');
-    IntStream.range(1, inClauseLiteralsCount - 1).forEach(i -> sqlBuilder.append(i).append(","));
-    sqlBuilder.append(inClauseLiteralsCount).append(")");
+    IntStream.range(1, inClauseLiteralsCount + 1).forEach(
+        i -> {
+          if (i > 1) {
+            sqlBuilder.append(',');
+          }
+
+          if (type == ValueType.LONG) {
+            sqlBuilder.append(i);
+          } else if (type == ValueType.STRING) {
+            sqlBuilder.append("'").append(i).append("'");
+          } else {
+            throw new ISE("Cannot generate IN with type[%s]", type);
+          }
+        }
+    );
+    sqlBuilder.append(")");
     return sqlBuilder.toString();
   }
 

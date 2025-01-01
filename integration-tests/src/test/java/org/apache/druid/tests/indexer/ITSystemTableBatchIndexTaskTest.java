@@ -30,14 +30,14 @@ import org.testng.annotations.Test;
 import java.io.Closeable;
 import java.util.function.Function;
 
-@Test(groups = TestNGGroup.BATCH_INDEX)
+@Test(groups = {TestNGGroup.BATCH_INDEX})
 @Guice(moduleFactory = DruidTestModuleFactory.class)
 public class ITSystemTableBatchIndexTaskTest extends AbstractITBatchIndexTest
 {
   private static final Logger LOG = new Logger(ITSystemTableBatchIndexTaskTest.class);
   private static final String INDEX_TASK = "/indexer/wikipedia_index_task.json";
   private static final String SYSTEM_QUERIES_RESOURCE = "/indexer/sys_segment_batch_index_queries.json";
-  private static final String INDEX_DATASOURCE = "wikipedia_index_test";
+  private static final String INDEX_DATASOURCE = "sys_segment_wikipedia_index_test";
 
   @Test
   public void testIndexData() throws Exception

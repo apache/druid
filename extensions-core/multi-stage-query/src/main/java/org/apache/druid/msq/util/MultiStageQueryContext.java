@@ -25,15 +25,20 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.opencsv.RFC4180Parser;
 import com.opencsv.RFC4180ParserBuilder;
+import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.msq.counters.NilQueryCounterSnapshot;
 import org.apache.druid.msq.exec.ClusterStatisticsMergeMode;
 import org.apache.druid.msq.exec.Limits;
 import org.apache.druid.msq.exec.SegmentSource;
 import org.apache.druid.msq.indexing.destination.MSQSelectDestination;
+import org.apache.druid.msq.indexing.error.MSQWarnings;
 import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
+import org.apache.druid.msq.rpc.ControllerResource;
+import org.apache.druid.msq.rpc.SketchEncoding;
 import org.apache.druid.msq.sql.MSQMode;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
@@ -99,6 +104,8 @@ public class MultiStageQueryContext
   public static final String CTX_MSQ_MODE = "mode";
   public static final String DEFAULT_MSQ_MODE = MSQMode.STRICT_MODE.toString();
 
+  // Note: CTX_MAX_NUM_TASKS and DEFAULT_MAX_NUM_TASKS values used here should be kept in sync with those in
+  // org.apache.druid.client.indexing.ClientMsqContext
   public static final String CTX_MAX_NUM_TASKS = "maxNumTasks";
   @VisibleForTesting
   static final int DEFAULT_MAX_NUM_TASKS = 2;
@@ -112,6 +119,7 @@ public class MultiStageQueryContext
   public static final String CTX_INCLUDE_SEGMENT_SOURCE = "includeSegmentSource";
   public static final SegmentSource DEFAULT_INCLUDE_SEGMENT_SOURCE = SegmentSource.NONE;
 
+  public static final String CTX_MAX_CONCURRENT_STAGES = "maxConcurrentStages";
   public static final String CTX_DURABLE_SHUFFLE_STORAGE = "durableShuffleStorage";
   private static final boolean DEFAULT_DURABLE_SHUFFLE_STORAGE = false;
   public static final String CTX_SELECT_DESTINATION = "selectDestination";
@@ -130,25 +138,26 @@ public class MultiStageQueryContext
   public static final String CTX_CLUSTER_STATISTICS_MERGE_MODE = "clusterStatisticsMergeMode";
   public static final String DEFAULT_CLUSTER_STATISTICS_MERGE_MODE = ClusterStatisticsMergeMode.SEQUENTIAL.toString();
 
+  public static final String CTX_SKETCH_ENCODING_MODE = "sketchEncoding";
+  public static final String DEFAULT_CTX_SKETCH_ENCODING_MODE = SketchEncoding.OCTET_STREAM.toString();
+
   public static final String CTX_ROWS_PER_SEGMENT = "rowsPerSegment";
   public static final int DEFAULT_ROWS_PER_SEGMENT = 3000000;
 
   public static final String CTX_ROWS_PER_PAGE = "rowsPerPage";
-  static final int DEFAULT_ROWS_PER_PAGE = 100000;
+  public static final int DEFAULT_ROWS_PER_PAGE = 100000;
+
+  public static final String CTX_REMOVE_NULL_BYTES = "removeNullBytes";
+  public static final boolean DEFAULT_REMOVE_NULL_BYTES = false;
 
   public static final String CTX_ROWS_IN_MEMORY = "rowsInMemory";
   // Lower than the default to minimize the impact of per-row overheads that are not accounted for by
   // OnheapIncrementalIndex. For example: overheads related to creating bitmaps during persist.
-  static final int DEFAULT_ROWS_IN_MEMORY = 100000;
+  public static final int DEFAULT_ROWS_IN_MEMORY = 100000;
 
   public static final String CTX_IS_REINDEX = "isReindex";
 
-  /**
-   * Key for controller task's context passed to worker tasks.
-   * Facilitates sharing the controller's execution environment
-   * and configurations with its associated worker tasks.
-   */
-  public static final String CTX_OF_CONTROLLER = "controllerCtx";
+  public static final String CTX_MAX_NUM_SEGMENTS = "maxNumSegments";
 
   /**
    * Controls sort order within segments. Normally, this is the same as the overall order of the query (from the
@@ -162,13 +171,36 @@ public class MultiStageQueryContext
   public static final boolean DEFAULT_USE_AUTO_SCHEMAS = false;
 
   public static final String CTX_ARRAY_INGEST_MODE = "arrayIngestMode";
-  public static final ArrayIngestMode DEFAULT_ARRAY_INGEST_MODE = ArrayIngestMode.MVD;
+  public static final ArrayIngestMode DEFAULT_ARRAY_INGEST_MODE = ArrayIngestMode.ARRAY;
 
-  public static final String NEXT_WINDOW_SHUFFLE_COL = "__windowShuffleCol";
+  /**
+   * Whether new counters (anything other than channel, sortProgress, warnings, segmentGenerationProgress) should
+   * be included in reports. This parameter is necessary because prior to Druid 31, we lacked
+   * {@link NilQueryCounterSnapshot} as a default counter, which means that {@link SqlStatementResourceHelper} and
+   * {@link ControllerResource#httpPostCounters} would throw errors when encountering new counter types that they do
+   * not yet recognize. This causes problems during rolling updates.
+   *
+   * Once all servers are on Druid 31 or later, this can safely be flipped to "true". At that point, unknown counters
+   * are represented on the deserialization side using {@link NilQueryCounterSnapshot}.
+   */
+  public static final String CTX_INCLUDE_ALL_COUNTERS = "includeAllCounters";
+  public static final boolean DEFAULT_INCLUDE_ALL_COUNTERS = false;
+
+  public static final String CTX_FORCE_TIME_SORT = DimensionsSpec.PARAMETER_FORCE_TIME_SORT;
+  private static final boolean DEFAULT_FORCE_TIME_SORT = DimensionsSpec.DEFAULT_FORCE_TIME_SORT;
 
   public static final String MAX_ROWS_MATERIALIZED_IN_WINDOW = "maxRowsMaterializedInWindow";
 
+  // This flag ensures backward compatibility and will be removed in Druid 33, with the default behavior as enabled.
+  public static final String WINDOW_FUNCTION_OPERATOR_TRANSFORMATION = "windowFunctionOperatorTransformation";
+
   public static final String CTX_SKIP_TYPE_VERIFICATION = "skipTypeVerification";
+
+  /**
+   * Number of partitions to target per worker when creating shuffle specs that involve specific numbers of
+   * partitions. This helps us utilize more parallelism when workers are multi-threaded.
+   */
+  public static final String CTX_TARGET_PARTITIONS_PER_WORKER = "targetPartitionsPerWorker";
 
   private static final Pattern LOOKS_LIKE_JSON_ARRAY = Pattern.compile("^\\s*\\[.*", Pattern.DOTALL);
 
@@ -177,6 +209,33 @@ public class MultiStageQueryContext
     return queryContext.getString(
         CTX_MSQ_MODE,
         DEFAULT_MSQ_MODE
+    );
+  }
+
+  public static int getMaxRowsMaterializedInWindow(final QueryContext queryContext)
+  {
+    return queryContext.getInt(
+        MAX_ROWS_MATERIALIZED_IN_WINDOW,
+        Limits.MAX_ROWS_MATERIALIZED_IN_WINDOW
+    );
+  }
+
+  public static boolean isWindowFunctionOperatorTransformationEnabled(final QueryContext queryContext)
+  {
+    return queryContext.getBoolean(
+        WINDOW_FUNCTION_OPERATOR_TRANSFORMATION,
+        false
+    );
+  }
+
+  public static int getMaxConcurrentStagesWithDefault(
+      final QueryContext queryContext,
+      final int defaultMaxConcurrentStages
+  )
+  {
+    return queryContext.getInt(
+        CTX_MAX_CONCURRENT_STAGES,
+        defaultMaxConcurrentStages
     );
   }
 
@@ -237,6 +296,15 @@ public class MultiStageQueryContext
     );
   }
 
+  public static SketchEncoding getSketchEncoding(QueryContext queryContext)
+  {
+    return QueryContexts.getAsEnum(
+        CTX_SKETCH_ENCODING_MODE,
+        queryContext.getString(CTX_SKETCH_ENCODING_MODE, DEFAULT_CTX_SKETCH_ENCODING_MODE),
+        SketchEncoding.class
+    );
+  }
+
   public static boolean isFinalizeAggregations(final QueryContext queryContext)
   {
     return queryContext.getBoolean(
@@ -287,6 +355,11 @@ public class MultiStageQueryContext
     );
   }
 
+  public static boolean removeNullBytes(final QueryContext queryContext)
+  {
+    return queryContext.getBoolean(CTX_REMOVE_NULL_BYTES, DEFAULT_REMOVE_NULL_BYTES);
+  }
+
 
   public static MSQSelectDestination getSelectDestination(final QueryContext queryContext)
   {
@@ -297,19 +370,15 @@ public class MultiStageQueryContext
     );
   }
 
-  @Nullable
-  public static MSQSelectDestination getSelectDestinationOrNull(final QueryContext queryContext)
-  {
-    return QueryContexts.getAsEnum(
-        CTX_SELECT_DESTINATION,
-        queryContext.getString(CTX_SELECT_DESTINATION),
-        MSQSelectDestination.class
-    );
-  }
-
   public static int getRowsInMemory(final QueryContext queryContext)
   {
     return queryContext.getInt(CTX_ROWS_IN_MEMORY, DEFAULT_ROWS_IN_MEMORY);
+  }
+
+  public static Integer getMaxNumSegments(final QueryContext queryContext)
+  {
+    // The default is null, if the context is not set.
+    return queryContext.getInt(CTX_MAX_NUM_SEGMENTS);
   }
 
   public static List<String> getSortOrder(final QueryContext queryContext)
@@ -323,6 +392,14 @@ public class MultiStageQueryContext
     return decodeIndexSpec(queryContext.get(CTX_INDEX_SPEC), objectMapper);
   }
 
+  public static long getMaxParseExceptions(final QueryContext queryContext)
+  {
+    return queryContext.getLong(
+        MSQWarnings.CTX_MAX_PARSE_EXCEPTIONS_ALLOWED,
+        MSQWarnings.DEFAULT_MAX_PARSE_EXCEPTIONS_ALLOWED
+    );
+  }
+
   public static boolean useAutoColumnSchemas(final QueryContext queryContext)
   {
     return queryContext.getBoolean(CTX_USE_AUTO_SCHEMAS, DEFAULT_USE_AUTO_SCHEMAS);
@@ -331,6 +408,27 @@ public class MultiStageQueryContext
   public static ArrayIngestMode getArrayIngestMode(final QueryContext queryContext)
   {
     return queryContext.getEnum(CTX_ARRAY_INGEST_MODE, ArrayIngestMode.class, DEFAULT_ARRAY_INGEST_MODE);
+  }
+
+  public static int getTargetPartitionsPerWorkerWithDefault(
+      final QueryContext queryContext,
+      final int defaultValue
+  )
+  {
+    return queryContext.getInt(CTX_TARGET_PARTITIONS_PER_WORKER, defaultValue);
+  }
+
+  /**
+   * See {@link #CTX_INCLUDE_ALL_COUNTERS}.
+   */
+  public static boolean getIncludeAllCounters(final QueryContext queryContext)
+  {
+    return queryContext.getBoolean(CTX_INCLUDE_ALL_COUNTERS, DEFAULT_INCLUDE_ALL_COUNTERS);
+  }
+
+  public static boolean isForceSegmentSortByTime(final QueryContext queryContext)
+  {
+    return queryContext.getBoolean(CTX_FORCE_TIME_SORT, DEFAULT_FORCE_TIME_SORT);
   }
 
   public static Set<String> getColumnsExcludedFromTypeVerification(final QueryContext queryContext)
@@ -350,7 +448,7 @@ public class MultiStageQueryContext
       try {
         // Not caching this ObjectMapper in a static, because we expect to use it infrequently (once per INSERT
         // query that uses this feature) and there is no need to keep it around longer than that.
-        return new ObjectMapper().readValue(listString, new TypeReference<List<String>>() {});
+        return new ObjectMapper().readValue(listString, new TypeReference<>() {});
       }
       catch (JsonProcessingException e) {
         throw QueryContexts.badValueException(keyName, "CSV or JSON array", listString);

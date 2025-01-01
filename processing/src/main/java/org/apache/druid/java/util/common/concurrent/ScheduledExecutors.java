@@ -47,7 +47,7 @@ public class ScheduledExecutors
         exec,
         initialDelay,
         delay,
-        new Callable<Signal>()
+        new Callable<>()
         {
           @Override
           public Signal call()
@@ -62,16 +62,6 @@ public class ScheduledExecutors
           }
         }
     );
-  }
-
-  /**
-   * Run callable repeatedly with the given delay between calls, after the given
-   * initial delay, until it returns Signal.STOP. Exceptions are caught and
-   * logged as errors.
-   */
-  public static void scheduleWithFixedDelay(ScheduledExecutorService exec, Duration delay, Callable<Signal> callable)
-  {
-    scheduleWithFixedDelay(exec, delay, delay, callable);
   }
 
   /**

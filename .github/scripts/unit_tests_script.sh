@@ -21,8 +21,8 @@ unset _JAVA_OPTIONS
 
 # Set MAVEN_OPTS for Surefire launcher.
 MAVEN_OPTS='-Xmx2500m' ${MVN} test -pl ${MAVEN_PROJECTS} \
-${MAVEN_SKIP} -Ddruid.generic.useDefaultValueForNull=${DRUID_USE_DEFAULT_VALUE_FOR_NULL} \
--DjfrProfilerArgLine="${JFR_PROFILER_ARG_LINE}"
+${MAVEN_SKIP} \
+-DjfrProfilerArgLine="${JFR_PROFILER_ARG_LINE}" -Pci
 sh -c "dmesg | egrep -i '(oom|out of memory|kill process|killed).*' -C 1 || exit 0"
 free -m
 ${MVN} -pl ${MAVEN_PROJECTS} jacoco:report || { echo "coverage_failure=false" >> "$GITHUB_ENV" && false; }
@@ -74,5 +74,7 @@ then
   { printf "\n\n****FAILED****\nDiff code coverage check failed. To view coverage report, run 'mvn clean test jacoco:report' and open 'target/site/jacoco/index.html'\nFor more details on how to run code coverage locally, follow instructions here - https://github.com/apache/druid/blob/master/dev/code-review/code-coverage.md#running-code-coverage-locally\n\n" && echo "coverage_failure=true" >> "$GITHUB_ENV" && false; }
 fi
 
-{ for i in 1 2 3; do curl -o codecov.sh -s https://codecov.io/bash && break || sleep 15; done }
-{ for i in 1 2 3; do bash codecov.sh -X gcov && break || sleep 15; done }
+# Commented out as codecov visualizations are currently not being used in the Druid community
+# and cause PR failures due to rate limiting (see https://github.com/apache/druid/pull/16347)
+# { for i in 1 2 3; do curl -o codecov.sh -s https://codecov.io/bash && break || sleep 15; done }
+# { for i in 1 2 3; do bash codecov.sh -X gcov && break || sleep 15; done }

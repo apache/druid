@@ -245,7 +245,7 @@ public class WorkerTaskManager implements IndexerTaskCountStatsProvider
     runningTasks.put(task.getId(), new TaskDetails(task));
     Futures.addCallback(
         future,
-        new FutureCallback<TaskStatus>()
+        new FutureCallback<>()
         {
           @Override
           public void onSuccess(TaskStatus result)
@@ -638,6 +638,22 @@ public class WorkerTaskManager implements IndexerTaskCountStatsProvider
   public Map<String, Long> getWorkerCompletedTasks()
   {
     return getNumTasksPerDatasource(this.getCompletedTasks().values(), TaskAnnouncement::getTaskDataSource);
+  }
+
+  @Override
+  public Map<String, Long> getWorkerFailedTasks()
+  {
+    return getNumTasksPerDatasource(completedTasks.entrySet().stream()
+            .filter(entry -> entry.getValue().getTaskStatus().isFailure())
+            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)).values(), TaskAnnouncement::getTaskDataSource);
+  }
+
+  @Override
+  public Map<String, Long> getWorkerSuccessfulTasks()
+  {
+    return getNumTasksPerDatasource(completedTasks.entrySet().stream()
+            .filter(entry -> entry.getValue().getTaskStatus().isSuccess())
+            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)).values(), TaskAnnouncement::getTaskDataSource);
   }
 
   private static class TaskDetails

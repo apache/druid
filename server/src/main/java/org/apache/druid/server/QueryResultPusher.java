@@ -38,6 +38,8 @@ import org.apache.druid.query.TruncatedResponseContextException;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.ForbiddenException;
+import org.eclipse.jetty.http.HttpFields;
+import org.eclipse.jetty.http.HttpHeader;
 
 import javax.annotation.Nullable;
 import javax.servlet.AsyncContext;
@@ -54,6 +56,7 @@ import java.util.Map;
 public abstract class QueryResultPusher
 {
   private static final Logger log = new Logger(QueryResultPusher.class);
+  protected static final String RESULT_TRAILER_HEADERS = QueryResource.RESPONSE_COMPLETE_TRAILER_HEADER;
 
   private final HttpServletRequest request;
   private final String queryId;
@@ -63,6 +66,7 @@ public abstract class QueryResultPusher
   private final QueryResource.QueryMetricCounter counter;
   private final MediaType contentType;
   private final Map<String, String> extraHeaders;
+  private final HttpFields trailerFields;
 
   private StreamingHttpResponseAccumulator accumulator;
   private AsyncContext asyncContext;
@@ -87,6 +91,7 @@ public abstract class QueryResultPusher
     this.counter = counter;
     this.contentType = contentType;
     this.extraHeaders = extraHeaders;
+    this.trailerFields = new HttpFields();
   }
 
   /**
@@ -120,7 +125,9 @@ public abstract class QueryResultPusher
 
       final Response.ResponseBuilder startResponse = resultsWriter.start();
       if (startResponse != null) {
-        startResponse.header(QueryResource.QUERY_ID_RESPONSE_HEADER, queryId);
+        startResponse.header(QueryResource.QUERY_ID_RESPONSE_HEADER, queryId)
+                     .header(HttpHeader.TRAILER.toString(), RESULT_TRAILER_HEADERS);
+
         for (Map.Entry<String, String> entry : extraHeaders.entrySet()) {
           startResponse.header(entry.getKey(), entry.getValue());
         }
@@ -141,6 +148,17 @@ public abstract class QueryResultPusher
       response.setHeader(QueryResource.QUERY_ID_RESPONSE_HEADER, queryId);
       for (Map.Entry<String, String> entry : extraHeaders.entrySet()) {
         response.setHeader(entry.getKey(), entry.getValue());
+      }
+
+      if (response instanceof org.eclipse.jetty.server.Response) {
+        org.eclipse.jetty.server.Response jettyResponse = (org.eclipse.jetty.server.Response) response;
+
+        jettyResponse.setHeader(HttpHeader.TRAILER.toString(), RESULT_TRAILER_HEADERS);
+        jettyResponse.setTrailers(() -> trailerFields);
+
+        // Start with complete status
+
+        trailerFields.put(QueryResource.RESPONSE_COMPLETE_TRAILER_HEADER, "true");
       }
 
       accumulator = new StreamingHttpResponseAccumulator(queryResponse.getResponseContext(), resultsWriter);
@@ -211,22 +229,8 @@ public abstract class QueryResultPusher
     return handleDruidException(resultsWriter, DruidException.fromFailure(new QueryExceptionCompat(e)));
   }
 
-  private Response handleDruidException(ResultsWriter resultsWriter, DruidException e)
+  private void incrementQueryCounterForException(final DruidException e)
   {
-    if (resultsWriter != null) {
-      resultsWriter.recordFailure(e);
-      counter.incrementFailed();
-
-      if (accumulator != null && accumulator.isInitialized()) {
-        // We already started sending a response when we got the error message.  In this case we just give up
-        // and hope that the partial stream generates a meaningful failure message for our client.  We could consider
-        // also throwing the exception body into the response to make it easier for the client to choke if it manages
-        // to parse a meaningful object out, but that's potentially an API change so we leave that as an exercise for
-        // the future.
-        return null;
-      }
-    }
-
     switch (e.getCategory()) {
       case INVALID_INPUT:
       case UNAUTHORIZED:
@@ -243,6 +247,26 @@ public abstract class QueryResultPusher
       case TIMEOUT:
         counter.incrementTimedOut();
         break;
+    }
+  }
+
+  private Response handleDruidException(ResultsWriter resultsWriter, DruidException e)
+  {
+    incrementQueryCounterForException(e);
+
+    if (resultsWriter != null) {
+      resultsWriter.recordFailure(e);
+
+      if (accumulator != null && accumulator.isInitialized()) {
+        // We already started sending a response when we got the error message.  In this case we just give up
+        // and hope that the partial stream generates a meaningful failure message for our client.  We could consider
+        // also throwing the exception body into the response to make it easier for the client to choke if it manages
+        // to parse a meaningful object out, but that's potentially an API change so we leave that as an exercise for
+        // the future.
+        trailerFields.put(QueryResource.ERROR_MESSAGE_TRAILER_HEADER, e.getMessage());
+        trailerFields.put(QueryResource.RESPONSE_COMPLETE_TRAILER_HEADER, "false");
+        return null;
+      }
     }
 
     if (response == null) {
@@ -417,6 +441,11 @@ public abstract class QueryResultPusher
 
         response.setHeader(QueryResource.HEADER_RESPONSE_CONTEXT, serializationResult.getResult());
         response.setContentType(contentType.toString());
+
+        if (response instanceof org.eclipse.jetty.server.Response) {
+          org.eclipse.jetty.server.Response jettyResponse = (org.eclipse.jetty.server.Response) response;
+          jettyResponse.setTrailers(() -> trailerFields);
+        }
 
         try {
           out = new CountingOutputStream(response.getOutputStream());

@@ -19,9 +19,14 @@
 
 package org.apache.druid.query.aggregation;
 
+import it.unimi.dsi.fastutil.Hash;
 import org.apache.druid.collections.SerializablePair;
 import org.apache.druid.segment.GenericColumnSerializer;
+import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.column.ColumnBuilder;
+import org.apache.druid.segment.column.ColumnType;
+import org.apache.druid.segment.column.ObjectStrategyComplexTypeStrategy;
+import org.apache.druid.segment.column.TypeStrategy;
 import org.apache.druid.segment.data.ObjectStrategy;
 import org.apache.druid.segment.serde.cell.NativeClearedByteBufferProvider;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
@@ -54,7 +59,11 @@ public class SerializablePairLongLongComplexMetricSerde extends AbstractSerializ
   }
 
   @Override
-  public GenericColumnSerializer<SerializablePairLongLong> getSerializer(SegmentWriteOutMedium segmentWriteOutMedium, String column)
+  public GenericColumnSerializer<SerializablePairLongLong> getSerializer(
+      SegmentWriteOutMedium segmentWriteOutMedium,
+      String column,
+      IndexSpec indexSpec
+  )
   {
     return new SerializablePairLongLongColumnSerializer(
         segmentWriteOutMedium,
@@ -75,7 +84,7 @@ public class SerializablePairLongLongComplexMetricSerde extends AbstractSerializ
   @Override
   public ObjectStrategy<SerializablePairLongLong> getObjectStrategy()
   {
-    return new ObjectStrategy<SerializablePairLongLong>()
+    return new ObjectStrategy<>()
     {
       @Override
       public int compare(SerializablePairLongLong o1, SerializablePairLongLong o2)
@@ -104,6 +113,35 @@ public class SerializablePairLongLongComplexMetricSerde extends AbstractSerializ
       {
         return SERDE.serialize(inPair);
       }
+
+      @Override
+      public boolean readRetainsBufferReference()
+      {
+        return false;
+      }
     };
+  }
+
+  @Override
+  public TypeStrategy<SerializablePairLongLong> getTypeStrategy()
+  {
+    return new ObjectStrategyComplexTypeStrategy<>(
+        getObjectStrategy(),
+        ColumnType.ofComplex(getTypeName()),
+        new Hash.Strategy<>()
+        {
+          @Override
+          public int hashCode(SerializablePairLongLong o)
+          {
+            return o.hashCode();
+          }
+
+          @Override
+          public boolean equals(SerializablePairLongLong a, SerializablePairLongLong b)
+          {
+            return a.equals(b);
+          }
+        }
+    );
   }
 }

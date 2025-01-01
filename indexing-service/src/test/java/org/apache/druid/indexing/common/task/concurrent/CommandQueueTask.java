@@ -24,6 +24,7 @@ import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.task.AbstractTask;
+import org.apache.druid.indexing.common.task.PendingSegmentAllocatingTask;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -40,7 +41,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * Test task that can be given a series of commands to execute in its {@link #runTask} method.
  */
-public class CommandQueueTask extends AbstractTask
+public class CommandQueueTask extends AbstractTask implements PendingSegmentAllocatingTask
 {
   private static final Logger log = new Logger(CommandQueueTask.class);
 
@@ -138,6 +139,12 @@ public class CommandQueueTask extends AbstractTask
     catch (Exception e) {
       throw new ISE(e, "Error waiting for command on task[%s] to finish", getId());
     }
+  }
+
+  @Override
+  public String getTaskAllocatorId()
+  {
+    return getId();
   }
 
   @Override

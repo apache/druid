@@ -16,8 +16,6 @@
  * limitations under the License.
  */
 
-import React from 'react';
-
 import type { Field } from '../../components';
 import { ExternalLink } from '../../components';
 import { getLink } from '../../links';
@@ -170,7 +168,7 @@ export const FILTERS_FIELDS: Field<IngestionSpec>[] = [
       <>
         <p>
           A Druid{' '}
-          <ExternalLink href={`${getLink('DOCS')}/querying/filters.html`}>
+          <ExternalLink href={`${getLink('DOCS')}/querying/filters`}>
             JSON filter expression
           </ExternalLink>{' '}
           to apply to the data.

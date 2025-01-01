@@ -21,7 +21,6 @@ package org.apache.druid.server.coordinator.duty;
 
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
@@ -30,6 +29,8 @@ import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
+import org.apache.druid.rpc.indexing.NoopOverlordClient;
+import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
@@ -68,10 +69,10 @@ public class KillStalePendingSegmentsTest
   @Test
   public void testRetentionStarts1DayBeforeNowWhenNoKnownTask()
   {
-    DruidCoordinatorRuntimeParams params = createParamsWithDatasources(DS.WIKI).build();
+    DruidCoordinatorRuntimeParams params = createParamsWithDatasources(TestDataSource.WIKI).build();
     killDuty.run(params);
 
-    final Interval observedKillInterval = overlordClient.observedKillIntervals.get(DS.WIKI);
+    final Interval observedKillInterval = overlordClient.observedKillIntervals.get(TestDataSource.WIKI);
     Assert.assertEquals(DateTimes.MIN, observedKillInterval.getStart());
 
     // Verify that the cutoff time is no later than 1 day ago from now
@@ -85,15 +86,15 @@ public class KillStalePendingSegmentsTest
   public void testRetentionStarts1DayBeforeEarliestActiveTask()
   {
     final DateTime startOfEarliestActiveTask = DateTimes.of("2023-01-01");
-    overlordClient.addTaskAndSegment(DS.WIKI, startOfEarliestActiveTask, TaskState.RUNNING);
-    overlordClient.addTaskAndSegment(DS.WIKI, startOfEarliestActiveTask.plusHours(2), TaskState.RUNNING);
-    overlordClient.addTaskAndSegment(DS.WIKI, startOfEarliestActiveTask.plusDays(1), TaskState.RUNNING);
-    overlordClient.addTaskAndSegment(DS.WIKI, startOfEarliestActiveTask.plusHours(3), TaskState.RUNNING);
+    overlordClient.addTaskAndSegment(TestDataSource.WIKI, startOfEarliestActiveTask, TaskState.RUNNING);
+    overlordClient.addTaskAndSegment(TestDataSource.WIKI, startOfEarliestActiveTask.plusHours(2), TaskState.RUNNING);
+    overlordClient.addTaskAndSegment(TestDataSource.WIKI, startOfEarliestActiveTask.plusDays(1), TaskState.RUNNING);
+    overlordClient.addTaskAndSegment(TestDataSource.WIKI, startOfEarliestActiveTask.plusHours(3), TaskState.RUNNING);
 
-    DruidCoordinatorRuntimeParams params = createParamsWithDatasources(DS.WIKI).build();
+    DruidCoordinatorRuntimeParams params = createParamsWithDatasources(TestDataSource.WIKI).build();
     killDuty.run(params);
 
-    final Interval observedKillInterval = overlordClient.observedKillIntervals.get(DS.WIKI);
+    final Interval observedKillInterval = overlordClient.observedKillIntervals.get(TestDataSource.WIKI);
     Assert.assertEquals(DateTimes.MIN, observedKillInterval.getStart());
     Assert.assertEquals(startOfEarliestActiveTask.minusDays(1), observedKillInterval.getEnd());
   }
@@ -102,40 +103,40 @@ public class KillStalePendingSegmentsTest
   public void testRetentionStarts1DayBeforeLatestCompletedTask()
   {
     final DateTime startOfLatestCompletedTask = DateTimes.of("2023-01-01");
-    overlordClient.addTaskAndSegment(DS.WIKI, startOfLatestCompletedTask, TaskState.FAILED);
-    overlordClient.addTaskAndSegment(DS.WIKI, startOfLatestCompletedTask.minusHours(2), TaskState.SUCCESS);
-    overlordClient.addTaskAndSegment(DS.WIKI, startOfLatestCompletedTask.minusDays(2), TaskState.FAILED);
-    overlordClient.addTaskAndSegment(DS.WIKI, startOfLatestCompletedTask.minusDays(3), TaskState.SUCCESS);
+    overlordClient.addTaskAndSegment(TestDataSource.WIKI, startOfLatestCompletedTask, TaskState.FAILED);
+    overlordClient.addTaskAndSegment(TestDataSource.WIKI, startOfLatestCompletedTask.minusHours(2), TaskState.SUCCESS);
+    overlordClient.addTaskAndSegment(TestDataSource.WIKI, startOfLatestCompletedTask.minusDays(2), TaskState.FAILED);
+    overlordClient.addTaskAndSegment(TestDataSource.WIKI, startOfLatestCompletedTask.minusDays(3), TaskState.SUCCESS);
 
-    DruidCoordinatorRuntimeParams params = createParamsWithDatasources(DS.WIKI).build();
+    DruidCoordinatorRuntimeParams params = createParamsWithDatasources(TestDataSource.WIKI).build();
     killDuty.run(params);
 
-    final Interval observedKillInterval = overlordClient.observedKillIntervals.get(DS.WIKI);
+    final Interval observedKillInterval = overlordClient.observedKillIntervals.get(TestDataSource.WIKI);
     Assert.assertEquals(DateTimes.MIN, observedKillInterval.getStart());
     Assert.assertEquals(startOfLatestCompletedTask.minusDays(1), observedKillInterval.getEnd());
 
     final CoordinatorRunStats stats = params.getCoordinatorStats();
-    Assert.assertEquals(2, stats.get(Stats.Kill.PENDING_SEGMENTS, RowKey.of(Dimension.DATASOURCE, DS.WIKI)));
+    Assert.assertEquals(2, stats.get(Stats.Kill.PENDING_SEGMENTS, RowKey.of(Dimension.DATASOURCE, TestDataSource.WIKI)));
   }
 
   @Test
   public void testRetentionStarts1DayBeforeLatestCompletedOrEarliestActiveTask()
   {
     final DateTime startOfLatestCompletedTask = DateTimes.of("2023-02-01");
-    overlordClient.addTaskAndSegment(DS.WIKI, startOfLatestCompletedTask, TaskState.FAILED);
+    overlordClient.addTaskAndSegment(TestDataSource.WIKI, startOfLatestCompletedTask, TaskState.FAILED);
 
     final DateTime startOfEarliestActiveTask = DateTimes.of("2023-01-01");
-    overlordClient.addTaskAndSegment(DS.KOALA, startOfEarliestActiveTask, TaskState.RUNNING);
+    overlordClient.addTaskAndSegment(TestDataSource.KOALA, startOfEarliestActiveTask, TaskState.RUNNING);
 
-    DruidCoordinatorRuntimeParams params = createParamsWithDatasources(DS.WIKI, DS.KOALA).build();
+    DruidCoordinatorRuntimeParams params = createParamsWithDatasources(TestDataSource.WIKI, TestDataSource.KOALA).build();
     killDuty.run(params);
 
     DateTime earliestEligibleTask = DateTimes.earlierOf(startOfEarliestActiveTask, startOfLatestCompletedTask);
-    final Interval wikiKillInterval = overlordClient.observedKillIntervals.get(DS.WIKI);
+    final Interval wikiKillInterval = overlordClient.observedKillIntervals.get(TestDataSource.WIKI);
     Assert.assertEquals(DateTimes.MIN, wikiKillInterval.getStart());
     Assert.assertEquals(earliestEligibleTask.minusDays(1), wikiKillInterval.getEnd());
 
-    final Interval koalaKillInterval = overlordClient.observedKillIntervals.get(DS.KOALA);
+    final Interval koalaKillInterval = overlordClient.observedKillIntervals.get(TestDataSource.KOALA);
     Assert.assertEquals(DateTimes.MIN, koalaKillInterval.getStart());
     Assert.assertEquals(earliestEligibleTask.minusDays(1), wikiKillInterval.getEnd());
   }
@@ -144,37 +145,37 @@ public class KillStalePendingSegmentsTest
   public void testPendingSegmentOfDisallowedDatasourceIsNotDeleted()
   {
     DruidCoordinatorRuntimeParams params =
-        createParamsWithDatasources(DS.WIKI, DS.KOALA).withDynamicConfigs(
+        createParamsWithDatasources(TestDataSource.WIKI, TestDataSource.KOALA).withDynamicConfigs(
             CoordinatorDynamicConfig
                 .builder()
                 .withDatasourcesToNotKillPendingSegmentsIn(
-                    Collections.singleton(DS.KOALA)
+                    Collections.singleton(TestDataSource.KOALA)
                 )
                 .build()
         ).build();
 
     DateTime startOfLatestCompletedTask = DateTimes.of("2023-01-01");
-    overlordClient.addTaskAndSegment(DS.WIKI, startOfLatestCompletedTask, TaskState.SUCCESS);
-    overlordClient.addTaskAndSegment(DS.WIKI, startOfLatestCompletedTask.minusDays(3), TaskState.SUCCESS);
-    overlordClient.addTaskAndSegment(DS.WIKI, startOfLatestCompletedTask.minusDays(5), TaskState.SUCCESS);
-    overlordClient.addTaskAndSegment(DS.KOALA, startOfLatestCompletedTask, TaskState.SUCCESS);
-    overlordClient.addTaskAndSegment(DS.KOALA, startOfLatestCompletedTask.minusDays(3), TaskState.SUCCESS);
-    overlordClient.addTaskAndSegment(DS.KOALA, startOfLatestCompletedTask.minusDays(5), TaskState.SUCCESS);
+    overlordClient.addTaskAndSegment(TestDataSource.WIKI, startOfLatestCompletedTask, TaskState.SUCCESS);
+    overlordClient.addTaskAndSegment(TestDataSource.WIKI, startOfLatestCompletedTask.minusDays(3), TaskState.SUCCESS);
+    overlordClient.addTaskAndSegment(TestDataSource.WIKI, startOfLatestCompletedTask.minusDays(5), TaskState.SUCCESS);
+    overlordClient.addTaskAndSegment(TestDataSource.KOALA, startOfLatestCompletedTask, TaskState.SUCCESS);
+    overlordClient.addTaskAndSegment(TestDataSource.KOALA, startOfLatestCompletedTask.minusDays(3), TaskState.SUCCESS);
+    overlordClient.addTaskAndSegment(TestDataSource.KOALA, startOfLatestCompletedTask.minusDays(5), TaskState.SUCCESS);
 
     killDuty.run(params);
 
     // Verify that stale pending segments are killed in "wiki" but not in "koala"
     final CoordinatorRunStats stats = params.getCoordinatorStats();
-    Assert.assertTrue(overlordClient.observedKillIntervals.containsKey(DS.WIKI));
-    Assert.assertEquals(2, stats.get(Stats.Kill.PENDING_SEGMENTS, RowKey.of(Dimension.DATASOURCE, DS.WIKI)));
+    Assert.assertTrue(overlordClient.observedKillIntervals.containsKey(TestDataSource.WIKI));
+    Assert.assertEquals(2, stats.get(Stats.Kill.PENDING_SEGMENTS, RowKey.of(Dimension.DATASOURCE, TestDataSource.WIKI)));
 
-    Assert.assertFalse(overlordClient.observedKillIntervals.containsKey(DS.KOALA));
-    Assert.assertEquals(0, stats.get(Stats.Kill.PENDING_SEGMENTS, RowKey.of(Dimension.DATASOURCE, DS.KOALA)));
+    Assert.assertFalse(overlordClient.observedKillIntervals.containsKey(TestDataSource.KOALA));
+    Assert.assertEquals(0, stats.get(Stats.Kill.PENDING_SEGMENTS, RowKey.of(Dimension.DATASOURCE, TestDataSource.KOALA)));
   }
 
   private DruidCoordinatorRuntimeParams.Builder createParamsWithDatasources(String... datasources)
   {
-    DruidCoordinatorRuntimeParams.Builder builder = DruidCoordinatorRuntimeParams.newBuilder(DateTimes.nowUtc());
+    DruidCoordinatorRuntimeParams.Builder builder = DruidCoordinatorRuntimeParams.builder();
 
     // Create a dummy for each of the datasources so that they get added to the timeline
     Set<DataSegment> usedSegments = new HashSet<>();
@@ -186,12 +187,6 @@ public class KillStalePendingSegmentsTest
     }
 
     return builder.withUsedSegments(usedSegments);
-  }
-
-  private static class DS
-  {
-    static final String WIKI = "wiki";
-    static final String KOALA = "koala";
   }
 
   /**
@@ -254,7 +249,7 @@ public class KillStalePendingSegmentsTest
         }
       }
 
-      if (remainingPendingSegments.size() > 0) {
+      if (!remainingPendingSegments.isEmpty()) {
         datasourceToPendingSegments.put(dataSource, remainingPendingSegments);
       }
 

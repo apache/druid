@@ -22,7 +22,7 @@ package org.apache.druid.query.groupby;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.guice.NestedDataModule;
+import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.io.Closer;
@@ -32,6 +32,9 @@ import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.AggregationTestHelper;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
+import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
+import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
+import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -74,10 +77,10 @@ public class NestedGroupByArrayQueryTest
       String vectorize
   )
   {
-    NestedDataModule.registerHandlersAndSerde();
+    BuiltInTypesModule.registerHandlersAndSerde();
     this.vectorize = QueryContexts.Vectorize.fromString(vectorize);
     this.helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
-        NestedDataModule.getJacksonModulesList(),
+        BuiltInTypesModule.getJacksonModulesList(),
         config,
         tempFolder
     );
@@ -132,6 +135,43 @@ public class NestedGroupByArrayQueryTest
                                           .setDimensions(DefaultDimensionSpec.of("arrayString", ColumnType.STRING_ARRAY))
                                           .setAggregatorSpecs(new CountAggregatorFactory("count"))
                                           .setContext(getContext())
+                                          .build();
+
+
+    runResults(
+        groupQuery,
+        ImmutableList.of(
+            new Object[]{null, 8L},
+            new Object[]{new Object[]{"a", "b"}, 8L},
+            new Object[]{new Object[]{"a", "b", "c"}, 4L},
+            new Object[]{new Object[]{"b", "c"}, 4L},
+            new Object[]{new Object[]{"d", "e"}, 4L}
+        )
+    );
+  }
+
+  @Test
+  public void testGroupByRootArrayStringOrderAndLimit()
+  {
+    GroupByQuery groupQuery = GroupByQuery.builder()
+                                          .setDataSource("test_datasource")
+                                          .setGranularity(Granularities.ALL)
+                                          .setInterval(Intervals.ETERNITY)
+                                          .setDimensions(DefaultDimensionSpec.of("arrayString", ColumnType.STRING_ARRAY))
+                                          .setAggregatorSpecs(new CountAggregatorFactory("count"))
+                                          .setContext(getContext())
+                                          .setLimitSpec(
+                                              new DefaultLimitSpec(
+                                                  ImmutableList.of(
+                                                      new OrderByColumnSpec(
+                                                          "arrayString",
+                                                          OrderByColumnSpec.Direction.ASCENDING,
+                                                          StringComparators.NATURAL
+                                                      )
+                                                  ),
+                                                  100
+                                              )
+                                          )
                                           .build();
 
 

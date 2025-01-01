@@ -100,6 +100,7 @@ export const QueryErrorPane = React.memo(function QueryErrorPane(props: QueryErr
         </p>
       )}
       {error.errorClass && <p>{error.errorClass}</p>}
+      {error.host && <p>{`Host: ${error.host}`}</p>}
     </div>
   );
 });

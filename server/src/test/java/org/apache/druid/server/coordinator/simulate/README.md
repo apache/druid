@@ -63,7 +63,6 @@ of the coordinator in these situations.
    interfaces to communicate with external dependencies have been provided as simple in-memory implementations:
     - communication with metadata store: `SegmentMetadataManager`, `MetadataRuleManager`
     - communication with historicals: `HttpClient`, `ServerInventoryView`
-    - `CuratorFramework`: provided as a mock as simulations of `CuratorLoadQueuePeon` are not supported yet
 4. __Inventory__: The coordinator maintains an inventory view of the cluster state. Simulations can choose from two
    modes of inventory update - auto and manual. In auto update mode, any change made to the cluster is immediately
    reflected in the inventory view. In manual update mode, the inventory must be explicitly synchronized with the

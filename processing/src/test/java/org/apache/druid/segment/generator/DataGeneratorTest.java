@@ -546,7 +546,7 @@ public class DataGeneratorTest extends InitializedNullHandlingTest
     {
       for (String dim : row.getDimensions()) {
         if (dimensionMap.get(dim) == null) {
-          dimensionMap.put(dim, new HashMap<Object, RowValuePropertyTracker>());
+          dimensionMap.put(dim, new HashMap<>());
         }
 
         Map<Object, RowValuePropertyTracker> valueMap = dimensionMap.get(dim);
@@ -744,6 +744,6 @@ public class DataGeneratorTest extends InitializedNullHandlingTest
         .build();
 
     dataGenerator.addToIndex(index, 100);
-    Assert.assertEquals(100, index.size());
+    Assert.assertEquals(100, index.numRows());
   }
 }

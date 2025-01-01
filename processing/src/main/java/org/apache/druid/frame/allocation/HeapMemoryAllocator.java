@@ -59,7 +59,7 @@ public class HeapMemoryAllocator implements MemoryAllocator
       bytesAllocated += size;
 
       return Optional.of(
-          new ResourceHolder<WritableMemory>()
+          new ResourceHolder<>()
           {
             private WritableMemory memory =
                 WritableMemory.writableWrap(ByteBuffer.allocate(Ints.checkedCast(size)).order(ByteOrder.LITTLE_ENDIAN));
@@ -77,8 +77,10 @@ public class HeapMemoryAllocator implements MemoryAllocator
             @Override
             public void close()
             {
-              memory = null;
-              bytesAllocated -= size;
+              if (memory != null) {
+                memory = null;
+                bytesAllocated -= size;
+              }
             }
           }
       );

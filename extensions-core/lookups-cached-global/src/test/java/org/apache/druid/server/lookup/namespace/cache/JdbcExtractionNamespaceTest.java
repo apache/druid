@@ -391,6 +391,36 @@ public class JdbcExtractionNamespaceTest
   }
 
   @Test(timeout = 60_000L)
+  public void testEmptyTable()
+      throws InterruptedException
+  {
+    // Delete existing rows from table.
+    final Handle handle = derbyConnectorRule.getConnector().getDBI().open();
+    handle.createStatement(
+        StringUtils.format("DELETE FROM %s", TABLE_NAME)
+    ).setQueryTimeout(1).execute();
+
+    final JdbcExtractionNamespace extractionNamespace = new JdbcExtractionNamespace(
+        derbyConnectorRule.getMetadataConnectorConfig(),
+        TABLE_NAME,
+        KEY_NAME,
+        VAL_NAME,
+        tsColumn,
+        null,
+        new Period(0),
+        null,
+        0,
+        null,
+        new JdbcAccessSecurityConfig()
+    );
+    try (CacheScheduler.Entry entry = scheduler.schedule(extractionNamespace)) {
+      CacheSchedulerTest.waitFor(entry);
+      final Map<String, String> map = entry.getCache();
+      Assert.assertTrue(map.isEmpty());
+    }
+  }
+
+  @Test(timeout = 60_000L)
   public void testSkipOld()
       throws InterruptedException
   {

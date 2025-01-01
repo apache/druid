@@ -115,7 +115,7 @@ public class ExpressionVirtualColumnTest extends InitializedNullHandlingTest
       ImmutableMap.of(
           "x", 3L,
           "y", 4L,
-          "b", Arrays.asList(new String[]{"3", null, "5"})
+          "b", Arrays.asList("3", null, "5")
       )
   );
 

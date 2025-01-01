@@ -28,6 +28,11 @@ import javax.annotation.Nullable;
 
 public class MSQTaskReportPayload
 {
+  public static final String FIELD_STATUS = "status";
+  public static final String FIELD_STAGES = "stages";
+  public static final String FIELD_COUNTERS = "counters";
+  public static final String FIELD_RESULTS = "results";
+
   private final MSQStatusReport status;
 
   @Nullable
@@ -41,10 +46,10 @@ public class MSQTaskReportPayload
 
   @JsonCreator
   public MSQTaskReportPayload(
-      @JsonProperty("status") MSQStatusReport status,
-      @JsonProperty("stages") @Nullable MSQStagesReport stages,
-      @JsonProperty("counters") @Nullable CounterSnapshotsTree counters,
-      @JsonProperty("results") @Nullable MSQResultsReport results
+      @JsonProperty(FIELD_STATUS) MSQStatusReport status,
+      @JsonProperty(FIELD_STAGES) @Nullable MSQStagesReport stages,
+      @JsonProperty(FIELD_COUNTERS) @Nullable CounterSnapshotsTree counters,
+      @JsonProperty(FIELD_RESULTS) @Nullable MSQResultsReport results
   )
   {
     this.status = status;

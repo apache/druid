@@ -154,7 +154,7 @@ public class NestedDataColumnIndexerV4 implements DimensionIndexer<StructuredDat
   @Override
   public int getCardinality()
   {
-    return globalDictionary.getCardinality();
+    return DimensionDictionarySelector.CARDINALITY_UNKNOWN;
   }
 
   @Override
@@ -386,7 +386,7 @@ public class NestedDataColumnIndexerV4 implements DimensionIndexer<StructuredDat
     if (root == null || !root.isSingleType()) {
       return null;
     }
-    return new ColumnValueSelector<Object>()
+    return new ColumnValueSelector<>()
     {
       @Override
       public boolean isNull()

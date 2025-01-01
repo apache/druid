@@ -16,86 +16,72 @@
  * limitations under the License.
  */
 
-import { Button, Callout, Classes, Dialog, Intent, TextArea } from '@blueprintjs/core';
+import { Button, Classes, Dialog, Intent } from '@blueprintjs/core';
 import Hjson from 'hjson';
 import * as JSONBig from 'json-bigint-native';
 import React, { useState } from 'react';
+import AceEditor from 'react-ace';
 
 import type { QueryContext } from '../../druid-models';
+import { AppToaster } from '../../singletons';
 
 import './edit-context-dialog.scss';
 
-export interface EditContextDialogProps {
-  queryContext: QueryContext;
-  onQueryContextChange: (queryContext: QueryContext) => void;
-  onClose: () => void;
+function formatContext(context: QueryContext | undefined): string {
+  const str = JSONBig.stringify(context || {}, undefined, 2);
+  return str === '{}' ? '{\n\n}' : str;
 }
 
-export interface EditContextDialogState {
-  queryContextString: string;
-  queryContext?: QueryContext;
-  error?: string;
+export interface EditContextDialogProps {
+  initQueryContext: QueryContext | undefined;
+  onQueryContextChange(queryContext: QueryContext): void;
+  onClose(): void;
 }
 
 export const EditContextDialog = React.memo(function EditContextDialog(
   props: EditContextDialogProps,
 ) {
-  const { onQueryContextChange, onClose } = props;
-  const [state, setState] = useState<EditContextDialogState>(() => ({
-    queryContext: props.queryContext,
-    queryContextString: Object.keys(props.queryContext).length
-      ? JSONBig.stringify(props.queryContext, undefined, 2)
-      : '{\n\n}',
-  }));
-
-  const { queryContext, queryContextString, error } = state;
-
-  function handleTextChange(e: any) {
-    const queryContextString = (e.target as HTMLInputElement).value;
-
-    let error: string | undefined;
-    let queryContext: QueryContext | undefined;
-    try {
-      queryContext = Hjson.parse(queryContextString);
-    } catch (e) {
-      error = e.message;
-    }
-
-    if (!error && (!queryContext || typeof queryContext !== 'object')) {
-      error = 'Input is not a valid object';
-      queryContext = undefined;
-    }
-
-    setState({
-      queryContextString,
-      queryContext,
-      error,
-    });
-  }
+  const { initQueryContext, onQueryContextChange, onClose } = props;
+  const [queryContextString, setQueryContextString] = useState<string>(
+    formatContext(initQueryContext),
+  );
 
   return (
     <Dialog className="edit-context-dialog" isOpen onClose={onClose} title="Edit query context">
-      <TextArea value={queryContextString} onChange={handleTextChange} autoFocus />
-      <div className={Classes.DIALOG_FOOTER_ACTIONS}>
-        {error && (
-          <Callout intent={Intent.DANGER} className="edit-context-dialog-error">
-            {error}
-          </Callout>
-        )}
-        <div className="edit-context-dialog-buttons">
+      <AceEditor
+        mode="hjson"
+        theme="solarized_dark"
+        className="query-string"
+        name="ace-editor"
+        fontSize={12}
+        width="100%"
+        height="100%"
+        showGutter
+        showPrintMargin={false}
+        value={queryContextString}
+        onChange={v => setQueryContextString(v)}
+      />
+      <div className={Classes.DIALOG_FOOTER}>
+        <div className={Classes.DIALOG_FOOTER_ACTIONS}>
           <Button text="Close" onClick={onClose} />
           <Button
             text="Save"
             intent={Intent.PRIMARY}
-            disabled={Boolean(error)}
-            onClick={
-              queryContext
-                ? () => {
-                    onQueryContextChange(queryContext);
-                    onClose();
-                  }
-                : undefined
-            }
+            onClick={() => {
+              let queryContext: QueryContext;
+              try {
+                queryContext = Hjson.parse(queryContextString);
+              } catch (e) {
+                AppToaster.show({
+                  message: e.message,
+                  intent: Intent.DANGER,
+                });
+                return;
+              }
+
+              onQueryContextChange(queryContext);
+              onClose();
+            }}
           />
         </div>
       </div>

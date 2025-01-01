@@ -63,7 +63,7 @@ class IndexTaskInputRowIteratorBuilderTestingFactory
 
   static CloseableIterator<InputRow> createInputRowIterator(InputRow inputRow)
   {
-    return new CloseableIterator<InputRow>()
+    return new CloseableIterator<>()
     {
       @Override
       public void close()

@@ -126,7 +126,11 @@ public class DurableStorageUtils
   {
     return StringUtils.format(
         "%s/taskId_%s",
-        getWorkerOutputFolderName(controllerTaskId, stageNumber, workerNumber),
+        getWorkerOutputFolderName(
+            IdUtils.validateId("controller task ID", controllerTaskId),
+            stageNumber,
+            workerNumber
+        ),
         taskId
     );
   }

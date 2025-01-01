@@ -71,6 +71,7 @@ import org.apache.druid.indexing.worker.TaskAnnouncement;
 import org.apache.druid.indexing.worker.Worker;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
+import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -94,6 +95,7 @@ import org.junit.Test;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.net.URI;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -119,7 +121,7 @@ public class TaskQueueTest extends IngestionTestBase
 
     taskQueue = new TaskQueue(
         new TaskLockConfig(),
-        new TaskQueueConfig(3, null, null, null, null),
+        new TaskQueueConfig(3, null, null, null, null, null),
         new DefaultTaskConfig()
         {
           @Override
@@ -215,6 +217,73 @@ public class TaskQueueTest extends IngestionTestBase
   }
 
   @Test
+  public void testAddThrowsExceptionWhenPayloadIsTooLarge()
+  {
+    HumanReadableBytes maxPayloadSize10Mib = HumanReadableBytes.valueOf(10 * 1024 * 1024);
+    TaskQueue maxPayloadTaskQueue = new TaskQueue(
+        new TaskLockConfig(),
+        new TaskQueueConfig(3, null, null, null, null, maxPayloadSize10Mib),
+        new DefaultTaskConfig()
+        {
+          @Override
+          public Map<String, Object> getContext()
+          {
+            return defaultTaskContext;
+          }
+        },
+        getTaskStorage(),
+        new SimpleTaskRunner(),
+        actionClientFactory,
+        getLockbox(),
+        serviceEmitter,
+        getObjectMapper(),
+        new NoopTaskContextEnricher()
+    );
+    maxPayloadTaskQueue.setActive();
+
+    // 1 MB is not too large
+    char[] context = new char[1024 * 1024];
+    Arrays.fill(context, 'a');
+    maxPayloadTaskQueue.add(
+        new TestTask(
+            "tx",
+            Intervals.of("2021-01/P1M"),
+            ImmutableMap.of(
+                "contextKey", new String(context)
+            )
+        )
+    );
+
+    // 100 MB is too large
+    char[] contextLarge = new char[100 * 1024 * 1024];
+    Arrays.fill(contextLarge, 'a');
+
+    Assert.assertThrows(
+        DruidException.class,
+        () -> maxPayloadTaskQueue.add(
+            new TestTask(
+                "tx2",
+                Intervals.of("2021-01/P1M"),
+                ImmutableMap.of(
+                    "contextKey", new String(contextLarge)
+                )
+            )
+        )
+    );
+
+    // If no limit is set, don't throw anything
+    taskQueue.add(
+        new TestTask(
+            "tx3",
+            Intervals.of("2021-01/P1M"),
+            ImmutableMap.of(
+                "contextKey", new String(contextLarge)
+            )
+        )
+    );
+  }
+
+  @Test
   public void testAddedTaskUsesLineageBasedSegmentAllocationByDefault()
   {
     final Task task = new TestTask("t1", Intervals.of("2021-01-01/P1D"));
@@ -298,12 +367,13 @@ public class TaskQueueTest extends IngestionTestBase
   @Test
   public void testExceptionInIsReadyFailsTask()
   {
+    final String exceptionMsg = "isReady failure test";
     final Task task = new TestTask("t1", Intervals.of("2021-01-01/P1D"))
     {
       @Override
       public boolean isReady(TaskActionClient taskActionClient)
       {
-        throw new RuntimeException("isReady failure test");
+        throw new RuntimeException(exceptionMsg);
       }
     };
     taskQueue.add(task);
@@ -314,7 +384,7 @@ public class TaskQueueTest extends IngestionTestBase
     Assert.assertEquals(TaskState.FAILED, statusOptional.get().getStatusCode());
     Assert.assertNotNull(statusOptional.get().getErrorMsg());
     Assert.assertTrue(
-        statusOptional.get().getErrorMsg().startsWith("Failed while waiting for the task to be ready to run")
+        statusOptional.get().getErrorMsg().contains(exceptionMsg)
     );
   }
 
@@ -335,7 +405,7 @@ public class TaskQueueTest extends IngestionTestBase
     EasyMock.replay(workerHolder);
     final TaskQueue taskQueue = new TaskQueue(
         new TaskLockConfig(),
-        new TaskQueueConfig(null, null, null, null, null),
+        new TaskQueueConfig(null, null, null, null, null, null),
         new DefaultTaskConfig(),
         getTaskStorage(),
         taskRunner,
@@ -423,7 +493,7 @@ public class TaskQueueTest extends IngestionTestBase
 
     final TaskQueue taskQueue = new TaskQueue(
         new TaskLockConfig(),
-        new TaskQueueConfig(null, null, null, null, null),
+        new TaskQueueConfig(null, null, null, null, null, null),
         new DefaultTaskConfig(),
         taskStorage,
         taskRunner,
@@ -449,7 +519,7 @@ public class TaskQueueTest extends IngestionTestBase
     final String password = "AbCd_1234";
     final ObjectMapper mapper = getObjectMapper();
 
-    final HttpInputSourceConfig httpInputSourceConfig = new HttpInputSourceConfig(Collections.singleton("http"));
+    final HttpInputSourceConfig httpInputSourceConfig = new HttpInputSourceConfig(Collections.singleton("http"), null);
     mapper.setInjectableValues(new InjectableValues.Std()
                                    .addValue(HttpInputSourceConfig.class, httpInputSourceConfig)
                                    .addValue(ObjectMapper.class, new DefaultObjectMapper())
@@ -468,7 +538,7 @@ public class TaskQueueTest extends IngestionTestBase
 
     final TaskQueue taskQueue = new TaskQueue(
         new TaskLockConfig(),
-        new TaskQueueConfig(null, null, null, null, null),
+        new TaskQueueConfig(null, null, null, null, null, null),
         new DefaultTaskConfig(),
         taskStorage,
         EasyMock.createMock(HttpRemoteTaskRunner.class),
@@ -479,19 +549,20 @@ public class TaskQueueTest extends IngestionTestBase
         new NoopTaskContextEnricher()
     );
 
-    final DataSchema dataSchema = new DataSchema(
-        "DS",
-        new TimestampSpec(null, null, null),
-        new DimensionsSpec(null),
-        null,
-        new UniformGranularitySpec(Granularities.YEAR, Granularities.DAY, null),
-        null
-    );
+    final DataSchema dataSchema =
+        DataSchema.builder()
+                  .withDataSource("DS")
+                  .withTimestamp(new TimestampSpec(null, null, null))
+                  .withDimensions(DimensionsSpec.builder().build())
+                  .withGranularity(
+                      new UniformGranularitySpec(Granularities.YEAR, Granularities.DAY, null)
+                  )
+                  .build();
     final ParallelIndexIOConfig ioConfig = new ParallelIndexIOConfig(
-        null,
         new HttpInputSource(Collections.singletonList(URI.create("http://host.org")),
                             "user",
                             new DefaultPasswordProvider(password),
+                            null,
                             null,
                             httpInputSourceConfig),
         new NoopInputFormat(),

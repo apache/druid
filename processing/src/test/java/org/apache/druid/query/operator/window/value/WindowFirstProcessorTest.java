@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.operator.window.value;
 
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.query.operator.window.ComposingProcessor;
 import org.apache.druid.query.operator.window.RowsAndColumnsHelper;
 import org.apache.druid.query.rowsandcols.MapOfColumnsRowsAndColumns;
@@ -28,6 +29,7 @@ import org.apache.druid.query.rowsandcols.column.DoubleArrayColumn;
 import org.apache.druid.query.rowsandcols.column.IntArrayColumn;
 import org.apache.druid.query.rowsandcols.column.ObjectArrayColumn;
 import org.apache.druid.segment.column.ColumnType;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.LinkedHashMap;
@@ -57,6 +59,11 @@ public class WindowFirstProcessorTest
         new WindowFirstProcessor("doubleCol", "FirstDoubleCol"),
         new WindowFirstProcessor("objectCol", "FirstObjectCol"),
         new WindowFirstProcessor("nullFirstCol", "NullFirstCol")
+    );
+
+    Assert.assertEquals(
+        ImmutableList.of("FirstIntCol", "FirstDoubleCol", "FirstObjectCol", "NullFirstCol"),
+        processor.getOutputColumnNames()
     );
 
     final RowsAndColumnsHelper expectations = new RowsAndColumnsHelper()

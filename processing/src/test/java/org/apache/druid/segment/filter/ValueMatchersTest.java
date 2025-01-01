@@ -20,6 +20,7 @@
 package org.apache.druid.segment.filter;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.collections.bitmap.RoaringBitmapFactory;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.filter.DruidObjectPredicate;
 import org.apache.druid.query.filter.DruidPredicateMatch;
@@ -47,13 +48,15 @@ public class ValueMatchersTest extends InitializedNullHandlingTest
   @Before
   public void setup()
   {
+    final RoaringBitmapFactory bitmapFactory = new RoaringBitmapFactory();
     supplierSingleConstant = new StringUtf8DictionaryEncodedColumnSupplier<>(
         GenericIndexed.fromIterable(
             ImmutableList.of(ByteBuffer.wrap(StringUtils.toUtf8("value"))),
             GenericIndexed.UTF8_STRATEGY
         )::singleThreaded,
         () -> VSizeColumnarInts.fromArray(new int[]{0}),
-        null
+        null,
+        bitmapFactory
     );
     supplierSingle = new StringUtf8DictionaryEncodedColumnSupplier<>(
         GenericIndexed.fromIterable(
@@ -64,7 +67,8 @@ public class ValueMatchersTest extends InitializedNullHandlingTest
             GenericIndexed.UTF8_STRATEGY
         )::singleThreaded,
         () -> VSizeColumnarInts.fromArray(new int[]{0, 0, 1, 0, 1}),
-        null
+        null,
+        bitmapFactory
     );
     supplierMulti = new StringUtf8DictionaryEncodedColumnSupplier<>(
         GenericIndexed.fromIterable(
@@ -77,7 +81,8 @@ public class ValueMatchersTest extends InitializedNullHandlingTest
                 VSizeColumnarInts.fromArray(new int[]{0, 0}),
                 VSizeColumnarInts.fromArray(new int[]{0})
             )
-        )
+        ),
+        bitmapFactory
     );
   }
   @Test

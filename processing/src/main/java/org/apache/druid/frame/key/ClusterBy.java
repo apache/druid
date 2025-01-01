@@ -152,29 +152,29 @@ public class ClusterBy
   /**
    * Comparator that compares keys for this instance using the given signature.
    */
-  public Comparator<RowKey> keyComparator()
+  public Comparator<RowKey> keyComparator(RowSignature rowSignature)
   {
-    return RowKeyComparator.create(columns);
+    return RowKeyComparator.create(columns, rowSignature);
   }
 
   /**
    * Comparator that compares byte arrays of keys for this instance using the given signature directly.
    */
-  public Comparator<byte[]> byteKeyComparator()
+  public Comparator<byte[]> byteKeyComparator(RowSignature rowSignature)
   {
-    return ByteRowKeyComparator.create(columns);
+    return ByteRowKeyComparator.create(columns, rowSignature);
   }
 
   /**
    * Comparator that compares bucket keys for this instance. Bucket keys are retrieved by calling
    * {@link RowKeyReader#trim(RowKey, int)} with {@link #getBucketByCount()}.
    */
-  public Comparator<RowKey> bucketComparator()
+  public Comparator<RowKey> bucketComparator(final RowSignature rowSignature)
   {
     if (bucketByCount == 0) {
       return Comparators.alwaysEqual();
     } else {
-      return RowKeyComparator.create(columns.subList(0, bucketByCount));
+      return RowKeyComparator.create(columns.subList(0, bucketByCount), rowSignature);
     }
   }
 

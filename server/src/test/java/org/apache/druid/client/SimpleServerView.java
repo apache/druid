@@ -30,7 +30,7 @@ import org.apache.druid.client.selector.TierSelectorStrategy;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.query.QueryRunner;
-import org.apache.druid.query.QueryToolChestWarehouse;
+import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.planning.DataSourceAnalysis;
@@ -66,14 +66,14 @@ public class SimpleServerView implements TimelineServerView
   private final DirectDruidClientFactory clientFactory;
 
   public SimpleServerView(
-      QueryToolChestWarehouse warehouse,
+      QueryRunnerFactoryConglomerate conglomerate,
       ObjectMapper objectMapper,
       HttpClient httpClient
   )
   {
     this.clientFactory = new DirectDruidClientFactory(
         new NoopServiceEmitter(),
-        warehouse,
+        conglomerate,
         NOOP_QUERY_WATCHER,
         objectMapper,
         httpClient
@@ -143,7 +143,7 @@ public class SimpleServerView implements TimelineServerView
   public <T> QueryRunner<T> getQueryRunner(DruidServer server)
   {
     final QueryableDruidServer queryableDruidServer = Preconditions.checkNotNull(servers.get(server), "server");
-    return (QueryRunner<T>) queryableDruidServer.getQueryRunner();
+    return queryableDruidServer.getQueryRunner();
   }
 
   @Override

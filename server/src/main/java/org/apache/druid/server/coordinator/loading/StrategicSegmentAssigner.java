@@ -69,6 +69,7 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
   private final Map<String, Integer> tierToHistoricalCount = new HashMap<>();
   private final Map<String, Set<SegmentId>> segmentsToDelete = new HashMap<>();
   private final Map<String, Set<DataSegment>> segmentsWithZeroRequiredReplicas = new HashMap<>();
+  private final Set<DataSegment> broadcastSegments = new HashSet<>();
 
   public StrategicSegmentAssigner(
       SegmentLoadQueueManager loadQueueManager,
@@ -90,11 +91,6 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
     cluster.getHistoricals().forEach(
         (tier, historicals) -> tierToHistoricalCount.put(tier, historicals.size())
     );
-  }
-
-  public CoordinatorRunStats getStats()
-  {
-    return stats;
   }
 
   public SegmentReplicationStatus getReplicationStatus()
@@ -361,6 +357,8 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
         entry -> replicaCountMap.computeIfAbsent(segment.getId(), entry.getKey())
                                 .setRequired(entry.getIntValue(), entry.getIntValue())
     );
+
+    broadcastSegments.add(segment);
   }
 
   @Override
@@ -396,6 +394,11 @@ public class StrategicSegmentAssigner implements SegmentActionHandler
 
     incrementSkipStat(Stats.Segments.ASSIGN_SKIPPED, skipReason, segment, server.getServer().getTier());
     return false;
+  }
+
+  public Set<DataSegment> getBroadcastSegments()
+  {
+    return broadcastSegments;
   }
 
   /**

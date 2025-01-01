@@ -106,9 +106,7 @@ public class CheckPointDataSourceMetadataAction implements TaskAction<Boolean>
   @Override
   public TypeReference<Boolean> getReturnTypeReference()
   {
-    return new TypeReference<Boolean>()
-    {
-    };
+    return new TypeReference<>() {};
   }
 
   @Override
@@ -119,12 +117,6 @@ public class CheckPointDataSourceMetadataAction implements TaskAction<Boolean>
         taskGroupId,
         checkpointMetadata
     );
-  }
-
-  @Override
-  public boolean isAudited()
-  {
-    return true;
   }
 
   @Override

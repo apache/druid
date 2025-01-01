@@ -41,6 +41,7 @@ import java.util.Set;
 
 public class RestoreTask extends AbstractFixedIntervalTask
 {
+  public static final String TYPE = "restore";
   private static final Logger log = new Logger(RestoreTask.class);
 
   public RestoreTask(
@@ -61,7 +62,7 @@ public class RestoreTask extends AbstractFixedIntervalTask
   @Override
   public String getType()
   {
-    return "restore";
+    return TYPE;
   }
 
   @Nonnull

@@ -29,13 +29,12 @@ import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import org.apache.druid.indexing.common.LockGranularity;
-import org.apache.druid.indexing.common.RetryPolicyConfig;
-import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.task.CompactionTask;
 import org.apache.druid.indexing.common.task.CompactionTask.Builder;
 import org.apache.druid.indexing.common.task.SpecificSegmentsSpec;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.segment.DataSegmentsWithSchemas;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Interval;
@@ -53,7 +52,6 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTest
 {
@@ -66,10 +64,10 @@ public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTes
       null,
       false,
       false,
-      0
+      0,
+      null
   );
   private static final Interval INTERVAL_TO_INDEX = Intervals.of("2017-12/P1M");
-  private static final RetryPolicyFactory RETRY_POLICY_FACTORY = new RetryPolicyFactory(new RetryPolicyConfig());
 
   private File inputDir;
 
@@ -97,20 +95,25 @@ public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTes
   @Test
   public void testPartialCompactHashAndDynamicPartitionedSegments()
   {
-    final Map<Interval, List<DataSegment>> hashPartitionedSegments = SegmentUtils.groupSegmentsByInterval(
+    DataSegmentsWithSchemas dataSegmentsWithSchemas =
         runTestTask(
             new HashedPartitionsSpec(null, 3, null),
             TaskState.SUCCESS,
             false
-        )
-    );
-    final Map<Interval, List<DataSegment>> linearlyPartitionedSegments = SegmentUtils.groupSegmentsByInterval(
+        );
+    verifySchema(dataSegmentsWithSchemas);
+    final Map<Interval, List<DataSegment>> hashPartitionedSegments =
+        SegmentUtils.groupSegmentsByInterval(dataSegmentsWithSchemas.getSegments());
+
+    dataSegmentsWithSchemas =
         runTestTask(
             new DynamicPartitionsSpec(10, null),
             TaskState.SUCCESS,
             true
-        )
-    );
+        );
+    verifySchema(dataSegmentsWithSchemas);
+    final Map<Interval, List<DataSegment>> linearlyPartitionedSegments =
+        SegmentUtils.groupSegmentsByInterval(dataSegmentsWithSchemas.getSegments());
     // Pick half of each partition lists to compact together
     hashPartitionedSegments.values().forEach(
         segmentsInInterval -> segmentsInInterval.sort(
@@ -137,8 +140,10 @@ public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTes
         .inputSpec(SpecificSegmentsSpec.fromSegments(segmentsToCompact))
         .tuningConfig(newTuningConfig(new DynamicPartitionsSpec(20, null), 2, false))
         .build();
+    dataSegmentsWithSchemas = runTask(compactionTask, TaskState.SUCCESS);
+    verifySchema(dataSegmentsWithSchemas);
     final Map<Interval, List<DataSegment>> compactedSegments = SegmentUtils.groupSegmentsByInterval(
-        runTask(compactionTask, TaskState.SUCCESS)
+        dataSegmentsWithSchemas.getSegments()
     );
     for (List<DataSegment> segmentsInInterval : compactedSegments.values()) {
       final int expectedAtomicUpdateGroupSize = segmentsInInterval.size();
@@ -151,20 +156,24 @@ public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTes
   @Test
   public void testPartialCompactRangeAndDynamicPartitionedSegments()
   {
-    final Map<Interval, List<DataSegment>> rangePartitionedSegments = SegmentUtils.groupSegmentsByInterval(
+    DataSegmentsWithSchemas dataSegmentsWithSchemas =
         runTestTask(
             new SingleDimensionPartitionsSpec(10, null, "dim1", false),
             TaskState.SUCCESS,
             false
-        )
-    );
-    final Map<Interval, List<DataSegment>> linearlyPartitionedSegments = SegmentUtils.groupSegmentsByInterval(
+        );
+    final Map<Interval, List<DataSegment>> rangePartitionedSegments =
+        SegmentUtils.groupSegmentsByInterval(dataSegmentsWithSchemas.getSegments());
+
+    dataSegmentsWithSchemas =
         runTestTask(
             new DynamicPartitionsSpec(10, null),
             TaskState.SUCCESS,
             true
-        )
-    );
+        );
+    final Map<Interval, List<DataSegment>> linearlyPartitionedSegments =
+        SegmentUtils.groupSegmentsByInterval(dataSegmentsWithSchemas.getSegments());
+
     // Pick half of each partition lists to compact together
     rangePartitionedSegments.values().forEach(
         segmentsInInterval -> segmentsInInterval.sort(
@@ -191,8 +200,10 @@ public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTes
         .inputSpec(SpecificSegmentsSpec.fromSegments(segmentsToCompact))
         .tuningConfig(newTuningConfig(new DynamicPartitionsSpec(20, null), 2, false))
         .build();
+
+    dataSegmentsWithSchemas = runTask(compactionTask, TaskState.SUCCESS);
     final Map<Interval, List<DataSegment>> compactedSegments = SegmentUtils.groupSegmentsByInterval(
-        runTask(compactionTask, TaskState.SUCCESS)
+        dataSegmentsWithSchemas.getSegments()
     );
     for (List<DataSegment> segmentsInInterval : compactedSegments.values()) {
       final int expectedAtomicUpdateGroupSize = segmentsInInterval.size();
@@ -202,7 +213,7 @@ public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTes
     }
   }
 
-  private Set<DataSegment> runTestTask(
+  private DataSegmentsWithSchemas runTestTask(
       PartitionsSpec partitionsSpec,
       TaskState expectedTaskState,
       boolean appendToExisting
@@ -228,8 +239,7 @@ public class PartialCompactionTest extends AbstractMultiPhaseParallelIndexingTes
   {
     return new Builder(
         DATASOURCE,
-        getSegmentCacheManagerFactory(),
-        RETRY_POLICY_FACTORY
+        getSegmentCacheManagerFactory()
     );
   }
 }

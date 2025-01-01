@@ -463,7 +463,7 @@ public class MarkEternityTombstonesAsUnusedTest
         .build();
 
     final DruidCoordinatorRuntimeParams params = DruidCoordinatorRuntimeParams
-        .newBuilder(DateTimes.nowUtc())
+        .builder()
         .withDataSourcesSnapshot(
             segmentsMetadataManager.getSnapshotOfDataSourcesWithAllUsedSegments()
         )
@@ -484,7 +484,9 @@ public class MarkEternityTombstonesAsUnusedTest
       final ImmutableList<DataSegment> expectedUsedSegments
   )
   {
-    params = new MarkEternityTombstonesAsUnused(segmentsMetadataManager::markSegmentsAsUnused).run(params);
+    params = new MarkEternityTombstonesAsUnused(
+        (ds, segmentIds) -> segmentsMetadataManager.markSegmentsAsUnused(segmentIds)
+    ).run(params);
 
     final Set<DataSegment> actualUsedSegments = Sets.newHashSet(segmentsMetadataManager.iterateAllUsedSegments());
 

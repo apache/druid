@@ -30,6 +30,7 @@ import org.apache.druid.storage.StorageConnectorProvider;
 import org.apache.druid.storage.s3.S3StorageDruidModule;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
 
+import javax.annotation.Nullable;
 import java.io.File;
 
 @JsonTypeName(S3StorageDruidModule.SCHEME)
@@ -38,11 +39,14 @@ public class S3StorageConnectorProvider extends S3OutputConfig implements Storag
   @JacksonInject
   ServerSideEncryptingAmazonS3 s3;
 
+  @JacksonInject
+  S3UploadManager s3UploadManager;
+
   @JsonCreator
   public S3StorageConnectorProvider(
       @JsonProperty(value = "bucket", required = true) String bucket,
       @JsonProperty(value = "prefix", required = true) String prefix,
-      @JsonProperty(value = "tempDir", required = true) File tempDir,
+      @JsonProperty(value = "tempDir") @Nullable File tempDir,
       @JsonProperty("chunkSize") HumanReadableBytes chunkSize,
       @JsonProperty("maxRetry") Integer maxRetry
   )
@@ -51,8 +55,9 @@ public class S3StorageConnectorProvider extends S3OutputConfig implements Storag
   }
 
   @Override
-  public StorageConnector get()
+  public StorageConnector createStorageConnector(File defaultTempDir)
   {
-    return new S3StorageConnector(this, s3);
+    S3OutputConfig config = this.getTempDir() == null ? this.withTempDir(defaultTempDir) : this;
+    return new S3StorageConnector(config, s3, s3UploadManager);
   }
 }

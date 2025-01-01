@@ -26,11 +26,6 @@ package org.apache.druid.msq.util;
 public enum ArrayIngestMode
 {
   /**
-   * Disables the ingestion of arrays via MSQ's INSERT queries.
-   */
-  NONE,
-
-  /**
    * String arrays are ingested as MVDs. This is to preserve the legacy behaviour of Druid and will be removed in the
    * future, since MVDs are not true array types and the behaviour is incorrect.
    * This also disables the ingestion of numeric arrays

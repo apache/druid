@@ -27,12 +27,12 @@ import {
   Intent,
   Menu,
   MenuItem,
+  Popover,
   Position,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { Popover2 } from '@blueprintjs/popover2';
-import type { QueryParameter } from '@druid-toolkit/query';
-import { isEmptyArray } from '@druid-toolkit/query';
+import type { QueryParameter } from 'druid-query-toolkit';
+import { isEmptyArray } from 'druid-query-toolkit';
 import React, { useState } from 'react';
 
 import { FancyNumericInput } from '../../../components/fancy-numeric-input/fancy-numeric-input';
@@ -83,7 +83,7 @@ export const QueryParametersDialog = React.memo(function QueryParametersDialog(
           return (
             <FormGroup key={i} label={`Parameter in position ${i + 1}`}>
               <ControlGroup fill>
-                <Popover2
+                <Popover
                   minimal
                   position={Position.BOTTOM_LEFT}
                   content={
@@ -104,7 +104,7 @@ export const QueryParametersDialog = React.memo(function QueryParametersDialog(
                   }
                 >
                   <Button text={type} rightIcon={IconNames.CARET_DOWN} />
-                </Popover2>
+                </Popover>
                 {oneOf(type, 'BIGINT', 'DOUBLE', 'FLOAT') ? (
                   <FancyNumericInput
                     value={Number(value)}

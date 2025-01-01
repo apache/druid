@@ -26,7 +26,6 @@ import com.google.inject.Binder;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Key;
-import com.google.inject.Module;
 import com.google.inject.TypeLiteral;
 import org.apache.druid.client.FilteredServerInventoryView;
 import org.apache.druid.client.TimelineServerView;
@@ -34,7 +33,6 @@ import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.client.indexing.IndexingService;
-import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.guice.DruidGuiceExtensions;
@@ -49,12 +47,14 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.GenericQueryMetricsFactory;
+import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
+import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.join.JoinableFactory;
-import org.apache.druid.segment.loading.SegmentLoader;
+import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.QuerySchedulerProvider;
 import org.apache.druid.server.ResponseContextConfig;
@@ -118,7 +118,10 @@ public class SqlModuleTest
   private JoinableFactory joinableFactory;
 
   @Mock
-  private SegmentLoader segmentLoader;
+  private SegmentCacheManager segmentCacheManager;
+
+  @Mock
+  private QueryRunnerFactoryConglomerate conglomerate;
 
   private Injector injector;
 
@@ -136,7 +139,7 @@ public class SqlModuleTest
         queryToolChestWarehouse,
         lookupExtractorFactoryContainerProvider,
         joinableFactory,
-        segmentLoader
+        segmentCacheManager
     );
   }
 
@@ -183,7 +186,7 @@ public class SqlModuleTest
             new ServerModule(),
             new JacksonModule(),
             new AuthenticatorMapperModule(),
-            (Module) binder -> {
+            binder -> {
               binder.bind(Validator.class).toInstance(Validation.buildDefaultValidatorFactory().getValidator());
               binder.bind(JsonConfigurator.class).in(LazySingleton.class);
               binder.bind(Properties.class).toInstance(props);
@@ -201,9 +204,10 @@ public class SqlModuleTest
               binder.bind(GenericQueryMetricsFactory.class).toInstance(genericQueryMetricsFactory);
               binder.bind(QuerySegmentWalker.class).toInstance(querySegmentWalker);
               binder.bind(QueryToolChestWarehouse.class).toInstance(queryToolChestWarehouse);
+              binder.bind(QueryRunnerFactoryConglomerate.class).toInstance(conglomerate);
               binder.bind(LookupExtractorFactoryContainerProvider.class).toInstance(lookupExtractorFactoryContainerProvider);
               binder.bind(JoinableFactory.class).toInstance(joinableFactory);
-              binder.bind(SegmentLoader.class).toInstance(segmentLoader);
+              binder.bind(SegmentCacheManager.class).toInstance(segmentCacheManager);
               binder.bind(QuerySchedulerProvider.class).in(LazySingleton.class);
               binder.bind(QueryScheduler.class)
                     .toProvider(QuerySchedulerProvider.class)

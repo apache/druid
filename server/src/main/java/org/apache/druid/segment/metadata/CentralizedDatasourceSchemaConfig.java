@@ -27,27 +27,55 @@ import com.google.common.annotations.VisibleForTesting;
  */
 public class CentralizedDatasourceSchemaConfig
 {
+  public static final String PROPERTY_PREFIX = "druid.centralizedDatasourceSchema";
+
+  public static final int SCHEMA_VERSION = 1;
+
   @JsonProperty
   private boolean enabled = false;
 
-  // If realtime segment schema should be published in segment announcement flow
-  // This config is temporary and will be removed.
+  // internal config meant for testing
   @JsonProperty
-  private boolean announceRealtimeSegmentSchema = false;
+  private boolean taskSchemaPublishDisabled = false;
+  @JsonProperty
+  private boolean backFillEnabled = true;
+  @JsonProperty
+  private long backFillPeriod = 60000;
 
+  @JsonProperty
   public boolean isEnabled()
   {
     return enabled;
   }
 
-  public boolean announceRealtimeSegmentSchema()
+  @JsonProperty
+  public boolean isBackFillEnabled()
   {
-    return announceRealtimeSegmentSchema;
+    return backFillEnabled;
+  }
+
+  @JsonProperty
+  public long getBackFillPeriod()
+  {
+    return backFillPeriod;
+  }
+
+  @JsonProperty
+  public boolean isTaskSchemaPublishDisabled()
+  {
+    return taskSchemaPublishDisabled;
   }
 
   public static CentralizedDatasourceSchemaConfig create()
   {
     return new CentralizedDatasourceSchemaConfig();
+  }
+
+  public static CentralizedDatasourceSchemaConfig create(boolean enabled)
+  {
+    CentralizedDatasourceSchemaConfig config = new CentralizedDatasourceSchemaConfig();
+    config.setEnabled(enabled);
+    return config;
   }
 
   @VisibleForTesting
@@ -57,8 +85,14 @@ public class CentralizedDatasourceSchemaConfig
   }
 
   @VisibleForTesting
-  public void setAnnounceRealtimeSegmentSchema(boolean announceRealtimeSegmentSchema)
+  public void setBackFillEnabled(boolean backFillEnabled)
   {
-    this.announceRealtimeSegmentSchema = announceRealtimeSegmentSchema;
+    this.backFillEnabled = backFillEnabled;
+  }
+
+  @VisibleForTesting
+  public void setBackFillPeriod(long backFillPeriod)
+  {
+    this.backFillPeriod = backFillPeriod;
   }
 }

@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
+import org.apache.druid.indexing.common.task.TuningConfigBuilder;
 import org.apache.druid.indexing.common.task.batch.partition.HashPartitionAnalysis;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -53,7 +54,10 @@ public class PartialHashSegmentGenerateTaskTest
   private static final ParallelIndexIngestionSpec INGESTION_SPEC = ParallelIndexTestingFactory.createIngestionSpec(
       new LocalInputSource(new File("baseDir"), "filer"),
       new JsonInputFormat(null, null, null, null, null),
-      new ParallelIndexTestingFactory.TuningConfigBuilder().build(),
+      TuningConfigBuilder.forParallelIndexTask()
+                         .withForceGuaranteedRollup(true)
+                         .withPartitionsSpec(new HashedPartitionsSpec(null, 2, null))
+                         .build(),
       ParallelIndexTestingFactory.createDataSchema(ParallelIndexTestingFactory.INPUT_INTERVALS)
   );
 
@@ -180,7 +184,10 @@ public class PartialHashSegmentGenerateTaskTest
         ParallelIndexTestingFactory.createIngestionSpec(
             new LocalInputSource(new File("baseDir"), "filer"),
             new JsonInputFormat(null, null, null, null, null),
-            new ParallelIndexTestingFactory.TuningConfigBuilder().build(),
+            TuningConfigBuilder.forParallelIndexTask()
+                               .withForceGuaranteedRollup(true)
+                               .withPartitionsSpec(new HashedPartitionsSpec(null, 2, null))
+                               .build(),
             ParallelIndexTestingFactory.createDataSchema(null)
         ),
         ParallelIndexTestingFactory.CONTEXT,

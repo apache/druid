@@ -16,48 +16,114 @@
  * limitations under the License.
  */
 
-import { Button, Classes, Code, ControlGroup, Dialog, FormGroup, Intent } from '@blueprintjs/core';
+import {
+  Button,
+  Classes,
+  ControlGroup,
+  Dialog,
+  FormGroup,
+  Intent,
+  Label,
+  Tag,
+} from '@blueprintjs/core';
 import React, { useState } from 'react';
 
-import { Loader } from '../../components';
+import type { FormJsonTabs } from '../../components';
+import { FormJsonSelector, JsonInput, Loader } from '../../components';
 import { FancyNumericInput } from '../../components/fancy-numeric-input/fancy-numeric-input';
+import type { SupervisorOffsetMap, SupervisorStatus } from '../../druid-models';
 import { useQueryManager } from '../../hooks';
 import { Api, AppToaster } from '../../singletons';
-import { deepDelete, deepGet, getDruidErrorMessage } from '../../utils';
+import {
+  deepDelete,
+  deepGet,
+  formatInteger,
+  getDruidErrorMessage,
+  isNumberLike,
+} from '../../utils';
 
 import './supervisor-reset-offsets-dialog.scss';
 
-type OffsetMap = Record<string, number>;
+function numberOrUndefined(x: any): number | undefined {
+  if (typeof x === 'undefined') return;
+  return Number(x);
+}
+
+interface PartitionEntry {
+  partition: string;
+  currentOffset?: number;
+}
+
+function getPartitionEntries(
+  supervisorStatus: SupervisorStatus,
+  partitionOffsetMap: SupervisorOffsetMap,
+): PartitionEntry[] {
+  const latestOffsets = supervisorStatus.payload?.latestOffsets;
+  const minimumLag = supervisorStatus.payload?.minimumLag;
+  let partitions: PartitionEntry[];
+  if (latestOffsets && minimumLag) {
+    partitions = Object.entries(latestOffsets).map(([partition, latestOffset]) => {
+      return {
+        partition,
+        currentOffset: Number(latestOffset) - Number(minimumLag[partition] || 0),
+      };
+    });
+  } else {
+    partitions = [];
+    const numPartitions = supervisorStatus.payload?.partitions;
+    for (let p = 0; p < numPartitions; p++) {
+      partitions.push({ partition: String(p) });
+    }
+  }
+
+  Object.keys(partitionOffsetMap).forEach(p => {
+    if (partitions.some(({ partition }) => partition === p)) return;
+    partitions.push({ partition: p });
+  });
+
+  partitions.sort((a, b) => {
+    return a.partition.localeCompare(b.partition, undefined, { numeric: true });
+  });
+
+  return partitions;
+}
 
 interface SupervisorResetOffsetsDialogProps {
   supervisorId: string;
   supervisorType: string;
-  onClose: () => void;
+  onClose(): void;
 }
 
 export const SupervisorResetOffsetsDialog = React.memo(function SupervisorResetOffsetsDialog(
   props: SupervisorResetOffsetsDialogProps,
 ) {
   const { supervisorId, supervisorType, onClose } = props;
-  const [offsetsToResetTo, setOffsetsToResetTo] = useState<OffsetMap>({});
+  const [partitionOffsetMap, setPartitionOffsetMap] = useState<SupervisorOffsetMap>({});
+  const [currentTab, setCurrentTab] = useState<FormJsonTabs>('form');
+  const [jsonError, setJsonError] = useState<Error | undefined>();
+  const disableSubmit = Boolean(jsonError);
 
-  const [statusResp] = useQueryManager<string, OffsetMap>({
+  const [statusResp] = useQueryManager<string, SupervisorStatus>({
     initQuery: supervisorId,
-    processQuery: async supervisorId => {
-      const statusResp = await Api.instance.get(
-        `/druid/indexer/v1/supervisor/${Api.encodePath(supervisorId)}/status`,
-      );
-      return statusResp.data;
+    processQuery: async (supervisorId, cancelToken) => {
+      return (
+        await Api.instance.get(
+          `/druid/indexer/v1/supervisor/${Api.encodePath(supervisorId)}/status`,
+          { cancelToken },
+        )
+      ).data;
     },
   });
 
-  const stream = deepGet(statusResp.data || {}, 'payload.stream');
-  const latestOffsets = deepGet(statusResp.data || {}, 'payload.latestOffsets');
-  const latestOffsetsEntries = latestOffsets ? Object.entries(latestOffsets) : undefined;
+  // Kafka:   Topic, Partition, Offset
+  // Kinesis: Stream, Shard, Sequence number
+  const partitionLabel = supervisorType === 'kinesis' ? 'Shard' : 'Partition';
+  const offsetLabel = supervisorType === 'kinesis' ? 'sequence number' : 'offset';
 
-  async function onSave() {
+  async function onSubmit() {
+    const stream = deepGet(statusResp.data || {}, 'payload.stream');
     if (!stream) return;
-    if (!Object.keys(offsetsToResetTo).length) return;
+    if (!Object.keys(partitionOffsetMap).length) return;
 
     try {
       await Api.instance.post(
@@ -67,68 +133,112 @@ export const SupervisorResetOffsetsDialog = React.memo(function SupervisorResetO
           partitions: {
             type: 'end',
             stream,
-            partitionOffsetMap: offsetsToResetTo,
+            partitionOffsetMap,
           },
         },
       );
     } catch (e) {
       AppToaster.show({
-        message: `Failed to set offsets: ${getDruidErrorMessage(e)}`,
+        message: `Failed to set ${offsetLabel}s: ${getDruidErrorMessage(e)}`,
         intent: Intent.DANGER,
       });
       return;
     }
 
     AppToaster.show({
-      message: `${supervisorId} offsets have been set`,
+      message: (
+        <>
+          <Tag minimal>{supervisorId}</Tag> {offsetLabel}s have been set.
+        </>
+      ),
       intent: Intent.SUCCESS,
     });
     onClose();
   }
 
+  const supervisorStatus = statusResp.data;
   return (
     <Dialog
       className="supervisor-reset-offsets-dialog"
       isOpen
       onClose={onClose}
-      title={`Set supervisor offsets: ${supervisorId}`}
+      title={`Set supervisor ${offsetLabel}s`}
     >
       <div className={Classes.DIALOG_BODY}>
-        {statusResp.loading && <Loader />}
-        {latestOffsetsEntries && (
+        <p>
+          Set <Tag minimal>{supervisorId}</Tag> to read from specific {offsetLabel}s.
+        </p>
+        <FormJsonSelector
+          tab={currentTab}
+          onChange={t => {
+            setJsonError(undefined);
+            setCurrentTab(t);
+          }}
+        />
+        {currentTab === 'form' ? (
           <>
-            <p>
-              Set <Code>{supervisorId}</Code> to specific offsets
-            </p>
-            {latestOffsetsEntries.map(([key, latestOffset]) => (
-              <FormGroup key={key} label={key} helperText={`(currently: ${latestOffset})`}>
-                <ControlGroup>
-                  <Button className="label-button" text="New offset:" disabled />
-                  <FancyNumericInput
-                    value={offsetsToResetTo[key]}
-                    onValueChange={valueAsNumber => {
-                      setOffsetsToResetTo({ ...offsetsToResetTo, [key]: valueAsNumber });
-                    }}
-                    onValueEmpty={() => {
-                      setOffsetsToResetTo(deepDelete(offsetsToResetTo, key));
-                    }}
-                    min={0}
-                    fill
-                    placeholder="Don't change offset"
-                  />
-                </ControlGroup>
-              </FormGroup>
-            ))}
-            {latestOffsetsEntries.length === 0 && (
-              <p>There are no partitions currently in this supervisor.</p>
-            )}
+            {statusResp.loading && <Loader />}
+            {supervisorStatus &&
+              getPartitionEntries(supervisorStatus, partitionOffsetMap).map(
+                ({ partition, currentOffset }) => (
+                  <FormGroup
+                    key={partition}
+                    label={`${partitionLabel} ${partition}${
+                      typeof currentOffset === 'undefined'
+                        ? ''
+                        : ` (current ${offsetLabel}=${formatInteger(currentOffset)})`
+                    }:`}
+                  >
+                    <ControlGroup>
+                      <Label className="new-offset-label">{`New ${offsetLabel}:`}</Label>
+                      <FancyNumericInput
+                        value={numberOrUndefined(partitionOffsetMap[partition])}
+                        onValueChange={valueAsNumber => {
+                          setPartitionOffsetMap({
+                            ...partitionOffsetMap,
+                            [partition]: valueAsNumber,
+                          });
+                        }}
+                        onValueEmpty={() => {
+                          setPartitionOffsetMap(deepDelete(partitionOffsetMap, partition));
+                        }}
+                        min={0}
+                        fill
+                        placeholder={`Don't change ${offsetLabel}`}
+                      />
+                    </ControlGroup>
+                  </FormGroup>
+                ),
+              )}
           </>
+        ) : (
+          <JsonInput
+            value={partitionOffsetMap}
+            onChange={setPartitionOffsetMap}
+            setError={setJsonError}
+            issueWithValue={value => {
+              if (!value || typeof value !== 'object') {
+                return `The ${offsetLabel} map must be an object`;
+              }
+              const badValue = Object.entries(value).find(([_, v]) => !isNumberLike(v));
+              if (badValue) {
+                return `The value of ${badValue[0]} is not a number`;
+              }
+              return;
+            }}
+            height="300px"
+          />
         )}
       </div>
       <div className={Classes.DIALOG_FOOTER}>
         <div className={Classes.DIALOG_FOOTER_ACTIONS}>
           <Button text="Close" onClick={onClose} />
-          <Button text="Save" intent={Intent.PRIMARY} onClick={() => void onSave()} />
+          <Button
+            text="Submit"
+            intent={Intent.PRIMARY}
+            disabled={disableSubmit}
+            onClick={() => void onSubmit()}
+          />
         </div>
       </div>
     </Dialog>

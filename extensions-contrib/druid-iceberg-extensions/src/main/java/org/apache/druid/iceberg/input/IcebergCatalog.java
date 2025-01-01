@@ -25,7 +25,6 @@ import org.apache.druid.iceberg.filter.IcebergFilter;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.iceberg.BaseMetastoreCatalog;
 import org.apache.iceberg.FileScanTask;
 import org.apache.iceberg.TableScan;
 import org.apache.iceberg.catalog.Catalog;
@@ -46,9 +45,15 @@ import java.util.List;
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = InputFormat.TYPE_PROPERTY)
 public abstract class IcebergCatalog
 {
+  public static final String DRUID_DYNAMIC_CONFIG_PROVIDER_KEY = "druid.dynamic.config.provider";
   private static final Logger log = new Logger(IcebergCatalog.class);
 
-  public abstract BaseMetastoreCatalog retrieveCatalog();
+  public abstract Catalog retrieveCatalog();
+
+  public boolean isCaseSensitive()
+  {
+    return true;
+  }
 
   /**
    * Extract the iceberg data files upto the latest snapshot associated with the table
@@ -92,6 +97,8 @@ public abstract class IcebergCatalog
       if (snapshotTime != null) {
         tableScan = tableScan.asOfTime(snapshotTime.getMillis());
       }
+
+      tableScan = tableScan.caseSensitive(isCaseSensitive());
       CloseableIterable<FileScanTask> tasks = tableScan.planFiles();
       CloseableIterable.transform(tasks, FileScanTask::file)
                        .forEach(dataFile -> dataFilePaths.add(dataFile.path().toString()));

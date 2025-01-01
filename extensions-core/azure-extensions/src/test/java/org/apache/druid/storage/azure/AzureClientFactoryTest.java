@@ -24,11 +24,19 @@ import com.azure.core.http.policy.BearerTokenAuthenticationPolicy;
 import com.azure.storage.blob.BlobServiceClient;
 import com.azure.storage.common.StorageSharedKeyCredential;
 import com.google.common.collect.ImmutableMap;
-import org.junit.Assert;
-import org.junit.Test;
+import org.apache.druid.java.util.common.concurrent.Execs;
+import org.junit.jupiter.api.Test;
 
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 public class AzureClientFactoryTest
 {
@@ -41,7 +49,7 @@ public class AzureClientFactoryTest
     AzureAccountConfig config = new AzureAccountConfig();
     azureClientFactory = new AzureClientFactory(config);
     BlobServiceClient blobServiceClient = azureClientFactory.getBlobServiceClient(null, ACCOUNT);
-    Assert.assertEquals(ACCOUNT, blobServiceClient.getAccountName());
+    assertEquals(ACCOUNT, blobServiceClient.getAccountName());
   }
 
   @Test
@@ -54,12 +62,14 @@ public class AzureClientFactoryTest
     StorageSharedKeyCredential storageSharedKeyCredential = StorageSharedKeyCredential.getSharedKeyCredentialFromPipeline(
         blobServiceClient.getHttpPipeline()
     );
-    Assert.assertNotNull(storageSharedKeyCredential);
+    assertNotNull(storageSharedKeyCredential);
 
     // Azure doesn't let us look at the key in the StorageSharedKeyCredential so make sure the authorization header generated is what we expect.
-    Assert.assertEquals(
-        new StorageSharedKeyCredential(ACCOUNT, "key").generateAuthorizationHeader(new URL("http://druid.com"), "POST", ImmutableMap.of()),
-        storageSharedKeyCredential.generateAuthorizationHeader(new URL("http://druid.com"), "POST", ImmutableMap.of())
+    assertEquals(
+        new StorageSharedKeyCredential(ACCOUNT, "key")
+            .generateAuthorizationHeader(new URL("http://druid.com"), "POST", ImmutableMap.of()),
+        storageSharedKeyCredential
+            .generateAuthorizationHeader(new URL("http://druid.com"), "POST", ImmutableMap.of())
     );
   }
 
@@ -77,7 +87,7 @@ public class AzureClientFactoryTest
       }
     }
 
-    Assert.assertNotNull(azureSasCredentialPolicy);
+    assertNotNull(azureSasCredentialPolicy);
   }
 
   @Test
@@ -94,7 +104,7 @@ public class AzureClientFactoryTest
       }
     }
 
-    Assert.assertNotNull(bearerTokenAuthenticationPolicy);
+    assertNotNull(bearerTokenAuthenticationPolicy);
   }
 
   @Test
@@ -105,7 +115,7 @@ public class AzureClientFactoryTest
     azureClientFactory = new AzureClientFactory(config);
     BlobServiceClient blobServiceClient = azureClientFactory.getBlobServiceClient(null, ACCOUNT);
     BlobServiceClient blobServiceClient2 = azureClientFactory.getBlobServiceClient(null, ACCOUNT);
-    Assert.assertEquals(blobServiceClient, blobServiceClient2);
+    assertEquals(blobServiceClient, blobServiceClient2);
   }
 
   @Test
@@ -116,7 +126,7 @@ public class AzureClientFactoryTest
     azureClientFactory = new AzureClientFactory(config);
     BlobServiceClient blobServiceClient = azureClientFactory.getBlobServiceClient(null, ACCOUNT);
     BlobServiceClient blobServiceClient2 = azureClientFactory.getBlobServiceClient(1, ACCOUNT);
-    Assert.assertNotEquals(blobServiceClient, blobServiceClient2);
+    assertNotEquals(blobServiceClient, blobServiceClient2);
   }
 
   @Test
@@ -125,9 +135,9 @@ public class AzureClientFactoryTest
     AzureAccountConfig config = new AzureAccountConfig();
     config.setKey("key");
     azureClientFactory = new AzureClientFactory(config);
-    BlobServiceClient expectedBlobServiceClient = azureClientFactory.getBlobServiceClient(AzureAccountConfig.DEFAULT_MAX_TRIES, ACCOUNT);
+    BlobServiceClient expectedBlobServiceClient = azureClientFactory.getBlobServiceClient(3, ACCOUNT);
     BlobServiceClient blobServiceClient = azureClientFactory.getBlobServiceClient(null, ACCOUNT);
-    Assert.assertEquals(expectedBlobServiceClient, blobServiceClient);
+    assertEquals(expectedBlobServiceClient, blobServiceClient);
   }
 
   @Test
@@ -138,10 +148,10 @@ public class AzureClientFactoryTest
     AzureAccountConfig config = new AzureAccountConfig();
     config.setKey("key");
     config.setEndpointSuffix(endpointSuffix);
-    URL expectedAccountUrl = new URL(AzureAccountConfig.DEFAULT_PROTOCOL, ACCOUNT + "." + AzureUtils.BLOB + "." + endpointSuffix, "");
+    URL expectedAccountUrl = new URL("https", ACCOUNT + "." + AzureUtils.BLOB + "." + endpointSuffix, "");
     azureClientFactory = new AzureClientFactory(config);
     BlobServiceClient blobServiceClient = azureClientFactory.getBlobServiceClient(null, ACCOUNT);
-    Assert.assertEquals(expectedAccountUrl.toString(), blobServiceClient.getAccountUrl());
+    assertEquals(expectedAccountUrl.toString(), blobServiceClient.getAccountUrl());
   }
 
   @Test
@@ -154,10 +164,10 @@ public class AzureClientFactoryTest
     config.setKey("key");
     config.setEndpointSuffix(endpointSuffix);
     config.setStorageAccountEndpointSuffix(storageAccountEndpointSuffix);
-    URL expectedAccountUrl = new URL(AzureAccountConfig.DEFAULT_PROTOCOL, ACCOUNT + "." + AzureUtils.BLOB + "." + endpointSuffix, "");
+    URL expectedAccountUrl = new URL("https", ACCOUNT + "." + AzureUtils.BLOB + "." + endpointSuffix, "");
     azureClientFactory = new AzureClientFactory(config);
     BlobServiceClient blobServiceClient = azureClientFactory.getBlobServiceClient(null, ACCOUNT);
-    Assert.assertEquals(expectedAccountUrl.toString(), blobServiceClient.getAccountUrl());
+    assertEquals(expectedAccountUrl.toString(), blobServiceClient.getAccountUrl());
   }
 
   @Test
@@ -168,9 +178,59 @@ public class AzureClientFactoryTest
     AzureAccountConfig config = new AzureAccountConfig();
     config.setKey("key");
     config.setStorageAccountEndpointSuffix(storageAccountEndpointSuffix);
-    URL expectedAccountUrl = new URL(AzureAccountConfig.DEFAULT_PROTOCOL, ACCOUNT + "." + storageAccountEndpointSuffix, "");
+    URL expectedAccountUrl = new URL("https", ACCOUNT + "." + storageAccountEndpointSuffix, "");
     azureClientFactory = new AzureClientFactory(config);
     BlobServiceClient blobServiceClient = azureClientFactory.getBlobServiceClient(null, ACCOUNT);
-    Assert.assertEquals(expectedAccountUrl.toString(), blobServiceClient.getAccountUrl());
+    assertEquals(expectedAccountUrl.toString(), blobServiceClient.getAccountUrl());
+  }
+
+  @Test
+  public void test_concurrent_azureClientFactory_gets() throws Exception
+  {
+    for (int i = 0; i < 10; i++) {
+      concurrentAzureClientFactoryGets();
+    }
+  }
+
+  private void concurrentAzureClientFactoryGets() throws Exception
+  {
+    final int threads = 100;
+    String endpointSuffix = "core.nonDefault.windows.net";
+    String storageAccountEndpointSuffix = "ABC123.blob.storage.azure.net";
+    AzureAccountConfig config = new AzureAccountConfig();
+    config.setKey("key");
+    config.setEndpointSuffix(endpointSuffix);
+    config.setStorageAccountEndpointSuffix(storageAccountEndpointSuffix);
+    final AzureClientFactory localAzureClientFactory = new AzureClientFactory(config);
+    final URL expectedAccountUrl = new URL(
+        "https",
+        ACCOUNT + "." + storageAccountEndpointSuffix,
+        ""
+    );
+
+    final CountDownLatch latch = new CountDownLatch(threads);
+    ExecutorService executorService = Execs.multiThreaded(threads, "azure-client-fetcher-%d");
+    final AtomicReference<Exception> failureException = new AtomicReference<>();
+    for (int i = 0; i < threads; i++) {
+      final int retry = i % 2;
+      executorService.submit(() -> {
+        try {
+          latch.countDown();
+          latch.await();
+          BlobServiceClient blobServiceClient = localAzureClientFactory.getBlobServiceClient(retry, ACCOUNT);
+          assertEquals(expectedAccountUrl.toString(), blobServiceClient.getAccountUrl());
+        }
+        catch (Exception e) {
+          failureException.compareAndSet(null, e);
+        }
+      });
+    }
+
+    //noinspection ResultOfMethodCallIgnored
+    executorService.awaitTermination(1000, TimeUnit.MICROSECONDS);
+
+    if (failureException.get() != null) {
+      throw failureException.get();
+    }
   }
 }

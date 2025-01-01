@@ -139,6 +139,11 @@ checker.init(
             licenseExt = '0BSD';
             break;
 
+          case  'OFL-1.1':
+            properLicenseName = 'SIL Open Font License 1.1';
+            licenseExt = 'OFL';
+            break;
+
           default:
             throw new Error(`Unknown license '${licenses}' in ${p}`);
         }
@@ -188,6 +193,7 @@ checker.init(
           if (name === 'diff-match-patch') publisher = 'Google';
           if (name === 'esutils') publisher = 'Yusuke Suzuki'; // https://github.com/estools/esutils#license
           if (name === 'echarts') publisher = 'Apache Software Foundation';
+          if (name === '@internationalized/date') publisher = 'Adobe';
         }
 
         if (!publisher) {

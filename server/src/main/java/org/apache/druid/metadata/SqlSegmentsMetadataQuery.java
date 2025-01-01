@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.UnmodifiableIterator;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
@@ -48,6 +49,7 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -242,45 +244,154 @@ public class SqlSegmentsMetadataQuery
     );
   }
 
-  public List<DataSegmentPlus> retrieveSegmentsById(String datasource, Set<String> segmentIds)
+  public Set<SegmentId> retrieveUsedSegmentIds(
+      final String dataSource,
+      final Interval interval
+  )
+  {
+    final StringBuilder sb = new StringBuilder();
+    sb.append("SELECT id FROM %s WHERE used = :used AND dataSource = :dataSource");
+
+    // If the interval supports comparing as a string, bake it into the SQL
+    final boolean compareAsString = Intervals.canCompareEndpointsAsStrings(interval);
+    if (compareAsString) {
+      sb.append(
+          getConditionForIntervalsAndMatchMode(
+              Collections.singletonList(interval),
+              IntervalMode.OVERLAPS,
+              connector.getQuoteString()
+          )
+      );
+    }
+
+    return connector.inReadOnlyTransaction(
+        (handle, status) -> {
+          final Query<Map<String, Object>> sql = handle
+              .createQuery(StringUtils.format(sb.toString(), dbTables.getSegmentsTable()))
+              .setFetchSize(connector.getStreamingFetchSize())
+              .bind("used", true)
+              .bind("dataSource", dataSource);
+
+          if (compareAsString) {
+            bindIntervalsToQuery(sql, Collections.singletonList(interval));
+          }
+
+          final Set<SegmentId> segmentIds = new HashSet<>();
+          try (final ResultIterator<String> iterator = sql.map((index, r, ctx) -> r.getString(1)).iterator()) {
+            while (iterator.hasNext()) {
+              final String id = iterator.next();
+              final SegmentId segmentId = SegmentId.tryParse(dataSource, id);
+              if (segmentId == null) {
+                throw DruidException.defensive(
+                    "Failed to parse SegmentId for id[%s] and dataSource[%s].",
+                    id, dataSource
+                );
+              }
+              if (IntervalMode.OVERLAPS.apply(interval, segmentId.getInterval())) {
+                segmentIds.add(segmentId);
+              }
+            }
+          }
+          return segmentIds;
+        });
+  }
+
+  public List<DataSegmentPlus> retrieveSegmentsById(
+      String datasource,
+      Set<String> segmentIds
+  )
   {
     final List<List<String>> partitionedSegmentIds
         = Lists.partition(new ArrayList<>(segmentIds), 100);
 
     final List<DataSegmentPlus> fetchedSegments = new ArrayList<>(segmentIds.size());
     for (List<String> partition : partitionedSegmentIds) {
-      fetchedSegments.addAll(retrieveSegmentBatchById(datasource, partition));
+      fetchedSegments.addAll(retrieveSegmentBatchById(datasource, partition, false));
     }
     return fetchedSegments;
   }
 
-  private List<DataSegmentPlus> retrieveSegmentBatchById(String datasource, List<String> segmentIds)
+  public List<DataSegmentPlus> retrieveSegmentsWithSchemaById(
+      String datasource,
+      Set<String> segmentIds
+  )
+  {
+    final List<List<String>> partitionedSegmentIds
+        = Lists.partition(new ArrayList<>(segmentIds), 100);
+
+    final List<DataSegmentPlus> fetchedSegments = new ArrayList<>(segmentIds.size());
+    for (List<String> partition : partitionedSegmentIds) {
+      fetchedSegments.addAll(retrieveSegmentBatchById(datasource, partition, true));
+    }
+    return fetchedSegments;
+  }
+
+  private List<DataSegmentPlus> retrieveSegmentBatchById(
+      String datasource,
+      List<String> segmentIds,
+      boolean includeSchemaInfo
+  )
   {
     if (segmentIds.isEmpty()) {
       return Collections.emptyList();
     }
 
-    final Query<Map<String, Object>> query = handle.createQuery(
-        StringUtils.format(
-            "SELECT payload, used FROM %s WHERE dataSource = :dataSource %s",
-            dbTables.getSegmentsTable(), getParameterizedInConditionForColumn("id", segmentIds)
-        )
-    );
+    ResultIterator<DataSegmentPlus> resultIterator;
+    if (includeSchemaInfo) {
+      final Query<Map<String, Object>> query = handle.createQuery(
+          StringUtils.format(
+              "SELECT payload, used, schema_fingerprint, num_rows, upgraded_from_segment_id FROM %s WHERE dataSource = :dataSource %s",
+              dbTables.getSegmentsTable(), getParameterizedInConditionForColumn("id", segmentIds)
+          )
+      );
 
-    bindColumnValuesToQueryWithInCondition("id", segmentIds, query);
+      bindColumnValuesToQueryWithInCondition("id", segmentIds, query);
 
-    ResultIterator<DataSegmentPlus> resultIterator = query
-        .bind("dataSource", datasource)
-        .setFetchSize(connector.getStreamingFetchSize())
-        .map(
-            (index, r, ctx) -> new DataSegmentPlus(
-                JacksonUtils.readValue(jsonMapper, r.getBytes(1), DataSegment.class),
-                null,
-                null,
-                r.getBoolean(2)
-            )
-        )
-        .iterator();
+      resultIterator = query
+          .bind("dataSource", datasource)
+          .setFetchSize(connector.getStreamingFetchSize())
+          .map(
+              (index, r, ctx) -> {
+                String schemaFingerprint = (String) r.getObject(3);
+                Long numRows = (Long) r.getObject(4);
+                return new DataSegmentPlus(
+                    JacksonUtils.readValue(jsonMapper, r.getBytes(1), DataSegment.class),
+                    null,
+                    null,
+                    r.getBoolean(2),
+                    schemaFingerprint,
+                    numRows,
+                    r.getString(5)
+                );
+              }
+          )
+          .iterator();
+    } else {
+      final Query<Map<String, Object>> query = handle.createQuery(
+          StringUtils.format(
+              "SELECT payload, used, upgraded_from_segment_id FROM %s WHERE dataSource = :dataSource %s",
+              dbTables.getSegmentsTable(), getParameterizedInConditionForColumn("id", segmentIds)
+          )
+      );
+
+      bindColumnValuesToQueryWithInCondition("id", segmentIds, query);
+
+      resultIterator = query
+          .bind("dataSource", datasource)
+          .setFetchSize(connector.getStreamingFetchSize())
+          .map(
+              (index, r, ctx) -> new DataSegmentPlus(
+                  JacksonUtils.readValue(jsonMapper, r.getBytes(1), DataSegment.class),
+                  null,
+                  null,
+                  r.getBoolean(2),
+                  null,
+                  null,
+                  r.getString(3)
+              )
+          )
+          .iterator();
+    }
 
     return Lists.newArrayList(resultIterator);
   }
@@ -807,6 +918,9 @@ public class SqlSegmentsMetadataQuery
             JacksonUtils.readValue(jsonMapper, r.getBytes(1), DataSegment.class),
             DateTimes.of(r.getString(2)),
             DateTimes.of(r.getString(3)),
+            null,
+            null,
+            null,
             null
         ))
         .iterator();
@@ -898,7 +1012,7 @@ public class SqlSegmentsMetadataQuery
    *
    * @implNote JDBI 3.x has better support for binding {@code IN} clauses directly.
    */
-  private static String getParameterizedInConditionForColumn(final String columnName, final List<String> values)
+  static String getParameterizedInConditionForColumn(final String columnName, final List<String> values)
   {
     if (values == null) {
       return "";
@@ -923,7 +1037,7 @@ public class SqlSegmentsMetadataQuery
    *
    * @see #getParameterizedInConditionForColumn(String, List)
    */
-  private static void bindColumnValuesToQueryWithInCondition(
+  static void bindColumnValuesToQueryWithInCondition(
       final String columnName,
       final List<String> values,
       final SQLStatement<?> query

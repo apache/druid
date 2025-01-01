@@ -28,11 +28,14 @@ import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.guice.ManageLifecycle;
+import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
+import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.metadata.AbstractSegmentMetadataCache;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.DataSourceInformation;
 import org.apache.druid.segment.realtime.appenderator.SegmentSchemas;
 import org.apache.druid.server.QueryLifecycleFactory;
@@ -72,6 +75,7 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
   private final CoordinatorClient coordinatorClient;
 
   private final BrokerSegmentMetadataCacheConfig config;
+  private final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
 
   @Inject
   public BrokerSegmentMetadataCache(
@@ -82,7 +86,8 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
       final InternalQueryConfig internalQueryConfig,
       final ServiceEmitter emitter,
       final PhysicalDatasourceMetadataFactory dataSourceMetadataFactory,
-      final CoordinatorClient coordinatorClient
+      final CoordinatorClient coordinatorClient,
+      final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
   )
   {
     super(
@@ -95,6 +100,7 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
     this.dataSourceMetadataFactory = dataSourceMetadataFactory;
     this.coordinatorClient = coordinatorClient;
     this.config = config;
+    this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
     initServerViewTimelineCallback(serverView);
   }
 
@@ -148,6 +154,35 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
     );
   }
 
+  @LifecycleStart
+  @Override
+  public void start() throws InterruptedException
+  {
+    log.info("Initializing cache.");
+    cacheExec.submit((Runnable) this::cacheExecLoop);
+    if (config.isAwaitInitializationOnStart()) {
+      awaitInitialization();
+    }
+  }
+
+  @LifecycleStop
+  @Override
+  public void stop()
+  {
+    cacheExec.shutdownNow();
+    callbackExec.shutdownNow();
+  }
+
+  /**
+   * Execute refresh on the broker in each cycle if CentralizedDatasourceSchema is enabled
+   * else if there are segments or datasources to be refreshed.
+   */
+  @Override
+  protected boolean shouldRefresh()
+  {
+    return centralizedDatasourceSchemaConfig.isEnabled() || super.shouldRefresh();
+  }
+
   /**
    * Refreshes the set of segments in two steps:
    * <ul>
@@ -163,18 +198,25 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
   @Override
   public void refresh(final Set<SegmentId> segmentsToRefresh, final Set<String> dataSourcesToRebuild) throws IOException
   {
-    // query schema for all datasources, which includes,
+    // query schema for all datasources in the inventory,
+    // which includes,
     // datasources explicitly marked for rebuilding
     // datasources for the segments to be refreshed
     // prebuilt datasources
-    final Set<String> dataSourcesToQuery = new HashSet<>(dataSourcesToRebuild);
+    // segmentMetadataInfo keys should be a superset of all other sets including datasources to refresh
+    final Set<String> dataSourcesToQuery = new HashSet<>(segmentMetadataInfo.keySet());
 
-    segmentsToRefresh.forEach(segment -> dataSourcesToQuery.add(segment.getDataSource()));
+    // this is the complete set of datasources polled from the Coordinator
+    final Set<String> polledDatasources = queryDataSources();
 
-    dataSourcesToQuery.addAll(tables.keySet());
+    dataSourcesToQuery.addAll(polledDatasources);
+
+    log.debug("Querying schema for [%s] datasources from Coordinator.", dataSourcesToQuery);
 
     // Fetch datasource information from the Coordinator
     Map<String, PhysicalDatasourceMetadata> polledDataSourceMetadata = queryDataSourceInformation(dataSourcesToQuery);
+
+    log.debug("Fetched schema for [%s] datasources from Coordinator.", polledDataSourceMetadata.keySet());
 
     // update datasource metadata in the cache
     polledDataSourceMetadata.forEach(this::updateDSMetadata);
@@ -199,6 +241,7 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
 
       // Remove those datasource for which we received schema from the Coordinator.
       dataSourcesToRebuild.removeAll(polledDataSourceMetadata.keySet());
+
       dataSourcesNeedingRebuild.clear();
     }
 
@@ -211,9 +254,42 @@ public class BrokerSegmentMetadataCache extends AbstractSegmentMetadataCache<Phy
         continue;
       }
 
+      if (rowSignature.getColumnNames().isEmpty()) {
+        // this case could arise when metadata refresh is disabled on broker
+        // and a new datasource is added
+        log.info("datasource [%s] schema has not been initialized yet, "
+                 + "check coordinator logs if this message is persistent.", dataSource);
+        // this is a harmless call
+        tables.remove(dataSource);
+        continue;
+      }
+
       final PhysicalDatasourceMetadata physicalDatasourceMetadata = dataSourceMetadataFactory.build(dataSource, rowSignature);
       updateDSMetadata(dataSource, physicalDatasourceMetadata);
     }
+  }
+
+  @Override
+  protected void removeSegmentAction(SegmentId segmentId)
+  {
+    // noop, no additional action needed when segment is removed.
+  }
+
+  private Set<String> queryDataSources()
+  {
+    Set<String> dataSources = new HashSet<>();
+
+    try {
+      Set<String> polled = FutureUtils.getUnchecked(coordinatorClient.fetchDataSourcesWithUsedSegments(), true);
+      if (polled != null) {
+        dataSources.addAll(polled);
+      }
+    }
+    catch (Exception e) {
+      log.debug(e, "Failed to query datasources from the Coordinator.");
+    }
+
+    return dataSources;
   }
 
   private Map<String, PhysicalDatasourceMetadata> queryDataSourceInformation(Set<String> dataSourcesToQuery)

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
+import org.apache.druid.quidem.DruidQTestInfo;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
@@ -34,8 +35,10 @@ import org.apache.druid.sql.calcite.QueryTestRunner.QueryResults;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.PlannerFixture;
 import org.apache.druid.sql.http.SqlParameter;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -75,6 +78,13 @@ public class QueryTestBuilder
     boolean isRunningMSQ();
 
     Map<String, Object> baseQueryContext();
+
+    default DruidQTestInfo getQTestInfo()
+    {
+      return null;
+    }
+
+    SqlTestFramework queryFramework();
   }
 
   protected final QueryTestConfig config;
@@ -301,8 +311,8 @@ public class QueryTestBuilder
 
   public boolean isDecoupledMode()
   {
-    String mode = (String) queryContext.getOrDefault(PlannerConfig.CTX_NATIVE_QUERY_SQL_PLANNING_MODE, "");
-    return PlannerConfig.NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED.equalsIgnoreCase(mode);
+    String mode = (String) queryContext.getOrDefault(QueryContexts.CTX_NATIVE_QUERY_SQL_PLANNING_MODE, "");
+    return QueryContexts.NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED.equalsIgnoreCase(mode);
   }
 
 }

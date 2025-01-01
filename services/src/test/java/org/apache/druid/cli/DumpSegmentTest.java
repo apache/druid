@@ -31,7 +31,7 @@ import org.apache.druid.collections.bitmap.RoaringBitmapFactory;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
-import org.apache.druid.guice.NestedDataModule;
+import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.initialization.ServerInjectorBuilder;
@@ -56,6 +56,7 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
@@ -84,7 +85,7 @@ public class DumpSegmentTest extends InitializedNullHandlingTest
 
   public DumpSegmentTest()
   {
-    NestedDataModule.registerHandlersAndSerde();
+    BuiltInTypesModule.registerHandlersAndSerde();
     this.closer = Closer.create();
   }
 
@@ -103,14 +104,56 @@ public class DumpSegmentTest extends InitializedNullHandlingTest
     QueryRunner runner = Mockito.mock(QueryRunner.class);
     QueryRunner mergeRunner = Mockito.mock(QueryRunner.class);
     Query query = Mockito.mock(Query.class);
+    QueryableIndex index = Mockito.mock(QueryableIndex.class);
     Sequence expected = Sequences.simple(Collections.singletonList(123));
+    Mockito.when(query.withOverriddenContext(ArgumentMatchers.any())).thenReturn(query);
     Mockito.when(injector.getInstance(QueryRunnerFactoryConglomerate.class)).thenReturn(conglomerate);
     Mockito.when(conglomerate.findFactory(ArgumentMatchers.any())).thenReturn(factory);
     Mockito.when(factory.createRunner(ArgumentMatchers.any())).thenReturn(runner);
     Mockito.when(factory.getToolchest().mergeResults(factory.mergeRunners(DirectQueryProcessingPool.INSTANCE, ImmutableList.of(runner)))).thenReturn(mergeRunner);
+    Mockito.when(factory.getToolchest().mergeResults(factory.mergeRunners(DirectQueryProcessingPool.INSTANCE, ImmutableList.of(runner)), true)).thenReturn(mergeRunner);
     Mockito.when(mergeRunner.run(ArgumentMatchers.any(), ArgumentMatchers.any())).thenReturn(expected);
-    Sequence actual = DumpSegment.executeQuery(injector, null, query);
+    Mockito.when(index.getOrdering()).thenReturn(Collections.emptyList());
+    Sequence actual = DumpSegment.executeQuery(injector, index, query);
     Assert.assertSame(expected, actual);
+  }
+
+  @Test
+  public void testDumpRows() throws Exception
+  {
+    Injector injector = Mockito.mock(Injector.class);
+    ObjectMapper mapper = TestHelper.makeJsonMapper();
+    mapper.registerModules(BuiltInTypesModule.getJacksonModulesList());
+    mapper.setInjectableValues(
+        new InjectableValues.Std()
+            .addValue(ExprMacroTable.class.getName(), TestExprMacroTable.INSTANCE)
+            .addValue(ObjectMapper.class.getName(), mapper)
+            .addValue(DefaultColumnFormatConfig.class, new DefaultColumnFormatConfig(null, null))
+    );
+    Mockito.when(injector.getInstance(Key.get(ObjectMapper.class, Json.class))).thenReturn(mapper);
+    Mockito.when(injector.getInstance(DefaultColumnFormatConfig.class)).thenReturn(new DefaultColumnFormatConfig(null, null));
+
+    List<Segment> segments = createSegments(tempFolder, closer);
+    QueryableIndex queryableIndex = segments.get(0).as(QueryableIndex.class);
+
+    File outputFile = tempFolder.newFile();
+
+    DumpSegment.runDump(
+        injector,
+        outputFile.getPath(),
+        queryableIndex,
+        DumpSegment.getColumnsToInclude(queryableIndex, Collections.emptyList()),
+        null,
+        false
+    );
+    final byte[] fileBytes = Files.readAllBytes(outputFile.toPath());
+    final String output = StringUtils.fromUtf8(fileBytes);
+    final String expected = "{\"__time\":1609459200000,\"nest\":{\"x\":200,\"y\":2.2},\"count\":1}\n"
+                            + "{\"__time\":1609459200000,\"nest\":{\"x\":400,\"y\":1.1,\"z\":\"a\"},\"count\":1}\n"
+                            + "{\"__time\":1609459200000,\"nest\":{\"x\":200,\"z\":\"b\"},\"count\":1}\n"
+                            + "{\"__time\":1609459200000,\"nest\":{\"x\":100,\"y\":1.1,\"z\":\"a\"},\"count\":1}\n"
+                            + "{\"__time\":1609459200000,\"nest\":{\"y\":3.3,\"z\":\"b\"},\"count\":1}\n";
+    Assert.assertEquals(expected, output);
   }
 
   @Test
@@ -154,18 +197,18 @@ public class DumpSegmentTest extends InitializedNullHandlingTest
   {
     Injector injector = Mockito.mock(Injector.class);
     ObjectMapper mapper = TestHelper.makeJsonMapper();
-    mapper.registerModules(NestedDataModule.getJacksonModulesList());
+    mapper.registerModules(BuiltInTypesModule.getJacksonModulesList());
     mapper.setInjectableValues(
         new InjectableValues.Std()
             .addValue(ExprMacroTable.class.getName(), TestExprMacroTable.INSTANCE)
             .addValue(ObjectMapper.class.getName(), mapper)
-            .addValue(DefaultColumnFormatConfig.class, new DefaultColumnFormatConfig(null))
+            .addValue(DefaultColumnFormatConfig.class, new DefaultColumnFormatConfig(null, null))
     );
     Mockito.when(injector.getInstance(Key.get(ObjectMapper.class, Json.class))).thenReturn(mapper);
-    Mockito.when(injector.getInstance(DefaultColumnFormatConfig.class)).thenReturn(new DefaultColumnFormatConfig(null));
+    Mockito.when(injector.getInstance(DefaultColumnFormatConfig.class)).thenReturn(new DefaultColumnFormatConfig(null, null));
 
     List<Segment> segments = createSegments(tempFolder, closer);
-    QueryableIndex queryableIndex = segments.get(0).asQueryableIndex();
+    QueryableIndex queryableIndex = segments.get(0).as(QueryableIndex.class);
 
     File outputFile = tempFolder.newFile();
     DumpSegment.runDumpNestedColumn(
@@ -194,18 +237,18 @@ public class DumpSegmentTest extends InitializedNullHandlingTest
   {
     Injector injector = Mockito.mock(Injector.class);
     ObjectMapper mapper = TestHelper.makeJsonMapper();
-    mapper.registerModules(NestedDataModule.getJacksonModulesList());
+    mapper.registerModules(BuiltInTypesModule.getJacksonModulesList());
     mapper.setInjectableValues(
         new InjectableValues.Std()
             .addValue(ExprMacroTable.class.getName(), TestExprMacroTable.INSTANCE)
             .addValue(ObjectMapper.class.getName(), mapper)
-            .addValue(DefaultColumnFormatConfig.class, new DefaultColumnFormatConfig(null))
+            .addValue(DefaultColumnFormatConfig.class, new DefaultColumnFormatConfig(null, null))
     );
     Mockito.when(injector.getInstance(Key.get(ObjectMapper.class, Json.class))).thenReturn(mapper);
-    Mockito.when(injector.getInstance(DefaultColumnFormatConfig.class)).thenReturn(new DefaultColumnFormatConfig(null));
+    Mockito.when(injector.getInstance(DefaultColumnFormatConfig.class)).thenReturn(new DefaultColumnFormatConfig(null, null));
 
     List<Segment> segments = createSegments(tempFolder, closer);
-    QueryableIndex queryableIndex = segments.get(0).asQueryableIndex();
+    QueryableIndex queryableIndex = segments.get(0).as(QueryableIndex.class);
 
     File outputFile = tempFolder.newFile();
     DumpSegment.runDumpNestedColumnPath(
@@ -255,7 +298,7 @@ public class DumpSegmentTest extends InitializedNullHandlingTest
         tempFolder,
         closer,
         "nested-test-data.json",
-        NestedDataTestUtils.DEFAULT_JSON_INPUT_FORMAT,
+        TestIndex.DEFAULT_JSON_INPUT_FORMAT,
         new TimestampSpec("timestamp", null, null),
         DimensionsSpec.builder().useSchemaDiscovery(true).build(),
         null,

@@ -39,7 +39,6 @@ import org.apache.druid.indexing.overlord.TaskStorage;
 import org.apache.druid.indexing.overlord.supervisor.Supervisor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorReport;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManager;
-import org.apache.druid.indexing.overlord.supervisor.autoscaler.LagStats;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Intervals;
@@ -55,6 +54,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -257,7 +257,7 @@ public class MaterializedViewSupervisor implements Supervisor
   }
 
   @Override
-  public void reset(DataSourceMetadata dataSourceMetadata)
+  public void reset(@Nullable DataSourceMetadata dataSourceMetadata)
   {
     if (dataSourceMetadata == null) {
       // if oldMetadata is different from spec, tasks and segments will be removed when reset.
@@ -278,36 +278,6 @@ public class MaterializedViewSupervisor implements Supervisor
     } else {
       throw new IAE("DerivedDataSourceMetadata is not allowed to reset to a new DerivedDataSourceMetadata");
     }
-  }
-
-  @Override
-  public void resetOffsets(DataSourceMetadata resetDataSourceMetadata)
-  {
-    throw new UnsupportedOperationException("Reset offsets not supported in MaterializedViewSupervisor");
-  }
-
-  @Override
-  public void checkpoint(int taskGroupId, DataSourceMetadata checkpointMetadata)
-  {
-    // do nothing
-  }
-
-  @Override
-  public LagStats computeLagStats()
-  {
-    throw new UnsupportedOperationException("Compute Lag Stats not supported in MaterializedViewSupervisor");
-  }
-
-  @Override
-  public Set<String> getActiveRealtimeSequencePrefixes()
-  {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public int getActiveTaskGroupsCount()
-  {
-    throw new UnsupportedOperationException("Get Active Task Groups Count is not supported in MaterializedViewSupervisor");
   }
 
   /**

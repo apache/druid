@@ -395,7 +395,7 @@ public class DruidMeta extends MetaImpl
     throw errorHandler.sanitize(t);
   }
 
-  private ExecuteResult doFetch(AbstractDruidJdbcStatement druidStatement, int maxRows)
+  protected ExecuteResult doFetch(AbstractDruidJdbcStatement druidStatement, int maxRows)
   {
     final Signature signature = druidStatement.getSignature();
     final Frame firstFrame = druidStatement.nextFrame(
@@ -752,7 +752,7 @@ public class DruidMeta extends MetaImpl
   }
 
   @VisibleForTesting
-  void closeAllConnections()
+  public void closeAllConnections()
   {
     for (String connectionId : ImmutableSet.copyOf(connections.keySet())) {
       closeConnection(new ConnectionHandle(connectionId));

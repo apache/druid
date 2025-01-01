@@ -31,7 +31,7 @@
     <parent>
         <groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>30.0.0-SNAPSHOT</version>
+        <version>32.0.0-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
@@ -75,12 +75,13 @@
             <version>${project.parent.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.google.inject</groupId>
-            <artifactId>guice</artifactId>
+            <groupId>org.apache.druid.extensions</groupId>
+            <artifactId>druid-kafka-indexing-service</artifactId>
+            <version>${project.parent.version}</version>
         </dependency>
         <dependency>
-            <groupId>com.google.inject.extensions</groupId>
-            <artifactId>guice-multibindings</artifactId>
+            <groupId>com.google.inject</groupId>
+            <artifactId>guice</artifactId>
         </dependency>
         <dependency>
             <groupId>org.apache.curator</groupId>
@@ -182,8 +183,8 @@
         </dependency>
         <!-- Tests can choose either the MySQL or MariaDB driver. -->
         <dependency>
-            <groupId>mysql</groupId>
-            <artifactId>mysql-connector-java</artifactId>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
             <version>${mysql.version}</version>
             <scope>runtime</scope>
         </dependency>
@@ -340,7 +341,7 @@
                     </ignoredUsedUndeclaredDependencies>
                     <!-- Dynamically loaded. -->
                     <ignoredUnusedDeclaredDependencies>
-                        <ignoredUnusedDeclaredDependency>mysql:mysql-connector-java:jar</ignoredUnusedDeclaredDependency>
+                        <ignoredUnusedDeclaredDependency>com.mysql:mysql-connector-j:jar</ignoredUnusedDeclaredDependency>
                     </ignoredUnusedDeclaredDependencies>
                 </configuration>
             </plugin>
@@ -401,6 +402,15 @@
             </properties>
         </profile>
         <profile>
+            <id>IT-Query</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+            <properties>
+                <it.category>Query</it.category>
+            </properties>
+        </profile>
+        <profile>
             <id>IT-MultiStageQuery</id>
             <activation>
                 <activeByDefault>false</activeByDefault>
@@ -446,6 +456,15 @@
             </properties>
         </profile>
         <profile>
+            <id>IT-BackwardCompatibilityMain</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+            <properties>
+                <it.category>BackwardCompatibilityMain</it.category>
+            </properties>
+        </profile>
+        <profile>
             <id>docker-tests</id>
             <activation>
                 <activeByDefault>false</activeByDefault>
@@ -455,6 +474,9 @@
                      <plugin>
                         <artifactId>maven-failsafe-plugin</artifactId>
                         <version>3.0.0-M7</version>
+                         <configuration>
+                             <argLine>--add-opens java.base/java.lang=ALL-UNNAMED</argLine>
+                         </configuration>
                         <dependencies>
                           <!-- Required to force Failsafe to use JUnit instead of TestNG.
                                junit47 is required to use test categories. -->

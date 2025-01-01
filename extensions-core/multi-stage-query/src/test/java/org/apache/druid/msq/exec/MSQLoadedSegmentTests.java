@@ -33,6 +33,7 @@ import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
@@ -126,6 +127,7 @@ public class MSQLoadedSegmentTests extends MSQTestBase
                            .dataSource(CalciteTests.DATASOURCE1)
                            .intervals(querySegmentSpec(Filtration.eternity()))
                            .columns("cnt", "dim1")
+                           .columnTypes(resultSignature.getColumnTypes())
                            .context(defaultScanQueryContext(REALTIME_QUERY_CTX, resultSignature))
                            .build()
                    )
@@ -189,7 +191,8 @@ public class MSQLoadedSegmentTests extends MSQTestBase
                            .dataSource(CalciteTests.DATASOURCE1)
                            .intervals(querySegmentSpec(Filtration.eternity()))
                            .columns("cnt", "dim1")
-                           .orderBy(ImmutableList.of(new ScanQuery.OrderBy("dim1", ScanQuery.Order.ASCENDING)))
+                           .columnTypes(resultSignature.getColumnTypes())
+                           .orderBy(ImmutableList.of(OrderBy.ascending("dim1")))
                            .context(defaultScanQueryContext(REALTIME_QUERY_CTX, resultSignature))
                            .build()
                    )

@@ -27,6 +27,7 @@ import org.apache.druid.query.rowsandcols.semantic.AppendableRowsAndColumns;
 import org.apache.druid.query.rowsandcols.semantic.ClusteredGroupPartitioner;
 import org.apache.druid.query.rowsandcols.semantic.DefaultClusteredGroupPartitioner;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Function;
@@ -124,4 +125,9 @@ public abstract class WindowRankingProcessorBase implements Processor
     return Objects.equals(groupingCols, other.groupingCols) && Objects.equals(outputColumn, other.outputColumn);
   }
 
+  @Override
+  public List<String> getOutputColumnNames()
+  {
+    return Collections.singletonList(outputColumn);
+  }
 }

@@ -43,6 +43,7 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeSystem;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexExecutor;
+import org.apache.calcite.runtime.Hook;
 import org.apache.calcite.schema.SchemaPlus;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlOperatorTable;
@@ -199,7 +200,7 @@ public class CalcitePlanner implements Planner, ViewExpander
 
     state = CalcitePlanner.State.STATE_2_READY;
 
-    // If user specify own traitDef, instead of default default trait,
+    // If user specifies own traitDef, instead of default trait,
     // register the trait def specified in traitDefs.
     if (this.traitDefs == null) {
       planner.addRelTraitDef(ConventionTraitDef.INSTANCE);
@@ -234,6 +235,7 @@ public class CalcitePlanner implements Planner, ViewExpander
   @Override
   public SqlNode validate(SqlNode sqlNode) throws ValidationException
   {
+    Hook.PARSE_TREE.run(new Object[]{null, sqlNode});
     ensure(CalcitePlanner.State.STATE_3_PARSED);
     this.validator = createSqlValidator(createCatalogReader());
     try {
@@ -293,10 +295,11 @@ public class CalcitePlanner implements Planner, ViewExpander
         rexBuilder
     );
     final SqlToRelConverter.Config config =
-        sqlToRelConverterConfig.withTrimUnusedFields(false);
+        sqlToRelConverterConfig.withTrimUnusedFields(false)
+                               .withHintStrategyTable(DruidHint.HINT_STRATEGY_TABLE);
     final SqlToRelConverter sqlToRelConverter =
         new DruidSqlToRelConverter(this, validator,
-                              createCatalogReader(), cluster, convertletTable, config
+                                   createCatalogReader(), cluster, convertletTable, config
         );
     RelRoot root =
         sqlToRelConverter.convertQuery(sql, false, true);

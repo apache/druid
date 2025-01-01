@@ -24,7 +24,6 @@ import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.metadata.MetadataRuleManager;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.apache.druid.server.coordinator.loading.StrategicSegmentAssigner;
@@ -56,11 +55,16 @@ public class RunRules implements CoordinatorDuty
 {
   private static final EmittingLogger log = new EmittingLogger(RunRules.class);
 
-  private final SegmentDeleteHandler deleteHandler;
+  private final MetadataAction.DeleteSegments deleteHandler;
+  private final MetadataAction.GetDatasourceRules ruleHandler;
 
-  public RunRules(SegmentDeleteHandler deleteHandler)
+  public RunRules(
+      MetadataAction.DeleteSegments deleteHandler,
+      MetadataAction.GetDatasourceRules ruleHandler
+  )
   {
     this.deleteHandler = deleteHandler;
+    this.ruleHandler = ruleHandler;
   }
 
   @Override
@@ -72,15 +76,13 @@ public class RunRules implements CoordinatorDuty
       return params;
     }
 
+    // Get all used segments sorted by interval. Segments must be sorted to ensure that:
+    // a) round-robin assignment distributes newer segments uniformly across servers
+    // b) replication throttling has a smaller impact on newer segments
+    final Set<DataSegment> usedSegments = params.getUsedSegmentsNewestFirst();
     final Set<DataSegment> overshadowed = params.getDataSourcesSnapshot().getOvershadowedSegments();
-    final Set<DataSegment> usedSegments = params.getUsedSegments();
-    log.info(
-        "Applying retention rules on [%,d] used segments, skipping [%,d] overshadowed segments.",
-        usedSegments.size(), overshadowed.size()
-    );
 
     final StrategicSegmentAssigner segmentAssigner = params.getSegmentAssigner();
-    final MetadataRuleManager databaseRuleManager = params.getDatabaseRuleManager();
 
     final DateTime now = DateTimes.nowUtc();
     final Object2IntOpenHashMap<String> datasourceToSegmentsWithNoRule = new Object2IntOpenHashMap<>();
@@ -92,7 +94,7 @@ public class RunRules implements CoordinatorDuty
       }
 
       // Find and apply matching rule
-      List<Rule> rules = databaseRuleManager.getRulesWithDefault(segment.getDataSource());
+      List<Rule> rules = ruleHandler.getRulesWithDefault(segment.getDataSource());
       boolean foundMatchingRule = false;
       for (Rule rule : rules) {
         if (rule.appliesTo(segment, now)) {
@@ -123,7 +125,7 @@ public class RunRules implements CoordinatorDuty
   {
     segmentAssigner.getSegmentsToDelete().forEach((datasource, segmentIds) -> {
       final Stopwatch stopwatch = Stopwatch.createStarted();
-      int numUpdatedSegments = deleteHandler.markSegmentsAsUnused(segmentIds);
+      int numUpdatedSegments = deleteHandler.markSegmentsAsUnused(datasource, segmentIds);
 
       RowKey rowKey = RowKey.of(Dimension.DATASOURCE, datasource);
       runStats.add(Stats.Segments.DELETED, rowKey, numUpdatedSegments);
@@ -158,17 +160,10 @@ public class RunRules implements CoordinatorDuty
 
   private Set<String> getBroadcastDatasources(DruidCoordinatorRuntimeParams params)
   {
-    final Set<String> broadcastDatasources =
-        params.getDataSourcesSnapshot().getDataSourcesMap().values().stream()
-              .map(ImmutableDruidDataSource::getName)
-              .filter(datasource -> isBroadcastDatasource(datasource, params))
-              .collect(Collectors.toSet());
-
-    if (!broadcastDatasources.isEmpty()) {
-      log.info("Found broadcast datasources [%s] which will not participate in balancing.", broadcastDatasources);
-    }
-
-    return broadcastDatasources;
+    return params.getDataSourcesSnapshot().getDataSourcesMap().values().stream()
+                 .map(ImmutableDruidDataSource::getName)
+                 .filter(this::isBroadcastDatasource)
+                 .collect(Collectors.toSet());
   }
 
   /**
@@ -179,9 +174,10 @@ public class RunRules implements CoordinatorDuty
    *   <li>Are unloaded if unused, even from realtime servers</li>
    * </ul>
    */
-  private boolean isBroadcastDatasource(String datasource, DruidCoordinatorRuntimeParams params)
+  private boolean isBroadcastDatasource(String datasource)
   {
-    return params.getDatabaseRuleManager().getRulesWithDefault(datasource).stream()
-                 .anyMatch(rule -> rule instanceof BroadcastDistributionRule);
+    return ruleHandler.getRulesWithDefault(datasource)
+                      .stream()
+                      .anyMatch(rule -> rule instanceof BroadcastDistributionRule);
   }
 }

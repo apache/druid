@@ -16,23 +16,23 @@
  * limitations under the License.
  */
 
-.bp4-dark .bp4-switch.bp4-control {
+.#{$ns}-dark .#{$ns}-switch.#{$ns}-control {
   &.legacy-switch {
-    input:checked ~ .bp4-control-indicator {
+    input:checked ~ .#{$ns}-control-indicator {
       background: $orange5;
     }
 
-    &:hover input:checked ~ .bp4-control-indicator {
+    &:hover input:checked ~ .#{$ns}-control-indicator {
       background: $orange2;
     }
   }
 
   &.danger-switch {
-    input:checked ~ .bp4-control-indicator {
+    input:checked ~ .#{$ns}-control-indicator {
       background: $red5;
     }
 
-    &:hover input:checked ~ .bp4-control-indicator {
+    &:hover input:checked ~ .#{$ns}-control-indicator {
       background: $red2;
     }
   }

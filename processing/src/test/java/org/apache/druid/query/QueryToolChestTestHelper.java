@@ -26,7 +26,7 @@ import java.util.List;
 
 public class QueryToolChestTestHelper
 {
-  public static void assertArrayResultsEquals(final List<Object[]> expected, final Sequence<Object[]> actual)
+  public static void assertArrayResultsEquals(List<Object[]> expected, final Sequence<Object[]> actual)
   {
     final List<Object[]> actualList = actual.toList();
     Assert.assertEquals("number of results", expected.size(), actualList.size());

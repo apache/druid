@@ -95,7 +95,8 @@ public class OffsetLimitFrameProcessorFactory extends BaseFrameProcessorFactory
       FrameContext frameContext,
       int maxOutstandingProcessors,
       CounterTracker counters,
-      Consumer<Throwable> warningPublisher
+      Consumer<Throwable> warningPublisher,
+      boolean removeNullBytes
   ) throws IOException
   {
     if (workerNumber > 0) {
@@ -126,7 +127,7 @@ public class OffsetLimitFrameProcessorFactory extends BaseFrameProcessorFactory
           ReadableConcatFrameChannel.open(Iterators.transform(readableInputs.iterator(), ReadableInput::getChannel)),
           outputChannel.getWritableChannel(),
           readableInputs.frameReader(),
-          stageDefinition.createFrameWriterFactory(HeapMemoryAllocator.unlimited()),
+          stageDefinition.createFrameWriterFactory(HeapMemoryAllocator.unlimited(), removeNullBytes),
           offset,
           // Limit processor will add limit + offset at various points; must avoid overflow
           limit == null ? Long.MAX_VALUE - offset : limit
@@ -137,6 +138,12 @@ public class OffsetLimitFrameProcessorFactory extends BaseFrameProcessorFactory
         ProcessorManagers.of(workerSupplier),
         OutputChannels.wrapReadOnly(Collections.singletonList(outputChannel))
     );
+  }
+
+  @Override
+  public boolean usesProcessingBuffers()
+  {
+    return false;
   }
 
   @Override

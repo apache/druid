@@ -43,6 +43,11 @@ public interface TaskLookup
     COMPLETE
   }
 
+  static TaskLookup activeTasksOnly()
+  {
+    return ActiveTaskLookup.getInstance();
+  }
+
   /**
    * Whether this lookup is guaranteed to not return any tasks.
    */

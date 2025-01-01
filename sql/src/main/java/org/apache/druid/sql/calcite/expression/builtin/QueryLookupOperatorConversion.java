@@ -81,12 +81,16 @@ public class QueryLookupOperatorConversion implements SqlOperatorConversion
           final DruidExpression arg = inputExpressions.get(0);
           final Expr lookupNameExpr = plannerContext.parseExpression(inputExpressions.get(1).getExpression());
           final String replaceMissingValueWith = getReplaceMissingValueWith(inputExpressions, plannerContext);
+          final String lookupName = (String) lookupNameExpr.getLiteralValue();
+
+          // Add the lookup name to the set of lookups to selectively load.
+          plannerContext.addLookupToLoad(lookupExtractorFactoryContainerProvider.getCanonicalLookupName(lookupName));
 
           if (arg.isSimpleExtraction() && lookupNameExpr.isLiteral()) {
             return arg.getSimpleExtraction().cascade(
                 new RegisteredLookupExtractionFn(
                     lookupExtractorFactoryContainerProvider,
-                    (String) lookupNameExpr.getLiteralValue(),
+                    lookupName,
                     false,
                     replaceMissingValueWith,
                     null,

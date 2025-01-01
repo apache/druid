@@ -1015,7 +1015,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
 
     InputSourceReader reader = inputSource.reader(
         someSchema,
-        new CsvInputFormat(ImmutableList.of("time", "dim1", "dim2"), "|", false, null, 0),
+        new CsvInputFormat(ImmutableList.of("time", "dim1", "dim2"), "|", false, null, 0, null),
         temporaryFolder.newFolder()
     );
 
@@ -1063,7 +1063,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
 
     InputSourceReader reader = inputSource.reader(
         someSchema,
-        new CsvInputFormat(ImmutableList.of("time", "dim1", "dim2"), "|", false, null, 0),
+        new CsvInputFormat(ImmutableList.of("time", "dim1", "dim2"), "|", false, null, 0, null),
         temporaryFolder.newFolder()
     );
     try (CloseableIterator<InputRow> readerIterator = reader.read()) {
@@ -1111,7 +1111,7 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
 
     InputSourceReader reader = inputSource.reader(
         someSchema,
-        new CsvInputFormat(ImmutableList.of("time", "dim1", "dim2"), "|", false, null, 0),
+        new CsvInputFormat(ImmutableList.of("time", "dim1", "dim2"), "|", false, null, 0, null),
         temporaryFolder.newFolder()
     );
 
@@ -1352,8 +1352,8 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
       // See https://github.com/FasterXML/jackson-databind/issues/962.
       return ImmutableList.of(
           new SimpleModule()
-              .addDeserializer(AmazonS3.class, new ItemDeserializer<AmazonS3>())
-              .addDeserializer(AmazonS3ClientBuilder.class, new ItemDeserializer<AmazonS3ClientBuilder>())
+              .addDeserializer(AmazonS3.class, new ItemDeserializer<>())
+              .addDeserializer(AmazonS3ClientBuilder.class, new ItemDeserializer<>())
       );
     }
 

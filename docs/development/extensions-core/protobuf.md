@@ -99,7 +99,7 @@ This feature uses Confluent's Protobuf provider which is not included in the Dru
 - https://repo1.maven.org/maven2/org/jetbrains/kotlin/kotlin-stdlib/1.4.0/kotlin-stdlib-1.4.0.jar
 - https://repo1.maven.org/maven2/com/squareup/wire/wire-schema/3.2.2/wire-schema-3.2.2.jar
 
-Copy or symlink those files inside the folder `extensions/protobuf-extensions` under the distribution root directory.
+Copy or symlink those files inside the folder `extensions-core/protobuf-extensions` under the distribution root directory.
 
 ## Create Kafka Supervisor
 
@@ -251,7 +251,7 @@ Important supervisor properties
 If necessary, from your Kafka installation directory run the following command to create the Kafka topic
 
 ```
-./bin/kafka-topics.sh --create --zookeeper localhost:2181 --replication-factor 1 --partitions 1 --topic metrics_pb
+./bin/kafka-topics.sh --create --bootstrap-server localhost:9092 --replication-factor 1 --partitions 1 --topic metrics_pb
 ```
 
 This example script requires `protobuf` and `kafka-python` modules. With the topic in place, messages can be inserted running the following command from your Druid installation directory
@@ -263,7 +263,7 @@ This example script requires `protobuf` and `kafka-python` modules. With the top
 You can confirm that data has been inserted to your Kafka topic using the following command from your Kafka installation directory
 
 ```
-./bin/kafka-console-consumer --zookeeper localhost --topic metrics_pb
+./bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic metrics_pb --from-beginning
 ```
 
 which should print messages like this

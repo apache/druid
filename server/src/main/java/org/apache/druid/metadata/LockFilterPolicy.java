@@ -21,10 +21,12 @@ package org.apache.druid.metadata;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 /**
  * Specifies a policy to filter active locks held by a datasource
@@ -33,17 +35,20 @@ public class LockFilterPolicy
 {
   private final String datasource;
   private final int priority;
+  private final List<Interval> intervals;
   private final Map<String, Object> context;
 
   @JsonCreator
   public LockFilterPolicy(
       @JsonProperty("datasource") String datasource,
       @JsonProperty("priority") int priority,
-      @JsonProperty("context") Map<String, Object> context
+      @JsonProperty("intervals") @Nullable List<Interval> intervals,
+      @JsonProperty("context") @Nullable Map<String, Object> context
   )
   {
     this.datasource = datasource;
     this.priority = priority;
+    this.intervals = intervals;
     this.context = context == null ? Collections.emptyMap() : context;
   }
 
@@ -65,24 +70,10 @@ public class LockFilterPolicy
     return context;
   }
 
-  @Override
-  public boolean equals(Object o)
+  @Nullable
+  @JsonProperty
+  public List<Interval> getIntervals()
   {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    LockFilterPolicy that = (LockFilterPolicy) o;
-    return Objects.equals(datasource, that.datasource)
-           && priority == that.priority
-           && Objects.equals(context, that.context);
-  }
-
-  @Override
-  public int hashCode()
-  {
-    return Objects.hash(datasource, priority, context);
+    return intervals;
   }
 }

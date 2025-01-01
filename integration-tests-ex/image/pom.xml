@@ -46,7 +46,7 @@ Reference: https://dzone.com/articles/build-docker-image-from-maven
     <parent>
         <artifactId>druid</artifactId>
         <groupId>org.apache.druid</groupId>
-        <version>30.0.0-SNAPSHOT</version>
+        <version>32.0.0-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
@@ -102,8 +102,8 @@ Reference: https://dzone.com/articles/build-docker-image-from-maven
                 </dependency>
                 <!-- Tests can choose either the MySQL or MariaDB driver. -->
                 <dependency>
-                    <groupId>mysql</groupId>
-                    <artifactId>mysql-connector-java</artifactId>
+                    <groupId>com.mysql</groupId>
+                    <artifactId>mysql-connector-j</artifactId>
                     <version>${mysql.version}</version>
                 </dependency>
                 <dependency>
@@ -131,8 +131,8 @@ Reference: https://dzone.com/articles/build-docker-image-from-maven
                                 <configuration>
                                     <artifactItems>
                                         <artifactItem>
-                                            <groupId>mysql</groupId>
-                                            <artifactId>mysql-connector-java</artifactId>
+                                            <groupId>com.mysql</groupId>
+                                            <artifactId>mysql-connector-j</artifactId>
                                             <version>${mysql.version}</version>
                                             <type>jar</type>
                                             <overWrite>true</overWrite>

@@ -19,7 +19,6 @@
 
 package org.apache.druid.k8s.overlord.taskadapter;
 
-import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import io.fabric8.kubernetes.api.model.Pod;
@@ -27,7 +26,6 @@ import io.fabric8.kubernetes.api.model.PodSpec;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
-import org.apache.druid.guice.FirehoseModule;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskConfigBuilder;
@@ -52,8 +50,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
-import java.io.IOException;
 import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -83,9 +81,6 @@ public class DruidPeonClientIntegrationTest
   {
     TestUtils utils = new TestUtils();
     jsonMapper = utils.getTestObjectMapper();
-    for (Module jacksonModule : new FirehoseModule().getJacksonModules()) {
-      jsonMapper.registerModule(jacksonModule);
-    }
     jsonMapper.registerSubtypes(
         new NamedType(ParallelIndexTuningConfig.class, "index_parallel"),
         new NamedType(IndexTask.IndexTuningConfig.class, "index")
@@ -152,7 +147,7 @@ public class DruidPeonClientIntegrationTest
                                  .map(Integer::parseInt)
                                  .collect(Collectors.toList()));
       }
-      catch (IOException e) {
+      catch (UncheckedIOException e) {
         throw new RuntimeException(e);
       }
     });

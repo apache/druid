@@ -114,32 +114,27 @@ public class SqlResults
       }
     } else if (sqlTypeName == SqlTypeName.BIGINT) {
       try {
-        coercedValue = DimensionHandlerUtils.convertObjectToLong(value);
+        coercedValue = DimensionHandlerUtils.convertObjectToLong(value, fieldName);
       }
       catch (Exception e) {
         throw cannotCoerce(value, sqlTypeName, fieldName);
       }
     } else if (sqlTypeName == SqlTypeName.FLOAT) {
       try {
-        coercedValue = DimensionHandlerUtils.convertObjectToFloat(value);
+        coercedValue = DimensionHandlerUtils.convertObjectToFloat(value, fieldName);
       }
       catch (Exception e) {
         throw cannotCoerce(value, sqlTypeName, fieldName);
       }
     } else if (SqlTypeName.FRACTIONAL_TYPES.contains(sqlTypeName)) {
       try {
-        coercedValue = DimensionHandlerUtils.convertObjectToDouble(value);
+        coercedValue = DimensionHandlerUtils.convertObjectToDouble(value, fieldName);
       }
       catch (Exception e) {
         throw cannotCoerce(value, sqlTypeName, fieldName);
       }
     } else if (sqlTypeName == SqlTypeName.OTHER) {
-      // Complex type, try to serialize if we should, else print class name
-      if (context.isSerializeComplexValues()) {
-        coercedValue = coerceUsingObjectMapper(jsonMapper, value, sqlTypeName, fieldName);
-      } else {
-        coercedValue = value.getClass().getName();
-      }
+      coercedValue = coerceUsingObjectMapper(jsonMapper, value, sqlTypeName, fieldName);
     } else if (sqlTypeName == SqlTypeName.ARRAY) {
       if (context.isStringifyArrays()) {
         if (value instanceof String) {
@@ -271,18 +266,15 @@ public class SqlResults
   public static class Context
   {
     private final DateTimeZone timeZone;
-    private final boolean serializeComplexValues;
     private final boolean stringifyArrays;
 
     @JsonCreator
     public Context(
         @JsonProperty("timeZone") final DateTimeZone timeZone,
-        @JsonProperty("serializeComplexValues") final boolean serializeComplexValues,
         @JsonProperty("stringifyArrays") final boolean stringifyArrays
     )
     {
       this.timeZone = timeZone;
-      this.serializeComplexValues = serializeComplexValues;
       this.stringifyArrays = stringifyArrays;
     }
 
@@ -290,7 +282,6 @@ public class SqlResults
     {
       return new Context(
           plannerContext.getTimeZone(),
-          plannerContext.getPlannerConfig().shouldSerializeComplexValues(),
           plannerContext.isStringifyArrays()
       );
     }
@@ -299,12 +290,6 @@ public class SqlResults
     public DateTimeZone getTimeZone()
     {
       return timeZone;
-    }
-
-    @JsonProperty
-    public boolean isSerializeComplexValues()
-    {
-      return serializeComplexValues;
     }
 
     @JsonProperty
@@ -323,15 +308,14 @@ public class SqlResults
         return false;
       }
       Context context = (Context) o;
-      return serializeComplexValues == context.serializeComplexValues
-             && stringifyArrays == context.stringifyArrays
+      return stringifyArrays == context.stringifyArrays
              && Objects.equals(timeZone, context.timeZone);
     }
 
     @Override
     public int hashCode()
     {
-      return Objects.hash(timeZone, serializeComplexValues, stringifyArrays);
+      return Objects.hash(timeZone, stringifyArrays);
     }
 
     @Override
@@ -339,7 +323,6 @@ public class SqlResults
     {
       return "Context{" +
              "timeZone=" + timeZone +
-             ", serializeComplexValues=" + serializeComplexValues +
              ", stringifyArrays=" + stringifyArrays +
              '}';
     }

@@ -20,10 +20,10 @@
 package org.apache.druid.query.topn;
 
 import org.apache.druid.query.ColumnSelectorPlus;
+import org.apache.druid.query.CursorGranularizer;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.topn.types.TopNColumnAggregatesProcessor;
 import org.apache.druid.segment.Cursor;
-import org.apache.druid.segment.StorageAdapter;
 
 /**
  * Heap based topn algorithm that handles aggregates on dimension extractions and numeric typed dimension columns.
@@ -37,23 +37,25 @@ public class HeapBasedTopNAlgorithm
   private final TopNQuery query;
 
   public HeapBasedTopNAlgorithm(
-      StorageAdapter storageAdapter,
-      TopNQuery query
+      TopNQuery query,
+      TopNCursorInspector cursorInspector
   )
   {
-    super(storageAdapter);
+    super(cursorInspector);
     this.query = query;
   }
 
   @Override
   public TopNParams makeInitParams(
       final ColumnSelectorPlus<TopNColumnAggregatesProcessor> selectorPlus,
-      final Cursor cursor
+      final Cursor cursor,
+      final CursorGranularizer granularizer
   )
   {
     return new TopNParams(
         selectorPlus,
         cursor,
+        granularizer,
         Integer.MAX_VALUE
     );
   }
@@ -65,7 +67,7 @@ public class HeapBasedTopNAlgorithm
       throw new UnsupportedOperationException("Cannot operate on a dimension with unknown cardinality");
     }
     ColumnSelectorPlus<TopNColumnAggregatesProcessor> selectorPlus = params.getSelectorPlus();
-    return selectorPlus.getColumnSelectorStrategy().getRowSelector(query, params, storageAdapter);
+    return selectorPlus.getColumnSelectorStrategy().getRowSelector(query, params, cursorInspector);
   }
 
   @Override
@@ -96,6 +98,7 @@ public class HeapBasedTopNAlgorithm
         query,
         selectorPlus.getSelector(),
         cursor,
+        params.getGranularizer(),
         rowSelector
     );
   }
@@ -112,7 +115,7 @@ public class HeapBasedTopNAlgorithm
   }
 
   @Override
-  protected void closeAggregators(TopNColumnAggregatesProcessor processor)
+  protected void resetAggregators(TopNColumnAggregatesProcessor processor)
   {
     processor.closeAggregators();
   }

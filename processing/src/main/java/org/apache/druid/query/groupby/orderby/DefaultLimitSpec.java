@@ -344,7 +344,7 @@ public class DefaultLimitSpec implements LimitSpec
     final Ordering<ResultRow> timeOrdering;
 
     if (hasTimestamp) {
-      timeOrdering = new Ordering<ResultRow>()
+      timeOrdering = new Ordering<>()
       {
         @Override
         public int compare(ResultRow left, ResultRow right)
@@ -468,7 +468,7 @@ public class DefaultLimitSpec implements LimitSpec
                 DimensionHandlerUtils.coerceToStringArray(o2)
             );
           }
-          return new DimensionComparisonUtils.ArrayComparator<String>(stringComparator)
+          return new DimensionComparisonUtils.ArrayComparator<>(stringComparator)
               .compare(
                   DimensionHandlerUtils.coerceToStringArray(o1),
                   DimensionHandlerUtils.coerceToStringArray(o2)
@@ -478,16 +478,33 @@ public class DefaultLimitSpec implements LimitSpec
         throw new ISE("Cannot create comparator for array type %s.", columnType.toString());
       }
     }
+    final Comparator comparatorToUse;
+    if (arrayComparator != null) {
+      comparatorToUse = arrayComparator;
+    } else {
+      comparatorToUse = DimensionComparisonUtils.isNaturalComparator(columnType.getType(), stringComparator)
+                        ? columnType.getNullableStrategy()
+                        : stringComparator;
+    }
+
     return Ordering.from(
         Comparator.comparing(
             (ResultRow row) -> {
               if (columnType.isArray()) {
+                // Arrays have a specialized comparator, that applies the ordering per element. That will handle the casting
+                // and the comparison
+                return row.get(column);
+              } else if (DimensionComparisonUtils.isNaturalComparator(columnType.getType(), stringComparator)) {
+                // If the natural comparator is used, we can directly extract the dimension value, and the type strategy's comparison
+                // function will handle it, without casting
                 return row.get(column);
               } else {
+                // If the comparator is not natural, we will be using the string comparator, and we need to cast the dimension to string
+                // before comparison
                 return getDimensionValue(row, column);
               }
             },
-            Comparator.nullsFirst(arrayComparator == null ? stringComparator : arrayComparator)
+            Comparator.nullsFirst(comparatorToUse)
         )
     );
   }

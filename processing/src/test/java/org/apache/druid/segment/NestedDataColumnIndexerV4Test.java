@@ -25,17 +25,13 @@ import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
-import org.apache.druid.guice.NestedDataModule;
-import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.incremental.IncrementalIndex;
+import org.apache.druid.segment.incremental.IncrementalIndexCursorFactory;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
 import org.apache.druid.segment.incremental.IndexSizeExceededException;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.nested.StructuredData;
@@ -45,7 +41,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import javax.annotation.Nonnull;
-import java.util.List;
 import java.util.Map;
 
 public class NestedDataColumnIndexerV4Test extends InitializedNullHandlingTest
@@ -61,78 +56,80 @@ public class NestedDataColumnIndexerV4Test extends InitializedNullHandlingTest
   @BeforeClass
   public static void setup()
   {
-    NestedDataModule.registerHandlersAndSerde();
+    BuiltInTypesModule.registerHandlersAndSerde();
   }
 
   @Test
   public void testKeySizeEstimation()
   {
     NestedDataColumnIndexerV4 indexer = new NestedDataColumnIndexerV4();
+    Assert.assertEquals(DimensionDictionarySelector.CARDINALITY_UNKNOWN, indexer.getCardinality());
     int baseCardinality = NullHandling.sqlCompatible() ? 0 : 2;
-    Assert.assertEquals(baseCardinality, indexer.getCardinality());
+    Assert.assertEquals(baseCardinality, indexer.globalDictionary.getCardinality());
 
     EncodedKeyComponent<StructuredData> key;
     // new raw value, new field, new dictionary entry
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(ImmutableMap.of("x", "foo"), false);
     Assert.assertEquals(228, key.getEffectiveSizeBytes());
-    Assert.assertEquals(baseCardinality + 1, indexer.getCardinality());
+    Assert.assertEquals(baseCardinality + 1, indexer.globalDictionary.getCardinality());
     // adding same value only adds estimated size of value itself
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(ImmutableMap.of("x", "foo"), false);
     Assert.assertEquals(112, key.getEffectiveSizeBytes());
-    Assert.assertEquals(baseCardinality + 1, indexer.getCardinality());
+    Assert.assertEquals(baseCardinality + 1, indexer.globalDictionary.getCardinality());
     // new raw value, new field, new dictionary entry
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(10L, false);
     Assert.assertEquals(94, key.getEffectiveSizeBytes());
-    Assert.assertEquals(baseCardinality + 2, indexer.getCardinality());
+    Assert.assertEquals(baseCardinality + 2, indexer.globalDictionary.getCardinality());
     // adding same value only adds estimated size of value itself
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(10L, false);
     Assert.assertEquals(16, key.getEffectiveSizeBytes());
-    Assert.assertEquals(baseCardinality + 2, indexer.getCardinality());
+    Assert.assertEquals(baseCardinality + 2, indexer.globalDictionary.getCardinality());
     // new raw value, new dictionary entry
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(11L, false);
     Assert.assertEquals(48, key.getEffectiveSizeBytes());
-    Assert.assertEquals(baseCardinality + 3, indexer.getCardinality());
+    Assert.assertEquals(baseCardinality + 3, indexer.globalDictionary.getCardinality());
 
     // new raw value, new fields
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(ImmutableList.of(1L, 2L, 10L), false);
     Assert.assertEquals(276, key.getEffectiveSizeBytes());
-    Assert.assertEquals(baseCardinality + 5, indexer.getCardinality());
+    Assert.assertEquals(baseCardinality + 5, indexer.globalDictionary.getCardinality());
     // new raw value, re-use fields and dictionary
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(ImmutableList.of(1L, 2L, 10L), false);
     Assert.assertEquals(56, key.getEffectiveSizeBytes());
-    Assert.assertEquals(baseCardinality + 5, indexer.getCardinality());
+    Assert.assertEquals(baseCardinality + 5, indexer.globalDictionary.getCardinality());
     // new raw value, new fields
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(
         ImmutableMap.of("x", ImmutableList.of(1L, 2L, 10L)),
         false
     );
     Assert.assertEquals(286, key.getEffectiveSizeBytes());
-    Assert.assertEquals(baseCardinality + 5, indexer.getCardinality());
+    Assert.assertEquals(baseCardinality + 5, indexer.globalDictionary.getCardinality());
     // new raw value
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(
         ImmutableMap.of("x", ImmutableList.of(1L, 2L, 10L)),
         false
     );
     Assert.assertEquals(118, key.getEffectiveSizeBytes());
-    Assert.assertEquals(baseCardinality + 5, indexer.getCardinality());
+    Assert.assertEquals(baseCardinality + 5, indexer.globalDictionary.getCardinality());
 
     key = indexer.processRowValsToUnsortedEncodedKeyComponent("", false);
     if (NullHandling.replaceWithDefault()) {
       Assert.assertEquals(0, key.getEffectiveSizeBytes());
-      Assert.assertEquals(baseCardinality + 6, indexer.getCardinality());
+      Assert.assertEquals(baseCardinality + 6, indexer.globalDictionary.getCardinality());
     } else {
       Assert.assertEquals(104, key.getEffectiveSizeBytes());
-      Assert.assertEquals(baseCardinality + 6, indexer.getCardinality());
+      Assert.assertEquals(baseCardinality + 6, indexer.globalDictionary.getCardinality());
     }
 
     key = indexer.processRowValsToUnsortedEncodedKeyComponent(0, false);
     if (NullHandling.replaceWithDefault()) {
       Assert.assertEquals(16, key.getEffectiveSizeBytes());
-      Assert.assertEquals(baseCardinality + 6, indexer.getCardinality());
+      Assert.assertEquals(baseCardinality + 6, indexer.globalDictionary.getCardinality());
     } else {
       Assert.assertEquals(48, key.getEffectiveSizeBytes());
-      Assert.assertEquals(baseCardinality + 7, indexer.getCardinality());
+      Assert.assertEquals(baseCardinality + 7, indexer.globalDictionary.getCardinality());
     }
+    Assert.assertEquals(DimensionDictionarySelector.CARDINALITY_UNKNOWN, indexer.getCardinality());
   }
 
   @Test
@@ -147,57 +144,44 @@ public class NestedDataColumnIndexerV4Test extends InitializedNullHandlingTest
     index.add(makeInputRow(minTimestamp + 4, true, STRING_COL, null));
     index.add(makeInputRow(minTimestamp + 5, false, STRING_COL, null));
 
-    IncrementalIndexStorageAdapter storageAdapter = new IncrementalIndexStorageAdapter(index);
-    Sequence<Cursor> cursorSequence = storageAdapter.makeCursors(
-        null,
-        Intervals.ETERNITY,
-        VirtualColumns.EMPTY,
-        Granularities.NONE,
-        false,
-        null
-    );
-    final DimensionSpec dimensionSpec = new DefaultDimensionSpec(STRING_COL, STRING_COL, ColumnType.STRING);
-    List<Cursor> cursorList = cursorSequence.toList();
-    ColumnSelectorFactory columnSelectorFactory = cursorList.get(0).getColumnSelectorFactory();
+    IncrementalIndexCursorFactory cursorFactory = new IncrementalIndexCursorFactory(index);
 
-    ColumnValueSelector valueSelector = columnSelectorFactory.makeColumnValueSelector(STRING_COL);
-    DimensionSelector dimensionSelector = columnSelectorFactory.makeDimensionSelector(dimensionSpec);
-    Assert.assertEquals("a", valueSelector.getObject());
-    Assert.assertEquals(1, dimensionSelector.getRow().size());
-    Assert.assertEquals("a", dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
-    Assert.assertEquals("a", dimensionSelector.getObject());
+    try (final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+      Cursor cursor = cursorHolder.asCursor();
+      final DimensionSpec dimensionSpec = new DefaultDimensionSpec(STRING_COL, STRING_COL, ColumnType.STRING);
+      ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
 
-    columnSelectorFactory = cursorList.get(1).getColumnSelectorFactory();
-    valueSelector = columnSelectorFactory.makeColumnValueSelector(STRING_COL);
-    dimensionSelector = columnSelectorFactory.makeDimensionSelector(dimensionSpec);
-    Assert.assertEquals("b", valueSelector.getObject());
-    Assert.assertEquals(1, dimensionSelector.getRow().size());
-    Assert.assertEquals("b", dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
-    Assert.assertEquals("b", dimensionSelector.getObject());
+      ColumnValueSelector valueSelector = columnSelectorFactory.makeColumnValueSelector(STRING_COL);
+      DimensionSelector dimensionSelector = columnSelectorFactory.makeDimensionSelector(dimensionSpec);
+      Assert.assertEquals("a", valueSelector.getObject());
+      Assert.assertEquals(1, dimensionSelector.getRow().size());
+      Assert.assertEquals("a", dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
+      Assert.assertEquals("a", dimensionSelector.getObject());
 
-    columnSelectorFactory = cursorList.get(2).getColumnSelectorFactory();
-    valueSelector = columnSelectorFactory.makeColumnValueSelector(STRING_COL);
-    dimensionSelector = columnSelectorFactory.makeDimensionSelector(dimensionSpec);
-    Assert.assertEquals("c", valueSelector.getObject());
-    Assert.assertEquals(1, dimensionSelector.getRow().size());
-    Assert.assertEquals("c", dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
-    Assert.assertEquals("c", dimensionSelector.getObject());
+      cursor.advance();
+      Assert.assertEquals("b", valueSelector.getObject());
+      Assert.assertEquals(1, dimensionSelector.getRow().size());
+      Assert.assertEquals("b", dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
+      Assert.assertEquals("b", dimensionSelector.getObject());
 
-    columnSelectorFactory = cursorList.get(3).getColumnSelectorFactory();
-    valueSelector = columnSelectorFactory.makeColumnValueSelector(STRING_COL);
-    dimensionSelector = columnSelectorFactory.makeDimensionSelector(dimensionSpec);
-    Assert.assertNull(valueSelector.getObject());
-    Assert.assertEquals(1, dimensionSelector.getRow().size());
-    Assert.assertNull(dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
-    Assert.assertNull(dimensionSelector.getObject());
+      cursor.advance();
+      Assert.assertEquals("c", valueSelector.getObject());
+      Assert.assertEquals(1, dimensionSelector.getRow().size());
+      Assert.assertEquals("c", dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
+      Assert.assertEquals("c", dimensionSelector.getObject());
 
-    columnSelectorFactory = cursorList.get(4).getColumnSelectorFactory();
-    valueSelector = columnSelectorFactory.makeColumnValueSelector(STRING_COL);
-    dimensionSelector = columnSelectorFactory.makeDimensionSelector(dimensionSpec);
-    Assert.assertNull(valueSelector.getObject());
-    Assert.assertEquals(1, dimensionSelector.getRow().size());
-    Assert.assertNull(dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
-    Assert.assertNull(dimensionSelector.getObject());
+      cursor.advance();
+      Assert.assertNull(valueSelector.getObject());
+      Assert.assertEquals(1, dimensionSelector.getRow().size());
+      Assert.assertNull(dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
+      Assert.assertNull(dimensionSelector.getObject());
+
+      cursor.advance();
+      Assert.assertNull(valueSelector.getObject());
+      Assert.assertEquals(1, dimensionSelector.getRow().size());
+      Assert.assertNull(dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
+      Assert.assertNull(dimensionSelector.getObject());
+    }
   }
 
   @Test
@@ -212,86 +196,72 @@ public class NestedDataColumnIndexerV4Test extends InitializedNullHandlingTest
     index.add(makeInputRow(minTimestamp + 4, true, LONG_COL, null));
     index.add(makeInputRow(minTimestamp + 5, false, LONG_COL, null));
 
-    IncrementalIndexStorageAdapter storageAdapter = new IncrementalIndexStorageAdapter(index);
-    Sequence<Cursor> cursorSequence = storageAdapter.makeCursors(
-        null,
-        Intervals.ETERNITY,
-        VirtualColumns.EMPTY,
-        Granularities.NONE,
-        false,
-        null
-    );
-    final DimensionSpec dimensionSpec = new DefaultDimensionSpec(LONG_COL, LONG_COL, ColumnType.LONG);
-    List<Cursor> cursorList = cursorSequence.toList();
-    ColumnSelectorFactory columnSelectorFactory = cursorList.get(0).getColumnSelectorFactory();
+    IncrementalIndexCursorFactory cursorFactory = new IncrementalIndexCursorFactory(index);
+    try (final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+      Cursor cursor = cursorHolder.asCursor();
+      final DimensionSpec dimensionSpec = new DefaultDimensionSpec(LONG_COL, LONG_COL, ColumnType.LONG);
+      ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
 
-    ColumnValueSelector valueSelector = columnSelectorFactory.makeColumnValueSelector(LONG_COL);
-    DimensionSelector dimensionSelector = columnSelectorFactory.makeDimensionSelector(dimensionSpec);
-    Assert.assertEquals(1L, valueSelector.getObject());
-    Assert.assertEquals(1L, valueSelector.getLong());
-    Assert.assertFalse(valueSelector.isNull());
-    Assert.assertEquals(1, dimensionSelector.getRow().size());
-    Assert.assertEquals("1", dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
-    Assert.assertEquals("1", dimensionSelector.getObject());
-
-    columnSelectorFactory = cursorList.get(1).getColumnSelectorFactory();
-    valueSelector = columnSelectorFactory.makeColumnValueSelector(LONG_COL);
-    dimensionSelector = columnSelectorFactory.makeDimensionSelector(dimensionSpec);
-    Assert.assertEquals(2L, valueSelector.getObject());
-    Assert.assertEquals(2L, valueSelector.getLong());
-    Assert.assertFalse(valueSelector.isNull());
-    Assert.assertEquals(1, dimensionSelector.getRow().size());
-    Assert.assertEquals("2", dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
-    Assert.assertEquals("2", dimensionSelector.getObject());
-
-    columnSelectorFactory = cursorList.get(2).getColumnSelectorFactory();
-    valueSelector = columnSelectorFactory.makeColumnValueSelector(LONG_COL);
-    dimensionSelector = columnSelectorFactory.makeDimensionSelector(dimensionSpec);
-    Assert.assertEquals(3L, valueSelector.getObject());
-    Assert.assertEquals(3L, valueSelector.getLong());
-    Assert.assertFalse(valueSelector.isNull());
-    Assert.assertEquals(1, dimensionSelector.getRow().size());
-    Assert.assertEquals("3", dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
-    Assert.assertEquals("3", dimensionSelector.getObject());
-
-    columnSelectorFactory = cursorList.get(3).getColumnSelectorFactory();
-    valueSelector = columnSelectorFactory.makeColumnValueSelector(LONG_COL);
-    dimensionSelector = columnSelectorFactory.makeDimensionSelector(dimensionSpec);
-    if (NullHandling.sqlCompatible()) {
-      Assert.assertNull(valueSelector.getObject());
-      Assert.assertTrue(valueSelector.isNull());
-      Assert.assertEquals(1, dimensionSelector.getRow().size());
-      Assert.assertNull(dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
-      Assert.assertNull(dimensionSelector.getObject());
-    } else {
-      Assert.assertEquals(NullHandling.defaultLongValue(), valueSelector.getObject());
+      ColumnValueSelector valueSelector = columnSelectorFactory.makeColumnValueSelector(LONG_COL);
+      DimensionSelector dimensionSelector = columnSelectorFactory.makeDimensionSelector(dimensionSpec);
+      Assert.assertEquals(1L, valueSelector.getObject());
+      Assert.assertEquals(1L, valueSelector.getLong());
       Assert.assertFalse(valueSelector.isNull());
       Assert.assertEquals(1, dimensionSelector.getRow().size());
-      Assert.assertEquals(
-          String.valueOf(NullHandling.defaultLongValue()),
-          dimensionSelector.lookupName(dimensionSelector.getRow().get(0))
-      );
-      Assert.assertEquals(String.valueOf(NullHandling.defaultLongValue()), dimensionSelector.getObject());
-    }
+      Assert.assertEquals("1", dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
+      Assert.assertEquals("1", dimensionSelector.getObject());
 
-    columnSelectorFactory = cursorList.get(4).getColumnSelectorFactory();
-    valueSelector = columnSelectorFactory.makeColumnValueSelector(LONG_COL);
-    dimensionSelector = columnSelectorFactory.makeDimensionSelector(dimensionSpec);
-    if (NullHandling.sqlCompatible()) {
-      Assert.assertNull(valueSelector.getObject());
-      Assert.assertTrue(valueSelector.isNull());
-      Assert.assertEquals(1, dimensionSelector.getRow().size());
-      Assert.assertNull(dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
-      Assert.assertNull(dimensionSelector.getObject());
-    } else {
-      Assert.assertEquals(NullHandling.defaultLongValue(), valueSelector.getObject());
+      cursor.advance();
+      Assert.assertEquals(2L, valueSelector.getObject());
+      Assert.assertEquals(2L, valueSelector.getLong());
       Assert.assertFalse(valueSelector.isNull());
       Assert.assertEquals(1, dimensionSelector.getRow().size());
-      Assert.assertEquals(
-          String.valueOf(NullHandling.defaultLongValue()),
-          dimensionSelector.lookupName(dimensionSelector.getRow().get(0))
-      );
-      Assert.assertEquals(String.valueOf(NullHandling.defaultLongValue()), dimensionSelector.getObject());
+      Assert.assertEquals("2", dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
+      Assert.assertEquals("2", dimensionSelector.getObject());
+
+      cursor.advance();
+      Assert.assertEquals(3L, valueSelector.getObject());
+      Assert.assertEquals(3L, valueSelector.getLong());
+      Assert.assertFalse(valueSelector.isNull());
+      Assert.assertEquals(1, dimensionSelector.getRow().size());
+      Assert.assertEquals("3", dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
+      Assert.assertEquals("3", dimensionSelector.getObject());
+
+      cursor.advance();
+      if (NullHandling.sqlCompatible()) {
+        Assert.assertNull(valueSelector.getObject());
+        Assert.assertTrue(valueSelector.isNull());
+        Assert.assertEquals(1, dimensionSelector.getRow().size());
+        Assert.assertNull(dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
+        Assert.assertNull(dimensionSelector.getObject());
+      } else {
+        Assert.assertEquals(NullHandling.defaultLongValue(), valueSelector.getObject());
+        Assert.assertFalse(valueSelector.isNull());
+        Assert.assertEquals(1, dimensionSelector.getRow().size());
+        Assert.assertEquals(
+            String.valueOf(NullHandling.defaultLongValue()),
+            dimensionSelector.lookupName(dimensionSelector.getRow().get(0))
+        );
+        Assert.assertEquals(String.valueOf(NullHandling.defaultLongValue()), dimensionSelector.getObject());
+      }
+
+      cursor.advance();
+      if (NullHandling.sqlCompatible()) {
+        Assert.assertNull(valueSelector.getObject());
+        Assert.assertTrue(valueSelector.isNull());
+        Assert.assertEquals(1, dimensionSelector.getRow().size());
+        Assert.assertNull(dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
+        Assert.assertNull(dimensionSelector.getObject());
+      } else {
+        Assert.assertEquals(NullHandling.defaultLongValue(), valueSelector.getObject());
+        Assert.assertFalse(valueSelector.isNull());
+        Assert.assertEquals(1, dimensionSelector.getRow().size());
+        Assert.assertEquals(
+            String.valueOf(NullHandling.defaultLongValue()),
+            dimensionSelector.lookupName(dimensionSelector.getRow().get(0))
+        );
+        Assert.assertEquals(String.valueOf(NullHandling.defaultLongValue()), dimensionSelector.getObject());
+      }
     }
   }
 
@@ -307,86 +277,72 @@ public class NestedDataColumnIndexerV4Test extends InitializedNullHandlingTest
     index.add(makeInputRow(minTimestamp + 4, true, DOUBLE_COL, null));
     index.add(makeInputRow(minTimestamp + 5, false, DOUBLE_COL, null));
 
-    IncrementalIndexStorageAdapter storageAdapter = new IncrementalIndexStorageAdapter(index);
-    Sequence<Cursor> cursorSequence = storageAdapter.makeCursors(
-        null,
-        Intervals.ETERNITY,
-        VirtualColumns.EMPTY,
-        Granularities.NONE,
-        false,
-        null
-    );
-    final DimensionSpec dimensionSpec = new DefaultDimensionSpec(DOUBLE_COL, DOUBLE_COL, ColumnType.DOUBLE);
-    List<Cursor> cursorList = cursorSequence.toList();
-    ColumnSelectorFactory columnSelectorFactory = cursorList.get(0).getColumnSelectorFactory();
+    IncrementalIndexCursorFactory cursorFactory = new IncrementalIndexCursorFactory(index);
+    try (final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+      Cursor cursor = cursorHolder.asCursor();
+      final DimensionSpec dimensionSpec = new DefaultDimensionSpec(DOUBLE_COL, DOUBLE_COL, ColumnType.DOUBLE);
+      ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
 
-    ColumnValueSelector valueSelector = columnSelectorFactory.makeColumnValueSelector(DOUBLE_COL);
-    DimensionSelector dimensionSelector = columnSelectorFactory.makeDimensionSelector(dimensionSpec);
-    Assert.assertEquals(1.1, valueSelector.getObject());
-    Assert.assertEquals(1.1, valueSelector.getDouble(), 0.0);
-    Assert.assertFalse(valueSelector.isNull());
-    Assert.assertEquals(1, dimensionSelector.getRow().size());
-    Assert.assertEquals("1.1", dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
-    Assert.assertEquals("1.1", dimensionSelector.getObject());
-
-    columnSelectorFactory = cursorList.get(1).getColumnSelectorFactory();
-    valueSelector = columnSelectorFactory.makeColumnValueSelector(DOUBLE_COL);
-    dimensionSelector = columnSelectorFactory.makeDimensionSelector(dimensionSpec);
-    Assert.assertEquals(2.2, valueSelector.getObject());
-    Assert.assertEquals(2.2, valueSelector.getDouble(), 0.0);
-    Assert.assertFalse(valueSelector.isNull());
-    Assert.assertEquals(1, dimensionSelector.getRow().size());
-    Assert.assertEquals("2.2", dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
-    Assert.assertEquals("2.2", dimensionSelector.getObject());
-
-    columnSelectorFactory = cursorList.get(2).getColumnSelectorFactory();
-    valueSelector = columnSelectorFactory.makeColumnValueSelector(DOUBLE_COL);
-    dimensionSelector = columnSelectorFactory.makeDimensionSelector(dimensionSpec);
-    Assert.assertEquals(3.3, valueSelector.getObject());
-    Assert.assertEquals(3.3, valueSelector.getDouble(), 0.0);
-    Assert.assertFalse(valueSelector.isNull());
-    Assert.assertEquals(1, dimensionSelector.getRow().size());
-    Assert.assertEquals("3.3", dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
-    Assert.assertEquals("3.3", dimensionSelector.getObject());
-
-    columnSelectorFactory = cursorList.get(3).getColumnSelectorFactory();
-    valueSelector = columnSelectorFactory.makeColumnValueSelector(DOUBLE_COL);
-    dimensionSelector = columnSelectorFactory.makeDimensionSelector(dimensionSpec);
-    if (NullHandling.sqlCompatible()) {
-      Assert.assertNull(valueSelector.getObject());
-      Assert.assertTrue(valueSelector.isNull());
-      Assert.assertEquals(1, dimensionSelector.getRow().size());
-      Assert.assertNull(dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
-      Assert.assertNull(dimensionSelector.getObject());
-    } else {
-      Assert.assertEquals(NullHandling.defaultDoubleValue(), valueSelector.getObject());
+      ColumnValueSelector valueSelector = columnSelectorFactory.makeColumnValueSelector(DOUBLE_COL);
+      DimensionSelector dimensionSelector = columnSelectorFactory.makeDimensionSelector(dimensionSpec);
+      Assert.assertEquals(1.1, valueSelector.getObject());
+      Assert.assertEquals(1.1, valueSelector.getDouble(), 0.0);
       Assert.assertFalse(valueSelector.isNull());
       Assert.assertEquals(1, dimensionSelector.getRow().size());
-      Assert.assertEquals(
-          String.valueOf(NullHandling.defaultDoubleValue()),
-          dimensionSelector.lookupName(dimensionSelector.getRow().get(0))
-      );
-      Assert.assertEquals(String.valueOf(NullHandling.defaultDoubleValue()), dimensionSelector.getObject());
-    }
+      Assert.assertEquals("1.1", dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
+      Assert.assertEquals("1.1", dimensionSelector.getObject());
 
-    columnSelectorFactory = cursorList.get(4).getColumnSelectorFactory();
-    valueSelector = columnSelectorFactory.makeColumnValueSelector(DOUBLE_COL);
-    dimensionSelector = columnSelectorFactory.makeDimensionSelector(dimensionSpec);
-    if (NullHandling.sqlCompatible()) {
-      Assert.assertNull(valueSelector.getObject());
-      Assert.assertTrue(valueSelector.isNull());
-      Assert.assertEquals(1, dimensionSelector.getRow().size());
-      Assert.assertNull(dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
-      Assert.assertNull(dimensionSelector.getObject());
-    } else {
-      Assert.assertEquals(NullHandling.defaultDoubleValue(), valueSelector.getObject());
+      cursor.advance();
+      Assert.assertEquals(2.2, valueSelector.getObject());
+      Assert.assertEquals(2.2, valueSelector.getDouble(), 0.0);
       Assert.assertFalse(valueSelector.isNull());
       Assert.assertEquals(1, dimensionSelector.getRow().size());
-      Assert.assertEquals(
-          String.valueOf(NullHandling.defaultDoubleValue()),
-          dimensionSelector.lookupName(dimensionSelector.getRow().get(0))
-      );
-      Assert.assertEquals(String.valueOf(NullHandling.defaultDoubleValue()), dimensionSelector.getObject());
+      Assert.assertEquals("2.2", dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
+      Assert.assertEquals("2.2", dimensionSelector.getObject());
+
+      cursor.advance();
+      Assert.assertEquals(3.3, valueSelector.getObject());
+      Assert.assertEquals(3.3, valueSelector.getDouble(), 0.0);
+      Assert.assertFalse(valueSelector.isNull());
+      Assert.assertEquals(1, dimensionSelector.getRow().size());
+      Assert.assertEquals("3.3", dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
+      Assert.assertEquals("3.3", dimensionSelector.getObject());
+
+      cursor.advance();
+      if (NullHandling.sqlCompatible()) {
+        Assert.assertNull(valueSelector.getObject());
+        Assert.assertTrue(valueSelector.isNull());
+        Assert.assertEquals(1, dimensionSelector.getRow().size());
+        Assert.assertNull(dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
+        Assert.assertNull(dimensionSelector.getObject());
+      } else {
+        Assert.assertEquals(NullHandling.defaultDoubleValue(), valueSelector.getObject());
+        Assert.assertFalse(valueSelector.isNull());
+        Assert.assertEquals(1, dimensionSelector.getRow().size());
+        Assert.assertEquals(
+            String.valueOf(NullHandling.defaultDoubleValue()),
+            dimensionSelector.lookupName(dimensionSelector.getRow().get(0))
+        );
+        Assert.assertEquals(String.valueOf(NullHandling.defaultDoubleValue()), dimensionSelector.getObject());
+      }
+
+      cursor.advance();
+      if (NullHandling.sqlCompatible()) {
+        Assert.assertNull(valueSelector.getObject());
+        Assert.assertTrue(valueSelector.isNull());
+        Assert.assertEquals(1, dimensionSelector.getRow().size());
+        Assert.assertNull(dimensionSelector.lookupName(dimensionSelector.getRow().get(0)));
+        Assert.assertNull(dimensionSelector.getObject());
+      } else {
+        Assert.assertEquals(NullHandling.defaultDoubleValue(), valueSelector.getObject());
+        Assert.assertFalse(valueSelector.isNull());
+        Assert.assertEquals(1, dimensionSelector.getRow().size());
+        Assert.assertEquals(
+            String.valueOf(NullHandling.defaultDoubleValue()),
+            dimensionSelector.lookupName(dimensionSelector.getRow().get(0))
+        );
+        Assert.assertEquals(String.valueOf(NullHandling.defaultDoubleValue()), dimensionSelector.getObject());
+      }
     }
   }
 
@@ -402,57 +358,35 @@ public class NestedDataColumnIndexerV4Test extends InitializedNullHandlingTest
     index.add(makeInputRow(minTimestamp + 4, true, STRING_ARRAY_COL, null));
     index.add(makeInputRow(minTimestamp + 5, false, STRING_ARRAY_COL, null));
 
-    IncrementalIndexStorageAdapter storageAdapter = new IncrementalIndexStorageAdapter(index);
-    Sequence<Cursor> cursorSequence = storageAdapter.makeCursors(
-        null,
-        Intervals.ETERNITY,
-        VirtualColumns.EMPTY,
-        Granularities.NONE,
-        false,
-        null
-    );
-    final DimensionSpec dimensionSpec = new DefaultDimensionSpec(STRING_ARRAY_COL, STRING_ARRAY_COL, ColumnType.STRING);
-    List<Cursor> cursorList = cursorSequence.toList();
-    ColumnSelectorFactory columnSelectorFactory = cursorList.get(0).getColumnSelectorFactory();
+    IncrementalIndexCursorFactory cursorFactory = new IncrementalIndexCursorFactory(index);
+    try (final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+      Cursor cursor = cursorHolder.asCursor();
+      final DimensionSpec dimensionSpec = new DefaultDimensionSpec(
+          STRING_ARRAY_COL,
+          STRING_ARRAY_COL,
+          ColumnType.STRING
+      );
+      ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
 
-    ColumnValueSelector valueSelector = columnSelectorFactory.makeColumnValueSelector(STRING_ARRAY_COL);
-    Assert.assertThrows(
-        UnsupportedOperationException.class,
-        () -> cursorList.get(0).getColumnSelectorFactory().makeDimensionSelector(dimensionSpec)
-    );
-    Assert.assertArrayEquals(new Object[]{"a"}, (Object[]) valueSelector.getObject());
+      ColumnValueSelector valueSelector = columnSelectorFactory.makeColumnValueSelector(STRING_ARRAY_COL);
+      Assert.assertThrows(
+          UnsupportedOperationException.class,
+          () -> cursor.getColumnSelectorFactory().makeDimensionSelector(dimensionSpec)
+      );
+      Assert.assertArrayEquals(new Object[]{"a"}, (Object[]) valueSelector.getObject());
 
-    columnSelectorFactory = cursorList.get(1).getColumnSelectorFactory();
-    valueSelector = columnSelectorFactory.makeColumnValueSelector(STRING_ARRAY_COL);
-    Assert.assertThrows(
-        UnsupportedOperationException.class,
-        () -> cursorList.get(1).getColumnSelectorFactory().makeDimensionSelector(dimensionSpec)
-    );
-    Assert.assertArrayEquals(new Object[]{"b", "c"}, (Object[]) valueSelector.getObject());
+      cursor.advance();
+      Assert.assertArrayEquals(new Object[]{"b", "c"}, (Object[]) valueSelector.getObject());
 
-    columnSelectorFactory = cursorList.get(2).getColumnSelectorFactory();
-    valueSelector = columnSelectorFactory.makeColumnValueSelector(STRING_ARRAY_COL);
-    Assert.assertThrows(
-        UnsupportedOperationException.class,
-        () -> cursorList.get(2).getColumnSelectorFactory().makeDimensionSelector(dimensionSpec)
-    );
-    Assert.assertArrayEquals(new Object[]{"d", "e"}, (Object[]) valueSelector.getObject());
+      cursor.advance();
+      Assert.assertArrayEquals(new Object[]{"d", "e"}, (Object[]) valueSelector.getObject());
 
-    columnSelectorFactory = cursorList.get(3).getColumnSelectorFactory();
-    valueSelector = columnSelectorFactory.makeColumnValueSelector(STRING_ARRAY_COL);
-    Assert.assertThrows(
-        UnsupportedOperationException.class,
-        () -> cursorList.get(3).getColumnSelectorFactory().makeDimensionSelector(dimensionSpec)
-    );
-    Assert.assertNull(valueSelector.getObject());
+      cursor.advance();
+      Assert.assertNull(valueSelector.getObject());
 
-    columnSelectorFactory = cursorList.get(4).getColumnSelectorFactory();
-    valueSelector = columnSelectorFactory.makeColumnValueSelector(STRING_ARRAY_COL);
-    Assert.assertThrows(
-        UnsupportedOperationException.class,
-        () -> cursorList.get(4).getColumnSelectorFactory().makeDimensionSelector(dimensionSpec)
-    );
-    Assert.assertNull(valueSelector.getObject());
+      cursor.advance();
+      Assert.assertNull(valueSelector.getObject());
+    }
   }
 
   @Test
@@ -467,49 +401,35 @@ public class NestedDataColumnIndexerV4Test extends InitializedNullHandlingTest
     index.add(makeInputRow(minTimestamp + 4, true, VARIANT_COL, null));
     index.add(makeInputRow(minTimestamp + 5, false, VARIANT_COL, null));
 
-    IncrementalIndexStorageAdapter storageAdapter = new IncrementalIndexStorageAdapter(index);
-    Sequence<Cursor> cursorSequence = storageAdapter.makeCursors(
-        null,
-        Intervals.ETERNITY,
-        VirtualColumns.EMPTY,
-        Granularities.NONE,
-        false,
-        null
-    );
-    final DimensionSpec dimensionSpec = new DefaultDimensionSpec(VARIANT_COL, VARIANT_COL, ColumnType.STRING);
-    List<Cursor> cursorList = cursorSequence.toList();
-    ColumnSelectorFactory columnSelectorFactory = cursorList.get(0).getColumnSelectorFactory();
+    IncrementalIndexCursorFactory cursorFactory = new IncrementalIndexCursorFactory(index);
+    try (final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+      Cursor cursor = cursorHolder.asCursor();
+      final DimensionSpec dimensionSpec = new DefaultDimensionSpec(VARIANT_COL, VARIANT_COL, ColumnType.STRING);
+      ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
 
-    ColumnValueSelector valueSelector = columnSelectorFactory.makeColumnValueSelector(VARIANT_COL);
-    DimensionSelector dimensionSelector = cursorList.get(0).getColumnSelectorFactory().makeDimensionSelector(dimensionSpec);
-    Assert.assertEquals("a", valueSelector.getObject());
-    Assert.assertEquals("a", dimensionSelector.getObject());
+      ColumnValueSelector valueSelector = columnSelectorFactory.makeColumnValueSelector(VARIANT_COL);
+      DimensionSelector dimensionSelector = cursor.getColumnSelectorFactory().makeDimensionSelector(dimensionSpec);
+      Assert.assertEquals("a", valueSelector.getObject());
+      Assert.assertEquals("a", dimensionSelector.getObject());
 
-    columnSelectorFactory = cursorList.get(1).getColumnSelectorFactory();
-    valueSelector = columnSelectorFactory.makeColumnValueSelector(VARIANT_COL);
-    dimensionSelector = cursorList.get(1).getColumnSelectorFactory().makeDimensionSelector(dimensionSpec);
-    Assert.assertEquals(2L, valueSelector.getObject());
-    Assert.assertFalse(valueSelector.isNull());
-    Assert.assertEquals("2", dimensionSelector.getObject());
+      cursor.advance();
+      Assert.assertEquals(2L, valueSelector.getObject());
+      Assert.assertFalse(valueSelector.isNull());
+      Assert.assertEquals("2", dimensionSelector.getObject());
 
-    columnSelectorFactory = cursorList.get(2).getColumnSelectorFactory();
-    valueSelector = columnSelectorFactory.makeColumnValueSelector(VARIANT_COL);
-    dimensionSelector = cursorList.get(2).getColumnSelectorFactory().makeDimensionSelector(dimensionSpec);
-    Assert.assertEquals(3.3, valueSelector.getObject());
-    Assert.assertFalse(valueSelector.isNull());
-    Assert.assertEquals("3.3", dimensionSelector.getObject());
+      cursor.advance();
+      Assert.assertEquals(3.3, valueSelector.getObject());
+      Assert.assertFalse(valueSelector.isNull());
+      Assert.assertEquals("3.3", dimensionSelector.getObject());
 
-    columnSelectorFactory = cursorList.get(3).getColumnSelectorFactory();
-    valueSelector = columnSelectorFactory.makeColumnValueSelector(VARIANT_COL);
-    dimensionSelector = cursorList.get(3).getColumnSelectorFactory().makeDimensionSelector(dimensionSpec);
-    Assert.assertNull(valueSelector.getObject());
-    Assert.assertNull(dimensionSelector.getObject());
+      cursor.advance();
+      Assert.assertNull(valueSelector.getObject());
+      Assert.assertNull(dimensionSelector.getObject());
 
-    columnSelectorFactory = cursorList.get(4).getColumnSelectorFactory();
-    valueSelector = columnSelectorFactory.makeColumnValueSelector(VARIANT_COL);
-    dimensionSelector = cursorList.get(4).getColumnSelectorFactory().makeDimensionSelector(dimensionSpec);
-    Assert.assertNull(valueSelector.getObject());
-    Assert.assertNull(dimensionSelector.getObject());
+      cursor.advance();
+      Assert.assertNull(valueSelector.getObject());
+      Assert.assertNull(dimensionSelector.getObject());
+    }
   }
 
   @Test
@@ -524,57 +444,31 @@ public class NestedDataColumnIndexerV4Test extends InitializedNullHandlingTest
     index.add(makeInputRow(minTimestamp + 4, true, NESTED_COL, null));
     index.add(makeInputRow(minTimestamp + 5, false, NESTED_COL, null));
 
-    IncrementalIndexStorageAdapter storageAdapter = new IncrementalIndexStorageAdapter(index);
-    Sequence<Cursor> cursorSequence = storageAdapter.makeCursors(
-        null,
-        Intervals.ETERNITY,
-        VirtualColumns.EMPTY,
-        Granularities.NONE,
-        false,
-        null
-    );
-    final DimensionSpec dimensionSpec = new DefaultDimensionSpec(NESTED_COL, NESTED_COL, ColumnType.STRING);
-    List<Cursor> cursorList = cursorSequence.toList();
-    ColumnSelectorFactory columnSelectorFactory = cursorList.get(0).getColumnSelectorFactory();
+    IncrementalIndexCursorFactory cursorFactory = new IncrementalIndexCursorFactory(index);
+    try (final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+      Cursor cursor = cursorHolder.asCursor();
+      final DimensionSpec dimensionSpec = new DefaultDimensionSpec(NESTED_COL, NESTED_COL, ColumnType.STRING);
+      ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
 
-    ColumnValueSelector valueSelector = columnSelectorFactory.makeColumnValueSelector(NESTED_COL);
-    Assert.assertThrows(
-        UnsupportedOperationException.class,
-        () -> cursorList.get(0).getColumnSelectorFactory().makeDimensionSelector(dimensionSpec)
-    );
-    Assert.assertEquals(StructuredData.wrap("a"), valueSelector.getObject());
+      ColumnValueSelector valueSelector = columnSelectorFactory.makeColumnValueSelector(NESTED_COL);
+      Assert.assertThrows(
+          UnsupportedOperationException.class,
+          () -> cursor.getColumnSelectorFactory().makeDimensionSelector(dimensionSpec)
+      );
+      Assert.assertEquals(StructuredData.wrap("a"), valueSelector.getObject());
 
-    columnSelectorFactory = cursorList.get(1).getColumnSelectorFactory();
-    valueSelector = columnSelectorFactory.makeColumnValueSelector(NESTED_COL);
-    Assert.assertThrows(
-        UnsupportedOperationException.class,
-        () -> cursorList.get(1).getColumnSelectorFactory().makeDimensionSelector(dimensionSpec)
-    );
-    Assert.assertEquals(StructuredData.wrap(2L), valueSelector.getObject());
+      cursor.advance();
+      Assert.assertEquals(StructuredData.wrap(2L), valueSelector.getObject());
 
-    columnSelectorFactory = cursorList.get(2).getColumnSelectorFactory();
-    valueSelector = columnSelectorFactory.makeColumnValueSelector(NESTED_COL);
-    Assert.assertThrows(
-        UnsupportedOperationException.class,
-        () -> cursorList.get(2).getColumnSelectorFactory().makeDimensionSelector(dimensionSpec)
-    );
-    Assert.assertEquals(StructuredData.wrap(ImmutableMap.of("x", 1.1, "y", 2L)), valueSelector.getObject());
+      cursor.advance();
+      Assert.assertEquals(StructuredData.wrap(ImmutableMap.of("x", 1.1, "y", 2L)), valueSelector.getObject());
 
-    columnSelectorFactory = cursorList.get(3).getColumnSelectorFactory();
-    valueSelector = columnSelectorFactory.makeColumnValueSelector(NESTED_COL);
-    Assert.assertThrows(
-        UnsupportedOperationException.class,
-        () -> cursorList.get(3).getColumnSelectorFactory().makeDimensionSelector(dimensionSpec)
-    );
-    Assert.assertNull(valueSelector.getObject());
+      cursor.advance();
+      Assert.assertNull(valueSelector.getObject());
 
-    columnSelectorFactory = cursorList.get(4).getColumnSelectorFactory();
-    valueSelector = columnSelectorFactory.makeColumnValueSelector(NESTED_COL);
-    Assert.assertThrows(
-        UnsupportedOperationException.class,
-        () -> cursorList.get(4).getColumnSelectorFactory().makeDimensionSelector(dimensionSpec)
-    );
-    Assert.assertNull(valueSelector.getObject());
+      cursor.advance();
+      Assert.assertNull(valueSelector.getObject());
+    }
   }
 
   @Nonnull
@@ -582,15 +476,16 @@ public class NestedDataColumnIndexerV4Test extends InitializedNullHandlingTest
   {
     IncrementalIndex index = new OnheapIncrementalIndex.Builder()
         .setIndexSchema(
-            new IncrementalIndexSchema(
-                minTimestamp,
-                new TimestampSpec(TIME_COL, "millis", null),
-                Granularities.NONE,
-                VirtualColumns.EMPTY,
-                DimensionsSpec.builder().useSchemaDiscovery(true).build(),
-                new AggregatorFactory[0],
-                false
-            )
+            IncrementalIndexSchema.builder()
+                                  .withMinTimestamp(minTimestamp)
+                                  .withTimestampSpec(new TimestampSpec(TIME_COL, "millis", null))
+                                  .withDimensionsSpec(
+                                      DimensionsSpec.builder()
+                                                    .useSchemaDiscovery(true)
+                                                    .build()
+                                  )
+                                  .withRollup(false)
+                                  .build()
         )
         .setMaxRowCount(1000)
         .build();

@@ -57,7 +57,7 @@ export APACHE_ARCHIVE_MIRROR_HOST=https://example.com/remote-generic-repo
 This section describes how to start integration tests against Docker containers which will be brought up automatically by following commands.
 If you want to build Docker images and run tests separately, see the next section.
 
-To run all tests from a test group using Docker and Maven run the following command:
+To run all tests from a test group using Docker and Maven run the following command from `integration-tests` directory:
 
 ```bash
 mvn verify -P integration-tests -Dgroups=<test_group>
@@ -68,7 +68,7 @@ The list of test groups can be found at
 
 ### Run a single test
 
-To run only a single test using Maven:
+To run only a single test using Maven, run the following command from `integration-tests` directory:
 
 ```bash
 mvn verify -P integration-tests -Dgroups=<test_group> -Dit.test=<test_name>
@@ -88,8 +88,7 @@ if your test has the annotation: `@Test(groups = TestNGGroup.BATCH_INDEX)` then 
 * Add `-pl :druid-integration-tests` when running integration tests for the second time or later without changing
 the code of core modules in between to skip up-to-date checks for the whole module dependency tree.
 
-* Integration tests can also be run with either Java 8 or Java 11 by adding `-Djvm.runtime=#` to the `mvn` command, where `#`
-can either be 8 or 11.
+* Integration tests can also be run with a specific Java version by adding `-Djvm.runtime=#` to the `mvn` command (where `#` can be 11, for example).
 
 * Druid's configuration (using Docker) can be overridden by providing `-Doverride.config.path=<PATH_TO_FILE>`.
 The file must contain one property per line, the key must start with `druid_` and the format should be snake case.

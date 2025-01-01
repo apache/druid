@@ -50,6 +50,7 @@ import org.apache.druid.java.util.metrics.MonitorScheduler;
 import org.apache.druid.java.util.metrics.NoopOshiSysMonitor;
 import org.apache.druid.java.util.metrics.NoopSysMonitor;
 import org.apache.druid.java.util.metrics.OshiSysMonitor;
+import org.apache.druid.java.util.metrics.OshiSysMonitorConfig;
 import org.apache.druid.java.util.metrics.SysMonitor;
 import org.apache.druid.query.ExecutorServiceMonitor;
 
@@ -66,7 +67,7 @@ import java.util.stream.Collectors;
  */
 public class MetricsModule implements Module
 {
-  static final String MONITORING_PROPERTY_PREFIX = "druid.monitoring";
+  public static final String MONITORING_PROPERTY_PREFIX = "druid.monitoring";
   private static final Logger log = new Logger(MetricsModule.class);
   private Set<NodeRole> nodeRoles;
 
@@ -86,12 +87,12 @@ public class MetricsModule implements Module
   {
     JsonConfigProvider.bind(binder, MONITORING_PROPERTY_PREFIX, DruidMonitorSchedulerConfig.class);
     JsonConfigProvider.bind(binder, MONITORING_PROPERTY_PREFIX, MonitorsConfig.class);
+    JsonConfigProvider.bind(binder, OshiSysMonitorConfig.PREFIX, OshiSysMonitorConfig.class);
 
     DruidBinders.metricMonitorBinder(binder); // get the binder so that it will inject the empty set at a minimum.
 
     binder.bind(DataSourceTaskIdHolder.class).in(LazySingleton.class);
 
-    binder.bind(EventReceiverFirehoseRegister.class).in(LazySingleton.class);
     binder.bind(ExecutorServiceMonitor.class).in(LazySingleton.class);
 
     // Instantiate eagerly so that we get everything registered and put into the Lifecycle
@@ -201,7 +202,11 @@ public class MetricsModule implements Module
 
   @Provides
   @ManageLifecycle
-  public OshiSysMonitor getOshiSysMonitor(DataSourceTaskIdHolder dataSourceTaskIdHolder, @Self Set<NodeRole> nodeRoles)
+  public OshiSysMonitor getOshiSysMonitor(
+      DataSourceTaskIdHolder dataSourceTaskIdHolder,
+      @Self Set<NodeRole> nodeRoles,
+      OshiSysMonitorConfig oshiSysConfig
+  )
   {
     if (nodeRoles.contains(NodeRole.PEON)) {
       return new NoopOshiSysMonitor();
@@ -210,7 +215,7 @@ public class MetricsModule implements Module
           dataSourceTaskIdHolder.getDataSource(),
           dataSourceTaskIdHolder.getTaskId()
       );
-      return new OshiSysMonitor(dimensions);
+      return new OshiSysMonitor(dimensions, oshiSysConfig);
     }
   }
 }

@@ -173,7 +173,7 @@ public class FrameFile implements Closeable
     final EnumSet<Flag> flagSet = flags.length == 0 ? EnumSet.noneOf(Flag.class) : EnumSet.copyOf(Arrays.asList(flags));
 
     if (!file.exists()) {
-      throw new FileNotFoundException(StringUtils.format("File [%s] not found", file));
+      throw new FileNotFoundException(StringUtils.format("File[%s] not found", file));
     }
 
     // Closer for mmap that is shared across all references: either footer only (if file size is larger
@@ -186,7 +186,7 @@ public class FrameFile implements Closeable
       // Verify minimum file length.
       if (fileLength <
           FrameFileWriter.MAGIC.length + FrameFileWriter.TRAILER_LENGTH + Byte.BYTES /* MARKER_NO_MORE_FRAMES */) {
-        throw new IOE("File [%s] is too short (size = [%,d])", file, fileLength);
+        throw new IOE("File[%s] is too short (size[%,d])", file, fileLength);
       }
 
       // Verify magic.
@@ -195,7 +195,7 @@ public class FrameFile implements Closeable
       randomAccessFile.readFully(buf, 0, FrameFileWriter.MAGIC.length);
 
       if (!bufMemory.equalTo(0, Memory.wrap(FrameFileWriter.MAGIC), 0, FrameFileWriter.MAGIC.length)) {
-        throw new IOE("File [%s] is not a frame file", file);
+        throw new IOE("File[%s] is not a frame file", file);
       }
 
       // Read number of frames and partitions.
@@ -204,9 +204,9 @@ public class FrameFile implements Closeable
 
       final int footerLength = bufMemory.getInt(Integer.BYTES * 2L);
       if (footerLength < 0) {
-        throw new ISE("Negative-size footer. Corrupt or truncated file?");
+        throw new ISE("Negative-size footer. Corrupt or truncated file[%s]?", file);
       } else if (footerLength > fileLength) {
-        throw new ISE("Oversize footer. Corrupt or truncated file?");
+        throw new ISE("Oversize footer. Corrupt or truncated file[%s]?", file);
       }
 
       final Memory wholeFileMemory;
@@ -243,7 +243,7 @@ public class FrameFile implements Closeable
       if (flagSet.contains(Flag.DELETE_ON_CLOSE)) {
         fileCloser.register(() -> {
           if (!file.delete()) {
-            log.warn("Could not delete frame file [%s]", file);
+            log.warn("Could not delete frame file[%s]", file);
           }
           if (byteTracker != null) {
             // Only release the bytes taken by frames, we don't track the header and footer as of now.
@@ -259,7 +259,7 @@ public class FrameFile implements Closeable
       }
 
       final ReferenceCountingCloseableObject<Closeable> referenceCounter =
-          new ReferenceCountingCloseableObject<Closeable>(fileCloser) {};
+          new ReferenceCountingCloseableObject<>(fileCloser) {};
 
       return new FrameFile(
           file,

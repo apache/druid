@@ -68,7 +68,7 @@ public class SimpleWorkerProvisioningStrategy extends AbstractWorkerProvisioning
         config,
         workerConfigRef,
         provisioningSchedulerConfig,
-        new Supplier<ScheduledExecutorService>()
+        new Supplier<>()
         {
           @Override
           public ScheduledExecutorService get()
@@ -133,7 +133,7 @@ public class SimpleWorkerProvisioningStrategy extends AbstractWorkerProvisioning
           Lists.newArrayList(
               Iterables.transform(
                   workers,
-                  new Function<ImmutableWorkerInfo, String>()
+                  new Function<>()
                   {
                     @Override
                     public String apply(ImmutableWorkerInfo input)
@@ -197,7 +197,7 @@ public class SimpleWorkerProvisioningStrategy extends AbstractWorkerProvisioning
               Lists.newArrayList(
                   Iterables.transform(
                       runner.getLazyWorkers(),
-                      new Function<Worker, String>()
+                      new Function<>()
                       {
                         @Override
                         public String apply(Worker input)
@@ -223,7 +223,7 @@ public class SimpleWorkerProvisioningStrategy extends AbstractWorkerProvisioning
           final Collection<String> laziestWorkerIps =
               Collections2.transform(
                   runner.markWorkersLazy(isLazyWorker, excessWorkers),
-                  new Function<Worker, String>()
+                  new Function<>()
                   {
                     @Override
                     public String apply(Worker worker)

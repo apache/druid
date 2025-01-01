@@ -64,6 +64,7 @@ public class MetadataStorageTablesConfigTest
 
     Assert.assertEquals(props.getProperty("druid.metadata.storage.tables.base"), config.getBase());
     Assert.assertEquals(props.getProperty("druid.metadata.storage.tables.segments"), config.getSegmentsTable());
+    Assert.assertEquals(props.getProperty("druid.metadata.storage.tables.segmentSchemas"), config.getSegmentSchemasTable());
     Assert.assertEquals(props.getProperty("druid.metadata.storage.tables.rules"), config.getRulesTable());
     Assert.assertEquals(props.getProperty("druid.metadata.storage.tables.config"), config.getConfigTable());
     Assert.assertEquals(
@@ -81,5 +82,19 @@ public class MetadataStorageTablesConfigTest
     Assert.assertEquals(props.getProperty("druid.metadata.storage.tables.dataSource"), config.getDataSourceTable());
     Assert.assertEquals(props.getProperty("druid.metadata.storage.tables.supervisors"), config.getSupervisorTable());
     Assert.assertEquals(props.getProperty("druid.metadata.storage.tables.upgradeSegments"), config.getUpgradeSegmentsTable());
+  }
+
+  @Test
+  public void testReadConfig()
+  {
+    MetadataStorageTablesConfig fromBase = MetadataStorageTablesConfig.fromBase("druid.metadata.storage.tables");
+    Assert.assertEquals("druid.metadata.storage.tables_segments", fromBase.getSegmentsTable());
+    Assert.assertEquals("druid.metadata.storage.tables_segmentSchemas", fromBase.getSegmentSchemasTable());
+    Assert.assertEquals("druid.metadata.storage.tables_tasklocks", fromBase.getTaskLockTable());
+    Assert.assertEquals("druid.metadata.storage.tables_rules", fromBase.getRulesTable());
+    Assert.assertEquals("druid.metadata.storage.tables_config", fromBase.getConfigTable());
+    Assert.assertEquals("druid.metadata.storage.tables_dataSource", fromBase.getDataSourceTable());
+    Assert.assertEquals("druid.metadata.storage.tables_supervisors", fromBase.getSupervisorTable());
+    Assert.assertEquals("druid.metadata.storage.tables_upgradeSegments", fromBase.getUpgradeSegmentsTable());
   }
 }

@@ -74,8 +74,14 @@ public interface FrameProcessorFactory<T, R, ExtraInfoType>
       FrameContext frameContext,
       int maxOutstandingProcessors,
       CounterTracker counters,
-      Consumer<Throwable> warningPublisher
+      Consumer<Throwable> warningPublisher,
+      boolean removeNullBytes
   ) throws IOException;
+
+  /**
+   * Whether processors from this factory use {@link org.apache.druid.msq.exec.ProcessingBuffers}.
+   */
+  boolean usesProcessingBuffers();
 
   @Nullable
   TypeReference<R> getResultTypeReference();

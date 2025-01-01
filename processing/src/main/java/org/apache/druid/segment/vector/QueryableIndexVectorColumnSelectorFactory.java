@@ -21,8 +21,13 @@ package org.apache.druid.segment.vector;
 
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.query.groupby.DeferExpressionDimensions;
+import org.apache.druid.query.groupby.epinephelinae.vector.GroupByVectorColumnProcessorFactory;
+import org.apache.druid.query.groupby.epinephelinae.vector.GroupByVectorColumnSelector;
 import org.apache.druid.segment.ColumnCache;
+import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.QueryableIndex;
+import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -245,6 +250,32 @@ public class QueryableIndexVectorColumnSelectorFactory implements VectorColumnSe
     }
 
     return columnValueSelector;
+  }
+
+  @Override
+  public GroupByVectorColumnSelector makeGroupByVectorColumnSelector(
+      String column,
+      DeferExpressionDimensions deferExpressionDimensions
+  )
+  {
+    GroupByVectorColumnSelector retVal = null;
+
+    // Allow virtual columns to control their own grouping behavior.
+    final VirtualColumn virtualColumn = virtualColumns.getVirtualColumn(column);
+    if (virtualColumn != null) {
+      retVal = virtualColumn.makeGroupByVectorColumnSelector(column, this, deferExpressionDimensions);
+    }
+
+    // Generic case: use GroupByVectorColumnProcessorFactory.instance() to build selectors for primitive types.
+    if (retVal == null) {
+      retVal = ColumnProcessors.makeVectorProcessor(
+          column,
+          GroupByVectorColumnProcessorFactory.instance(),
+          this
+      );
+    }
+
+    return retVal;
   }
 
   @Nullable

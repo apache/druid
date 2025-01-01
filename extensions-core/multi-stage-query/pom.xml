@@ -31,7 +31,7 @@
     <parent>
         <groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>30.0.0-SNAPSHOT</version>
+        <version>32.0.0-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
@@ -69,11 +69,6 @@
         <dependency>
             <groupId>com.google.inject</groupId>
             <artifactId>guice</artifactId>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.google.inject.extensions</groupId>
-            <artifactId>guice-multibindings</artifactId>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -188,12 +183,12 @@
         </dependency>
         <dependency>
             <groupId>it.unimi.dsi</groupId>
-            <artifactId>fastutil-core</artifactId>
+            <artifactId>fastutil</artifactId>
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>commons-lang</groupId>
-            <artifactId>commons-lang</artifactId>
+            <groupId>it.unimi.dsi</groupId>
+            <artifactId>fastutil-core</artifactId>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -206,6 +201,37 @@
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>net.hydromatic</groupId>
+            <artifactId>quidem</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+             <groupId>org.apache.calcite.avatica</groupId>
+             <artifactId>avatica-core</artifactId>
+             <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.calcite</groupId>
+            <artifactId>calcite-testkit</artifactId>
+            <version>${calcite.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.junit.jupiter</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.hamcrest</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.reflections</groupId>
+            <artifactId>reflections</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -290,6 +316,13 @@
         </dependency>
         <dependency>
             <groupId>org.apache.druid</groupId>
+            <artifactId>druid-indexing-service</artifactId>
+            <version>${project.parent.version}</version>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.druid</groupId>
             <artifactId>druid-sql</artifactId>
             <version>${project.parent.version}</version>
             <type>test-jar</type>
@@ -313,6 +346,17 @@
                         <exclude>org/apache/druid/msq/indexing/IndexerWorkerManagerClient*</exclude>
                     </excludes>
                 </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <executions>
+                <execution>
+                <goals>
+                <goal>test-jar</goal>
+                </goals>
+                </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>

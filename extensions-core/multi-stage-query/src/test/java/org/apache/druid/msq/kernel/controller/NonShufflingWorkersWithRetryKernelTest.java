@@ -20,6 +20,7 @@
 package org.apache.druid.msq.kernel.controller;
 
 
+import org.apache.druid.msq.indexing.destination.DurableStorageMSQDestination;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -318,13 +319,20 @@ public class NonShufflingWorkersWithRetryKernelTest extends BaseControllerQueryK
   @Nonnull
   private ControllerQueryKernelTester getSimpleQueryDefinition(int numWorkers)
   {
-    ControllerQueryKernelTester controllerQueryKernelTester = testControllerQueryKernel(numWorkers);
+    ControllerQueryKernelTester controllerQueryKernelTester = testControllerQueryKernel(
+        configBuilder ->
+            configBuilder
+                .destination(DurableStorageMSQDestination.instance())
+                .durableStorage(true)
+                .faultTolerance(true)
+                .build()
+    );
     // 0 -> 1
     controllerQueryKernelTester.queryDefinition(
         new MockQueryDefinitionBuilder(2)
-            .addVertex(0, 1)
-            .defineStage(0, false, numWorkers)
-            .defineStage(1, false, numWorkers)
+            .addEdge(0, 1)
+            .defineStage(0, null, numWorkers)
+            .defineStage(1, null, numWorkers)
             .getQueryDefinitionBuilder()
             .build()
     );

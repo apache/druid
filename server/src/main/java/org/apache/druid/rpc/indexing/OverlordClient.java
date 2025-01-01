@@ -30,10 +30,15 @@ import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
+import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.rpc.ServiceRetryPolicy;
+import org.apache.druid.server.compaction.CompactionProgressResponse;
+import org.apache.druid.server.compaction.CompactionStatusResponse;
+import org.apache.druid.server.http.SegmentsToUpdateFilter;
+import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -108,7 +113,6 @@ public interface OverlordClient
         dataSource,
         interval,
         versions,
-        false,
         null,
         maxSegmentsToKill,
         maxUsedStatusLastUpdatedTime
@@ -166,7 +170,7 @@ public interface OverlordClient
    * Returns a {@link org.apache.druid.rpc.HttpResponseException} with code
    * {@link javax.ws.rs.core.Response.Status#NOT_FOUND} if there is no report available for some reason.
    */
-  ListenableFuture<Map<String, Object>> taskReportAsMap(String taskId);
+  ListenableFuture<TaskReport.ReportMap> taskReportAsMap(String taskId);
 
   /**
    * Returns the payload for a task as an instance of {@link ClientTaskQuery}. This method only works for tasks
@@ -211,6 +215,83 @@ public interface OverlordClient
    * Returns total worker capacity details.
    */
   ListenableFuture<IndexingTotalWorkerCapacityInfo> getTotalWorkerCapacity();
+
+  /**
+   * Checks if compaction supervisors are enabled on the Overlord.
+   * When this returns true, the Coordinator does not run CompactSegments duty.
+   * <p>
+   * API: {@code /druid/indexer/v1/compaction/isSupervisorEnabled}
+   */
+  ListenableFuture<Boolean> isCompactionSupervisorEnabled();
+
+  /**
+   * Gets the number of bytes yet to be compacted for the given datasource.
+   * <p>
+   * API: {@code /druid/indexer/v1/compaction/progress}
+   */
+  ListenableFuture<CompactionProgressResponse> getBytesAwaitingCompaction(String dataSource);
+
+  /**
+   * Gets the latest compaction snapshots of one or all datasources.
+   * <p>
+   * API: {@code /druid/indexer/v1/compaction/status}
+   *
+   * @param dataSource If passed as non-null, then the returned list contains only
+   *                   the snapshot for this datasource.
+   */
+  ListenableFuture<CompactionStatusResponse> getCompactionSnapshots(@Nullable String dataSource);
+
+  /**
+   * Marks all non-overshadowed segments of the datasource as used.
+   * <p>
+   * API: {@code POST /druid/indexer/v1/datasources/{dataSourceName}}
+   */
+  ListenableFuture<SegmentUpdateResponse> markNonOvershadowedSegmentsAsUsed(String dataSource);
+
+  /**
+   * Marks non-overshadowed segments that satisfy the given filter as used.
+   * <p>
+   * API: {@code POST /druid/indexer/v1/datasources/{dataSourceName}/markUsed}
+   *
+   * @param filter Must be non-null
+   */
+  ListenableFuture<SegmentUpdateResponse> markNonOvershadowedSegmentsAsUsed(
+      String dataSource,
+      SegmentsToUpdateFilter filter
+  );
+
+  /**
+   * Marks the given segment as used.
+   * <p>
+   * API: {@code POST /druid/indexer/v1/datasources/{dataSourceName}/segments/{segmentId}}
+   */
+  ListenableFuture<SegmentUpdateResponse> markSegmentAsUsed(SegmentId segmentId);
+
+  /**
+   * Marks all non-overshadowed segments of the datasource as unused.
+   * <p>
+   * API: {@code DELETE /druid/indexer/v1/datasources/{dataSourceName}}
+   */
+  ListenableFuture<SegmentUpdateResponse> markSegmentsAsUnused(String dataSource);
+
+  /**
+   * Marks non-overshadowed segments that satisfy the given filter as unused.
+   * <p>
+   * API: {@code POST /druid/indexer/v1/datasources/{dataSourceName}/markUnused}
+   *
+   * @param filter Must be non-null
+   */
+  ListenableFuture<SegmentUpdateResponse> markSegmentsAsUnused(
+      String dataSource,
+      SegmentsToUpdateFilter filter
+  );
+
+  /**
+   * Marks the given segment as unused.
+   * <p>
+   * API: {@code DELETE /druid/indexer/v1/datasources/{dataSourceName}/segments/{segmentId}}
+   */
+  ListenableFuture<SegmentUpdateResponse> markSegmentAsUnused(SegmentId segmentId);
 
   /**
    * Returns a copy of this client with a different retry policy.

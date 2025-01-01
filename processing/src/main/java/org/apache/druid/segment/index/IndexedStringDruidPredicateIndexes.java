@@ -59,12 +59,11 @@ public final class IndexedStringDruidPredicateIndexes<TDictionary extends Indexe
       @Override
       public Iterable<ImmutableBitmap> getBitmapIterable(boolean includeUnknown)
       {
-        return () -> new Iterator<ImmutableBitmap>()
+        return () -> new Iterator<>()
         {
           final Iterator<String> iterator = dictionary.iterator();
-          @Nullable
-          String next = null;
           boolean nextSet = false;
+          int index = -1;
 
           @Override
           public boolean hasNext()
@@ -85,23 +84,17 @@ public final class IndexedStringDruidPredicateIndexes<TDictionary extends Indexe
               }
             }
             nextSet = false;
-            final int idx = dictionary.indexOf(next);
-            if (idx < 0) {
-              return bitmapFactory.makeEmptyImmutableBitmap();
-            }
 
-            final ImmutableBitmap bitmap = bitmaps.get(idx);
+            final ImmutableBitmap bitmap = bitmaps.get(index);
             return bitmap == null ? bitmapFactory.makeEmptyImmutableBitmap() : bitmap;
           }
 
           private void findNext()
           {
             while (!nextSet && iterator.hasNext()) {
-              String nextValue = iterator.next();
+              final String nextValue = iterator.next();
+              index++;
               nextSet = stringPredicate.apply(nextValue).matches(includeUnknown);
-              if (nextSet) {
-                next = nextValue;
-              }
             }
           }
         };

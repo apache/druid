@@ -1,0 +1,130 @@
+# testInnerJoinOnTwoInlineDataSourcesWithOuterWhere_withLeftDirectAccess@default@NullHandling=default case-crc:8573b42e
+# quidem testcase reason: JOIN_LEFT_DIRECT_ACCESS
+!set debug true
+!set defaultTimeout 300000
+!set enableJoinLeftTableScanDirect true
+!set maxScatterGatherBytes 9223372036854775807
+!set plannerStrategy DECOUPLED
+!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
+!set sqlQueryId dummy
+!set outputformat mysql
+!use druidtest:///
+with abc as
+(
+  SELECT dim1, "__time", m1 from foo WHERE "dim1" = '10.1'
+)
+SELECT t1.dim1, t1."__time" from abc as t1 INNER JOIN abc as t2 on t1.dim1 = t2.dim1 WHERE t1.dim1 = '10.1'
+;
++------+-------------------------+
+| dim1 | __time                  |
++------+-------------------------+
+| 10.1 | 2000-01-02 00:00:00.000 |
++------+-------------------------+
+(1 row)
+
+!ok
+LogicalProject(dim1=[CAST('10.1':VARCHAR):VARCHAR], __time=[$1])
+  LogicalJoin(condition=[=($0, $2)], joinType=[inner])
+    LogicalProject(dim1=[CAST('10.1':VARCHAR):VARCHAR], __time=[$0])
+      LogicalFilter(condition=[=($1, '10.1')])
+        LogicalTableScan(table=[[druid, foo]])
+    LogicalProject(dim1=[$1])
+      LogicalFilter(condition=[=($1, '10.1')])
+        LogicalTableScan(table=[[druid, foo]])
+
+!logicalPlan
+DruidProject(dim1=[CAST('10.1':VARCHAR):VARCHAR], __time=[$1], druid=[logical])
+  DruidJoin(condition=[=($0, $2)], joinType=[inner])
+    DruidProject(dim1=[CAST('10.1':VARCHAR):VARCHAR], __time=[$0], druid=[logical])
+      DruidFilter(condition=[=($1, '10.1')])
+        DruidTableScan(table=[[druid, foo]], druid=[logical])
+    DruidProject(dim1=[$1], druid=[logical])
+      DruidFilter(condition=[=($1, '10.1')])
+        DruidTableScan(table=[[druid, foo]], druid=[logical])
+
+!druidPlan
+{
+  "queryType" : "scan",
+  "dataSource" : {
+    "type" : "join",
+    "left" : {
+      "type" : "query",
+      "query" : {
+        "queryType" : "scan",
+        "dataSource" : {
+          "type" : "table",
+          "name" : "foo"
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "virtualColumns" : [ {
+          "type" : "expression",
+          "name" : "v0",
+          "expression" : "'10.1'",
+          "outputType" : "STRING"
+        } ],
+        "resultFormat" : "compactedList",
+        "filter" : {
+          "type" : "selector",
+          "dimension" : "dim1",
+          "value" : "10.1"
+        },
+        "columns" : [ "v0", "__time" ],
+        "columnTypes" : [ "STRING", "LONG" ],
+        "granularity" : {
+          "type" : "all"
+        },
+        "legacy" : false
+      }
+    },
+    "right" : {
+      "type" : "query",
+      "query" : {
+        "queryType" : "scan",
+        "dataSource" : {
+          "type" : "table",
+          "name" : "foo"
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "resultFormat" : "compactedList",
+        "filter" : {
+          "type" : "selector",
+          "dimension" : "dim1",
+          "value" : "10.1"
+        },
+        "columns" : [ "dim1" ],
+        "columnTypes" : [ "STRING" ],
+        "granularity" : {
+          "type" : "all"
+        },
+        "legacy" : false
+      }
+    },
+    "rightPrefix" : "j0.",
+    "condition" : "(\"v0\" == \"j0.dim1\")",
+    "joinType" : "INNER"
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "_v0",
+    "expression" : "'10.1'",
+    "outputType" : "STRING"
+  } ],
+  "resultFormat" : "compactedList",
+  "columns" : [ "_v0", "__time" ],
+  "columnTypes" : [ "STRING", "LONG" ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "legacy" : false
+}
+!nativePlan

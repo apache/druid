@@ -44,6 +44,9 @@ public abstract class StringFrameColumnWriter<T extends ColumnValueSelector> imp
 
   public static final long DATA_OFFSET = 1 /* type code */ + 1 /* single or multi-value? */;
 
+  public static final byte MULTI_VALUE_BYTE = (byte) 0x01;
+  public static final long MULTI_VALUE_POSITION = 1;
+
   private final T selector;
   private final byte typeCode;
   protected final ColumnCapabilities.Capable multiValue;
@@ -164,12 +167,11 @@ public abstract class StringFrameColumnWriter<T extends ColumnValueSelector> imp
         assert stringDataCursor != null; // Won't be null when len > 0, since utf8DataByteLength would be > 0.
 
         // Since we allow null bytes, this call wouldn't throw InvalidNullByteException
-        FrameWriterUtils.copyByteBufferToMemory(
+        FrameWriterUtils.copyByteBufferToMemoryAllowingNullBytes(
             utf8Datum,
             stringDataCursor.memory(),
             stringDataCursor.start() + lastStringLength,
-            len,
-            true
+            len
         );
       }
 
@@ -229,7 +231,7 @@ public abstract class StringFrameColumnWriter<T extends ColumnValueSelector> imp
     long currentPosition = startPosition;
 
     memory.putByte(currentPosition, typeCode);
-    memory.putByte(currentPosition + 1, writeMultiValue ? (byte) 1 : (byte) 0);
+    memory.putByte(currentPosition + 1, writeMultiValue ? MULTI_VALUE_BYTE : (byte) 0);
     currentPosition += 2;
 
     if (writeMultiValue) {

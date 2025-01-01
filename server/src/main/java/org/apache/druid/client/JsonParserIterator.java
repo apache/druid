@@ -86,6 +86,16 @@ public class JsonParserIterator<T> implements CloseableIterator<T>
     this.hasTimeout = timeoutAt > -1;
   }
 
+  /**
+   * Bypasses Jackson serialization to prevent materialization of results from the {@code future} in memory at once.
+   * A shortened version of {@link #JsonParserIterator(JavaType, Future, String, Query, String, ObjectMapper)}
+   * where the URL and host parameters, used solely for logging/errors, are not known.
+   */
+  public JsonParserIterator(JavaType typeRef, Future<InputStream> future, ObjectMapper objectMapper)
+  {
+    this(typeRef, future, "", null, "", objectMapper);
+  }
+
   @Override
   public boolean hasNext()
   {

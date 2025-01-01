@@ -25,18 +25,20 @@ import type { BasicAction } from '../../utils/basic-action';
 import type { SideButtonMetaData } from '../table-action-dialog/table-action-dialog';
 import { TableActionDialog } from '../table-action-dialog/table-action-dialog';
 
+type TaskTableActionDialogTab = 'status' | 'report' | 'spec' | 'log';
+
 interface TaskTableActionDialogProps {
   taskId: string;
   actions: BasicAction[];
-  onClose: () => void;
   status: string;
+  onClose(): void;
 }
 
 export const TaskTableActionDialog = React.memo(function TaskTableActionDialog(
   props: TaskTableActionDialogProps,
 ) {
   const { taskId, actions, onClose, status } = props;
-  const [activeTab, setActiveTab] = useState('status');
+  const [activeTab, setActiveTab] = useState<TaskTableActionDialogTab>('status');
 
   const taskTableSideButtonMetadata: SideButtonMetaData[] = [
     {
@@ -46,20 +48,20 @@ export const TaskTableActionDialog = React.memo(function TaskTableActionDialog(
       onClick: () => setActiveTab('status'),
     },
     {
-      icon: 'align-left',
-      text: 'Payload',
-      active: activeTab === 'payload',
-      onClick: () => setActiveTab('payload'),
-    },
-    {
       icon: 'comparison',
       text: 'Reports',
-      active: activeTab === 'reports',
-      onClick: () => setActiveTab('reports'),
+      active: activeTab === 'report',
+      onClick: () => setActiveTab('report'),
+    },
+    {
+      icon: 'align-left',
+      text: 'Spec',
+      active: activeTab === 'spec',
+      onClick: () => setActiveTab('spec'),
     },
     {
       icon: 'align-justify',
-      text: 'Logs',
+      text: 'Log',
       active: activeTab === 'log',
       onClick: () => setActiveTab('log'),
     },
@@ -80,18 +82,18 @@ export const TaskTableActionDialog = React.memo(function TaskTableActionDialog(
           downloadFilename={`task-status-${taskId}.json`}
         />
       )}
-      {activeTab === 'payload' && (
-        <ShowJson
-          endpoint={taskEndpointBase}
-          transform={x => deepGet(x, 'payload') || x}
-          downloadFilename={`task-payload-${taskId}.json`}
-        />
-      )}
-      {activeTab === 'reports' && (
+      {activeTab === 'report' && (
         <ShowJson
           endpoint={`${taskEndpointBase}/reports`}
           transform={x => deepGet(x, 'ingestionStatsAndErrors.payload') || x}
           downloadFilename={`task-reports-${taskId}.json`}
+        />
+      )}
+      {activeTab === 'spec' && (
+        <ShowJson
+          endpoint={taskEndpointBase}
+          transform={x => deepGet(x, 'payload') || x}
+          downloadFilename={`task-payload-${taskId}.json`}
         />
       )}
       {activeTab === 'log' && (

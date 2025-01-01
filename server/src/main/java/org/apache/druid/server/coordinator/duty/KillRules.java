@@ -20,7 +20,7 @@
 package org.apache.druid.server.coordinator.duty;
 
 import org.apache.druid.metadata.MetadataRuleManager;
-import org.apache.druid.server.coordinator.DruidCoordinatorConfig;
+import org.apache.druid.server.coordinator.config.MetadataCleanupConfig;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.joda.time.DateTime;
 
@@ -29,19 +29,11 @@ public class KillRules extends MetadataCleanupDuty
   private final MetadataRuleManager metadataRuleManager;
 
   public KillRules(
-      DruidCoordinatorConfig config,
+      MetadataCleanupConfig config,
       MetadataRuleManager metadataRuleManager
   )
   {
-    super(
-        "rules",
-        "druid.coordinator.kill.rule",
-        config.isRuleKillEnabled(),
-        config.getCoordinatorRuleKillPeriod(),
-        config.getCoordinatorRuleKillDurationToRetain(),
-        Stats.Kill.RULES,
-        config
-    );
+    super("rules", config, Stats.Kill.RULES);
     this.metadataRuleManager = metadataRuleManager;
   }
 

@@ -214,7 +214,7 @@ public class LeastExpressionTest extends CalciteTestBase
   }
 
   @Test
-  public void testDecimalWithNullShouldReturnString()
+  public void testDecimalWithNullShouldNotReturnString()
   {
     testExpression(
         Arrays.asList(
@@ -227,7 +227,7 @@ public class LeastExpressionTest extends CalciteTestBase
             3.4,
             null
         ),
-        "1.2"
+        1.2
     );
   }
 

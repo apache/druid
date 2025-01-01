@@ -21,8 +21,6 @@ package org.apache.druid.indexing.common.task;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -34,7 +32,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputSource;
@@ -48,9 +45,9 @@ import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexer.partitions.SecondaryPartitionType;
+import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskRealtimeMetricsMonitorBuilder;
-import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.indexing.common.stats.TaskRealtimeMetricsMonitor;
@@ -67,6 +64,7 @@ import org.apache.druid.indexing.overlord.sampler.InputSourceSampler;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.JodaUtils;
+import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -75,6 +73,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.incremental.AppendableIndexSpec;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
@@ -82,12 +81,11 @@ import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.BatchIOConfig;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.IngestionSpec;
-import org.apache.druid.segment.indexing.RealtimeIOConfig;
 import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
-import org.apache.druid.segment.realtime.FireDepartment;
-import org.apache.druid.segment.realtime.FireDepartmentMetrics;
+import org.apache.druid.segment.realtime.ChatHandler;
+import org.apache.druid.segment.realtime.SegmentGenerationMetrics;
 import org.apache.druid.segment.realtime.appenderator.Appenderator;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorConfig;
 import org.apache.druid.segment.realtime.appenderator.BaseAppenderatorDriver;
@@ -95,7 +93,6 @@ import org.apache.druid.segment.realtime.appenderator.BatchAppenderatorDriver;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.realtime.appenderator.SegmentsAndCommitMetadata;
 import org.apache.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
-import org.apache.druid.segment.realtime.firehose.ChatHandler;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizerMapper;
@@ -137,9 +134,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
+public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, PendingSegmentAllocatingTask
 {
-
   public static final HashFunction HASH_FUNCTION = Hashing.murmur3_128();
 
   public static final String TYPE = "index";
@@ -302,14 +298,17 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     }
   }
 
+  @Override
+  public String getTaskAllocatorId()
+  {
+    return getGroupId();
+  }
+
   @Nonnull
   @JsonIgnore
   @Override
   public Set<ResourceAction> getInputSourceResources()
   {
-    if (ingestionSchema.getIOConfig().firehoseFactory != null) {
-      throw getInputSecurityOnFirehoseUnsupportedError();
-    }
     return getIngestionSchema().getIOConfig().getInputSource() != null ?
            getIngestionSchema().getIOConfig().getInputSource().getTypes()
                .stream()
@@ -538,7 +537,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 
   private void updateAndWriteCompletionReports(TaskToolbox toolbox, Long segmentsRead, Long segmentsPublished)
   {
-    completionReports = buildIngestionStatsReport(ingestionState, errorMsg, segmentsRead, segmentsPublished);
+    completionReports = buildIngestionStatsAndContextReport(ingestionState, errorMsg, segmentsRead, segmentsPublished);
     if (isStandAloneTask) {
       toolbox.getTaskReportFileWriter().write(getId(), completionReports);
     }
@@ -825,15 +824,9 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       final PartitionAnalysis partitionAnalysis
   ) throws IOException, InterruptedException
   {
-    final FireDepartment fireDepartmentForMetrics =
-        new FireDepartment(dataSchema, new RealtimeIOConfig(null, null), null);
-    FireDepartmentMetrics buildSegmentsFireDepartmentMetrics = fireDepartmentForMetrics.getMetrics();
-
-    final TaskRealtimeMetricsMonitor metricsMonitor = TaskRealtimeMetricsMonitorBuilder.build(
-        this,
-        fireDepartmentForMetrics,
-        buildSegmentsMeters
-    );
+    final SegmentGenerationMetrics buildSegmentsSegmentGenerationMetrics = new SegmentGenerationMetrics();
+    final TaskRealtimeMetricsMonitor metricsMonitor =
+        TaskRealtimeMetricsMonitorBuilder.build(this, buildSegmentsSegmentGenerationMetrics, buildSegmentsMeters);
     toolbox.addMonitor(metricsMonitor);
 
     final PartitionsSpec partitionsSpec = partitionAnalysis.getPartitionsSpec();
@@ -875,8 +868,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 
     final TaskLockType taskLockType = getTaskLockHelper().getLockTypeToUse();
     final TransactionalSegmentPublisher publisher =
-        (segmentsToBeOverwritten, segmentsToPublish, commitMetadata) -> toolbox.getTaskActionClient().submit(
-            buildPublishAction(segmentsToBeOverwritten, segmentsToPublish, taskLockType)
+        (segmentsToBeOverwritten, segmentsToPublish, commitMetadata, map) -> toolbox.getTaskActionClient().submit(
+            buildPublishAction(segmentsToBeOverwritten, segmentsToPublish, map, taskLockType)
         );
 
     String effectiveId = getContextValue(CompactionTask.CTX_KEY_APPENDERATOR_TRACKING_TASK_ID, null);
@@ -887,7 +880,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     final Appenderator appenderator = BatchAppenderators.newAppenderator(
         effectiveId,
         toolbox.getAppenderatorsManager(),
-        buildSegmentsFireDepartmentMetrics,
+        buildSegmentsSegmentGenerationMetrics,
         toolbox,
         dataSchema,
         tuningConfig,
@@ -899,7 +892,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
     try (final BatchAppenderatorDriver driver = BatchAppenderators.newDriver(appenderator, toolbox, segmentAllocator)) {
       driver.startJob();
 
-      SegmentsAndCommitMetadata pushed = InputSourceProcessor.process(
+      Pair<SegmentsAndCommitMetadata, SegmentSchemaMapping> commitMetadataAndSchema = InputSourceProcessor.process(
           dataSchema,
           driver,
           partitionsSpec,
@@ -913,6 +906,7 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
           pushTimeout
       );
 
+      SegmentsAndCommitMetadata pushed = commitMetadataAndSchema.lhs;
       // If we use timeChunk lock, then we don't have to specify what segments will be overwritten because
       // it will just overwrite all segments overlapped with the new segments.
       final Set<DataSegment> inputSegments = getTaskLockHelper().isUseSegmentLock()
@@ -950,7 +944,6 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 
         tombStones = tombstoneHelper.computeTombstones(ingestionSchema.getDataSchema(), tombstonesAndVersions);
 
-
         log.debugSegments(tombStones, "To publish tombstones");
       }
 
@@ -960,7 +953,8 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
               inputSegments,
               tombStones,
               publisher,
-              annotateFunction
+              annotateFunction,
+              commitMetadataAndSchema.rhs
           ), pushTimeout);
       appenderator.close();
 
@@ -1123,8 +1117,6 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
   @JsonTypeName("index")
   public static class IndexIOConfig implements BatchIOConfig
   {
-
-    private final FirehoseFactory firehoseFactory;
     private final InputSource inputSource;
     private final AtomicReference<InputSource> inputSourceWithToolbox = new AtomicReference<>();
     private final InputFormat inputFormat;
@@ -1133,40 +1125,16 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
 
     @JsonCreator
     public IndexIOConfig(
-        @Deprecated @JsonProperty("firehose") @Nullable FirehoseFactory firehoseFactory,
         @JsonProperty("inputSource") @Nullable InputSource inputSource,
         @JsonProperty("inputFormat") @Nullable InputFormat inputFormat,
         @JsonProperty("appendToExisting") @Nullable Boolean appendToExisting,
         @JsonProperty("dropExisting") @Nullable Boolean dropExisting
     )
     {
-      Checks.checkOneNotNullOrEmpty(
-          ImmutableList.of(new Property<>("firehose", firehoseFactory), new Property<>("inputSource", inputSource))
-      );
-      if (firehoseFactory != null && inputFormat != null) {
-        throw new IAE("Cannot use firehose and inputFormat together. Try using inputSource instead of firehose.");
-      }
-      this.firehoseFactory = firehoseFactory;
       this.inputSource = inputSource;
       this.inputFormat = inputFormat;
       this.appendToExisting = appendToExisting == null ? BatchIOConfig.DEFAULT_APPEND_EXISTING : appendToExisting;
       this.dropExisting = dropExisting == null ? BatchIOConfig.DEFAULT_DROP_EXISTING : dropExisting;
-    }
-
-    // old constructor for backward compatibility
-    @Deprecated
-    public IndexIOConfig(FirehoseFactory firehoseFactory, @Nullable Boolean appendToExisting, @Nullable Boolean dropExisting)
-    {
-      this(firehoseFactory, null, null, appendToExisting, dropExisting);
-    }
-
-    @Nullable
-    @JsonProperty("firehose")
-    @JsonInclude(Include.NON_NULL)
-    @Deprecated
-    public FirehoseFactory getFirehoseFactory()
-    {
-      return firehoseFactory;
     }
 
     @Nullable
@@ -1471,31 +1439,6 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
       );
     }
 
-    public IndexTuningConfig withPartitionsSpec(PartitionsSpec partitionsSpec)
-    {
-      return new IndexTuningConfig(
-          appendableIndexSpec,
-          maxRowsInMemory,
-          maxBytesInMemory,
-          skipBytesInMemoryOverheadCheck,
-          partitionsSpec,
-          indexSpec,
-          indexSpecForIntermediatePersists,
-          maxPendingPersists,
-          forceGuaranteedRollup,
-          reportParseExceptions,
-          pushTimeout,
-          basePersistDirectory,
-          segmentWriteOutMediumFactory,
-          logParseExceptions,
-          maxParseExceptions,
-          maxSavedParseExceptions,
-          maxColumnsToMerge,
-          awaitSegmentAvailabilityTimeoutMillis,
-          numPersistThreads
-      );
-    }
-
     @JsonProperty
     @Override
     public AppendableIndexSpec getAppendableIndexSpec()
@@ -1770,5 +1713,4 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler
              '}';
     }
   }
-
 }

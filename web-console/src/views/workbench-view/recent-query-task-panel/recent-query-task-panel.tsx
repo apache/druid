@@ -16,14 +16,13 @@
  * limitations under the License.
  */
 
-import { Button, Icon, Intent, Menu, MenuDivider, MenuItem } from '@blueprintjs/core';
+import { Button, Icon, Intent, Menu, MenuDivider, MenuItem, Popover } from '@blueprintjs/core';
 import type { IconName } from '@blueprintjs/icons';
 import { IconNames } from '@blueprintjs/icons';
-import { Popover2 } from '@blueprintjs/popover2';
-import { T } from '@druid-toolkit/query';
 import classNames from 'classnames';
 import copy from 'copy-to-clipboard';
-import React, { useCallback, useState } from 'react';
+import { T } from 'druid-query-toolkit';
+import React, { useState } from 'react';
 import { useStore } from 'zustand';
 
 import { Loader } from '../../../components';
@@ -39,7 +38,7 @@ import {
   queryDruidSql,
 } from '../../../utils';
 import { CancelQueryDialog } from '../cancel-query-dialog/cancel-query-dialog';
-import { workStateStore } from '../work-state-store';
+import { getMsqTaskVersion, WORK_STATE_STORE } from '../work-state-store';
 
 import './recent-query-task-panel.scss';
 
@@ -70,17 +69,6 @@ interface RecentQueryEntry {
   errorMessage?: string;
 }
 
-function formatDetail(entry: RecentQueryEntry): string | undefined {
-  const lines: string[] = [];
-  if (entry.datasource !== Execution.INLINE_DATASOURCE_MARKER) {
-    lines.push(`Datasource: ${entry.datasource}`);
-  }
-  if (entry.errorMessage) {
-    lines.push(entry.errorMessage);
-  }
-  return lines.length ? lines.join('\n\n') : undefined;
-}
-
 export interface RecentQueryTaskPanelProps {
   onClose(): void;
   onExecutionDetails(id: string): void;
@@ -95,16 +83,12 @@ export const RecentQueryTaskPanel = React.memo(function RecentQueryTaskPanel(
 
   const [confirmCancelId, setConfirmCancelId] = useState<string | undefined>();
 
-  const workStateVersion = useStore(
-    workStateStore,
-    useCallback(state => state.version, []),
-  );
-
   const [queryTaskHistoryState, queryManager] = useQueryManager<number, RecentQueryEntry[]>({
-    query: workStateVersion,
-    processQuery: async _ => {
-      return await queryDruidSql<RecentQueryEntry>({
-        query: `SELECT
+    query: useStore(WORK_STATE_STORE, getMsqTaskVersion),
+    processQuery: async (_, cancelToken) => {
+      return await queryDruidSql<RecentQueryEntry>(
+        {
+          query: `SELECT
   CASE WHEN ${TASK_CANCELED_PREDICATE} THEN 'CANCELED' ELSE "status" END AS "taskStatus",
   "task_id" AS "taskId",
   "datasource",
@@ -115,7 +99,9 @@ FROM sys.tasks
 WHERE "type" = 'query_controller'
 ORDER BY "created_time" DESC
 LIMIT 100`,
-      });
+        },
+        cancelToken,
+      );
     },
   });
 
@@ -124,11 +110,6 @@ LIMIT 100`,
   }, 30000);
 
   const now = useClock();
-
-  const incrementWorkVersion = useStore(
-    workStateStore,
-    useCallback(state => state.increment, []),
-  );
 
   const queryTaskHistory = queryTaskHistoryState.getSomeData();
   return (
@@ -174,7 +155,7 @@ LIMIT 100`,
                     }
 
                     onNewTab(
-                      WorkbenchQuery.fromEffectiveQueryAndContext(
+                      WorkbenchQuery.fromTaskQueryAndContext(
                         execution.sqlQuery,
                         execution.queryContext,
                       ).changeLastExecution({ engine: 'sql-msq-task', id: w.taskId }),
@@ -227,13 +208,19 @@ LIMIT 100`,
 
             const [icon, color] = statusToIconAndColor(w.taskStatus);
             return (
-              <Popover2 className="work-entry" key={w.taskId} position="left" content={menu}>
-                <div title={formatDetail(w)} onDoubleClick={() => onExecutionDetails(w.taskId)}>
+              <Popover className="work-entry" key={w.taskId} position="left" content={menu}>
+                <div
+                  data-tooltip={
+                    `ID: ${w.taskId}` + (w.errorMessage ? `\n\nError:\n${w.errorMessage}` : '')
+                  }
+                  onDoubleClick={() => onExecutionDetails(w.taskId)}
+                >
                   <div className="line1">
                     <Icon
                       className={'status-icon ' + w.taskStatus.toLowerCase()}
                       icon={icon}
                       style={{ color }}
+                      data-tooltip={`Task status: ${w.taskStatus}`}
                     />
                     <div className="timing">
                       {prettyFormatIsoDate(w.createdTime) +
@@ -260,7 +247,7 @@ LIMIT 100`,
                     </div>
                   </div>
                 </div>
-              </Popover2>
+              </Popover>
             );
           })}
         </div>
@@ -278,7 +265,7 @@ LIMIT 100`,
                 message: 'Query canceled',
                 intent: Intent.SUCCESS,
               });
-              incrementWorkVersion();
+              queryManager.rerunLastQuery();
             } catch {
               AppToaster.show({
                 message: 'Could not cancel query',

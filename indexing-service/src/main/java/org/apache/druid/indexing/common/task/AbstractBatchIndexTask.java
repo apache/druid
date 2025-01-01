@@ -31,13 +31,13 @@ import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.indexer.IngestionState;
-import org.apache.druid.indexing.common.IngestionStatsAndErrors;
-import org.apache.druid.indexing.common.IngestionStatsAndErrorsTaskReport;
+import org.apache.druid.indexer.report.IngestionStatsAndErrors;
+import org.apache.druid.indexer.report.IngestionStatsAndErrorsTaskReport;
+import org.apache.druid.indexer.report.TaskContextReport;
+import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.common.LockGranularity;
-import org.apache.druid.indexing.common.TaskContextReport;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
-import org.apache.druid.indexing.common.TaskReport;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.LockListAction;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
@@ -59,7 +59,6 @@ import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.Stopwatch;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.GranularityType;
@@ -69,6 +68,7 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.handoff.SegmentHandoffNotifier;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
@@ -433,16 +433,21 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
   protected TaskAction<SegmentPublishResult> buildPublishAction(
       Set<DataSegment> segmentsToBeOverwritten,
       Set<DataSegment> segmentsToPublish,
+      SegmentSchemaMapping segmentSchemaMapping,
       TaskLockType lockType
   )
   {
     switch (lockType) {
       case REPLACE:
-        return SegmentTransactionalReplaceAction.create(segmentsToPublish);
+        return SegmentTransactionalReplaceAction.create(segmentsToPublish, segmentSchemaMapping);
       case APPEND:
-        return SegmentTransactionalAppendAction.forSegments(segmentsToPublish);
+        return SegmentTransactionalAppendAction.forSegments(segmentsToPublish, segmentSchemaMapping);
       default:
-        return SegmentTransactionalInsertAction.overwriteAction(segmentsToBeOverwritten, segmentsToPublish);
+        return SegmentTransactionalInsertAction.overwriteAction(
+            segmentsToBeOverwritten,
+            segmentsToPublish,
+            segmentSchemaMapping
+        );
     }
   }
 
@@ -482,9 +487,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       if (lock == null) {
         return false;
       }
-      if (lock.isRevoked()) {
-        throw new ISE(StringUtils.format("Lock for interval [%s] was revoked.", cur));
-      }
+      lock.assertNotRevoked();
       locksAcquired++;
       intervalToLockVersion.put(cur, lock.getVersion());
     }
@@ -617,17 +620,26 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
     if (storeCompactionState) {
       TuningConfig tuningConfig = ingestionSpec.getTuningConfig();
       GranularitySpec granularitySpec = ingestionSpec.getDataSchema().getGranularitySpec();
-      // We do not need to store dimensionExclusions and spatialDimensions since auto compaction does not support them
-      DimensionsSpec dimensionsSpec = ingestionSpec.getDataSchema().getDimensionsSpec() == null
-                                      ? null
-                                      : new DimensionsSpec(ingestionSpec.getDataSchema().getDimensionsSpec().getDimensions());
+      DimensionsSpec dimensionsSpec;
+      if (ingestionSpec.getDataSchema().getDimensionsSpec() == null) {
+        dimensionsSpec = null;
+      } else {
+        // We do not need to store spatial dimensions, since by this point they've been converted to regular dimensions.
+        // We also do not need to store dimensionExclusions, only dimensions that exist.
+        final DimensionsSpec inputDimensionsSpec = ingestionSpec.getDataSchema().getDimensionsSpec();
+        dimensionsSpec = DimensionsSpec
+            .builder()
+            .setDimensions(inputDimensionsSpec.getDimensions())
+            .setForceSegmentSortByTime(inputDimensionsSpec.isForceSegmentSortByTimeConfigured())
+            .build();
+      }
       // We only need to store filter since that is the only field auto compaction support
       Map<String, Object> transformSpec = ingestionSpec.getDataSchema().getTransformSpec() == null || TransformSpec.NONE.equals(ingestionSpec.getDataSchema().getTransformSpec())
                                           ? null
                                           : new ClientCompactionTaskTransformSpec(ingestionSpec.getDataSchema().getTransformSpec().getFilter()).asMap(toolbox.getJsonMapper());
       List<Object> metricsSpec = ingestionSpec.getDataSchema().getAggregators() == null
                                  ? null
-                                 : toolbox.getJsonMapper().convertValue(ingestionSpec.getDataSchema().getAggregators(), new TypeReference<List<Object>>() {});
+                                 : toolbox.getJsonMapper().convertValue(ingestionSpec.getDataSchema().getAggregators(), new TypeReference<>() {});
 
       return CompactionState.addCompactionStateToSegments(
           tuningConfig.getPartitionsSpec(),
@@ -707,7 +719,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
 
     try (
         SegmentHandoffNotifier notifier = toolbox.getSegmentHandoffNotifierFactory()
-                                                 .createSegmentHandoffNotifier(segmentsToWaitFor.get(0).getDataSource())
+                                                 .createSegmentHandoffNotifier(segmentsToWaitFor.get(0).getDataSource(), getId())
     ) {
 
       final ExecutorService exec = Execs.directExecutor();
@@ -825,9 +837,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
             "Cannot acquire a lock for interval[%s]",
             interval
         );
-        if (lock.isRevoked()) {
-          throw new ISE(StringUtils.format("Lock for interval [%s] was revoked.", interval));
-        }
+        lock.assertNotRevoked();
         version = lock.getVersion();
       } else {
         version = existingLockVersion;
@@ -920,7 +930,24 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
                 null,
                 null
             )
-        ),
+        )
+    );
+  }
+
+  /**
+   * Builds a map with the following keys and values:
+   *  {@link IngestionStatsAndErrorsTaskReport#REPORT_KEY} : {@link IngestionStatsAndErrorsTaskReport}.
+   *  {@link TaskContextReport#REPORT_KEY} : {@link TaskContextReport}.
+   */
+  protected TaskReport.ReportMap buildIngestionStatsAndContextReport(
+      IngestionState ingestionState,
+      String errorMessage,
+      Long segmentsRead,
+      Long segmentsPublished
+  )
+  {
+    return TaskReport.buildTaskReports(
+        buildIngestionStatsTaskReport(ingestionState, errorMessage, segmentsRead, segmentsPublished),
         new TaskContextReport(getId(), getContext())
     );
   }
@@ -937,21 +964,33 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
   )
   {
     return TaskReport.buildTaskReports(
-        new IngestionStatsAndErrorsTaskReport(
-            getId(),
-            new IngestionStatsAndErrors(
-                ingestionState,
-                getTaskCompletionUnparseableEvents(),
-                getTaskCompletionRowStats(),
-                errorMessage,
-                segmentAvailabilityConfirmationCompleted,
-                segmentAvailabilityWaitTimeMs,
-                Collections.emptyMap(),
-                segmentsRead,
-                segmentsPublished
-            )
-        ),
-        new TaskContextReport(getId(), getContext())
+        buildIngestionStatsTaskReport(ingestionState, errorMessage, segmentsRead, segmentsPublished)
+    );
+  }
+
+  /**
+   * Helper method to create IngestionStatsAndErrorsTaskReport.
+   */
+  private IngestionStatsAndErrorsTaskReport buildIngestionStatsTaskReport(
+      IngestionState ingestionState,
+      String errorMessage,
+      Long segmentsRead,
+      Long segmentsPublished
+  )
+  {
+    return new IngestionStatsAndErrorsTaskReport(
+        getId(),
+        new IngestionStatsAndErrors(
+            ingestionState,
+            getTaskCompletionUnparseableEvents(),
+            getTaskCompletionRowStats(),
+            errorMessage,
+            segmentAvailabilityConfirmationCompleted,
+            segmentAvailabilityWaitTimeMs,
+            Collections.emptyMap(),
+            segmentsRead,
+            segmentsPublished
+        )
     );
   }
 

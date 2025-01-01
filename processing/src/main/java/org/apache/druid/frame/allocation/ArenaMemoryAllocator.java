@@ -37,6 +37,7 @@ public class ArenaMemoryAllocator implements MemoryAllocator
   private final WritableMemory arena;
   private long allocations = 0;
   private long position = 0;
+  private WritableMemory lastAllocation;
 
   private ArenaMemoryAllocator(WritableMemory arena)
   {
@@ -64,20 +65,23 @@ public class ArenaMemoryAllocator implements MemoryAllocator
   @Override
   public Optional<ResourceHolder<WritableMemory>> allocate(final long size)
   {
-    if (position + size < arena.getCapacity()) {
+    if (position + size <= arena.getCapacity()) {
       final long start = position;
       allocations++;
       position += size;
 
+      final WritableMemory memory = arena.writableRegion(start, size, ByteOrder.LITTLE_ENDIAN);
+      lastAllocation = memory;
+
       return Optional.of(
-          new ResourceHolder<WritableMemory>()
+          new ResourceHolder<>()
           {
-            private WritableMemory memory = arena.writableRegion(start, size, ByteOrder.LITTLE_ENDIAN);
+            boolean closed;
 
             @Override
             public WritableMemory get()
             {
-              if (memory == null) {
+              if (closed) {
                 throw new ISE("Already closed");
               }
 
@@ -87,10 +91,21 @@ public class ArenaMemoryAllocator implements MemoryAllocator
             @Override
             public void close()
             {
-              memory = null;
+              if (closed) {
+                return;
+              }
+
+              closed = true;
+
+              //noinspection ObjectEquality
+              if (memory == lastAllocation) {
+                // Last allocation closed; decrement position to enable partial arena reuse.
+                position -= memory.getCapacity();
+                lastAllocation = null;
+              }
 
               if (--allocations == 0) {
-                // All allocations closed; reset position to enable arena reuse.
+                // All allocations closed; reset position to enable full arena reuse.
                 position = 0;
               }
             }

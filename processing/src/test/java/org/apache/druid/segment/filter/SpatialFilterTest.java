@@ -40,12 +40,18 @@ import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.aggregation.TestObjectColumnSelector;
+import org.apache.druid.query.dimension.DimensionSpec;
+import org.apache.druid.query.filter.FilterTuning;
 import org.apache.druid.query.filter.SpatialDimFilter;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryEngine;
 import org.apache.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import org.apache.druid.query.timeseries.TimeseriesQueryRunnerFactory;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
+import org.apache.druid.segment.ColumnSelectorFactory;
+import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IncrementalIndexSegment;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMerger;
@@ -54,6 +60,9 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.QueryableIndexSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.column.ColumnCapabilities;
+import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.StringEncodingStrategy;
 import org.apache.druid.segment.data.FrontCodedIndexed;
 import org.apache.druid.segment.incremental.IncrementalIndex;
@@ -62,28 +71,31 @@ import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.Interval;
+import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
+ *
  */
 @RunWith(Parameterized.class)
 public class SpatialFilterTest extends InitializedNullHandlingTest
 {
+  public static final int NUM_POINTS = 5000;
   private static IndexMerger INDEX_MERGER = TestHelper.getTestIndexMergerV9(OffHeapMemorySegmentWriteOutMediumFactory.instance());
   private static IndexIO INDEX_IO = TestHelper.getTestIndexIO();
-
-  public static final int NUM_POINTS = 5000;
   private static Interval DATA_INTERVAL = Intervals.of("2013-01-01/2013-01-07");
 
   private static AggregatorFactory[] METRIC_AGGS = new AggregatorFactory[]{
@@ -92,6 +104,12 @@ public class SpatialFilterTest extends InitializedNullHandlingTest
   };
 
   private static List<String> DIMS = Lists.newArrayList("dim", "lat", "long", "lat2", "long2");
+  private final Segment segment;
+
+  public SpatialFilterTest(Segment segment)
+  {
+    this.segment = segment;
+  }
 
   @Parameterized.Parameters
   public static Collection<?> constructorFeeder() throws IOException
@@ -517,7 +535,11 @@ public class SpatialFilterTest extends InitializedNullHandlingTest
 
       QueryableIndex mergedRealtime = INDEX_IO.loadIndex(
           INDEX_MERGER.mergeQueryableIndex(
-              Arrays.asList(INDEX_IO.loadIndex(firstFile), INDEX_IO.loadIndex(secondFile), INDEX_IO.loadIndex(thirdFile)),
+              Arrays.asList(
+                  INDEX_IO.loadIndex(firstFile),
+                  INDEX_IO.loadIndex(secondFile),
+                  INDEX_IO.loadIndex(thirdFile)
+              ),
               true,
               METRIC_AGGS,
               mergedFile,
@@ -532,13 +554,6 @@ public class SpatialFilterTest extends InitializedNullHandlingTest
     catch (IOException e) {
       throw new RuntimeException(e);
     }
-  }
-
-  private final Segment segment;
-
-  public SpatialFilterTest(Segment segment)
-  {
-    this.segment = segment;
   }
 
   @Test
@@ -563,13 +578,13 @@ public class SpatialFilterTest extends InitializedNullHandlingTest
                                   .build();
 
     List<Result<TimeseriesResultValue>> expectedResults = Collections.singletonList(
-        new Result<TimeseriesResultValue>(
+        new Result<>(
             DateTimes.of("2013-01-01T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
-                    .put("rows", 3L)
-                    .put("val", 59L)
-                    .build()
+                            .put("rows", 3L)
+                            .put("val", 59L)
+                            .build()
             )
         )
     );
@@ -615,13 +630,13 @@ public class SpatialFilterTest extends InitializedNullHandlingTest
                                   .build();
 
     List<Result<TimeseriesResultValue>> expectedResults = Collections.singletonList(
-        new Result<TimeseriesResultValue>(
+        new Result<>(
             DateTimes.of("2013-01-01T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
-                    .put("rows", 1L)
-                    .put("val", 13L)
-                    .build()
+                            .put("rows", 1L)
+                            .put("val", 13L)
+                            .build()
             )
         )
     );
@@ -666,7 +681,7 @@ public class SpatialFilterTest extends InitializedNullHandlingTest
                                   .build();
 
     List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
-        new Result<TimeseriesResultValue>(
+        new Result<>(
             DateTimes.of("2013-01-01T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
@@ -675,7 +690,7 @@ public class SpatialFilterTest extends InitializedNullHandlingTest
                             .build()
             )
         ),
-        new Result<TimeseriesResultValue>(
+        new Result<>(
             DateTimes.of("2013-01-02T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
@@ -684,7 +699,7 @@ public class SpatialFilterTest extends InitializedNullHandlingTest
                             .build()
             )
         ),
-        new Result<TimeseriesResultValue>(
+        new Result<>(
             DateTimes.of("2013-01-03T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
@@ -693,7 +708,7 @@ public class SpatialFilterTest extends InitializedNullHandlingTest
                             .build()
             )
         ),
-        new Result<TimeseriesResultValue>(
+        new Result<>(
             DateTimes.of("2013-01-04T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
@@ -702,7 +717,7 @@ public class SpatialFilterTest extends InitializedNullHandlingTest
                             .build()
             )
         ),
-        new Result<TimeseriesResultValue>(
+        new Result<>(
             DateTimes.of("2013-01-05T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
@@ -741,5 +756,49 @@ public class SpatialFilterTest extends InitializedNullHandlingTest
   public void testEqualsContractForBoundDruidPredicateFactory()
   {
     EqualsVerifier.forClass(SpatialFilter.BoundDruidPredicateFactory.class).usingGetClass().verify();
+  }
+
+  @Test
+  public void testSpatialFilter()
+  {
+    SpatialFilter spatialFilter = new SpatialFilter(
+        "test",
+        new RadiusBound(new float[]{0, 0}, 0f, 0),
+        new FilterTuning(false, 1, 1)
+    );
+    // String complex
+    Assert.assertTrue(spatialFilter.makeMatcher(new TestSpatialSelectorFactory("0,0")).matches(true));
+    // Unknown complex, invokes object predicate
+    Assert.assertFalse(spatialFilter.makeMatcher(new TestSpatialSelectorFactory(new Date())).matches(true));
+    Assert.assertFalse(spatialFilter.makeMatcher(new TestSpatialSelectorFactory(new Object())).matches(true));
+  }
+
+  static class TestSpatialSelectorFactory implements ColumnSelectorFactory
+  {
+    Object object;
+
+    public TestSpatialSelectorFactory(Object value)
+    {
+      object = value;
+    }
+
+    @Override
+    public DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec)
+    {
+      return null;
+    }
+
+    @Override
+    public ColumnValueSelector makeColumnValueSelector(String columnName)
+    {
+      return new TestObjectColumnSelector(new Object[]{object});
+    }
+
+    @Nullable
+    @Override
+    public ColumnCapabilities getColumnCapabilities(String column)
+    {
+      return ColumnCapabilitiesImpl.createDefault().setType(ColumnType.UNKNOWN_COMPLEX);
+    }
   }
 }

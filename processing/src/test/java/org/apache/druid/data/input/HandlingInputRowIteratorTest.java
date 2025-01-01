@@ -44,7 +44,7 @@ public class HandlingInputRowIteratorTest
   public static class AbsentRowTest
   {
     private static final CloseableIterator<InputRow> EMPTY_ITERATOR = CloseableIterators.withEmptyBaggage(
-        new Iterator<InputRow>()
+        new Iterator<>()
         {
           @Override
           public boolean hasNext()
@@ -143,7 +143,7 @@ public class HandlingInputRowIteratorTest
         HandlingInputRowIterator.InputRowHandler secondHandler)
     {
       CloseableIterator<InputRow> iterator = CloseableIterators.withEmptyBaggage(
-          new Iterator<InputRow>()
+          new Iterator<>()
           {
             private final Iterator<InputRow> delegate = INPUT_ROWS.iterator();
 

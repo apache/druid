@@ -19,11 +19,14 @@
 
 package org.apache.druid.sql.calcite.planner;
 
-import org.apache.calcite.util.Pair;
+import org.apache.calcite.rel.core.Join;
+import org.apache.calcite.rel.hint.RelHint;
+import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map.Entry;
 
 /**
  * Utility class for queries
@@ -42,17 +45,34 @@ public class QueryUtils
    * @return Mappings for queryColumn to outputColumn
    */
   public static List<ColumnMapping> buildColumnMappings(
-      final List<Pair<Integer, String>> fieldMapping,
+      final List<Entry<Integer, String>> fieldMapping,
       final DruidQuery druidQuery
   )
   {
     final List<ColumnMapping> columnMappings = new ArrayList<>();
-    for (final Pair<Integer, String> entry : fieldMapping) {
+    for (final Entry<Integer, String> entry : fieldMapping) {
       final String queryColumn = druidQuery.getOutputRowSignature().getColumnName(entry.getKey());
       final String outputColumn = entry.getValue();
       columnMappings.add(new ColumnMapping(queryColumn, outputColumn));
     }
 
     return columnMappings;
+  }
+
+  public static JoinAlgorithm getJoinAlgorithm(Join join, PlannerContext plannerContext)
+  {
+    RelHint closestHint = null;
+    for (RelHint hint : join.getHints()) {
+      if ((closestHint == null || hint.inheritPath.size() < closestHint.inheritPath.size())
+          && DruidHint.DruidJoinHint.fromString(hint.hintName) != null) {
+        closestHint = hint;
+      }
+    }
+
+    if (closestHint != null) {
+      return DruidHint.DruidJoinHint.fromString(closestHint.hintName).asJoinAlgorithm();
+    } else {
+      return plannerContext.getJoinAlgorithm();
+    }
   }
 }

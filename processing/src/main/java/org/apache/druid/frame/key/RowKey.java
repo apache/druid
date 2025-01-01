@@ -27,6 +27,16 @@ import java.util.Arrays;
 
 /**
  * Represents a specific sorting or hashing key. Instances of this class wrap a byte array in row-based frame format.
+ *
+ * Following is the layout of the RowKey with n fields
+ *
+ * Header section
+ * byte[1..4] - End of field 1
+ * byte[5..8] - End of field 2
+ * ...
+ * byte[4(n-1)..4n] - End of field n
+ * Key section
+ * byte[headerEnd+1..headerEnd+1+fieldSize1] - Data of field1
  */
 public class RowKey
 {

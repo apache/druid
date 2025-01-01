@@ -42,7 +42,7 @@ import java.util.Iterator;
  * <li>{@code druid.extension.custom.type="s3"}
  * <li>{@code druid.extension.custom.bucket="myBucket"}
  * </ul>
- * The final state of this inteface would have
+ * The final state of this interface would have
  * <ol>
  * <li>Future Non blocking API's</li>
  * <li>Offset based fetch</li>
@@ -90,12 +90,13 @@ public interface StorageConnector
 
   /**
    * Open an {@link OutputStream} for writing data to the path in the underlying storage system.
-   * Most implementations prepend the input path with a basePath.
+   * Most implementations prepend the input path with a basePath. If an object exists at the path,
+   * the existing object will be overwritten by the write operation.
    * Callers are adivised to namespace there files as there might be race conditions.
    * The caller should take care of closing the stream when done or in case of error.
    *
-   * @param path
-   * @return
+   * @param path to write
+   * @return OutputStream to the path
    * @throws IOException
    */
   OutputStream write(String path) throws IOException;

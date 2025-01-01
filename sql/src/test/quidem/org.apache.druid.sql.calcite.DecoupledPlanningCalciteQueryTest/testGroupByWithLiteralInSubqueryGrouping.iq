@@ -1,0 +1,110 @@
+# testGroupByWithLiteralInSubqueryGrouping case-crc:a63c5a2f
+# quidem testcase reason: IMPROVED_PLAN
+!set debug true
+!set defaultTimeout 300000
+!set maxScatterGatherBytes 9223372036854775807
+!set plannerStrategy DECOUPLED
+!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
+!set sqlQueryId dummy
+!set outputformat mysql
+!use druidtest:///
+SELECT 
+   t1, t2
+  FROM
+   ( SELECT
+     'dummy' as t1,
+     CASE
+       WHEN 
+         dim4 = 'b'
+       THEN dim4
+       ELSE NULL
+     END AS t2
+     FROM
+       numfoo
+     GROUP BY
+       dim4
+   )
+ GROUP BY
+   t1,t2
+;
++-------+----+
+| t1    | t2 |
++-------+----+
+| dummy |    |
+| dummy | b  |
++-------+----+
+(2 rows)
+
+!ok
+LogicalProject(t1=['dummy'], t2=[$0])
+  LogicalAggregate(group=[{0}])
+    LogicalProject(t2=[CASE(=($0, 'b'), $0, null:VARCHAR)])
+      LogicalAggregate(group=[{4}])
+        LogicalTableScan(table=[[druid, numfoo]])
+
+!logicalPlan
+DruidProject(t1=['dummy'], t2=[$0], druid=[logical])
+  DruidAggregate(group=[{0}], druid=[logical])
+    DruidProject(t2=[CASE(=($0, 'b'), $0, null:VARCHAR)], druid=[logical])
+      DruidAggregate(group=[{4}], druid=[logical])
+        DruidTableScan(table=[[druid, numfoo]], druid=[logical])
+
+!druidPlan
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "query",
+    "query" : {
+      "queryType" : "groupBy",
+      "dataSource" : {
+        "type" : "table",
+        "name" : "numfoo"
+      },
+      "intervals" : {
+        "type" : "intervals",
+        "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+      },
+      "granularity" : {
+        "type" : "all"
+      },
+      "dimensions" : [ {
+        "type" : "default",
+        "dimension" : "dim4",
+        "outputName" : "d0",
+        "outputType" : "STRING"
+      } ],
+      "limitSpec" : {
+        "type" : "NoopLimitSpec"
+      }
+    }
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "virtualColumns" : [ {
+    "type" : "expression",
+    "name" : "v0",
+    "expression" : "case_searched((\"d0\" == 'b'),\"d0\",null)",
+    "outputType" : "STRING"
+  } ],
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "v0",
+    "outputName" : "_d0",
+    "outputType" : "STRING"
+  } ],
+  "postAggregations" : [ {
+    "type" : "expression",
+    "name" : "p0",
+    "expression" : "'dummy'",
+    "outputType" : "STRING"
+  } ],
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  }
+}
+!nativePlan

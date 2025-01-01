@@ -31,7 +31,6 @@ import org.apache.druid.indexing.seekablestream.SettableByteEntity;
 import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
-import org.apache.druid.java.util.common.parsers.ParseException;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
@@ -59,14 +58,13 @@ public class KafkaInputReader implements InputEntityReader
   private final String topicColumnName;
 
   /**
-   *
-   * @param inputRowSchema Actual schema from the ingestion spec
-   * @param source kafka record containing header, key & value that is wrapped inside SettableByteEntity
+   * @param inputRowSchema       Actual schema from the ingestion spec
+   * @param source               kafka record containing header, key & value that is wrapped inside SettableByteEntity
    * @param headerParserSupplier Function to get Header parser for parsing the header section, kafkaInputFormat allows users to skip header parsing section and hence an be null
-   * @param keyParserSupplier Function to get Key parser for key section, can be null as well. Key parser supplier can also return a null key parser.
-   * @param valueParser Value parser is a required section in kafkaInputFormat. It cannot be null.
-   * @param keyColumnName Default key column name
-   * @param timestampColumnName Default kafka record's timestamp column name
+   * @param keyParserSupplier    Function to get Key parser for key section, can be null as well. Key parser supplier can also return a null key parser.
+   * @param valueParser          Value parser is a required section in kafkaInputFormat. It cannot be null.
+   * @param keyColumnName        Default key column name
+   * @param timestampColumnName  Default kafka record's timestamp column name
    */
   public KafkaInputReader(
       InputRowSchema inputRowSchema,
@@ -145,14 +143,9 @@ public class KafkaInputReader implements InputEntityReader
       try (CloseableIterator<InputRow> keyIterator = keyParser.read()) {
         // Key currently only takes the first row and ignores the rest.
         if (keyIterator.hasNext()) {
-          // Return type for the key parser should be of type MapBasedInputRow
-          // Parsers returning other types are not compatible currently.
-          MapBasedInputRow keyRow = (MapBasedInputRow) keyIterator.next();
+          final InputRow keyRow = keyIterator.next();
           // Add the key to the mergeList only if the key string is not already present
-          mergedHeaderMap.putIfAbsent(
-              keyColumnName,
-              keyRow.getEvent().entrySet().stream().findFirst().get().getValue()
-          );
+          mergedHeaderMap.computeIfAbsent(keyColumnName, ignored -> getFirstValue(keyRow));
         }
       }
       catch (ClassCastException e) {
@@ -171,21 +164,8 @@ public class KafkaInputReader implements InputEntityReader
   {
     return valueParser.read().map(
         r -> {
-          final MapBasedInputRow valueRow;
-          try {
-            // Return type for the value parser should be of type MapBasedInputRow
-            // Parsers returning other types are not compatible currently.
-            valueRow = (MapBasedInputRow) r;
-          }
-          catch (ClassCastException e) {
-            throw new ParseException(
-                null,
-                "Unsupported input format in valueFormat. KafkaInputFormat only supports input format that return MapBasedInputRow rows"
-            );
-          }
-
-          final Map<String, Object> event = buildBlendedEventMap(valueRow.getEvent(), headerKeyList);
-          final HashSet<String> newDimensions = new HashSet<>(valueRow.getDimensions());
+          final HashSet<String> newDimensions = new HashSet<>(r.getDimensions());
+          final Map<String, Object> event = buildBlendedEventMap(r::getRaw, newDimensions, headerKeyList);
           newDimensions.addAll(headerKeyList.keySet());
           // Remove the dummy timestamp added in KafkaInputFormat
           newDimensions.remove(KafkaInputFormat.DEFAULT_AUTO_TIMESTAMP_STRING);
@@ -244,25 +224,18 @@ public class KafkaInputReader implements InputEntityReader
           }
           List<InputRow> newInputRows = Lists.newArrayListWithCapacity(rowAndValues.getInputRows().size());
           List<Map<String, Object>> newRawRows = Lists.newArrayListWithCapacity(rowAndValues.getRawValues().size());
-          ParseException parseException = null;
 
           for (Map<String, Object> raw : rowAndValues.getRawValuesList()) {
-            newRawRows.add(buildBlendedEventMap(raw, headerKeyList));
+            newRawRows.add(buildBlendedEventMap(raw::get, raw.keySet(), headerKeyList));
           }
           for (InputRow r : rowAndValues.getInputRows()) {
-            MapBasedInputRow valueRow = null;
-            try {
-              valueRow = (MapBasedInputRow) r;
-            }
-            catch (ClassCastException e) {
-              parseException = new ParseException(
-                  null,
-                  "Unsupported input format in valueFormat. KafkaInputFormat only supports input format that return MapBasedInputRow rows"
+            if (r != null) {
+              final HashSet<String> newDimensions = new HashSet<>(r.getDimensions());
+              final Map<String, Object> event = buildBlendedEventMap(
+                  r::getRaw,
+                  newDimensions,
+                  headerKeyList
               );
-            }
-            if (valueRow != null) {
-              final Map<String, Object> event = buildBlendedEventMap(valueRow.getEvent(), headerKeyList);
-              final HashSet<String> newDimensions = new HashSet<>(valueRow.getDimensions());
               newDimensions.addAll(headerKeyList.keySet());
               // Remove the dummy timestamp added in KafkaInputFormat
               newDimensions.remove(KafkaInputFormat.DEFAULT_AUTO_TIMESTAMP_STRING);
@@ -279,7 +252,7 @@ public class KafkaInputReader implements InputEntityReader
               );
             }
           }
-          return InputRowListPlusRawValues.ofList(newRawRows, newInputRows, parseException);
+          return InputRowListPlusRawValues.ofList(newRawRows, newInputRows, null);
         }
     );
   }
@@ -302,22 +275,31 @@ public class KafkaInputReader implements InputEntityReader
   /**
    * Builds a map that blends two {@link Map}, presenting the combined keyset of both maps, and preferring to read
    * from the first map and falling back to the second map if the value is not present.
-   *
+   * <p>
    * This strategy is used rather than just copying the values of the keyset into a new map so that any 'flattening'
    * machinery (such as {@link Map} created by {@link org.apache.druid.java.util.common.parsers.ObjectFlatteners}) is
    * still in place to be lazily evaluated instead of eagerly copying.
    */
-  private static Map<String, Object> buildBlendedEventMap(Map<String, Object> map, Map<String, Object> fallback)
+  private static Map<String, Object> buildBlendedEventMap(
+      Function<String, Object> getRowValue,
+      Set<String> rowDimensions,
+      Map<String, Object> fallback
+  )
   {
     final Set<String> keySet = new HashSet<>(fallback.keySet());
-    keySet.addAll(map.keySet());
+    keySet.addAll(rowDimensions);
 
-    return new AbstractMap<String, Object>()
+    return new AbstractMap<>()
     {
       @Override
       public Object get(Object key)
       {
-        return map.getOrDefault((String) key, fallback.get(key));
+        final String skey = (String) key;
+        final Object val = getRowValue.apply(skey);
+        if (val == null) {
+          return fallback.get(skey);
+        }
+        return val;
       }
 
       @Override
@@ -355,5 +337,16 @@ public class KafkaInputReader implements InputEntityReader
                        .collect(Collectors.toCollection(LinkedHashSet::new));
       }
     };
+  }
+
+  /**
+   * Get the first value from an {@link InputRow}. This is the first element from {@link InputRow#getDimensions()}
+   * if there are any. If there are not any, returns null. This method is used to extract keys.
+   */
+  @Nullable
+  static Object getFirstValue(final InputRow row)
+  {
+    final List<String> dimensions = row.getDimensions();
+    return !dimensions.isEmpty() ? row.getRaw(dimensions.get(0)) : null;
   }
 }

@@ -22,9 +22,12 @@ package org.apache.druid.rpc.indexing;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
+import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.TaskStatusPlus;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.rpc.ServiceLocation;
 import org.apache.druid.rpc.ServiceLocations;
@@ -62,6 +65,25 @@ public class SpecificTaskServiceLocatorTest
   {
     Mockito.when(overlordClient.taskStatuses(Collections.singleton(TASK_ID)))
            .thenReturn(status(TaskState.RUNNING, TaskLocation.unknown()));
+    final TaskStatusResponse response = new TaskStatusResponse(
+        TASK_ID,
+        new TaskStatusPlus(
+            TASK_ID,
+            null,
+            null,
+            DateTimes.nowUtc(),
+            DateTimes.EPOCH,
+            TaskState.RUNNING,
+            null,
+            null,
+            null,
+            TaskLocation.unknown(),
+            null,
+            null
+        )
+    );
+    Mockito.when(overlordClient.taskStatus(TASK_ID))
+           .thenReturn(Futures.immediateFuture(response));
 
     final SpecificTaskServiceLocator locator = new SpecificTaskServiceLocator(TASK_ID, overlordClient);
     final ListenableFuture<ServiceLocations> future = locator.locate();
@@ -94,6 +116,25 @@ public class SpecificTaskServiceLocatorTest
   {
     Mockito.when(overlordClient.taskStatuses(Collections.singleton(TASK_ID)))
            .thenReturn(status(TaskState.SUCCESS, TaskLocation.unknown()));
+    final TaskStatusResponse response = new TaskStatusResponse(
+        TASK_ID,
+        new TaskStatusPlus(
+            TASK_ID,
+            null,
+            null,
+            DateTimes.nowUtc(),
+            DateTimes.EPOCH,
+            TaskState.FAILED,
+            null,
+            null,
+            100L,
+            TaskLocation.unknown(),
+            null,
+            null
+        )
+    );
+    Mockito.when(overlordClient.taskStatus(TASK_ID))
+           .thenReturn(Futures.immediateFuture(response));
 
     final SpecificTaskServiceLocator locator = new SpecificTaskServiceLocator(TASK_ID, overlordClient);
     final ListenableFuture<ServiceLocations> future = locator.locate();
@@ -105,6 +146,25 @@ public class SpecificTaskServiceLocatorTest
   {
     Mockito.when(overlordClient.taskStatuses(Collections.singleton(TASK_ID)))
            .thenReturn(status(TaskState.FAILED, TaskLocation.unknown()));
+    final TaskStatusResponse response = new TaskStatusResponse(
+        TASK_ID,
+        new TaskStatusPlus(
+            TASK_ID,
+            null,
+            null,
+            DateTimes.nowUtc(),
+            DateTimes.EPOCH,
+            TaskState.FAILED,
+            null,
+            null,
+            100L,
+            TaskLocation.unknown(),
+            null,
+            null
+        )
+    );
+    Mockito.when(overlordClient.taskStatus(TASK_ID))
+           .thenReturn(Futures.immediateFuture(response));
 
     final SpecificTaskServiceLocator locator = new SpecificTaskServiceLocator(TASK_ID, overlordClient);
     final ListenableFuture<ServiceLocations> future = locator.locate();

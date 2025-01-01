@@ -22,15 +22,18 @@ package org.apache.druid.indexing.common.actions;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.task.IndexTaskUtils;
+import org.apache.druid.indexing.common.task.PendingSegmentAllocatingTask;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.CriticalAction;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.metadata.ReplaceTaskLock;
+import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.SegmentUtils;
 import org.apache.druid.timeline.DataSegment;
 
@@ -43,6 +46,17 @@ import java.util.stream.Collectors;
 /**
  * Append segments to metadata storage. The segment versions must all be less than or equal to a lock held by
  * your task for the segment intervals.
+ *
+ * <pre>
+ * Pseudo code (for a single interval):
+ * For an append lock held over an interval:
+ *     transaction {
+ *       commit input segments contained within interval
+ *       if there is an active replace lock over the interval:
+ *         add an entry for the inputSegment corresponding to the replace lock's task in the upgradeSegments table
+ *       fetch pending segments with parent contained within the input segments, and commit them
+ *     }
+ * </pre>
  */
 public class SegmentTransactionalAppendAction implements TaskAction<SegmentPublishResult>
 {
@@ -51,26 +65,30 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
   private final DataSourceMetadata startMetadata;
   @Nullable
   private final DataSourceMetadata endMetadata;
+  @Nullable
+  private final SegmentSchemaMapping segmentSchemaMapping;
 
-  public static SegmentTransactionalAppendAction forSegments(Set<DataSegment> segments)
+  public static SegmentTransactionalAppendAction forSegments(Set<DataSegment> segments, SegmentSchemaMapping segmentSchemaMapping)
   {
-    return new SegmentTransactionalAppendAction(segments, null, null);
+    return new SegmentTransactionalAppendAction(segments, null, null, segmentSchemaMapping);
   }
 
   public static SegmentTransactionalAppendAction forSegmentsAndMetadata(
       Set<DataSegment> segments,
       DataSourceMetadata startMetadata,
-      DataSourceMetadata endMetadata
+      DataSourceMetadata endMetadata,
+      SegmentSchemaMapping segmentSchemaMapping
   )
   {
-    return new SegmentTransactionalAppendAction(segments, startMetadata, endMetadata);
+    return new SegmentTransactionalAppendAction(segments, startMetadata, endMetadata, segmentSchemaMapping);
   }
 
   @JsonCreator
   private SegmentTransactionalAppendAction(
       @JsonProperty("segments") Set<DataSegment> segments,
       @JsonProperty("startMetadata") @Nullable DataSourceMetadata startMetadata,
-      @JsonProperty("endMetadata") @Nullable DataSourceMetadata endMetadata
+      @JsonProperty("endMetadata") @Nullable DataSourceMetadata endMetadata,
+      @JsonProperty("segmentSchemaMapping") @Nullable SegmentSchemaMapping segmentSchemaMapping
   )
   {
     this.segments = segments;
@@ -81,6 +99,7 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
         || (startMetadata != null && endMetadata == null)) {
       throw InvalidInput.exception("startMetadata and endMetadata must either be both null or both non-null.");
     }
+    this.segmentSchemaMapping = segmentSchemaMapping;
   }
 
   @JsonProperty
@@ -103,17 +122,29 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
     return endMetadata;
   }
 
+  @JsonProperty
+  @Nullable
+  public SegmentSchemaMapping getSegmentSchemaMapping()
+  {
+    return segmentSchemaMapping;
+  }
+
   @Override
   public TypeReference<SegmentPublishResult> getReturnTypeReference()
   {
-    return new TypeReference<SegmentPublishResult>()
-    {
-    };
+    return new TypeReference<>() {};
   }
 
   @Override
   public SegmentPublishResult perform(Task task, TaskActionToolbox toolbox)
   {
+    if (!(task instanceof PendingSegmentAllocatingTask)) {
+      throw DruidException.defensive(
+          "Task[%s] of type[%s] cannot append segments as it does not implement PendingSegmentAllocatingTask.",
+          task.getId(),
+          task.getType()
+      );
+    }
     // Verify that all the locks are of expected type
     final List<TaskLock> locks = toolbox.getTaskLockbox().findLocksForTask(task);
     for (TaskLock lock : locks) {
@@ -132,17 +163,22 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
         = TaskLocks.findReplaceLocksCoveringSegments(datasource, toolbox.getTaskLockbox(), segments);
 
     final CriticalAction.Action<SegmentPublishResult> publishAction;
+    final String taskAllocatorId = ((PendingSegmentAllocatingTask) task).getTaskAllocatorId();
     if (startMetadata == null) {
       publishAction = () -> toolbox.getIndexerMetadataStorageCoordinator().commitAppendSegments(
           segments,
-          segmentToReplaceLock
+          segmentToReplaceLock,
+          taskAllocatorId,
+          segmentSchemaMapping
       );
     } else {
       publishAction = () -> toolbox.getIndexerMetadataStorageCoordinator().commitAppendSegmentsAndMetadata(
           segments,
           segmentToReplaceLock,
           startMetadata,
-          endMetadata
+          endMetadata,
+          taskAllocatorId,
+          segmentSchemaMapping
       );
     }
 
@@ -168,12 +204,6 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
 
     IndexTaskUtils.emitSegmentPublishMetrics(retVal, task, toolbox);
     return retVal;
-  }
-
-  @Override
-  public boolean isAudited()
-  {
-    return true;
   }
 
   @Override

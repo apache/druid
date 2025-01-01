@@ -84,9 +84,7 @@ public class AvroOCFReaderTest
                        + "  ]\n"
                        + "}";
 
-    TypeReference<Map<String, Object>> typeRef = new TypeReference<Map<String, Object>>()
-    {
-    };
+    TypeReference<Map<String, Object>> typeRef = new TypeReference<>() {};
     final Map<String, Object> readerSchema = mapper.readValue(schemaStr, typeRef);
 
     final InputEntityReader reader = createReader(mapper, readerSchema);
@@ -114,9 +112,7 @@ public class AvroOCFReaderTest
                        + "  ]\n"
                        + "}";
 
-    TypeReference<Map<String, Object>> typeRef = new TypeReference<Map<String, Object>>()
-    {
-    };
+    TypeReference<Map<String, Object>> typeRef = new TypeReference<>() {};
     final Map<String, Object> readerSchema = mapper.readValue(schemaStr, typeRef);
 
     final InputEntityReader reader = createReader(mapper, readerSchema);

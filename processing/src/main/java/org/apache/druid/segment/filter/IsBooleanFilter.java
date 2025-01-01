@@ -79,6 +79,12 @@ public class IsBooleanFilter implements Filter
         }
 
         @Override
+        public int estimatedComputeCost()
+        {
+          return baseIndex.estimatedComputeCost();
+        }
+
+        @Override
         public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
         {
           if (isTrue) {
@@ -94,7 +100,7 @@ public class IsBooleanFilter implements Filter
         @Override
         public <T> T computeBitmapResult(
             BitmapResultFactory<T> bitmapResultFactory,
-            int selectionRowCount,
+            int applyRowCount,
             int totalRowCount,
             boolean includeUnknown
         )
@@ -102,7 +108,7 @@ public class IsBooleanFilter implements Filter
           if (isTrue) {
             return baseIndex.computeBitmapResult(
                 bitmapResultFactory,
-                selectionRowCount,
+                applyRowCount,
                 totalRowCount,
                 false
             );
@@ -110,7 +116,7 @@ public class IsBooleanFilter implements Filter
 
           final T result = baseIndex.computeBitmapResult(
               bitmapResultFactory,
-              selectionRowCount,
+              applyRowCount,
               totalRowCount,
               useThreeValueLogic
           );

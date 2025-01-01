@@ -24,8 +24,14 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 /**
  * Marker interface for the results of {@link QueryCounter#snapshot()}. No methods, because the only purpose of these
  * snapshots is to pass things along from worker -> controller -> report.
+ *
+ * To support easy adding of new counters, implementations must use forward-compatible deserialization setups.
+ * In particular, implementations should avoid using enums where new values may be added in the future.
+ *
+ * The default impl is {@link NilQueryCounterSnapshot}. This means that readers will see {@link NilQueryCounterSnapshot}
+ * if they don't understand the particular counter type in play.
  */
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = NilQueryCounterSnapshot.class)
 public interface QueryCounterSnapshot
 {
 }

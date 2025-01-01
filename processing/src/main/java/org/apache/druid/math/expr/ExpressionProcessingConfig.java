@@ -30,6 +30,7 @@ public class ExpressionProcessingConfig
 {
   private static final Logger LOG = new Logger(ExpressionProcessingConfig.class);
 
+  @Deprecated
   public static final String NULL_HANDLING_LEGACY_LOGICAL_OPS_STRING = "druid.expressions.useStrictBooleans";
   // Coerce arrays to multi value strings
   public static final String PROCESS_ARRAYS_AS_MULTIVALUE_STRINGS_CONFIG_STRING =
@@ -37,9 +38,7 @@ public class ExpressionProcessingConfig
   // Coerce 'null', '[]', and '[null]' into '[null]' for backwards compat with 0.22 and earlier
   public static final String HOMOGENIZE_NULL_MULTIVALUE_STRING_ARRAYS =
       "druid.expressions.homogenizeNullMultiValueStringArrays";
-
-  @JsonProperty("useStrictBooleans")
-  private final boolean useStrictBooleans;
+  public static final String ALLOW_VECTORIZE_FALLBACK = "druid.expressions.allowVectorizeFallback";
 
   @JsonProperty("processArraysAsMultiValueStrings")
   private final boolean processArraysAsMultiValueStrings;
@@ -47,11 +46,19 @@ public class ExpressionProcessingConfig
   @JsonProperty("homogenizeNullMultiValueStringArrays")
   private final boolean homogenizeNullMultiValueStringArrays;
 
+  @JsonProperty("allowVectorizeFallback")
+  private final boolean allowVectorizeFallback;
+
+  @Deprecated
+  @JsonProperty("useStrictBooleans")
+  private final boolean useStrictBooleans;
+
   @JsonCreator
   public ExpressionProcessingConfig(
-      @JsonProperty("useStrictBooleans") @Nullable Boolean useStrictBooleans,
+      @Deprecated @JsonProperty("useStrictBooleans") @Nullable Boolean useStrictBooleans,
       @JsonProperty("processArraysAsMultiValueStrings") @Nullable Boolean processArraysAsMultiValueStrings,
-      @JsonProperty("homogenizeNullMultiValueStringArrays") @Nullable Boolean homogenizeNullMultiValueStringArrays
+      @JsonProperty("homogenizeNullMultiValueStringArrays") @Nullable Boolean homogenizeNullMultiValueStringArrays,
+      @JsonProperty("allowVectorizeFallback") @Nullable Boolean allowVectorizeFallback
   )
   {
     this.useStrictBooleans = getWithPropertyFallback(
@@ -67,6 +74,10 @@ public class ExpressionProcessingConfig
         homogenizeNullMultiValueStringArrays,
         HOMOGENIZE_NULL_MULTIVALUE_STRING_ARRAYS
     );
+    this.allowVectorizeFallback = getWithPropertyFallbackFalse(
+        allowVectorizeFallback,
+        ALLOW_VECTORIZE_FALLBACK
+    );
     String version = ExpressionProcessingConfig.class.getPackage().getImplementationVersion();
     if (version == null || version.contains("SNAPSHOT")) {
       version = "latest";
@@ -74,15 +85,10 @@ public class ExpressionProcessingConfig
     final String docsBaseFormat = "https://druid.apache.org/docs/%s/querying/sql-data-types#%s";
     if (!this.useStrictBooleans) {
       LOG.warn(
-          "druid.expressions.useStrictBooleans set to 'false', we recommend using 'true' if using SQL to query Druid for the most SQL compliant behavior, see %s for details",
+          "druid.expressions.useStrictBooleans set to 'false', but has been removed from Druid and is always 'true' now for the most SQL compliant behavior, see %s for details",
           StringUtils.format(docsBaseFormat, version, "boolean-logic")
       );
     }
-  }
-
-  public boolean isUseStrictBooleans()
-  {
-    return useStrictBooleans;
   }
 
   public boolean processArraysAsMultiValueStrings()
@@ -93,6 +99,11 @@ public class ExpressionProcessingConfig
   public boolean isHomogenizeNullMultiValueStringArrays()
   {
     return homogenizeNullMultiValueStringArrays;
+  }
+
+  public boolean allowVectorizeFallback()
+  {
+    return allowVectorizeFallback;
   }
 
   private static boolean getWithPropertyFallbackFalse(@Nullable Boolean value, String property)

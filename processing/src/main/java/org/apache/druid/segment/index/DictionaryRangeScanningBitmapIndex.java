@@ -46,16 +46,22 @@ public abstract class DictionaryRangeScanningBitmapIndex extends SimpleImmutable
     this.rangeSize = rangeSize;
   }
 
+  @Override
+  public int estimatedComputeCost()
+  {
+    return this.rangeSize;
+  }
+
   @Nullable
   @Override
   public final <T> T computeBitmapResult(
       BitmapResultFactory<T> bitmapResultFactory,
-      int selectionRowCount,
+      int applyRowCount,
       int totalRowCount,
       boolean includeUnknown
   )
   {
-    final int scale = (int) Math.ceil(sizeScale * selectionRowCount);
+    final int scale = (int) Math.ceil(sizeScale * applyRowCount);
     if (rangeSize > scale) {
       return null;
     }

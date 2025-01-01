@@ -397,7 +397,7 @@ public class HdfsDataSegmentPusherTest
         addSerializer(NumberedShardSpec.class, ToStringSerializer.instance);
         addDeserializer(
             Interval.class,
-            new StdDeserializer<Interval>(Interval.class)
+            new StdDeserializer<>(Interval.class)
             {
               @Override
               public Interval deserialize(JsonParser jsonParser, DeserializationContext deserializationContext)

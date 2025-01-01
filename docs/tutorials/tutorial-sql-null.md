@@ -118,7 +118,7 @@ Druid returns the following:
 |`another_value`|1|1|
 |`some_value`|1|1|
 
-Also note that GROUP BY expressions yields distinct entries for `null` and the empty string.
+Also note that GROUP BY expressions yield distinct entries for `null` and the empty string.
 
 ### Filter for empty strings in addition to null
 
@@ -133,7 +133,7 @@ WHERE "string_value" IS NULL OR "string_value" = ''
 Druid returns the following:
 
 |`__time`|`title`|`string_value`|`numeric_value`|
-|---|---|---|---|---|---|
+|---|---|---|---|
 |`2024-01-01T01:04:00.000Z`|`example_3`|`empty`|`null`|
 |`2024-01-01T01:05:00.000Z`|`example_4`|`null`|`null`|
 

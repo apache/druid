@@ -27,12 +27,12 @@ import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
 import org.apache.druid.segment.column.ColumnConfig;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
 import org.apache.druid.segment.nested.NestedCommonFormatColumn;
-import org.apache.druid.segment.nested.NestedCommonFormatColumnSerializer;
 import org.apache.druid.segment.nested.NestedDataColumnSupplier;
 import org.apache.druid.segment.nested.ScalarDoubleColumnAndIndexSupplier;
 import org.apache.druid.segment.nested.ScalarLongColumnAndIndexSupplier;
@@ -70,7 +70,7 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
   ) throws IOException
   {
     return fileMapper.mapFile(
-        NestedCommonFormatColumnSerializer.getInternalFileName(fileNameBase, internalFileName)
+        ColumnSerializerUtils.getInternalFileName(fileNameBase, internalFileName)
     );
   }
 
@@ -190,80 +190,99 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
   private class StringColumnDeserializer implements Deserializer
   {
     @Override
-    public void read(ByteBuffer buffer, ColumnBuilder builder, ColumnConfig columnConfig)
+    public void read(ByteBuffer buffer, ColumnBuilder builder, ColumnConfig columnConfig, @Nullable ColumnHolder parent)
     {
       ScalarStringColumnAndIndexSupplier supplier = ScalarStringColumnAndIndexSupplier.read(
           byteOrder,
           bitmapSerdeFactory,
           buffer,
-          builder
+          builder,
+          parent == null ? null : (ScalarStringColumnAndIndexSupplier) parent.getColumnSupplier()
       );
       ColumnCapabilitiesImpl capabilitiesBuilder = builder.getCapabilitiesBuilder();
       capabilitiesBuilder.setDictionaryEncoded(true);
       capabilitiesBuilder.setDictionaryValuesSorted(true);
       capabilitiesBuilder.setDictionaryValuesUnique(true);
       builder.setType(logicalType);
+      builder.setHasNulls(hasNulls);
       builder.setNestedCommonFormatColumnSupplier(supplier);
       builder.setIndexSupplier(supplier, true, false);
-      builder.setColumnFormat(new NestedCommonFormatColumn.Format(logicalType, capabilitiesBuilder.hasNulls().isTrue(), enforceLogicalType));
+      builder.setColumnFormat(new NestedCommonFormatColumn.Format(
+          logicalType,
+          capabilitiesBuilder.hasNulls().isTrue(),
+          enforceLogicalType
+      ));
     }
   }
 
   private class LongColumnDeserializer implements Deserializer
   {
     @Override
-    public void read(ByteBuffer buffer, ColumnBuilder builder, ColumnConfig columnConfig)
+    public void read(ByteBuffer buffer, ColumnBuilder builder, ColumnConfig columnConfig, @Nullable ColumnHolder parent)
     {
       ScalarLongColumnAndIndexSupplier supplier = ScalarLongColumnAndIndexSupplier.read(
           byteOrder,
           bitmapSerdeFactory,
           buffer,
           builder,
-          columnConfig
+          columnConfig,
+          parent == null ? null : (ScalarLongColumnAndIndexSupplier) parent.getColumnSupplier()
       );
       ColumnCapabilitiesImpl capabilitiesBuilder = builder.getCapabilitiesBuilder();
       // technically, these columns are dictionary encoded, however they do not implement the DictionaryEncodedColumn
       // interface, so do not make the claim in the ColumnCapabilities
       builder.setType(logicalType);
+      builder.setHasNulls(hasNulls);
       builder.setNestedCommonFormatColumnSupplier(supplier);
       builder.setIndexSupplier(supplier, true, false);
-      builder.setColumnFormat(new NestedCommonFormatColumn.Format(logicalType, capabilitiesBuilder.hasNulls().isTrue(), enforceLogicalType));
+      builder.setColumnFormat(new NestedCommonFormatColumn.Format(
+          logicalType,
+          capabilitiesBuilder.hasNulls().isTrue(),
+          enforceLogicalType
+      ));
     }
   }
 
   private class DoubleColumnDeserializer implements Deserializer
   {
     @Override
-    public void read(ByteBuffer buffer, ColumnBuilder builder, ColumnConfig columnConfig)
+    public void read(ByteBuffer buffer, ColumnBuilder builder, ColumnConfig columnConfig, @Nullable ColumnHolder parent)
     {
       ScalarDoubleColumnAndIndexSupplier supplier = ScalarDoubleColumnAndIndexSupplier.read(
           byteOrder,
           bitmapSerdeFactory,
           buffer,
           builder,
-          columnConfig
+          columnConfig,
+          parent == null ? null : (ScalarDoubleColumnAndIndexSupplier) parent.getColumnSupplier()
       );
       ColumnCapabilitiesImpl capabilitiesBuilder = builder.getCapabilitiesBuilder();
       // technically, these columns are dictionary encoded, however they do not implement the DictionaryEncodedColumn
       // interface, so do not make the claim in the ColumnCapabilities
       builder.setType(logicalType);
+      builder.setHasNulls(hasNulls);
       builder.setNestedCommonFormatColumnSupplier(supplier);
       builder.setIndexSupplier(supplier, true, false);
-      builder.setColumnFormat(new NestedCommonFormatColumn.Format(logicalType, capabilitiesBuilder.hasNulls().isTrue(), enforceLogicalType));
+      builder.setColumnFormat(new NestedCommonFormatColumn.Format(
+          logicalType,
+          capabilitiesBuilder.hasNulls().isTrue(),
+          enforceLogicalType
+      ));
     }
   }
 
   private class VariantColumnDeserializer implements Deserializer
   {
     @Override
-    public void read(ByteBuffer buffer, ColumnBuilder builder, ColumnConfig columnConfig)
+    public void read(ByteBuffer buffer, ColumnBuilder builder, ColumnConfig columnConfig, @Nullable ColumnHolder parent)
     {
       VariantColumnAndIndexSupplier supplier = VariantColumnAndIndexSupplier.read(
           logicalType,
           byteOrder,
           bitmapSerdeFactory,
           buffer,
-          builder
+          builder.getFileMapper(),
+          parent == null ? null : (VariantColumnAndIndexSupplier) parent.getColumnSupplier()
       );
       ColumnCapabilitiesImpl capabilitiesBuilder = builder.getCapabilitiesBuilder();
       // if we are a mixed type, don't call ourself dictionary encoded for now so we don't end up doing the wrong thing
@@ -275,6 +294,7 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
         capabilitiesBuilder.setDictionaryValuesUnique(true);
       }
       builder.setType(logicalType);
+      builder.setHasNulls(hasNulls);
       builder.setNestedCommonFormatColumnSupplier(supplier);
       builder.setIndexSupplier(supplier, true, false);
       builder.setColumnFormat(new NestedCommonFormatColumn.Format(
@@ -288,7 +308,7 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
   private class NestedColumnDeserializer implements Deserializer
   {
     @Override
-    public void read(ByteBuffer buffer, ColumnBuilder builder, ColumnConfig columnConfig)
+    public void read(ByteBuffer buffer, ColumnBuilder builder, ColumnConfig columnConfig, @Nullable ColumnHolder parent)
     {
       NestedDataColumnSupplier supplier = NestedDataColumnSupplier.read(
           logicalType,
@@ -297,15 +317,13 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
           builder,
           columnConfig,
           bitmapSerdeFactory,
-          byteOrder
+          byteOrder,
+          parent == null ? null : (NestedDataColumnSupplier) parent.getColumnSupplier()
       );
-      ColumnCapabilitiesImpl capabilitiesBuilder = builder.getCapabilitiesBuilder();
-      capabilitiesBuilder.setDictionaryEncoded(true);
-      capabilitiesBuilder.setDictionaryValuesSorted(true);
-      capabilitiesBuilder.setDictionaryValuesUnique(true);
       ColumnType simpleType = supplier.getLogicalType();
       ColumnType logicalType = simpleType == null ? ColumnType.NESTED_DATA : simpleType;
       builder.setType(logicalType);
+      builder.setHasNulls(hasNulls);
       builder.setNestedCommonFormatColumnSupplier(supplier);
       // in default value mode, SQL planning by default uses selector filters for things like 'is null', which does
       // not work correctly for complex types (or arrays). so, only hook up this index in sql compatible mode so that

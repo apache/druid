@@ -129,7 +129,6 @@
         "delta",
         "page"
       ],
-      "legacy": false,
       "context": {
         "__exportFileFormat": "CSV",
         "__resultFormat": "array",
@@ -199,7 +198,6 @@
   },
   "sqlResultsContext": {
     "timeZone": "UTC",
-    "serializeComplexValues": true,
     "stringifyArrays": false
   },
   "sqlTypeNames": [

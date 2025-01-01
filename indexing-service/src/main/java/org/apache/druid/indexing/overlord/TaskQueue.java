@@ -35,6 +35,7 @@ import org.apache.druid.annotations.SuppressFBWarnings;
 import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.EntryAlreadyExists;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskStatus;
@@ -97,6 +98,9 @@ public class TaskQueue
 {
   private static final long MANAGEMENT_WAIT_TIMEOUT_NANOS = TimeUnit.SECONDS.toNanos(60);
   private static final long MIN_WAIT_TIME_MS = 100;
+
+  // 60 MB warning threshold since 64 MB is the default max_allowed_packet size in MySQL 8+
+  private static final long TASK_SIZE_WARNING_THRESHOLD = 1024 * 1024 * 60;
 
   // Task ID -> Task, for tasks that are active in some way (submitted, running, or finished and to-be-cleaned-up).
   @GuardedBy("giant")
@@ -424,13 +428,16 @@ public class TaskQueue
           catch (Exception e) {
             log.warn(e, "Exception thrown during isReady for task: %s", task.getId());
             final String errorMessage;
-            if (e instanceof MaxAllowedLocksExceededException) {
+            if (e instanceof MaxAllowedLocksExceededException || e instanceof DruidException) {
               errorMessage = e.getMessage();
             } else {
-              errorMessage = "Failed while waiting for the task to be ready to run. "
-                                          + "See overlord logs for more details.";
+              errorMessage = StringUtils.format(
+                  "Encountered error[%s] while waiting for task to be ready. See Overlord logs for more details.",
+                  e.getMessage()
+              );
             }
-            notifyStatus(task, TaskStatus.failure(task.getId(), errorMessage), errorMessage);
+            TaskStatus taskStatus = TaskStatus.failure(task.getId(), errorMessage);
+            notifyStatus(task, taskStatus, taskStatus.getErrorMsg());
             continue;
           }
           if (taskIsReady) {
@@ -505,6 +512,7 @@ public class TaskQueue
     if (taskStorage.getTask(task.getId()).isPresent()) {
       throw EntryAlreadyExists.exception("Task[%s] already exists", task.getId());
     }
+    validateTaskPayload(task);
 
     // Set forceTimeChunkLock before adding task spec to taskStorage, so that we can see always consistent task spec.
     task.addToContextIfAbsent(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, lockConfig.isForceTimeChunkLock());
@@ -733,7 +741,7 @@ public class TaskQueue
 
     Futures.addCallback(
         statusFuture,
-        new FutureCallback<TaskStatus>()
+        new FutureCallback<>()
         {
           @Override
           public void onSuccess(final TaskStatus status)
@@ -1013,6 +1021,36 @@ public class TaskQueue
     }
     finally {
       giant.unlock();
+    }
+  }
+
+  private void validateTaskPayload(Task task)
+  {
+    try {
+      String payload = passwordRedactingMapper.writeValueAsString(task);
+      if (config.getMaxTaskPayloadSize() != null && config.getMaxTaskPayloadSize().getBytesInInt() < payload.length()) {
+        throw InvalidInput.exception(
+                "Task[%s] has payload of size[%d] but max allowed size is [%d]. " +
+                    "Reduce the size of the task payload or increase 'druid.indexer.queue.maxTaskPayloadSize'.",
+                task.getId(), payload.length(), config.getMaxTaskPayloadSize()
+            );
+      } else if (payload.length() > TASK_SIZE_WARNING_THRESHOLD) {
+        log.warn(
+            "Task[%s] of datasource[%s] has payload size[%d] larger than the recommended maximum[%d]. " +
+                "Large task payloads may cause stability issues in the Overlord and may fail while persisting to the metadata store." +
+                "Such tasks may be rejected by the Overlord in future Druid versions.",
+            task.getId(),
+            task.getDataSource(),
+            payload.length(),
+            TASK_SIZE_WARNING_THRESHOLD
+        );
+      }
+    }
+    catch (JsonProcessingException e) {
+      log.error(e, "Failed to parse task payload for validation");
+      throw DruidException.defensive(
+          "Failed to parse task payload for validation"
+      );
     }
   }
 }

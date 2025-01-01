@@ -28,11 +28,10 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import org.apache.druid.collections.BlockingPool;
 import org.apache.druid.collections.DefaultBlockingPool;
-import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.collections.SerializablePair;
-import org.apache.druid.collections.StupidPool;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.Row;
+import org.apache.druid.jackson.AggregatorsModule;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -51,10 +50,11 @@ import org.apache.druid.query.aggregation.SerializablePairLongDouble;
 import org.apache.druid.query.aggregation.SerializablePairLongFloat;
 import org.apache.druid.query.aggregation.SerializablePairLongLong;
 import org.apache.druid.query.aggregation.SerializablePairLongString;
-import org.apache.druid.query.aggregation.last.DoubleLastAggregatorFactory;
-import org.apache.druid.query.aggregation.last.FloatLastAggregatorFactory;
-import org.apache.druid.query.aggregation.last.LongLastAggregatorFactory;
-import org.apache.druid.query.aggregation.last.StringLastAggregatorFactory;
+import org.apache.druid.query.aggregation.SerializablePairLongStringComplexMetricSerde;
+import org.apache.druid.query.aggregation.firstlast.last.DoubleLastAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.last.FloatLastAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.last.LongLastAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.last.StringLastAggregatorFactory;
 import org.apache.druid.query.aggregation.post.ConstantPostAggregator;
 import org.apache.druid.query.aggregation.post.ExpressionPostAggregator;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
@@ -96,6 +96,7 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
   public static void setUpClass()
   {
     NullHandling.initializeForTests();
+    AggregatorsModule.registerComplexMetricsAndSerde();
   }
 
   @Test
@@ -129,13 +130,13 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
         .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
         .build();
 
-    final CacheStrategy<ResultRow, Object, GroupByQuery> strategy1 = new GroupByQueryQueryToolChest(
-        null
-    ).getCacheStrategy(query1);
+    final ObjectMapper mapper = TestHelper.makeJsonMapper();
 
-    final CacheStrategy<ResultRow, Object, GroupByQuery> strategy2 = new GroupByQueryQueryToolChest(
-        null
-    ).getCacheStrategy(query2);
+    final CacheStrategy<ResultRow, Object, GroupByQuery> strategy1 =
+        new GroupByQueryQueryToolChest(null, null).getCacheStrategy(query1, mapper);
+
+    final CacheStrategy<ResultRow, Object, GroupByQuery> strategy2 =
+        new GroupByQueryQueryToolChest(null, null).getCacheStrategy(query2, mapper);
 
     Assert.assertTrue(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
     Assert.assertFalse(Arrays.equals(
@@ -191,13 +192,12 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
         )
         .build();
 
-    final CacheStrategy<ResultRow, Object, GroupByQuery> strategy1 = new GroupByQueryQueryToolChest(
-        null
-    ).getCacheStrategy(query1);
+    final ObjectMapper mapper = TestHelper.makeJsonMapper();
+    final CacheStrategy<ResultRow, Object, GroupByQuery> strategy1 =
+        new GroupByQueryQueryToolChest(null, null).getCacheStrategy(query1, mapper);
 
-    final CacheStrategy<ResultRow, Object, GroupByQuery> strategy2 = new GroupByQueryQueryToolChest(
-        null
-    ).getCacheStrategy(query2);
+    final CacheStrategy<ResultRow, Object, GroupByQuery> strategy2 =
+        new GroupByQueryQueryToolChest(null, null).getCacheStrategy(query2, mapper);
 
     Assert.assertTrue(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
     Assert.assertFalse(Arrays.equals(
@@ -255,13 +255,12 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
         .setHavingSpec(new GreaterThanHavingSpec(QueryRunnerTestHelper.UNIQUE_METRIC, 10))
         .build();
 
-    final CacheStrategy<ResultRow, Object, GroupByQuery> strategy1 = new GroupByQueryQueryToolChest(
-        null
-    ).getCacheStrategy(query1);
+    final ObjectMapper mapper = TestHelper.makeJsonMapper();
+    final CacheStrategy<ResultRow, Object, GroupByQuery> strategy1 =
+        new GroupByQueryQueryToolChest(null, null).getCacheStrategy(query1, mapper);
 
-    final CacheStrategy<ResultRow, Object, GroupByQuery> strategy2 = new GroupByQueryQueryToolChest(
-        null
-    ).getCacheStrategy(query2);
+    final CacheStrategy<ResultRow, Object, GroupByQuery> strategy2 =
+        new GroupByQueryQueryToolChest(null, null).getCacheStrategy(query2, mapper);
 
     Assert.assertTrue(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
     Assert.assertFalse(Arrays.equals(
@@ -341,13 +340,12 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
         .setHavingSpec(andHavingSpec2)
         .build();
 
-    final CacheStrategy<ResultRow, Object, GroupByQuery> strategy1 = new GroupByQueryQueryToolChest(
-        null
-    ).getCacheStrategy(query1);
+    final ObjectMapper mapper = TestHelper.makeJsonMapper();
+    final CacheStrategy<ResultRow, Object, GroupByQuery> strategy1 =
+        new GroupByQueryQueryToolChest(null, null).getCacheStrategy(query1, mapper);
 
-    final CacheStrategy<ResultRow, Object, GroupByQuery> strategy2 = new GroupByQueryQueryToolChest(
-        null
-    ).getCacheStrategy(query2);
+    final CacheStrategy<ResultRow, Object, GroupByQuery> strategy2 =
+        new GroupByQueryQueryToolChest(null, null).getCacheStrategy(query2, mapper);
 
     Assert.assertTrue(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
     Assert.assertFalse(Arrays.equals(
@@ -434,13 +432,12 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
         .setHavingSpec(havingSpec2)
         .build();
 
-    final CacheStrategy<ResultRow, Object, GroupByQuery> strategy1 = new GroupByQueryQueryToolChest(
-        null
-    ).getCacheStrategy(query1);
+    final ObjectMapper mapper = TestHelper.makeJsonMapper();
+    final CacheStrategy<ResultRow, Object, GroupByQuery> strategy1 =
+        new GroupByQueryQueryToolChest(null, null).getCacheStrategy(query1, mapper);
 
-    final CacheStrategy<ResultRow, Object, GroupByQuery> strategy2 = new GroupByQueryQueryToolChest(
-        null
-    ).getCacheStrategy(query2);
+    final CacheStrategy<ResultRow, Object, GroupByQuery> strategy2 =
+        new GroupByQueryQueryToolChest(null, null).getCacheStrategy(query2, mapper);
 
     Assert.assertTrue(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
     Assert.assertFalse(Arrays.equals(
@@ -499,13 +496,12 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
         ))
         .build();
 
-    final CacheStrategy<ResultRow, Object, GroupByQuery> strategy1 = new GroupByQueryQueryToolChest(
-        null
-    ).getCacheStrategy(query1);
+    final ObjectMapper mapper = TestHelper.makeJsonMapper();
+    final CacheStrategy<ResultRow, Object, GroupByQuery> strategy1 =
+        new GroupByQueryQueryToolChest(null, null).getCacheStrategy(query1, mapper);
 
-    final CacheStrategy<ResultRow, Object, GroupByQuery> strategy2 = new GroupByQueryQueryToolChest(
-        null
-    ).getCacheStrategy(query2);
+    final CacheStrategy<ResultRow, Object, GroupByQuery> strategy2 =
+        new GroupByQueryQueryToolChest(null, null).getCacheStrategy(query2, mapper);
 
     Assert.assertTrue(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
     Assert.assertFalse(Arrays.equals(
@@ -521,6 +517,48 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
     doTestCacheStrategy(ColumnType.FLOAT, 2.1f);
     doTestCacheStrategy(ColumnType.DOUBLE, 2.1d);
     doTestCacheStrategy(ColumnType.LONG, 2L);
+  }
+
+  @Test
+  public void testComplexDimensionCacheStrategy() throws IOException
+  {
+    final GroupByQuery query1 = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimensions(ImmutableList.of(
+            new DefaultDimensionSpec(
+                "test",
+                "test",
+                ColumnType.ofComplex(SerializablePairLongStringComplexMetricSerde.TYPE_NAME)
+            )
+        ))
+        .setAggregatorSpecs(QueryRunnerTestHelper.ROWS_COUNT)
+        .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
+        .build();
+
+    ObjectMapper objectMapper = TestHelper.makeJsonMapper();
+
+    CacheStrategy<ResultRow, Object, GroupByQuery> strategy =
+        new GroupByQueryQueryToolChest(null, null).getCacheStrategy(query1, objectMapper);
+
+    // test timestamps that result in integer size millis
+    final ResultRow result1 = ResultRow.of(
+        123L,
+        new SerializablePairLongString(123L, "abc"),
+        1
+    );
+
+    Object preparedValue = strategy.prepareForSegmentLevelCache().apply(result1);
+
+    Object fromCacheValue = objectMapper.readValue(
+        objectMapper.writeValueAsBytes(preparedValue),
+        strategy.getCacheObjectClazz()
+    );
+
+    ResultRow fromCacheResult = strategy.pullFromSegmentLevelCache().apply(fromCacheValue);
+
+    Assert.assertEquals(result1, fromCacheResult);
   }
 
   @Test
@@ -549,10 +587,9 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
         .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
         .build();
 
+    final ObjectMapper mapper = TestHelper.makeJsonMapper();
     CacheStrategy<ResultRow, Object, GroupByQuery> strategy =
-        new GroupByQueryQueryToolChest(null).getCacheStrategy(
-            query1
-        );
+        new GroupByQueryQueryToolChest(null, null).getCacheStrategy(query1, mapper);
 
     // test timestamps that result in integer size millis
     final ResultRow result1 = ResultRow.of(
@@ -589,7 +626,7 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
         .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
         .build();
 
-    final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(null);
+    final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(null, null);
 
     final ObjectMapper objectMapper = TestHelper.makeJsonMapper();
     final ObjectMapper arraysObjectMapper = toolChest.decorateObjectMapper(
@@ -660,6 +697,87 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
   }
 
   @Test
+  public void testResultSerdeWithComplexDimension() throws Exception
+  {
+    final GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
+        .setDimensions(ImmutableList.of(
+            DefaultDimensionSpec.of("test"),
+            new DefaultDimensionSpec(
+                "test2",
+                "test2",
+                ColumnType.ofComplex(SerializablePairLongStringComplexMetricSerde.TYPE_NAME)
+            )
+        ))
+        .setAggregatorSpecs(Collections.singletonList(QueryRunnerTestHelper.ROWS_COUNT))
+        .setPostAggregatorSpecs(Collections.singletonList(new ConstantPostAggregator("post", 10)))
+        .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
+        .build();
+
+    final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(null, null);
+
+    final ObjectMapper objectMapper = TestHelper.makeJsonMapper();
+    final ObjectMapper arraysObjectMapper = toolChest.decorateObjectMapper(
+        objectMapper,
+        query.withOverriddenContext(ImmutableMap.of(GroupByQueryConfig.CTX_KEY_ARRAY_RESULT_ROWS, true))
+    );
+    final ObjectMapper mapsObjectMapper = toolChest.decorateObjectMapper(
+        objectMapper,
+        query.withOverriddenContext(ImmutableMap.of(GroupByQueryConfig.CTX_KEY_ARRAY_RESULT_ROWS, false))
+    );
+
+    final Object[] rowObjects = {
+        DateTimes.of("2000").getMillis(),
+        "foo",
+        new SerializablePairLongString(1L, "test"),
+        100,
+        10.0
+    };
+    final ResultRow resultRow = ResultRow.of(rowObjects);
+
+    // There are no tests with the standard mapper since it cannot convert the generic deserialized type for Pair class
+    // into the Pair class
+
+    Assert.assertEquals(
+        "array mapper reads arrays",
+        resultRow,
+        arraysObjectMapper.readValue(
+            arraysObjectMapper.writeValueAsBytes(resultRow),
+            ResultRow.class
+        )
+    );
+
+    Assert.assertEquals(
+        "array mapper reads arrays (2)",
+        resultRow,
+        arraysObjectMapper.readValue(
+            StringUtils.format("[%s, \"foo\", {\"lhs\":1,\"rhs\":\"test\"}, 100, 10.0]", DateTimes.of("2000").getMillis()),
+            ResultRow.class
+        )
+    );
+
+    Assert.assertEquals(
+        "map mapper reads arrays",
+        resultRow,
+        mapsObjectMapper.readValue(
+            arraysObjectMapper.writeValueAsBytes(resultRow),
+            ResultRow.class
+        )
+    );
+
+    Assert.assertEquals(
+        "map mapper reads maps",
+        resultRow,
+        mapsObjectMapper.readValue(
+            mapsObjectMapper.writeValueAsBytes(resultRow),
+            ResultRow.class
+        )
+    );
+  }
+
+  @Test
   public void testResultSerdeIntermediateResultAsMapCompat() throws Exception
   {
     final GroupByQuery query = GroupByQuery
@@ -682,6 +800,8 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
             return true;
           }
         },
+        null,
+        null,
         null
     );
 
@@ -798,7 +918,7 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
                     .add("uniques", null)
                     .add("const", ColumnType.LONG)
                     .build(),
-        new GroupByQueryQueryToolChest(null).resultArraySignature(query)
+        new GroupByQueryQueryToolChest(null, null).resultArraySignature(query)
     );
   }
 
@@ -823,7 +943,7 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
                     .add("uniques", null)
                     .add("const", ColumnType.LONG)
                     .build(),
-        new GroupByQueryQueryToolChest(null).resultArraySignature(query)
+        new GroupByQueryQueryToolChest(null, null).resultArraySignature(query)
     );
   }
 
@@ -844,7 +964,7 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
             new Object[]{"foo", 1L, 2L, 3L, 1L},
             new Object[]{"bar", 4L, 5L, 6L, 1L}
         ),
-        new GroupByQueryQueryToolChest(null).resultsAsArrays(
+        new GroupByQueryQueryToolChest(null, null).resultsAsArrays(
             query,
             Sequences.simple(
                 ImmutableList.of(
@@ -873,7 +993,7 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
             new Object[]{DateTimes.of("2000-01-01").getMillis(), "foo", 1L, 2L, 3L, 1L},
             new Object[]{DateTimes.of("2000-01-02").getMillis(), "bar", 4L, 5L, 6L, 1L}
         ),
-        new GroupByQueryQueryToolChest(null).resultsAsArrays(
+        new GroupByQueryQueryToolChest(null, null).resultsAsArrays(
             query,
             Sequences.simple(
                 ImmutableList.of(
@@ -889,7 +1009,7 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
   public void testCanPerformSubqueryOnGroupBys()
   {
     Assert.assertTrue(
-        new GroupByQueryQueryToolChest(null).canPerformSubquery(
+        new GroupByQueryQueryToolChest(null, null).canPerformSubquery(
             new GroupByQuery.Builder()
                 .setDataSource(
                     new QueryDataSource(
@@ -911,7 +1031,7 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
   public void testCanPerformSubqueryOnTimeseries()
   {
     Assert.assertFalse(
-        new GroupByQueryQueryToolChest(null).canPerformSubquery(
+        new GroupByQueryQueryToolChest(null, null).canPerformSubquery(
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
                   .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
@@ -925,7 +1045,7 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
   public void testCanPerformSubqueryOnGroupByOfTimeseries()
   {
     Assert.assertFalse(
-        new GroupByQueryQueryToolChest(null).canPerformSubquery(
+        new GroupByQueryQueryToolChest(null, null).canPerformSubquery(
             new GroupByQuery.Builder()
                 .setDataSource(
                     new QueryDataSource(
@@ -997,10 +1117,9 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
         .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
         .build();
 
+    final ObjectMapper mapper = TestHelper.makeJsonMapper();
     CacheStrategy<ResultRow, Object, GroupByQuery> strategy =
-        new GroupByQueryQueryToolChest(null).getCacheStrategy(
-            query1
-        );
+        new GroupByQueryQueryToolChest(null, null).getCacheStrategy(query1, mapper);
 
     // test timestamps that result in integer size millis
     final ResultRow result1 = ResultRow.of(
@@ -1092,13 +1211,12 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
         .setGranularity(QueryRunnerTestHelper.DAY_GRAN)
         .build();
 
-    final CacheStrategy<ResultRow, Object, GroupByQuery> strategy1 = new GroupByQueryQueryToolChest(
-        null
-    ).getCacheStrategy(query1);
+    final ObjectMapper mapper = TestHelper.makeJsonMapper();
+    final CacheStrategy<ResultRow, Object, GroupByQuery> strategy1 =
+        new GroupByQueryQueryToolChest(null, null).getCacheStrategy(query1, mapper);
 
-    final CacheStrategy<ResultRow, Object, GroupByQuery> strategy2 = new GroupByQueryQueryToolChest(
-        null
-    ).getCacheStrategy(query2);
+    final CacheStrategy<ResultRow, Object, GroupByQuery> strategy2 =
+        new GroupByQueryQueryToolChest(null, null).getCacheStrategy(query2, mapper);
 
     Assert.assertFalse(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
     Assert.assertFalse(Arrays.equals(
@@ -1130,13 +1248,12 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
         .overrideContext(ImmutableMap.of(GroupByQueryConfig.CTX_KEY_APPLY_LIMIT_PUSH_DOWN, "false"))
         .build();
 
-    final CacheStrategy<ResultRow, Object, GroupByQuery> strategy1 = new GroupByQueryQueryToolChest(
-        null
-    ).getCacheStrategy(query1);
+    final ObjectMapper mapper = TestHelper.makeJsonMapper();
+    final CacheStrategy<ResultRow, Object, GroupByQuery> strategy1 =
+        new GroupByQueryQueryToolChest(null, null).getCacheStrategy(query1, mapper);
 
-    final CacheStrategy<ResultRow, Object, GroupByQuery> strategy2 = new GroupByQueryQueryToolChest(
-        null
-    ).getCacheStrategy(query2);
+    final CacheStrategy<ResultRow, Object, GroupByQuery> strategy2 =
+        new GroupByQueryQueryToolChest(null, null).getCacheStrategy(query2, mapper);
 
     Assert.assertFalse(Arrays.equals(strategy1.computeCacheKey(query1), strategy2.computeCacheKey(query2)));
     Assert.assertTrue(
@@ -1175,25 +1292,25 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
     final Supplier<ByteBuffer> bufferSupplier =
         () -> ByteBuffer.allocateDirect(processingConfig.intermediateComputeSizeBytes());
 
-    final NonBlockingPool<ByteBuffer> bufferPool = new StupidPool<>(
-        "GroupByQueryEngine-bufferPool",
-        bufferSupplier
-    );
     final BlockingPool<ByteBuffer> mergeBufferPool = new DefaultBlockingPool<>(
         bufferSupplier,
         processingConfig.getNumMergeBuffers()
     );
+    final GroupByStatsProvider groupByStatsProvider = new GroupByStatsProvider();
+    final GroupByResourcesReservationPool groupByResourcesReservationPool =
+        new GroupByResourcesReservationPool(mergeBufferPool, queryConfig);
     final GroupingEngine groupingEngine = new GroupingEngine(
         processingConfig,
         queryConfigSupplier,
-        bufferPool,
-        mergeBufferPool,
+        groupByResourcesReservationPool,
         TestHelper.makeJsonMapper(),
         new ObjectMapper(new SmileFactory()),
-        QueryRunnerTestHelper.NOOP_QUERYWATCHER
+        QueryRunnerTestHelper.NOOP_QUERYWATCHER,
+        groupByStatsProvider
     );
-    final GroupByQueryQueryToolChest queryToolChest = new GroupByQueryQueryToolChest(groupingEngine);
-    CacheStrategy<ResultRow, Object, GroupByQuery> cacheStrategy = queryToolChest.getCacheStrategy(query);
+    final GroupByQueryQueryToolChest queryToolChest = new GroupByQueryQueryToolChest(groupingEngine, groupByResourcesReservationPool);
+    final ObjectMapper mapper = TestHelper.makeJsonMapper();
+    CacheStrategy<ResultRow, Object, GroupByQuery> cacheStrategy = queryToolChest.getCacheStrategy(query, mapper);
     Assert.assertTrue(
         "result level cache on broker server for GroupByStrategyV2 should be enabled",
         cacheStrategy.isCacheable(query, false, false)

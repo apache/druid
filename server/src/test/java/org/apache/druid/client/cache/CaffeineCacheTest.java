@@ -44,12 +44,11 @@ import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.ForkJoinPool;
 
-public class CaffeineCacheTest
+public class CaffeineCacheTest extends CacheTestBase<CaffeineCache>
 {
   private static final byte[] HI = StringUtils.toUtf8("hiiiiiiiiiiiiiiiiiii");
   private static final byte[] HO = StringUtils.toUtf8("hooooooooooooooooooo");
 
-  private CaffeineCache cache;
   private final CaffeineCacheConfig cacheConfig = new CaffeineCacheConfig()
   {
     @Override

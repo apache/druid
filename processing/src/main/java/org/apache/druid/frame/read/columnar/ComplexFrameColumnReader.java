@@ -124,6 +124,7 @@ public class ComplexFrameColumnReader implements FrameColumnReader
   {
     private final Frame frame;
     private final ComplexMetricSerde serde;
+    private final Class<?> clazz;
     private final Memory memory;
     private final long startOfOffsetSection;
     private final long startOfDataSection;
@@ -138,6 +139,8 @@ public class ComplexFrameColumnReader implements FrameColumnReader
     {
       this.frame = frame;
       this.serde = serde;
+      //noinspection deprecation
+      this.clazz = serde.getObjectStrategy().getClazz();
       this.memory = memory;
       this.startOfOffsetSection = startOfOffsetSection;
       this.startOfDataSection = startOfDataSection;
@@ -146,7 +149,7 @@ public class ComplexFrameColumnReader implements FrameColumnReader
     @Override
     public ColumnValueSelector<?> makeColumnValueSelector(final ReadableOffset offset)
     {
-      return new ObjectColumnSelector<Object>()
+      return new ObjectColumnSelector<>()
       {
         @Nullable
         @Override
@@ -158,7 +161,7 @@ public class ComplexFrameColumnReader implements FrameColumnReader
         @Override
         public Class<?> classOfObject()
         {
-          return serde.getExtractor().extractedClass();
+          return clazz;
         }
 
         @Override
@@ -182,6 +185,7 @@ public class ComplexFrameColumnReader implements FrameColumnReader
     }
 
     @Override
+    @Nullable
     public Object getRowValue(int rowNum)
     {
       // Need bounds checking, since getObjectForPhysicalRow doesn't do it.
