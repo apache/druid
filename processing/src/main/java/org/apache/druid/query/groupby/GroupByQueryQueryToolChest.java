@@ -47,6 +47,7 @@ import org.apache.druid.query.DataSource;
 import org.apache.druid.query.FrameSignaturePair;
 import org.apache.druid.query.IterableRowsCursorHelper;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryResourceId;
@@ -270,6 +271,9 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
         }
         if (((QueryDataSource) dataSource).getQuery().getContext() != null) {
           subqueryContext.putAll(((QueryDataSource) dataSource).getQuery().getContext());
+        }
+        if (canPerformSubquery(((QueryDataSource) dataSource).getQuery())) {
+          subqueryContext.put(QueryContexts.FINALIZE_KEY, true);
         }
         subqueryContext.put(GroupByQuery.CTX_KEY_SORT_BY_DIMS_FIRST, false);
         subquery = (GroupByQuery) ((QueryDataSource) dataSource).getQuery().withOverriddenContext(subqueryContext);
