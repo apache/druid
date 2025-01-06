@@ -363,7 +363,7 @@ public class HttpLoadQueuePeonTest
         return (ListenableFuture<Final>) Futures.immediateFuture(
             new ByteArrayInputStream(
                 MAPPER
-                    .writerWithType(HttpLoadQueuePeon.RESPONSE_ENTITY_TYPE_REF)
+                    .writerFor(HttpLoadQueuePeon.RESPONSE_ENTITY_TYPE_REF)
                     .writeValueAsBytes(statuses)
             )
         );
