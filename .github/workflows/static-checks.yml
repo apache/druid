@@ -71,8 +71,8 @@ jobs:
       - name: Upload extracted cache files as artifact
         uses: actions/upload-artifact@master
         with:
-          name: cache.tzst
-          path: /home/runner/work/_temp/6b843275-a174-4b1b-a47c-49453c7b976b/cache.tzst
+          name: temp-dir
+          path: /home/runner/work/_temp/
 
       - name: packaging check
         run: |
