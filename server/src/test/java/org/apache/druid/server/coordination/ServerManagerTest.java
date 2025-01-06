@@ -588,7 +588,7 @@ public class ServerManagerTest
     expectedException.expect(QueryUnsupportedException.class);
     expectedException.expectMessage("Unknown query type");
     serverManager.getQueryRunnerForSegments(
-        new BaseQuery<Object>(
+        new BaseQuery<>(
             new TableDataSource("test"),
             new MultipleSpecificSegmentSpec(descriptors),
             new HashMap<>()
@@ -864,9 +864,7 @@ public class ServerManagerTest
     @Override
     public TypeReference<T> getResultTypeReference()
     {
-      return new TypeReference<T>()
-      {
-      };
+      return new TypeReference<>() {};
     }
   }
 
@@ -934,7 +932,7 @@ public class ServerManagerTest
       }
 
       final Yielder<OutType> baseYielder = baseSequence.toYielder(initValue, accumulator);
-      return new Yielder<OutType>()
+      return new Yielder<>()
       {
         @Override
         public OutType get()

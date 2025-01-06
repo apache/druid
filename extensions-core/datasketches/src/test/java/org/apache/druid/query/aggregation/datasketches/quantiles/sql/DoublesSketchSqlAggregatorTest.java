@@ -27,6 +27,7 @@ import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
@@ -390,7 +391,8 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                         JoinType.INNER,
                         null,
                         TestExprMacroTable.INSTANCE,
-                        null
+                        null,
+                        JoinAlgorithm.BROADCAST
                     )
                 )
                 .intervals(querySegmentSpec(Intervals.ETERNITY))

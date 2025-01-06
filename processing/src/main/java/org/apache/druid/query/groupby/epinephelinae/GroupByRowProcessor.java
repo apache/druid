@@ -119,7 +119,7 @@ public class GroupByRowProcessor
         subquery,
         querySpecificConfig,
         processingConfig,
-        new Supplier<ByteBuffer>()
+        new Supplier<>()
         {
           @Override
           public ByteBuffer get()

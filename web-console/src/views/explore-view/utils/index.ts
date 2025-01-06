@@ -17,7 +17,6 @@
  */
 
 export * from './date-format';
-export * from './duration';
 export * from './filter-pattern-helpers';
 export * from './general';
 export * from './get-auto-granularity';
@@ -25,6 +24,5 @@ export * from './known-aggregations';
 export * from './max-time-for-table';
 export * from './misc';
 export * from './query-log';
-export * from './snap-to-granularity';
 export * from './table-query';
 export * from './time-manipulation';

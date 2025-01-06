@@ -57,8 +57,8 @@ public class S3StorageConnector extends ChunkingStorageConnector<GetObjectReques
   private final ServerSideEncryptingAmazonS3 s3Client;
   private final S3UploadManager s3UploadManager;
 
-  private static final String DELIM = "/";
-  private static final Joiner JOINER = Joiner.on(DELIM).skipNulls();
+  static final String DELIM = "/";
+  static final Joiner JOINER = Joiner.on(DELIM).skipNulls();
   private static final int MAX_NUMBER_OF_LISTINGS = 1000;
 
   public S3StorageConnector(S3OutputConfig config, ServerSideEncryptingAmazonS3 serverSideEncryptingAmazonS3, S3UploadManager s3UploadManager)
@@ -121,7 +121,7 @@ public class S3StorageConnector extends ChunkingStorageConnector<GetObjectReques
     builder.maxRetry(config.getMaxRetry());
     builder.retryCondition(S3Utils.S3RETRY);
     builder.objectSupplier((start, end) -> new GetObjectRequest(config.getBucket(), objectPath(path)).withRange(start, end - 1));
-    builder.objectOpenFunction(new ObjectOpenFunction<GetObjectRequest>()
+    builder.objectOpenFunction(new ObjectOpenFunction<>()
     {
       @Override
       public InputStream open(GetObjectRequest object)

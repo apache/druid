@@ -89,12 +89,8 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
 {
   private static final byte GROUPBY_QUERY = 0x14;
   private static final TypeReference<Object> OBJECT_TYPE_REFERENCE =
-      new TypeReference<Object>()
-      {
-      };
-  private static final TypeReference<ResultRow> TYPE_REFERENCE = new TypeReference<ResultRow>()
-  {
-  };
+      new TypeReference<>() {};
+  private static final TypeReference<ResultRow> TYPE_REFERENCE = new TypeReference<>() {};
 
   private final GroupingEngine groupingEngine;
   private final GroupByQueryConfig queryConfig;
@@ -501,7 +497,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
   public QueryRunner<ResultRow> preMergeQueryDecoration(final QueryRunner<ResultRow> runner)
   {
     return new SubqueryQueryRunner<>(
-        new QueryRunner<ResultRow>()
+        new QueryRunner<>()
         {
           @Override
           public Sequence<ResultRow> run(QueryPlus<ResultRow> queryPlus, ResponseContext responseContext)
@@ -556,7 +552,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
     }
     final Class<?>[] dimensionClasses = createDimensionClasses(query);
 
-    return new CacheStrategy<ResultRow, Object, GroupByQuery>()
+    return new CacheStrategy<>()
     {
       private static final byte CACHE_STRATEGY_VERSION = 0x1;
       private final List<AggregatorFactory> aggs = query.getAggregatorSpecs();
@@ -619,7 +615,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
       {
         final boolean resultRowHasTimestamp = query.getResultRowHasTimestamp();
 
-        return new Function<ResultRow, Object>()
+        return new Function<>()
         {
           @Override
           public Object apply(ResultRow resultRow)
@@ -657,7 +653,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
         final int aggregatorStart = query.getResultRowAggregatorStart();
         final int postAggregatorStart = query.getResultRowPostAggregatorStart();
 
-        return new Function<Object, ResultRow>()
+        return new Function<>()
         {
           private final Granularity granularity = query.getGranularity();
 

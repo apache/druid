@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableSet;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.segment.column.Types;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
@@ -206,9 +205,6 @@ abstract class BinaryBooleanOpExprBase extends BinaryOpExprBase
         result = evalDouble(leftVal.asDouble(), rightVal.asDouble());
         break;
     }
-    if (!ExpressionProcessing.useStrictBooleans() && !type.is(ExprType.STRING) && !type.isArray()) {
-      return ExprEval.ofBoolean(result, type);
-    }
     return ExprEval.ofLongBoolean(result);
   }
 
@@ -224,11 +220,7 @@ abstract class BinaryBooleanOpExprBase extends BinaryOpExprBase
   @Override
   public ExpressionType getOutputType(InputBindingInspector inspector)
   {
-    ExpressionType implicitCast = super.getOutputType(inspector);
-    if (ExpressionProcessing.useStrictBooleans() || Types.isNullOr(implicitCast, ExprType.STRING)) {
-      return ExpressionType.LONG;
-    }
-    return implicitCast;
+    return ExpressionType.LONG;
   }
 
   @Override

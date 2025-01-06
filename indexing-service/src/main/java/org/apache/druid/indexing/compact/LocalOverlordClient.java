@@ -25,33 +25,25 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
 import org.apache.druid.client.indexing.IndexingTotalWorkerCapacityInfo;
-import org.apache.druid.client.indexing.IndexingWorkerInfo;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
-import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
-import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.common.task.CompactionTask;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.indexing.overlord.TaskQueryTool;
 import org.apache.druid.indexing.overlord.TaskQueue;
 import org.apache.druid.indexing.overlord.http.TotalWorkerCapacityResponse;
-import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.metadata.LockFilterPolicy;
-import org.apache.druid.rpc.ServiceRetryPolicy;
-import org.apache.druid.rpc.indexing.OverlordClient;
-import org.apache.druid.server.compaction.CompactionProgressResponse;
-import org.apache.druid.server.compaction.CompactionStatusResponse;
+import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
-import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -62,7 +54,7 @@ import java.util.function.Supplier;
  * task related info. This client simply redirects all queries to the
  * {@link TaskQueryTool} and all updates to the {@link TaskQueue}.
  */
-class LocalOverlordClient implements OverlordClient
+class LocalOverlordClient extends NoopOverlordClient
 {
   private static final Logger log = new Logger(LocalOverlordClient.class);
 
@@ -198,67 +190,5 @@ class LocalOverlordClient implements OverlordClient
           taskPayload
       );
     }
-  }
-
-  // Unsupported methods as these are not used by the CompactionScheduler / CompactSegments duty
-
-  @Override
-  public ListenableFuture<URI> findCurrentLeader()
-  {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public ListenableFuture<TaskStatusResponse> taskStatus(String taskId)
-  {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public ListenableFuture<TaskReport.ReportMap> taskReportAsMap(String taskId)
-  {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public ListenableFuture<CloseableIterator<SupervisorStatus>> supervisorStatuses()
-  {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public ListenableFuture<Integer> killPendingSegments(String dataSource, Interval interval)
-  {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public ListenableFuture<List<IndexingWorkerInfo>> getWorkers()
-  {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public ListenableFuture<CompactionStatusResponse> getCompactionSnapshots(@Nullable String dataSource)
-  {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public ListenableFuture<CompactionProgressResponse> getBytesAwaitingCompaction(String dataSource)
-  {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public ListenableFuture<Boolean> isCompactionSupervisorEnabled()
-  {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public OverlordClient withRetryPolicy(ServiceRetryPolicy retryPolicy)
-  {
-    return this;
   }
 }

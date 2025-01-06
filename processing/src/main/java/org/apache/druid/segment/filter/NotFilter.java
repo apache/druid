@@ -21,7 +21,6 @@ package org.apache.druid.segment.filter;
 
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.query.filter.Filter;
@@ -45,11 +44,10 @@ import java.util.Set;
 /**
  * Nice filter you have there... NOT!
  *
- * If {@link ExpressionProcessing#useStrictBooleans()} and {@link NullHandling#sqlCompatible()} are both true, this
- * filter inverts the {@code includeUnknown} flag to properly map Druids native two-valued logic (true, false) to SQL
- * three-valued logic (true, false, unknown). At the top level, this flag is always passed in as 'false', and is only
- * flipped by this filter. Other logical filters ({@link AndFilter} and {@link OrFilter}) propagate the value of
- * {@code includeUnknown} to their children.
+ * If {@link NullHandling#sqlCompatible()} is true, this filter inverts the {@code includeUnknown} flag to properly
+ * map Druids native two-valued logic (true, false) to SQL three-valued logic (true, false, unknown). At the top level,
+ * this flag is always passed in as 'false', and is only flipped by this filter. Other logical filters
+ * ({@link AndFilter} and {@link OrFilter}) propagate the value of {@code includeUnknown} to their children.
  *
  * For example, if the base filter is equality, by default value matchers and indexes only return true for the rows
  * that are equal to the value. When wrapped in a not filter, the not filter indicates that the equality matchers and

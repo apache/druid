@@ -60,7 +60,7 @@ public class DistinctCountTopNQueryTest extends InitializedNullHandlingTest
   {
     pool = new CloseableStupidPool<>(
         "TopNQueryEngine-bufferPool",
-        new Supplier<ByteBuffer>()
+        new Supplier<>()
         {
           @Override
           public ByteBuffer get()

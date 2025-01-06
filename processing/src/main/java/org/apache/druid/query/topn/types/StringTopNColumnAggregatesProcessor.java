@@ -150,27 +150,29 @@ public class StringTopNColumnAggregatesProcessor implements TopNColumnAggregates
   )
   {
     long processedRows = 0;
-    while (!cursor.isDone()) {
-      final IndexedInts dimValues = selector.getRow();
-      for (int i = 0, size = dimValues.size(); i < size; ++i) {
-        final int dimIndex = dimValues.get(i);
-        Aggregator[] aggs = rowSelector[dimIndex];
-        if (aggs == null) {
-          final Object key = dimensionValueConverter.apply(selector.lookupName(dimIndex));
-          aggs = aggregatesStore.computeIfAbsent(
-              key,
-              k -> BaseTopNAlgorithm.makeAggregators(cursor, query.getAggregatorSpecs())
-          );
-          rowSelector[dimIndex] = aggs;
-        }
+    if (granularizer.currentOffsetWithinBucket()) {
+      while (!cursor.isDone()) {
+        final IndexedInts dimValues = selector.getRow();
+        for (int i = 0, size = dimValues.size(); i < size; ++i) {
+          final int dimIndex = dimValues.get(i);
+          Aggregator[] aggs = rowSelector[dimIndex];
+          if (aggs == null) {
+            final Object key = dimensionValueConverter.apply(selector.lookupName(dimIndex));
+            aggs = aggregatesStore.computeIfAbsent(
+                key,
+                k -> BaseTopNAlgorithm.makeAggregators(cursor, query.getAggregatorSpecs())
+            );
+            rowSelector[dimIndex] = aggs;
+          }
 
-        for (Aggregator aggregator : aggs) {
-          aggregator.aggregate();
+          for (Aggregator aggregator : aggs) {
+            aggregator.aggregate();
+          }
         }
-      }
-      processedRows++;
-      if (!granularizer.advanceCursorWithinBucket()) {
-        break;
+        processedRows++;
+        if (!granularizer.advanceCursorWithinBucket()) {
+          break;
+        }
       }
     }
     return processedRows;
@@ -192,22 +194,24 @@ public class StringTopNColumnAggregatesProcessor implements TopNColumnAggregates
   )
   {
     long processedRows = 0;
-    while (!cursor.isDone()) {
-      final IndexedInts dimValues = selector.getRow();
-      for (int i = 0, size = dimValues.size(); i < size; ++i) {
-        final int dimIndex = dimValues.get(i);
-        final Object key = dimensionValueConverter.apply(selector.lookupName(dimIndex));
-        Aggregator[] aggs = aggregatesStore.computeIfAbsent(
-            key,
-            k -> BaseTopNAlgorithm.makeAggregators(cursor, query.getAggregatorSpecs())
-        );
-        for (Aggregator aggregator : aggs) {
-          aggregator.aggregate();
+    if (granularizer.currentOffsetWithinBucket()) {
+      while (!cursor.isDone()) {
+        final IndexedInts dimValues = selector.getRow();
+        for (int i = 0, size = dimValues.size(); i < size; ++i) {
+          final int dimIndex = dimValues.get(i);
+          final Object key = dimensionValueConverter.apply(selector.lookupName(dimIndex));
+          Aggregator[] aggs = aggregatesStore.computeIfAbsent(
+              key,
+              k -> BaseTopNAlgorithm.makeAggregators(cursor, query.getAggregatorSpecs())
+          );
+          for (Aggregator aggregator : aggs) {
+            aggregator.aggregate();
+          }
         }
-      }
-      processedRows++;
-      if (!granularizer.advanceCursorWithinBucket()) {
-        break;
+        processedRows++;
+        if (!granularizer.advanceCursorWithinBucket()) {
+          break;
+        }
       }
     }
     return processedRows;

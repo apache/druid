@@ -24,7 +24,7 @@ import { Loader, ShowValue } from '../../components';
 import type { CompactionConfig } from '../../druid-models';
 import { useQueryManager } from '../../hooks';
 import { Api } from '../../singletons';
-import { formatInteger, formatPercent } from '../../utils';
+import { formatInteger, formatPercent, getApiArray } from '../../utils';
 import { DiffDialog } from '../diff-dialog/diff-dialog';
 
 import './compaction-history-dialog.scss';
@@ -65,11 +65,10 @@ export const CompactionHistoryDialog = React.memo(function CompactionHistoryDial
     initQuery: datasource,
     processQuery: async (datasource, cancelToken) => {
       try {
-        const resp = await Api.instance.get(
+        return await getApiArray<CompactionHistoryEntry>(
           `/druid/coordinator/v1/config/compaction/${Api.encodePath(datasource)}/history?count=20`,
-          { cancelToken },
+          cancelToken,
         );
-        return resp.data;
       } catch (e) {
         if (e.response?.status === 404) return [];
         throw e;

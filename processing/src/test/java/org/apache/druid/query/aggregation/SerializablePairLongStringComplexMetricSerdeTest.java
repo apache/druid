@@ -205,7 +205,7 @@ public class SerializablePairLongStringComplexMetricSerdeTest
 
     final AtomicReference<SerializablePairLongString> reference = new AtomicReference<>(null);
     ColumnValueSelector<SerializablePairLongString> valueSelector =
-        new SingleObjectColumnValueSelector<SerializablePairLongString>(
+        new SingleObjectColumnValueSelector<>(
             SerializablePairLongString.class
         )
         {

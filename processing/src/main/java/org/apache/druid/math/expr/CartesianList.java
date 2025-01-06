@@ -51,7 +51,7 @@ public final class CartesianList<E> extends AbstractList<List<E>> implements Ran
       }
       axesBuilder.add(new ArrayList<>(list));
     }
-    return new CartesianList<E>(axesBuilder);
+    return new CartesianList<>(axesBuilder);
   }
 
   CartesianList(List<List<? extends E>> axes)
@@ -103,7 +103,7 @@ public final class CartesianList<E> extends AbstractList<List<E>> implements Ran
   public List<E> get(final int index)
   {
     Preconditions.checkElementIndex(index, size());
-    return new AbstractList<E>()
+    return new AbstractList<>()
     {
       @Override
       public int size()

@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { QueryResult } from '@druid-toolkit/query';
+import { QueryResult } from 'druid-query-toolkit';
 import * as JSONBig from 'json-bigint-native';
 
 export function bootstrapJsonParse() {

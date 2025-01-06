@@ -104,9 +104,7 @@ public class LookupCoordinatorManager
   private static final String LOOKUP_UPDATE_REQUEST_PATH = LOOKUP_BASE_REQUEST_PATH + "/" + "updates";
 
   private static final TypeReference<LookupsState<LookupExtractorFactoryMapContainer>> LOOKUPS_STATE_TYPE_REFERENCE =
-      new TypeReference<LookupsState<LookupExtractorFactoryMapContainer>>()
-      {
-      };
+      new TypeReference<>() {};
 
   private static final EmittingLogger LOG = new EmittingLogger(LookupCoordinatorManager.class);
 
@@ -321,7 +319,7 @@ public class LookupCoordinatorManager
     Preconditions.checkState(lifecycleLock.awaitStarted(5, TimeUnit.SECONDS), "not started");
     return Collections2.transform(
         lookupNodeDiscovery.getNodesInTier(tier),
-        new Function<HostAndPortWithScheme, HostAndPort>()
+        new Function<>()
         {
           @Override
           public HostAndPort apply(HostAndPortWithScheme input)
@@ -490,9 +488,7 @@ public class LookupCoordinatorManager
     //Note: this call is idempotent, so multiple start() would not cause any problems.
     lookupMapConfigRef = configManager.watch(
         LOOKUP_CONFIG_KEY,
-        new TypeReference<Map<String, Map<String, LookupExtractorFactoryMapContainer>>>()
-        {
-        },
+        new TypeReference<>() {},
         null
     );
 

@@ -28,6 +28,7 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.avatica.remote.TypedValue;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.http.ClientSqlQuery;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -35,6 +36,11 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+/**
+ * See {@link ClientSqlQuery} for the equivalent POJO class used on the client side to interact with the Broker.
+ * Note: The fields {@link #resultFormat} and {@link #parameters} rely on Calcite data types,
+ * preventing this class from being moved to the processing module for reuse.
+ */
 public class SqlQuery
 {
   public static List<TypedValue> getParameterList(List<SqlParameter> parameters)

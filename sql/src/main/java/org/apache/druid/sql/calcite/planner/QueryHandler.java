@@ -62,6 +62,8 @@ import org.apache.druid.java.util.common.guava.BaseSequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.explain.ExplainAttributes;
 import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
@@ -341,7 +343,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
                   @Override
                   public QueryHandler.EnumeratorIterator<Object[]> make()
                   {
-                    return new QueryHandler.EnumeratorIterator<>(new Iterator<Object[]>()
+                    return new QueryHandler.EnumeratorIterator<>(new Iterator<>()
                     {
                       @Override
                       public boolean hasNext()
@@ -540,7 +542,7 @@ public abstract class QueryHandler extends SqlStatementHandler.BaseStatementHand
 
     if (plannerContext.getPlannerConfig()
                       .getNativeQuerySqlPlanningMode()
-                      .equals(PlannerConfig.NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED)
+                      .equals(QueryContexts.NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED)
     ) {
       RelNode newRoot = parameterized;
       newRoot = planner.transform(

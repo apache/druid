@@ -512,7 +512,7 @@ public class OverlordResource
   {
     return asLeaderWith(
         taskMaster.getTaskActionClient(holder.getTask()),
-        new Function<TaskActionClient, Response>()
+        new Function<>()
         {
           @Override
           public Response apply(TaskActionClient taskActionClient)

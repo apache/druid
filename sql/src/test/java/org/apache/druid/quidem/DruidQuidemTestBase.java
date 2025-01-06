@@ -181,7 +181,7 @@ public abstract class DruidQuidemTestBase
 
   protected final List<String> getFileNames() throws IOException
   {
-    List<String> ret = new ArrayList<String>();
+    List<String> ret = new ArrayList<>();
 
     File testRoot = getTestRoot();
     if (!testRoot.exists()) {

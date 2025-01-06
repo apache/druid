@@ -159,12 +159,12 @@ public class ImmutableFloatNode implements ImmutableNode<float[]>
   @SuppressWarnings("ArgumentParameterSwap")
   public Iterable<ImmutableNode<float[]>> getChildren()
   {
-    return new Iterable<ImmutableNode<float[]>>()
+    return new Iterable<>()
     {
       @Override
       public Iterator<ImmutableNode<float[]>> iterator()
       {
-        return new Iterator<ImmutableNode<float[]>>()
+        return new Iterator<>()
         {
           private int count = 0;
 

@@ -96,7 +96,7 @@ public class GenericIndexedWriter<T> implements DictionaryWriter<T>
       final Closer closer
   )
   {
-    return new ObjectStrategy<ByteBuffer>()
+    return new ObjectStrategy<>()
     {
       private final CompressionStrategy.Compressor compressor = compressionStrategy.getCompressor();
       private final ByteBuffer compressedDataBuffer = compressor.allocateOutBuffer(bufferSize, closer);

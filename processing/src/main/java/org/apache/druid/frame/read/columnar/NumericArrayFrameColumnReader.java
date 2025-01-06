@@ -187,7 +187,7 @@ public abstract class NumericArrayFrameColumnReader implements FrameColumnReader
     public ColumnValueSelector<?> makeColumnValueSelector(ReadableOffset offset)
     {
       // Cache's the row's value before returning
-      return new ObjectColumnSelector<Object>()
+      return new ObjectColumnSelector<>()
       {
 
         // Cached row number
