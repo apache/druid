@@ -54,6 +54,20 @@ jobs:
           java-version: ${{ matrix.java }}
           cache: 'maven'
 
+      - name: Restore Maven Cache to /tmp/downloaded-cache/
+        id: restore-cache
+        uses: actions/cache@v4
+        with:
+          path: /tmp/downloaded-cache/
+          key: setup-java-Linux-x64-maven-e0979522ee0909305f52895535b8971c248ab9db12153a75644f1fcf6c027c8b
+
+      - name: Upload Maven Cache as Artifact (if found)
+        if: ${{ steps.restore-cache.outputs.cache-hit == 'true' }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: setup-java-Linux-x64-maven-e0979522ee0909305f52895535b8971c248ab9db12153a75644f1fcf6c027c8b
+          path: /tmp/downloaded-cache/
+
       - name: packaging check
         run: |
           ./.github/scripts/setup_generate_license.sh
