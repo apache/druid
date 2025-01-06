@@ -17,19 +17,19 @@
  * under the License.
  */
 
-package org.apache.druid.client.selector;
+package org.apache.druid.client;
 
-import org.apache.druid.client.DruidServer;
 import org.apache.druid.query.QueryRunner;
 
 /**
+ *
  */
-public class QueryableDruidServer<T extends QueryRunner<?>>
+public class QueryableDruidServer
 {
   private final DruidServer server;
-  private final T queryRunner;
+  private final QueryRunner<?> queryRunner;
 
-  public QueryableDruidServer(DruidServer server, T queryRunner)
+  public QueryableDruidServer(DruidServer server, QueryRunner<?> queryRunner)
   {
     this.server = server;
     this.queryRunner = queryRunner;
@@ -40,7 +40,7 @@ public class QueryableDruidServer<T extends QueryRunner<?>>
     return server;
   }
 
-  public T getQueryRunner()
+  public QueryRunner<?> getQueryRunner()
   {
     return queryRunner;
   }
@@ -52,5 +52,10 @@ public class QueryableDruidServer<T extends QueryRunner<?>>
            "server=" + server +
            ", queryRunner=" + queryRunner +
            '}';
+  }
+
+  public interface Maker
+  {
+    QueryableDruidServer make(DruidServer server);
   }
 }
