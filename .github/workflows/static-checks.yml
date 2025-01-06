@@ -58,7 +58,7 @@ jobs:
         id: restore-cache
         uses: actions/cache/restore@v4
         with:
-          path: /tmp/downloaded-cache/
+          path: ~/.m2/downloaded-cache
           key: setup-java-Linux-x64-maven-e0979522ee0909305f52895535b8971c248ab9db12153a75644f1fcf6c027c8b
 
       - name: Upload Maven Cache as Artifact (if found)
@@ -66,7 +66,7 @@ jobs:
         uses: actions/upload-artifact@master
         with:
           name: setup-java-Linux-x64-maven-e0979522ee0909305f52895535b8971c248ab9db12153a75644f1fcf6c027c8b
-          path: /tmp/downloaded-cache/
+          path: ~/.m2/downloaded-cache
 
       - name: packaging check
         run: |
