@@ -68,6 +68,12 @@ jobs:
           name: setup-java-Linux-x64-maven-e0979522ee0909305f52895535b8971c248ab9db12153a75644f1fcf6c027c8b
           path: ~/.m2/downloaded-cache
 
+      - name: Upload extracted cache files as artifact
+        uses: actions/upload-artifact@master
+        with:
+          name: extracted-cache-files
+          path: /home/runner/work/druid/druid
+
       - name: packaging check
         run: |
           ./.github/scripts/setup_generate_license.sh
