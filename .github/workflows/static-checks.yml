@@ -61,18 +61,22 @@ jobs:
           path: ~/.m2/downloaded-cache
           key: setup-java-Linux-x64-maven-e0979522ee0909305f52895535b8971c248ab9db12153a75644f1fcf6c027c8b
 
-      - name: Upload Maven Cache as Artifact (if found)
-        if: ${{ steps.restore-cache.outputs.cache-hit == 'true' }}
-        uses: actions/upload-artifact@master
-        with:
-          name: setup-java-Linux-x64-maven-e0979522ee0909305f52895535b8971c248ab9db12153a75644f1fcf6c027c8b
-          path: ~/.m2/downloaded-cache
+      - name: List locally installed maven packages
+        run: |
+          mvn dependency:list -DoutputAbsoluteArtifactFilename -DoutputFile=/dev/fd/2 2>&1 1>/dev/null | grep -o "/.*/" | xargs -Ixxx grep -L "jar>central=$" xxx_remote.repositories | grep -o ".*/"
 
-      - name: Upload extracted cache files as artifact
-        uses: actions/upload-artifact@master
-        with:
-          name: cache.tzst
-          path: /home/runner/work/_temp/6b843275-a174-4b1b-a47c-49453c7b976b/cache.tzst
+#      - name: Upload Maven Cache as Artifact (if found)
+#        if: ${{ steps.restore-cache.outputs.cache-hit == 'true' }}
+#        uses: actions/upload-artifact@master
+#        with:
+#          name: setup-java-Linux-x64-maven-e0979522ee0909305f52895535b8971c248ab9db12153a75644f1fcf6c027c8b
+#          path: ~/.m2/downloaded-cache
+#
+#      - name: Upload extracted cache files as artifact
+#        uses: actions/upload-artifact@master
+#        with:
+#          name: cache.tzst
+#          path: /home/runner/work/_temp/6b843275-a174-4b1b-a47c-49453c7b976b/cache.tzst
 
       - name: packaging check
         run: |
