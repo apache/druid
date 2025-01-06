@@ -63,7 +63,7 @@ jobs:
 
       - name: Upload Maven Cache as Artifact (if found)
         if: ${{ steps.restore-cache.outputs.cache-hit == 'true' }}
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@master
         with:
           name: setup-java-Linux-x64-maven-e0979522ee0909305f52895535b8971c248ab9db12153a75644f1fcf6c027c8b
           path: /tmp/downloaded-cache/
