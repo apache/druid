@@ -103,7 +103,7 @@ public class FrameBasedInlineDataSource implements DataSource
               .collect(Collectors.toList());
 
           return Sequences.simple(
-              () -> new Iterator<>()
+              () -> new Iterator<Object[]>()
               {
                 @Override
                 public boolean hasNext()
