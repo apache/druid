@@ -101,6 +101,7 @@ jobs:
       test_range: ${{ matrix.test_range }}
 
   check_results:
+    if: ${{ always() }}
     needs: [indexing_modules_test, processing_modules_test, server_modules_test, other_modules_test]
     runs-on: ubuntu-latest
     outputs:
