@@ -157,18 +157,18 @@ jobs:
           echo ${{ needs.set-env-var.outputs.DRUID_PREVIOUS_IT_IMAGE_NAME }}
           docker save "${{ needs.set-env-var.outputs.DRUID_PREVIOUS_IT_IMAGE_NAME }}" | gzip > druid-container-jdk${{ matrix.jdk }}-version${{ needs.set-env-var.outputs.DRUID_PREVIOUS_VERSION }}.tar.gz    
 
-#  unit-tests-phase2:
-#    strategy:
-#      fail-fast: false
-#      matrix:
-#        # Use JDK 21.0.4 to work around https://github.com/apache/druid/issues/17429
-#        jdk: [ '11', '21.0.4' ]
-#    name: "unit tests (jdk${{ matrix.jdk }})"
-#    uses: ./.github/workflows/unit-tests.yml
-#    needs: unit-tests
-#    if: ${{ always() && (needs.unit-tests.result == 'success' || needs.unit-tests.outputs.continue_tests) }}
-#    with:
-#      jdk: ${{ matrix.jdk }}
+  unit-tests-phase2:
+    strategy:
+      fail-fast: false
+      matrix:
+        # Use JDK 21.0.4 to work around https://github.com/apache/druid/issues/17429
+        jdk: [ '11', '21.0.4' ]
+    name: "unit tests (jdk${{ matrix.jdk }})"
+    uses: ./.github/workflows/unit-tests.yml
+    needs: unit-tests
+    if: ${{ always() && (needs.unit-tests.result == 'success' || needs.unit-tests.outputs.continue_tests) }}
+    with:
+      jdk: ${{ matrix.jdk }}
 
   unit-tests:
     name: "unit tests (jdk17)"
@@ -177,17 +177,17 @@ jobs:
     with:
       jdk: 17
 
-#  standard-its:
-#    needs: unit-tests
-#    if: ${{ always() && (needs.unit-tests.result == 'success' || needs.unit-tests.outputs.continue_tests) }}
-#    uses: ./.github/workflows/standard-its.yml
-#
-#  revised-its:
-#    needs: [unit-tests, set-env-var]
-#    if: ${{ always() && (needs.unit-tests.result == 'success' || needs.unit-tests.outputs.continue_tests) }}
-#    uses: ./.github/workflows/revised-its.yml
-#    with:
-#      BACKWARD_COMPATIBILITY_IT_ENABLED: ${{ needs.set-env-var.outputs.BACKWARD_COMPATIBILITY_IT_ENABLED }}
-#      DRUID_PREVIOUS_VERSION: ${{ needs.set-env-var.outputs.DRUID_PREVIOUS_VERSION }}
-#      DRUID_PREVIOUS_VERSION_DOWNLOAD_URL: ${{ needs.set-env-var.outputs.DRUID_PREVIOUS_VERSION_DOWNLOAD_URL }}
-#      DRUID_PREVIOUS_IT_IMAGE_NAME: ${{ needs.set-env-var.outputs.DRUID_PREVIOUS_IT_IMAGE_NAME }}
+  standard-its:
+    needs: unit-tests
+    if: ${{ always() && (needs.unit-tests.result == 'success' || needs.unit-tests.outputs.continue_tests) }}
+    uses: ./.github/workflows/standard-its.yml
+
+  revised-its:
+    needs: [unit-tests, set-env-var]
+    if: ${{ always() && (needs.unit-tests.result == 'success' || needs.unit-tests.outputs.continue_tests) }}
+    uses: ./.github/workflows/revised-its.yml
+    with:
+      BACKWARD_COMPATIBILITY_IT_ENABLED: ${{ needs.set-env-var.outputs.BACKWARD_COMPATIBILITY_IT_ENABLED }}
+      DRUID_PREVIOUS_VERSION: ${{ needs.set-env-var.outputs.DRUID_PREVIOUS_VERSION }}
+      DRUID_PREVIOUS_VERSION_DOWNLOAD_URL: ${{ needs.set-env-var.outputs.DRUID_PREVIOUS_VERSION_DOWNLOAD_URL }}
+      DRUID_PREVIOUS_IT_IMAGE_NAME: ${{ needs.set-env-var.outputs.DRUID_PREVIOUS_IT_IMAGE_NAME }}
