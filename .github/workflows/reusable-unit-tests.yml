@@ -29,15 +29,15 @@ on:
         required: true
         type: string
         description: 'Name of group of tests running (to display)'
+      test_range:
+        required: false
+        type: string
+        description: 'Test name range (A-M, for example) for splitting tests based on the first character of the test class name'
+        default: 'A-Z'
     outputs:
       coverage_failure:
         description: 'Indicates if test failed by coverage issues'
         value: ${{ jobs.unit-tests.outputs.coverage_failure }}
-    test_range:
-      required: false
-      type: string
-      description: 'Test name range (A-M, for example) for splitting tests based on the first character of the test class name'
-      default: 'A-Z'
 
 env:
   MVN: mvn -B
