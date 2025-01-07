@@ -28,10 +28,6 @@ END=$(echo ${TEST_RANGE} | cut -d'-' -f2)
 RANGES=$(eval echo {${START}..${END}} | sed -e 's/ /*,/g')
 RANGES+="*"
 
-# Output the result
-echo "Printing ranges"
-echo ${RANGES}
-
 # Set MAVEN_OPTS for Surefire launcher.
 MAVEN_OPTS='-Xmx2500m' ${MVN} test -pl ${MAVEN_PROJECTS} \
 ${MAVEN_SKIP} \
