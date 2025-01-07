@@ -171,12 +171,6 @@ public class NumericArrayFieldWriter implements FieldWriter
         @Override
         public boolean isNull()
         {
-          // Arrays preserve the individual element's nullity when they are written and read.
-          // Therefore, when working with SQL incompatible mode, [7, null] won't change to [7, 0] when written to and
-          // read from the underlying serialization (as compared with the primitives). Therefore,
-          // even when NullHandling.replaceWithDefault() is true we need to write null as is, and not convert it to their
-          // default value when writing the array. Therefore, the check is `getObject() == null` ignoring the value of
-          // `NullHandling.replaceWithDefaul()`.
           return getObject() == null;
         }
 

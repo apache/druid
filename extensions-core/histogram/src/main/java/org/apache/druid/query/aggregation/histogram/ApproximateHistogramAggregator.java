@@ -52,9 +52,6 @@ public class ApproximateHistogramAggregator implements Aggregator
   @Override
   public void aggregate()
   {
-    // In case of ExpressionColumnValueSelector isNull will compute the expression and then give the result,
-    // the check for is NullHandling.replaceWithDefault is there to not have any performance impact of calling
-    // isNull for default case.
     if (!selector.isNull()) {
       histogram.offer(selector.getFloat());
     }

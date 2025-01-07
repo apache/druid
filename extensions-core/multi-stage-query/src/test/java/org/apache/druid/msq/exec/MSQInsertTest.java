@@ -1763,7 +1763,7 @@ public class MSQInsertTest extends MSQTestBase
 
   private List<Object[]> expectedFooRows()
   {
-    return ImmutableList.of(
+    return Arrays.asList(
         new Object[]{946684800000L, "", 1L},
         new Object[]{946771200000L, "10.1", 1L},
         new Object[]{946857600000L, "2", 1L},
