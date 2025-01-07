@@ -19,7 +19,7 @@
 
 package org.apache.druid.server.security;
 
-import org.apache.druid.query.policy.Policy;
+import org.apache.druid.query.policy.NoRestrictionPolicy;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -83,9 +83,9 @@ public class ForbiddenExceptionTest
     Assert.assertEquals("Allowed:true, Message:, Policy: Optional.empty", access.toString());
     Assert.assertEquals("Authorized", access.getMessage());
 
-    access = Access.allowWithRestriction(Policy.NO_RESTRICTION);
+    access = Access.allowWithRestriction(NoRestrictionPolicy.INSTANCE);
     Assert.assertTrue(access.isAllowed());
-    Assert.assertEquals("Allowed:true, Message:, Policy: Optional[Policy{rowFilter=null}]", access.toString());
-    Assert.assertEquals("Authorized, with restriction Policy{rowFilter=null}", access.getMessage());
+    Assert.assertEquals("Allowed:true, Message:, Policy: Optional[NO_RESTRICTION]", access.toString());
+    Assert.assertEquals("Authorized, with restriction [NO_RESTRICTION]", access.getMessage());
   }
 }

@@ -128,9 +128,9 @@ public class DartQueryMaker implements QueryMaker
   @Override
   public QueryResponse<Object[]> runQuery(DruidQuery druidQuery)
   {
-    plannerContext.getAuthorizationResult().getPermissionErrorMessage(true).ifPresent(error -> {
-      throw new ForbiddenException(error);
-    });
+    if (!plannerContext.getAuthorizationResult().isUserWithNoRestriction()) {
+      throw new ForbiddenException(plannerContext.getAuthorizationResult().getErrorMessage());
+    }
     final MSQSpec querySpec = MSQTaskQueryMaker.makeQuerySpec(
         null,
         druidQuery,

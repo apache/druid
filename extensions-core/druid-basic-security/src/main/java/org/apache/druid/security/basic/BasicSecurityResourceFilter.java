@@ -60,14 +60,14 @@ public class BasicSecurityResourceFilter extends AbstractResourceFilter
         getAuthorizerMapper()
     );
 
-    authResult.getPermissionErrorMessage(true).ifPresent(error -> {
+    if (!authResult.isUserWithNoRestriction()) {
       throw new WebApplicationException(
           Response.status(Response.Status.FORBIDDEN)
                   .type(MediaType.TEXT_PLAIN)
-                  .entity(StringUtils.format("Access-Check-Result: %s", error))
+                  .entity(StringUtils.format("Access-Check-Result: %s", authResult.getErrorMessage()))
                   .build()
       );
-    });
+    }
 
     return request;
   }

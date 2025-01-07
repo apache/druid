@@ -62,9 +62,9 @@ public class ConfigResourceFilter extends AbstractResourceFilter
         getAuthorizerMapper()
     );
 
-    authResult.getPermissionErrorMessage(true).ifPresent(error -> {
-      throw new ForbiddenException(error);
-    });
+    if (!authResult.isUserWithNoRestriction()) {
+      throw new ForbiddenException(authResult.getErrorMessage());
+    }
 
     return request;
   }

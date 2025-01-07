@@ -50,9 +50,9 @@ public class ChatHandlers
     );
 
     AuthorizationResult authResult = AuthorizationUtils.authorizeResourceAction(req, resourceAction, authorizerMapper);
-    authResult.getPermissionErrorMessage(true).ifPresent(error -> {
-      throw new ForbiddenException(error);
-    });
+    if (!authResult.isUserWithNoRestriction()) {
+      throw new ForbiddenException(authResult.getErrorMessage());
+    }
 
     return authResult;
   }

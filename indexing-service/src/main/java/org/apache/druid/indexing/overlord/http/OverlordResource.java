@@ -182,9 +182,9 @@ public class OverlordResource
         resourceActions,
         authorizerMapper
     );
-    authResult.getPermissionErrorMessage(true).ifPresent(error -> {
-      throw new ForbiddenException(error);
-    });
+    if (!authResult.isUserWithNoRestriction()) {
+      throw new ForbiddenException(authResult.getErrorMessage());
+    }
 
     return asLeaderWith(
         taskMaster.getTaskQueue(),
@@ -614,14 +614,14 @@ public class OverlordResource
           authorizerMapper
       );
 
-      authResult.getPermissionErrorMessage(true).ifPresent(error -> {
+      if (!authResult.isUserWithNoRestriction()) {
         throw new WebApplicationException(
             Response.status(Response.Status.FORBIDDEN)
                     .type(MediaType.TEXT_PLAIN)
-                    .entity(StringUtils.format("Access-Check-Result: %s", error))
+                    .entity(StringUtils.format("Access-Check-Result: %s", authResult.getErrorMessage()))
                     .build()
         );
-      });
+      }
     }
 
     return asLeaderWith(
@@ -663,9 +663,9 @@ public class OverlordResource
         authorizerMapper
     );
 
-    authResult.getPermissionErrorMessage(true).ifPresent(error -> {
-      throw new ForbiddenException(error);
-    });
+    if (!authResult.isUserWithNoRestriction()) {
+      throw new ForbiddenException(authResult.getErrorMessage());
+    }
 
     if (overlord.isLeader()) {
       try {

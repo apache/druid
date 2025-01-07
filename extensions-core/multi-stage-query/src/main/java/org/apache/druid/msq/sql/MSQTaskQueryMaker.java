@@ -117,9 +117,9 @@ public class MSQTaskQueryMaker implements QueryMaker
   @Override
   public QueryResponse<Object[]> runQuery(final DruidQuery druidQuery)
   {
-    plannerContext.getAuthorizationResult().getPermissionErrorMessage(true).ifPresent(error -> {
-      throw new ForbiddenException(error);
-    });
+    if (!plannerContext.getAuthorizationResult().isUserWithNoRestriction()) {
+      throw new ForbiddenException(plannerContext.getAuthorizationResult().getErrorMessage());
+    }
     Hook.QUERY_PLAN.run(druidQuery.getQuery());
     plannerContext.dispatchHook(DruidHook.NATIVE_PLAN, druidQuery.getQuery());
 

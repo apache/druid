@@ -45,7 +45,9 @@ import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.NullFilter;
+import org.apache.druid.query.policy.NoRestrictionPolicy;
 import org.apache.druid.query.policy.Policy;
+import org.apache.druid.query.policy.RowFilterPolicy;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.security.Access;
@@ -158,10 +160,8 @@ public class QueryLifecycleTest
   }
 
   @Test
-  @Parameters({"APPLY_WHEN_APPLICABLE"})
-  public void testRunSimple_preauthorizedAsSuperuser(Policy.TablePolicySecurityLevel securityLevel)
+  public void testRunSimple_preauthorizedAsSuperuser()
   {
-    // A simple path with the lowest security level configed.
     EasyMock.expect(queryConfig.getContext()).andReturn(ImmutableMap.of()).anyTimes();
     EasyMock.expect(authenticationResult.getIdentity()).andReturn(IDENTITY).anyTimes();
     EasyMock.expect(conglomerate.getToolChest(EasyMock.anyObject()))
@@ -171,11 +171,10 @@ public class QueryLifecycleTest
             .andReturn(runner)
             .once();
     EasyMock.expect(runner.run(EasyMock.anyObject(), EasyMock.anyObject())).andReturn(Sequences.empty()).once();
+
     replayAll();
 
-    QueryLifecycle lifecycle = createLifecycle(AuthConfig.newBuilder()
-                                                         .setTablePolicySecurityLevel(securityLevel)
-                                                         .build());
+    QueryLifecycle lifecycle = createLifecycle(new AuthConfig());
     lifecycle.runSimple(query, authenticationResult, AuthorizationResult.ALLOW_NO_RESTRICTION);
   }
 
@@ -206,7 +205,7 @@ public class QueryLifecycleTest
   public void testRunSimple_withPolicyRestriction(Policy.TablePolicySecurityLevel securityLevel)
   {
     // Test the path when an external client send a sql query to broker, through runSimple.
-    Policy rowFilterPolicy = Policy.fromRowFilter(new NullFilter("some-column", null));
+    Policy rowFilterPolicy = RowFilterPolicy.from(new NullFilter("some-column", null));
     Access access = Access.allowWithRestriction(rowFilterPolicy);
     AuthorizationResult authorizationResult = AuthorizationResult.allowWithRestriction(ImmutableMap.of(
         DATASOURCE,
@@ -248,7 +247,7 @@ public class QueryLifecycleTest
       "POLICY_CHECKED_ON_ALL_TABLES_ALLOW_EMPTY, Need to check row-level policy for all tables missing [some_datasource]",
       "POLICY_CHECKED_ON_ALL_TABLES_POLICY_MUST_EXIST, Need to check row-level policy for all tables missing [some_datasource]"
   })
-  public void testRunSimple_withNoRestriction(
+  public void testRunSimple_withNoRestrictionPolicy(
       Policy.TablePolicySecurityLevel securityLevel,
       String error
   )
@@ -329,12 +328,12 @@ public class QueryLifecycleTest
     // This is not allowed in any case.
     expectedException.expect(ISE.class);
     expectedException.expectMessage(
-        "Multiple restrictions on [some_datasource]: Policy{rowFilter=some-column IS NULL} and Policy{rowFilter=some-column2 IS NULL}");
+        "Multiple restrictions on table [some_datasource]: policy [RowFilterPolicy{rowFilter=some-column IS NULL}] and policy [RowFilterPolicy{rowFilter=some-column2 IS NULL}]");
 
     DimFilter originalFilterOnRDS = new NullFilter("some-column", null);
-    Policy originalFilterPolicy = Policy.fromRowFilter(originalFilterOnRDS);
+    Policy originalFilterPolicy = RowFilterPolicy.from(originalFilterOnRDS);
 
-    Policy newFilterPolicy = Policy.fromRowFilter(new NullFilter("some-column2", null));
+    Policy newFilterPolicy = RowFilterPolicy.from(new NullFilter("some-column2", null));
     AuthorizationResult authorizationResult = AuthorizationResult.allowWithRestriction(ImmutableMap.of(
         DATASOURCE,
         Optional.of(newFilterPolicy)
@@ -359,7 +358,6 @@ public class QueryLifecycleTest
     replayAll();
 
     AuthConfig authConfig = AuthConfig.newBuilder()
-                                      .setAuthorizeQueryContextParams(true)
                                       .setTablePolicySecurityLevel(securityLevel)
                                       .build();
 
@@ -377,10 +375,10 @@ public class QueryLifecycleTest
   {
     expectedException.expect(ISE.class);
     expectedException.expectMessage(
-        "No restriction found on table [some_datasource], but had Policy{rowFilter=some-column IS NULL} before.");
+        "No restriction found on table [some_datasource], but had policy [RowFilterPolicy{rowFilter=some-column IS NULL}] before.");
 
     DimFilter originalFilterOnRDS = new NullFilter("some-column", null);
-    Policy originalFilterPolicy = Policy.fromRowFilter(originalFilterOnRDS);
+    Policy originalFilterPolicy = RowFilterPolicy.from(originalFilterOnRDS);
     DataSource restrictedDataSource = RestrictedDataSource.create(
         TableDataSource.create(DATASOURCE),
         originalFilterPolicy
@@ -411,7 +409,6 @@ public class QueryLifecycleTest
     replayAll();
 
     AuthConfig authConfig = AuthConfig.newBuilder()
-                                      .setAuthorizeQueryContextParams(true)
                                       .setTablePolicySecurityLevel(securityLevel)
                                       .build();
 
@@ -429,7 +426,7 @@ public class QueryLifecycleTest
   public void testAuthorized_withPolicyRestriction(Policy.TablePolicySecurityLevel securityLevel)
   {
     // Test the path broker receives a native json query from external client, should add restriction on data source
-    Policy rowFilterPolicy = Policy.fromRowFilter(new NullFilter("some-column", null));
+    Policy rowFilterPolicy = RowFilterPolicy.from(new NullFilter("some-column", null));
     Access access = Access.allowWithRestriction(rowFilterPolicy);
 
     DataSource expectedDataSource = RestrictedDataSource.create(TableDataSource.create(DATASOURCE), rowFilterPolicy);
@@ -457,12 +454,11 @@ public class QueryLifecycleTest
     replayAll();
 
     AuthConfig authConfig = AuthConfig.newBuilder()
-                                      .setAuthorizeQueryContextParams(true)
                                       .setTablePolicySecurityLevel(securityLevel)
                                       .build();
     QueryLifecycle lifecycle = createLifecycle(authConfig);
     lifecycle.initialize(query);
-    Assert.assertTrue(lifecycle.authorize(authenticationResult).getPermissionErrorMessage(false).isEmpty());
+    Assert.assertTrue(lifecycle.authorize(authenticationResult).allowBasicAccess());
     lifecycle.execute();
   }
 
@@ -475,9 +471,9 @@ public class QueryLifecycleTest
   public void testAuthorized_queryWithRestrictedDataSource_runWithSuperUserPermission(Policy.TablePolicySecurityLevel securityLevel)
   {
     // Test the path historical receives a native json query from broker, query already has restriction on data source
-    Policy rowFilterPolicy = Policy.fromRowFilter(new NullFilter("some-column", null));
+    Policy rowFilterPolicy = RowFilterPolicy.from(new NullFilter("some-column", null));
     // Internal druid system would get a NO_RESTRICTION on a restricted data source.
-    Access access = Access.allowWithRestriction(Policy.NO_RESTRICTION);
+    Access access = Access.allowWithRestriction(NoRestrictionPolicy.INSTANCE);
 
     DataSource restrictedDataSource = RestrictedDataSource.create(TableDataSource.create(DATASOURCE), rowFilterPolicy);
 
@@ -508,7 +504,7 @@ public class QueryLifecycleTest
                                       .build();
     QueryLifecycle lifecycle = createLifecycle(authConfig);
     lifecycle.initialize(query);
-    Assert.assertTrue(lifecycle.authorize(authenticationResult).getPermissionErrorMessage(false).isEmpty());
+    Assert.assertTrue(lifecycle.authorize(authenticationResult).allowBasicAccess());
     lifecycle.execute();
   }
 
@@ -565,11 +561,11 @@ public class QueryLifecycleTest
         revisedContext
     );
 
-    Assert.assertTrue(lifecycle.authorize(mockRequest()).getPermissionErrorMessage(false).isEmpty());
+    Assert.assertTrue(lifecycle.authorize(mockRequest()).isUserWithNoRestriction());
 
     lifecycle = createLifecycle(authConfig);
     lifecycle.initialize(query);
-    Assert.assertTrue(lifecycle.authorize(authenticationResult).getPermissionErrorMessage(false).isEmpty());
+    Assert.assertTrue(lifecycle.authorize(authenticationResult).isUserWithNoRestriction());
   }
 
   @Test
@@ -611,11 +607,11 @@ public class QueryLifecycleTest
                                       .build();
     QueryLifecycle lifecycle = createLifecycle(authConfig);
     lifecycle.initialize(query);
-    Assert.assertFalse(lifecycle.authorize(mockRequest()).getPermissionErrorMessage(false).isEmpty());
+    Assert.assertFalse(lifecycle.authorize(mockRequest()).allowBasicAccess());
 
     lifecycle = createLifecycle(authConfig);
     lifecycle.initialize(query);
-    Assert.assertFalse(lifecycle.authorize(authenticationResult).getPermissionErrorMessage(false).isEmpty());
+    Assert.assertFalse(lifecycle.authorize(authenticationResult).allowBasicAccess());
   }
 
   @Test
@@ -657,11 +653,11 @@ public class QueryLifecycleTest
         revisedContext
     );
 
-    Assert.assertTrue(lifecycle.authorize(mockRequest()).getPermissionErrorMessage(false).isEmpty());
+    Assert.assertTrue(lifecycle.authorize(mockRequest()).isUserWithNoRestriction());
 
     lifecycle = createLifecycle(authConfig);
     lifecycle.initialize(query);
-    Assert.assertTrue(lifecycle.authorize(authenticationResult).getPermissionErrorMessage(false).isEmpty());
+    Assert.assertTrue(lifecycle.authorize(authenticationResult).isUserWithNoRestriction());
   }
 
   @Test
@@ -708,11 +704,11 @@ public class QueryLifecycleTest
         revisedContext
     );
 
-    Assert.assertTrue(lifecycle.authorize(mockRequest()).getPermissionErrorMessage(false).isEmpty());
+    Assert.assertTrue(lifecycle.authorize(mockRequest()).allowBasicAccess());
 
     lifecycle = createLifecycle(authConfig);
     lifecycle.initialize(query);
-    Assert.assertTrue(lifecycle.authorize(authenticationResult).getPermissionErrorMessage(false).isEmpty());
+    Assert.assertTrue(lifecycle.authorize(authenticationResult).allowBasicAccess());
   }
 
   @Test
@@ -757,11 +753,11 @@ public class QueryLifecycleTest
                                       .build();
     QueryLifecycle lifecycle = createLifecycle(authConfig);
     lifecycle.initialize(query);
-    Assert.assertFalse(lifecycle.authorize(mockRequest()).getPermissionErrorMessage(false).isEmpty());
+    Assert.assertFalse(lifecycle.authorize(mockRequest()).allowBasicAccess());
 
     lifecycle = createLifecycle(authConfig);
     lifecycle.initialize(query);
-    Assert.assertFalse(lifecycle.authorize(authenticationResult).getPermissionErrorMessage(false).isEmpty());
+    Assert.assertFalse(lifecycle.authorize(authenticationResult).allowBasicAccess());
   }
 
   @Test
@@ -817,11 +813,11 @@ public class QueryLifecycleTest
     Assert.assertTrue(revisedContext.containsKey("baz"));
     Assert.assertTrue(revisedContext.containsKey("queryId"));
 
-    Assert.assertTrue(lifecycle.authorize(mockRequest()).getPermissionErrorMessage(false).isEmpty());
+    Assert.assertTrue(lifecycle.authorize(mockRequest()).allowBasicAccess());
 
     lifecycle = createLifecycle(authConfig);
     lifecycle.initialize(query);
-    Assert.assertTrue(lifecycle.authorize(mockRequest()).getPermissionErrorMessage(false).isEmpty());
+    Assert.assertTrue(lifecycle.authorize(mockRequest()).allowBasicAccess());
   }
 
   public static Query<?> queryMatchDataSource(DataSource dataSource)

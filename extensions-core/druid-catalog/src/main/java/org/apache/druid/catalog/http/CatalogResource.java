@@ -581,9 +581,9 @@ public class CatalogResource
   private void authorize(String resource, String key, Action action, HttpServletRequest request)
   {
     final AuthorizationResult authResult = authorizeAccess(resource, key, action, request);
-    authResult.getPermissionErrorMessage(true).ifPresent(error -> {
-      throw new ForbiddenException(error);
-    });
+    if (!authResult.isUserWithNoRestriction()) {
+      throw new ForbiddenException(authResult.getErrorMessage());
+    }
   }
 
   private AuthorizationResult authorizeAccess(String resource, String key, Action action, HttpServletRequest request)

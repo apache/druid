@@ -24,8 +24,10 @@ import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.query.filter.EqualityFilter;
-import org.apache.druid.query.policy.Policy;
+import org.apache.druid.query.policy.NoRestrictionPolicy;
+import org.apache.druid.query.policy.RowFilterPolicy;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.server.security.AuthorizationResult;
 import org.junit.Before;
@@ -36,8 +38,8 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-
 
 @RunWith(JUnitParamsRunner.class)
 public class AuthorizationResultTest
@@ -62,55 +64,51 @@ public class AuthorizationResultTest
     AuthorizationResult result = AuthorizationResult.allowWithRestriction(
         ImmutableMap.of(
             "table1",
-            Optional.of(Policy.NO_RESTRICTION),
+            Optional.of(NoRestrictionPolicy.INSTANCE),
             "table2",
             Optional.of(
-                Policy.fromRowFilter(new EqualityFilter("column1", ColumnType.STRING, "val1", null)))
+                RowFilterPolicy.from(new EqualityFilter("column1", ColumnType.STRING, "val1", null)))
         )
     );
     assertEquals(
-        "AuthorizationResult [permission=ALLOW_WITH_RESTRICTION, failureMessage=null, policyRestrictions={table1=Optional[Policy{rowFilter=null}], table2=Optional[Policy{rowFilter=column1 = val1}]}, sqlResourceActions=null, allResourceActions=null]",
+        "AuthorizationResult [permission=ALLOW_WITH_RESTRICTION, failureMessage=null, policyRestrictions={table1=Optional[NO_RESTRICTION], table2=Optional[RowFilterPolicy{rowFilter=column1 = val1}]}, sqlResourceActions=null, allResourceActions=null]",
         result.toString()
     );
   }
 
   @Test
-  @Parameters({"true", "false"})
-  public void testFailedAccess_withPermissionError(boolean policyRestrictionsNotPermitted)
+  public void testNoAccess()
   {
     AuthorizationResult result = AuthorizationResult.deny("this data source is not permitted");
-    assertEquals(
-        Optional.of("this data source is not permitted"),
-        result.getPermissionErrorMessage(policyRestrictionsNotPermitted)
-    );
+    assertFalse(result.allowBasicAccess());
+    assertFalse(result.isUserWithNoRestriction());
+    assertEquals("this data source is not permitted", result.getErrorMessage());
     assertFalse(result.isUserWithNoRestriction());
   }
 
   @Test
-  @Parameters({"true", "false"})
-  public void testFullAccess_noPermissionError(boolean policyRestrictionsNotPermitted)
+  public void testFullAccess()
   {
     AuthorizationResult result = AuthorizationResult.allowWithRestriction(ImmutableMap.of());
+    assertTrue(result.allowBasicAccess());
+    assertTrue(result.isUserWithNoRestriction());
+    assertThrows(DruidException.class, result::getErrorMessage);
+
     AuthorizationResult resultWithEmptyPolicy = AuthorizationResult.allowWithRestriction(ImmutableMap.of(
         "table1",
         Optional.empty()
     ));
+    assertTrue(resultWithEmptyPolicy.allowBasicAccess());
+    assertTrue(resultWithEmptyPolicy.isUserWithNoRestriction());
+    assertThrows(DruidException.class, resultWithEmptyPolicy::getErrorMessage);
+
     AuthorizationResult resultWithNoRestrictionPolicy = AuthorizationResult.allowWithRestriction(ImmutableMap.of(
         "table1",
-        Optional.of(Policy.NO_RESTRICTION)
+        Optional.of(NoRestrictionPolicy.INSTANCE)
     ));
-
-    assertEquals(Optional.empty(), result.getPermissionErrorMessage(policyRestrictionsNotPermitted));
-    assertTrue(result.isUserWithNoRestriction());
-
-    assertEquals(Optional.empty(), resultWithEmptyPolicy.getPermissionErrorMessage(policyRestrictionsNotPermitted));
-    assertTrue(resultWithEmptyPolicy.isUserWithNoRestriction());
-
-    assertEquals(
-        Optional.empty(),
-        resultWithNoRestrictionPolicy.getPermissionErrorMessage(policyRestrictionsNotPermitted)
-    );
+    assertTrue(resultWithNoRestrictionPolicy.allowBasicAccess());
     assertTrue(resultWithNoRestrictionPolicy.isUserWithNoRestriction());
+    assertThrows(DruidException.class, resultWithNoRestrictionPolicy::getErrorMessage);
   }
 
   @Test
@@ -118,18 +116,19 @@ public class AuthorizationResultTest
       "true, Optional[Unauthorized]",
       "false, Optional.empty"
   })
-  public void testRestrictedAccess_noPermissionError(boolean policyRestrictionsNotPermitted, String error)
+  public void testRestrictedAccess(boolean policyRestrictionsNotPermitted, String error)
   {
     AuthorizationResult result = AuthorizationResult.allowWithRestriction(ImmutableMap.of(
         "table1",
-        Optional.of(Policy.fromRowFilter(new EqualityFilter(
+        Optional.of(RowFilterPolicy.from(new EqualityFilter(
             "col",
             ColumnType.STRING,
             "val1",
             null
         )))
     ));
-    assertEquals(error, result.getPermissionErrorMessage(policyRestrictionsNotPermitted).toString());
+    assertTrue(result.allowBasicAccess());
     assertFalse(result.isUserWithNoRestriction());
+    assertEquals("Unauthorized", result.getErrorMessage());
   }
 }

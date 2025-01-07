@@ -19,18 +19,18 @@
 
 package org.apache.druid.query.policy;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.query.filter.DimFilter;
-
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import java.util.Objects;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
 /**
  * Represents a granular-level (e.x. row filter) restriction on read-table access.
  */
-public class Policy
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
+@JsonSubTypes({
+    @JsonSubTypes.Type(value = RowFilterPolicy.class, name = "row"),
+    @JsonSubTypes.Type(value = NoRestrictionPolicy.class, name = "noRestriction")
+})
+public interface Policy
 {
   /**
    * Defines how strict we want to enforce the policy on tables during query execution process.
@@ -40,7 +40,7 @@ public class Policy
    *   <li>{@code POLICY_CHECKED_ON_ALL_TABLES_POLICY_MUST_EXIST}, every table must have a policy when requests come from external users.
    * </ol>
    */
-  public enum TablePolicySecurityLevel
+  enum TablePolicySecurityLevel
   {
     APPLY_WHEN_APPLICABLE(0),
     POLICY_CHECKED_ON_ALL_TABLES_ALLOW_EMPTY(1),
@@ -70,67 +70,5 @@ public class Policy
     {
       return securityLevel >= 2;
     }
-  }
-
-  /**
-   * A special kind of policy restriction, indicating that this table is restricted, but doesn't impose any restriction
-   * to a user.
-   */
-  public static final Policy NO_RESTRICTION = new Policy(null);
-
-  @JsonProperty("rowFilter")
-  private final DimFilter rowFilter;
-
-  @JsonCreator
-  Policy(@Nullable @JsonProperty("rowFilter") DimFilter rowFilter)
-  {
-    this.rowFilter = rowFilter;
-  }
-
-  public static Policy fromRowFilter(@Nonnull DimFilter rowFilter)
-  {
-    return new Policy(rowFilter);
-  }
-
-  @Nullable
-  public DimFilter getRowFilter()
-  {
-    return rowFilter;
-  }
-
-  /**
-   * Returns true if the policy imposes no restrictions.
-   */
-  public boolean hasNoRestriction()
-  {
-    if (NO_RESTRICTION.equals(this)) {
-      return true;
-    }
-    return false;
-  }
-
-  @Override
-  public String toString()
-  {
-    return "Policy{" + "rowFilter=" + rowFilter + '}';
-  }
-
-  @Override
-  public boolean equals(Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    Policy that = (Policy) o;
-    return Objects.equals(rowFilter, that.rowFilter);
-  }
-
-  @Override
-  public int hashCode()
-  {
-    return Objects.hash(rowFilter);
   }
 }

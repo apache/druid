@@ -247,7 +247,7 @@ public class DartSqlResource extends SqlResource
 
     final AuthorizationResult authResult = authorizeCancellation(req, cancelables);
 
-    if (!authResult.getPermissionErrorMessage(true).isPresent()) {
+    if (authResult.isUserWithNoRestriction()) {
       sqlLifecycleManager.removeAll(sqlQueryId, cancelables);
 
       // Don't call cancel() on the cancelables. That just cancels native queries, which is useless here. Instead,

@@ -22,10 +22,13 @@ package org.apache.druid.query;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.planning.DataSourceAnalysis;
+import org.apache.druid.query.policy.NoRestrictionPolicy;
 import org.apache.druid.query.policy.Policy;
+import org.apache.druid.query.policy.RowFilterPolicy;
 import org.apache.druid.segment.RestrictedSegment;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.utils.JvmUtils;
@@ -75,7 +78,7 @@ public class RestrictedDataSource implements DataSource
   )
   {
     if (!(base instanceof TableDataSource)) {
-      throw new IAE("Expected a TableDataSource, got [%s]", base.getClass());
+      throw new IAE("Expected a TableDataSource, got data source type [%s]", base.getClass());
     }
     if (Objects.isNull(policy)) {
       throw new IAE("Policy can't be null for RestrictedDataSource");
@@ -134,7 +137,7 @@ public class RestrictedDataSource implements DataSource
         () -> base.createSegmentMapFunction(
             query,
             cpuTimeAccumulator
-        ).andThen((segment) -> (new RestrictedSegment(segment, policy.getRowFilter())))
+        ).andThen((segment) -> (new RestrictedSegment(segment, policy)))
     );
   }
 
@@ -157,13 +160,18 @@ public class RestrictedDataSource implements DataSource
     Optional<Policy> newPolicy = policyMap.getOrDefault(base.getName(), Optional.empty());
     if (!newPolicy.isPresent()) {
       throw new ISE(
-          "No restriction found on table [%s], but had %s before.",
+          "No restriction found on table [%s], but had policy [%s] before.",
           base.getName(),
           policy
       );
     }
-    if (!Policy.NO_RESTRICTION.equals(newPolicy.get())) {
-      throw new ISE("Multiple restrictions on [%s]: %s and %s", base.getName(), policy, newPolicy.get());
+    if (!(newPolicy.get() instanceof NoRestrictionPolicy)) {
+      throw new ISE(
+          "Multiple restrictions on table [%s]: policy [%s] and policy [%s]",
+          base.getName(),
+          policy,
+          newPolicy.get()
+      );
     }
     // The only happy path is, newPolicy is Policy.NO_RESTRICTION, which means this comes from an anthenticated and
     // authorized druid-internal request.
@@ -175,7 +183,7 @@ public class RestrictedDataSource implements DataSource
   {
     return "RestrictedDataSource{" +
            "base=" + base +
-           ", policy='" + policy + '}';
+           ", policy='" + policy + "'}";
   }
 
   @Override

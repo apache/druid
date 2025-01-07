@@ -681,13 +681,13 @@ public class SqlStatementResource
         authorizerMapper
     );
 
-    authResult.getPermissionErrorMessage(true).ifPresent(error -> {
+    if (!authResult.isUserWithNoRestriction()) {
       throw new ForbiddenException(StringUtils.format(
           "The current user[%s] cannot view query id[%s] since the query is owned by another user",
           currentUser,
           queryId
       ));
-    });
+    }
 
     return msqControllerTask;
   }

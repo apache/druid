@@ -20,6 +20,8 @@
 package org.apache.druid.segment;
 
 import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.policy.NoRestrictionPolicy;
+import org.apache.druid.query.policy.Policy;
 import org.apache.druid.timeline.SegmentId;
 import org.joda.time.Interval;
 
@@ -36,16 +38,15 @@ import java.util.Optional;
 public class RestrictedSegment implements SegmentReference
 {
   protected final SegmentReference delegate;
-  @Nullable
-  private final DimFilter filter;
+  protected final Policy policy;
 
   public RestrictedSegment(
       SegmentReference delegate,
-      @Nullable DimFilter filter
+      Policy policy
   )
   {
     this.delegate = delegate;
-    this.filter = filter;
+    this.policy = policy;
   }
 
   @Override
@@ -69,7 +70,7 @@ public class RestrictedSegment implements SegmentReference
   @Override
   public CursorFactory asCursorFactory()
   {
-    return new RestrictedCursorFactory(delegate.asCursorFactory(), filter);
+    return new RestrictedCursorFactory(delegate.asCursorFactory(), policy);
   }
 
   @Nullable
@@ -90,11 +91,14 @@ public class RestrictedSegment implements SegmentReference
     } else if (TimeBoundaryInspector.class.equals(clazz)) {
       return (T) WrappedTimeBoundaryInspector.create(delegate.as(TimeBoundaryInspector.class));
     } else if (TopNOptimizationInspector.class.equals(clazz)) {
-      return (T) new SimpleTopNOptimizationInspector(filter == null);
+      return (T) new SimpleTopNOptimizationInspector(policy instanceof NoRestrictionPolicy);
+    } else if (BypassRestrictedSegment.class.equals(clazz)) {
+      // A backdoor solution to get the wrapped segment, effectively bypassing the policy.
+      return (T) new BypassRestrictedSegment(delegate, policy);
     }
 
     // Unless we know there's no restriction, it's dangerous to return the implementation of a particular interface.
-    if (filter == null) {
+    if (policy instanceof NoRestrictionPolicy) {
       return delegate.as(clazz);
     }
     return null;

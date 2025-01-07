@@ -316,7 +316,7 @@ public class QueryLifecycle
     Preconditions.checkNotNull(authenticationResult, "authenticationResult");
     Preconditions.checkNotNull(authorizationResult, "authorizationResult");
 
-    if (authorizationResult.getPermissionErrorMessage(false).isPresent()) {
+    if (!authorizationResult.allowBasicAccess()) {
       // Not authorized; go straight to Jail, do not pass Go.
       transition(State.AUTHORIZING, State.UNAUTHORIZED);
     } else {

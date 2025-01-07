@@ -52,7 +52,9 @@ import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
+import org.apache.druid.query.policy.NoRestrictionPolicy;
 import org.apache.druid.query.policy.Policy;
+import org.apache.druid.query.policy.RowFilterPolicy;
 import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.join.JoinableFactory;
@@ -136,8 +138,8 @@ public class CalciteTests
   public static final String BENCHMARK_DATASOURCE = "benchmark_ds";
 
   public static final String TEST_SUPERUSER_NAME = "testSuperuser";
-  public static final Policy POLICY_NO_RESTRICTION_SUPERUSER = Policy.NO_RESTRICTION;
-  public static final Policy POLICY_RESTRICTION = Policy.fromRowFilter(BaseCalciteQueryTest.numericSelector("m1", "6"));
+  public static final Policy POLICY_NO_RESTRICTION_SUPERUSER = NoRestrictionPolicy.INSTANCE;
+  public static final Policy POLICY_RESTRICTION = RowFilterPolicy.from(BaseCalciteQueryTest.numericSelector("m1", "6"));
   public static final AuthorizerMapper TEST_AUTHORIZER_MAPPER = new AuthorizerMapper(null)
   {
     @Override

@@ -184,10 +184,11 @@ public class AuthorizationUtils
         resultCache.add(resourceAction);
         if (resourceAction.getAction().equals(Action.READ)
             && RESTRICTION_APPLICABLE_RESOURCE_TYPES.contains(resourceAction.getResource().getType())) {
+          // For every table read, we check on the policy returned from authorizer and add it to the map.
           policyFilters.put(resourceAction.getResource().getName(), access.getPolicy());
         } else if (access.getPolicy().isPresent()) {
           throw DruidException.defensive(
-              "Policy should only present when reading a table, but was present for %s",
+              "Policy should only present when reading a table, but was present for a different kind of resource action [%s]",
               resourceAction
           );
         } else {
@@ -232,10 +233,7 @@ public class AuthorizationUtils
         authorizerMapper
     );
 
-    request.setAttribute(
-        AuthConfig.DRUID_AUTHORIZATION_CHECKED,
-        !authResult.getPermissionErrorMessage(false).isPresent()
-    );
+    request.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, authResult.allowBasicAccess());
     return authResult;
   }
 

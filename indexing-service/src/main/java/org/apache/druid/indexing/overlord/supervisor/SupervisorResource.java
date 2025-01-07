@@ -148,9 +148,9 @@ public class SupervisorResource
               authorizerMapper
           );
 
-          authResult.getPermissionErrorMessage(true).ifPresent(error -> {
-            throw new ForbiddenException(error);
-          });
+          if (!authResult.isUserWithNoRestriction()) {
+            throw new ForbiddenException(authResult.getErrorMessage());
+          }
 
           manager.createOrUpdateAndStartSupervisor(spec);
 

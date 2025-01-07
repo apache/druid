@@ -103,8 +103,9 @@ public class Access
       stringBuilder.append(message);
     }
     if (allowed && policy.isPresent()) {
-      stringBuilder.append(", with restriction ");
+      stringBuilder.append(", with restriction [");
       stringBuilder.append(policy.get());
+      stringBuilder.append("]");
     }
     return stringBuilder.toString();
   }

@@ -158,9 +158,9 @@ public class QueryResource implements QueryCountStatsProvider
         authorizerMapper
     );
 
-    authResult.getPermissionErrorMessage(true).ifPresent(error -> {
-      throw new ForbiddenException(error);
-    });
+    if (!authResult.isUserWithNoRestriction()) {
+      throw new ForbiddenException(authResult.getErrorMessage());
+    }
 
     queryScheduler.cancelQuery(queryId);
     return Response.status(Response.Status.ACCEPTED).build();
@@ -214,9 +214,9 @@ public class QueryResource implements QueryCountStatsProvider
         return io.getResponseWriter().buildNonOkResponse(qe.getFailType().getExpectedStatus(), qe);
       }
 
-      authResult.getPermissionErrorMessage(true).ifPresent(error -> {
-        throw new ForbiddenException(error);
-      });
+      if (!authResult.isUserWithNoRestriction()) {
+        throw new ForbiddenException(authResult.getErrorMessage());
+      }
 
       final QueryResourceQueryResultPusher pusher = new QueryResourceQueryResultPusher(req, queryLifecycle, io);
       return pusher.push();

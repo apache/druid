@@ -23,6 +23,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.query.policy.NoRestrictionPolicy;
 import org.apache.druid.query.policy.Policy;
 
 import javax.annotation.Nonnull;
@@ -149,7 +150,14 @@ public class AuthorizationResult
   }
 
   /**
-   * Returns true if user has the correct permission, and the policy restrictions indicates one of the following:
+   * Returns true if user has basic access.
+   */
+  public boolean allowBasicAccess() {
+    return PERMISSION.ALLOW_NO_RESTRICTION.equals(permission) || PERMISSION.ALLOW_WITH_RESTRICTION.equals(permission);
+  }
+
+  /**
+   * Returns true if user has all required permission, and the policy restrictions indicates one of the following:
    * <li> no policy found
    * <li> the user has a no-restriction policy
    */
@@ -160,34 +168,21 @@ public class AuthorizationResult
                                                                                        .stream()
                                                                                        .map(p -> p.orElse(null))
                                                                                        .filter(Objects::nonNull) // Can be replaced by Optional::stream after java 11
-                                                                                       .allMatch(Policy::hasNoRestriction));
+                                                                                       .allMatch(p -> (p instanceof NoRestrictionPolicy)));
   }
 
   /**
-   * Returns a permission error string if the AuthorizationResult doesn't permit all requried access. Otherwise, returns
-   * empty. When {@code policyRestrictionsNotPermitted} set to true, it requests unrestricted full access. The caller
-   * can use this method to retrieve the error string, and throw a {@link ForbiddenException} with the error message.
-   * <p>
-   * It first checks if all permissions (e.x. {@link org.apache.druid.security.basic.authorization.entity.BasicAuthorizerPermission})
-   * have been granted access. If not, returns the {@code failureMessage}. Then if {@code policyRestrictionsNotPermitted},
-   * it checks for 'actual' policy restrictions (i.e. {@link Policy#hasNoRestriction} returns false). If 'actual' policy
-   * restrictions exist, returns {@link Access#DEFAULT_ERROR_MESSAGE}.
-   *
-   * @param policyRestrictionsNotPermitted true if policy restrictions are considered as not permitted
-   * @return optional permission error message
+   * Returns an error string if the AuthorizationResult doesn't permit all requried access.
    */
-  public Optional<String> getPermissionErrorMessage(boolean policyRestrictionsNotPermitted)
+  public String getErrorMessage()
   {
     switch (permission) {
-      case ALLOW_NO_RESTRICTION:
-        return Optional.empty();
       case DENY:
-        return Optional.of(Objects.requireNonNull(failureMessage));
+        return Objects.requireNonNull(failureMessage);
       case ALLOW_WITH_RESTRICTION:
-        if (policyRestrictionsNotPermitted && !isUserWithNoRestriction()) {
-          return Optional.of(Access.DEFAULT_ERROR_MESSAGE);
+        if (!isUserWithNoRestriction()) {
+          return Access.DEFAULT_ERROR_MESSAGE;
         }
-        return Optional.empty();
       default:
         throw DruidException.defensive("unreachable");
     }

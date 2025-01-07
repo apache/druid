@@ -24,7 +24,8 @@ import com.google.common.collect.ImmutableList;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.filter.TrueDimFilter;
-import org.apache.druid.query.policy.Policy;
+import org.apache.druid.query.policy.NoRestrictionPolicy;
+import org.apache.druid.query.policy.RowFilterPolicy;
 import org.apache.druid.segment.TestHelper;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -42,11 +43,11 @@ public class RestrictedDataSourceTest
   private final TableDataSource barDataSource = new TableDataSource("bar");
   private final RestrictedDataSource restrictedFooDataSource = RestrictedDataSource.create(
       fooDataSource,
-      Policy.NO_RESTRICTION
+      RowFilterPolicy.from(TrueDimFilter.instance())
   );
   private final RestrictedDataSource restrictedBarDataSource = RestrictedDataSource.create(
       barDataSource,
-      Policy.NO_RESTRICTION
+      NoRestrictionPolicy.INSTANCE
   );
 
   @Test
@@ -146,13 +147,13 @@ public class RestrictedDataSourceTest
   {
     final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
     final RestrictedDataSource deserializedRestrictedDataSource = jsonMapper.readValue(
-        "{\"type\":\"restrict\",\"base\":{\"type\":\"table\",\"name\":\"foo\"},\"policy\":{\"rowFilter\":{\"type\":\"true\"}}}",
+        "{\"type\":\"restrict\",\"base\":{\"type\":\"table\",\"name\":\"foo\"},\"policy\":{\"type\":\"noRestriction\"}}",
         RestrictedDataSource.class
     );
 
     Assert.assertEquals(
         deserializedRestrictedDataSource,
-        RestrictedDataSource.create(fooDataSource, Policy.fromRowFilter(TrueDimFilter.instance()))
+        RestrictedDataSource.create(fooDataSource, NoRestrictionPolicy.INSTANCE)
     );
   }
 
@@ -164,7 +165,7 @@ public class RestrictedDataSourceTest
     final String s = jsonMapper.writeValueAsString(restrictedFooDataSource);
 
     Assert.assertEquals(
-        "{\"type\":\"restrict\",\"base\":{\"type\":\"table\",\"name\":\"foo\"},\"policy\":{\"rowFilter\":null}}",
+        "{\"type\":\"restrict\",\"base\":{\"type\":\"table\",\"name\":\"foo\"},\"policy\":{\"type\":\"row\",\"rowFilter\":{\"type\":\"true\"}}}",
         s
     );
   }
