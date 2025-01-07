@@ -72,12 +72,17 @@ jobs:
 
   processing_modules_test:
     needs: changes
+    strategy:
+      fail-fast: false
+      matrix:
+        test_range: [ 'A-M', 'N-Z' ]
     if: ${{ needs.changes.outputs.core == 'true' }}
     uses: ./.github/workflows/reusable-unit-tests.yml
     with:
       jdk: ${{ inputs.jdk }}
       module: processing
       maven_projects: 'processing'
+      test_range: ${{ matrix.test_range }}
 
   server_modules_test:
     needs: changes
