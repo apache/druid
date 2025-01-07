@@ -26,14 +26,11 @@ on:
         description: 'Flag to decide if next tests need to run incase coverage issue failures'
         value: |
           ${{
-            (jobs.indexing_modules_test.result == 'success' || jobs.indexing_modules_test.result == 'skipped' || 
-          fromJson(jobs.indexing_modules_test.outputs.coverage_failure)) &&
-            (jobs.processing_modules_test.result == 'success' || jobs.processing_modules_test.result == 'skipped' || 
-          fromJson(jobs.processing_modules_test.outputs.coverage_failure)) &&
-            (jobs.server_modules_test.result == 'success' || jobs.server_modules_test.result == 'skipped' || fromJson
-          (jobs.server_modules_test.outputs.coverage_failure)) &&
-            (jobs.other_modules_test.result == 'success' || jobs.other_modules_test.result == 'skipped' || fromJson(jobs
-          .other_modules_test.outputs.coverage_failure))
+            !contains(needs.*.result, 'failure') ||
+            (contains(fromJson(needs.indexing_modules_test.outputs.*.coverage_failure || '[]'), true) &&
+              contains(fromJson(needs.processing_modules_test.outputs.*.coverage_failure || '[]'), true) &&
+              fromJson(needs.server_modules_test.outputs.coverage_failure || 'false') &&
+              contains(fromJson(needs.other_modules_test.outputs.*.coverage_failure || '[]'), true))
           }}
 
 jobs:
