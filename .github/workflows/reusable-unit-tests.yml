@@ -49,7 +49,7 @@ env:
 
 jobs:
   unit-tests:
-    name: ${{ inputs.module }} modules test
+    name: ${{ inputs.module }} modules test (test_range=${{ inputs.test_range }})
     runs-on: ubuntu-latest
     outputs:
       coverage_failure: ${{ steps.set_outputs.outputs.coverage_failure }}
