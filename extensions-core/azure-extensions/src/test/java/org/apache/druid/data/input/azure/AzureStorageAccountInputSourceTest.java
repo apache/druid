@@ -65,7 +65,7 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class StorageAccountInputSourceTest extends EasyMockSupport
+public class AzureStorageAccountInputSourceTest extends EasyMockSupport
 {
   private static final String BLOB_NAME = "blob";
   private static final URI PREFIX_URI;
