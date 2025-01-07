@@ -63,12 +63,17 @@ jobs:
 
   indexing_modules_test:
     needs: changes
+    strategy:
+      fail-fast: false
+      matrix:
+        test_range: [ 'A-M', 'N-Z' ]
     if: ${{ needs.changes.outputs.core == 'true' || needs.changes.outputs.kafka == 'true' || needs.changes.outputs.kinesis == 'true'}}
     uses: ./.github/workflows/reusable-unit-tests.yml
     with:
       jdk: ${{ inputs.jdk }}
       module: indexing
       maven_projects: 'indexing-hadoop,indexing-service,extensions-core/kafka-indexing-service,extensions-core/kinesis-indexing-service'
+      test_range: ${{ matrix.test_range }}
 
   processing_modules_test:
     needs: changes
@@ -95,7 +100,12 @@ jobs:
 
   other_modules_test:
     uses: ./.github/workflows/reusable-unit-tests.yml
+    strategy:
+      fail-fast: false
+      matrix:
+        test_range: [ 'A-M', 'N-Z' ]
     with:
       jdk: ${{ inputs.jdk }}
       module: other
       maven_projects: '!processing,!indexing-hadoop,!indexing-service,!extensions-core/kafka-indexing-service,!extensions-core/kinesis-indexing-service,!server,!web-console,!integration-tests,!:druid-it-tools,!:druid-it-image,!:druid-it-cases'
+      test_range: ${{ matrix.test_range }}
