@@ -45,7 +45,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.m2/repository
-          key: maven-${{ runner.os }}-8-${{ github.sha }}
+          key: maven-${{ runner.os }}-17-${{ github.sha }}
 
       - name: Maven build
         id: maven_build

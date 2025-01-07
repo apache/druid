@@ -164,7 +164,7 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: ~/.m2/repository
-          key: maven-${{ runner.os }}-8-${{ github.sha }}
+          key: maven-${{ runner.os }}-17-${{ github.sha }}
           restore-keys: setup-java-Linux-maven-${{ hashFiles('**/pom.xml') }}
 
       - name: Maven build
