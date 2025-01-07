@@ -19,10 +19,22 @@ set -e
 
 unset _JAVA_OPTIONS
 
+# Get the start and end letters from the range
+START=$(echo ${TEST_RANGE} | cut -d'-' -f1)
+END=$(echo ${TEST_RANGE} | cut -d'-' -f2)
+
+# Generate the list of patterns and replace spaces with *,
+# This essentially converts a range of A-D to A*,B*,C*,D*
+RANGES=$(eval echo {${START}..${END}} | sed -e 's/ /*,/g')
+
+# Output the result
+echo "Printing ranges"
+echo ${RANGES}
+
 # Set MAVEN_OPTS for Surefire launcher.
 MAVEN_OPTS='-Xmx2500m' ${MVN} test -pl ${MAVEN_PROJECTS} \
 ${MAVEN_SKIP} \
--Dtest="%regex[.*/[${TEST_RANGE}][^/]*Test\.class]" \
+-Dtest="${RANGES}" \
 -DjfrProfilerArgLine="${JFR_PROFILER_ARG_LINE}" -Pci
 sh -c "dmesg | egrep -i '(oom|out of memory|kill process|killed).*' -C 1 || exit 0"
 free -m
