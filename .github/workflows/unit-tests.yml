@@ -24,14 +24,7 @@ on:
     outputs:
       continue_tests:
         description: 'Flag to decide if next tests need to run incase coverage issue failures'
-        value: |
-          ${{
-            !contains(needs.*.result, 'failure') ||
-            (contains(fromJson(needs.indexing_modules_test.outputs.*.coverage_failure || '[]'), true) &&
-              contains(fromJson(needs.processing_modules_test.outputs.*.coverage_failure || '[]'), true) &&
-              fromJson(needs.server_modules_test.outputs.coverage_failure || 'false') &&
-              contains(fromJson(needs.other_modules_test.outputs.*.coverage_failure || '[]'), true))
-          }}
+        value: ${{ jobs.check_results.outputs.should_continue }}
 
 jobs:
   changes:
@@ -106,3 +99,59 @@ jobs:
       module: other
       maven_projects: '!processing,!indexing-hadoop,!indexing-service,!extensions-core/kafka-indexing-service,!extensions-core/kinesis-indexing-service,!server,!web-console,!integration-tests,!:druid-it-tools,!:druid-it-image,!:druid-it-cases'
       test_range: ${{ matrix.test_range }}
+
+  check_results:
+    needs: [indexing_modules_test, processing_modules_test, server_modules_test, other_modules_test]
+    runs-on: ubuntu-latest
+    outputs:
+      should_continue: ${{ steps.check.outputs.continue }}
+    steps:
+      - id: check
+        run: |
+          echo "Debug: Starting check_results evaluation"
+          
+          # Raw values
+          echo "Raw indexing_modules_test result: ${{ toJSON(needs.indexing_modules_test.result) }}"
+          echo "Raw indexing_modules_test outputs: ${{ toJSON(needs.indexing_modules_test.outputs) }}"
+          
+          echo "Raw processing_modules_test result: ${{ toJSON(needs.processing_modules_test.result) }}"
+          echo "Raw processing_modules_test outputs: ${{ toJSON(needs.processing_modules_test.outputs) }}"
+          
+          echo "Raw server_modules_test result: ${{ needs.server_modules_test.result }}"
+          echo "Raw server_modules_test outputs: ${{ toJSON(needs.server_modules_test.outputs) }}"
+          
+          echo "Raw other_modules_test result: ${{ toJSON(needs.other_modules_test.result) }}"
+          echo "Raw other_modules_test outputs: ${{ toJSON(needs.other_modules_test.outputs) }}"
+          
+          # Computed values
+          INDEXING_SUCCESS="${{ contains(needs.indexing_modules_test.result, 'success') || contains(needs.indexing_modules_test.result, 'skipped') }}"
+          INDEXING_COVERAGE="${{ contains(fromJson(needs.indexing_modules_test.outputs.*.coverage_failure || '[]'), true) }}"
+          echo "Computed INDEXING_SUCCESS: $INDEXING_SUCCESS"
+          echo "Computed INDEXING_COVERAGE: $INDEXING_COVERAGE"
+          
+          PROCESSING_SUCCESS="${{ contains(needs.processing_modules_test.result, 'success') || contains(needs.processing_modules_test.result, 'skipped') }}"
+          PROCESSING_COVERAGE="${{ contains(fromJson(needs.processing_modules_test.outputs.*.coverage_failure || '[]'), true) }}"
+          echo "Computed PROCESSING_SUCCESS: $PROCESSING_SUCCESS"
+          echo "Computed PROCESSING_COVERAGE: $PROCESSING_COVERAGE"
+          
+          SERVER_SUCCESS="${{ needs.server_modules_test.result == 'success' || needs.server_modules_test.result == 'skipped' }}"
+          SERVER_COVERAGE="${{ fromJson(needs.server_modules_test.outputs.coverage_failure || 'false') }}"
+          echo "Computed SERVER_SUCCESS: $SERVER_SUCCESS"
+          echo "Computed SERVER_COVERAGE: $SERVER_COVERAGE"
+          
+          OTHER_SUCCESS="${{ contains(needs.other_modules_test.result, 'success') || contains(needs.other_modules_test.result, 'skipped') }}"
+          OTHER_COVERAGE="${{ contains(fromJson(needs.other_modules_test.outputs.*.coverage_failure || '[]'), true) }}"
+          echo "Computed OTHER_SUCCESS: $OTHER_SUCCESS"
+          echo "Computed OTHER_COVERAGE: $OTHER_COVERAGE"
+          
+          # Final evaluation
+          if [[ "$INDEXING_SUCCESS" == "true" || "$INDEXING_COVERAGE" == "true" ]] && \
+             [[ "$PROCESSING_SUCCESS" == "true" || "$PROCESSING_COVERAGE" == "true" ]] && \
+             [[ "$SERVER_SUCCESS" == "true" || "$SERVER_COVERAGE" == "true" ]] && \
+             [[ "$OTHER_SUCCESS" == "true" || "$OTHER_COVERAGE" == "true" ]]; then
+            echo "Final evaluation: Setting continue=true"
+            echo "continue=true" >> $GITHUB_OUTPUT
+          else
+            echo "Final evaluation: Setting continue=false"
+            echo "continue=false" >> $GITHUB_OUTPUT
+          fi
