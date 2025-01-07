@@ -44,7 +44,7 @@ public class StrlenExtractionFn extends DimExtractionFn
     if (value == null) {
       return null;
     }
-    return String.valueOf(value == null ? 0 : value.length());
+    return String.valueOf(value.length());
   }
 
   @Override

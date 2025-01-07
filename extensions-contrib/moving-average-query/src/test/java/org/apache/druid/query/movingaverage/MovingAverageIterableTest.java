@@ -794,12 +794,6 @@ public class MovingAverageIterableTest extends InitializedNullHandlingTest
     Assert.assertEquals("m", (result.getDimension("gender")).get(0));
     Assert.assertEquals(5.0f, result.getMetric("movingAvgPageViews").floatValue(), 0.0f);
 
-    Assert.assertTrue(iter.hasNext());
-    result = iter.next();
-    Assert.assertEquals(JAN_6, result.getTimestamp());
-    Assert.assertEquals("m", (result.getDimension("gender")).get(0));
-    Assert.assertEquals(0.0f, result.getMetric("movingAvgPageViews").floatValue(), 0.0f);
-
     Assert.assertFalse(iter.hasNext());
   }
 }

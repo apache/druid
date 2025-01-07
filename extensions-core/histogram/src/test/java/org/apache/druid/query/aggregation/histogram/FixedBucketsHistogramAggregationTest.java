@@ -83,9 +83,9 @@ public class FixedBucketsHistogramAggregationTest extends InitializedNullHandlin
   public void testIngestWithNullsIgnoredAndQuery() throws Exception
   {
     MapBasedRow row = ingestAndQuery();
-    Assert.assertEquals(0.0, row.getMetric("index_min"));
+    Assert.assertEquals(92.782760, row.getMetric("index_min").floatValue(), 0.0001);
     Assert.assertEquals(135.109191, row.getMetric("index_max").floatValue(), 0.0001);
-    Assert.assertEquals(135.8699951171875, row.getMetric("index_quantile").floatValue(), 0.0001);
+    Assert.assertEquals(135.9499969482422, row.getMetric("index_quantile").floatValue(), 0.0001);
   }
 
   private MapBasedRow ingestAndQuery() throws Exception

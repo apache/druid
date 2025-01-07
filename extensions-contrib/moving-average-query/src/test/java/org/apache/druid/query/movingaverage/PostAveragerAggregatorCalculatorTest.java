@@ -97,7 +97,7 @@ public class PostAveragerAggregatorCalculatorTest
 
     Row result = pac.apply(row);
 
-    Assert.assertEquals(0.0, result.getMetric("avgCountRatio").floatValue(), 0.0);
+    Assert.assertNull(result.getMetric("avgCountRatio"));
     Assert.assertNull(result.getRaw("avgCountRatio"));
   }
 }

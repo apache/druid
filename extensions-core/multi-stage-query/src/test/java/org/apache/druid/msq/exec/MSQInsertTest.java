@@ -73,7 +73,6 @@ import org.mockito.Mockito;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
@@ -1776,10 +1775,9 @@ public class MSQInsertTest extends MSQTestBase
 
   private List<Object[]> expectedFooRowsWithAggregatedComplexColumn()
   {
-     new ArrayList<>();
     HyperLogLogCollector hyperLogLogCollector = HyperLogLogCollector.makeLatestCollector();
     hyperLogLogCollector.add(fn.hashInt(1).asBytes());
-    List<Object[]> expectedRows = ImmutableList.of(
+    return ImmutableList.of(
         new Object[]{946684800000L, "", hyperLogLogCollector.estimateCardinalityRound()},
         new Object[]{946771200000L, "10.1", hyperLogLogCollector.estimateCardinalityRound()},
         new Object[]{946857600000L, "2", hyperLogLogCollector.estimateCardinalityRound()},
@@ -1787,7 +1785,6 @@ public class MSQInsertTest extends MSQTestBase
         new Object[]{978393600000L, "def", hyperLogLogCollector.estimateCardinalityRound()},
         new Object[]{978480000000L, "abc", hyperLogLogCollector.estimateCardinalityRound()}
     );
-    return expectedRows;
   }
 
   private List<Object[]> expectedMultiValueFooRows()
