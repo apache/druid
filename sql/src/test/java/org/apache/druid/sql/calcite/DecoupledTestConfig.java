@@ -78,9 +78,9 @@ public @interface DecoupledTestConfig
      */
     UNNEST_EXTRA_SCANQUERY,
     /**
-     * Occurs in tandem with {@link NotYetSupported.Modes.RESULT_MISMATCH_NATIVE_UNNEST_INCORRECT_RESULTS}.
+     * Occurs in tandem with {@link NotYetSupported.Modes#PREDICATE_NOT_SUPPORTED}.
      */
-    RESULT_MISMATCH_NATIVE_UNNEST_INCORRECT_RESULTS,
+    PREDICATE_NOT_SUPPORTED,
     /**
      * Not really different plan.
      */
