@@ -26,6 +26,7 @@ END=$(echo ${TEST_RANGE} | cut -d'-' -f2)
 # Generate the list of patterns and replace spaces with *,
 # This essentially converts a range of A-D to A*,B*,C*,D*
 RANGES=$(eval echo {${START}..${END}} | sed -e 's/ /*,/g')
+RANGES+="*"
 
 # Output the result
 echo "Printing ranges"
