@@ -78,6 +78,7 @@ import org.apache.druid.server.metrics.SubqueryCountStatsProvider;
 import org.apache.druid.server.router.TieredBrokerConfig;
 import org.apache.druid.sql.calcite.schema.MetadataSegmentView;
 import org.apache.druid.sql.guice.SqlModule;
+import org.apache.druid.storage.local.LocalTmpStorageConfig;
 import org.apache.druid.timeline.PruneLoadSpec;
 import org.eclipse.jetty.server.Server;
 
@@ -185,6 +186,10 @@ public class CliBroker extends ServerRunnable
 
           Jerseys.addResource(binder, SelfDiscoveryResource.class);
           LifecycleModule.registerKey(binder, Key.get(SelfDiscoveryResource.class));
+
+          binder.bind(LocalTmpStorageConfig.class)
+                .toProvider(new LocalTmpStorageConfig.DefaultLocalTmpStorageConfigProvider("broker"))
+                .in(LazySingleton.class);
         },
         new LookupModule(),
         new SqlModule()
