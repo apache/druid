@@ -52,7 +52,6 @@ import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.client.JsonParserIterator;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.coordinator.Coordinator;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.DiscoveryDruidNode;
@@ -634,7 +633,7 @@ public class SystemSchema extends AbstractSchema
           null,
           UNKNOWN_SIZE,
           UNKNOWN_SIZE,
-          NullHandling.defaultLongValue(),
+          null,
           toStringOrNull(discoveryDruidNode.getStartTime())
       };
     }
@@ -692,7 +691,7 @@ public class SystemSchema extends AbstractSchema
           druidServerToUse.getTier(),
           currentSize,
           druidServerToUse.getMaxSize(),
-          NullHandling.defaultLongValue(),
+          null,
           toStringOrNull(discoveryDruidNode.getStartTime())
       };
     }

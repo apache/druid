@@ -35,7 +35,6 @@ import org.apache.druid.client.DirectDruidClientFactory;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.selector.HighestPriorityTierSelectorStrategy;
 import org.apache.druid.client.selector.RandomServerSelectorStrategy;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.curator.CuratorTestBase;
 import org.apache.druid.indexing.materializedview.DerivativeDataSourceMetadata;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -77,10 +76,6 @@ import java.util.concurrent.TimeUnit;
 
 public class DatasourceOptimizerTest extends CuratorTestBase
 {
-  static {
-    NullHandling.initializeForTests();
-  }
-
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
   private DerivativeDataSourceManager derivativesManager;

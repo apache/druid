@@ -20,7 +20,6 @@
 package org.apache.druid.query.sql;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.SleepModule;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.query.Druids;
@@ -79,7 +78,7 @@ public class SleepSqlTest extends BaseCalciteQueryTest
                   .build()
         ),
         ImmutableList.of(
-            new Object[]{NullHandling.replaceWithDefault() ? "" : null}
+            new Object[]{null}
         )
     );
   }

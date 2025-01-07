@@ -34,7 +34,6 @@ import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.MapCache;
 import org.apache.druid.client.coordinator.NoopCoordinatorClient;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -189,10 +188,6 @@ public abstract class SeekableStreamIndexTaskTestBase extends EasyMockSupport
   );
   protected static final Logger LOG = new Logger(SeekableStreamIndexTaskTestBase.class);
   protected static ListeningExecutorService taskExec;
-
-  static {
-    NullHandling.initializeForTests();
-  }
 
   protected final List<Task> runningTasks = new ArrayList<>();
   protected final LockGranularity lockGranularity;

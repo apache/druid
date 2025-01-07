@@ -25,7 +25,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.hll.HyperLogLogCollector;
@@ -343,7 +342,7 @@ public class MSQInsertTest extends MSQTestBase
         new Object[]{946771200000L, "b"},
         new Object[]{946771200000L, "c"},
         new Object[]{946857600000L, "d"},
-        new Object[]{978307200000L, NullHandling.sqlCompatible() ? "" : null},
+        new Object[]{978307200000L, ""},
         new Object[]{978393600000L, null},
         new Object[]{978480000000L, null}
     );
@@ -892,13 +891,7 @@ public class MSQInsertTest extends MSQTestBase
                      .setQueryContext(adjustedContext)
                      .setExpectedSegments(ImmutableSet.of(SegmentId.of("foo1", Intervals.ETERNITY, "test", 0)))
                      .setExpectedResultRows(
-                         NullHandling.replaceWithDefault() ?
                          ImmutableList.of(
-                             new Object[]{0L, null},
-                             new Object[]{0L, new Object[]{"a", "b"}},
-                             new Object[]{0L, new Object[]{"b", "c"}},
-                             new Object[]{0L, new Object[]{"d"}}
-                         ) : ImmutableList.of(
                              new Object[]{0L, null},
                              new Object[]{0L, new Object[]{"a", "b"}},
                              new Object[]{0L, new Object[]{""}},
@@ -928,13 +921,7 @@ public class MSQInsertTest extends MSQTestBase
                      .setQueryContext(adjustedContext)
                      .setExpectedSegments(ImmutableSet.of(SegmentId.of("foo1", Intervals.ETERNITY, "test", 0)))
                      .setExpectedResultRows(
-                         NullHandling.replaceWithDefault() ?
                          ImmutableList.of(
-                             new Object[]{0L, null},
-                             new Object[]{0L, new Object[]{"a", "b"}},
-                             new Object[]{0L, new Object[]{"b", "c"}},
-                             new Object[]{0L, new Object[]{"d"}}
-                         ) : ImmutableList.of(
                              new Object[]{0L, null},
                              new Object[]{0L, new Object[]{"a", "b"}},
                              new Object[]{0L, new Object[]{""}},
@@ -964,13 +951,7 @@ public class MSQInsertTest extends MSQTestBase
                      .setQueryContext(adjustedContext)
                      .setExpectedSegments(ImmutableSet.of(SegmentId.of("foo1", Intervals.ETERNITY, "test", 0)))
                      .setExpectedResultRows(
-                         NullHandling.replaceWithDefault() ?
                          ImmutableList.of(
-                             new Object[]{0L, null},
-                             new Object[]{0L, Arrays.asList("a", "b")},
-                             new Object[]{0L, Arrays.asList("b", "c")},
-                             new Object[]{0L, "d"}
-                         ) : ImmutableList.of(
                              new Object[]{0L, null},
                              new Object[]{0L, ""},
                              new Object[]{0L, Arrays.asList("a", "b")},
@@ -1783,85 +1764,64 @@ public class MSQInsertTest extends MSQTestBase
 
   private List<Object[]> expectedFooRows()
   {
-    List<Object[]> expectedRows = new ArrayList<>();
-    if (!useDefault) {
-      expectedRows.add(new Object[]{946684800000L, "", 1L});
-    }
-    expectedRows.addAll(ImmutableList.of(
+    return ImmutableList.of(
+        new Object[]{946684800000L, "", 1L},
         new Object[]{946771200000L, "10.1", 1L},
         new Object[]{946857600000L, "2", 1L},
         new Object[]{978307200000L, "1", 1L},
         new Object[]{978393600000L, "def", 1L},
         new Object[]{978480000000L, "abc", 1L}
-    ));
-    return expectedRows;
+    );
   }
 
   private List<Object[]> expectedFooRowsWithAggregatedComplexColumn()
   {
-    List<Object[]> expectedRows = new ArrayList<>();
+     new ArrayList<>();
     HyperLogLogCollector hyperLogLogCollector = HyperLogLogCollector.makeLatestCollector();
     hyperLogLogCollector.add(fn.hashInt(1).asBytes());
-    if (!useDefault) {
-      expectedRows.add(new Object[]{946684800000L, "", hyperLogLogCollector.estimateCardinalityRound()});
-    }
-    expectedRows.addAll(ImmutableList.of(
+    List<Object[]> expectedRows = ImmutableList.of(
+        new Object[]{946684800000L, "", hyperLogLogCollector.estimateCardinalityRound()},
         new Object[]{946771200000L, "10.1", hyperLogLogCollector.estimateCardinalityRound()},
         new Object[]{946857600000L, "2", hyperLogLogCollector.estimateCardinalityRound()},
         new Object[]{978307200000L, "1", hyperLogLogCollector.estimateCardinalityRound()},
         new Object[]{978393600000L, "def", hyperLogLogCollector.estimateCardinalityRound()},
         new Object[]{978480000000L, "abc", hyperLogLogCollector.estimateCardinalityRound()}
-    ));
+    );
     return expectedRows;
   }
 
   private List<Object[]> expectedMultiValueFooRows()
   {
-    List<Object[]> expectedRows = new ArrayList<>();
-    if (!useDefault) {
-      expectedRows.add(new Object[]{0L, ""});
-    }
-
-    expectedRows.addAll(
-        ImmutableList.of(
-            new Object[]{0L, ImmutableList.of("a", "b")},
-            new Object[]{0L, ImmutableList.of("b", "c")},
-            new Object[]{0L, "d"}
-        ));
-    return expectedRows;
+    return ImmutableList.of(
+        new Object[]{0L, ""},
+        new Object[]{0L, ImmutableList.of("a", "b")},
+        new Object[]{0L, ImmutableList.of("b", "c")},
+        new Object[]{0L, "d"}
+    );
   }
 
   private List<Object[]> expectedMultiValueFooRowsGroupBy()
   {
-    List<Object[]> expectedRows = new ArrayList<>();
-    if (!useDefault) {
-      expectedRows.add(new Object[]{0L, ""});
-    }
-    expectedRows.addAll(ImmutableList.of(
+    return ImmutableList.of(
+        new Object[]{0L, ""},
         new Object[]{0L, "a"},
         new Object[]{0L, "b"},
         new Object[]{0L, "c"},
         new Object[]{0L, "d"}
-    ));
-    return expectedRows;
+    );
   }
 
   private Set<SegmentId> expectedFooSegments()
   {
-    Set<SegmentId> expectedSegments = new TreeSet<>();
-
-    if (!useDefault) {
-      expectedSegments.add(SegmentId.of("foo1", Intervals.of("2000-01-01T/P1D"), "test", 0));
-    }
-    expectedSegments.addAll(
+    return new TreeSet<>(
         ImmutableSet.of(
+            SegmentId.of("foo1", Intervals.of("2000-01-01T/P1D"), "test", 0),
             SegmentId.of("foo1", Intervals.of("2000-01-02T/P1D"), "test", 0),
             SegmentId.of("foo1", Intervals.of("2000-01-03T/P1D"), "test", 0),
             SegmentId.of("foo1", Intervals.of("2001-01-01T/P1D"), "test", 0),
             SegmentId.of("foo1", Intervals.of("2001-01-02T/P1D"), "test", 0),
             SegmentId.of("foo1", Intervals.of("2001-01-03T/P1D"), "test", 0)
-        ));
-
-    return expectedSegments;
+        )
+    );
   }
 }

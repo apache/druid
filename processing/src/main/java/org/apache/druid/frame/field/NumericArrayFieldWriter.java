@@ -20,7 +20,6 @@
 package org.apache.druid.frame.field;
 
 import org.apache.datasketches.memory.WritableMemory;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;
 
@@ -143,24 +142,24 @@ public class NumericArrayFieldWriter implements FieldWriter
         public double getDouble()
         {
           final Number n = getObject();
-          assert NullHandling.replaceWithDefault() || n != null;
-          return n != null ? n.doubleValue() : 0d;
+          assert n != null;
+          return n.doubleValue();
         }
 
         @Override
         public float getFloat()
         {
           final Number n = getObject();
-          assert NullHandling.replaceWithDefault() || n != null;
-          return n != null ? n.floatValue() : 0f;
+          assert n != null;
+          return n.floatValue();
         }
 
         @Override
         public long getLong()
         {
           final Number n = getObject();
-          assert NullHandling.replaceWithDefault() || n != null;
-          return n != null ? n.longValue() : 0L;
+          assert n != null;
+          return n.longValue();
         }
 
         @Override

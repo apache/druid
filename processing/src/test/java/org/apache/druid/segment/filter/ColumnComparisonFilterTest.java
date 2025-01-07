@@ -23,7 +23,6 @@ import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import nl.jqno.equalsverifier.EqualsVerifier;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InputRowParser;
@@ -132,57 +131,30 @@ public class ColumnComparisonFilterTest extends BaseFilterTest
         DefaultDimensionSpec.of("dim7")
     )), ImmutableList.of("0", "1", "2", "3", "4", "5", "6", "7", "8", "9"));
 
-    if (NullHandling.replaceWithDefault()) {
-      // "" is equivalent to null which is equivalent to a missing dimension
-      assertFilterMatchesSkipVectorize(new ColumnComparisonDimFilter(ImmutableList.of(
-          DefaultDimensionSpec.of("dim1"),
-          DefaultDimensionSpec.of("dim6")
-      )), ImmutableList.of("0"));
+    // "" is not equivalent to a missing dimension
+    assertFilterMatchesSkipVectorize(new ColumnComparisonDimFilter(ImmutableList.of(
+        DefaultDimensionSpec.of("dim1"),
+        DefaultDimensionSpec.of("dim6")
+    )), Collections.emptyList());
 
-      assertFilterMatchesSkipVectorize(new ColumnComparisonDimFilter(ImmutableList.of(
-          DefaultDimensionSpec.of("dim2"),
-          DefaultDimensionSpec.of("dim6")
-      )), ImmutableList.of("1", "2", "6", "7", "8"));
+    assertFilterMatchesSkipVectorize(new ColumnComparisonDimFilter(ImmutableList.of(
+        DefaultDimensionSpec.of("dim2"),
+        DefaultDimensionSpec.of("dim6")
+    )), ImmutableList.of("1", "6", "7", "8"));
 
-      assertFilterMatchesSkipVectorize(
-          new ColumnComparisonDimFilter(
-              ImmutableList.of(DefaultDimensionSpec.of("dim1"), DefaultDimensionSpec.of("dim6"))
-          ),
-          ImmutableList.of("0")
-      );
+    assertFilterMatchesSkipVectorize(
+        new ColumnComparisonDimFilter(
+            ImmutableList.of(DefaultDimensionSpec.of("dim1"), DefaultDimensionSpec.of("dim6"))
+        ),
+        ImmutableList.of()
+    );
 
-      assertFilterMatchesSkipVectorize(
-          new ColumnComparisonDimFilter(
-              ImmutableList.of(DefaultDimensionSpec.of("dim2"), DefaultDimensionSpec.of("dim6"))
-          ),
-          ImmutableList.of("1", "2", "6", "7", "8")
-      );
-    } else {
-      // "" is not equivalent to a missing dimension
-      assertFilterMatchesSkipVectorize(new ColumnComparisonDimFilter(ImmutableList.of(
-          DefaultDimensionSpec.of("dim1"),
-          DefaultDimensionSpec.of("dim6")
-      )), Collections.emptyList());
-
-      assertFilterMatchesSkipVectorize(new ColumnComparisonDimFilter(ImmutableList.of(
-          DefaultDimensionSpec.of("dim2"),
-          DefaultDimensionSpec.of("dim6")
-      )), ImmutableList.of("1", "6", "7", "8"));
-
-      assertFilterMatchesSkipVectorize(
-          new ColumnComparisonDimFilter(
-              ImmutableList.of(DefaultDimensionSpec.of("dim1"), DefaultDimensionSpec.of("dim6"))
-          ),
-          ImmutableList.of()
-      );
-
-      assertFilterMatchesSkipVectorize(
-          new ColumnComparisonDimFilter(
-              ImmutableList.of(DefaultDimensionSpec.of("dim2"), DefaultDimensionSpec.of("dim6"))
-          ),
-          ImmutableList.of("1", "6", "7", "8")
-      );
-    }
+    assertFilterMatchesSkipVectorize(
+        new ColumnComparisonDimFilter(
+            ImmutableList.of(DefaultDimensionSpec.of("dim2"), DefaultDimensionSpec.of("dim6"))
+        ),
+        ImmutableList.of("1", "6", "7", "8")
+    );
   }
 
   @Test

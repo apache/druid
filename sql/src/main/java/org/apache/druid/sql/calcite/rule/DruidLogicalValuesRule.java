@@ -25,7 +25,6 @@ import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.rel.logical.LogicalValues;
 import org.apache.calcite.rex.RexLiteral;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.segment.column.RowSignature;
@@ -121,7 +120,7 @@ public class DruidLogicalValuesRule extends RelOptRule
         }
         return ((Number) RexLiteral.value(literal)).longValue();
       case BOOLEAN:
-        if (NullHandling.sqlCompatible() && literal.isNull()) {
+        if (literal.isNull()) {
           return null;
         }
         return literal.isAlwaysTrue() ? 1L : 0L;

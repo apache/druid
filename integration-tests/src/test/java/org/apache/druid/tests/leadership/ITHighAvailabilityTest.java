@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Inject;
 import org.apache.druid.cli.CliCustomNodeRole;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.curator.discovery.ServerDiscoveryFactory;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidNodeDiscovery;
@@ -288,7 +287,7 @@ public class ITHighAvailabilityTest
       working = StringUtils.replace(working, "%%COORDINATOR_ONE_LEADER%%", "0");
       working = StringUtils.replace(working, "%%COORDINATOR_TWO_LEADER%%", "1");
     }
-    working = StringUtils.replace(working, "%%NON_LEADER%%", String.valueOf(NullHandling.defaultLongValue()));
+    working = StringUtils.replace(working, "%%NON_LEADER%%", String.valueOf(null));
     return working;
   }
 

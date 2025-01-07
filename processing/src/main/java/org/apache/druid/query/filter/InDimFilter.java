@@ -42,7 +42,6 @@ import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.guava.Comparators;
@@ -86,9 +85,7 @@ import java.util.TreeSet;
 public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
 {
   /**
-   * Values matched by this filter. Values are sorted (nulls-first). Values can contain `null` in SQL-compatible null
-   * handling mode. When {@link NullHandling#replaceWithDefault()}, the values set does not contain empty string.
-   * (It may contain null.)
+   * Values matched by this filter. Values are sorted (nulls-first).
    */
   private final ValuesSet values;
   // Computed eagerly, not lazily, because lazy computations would block all processing threads for a given query.
@@ -277,14 +274,13 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
     }
     RangeSet<String> retSet = TreeRangeSet.create();
     for (String value : values) {
-      String valueEquivalent = NullHandling.nullToEmptyIfNeeded(value);
-      if (valueEquivalent == null) {
+      if (value == null) {
         // Case when SQL compatible null handling is enabled
         // Range.singleton(null) is invalid, so use the fact that
         // only null values are less than empty string.
         retSet.add(Range.lessThan(""));
       } else {
-        retSet.add(Range.singleton(valueEquivalent));
+        retSet.add(Range.singleton(value));
       }
     }
     return retSet;
@@ -473,7 +469,7 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
 
     if (!exFn.isInjective()
         && !exFn.isRetainMissingValue()
-        && inFilter.values.contains(NullHandling.emptyToNullIfNeeded(exFn.getReplaceMissingValueWith()))) {
+        && inFilter.values.contains(exFn.getReplaceMissingValueWith())) {
       // We cannot do an unapply()-based optimization when the original filter is configured to match on values that are
       // not present in the lookup key set. This would require creating a filter like "NOT IN (lookup key set)", which
       // we aren't willing to do, since it requires iterating the entire lookup and may be prohibitively large.
@@ -492,7 +488,7 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
 
       boolean ok = false;
 
-      if (!NullHandling.isNullOrEquivalent(exFn.getReplaceMissingValueWith()) || exFn.isInjective()) {
+      if (exFn.getReplaceMissingValueWith() != null || exFn.isInjective()) {
         final Iterator<String> keysWithNullValues = lookup.unapplyAll(Collections.singleton(null));
         if (keysWithNullValues != null) {
           if (!keysWithNullValues.hasNext()) {
@@ -512,7 +508,7 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
     }
 
     final Set<String> valuesToUnapply;
-    if (!NullHandling.isNullOrEquivalent(exFn.getReplaceMissingValueWith())
+    if (exFn.getReplaceMissingValueWith() != null
         && inFilter.values.contains(exFn.getReplaceMissingValueWith())) {
       // When matching against replaceMissingValueWith, this filter matches null values.
       valuesToUnapply = Sets.union(inFilter.values, Collections.singleton(null));
@@ -534,10 +530,9 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
       }
     }
 
-    // In SQL-compatible null handling mode, lookup of null is always "replaceMissingValueWith", regardless of contents
-    // of the lookup. So, if we're matching against "replaceMissingValueWith", we need to include null in the
-    // unapplied set.
-    if (NullHandling.sqlCompatible() && inFilter.values.contains(exFn.getReplaceMissingValueWith())) {
+    // lookup of null is always "replaceMissingValueWith", regardless of contents of the lookup. So, if we're matching
+    // against "replaceMissingValueWith", we need to include null in the unapplied set.
+    if (inFilter.values.contains(exFn.getReplaceMissingValueWith())) {
       unapplied.add(null);
     }
 
@@ -547,7 +542,7 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
     // If the selector value is overwritten in the lookup map, don't add selector value to keys.
     if (exFn.isRetainMissingValue()) {
       for (final String value : inFilter.values) {
-        if (NullHandling.isNullOrEquivalent(lookup.apply(NullHandling.emptyToNullIfNeeded(value)))) {
+        if (lookup.apply(value) == null) {
           unapplied.add(value);
         }
       }
@@ -756,20 +751,16 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
 
     /**
      * Create a ValuesSet from another Collection. The Collection will be reused if it is a {@link SortedSet} with
-     * the {@link Comparators#naturalNullsFirst()} comparator, and doesn't contain empty string in
-     * {@link NullHandling#replaceWithDefault()} mode.
+     * the {@link Comparators#naturalNullsFirst()} comparator.
      */
     private ValuesSet(final Collection<String> values)
     {
       if (values instanceof SortedSet
-          && Comparators.naturalNullsFirst().equals(((SortedSet<String>) values).comparator())
-          && !(NullHandling.replaceWithDefault() && values.contains(""))) {
+          && Comparators.naturalNullsFirst().equals(((SortedSet<String>) values).comparator())) {
         this.values = (SortedSet<String>) values;
       } else {
         this.values = new TreeSet<>(Comparators.naturalNullsFirst());
-        for (String value : values) {
-          this.values.add(NullHandling.emptyToNullIfNeeded(value));
-        }
+        this.values.addAll(values);
       }
     }
 
@@ -782,26 +773,25 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
     }
 
     /**
-     * Creates a ValuesSet wrapping the provided single value, with {@link NullHandling#emptyToNullIfNeeded(String)}
-     * applied.
+     * Creates a ValuesSet wrapping the provided single value.
      *
      * @throws IllegalStateException if the provided collection cannot be wrapped since it has the wrong comparator
      */
     public static ValuesSet of(@Nullable final String value)
     {
       final ValuesSet retVal = ValuesSet.create();
-      retVal.add(NullHandling.emptyToNullIfNeeded(value));
+      retVal.add(value);
       return retVal;
     }
 
     /**
-     * Creates a ValuesSet copying the provided iterator, with {@link NullHandling#emptyToNullIfNeeded(String)} applied.
+     * Creates a ValuesSet copying the provided iterator.
      */
     public static ValuesSet copyOf(final Iterator<String> values)
     {
       final TreeSet<String> copyOfValues = new TreeSet<>(Comparators.naturalNullsFirst());
       while (values.hasNext()) {
-        copyOfValues.add(NullHandling.emptyToNullIfNeeded(values.next()));
+        copyOfValues.add(values.next());
       }
       return new ValuesSet(copyOfValues);
     }
@@ -832,8 +822,7 @@ public class InDimFilter extends AbstractOptimizableDimFilter implements Filter
     @Override
     public boolean add(String s)
     {
-      // In non-SQL-compatible mode, empty strings must be converted to nulls for the filter.
-      return delegate().add(NullHandling.emptyToNullIfNeeded(s));
+      return delegate().add(s);
     }
 
     @Override

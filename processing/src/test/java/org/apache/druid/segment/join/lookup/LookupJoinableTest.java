@@ -22,7 +22,6 @@ package org.apache.druid.segment.join.lookup;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.lookup.ImmutableLookupMap;
 import org.apache.druid.query.lookup.LookupExtractor;
@@ -288,9 +287,7 @@ public class LookupJoinableTest extends InitializedNullHandlingTest
     );
 
     Assert.assertEquals(
-        NullHandling.sqlCompatible()
-        ? ImmutableSet.of(SEARCH_KEY_VALUE, "foo", "bar", "")
-        : ImmutableSet.of(SEARCH_KEY_VALUE, "foo", "bar"),
+        ImmutableSet.of(SEARCH_KEY_VALUE, "foo", "bar", ""),
         values.getColumnValues()
     );
   }

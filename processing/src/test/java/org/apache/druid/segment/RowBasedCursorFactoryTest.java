@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.math.LongMath;
 import junitparams.converters.Nullable;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -99,8 +98,6 @@ public class RowBasedCursorFactoryTest
   @BeforeClass
   public static void setUpClass()
   {
-    NullHandling.initializeForTests();
-
     PROCESSORS.clear();
 
     // Read all the types as all the other types.
@@ -635,9 +632,9 @@ public class RowBasedCursorFactoryTest
                   "0",
 
                   // COMPLEX
-                  NullHandling.defaultFloatValue(),
-                  NullHandling.defaultDoubleValue(),
-                  NullHandling.defaultLongValue(),
+                  null,
+                  null,
+                  null,
                   null,
                   null,
 
@@ -679,9 +676,9 @@ public class RowBasedCursorFactoryTest
                   "1",
 
                   // COMPLEX
-                  NullHandling.defaultFloatValue(),
-                  NullHandling.defaultDoubleValue(),
-                  NullHandling.defaultLongValue(),
+                  null,
+                  null,
+                  null,
                   null,
                   null,
 
