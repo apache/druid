@@ -956,7 +956,6 @@ public abstract class AbstractAuthConfigurationTest
   {
     String json = StringUtils.replace(template, "%%HISTORICAL%%", config.getHistoricalInternalHost());
     json = StringUtils.replace(json, "%%BROKER%%", config.getBrokerInternalHost());
-    json = StringUtils.replace(json, "%%NON_LEADER%%", String.valueOf(null));
     return json;
   }
 }
