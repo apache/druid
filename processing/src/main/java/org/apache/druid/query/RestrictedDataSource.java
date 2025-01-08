@@ -22,13 +22,11 @@ package org.apache.druid.query;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.policy.NoRestrictionPolicy;
 import org.apache.druid.query.policy.Policy;
-import org.apache.druid.query.policy.RowFilterPolicy;
 import org.apache.druid.segment.RestrictedSegment;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.utils.JvmUtils;
@@ -173,7 +171,7 @@ public class RestrictedDataSource implements DataSource
           newPolicy.get()
       );
     }
-    // The only happy path is, newPolicy is Policy.NO_RESTRICTION, which means this comes from an anthenticated and
+    // The only happy path is, newPolicy is NoRestrictionPolicy, which means this comes from an anthenticated and
     // authorized druid-internal request.
     return this;
   }
@@ -183,7 +181,7 @@ public class RestrictedDataSource implements DataSource
   {
     return "RestrictedDataSource{" +
            "base=" + base +
-           ", policy='" + policy + "'}";
+           ", policy=" + policy + "}";
   }
 
   @Override

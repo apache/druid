@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment;
 
-import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.policy.NoRestrictionPolicy;
 import org.apache.druid.query.policy.Policy;
 import org.apache.druid.timeline.SegmentId;
@@ -32,8 +31,12 @@ import java.io.IOException;
 import java.util.Optional;
 
 /**
- * A wrapped {@link SegmentReference} with a {@link DimFilter} restriction. The restriction must be applied on the
- * segment.
+ * A wrapped {@link SegmentReference} with a {@link Policy} restriction. The policy must be applied when querying the
+ * wrapped segment, e.x {@link #asCursorFactory()} returns a policy-enforced {@link RestrictedCursorFactory}. The policy
+ * and wrapped SegmentReference (i.e. delegate) can't be accessed directly.
+ * <p>
+ * There's a backdoor to get the wrapped SegmentReference through {@code as(BypassRestrictedSegment.class)}, returning
+ * a policy-aware (but not enforced) {@link BypassRestrictedSegment} instance.
  */
 public class RestrictedSegment implements SegmentReference
 {

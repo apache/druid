@@ -70,7 +70,7 @@ public abstract class AbstractStatement implements Closeable
    */
   protected final Map<String, Object> queryContext;
   protected PlannerContext plannerContext;
-  protected AuthorizationResult authResult;
+  protected DruidPlanner.AuthResult authResult;
   protected PlannerHook hook;
 
   public AbstractStatement(
@@ -151,8 +151,8 @@ public abstract class AbstractStatement implements Closeable
     // Authentication is done by the planner using the function provided
     // here. The planner ensures that this step is done before planning.
     authResult = planner.authorize(authorizer, contextResources);
-    if (!authResult.allowBasicAccess()) {
-      throw new ForbiddenException(authResult.getErrorMessage());
+    if (!authResult.authorizationResult.allowBasicAccess()) {
+      throw new ForbiddenException(authResult.authorizationResult.getErrorMessage());
     }
   }
 
@@ -175,12 +175,12 @@ public abstract class AbstractStatement implements Closeable
    */
   public Set<ResourceAction> resources()
   {
-    return Objects.requireNonNull(authResult.getSqlResourceActions());
+    return Objects.requireNonNull(authResult.sqlResourceActions);
   }
 
   public Set<ResourceAction> allResources()
   {
-    return Objects.requireNonNull(authResult.getAllResourceActions());
+    return Objects.requireNonNull(authResult.allResourceActions);
   }
 
   public SqlQueryPlus query()

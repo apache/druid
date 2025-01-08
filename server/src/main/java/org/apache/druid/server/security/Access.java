@@ -69,21 +69,33 @@ public class Access
     this.policy = policy;
   }
 
+  /**
+   * Constructs {@link Access} instance with access allowed, with no policy restriction.
+   */
   public static Access allow()
   {
     return new Access(true, "", Optional.empty());
   }
 
+  /**
+   * Contructs {@link Access} instance with access denied.
+   */
   public static Access deny(@Nullable String message)
   {
     return new Access(false, StringUtils.nullToEmptyNonDruidDataString(message), null);
   }
 
+  /**
+   * Contructs {@link Access} instance with access allowed, but with policy restriction.
+   */
   public static Access allowWithRestriction(Policy policy)
   {
     return new Access(true, "", Optional.of(policy));
   }
 
+  /**
+   * Returns true if access allowed, ignoring any policy restrictions.
+   */
   public boolean isAllowed()
   {
     return allowed;

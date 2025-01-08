@@ -20,8 +20,6 @@
 package org.apache.druid.initialization;
 
 import com.google.common.collect.ImmutableMap;
-import junitparams.JUnitParamsRunner;
-import junitparams.Parameters;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
@@ -32,7 +30,6 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.server.security.AuthorizationResult;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 
 import java.util.Optional;
 
@@ -41,7 +38,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@RunWith(JUnitParamsRunner.class)
 public class AuthorizationResultTest
 {
   @Before
@@ -71,7 +67,7 @@ public class AuthorizationResultTest
         )
     );
     assertEquals(
-        "AuthorizationResult [permission=ALLOW_WITH_RESTRICTION, failureMessage=null, policyRestrictions={table1=Optional[NO_RESTRICTION], table2=Optional[RowFilterPolicy{rowFilter=column1 = val1}]}, sqlResourceActions=null, allResourceActions=null]",
+        "AuthorizationResult [permission=ALLOW_WITH_RESTRICTION, failureMessage=null, policyRestrictions={table1=Optional[NO_RESTRICTION], table2=Optional[RowFilterPolicy{rowFilter=column1 = val1}]}]",
         result.toString()
     );
   }
@@ -112,11 +108,7 @@ public class AuthorizationResultTest
   }
 
   @Test
-  @Parameters({
-      "true, Optional[Unauthorized]",
-      "false, Optional.empty"
-  })
-  public void testRestrictedAccess(boolean policyRestrictionsNotPermitted, String error)
+  public void testRestrictedAccess()
   {
     AuthorizationResult result = AuthorizationResult.allowWithRestriction(ImmutableMap.of(
         "table1",

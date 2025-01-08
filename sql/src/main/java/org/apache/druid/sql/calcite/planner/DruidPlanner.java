@@ -42,6 +42,7 @@ import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.parser.DruidSqlReplace;
 import org.apache.druid.sql.calcite.parser.ParseException;
 import org.apache.druid.sql.calcite.parser.Token;
+import org.apache.druid.sql.calcite.planner.DruidPlanner.AuthResult;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.joda.time.DateTimeZone;
 
@@ -70,6 +71,35 @@ public class DruidPlanner implements Closeable
   public enum State
   {
     START, VALIDATED, PREPARED, PLANNED
+  }
+
+  public static class AuthResult
+  {
+    public final AuthorizationResult authorizationResult;
+
+    /**
+     * Resource actions used with authorizing a cancellation request. These actions
+     * include only the data-level actions (e.g. the datasource.)
+     */
+    public final Set<ResourceAction> sqlResourceActions;
+
+    /**
+     * Full resource actions authorized as part of this request. Used when logging
+     * resource actions. Includes query context keys, if query context authorization
+     * is enabled.
+     */
+    public final Set<ResourceAction> allResourceActions;
+
+    public AuthResult(
+        final AuthorizationResult authorizationResult,
+        final Set<ResourceAction> sqlResourceActions,
+        final Set<ResourceAction> allResourceActions
+    )
+    {
+      this.authorizationResult = authorizationResult;
+      this.sqlResourceActions = sqlResourceActions;
+      this.allResourceActions = allResourceActions;
+    }
   }
 
   private final FrameworkConfig frameworkConfig;
@@ -203,7 +233,7 @@ public class DruidPlanner implements Closeable
    *                     authorize.
    * @return the return value from the authorizer
    */
-  public AuthorizationResult authorize(
+  public AuthResult authorize(
       final Function<Set<ResourceAction>, AuthorizationResult> authorizer,
       final Set<ResourceAction> extraActions
   )
@@ -219,10 +249,7 @@ public class DruidPlanner implements Closeable
     // Views prepare without authorization, Avatica does authorize, then prepare,
     // so the only constraint is that authorization be done before planning.
     authorized = true;
-    return authorizationResult.withResourceActions(
-        sqlResourceActions,
-        allResourceActions
-    );
+    return new AuthResult(authorizationResult, sqlResourceActions, allResourceActions);
   }
 
   /**
