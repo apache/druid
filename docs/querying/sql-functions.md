@@ -27,7 +27,7 @@ sidebar_label: "All functions"
  Apache Druid supports two query languages: Druid SQL and [native queries](querying.md).
  This document describes the SQL language.
 :::
-<!-- The **Learn More** at the end of each function section provides further documentation. -->
+
 This page provides a reference of Apache Druid&circledR; SQL functions in alphabetical order. For more details on a function, refer to the following:
 * [Aggregation functions](sql-aggregations.md)
 * [Array functions](sql-array-functions.md)
@@ -36,15 +36,25 @@ This page provides a reference of Apache Druid&circledR; SQL functions in alphab
 * [Scalar functions](sql-scalar.md)
 * [Window functions](sql-window-functions.md)
 
+## Example data
+
 The examples on this page use the following example datasources:
-* `flight-carriers` using `FlightCarrierOnTime (1 month)`
-* `taxi-trips` using `NYC Taxi cabs (3 files)`
-* `kttm` using `KoalasToTheMax one day`
 * `array-example` created with [SQL-based ingestion](../multi-stage-query/index.md)
+* `flight-carriers` using `FlightCarrierOnTime (1 month)` included with Druid
+* `kttm` using `KoalasToTheMax one day` included with Druid
+* `mvd-example` using [SQL-based ingestion](multi-value-dimensions.md#sql-based-ingestion)
+* `taxi-trips` using `NYC Taxi cabs (3 files)` included with Druid
 
-Use the following query to create the `array-example` datasource.
+To load a datasource included with Druid,
+access the [web console](../operations/web-console.md)
+and go to **Load data > Batch - SQL > Example data**.
+Select **Connect data**, and parse using the default settings.
+On the page to configure the schema, select the datasource label
+and enter the name of the datasource listed above.
 
-<details><summary>Example query</summary>
+Use the following query to create the `array-example` datasource:
+
+<details><summary>Datasource for arrays</summary>
 
 ```sql
 REPLACE INTO "array-example" OVERWRITE ALL
@@ -75,6 +85,32 @@ PARTITIONED BY DAY
 
 </details>
 
+Use the following query to create the `mvd-example` datasource:
+
+<details><summary>Datasource for multi-value string dimensions</summary>
+
+```sql
+REPLACE INTO "mvd-example" OVERWRITE ALL
+WITH "ext" AS (
+  SELECT *
+  FROM TABLE(
+    EXTERN(
+      '{"type":"inline","data":"{\"timestamp\": \"2011-01-12T00:00:00.000Z\", \"label\": \"row1\", \"tags\": [\"t1\",\"t2\",\"t3\"]}\n{\"timestamp\": \"2011-01-13T00:00:00.000Z\", \"label\": \"row2\", \"tags\": [\"t3\",\"t4\",\"t5\"]}\n{\"timestamp\": \"2011-01-14T00:00:00.000Z\", \"label\": \"row3\", \"tags\": [\"t5\",\"t6\",\"t7\"]}\n{\"timestamp\": \"2011-01-14T00:00:00.000Z\", \"label\": \"row4\", \"tags\": []}"}',
+      '{"type":"json"}',
+      '[{"name":"timestamp", "type":"STRING"},{"name":"label", "type":"STRING"},{"name":"tags", "type":"ARRAY<STRING>"}]'
+    )
+  )
+)
+SELECT
+  TIME_PARSE("timestamp") AS "__time",
+  "label",
+  ARRAY_TO_MV("tags") AS "tags"
+FROM "ext"
+PARTITIONED BY DAY
+```
+
+</details>
+
 ## ABS
 
 Calculates the absolute value of a numeric expression.
@@ -96,9 +132,9 @@ LIMIT 1
 ```
 Returns the following:
 
-| `arrival_delay` | `absolute_arrival_delay` | 
-| -- | -- | 
-| `-27` | `27` | 
+| `arrival_delay` | `absolute_arrival_delay` |
+| -- | -- |
+| `-27` | `27` |
 </details>
 
 [Learn more](sql-scalar.md#numeric-functions)
@@ -120,7 +156,7 @@ SELECT ACOS(0) AS "arc_cosine"
 Returns the following:
 
 | `arc_cosine` |  
-| -- | 
+| -- |
 | `1.5707963267948966` |
 </details>
 
@@ -830,7 +866,7 @@ SELECT ASIN(1) AS "arc_sine"
 Returns the following:
 
 | `arc_sine` |  
-| -- | 
+| -- |
 | `1.5707963267948966` |
 </details>
 
@@ -853,7 +889,7 @@ SELECT ATAN(1) AS "arc_tangent"
 Returns the following:
 
 | `arc_tangent` |  
-| -- | 
+| -- |
 | `0.7853981633974483` |
 </details>
 
@@ -876,7 +912,7 @@ SELECT ATAN2(1,-1) AS "arc_tangent_2"
 Returns the following:
 
 | `arc_tangent_2` |  
-| -- | 
+| -- |
 | `2.356194490192345` |
 </details>
 
@@ -934,9 +970,9 @@ SELECT BITWISE_AND(12, 10) AS "bitwise_and"
 ```
 Returns the following:
 
-| `bitwise_and` | 
+| `bitwise_and` |
 | -- |
-| 8 | 
+| 8 |
 </details>
 
 [Learn more](sql-scalar.md#numeric-functions)
@@ -957,9 +993,9 @@ SELECT BITWISE_COMPLEMENT(12) AS "bitwise_complement"
 ```
 Returns the following:
 
-| `bitwise_complement` | 
+| `bitwise_complement` |
 | -- |
-| -13 | 
+| -13 |
 </details>
 
 [Learn more](sql-scalar.md#numeric-functions)
@@ -980,9 +1016,9 @@ SELECT BITWISE_CONVERT_DOUBLE_TO_LONG_BITS(255) AS "ieee_754_double_to_long"
 ```
 Returns the following:
 
-| `ieee_754_double_to_long` | 
+| `ieee_754_double_to_long` |
 | -- |
-| `4643176031446892544` | 
+| `4643176031446892544` |
 </details>
 
 [Learn more](sql-scalar.md#numeric-functions)
@@ -1004,9 +1040,9 @@ SELECT BITWISE_CONVERT_LONG_BITS_TO_DOUBLE(4643176031446892544) AS "long_to_ieee
 ```
 Returns the following:
 
-| `long_to_ieee_754_double` | 
+| `long_to_ieee_754_double` |
 | -- |
-| `255` | 
+| `255` |
 </details>
 
 [Learn more](sql-scalar.md#numeric-functions)
@@ -1027,9 +1063,9 @@ SELECT BITWISE_OR(12, 10) AS "bitwise_or"
 ```
 Returns the following:
 
-| `bitwise_or` | 
+| `bitwise_or` |
 | -- |
-| `14` | 
+| `14` |
 </details>
 
 [Learn more](sql-scalar.md#numeric-functions)
@@ -1050,9 +1086,9 @@ SELECT BITWISE_SHIFT_LEFT(2, 3) AS "bitwise_shift_left"
 ```
 Returns the following:
 
-| `bitwise_shift_left` | 
+| `bitwise_shift_left` |
 | -- |
-| `16` | 
+| `16` |
 </details>
 
 [Learn more](sql-scalar.md#numeric-functions)
@@ -1073,9 +1109,9 @@ SELECT BITWISE_SHIFT_RIGHT(16, 3) AS "bitwise_shift_right"
 ```
 Returns the following:
 
-| `bitwise_shift_right` | 
+| `bitwise_shift_right` |
 | -- |
-| `2` | 
+| `2` |
 </details>
 
 [Learn more](sql-scalar.md#numeric-functions)
@@ -1096,9 +1132,9 @@ SELECT BITWISE_XOR(12, 10) AS "bitwise_xor"
 ```
 Returns the following:
 
-| `bitwise_xor` | 
+| `bitwise_xor` |
 | -- |
-| `6` | 
+| `6` |
 </details>
 
 [Learn more](sql-scalar.md#numeric-functions)
@@ -1141,7 +1177,7 @@ SELECT
 Returns the following:
 
 | `original_string` | `trim_both_ends` |
-| -- | -- | 
+| -- | -- |
 | `___abc___` | `abc` |
 
 </details>
@@ -1239,7 +1275,7 @@ LIMIT 1
 Returns the following:
 
 | `original_column` | `cast_to_string` |
-| -- | -- | 
+| -- | -- |
 | `1571` | `1571.0` |
 
 </details>
@@ -1296,9 +1332,9 @@ LIMIT 1
 ```
 Returns the following:
 
-| `fare_amount` | `ceiling_fare_amount` | 
-| -- | -- | 
-| `21.25` | `22` | 
+| `fare_amount` | `ceiling_fare_amount` |
+| -- | -- |
+| `21.25` | `22` |
 </details>
 
 [Learn more](sql-scalar.md#numeric-functions)
@@ -1370,7 +1406,7 @@ Returns the following:
 
 | `origin_city` | `destination_city` | `concatenate_flight_details` |
 | -- | -- | -- |
-| `San Juan, PR` | `Washington, DC` | `San Juan, PR to Washington, DC` | 
+| `San Juan, PR` | `Washington, DC` | `San Juan, PR to Washington, DC` |
 
 </details>
 
@@ -1397,7 +1433,7 @@ LIMIT 2
 
 Returns the following:
 
-| `origin_city` | `contains_string` | 
+| `origin_city` | `contains_string` |
 | -- | -- |
 | `San Juan, PR` | `true` |
 | `Boston, MA` | `false` |
@@ -1424,7 +1460,7 @@ SELECT COS(PI / 3) AS "cosine"
 Returns the following:
 
 | `cosine` |  
-| -- | 
+| -- |
 | `0.5000000000000001` |
 </details>
 
@@ -1447,7 +1483,7 @@ SELECT COT(PI / 3) AS "cotangent"
 Returns the following:
 
 | `cotangent` |  
-| -- | 
+| -- |
 | `0.577350269189626` |
 </details>
 
@@ -1489,7 +1525,7 @@ SELECT CURRENT_DATE AS "current_date"
 
 Returns the following:
 
-| `current_date` | 
+| `current_date` |
 | -- |
 | `2024-08-14T00:00:00.000Z `|
 
@@ -1606,7 +1642,7 @@ SELECT DEGREES(PI) AS "degrees"
 Returns the following:
 
 | `degrees` |  
-| -- | 
+| -- |
 | `180` |
 </details>
 
@@ -1670,7 +1706,7 @@ FROM "flight-carriers"
 
 Returns a result similar to the following:
 
-| `estimate_cdf` | 
+| `estimate_cdf` |
 | -- |
 | `[0.6332237016416492,0.8908411023460711,0.9612303007393957,1.0]` |
 
@@ -1697,7 +1733,7 @@ FROM "flight-carriers"
 Returns a result similar to the following:
 
 | `estimate_median` |
-| -- | 
+| -- |
 | `569` |
 
 </details>
@@ -1723,7 +1759,7 @@ FROM "flight-carriers"
 Returns a result similar to the following:
 
 | `estimate_fractions` |
-| -- | 
+| -- |
 | `[316.0,571.0,951.0]` |
 
 </details>
@@ -1749,7 +1785,7 @@ FROM "flight-carriers"
 
 Returns a result similar to the following:
 
-| `estimate_histogram` | 
+| `estimate_histogram` |
 | -- |
 | `[358496.0,153974.99999999997,39909.99999999999,13757.000000000005]` |
 
@@ -1780,8 +1816,8 @@ LIMIT 1
 
 Returns the following:
 
-| `origin_state` | `destination_state` | `hll_tail_number` | 
-| -- | -- | -- | 
+| `origin_state` | `destination_state` | `hll_tail_number` |
+| -- | -- | -- |
 | `AK` | `AK` | `"AwEHDAcIAAFBAAAAfY..."` |
 
 </details>
@@ -1860,8 +1896,8 @@ FROM "flight-carriers"
 
 Returns the following:
 
-| `quantile_sketch` | 
-| -- | 
+| `quantile_sketch` |
+| -- |
 | `AgMIGoAAAAB6owgAA...` |
 
 </details>
@@ -2102,9 +2138,9 @@ LIMIT 1
 ```
 Returns the following:
 
-| `fare_amount` | `floor_fare_amount` | 
-| -- | -- | 
-| `21.25` | `21` | 
+| `fare_amount` | `floor_fare_amount` |
+| -- | -- |
+| `21.25` | `21` |
 </details>
 
 [Learn more](sql-scalar.md#numeric-functions)
@@ -2127,7 +2163,7 @@ SELECT GREATEST(PI, 4, -5.0) AS "greatest"
 Returns the following:
 
 | `greatest` |
-| -- | 
+| -- |
 | `4` |
 
 </details>
@@ -2164,7 +2200,7 @@ FROM "flight-carriers"
 
 Returns the following:
 
-| `estimate` | 
+| `estimate` |
 | -- |
 | `4685.8815405960595` |
 
@@ -2411,7 +2447,7 @@ LIMIT 2
 Returns the following:
 
 | `ipv4_address` | `belongs_in_subnet`|
-| -- | -- | 
+| -- | -- |
 | `181.13.41.82` | `true`|
 | `177.242.100.0` | `false`|
 
@@ -2494,9 +2530,9 @@ SELECT
 
 Returns the following: 
 
-| `ipv6_address` | `belongs_in_subnet` | 
+| `ipv6_address` | `belongs_in_subnet` |
 | -- | -- |
-| `75e9:efa4:29c6:85f6::232c` | `true` | 
+| `75e9:efa4:29c6:85f6::232c` | `true` |
 
 
 </details>
@@ -2518,7 +2554,7 @@ Returns an array of field names from `expr` at the specified `path`.
 
 Merges two or more JSON `STRING` or `COMPLEX<json>` into one. Preserves the rightmost value when there are key overlaps. Returning always a `COMPLEX<json>` type.
 
-* **Syntax:**: `JSON_MERGE(expr1, expr2[, expr3 ...])`
+* **Syntax:** `JSON_MERGE(expr1, expr2[, expr3 ...])`
 * **Function type:** JSON
 
 [Learn more](sql-json-functions.md)
@@ -2691,7 +2727,7 @@ LIMIT 1
 
 Returns the following:
 
-| `origin_city_name` | `city_name_length` | 
+| `origin_city_name` | `city_name_length` |
 | -- | -- |
 | `San Juan, PR` | `12` |
 
@@ -2729,9 +2765,9 @@ LIMIT 1
 
 Returns the following:
 
-| `max_temperature` | `natural_log_max_temp` | 
-| -- | -- | 
-| `76` | `4.330733340286331` | 
+| `max_temperature` | `natural_log_max_temp` |
+| -- | -- |
+| `76` | `4.330733340286331` |
 
 </details>
 
@@ -2757,9 +2793,9 @@ LIMIT 1
 ```
 Returns the following:
 
-| `max_temperature` | `log10_max_temp` | 
-| -- | -- | 
-| `76` | `1.8808135922807914` | 
+| `max_temperature` | `log10_max_temp` |
+| -- | -- |
+| `76` | `1.8808135922807914` |
 </details>
 
 [Learn more](sql-scalar.md#numeric-functions)
@@ -2794,7 +2830,7 @@ LIMIT 2
 
 Returns the following:
 
-| `origin_airport` | `full_airport_name` | 
+| `origin_airport` | `full_airport_name` |
 | -- | -- |
 | `SJU` | `Luis Munoz Marin International Airport` |
 | `BOS` | `key not found` |
@@ -2885,7 +2921,7 @@ SELECT
 Returns the following:
 
 | `original_string` | `trim_leading_end_of_expression` |
-| -- | -- | 
+| -- | -- |
 | `___abc___` | `abc___` |
 
 </details>
@@ -2951,9 +2987,9 @@ SELECT MOD(78, 10) as "modulo"
 ```
 Returns the following:
 
-| `modulo` | 
-| -- | 
-| `8` | 
+| `modulo` |
+| -- |
+| `8` |
 </details>
 
 [Learn more](sql-scalar.md#numeric-functions)
@@ -2962,8 +2998,26 @@ Returns the following:
 
 Adds the expression to the end of the array.
 
-* **Syntax:**: `MV_APPEND(arr1, expr)`
+* **Syntax:** `MV_APPEND(arr1, expr)`
 * **Function type:** Multi-value string
+
+<details><summary>Example</summary>
+
+The following example appends the string `label` to the multi-value string `tags` from `mvd-example`:
+
+```sql
+SELECT MV_APPEND("tags", "label") AS append
+FROM "mvd-example"
+LIMIT 1
+```
+
+Returns the following:
+
+| `append` |
+| -- |
+| `["t1","t2","t3","row1"]` |
+
+</details>
 
 [Learn more](sql-multivalue-string-functions.md)
 
@@ -2971,8 +3025,26 @@ Adds the expression to the end of the array.
 
 Concatenates two arrays.
 
-* **Syntax:**: `MV_CONCAT(arr1, arr2)`
+* **Syntax:** `MV_CONCAT(arr1, arr2)`
 * **Function type:** Multi-value string
+
+<details><summary>Example</summary>
+
+The following example concatenates `tags` from `mvd-example` to itself:
+
+```sql
+SELECT MV_CONCAT("tags", "tags") AS cat
+FROM "mvd-example"
+LIMIT 1
+```
+
+Returns the following:
+
+| `cat` |
+| -- |
+| `["t1","t2","t3","t1","t2","t3"]` |
+
+</details>
 
 [Learn more](sql-multivalue-string-functions.md)
 
@@ -2981,17 +3053,57 @@ Concatenates two arrays.
 
 Returns true if the expression is in the array, false otherwise.
 
-* **Syntax:**: `MV_CONTAINS(arr, expr)`
+* **Syntax:** `MV_CONTAINS(arr, expr)`
 * **Function type:** Multi-value string
+
+<details><summary>Example</summary>
+
+The following example checks if the string `t3` exists within `tags` from `mvd-example`:
+
+```sql
+SELECT "tags", MV_CONTAINS("tags", 't3') AS contained
+FROM "mvd-example"
+```
+
+Returns the following:
+
+|`tags`|`contained`|
+|------|-----------|
+|`["t1","t2","t3"]`|`true`|
+|`["t3","t4","t5"]`|`true`|
+|`["t5","t6","t7"]`|`false`|
+|`null`|`false`|
+
+</details>
 
 [Learn more](sql-multivalue-string-functions.md)
 
 ## MV_FILTER_NONE
 
-Filters a multi-value expression to include no values contained in the array.
+Filters a multi-value expression to exclude values from an array.
 
-* **Syntax:**: `MV_FILTER_NONE(expr, arr)`
+* **Syntax:** `MV_FILTER_NONE(expr, arr)`
 * **Function type:** Multi-value string
+
+<details><summary>Example</summary>
+
+The following example filters `tags` from `mvd-example` to remove values `t1` or `t3`, if present:
+
+```sql
+SELECT MV_FILTER_NONE("tags", ARRAY['t1', 't3']) AS exclude
+FROM "mvd-example"
+LIMIT 3
+```
+
+Returns the following:
+
+| `exclude` |
+| -- |
+| `t2` |
+| `["t4", "t5"]` |
+| `["t5","t6","t7"]` |
+
+</details>
 
 [Learn more](sql-multivalue-string-functions.md)
 
@@ -2999,8 +3111,28 @@ Filters a multi-value expression to include no values contained in the array.
 
 Filters a multi-value expression to include only values contained in the array.
 
-* **Syntax:**: `MV_FILTER_ONLY(expr, arr)`
+* **Syntax:** `MV_FILTER_ONLY(expr, arr)`
 * **Function type:** Multi-value string
+
+<details><summary>Example</summary>
+
+The following example filters `tags` from `mvd-example` to only contain the values `t1` or `t3`:
+
+```sql
+SELECT MV_FILTER_ONLY("tags", ARRAY['t1', 't3']) AS filt
+FROM "mvd-example"
+LIMIT 3
+```
+
+Returns the following:
+
+| `filt` |
+| -- |
+| `["t1","t3"]` |
+| `t3` |
+| null |
+
+</details>
 
 [Learn more](sql-multivalue-string-functions.md)
 
@@ -3008,8 +3140,26 @@ Filters a multi-value expression to include only values contained in the array.
 
 Returns the length of an array expression.
 
-* **Syntax:**: `MV_LENGTH(arr)`
+* **Syntax:** `MV_LENGTH(arr)`
 * **Function type:** Multi-value string
+
+<details><summary>Example</summary>
+
+The following example returns the length of the `tags` multi-value strings from `mvd-example`:
+
+```sql
+SELECT MV_LENGTH("tags") AS len
+FROM "mvd-example"
+LIMIT 1
+```
+
+Returns the following:
+
+| `len` |
+| -- |
+| `3` |
+
+</details>
 
 [Learn more](sql-multivalue-string-functions.md)
 
@@ -3017,8 +3167,28 @@ Returns the length of an array expression.
 
 Returns the array element at the given zero-based index.
 
-* **Syntax:**: `MV_OFFSET(arr, long)`
+* **Syntax:** `MV_OFFSET(arr, long)`
 * **Function type:** Multi-value string
+
+<details><summary>Example</summary>
+
+The following example returns `tags` and the element at the third position of `tags` in `mvd-example`:
+
+```sql
+SELECT "tags", MV_OFFSET("tags", 2) AS elem
+FROM "mvd-example"
+```
+
+Returns the following:
+
+|`tags`|`elem`|
+|------|------|
+|`["t1","t2","t3"]`|`t3`|
+|`["t3","t4","t5"]`|`t5`|
+|`["t5","t6","t7"]`|`t7`|
+|`null`|`null`|
+
+</details>
 
 [Learn more](sql-multivalue-string-functions.md)
 
@@ -3026,8 +3196,28 @@ Returns the array element at the given zero-based index.
 
 Returns the zero-based index of the first occurrence of a given expression in the array.
 
-* **Syntax:**: `MV_OFFSET_OF(arr, expr)`
+* **Syntax:** `MV_OFFSET_OF(arr, expr)`
 * **Function type:** Multi-value string
+
+<details><summary>Example</summary>
+
+The following example returns `tags` and the zero-based index of the string `t3` from `tags` in `mvd-example`:
+
+```sql
+SELECT "tags", MV_OFFSET_OF("tags", 't3') AS index
+FROM "mvd-example"
+```
+
+Returns the following:
+
+|`tags`|`index`|
+|------|-------|
+|`["t1","t2","t3"]`|`2`|
+|`["t3","t4","t5"]`|`0`|
+|`["t5","t6","t7"]`|`null`|
+|`null`|`null`|
+
+</details>
 
 [Learn more](sql-multivalue-string-functions.md)
 
@@ -3035,8 +3225,28 @@ Returns the zero-based index of the first occurrence of a given expression in th
 
 Returns the array element at the given one-based index.
 
-* **Syntax:**: `MV_ORDINAL(arr, long)`
+* **Syntax:** `MV_ORDINAL(arr, long)`
 * **Function type:** Multi-value string
+
+<details><summary>Example</summary>
+
+The following example returns `tags` and the element at the third position of `tags` in `mvd-example`:
+
+```sql
+SELECT "tags", MV_ORDINAL("tags", 3) AS elem
+FROM "mvd-example"
+```
+
+Returns the following:
+
+|`tags`|`elem`|
+|------|------|
+|`["t1","t2","t3"]`|`t3`|
+|`["t3","t4","t5"]`|`t5`|
+|`["t5","t6","t7"]`|`t7`|
+|`null`|`null`|
+
+</details>
 
 [Learn more](sql-multivalue-string-functions.md)
 
@@ -3044,8 +3254,28 @@ Returns the array element at the given one-based index.
 
 Returns the one-based index of the first occurrence of a given expression.
 
-* **Syntax:**: `MV_ORDINAL_OF(arr, expr)`
+* **Syntax:** `MV_ORDINAL_OF(arr, expr)`
 * **Function type:** Multi-value string
+
+<details><summary>Example</summary>
+
+The following example returns `tags` and the one-based index of the string `t3` from `tags` in `mvd-example`:
+
+```sql
+SELECT "tags", MV_ORDINAL_OF("tags", 't3') AS index
+FROM "mvd-example"
+```
+
+Returns the following:
+
+|`tags`|`index`|
+|------|-------|
+|`["t1","t2","t3"]`|`3`|
+|`["t3","t4","t5"]`|`1`|
+|`["t5","t6","t7"]`|`null`|
+|`null`|`null`|
+
+</details>
 
 [Learn more](sql-multivalue-string-functions.md)
 
@@ -3053,8 +3283,28 @@ Returns the one-based index of the first occurrence of a given expression.
 
 Returns true if the two arrays have any elements in common, false otherwise.
 
-* **Syntax:**: `MV_OVERLAP(arr1, arr2)`
+* **Syntax:** `MV_OVERLAP(arr1, arr2)`
 * **Function type:** Multi-value string
+
+<details><summary>Example</summary>
+
+The following example identifies rows that contain `t1` or `t3` in `tags` from `mvd-example`:
+
+```sql
+SELECT "tags", MV_OVERLAP("tags", ARRAY['t1', 't3']) AS overlap
+FROM "mvd_example"
+```
+
+Returns the following:
+
+|`tags`|`overlap`|
+|------|---------|
+|`["t1","t2","t3"]`|`true`|
+|`["t3","t4","t5"]`|`true`|
+|`["t5","t6","t7"]`|`false`|
+|`null`|`false`|
+
+</details>
 
 [Learn more](sql-multivalue-string-functions.md)
 
@@ -3062,8 +3312,27 @@ Returns true if the two arrays have any elements in common, false otherwise.
 
 Adds the expression to the beginning of the array.
 
-* **Syntax:**: `MV_PREPEND(expr, arr)`
+* **Syntax:** `MV_PREPEND(expr, arr)`
 * **Function type:** Multi-value string
+
+<details><summary>Example</summary>
+
+The following example prepends the string dimension `label` to the multi-value string dimension `tags` from `mvd-example`:
+
+```sql
+SELECT MV_PREPEND("label", "tags") AS prepend
+FROM "mvd-example"
+LIMIT 1
+```
+
+Returns the following:
+
+| `prepend` |
+| -- |
+| `["row1","t1","t2","t3"]` |
+
+
+</details>
 
 [Learn more](sql-multivalue-string-functions.md)
 
@@ -3071,8 +3340,28 @@ Adds the expression to the beginning of the array.
 
 Returns a slice of the array from the zero-based start and end indexes.
 
-* **Syntax:**: `MV_SLICE(arr, start, end)`
+* **Syntax:** `MV_SLICE(arr, start, end)`
 * **Function type:** Multi-value string
+
+<details><summary>Example</summary>
+
+The following example returns `tags` and the second and third values of `tags` from `mvd-example`:
+
+```sql
+SELECT "tags", MV_SLICE(tags, 1, 3) AS slice
+FROM "mvd-example"
+```
+
+Returns the following:
+
+|`tags`|`slice`|
+|------|-------|
+|`["t1"","t2","t3"]`|`["t2","t3"]`|
+|`["t3"","t4","t5"]`|`["t4","t5"]`|
+|`["t5"","t6","t7"]`|`["t6","t7"]`|
+|`null`|`null`|
+
+</details>
 
 [Learn more](sql-multivalue-string-functions.md)
 
@@ -3080,8 +3369,26 @@ Returns a slice of the array from the zero-based start and end indexes.
 
 Converts a multi-value string from a `VARCHAR` to a `VARCHAR ARRAY`.
 
-* **Syntax:**: `MV_TO_ARRAY(str)`
+* **Syntax:** `MV_TO_ARRAY(str)`
 * **Function type:** Multi-value string
+
+<details><summary>Example</summary>
+
+The following example transforms the `tags` column from `mvd-example` to arrays:
+
+```sql
+SELECT MV_TO_ARRAY(tags) AS arr
+FROM "mvd-example"
+LIMIT 1
+```
+
+Returns the following:
+
+| `arr` |
+| -- |
+| `[t1, t2, t3]` |
+
+</details>
 
 [Learn more](sql-multivalue-string-functions.md)
 
@@ -3089,8 +3396,26 @@ Converts a multi-value string from a `VARCHAR` to a `VARCHAR ARRAY`.
 
 Joins all elements of the array together by the given delimiter.
 
-* **Syntax:**: `MV_TO_STRING(arr, str)`
+* **Syntax:** `MV_TO_STRING(arr, str)`
 * **Function type:** Multi-value string
+
+<details><summary>Example</summary>
+
+The following example transforms the `tags` column from `mvd-example` to strings delimited by a space character:
+
+```sql
+SELECT MV_TO_STRING("tags", ' ') AS str
+FROM mvd-example
+LIMIT 1
+```
+
+Returns the following:
+
+| `str` |
+| -- |
+| `t1 t2 t3` |
+
+</details>
 
 [Learn more](sql-multivalue-string-functions.md)
 
@@ -3256,7 +3581,7 @@ Returns the following:
 
 | `power` |
 | -- |
-| `25` | 
+| `25` |
 </details>
 
 [Learn more](sql-scalar.md#numeric-functions)
@@ -3278,7 +3603,7 @@ SELECT RADIANS(180) AS "radians"
 Returns the following:
 
 | `radians` |  
-| -- | 
+| -- |
 | `3.141592653589793` |
 </details>
 
@@ -3426,7 +3751,7 @@ SELECT
 
 Returns the following:
 
-| `original_string` | `modified_string` | 
+| `original_string` | `modified_string` |
 | -- | -- |
 | `abc 123 abc 123` | `XYZ 123 XYZ 123` |
 
@@ -3509,9 +3834,9 @@ LIMIT 1
 ```
 Returns the following:
 
-| `pickup_longitude` | `rounded_pickup_longitude` | 
-| -- | -- | 
-| `-73.9377670288086` | `-74` | 
+| `pickup_longitude` | `rounded_pickup_longitude` |
+| -- | -- |
+| `-73.9377670288086` | `-74` |
 </details>
 
 [Learn more](sql-scalar.md#numeric-functions)
@@ -3576,7 +3901,7 @@ SELECT
 Returns the following:
 
 | `original_string` | `trim_end` |
-| -- | -- | 
+| -- | -- |
 | `___abc___` | `___abc` |
 
 </details>
@@ -3625,7 +3950,7 @@ SELECT SIN(PI / 3) AS "sine"
 Returns the following:
 
 | `sine` |  
-| -- | 
+| -- |
 | `0.8660254037844386` |
 </details>
 
@@ -3648,7 +3973,7 @@ SELECT SQRT(25) AS "square_root"
 Returns the following:
 
 | `square_root` |  
-| -- | 
+| -- |
 | `5` |
 </details>
 
@@ -3690,16 +4015,6 @@ Collects all values of an expression into a single string.
 
 [Learn more](sql-aggregations.md)
 
-## STRING_TO_ARRAY
-
-Splits the string into an array of substrings using the specified delimiter. The delimiter must be a valid regular expression.
-
-* **Syntax**: `STRING_TO_ARRAY(string, delimiter)`
-* **Function type:** Array
-
-[Learn more](sql-array-functions.md)
-
-
 ## STRING_FORMAT
 
 Returns a string formatted in the manner of Java's [String.format](https://docs.oracle.com/javase/8/docs/api/java/lang/String.html#format-java.lang.String-java.lang.Object...-).
@@ -3730,12 +4045,37 @@ Returns the following:
 
 [Learn more](sql-scalar.md#string-functions)
 
+## STRING_TO_ARRAY
+
+Splits the string into an array of substrings using the specified delimiter. The delimiter must be a valid regular expression.
+
+* **Syntax**: `STRING_TO_ARRAY(string, delimiter)`
+* **Function type:** Array
+
+[Learn more](sql-array-functions.md)
+
 ## STRING_TO_MV
 
 Splits `str1` into an multi-value string on the delimiter specified by `str2`, which is a regular expression.
 
 * **Syntax:** `STRING_TO_MV(str1, str2)`
 * **Function type:** Multi-value string
+
+<details><summary>Example</summary>
+
+The following example splits a street address by whitespace characters:
+
+```sql
+SELECT STRING_TO_MV('123 Rose Lane', '\s+') AS mv
+```
+
+Returns the following:
+
+| `mv` |
+| -- |
+| `["123","Rose","Lane"]` |
+
+</details>
 
 [Learn more](sql-multivalue-string-functions.md)
 
@@ -3840,7 +4180,7 @@ SELECT TAN(PI / 3) AS "tangent"
 Returns the following:
 
 | `tangent` |  
-| -- | 
+| -- |
 | `1.7320508075688767` |
 </details>
 
@@ -3885,9 +4225,9 @@ LIMIT 1
 
 Returns the following:
 
-| `origin_state` | `concatenate_state_with_USA` | 
-| -- | -- | 
-| `PR` | `PR, USA` | 
+| `origin_state` | `concatenate_state_with_USA` |
+| -- | -- |
+| `PR` | `PR, USA` |
 
 </details>
 
@@ -3912,7 +4252,7 @@ FROM "flight-carriers"
 Returns the following:
 
 | `estimate` |
-| -- | 
+| -- |
 | `4667` |
 
 </details>
@@ -4005,7 +4345,7 @@ FROM "flight-carriers"
 Returns the following:
 
 | `estimate_not` |
-| -- | 
+| -- |
 | `145` |
 
 </details>
@@ -4094,8 +4434,8 @@ LIMIT 2
 
 Returns the following:
 
-| `original_timestamp` | `extract_hour` | 
-| -- | -- | 
+| `original_timestamp` | `extract_hour` |
+| -- | -- |
 | `2013-08-01T08:14:37.000Z` | `4` |
 | `2013-08-01T09:13:00.000Z` | `5` |
 
@@ -4185,8 +4525,8 @@ Returns the following:
 
 | `original_time` | `in_interval` |
 | -- | -- |
-| `2013-08-01T08:14:37.000Z` | `true` | 
-| `2013-08-01T09:13:00.000Z` | `false` | 
+| `2013-08-01T08:14:37.000Z` | `true` |
+| `2013-08-01T09:13:00.000Z` | `false` |
 
 </details>
 
@@ -4213,7 +4553,7 @@ LIMIT 1
 
 Returns the following:
 
-| `original_string` | `timestamp` | 
+| `original_string` | `timestamp` |
 | -- | -- |
 | `2005-11-01` | `2005-11-01T05:00:00.000Z` |
 
@@ -4244,7 +4584,7 @@ Returns the following:
 
 | `original_timestamp` | `shift_back` |
 | -- | -- |
-| `2013-08-01T08:14:37.000Z` | `2013-07-31T08:14:37.000Z` | 
+| `2013-08-01T08:14:37.000Z` | `2013-07-31T08:14:37.000Z` |
 
 </details>
 
@@ -4404,9 +4744,10 @@ LIMIT 1
 ```
 Returns the following:
 
-| `pickup_longitude` | `truncate_pickup_longitude` | 
-| -- | -- | 
-| `-73.9377670288086` | `-73.9` | 
+| `pickup_longitude` | `truncate_pickup_longitude` |
+| -- | -- |
+| `-73.9377670288086` | `-73.9` |
+
 </details>
 
 
