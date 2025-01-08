@@ -61,15 +61,7 @@ import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
-import org.apache.druid.indexing.common.actions.LockListAction;
-import org.apache.druid.indexing.common.actions.LockReleaseAction;
-import org.apache.druid.indexing.common.actions.MarkSegmentsAsUnusedAction;
-import org.apache.druid.indexing.common.actions.SegmentAllocateAction;
-import org.apache.druid.indexing.common.actions.SegmentTransactionalAppendAction;
-import org.apache.druid.indexing.common.actions.SegmentTransactionalInsertAction;
-import org.apache.druid.indexing.common.actions.SegmentTransactionalReplaceAction;
-import org.apache.druid.indexing.common.actions.TaskAction;
-import org.apache.druid.indexing.common.actions.TaskActionClient;
+import org.apache.druid.indexing.common.actions.*;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.common.task.batch.TooManyBucketsException;
 import org.apache.druid.indexing.common.task.batch.parallel.TombstoneHelper;
@@ -164,6 +156,7 @@ import org.apache.druid.msq.querykit.results.QueryResultFrameProcessorFactory;
 import org.apache.druid.msq.querykit.scan.ScanQueryKit;
 import org.apache.druid.msq.shuffle.input.DurableStorageInputChannelFactory;
 import org.apache.druid.msq.shuffle.input.WorkerInputChannelFactory;
+import org.apache.druid.msq.statistics.ClusterByStatisticsCollector;
 import org.apache.druid.msq.statistics.PartialKeyStatisticsInformation;
 import org.apache.druid.msq.util.IntervalUtils;
 import org.apache.druid.msq.util.MSQFutureUtils;
@@ -331,27 +324,6 @@ public class ControllerImpl implements Controller
     }
     // Call onQueryComplete after Closer is fully closed, ensuring no controller-related processing is ongoing.
     queryListener.onQueryComplete(reportPayload);
-
-    long totalProcessedBytes = reportPayload.getCounters().copyMap().values().stream()
-        .mapToLong(integerCounterSnapshotsMap -> integerCounterSnapshotsMap.values().stream()
-            .mapToLong(counterSnapshots -> {
-              Map<String, QueryCounterSnapshot> workerCounters = counterSnapshots.getMap();
-              return workerCounters.entrySet().stream()
-                  .mapToLong(channel -> {
-                    if (channel.getKey().startsWith("input")) {
-                      ChannelCounters.Snapshot snapshot = (ChannelCounters.Snapshot) channel.getValue();
-                      return snapshot.getBytes() == null ? 0L :
-                          Arrays.stream(snapshot.getBytes()).sum();
-                    }
-                    return 0L;
-                  })
-                  .sum();
-            })
-            .sum())
-        .sum();
-
-    log.info("Total processed bytes: %d", totalProcessedBytes);
-    context.emitMetric("ingest/processed/bytes", totalProcessedBytes);
   }
 
   @Override
@@ -537,7 +509,7 @@ public class ControllerImpl implements Controller
       stagesReport = null;
     }
 
-    return new MSQTaskReportPayload(
+    final MSQTaskReportPayload msqTaskReportPayload = new MSQTaskReportPayload(
         makeStatusReport(
             taskStateForReport,
             errorForReport,
@@ -552,6 +524,29 @@ public class ControllerImpl implements Controller
         countersSnapshot,
         null
     );
+    // Emit summary metrics based on query type
+    emitSummaryMetrics(msqTaskReportPayload, querySpec);
+    return msqTaskReportPayload;
+  }
+
+  private void emitSummaryMetrics(final MSQTaskReportPayload msqTaskReportPayload, final MSQSpec querySpec) {
+    long totalProcessedBytes = msqTaskReportPayload.getCounters() != null
+        ? msqTaskReportPayload.getCounters().copyMap().values().stream().mapToLong(
+            integerCounterSnapshotsMap -> integerCounterSnapshotsMap.values().stream()
+                .mapToLong(counterSnapshots -> {
+                  Map<String, QueryCounterSnapshot> workerCounters = counterSnapshots.getMap();
+                  return workerCounters.entrySet().stream().mapToLong(
+                      channel -> { if (channel.getKey().startsWith("input")) {
+                        ChannelCounters.Snapshot snapshot = (ChannelCounters.Snapshot) channel.getValue();
+                        return snapshot.getBytes() == null ? 0L : Arrays.stream(snapshot.getBytes()).sum();
+                      }
+                      return 0L;
+                      }).sum();
+                }).sum()).sum()
+        : 0;
+
+    log.info("Total processed bytes: %d, query: %s", totalProcessedBytes, querySpec.getQuery());
+    context.emitMetric("ingest/processed/bytes", totalProcessedBytes);
   }
 
   /**
@@ -2167,7 +2162,7 @@ public class ControllerImpl implements Controller
    * preempted. Uses string comparison, because the relevant Overlord APIs do not have a more reliable way of
    * discerning the cause of errors.
    * <p>
-   * Error strings are taken from {@link org.apache.druid.indexing.common.actions.TaskLocks}
+   * Error strings are taken from {@link TaskLocks}
    * and {@link SegmentAllocateAction}.
    */
   private static boolean isTaskLockPreemptedException(Exception e)
@@ -2441,7 +2436,7 @@ public class ControllerImpl implements Controller
     }
 
     /**
-     * Enqueues the fetching {@link org.apache.druid.msq.statistics.ClusterByStatisticsCollector}
+     * Enqueues the fetching {@link ClusterByStatisticsCollector}
      * from each worker via {@link WorkerSketchFetcher}
      */
     private void fetchStatsFromWorkers()
