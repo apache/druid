@@ -42,7 +42,6 @@ import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.parser.DruidSqlReplace;
 import org.apache.druid.sql.calcite.parser.ParseException;
 import org.apache.druid.sql.calcite.parser.Token;
-import org.apache.druid.sql.calcite.planner.DruidPlanner.AuthResult;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.joda.time.DateTimeZone;
 

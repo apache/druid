@@ -36,9 +36,6 @@ import java.util.Collections;
 
 public class RestrictedDataSourceTest
 {
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
   private final TableDataSource fooDataSource = new TableDataSource("foo");
   private final TableDataSource barDataSource = new TableDataSource("bar");
   private final RestrictedDataSource restrictedFooDataSource = RestrictedDataSource.create(

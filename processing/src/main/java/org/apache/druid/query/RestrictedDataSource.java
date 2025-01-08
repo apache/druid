@@ -40,11 +40,10 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
 /**
- * Reperesents a TableDataSource with row-level restriction.
+ * Reperesents a TableDataSource with policy restriction.
  * <p>
- * A RestrictedDataSource means the base TableDataSource has restriction imposed. A table without any restriction should
- * never be transformed to a RestrictedDataSource. Druid internal system and admin users would have a null rowFilter,
- * while external users would have a rowFilter based on the applied restriction.
+ * A RestrictedDataSource means the base TableDataSource has policy imposed. A table without any policy should never be
+ * transformed to a RestrictedDataSource. Druid internal system and admin users would have a {@link NoRestrictionPolicy}.
  */
 public class RestrictedDataSource implements DataSource
 {
