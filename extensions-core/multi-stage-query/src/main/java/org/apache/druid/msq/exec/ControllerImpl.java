@@ -532,7 +532,7 @@ public class ControllerImpl implements Controller
         countersSnapshot,
         null
     );
-    // Emit summary metrics based on query type
+    // Emit summary metrics
     emitSummaryMetrics(msqTaskReportPayload, querySpec);
     return msqTaskReportPayload;
   }
