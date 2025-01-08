@@ -19,15 +19,9 @@
 
 package org.apache.druid.segment;
 
-import com.google.common.collect.ImmutableList;
-import org.apache.druid.error.DruidException;
-import org.apache.druid.query.filter.Filter;
-import org.apache.druid.query.policy.NoRestrictionPolicy;
 import org.apache.druid.query.policy.Policy;
-import org.apache.druid.query.policy.RowFilterPolicy;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.filter.AndFilter;
 
 import javax.annotation.Nullable;
 
@@ -48,20 +42,7 @@ public class RestrictedCursorFactory implements CursorFactory
   @Override
   public CursorHolder makeCursorHolder(CursorBuildSpec spec)
   {
-    if (policy instanceof NoRestrictionPolicy) {
-      return delegate.makeCursorHolder(spec);
-    } else if (policy instanceof RowFilterPolicy) {
-      final Filter rowFilter = ((RowFilterPolicy) policy).getRowFilter().toFilter();
-      final CursorBuildSpec.CursorBuildSpecBuilder buildSpecBuilder = CursorBuildSpec.builder(spec);
-      final Filter newFilter = spec.getFilter() == null
-                               ? rowFilter
-                               : new AndFilter(ImmutableList.of(spec.getFilter(), rowFilter));
-      buildSpecBuilder.setFilter(newFilter);
-
-      return delegate.makeCursorHolder(buildSpecBuilder.build());
-    } else {
-      throw DruidException.defensive("not supported policy type [%s]", policy.getClass());
-    }
+    return delegate.makeCursorHolder(policy.visit(spec));
   }
 
   @Override

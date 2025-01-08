@@ -21,9 +21,10 @@ package org.apache.druid.query.policy;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.apache.druid.segment.CursorBuildSpec;
 
 /**
- * Represents a granular-level (e.x. row filter) restriction on read-table access.
+ * Extensible interface for a granular-level (e.x. row filter) restriction on read-table access.
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes({
@@ -32,6 +33,12 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 })
 public interface Policy
 {
+  /**
+   * Apply this policy to a {@link CursorBuildSpec} to seamlessly enforce policies for cursor-based queries. The
+   * application must encapsulate 100% of the requirements of this policy.
+   */
+  CursorBuildSpec visit(CursorBuildSpec spec);
+
   /**
    * Defines how strict we want to enforce the policy on tables during query execution process.
    * <ol>

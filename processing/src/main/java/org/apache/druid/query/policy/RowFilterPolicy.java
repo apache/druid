@@ -21,7 +21,11 @@ package org.apache.druid.query.policy;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableList;
 import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.filter.Filter;
+import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.filter.AndFilter;
 
 import javax.annotation.Nonnull;
 import java.util.Objects;
@@ -45,10 +49,16 @@ public class RowFilterPolicy implements Policy
     return new RowFilterPolicy(rowFilter);
   }
 
-  @Nonnull
-  public DimFilter getRowFilter()
+  @Override
+  public CursorBuildSpec visit(CursorBuildSpec spec)
   {
-    return rowFilter;
+    CursorBuildSpec.CursorBuildSpecBuilder builder = CursorBuildSpec.builder(spec);
+    final Filter filter = spec.getFilter();
+    final Filter policyFilter = this.rowFilter.toFilter();
+
+    final Filter newFilter = filter == null ? policyFilter : new AndFilter(ImmutableList.of(policyFilter, filter));
+    builder.setFilter(newFilter);
+    return builder.build();
   }
 
   @Override

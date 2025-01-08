@@ -19,49 +19,16 @@
 
 package org.apache.druid.query.policy;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
 import org.apache.druid.segment.CursorBuildSpec;
+import org.junit.Assert;
+import org.junit.Test;
 
-/**
- * Represents a special kind of policy restriction, indicating that this table is restricted, but doesn't impose any restriction
- * to a user.
- */
-public class NoRestrictionPolicy implements Policy
+public class NoRestrictionPolicyTest
 {
-  public static final NoRestrictionPolicy INSTANCE = new NoRestrictionPolicy();
-
-  @JsonCreator
-  NoRestrictionPolicy()
+  @Test
+  public void testVisit()
   {
-  }
-
-  @Override
-  public CursorBuildSpec visit(CursorBuildSpec spec)
-  {
-    return spec;
-  }
-
-  @Override
-  public String toString()
-  {
-    return "NO_RESTRICTION";
-  }
-
-  @Override
-  public boolean equals(Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-    return true;
-  }
-
-  @Override
-  public int hashCode()
-  {
-    return 0;
+    final NoRestrictionPolicy policy = NoRestrictionPolicy.INSTANCE;
+    Assert.assertEquals(CursorBuildSpec.FULL_SCAN, policy.visit(CursorBuildSpec.FULL_SCAN));
   }
 }
