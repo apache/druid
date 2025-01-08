@@ -28,9 +28,7 @@ import org.apache.druid.query.policy.NoRestrictionPolicy;
 import org.apache.druid.query.policy.RowFilterPolicy;
 import org.apache.druid.segment.TestHelper;
 import org.junit.Assert;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 import java.util.Collections;
 

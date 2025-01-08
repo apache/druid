@@ -23,13 +23,13 @@ import com.google.common.collect.ImmutableList;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.EqualityFilter;
+import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.filter.AndFilter;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.apache.druid.query.filter.Filter;
 
 public class RowFilterPolicyTest
 {
