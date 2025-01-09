@@ -194,6 +194,7 @@
         <module>cloud/gcp-common</module>
         <!-- Core extensions -->
         <module>extensions-core/kubernetes-extensions</module>
+        <module>extensions-core/kubernetes-overlord-extensions</module>
         <module>extensions-core/avro-extensions</module>
         <module>extensions-core/azure-extensions</module>
         <module>extensions-core/datasketches</module>
@@ -251,7 +252,6 @@
         <module>extensions-contrib/aliyun-oss-extensions</module>
         <module>extensions-contrib/prometheus-emitter</module>
         <module>extensions-contrib/opentelemetry-emitter</module>
-        <module>extensions-contrib/kubernetes-overlord-extensions</module>
         <module>extensions-contrib/grpc-query</module>
         <module>extensions-contrib/druid-iceberg-extensions</module>
         <module>extensions-contrib/druid-deltalake-extensions</module>
