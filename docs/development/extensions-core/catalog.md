@@ -52,8 +52,8 @@ A tableSpec defines a table
 | Property     | Type                            | Description                                                               | Required | Default |
 |--------------|---------------------------------|---------------------------------------------------------------------------|----------|---------|
 | `type`       | String                          | the type of table. The only value supported at this time is `datasource`  | yes      | null    |
-| `properties` | Map<String, Object>             | the table's defined properties. see [table properties](#table-properties) | no       | null    |
-| `columns`    | List<[ColumnSpec](#columnspec)> | the table's defined columns                                               | no       | null    |
+| `properties` | Map\<String, Object\>             | the table's defined properties. see [table properties](#table-properties) | no       | null    |
+| `columns`    | List\<[ColumnSpec](#columnspec)\> | the table's defined columns                                               | no       | null    |
 
 #### Table Properties
 

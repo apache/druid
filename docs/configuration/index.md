@@ -2114,8 +2114,8 @@ The `druid.query.default.context.{query_context_key}` runtime property prefix ap
 
 The precedence chain for query context values is as follows:
 
-hard-coded default value in Druid code <- runtime property not prefixed with `druid.query.default.context`
-<- runtime property prefixed with `druid.query.default.context` <- context parameter in the query
+hard-coded default value in Druid code `<-` runtime property not prefixed with `druid.query.default.context`
+`<-` runtime property prefixed with `druid.query.default.context` `<-` context parameter in the query
 
 Note that not all query context key has a runtime property not prefixed with `druid.query.default.context` that can
 override the hard-coded default value. For example, `maxQueuedBytes` has `druid.broker.http.maxQueuedBytes`
