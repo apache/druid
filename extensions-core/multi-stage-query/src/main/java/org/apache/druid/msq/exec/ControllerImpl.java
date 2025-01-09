@@ -537,18 +537,20 @@ public class ControllerImpl implements Controller
     return msqTaskReportPayload;
   }
 
-  private void emitSummaryMetrics(final MSQTaskReportPayload msqTaskReportPayload, final MSQSpec querySpec) {
+  private void emitSummaryMetrics(final MSQTaskReportPayload msqTaskReportPayload, final MSQSpec querySpec)
+  {
     long totalProcessedBytes = msqTaskReportPayload.getCounters() != null
         ? msqTaskReportPayload.getCounters().copyMap().values().stream().mapToLong(
             integerCounterSnapshotsMap -> integerCounterSnapshotsMap.values().stream()
                 .mapToLong(counterSnapshots -> {
                   Map<String, QueryCounterSnapshot> workerCounters = counterSnapshots.getMap();
                   return workerCounters.entrySet().stream().mapToLong(
-                      channel -> { if (channel.getKey().startsWith("input")) {
-                        ChannelCounters.Snapshot snapshot = (ChannelCounters.Snapshot) channel.getValue();
-                        return snapshot.getBytes() == null ? 0L : Arrays.stream(snapshot.getBytes()).sum();
-                      }
-                      return 0L;
+                      channel -> {
+                        if (channel.getKey().startsWith("input")) {
+                          ChannelCounters.Snapshot snapshot = (ChannelCounters.Snapshot) channel.getValue();
+                          return snapshot.getBytes() == null ? 0L : Arrays.stream(snapshot.getBytes()).sum();
+                        }
+                        return 0L;
                       }).sum();
                 }).sum()).sum()
         : 0;
