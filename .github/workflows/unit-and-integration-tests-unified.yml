@@ -159,7 +159,6 @@ jobs:
 
   # check if it is a PR and if it is approved. For approved PRs, we do not want to run tests sequentially
   check-approval:
-    needs: build
     runs-on: ubuntu-latest
     outputs:
       approved: ${{ steps.check.outputs.isApproved }}
@@ -194,7 +193,7 @@ jobs:
   unit-tests-unapproved:
     name: "unit tests - PR unapproved - (jdk17)"
     uses: ./.github/workflows/unit-tests.yml
-    needs: check-approval
+    needs: [build, check-approval]
     if: ${{ needs.check-approval.outputs.approved != 'true' }}
     with:
       jdk: 17
@@ -202,7 +201,7 @@ jobs:
   unit-tests-approved:
     name: "unit tests - PR approved - (jdk17)"
     uses: ./.github/workflows/unit-tests.yml
-    needs: check-approval
+    needs: [build, check-approval]
     if: ${{ needs.check-approval.outputs.approved == 'true' }}
     with:
       jdk: 17
