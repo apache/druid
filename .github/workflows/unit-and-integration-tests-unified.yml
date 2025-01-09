@@ -175,7 +175,7 @@ jobs:
       - name: Check PR Approval (if applicable)
         id: check
         if: ${{ env.isPR == 'true' }}
-        uses: actions/github-script@v6
+        uses: actions/github-script@v7
         with:
           script: |
             const reviews = await github.rest.pulls.listReviews({
