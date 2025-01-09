@@ -58,11 +58,7 @@ public class Exprs
    */
   public static Expr.BindingAnalysis analyzeBindings(final List<Expr> args)
   {
-    Expr.BindingAnalysis accumulator = new Expr.BindingAnalysis();
-    for (final Expr arg : args) {
-      accumulator = accumulator.with(arg);
-    }
-    return accumulator;
+    return Expr.BindingAnalysis.collectExprs(args);
   }
 
   /**
