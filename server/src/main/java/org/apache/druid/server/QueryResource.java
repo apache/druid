@@ -214,7 +214,7 @@ public class QueryResource implements QueryCountStatsProvider
         return io.getResponseWriter().buildNonOkResponse(qe.getFailType().getExpectedStatus(), qe);
       }
 
-      if (!authResult.isUserWithNoRestriction()) {
+      if (!authResult.allowBasicAccess()) {
         throw new ForbiddenException(authResult.getErrorMessage());
       }
 

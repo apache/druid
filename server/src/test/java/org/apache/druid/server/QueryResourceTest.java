@@ -64,6 +64,8 @@ import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TruncatedResponseContextException;
+import org.apache.druid.query.filter.NullFilter;
+import org.apache.druid.query.policy.RowFilterPolicy;
 import org.apache.druid.query.timeboundary.TimeBoundaryResultValue;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.log.TestRequestLogger;
@@ -822,7 +824,7 @@ public class QueryResourceTest
           public Access authorize(AuthenticationResult authenticationResult, Resource resource, Action action)
           {
             if (resource.getName().equals("allow")) {
-              return new Access(true);
+              return Access.allowWithRestriction(RowFilterPolicy.from(new NullFilter("col",null)));
             } else {
               return new Access(false);
             }
