@@ -2567,33 +2567,11 @@ public class CachingClusteredClientTest
 
       List<SearchHit> values = new ArrayList<>();
       while (index < objects.length && !(objects[index] instanceof DateTime)) {
-        values.add(new SearchHit(dim, objects[index++].toString(), (Integer) objects[index++]));
+        values.add(new SearchHit(dim, objects[index].toString(), (Integer) objects[index + 1]));
+        index += 2;
       }
 
       retVal.add(new Result<>(timestamp, new SearchResultValue(values)));
-    }
-    return retVal;
-  }
-
-  private Iterable<ResultRow> makeGroupByResults(GroupByQuery query, Object... objects)
-  {
-    List<ResultRow> retVal = new ArrayList<>();
-    int index = 0;
-    while (index < objects.length) {
-      final DateTime timestamp = (DateTime) objects[index++];
-      final Map<String, Object> rowMap = (Map<String, Object>) objects[index++];
-      final ResultRow row = ResultRow.create(query.getResultRowSizeWithoutPostAggregators());
-
-      if (query.getResultRowHasTimestamp()) {
-        row.set(0, timestamp.getMillis());
-      }
-
-      for (Map.Entry<String, Object> entry : rowMap.entrySet()) {
-        final int position = query.getResultRowSignature().indexOf(entry.getKey());
-        row.set(position, entry.getValue());
-      }
-
-      retVal.add(row);
     }
     return retVal;
   }
