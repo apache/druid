@@ -321,7 +321,7 @@ public class QueryLifecycle
       transition(State.AUTHORIZING, State.UNAUTHORIZED);
     } else {
       transition(State.AUTHORIZING, State.AUTHORIZED);
-      if (this.baseQuery instanceof SegmentMetadataQuery && authorizationResult.isUserWithNoRestriction()) {
+      if (this.baseQuery instanceof SegmentMetadataQuery && authorizationResult.allowAccessWithNoRestriction()) {
         // skip restrictions mapping for SegmentMetadataQuery from user with no restriction
       } else {
         this.baseQuery = this.baseQuery.withDataSource(this.baseQuery.getDataSource()

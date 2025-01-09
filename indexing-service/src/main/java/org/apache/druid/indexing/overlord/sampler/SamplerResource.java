@@ -78,7 +78,7 @@ public class SamplerResource
         authorizerMapper
     );
 
-    if (!authResult.isUserWithNoRestriction()) {
+    if (!authResult.allowAccessWithNoRestriction()) {
       throw new ForbiddenException(authResult.getErrorMessage());
     }
     return sampler.sample();

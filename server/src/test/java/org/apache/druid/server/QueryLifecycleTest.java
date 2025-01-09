@@ -518,11 +518,11 @@ public class QueryLifecycleTest
         revisedContext
     );
 
-    Assert.assertTrue(lifecycle.authorize(mockRequest()).isUserWithNoRestriction());
+    Assert.assertTrue(lifecycle.authorize(mockRequest()).allowAccessWithNoRestriction());
 
     lifecycle = createLifecycle(authConfig);
     lifecycle.initialize(query);
-    Assert.assertTrue(lifecycle.authorize(authenticationResult).isUserWithNoRestriction());
+    Assert.assertTrue(lifecycle.authorize(authenticationResult).allowAccessWithNoRestriction());
   }
 
   @Test
@@ -610,11 +610,11 @@ public class QueryLifecycleTest
         revisedContext
     );
 
-    Assert.assertTrue(lifecycle.authorize(mockRequest()).isUserWithNoRestriction());
+    Assert.assertTrue(lifecycle.authorize(mockRequest()).allowAccessWithNoRestriction());
 
     lifecycle = createLifecycle(authConfig);
     lifecycle.initialize(query);
-    Assert.assertTrue(lifecycle.authorize(authenticationResult).isUserWithNoRestriction());
+    Assert.assertTrue(lifecycle.authorize(authenticationResult).allowAccessWithNoRestriction());
   }
 
   @Test

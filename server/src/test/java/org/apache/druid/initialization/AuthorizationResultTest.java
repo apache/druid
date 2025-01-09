@@ -77,9 +77,9 @@ public class AuthorizationResultTest
   {
     AuthorizationResult result = AuthorizationResult.deny("this data source is not permitted");
     assertFalse(result.allowBasicAccess());
-    assertFalse(result.isUserWithNoRestriction());
+    assertFalse(result.allowAccessWithNoRestriction());
     assertEquals("this data source is not permitted", result.getErrorMessage());
-    assertFalse(result.isUserWithNoRestriction());
+    assertFalse(result.allowAccessWithNoRestriction());
   }
 
   @Test
@@ -87,7 +87,7 @@ public class AuthorizationResultTest
   {
     AuthorizationResult result = AuthorizationResult.allowWithRestriction(ImmutableMap.of());
     assertTrue(result.allowBasicAccess());
-    assertTrue(result.isUserWithNoRestriction());
+    assertTrue(result.allowAccessWithNoRestriction());
     assertThrows(DruidException.class, result::getErrorMessage);
 
     AuthorizationResult resultWithEmptyPolicy = AuthorizationResult.allowWithRestriction(ImmutableMap.of(
@@ -95,7 +95,7 @@ public class AuthorizationResultTest
         Optional.empty()
     ));
     assertTrue(resultWithEmptyPolicy.allowBasicAccess());
-    assertTrue(resultWithEmptyPolicy.isUserWithNoRestriction());
+    assertTrue(resultWithEmptyPolicy.allowAccessWithNoRestriction());
     assertThrows(DruidException.class, resultWithEmptyPolicy::getErrorMessage);
 
     AuthorizationResult resultWithNoRestrictionPolicy = AuthorizationResult.allowWithRestriction(ImmutableMap.of(
@@ -103,7 +103,7 @@ public class AuthorizationResultTest
         Optional.of(NoRestrictionPolicy.INSTANCE)
     ));
     assertTrue(resultWithNoRestrictionPolicy.allowBasicAccess());
-    assertTrue(resultWithNoRestrictionPolicy.isUserWithNoRestriction());
+    assertTrue(resultWithNoRestrictionPolicy.allowAccessWithNoRestriction());
     assertThrows(DruidException.class, resultWithNoRestrictionPolicy::getErrorMessage);
   }
 
@@ -120,7 +120,7 @@ public class AuthorizationResultTest
         )))
     ));
     assertTrue(result.allowBasicAccess());
-    assertFalse(result.isUserWithNoRestriction());
+    assertFalse(result.allowAccessWithNoRestriction());
     assertEquals("Unauthorized", result.getErrorMessage());
   }
 }

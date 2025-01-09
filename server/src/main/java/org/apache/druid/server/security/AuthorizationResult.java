@@ -132,7 +132,7 @@ public class AuthorizationResult
    * <li> no policy found
    * <li> the user has a no-restriction policy
    */
-  public boolean isUserWithNoRestriction()
+  public boolean allowAccessWithNoRestriction()
   {
     return PERMISSION.ALLOW_NO_RESTRICTION.equals(permission) || (PERMISSION.ALLOW_WITH_RESTRICTION.equals(permission)
                                                                   && policyRestrictions.values()
@@ -151,7 +151,7 @@ public class AuthorizationResult
       case DENY:
         return Objects.requireNonNull(failureMessage);
       case ALLOW_WITH_RESTRICTION:
-        if (!isUserWithNoRestriction()) {
+        if (!allowAccessWithNoRestriction()) {
           return Access.DEFAULT_ERROR_MESSAGE;
         }
       default:

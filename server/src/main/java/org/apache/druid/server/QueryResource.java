@@ -158,7 +158,7 @@ public class QueryResource implements QueryCountStatsProvider
         authorizerMapper
     );
 
-    if (!authResult.isUserWithNoRestriction()) {
+    if (!authResult.allowAccessWithNoRestriction()) {
       throw new ForbiddenException(authResult.getErrorMessage());
     }
 

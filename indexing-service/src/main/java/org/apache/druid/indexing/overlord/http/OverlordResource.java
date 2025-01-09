@@ -182,7 +182,7 @@ public class OverlordResource
         resourceActions,
         authorizerMapper
     );
-    if (!authResult.isUserWithNoRestriction()) {
+    if (!authResult.allowAccessWithNoRestriction()) {
       throw new ForbiddenException(authResult.getErrorMessage());
     }
 
@@ -614,7 +614,7 @@ public class OverlordResource
           authorizerMapper
       );
 
-      if (!authResult.isUserWithNoRestriction()) {
+      if (!authResult.allowAccessWithNoRestriction()) {
         throw new WebApplicationException(
             Response.status(Response.Status.FORBIDDEN)
                     .type(MediaType.TEXT_PLAIN)
@@ -663,7 +663,7 @@ public class OverlordResource
         authorizerMapper
     );
 
-    if (!authResult.isUserWithNoRestriction()) {
+    if (!authResult.allowAccessWithNoRestriction()) {
       throw new ForbiddenException(authResult.getErrorMessage());
     }
 

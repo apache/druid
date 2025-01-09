@@ -103,7 +103,7 @@ public class SupervisorResourceFilter extends AbstractResourceFilter
         getAuthorizerMapper()
     );
 
-    if (!authResult.isUserWithNoRestriction()) {
+    if (!authResult.allowAccessWithNoRestriction()) {
       throw new ForbiddenException(authResult.getErrorMessage());
     }
 

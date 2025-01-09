@@ -60,7 +60,7 @@ public class BasicSecurityResourceFilter extends AbstractResourceFilter
         getAuthorizerMapper()
     );
 
-    if (!authResult.isUserWithNoRestriction()) {
+    if (!authResult.allowAccessWithNoRestriction()) {
       throw new WebApplicationException(
           Response.status(Response.Status.FORBIDDEN)
                   .type(MediaType.TEXT_PLAIN)

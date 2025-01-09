@@ -681,7 +681,7 @@ public class SqlStatementResource
         authorizerMapper
     );
 
-    if (!authResult.isUserWithNoRestriction()) {
+    if (!authResult.allowAccessWithNoRestriction()) {
       throw new ForbiddenException(StringUtils.format(
           "The current user[%s] cannot view query id[%s] since the query is owned by another user",
           currentUser,

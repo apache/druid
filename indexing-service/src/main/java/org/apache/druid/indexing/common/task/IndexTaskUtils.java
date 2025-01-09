@@ -80,7 +80,7 @@ public class IndexTaskUtils
     );
 
     AuthorizationResult authResult = AuthorizationUtils.authorizeResourceAction(req, resourceAction, authorizerMapper);
-    if (!authResult.isUserWithNoRestriction()) {
+    if (!authResult.allowAccessWithNoRestriction()) {
       throw new ForbiddenException(authResult.getErrorMessage());
     }
     return authResult;

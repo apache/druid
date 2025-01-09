@@ -142,7 +142,7 @@ public class SqlResource
 
     final AuthorizationResult authResult = authorizeCancellation(req, lifecycles);
 
-    if (authResult.isUserWithNoRestriction()) {
+    if (authResult.allowAccessWithNoRestriction()) {
       // should remove only the lifecycles in the snapshot.
       sqlLifecycleManager.removeAll(sqlQueryId, lifecycles);
       lifecycles.forEach(Cancelable::cancel);

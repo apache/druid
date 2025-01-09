@@ -148,7 +148,7 @@ public class SupervisorResource
               authorizerMapper
           );
 
-          if (!authResult.isUserWithNoRestriction()) {
+          if (!authResult.allowAccessWithNoRestriction()) {
             throw new ForbiddenException(authResult.getErrorMessage());
           }
 
