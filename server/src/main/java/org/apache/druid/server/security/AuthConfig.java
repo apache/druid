@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.query.QueryContexts;
-import org.apache.druid.query.policy.Policy;
 import org.apache.druid.utils.CollectionUtils;
 
 import java.util.Collections;
@@ -64,7 +63,7 @@ public class AuthConfig
 
   public AuthConfig()
   {
-    this(null, null, null, false, false, null, null, false, null);
+    this(null, null, null, false, false, null, null, false);
   }
 
   @JsonProperty
@@ -101,9 +100,6 @@ public class AuthConfig
   @JsonProperty
   private final boolean enableInputSourceSecurity;
 
-  @JsonProperty
-  private final Policy.TablePolicySecurityLevel tablePolicySecurityLevel;
-
   @JsonCreator
   public AuthConfig(
       @JsonProperty("authenticatorChain") List<String> authenticatorChain,
@@ -113,8 +109,7 @@ public class AuthConfig
       @JsonProperty("authorizeQueryContextParams") boolean authorizeQueryContextParams,
       @JsonProperty("unsecuredContextKeys") Set<String> unsecuredContextKeys,
       @JsonProperty("securedContextKeys") Set<String> securedContextKeys,
-      @JsonProperty("enableInputSourceSecurity") boolean enableInputSourceSecurity,
-      @JsonProperty("tablePolicySecurityLevel") Policy.TablePolicySecurityLevel tablePolicySecurityLevel
+      @JsonProperty("enableInputSourceSecurity") boolean enableInputSourceSecurity
   )
   {
     this.authenticatorChain = authenticatorChain;
@@ -127,7 +122,6 @@ public class AuthConfig
                                 : unsecuredContextKeys;
     this.securedContextKeys = securedContextKeys;
     this.enableInputSourceSecurity = enableInputSourceSecurity;
-    this.tablePolicySecurityLevel = tablePolicySecurityLevel == null ? Policy.TablePolicySecurityLevel.APPLY_WHEN_APPLICABLE : tablePolicySecurityLevel;
   }
 
   public List<String> getAuthenticatorChain()
@@ -158,15 +152,6 @@ public class AuthConfig
   public boolean isEnableInputSourceSecurity()
   {
     return enableInputSourceSecurity;
-  }
-
-  /**
-   * When enabled, {@link org.apache.druid.server.QueryLifecycle} checks a policy entry in {@link AuthorizationResult#getPolicy()}
-   * for all tables in the query, and throws exception when there's no entry.
-   */
-  public Policy.TablePolicySecurityLevel getTablePolicySecurityLevel()
-  {
-    return tablePolicySecurityLevel;
   }
 
   /**
@@ -216,8 +201,7 @@ public class AuthConfig
            && Objects.equals(unsecuredPaths, that.unsecuredPaths)
            && Objects.equals(unsecuredContextKeys, that.unsecuredContextKeys)
            && Objects.equals(securedContextKeys, that.securedContextKeys)
-           && Objects.equals(enableInputSourceSecurity, that.enableInputSourceSecurity)
-           && Objects.equals(tablePolicySecurityLevel, that.tablePolicySecurityLevel);
+           && Objects.equals(enableInputSourceSecurity, that.enableInputSourceSecurity);
   }
 
   @Override
@@ -231,8 +215,7 @@ public class AuthConfig
         authorizeQueryContextParams,
         unsecuredContextKeys,
         securedContextKeys,
-        enableInputSourceSecurity,
-        tablePolicySecurityLevel
+        enableInputSourceSecurity
     );
   }
 
@@ -248,7 +231,6 @@ public class AuthConfig
            ", unsecuredContextKeys=" + unsecuredContextKeys +
            ", securedContextKeys=" + securedContextKeys +
            ", enableInputSourceSecurity=" + enableInputSourceSecurity +
-           ", tablePolicySecurityLevel=" + tablePolicySecurityLevel +
            '}';
   }
 
@@ -270,7 +252,6 @@ public class AuthConfig
     private Set<String> unsecuredContextKeys;
     private Set<String> securedContextKeys;
     private boolean enableInputSourceSecurity;
-    private Policy.TablePolicySecurityLevel tablePolicySecurityLevel;
 
     public Builder setAuthenticatorChain(List<String> authenticatorChain)
     {
@@ -320,12 +301,6 @@ public class AuthConfig
       return this;
     }
 
-    public Builder setTablePolicySecurityLevel(Policy.TablePolicySecurityLevel tablePolicySecurityLevel)
-    {
-      this.tablePolicySecurityLevel = tablePolicySecurityLevel;
-      return this;
-    }
-
     public AuthConfig build()
     {
       return new AuthConfig(
@@ -336,8 +311,7 @@ public class AuthConfig
           authorizeQueryContextParams,
           unsecuredContextKeys,
           securedContextKeys,
-          enableInputSourceSecurity,
-          tablePolicySecurityLevel
+          enableInputSourceSecurity
       );
     }
   }

@@ -145,10 +145,7 @@ public class RestrictedDataSource implements DataSource
   }
 
   @Override
-  public DataSource mapWithRestriction(
-      Map<String, Optional<Policy>> policyMap,
-      Policy.TablePolicySecurityLevel tablePolicySecurityLevel
-  )
+  public DataSource mapWithRestriction(Map<String, Optional<Policy>> policyMap)
   {
     if (!policyMap.containsKey(base.getName())) {
       throw new ISE("Missing policy check result for table [%s]", base.getName());

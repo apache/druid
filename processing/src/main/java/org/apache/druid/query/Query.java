@@ -34,7 +34,6 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.query.operator.WindowOperatorQuery;
 import org.apache.druid.query.planning.DataSourceAnalysis;
-import org.apache.druid.query.policy.Policy;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.search.SearchQuery;
 import org.apache.druid.query.select.SelectQuery;
@@ -55,7 +54,6 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -243,24 +241,6 @@ public interface Query<T>
   }
 
   Query<T> withDataSource(DataSource dataSource);
-
-  /**
-   * Returns the query with an updated datasource based on the policy restrictions on tables.
-   * <p>
-   * If this datasource contains no table, no changes should occur.
-   *
-   * @param policyMap                a mapping of table names to policy restrictions
-   * @param tablePolicySecurityLevel an enum denoting that, how strict we need to enforce the policy on tables
-   * @return the updated datasource, with restrictions applied in the datasource tree
-   * @throws IllegalStateException if {@code policyMap} is not compatible with {@code tablePolicySecurityLevel}
-   */
-  default Query<T> withPolicyRestrictions(
-      Map<String, Optional<Policy>> policyMap,
-      Policy.TablePolicySecurityLevel tablePolicySecurityLevel
-  )
-  {
-    return this.withDataSource(this.getDataSource().mapWithRestriction(policyMap, tablePolicySecurityLevel));
-  }
 
   default Query<T> optimizeForSegment(PerSegmentQueryOptimizationContext optimizationContext)
   {
