@@ -21,7 +21,6 @@ package org.apache.druid.query.filter.sql;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.calcite.avatica.SqlType;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.BloomFilterExtensionModule;
 import org.apache.druid.guice.BloomFilterSerializersModule;
 import org.apache.druid.initialization.DruidModule;
@@ -104,9 +103,7 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
     BloomKFilter filter = new BloomKFilter(1500);
     filter.addString("a-foo");
     filter.addString("-foo");
-    if (!NullHandling.replaceWithDefault()) {
-      filter.addBytes(null, 0, 0);
-    }
+    filter.addBytes(null, 0, 0);
     byte[] bytes = BloomFilterSerializersModule.bloomKFilterToBytes(filter);
     String base64 = StringUtils.encodeBase64String(bytes);
 
@@ -316,8 +313,7 @@ public class BloomDimFilterSqlTest extends BaseCalciteQueryTest
         ImmutableList.of(
             new Object[]{6L}
         ),
-        // there are no empty strings in the druid expression language since empty is coerced into a null when parsed
-        ImmutableList.of(new SqlParameter(SqlType.VARCHAR, NullHandling.defaultStringValue()), new SqlParameter(SqlType.VARCHAR, base64))
+        ImmutableList.of(new SqlParameter(SqlType.VARCHAR, null), new SqlParameter(SqlType.VARCHAR, base64))
     );
   }
 }

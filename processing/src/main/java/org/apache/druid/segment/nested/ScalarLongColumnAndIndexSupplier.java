@@ -30,7 +30,6 @@ import it.unimi.dsi.fastutil.longs.LongSet;
 import org.apache.druid.annotations.SuppressFBWarnings;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -218,12 +217,7 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
   public <T> T as(Class<T> clazz)
   {
     if (clazz.equals(NullValueIndex.class)) {
-      final BitmapColumnIndex nullIndex;
-      if (NullHandling.replaceWithDefault()) {
-        nullIndex = new SimpleImmutableBitmapIndex(bitmapFactory.makeEmptyImmutableBitmap());
-      } else {
-        nullIndex = new SimpleImmutableBitmapIndex(nullValueBitmap);
-      }
+      final BitmapColumnIndex nullIndex = new SimpleImmutableBitmapIndex(nullValueBitmap);
       return (T) (NullValueIndex) () -> nullIndex;
     } else if (clazz.equals(ValueIndexes.class)) {
       return (T) new LongValueIndexes();
@@ -372,7 +366,6 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
   private class LongStringValueSetIndexes implements StringValueSetIndexes
   {
     final FixedIndexed<Long> dictionary = longDictionarySupplier.get();
-    int defaultValueIndex = dictionary.indexOf(NullHandling.defaultLongValue());
 
     @Override
     public BitmapColumnIndex forValue(@Nullable String value)
@@ -391,22 +384,11 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
         public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
         {
           if (longValue == null) {
-            if (inputNull && NullHandling.sqlCompatible()) {
+            if (inputNull) {
               return bitmapResultFactory.wrapDimensionValue(getBitmap(0));
             } else {
               return bitmapResultFactory.wrapDimensionValue(bitmapFactory.makeEmptyImmutableBitmap());
             }
-          }
-          if (NullHandling.replaceWithDefault() && longValue.equals(NullHandling.defaultLongValue())) {
-            if (defaultValueIndex >= 0) {
-              return bitmapResultFactory.unionDimensionValueBitmaps(
-                  ImmutableList.of(
-                      getBitmap(0),
-                      getBitmap(defaultValueIndex)
-                  )
-              );
-            }
-            return bitmapResultFactory.wrapDimensionValue(getBitmap(0));
           }
           final int id = dictionary.indexOf(longValue);
           if (includeUnknown) {
@@ -448,9 +430,6 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
               Long theValue = DimensionHandlerUtils.convertObjectToLong(value);
               if (theValue != null) {
                 longs.add(theValue.longValue());
-                if (NullHandling.replaceWithDefault() && theValue.equals(NullHandling.defaultLongValue())) {
-                  needNullCheck = true;
-                }
               }
             }
           }
@@ -633,11 +612,7 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
                 Long nextValue = iterator.next();
                 index++;
                 if (nextValue == null) {
-                  if (NullHandling.sqlCompatible()) {
-                    nextSet = longPredicate.applyNull().matches(includeUnknown);
-                  } else {
-                    nextSet = longPredicate.applyLong(NullHandling.defaultLongValue()).matches(includeUnknown);
-                  }
+                  nextSet = longPredicate.applyNull().matches(includeUnknown);
                 } else {
                   nextSet = longPredicate.applyLong(nextValue).matches(includeUnknown);
                 }

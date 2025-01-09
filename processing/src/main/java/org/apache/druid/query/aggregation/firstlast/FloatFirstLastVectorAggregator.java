@@ -60,7 +60,7 @@ public class FloatFirstLastVectorAggregator extends FirstLastVectorAggregator<Fl
     buf.putLong(position, selectionPredicate.initValue());
     buf.put(
         position + NULLITY_OFFSET,
-        NullHandling.replaceWithDefault() ? NullHandling.IS_NOT_NULL_BYTE : NullHandling.IS_NULL_BYTE
+        NullHandling.IS_NULL_BYTE
     );
     buf.putFloat(position + VALUE_OFFSET, 0.0F);
   }
@@ -97,14 +97,6 @@ public class FloatFirstLastVectorAggregator extends FirstLastVectorAggregator<Fl
   {
     buf.putLong(position, time);
     buf.put(position + NULLITY_OFFSET, NullHandling.IS_NULL_BYTE);
-    buf.putFloat(position + VALUE_OFFSET, 0.0F);
-  }
-
-  @Override
-  protected void putDefaultValue(ByteBuffer buf, int position, long time)
-  {
-    buf.putLong(position, time);
-    buf.put(position + NULLITY_OFFSET, NullHandling.IS_NOT_NULL_BYTE);
     buf.putFloat(position + VALUE_OFFSET, 0.0F);
   }
 

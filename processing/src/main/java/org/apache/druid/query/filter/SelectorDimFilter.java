@@ -64,7 +64,7 @@ public class SelectorDimFilter extends AbstractOptimizableDimFilter implements D
     Preconditions.checkArgument(dimension != null, "dimension must not be null");
 
     this.dimension = dimension;
-    this.value = NullHandling.emptyToNullIfNeeded(value);
+    this.value = value;
     this.extractionFn = extractionFn;
     this.filterTuning = filterTuning;
 
@@ -180,13 +180,12 @@ public class SelectorDimFilter extends AbstractOptimizableDimFilter implements D
       return null;
     }
     RangeSet<String> retSet = TreeRangeSet.create();
-    String valueEquivalent = NullHandling.nullToEmptyIfNeeded(value);
-    if (valueEquivalent == null) {
+    if (value == null) {
       // Case when SQL compatible null handling is enabled
       // Nulls are less than empty String in segments
       retSet.add(Range.lessThan(""));
     } else {
-      retSet.add(Range.singleton(valueEquivalent));
+      retSet.add(Range.singleton(value));
     }
     return retSet;
   }

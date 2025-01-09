@@ -20,7 +20,6 @@
 package org.apache.druid.math.expr;
 
 import com.google.common.collect.ImmutableSet;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
@@ -134,7 +133,7 @@ class UnaryMinusExpr extends UnaryExpr
       return ExprEval.of(((BigInteger) expr.getLiteralValue()).multiply(BigInteger.valueOf(-1)).longValueExact());
     }
     ExprEval ret = expr.eval(bindings);
-    if (NullHandling.sqlCompatible() && (ret.value() == null)) {
+    if (ret.value() == null) {
       return ExprEval.of(null);
     }
     if (ret.type().is(ExprType.LONG)) {
@@ -177,7 +176,7 @@ class UnaryNotExpr extends UnaryExpr
   public ExprEval eval(ObjectBinding bindings)
   {
     ExprEval ret = expr.eval(bindings);
-    if (NullHandling.sqlCompatible() && (ret.value() == null)) {
+    if (ret.value() == null) {
       return ExprEval.of(null);
     }
     return ExprEval.ofLongBoolean(!ret.asBoolean());

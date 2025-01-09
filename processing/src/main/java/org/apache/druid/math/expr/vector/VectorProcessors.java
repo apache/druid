@@ -20,7 +20,6 @@
 package org.apache.druid.math.expr.vector;
 
 import com.google.common.base.Preconditions;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.Expr;
@@ -120,12 +119,8 @@ public class VectorProcessors
     final double[] doubles = new double[maxVectorSize];
     final boolean[] nulls;
     if (constant == null) {
-      if (NullHandling.sqlCompatible()) {
-        nulls = new boolean[maxVectorSize];
-        Arrays.fill(nulls, true);
-      } else {
-        nulls = null;
-      }
+      nulls = new boolean[maxVectorSize];
+      Arrays.fill(nulls, true);
     } else {
       nulls = null;
       Arrays.fill(doubles, constant);
@@ -157,12 +152,8 @@ public class VectorProcessors
     final long[] longs = new long[maxVectorSize];
     final boolean[] nulls;
     if (constant == null) {
-      if (NullHandling.sqlCompatible()) {
-        nulls = new boolean[maxVectorSize];
-        Arrays.fill(nulls, true);
-      } else {
-        nulls = null;
-      }
+      nulls = new boolean[maxVectorSize];
+      Arrays.fill(nulls, true);
     } else {
       nulls = null;
       Arrays.fill(longs, constant);
@@ -198,11 +189,7 @@ public class VectorProcessors
 
     if (inputType == null) {
       // nil column, we can be anything, so be a string because it's the most flexible
-      if (NullHandling.sqlCompatible()) {
-        return constant((Long) null, inspector.getMaxVectorSize());
-      } else {
-        return constant(null, inspector.getMaxVectorSize(), ExpressionType.STRING);
-      }
+      return constant((Long) null, inspector.getMaxVectorSize());
     }
     switch (inputType.getType()) {
       case LONG:
@@ -255,7 +242,7 @@ public class VectorProcessors
           final String input = (String) strings[i];
           if (input == null) {
             longs[i] = 0L;
-            outputNulls[i] = NullHandling.sqlCompatible();
+            outputNulls[i] = true;
           } else {
             if (radix == 16 && (input.startsWith("0x") || input.startsWith("0X"))) {
               // Strip leading 0x from hex strings.
@@ -268,7 +255,7 @@ public class VectorProcessors
         }
         catch (NumberFormatException e) {
           longs[i] = 0L;
-          outputNulls[i] = NullHandling.sqlCompatible();
+          outputNulls[i] = true;
         }
       }
     };
@@ -706,27 +693,25 @@ public class VectorProcessors
               int i
           )
           {
-            if (NullHandling.sqlCompatible()) {
-              // true/null, null/true -> true
-              // false/null, null/false, null/null -> null
-              final boolean leftNull = leftNulls != null && leftNulls[i];
-              final boolean rightNull = rightNulls != null && rightNulls[i];
-              if (leftNull) {
-                if (rightNull) {
-                  output[i] = 0L;
-                  outputNulls[i] = true;
-                  return;
-                }
-                final boolean bool = Evals.asBoolean(rightInput[i]);
-                output[i] = Evals.asLong(bool);
-                outputNulls[i] = !bool;
-                return;
-              } else if (rightNull) {
-                final boolean bool = Evals.asBoolean(leftInput[i]);
-                output[i] = Evals.asLong(bool);
-                outputNulls[i] = !bool;
+            // true/null, null/true -> true
+            // false/null, null/false, null/null -> null
+            final boolean leftNull = leftNulls != null && leftNulls[i];
+            final boolean rightNull = rightNulls != null && rightNulls[i];
+            if (leftNull) {
+              if (rightNull) {
+                output[i] = 0L;
+                outputNulls[i] = true;
                 return;
               }
+              final boolean bool = Evals.asBoolean(rightInput[i]);
+              output[i] = Evals.asLong(bool);
+              outputNulls[i] = !bool;
+              return;
+            } else if (rightNull) {
+              final boolean bool = Evals.asBoolean(leftInput[i]);
+              output[i] = Evals.asLong(bool);
+              outputNulls[i] = !bool;
+              return;
             }
             output[i] = Evals.asLong(Evals.asBoolean(leftInput[i]) || Evals.asBoolean(rightInput[i]));
             outputNulls[i] = false;
@@ -756,27 +741,25 @@ public class VectorProcessors
               int i
           )
           {
-            if (NullHandling.sqlCompatible()) {
-              // true/null, null/true -> true
-              // false/null, null/false, null/null -> null
-              final boolean leftNull = leftNulls != null && leftNulls[i];
-              final boolean rightNull = rightNulls != null && rightNulls[i];
-              if (leftNull) {
-                if (rightNull) {
-                  output[i] = 0;
-                  outputNulls[i] = true;
-                  return;
-                }
-                final boolean bool = Evals.asBoolean(rightInput[i]);
-                output[i] = Evals.asLong(bool);
-                outputNulls[i] = !bool;
-                return;
-              } else if (rightNull) {
-                final boolean bool = Evals.asBoolean(leftInput[i]);
-                output[i] = Evals.asLong(bool);
-                outputNulls[i] = !bool;
+            // true/null, null/true -> true
+            // false/null, null/false, null/null -> null
+            final boolean leftNull = leftNulls != null && leftNulls[i];
+            final boolean rightNull = rightNulls != null && rightNulls[i];
+            if (leftNull) {
+              if (rightNull) {
+                output[i] = 0;
+                outputNulls[i] = true;
                 return;
               }
+              final boolean bool = Evals.asBoolean(rightInput[i]);
+              output[i] = Evals.asLong(bool);
+              outputNulls[i] = !bool;
+              return;
+            } else if (rightNull) {
+              final boolean bool = Evals.asBoolean(leftInput[i]);
+              output[i] = Evals.asLong(bool);
+              outputNulls[i] = !bool;
+              return;
             }
             output[i] = Evals.asLong(Evals.asBoolean(leftInput[i]) || Evals.asBoolean(rightInput[i]));
             outputNulls[i] = false;
@@ -812,7 +795,7 @@ public class VectorProcessors
             final boolean rightNull = rightInput[i] == null;
             if (leftNull) {
               if (rightNull) {
-                outputNulls[i] = NullHandling.sqlCompatible();
+                outputNulls[i] = true;
                 return;
               }
               final boolean bool = Evals.asBoolean((String) rightInput[i]);
@@ -872,27 +855,25 @@ public class VectorProcessors
               int i
           )
           {
-            if (NullHandling.sqlCompatible()) {
-              // true/null, null/true, null/null -> null
-              // false/null, null/false -> false
-              final boolean leftNull = leftNulls != null && leftNulls[i];
-              final boolean rightNull = rightNulls != null && rightNulls[i];
-              if (leftNull) {
-                if (rightNull) {
-                  output[i] = 0L;
-                  outputNulls[i] = true;
-                  return;
-                }
-                final boolean bool = Evals.asBoolean(rightInput[i]);
-                output[i] = Evals.asLong(bool);
-                outputNulls[i] = bool;
-                return;
-              } else if (rightNull) {
-                final boolean bool = Evals.asBoolean(leftInput[i]);
-                output[i] = Evals.asLong(bool);
-                outputNulls[i] = bool;
+            // true/null, null/true, null/null -> null
+            // false/null, null/false -> false
+            final boolean leftNull = leftNulls != null && leftNulls[i];
+            final boolean rightNull = rightNulls != null && rightNulls[i];
+            if (leftNull) {
+              if (rightNull) {
+                output[i] = 0L;
+                outputNulls[i] = true;
                 return;
               }
+              final boolean bool = Evals.asBoolean(rightInput[i]);
+              output[i] = Evals.asLong(bool);
+              outputNulls[i] = bool;
+              return;
+            } else if (rightNull) {
+              final boolean bool = Evals.asBoolean(leftInput[i]);
+              output[i] = Evals.asLong(bool);
+              outputNulls[i] = bool;
+              return;
             }
             output[i] = Evals.asLong(Evals.asBoolean(leftInput[i]) && Evals.asBoolean(rightInput[i]));
             outputNulls[i] = false;
@@ -922,27 +903,25 @@ public class VectorProcessors
               int i
           )
           {
-            if (NullHandling.sqlCompatible()) {
-              // true/null, null/true, null/null -> null
-              // false/null, null/false -> false
-              final boolean leftNull = leftNulls != null && leftNulls[i];
-              final boolean rightNull = rightNulls != null && rightNulls[i];
-              if (leftNull) {
-                if (rightNull) {
-                  output[i] = 0L;
-                  outputNulls[i] = true;
-                  return;
-                }
-                final boolean bool = Evals.asBoolean(rightInput[i]);
-                output[i] = Evals.asLong(bool);
-                outputNulls[i] = bool;
-                return;
-              } else if (rightNull) {
-                final boolean bool = Evals.asBoolean(leftInput[i]);
-                output[i] = Evals.asLong(bool);
-                outputNulls[i] = bool;
+            // true/null, null/true, null/null -> null
+            // false/null, null/false -> false
+            final boolean leftNull = leftNulls != null && leftNulls[i];
+            final boolean rightNull = rightNulls != null && rightNulls[i];
+            if (leftNull) {
+              if (rightNull) {
+                output[i] = 0L;
+                outputNulls[i] = true;
                 return;
               }
+              final boolean bool = Evals.asBoolean(rightInput[i]);
+              output[i] = Evals.asLong(bool);
+              outputNulls[i] = bool;
+              return;
+            } else if (rightNull) {
+              final boolean bool = Evals.asBoolean(leftInput[i]);
+              output[i] = Evals.asLong(bool);
+              outputNulls[i] = bool;
+              return;
             }
             output[i] = Evals.asLong(Evals.asBoolean(leftInput[i]) && Evals.asBoolean(rightInput[i]));
             outputNulls[i] = false;

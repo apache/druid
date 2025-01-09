@@ -21,7 +21,6 @@ package org.apache.druid.query.aggregation.tdigestsketch.sql;
 
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Injector;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -249,11 +248,7 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
         ),
         ResultMatchMode.EQUALS_EPS,
         ImmutableList.of(
-            NullHandling.replaceWithDefault()
-            ? new String[]{
-                "\"AAAAAQAAAAAAAAAAQCQzMzMzMzNAaQAAAAAAAAAAAAY/8AAAAAAAAAAAAAAAAAAAP/AAAAAAAAAAAAAAAAAAAD/wAAAAAAAAAAAAAAAAAAA/8AAAAAAAAD/wAAAAAAAAP/AAAAAAAABAAAAAAAAAAD/wAAAAAAAAQCQzMzMzMzM=\""
-            }
-            : new String[]{
+            new String[]{
                 "\"AAAAAT/wAAAAAAAAQCQzMzMzMzNAaQAAAAAAAAAAAAM/8AAAAAAAAD/wAAAAAAAAP/AAAAAAAABAAAAAAAAAAD/wAAAAAAAAQCQzMzMzMzM=\""
             }
         )
@@ -510,9 +505,7 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
         ),
         ResultMatchMode.EQUALS_EPS,
         ImmutableList.of(
-            NullHandling.replaceWithDefault()
-            ? new Object[]{0.0, 0.5, 10.1}
-            : new Object[]{1.0, 2.0, 10.1}
+            new Object[]{1.0, 2.0, 10.1}
         )
     );
   }
@@ -531,7 +524,7 @@ public class TDigestSketchSqlAggregatorTest extends BaseCalciteQueryTest
             Druids.newTimeseriesQueryBuilder()
                   .dataSource(CalciteTests.DATASOURCE1)
                   .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
-                  .filters(numericEquality("dim2", 0L, ColumnType.LONG))
+                  .filters(equality("dim2", 0L, ColumnType.LONG))
                   .granularity(Granularities.ALL)
                   .aggregators(ImmutableList.of(
                       new TDigestSketchAggregatorFactory("a0", "m1", TDigestSketchAggregatorFactory.DEFAULT_COMPRESSION),

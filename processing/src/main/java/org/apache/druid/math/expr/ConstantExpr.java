@@ -22,7 +22,6 @@ package org.apache.druid.math.expr;
 import com.google.common.base.Preconditions;
 import com.google.errorprone.annotations.Immutable;
 import org.apache.commons.text.StringEscapeUtils;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
@@ -31,7 +30,6 @@ import org.apache.druid.segment.column.TypeStrategy;
 
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
-
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -402,7 +400,7 @@ class StringExpr extends ConstantExpr<String>
 {
   StringExpr(@Nullable String value)
   {
-    super(ExpressionType.STRING, NullHandling.emptyToNullIfNeeded(value));
+    super(ExpressionType.STRING, value);
   }
 
   @Override

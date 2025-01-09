@@ -20,7 +20,6 @@
 package org.apache.druid.query.aggregation;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.GenericColumnSerializer;
 import org.apache.druid.segment.IndexSpec;
@@ -47,10 +46,6 @@ import java.util.concurrent.atomic.AtomicReference;
 
 public class SerializablePairLongFloatComplexMetricSerdeTest
 {
-  static {
-    NullHandling.initializeForTests();
-  }
-
   private static final SerializablePairLongFloatComplexMetricSerde COMPRESSED_SERDE =
       new SerializablePairLongFloatComplexMetricSerde();
 

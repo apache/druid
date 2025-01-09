@@ -22,7 +22,6 @@ package org.apache.druid.segment.filter;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.Iterables;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.Expr;
@@ -364,7 +363,7 @@ public class ExpressionFilter implements Filter
           final ExprEval<?> eval = expr.get().eval(
               InputBindings.forInputSupplier(
                   ExpressionType.STRING,
-                  () -> NullHandling.nullToEmptyIfNeeded(value)
+                  () -> value
               )
           );
           if (eval.value() == null) {
