@@ -83,7 +83,8 @@ druid.indexer.task.default.context={"useConcurrentLocks":true}
 
 We recommend that you use the `useConcurrentLocks` context parameter so that Druid automatically determines the task lock types for you. If, for some reason, you need to manually set the task lock types explicitly, you can read more about them in this section.
 
-<details><summary>Click here to read more about the lock types.</summary>
+<details>
+<summary>Click here to read more about the lock types.</summary>
 
 Druid uses task locks to make sure that multiple conflicting operations don't happen at once.
 There are two task lock types: `APPEND` and `REPLACE`. The type of lock you use is determined by what you're trying to accomplish.

@@ -314,7 +314,8 @@ This property affects both storage and querying, and must be set on all Druid se
 
 The following table illustrates some example scenarios and the impact of the changes.
 
-<details><summary>Show the table</summary>
+<details>
+<summary>Show the table</summary>
 
 | Query| Druid 27.0.0 and earlier| Druid 28.0.0 and later|
 |------|------------------------|----------------------|
