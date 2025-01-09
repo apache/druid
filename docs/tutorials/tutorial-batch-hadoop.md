@@ -148,7 +148,7 @@ From the Hadoop container's shell, run the following command to copy the Hadoop 
 cp /usr/local/hadoop/etc/hadoop/*.xml /shared/hadoop_xml
 ```
 
-From the host machine, run the following, where {PATH_TO_DRUID} is replaced by the path to the Druid package.
+From the host machine, run the following, where \{PATH_TO_DRUID\} is replaced by the path to the Druid package.
 
 ```bash
 mkdir -p {PATH_TO_DRUID}/conf/druid/single-server/micro-quickstart/_common/hadoop-xml

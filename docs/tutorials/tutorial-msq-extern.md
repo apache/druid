@@ -47,7 +47,7 @@ To generate a query from external data, do the following:
 5. When you're ready, click **Done**. You're returned to the **Query** view where you can see the starter query that will insert the data from the external source into a table named `wikipedia`.
 
    <details>
-<summary>Show the query</summary>
+   <summary>Show the query</summary>
 
    ```sql
    REPLACE INTO "wikipedia" OVERWRITE ALL

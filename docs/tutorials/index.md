@@ -146,7 +146,7 @@ Follow these steps to load the sample Wikipedia dataset:
    The query inserts the sample data into the table named `wikiticker-2015-09-12-sampled`.
 
    <details>
-<summary>Show the query</summary>
+   <summary>Show the query</summary>
 
    ```sql
    REPLACE INTO "wikiticker-2015-09-12-sampled" OVERWRITE ALL

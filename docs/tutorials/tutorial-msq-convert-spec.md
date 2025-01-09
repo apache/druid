@@ -42,7 +42,7 @@ To convert the ingestion spec to a query task, do the following:
 3. In the **Ingestion spec to covert** window, insert your ingestion spec. You can use your own spec or the sample ingestion spec provided in the tutorial. The sample spec uses data hosted at `https://druid.apache.org/data/wikipedia.json.gz` and loads it into a table named `wikipedia`:
 
    <details>
-<summary>Show the spec</summary>
+   <summary>Show the spec</summary>
 
    ```json
    {
@@ -129,7 +129,7 @@ To convert the ingestion spec to a query task, do the following:
 4. Click **Submit** to submit the spec. The web console uses the JSON-based ingestion spec to generate a SQL query that you can use instead. This is what the query looks like for the sample ingestion spec:
 
    <details>
-<summary>Show the query</summary>
+   <summary>Show the query</summary>
 
    ```sql
    -- This SQL query was auto generated from an ingestion spec
