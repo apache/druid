@@ -60,7 +60,7 @@ public class AuthorizationResultTest
     AuthorizationResult result = AuthorizationResult.allowWithRestriction(
         ImmutableMap.of(
             "table1",
-            Optional.of(NoRestrictionPolicy.INSTANCE),
+            Optional.of(NoRestrictionPolicy.instance()),
             "table2",
             Optional.of(
                 RowFilterPolicy.from(new EqualityFilter("column1", ColumnType.STRING, "val1", null)))
@@ -100,7 +100,7 @@ public class AuthorizationResultTest
 
     AuthorizationResult resultWithNoRestrictionPolicy = AuthorizationResult.allowWithRestriction(ImmutableMap.of(
         "table1",
-        Optional.of(NoRestrictionPolicy.INSTANCE)
+        Optional.of(NoRestrictionPolicy.instance())
     ));
     assertTrue(resultWithNoRestrictionPolicy.allowBasicAccess());
     assertTrue(resultWithNoRestrictionPolicy.allowAccessWithNoRestriction());

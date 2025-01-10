@@ -509,7 +509,7 @@ public class JoinDataSourceTest
     JoinDataSource dataSource = JoinDataSource.create(
         RestrictedDataSource.create(
             new TableDataSource("table1"),
-            NoRestrictionPolicy.INSTANCE
+            NoRestrictionPolicy.instance()
         ),
         new TableDataSource("table2"),
         "j.",

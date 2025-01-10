@@ -28,11 +28,14 @@ import org.apache.druid.segment.CursorBuildSpec;
  */
 public class NoRestrictionPolicy implements Policy
 {
-  public static final NoRestrictionPolicy INSTANCE = new NoRestrictionPolicy();
-
-  @JsonCreator
   NoRestrictionPolicy()
   {
+  }
+
+  @JsonCreator
+  public static NoRestrictionPolicy instance()
+  {
+    return new NoRestrictionPolicy();
   }
 
   @Override

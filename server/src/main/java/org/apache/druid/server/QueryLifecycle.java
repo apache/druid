@@ -325,7 +325,7 @@ public class QueryLifecycle
         // skip restrictions mapping for SegmentMetadataQuery from user with no restriction
       } else {
         this.baseQuery = this.baseQuery.withDataSource(this.baseQuery.getDataSource()
-                                                                     .mapWithRestriction(authorizationResult.getPolicy()));
+                                                                     .withPolicies(authorizationResult.getPolicyMap()));
       }
     }
 

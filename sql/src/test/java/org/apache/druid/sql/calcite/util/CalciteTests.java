@@ -138,7 +138,7 @@ public class CalciteTests
   public static final String BENCHMARK_DATASOURCE = "benchmark_ds";
 
   public static final String TEST_SUPERUSER_NAME = "testSuperuser";
-  public static final Policy POLICY_NO_RESTRICTION_SUPERUSER = NoRestrictionPolicy.INSTANCE;
+  public static final Policy POLICY_NO_RESTRICTION_SUPERUSER = NoRestrictionPolicy.instance();
   public static final Policy POLICY_RESTRICTION = RowFilterPolicy.from(BaseCalciteQueryTest.numericSelector("m1", "6"));
   public static final AuthorizerMapper TEST_AUTHORIZER_MAPPER = new AuthorizerMapper(null)
   {

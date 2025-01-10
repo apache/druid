@@ -31,12 +31,14 @@ import java.io.IOException;
 import java.util.Optional;
 
 /**
- * A wrapped {@link SegmentReference} with a {@link Policy} restriction. The policy must be applied when querying the
- * wrapped segment, e.x {@link #asCursorFactory()} returns a policy-enforced {@link RestrictedCursorFactory}. The policy
- * and wrapped SegmentReference (i.e. delegate) can't be accessed directly.
+ * A {@link SegmentReference} wrapper with a {@link Policy} restriction that is automatically enforced.
+ * The policy seamlessly governs queries on the wrapped segment, ensuring compliance. For example,
+ * {@link #asCursorFactory()} returns a policy-enforced {@link RestrictedCursorFactory}.
+ *
  * <p>
- * There's a backdoor to get the wrapped SegmentReference through {@code as(BypassRestrictedSegment.class)}, returning
- * a policy-aware (but not enforced) {@link BypassRestrictedSegment} instance.
+ * Direct access to the policy or the underlying SegmentReference (the delegate) is not allowed.
+ * However, a backdoor is available via {@code as(BypassRestrictedSegment.class)}, allowing access to
+ * a {@link BypassRestrictedSegment} instance, which provides flexibility on policy enforcement.
  */
 public class RestrictedSegment implements SegmentReference
 {

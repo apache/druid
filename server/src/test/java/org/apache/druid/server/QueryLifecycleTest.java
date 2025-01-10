@@ -237,7 +237,7 @@ public class QueryLifecycleTest
     // The druid-internal gets a NoRestrictionPolicy.
     AuthorizationResult authorizationResult = AuthorizationResult.allowWithRestriction(ImmutableMap.of(
         DATASOURCE,
-        Optional.of(NoRestrictionPolicy.INSTANCE)
+        Optional.of(NoRestrictionPolicy.instance())
     ));
     final SegmentMetadataQuery query = Druids.newSegmentMetadataQueryBuilder()
                                              .dataSource(DATASOURCE)
@@ -431,7 +431,7 @@ public class QueryLifecycleTest
     // Test the path historical receives a native json query from broker, query already has restriction on data source
     Policy rowFilterPolicy = RowFilterPolicy.from(new NullFilter("some-column", null));
     // Internal druid system would get a NO_RESTRICTION on a restricted data source.
-    Access access = Access.allowWithRestriction(NoRestrictionPolicy.INSTANCE);
+    Access access = Access.allowWithRestriction(NoRestrictionPolicy.instance());
 
     DataSource restrictedDataSource = RestrictedDataSource.create(TableDataSource.create(DATASOURCE), rowFilterPolicy);
 

@@ -134,11 +134,11 @@ public interface DataSource
    *                               the policyMap (used by druid-internal). Missing policy or adding a
    *                               non-NoRestrictionPolicy to RestrictedDataSource would throw.
    */
-  default DataSource mapWithRestriction(Map<String, Optional<Policy>> policyMap)
+  default DataSource withPolicies(Map<String, Optional<Policy>> policyMap)
   {
     List<DataSource> children = this.getChildren()
                                     .stream()
-                                    .map(child -> child.mapWithRestriction(policyMap))
+                                    .map(child -> child.withPolicies(policyMap))
                                     .collect(Collectors.toList());
     return this.withChildren(children);
   }

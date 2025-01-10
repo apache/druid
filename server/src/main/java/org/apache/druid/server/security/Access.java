@@ -42,7 +42,7 @@ public class Access
   private final String message;
   // A policy restriction on top of table-level read access. It should be empty if there are no policy restrictions
   // or if access is requested for an action other than reading the table.
-  private final Optional<Policy> policy;
+  private final Optional<Policy> policy; // should this be a list?
 
   /**
    * @deprecated use {@link #allow()} or {@link #deny(String)} instead

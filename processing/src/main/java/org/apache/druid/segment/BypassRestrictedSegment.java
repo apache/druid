@@ -19,20 +19,30 @@
 
 package org.apache.druid.segment;
 
-import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.policy.Policy;
 
 /**
- * A wrapped {@link SegmentReference} with a {@link DimFilter} restriction, and the policy restriction can be bypassed.
+ * A {@link SegmentReference} wrapper with a {@link Policy} restriction that is not automatically enforced.
+ * Instead, it relies on the caller to apply or enforce the policy.
+ *
  * <p>
- * In some methods, such as {@link #as(Class)}, {@link #asQueryableIndex()}, and {@link #asCursorFactory()}, the policy
- * is ignored.
+ * Certain methods, such as {@link #as(Class)}, {@link #asQueryableIndex()}, and {@link #asCursorFactory()},
+ * provide access to the underlying segment without automatically applying the policy, leaving it up to
+ * the caller to ensure compliance when needed.
+ * <p>
+ * This design provides flexibility for scenarios where policy enforcement is not required or desired.
  */
-class BypassRestrictedSegment extends RestrictedSegment
+class BypassRestrictedSegment extends WrappedSegmentReference
 {
-  public BypassRestrictedSegment(SegmentReference delegate, Policy policy)
+  protected final Policy policy;
+
+  public BypassRestrictedSegment(
+      SegmentReference delegate,
+      Policy policy
+  )
   {
-    super(delegate, policy);
+    super(delegate);
+    this.policy = policy;
   }
 
   public Policy getPolicy()

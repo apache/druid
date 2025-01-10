@@ -85,7 +85,7 @@ public class DataSourceTest
     );
 
     Assert.assertEquals(
-        RestrictedDataSource.create(TableDataSource.create("somedatasource"), NoRestrictionPolicy.INSTANCE),
+        RestrictedDataSource.create(TableDataSource.create("somedatasource"), NoRestrictionPolicy.instance()),
         dataSource
     );
   }
@@ -138,9 +138,9 @@ public class DataSourceTest
     UnionDataSource unionDataSource = new UnionDataSource(Lists.newArrayList(table1, table2, table3));
     ImmutableMap<String, Optional<Policy>> restrictions = ImmutableMap.of(
         "table1",
-        Optional.of(NoRestrictionPolicy.INSTANCE),
+        Optional.of(NoRestrictionPolicy.instance()),
         "table2",
-        Optional.of(NoRestrictionPolicy.INSTANCE),
+        Optional.of(NoRestrictionPolicy.instance()),
         "table3",
         Optional.of(RowFilterPolicy.from(new NullFilter(
             "some-column",
@@ -149,15 +149,15 @@ public class DataSourceTest
     );
 
     Assert.assertEquals(
-        unionDataSource.mapWithRestriction(restrictions),
+        unionDataSource.withPolicies(restrictions),
         new UnionDataSource(Lists.newArrayList(
             RestrictedDataSource.create(
                 table1,
-                NoRestrictionPolicy.INSTANCE
+                NoRestrictionPolicy.instance()
             ),
             RestrictedDataSource.create(
                 table2,
-                NoRestrictionPolicy.INSTANCE
+                NoRestrictionPolicy.instance()
             ),
             RestrictedDataSource.create(
                 table3,
@@ -180,10 +180,10 @@ public class DataSourceTest
     // The druid-system should get a NO_RESTRICTION policy attached on a table.
     ImmutableMap<String, Optional<Policy>> noRestrictionPolicy = ImmutableMap.of(
         "table1",
-        Optional.of(NoRestrictionPolicy.INSTANCE)
+        Optional.of(NoRestrictionPolicy.instance())
     );
 
-    Assert.assertEquals(restrictedDataSource, restrictedDataSource.mapWithRestriction(noRestrictionPolicy));
+    Assert.assertEquals(restrictedDataSource, restrictedDataSource.withPolicies(noRestrictionPolicy));
   }
 
   @Test
@@ -200,18 +200,18 @@ public class DataSourceTest
     ImmutableMap<String, Optional<Policy>> noPolicyFound = ImmutableMap.of("table1", Optional.empty());
     ImmutableMap<String, Optional<Policy>> policyWasNotChecked = ImmutableMap.of();
 
-    ISE e = Assert.assertThrows(ISE.class, () -> restrictedDataSource.mapWithRestriction(anotherRestrictions));
+    ISE e = Assert.assertThrows(ISE.class, () -> restrictedDataSource.withPolicies(anotherRestrictions));
     Assert.assertEquals(
         "Multiple restrictions on table [table1]: policy [RowFilterPolicy{rowFilter=random-column IS NULL}] and policy [RowFilterPolicy{rowFilter=some-column IS NULL}]",
         e.getMessage()
     );
 
-    ISE e2 = Assert.assertThrows(ISE.class, () -> restrictedDataSource.mapWithRestriction(noPolicyFound));
+    ISE e2 = Assert.assertThrows(ISE.class, () -> restrictedDataSource.withPolicies(noPolicyFound));
     Assert.assertEquals(
         "No restriction found on table [table1], but had policy [RowFilterPolicy{rowFilter=random-column IS NULL}] before.",
         e2.getMessage()
     );
-    ISE e3 = Assert.assertThrows(ISE.class, () -> restrictedDataSource.mapWithRestriction(policyWasNotChecked));
+    ISE e3 = Assert.assertThrows(ISE.class, () -> restrictedDataSource.withPolicies(policyWasNotChecked));
     Assert.assertEquals("Missing policy check result for table [table1]", e3.getMessage());
   }
 }

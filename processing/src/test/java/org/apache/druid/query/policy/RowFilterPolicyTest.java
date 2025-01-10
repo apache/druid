@@ -19,12 +19,15 @@
 
 package org.apache.druid.query.policy;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.filter.AndFilter;
 import org.junit.Assert;
@@ -33,10 +36,38 @@ import org.junit.Test;
 
 public class RowFilterPolicyTest
 {
+  private RowFilterPolicy simpleRowPolicy;
+
   @Before
   public void setup()
   {
     NullHandling.initializeForTests();
+    simpleRowPolicy = RowFilterPolicy.from(new EqualityFilter("col0", ColumnType.STRING, "val0", null));
+  }
+
+  @Test
+  public void test_equals()
+  {
+    EqualsVerifier.forClass(RowFilterPolicy.class).usingGetClass().withNonnullFields(new String[]{"rowFilter"}).verify();
+  }
+
+  @Test
+  public void test_deserialize_fromString() throws Exception
+  {
+    ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
+    Policy deserialized = jsonMapper.readValue(
+        "{\"type\":\"row\",\"rowFilter\":{\"type\":\"equals\",\"column\":\"col0\",\"matchValueType\":\"STRING\",\"matchValue\":\"val0\"}}\n",
+        Policy.class
+    );
+    Assert.assertEquals(simpleRowPolicy, deserialized);
+  }
+
+  @Test
+  public void test_serde_roundTrip() throws Exception
+  {
+    ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
+    Policy deserialized = jsonMapper.readValue(jsonMapper.writeValueAsString(simpleRowPolicy), Policy.class);
+    Assert.assertEquals(simpleRowPolicy, deserialized);
   }
 
   @Test

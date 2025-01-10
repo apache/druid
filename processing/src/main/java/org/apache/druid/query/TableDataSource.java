@@ -116,7 +116,7 @@ public class TableDataSource implements DataSource
   }
 
   @Override
-  public DataSource mapWithRestriction(Map<String, Optional<Policy>> policyMap)
+  public DataSource withPolicies(Map<String, Optional<Policy>> policyMap)
   {
     Optional<Policy> policy = policyMap.getOrDefault(name, Optional.empty());
     if (!policy.isPresent()) {

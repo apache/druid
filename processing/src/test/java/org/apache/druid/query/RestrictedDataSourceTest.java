@@ -42,7 +42,7 @@ public class RestrictedDataSourceTest
   );
   private final RestrictedDataSource restrictedBarDataSource = RestrictedDataSource.create(
       barDataSource,
-      NoRestrictionPolicy.INSTANCE
+      NoRestrictionPolicy.instance()
   );
 
   @Test
@@ -148,7 +148,7 @@ public class RestrictedDataSourceTest
 
     Assert.assertEquals(
         deserializedRestrictedDataSource,
-        RestrictedDataSource.create(fooDataSource, NoRestrictionPolicy.INSTANCE)
+        RestrictedDataSource.create(fooDataSource, NoRestrictionPolicy.instance())
     );
   }
 

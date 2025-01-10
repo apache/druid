@@ -83,7 +83,7 @@ public class ForbiddenExceptionTest
     Assert.assertEquals("Allowed:true, Message:, Policy: Optional.empty", access.toString());
     Assert.assertEquals("Authorized", access.getMessage());
 
-    access = Access.allowWithRestriction(NoRestrictionPolicy.INSTANCE);
+    access = Access.allowWithRestriction(NoRestrictionPolicy.instance());
     Assert.assertTrue(access.isAllowed());
     Assert.assertEquals("Allowed:true, Message:, Policy: Optional[NO_RESTRICTION]", access.toString());
     Assert.assertEquals("Authorized, with restriction [NO_RESTRICTION]", access.getMessage());

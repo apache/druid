@@ -21,6 +21,7 @@ package org.apache.druid.query.policy;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import org.apache.druid.guice.annotations.UnstableApi;
 import org.apache.druid.segment.CursorBuildSpec;
 
 /**
@@ -32,6 +33,7 @@ import org.apache.druid.segment.CursorBuildSpec;
     @JsonSubTypes.Type(value = RowFilterPolicy.class, name = "row"),
     @JsonSubTypes.Type(value = NoRestrictionPolicy.class, name = "noRestriction")
 })
+@UnstableApi
 public interface Policy
 {
   /**

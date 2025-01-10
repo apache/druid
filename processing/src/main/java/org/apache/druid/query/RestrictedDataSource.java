@@ -48,6 +48,7 @@ import java.util.function.Function;
 public class RestrictedDataSource implements DataSource
 {
   private final TableDataSource base;
+  // update List policy?
   private final Policy policy;
 
   @JsonProperty("base")
@@ -145,7 +146,7 @@ public class RestrictedDataSource implements DataSource
   }
 
   @Override
-  public DataSource mapWithRestriction(Map<String, Optional<Policy>> policyMap)
+  public DataSource withPolicies(Map<String, Optional<Policy>> policyMap)
   {
     if (!policyMap.containsKey(base.getName())) {
       throw new ISE("Missing policy check result for table [%s]", base.getName());

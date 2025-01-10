@@ -19,16 +19,42 @@
 
 package org.apache.druid.query.policy;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.TestHelper;
 import org.junit.Assert;
 import org.junit.Test;
 
 public class NoRestrictionPolicyTest
 {
   @Test
+  public void test_equals()
+  {
+    EqualsVerifier.forClass(NoRestrictionPolicy.class).usingGetClass().verify();
+  }
+
+  @Test
+  public void test_deserialize_fromString() throws Exception
+  {
+    ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
+    Policy deserialized = jsonMapper.readValue("{\"type\":\"noRestriction\"}", Policy.class);
+    Assert.assertEquals(NoRestrictionPolicy.instance(), deserialized);
+  }
+
+  @Test
+  public void test_serde_roundTrip() throws Exception
+  {
+    final NoRestrictionPolicy policy = NoRestrictionPolicy.instance();
+    ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
+    Policy deserialized = jsonMapper.readValue(jsonMapper.writeValueAsString(policy), Policy.class);
+    Assert.assertEquals(policy, deserialized);
+  }
+
+  @Test
   public void testVisit()
   {
-    final NoRestrictionPolicy policy = NoRestrictionPolicy.INSTANCE;
+    final NoRestrictionPolicy policy = NoRestrictionPolicy.instance();
     Assert.assertEquals(CursorBuildSpec.FULL_SCAN, policy.visit(CursorBuildSpec.FULL_SCAN));
   }
 }

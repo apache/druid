@@ -49,7 +49,7 @@ public class AuthorizationResult
    * superusers, except in cases where granular ACL considerations are not a priority.
    */
   public static final AuthorizationResult ALLOW_NO_RESTRICTION = new AuthorizationResult(
-      PERMISSION.ALLOW_NO_RESTRICTION,
+      Permission.ALLOW_NO_RESTRICTION,
       null,
       Collections.emptyMap()
   );
@@ -58,19 +58,19 @@ public class AuthorizationResult
    * Provides a default deny access result.
    */
   public static final AuthorizationResult DENY = new AuthorizationResult(
-      PERMISSION.DENY,
+      Permission.DENY,
       Access.DENIED.getMessage(),
       Collections.emptyMap()
   );
 
-  enum PERMISSION
+  enum Permission
   {
     ALLOW_NO_RESTRICTION,
     ALLOW_WITH_RESTRICTION,
     DENY
   }
 
-  private final PERMISSION permission;
+  private final Permission permission;
 
   @Nullable
   private final String failureMessage;
@@ -78,7 +78,7 @@ public class AuthorizationResult
   private final Map<String, Optional<Policy>> policyRestrictions;
 
   AuthorizationResult(
-      PERMISSION permission,
+      Permission permission,
       @Nullable String failureMessage,
       Map<String, Optional<Policy>> policyRestrictions
   )
@@ -108,7 +108,7 @@ public class AuthorizationResult
 
   public static AuthorizationResult deny(@Nonnull String failureMessage)
   {
-    return new AuthorizationResult(PERMISSION.DENY, failureMessage, Collections.emptyMap());
+    return new AuthorizationResult(Permission.DENY, failureMessage, Collections.emptyMap());
   }
 
   public static AuthorizationResult allowWithRestriction(Map<String, Optional<Policy>> policyRestrictions)
@@ -116,7 +116,7 @@ public class AuthorizationResult
     if (policyRestrictions.isEmpty()) {
       return ALLOW_NO_RESTRICTION;
     }
-    return new AuthorizationResult(PERMISSION.ALLOW_WITH_RESTRICTION, null, policyRestrictions);
+    return new AuthorizationResult(Permission.ALLOW_WITH_RESTRICTION, null, policyRestrictions);
   }
 
   /**
@@ -124,7 +124,7 @@ public class AuthorizationResult
    */
   public boolean allowBasicAccess()
   {
-    return PERMISSION.ALLOW_NO_RESTRICTION.equals(permission) || PERMISSION.ALLOW_WITH_RESTRICTION.equals(permission);
+    return Permission.ALLOW_NO_RESTRICTION.equals(permission) || Permission.ALLOW_WITH_RESTRICTION.equals(permission);
   }
 
   /**
@@ -134,11 +134,10 @@ public class AuthorizationResult
    */
   public boolean allowAccessWithNoRestriction()
   {
-    return PERMISSION.ALLOW_NO_RESTRICTION.equals(permission) || (PERMISSION.ALLOW_WITH_RESTRICTION.equals(permission)
+    return Permission.ALLOW_NO_RESTRICTION.equals(permission) || (Permission.ALLOW_WITH_RESTRICTION.equals(permission)
                                                                   && policyRestrictions.values()
                                                                                        .stream()
-                                                                                       .map(p -> p.orElse(null))
-                                                                                       .filter(Objects::nonNull) // Can be replaced by Optional::stream after java 11
+                                                                                       .flatMap(Optional::stream)
                                                                                        .allMatch(p -> (p instanceof NoRestrictionPolicy)));
   }
 
@@ -159,7 +158,7 @@ public class AuthorizationResult
     }
   }
 
-  public Map<String, Optional<Policy>> getPolicy()
+  public Map<String, Optional<Policy>> getPolicyMap()
   {
     return policyRestrictions;
   }
