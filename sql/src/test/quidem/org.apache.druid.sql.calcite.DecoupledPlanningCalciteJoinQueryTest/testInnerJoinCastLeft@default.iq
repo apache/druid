@@ -19,14 +19,6 @@ INNER JOIN lookup.lookyloo l ON CAST(foo.m1 AS VARCHAR) = l.k
 (0 rows)
 
 !ok
-LogicalProject(dim1=[$0], v=[$3])
-  LogicalJoin(condition=[=($0, $2)], joinType=[inner])
-    LogicalFilter(condition=[IS NULL($1)])
-      LogicalProject(dim1=[$1], dim2=[$2])
-LogicalProject(dim1=[$0], v=[$2])
-  LogicalJoin(condition=[=($0, $1)], joinType=[inner])
-    LogicalProject(dim1=[$1])
-      LogicalFilter(condition=[IS NULL($2)])
 LogicalProject(m1=[$0], k=[$2], v=[$3])
   LogicalJoin(condition=[=($1, $2)], joinType=[inner])
     LogicalProject(m1=[$5], m10=[CAST($5):VARCHAR])
@@ -34,14 +26,6 @@ LogicalProject(m1=[$0], k=[$2], v=[$3])
     LogicalTableScan(table=[[lookup, lookyloo]])
 
 !logicalPlan
-DruidProject(dim1=[$0], v=[$3], druid=[logical])
-  DruidJoin(condition=[=($0, $2)], joinType=[inner])
-    DruidFilter(condition=[IS NULL($1)])
-      DruidProject(dim1=[$1], dim2=[$2], druid=[logical])
-DruidProject(dim1=[$0], v=[$2], druid=[logical])
-  DruidJoin(condition=[=($0, $1)], joinType=[inner])
-    DruidProject(dim1=[$1], druid=[logical])
-      DruidFilter(condition=[IS NULL($2)])
 DruidProject(m1=[$0], k=[$2], v=[$3], druid=[logical])
   DruidJoin(condition=[=($1, $2)], joinType=[inner])
     DruidProject(m1=[$5], m10=[CAST($5):VARCHAR], druid=[logical])
@@ -74,10 +58,6 @@ DruidProject(m1=[$0], k=[$2], v=[$3], druid=[logical])
         "resultFormat" : "compactedList",
         "columns" : [ "m1", "v0" ],
         "columnTypes" : [ "FLOAT", "STRING" ],
-        "columns" : [ "dim1", "dim2" ],
-        "columnTypes" : [ "STRING", "STRING" ],
-        "columns" : [ "dim1" ],
-        "columnTypes" : [ "STRING" ],
         "granularity" : {
           "type" : "all"
         },

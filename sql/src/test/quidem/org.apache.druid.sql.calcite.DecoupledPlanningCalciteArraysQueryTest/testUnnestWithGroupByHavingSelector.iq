@@ -1,4 +1,4 @@
-# testUnnestWithGroupByHavingSelector@NullHandling=default case-crc:76a4f833
+# testUnnestWithGroupByHavingSelector case-crc:76a4f833
 # quidem testcase reason: IMPROVED_PLAN
 !set debug true
 !set defaultTimeout 300000
@@ -45,9 +45,10 @@ DruidAggregate(group=[{1}], EXPR$1=[COUNT()], druid=[logical])
       "outputType" : "ARRAY<STRING>"
     },
     "unnestFilter" : {
-      "type" : "selector",
-      "dimension" : "j0.unnest",
-      "value" : "b"
+      "type" : "equals",
+      "column" : "j0.unnest",
+      "matchValueType" : "STRING",
+      "matchValue" : "b"
     }
   },
   "intervals" : {

@@ -92,8 +92,7 @@ public @interface NotYetSupported
     SORT_REMOVE_CONSTANT_KEYS_CONFLICT(DruidException.class, "not enough rules"),
     REQUIRE_TIME_CONDITION(CannotBuildQueryException.class, "requireTimeCondition is enabled"),
     UNNEST_INLINED(Exception.class, "Missing conversion is Uncollect"),
-    UNNEST_RESULT_MISMATCH(AssertionError.class, "(Result count mismatch|column content mismatch)"),
-    UNNEST_PREDICATE_NOT_SUPPORTED(Throwable.class, "Predicate does not support ARRAY types");
+    UNNEST_RESULT_MISMATCH(AssertionError.class, "(Result count mismatch|column content mismatch)");
     // @formatter:on
 
     public Class<? extends Throwable> throwableClass;
