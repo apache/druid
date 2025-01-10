@@ -21,14 +21,12 @@ package org.apache.druid.initialization;
 
 import com.google.common.collect.ImmutableMap;
 import nl.jqno.equalsverifier.EqualsVerifier;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.query.filter.EqualityFilter;
 import org.apache.druid.query.policy.NoRestrictionPolicy;
 import org.apache.druid.query.policy.RowFilterPolicy;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.server.security.AuthorizationResult;
-import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Optional;
@@ -40,12 +38,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class AuthorizationResultTest
 {
-  @Before
-  public void setUp()
-  {
-    NullHandling.initializeForTests();
-  }
-
   @Test
   public void testEquals()
   {

@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
@@ -34,7 +33,6 @@ import org.apache.druid.query.policy.Policy;
 import org.apache.druid.query.policy.RowFilterPolicy;
 import org.apache.druid.segment.TestHelper;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -43,12 +41,6 @@ import java.util.Optional;
 public class DataSourceTest
 {
   private static final ObjectMapper JSON_MAPPER = TestHelper.makeJsonMapper();
-
-  @Before
-  public void setUp()
-  {
-    NullHandling.initializeForTests(); // Needed for loading QueryRunnerTestHelper static variables.
-  }
 
   @Test
   public void testSerialization() throws IOException
