@@ -20,9 +20,10 @@
 package org.apache.druid.curator.announcement;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.api.transaction.CuratorTransaction;
-import org.apache.curator.framework.api.transaction.CuratorTransactionFinal;
+import org.apache.curator.framework.api.transaction.CuratorMultiTransaction;
+import org.apache.curator.framework.api.transaction.CuratorOp;
 import org.apache.curator.framework.recipes.cache.ChildData;
 import org.apache.curator.framework.recipes.cache.PathChildrenCache;
 import org.apache.curator.framework.recipes.cache.PathChildrenCacheEvent;
@@ -53,7 +54,15 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * Announces things on Zookeeper.
+ * The {@link Announcer} class manages the announcement of a node, and watches all child
+ * and sibling nodes under the specified path in a ZooKeeper ensemble. It monitors these nodes
+ * to ensure their existence and manage their lifecycle collectively.
+ *
+ * <p>
+ * This class uses Apache Curator's PathChildrenCache recipe under the hood to track all znodes
+ * under the specified node's parent. See {@link NodeAnnouncer} for an announcer that
+ * uses the NodeCache recipe instead.
+ * </p>
  */
 public class Announcer
 {
@@ -63,7 +72,9 @@ public class Announcer
   private final PathChildrenCacheFactory factory;
   private final ExecutorService pathChildrenCacheExecutor;
 
+  @GuardedBy("toAnnounce")
   private final List<Announceable> toAnnounce = new ArrayList<>();
+  @GuardedBy("toAnnounce")
   private final List<Announceable> toUpdate = new ArrayList<>();
   private final ConcurrentMap<String, PathChildrenCache> listeners = new ConcurrentHashMap<>();
   private final ConcurrentMap<String, ConcurrentMap<String, byte[]>> announcements = new ConcurrentHashMap<>();
@@ -107,6 +118,7 @@ public class Announcer
     log.debug("Starting Announcer.");
     synchronized (toAnnounce) {
       if (started) {
+        log.debug("Cannot start Announcer that has already started.");
         return;
       }
 
@@ -130,6 +142,7 @@ public class Announcer
     log.debug("Stopping Announcer.");
     synchronized (toAnnounce) {
       if (!started) {
+        log.debug("Cannot stop Announcer that has not started.");
         return;
       }
 
@@ -154,27 +167,30 @@ public class Announcer
       }
 
       if (!parentsIBuilt.isEmpty()) {
-        CuratorTransaction transaction = curator.inTransaction();
+        CuratorMultiTransaction transaction = curator.transaction();
+
+        ArrayList<CuratorOp> operations = new ArrayList<>();
         for (String parent : parentsIBuilt) {
           try {
-            transaction = transaction.delete().forPath(parent).and();
+            operations.add(curator.transactionOp().delete().forPath(parent));
           }
           catch (Exception e) {
-            log.info(e, "Unable to delete parent[%s], boooo.", parent);
+            log.info(e, "Unable to delete parent[%s] when closing Announcer.", parent);
           }
         }
+
         try {
-          ((CuratorTransactionFinal) transaction).commit();
+          transaction.forOperations(operations);
         }
         catch (Exception e) {
-          log.info(e, "Unable to commit transaction. Please feed the hamsters");
+          log.info(e, "Unable to commit transaction when closing Announcer.");
         }
       }
     }
   }
 
   /**
-   * Like announce(path, bytes, true).
+   * Overload of {@link #announce(String, byte[], boolean)}, but removes parent node of path after announcement.
    */
   public void announce(String path, byte[] bytes)
   {
@@ -182,17 +198,23 @@ public class Announcer
   }
 
   /**
-   * Announces the provided bytes at the given path.  Announcement means that it will create an ephemeral node
-   * and monitor it to make sure that it always exists until it is unannounced or this object is closed.
+   * Announces the provided bytes at the given path.
+   *
+   * <p>
+   * Announcement using {@link Announcer} will create an ephemeral znode at the specified path, and uses its parent
+   * path to watch all the siblings and children znodes of your specified path. The watched nodes will always exist
+   * until it is unannounced, or until {@link #stop()} is called.
+   * </p>
    *
    * @param path                  The path to announce at
    * @param bytes                 The payload to announce
-   * @param removeParentIfCreated remove parent of "path" if we had created that parent
+   * @param removeParentIfCreated remove parent of "path" if we had created that parent during announcement
    */
   public void announce(String path, byte[] bytes, boolean removeParentIfCreated)
   {
     synchronized (toAnnounce) {
       if (!started) {
+        log.debug("Announcer has not started yet, queuing announcement for later processing...");
         toAnnounce.add(new Announceable(path, bytes, removeParentIfCreated));
         return;
       }
@@ -212,13 +234,13 @@ public class Announcer
         }
       }
       catch (Exception e) {
-        log.debug(e, "Problem checking if the parent existed, ignoring.");
+        log.warn(e, "Failed to check existence of parent path. Proceeding without creating parent path.");
       }
 
       // I don't have a watcher on this path yet, create a Map and start watching.
       announcements.putIfAbsent(parentPath, new ConcurrentHashMap<>());
 
-      // Guaranteed to be non-null, but might be a map put in there by another thread.
+      // Guaranteed to be non-null, but might be a map put in here by another thread.
       final ConcurrentMap<String, byte[]> finalSubPaths = announcements.get(parentPath);
 
       // Synchronize to make sure that I only create a listener once.
@@ -347,7 +369,7 @@ public class Announcer
     ConcurrentMap<String, byte[]> subPaths = announcements.get(parentPath);
 
     if (subPaths == null || subPaths.get(nodePath) == null) {
-      throw new ISE("Cannot update a path[%s] that hasn't been announced!", path);
+      throw new ISE("Cannot update path[%s] that hasn't been announced!", path);
     }
 
     synchronized (toAnnounce) {
@@ -397,10 +419,14 @@ public class Announcer
     log.info("Unannouncing [%s]", path);
 
     try {
-      curator.inTransaction().delete().forPath(path).and().commit();
+      CuratorOp deleteOp = curator.transactionOp().delete().forPath(path);
+      curator.transaction().forOperations(deleteOp);
     }
     catch (KeeperException.NoNodeException e) {
-      log.info("Node[%s] didn't exist anyway...", path);
+      log.info("Unannounced node[%s] that does not exist.", path);
+    }
+    catch (KeeperException.NotEmptyException e) {
+      log.warn("Unannouncing non-empty path[%s]", path);
     }
     catch (Exception e) {
       throw new RuntimeException(e);
@@ -426,22 +452,11 @@ public class Announcer
       }
       log.debug("Created parentPath[%s], %s remove on stop.", parentPath, removeParentsIfCreated ? "will" : "will not");
     }
-    catch (Exception e) {
+    catch (KeeperException.NodeExistsException e) {
       log.info(e, "Problem creating parentPath[%s], someone else created it first?", parentPath);
     }
-  }
-
-  private static class Announceable
-  {
-    final String path;
-    final byte[] bytes;
-    final boolean removeParentsIfCreated;
-
-    public Announceable(String path, byte[] bytes, boolean removeParentsIfCreated)
-    {
-      this.path = path;
-      this.bytes = bytes;
-      this.removeParentsIfCreated = removeParentsIfCreated;
+    catch (Exception e) {
+      log.error(e, "Unhandled exception when creating parentPath[%s].", parentPath);
     }
   }
 }
