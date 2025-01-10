@@ -3443,7 +3443,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             }
           >
             <Switch
-              label="Use concurrent locks (experimental)"
+              label="Use concurrent locks"
               checked={Boolean(deepGet(spec, 'context.useConcurrentLocks'))}
               onChange={() => {
                 this.updateSpec(

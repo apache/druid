@@ -21,7 +21,6 @@ package org.apache.druid.client.indexing;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import nl.jqno.equalsverifier.EqualsVerifier;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.junit.Assert;
@@ -44,7 +43,6 @@ public class ClientCompactionTaskTransformSpecTest
   @Test
   public void testSerde() throws IOException
   {
-    NullHandling.initializeForTests();
     final ClientCompactionTaskTransformSpec expected = new ClientCompactionTaskTransformSpec(
         new SelectorDimFilter("dim1", "foo", null)
     );
@@ -61,7 +59,6 @@ public class ClientCompactionTaskTransformSpecTest
   @Test
   public void testAsMap()
   {
-    NullHandling.initializeForTests();
     final ObjectMapper objectMapper = new DefaultObjectMapper();
     String dimension = "dim1";
     String value = "foo";

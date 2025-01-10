@@ -22,7 +22,6 @@ package org.apache.druid.query.search;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -770,7 +769,7 @@ public class SearchQueryRunnerTest extends InitializedNullHandlingTest
     );
     List<SearchHit> expectedHits = new ArrayList<>();
     expectedHits.add(new SearchHit("table", "table", 1));
-    expectedHits.add(new SearchHit("table", NullHandling.defaultStringValue(), 1));
+    expectedHits.add(new SearchHit("table", null, 1));
     checkSearchQuery(searchQuery, runner, expectedHits);
   }
 

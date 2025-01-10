@@ -644,10 +644,7 @@ public class RowBasedGrouperHelper
           for (int i = resultRowDimensionStart; i < entry.getKey().getKey().length; i++) {
             if (dimsToInclude == null || dimsToIncludeBitSet.get(i - resultRowDimensionStart)) {
               final Object dimVal = entry.getKey().getKey()[i];
-              resultRow.set(
-                  i,
-                  dimVal instanceof String ? NullHandling.emptyToNullIfNeeded((String) dimVal) : dimVal
-              );
+              resultRow.set(i, dimVal);
             }
           }
 
@@ -1571,19 +1568,15 @@ public class RowBasedGrouperHelper
         @Nullable StringComparator stringComparator
     )
     {
-      if (NullHandling.sqlCompatible()) {
-        return new NullableRowBasedKeySerdeHelper(
-            makeNumericSerdeHelper(
-                valueType,
-                keyBufferPosition + Byte.BYTES,
-                pushLimitDown,
-                stringComparator
-            ),
-            keyBufferPosition
-        );
-      } else {
-        return makeNumericSerdeHelper(valueType, keyBufferPosition, pushLimitDown, stringComparator);
-      }
+      return new NullableRowBasedKeySerdeHelper(
+          makeNumericSerdeHelper(
+              valueType,
+              keyBufferPosition + Byte.BYTES,
+              pushLimitDown,
+              stringComparator
+          ),
+          keyBufferPosition
+      );
     }
 
     private RowBasedKeySerdeHelper makeNumericSerdeHelper(

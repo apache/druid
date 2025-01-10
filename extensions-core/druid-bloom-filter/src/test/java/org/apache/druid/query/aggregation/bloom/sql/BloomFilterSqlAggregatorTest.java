@@ -22,7 +22,6 @@ package org.apache.druid.query.aggregation.bloom.sql;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Injector;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.guice.BloomFilterExtensionModule;
 import org.apache.druid.initialization.DruidModule;
@@ -127,7 +126,7 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
 
     BloomKFilter expectedbl1 = new BloomKFilter(TEST_NUM_ENTRIES);
     for (InputRow row : TestDataBuilder.ROWS1_WITH_NUMERIC_DIMS) {
-      String raw = NullHandling.emptyToNullIfNeeded((String) row.getRaw("dim1"));
+      String raw = (String) row.getRaw("dim1");
       if (raw == null) {
         expectedbl1.addBytes(null, 0, 0);
       } else {
@@ -174,7 +173,7 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
     BloomKFilter expectedbl1 = new BloomKFilter(TEST_NUM_ENTRIES);
     BloomKFilter expected2 = new BloomKFilter(TEST_NUM_ENTRIES);
     for (InputRow row : TestDataBuilder.ROWS1_WITH_NUMERIC_DIMS) {
-      String raw = NullHandling.emptyToNullIfNeeded((String) row.getRaw("dim1"));
+      String raw = (String) row.getRaw("dim1");
       if (raw == null) {
         expectedbl1.addBytes(null, 0, 0);
       } else {
@@ -185,11 +184,10 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
         expected2.addBytes(null, 0, 0);
       }
       for (String s : lst) {
-        String val = NullHandling.emptyToNullIfNeeded(s);
-        if (val == null) {
+        if (s == null) {
           expected2.addBytes(null, 0, 0);
         } else {
-          expected2.addString(val);
+          expected2.addString(s);
         }
       }
     }
@@ -237,7 +235,7 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
 
     BloomKFilter expectedbl1 = new BloomKFilter(TEST_NUM_ENTRIES);
     for (InputRow row : TestDataBuilder.ROWS1_WITH_NUMERIC_DIMS) {
-      String raw = NullHandling.emptyToNullIfNeeded((String) row.getRaw("dim1"));
+      String raw = (String) row.getRaw("dim1");
       // empty string extractionFn produces null
       if (raw == null || "".equals(raw)) {
         expectedbl1.addBytes(null, 0, 0);
@@ -286,11 +284,7 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
     for (InputRow row : TestDataBuilder.ROWS1_WITH_NUMERIC_DIMS) {
       Object raw = row.getRaw("l1");
       if (raw == null) {
-        if (NullHandling.replaceWithDefault()) {
-          expected3.addLong(NullHandling.defaultLongValue());
-        } else {
-          expected3.addBytes(null, 0, 0);
-        }
+        expected3.addBytes(null, 0, 0);
       } else {
         expected3.addLong(((Number) raw).longValue());
       }
@@ -331,11 +325,7 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
     for (InputRow row : TestDataBuilder.ROWS1_WITH_NUMERIC_DIMS) {
       Object raw = row.getRaw("l1");
       if (raw == null) {
-        if (NullHandling.replaceWithDefault()) {
-          expectedbl1.addLong(NullHandling.defaultLongValue());
-        } else {
-          expectedbl1.addBytes(null, 0, 0);
-        }
+        expectedbl1.addBytes(null, 0, 0);
       } else {
         expectedbl1.addLong(2 * ((Number) raw).longValue());
       }
@@ -385,11 +375,7 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
     for (InputRow row : TestDataBuilder.ROWS1_WITH_NUMERIC_DIMS) {
       Object raw = row.getRaw("f1");
       if (raw == null) {
-        if (NullHandling.replaceWithDefault()) {
-          expectedbl1.addFloat(NullHandling.defaultFloatValue());
-        } else {
-          expectedbl1.addBytes(null, 0, 0);
-        }
+        expectedbl1.addBytes(null, 0, 0);
       } else {
         expectedbl1.addFloat(2 * ((Number) raw).floatValue());
       }
@@ -439,11 +425,7 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
     for (InputRow row : TestDataBuilder.ROWS1_WITH_NUMERIC_DIMS) {
       Object raw = row.getRaw("dbl1");
       if (raw == null) {
-        if (NullHandling.replaceWithDefault()) {
-          expectedbl1.addDouble(NullHandling.defaultDoubleValue());
-        } else {
-          expectedbl1.addBytes(null, 0, 0);
-        }
+        expectedbl1.addBytes(null, 0, 0);
       } else {
         expectedbl1.addDouble(2 * ((Number) raw).doubleValue());
       }
@@ -504,7 +486,7 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
                   .dataSource(CalciteTests.DATASOURCE3)
                   .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
                   .granularity(Granularities.ALL)
-                  .filters(numericEquality("dim2", 0L, ColumnType.LONG))
+                  .filters(equality("dim2", 0L, ColumnType.LONG))
                   .aggregators(
                       ImmutableList.of(
                           new BloomFilterAggregatorFactory(

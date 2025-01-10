@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.topn.types;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.CursorGranularizer;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.topn.BaseTopNAlgorithm;
@@ -45,7 +44,6 @@ import java.util.function.Function;
 public abstract class NullableNumericTopNColumnAggregatesProcessor<Selector extends BaseNullableColumnValueSelector>
     implements TopNColumnAggregatesProcessor<Selector>
 {
-  private final boolean hasNulls = !NullHandling.replaceWithDefault();
   final Function<Object, Object> converter;
   Aggregator[] nullValueAggregates;
 
@@ -96,7 +94,7 @@ public abstract class NullableNumericTopNColumnAggregatesProcessor<Selector exte
     long processedRows = 0;
     if (granularizer.currentOffsetWithinBucket()) {
       while (!cursor.isDone()) {
-        if (hasNulls && selector.isNull()) {
+        if (selector.isNull()) {
           if (nullValueAggregates == null) {
             nullValueAggregates = BaseTopNAlgorithm.makeAggregators(cursor, query.getAggregatorSpecs());
           }

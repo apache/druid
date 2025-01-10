@@ -40,7 +40,6 @@ import org.apache.druid.client.indexing.ClientMSQContext;
 import org.apache.druid.client.indexing.ClientTaskQuery;
 import org.apache.druid.client.indexing.IndexingTotalWorkerCapacityInfo;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.RunnerTaskState;
@@ -1312,7 +1311,6 @@ public class CompactSegmentsTest
   @Test
   public void testCompactWithTransformSpec()
   {
-    NullHandling.initializeForTests();
     final OverlordClient mockClient = Mockito.mock(OverlordClient.class);
     final ArgumentCaptor<Object> payloadCaptor = setUpMockClient(mockClient);
     final CompactSegments compactSegments = new CompactSegments(statusTracker, mockClient);
@@ -1415,7 +1413,6 @@ public class CompactSegmentsTest
   @Test
   public void testCompactWithMetricsSpec()
   {
-    NullHandling.initializeForTests();
     AggregatorFactory[] aggregatorFactories = new AggregatorFactory[] {new CountAggregatorFactory("cnt")};
     final OverlordClient mockClient = Mockito.mock(OverlordClient.class);
     final ArgumentCaptor<Object> payloadCaptor = setUpMockClient(mockClient);

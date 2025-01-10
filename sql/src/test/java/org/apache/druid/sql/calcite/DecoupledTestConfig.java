@@ -172,6 +172,4 @@ public @interface DecoupledTestConfig
       return this != NONE;
     }
   }
-
-  boolean separateDefaultModeTest() default false;
 }

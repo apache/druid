@@ -21,7 +21,6 @@ package org.apache.druid.benchmark;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.java.util.common.StringUtils;
@@ -52,10 +51,6 @@ import java.util.concurrent.TimeUnit;
 @State(Scope.Benchmark)
 public class IncrementalIndexRowTypeBenchmark
 {
-  static {
-    NullHandling.initializeForTests();
-  }
-
   @Param({"250000"})
   private int rowsPerSegment;
 
