@@ -4524,6 +4524,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
   }
 
   @NotYetSupported(Modes.UNNEST_RESULT_MISMATCH)
+  @DecoupledTestConfig(ignoreExpectedQueriesReason = IgnoreQueriesReason.UNNEST_EXTRA_SCANQUERY)
   @Test
   public void testUnnestThriceWithFiltersOnDimAndUnnestCol()
   {
