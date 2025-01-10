@@ -1647,12 +1647,6 @@
                             <goal>check</goal>
                         </goals>
                         <configuration>
-                            <signature>
-                                <groupId>org.codehaus.mojo.signature
-                                </groupId>
-                                <artifactId>java18</artifactId>
-                                <version>1.0</version>
-                            </signature>
                             <ignores>
                                 <!-- Some of our code uses sun.* classes directly, which are not part of
                                      the JDK signature (although they are there anyway). -->
