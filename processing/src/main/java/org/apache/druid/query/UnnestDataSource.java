@@ -173,6 +173,12 @@ public class UnnestDataSource implements DataSource
     return current.getAnalysis();
   }
 
+  @Override
+  public boolean hasTimeFilter()
+  {
+    return this.getBase().hasTimeFilter();
+  }
+
 
   @Override
   public String toString()
