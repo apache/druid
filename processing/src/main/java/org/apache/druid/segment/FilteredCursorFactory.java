@@ -19,7 +19,10 @@
 
 package org.apache.druid.segment;
 
+<<<<<<< HEAD
 import com.google.common.collect.Iterables;
+=======
+>>>>>>> apache/master
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -27,6 +30,9 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.filter.Filters;
 
 import javax.annotation.Nullable;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 
 import java.util.Arrays;
 
@@ -51,6 +57,7 @@ public class FilteredCursorFactory implements CursorFactory
   public CursorHolder makeCursorHolder(CursorBuildSpec spec)
   {
     final CursorBuildSpec.CursorBuildSpecBuilder buildSpecBuilder = CursorBuildSpec.builder(spec);
+<<<<<<< HEAD
     // FIXME maybeAnd
     buildSpecBuilder.setFilter(Filters.conjunction(spec.getFilter(), getFilter()));
     buildSpecBuilder.setVirtualColumns(
@@ -61,6 +68,32 @@ public class FilteredCursorFactory implements CursorFactory
             )
         )
     );
+=======
+    final Filter newFilter;
+    final Set<String> physicalColumns;
+    if (filter != null) {
+      if (spec.getFilter() == null) {
+        newFilter = filter.toFilter();
+      } else {
+        newFilter = Filters.and(Arrays.asList(spec.getFilter(), filter.toFilter()));
+      }
+      if (spec.getPhysicalColumns() != null) {
+        physicalColumns = new HashSet<>(spec.getPhysicalColumns());
+        for (String column : filter.getRequiredColumns()) {
+          if (!spec.getVirtualColumns().exists(column)) {
+            physicalColumns.add(column);
+          }
+        }
+      } else {
+        physicalColumns = null;
+      }
+    } else {
+      newFilter = spec.getFilter();
+      physicalColumns = spec.getPhysicalColumns();
+    }
+    buildSpecBuilder.setFilter(newFilter)
+                    .setPhysicalColumns(physicalColumns);
+>>>>>>> apache/master
     return delegate.makeCursorHolder(buildSpecBuilder.build());
   }
 

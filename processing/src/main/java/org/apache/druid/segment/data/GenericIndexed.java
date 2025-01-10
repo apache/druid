@@ -21,7 +21,6 @@ package org.apache.druid.segment.data;
 
 import com.google.common.primitives.Ints;
 import org.apache.druid.collections.ResourceHolder;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.utils.SerializerUtils;
 import org.apache.druid.io.Channels;
 import org.apache.druid.java.util.common.ByteBufferUtils;
@@ -103,7 +102,7 @@ public abstract class GenericIndexed<T> implements CloseableIndexed<T>, Serializ
    * The compare method of this instance uses {@link StringUtils#compareUtf8UsingJavaStringOrdering(byte[], byte[])}
    * so that behavior is consistent with {@link #STRING_STRATEGY}.
    */
-  public static final ObjectStrategy<ByteBuffer> UTF8_STRATEGY = new ObjectStrategy<ByteBuffer>()
+  public static final ObjectStrategy<ByteBuffer> UTF8_STRATEGY = new ObjectStrategy<>()
   {
     @Override
     public Class<ByteBuffer> getClazz()
@@ -141,7 +140,7 @@ public abstract class GenericIndexed<T> implements CloseableIndexed<T>, Serializ
     }
   };
 
-  public static final ObjectStrategy<String> STRING_STRATEGY = new ObjectStrategy<String>()
+  public static final ObjectStrategy<String> STRING_STRATEGY = new ObjectStrategy<>()
   {
     @Override
     public Class<String> getClazz()
@@ -159,7 +158,7 @@ public abstract class GenericIndexed<T> implements CloseableIndexed<T>, Serializ
     @Nullable
     public byte[] toBytes(@Nullable String val)
     {
-      return StringUtils.toUtf8Nullable(NullHandling.nullToEmptyIfNeeded(val));
+      return StringUtils.toUtf8Nullable(val);
     }
 
     @Override
@@ -560,10 +559,7 @@ public abstract class GenericIndexed<T> implements CloseableIndexed<T>, Serializ
   {
     ByteBuffer copyValueBuffer = valueBuffer.asReadOnlyBuffer();
     int size = endOffset - startOffset;
-    // When size is 0 and SQL compatibility is enabled also check for null marker before returning null.
-    // When SQL compatibility is not enabled return null for both null as well as empty string case.
-    if (size == 0 && (NullHandling.replaceWithDefault()
-                      || copyValueBuffer.get(startOffset - Integer.BYTES) == NULL_VALUE_SIZE_MARKER)) {
+    if (size == 0 && (copyValueBuffer.get(startOffset - Integer.BYTES) == NULL_VALUE_SIZE_MARKER)) {
       return null;
     }
     copyValueBuffer.position(startOffset);
@@ -601,10 +597,7 @@ public abstract class GenericIndexed<T> implements CloseableIndexed<T>, Serializ
     ByteBuffer bufferedIndexedGetByteBuffer(ByteBuffer copyValueBuffer, int startOffset, int endOffset)
     {
       int size = endOffset - startOffset;
-      // When size is 0 and SQL compatibility is enabled also check for null marker before returning null.
-      // When SQL compatibility is not enabled return null for both null as well as empty string case.
-      if (size == 0 && (NullHandling.replaceWithDefault()
-                        || copyValueBuffer.get(startOffset - Integer.BYTES) == NULL_VALUE_SIZE_MARKER)) {
+      if (size == 0 && (copyValueBuffer.get(startOffset - Integer.BYTES) == NULL_VALUE_SIZE_MARKER)) {
         return null;
       }
 

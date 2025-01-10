@@ -71,7 +71,7 @@ import java.util.UUID;
  */
 public class Druids
 {
-  public static final Function<String, DimensionSpec> DIMENSION_IDENTITY = new Function<String, DimensionSpec>()
+  public static final Function<String, DimensionSpec> DIMENSION_IDENTITY = new Function<>()
   {
     @Nullable
     @Override

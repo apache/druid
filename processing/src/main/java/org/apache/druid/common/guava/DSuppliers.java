@@ -29,7 +29,7 @@ public class DSuppliers
 {
   public static <T> Supplier<T> of(final AtomicReference<T> ref)
   {
-    return new Supplier<T>()
+    return new Supplier<>()
     {
       @Override
       public T get()

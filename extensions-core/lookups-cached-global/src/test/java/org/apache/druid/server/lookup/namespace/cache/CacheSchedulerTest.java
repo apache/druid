@@ -74,7 +74,7 @@ import java.util.concurrent.TimeoutException;
 public class CacheSchedulerTest
 {
   public static final Function<Lifecycle, NamespaceExtractionCacheManager> CREATE_ON_HEAP_CACHE_MANAGER =
-      new Function<Lifecycle, NamespaceExtractionCacheManager>()
+      new Function<>()
       {
         @Nullable
         @Override
@@ -88,7 +88,7 @@ public class CacheSchedulerTest
         }
       };
   public static final Function<Lifecycle, NamespaceExtractionCacheManager> CREATE_OFF_HEAP_CACHE_MANAGER =
-      new Function<Lifecycle, NamespaceExtractionCacheManager>()
+      new Function<>()
       {
         @Nullable
         @Override

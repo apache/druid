@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.expression;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -65,7 +64,7 @@ public class LikeExprMacro implements ExprMacroTable.ExprMacro
     }
 
     final LikeDimFilter.LikeMatcher likeMatcher = LikeDimFilter.LikeMatcher.from(
-        NullHandling.nullToEmptyIfNeeded((String) patternExpr.getLiteralValue()),
+        (String) patternExpr.getLiteralValue(),
         escapeChar
     );
 

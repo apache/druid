@@ -34,6 +34,7 @@ import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.AsyncFunction;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import it.unimi.dsi.fastutil.ints.Int2ObjectLinkedOpenHashMap;
@@ -1104,6 +1105,19 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   }
 
   @Override
+  public ListenableFuture<Void> stopAsync()
+  {
+    ListeningExecutorService shutdownExec = MoreExecutors.listeningDecorator(
+        Execs.singleThreaded("supervisor-shutdown-" + StringUtils.encodeForFormat(supervisorId) + "--%d")
+    );
+    return shutdownExec.submit(() -> {
+      stop(false);
+      shutdownExec.shutdown();
+      return null;
+    });
+  }
+
+  @Override
   public void reset(@Nullable final DataSourceMetadata dataSourceMetadata)
   {
     log.info("Posting ResetNotice with datasource metadata [%s]", dataSourceMetadata);
@@ -2064,7 +2078,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           futures.add(
               Futures.transform(
                   getStatusAndPossiblyEndOffsets(taskId),
-                  new Function<Pair<SeekableStreamIndexTaskRunner.Status, Map<PartitionIdType, SequenceOffsetType>>, Boolean>()
+                  new Function<>()
                   {
                     @Override
                     public Boolean apply(Pair<SeekableStreamIndexTaskRunner.Status, Map<PartitionIdType, SequenceOffsetType>> pair)
@@ -2100,7 +2114,8 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
                             if (sequence.equals(getEndOfPartitionMarker())) {
                               log.info(
                                   "Got end-of-partition(EOS) marker for partition[%s] from task[%s] in discoverTasks, clearing partition offset to refetch from metadata.",
-                                  partition, taskId
+                                  partition,
+                                  taskId
                               );
                               endOffsetsAreInvalid = true;
                               partitionOffsets.put(partition, getNotSetMarker());
@@ -2603,7 +2618,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   private ListenableFuture<Void> stopTask(final String id, final boolean publish)
   {
     return Futures.transform(
-        taskClient.stopAsync(id, publish), new Function<Boolean, Void>()
+        taskClient.stopAsync(id, publish), new Function<>()
         {
           @Nullable
           @Override
@@ -3155,7 +3170,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           futureTaskIds.add(taskId);
           futures.add(
               Futures.transform(
-                  taskClient.getStartTimeAsync(taskId), new Function<DateTime, Boolean>()
+                  taskClient.getStartTimeAsync(taskId), new Function<>()
                   {
                     @Override
                     public Boolean apply(@Nullable DateTime startTime)
@@ -3377,7 +3392,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
     return Futures.transformAsync(
         FutureUtils.coalesce(pauseFutures),
-        new AsyncFunction<List<Either<Throwable, Map<PartitionIdType, SequenceOffsetType>>>, Map<PartitionIdType, SequenceOffsetType>>()
+        new AsyncFunction<>()
         {
           @Override
           public ListenableFuture<Map<PartitionIdType, SequenceOffsetType>> apply(List<Either<Throwable, Map<PartitionIdType, SequenceOffsetType>>> input)

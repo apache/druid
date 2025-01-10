@@ -35,7 +35,6 @@ import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.MapCache;
 import org.apache.druid.client.coordinator.NoopCoordinatorClient;
-import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.data.input.AbstractInputSource;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowListPlusRawValues;
@@ -110,6 +109,7 @@ import org.apache.druid.query.ForwardingQueryProcessingPool;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
+import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9Factory;
 import org.apache.druid.segment.IndexSpec;
@@ -201,7 +201,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
   @Rule
   public final TemporaryFolder temporaryFolder = new TemporaryFolder();
 
-  private static final Ordering<DataSegment> BY_INTERVAL_ORDERING = new Ordering<DataSegment>()
+  private static final Ordering<DataSegment> BY_INTERVAL_ORDERING = new Ordering<>()
   {
     @Override
     public int compare(DataSegment dataSegment, DataSegment dataSegment2)
@@ -287,7 +287,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
         @Override
         public CloseableIterator<InputRow> read(InputStats inputStats)
         {
-          return new CloseableIterator<InputRow>()
+          return new CloseableIterator<>()
           {
             @Override
             public void close()
@@ -777,7 +777,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
             "2011-04-01/2011-04-02",
             "2011-04-02/2011-04-03",
             "2011-04-04/2011-04-05"
-        ), new Function<String, DataSegment>()
+        ), new Function<>()
         {
           @Override
           public DataSegment apply(String input)
@@ -874,7 +874,7 @@ public class TaskLifecycleTest extends InitializedNullHandlingTest
             "2011-04-01/2011-04-02",
             "2011-04-02/2011-04-03",
             "2011-04-04/2011-04-05"
-        ), new Function<String, DataSegment>()
+        ), new Function<>()
         {
           @Override
           public DataSegment apply(String input)

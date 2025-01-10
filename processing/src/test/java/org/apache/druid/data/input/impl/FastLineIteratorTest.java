@@ -20,9 +20,7 @@
 package org.apache.druid.data.input.impl;
 
 import org.apache.commons.lang3.RandomStringUtils;
-import org.apache.druid.common.config.NullHandling;
 import org.junit.Assert;
-import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -35,12 +33,6 @@ public class FastLineIteratorTest
 {
   @Rule
   public final ExpectedException expectedException = ExpectedException.none();
-
-  @BeforeClass
-  public static void setup()
-  {
-    NullHandling.initializeForTests();
-  }
 
   @Test
   public void testNullInputThrows()

@@ -278,11 +278,7 @@
             <groupId>com.google.inject</groupId>
             <artifactId>guice</artifactId>
         </dependency>
-        <dependency>
-            <groupId>com.google.inject.extensions</groupId>
-            <artifactId>guice-multibindings</artifactId>
-            <scope>provided</scope>
-        </dependency>
+
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
@@ -666,7 +662,7 @@
                             </properties>
                             <argLine>
                                 ${jdk.strong.encapsulation.argLine}
-                                -Xmx128m
+                                -Xmx256m
                                 -Duser.timezone=UTC
                                 -Dfile.encoding=UTF-8
                                 -Ddruid.test.config.dockerIp=${env.DOCKER_IP}

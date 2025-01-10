@@ -79,9 +79,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
   private static final EmittingLogger log = new EmittingLogger(KinesisSupervisor.class);
 
   public static final TypeReference<TreeMap<Integer, Map<String, String>>> CHECKPOINTS_TYPE_REF =
-      new TypeReference<TreeMap<Integer, Map<String, String>>>()
-      {
-      };
+      new TypeReference<>() {};
 
   public static final String OFFSET_NOT_SET = "-1";
   private final KinesisSupervisorSpec spec;

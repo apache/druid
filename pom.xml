@@ -95,7 +95,7 @@
         <errorprone.version>2.35.1</errorprone.version>
         <fastutil.version>8.5.4</fastutil.version>
         <guava.version>32.0.1-jre</guava.version>
-        <guice.version>4.2.2</guice.version>
+        <guice.version>5.1.0</guice.version>
         <hamcrest.version>1.3</hamcrest.version>
         <jetty.version>9.4.56.v20240826</jetty.version>
         <jersey.version>1.19.4</jersey.version>
@@ -105,7 +105,7 @@
         <mysql.version>8.2.0</mysql.version>
         <mariadb.version>2.7.3</mariadb.version>
         <netty3.version>3.10.6.Final</netty3.version>
-        <netty4.version>4.1.108.Final</netty4.version>
+        <netty4.version>4.1.116.Final</netty4.version>
         <postgresql.version>42.7.2</postgresql.version>
         <protobuf.version>3.25.5</protobuf.version>
         <resilience4j.version>1.3.1</resilience4j.version>
@@ -594,11 +594,6 @@
             <dependency>
                 <groupId>com.google.inject.extensions</groupId>
                 <artifactId>guice-servlet</artifactId>
-                <version>${guice.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.google.inject.extensions</groupId>
-                <artifactId>guice-multibindings</artifactId>
                 <version>${guice.version}</version>
             </dependency>
             <dependency>
@@ -1403,6 +1398,18 @@
               <artifactId>joni</artifactId>
               <version>2.1.34</version>
           </dependency>
+            <dependency>
+                <groupId>org.testcontainers</groupId>
+                <artifactId>testcontainers</artifactId>
+                <version>1.16.3</version>
+                <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.testcontainers</groupId>
+                <artifactId>junit-jupiter</artifactId>
+                <version>1.16.3</version>
+                <scope>test</scope>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -1654,6 +1661,9 @@
                                 <ignore>sun.misc.Unsafe</ignore>
                                 <!-- ignore java reflection polymorphic api signatures -->
                                 <ignore>java.lang.invoke.MethodHandle</ignore>
+                                <!-- For ignoring java.lang.ClassLoader#getPlatformClassLoader since that's present in java 9+.
+                                Need to be added since animal sniffer is using JDK8 signature currently. -->
+                                <ignore>java.lang.ClassLoader</ignore>
                                 <!--
                                  For the following java.nio.* classes, we get errors like: "Undefined reference: java.nio.ByteBuffer java.nio.ByteBuffer.clear()"
                                  GitHub issue: https://github.com/mojohaus/animal-sniffer/issues/4
@@ -1717,9 +1727,9 @@
                 </configuration>
             </plugin>
             <plugin>
-                <groupId>pl.project13.maven</groupId>
-                <artifactId>git-commit-id-plugin</artifactId>
-                <version>4.9.10</version>
+                <groupId>io.github.git-commit-id</groupId>
+                <artifactId>git-commit-id-maven-plugin</artifactId>
+                <version>9.0.1</version>
                 <executions>
                     <execution>
                         <goals>
@@ -2256,6 +2266,9 @@
             <skipTests>true</skipTests> <!-- skips both UTs and ITs -->
             <jacoco.skip>true</jacoco.skip>
           </properties>
+        </profile>
+        <profile>
+            <id>ci</id>
         </profile>
     </profiles>
 </project>

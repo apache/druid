@@ -372,7 +372,7 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (dynamic 
       >
         <Blueprint5.Switch
           checked={false}
-          label="Use concurrent locks (experimental)"
+          label="Use concurrent locks"
           onChange={[Function]}
         />
       </Memo(FormGroupWithInfo)>
@@ -782,7 +782,7 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (hashed p
       >
         <Blueprint5.Switch
           checked={false}
-          label="Use concurrent locks (experimental)"
+          label="Use concurrent locks"
           onChange={[Function]}
         />
       </Memo(FormGroupWithInfo)>
@@ -1192,7 +1192,7 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (range pa
       >
         <Blueprint5.Switch
           checked={false}
-          label="Use concurrent locks (experimental)"
+          label="Use concurrent locks"
           onChange={[Function]}
         />
       </Memo(FormGroupWithInfo)>
@@ -1602,7 +1602,7 @@ exports[`CompactionConfigDialog matches snapshot without compactionConfig 1`] = 
       >
         <Blueprint5.Switch
           checked={false}
-          label="Use concurrent locks (experimental)"
+          label="Use concurrent locks"
           onChange={[Function]}
         />
       </Memo(FormGroupWithInfo)>

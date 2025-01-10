@@ -90,9 +90,7 @@ public class SqlHttpModuleTest
   public void testSqlResourceIsAvailableViaJersey()
   {
     Set<Class<?>> jerseyResourceClasses =
-        injector.getInstance(Key.get(new TypeLiteral<Set<Class<?>>>()
-        {
-        }, JSR311Resource.class));
+        injector.getInstance(Key.get(new TypeLiteral<>() {}, JSR311Resource.class));
     Assert.assertEquals(1, jerseyResourceClasses.size());
     Assert.assertEquals(SqlResource.class, jerseyResourceClasses.iterator().next());
   }

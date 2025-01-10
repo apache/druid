@@ -281,7 +281,7 @@ public class SpillingGrouper<KeyType> implements Grouper<KeyType>
           CloseableIterators.withEmptyBaggage(
               Iterators.transform(
                   fileIterator,
-                  new Function<Entry<KeyType>, Entry<KeyType>>()
+                  new Function<>()
                   {
                     final ReusableEntry<KeyType> reusableEntry =
                         ReusableEntry.create(keySerde, aggregatorFactories.length);

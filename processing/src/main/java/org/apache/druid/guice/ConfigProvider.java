@@ -48,7 +48,7 @@ public class ConfigProvider<T> implements Provider<T>
 
   public static <T> Provider<T> of(Class<T> clazz, Map<String, String> replacements)
   {
-    return new ConfigProvider<T>(clazz, replacements);
+    return new ConfigProvider<>(clazz, replacements);
   }
 
   private final Class<T> clazz;

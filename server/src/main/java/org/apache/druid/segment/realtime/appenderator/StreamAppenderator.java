@@ -439,7 +439,7 @@ public class StreamAppenderator implements Appenderator
 
         Futures.addCallback(
             persistAll(committerSupplier == null ? null : committerSupplier.get()),
-            new FutureCallback<Object>()
+            new FutureCallback<>()
             {
               @Override
               public void onSuccess(@Nullable Object result)
@@ -684,7 +684,7 @@ public class StreamAppenderator implements Appenderator
     final Stopwatch persistStopwatch = Stopwatch.createStarted();
     AtomicLong totalPersistedRows = new AtomicLong(numPersistedRows);
     final ListenableFuture<Object> future = persistExecutor.submit(
-        new Callable<Object>()
+        new Callable<>()
         {
           @Override
           public Object call() throws IOException

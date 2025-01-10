@@ -162,7 +162,7 @@ public class ClientInfoResource
       return Collections.emptyMap();
     }
     Map<Interval, Object> servedIntervals = new TreeMap<>(
-        new Comparator<Interval>()
+        new Comparator<>()
         {
           @Override
           public int compare(Interval o1, Interval o2)

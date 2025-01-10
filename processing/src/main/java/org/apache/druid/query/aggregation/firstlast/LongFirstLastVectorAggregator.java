@@ -60,7 +60,7 @@ public class LongFirstLastVectorAggregator extends FirstLastVectorAggregator<Lon
     buf.putLong(position, selectionPredicate.initValue());
     buf.put(
         position + NULLITY_OFFSET,
-        NullHandling.replaceWithDefault() ? NullHandling.IS_NOT_NULL_BYTE : NullHandling.IS_NULL_BYTE
+        NullHandling.IS_NULL_BYTE
     );
     buf.putLong(position + VALUE_OFFSET, 0L);
   }
@@ -97,14 +97,6 @@ public class LongFirstLastVectorAggregator extends FirstLastVectorAggregator<Lon
   {
     buf.putLong(position, time);
     buf.put(position + NULLITY_OFFSET, NullHandling.IS_NULL_BYTE);
-    buf.putLong(position + VALUE_OFFSET, 0L);
-  }
-
-  @Override
-  protected void putDefaultValue(ByteBuffer buf, int position, long time)
-  {
-    buf.putLong(position, time);
-    buf.put(position + NULLITY_OFFSET, NullHandling.IS_NOT_NULL_BYTE);
     buf.putLong(position + VALUE_OFFSET, 0L);
   }
 

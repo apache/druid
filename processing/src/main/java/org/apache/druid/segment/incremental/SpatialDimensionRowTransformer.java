@@ -87,7 +87,7 @@ public class SpatialDimensionRowTransformer implements Function<InputRow, InputR
     final List<String> finalDims = Lists.newArrayList(
         Iterables.filter(
             row.getDimensions(),
-            new Predicate<String>()
+            new Predicate<>()
             {
               @Override
               public boolean apply(String input)
@@ -213,10 +213,14 @@ public class SpatialDimensionRowTransformer implements Function<InputRow, InputR
   @Nullable
   private static Float tryParseFloat(String val)
   {
+    if (val == null) {
+      return null;
+    }
+
     try {
       return Float.parseFloat(val);
     }
-    catch (NullPointerException | NumberFormatException e) {
+    catch (NumberFormatException e) {
       return null;
     }
   }

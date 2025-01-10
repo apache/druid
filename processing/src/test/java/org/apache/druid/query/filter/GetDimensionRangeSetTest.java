@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableRangeSet;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.js.JavaScriptConfig;
 import org.apache.druid.query.extraction.IdentityExtractionFn;
@@ -181,21 +180,11 @@ public class GetDimensionRangeSetTest
     Assert.assertNull(not1.getDimensionRangeSet("dim2"));
 
     DimFilter not2 = new NotDimFilter(in3);
-    if (NullHandling.sqlCompatible()) {
-      // Empty string is included when != null for SQL Compatible case
-      RangeSet expected2 = rangeSet(ImmutableList.of(
-          Range.closedOpen("", "null"),
-          Range.greaterThan("null")
-      ));
-      Assert.assertEquals(expected2, not2.getDimensionRangeSet("dim1"));
-    } else {
-      RangeSet expected2 = rangeSet(ImmutableList.of(
-          Range.lessThan(""),
-          Range.open("", "null"),
-          Range.greaterThan("null")
-      ));
-      Assert.assertEquals(expected2, not2.getDimensionRangeSet("dim1"));
-    }
+    RangeSet expected2 = rangeSet(ImmutableList.of(
+        Range.closedOpen("", "null"),
+        Range.greaterThan("null")
+    ));
+    Assert.assertEquals(expected2, not2.getDimensionRangeSet("dim1"));
 
     DimFilter not3 = new NotDimFilter(bound1);
     RangeSet expected3 = rangeSet(ImmutableList.of(Range.lessThan("from"), Range.greaterThan("to")));
@@ -236,13 +225,8 @@ public class GetDimensionRangeSetTest
   private static Range<String> point(String s)
   {
     if (s == null) {
-      if (NullHandling.sqlCompatible()) {
-        // Range.singleton(null) is invalid
-        return Range.lessThan("");
-      } else {
-        // For non-sql compatible case, null and "" are equivalent
-        return Range.singleton("");
-      }
+      // Range.singleton(null) is invalid
+      return Range.lessThan("");
     }
     return Range.singleton(s);
   }

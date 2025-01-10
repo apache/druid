@@ -87,7 +87,7 @@ public class FieldAccessPostAggregatorTest extends InitializedNullHandlingTest
 
     fieldAccessPostAggregator = new FieldAccessPostAggregator("To be, or not to be, that is the question:", "rows");
     CountAggregator agg = new CountAggregator();
-    Map<String, Object> metricValues = new HashMap<String, Object>();
+    Map<String, Object> metricValues = new HashMap<>();
     metricValues.put(aggName, agg.get());
     Assert.assertEquals(new Long(0L), fieldAccessPostAggregator.compute(metricValues));
 

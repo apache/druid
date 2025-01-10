@@ -371,18 +371,14 @@ name: Guice
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 4.2.2
+version: 5.1.0
 libraries:
   - com.google.inject: guice
-  - com.google.inject.extensions: guice-multibindings
   - com.google.inject.extensions: guice-servlet
   - com.google.inject.extensions: guice-assistedinject
 notices:
   - guice: |
       Google Guice - Core Library
-      Copyright 2006-2016 Google, Inc.
-  - guice-multibindings: |
-      Google Guice - Extensions - MultiBindings
       Copyright 2006-2016 Google, Inc.
   - guice-servlet: |
       Google Guice - Extensions - Servlet
@@ -1249,7 +1245,7 @@ name: Netty
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 4.1.108.Final
+version: 4.1.116.Final
 libraries:
   - io.netty: netty-buffer
   - io.netty: netty-codec
@@ -4415,7 +4411,7 @@ name: Netty
 license_category: binary
 module: extensions/druid-azure-extensions
 license_name: Apache License version 2.0
-version: 2.0.65.Final
+version: 2.0.69.Final
 libraries:
   - io.netty: netty-tcnative-boringssl-static
   - io.netty: netty-tcnative-classes

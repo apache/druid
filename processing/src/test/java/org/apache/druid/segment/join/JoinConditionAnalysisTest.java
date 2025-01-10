@@ -22,12 +22,10 @@ package org.apache.druid.segment.join;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import nl.jqno.equalsverifier.EqualsVerifier;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.junit.Assert;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.util.List;
@@ -36,12 +34,6 @@ import java.util.stream.Collectors;
 public class JoinConditionAnalysisTest
 {
   private static final String PREFIX = "j.";
-
-  @BeforeClass
-  public static void setUpStatic()
-  {
-    NullHandling.initializeForTests();
-  }
 
   @Test
   public void test_forExpression_simple()

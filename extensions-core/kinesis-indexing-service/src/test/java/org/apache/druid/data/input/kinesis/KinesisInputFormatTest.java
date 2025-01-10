@@ -25,7 +25,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputFormat;
@@ -58,11 +57,6 @@ import java.util.List;
 
 public class KinesisInputFormatTest
 {
-  static {
-    NullHandling.initializeForTests();
-  }
-
-
   private static final String KINESIS_APPROXIMATE_TIME_DATE = "2024-07-29";
   private static final long KINESIS_APPROXOIMATE_TIMESTAMP_MILLIS = DateTimes.of(KINESIS_APPROXIMATE_TIME_DATE).getMillis();
   private static final String DATA_TIMSTAMP_DATE = "2024-07-30";

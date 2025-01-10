@@ -22,7 +22,6 @@ package org.apache.druid.segment.metadata;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
@@ -51,10 +50,6 @@ import java.util.Set;
 
 public class SegmentSchemaManagerTest
 {
-  static {
-    NullHandling.initializeForTests();
-  }
-
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule(CentralizedDatasourceSchemaConfig.create(true));
 

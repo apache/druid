@@ -38,7 +38,6 @@ public class SegmentCreateRequest
   private final String sequenceName;
   private final String previousSegmentId;
   private final PartialShardSpec partialShardSpec;
-  private final String upgradedFromSegmentId;
   private final String taskAllocatorId;
 
   public SegmentCreateRequest(
@@ -46,7 +45,6 @@ public class SegmentCreateRequest
       String previousSegmentId,
       String version,
       PartialShardSpec partialShardSpec,
-      String upgradedFromSegmentId,
       String taskAllocatorId
   )
   {
@@ -54,24 +52,31 @@ public class SegmentCreateRequest
     this.previousSegmentId = previousSegmentId == null ? "" : previousSegmentId;
     this.version = version;
     this.partialShardSpec = partialShardSpec;
-    this.upgradedFromSegmentId = upgradedFromSegmentId;
     this.taskAllocatorId = taskAllocatorId;
   }
 
+  /**
+   * Represents group of ingestion tasks that produce a segment series.
+   */
   public String getSequenceName()
   {
     return sequenceName;
   }
 
   /**
-   * Non-null previous segment id. This can be used for persisting to the
-   * pending segments table in the metadata store.
+   * Previous segment id allocated for this sequence.
+   *
+   * @return Empty string if there is no previous segment in the series.
    */
   public String getPreviousSegmentId()
   {
     return previousSegmentId;
   }
 
+  /**
+   * Version of the lock held by the task that has requested the segment allocation.
+   * The allocated segment must have a version less than or equal to this version.
+   */
   public String getVersion()
   {
     return version;
@@ -80,11 +85,6 @@ public class SegmentCreateRequest
   public PartialShardSpec getPartialShardSpec()
   {
     return partialShardSpec;
-  }
-
-  public String getUpgradedFromSegmentId()
-  {
-    return upgradedFromSegmentId;
   }
 
   public String getTaskAllocatorId()

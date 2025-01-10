@@ -59,6 +59,7 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertEquals;
@@ -603,7 +604,7 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
 
     runner.tasks.put(task.getId(), workItem);
 
-    ListenableFuture<InputStream> future = new ListenableFuture<InputStream>()
+    ListenableFuture<InputStream> future = new ListenableFuture<>()
     {
       @Override
       public void addListener(Runnable runnable, Executor executor)
@@ -758,5 +759,21 @@ public class KubernetesTaskRunnerTest extends EasyMockSupport
     Assert.assertEquals(1, runner.getUsedCapacity());
     runner.tasks.remove(task.getId());
     Assert.assertEquals(0, runner.getUsedCapacity());
+  }
+
+  @Test
+  public void test_stop()
+  {
+
+    KubernetesTaskRunner kubernetesTaskRunner = new KubernetesTaskRunner(
+        taskAdapter,
+        config,
+        peonClient,
+        httpClient,
+        new TestPeonLifecycleFactory(kubernetesPeonLifecycle),
+        emitter
+    );
+    kubernetesTaskRunner.stop();
+    Assert.assertThrows(RejectedExecutionException.class, () -> kubernetesTaskRunner.run(task));
   }
 }

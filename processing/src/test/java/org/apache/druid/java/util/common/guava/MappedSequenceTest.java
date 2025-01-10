@@ -34,7 +34,7 @@ public class MappedSequenceTest
   @Test
   public void testSanity() throws Exception
   {
-    Function<Integer, Integer> fn = new Function<Integer, Integer>()
+    Function<Integer, Integer> fn = new Function<>()
     {
       @Override
       public Integer apply(Integer input)

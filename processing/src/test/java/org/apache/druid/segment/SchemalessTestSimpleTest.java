@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.apache.druid.collections.CloseableStupidPool;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -58,6 +57,7 @@ import org.apache.druid.query.topn.TopNResultValue;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.apache.druid.timeline.SegmentId;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -83,11 +83,11 @@ public class SchemalessTestSimpleTest extends InitializedNullHandlingTest
     for (SegmentWriteOutMediumFactory segmentWriteOutMediumFactory : SegmentWriteOutMediumFactory.builtInFactories()) {
       SchemalessIndexTest schemalessIndexTest = new SchemalessIndexTest(segmentWriteOutMediumFactory);
       final IncrementalIndex incrementalIndex = SchemalessIndexTest.getIncrementalIndex();
-      final QueryableIndex persistedIncrementalIndex = TestIndex.persistRealtimeAndLoadMMapped(incrementalIndex);
+      final QueryableIndex persistedIncrementalIndex = TestIndex.persistAndMemoryMap(incrementalIndex);
       final QueryableIndex mergedIncrementalIndex = schemalessIndexTest.getMergedIncrementalIndex();
-      argumentArrays.add(new Object[] {new IncrementalIndexSegment(incrementalIndex, null), false});
-      argumentArrays.add(new Object[] {new QueryableIndexSegment(persistedIncrementalIndex, null), false});
-      argumentArrays.add(new Object[] {new QueryableIndexSegment(mergedIncrementalIndex, null), true});
+      argumentArrays.add(new Object[] {new IncrementalIndexSegment(incrementalIndex, SegmentId.dummy("test"))});
+      argumentArrays.add(new Object[] {new QueryableIndexSegment(persistedIncrementalIndex, SegmentId.dummy("test"))});
+      argumentArrays.add(new Object[] {new QueryableIndexSegment(mergedIncrementalIndex, SegmentId.dummy("test"))});
     }
     return argumentArrays;
   }
@@ -116,13 +116,10 @@ public class SchemalessTestSimpleTest extends InitializedNullHandlingTest
   );
 
   private final Segment segment;
-  private final boolean coalesceAbsentAndEmptyDims;
 
-  public SchemalessTestSimpleTest(Segment segment, boolean coalesceAbsentAndEmptyDims)
+  public SchemalessTestSimpleTest(Segment segment)
   {
     this.segment = segment;
-    // Empty and empty dims are equivalent only when replaceWithDefault is true
-    this.coalesceAbsentAndEmptyDims = coalesceAbsentAndEmptyDims && NullHandling.replaceWithDefault();
   }
 
   @Test
@@ -151,12 +148,12 @@ public class SchemalessTestSimpleTest extends InitializedNullHandlingTest
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
-                    .put("rows", coalesceAbsentAndEmptyDims ? 10L : 11L)
+                    .put("rows", 11L)
                     .put("index", 900.0)
-                    .put("addRowsIndexConstant", coalesceAbsentAndEmptyDims ? 911.0 : 912.0)
+                    .put("addRowsIndexConstant", 912.0)
                     .put("uniques", 2.000977198748901D)
                     .put("maxIndex", 100.0)
-                    .put("minIndex", NullHandling.replaceWithDefault() ? 0.0 : 100.0)
+                    .put("minIndex", 100.0)
                     .build()
             )
         )
@@ -253,7 +250,7 @@ public class SchemalessTestSimpleTest extends InitializedNullHandlingTest
                               .build();
 
     List<Result<SearchResultValue>> expectedResults = Collections.singletonList(
-        new Result<SearchResultValue>(
+        new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new SearchResultValue(
                 Arrays.asList(
@@ -278,7 +275,7 @@ public class SchemalessTestSimpleTest extends InitializedNullHandlingTest
                                     .build();
 
     List<Result<TimeBoundaryResultValue>> expectedResults = Collections.singletonList(
-        new Result<TimeBoundaryResultValue>(
+        new Result<>(
             DateTimes.of("2011-01-12T00:00:00.000Z"),
             new TimeBoundaryResultValue(
                 ImmutableMap.of(

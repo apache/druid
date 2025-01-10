@@ -21,7 +21,6 @@ package org.apache.druid.server.lookup;
 
 
 import com.google.common.base.Preconditions;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.server.lookup.cache.loading.LoadingCache;
@@ -68,41 +67,34 @@ public class LoadingLookup extends LookupExtractor
   @Override
   public String apply(@Nullable final String key)
   {
-    String keyEquivalent = NullHandling.nullToEmptyIfNeeded(key);
-    if (keyEquivalent == null) {
-      // valueEquivalent is null only for SQL Compatible Null Behavior
-      // otherwise null will be replaced with empty string in nullToEmptyIfNeeded above.
+    if (key == null) {
       return null;
     }
 
-    final String presentVal = this.loadingCache.getIfPresent(keyEquivalent);
+    final String presentVal = this.loadingCache.getIfPresent(key);
     if (presentVal != null) {
-      return NullHandling.emptyToNullIfNeeded(presentVal);
+      return presentVal;
     }
 
-    final String val = this.dataFetcher.fetch(keyEquivalent);
+    final String val = this.dataFetcher.fetch(key);
     if (val == null) {
       return null;
     }
 
-    this.loadingCache.putAll(Collections.singletonMap(keyEquivalent, val));
+    this.loadingCache.putAll(Collections.singletonMap(key, val));
 
-    return NullHandling.emptyToNullIfNeeded(val);
+    return val;
   }
 
   @Override
   public List<String> unapply(@Nullable final String value)
   {
-    String valueEquivalent = NullHandling.nullToEmptyIfNeeded(value);
-    if (valueEquivalent == null) {
-      // valueEquivalent is null only for SQL Compatible Null Behavior
-      // otherwise null will be replaced with empty string in nullToEmptyIfNeeded above.
-      // null value maps to empty list when SQL Compatible
+    if (value == null) {
       return Collections.emptyList();
     }
     final List<String> retList;
     try {
-      retList = reverseLoadingCache.get(valueEquivalent, new UnapplyCallable(valueEquivalent));
+      retList = reverseLoadingCache.get(value, new UnapplyCallable(value));
       return retList;
     }
     catch (ExecutionException e) {

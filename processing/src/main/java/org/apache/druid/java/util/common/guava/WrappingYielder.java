@@ -45,7 +45,7 @@ final class WrappingYielder<OutType> implements Yielder<OutType>
   public Yielder<OutType> next(final OutType initValue)
   {
     try {
-      return wrapper.wrap(new Supplier<Yielder<OutType>>()
+      return wrapper.wrap(new Supplier<>()
       {
         @Override
         public Yielder<OutType> get()
