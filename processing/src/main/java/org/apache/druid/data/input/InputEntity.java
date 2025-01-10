@@ -21,6 +21,7 @@ package org.apache.druid.data.input;
 
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.annotations.UnstableApi;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
@@ -67,9 +68,32 @@ public interface InputEntity
    * This is the basic way to read the given entity.
    * This method may be called multiple times to re-read the data from the entity.
    *
+   * This method will also un-compress the remote data.
+   *
    * @see #fetch
    */
   InputStream open() throws IOException;
+
+  default long getSize() throws IOException
+  {
+    throw DruidException.defensive("getSize is not supported in %s", getClass().getName());
+  }
+
+  /**
+   * Opens an {@link SeekableInputStream} that can be used by formats such as Parquet, ORC that support column
+   * projection. This method will not uncompress the input data. Interfaces that implement this, should also implement
+   * {@link #getSize()} and override {@link #isSeekable()} to return {@code true}
+   */
+  @SuppressWarnings("RedundantThrows")
+  default SeekableInputStream openSeekable() throws IOException
+  {
+    throw DruidException.defensive("openSeekable is not supported in %s", getClass().getName());
+  }
+
+  default boolean isSeekable()
+  {
+    return false;
+  }
 
   /**
    * Fetches the input entity into the local storage.
