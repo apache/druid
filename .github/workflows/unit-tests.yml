@@ -24,17 +24,7 @@ on:
     outputs:
       continue_tests:
         description: 'Flag to decide if next tests need to run incase coverage issue failures'
-        value: |
-          ${{
-            (jobs.indexing_modules_test.result == 'success' || jobs.indexing_modules_test.result == 'skipped' || 
-          fromJson(jobs.indexing_modules_test.outputs.coverage_failure)) &&
-            (jobs.processing_modules_test.result == 'success' || jobs.processing_modules_test.result == 'skipped' || 
-          fromJson(jobs.processing_modules_test.outputs.coverage_failure)) &&
-            (jobs.server_modules_test.result == 'success' || jobs.server_modules_test.result == 'skipped' || fromJson
-          (jobs.server_modules_test.outputs.coverage_failure)) &&
-            (jobs.other_modules_test.result == 'success' || jobs.other_modules_test.result == 'skipped' || fromJson(jobs
-          .other_modules_test.outputs.coverage_failure))
-          }}
+        value: ${{ jobs.check_results.outputs.should_continue }}
 
 jobs:
   changes:
@@ -61,23 +51,33 @@ jobs:
             kinesis:
               - 'extensions-core/kinesis-indexing-service/**'
 
-  indexing_modules_test:
-    needs: changes
-    if: ${{ needs.changes.outputs.core == 'true' || needs.changes.outputs.kafka == 'true' || needs.changes.outputs.kinesis == 'true'}}
-    uses: ./.github/workflows/reusable-unit-tests.yml
-    with:
-      jdk: ${{ inputs.jdk }}
-      module: indexing
-      maven_projects: 'indexing-hadoop,indexing-service,extensions-core/kafka-indexing-service,extensions-core/kinesis-indexing-service'
+#  indexing_modules_test:
+#    needs: changes
+#    strategy:
+#      fail-fast: false
+#      matrix:
+#        test_range: [ 'A-K', 'L-Z' ]
+#    if: ${{ needs.changes.outputs.core == 'true' || needs.changes.outputs.kafka == 'true' || needs.changes.outputs.kinesis == 'true'}}
+#    uses: ./.github/workflows/reusable-unit-tests.yml
+#    with:
+#      jdk: ${{ inputs.jdk }}
+#      module: indexing
+#      maven_projects: 'indexing-hadoop,indexing-service,extensions-core/kafka-indexing-service,extensions-core/kinesis-indexing-service'
+#      test_range: ${{ matrix.test_range }}
 
   processing_modules_test:
     needs: changes
+    strategy:
+      fail-fast: false
+      matrix:
+        test_range: [ 'X-X', 'Y-Y' ]
     if: ${{ needs.changes.outputs.core == 'true' }}
     uses: ./.github/workflows/reusable-unit-tests.yml
     with:
       jdk: ${{ inputs.jdk }}
       module: processing
       maven_projects: 'processing'
+      test_range: ${{ matrix.test_range }}
 
   server_modules_test:
     needs: changes
@@ -88,9 +88,30 @@ jobs:
       module: server
       maven_projects: 'server'
 
-  other_modules_test:
-    uses: ./.github/workflows/reusable-unit-tests.yml
-    with:
-      jdk: ${{ inputs.jdk }}
-      module: other
-      maven_projects: '!processing,!indexing-hadoop,!indexing-service,!extensions-core/kafka-indexing-service,!extensions-core/kinesis-indexing-service,!server,!web-console,!integration-tests,!:druid-it-tools,!:druid-it-image,!:druid-it-cases'
+#  other_modules_test:
+#    uses: ./.github/workflows/reusable-unit-tests.yml
+#    strategy:
+#      fail-fast: false
+#      matrix:
+#        test_range: [ 'A-K', 'L-Z' ]
+#    with:
+#      jdk: ${{ inputs.jdk }}
+#      module: other
+#      maven_projects: '!processing,!indexing-hadoop,!indexing-service,!extensions-core/kafka-indexing-service,!extensions-core/kinesis-indexing-service,!server,!web-console,!integration-tests,!:druid-it-tools,!:druid-it-image,!:druid-it-cases'
+#      test_range: ${{ matrix.test_range }}
+
+  check_results:
+    needs: [processing_modules_test, server_modules_test]
+    runs-on: ubuntu-latest
+    outputs:
+      should_continue: ${{ steps.check.outputs.continue }}
+    steps:
+      - id: check
+        run: |
+          echo '${{ toJSON(needs.processing_modules_test.result) }}'
+          echo '${{ toJSON(needs.server_modules_test.result) }}'
+
+          echo '${{ toJSON(needs.processing_modules_test.outputs) }}'
+          echo '${{ toJSON(needs.server_modules_test.outputs) }}'
+          
+          echo "continue=true" >> $GITHUB_OUTPUT

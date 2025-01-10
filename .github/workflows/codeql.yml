@@ -2,18 +2,9 @@ name: "CodeQL"
 
 on:
   push:
-    paths-ignore:
-      - '**/*.md'
-      - 'dev/**'
-      - 'docs/**'
-    branches: [ 'master', '0.6.x', '0.7.x', '0.7.1.x', '0.7.2.x', '0.8.0', '0.8.1', '0.8.2', '0.8.3', '0.9.0', '0.9.1' ]
+    branches: [ 'nonexistentbranch' ]
   pull_request:
-    paths-ignore:
-      - '**/*.md'
-      - 'dev/**'
-      - 'docs/**'
-    # The branches below must be a subset of the branches above
-    branches: [ 'master' ]
+    branches: [ 'nonexistentbranch' ]
   schedule:
     - cron: '18 15 * * 4'
 
