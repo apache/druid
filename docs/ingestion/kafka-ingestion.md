@@ -29,8 +29,11 @@ To use the Kafka indexing service, you must be on Apache Kafka version 0.11.x or
 If you are using an older version, refer to the [Apache Kafka upgrade guide](https://kafka.apache.org/documentation/#upgrade).
 :::
 
-When you enable the Kafka indexing service, you can configure supervisors on the Overlord to manage the creation and lifetime of Kafka indexing tasks.
-Kafka indexing tasks read events using Kafka partition and offset mechanism to guarantee exactly-once ingestion. The supervisor oversees the state of the indexing tasks to coordinate handoffs, manage failures, and ensure that scalability and replication requirements are maintained.
+When you enable the Apache Kafka indexing service, you can configure supervisors on the Overlord to manage the creation and lifetime of Kafka indexing tasks.
+
+The supervisor oversees the state of the indexing tasks to coordinate handoffs, manage failures, and ensure that scalability and replication requirements are maintained.
+
+Kafka indexing tasks read events using Kafka partition and offset mechanism to guarantee exactly-once ingestion. 
 
 This topic contains configuration information for the Kafka indexing service supervisor for Apache Druid.
 
@@ -38,9 +41,11 @@ This topic contains configuration information for the Kafka indexing service sup
 
 To use the Kafka indexing service, you must first load the `druid-kafka-indexing-service` extension on both the Overlord and the Middle Manager. See [Loading extensions](../configuration/extensions.md) for more information.
 
-## Supervisor spec configuration
+## `spec`
 
-This section outlines the configuration properties that are specific to the Apache Kafka streaming ingestion method. For configuration properties shared across all streaming ingestion methods supported by Druid, see [Supervisor spec](supervisor.md#supervisor-spec).
+This section outlines the configuration properties that are specific to Kafka streaming ingestion.
+
+For configuration properties shared across all streaming ingestion methods, see [supervisor spec](supervisor.md#spec).
 
 The following example shows a supervisor spec for the Kafka indexing service:
 
@@ -113,10 +118,13 @@ The following example shows a supervisor spec for the Kafka indexing service:
 
 </details>
 
-### I/O configuration
+### `ioConfig`
+
+The `ioConfig` object defines how Druid reads data from a source system, such as Apache Kafka, Amazon S3, a mounted filesystem, or any other supported source system.
 
 The following table outlines the `ioConfig` configuration properties specific to Kafka.
-For configuration properties shared across all streaming ingestion methods, refer to [Supervisor I/O configuration](supervisor.md#io-configuration).
+
+For properties common to all streaming ingestion configurations, see [supervisor `ioConfig`](supervisor.md#ioconfig).
 
 |Property|Type|Description|Required|Default|
 |--------|----|-----------|--------|-------|
@@ -426,10 +434,13 @@ This query returns:
 |------------------|-----------|-----------------|-------------|
 |`development`|`wiki-edit`|`1680795276351`|`wiki-edits`|
 
-### Tuning configuration
+### `tuningConfig`
 
-The following table outlines the `tuningConfig` configuration properties specific to Kafka.
-For configuration properties shared across all streaming ingestion methods, refer to [Supervisor tuning configuration](supervisor.md#tuning-configuration).
+You specify tuning properties in a `tuningConfig` object at the top level of an ingestion spec.
+
+The following table outlines the `tuningConfig` configuration properties specific to Apache Kafka.
+
+For properties common to all streaming ingestion configurations, see [supervisor `tuningConfig`](supervisor.md#tuningconfig).
 
 |Property|Type|Description|Required|Default|
 |--------|----|-----------|--------|-------|
@@ -454,6 +465,6 @@ For information on how to optimize the segment size, see [Segment size optimizat
 See the following topics for more information:
 
 * [Supervisor API](../api-reference/supervisor-api.md) for how to manage and monitor supervisors using the API.
-* [Supervisor](../ingestion/supervisor.md) for supervisor status and capacity planning.
+* [Supervisor](supervisor.md) for supervisor status and capacity planning.
 * [Loading from Apache Kafka](../tutorials/tutorial-kafka.md) for a tutorial on streaming data from Apache Kafka.
-* [Kafka input format](../ingestion/data-formats.md#kafka) to learn about the `kafka` input format.
+* [Kafka input format](data-formats.md#kafka) to learn about the `kafka` input format.
