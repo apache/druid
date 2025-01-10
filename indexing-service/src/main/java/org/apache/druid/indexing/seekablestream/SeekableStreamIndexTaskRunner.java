@@ -664,17 +664,10 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
             }
 
             // Emit the processed bytes metric
-            try {
-              toolbox.getEmitter().emit(
-                  ServiceMetricEvent.builder()
-                      .setDimension("taskId", task.getId())
-                      .setDimension("dataSource", task.getDataSource())
-                      .setMetric("ingest/processed/bytes", bytesProcessed)
-              );
-            }
-            catch (Exception e) {
-              log.warn(e, "Unable to emit processed bytes metric");
-            }
+            IndexTaskUtils.setTaskDimensions(new ServiceMetricEvent.Builder(), task);
+            toolbox.getEmitter().emit(
+                ServiceMetricEvent.builder().setMetric("ingest/processed/bytes", bytesProcessed)
+            );
 
             if (shouldProcess) {
               final List<InputRow> rows = parser.parse(record.getData(), isEndOfShard(record.getSequenceNumber()));

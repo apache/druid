@@ -1634,12 +1634,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
     buildSegmentsRowStats.addRowIngestionMetersTotals(rowStatsForRunningTasks);
 
     // Emit the processed bytes metric
-    try {
-      emitMetric(toolbox.getEmitter(), "ingest/processed/bytes", rowStatsForRunningTasks.getProcessedBytes());
-    }
-    catch (Exception e) {
-      LOG.warn(e, "Unable to emit processed bytes metric");
-    }
+    emitMetric(toolbox.getEmitter(), "ingest/processed/bytes", rowStatsForRunningTasks.getProcessedBytes());
 
     return createStatsAndErrorsReport(buildSegmentsRowStats.getTotals(), unparseableEvents);
   }

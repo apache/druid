@@ -555,7 +555,7 @@ public class ControllerImpl implements Controller
                 }).sum()).sum()
         : 0;
 
-    log.info("Total processed bytes: %d, query: %s", totalProcessedBytes, querySpec.getQuery());
+    log.debug("Processed bytes[%d] for query[%s].", totalProcessedBytes, querySpec.getQuery());
     context.emitMetric("ingest/processed/bytes", totalProcessedBytes);
   }
 
