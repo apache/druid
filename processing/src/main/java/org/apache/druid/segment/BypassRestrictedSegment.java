@@ -22,15 +22,13 @@ package org.apache.druid.segment;
 import org.apache.druid.query.policy.Policy;
 
 /**
- * A {@link SegmentReference} wrapper with a {@link Policy} restriction that is not automatically enforced.
- * Instead, it relies on the caller to apply or enforce the policy.
- *
+ * A {@link SegmentReference} wrapper with a {@link Policy} restriction that is not applied. Instead, it relies on the
+ * caller to apply the policy.
  * <p>
- * Certain methods, such as {@link #as(Class)}, {@link #asQueryableIndex()}, and {@link #asCursorFactory()},
- * provide access to the underlying segment without automatically applying the policy, leaving it up to
- * the caller to ensure compliance when needed.
- * <p>
- * This design provides flexibility for scenarios where policy enforcement is not required or desired.
+ * This class is useful when a query engine needs direct access to interfaces that cannot have policies applied
+ * transparently. For example, {@link RestrictedSegment} returns null for {@link #asQueryableIndex} because it cannot
+ * apply policies transparently to a {@link QueryableIndex}. To use one, a query engine needs to obtain a
+ * {@link BypassRestrictedSegment} and apply the policies itself.
  */
 class BypassRestrictedSegment extends WrappedSegmentReference
 {
