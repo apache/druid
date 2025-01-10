@@ -21,6 +21,7 @@ package org.apache.druid.query.materializedview;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.MapBasedRow;
@@ -107,6 +108,7 @@ public class MaterializedViewQueryQueryToolChestTest extends InitializedNullHand
   @Test
   public void testDecorateObjectMapper() throws IOException
   {
+    JSON_MAPPER.configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS, true);
     GroupByQuery realQuery = GroupByQuery.builder()
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
@@ -165,6 +167,7 @@ public class MaterializedViewQueryQueryToolChestTest extends InitializedNullHand
   @Test
   public void testDecorateObjectMapperMaterializedViewQuery() throws IOException
   {
+    JSON_MAPPER.configure(SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS, true);
     GroupByQuery realQuery = GroupByQuery.builder()
         .setDataSource(QueryRunnerTestHelper.DATA_SOURCE)
         .setQuerySegmentSpec(QueryRunnerTestHelper.FIRST_TO_THIRD)
