@@ -158,6 +158,10 @@ public class AuthorizationResult
     }
   }
 
+  /**
+   * Returns a map of table and {@link Policy} restriction on the table. Empty value means the table doesn't have any
+   * restriction.
+   */
   public Map<String, Optional<Policy>> getPolicyMap()
   {
     return policyRestrictions;

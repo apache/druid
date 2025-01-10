@@ -26,12 +26,13 @@ import org.apache.druid.segment.column.RowSignature;
 import javax.annotation.Nullable;
 
 /**
- * A factory class for creating {@code Cursor} instances with strict adherence to {@link Policy} restrictions.
+ * A factory class for creating {@code Cursor} instances with strict adherence to {@link Policy} restrictions. Created
+ * by {@link RestrictedSegment#asCursorFactory()}, and applies policies transparently.
  * <p>
  * The {@code CursorFactory} simplifies the process of initializing and retrieving {@code Cursor} objects while ensuring
  * that any cursor created complies with the {@link Policy} restrictions.
  * <p>
- * Policy Enforcement in {@link #makeCursorHolder}:
+ * Policy enforcement in {@link #makeCursorHolder}:
  * <ul>
  * <li>Row-level restrictions are enforced by adding filters to {@link CursorBuildSpec}, which is then passed to
  * delegate for execution. This ensures that only relevant data are accessible by the client.
