@@ -60,10 +60,11 @@ public class ThresholdBasedQueryPrioritizationStrategyTest
   public void testPrioritizationPeriodThresholdInsidePeriod()
   {
     QueryPrioritizationStrategy strategy = new ThresholdBasedQueryPrioritizationStrategy(
-        "P90D", null, null, null, adjustment);
+        "P90D", null, null, null, null, adjustment);
     DateTime startDate = DateTimes.nowUtc().minusDays(1);
     DateTime endDate = DateTimes.nowUtc();
     TimeseriesQuery query = queryBuilder.intervals(ImmutableList.of(new Interval(startDate, endDate)))
+                                        .dataSource("generalDatasource")
                                         .granularity(Granularities.MINUTE)
                                         .context(ImmutableMap.of())
                                         .build();
@@ -81,11 +82,13 @@ public class ThresholdBasedQueryPrioritizationStrategyTest
         null,
         null,
         null,
+        null,
         adjustment
     );
     DateTime startDate = DateTimes.nowUtc().minusDays(100);
     DateTime endDate = DateTimes.nowUtc().minusDays(80);
     TimeseriesQuery query = queryBuilder.intervals(ImmutableList.of(new Interval(startDate, endDate)))
+                                        .dataSource("generalDatasource")
                                         .granularity(Granularities.HOUR)
                                         .context(ImmutableMap.of())
                                         .build();
@@ -104,11 +107,13 @@ public class ThresholdBasedQueryPrioritizationStrategyTest
         "P7D",
         null,
         null,
+        null,
         adjustment
     );
     DateTime startDate = DateTimes.nowUtc().minusDays(1);
     DateTime endDate = DateTimes.nowUtc();
     TimeseriesQuery query = queryBuilder.intervals(ImmutableList.of(new Interval(startDate, endDate)))
+                                        .dataSource("generalDatasource")
                                         .granularity(Granularities.MINUTE)
                                         .context(ImmutableMap.of())
                                         .build();
@@ -126,11 +131,13 @@ public class ThresholdBasedQueryPrioritizationStrategyTest
         "P7D",
         null,
         null,
+        null,
         adjustment
     );
     DateTime startDate = DateTimes.nowUtc().minusDays(20);
     DateTime endDate = DateTimes.nowUtc();
     TimeseriesQuery query = queryBuilder.intervals(ImmutableList.of(new Interval(startDate, endDate)))
+                                        .dataSource("generalDatasource")
                                         .granularity(Granularities.HOUR)
                                         .context(ImmutableMap.of())
                                         .build();
@@ -149,11 +156,13 @@ public class ThresholdBasedQueryPrioritizationStrategyTest
         null,
         2,
         null,
+        null,
         adjustment
     );
     DateTime startDate = DateTimes.nowUtc().minusDays(1);
     DateTime endDate = DateTimes.nowUtc();
     TimeseriesQuery query = queryBuilder.intervals(ImmutableList.of(new Interval(startDate, endDate)))
+                                        .dataSource("generalDatasource")
                                         .granularity(Granularities.MINUTE)
                                         .context(ImmutableMap.of())
                                         .build();
@@ -174,11 +183,13 @@ public class ThresholdBasedQueryPrioritizationStrategyTest
         null,
         2,
         null,
+        null,
         adjustment
     );
     DateTime startDate = DateTimes.nowUtc().minusDays(20);
     DateTime endDate = DateTimes.nowUtc();
     TimeseriesQuery query = queryBuilder.intervals(ImmutableList.of(new Interval(startDate, endDate)))
+                                        .dataSource("generalDatasource")
                                         .granularity(Granularities.HOUR)
                                         .context(ImmutableMap.of())
                                         .build();
@@ -204,11 +215,13 @@ public class ThresholdBasedQueryPrioritizationStrategyTest
             null,
             null,
             "P7D",
+            null,
             adjustment
     );
     DateTime startDate = DateTimes.nowUtc().minusDays(1);
     DateTime endDate = DateTimes.nowUtc();
     TimeseriesQuery query = queryBuilder.intervals(ImmutableList.of(new Interval(startDate, endDate)))
+            .dataSource("generalDatasource")
             .granularity(Granularities.MINUTE)
             .context(ImmutableMap.of())
             .build();
@@ -228,11 +241,13 @@ public class ThresholdBasedQueryPrioritizationStrategyTest
             null,
             null,
             "P7D",
+            null,
             adjustment
     );
     DateTime startDate = DateTimes.nowUtc().minusDays(20);
     DateTime endDate = DateTimes.nowUtc();
     TimeseriesQuery query = queryBuilder.intervals(ImmutableList.of(new Interval(startDate, endDate)))
+            .dataSource("generalDatasource")
             .granularity(Granularities.HOUR)
             .context(ImmutableMap.of())
             .build();
@@ -244,4 +259,69 @@ public class ThresholdBasedQueryPrioritizationStrategyTest
             (int) strategy.computePriority(QueryPlus.wrap(query), ImmutableSet.of(segmentServerSelector)).get()
     );
   }
+
+  @Test
+  public void testPrioritizationWithExemptDatasource()
+  {
+    QueryPrioritizationStrategy strategy = new ThresholdBasedQueryPrioritizationStrategy(
+            null,
+            null,
+            2,
+            null,
+            ImmutableSet.of("exemptDatasource"),
+            adjustment
+    );
+    DateTime startDate = DateTimes.nowUtc().minusDays(20);
+    DateTime endDate = DateTimes.nowUtc();
+    TimeseriesQuery query = queryBuilder.intervals(ImmutableList.of(new Interval(startDate, endDate)))
+            .dataSource("exemptDatasource")
+            .granularity(Granularities.HOUR)
+            .context(ImmutableMap.of())
+            .build();
+
+    Assert.assertFalse(
+            strategy.computePriority(
+                    QueryPlus.wrap(query),
+                    ImmutableSet.of(
+                            EasyMock.createMock(SegmentServerSelector.class),
+                            EasyMock.createMock(SegmentServerSelector.class),
+                            EasyMock.createMock(SegmentServerSelector.class)
+                    )
+            ).isPresent()
+    );
+  }
+
+  @Test
+  public void testPrioritizationWithNonExemptDatasource()
+  {
+    QueryPrioritizationStrategy strategy = new ThresholdBasedQueryPrioritizationStrategy(
+            null,
+            null,
+            2,
+            null,
+            ImmutableSet.of("exemptDatasource"),
+            adjustment
+    );
+    DateTime startDate = DateTimes.nowUtc().minusDays(20);
+    DateTime endDate = DateTimes.nowUtc();
+    TimeseriesQuery query = queryBuilder.dataSource("nonExemptDatasource")
+            .intervals(ImmutableList.of(new Interval(startDate, endDate)))
+            .granularity(Granularities.HOUR)
+            .context(ImmutableMap.of())
+            .build();
+
+    // Since "test" is not in the exempt list, priority should be adjusted
+    Assert.assertEquals(
+            -adjustment,
+            (int) strategy.computePriority(
+                    QueryPlus.wrap(query),
+                    ImmutableSet.of(
+                            EasyMock.createMock(SegmentServerSelector.class),
+                            EasyMock.createMock(SegmentServerSelector.class),
+                            EasyMock.createMock(SegmentServerSelector.class)
+                    )
+            ).get()
+    );
+  }
+
 }
