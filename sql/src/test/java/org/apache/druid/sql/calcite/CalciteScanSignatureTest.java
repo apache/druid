@@ -103,9 +103,7 @@ public class CalciteScanSignatureTest extends BaseCalciteQueryTest
                 .limit(2)
                 .build()
         ),
-        useDefault ? ImmutableList.of(
-            new Object[]{0L}, new Object[]{0L}
-        ) : ImmutableList.of(
+        ImmutableList.of(
             new Object[]{null}, new Object[]{null}
         )
     );

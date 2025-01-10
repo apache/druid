@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.calcite.avatica.ColumnMetaData;
 import org.apache.calcite.avatica.remote.TypedValue;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.CsvInputFormat;
 import org.apache.druid.data.input.impl.InlineInputSource;
 import org.apache.druid.data.input.impl.JsonInputFormat;
@@ -45,7 +44,6 @@ import org.apache.druid.msq.indexing.destination.DurableStorageMSQDestination;
 import org.apache.druid.msq.indexing.destination.MSQSelectDestination;
 import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
 import org.apache.druid.msq.indexing.report.MSQResultsReport;
-import org.apache.druid.msq.querykit.common.SortMergeJoinFrameProcessorFactory;
 import org.apache.druid.msq.test.CounterSnapshotMatcher;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.util.MultiStageQueryContext;
@@ -53,7 +51,6 @@ import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.OrderBy;
-import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
@@ -858,7 +855,7 @@ public class MSQSelectTest extends MSQTestBase
                                                DruidExpression.ofColumn(ColumnType.STRING, "dim2"),
                                                DruidExpression.ofColumn(ColumnType.STRING, "j0.k")
                                            ),
-                                           NullHandling.sqlCompatible() ? JoinType.INNER : JoinType.LEFT
+                                           JoinType.INNER
                                        )
                                    )
                                    .setInterval(querySegmentSpec(Filtration.eternity()))
@@ -883,12 +880,7 @@ public class MSQSelectTest extends MSQTestBase
                    .build())
         .setExpectedRowSignature(rowSignature)
         .setExpectedResultRows(
-            NullHandling.sqlCompatible()
-            ? ImmutableList.of(
-                new Object[]{"xabc", 1L}
-            )
-            : ImmutableList.of(
-                new Object[]{NullHandling.defaultStringValue(), 3L},
+            ImmutableList.of(
                 new Object[]{"xabc", 1L}
             )
         )
@@ -981,22 +973,12 @@ public class MSQSelectTest extends MSQTestBase
                                                      .add("EXPR$1", ColumnType.DOUBLE)
                                                      .build();
 
-    final ImmutableList<Object[]> expectedResults;
-
-    if (NullHandling.sqlCompatible()) {
-      expectedResults = ImmutableList.of(
-          new Object[]{null, 4.0},
-          new Object[]{"", 3.0},
-          new Object[]{"a", 2.5},
-          new Object[]{"abc", 5.0}
-      );
-    } else {
-      expectedResults = ImmutableList.of(
-          new Object[]{"", 3.6666666666666665},
-          new Object[]{"a", 2.5},
-          new Object[]{"abc", 5.0}
-      );
-    }
+    final ImmutableList<Object[]> expectedResults = ImmutableList.of(
+        new Object[]{null, 4.0},
+        new Object[]{"", 3.0},
+        new Object[]{"a", 2.5},
+        new Object[]{"abc", 5.0}
+    );
 
     final GroupByQuery query =
         GroupByQuery.builder()
@@ -1052,21 +1034,12 @@ public class MSQSelectTest extends MSQTestBase
                     .setDimensions(new DefaultDimensionSpec("dim2", "d0", ColumnType.STRING))
                     .setGranularity(Granularities.ALL)
                     .setAggregatorSpecs(
-                        useDefault
-                        ? aggregators(
-                            new DoubleSumAggregatorFactory("a0:sum", "m2"),
-                            new CountAggregatorFactory("a0:count")
-                        )
-                        : aggregators(
+                        aggregators(
                             new DoubleSumAggregatorFactory("a0:sum", "m2"),
                             new FilteredAggregatorFactory(
                                 new CountAggregatorFactory("a0:count"),
                                 notNull("m2"),
-
-                                // Not sure why the name is only set in SQL-compatible null mode. Seems strange.
-                                // May be due to JSON serialization: name is set on the serialized aggregator even
-                                // if it was originally created with no name.
-                                NullHandling.sqlCompatible() ? "a0:count" : null
+                                "a0:count"
                             )
                         )
                     )
@@ -1778,9 +1751,9 @@ public class MSQSelectTest extends MSQTestBase
             new Object[]{"[\"a\",\"b\"]", ImmutableList.of("a", "b")},
             new Object[]{"[\"b\",\"c\"]", ImmutableList.of("b", "c")},
             new Object[]{"d", ImmutableList.of("d")},
-            new Object[]{"", useDefault ? null : Collections.singletonList("")},
-            new Object[]{NullHandling.defaultStringValue(), null},
-            new Object[]{NullHandling.defaultStringValue(), null}
+            new Object[]{"", Collections.singletonList("")},
+            new Object[]{null, null},
+            new Object[]{null, null}
         )).verifyResults();
   }
 
@@ -2006,9 +1979,7 @@ public class MSQSelectTest extends MSQTestBase
         .setQueryContext(context)
         .setExpectedRowSignature(resultSignature)
         .setExpectedResultRows(
-            NullHandling.replaceWithDefault()
-            ? ImmutableList.of(new Object[]{"", 3L}, new Object[]{"a", 2L})
-            : ImmutableList.of(new Object[]{null, 2L}, new Object[]{"a", 2L})
+            ImmutableList.of(new Object[]{null, 2L}, new Object[]{"a", 2L})
 
         )
         .verifyResults();
@@ -2151,16 +2122,13 @@ public class MSQSelectTest extends MSQTestBase
                                             .add("cnt1", ColumnType.LONG)
                                             .build();
 
-    ArrayList<Object[]> expected = new ArrayList<>();
-    expected.add(new Object[]{null, !useDefault ? 2L : 3L});
-    if (!useDefault) {
-      expected.add(new Object[]{Collections.singletonList(""), 1L});
-    }
-    expected.addAll(ImmutableList.of(
+    List<Object[]> expected = ImmutableList.of(
+        new Object[]{null, 2L},
+        new Object[]{Collections.singletonList(""), 1L},
         new Object[]{Arrays.asList("a", "b"), 1L},
         new Object[]{Arrays.asList("b", "c"), 1L},
         new Object[]{Collections.singletonList("d"), 1L}
-    ));
+    );
 
     testSelectQuery()
         .setSql("select MV_TO_ARRAY(dim3), count(*) as cnt1 from foo group by MV_TO_ARRAY(dim3)")
@@ -2333,7 +2301,7 @@ public class MSQSelectTest extends MSQTestBase
                 new Object[]{946684800000L, 1L},
                 new Object[]{946771200000L, 1L},
                 new Object[]{946857600000L, 1L},
-                new Object[]{978307200000L, !useDefault ? 1L : 0L},
+                new Object[]{978307200000L, 1L},
                 new Object[]{978393600000L, 0L},
                 new Object[]{978480000000L, 0L}
             )
@@ -2470,118 +2438,11 @@ public class MSQSelectTest extends MSQTestBase
 
   @MethodSource("data")
   @ParameterizedTest(name = "{index}:with context {0}")
-  public void testJoinUsesDifferentAlgorithm(String contextName, Map<String, Object> context)
-  {
-    // This test asserts that the join algorithm used is a different one from that supplied. In sqlCompatible() mode
-    // the query gets planned differently, therefore we do use the sortMerge processor. Instead of having separate
-    // handling, a similar test has been described in CalciteJoinQueryMSQTest, therefore we don't want to repeat that
-    // here, hence ignoring in sqlCompatible() mode
-    if (NullHandling.sqlCompatible()) {
-      return;
-    }
-
-    RowSignature rowSignature = RowSignature.builder().add("cnt", ColumnType.LONG).build();
-
-    Map<String, Object> queryContext = new HashMap<>(context);
-    queryContext.put(PlannerContext.CTX_SQL_JOIN_ALGORITHM, JoinAlgorithm.SORT_MERGE.toString());
-
-    Query<?> expectedQuery;
-
-    expectedQuery = GroupByQuery
-        .builder()
-        .setDataSource(
-            join(
-                new QueryDataSource(
-                    newScanQueryBuilder()
-                        .dataSource("foo")
-                        .columns("__time")
-                        .columnTypes(ColumnType.LONG)
-                        .context(defaultScanQueryContext(
-                            queryContext,
-                            RowSignature.builder().add("__time", ColumnType.LONG).build()
-                        ))
-                        .intervals(querySegmentSpec(Intervals.ETERNITY))
-                        .build()
-                ),
-                new QueryDataSource(
-                    GroupByQuery.builder()
-                                .setDataSource("foo")
-                                .setDimensions(
-                                    new DefaultDimensionSpec("m1", "d0", ColumnType.FLOAT)
-                                )
-                                .setContext(queryContext)
-                                .setQuerySegmentSpec(querySegmentSpec(Intervals.ETERNITY))
-                                .setGranularity(Granularities.ALL)
-                                .setPostAggregatorSpecs(
-                                    expressionPostAgg(
-                                        "a0",
-                                        "1",
-                                        ColumnType.LONG
                                     ),
                                     expressionPostAgg(
                                         "p0",
                                         "(CAST(floor(100), 'DOUBLE') == \"d0\")",
                                         ColumnType.LONG
-                                    )
-                                )
-                                .build()
-
-                ),
-                "j0.",
-                "(1 == \"j0.p0\")",
-                JoinType.LEFT,
-                null,
-                JoinAlgorithm.SORT_MERGE
-            )
-        )
-        .setAggregatorSpecs(
-            new FilteredAggregatorFactory(
-                new CountAggregatorFactory("a0"),
-                isNull("j0.a0"),
-                "a0"
-            )
-        )
-        .setContext(queryContext)
-        .setQuerySegmentSpec(querySegmentSpec(Intervals.ETERNITY))
-        .setGranularity(Granularities.ALL)
-        .build();
-
-    testSelectQuery()
-        .setSql(
-            "SELECT COUNT(*) FILTER (WHERE FLOOR(100) NOT IN (SELECT m1 FROM foo)) AS cnt "
-            + "FROM foo"
-        )
-        .setExpectedRowSignature(rowSignature)
-        .setExpectedMSQSpec(
-            MSQSpec
-                .builder()
-                .query(expectedQuery)
-                .columnMappings(new ColumnMappings(
-                    ImmutableList.of(
-                        new ColumnMapping("a0", "cnt")
-                    )
-                ))
-                .destination(isDurableStorageDestination(contextName, context)
-                             ? DurableStorageMSQDestination.INSTANCE
-                             : TaskReportMSQDestination.INSTANCE)
-                .tuningConfig(MSQTuningConfig.defaultConfig())
-                .build())
-        .setQueryContext(queryContext)
-        .addAdhocReportAssertions(
-            msqTaskReportPayload -> msqTaskReportPayload.getStages().getStages().stream().noneMatch(
-                stage -> stage.getStageDefinition()
-                              .getProcessorFactory()
-                              .getClass()
-                              .equals(SortMergeJoinFrameProcessorFactory.class)
-            ),
-            "assert the query didn't use sort merge"
-        )
-        .setExpectedResultRows(ImmutableList.of(new Object[]{6L}))
-        .verifyResults();
-  }
-
-  @MethodSource("data")
-  @ParameterizedTest(name = "{index}:with context {0}")
   public void testSelectUnnestOnInlineFoo(String contextName, Map<String, Object> context)
   {
     RowSignature resultSignature = RowSignature.builder()
@@ -2685,16 +2546,7 @@ public class MSQSelectTest extends MSQTestBase
         .setExpectedRowSignature(outputSignature)
         .setQueryContext(context)
         .setExpectedResultRows(
-            useDefault ? ImmutableList.of(
-                new Object[]{"a"},
-                new Object[]{"b"},
-                new Object[]{"b"},
-                new Object[]{"c"},
-                new Object[]{"d"},
-                new Object[]{""},
-                new Object[]{""},
-                new Object[]{""}
-            ) : ImmutableList.of(
+            ImmutableList.of(
                 new Object[]{"a"},
                 new Object[]{"b"},
                 new Object[]{"b"},
@@ -2774,10 +2626,7 @@ public class MSQSelectTest extends MSQTestBase
         .setExpectedRowSignature(outputSignature)
         .setQueryContext(context)
         .setExpectedResultRows(
-            useDefault ? ImmutableList.of(
-                new Object[]{"a"},
-                new Object[]{"b"}
-            ) : ImmutableList.of(
+            ImmutableList.of(
                 new Object[]{"a"},
                 new Object[]{"b"},
                 new Object[]{""}
@@ -2847,12 +2696,8 @@ public class MSQSelectTest extends MSQTestBase
   private List<Object[]> expectedMultiValueFooRowsGroup()
   {
     ArrayList<Object[]> expected = new ArrayList<>();
-    if (useDefault) {
-      expected.add(new Object[]{"", 3L});
-    } else {
-      expected.add(new Object[]{null, 2L});
-      expected.add(new Object[]{"", 1L});
-    }
+    expected.add(new Object[]{null, 2L});
+    expected.add(new Object[]{"", 1L});
     expected.addAll(ImmutableList.of(
         new Object[]{"a", 1L},
         new Object[]{"b", 2L},
@@ -2864,18 +2709,14 @@ public class MSQSelectTest extends MSQTestBase
 
   private List<Object[]> expectedMultiValueFooRowsGroupByList()
   {
-    ArrayList<Object[]> expected = new ArrayList<>();
-    expected.add(new Object[]{null, !useDefault ? 2L : 3L});
-    if (!useDefault) {
-      expected.add(new Object[]{Collections.singletonList(""), 1L});
-    }
-    expected.addAll(ImmutableList.of(
+    return ImmutableList.of(
+        new Object[]{null, 2L},
+        new Object[]{Collections.singletonList(""), 1L},
         new Object[]{Collections.singletonList("a"), 1L},
         new Object[]{Collections.singletonList("b"), 2L},
         new Object[]{Collections.singletonList("c"), 1L},
         new Object[]{Collections.singletonList("d"), 1L}
-    ));
-    return expected;
+    );
   }
 
   private static Map<String, Object> enableMultiValueUnnesting(Map<String, Object> context, boolean value)

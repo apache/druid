@@ -24,7 +24,6 @@ import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.bitmap.MutableBitmap;
 import org.apache.druid.collections.bitmap.RoaringBitmapFactory;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.query.filter.InDimFilter;
@@ -59,10 +58,6 @@ import java.util.stream.IntStream;
 @Measurement(iterations = 3)
 public class InFilterBenchmark
 {
-  static {
-    NullHandling.initializeForTests();
-  }
-
   private static final int START_INT = 10_000_000;
 
   private InDimFilter inFilter;

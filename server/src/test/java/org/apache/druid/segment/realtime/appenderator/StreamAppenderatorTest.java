@@ -26,7 +26,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.Committer;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
@@ -300,7 +299,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
       appenderator.startJob();
       appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo", 1), committerSupplier);
       //expectedSizeInBytes = 44(map overhead) + 28 (TimeAndDims overhead) + 56 (aggregator metrics) + 54 (dimsKeySize) = 182 + 1 byte when null handling is enabled
-      int nullHandlingOverhead = NullHandling.sqlCompatible() ? 1 : 0;
+      int nullHandlingOverhead = 1;
       Assert.assertEquals(
           182 + nullHandlingOverhead,
           ((StreamAppenderator) appenderator).getBytesInMemory(IDENTIFIERS.get(0))
@@ -349,7 +348,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
       appenderator.startJob();
       appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo", 1), committerSupplier);
       //expectedSizeInBytes = 44(map overhead) + 28 (TimeAndDims overhead) + 56 (aggregator metrics) + 54 (dimsKeySize) = 182
-      int nullHandlingOverhead = NullHandling.sqlCompatible() ? 1 : 0;
+      int nullHandlingOverhead = 1;
       Assert.assertEquals(182 + nullHandlingOverhead, ((StreamAppenderator) appenderator).getBytesCurrentlyInMemory());
       appenderator.add(IDENTIFIERS.get(1), ir("2000", "bar", 1), committerSupplier);
       Assert.assertEquals(
@@ -395,7 +394,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
       appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo", 1), committerSupplier);
       // Still under maxSizeInBytes after the add. Hence, we do not persist yet
       //expectedSizeInBytes = 44(map overhead) + 28 (TimeAndDims overhead) + 56 (aggregator metrics) + 54 (dimsKeySize) = 182 + 1 byte when null handling is enabled
-      int nullHandlingOverhead = NullHandling.sqlCompatible() ? 1 : 0;
+      int nullHandlingOverhead = 1;
       int currentInMemoryIndexSize = 182 + nullHandlingOverhead;
       int sinkSizeOverhead = 1 * StreamAppenderator.ROUGH_OVERHEAD_PER_SINK;
       // currHydrant in the sink still has > 0 bytesInMemory since we do not persist yet
@@ -591,7 +590,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
       appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo", 1), committerSupplier);
 
       // Still under maxSizeInBytes after the add. Hence, we do not persist yet
-      int nullHandlingOverhead = NullHandling.sqlCompatible() ? 1 : 0;
+      int nullHandlingOverhead = 1;
       int currentInMemoryIndexSize = 182 + nullHandlingOverhead;
       int sinkSizeOverhead = 1 * StreamAppenderator.ROUGH_OVERHEAD_PER_SINK;
       Assert.assertEquals(
@@ -643,7 +642,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
 
       // Still under maxSizeInBytes after the add. Hence, we do not persist yet
       //expectedSizeInBytes = 44(map overhead) + 28 (TimeAndDims overhead) + 56 (aggregator metrics) + 54 (dimsKeySize) = 182 + 1 byte when null handling is enabled
-      int nullHandlingOverhead = NullHandling.sqlCompatible() ? 1 : 0;
+      int nullHandlingOverhead = 1;
       int currentInMemoryIndexSize = 182 + nullHandlingOverhead;
       int sinkSizeOverhead = 2 * StreamAppenderator.ROUGH_OVERHEAD_PER_SINK;
       // currHydrant in the sink still has > 0 bytesInMemory since we do not persist yet
@@ -787,7 +786,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
       Assert.assertEquals(0, ((StreamAppenderator) appenderator).getRowsInMemory());
       appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo", 1), committerSupplier);
       //we still calculate the size even when ignoring it to make persist decision
-      int nullHandlingOverhead = NullHandling.sqlCompatible() ? 1 : 0;
+      int nullHandlingOverhead = 1;
       Assert.assertEquals(
           182 + nullHandlingOverhead,
           ((StreamAppenderator) appenderator).getBytesInMemory(IDENTIFIERS.get(0))

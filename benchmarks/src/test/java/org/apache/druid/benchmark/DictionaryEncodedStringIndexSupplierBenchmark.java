@@ -24,7 +24,6 @@ import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.bitmap.MutableBitmap;
 import org.apache.druid.collections.bitmap.RoaringBitmapFactory;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.ByteBufferUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.data.BitmapSerdeFactory;
@@ -64,10 +63,6 @@ import java.util.stream.IntStream;
 @Measurement(iterations = 10)
 public class DictionaryEncodedStringIndexSupplierBenchmark
 {
-  static {
-    NullHandling.initializeForTests();
-  }
-
   @State(Scope.Benchmark)
   public static class BenchmarkState
   {

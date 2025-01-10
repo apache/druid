@@ -19,6 +19,7 @@
 
 package org.apache.druid.cli;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Injector;
 import org.apache.commons.io.FileUtils;
@@ -42,6 +43,7 @@ import org.apache.druid.java.util.common.granularity.AllGranularity;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
+import org.apache.druid.storage.local.LocalTmpStorageConfig;
 import org.joda.time.Duration;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -57,6 +59,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 
 import static org.easymock.EasyMock.mock;
 
@@ -141,6 +144,24 @@ public class CliPeonTest
         ),
         CliPeon.heartbeatDimensions(new TestStreamingTask(taskId, datasource, ImmutableMap.of(DruidMetrics.TAGS, tags), groupId))
     );
+  }
+
+  @Test
+  public void testCliPeonLocalTmpStorage() throws IOException
+  {
+    File file = temporaryFolder.newFile("task.json");
+    FileUtils.write(file, "{\"type\":\"noop\"}", StandardCharsets.UTF_8);
+
+    CliPeon runnable = new CliPeon();
+    runnable.taskAndStatusFile = ImmutableList.of(file.getParent(), "1");
+    Properties properties = new Properties();
+    runnable.configure(properties);
+    runnable.configure(properties, GuiceInjectors.makeStartupInjector());
+    Injector secondaryInjector = runnable.makeInjector();
+    Assert.assertNotNull(secondaryInjector);
+
+    LocalTmpStorageConfig localTmpStorageConfig = secondaryInjector.getInstance(LocalTmpStorageConfig.class);
+    Assert.assertEquals(new File(file.getParent(), "/tmp").getAbsolutePath(), localTmpStorageConfig.getTmpDir().getAbsolutePath());
   }
 
   private static class FakeCliPeon extends CliPeon
