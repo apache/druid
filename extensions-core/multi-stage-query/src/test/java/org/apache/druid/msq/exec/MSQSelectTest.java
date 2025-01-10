@@ -2438,11 +2438,6 @@ public class MSQSelectTest extends MSQTestBase
 
   @MethodSource("data")
   @ParameterizedTest(name = "{index}:with context {0}")
-                                    ),
-                                    expressionPostAgg(
-                                        "p0",
-                                        "(CAST(floor(100), 'DOUBLE') == \"d0\")",
-                                        ColumnType.LONG
   public void testSelectUnnestOnInlineFoo(String contextName, Map<String, Object> context)
   {
     RowSignature resultSignature = RowSignature.builder()
