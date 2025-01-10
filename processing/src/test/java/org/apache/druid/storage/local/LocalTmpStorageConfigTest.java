@@ -17,40 +17,26 @@
  * under the License.
  */
 
-package org.apache.druid.client.selector;
+package org.apache.druid.storage.local;
 
-import org.apache.druid.client.DruidServer;
-import org.apache.druid.query.QueryRunner;
+import com.google.inject.Guice;
+import com.google.inject.Injector;
+import org.junit.Assert;
+import org.junit.Test;
 
-/**
- */
-public class QueryableDruidServer<T extends QueryRunner<?>>
+import java.util.UUID;
+
+public class LocalTmpStorageConfigTest
 {
-  private final DruidServer server;
-  private final T queryRunner;
-
-  public QueryableDruidServer(DruidServer server, T queryRunner)
+  @Test
+  public void testDefaultLocalTmpStorage()
   {
-    this.server = server;
-    this.queryRunner = queryRunner;
-  }
-
-  public DruidServer getServer()
-  {
-    return server;
-  }
-
-  public T getQueryRunner()
-  {
-    return queryRunner;
-  }
-
-  @Override
-  public String toString()
-  {
-    return "QueryableDruidServer{" +
-           "server=" + server +
-           ", queryRunner=" + queryRunner +
-           '}';
+    String tmpString = UUID.randomUUID().toString();
+    Injector injector = Guice.createInjector(
+        binder -> binder.bind(LocalTmpStorageConfig.class)
+                        .toProvider(new LocalTmpStorageConfig.DefaultLocalTmpStorageConfigProvider(tmpString))
+    );
+    LocalTmpStorageConfig localTmpStorageConfig = injector.getInstance(LocalTmpStorageConfig.class);
+    Assert.assertTrue(localTmpStorageConfig.getTmpDir().getAbsolutePath().contains(tmpString));
   }
 }

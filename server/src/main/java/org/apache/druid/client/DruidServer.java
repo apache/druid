@@ -83,7 +83,12 @@ public class DruidServer implements Comparable<DruidServer>
       @JsonProperty("priority") int priority
   )
   {
-    this.metadata = new DruidServerMetadata(name, hostAndPort, hostAndTlsPort, maxSize, type, tier, priority);
+    this(new DruidServerMetadata(name, hostAndPort, hostAndTlsPort, maxSize, type, tier, priority));
+  }
+
+  public DruidServer(DruidServerMetadata metadata)
+  {
+    this.metadata = metadata;
   }
 
   @JsonProperty

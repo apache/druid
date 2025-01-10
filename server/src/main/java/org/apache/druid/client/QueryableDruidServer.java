@@ -17,15 +17,45 @@
  * under the License.
  */
 
-package org.apache.druid.msq.test;
+package org.apache.druid.client;
 
-import org.apache.druid.sql.calcite.TempDirProducer;
-import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
+import org.apache.druid.query.QueryRunner;
 
-public class StandardMSQComponentSupplier extends AbstractMSQComponentSupplierDelegate
+/**
+ *
+ */
+public class QueryableDruidServer
 {
-  public StandardMSQComponentSupplier(TempDirProducer tempFolderProducer)
+  private final DruidServer server;
+  private final QueryRunner<?> queryRunner;
+
+  public QueryableDruidServer(DruidServer server, QueryRunner<?> queryRunner)
   {
-    super(new StandardComponentSupplier(tempFolderProducer));
+    this.server = server;
+    this.queryRunner = queryRunner;
+  }
+
+  public DruidServer getServer()
+  {
+    return server;
+  }
+
+  public QueryRunner<?> getQueryRunner()
+  {
+    return queryRunner;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "QueryableDruidServer{" +
+           "server=" + server +
+           ", queryRunner=" + queryRunner +
+           '}';
+  }
+
+  public interface Maker
+  {
+    QueryableDruidServer make(DruidServer server);
   }
 }
