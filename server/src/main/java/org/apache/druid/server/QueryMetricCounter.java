@@ -17,21 +17,15 @@
  * under the License.
  */
 
-package org.apache.druid.guice;
+package org.apache.druid.server;
 
-import com.google.inject.Binder;
-import org.apache.druid.initialization.DruidModule;
-import org.apache.druid.server.BaseQueryCountResource;
-import org.apache.druid.server.QueryResource;
-import org.apache.druid.server.metrics.QueryCountStatsProvider;
-
-public class QueryablePeonModule implements DruidModule
+public interface QueryMetricCounter
 {
-  @Override
-  public void configure(Binder binder)
-  {
-    binder.bind(QueryCountStatsProvider.class).to(BaseQueryCountResource.class);
-    Jerseys.addResource(binder, QueryResource.class);
-    LifecycleModule.register(binder, QueryResource.class);
-  }
+  void incrementSuccess();
+
+  void incrementFailed();
+
+  void incrementInterrupted();
+
+  void incrementTimedOut();
 }
