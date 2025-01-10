@@ -44,6 +44,7 @@ import org.apache.druid.java.util.metrics.ClockDriftSafeMonitorScheduler;
 import org.apache.druid.java.util.metrics.DruidMonitorSchedulerConfig;
 import org.apache.druid.java.util.metrics.JvmCpuMonitor;
 import org.apache.druid.java.util.metrics.JvmMonitor;
+import org.apache.druid.java.util.metrics.JvmMonitorConfig;
 import org.apache.druid.java.util.metrics.JvmThreadsMonitor;
 import org.apache.druid.java.util.metrics.Monitor;
 import org.apache.druid.java.util.metrics.MonitorScheduler;
@@ -88,6 +89,7 @@ public class MetricsModule implements Module
     JsonConfigProvider.bind(binder, MONITORING_PROPERTY_PREFIX, DruidMonitorSchedulerConfig.class);
     JsonConfigProvider.bind(binder, MONITORING_PROPERTY_PREFIX, MonitorsConfig.class);
     JsonConfigProvider.bind(binder, OshiSysMonitorConfig.PREFIX, OshiSysMonitorConfig.class);
+    JsonConfigProvider.bind(binder, JvmMonitorConfig.PREFIX, JvmMonitorConfig.class);
 
     DruidBinders.metricMonitorBinder(binder); // get the binder so that it will inject the empty set at a minimum.
 
@@ -151,14 +153,15 @@ public class MetricsModule implements Module
   @Provides
   @ManageLifecycle
   public JvmMonitor getJvmMonitor(
-      DataSourceTaskIdHolder dataSourceTaskIdHolder
+      DataSourceTaskIdHolder dataSourceTaskIdHolder,
+      JvmMonitorConfig config
   )
   {
     Map<String, String[]> dimensions = MonitorsConfig.mapOfDatasourceAndTaskID(
         dataSourceTaskIdHolder.getDataSource(),
         dataSourceTaskIdHolder.getTaskId()
     );
-    return new JvmMonitor(dimensions);
+    return new JvmMonitor(dimensions, config);
   }
 
   @Provides
