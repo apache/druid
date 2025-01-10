@@ -27,15 +27,19 @@ ARG ZK_VERSION
 ARG APACHE_ARCHIVE_MIRROR_HOST=https://downloads.apache.org
 ARG SETUP_RETRIES=3
 # Retry mechanism for running the setup script up to limit of 3 times.
-RUN set -e; \
-    for i in $(seq 1 $SETUP_RETRIES); do \
-        echo "Attempt $i to run the setup script..."; \
+RUN i=0; \
+    while [ $i -lt $SETUP_RETRIES ]; do \
         APACHE_ARCHIVE_MIRROR_HOST=${APACHE_ARCHIVE_MIRROR_HOST} /root/base-setup.sh && break || { \
+            i=$(($i + 1)); \
             echo "Set up script attempt $i/$SETUP_RETRIES failed."; \
             sleep 2; \
         }; \
     done; \
-    rm -f /root/base-setup.sh
+    rm -f /root/base-setup.sh; \
+    if [ "$i" -eq "$SETUP_RETRIES" ]; then \
+        exit 1; \
+    fi
+
 
 FROM druidbase
 ARG MYSQL_VERSION
