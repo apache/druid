@@ -1647,12 +1647,7 @@
                             <goal>check</goal>
                         </goals>
                         <configuration>
-                            <signature>
-                                <groupId>org.codehaus.mojo.signature
-                                </groupId>
-                                <artifactId>java18</artifactId>
-                                <version>1.0</version>
-                            </signature>
+                            <!-- checks for ${java.version}, TODO: replace this plugin with release flag with javac, see https://openjdk.org/jeps/247  -->
                             <ignores>
                                 <!-- Some of our code uses sun.* classes directly, which are not part of
                                      the JDK signature (although they are there anyway). -->

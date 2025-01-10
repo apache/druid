@@ -27,8 +27,8 @@ import org.apache.druid.java.util.emitter.service.SegmentMetadataEvent;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
-import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.AuthorizationResult;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
@@ -67,7 +67,7 @@ public class IndexTaskUtils
    *
    * @return authorization result
    */
-  public static Access datasourceAuthorizationCheck(
+  public static AuthorizationResult datasourceAuthorizationCheck(
       final HttpServletRequest req,
       Action action,
       String datasource,
@@ -79,12 +79,11 @@ public class IndexTaskUtils
         action
     );
 
-    Access access = AuthorizationUtils.authorizeResourceAction(req, resourceAction, authorizerMapper);
-    if (!access.isAllowed()) {
-      throw new ForbiddenException(access.toString());
+    AuthorizationResult authResult = AuthorizationUtils.authorizeResourceAction(req, resourceAction, authorizerMapper);
+    if (!authResult.allowAccessWithNoRestriction()) {
+      throw new ForbiddenException(authResult.getErrorMessage());
     }
-
-    return access;
+    return authResult;
   }
 
   public static void setTaskDimensions(final ServiceMetricEvent.Builder metricBuilder, final Task task)
