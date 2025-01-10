@@ -1647,6 +1647,7 @@
                             <goal>check</goal>
                         </goals>
                         <configuration>
+                            <!-- checks for ${java.version}, TODO: replace this plugin with release flag with javac, see https://openjdk.org/jeps/247  -->
                             <ignores>
                                 <!-- Some of our code uses sun.* classes directly, which are not part of
                                      the JDK signature (although they are there anyway). -->
