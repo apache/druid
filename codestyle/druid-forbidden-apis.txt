@@ -2,6 +2,7 @@ com.fasterxml.jackson.databind.ObjectMapper#reader(com.fasterxml.jackson.core.ty
 com.fasterxml.jackson.databind.ObjectMapper#reader(com.fasterxml.jackson.databind.JavaType) @ Use ObjectMapper#readerFor instead
 com.fasterxml.jackson.databind.ObjectMapper#reader(java.lang.Class) @ Use ObjectMapper#readerFor instead
 com.fasterxml.jackson.databind.ObjectMapper#writeValue(com.fasterxml.jackson.core.JsonGenerator, java.lang.Object) @ Use JacksonUtils#writeObjectUsingSerializerProvider to allow SerializerProvider reuse
+com.fasterxml.jackson.databind.ObjectMapper#writerWithType(com.fasterxml.jackson.core.type.TypeReference) @ Use ObjectMapper#writeFor instead
 com.fasterxml.jackson.core.JsonGenerator#writeObject(java.lang.Object) @ Use JacksonUtils#writeObjectUsingSerializerProvider to allow SerializerProvider reuse
 com.google.common.base.Charsets @ Use java.nio.charset.StandardCharsets instead
 com.google.common.collect.Iterators#emptyIterator() @ Use java.util.Collections#emptyIterator()

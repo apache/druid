@@ -132,7 +132,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
   )
   {
     this.jsonMapper = jsonMapper;
-    this.requestBodyWriter = jsonMapper.writerWithType(REQUEST_ENTITY_TYPE_REF);
+    this.requestBodyWriter = jsonMapper.writerFor(REQUEST_ENTITY_TYPE_REF);
     this.httpClient = httpClient;
     this.config = config;
     this.processingExecutor = processingExecutor;
