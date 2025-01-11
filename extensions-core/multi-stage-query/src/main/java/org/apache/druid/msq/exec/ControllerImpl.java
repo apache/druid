@@ -86,8 +86,10 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.counters.CounterSnapshots;
 import org.apache.druid.msq.counters.CounterSnapshotsTree;
+import org.apache.druid.msq.counters.QueryCounterSnapshot;
 import org.apache.druid.msq.indexing.InputChannelFactory;
 import org.apache.druid.msq.indexing.InputChannelsImpl;
 import org.apache.druid.msq.indexing.MSQControllerTask;
@@ -162,6 +164,7 @@ import org.apache.druid.msq.querykit.results.QueryResultFrameProcessorFactory;
 import org.apache.druid.msq.querykit.scan.ScanQueryKit;
 import org.apache.druid.msq.shuffle.input.DurableStorageInputChannelFactory;
 import org.apache.druid.msq.shuffle.input.WorkerInputChannelFactory;
+import org.apache.druid.msq.statistics.ClusterByStatisticsCollector;
 import org.apache.druid.msq.statistics.PartialKeyStatisticsInformation;
 import org.apache.druid.msq.util.IntervalUtils;
 import org.apache.druid.msq.util.MSQFutureUtils;
@@ -514,7 +517,7 @@ public class ControllerImpl implements Controller
       stagesReport = null;
     }
 
-    return new MSQTaskReportPayload(
+    final MSQTaskReportPayload msqTaskReportPayload = new MSQTaskReportPayload(
         makeStatusReport(
             taskStateForReport,
             errorForReport,
@@ -529,6 +532,31 @@ public class ControllerImpl implements Controller
         countersSnapshot,
         null
     );
+    // Emit summary metrics
+    emitSummaryMetrics(msqTaskReportPayload, querySpec);
+    return msqTaskReportPayload;
+  }
+
+  private void emitSummaryMetrics(final MSQTaskReportPayload msqTaskReportPayload, final MSQSpec querySpec)
+  {
+    long totalProcessedBytes = msqTaskReportPayload.getCounters() != null
+        ? msqTaskReportPayload.getCounters().copyMap().values().stream().mapToLong(
+            integerCounterSnapshotsMap -> integerCounterSnapshotsMap.values().stream()
+                .mapToLong(counterSnapshots -> {
+                  Map<String, QueryCounterSnapshot> workerCounters = counterSnapshots.getMap();
+                  return workerCounters.entrySet().stream().mapToLong(
+                      channel -> {
+                        if (channel.getKey().startsWith("input")) {
+                          ChannelCounters.Snapshot snapshot = (ChannelCounters.Snapshot) channel.getValue();
+                          return snapshot.getBytes() == null ? 0L : Arrays.stream(snapshot.getBytes()).sum();
+                        }
+                        return 0L;
+                      }).sum();
+                }).sum()).sum()
+        : 0;
+
+    log.debug("Processed bytes[%d] for query[%s].", totalProcessedBytes, querySpec.getQuery());
+    context.emitMetric("ingest/processed/bytes", totalProcessedBytes);
   }
 
   /**
@@ -2418,7 +2446,7 @@ public class ControllerImpl implements Controller
     }
 
     /**
-     * Enqueues the fetching {@link org.apache.druid.msq.statistics.ClusterByStatisticsCollector}
+     * Enqueues the fetching {@link ClusterByStatisticsCollector}
      * from each worker via {@link WorkerSketchFetcher}
      */
     private void fetchStatsFromWorkers()
