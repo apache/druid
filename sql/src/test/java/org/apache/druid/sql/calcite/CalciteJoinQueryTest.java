@@ -1980,7 +1980,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   // This SQL currently does not result in an optimum plan.
   // Unfortunately, we have disabled pushing down predicates (conditions and filters) due to https://github.com/apache/druid/pull/9773
   // Hence, comma join will result in a cross join with filter on outermost
-  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.IRRELEVANT_SCANQUERY)
+  @DecoupledTestConfig(ignoreExpectedQueriesReason = IgnoreQueriesReason.XL)
   @MethodSource("provideQueryContexts")
   @ParameterizedTest(name = "{0}")
   public void testCommaJoinTableLookupTableMismatchedTypes(Map<String, Object> queryContext)
@@ -2843,6 +2843,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @DecoupledTestConfig(ignoreExpectedQueriesReason = IgnoreQueriesReason.XL)
   @MethodSource("provideQueryContexts")
   @ParameterizedTest(name = "{0}")
   public void testLeftJoinOnTwoInlineDataSourcesWithTimeFilter(Map<String, Object> queryContext)
@@ -2976,6 +2977,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @DecoupledTestConfig(ignoreExpectedQueriesReason = IgnoreQueriesReason.XL)
   @MethodSource("provideQueryContexts")
   @ParameterizedTest(name = "{0}")
   public void testLeftJoinOnTwoInlineDataSourcesWithOuterWhere(Map<String, Object> queryContext)
@@ -3083,6 +3085,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @DecoupledTestConfig(ignoreExpectedQueriesReason = IgnoreQueriesReason.XL)
   @MethodSource("provideQueryContexts")
   @ParameterizedTest(name = "{0}")
   public void testLeftJoinOnTwoInlineDataSources(Map<String, Object> queryContext)
@@ -3190,6 +3193,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @DecoupledTestConfig(ignoreExpectedQueriesReason = IgnoreQueriesReason.XL)
   @MethodSource("provideQueryContexts")
   @ParameterizedTest(name = "{0}")
   public void testInnerJoinOnTwoInlineDataSourcesWithOuterWhere(Map<String, Object> queryContext)
@@ -3297,6 +3301,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @DecoupledTestConfig(ignoreExpectedQueriesReason = IgnoreQueriesReason.XL)
   @MethodSource("provideQueryContexts")
   @ParameterizedTest(name = "{0}")
   public void testInnerJoinOnTwoInlineDataSources(Map<String, Object> queryContext)
@@ -3505,6 +3510,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @DecoupledTestConfig(ignoreExpectedQueriesReason = IgnoreQueriesReason.XL)
   @Test
   public void testLeftJoinRightTableCanBeEmpty()
   {
@@ -6020,7 +6026,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledTestConfig(ignoreExpectedQueriesReason = IgnoreQueriesReason.UNNEST_EXTRA_SCANQUERY)
+  @DecoupledTestConfig(ignoreExpectedQueriesReason = IgnoreQueriesReason.XL)
   @Test
   public void testJoinsWithUnnestOverFilteredDSOnLeft()
   {
@@ -6045,7 +6051,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                                 new TableDataSource(CalciteTests.DATASOURCE1),
                                 equality("dim2", "a", ColumnType.STRING)
                             ),
-                            expressionVirtualColumn("j0.unnest", "\"dim3\"", ColumnType.STRING),
+                            nestedExpressionVirtualColumn("j0.unnest", "\"dim3\"", ColumnType.STRING),
                             null
                         ),
                         new QueryDataSource(

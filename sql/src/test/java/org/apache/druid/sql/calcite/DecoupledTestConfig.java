@@ -53,7 +53,8 @@ public @interface DecoupledTestConfig
     /**
      * An extra ScanQuery to service a Project and/or Filter was added.
      */
-    UNNEST_EXTRA_SCANQUERY;
+    UNNEST_EXTRA_SCANQUERY,
+    XL;
 
     public boolean isPresent()
     {

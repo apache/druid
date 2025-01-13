@@ -235,7 +235,7 @@ public class DruidQueryGenerator
 
     boolean filteredDatasourceAllowed()
     {
-      return joinType == JoinPosition.NONE;
+      return joinType != JoinPosition.RIGHT;
     }
 
     boolean finalizeSubQuery()
