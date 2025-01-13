@@ -63,7 +63,7 @@ public abstract class QueryResultPusher
   private final ObjectMapper jsonMapper;
   private final ResponseContextConfig responseContextConfig;
   private final DruidNode selfNode;
-  private final QueryResource.QueryMetricCounter counter;
+  private final QueryMetricCounter counter;
   private final MediaType contentType;
   private final Map<String, String> extraHeaders;
   private final HttpFields trailerFields;
@@ -77,7 +77,7 @@ public abstract class QueryResultPusher
       ObjectMapper jsonMapper,
       ResponseContextConfig responseContextConfig,
       DruidNode selfNode,
-      QueryResource.QueryMetricCounter counter,
+      QueryMetricCounter counter,
       String queryId,
       MediaType contentType,
       Map<String, String> extraHeaders

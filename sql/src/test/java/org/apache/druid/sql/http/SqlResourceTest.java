@@ -63,6 +63,7 @@ import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
+import org.apache.druid.server.BaseQueryCountResource;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.QueryResource;
 import org.apache.druid.server.QueryResponse;
@@ -180,6 +181,7 @@ public class SqlResourceTest extends CalciteTestBase
   private NativeSqlEngine engine;
   private SqlStatementFactory sqlStatementFactory;
   private StubServiceEmitter stubServiceEmitter;
+  private BaseQueryCountResource baseQueryResource;
 
   private CountDownLatch lifecycleAddLatch;
   private final SettableSupplier<NonnullPair<CountDownLatch, Boolean>> validateAndAuthorizeLatchSupplier = new SettableSupplier<>();
@@ -246,6 +248,7 @@ public class SqlResourceTest extends CalciteTestBase
     req = request();
 
     testRequestLogger = new TestRequestLogger();
+    baseQueryResource = new BaseQueryCountResource();
 
     final PlannerFactory plannerFactory = new PlannerFactory(
         rootSchema,
@@ -328,7 +331,8 @@ public class SqlResourceTest extends CalciteTestBase
         lifecycleManager,
         new ServerConfig(),
         TEST_RESPONSE_CONTEXT_CONFIG,
-        DUMMY_DRUID_NODE
+        DUMMY_DRUID_NODE,
+        baseQueryResource
     );
   }
 
@@ -1525,7 +1529,8 @@ public class SqlResourceTest extends CalciteTestBase
           }
         },
         TEST_RESPONSE_CONTEXT_CONFIG,
-        DUMMY_DRUID_NODE
+        DUMMY_DRUID_NODE,
+        baseQueryResource
     );
 
     String errorMessage = "This will be supported in Druid 9999";
@@ -1679,7 +1684,9 @@ public class SqlResourceTest extends CalciteTestBase
       }
     }
     Assert.assertEquals(2, success);
+    Assert.assertEquals(2, resource.counter.getSuccessfulQueryCount());
     Assert.assertEquals(1, limited);
+    Assert.assertEquals(1, resource.counter.getFailedQueryCount());
     Assert.assertEquals(3, testRequestLogger.getSqlQueryLogs().size());
     Assert.assertTrue(lifecycleManager.getAll(sqlQueryId).isEmpty());
   }
@@ -1715,6 +1722,7 @@ public class SqlResourceTest extends CalciteTestBase
         ""
     );
     Assert.assertTrue(lifecycleManager.getAll(sqlQueryId).isEmpty());
+    Assert.assertEquals(1, resource.counter.getTimedOutQueryCount());
   }
 
   @Test
