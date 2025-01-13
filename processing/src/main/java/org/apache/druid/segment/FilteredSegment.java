@@ -20,28 +20,31 @@
 package org.apache.druid.segment;
 
 import org.apache.druid.query.filter.DimFilter;
-
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
+// FIXME
 public class FilteredSegment extends WrappedSegmentReference
 {
   @Nullable
   private final DimFilter filter;
+  private final VirtualColumns virtualColumns;
 
   public FilteredSegment(
       SegmentReference delegate,
-      @Nullable DimFilter filter
+      @Nullable DimFilter filter,
+      @Nullable VirtualColumns virtualColumns
   )
   {
     super(delegate);
     this.filter = filter;
+    this.virtualColumns = virtualColumns;
   }
 
   @Override
   public CursorFactory asCursorFactory()
   {
-    return new FilteredCursorFactory(delegate.asCursorFactory(), filter);
+    return new FilteredCursorFactory(delegate.asCursorFactory(), filter, virtualColumns);
   }
 
   @Nullable
@@ -49,7 +52,7 @@ public class FilteredSegment extends WrappedSegmentReference
   public <T> T as(@Nonnull Class<T> clazz)
   {
     if (TopNOptimizationInspector.class.equals(clazz)) {
-      return (T) new SimpleTopNOptimizationInspector(filter == null);
+      return (T) new SimpleTopNOptimizationInspector(filter == null && virtualColumns == null);
     }
     return super.as(clazz);
   }

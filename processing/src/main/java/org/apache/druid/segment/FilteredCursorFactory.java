@@ -19,6 +19,10 @@
 
 package org.apache.druid.segment;
 
+<<<<<<< HEAD
+import com.google.common.collect.Iterables;
+=======
+>>>>>>> apache/master
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -30,22 +34,41 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
+import java.util.Arrays;
+
 public class FilteredCursorFactory implements CursorFactory
 {
   private final CursorFactory delegate;
   @Nullable
   private final DimFilter filter;
+  private final VirtualColumns virtualColumns;
 
-  public FilteredCursorFactory(CursorFactory delegate, @Nullable DimFilter filter)
+  public FilteredCursorFactory(
+      CursorFactory delegate,
+      @Nullable DimFilter filter,
+      @Nullable VirtualColumns virtualColumns)
   {
     this.delegate = delegate;
     this.filter = filter;
+    this.virtualColumns = virtualColumns == null ? VirtualColumns.EMPTY : virtualColumns;
   }
 
   @Override
   public CursorHolder makeCursorHolder(CursorBuildSpec spec)
   {
     final CursorBuildSpec.CursorBuildSpecBuilder buildSpecBuilder = CursorBuildSpec.builder(spec);
+<<<<<<< HEAD
+    // FIXME maybeAnd
+    buildSpecBuilder.setFilter(Filters.conjunction(spec.getFilter(), getFilter()));
+    buildSpecBuilder.setVirtualColumns(
+        VirtualColumns.fromIterable(
+            Iterables.concat(
+                Arrays.asList(spec.getVirtualColumns().getVirtualColumns()),
+                Arrays.asList(virtualColumns.getVirtualColumns())
+            )
+        )
+    );
+=======
     final Filter newFilter;
     final Set<String> physicalColumns;
     if (filter != null) {
@@ -70,7 +93,16 @@ public class FilteredCursorFactory implements CursorFactory
     }
     buildSpecBuilder.setFilter(newFilter)
                     .setPhysicalColumns(physicalColumns);
+>>>>>>> apache/master
     return delegate.makeCursorHolder(buildSpecBuilder.build());
+  }
+
+  private Filter getFilter()
+  {
+    if (filter == null) {
+      return null;
+    }
+    return filter.toFilter();
   }
 
   @Override

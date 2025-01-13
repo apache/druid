@@ -1065,4 +1065,9 @@ public class Druids
   {
     return new DataSourceMetadataQueryBuilder();
   }
+
+  public static FilteredDataSource filteredDataSource(DataSource base, DimFilter filter)
+  {
+    return FilteredDataSource.create(base, filter, null);
+  }
 }

@@ -20,6 +20,8 @@
 package org.apache.druid.query;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.IAE;
@@ -27,9 +29,11 @@ import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.FilteredSegment;
 import org.apache.druid.segment.SegmentReference;
+import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.utils.JvmUtils;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -49,10 +53,12 @@ import java.util.function.Function;
  * putting more work to be done at the broker level. This pushes the operations down to the
  * segments and is more performant.
  */
+@JsonInclude(Include.NON_NULL)
 public class FilteredDataSource implements DataSource
 {
   private final DataSource base;
   private final DimFilter filter;
+  private final VirtualColumns virtualColumns;
 
   @JsonProperty("base")
   public DataSource getBase()
@@ -66,19 +72,35 @@ public class FilteredDataSource implements DataSource
     return filter;
   }
 
-  private FilteredDataSource(DataSource base, @Nullable DimFilter filter)
+  @JsonProperty("virtualColumns")
+  public VirtualColumns getVirtualColumns()
+  {
+    return virtualColumns;
+  }
+
+  private FilteredDataSource(DataSource base, @Nullable DimFilter filter, VirtualColumns virtualColumns)
   {
     this.base = base;
     this.filter = filter;
+    this.virtualColumns = virtualColumns;
   }
 
   @JsonCreator
   public static FilteredDataSource create(
       @JsonProperty("base") DataSource base,
-      @JsonProperty("filter") @Nullable DimFilter f
+      @JsonProperty("filter") @Nullable DimFilter filter,
+      @JsonProperty("virtualColumns") @Nullable VirtualColumns virtualColumns
   )
   {
-    return new FilteredDataSource(base, f);
+    return new FilteredDataSource(base, filter, virtualColumns);
+  }
+
+  public static FilteredDataSource create(
+      DataSource base,
+      @Nullable DimFilter filter
+  )
+  {
+    return Druids.filteredDataSource(base, filter);
   }
 
   @Override
@@ -100,7 +122,7 @@ public class FilteredDataSource implements DataSource
       throw new IAE("Expected [1] child, got [%d]", children.size());
     }
 
-    return new FilteredDataSource(children.get(0), filter);
+    return new FilteredDataSource(children.get(0), filter, virtualColumns);
   }
 
   @Override
@@ -133,23 +155,24 @@ public class FilteredDataSource implements DataSource
     );
     return JvmUtils.safeAccumulateThreadCpuTime(
         cpuTimeAccumulator,
-        () -> baseSegment -> new FilteredSegment(segmentMapFn.apply(baseSegment), filter)
+        () -> baseSegment -> new FilteredSegment(segmentMapFn.apply(baseSegment), filter, virtualColumns)
     );
   }
 
   @Override
   public DataSource withUpdatedDataSource(DataSource newSource)
   {
-    return new FilteredDataSource(newSource, filter);
+    return new FilteredDataSource(newSource, filter, virtualColumns);
   }
 
   @Override
   public String toString()
   {
     return "FilteredDataSource{" +
-           "base=" + base +
-           ", filter='" + filter + '\'' +
-           '}';
+        "base=" + base +
+        ", filter='" + filter + "'" +
+        ", virtualColumns=" + virtualColumns +
+        '}';
   }
 
   @Override
@@ -175,12 +198,14 @@ public class FilteredDataSource implements DataSource
       return false;
     }
     FilteredDataSource that = (FilteredDataSource) o;
-    return Objects.equals(base, that.base) && Objects.equals(filter, that.filter);
+    return Objects.equals(base, that.base) &&
+        Objects.equals(filter, that.filter) &&
+        Objects.equals(virtualColumns, that.virtualColumns);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(base, filter);
+    return Objects.hash(base, filter, virtualColumns);
   }
 }
