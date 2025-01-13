@@ -407,18 +407,4 @@ public class Filters
     }
     return 1;
   }
-
-  public static Filter conjunction(Filter... filters)
-  {
-    LinkedHashSet<Filter> filterOperands = new LinkedHashSet<>();
-    for (Filter filter : filters) {
-      if (filter != null) {
-        filterOperands.add(filter);
-      }
-    }
-    if (filterOperands.size() <= 1) {
-      return filterOperands.isEmpty() ? null : filterOperands.iterator().next();
-    }
-    return new AndFilter(filterOperands);
-  }
 }

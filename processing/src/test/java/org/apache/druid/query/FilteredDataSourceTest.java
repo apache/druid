@@ -22,9 +22,7 @@ package org.apache.druid.query;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import nl.jqno.equalsverifier.EqualsVerifier;
-import org.apache.druid.query.filter.DimFilters;
 import org.apache.druid.segment.TestHelper;
-import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -32,15 +30,15 @@ import org.junit.rules.ExpectedException;
 
 import java.util.Collections;
 
-public class FilteredDataSourceTest extends InitializedNullHandlingTest
+public class FilteredDataSourceTest
 {
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
 
   private final TableDataSource fooDataSource = new TableDataSource("foo");
   private final TableDataSource barDataSource = new TableDataSource("bar");
-  private final FilteredDataSource filteredFooDataSource = FilteredDataSource.create(fooDataSource, DimFilters.dimEquals("col", "value"));
-  private final FilteredDataSource filteredBarDataSource = FilteredDataSource.create(barDataSource, DimFilters.dimEquals("col", "value"));
+  private final FilteredDataSource filteredFooDataSource = FilteredDataSource.create(fooDataSource, null);
+  private final FilteredDataSource filteredBarDataSource = FilteredDataSource.create(barDataSource, null);
 
   @Test
   public void test_getTableNames()
@@ -131,7 +129,7 @@ public class FilteredDataSourceTest extends InitializedNullHandlingTest
     final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
 
     final FilteredDataSource deserializedFilteredDataSource = jsonMapper.readValue(
-        "{\"type\":\"filter\",\"base\":{\"type\":\"table\",\"name\":\"foo\"},\"filter\":{\"type\":\"selector\",\"dimension\":\"col\",\"value\":\"value\"}}",
+        "{\"type\":\"filter\",\"base\":{\"type\":\"table\",\"name\":\"foo\"},\"filter\":null}",
         FilteredDataSource.class
     );
 
@@ -144,10 +142,7 @@ public class FilteredDataSourceTest extends InitializedNullHandlingTest
   {
     final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
     final String s = jsonMapper.writeValueAsString(filteredFooDataSource);
-    Assert.assertEquals(
-        "{\"type\":\"filter\",\"base\":{\"type\":\"table\",\"name\":\"foo\"},\"filter\":{\"type\":\"selector\",\"dimension\":\"col\",\"value\":\"value\"}}",
-        s
-    );
+    Assert.assertEquals("{\"type\":\"filter\",\"base\":{\"type\":\"table\",\"name\":\"foo\"},\"filter\":null}", s);
   }
 
   @Test
