@@ -33,7 +33,7 @@ apt-get -qq install -y supervisor
 
 # Zookeeper
 install_zk() {
-  wget --inet4-only -O /tmp/$ZK_TAR.tar.gz "$APACHE_ARCHIVE_MIRROR_HOST/zookeeper/zookeeper-$ZK_VERSION/$ZK_TAR.tar.gz"
+  wget -q4 --tries=10 --waitretry=10 -O /tmp/$ZK_TAR.tar.gz "$APACHE_ARCHIVE_MIRROR_HOST/zookeeper/zookeeper-$ZK_VERSION/$ZK_TAR.tar.gz"
   tar -xzf /tmp/$ZK_TAR.tar.gz -C /usr/local
   cp /usr/local/$ZK_TAR/conf/zoo_sample.cfg /usr/local/$ZK_TAR/conf/zoo.cfg
   rm /tmp/$ZK_TAR.tar.gz
@@ -45,7 +45,7 @@ ln -s /usr/local/$ZK_TAR /usr/local/zookeeper
 
 # Kafka
 # KAFKA_VERSION is defined by docker build arguments
-wget --inet4-only -O /tmp/kafka_2.13-$KAFKA_VERSION.tgz "$APACHE_ARCHIVE_MIRROR_HOST/kafka/$KAFKA_VERSION/kafka_2.13-$KAFKA_VERSION.tgz"
+wget -q4 --tries=10 --waitretry=10 -O /tmp/kafka_2.13-$KAFKA_VERSION.tgz "$APACHE_ARCHIVE_MIRROR_HOST/kafka/$KAFKA_VERSION/kafka_2.13-$KAFKA_VERSION.tgz"
 tar -xzf /tmp/kafka_2.13-$KAFKA_VERSION.tgz -C /usr/local
 ln -s /usr/local/kafka_2.13-$KAFKA_VERSION /usr/local/kafka
 rm /tmp/kafka_2.13-$KAFKA_VERSION.tgz
