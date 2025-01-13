@@ -108,6 +108,12 @@ public @interface NotYetSupported
     {
       return Pattern.compile(regex, Pattern.MULTILINE | Pattern.DOTALL);
     }
+
+    @Override
+    public String toString()
+    {
+      return name() + "{" + regex + "}";
+    }
   };
 
   /**

@@ -20,6 +20,7 @@
 package org.apache.druid.sql.calcite;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Maps;
 import org.apache.druid.sql.calcite.NotYetSupported.Modes;
 import org.junit.Test;
 import org.reflections.Reflections;
@@ -34,6 +35,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
@@ -81,9 +83,9 @@ public class NotYetSupportedUsageTest
 
     public String className;
     private List<String> methodNames;
-    private Modes mode;
+    private Enum<?> mode;
 
-    public ReportEntry(String className, String methodName, Modes mode)
+    public ReportEntry(String className, String methodName, Enum<?> mode)
     {
       this.className = className;
       this.mode = mode;
@@ -104,7 +106,7 @@ public class NotYetSupportedUsageTest
     @Override
     public String toString()
     {
-      return " | " + className + " | " + methodNames.size() + " | " + mode + " | " + mode.regex + " | ";
+      return " | " + className + " | " + methodNames.size() + " | " + mode.name() + " | " + mode + " | ";
     }
   }
 
@@ -112,13 +114,20 @@ public class NotYetSupportedUsageTest
   public void createReport()
   {
     Set<Method> methodsAnnotatedWith = getAnnotatedMethods();
+    Map<Method, Modes> map = Maps.asMap(methodsAnnotatedWith, this::getAnnotation);
+    createReport(map);
+  }
 
+
+  private void createReport(Map<Method,Modes> methodsAnnotatedWith)
+  {
     Map<List<Object>, ReportEntry> mentryMap = new HashMap<>();
-    for (Method method : methodsAnnotatedWith) {
+    for (Entry<Method, Modes> e : methodsAnnotatedWith.entrySet()) {
+      Method method = e.getKey();;
       ReportEntry entry = new ReportEntry(
           method.getDeclaringClass().getSimpleName(),
           method.getName(),
-          getAnnotation(method)
+          e.getValue()
       );
       ReportEntry existing = mentryMap.get(entry.getKey());
       if (existing != null) {
@@ -133,7 +142,6 @@ public class NotYetSupportedUsageTest
     for (ReportEntry reportEntry : results) {
       System.out.println(reportEntry);
     }
-
   }
 
   private Modes getAnnotation(Method method)
