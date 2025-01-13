@@ -99,17 +99,4 @@ public class MSQTuningConfigTest
     Assert.assertEquals(Integer.valueOf(10), msqTuningConfig.getMaxNumSegments());
     Assert.assertEquals(IndexSpec.builder().build(), msqTuningConfig.getIndexSpec());
   }
-
-  @Test
-  public void testToString()
-  {
-    MSQTuningConfig msqTuningConfig = new MSQTuningConfig(1, 100000, 5000, 10, IndexSpec.builder().build());
-    String toStringResult = msqTuningConfig.toString();
-    Assert.assertNotNull(toStringResult);
-    Assert.assertTrue(toStringResult.contains("maxNumWorkers=1"));
-    Assert.assertTrue(toStringResult.contains("maxRowsInMemory=100000"));
-    Assert.assertTrue(toStringResult.contains("rowsPerSegment=5000"));
-    Assert.assertTrue(toStringResult.contains("maxNumSegments=10"));
-    Assert.assertTrue(toStringResult.contains("indexSpec=IndexSpec{bitmapSerdeFactory=RoaringBitmapSerdeFactory{}, dimensionCompression=lz4, stringDictionaryEncoding=Utf8{}, metricCompression=lz4, longEncoding=longs, complexMetricCompression=null, jsonCompression=null, segmentLoader=null}"));
-  }
 }

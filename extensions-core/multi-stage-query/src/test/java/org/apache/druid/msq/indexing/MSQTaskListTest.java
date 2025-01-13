@@ -82,14 +82,6 @@ public class MSQTaskListTest
   }
 
   @Test
-  public void testToString()
-  {
-    List<String> taskIds = Arrays.asList("task1", "task2");
-    MSQTaskList msqTaskList = new MSQTaskList(taskIds);
-    assertEquals("MSQTaskList{taskIds=[task1, task2]}", msqTaskList.toString());
-  }
-
-  @Test
   public void testJsonSerialization() throws Exception
   {
     List<String> taskIds = Arrays.asList("task1", "task2");

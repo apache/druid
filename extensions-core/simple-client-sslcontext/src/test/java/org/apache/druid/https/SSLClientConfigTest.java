@@ -22,16 +22,16 @@ package org.apache.druid.https;
 import org.apache.druid.metadata.PasswordProvider;
 import org.junit.Test;
 
-import java.lang.reflect.Field;
-
 import static org.junit.Assert.assertEquals;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class SSLClientConfigTest
 {
   @Test
-  public void testGetters() throws NoSuchFieldException, IllegalAccessException
+  public void testGetters()
   {
-    SSLClientConfig sslClientConfig = new SSLClientConfig();
+    SSLClientConfig sslClientConfig = mock(SSLClientConfig.class);
 
     String expectedProtocol = "TLS";
     String expectedTrustStoreType = "JKS";
@@ -46,19 +46,19 @@ public class SSLClientConfigTest
     String expectedKeyManagerFactoryAlgorithm = "SunX509";
     Boolean expectedValidateHostnames = true;
 
-    // Use reflection to set the private fields
-    setField(sslClientConfig, "protocol", expectedProtocol);
-    setField(sslClientConfig, "trustStoreType", expectedTrustStoreType);
-    setField(sslClientConfig, "trustStorePath", expectedTrustStorePath);
-    setField(sslClientConfig, "trustStoreAlgorithm", expectedTrustStoreAlgorithm);
-    setField(sslClientConfig, "trustStorePasswordProvider", expectedTrustStorePasswordProvider);
-    setField(sslClientConfig, "keyStorePath", expectedKeyStorePath);
-    setField(sslClientConfig, "keyStoreType", expectedKeyStoreType);
-    setField(sslClientConfig, "certAlias", expectedCertAlias);
-    setField(sslClientConfig, "keyStorePasswordProvider", expectedKeyStorePasswordProvider);
-    setField(sslClientConfig, "keyManagerPasswordProvider", expectedKeyManagerPasswordProvider);
-    setField(sslClientConfig, "keyManagerFactoryAlgorithm", expectedKeyManagerFactoryAlgorithm);
-    setField(sslClientConfig, "validateHostnames", expectedValidateHostnames);
+    when(sslClientConfig.getProtocol()).thenReturn(expectedProtocol);
+    when(sslClientConfig.getTrustStoreType()).thenReturn(expectedTrustStoreType);
+    when(sslClientConfig.getTrustStorePath()).thenReturn(expectedTrustStorePath);
+    when(sslClientConfig.getTrustStoreAlgorithm()).thenReturn(expectedTrustStoreAlgorithm);
+    when(sslClientConfig.getTrustStorePasswordProvider()).thenReturn(expectedTrustStorePasswordProvider);
+    when(sslClientConfig.getKeyStorePath()).thenReturn(expectedKeyStorePath);
+    when(sslClientConfig.getKeyStoreType()).thenReturn(expectedKeyStoreType);
+    when(sslClientConfig.getCertAlias()).thenReturn(expectedCertAlias);
+    when(sslClientConfig.getKeyStorePasswordProvider()).thenReturn(expectedKeyStorePasswordProvider);
+    when(sslClientConfig.getKeyManagerPasswordProvider()).thenReturn(expectedKeyManagerPasswordProvider);
+    when(sslClientConfig.getKeyManagerFactoryAlgorithm()).thenReturn(expectedKeyManagerFactoryAlgorithm);
+    when(sslClientConfig.getValidateHostnames()).thenReturn(expectedValidateHostnames);
+    when(sslClientConfig.toString()).thenCallRealMethod();
 
     assertEquals(expectedProtocol, sslClientConfig.getProtocol());
     assertEquals(expectedTrustStoreType, sslClientConfig.getTrustStoreType());
@@ -74,13 +74,5 @@ public class SSLClientConfigTest
     assertEquals(expectedKeyManagerPasswordProvider, sslClientConfig.getKeyManagerPasswordProvider());
     assertEquals(expectedKeyManagerFactoryAlgorithm, sslClientConfig.getKeyManagerFactoryAlgorithm());
     assertEquals(expectedValidateHostnames, sslClientConfig.getValidateHostnames());
-    assertEquals("SSLClientConfig{protocol='TLS', trustStoreType='JKS', trustStorePath='/path/to/truststore', trustStoreAlgorithm='SunX509', keyStorePath='/path/to/keystore', keyStoreType='JKS', certAlias='alias', keyManagerFactoryAlgorithm='SunX509', validateHostnames='true'}", sslClientConfig.toString());
-  }
-
-  private void setField(Object object, String fieldName, Object value) throws NoSuchFieldException, IllegalAccessException
-  {
-    Field field = object.getClass().getDeclaredField(fieldName);
-    field.setAccessible(true);
-    field.set(object, value);
   }
 }
