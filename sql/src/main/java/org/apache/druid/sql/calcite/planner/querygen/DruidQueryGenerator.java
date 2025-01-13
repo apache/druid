@@ -453,11 +453,7 @@ public class DruidQueryGenerator
           DruidQuery q = buildQuery(false);
           SourceDesc origInput = getSource();
           DataSource dataSource;
-          if (q.getFilter() == null) {
-            dataSource = origInput.dataSource;
-          } else {
-            dataSource = makeFilteredDataSource(origInput, q.getFilter(), q.getVirtualColumns());
-          }
+          dataSource = makeFilteredDataSource(origInput, q.getFilter(), q.getVirtualColumns());
           return new SourceDesc(dataSource, q.getOutputRowSignature());
         }
         throw DruidException.defensive("Can't unwrap source of vertex[%s]", partialDruidQuery);
@@ -537,11 +533,22 @@ public class DruidQueryGenerator
    * The fact that {@link Filtration} have to be run on the filter is out-of scope here.
    * @param virtualColumns
    */
-  public static FilteredDataSource makeFilteredDataSource(SourceDesc sd, DimFilter filter, VirtualColumns virtualColumns)
+  public static DataSource makeFilteredDataSource(SourceDesc sd, DimFilter filter, VirtualColumns virtualColumns)
   {
+    if (virtualColumns.isEmpty() && filter == null) {
+      return sd.dataSource;
+    }
+    DimFilter newFilter = makeOptimizedFilter(sd, filter);
+    return FilteredDataSource.create(sd.dataSource, newFilter, virtualColumns);
+  }
 
+  private static DimFilter makeOptimizedFilter(SourceDesc sd, DimFilter filter)
+  {
+    if (filter == null) {
+      return null;
+    }
     Filtration filtration = Filtration.create(filter).optimizeFilterOnly(sd.rowSignature);
     DimFilter newFilter = filtration.getDimFilter();
-    return FilteredDataSource.create(sd.dataSource, newFilter, virtualColumns);
+    return newFilter;
   }
 }
