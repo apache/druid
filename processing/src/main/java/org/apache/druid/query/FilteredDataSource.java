@@ -32,10 +32,6 @@ import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.VirtualColumns;
 import javax.annotation.Nullable;
 
-import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.Method;
-import java.lang.reflect.Proxy;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -159,41 +155,6 @@ public class FilteredDataSource implements DataSource
         newCfg
     );
     return baseSegment -> new FilteredSegment(segmentMapFn.apply(baseSegment), filter, virtualColumns);
-  }
-
-  class QueryInvocationHandler implements InvocationHandler
-  {
-      private Query query;
-      private Set<String> requiredColumns;
-      public QueryInvocationHandler(Query q, Set<String> requiredColumns)
-      {
-          this.query=q;
-          this.requiredColumns=requiredColumns;
-      }
-      @Override
-      public Object invoke(Object proxy, Method method, Object[] args) throws Throwable
-      {
-        if (method.getName().equals("getRequiredColumns"))
-        {
-            return requiredColumns;
-        }
-        else
-        {
-            return method.invoke(query, args);
-        }
-      }
-  }
-
-  //FIXME
-  @Deprecated
-  private Query overrideQueryRequiredColumns(Query query, Set<String> requiredColumns) throws Exception
-  {
-
-//    if(true) {
-//      return query;
-//    }
-    Class proxyClass = Proxy.getProxyClass(getClass().getClassLoader(), Query.class);
-    return (Query) proxyClass.getConstructor(InvocationHandler.class).newInstance(new QueryInvocationHandler(query, requiredColumns));
   }
 
   @Override

@@ -456,6 +456,7 @@ public class JoinDataSource implements DataSource
             final Set<String> requiredColumns = cfg.getRequiredColumns();
             final Filter baseFilterToUse;
             final List<JoinableClause> clausesToUse;
+            SegmentMapConfig subCfg = cfg;
 
             if (requiredColumns != null && filterRewriteConfig.isEnableRewriteJoinToFilter()) {
               final Pair<List<Filter>, List<JoinableClause>> conversionResult = JoinableFactoryWrapper.convertJoinsToFilters(
@@ -474,6 +475,12 @@ public class JoinDataSource implements DataSource
                       )
                   ).orElse(null);
               clausesToUse = conversionResult.rhs;
+              if (false) {
+                // FIXME doesn't seem like this is needed
+                Set<String> a = conversionResult.lhs.stream().flatMap(f -> f.getRequiredColumns().stream())
+                    .collect(Collectors.toSet());
+                subCfg = subCfg.withColumns(a);
+              }
             } else {
               baseFilterToUse = baseFilter;
               clausesToUse = joinableClauses.getJoinableClauses();
@@ -490,23 +497,7 @@ public class JoinDataSource implements DataSource
                 )
             );
             // FIXME
-            SegmentMapConfig newCfg = cfg;
-            final Function<SegmentReference, SegmentReference> baseMapFn;
-            // A join data source is not concrete
-            // And isConcrete() of an unnest datasource delegates to its base
-            // Hence, in the case of a Join -> Unnest -> Join
-            // if we just use isConcrete on the left
-            // the segment map function for the unnest would never get called
-            // This calls us to delegate to the segmentMapFunction of the left
-            // only when it is not a JoinDataSource
-            if (left instanceof JoinDataSource) {
-              baseMapFn = Function.identity();
-              if(true) {
-                throw new RuntimeException("whot");
-              }
-            } else {
-              baseMapFn = left.createSegmentMapFunction(newCfg);
-            }
+            final Function<SegmentReference, SegmentReference> baseMapFn = left.createSegmentMapFunction(subCfg);
             return baseSegment ->
                 new HashJoinSegment(
                     baseMapFn.apply(baseSegment),
