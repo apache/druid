@@ -5164,7 +5164,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.UNNEST_EXTRA_SCAN)
+  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.USES_SCAN_DATASOURCE)
   @Test
   public void testUnnestWithFilters()
   {
@@ -5196,7 +5196,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.UNNEST_EXTRA_SCAN)
+  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.USES_SCAN_DATASOURCE)
   @Test
   public void testUnnestWithFiltersWithExpressionInInnerQuery()
   {
@@ -5233,7 +5233,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.UNNEST_EXTRA_SCAN)
+  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.USES_SCAN_DATASOURCE)
   @Test
   public void testUnnestWithInFiltersWithExpressionInInnerQuery()
   {
@@ -5310,7 +5310,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.UNNEST_EXTRA_SCAN)
+  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.USES_SCAN_DATASOURCE)
   @Test
   public void testUnnestWithFiltersInsideAndOutside()
   {
