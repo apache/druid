@@ -24,16 +24,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.DataSource;
-import org.apache.druid.query.Query;
 import org.apache.druid.query.planning.DataSourceAnalysis;
-import org.apache.druid.segment.SegmentReference;
-
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Function;
 
 /**
  * Represents an input number, i.e., a positional index into
@@ -94,12 +89,6 @@ public class InputNumberDataSource implements DataSource
   {
     // InputNumberDataSource represents InputSpecs, which are scannable via Segment adapters.
     return true;
-  }
-
-  @Override
-  public Function<SegmentReference, SegmentReference> createSegmentMapFunction(Query query, AtomicLong cpuTimeAcc)
-  {
-    return Function.identity();
   }
 
   @Override
