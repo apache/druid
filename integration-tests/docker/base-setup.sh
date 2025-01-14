@@ -36,13 +36,7 @@ download_file() {
   local dest=$1
   local host=$2
 
-  if ! wget --inet4-only --quiet --continue --output-document="$dest" "$host"
-  then
-    echo "Download from $host failed!"
-    return 1
-  fi
-
-  echo "Download from $host succeeded!"
+  wget --retry-connrefused --no-verbose --continue --output-document="$dest" "$host"
 }
 
 # Zookeeper
