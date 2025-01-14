@@ -170,6 +170,12 @@ public class FrameBasedInlineDataSource implements DataSource
   }
 
   @Override
+  public Function<SegmentReference, SegmentReference> createSegmentMapFunction(SegmentMapConfig cfg)
+  {
+    return Function.identity();
+  }
+
+  @Override
   public DataSource withUpdatedDataSource(DataSource newSource)
   {
     return newSource;

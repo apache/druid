@@ -21,9 +21,13 @@ package org.apache.druid.query;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.google.common.collect.Sets;
+import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.planning.PreJoinableClause;
 import org.apache.druid.segment.SegmentReference;
+import org.apache.druid.segment.VirtualColumns;
+import org.apache.druid.segment.join.filter.rewrite.JoinFilterRewriteConfig;
 
 import java.util.List;
 import java.util.Set;
@@ -103,25 +107,54 @@ public interface DataSource
   static class SegmentMapConfig
   {
     private Query query;
+    private Set requiredColumns;
 
     public SegmentMapConfig(Query query)
     {
+      this(query,query.getRequiredColumns());
+    }
+
+    public SegmentMapConfig(Query query, Set requiredColumns)
+    {
       this.query = query;
+      this.requiredColumns=requiredColumns;
     }
 
     static SegmentMapConfig of(Query query)
     {
       return new SegmentMapConfig(query);
     }
+
+    public JoinFilterRewriteConfig getJoinFilterRewriteConfig()
+    {
+      return JoinFilterRewriteConfig.forQuery(query);
+    }
+
+    public Set<String> getRequiredColumns()
+    {
+      return query.getRequiredColumns();
+    }
+
+    public VirtualColumns getVirtualColumns()
+    {
+      return query.getVirtualColumns();
+    }
+
+    public DimFilter getFilter()
+    {
+      return query.getFilter();
+    }
+
+    public SegmentMapConfig withColumns(Set<String> requiredColumns)
+    {
+      return new SegmentMapConfig(query, Sets.union(this.requiredColumns, requiredColumns));
+    }
   }
 
   /**
    * Returns a segment function on to how to segment should be modified.
    */
-  default Function<SegmentReference, SegmentReference> createSegmentMapFunction(SegmentMapConfig query)
-  {
-    throw new RuntimeException();
-  }
+  Function<SegmentReference, SegmentReference> createSegmentMapFunction(SegmentMapConfig query);
 
   /**
    * Returns a segment function on to how to segment should be modified.
