@@ -144,14 +144,10 @@ public class FilteredDataSource implements DataSource
   }
 
   @Override
-  public Function<SegmentReference, SegmentReference> createSegmentMapFunction(
-      Query query,
-      AtomicLong cpuTimeAccumulator
-  )
+  public Function<SegmentReference, SegmentReference> createSegmentMapFunction(SegmentMapConfig req)
   {
     final Function<SegmentReference, SegmentReference> segmentMapFn = base.createSegmentMapFunction(
-        query,
-        cpuTimeAccumulator
+        req
     );
     return JvmUtils.safeAccumulateThreadCpuTime(
         cpuTimeAccumulator,
