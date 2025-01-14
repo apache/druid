@@ -37,6 +37,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -167,6 +168,12 @@ public class FrameBasedInlineDataSource implements DataSource
   public boolean isConcrete()
   {
     return true;
+  }
+
+  @Override
+  public Function<SegmentReference, SegmentReference> createSegmentMapFunction(Query query, AtomicLong cpuTimeAcc)
+  {
+    return Function.identity();
   }
 
   @Override
