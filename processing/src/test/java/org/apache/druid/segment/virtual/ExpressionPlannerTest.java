@@ -21,7 +21,6 @@ package org.apache.druid.segment.virtual;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
@@ -344,11 +343,7 @@ public class ExpressionPlannerTest extends InitializedNullHandlingTest
     ColumnCapabilities inferred = thePlan.inferColumnCapabilities(null);
     Assert.assertNotNull(inferred);
     Assert.assertEquals(ValueType.LONG, inferred.getType());
-    if (NullHandling.sqlCompatible()) {
-      Assert.assertTrue(inferred.hasNulls().isMaybeTrue());
-    } else {
-      Assert.assertFalse(inferred.hasNulls().isMaybeTrue());
-    }
+    Assert.assertTrue(inferred.hasNulls().isMaybeTrue());
     Assert.assertFalse(inferred.isDictionaryEncoded().isMaybeTrue());
     Assert.assertFalse(inferred.areDictionaryValuesSorted().isMaybeTrue());
     Assert.assertFalse(inferred.areDictionaryValuesUnique().isMaybeTrue());
@@ -383,11 +378,7 @@ public class ExpressionPlannerTest extends InitializedNullHandlingTest
     inferred = thePlan.inferColumnCapabilities(null);
     Assert.assertNotNull(inferred);
     Assert.assertEquals(ValueType.DOUBLE, inferred.getType());
-    if (NullHandling.sqlCompatible()) {
-      Assert.assertTrue(inferred.hasNulls().isMaybeTrue());
-    } else {
-      Assert.assertFalse(inferred.hasNulls().isMaybeTrue());
-    }
+    Assert.assertTrue(inferred.hasNulls().isMaybeTrue());
     Assert.assertFalse(inferred.isDictionaryEncoded().isMaybeTrue());
     Assert.assertFalse(inferred.areDictionaryValuesSorted().isMaybeTrue());
     Assert.assertFalse(inferred.areDictionaryValuesUnique().isMaybeTrue());

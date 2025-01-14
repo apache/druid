@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment.filter;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.filter.ColumnIndexSelector;
@@ -44,10 +43,10 @@ import java.util.Set;
 /**
  * Nice filter you have there... NOT!
  *
- * If {@link NullHandling#sqlCompatible()} is true, this filter inverts the {@code includeUnknown} flag to properly
- * map Druids native two-valued logic (true, false) to SQL three-valued logic (true, false, unknown). At the top level,
- * this flag is always passed in as 'false', and is only flipped by this filter. Other logical filters
- * ({@link AndFilter} and {@link OrFilter}) propagate the value of {@code includeUnknown} to their children.
+ * This filter inverts the {@code includeUnknown} flag to properly ap Druids native two-valued logic (true, false) to
+ * SQL three-valued logic (true, false, unknown). At the top level, this flag is always passed in as 'false', and is
+ * only flipped by this filter. Other logical filters ({@link AndFilter} and {@link OrFilter}) propagate the value of
+ * {@code includeUnknown} to their children.
  *
  * For example, if the base filter is equality, by default value matchers and indexes only return true for the rows
  * that are equal to the value. When wrapped in a not filter, the not filter indicates that the equality matchers and
@@ -71,7 +70,6 @@ public class NotFilter implements Filter
     if (baseIndex != null && baseIndex.getIndexCapabilities().isInvertible()) {
       return new BitmapColumnIndex()
       {
-        private final boolean useThreeValueLogic = NullHandling.useThreeValueLogic();
         @Override
         public ColumnIndexCapabilities getIndexCapabilities()
         {
@@ -88,7 +86,7 @@ public class NotFilter implements Filter
         public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
         {
           return bitmapResultFactory.complement(
-              baseIndex.computeBitmapResult(bitmapResultFactory, !includeUnknown && useThreeValueLogic),
+              baseIndex.computeBitmapResult(bitmapResultFactory, !includeUnknown),
               selector.getNumRows()
           );
         }
@@ -106,7 +104,7 @@ public class NotFilter implements Filter
               bitmapResultFactory,
               applyRowCount,
               totalRowCount,
-              !includeUnknown && useThreeValueLogic
+              !includeUnknown
           );
           if (result == null) {
             return null;
@@ -125,11 +123,10 @@ public class NotFilter implements Filter
 
     return new ValueMatcher()
     {
-      private final boolean useThreeValueLogic = NullHandling.useThreeValueLogic();
       @Override
       public boolean matches(boolean includeUnknown)
       {
-        return !baseMatcher.matches(!includeUnknown && useThreeValueLogic);
+        return !baseMatcher.matches(!includeUnknown);
       }
 
       @Override
@@ -148,12 +145,11 @@ public class NotFilter implements Filter
     return new BaseVectorValueMatcher(baseMatcher)
     {
       private final VectorMatch scratch = VectorMatch.wrap(new int[factory.getMaxVectorSize()]);
-      private final boolean useThreeValueLogic = NullHandling.useThreeValueLogic();
 
       @Override
       public ReadableVectorMatch match(final ReadableVectorMatch mask, boolean includeUnknown)
       {
-        final ReadableVectorMatch baseMatch = baseMatcher.match(mask, !includeUnknown && useThreeValueLogic);
+        final ReadableVectorMatch baseMatch = baseMatcher.match(mask, !includeUnknown);
 
         scratch.copyFrom(mask);
         scratch.removeAll(baseMatch);

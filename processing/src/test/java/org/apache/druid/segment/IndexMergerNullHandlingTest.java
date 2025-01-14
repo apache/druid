@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultiset;
 import com.google.common.collect.Sets;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.Comparators;
@@ -52,16 +51,13 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 public class IndexMergerNullHandlingTest
 {
-  static {
-    NullHandling.initializeForTests();
-  }
-
   private IndexMerger indexMerger;
   private IndexIO indexIO;
   private IndexSpec indexSpec;
@@ -98,13 +94,8 @@ public class IndexMergerNullHandlingTest
     nullFlavors.add(mNull);
     nullFlavors.add(mListOfNull);
 
-    if (NullHandling.replaceWithDefault()) {
-      nullFlavors.add(mEmptyString);
-      nullFlavors.add(mListOfEmptyString);
-    } else {
-      nonNullFlavors.add(mEmptyString);
-      nonNullFlavors.add(mListOfEmptyString);
-    }
+    nonNullFlavors.add(mEmptyString);
+    nonNullFlavors.add(mListOfEmptyString);
 
     Set<Map<String, Object>> allValues = new HashSet<>();
     allValues.addAll(nonNullFlavors);
@@ -193,7 +184,7 @@ public class IndexMergerNullHandlingTest
             final List<Integer> expectedNullRows = new ArrayList<>();
             for (int i = 0; i < index.getNumRows(); i++) {
               final List<String> row = getRow(dictionaryColumn, i);
-              if (row.isEmpty() || row.stream().anyMatch(NullHandling::isNullOrEquivalent)) {
+              if (row.isEmpty() || row.stream().anyMatch(Objects::isNull)) {
                 expectedNullRows.add(i);
               }
             }
@@ -232,7 +223,7 @@ public class IndexMergerNullHandlingTest
     if (value == null) {
       retVal.add(null);
     } else if (value instanceof String) {
-      retVal.add(NullHandling.emptyToNullIfNeeded(((String) value)));
+      retVal.add((String) value);
     } else if (value instanceof List) {
       final List<String> list = (List<String>) value;
       if (list.isEmpty()) {
@@ -240,7 +231,7 @@ public class IndexMergerNullHandlingTest
         // they sometimes also become nulls in multi-valued columns (see comments in getRow())
         retVal.add(null);
       } else {
-        retVal.addAll(list.stream().map(NullHandling::emptyToNullIfNeeded).collect(Collectors.toList()));
+        retVal.addAll(list);
       }
     } else {
       throw new ISE("didn't expect class[%s]", value.getClass());

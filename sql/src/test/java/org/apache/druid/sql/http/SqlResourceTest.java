@@ -30,7 +30,6 @@ import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.calcite.avatica.SqlType;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.exception.AllowedRegexErrorResponseTransformStrategy;
 import org.apache.druid.common.exception.ErrorResponseTransformStrategy;
 import org.apache.druid.common.guava.SettableSupplier;
@@ -119,7 +118,6 @@ import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.StreamingOutput;
-
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -555,11 +553,6 @@ public class SqlResourceTest extends CalciteTestBase
     ).rhs;
 
     Assert.assertEquals(
-        NullHandling.replaceWithDefault() ?
-        ImmutableList.of(
-            ImmutableMap.of("t1", "2001-01-03T00:00:00.000Z", "t2", "-292275055-05-16T16:47:04.192Z")
-            // t2 represents Long.MIN converted to a timestamp
-        ) :
         ImmutableList.of(
             Maps.transformValues(
                 ImmutableMap.of("t1", "2001-01-03T00:00:00.000Z", "t2", ""),
@@ -609,12 +602,6 @@ public class SqlResourceTest extends CalciteTestBase
     ).rhs;
 
     Assert.assertEquals(
-        NullHandling.replaceWithDefault() ?
-        ImmutableList.of(
-            ImmutableMap.of("x", "", "y", ""),
-            ImmutableMap.of("x", "a", "y", "a"),
-            ImmutableMap.of("x", "abc", "y", "abc")
-        ) :
         ImmutableList.of(
             // x and y both should be null instead of empty string
             Maps.transformValues(ImmutableMap.of("x", "", "y", ""), (val) -> null),
@@ -630,7 +617,6 @@ public class SqlResourceTest extends CalciteTestBase
   public void testArrayResultFormat() throws Exception
   {
     final String query = "SELECT *, CASE dim2 WHEN '' THEN dim2 END FROM foo LIMIT 2";
-    final String nullStr = NullHandling.replaceWithDefault() ? "" : null;
 
     Assert.assertEquals(
         ImmutableList.of(
@@ -643,18 +629,18 @@ public class SqlResourceTest extends CalciteTestBase
                 1.0,
                 1.0,
                 "\"AQAAAEAAAA==\"",
-                nullStr
+                null
             ),
             Arrays.asList(
                 "2000-01-02T00:00:00.000Z",
                 "10.1",
-                nullStr,
+                null,
                 "[\"b\",\"c\"]",
                 1,
                 2.0,
                 2.0,
                 "\"AQAAAQAAAAHNBA==\"",
-                nullStr
+                null
             )
         ),
         doPost(
@@ -741,11 +727,10 @@ public class SqlResourceTest extends CalciteTestBase
   public void testArrayResultFormatWithHeader() throws Exception
   {
     final String query = "SELECT *, CASE dim2 WHEN '' THEN dim2 END FROM foo LIMIT 2";
-    final String nullStr = NullHandling.replaceWithDefault() ? "" : null;
 
     List[] expectedQueryResults = new List[]{
-        Arrays.asList("2000-01-01T00:00:00.000Z", "", "a", "[\"a\",\"b\"]", 1, 1.0, 1.0, "\"AQAAAEAAAA==\"", nullStr),
-        Arrays.asList("2000-01-02T00:00:00.000Z", "10.1", nullStr, "[\"b\",\"c\"]", 1, 2.0, 2.0, "\"AQAAAQAAAAHNBA==\"", nullStr)
+        Arrays.asList("2000-01-01T00:00:00.000Z", "", "a", "[\"a\",\"b\"]", 1, 1.0, 1.0, "\"AQAAAEAAAA==\"", null),
+        Arrays.asList("2000-01-02T00:00:00.000Z", "10.1", null, "[\"b\",\"c\"]", 1, 2.0, 2.0, "\"AQAAAQAAAAHNBA==\"", null)
     };
 
     MockHttpServletResponse response = postForAsyncResponse(
@@ -865,7 +850,6 @@ public class SqlResourceTest extends CalciteTestBase
     );
     Assert.assertNull(pair.lhs);
     final String response = pair.rhs;
-    final String nullStr = NullHandling.replaceWithDefault() ? "" : null;
     final List<String> lines = Splitter.on('\n').splitToList(response);
 
     Assert.assertEquals(4, lines.size());
@@ -879,7 +863,7 @@ public class SqlResourceTest extends CalciteTestBase
             1.0,
             1.0,
             "\"AQAAAEAAAA==\"",
-            nullStr
+            null
         ),
         JSON_MAPPER.readValue(lines.get(0), List.class)
     );
@@ -887,13 +871,13 @@ public class SqlResourceTest extends CalciteTestBase
         Arrays.asList(
             "2000-01-02T00:00:00.000Z",
             "10.1",
-            nullStr,
+            null,
             "[\"b\",\"c\"]",
             1,
             2.0,
             2.0,
             "\"AQAAAQAAAAHNBA==\"",
-            nullStr
+            null
         ),
         JSON_MAPPER.readValue(lines.get(1), List.class)
     );
@@ -910,7 +894,6 @@ public class SqlResourceTest extends CalciteTestBase
     );
     Assert.assertNull(pair.lhs);
     final String response = pair.rhs;
-    final String nullStr = NullHandling.replaceWithDefault() ? "" : null;
     final List<String> lines = Splitter.on('\n').splitToList(response);
 
     Assert.assertEquals(7, lines.size());
@@ -927,7 +910,7 @@ public class SqlResourceTest extends CalciteTestBase
             1.0,
             1.0,
             "\"AQAAAEAAAA==\"",
-            nullStr
+            null
         ),
         JSON_MAPPER.readValue(lines.get(3), List.class)
     );
@@ -935,13 +918,13 @@ public class SqlResourceTest extends CalciteTestBase
         Arrays.asList(
             "2000-01-02T00:00:00.000Z",
             "10.1",
-            nullStr,
+            null,
             "[\"b\",\"c\"]",
             1,
             2.0,
             2.0,
             "\"AQAAAQAAAAHNBA==\"",
-            nullStr
+            null
         ),
         JSON_MAPPER.readValue(lines.get(4), List.class)
     );
@@ -981,10 +964,9 @@ public class SqlResourceTest extends CalciteTestBase
   public void testObjectResultFormat() throws Exception
   {
     final String query = "SELECT *, CASE dim2 WHEN '' THEN dim2 END FROM foo  LIMIT 2";
-    final String nullStr = NullHandling.replaceWithDefault() ? "" : null;
     final Function<Map<String, Object>, Map<String, Object>> transformer = m -> Maps.transformEntries(
         m,
-        (k, v) -> "EXPR$8".equals(k) || ("dim2".equals(k) && v.toString().isEmpty()) ? nullStr : v
+        (k, v) -> "EXPR$8".equals(k) || ("dim2".equals(k) && v.toString().isEmpty()) ? null : v
     );
 
     Assert.assertEquals(
@@ -1032,11 +1014,10 @@ public class SqlResourceTest extends CalciteTestBase
     );
     Assert.assertNull(pair.lhs);
     final String response = pair.rhs;
-    final String nullStr = NullHandling.replaceWithDefault() ? "" : null;
     final Function<Map<String, Object>, Map<String, Object>> transformer = m -> {
       return Maps.transformEntries(
           m,
-          (k, v) -> "EXPR$8".equals(k) || ("dim2".equals(k) && v.toString().isEmpty()) ? nullStr : v
+          (k, v) -> "EXPR$8".equals(k) || ("dim2".equals(k) && v.toString().isEmpty()) ? null : v
       );
     };
     final List<String> lines = Splitter.on('\n').splitToList(response);
@@ -1088,10 +1069,9 @@ public class SqlResourceTest extends CalciteTestBase
         doPostRaw(new SqlQuery(query, ResultFormat.OBJECTLINES, true, false, false, null, null));
     Assert.assertNull(pair.lhs);
     final String response = pair.rhs;
-    final String nullStr = NullHandling.replaceWithDefault() ? "" : null;
     final Function<Map<String, Object>, Map<String, Object>> transformer = m -> Maps.transformEntries(
         m,
-        (k, v) -> "EXPR$8".equals(k) || ("dim2".equals(k) && v.toString().isEmpty()) ? nullStr : v
+        (k, v) -> "EXPR$8".equals(k) || ("dim2".equals(k) && v.toString().isEmpty()) ? null : v
     );
     final List<String> lines = Splitter.on('\n').splitToList(response);
 
@@ -1148,10 +1128,9 @@ public class SqlResourceTest extends CalciteTestBase
         doPostRaw(new SqlQuery(query, ResultFormat.OBJECTLINES, true, true, true, null, null));
     Assert.assertNull(pair.lhs);
     final String response = pair.rhs;
-    final String nullStr = NullHandling.replaceWithDefault() ? "" : null;
     final Function<Map<String, Object>, Map<String, Object>> transformer = m -> Maps.transformEntries(
         m,
-        (k, v) -> "EXPR$8".equals(k) || ("dim2".equals(k) && v.toString().isEmpty()) ? nullStr : v
+        (k, v) -> "EXPR$8".equals(k) || ("dim2".equals(k) && v.toString().isEmpty()) ? null : v
     );
     final List<String> lines = Splitter.on('\n').splitToList(response);
 

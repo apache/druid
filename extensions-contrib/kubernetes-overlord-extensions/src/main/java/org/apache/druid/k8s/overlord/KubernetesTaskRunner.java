@@ -399,6 +399,8 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
   public void stop()
   {
     log.debug("Stopping KubernetesTaskRunner");
+    // Stop managing the running k8s jobs
+    exec.shutdownNow();
     cleanupExecutor.shutdownNow();
     log.debug("Stopped KubernetesTaskRunner");
   }

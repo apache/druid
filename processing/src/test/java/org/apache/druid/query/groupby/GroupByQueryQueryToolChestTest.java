@@ -29,7 +29,6 @@ import com.google.common.collect.Lists;
 import org.apache.druid.collections.BlockingPool;
 import org.apache.druid.collections.DefaultBlockingPool;
 import org.apache.druid.collections.SerializablePair;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.jackson.AggregatorsModule;
 import org.apache.druid.java.util.common.DateTimes;
@@ -95,7 +94,6 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
   @BeforeClass
   public static void setUpClass()
   {
-    NullHandling.initializeForTests();
     AggregatorsModule.registerComplexMetricsAndSerde();
   }
 

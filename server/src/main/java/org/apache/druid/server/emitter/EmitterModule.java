@@ -58,10 +58,10 @@ public class EmitterModule implements Module
   private static final Logger log = new Logger(EmitterModule.class);
   private static final String EMITTER_PROPERTY = "druid.emitter";
 
-  private final Properties props;
+  private Properties props;
 
   @Inject
-  public EmitterModule(
+  public void setProps(
       Properties props
   )
   {

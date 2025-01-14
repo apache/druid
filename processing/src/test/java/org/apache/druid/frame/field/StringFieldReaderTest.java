@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableList;
 import it.unimi.dsi.fastutil.objects.ObjectArrays;
 import junitparams.converters.Nullable;
 import org.apache.datasketches.memory.WritableMemory;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.extraction.SubstringDimExtractionFn;
@@ -106,8 +105,7 @@ public class StringFieldReaderTest extends InitializedNullHandlingTest
   public void test_isNull_emptyString()
   {
     writeToMemory(Collections.singletonList(""));
-    Assert.assertEquals(
-        NullHandling.replaceWithDefault(),
+    Assert.assertFalse(
         new StringFieldReader().isNull(memory, MEMORY_POSITION)
     );
     Assert.assertFalse(new StringArrayFieldReader().isNull(memory, MEMORY_POSITION));

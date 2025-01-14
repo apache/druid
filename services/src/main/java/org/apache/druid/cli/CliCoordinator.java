@@ -130,6 +130,7 @@ import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManagerConfig;
 import org.apache.druid.server.metrics.ServiceStatusMonitor;
 import org.apache.druid.server.router.TieredBrokerConfig;
+import org.apache.druid.storage.local.LocalTmpStorageConfig;
 import org.eclipse.jetty.server.Server;
 import org.joda.time.Duration;
 
@@ -288,6 +289,9 @@ public class CliCoordinator extends ServerRunnable
               binder.bind(new TypeLiteral<Supplier<Map<String, Object>>>() {})
                   .annotatedWith(Names.named(ServiceStatusMonitor.HEARTBEAT_TAGS_BINDING))
                   .toProvider(HeartbeatSupplier.class);
+              binder.bind(LocalTmpStorageConfig.class)
+                    .toProvider(new LocalTmpStorageConfig.DefaultLocalTmpStorageConfigProvider("coordinator"))
+                    .in(LazySingleton.class);
             }
 
             binder.bind(CoordinatorCustomDutyGroups.class)
@@ -451,7 +455,7 @@ public class CliCoordinator extends ServerRunnable
       final MapBinder<Class<? extends Query>, QueryRunnerFactory> queryFactoryBinder =
           DruidBinders.queryRunnerFactoryBinder(binder);
       queryFactoryBinder.addBinding(SegmentMetadataQuery.class).to(SegmentMetadataQueryRunnerFactory.class);
-      DruidBinders.queryLogicBinder(binder);
+      DruidBinders.queryBinder(binder);
       binder.bind(SegmentMetadataQueryRunnerFactory.class).in(LazySingleton.class);
 
       binder.bind(GenericQueryMetricsFactory.class).to(DefaultGenericQueryMetricsFactory.class);

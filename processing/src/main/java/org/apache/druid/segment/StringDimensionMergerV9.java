@@ -27,7 +27,6 @@ import org.apache.druid.collections.bitmap.MutableBitmap;
 import org.apache.druid.collections.spatial.ImmutableRTree;
 import org.apache.druid.collections.spatial.RTree;
 import org.apache.druid.collections.spatial.split.LinearGutmanSplitStrategy;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.io.Closer;
@@ -113,7 +112,7 @@ public class StringDimensionMergerV9 extends DictionaryEncodedColumnMerger<Strin
   @Override
   protected String coerceValue(String value)
   {
-    return NullHandling.emptyToNullIfNeeded(value);
+    return value;
   }
 
   @Override
