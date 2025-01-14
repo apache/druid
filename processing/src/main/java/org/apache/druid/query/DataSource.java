@@ -107,10 +107,7 @@ public interface DataSource
    * @param cpuTimeAcc the cpu time accumulator
    * @return the segment function
    */
-  default Function<SegmentReference, SegmentReference> createSegmentMapFunction(Query query)
-  {
-    return Function.identity();
-  }
+  Function<SegmentReference, SegmentReference> createSegmentMapFunction(Query query);
 
   /**
    * Returns an updated datasource based on the specified new source.
