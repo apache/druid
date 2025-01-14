@@ -193,7 +193,7 @@ public class BroadcastJoinSegmentMapFnProcessor implements FrameProcessor<Functi
 
   private Function<SegmentReference, SegmentReference> createSegmentMapFunction()
   {
-    return inlineChannelData(query.getDataSource()).createSegmentMapFunction(query);
+    return inlineChannelData(query.getDataSource()).createSegmentMapFunction1(query);
   }
 
   DataSource inlineChannelData(final DataSource originalDataSource)

@@ -131,11 +131,11 @@ public class UnnestDataSource implements DataSource
   }
 
   @Override
-  public Function<SegmentReference, SegmentReference> createSegmentMapFunction(
+  public Function<SegmentReference, SegmentReference> createSegmentMapFunction1(
       Query query
   )
   {
-    final Function<SegmentReference, SegmentReference> segmentMapFn = base.createSegmentMapFunction(
+    final Function<SegmentReference, SegmentReference> segmentMapFn = base.createSegmentMapFunction1(
         query
     );
     return baseSegment -> new UnnestSegment(segmentMapFn.apply(baseSegment), virtualColumn, unnestFilter);

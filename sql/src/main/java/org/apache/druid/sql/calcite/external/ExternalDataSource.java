@@ -124,7 +124,7 @@ public class ExternalDataSource implements DataSource
   }
 
   @Override
-  public Function<SegmentReference, SegmentReference> createSegmentMapFunction(
+  public Function<SegmentReference, SegmentReference> createSegmentMapFunction1(
       Query query
   )
   {

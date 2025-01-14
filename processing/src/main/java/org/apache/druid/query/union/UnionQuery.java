@@ -270,7 +270,7 @@ public class UnionQuery implements Query<Object>
     }
 
     @Override
-    public Function<SegmentReference, SegmentReference> createSegmentMapFunction(Query query)
+    public Function<SegmentReference, SegmentReference> createSegmentMapFunction1(Query query)
     {
       throw methodNotSupported();
     }

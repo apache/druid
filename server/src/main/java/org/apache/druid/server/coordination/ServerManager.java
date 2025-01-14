@@ -197,7 +197,7 @@ public class ServerManager implements QuerySegmentWalker
     }
     final Function<SegmentReference, SegmentReference> segmentMapFn = JvmUtils.safeAccumulateThreadCpuTime(
         cpuTimeAccumulator,
-        () -> dataSourceFromQuery.createSegmentMapFunction(newQuery)
+        () -> dataSourceFromQuery.createSegmentMapFunction1(newQuery)
     );
 
     // We compute the datasource's cache key here itself so it doesn't need to be re-computed for every segment

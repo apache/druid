@@ -151,7 +151,7 @@ public class FilteredDataSource implements DataSource
   }
 
   @Override
-  public Function<SegmentReference, SegmentReference> createSegmentMapFunction(Query query)
+  public Function<SegmentReference, SegmentReference> createSegmentMapFunction1(Query query)
   {
     Set<String> requiredColumns = new LinkedHashSet<>(query.getRequiredColumns());
     requiredColumns.addAll(virtualColumns.getRequiredColumns());
@@ -166,7 +166,7 @@ public class FilteredDataSource implements DataSource
 
     }
 
-    final Function<SegmentReference, SegmentReference> segmentMapFn = base.createSegmentMapFunction(
+    final Function<SegmentReference, SegmentReference> segmentMapFn = base.createSegmentMapFunction1(
         newQuery
     );
     return baseSegment -> new FilteredSegment(segmentMapFn.apply(baseSegment), filter, virtualColumns);

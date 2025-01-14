@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.guava.FunctionalIterable;
 import org.apache.druid.java.util.common.guava.LazySequence;
 import org.apache.druid.query.DataSource;
+import org.apache.druid.query.DataSource.SegmentMapConfig;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
 import org.apache.druid.query.NoopQueryRunner;
 import org.apache.druid.query.Queries;
@@ -145,8 +146,9 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
       throw new ISE("Cannot handle subquery: %s", dataSourceFromQuery);
     }
 
+    SegmentMapConfig cfg = new SegmentMapConfig(query);
     final Function<SegmentReference, SegmentReference> segmentMapFn = dataSourceFromQuery.createSegmentMapFunction(
-        query
+        cfg
     );
 
     final QueryRunner<T> baseRunner = new FinalizeResultsQueryRunner<>(

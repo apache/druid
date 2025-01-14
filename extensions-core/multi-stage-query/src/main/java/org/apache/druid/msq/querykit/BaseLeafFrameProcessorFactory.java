@@ -162,7 +162,7 @@ public abstract class BaseLeafFrameProcessorFactory extends BaseFrameProcessorFa
 
     if (segmentMapFnProcessor == null) {
       final Function<SegmentReference, SegmentReference> segmentMapFn =
-          query.getDataSource().createSegmentMapFunction(query);
+          query.getDataSource().createSegmentMapFunction1(query);
       processorManager = processorManagerFn.apply(ImmutableList.of(segmentMapFn));
     } else {
       processorManager = new ChainedProcessorManager<>(ProcessorManagers.of(() -> segmentMapFnProcessor), processorManagerFn);

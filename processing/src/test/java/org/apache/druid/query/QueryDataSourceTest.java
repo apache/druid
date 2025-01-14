@@ -172,11 +172,11 @@ public class QueryDataSourceTest
   @Test
   public void test_withSegmentMapFunction()
   {
-    Function<SegmentReference, SegmentReference> parentsegmentMapFunction = queryDataSource.createSegmentMapFunction(
+    Function<SegmentReference, SegmentReference> parentsegmentMapFunction = queryDataSource.createSegmentMapFunction1(
         groupByQuery
     );
 
-    Function<SegmentReference, SegmentReference> childsegmentMapFunction = queryOnTableDataSource.createSegmentMapFunction(
+    Function<SegmentReference, SegmentReference> childsegmentMapFunction = queryOnTableDataSource.createSegmentMapFunction1(
         groupByQuery
     );
     // The segment functions should both be identity functions and equal

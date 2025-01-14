@@ -204,7 +204,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
     // segmentMapFn maps each base Segment into a joined Segment if necessary.
     final Function<SegmentReference, SegmentReference> segmentMapFn = JvmUtils.safeAccumulateThreadCpuTime(
         cpuTimeAccumulator,
-        () -> dataSourceFromQuery.createSegmentMapFunction(query)
+        () -> dataSourceFromQuery.createSegmentMapFunction1(query)
     );
 
     // We compute the join cache key here itself so it doesn't need to be re-computed for every segment

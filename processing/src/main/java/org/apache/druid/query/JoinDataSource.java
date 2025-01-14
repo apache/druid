@@ -296,7 +296,7 @@ public class JoinDataSource implements DataSource
   }
 
   @Override
-  public Function<SegmentReference, SegmentReference> createSegmentMapFunction(
+  public Function<SegmentReference, SegmentReference> createSegmentMapFunction1(
       Query query
   )
   {
@@ -499,7 +499,7 @@ public class JoinDataSource implements DataSource
             if (left instanceof JoinDataSource) {
               baseMapFn = Function.identity();
             } else {
-              baseMapFn = left.createSegmentMapFunction(
+              baseMapFn = left.createSegmentMapFunction1(
                   query
               );
             }

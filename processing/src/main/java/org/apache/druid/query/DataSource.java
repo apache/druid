@@ -118,7 +118,15 @@ public interface DataSource
   /**
    * Returns a segment function on to how to segment should be modified.
    */
-  default Function<SegmentReference, SegmentReference> createSegmentMapFunction(Query query)
+  default Function<SegmentReference, SegmentReference> createSegmentMapFunction(SegmentMapConfig query)
+  {
+    throw new RuntimeException();
+  }
+
+  /**
+   * Returns a segment function on to how to segment should be modified.
+   */
+  default Function<SegmentReference, SegmentReference> createSegmentMapFunction1(Query query)
   {
     return Function.identity();
   }

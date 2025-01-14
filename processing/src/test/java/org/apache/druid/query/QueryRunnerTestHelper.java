@@ -559,7 +559,7 @@ public class QueryRunnerTestHelper
   {
     final DataSource base = query.getDataSource();
 
-    final SegmentReference segmentReference = base.createSegmentMapFunction(query)
+    final SegmentReference segmentReference = base.createSegmentMapFunction1(query)
                                                   .apply(ReferenceCountingSegment.wrapRootGenerationSegment(adapter));
     return makeQueryRunner(factory, segmentReference, runnerName);
   }
