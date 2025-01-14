@@ -100,12 +100,23 @@ public interface DataSource
    */
   boolean isConcrete();
 
+  static class SegmentMapConfig
+  {
+    private Query query;
+
+    public SegmentMapConfig(Query query)
+    {
+      this.query = query;
+    }
+
+    static SegmentMapConfig of(Query query)
+    {
+      return new SegmentMapConfig(query);
+    }
+  }
+
   /**
    * Returns a segment function on to how to segment should be modified.
-   *
-   * @param query      the input query
-   * @param cpuTimeAcc the cpu time accumulator
-   * @return the segment function
    */
   default Function<SegmentReference, SegmentReference> createSegmentMapFunction(Query query)
   {
