@@ -464,7 +464,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.JOIN_FILTER_LOCATIONS)
+  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.USES_SCAN_DATASOURCE)
   public void testJoinOnTimeseriesWithFloorOnTime()
   {
     // Cannot vectorize JOIN operator.
@@ -519,7 +519,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.JOIN_FILTER_LOCATIONS)
+  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.USES_SCAN_DATASOURCE)
   public void testJoinOnGroupByInsteadOfTimeseriesWithFloorOnTime()
   {
     // Cannot vectorize JOIN operator.
@@ -586,7 +586,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
-  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.JOIN_FILTER_LOCATIONS)
+  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.USES_SCAN_DATASOURCE)
   public void testJoinOnGroupByInsteadOfTimeseriesWithFloorOnTimeWithNoAggregateMultipleValues()
   {
     // Cannot vectorize JOIN operator.
@@ -734,7 +734,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.SLIGHTLY_WORSE_FILTER_PUSHED_TO_JOIN_OPERAND)
+  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.USES_SCAN_DATASOURCE)
   @MethodSource("provideQueryContexts")
   @ParameterizedTest(name = "{0}")
   public void testFilterAndGroupByLookupUsingJoinOperatorBackwards(Map<String, Object> queryContext)
@@ -2001,7 +2001,7 @@ public void testCNO(Map<String, Object> queryContext)
   }
 
   @Test
-  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.JOIN_FILTER_LOCATIONS)
+  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.USES_SCAN_DATASOURCE)
   public void testCommaJoinLeftFunction()
   {
     testQuery(
@@ -2172,7 +2172,7 @@ public void testCNO(Map<String, Object> queryContext)
     );
   }
 
-  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.JOIN_FILTER_LOCATIONS)
+  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.USES_SCAN_DATASOURCE)
   @MethodSource("provideQueryContexts")
   @ParameterizedTest(name = "{0}")
   public void testInnerJoinCastLeft(Map<String, Object> queryContext)
@@ -2306,7 +2306,7 @@ public void testCNO(Map<String, Object> queryContext)
     );
   }
 
-  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.JOIN_FILTER_LOCATIONS)
+  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.USES_SCAN_DATASOURCE)
   @MethodSource("provideQueryContexts")
   @ParameterizedTest(name = "{0}")
   public void testInnerJoinLeftFunction(Map<String, Object> queryContext)
@@ -2766,7 +2766,7 @@ public void testCNO(Map<String, Object> queryContext)
     );
   }
 
-  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.JOIN_FILTER_LOCATIONS)
+  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.USES_SCAN_DATASOURCE)
   @MethodSource("provideQueryContexts")
   @ParameterizedTest(name = "{0}")
   public void testUsingSubqueryWithExtractionFns(Map<String, Object> queryContext)
@@ -2827,7 +2827,7 @@ public void testCNO(Map<String, Object> queryContext)
     );
   }
 
-  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.EQUIV_PLAN)
+  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.USES_SCAN_DATASOURCE)
   @MethodSource("provideQueryContexts")
   @ParameterizedTest(name = "{0}")
   public void testInnerJoinWithIsNullFilter(Map<String, Object> queryContext)
@@ -2975,7 +2975,7 @@ public void testCNO(Map<String, Object> queryContext)
     );
   }
 
-  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.JOIN_LEFT_DIRECT_ACCESS)
+  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.USES_SCAN_DATASOURCE_INTERVALS)
   @MethodSource("provideQueryContexts")
   @ParameterizedTest(name = "{0}")
   public void testLeftJoinOnTwoInlineDataSourcesWithTimeFilter_withLeftDirectAccess(Map<String, Object> queryContext)
@@ -3201,7 +3201,7 @@ public void testCNO(Map<String, Object> queryContext)
     );
   }
 
-  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.JOIN_LEFT_DIRECT_ACCESS)
+  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.USES_SCAN_DATASOURCE)
   @MethodSource("provideQueryContexts")
   @ParameterizedTest(name = "{0}")
   public void testLeftJoinOnTwoInlineDataSources_withLeftDirectAccess(Map<String, Object> queryContext)
@@ -3309,7 +3309,7 @@ public void testCNO(Map<String, Object> queryContext)
     );
   }
 
-  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.JOIN_LEFT_DIRECT_ACCESS)
+  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.USES_SCAN_DATASOURCE)
   @MethodSource("provideQueryContexts")
   @ParameterizedTest(name = "{0}")
   public void testInnerJoinOnTwoInlineDataSourcesWithOuterWhere_withLeftDirectAccess(Map<String, Object> queryContext)
@@ -3504,7 +3504,7 @@ public void testCNO(Map<String, Object> queryContext)
     );
   }
 
-  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.JOIN_LEFT_DIRECT_ACCESS)
+  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.USES_SCAN_DATASOURCE)
   @MethodSource("provideQueryContexts")
   @ParameterizedTest(name = "{0}")
   public void testInnerJoinOnTwoInlineDataSources_withLeftDirectAccess(Map<String, Object> queryContext)
@@ -3952,7 +3952,7 @@ public void testCNO(Map<String, Object> queryContext)
     );
   }
 
-  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.SLIGHTLY_WORSE_FILTER_PUSHED_TO_JOIN_OPERAND)
+  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.USES_SCAN_DATASOURCE)
   @Test
   public void testSemiJoinWithOuterTimeExtractScan()
   {
@@ -4001,7 +4001,7 @@ public void testCNO(Map<String, Object> queryContext)
     );
   }
 
-  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.SLIGHTLY_WORSE_FILTER_PUSHED_TO_JOIN_OPERAND)
+  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.USES_SCAN_DATASOURCE)
   @MethodSource("provideQueryContexts")
   @ParameterizedTest(name = "{0}")
   public void testTwoSemiJoinsSimultaneously(Map<String, Object> queryContext)
@@ -4065,7 +4065,7 @@ public void testCNO(Map<String, Object> queryContext)
     );
   }
 
-  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.SLIGHTLY_WORSE_FILTER_PUSHED_TO_JOIN_OPERAND)
+  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.USES_SCAN_DATASOURCE)
   @MethodSource("provideQueryContexts")
   @ParameterizedTest(name = "{0}")
   public void testSemiAndAntiJoinSimultaneouslyUsingWhereInSubquery(Map<String, Object> queryContext)
@@ -4239,7 +4239,7 @@ public void testCNO(Map<String, Object> queryContext)
     );
   }
 
-  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.SLIGHTLY_WORSE_FILTER_PUSHED_TO_JOIN_OPERAND)
+  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.USES_SCAN_DATASOURCE)
   @Test
   public void testSemiJoinWithOuterTimeExtractAggregateWithOrderBy()
   {
@@ -4811,7 +4811,7 @@ public void testCNO(Map<String, Object> queryContext)
     );
   }
 
-  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.SLIGHTLY_WORSE_FILTER_PUSHED_TO_JOIN_OPERAND)
+  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.USES_SCAN_DATASOURCE)
   @MethodSource("provideQueryContexts")
   @ParameterizedTest(name = "{0}")
   public void testUsingSubqueryAsPartOfAndFilter(Map<String, Object> queryContext)
@@ -5247,7 +5247,7 @@ public void testCNO(Map<String, Object> queryContext)
     );
   }
 
-  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.SLIGHTLY_WORSE_FILTER_PUSHED_TO_JOIN_OPERAND)
+  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.USES_SCAN_DATASOURCE)
   @MethodSource("provideQueryContexts")
   @ParameterizedTest(name = "{0}")
   public void testVirtualColumnOnMVFilterJoinExpression(Map<String, Object> queryContext)
@@ -5306,7 +5306,7 @@ public void testCNO(Map<String, Object> queryContext)
     );
   }
 
-  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.DEFINETLY_WORSE_PLAN)
+  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.USES_SCAN_DATASOURCE)
   @MethodSource("provideQueryContexts")
   @ParameterizedTest(name = "{0}")
   public void testVirtualColumnOnMVFilterMultiJoinExpression(Map<String, Object> queryContext)
@@ -5499,7 +5499,7 @@ public void testCNO(Map<String, Object> queryContext)
     );
   }
 
-  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.SLIGHTLY_WORSE_FILTER_PUSHED_TO_JOIN_OPERAND)
+  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.USES_SCAN_DATASOURCE)
   @MethodSource("provideQueryContexts")
   @ParameterizedTest(name = "{0}")
   public void testInnerJoinWithFilterPushdownAndManyFiltersNonEmptyResults(Map<String, Object> queryContext)
@@ -5955,7 +5955,7 @@ public void testCNO(Map<String, Object> queryContext)
   }
 
   @Test
-  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.JOIN_FILTER_LOCATIONS)
+  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.USES_SCAN_DATASOURCE)
   public void testJoinWithInputRefCondition()
   {
     cannotVectorize();

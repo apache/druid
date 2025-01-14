@@ -166,7 +166,12 @@ public @interface DecoupledTestConfig
     /**
      * This is due to substring('',1') is null.
      */
-    UNNEST_SUBSTRING_EMPTY;
+    UNNEST_SUBSTRING_EMPTY,
+    USES_SCAN_DATASOURCE,
+    /**
+     * Intervals filtered as filter
+     */
+    USES_SCAN_DATASOURCE_INTERVALS;
 
     public boolean isPresent()
     {
