@@ -148,7 +148,7 @@ public class FilteredDataSource implements DataSource
   public Function<SegmentReference, SegmentReference> createSegmentMapFunction(Query query)
   {
     Set<String> requiredColumns = new LinkedHashSet<>(query.getRequiredColumns());
-    requiredColumns.addAll(        virtualColumns.getRequiredColumns());
+    requiredColumns.addAll(virtualColumns.getRequiredColumns());
 
     Query newQuery;
     try {
