@@ -48,7 +48,7 @@ import java.util.function.Function;
 public class RestrictedDataSource implements DataSource
 {
   private final TableDataSource base;
-  // update List policy?
+
   private final Policy policy;
 
   @JsonProperty("base")

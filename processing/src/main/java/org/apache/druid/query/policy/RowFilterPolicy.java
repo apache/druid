@@ -41,8 +41,7 @@ public class RowFilterPolicy implements Policy
   @JsonCreator
   RowFilterPolicy(@Nonnull @JsonProperty("rowFilter") DimFilter rowFilter)
   {
-    Preconditions.checkNotNull(rowFilter);
-    this.rowFilter = rowFilter;
+    this.rowFilter = Preconditions.checkNotNull(rowFilter, "rowFilter can't be null");
   }
 
   public static RowFilterPolicy from(@Nonnull DimFilter rowFilter)

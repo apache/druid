@@ -128,7 +128,10 @@ public interface DataSource
    * <p>
    * If this datasource contains no table, no changes should occur.
    *
-   * @param policyMap a mapping of table names to policy restrictions
+   * @param policyMap a mapping of table names to policy restrictions. A missing key is different from an empty value:
+   *                  <ul>
+   *                    <li> a missing key means the table has never been permission checked.
+   *                    <li> an empty value indicates the table doesn't have any policy restrictions, it has been permission checked.
    * @return the updated datasource, with restrictions applied in the datasource tree
    * @throws IllegalStateException when mapping a RestrictedDataSource, unless the table has a NoRestrictionPolicy in
    *                               the policyMap (used by druid-internal). Missing policy or adding a
