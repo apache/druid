@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.planning.PreJoinableClause;
 import org.apache.druid.segment.SegmentReference;
+import org.apache.druid.segment.join.filter.rewrite.JoinFilterRewriteConfig;
 
 import java.util.List;
 import java.util.Set;
@@ -113,12 +114,18 @@ public interface DataSource
     {
       return new SegmentMapConfig(query);
     }
+
+    public boolean isEnableRewriteJoinToFilter()
+    {
+      final JoinFilterRewriteConfig filterRewriteConfig = JoinFilterRewriteConfig.forQuery(query);
+      return filterRewriteConfig.isEnableRewriteJoinToFilter();
+    }
   }
 
   /**
    * Returns a segment function on to how to segment should be modified.
    */
-  default Function<SegmentReference, SegmentReference> createSegmentMapFunction(Query query)
+  default Function<SegmentReference, SegmentReference> createSegmentMapFunction(SegmentMapConfig sMapConfig)
   {
     return Function.identity();
   }

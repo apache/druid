@@ -140,12 +140,11 @@ public class FilteredDataSource implements DataSource
     return base.isConcrete();
   }
 
+
   @Override
-  public Function<SegmentReference, SegmentReference> createSegmentMapFunction(Query query)
+  public Function<SegmentReference, SegmentReference> createSegmentMapFunction(SegmentMapConfig cfg)
   {
-    final Function<SegmentReference, SegmentReference> segmentMapFn = base.createSegmentMapFunction(
-        query
-    );
+    final Function<SegmentReference, SegmentReference> segmentMapFn = base.createSegmentMapFunction(cfg);
     return baseSegment -> new FilteredSegment(segmentMapFn.apply(baseSegment), filter, virtualColumns);
   }
 

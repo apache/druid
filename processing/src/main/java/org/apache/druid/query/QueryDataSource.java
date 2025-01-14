@@ -108,12 +108,10 @@ public class QueryDataSource implements DataSource
   }
 
   @Override
-  public Function<SegmentReference, SegmentReference> createSegmentMapFunction(
-      Query query
-  )
+  public Function<SegmentReference, SegmentReference> createSegmentMapFunction(SegmentMapConfig sMapConfig)
   {
     final Query<?> subQuery = this.getQuery();
-    return subQuery.getDataSource().createSegmentMapFunction(subQuery);
+    return subQuery.getDataSource().createSegmentMapFunction(sMapConfig);
   }
 
   @Override
