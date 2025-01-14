@@ -132,7 +132,7 @@ public interface DataSource
 
     public Set<String> getRequiredColumns()
     {
-      return query.getRequiredColumns();
+      return requiredColumns;
     }
 
     public VirtualColumns getVirtualColumns()
@@ -149,6 +149,16 @@ public interface DataSource
     {
       return new SegmentMapConfig(query, Sets.union(this.requiredColumns, requiredColumns));
     }
+
+    public SegmentMapConfig withVirtualColumns(VirtualColumns virtualColumns)
+    {
+      return new SegmentMapConfig(query, Sets.union(this.requiredColumns, virtualColumns.getRequiredColumns()));
+    }
+
+//    public SegmentMapConfig withFilters(@Nullable DimFilter ...filters)
+//    {
+//      return new SegmentMapConfig(query, Sets.union(this.requiredColumns, requiredColumns));
+//    }
   }
 
   /**
