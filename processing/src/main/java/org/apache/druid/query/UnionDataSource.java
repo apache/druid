@@ -27,14 +27,11 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.planning.DataSourceAnalysis;
-import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.utils.CollectionUtils;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -141,15 +138,6 @@ public class UnionDataSource implements DataSource
   public boolean isConcrete()
   {
     return dataSources.stream().allMatch(DataSource::isConcrete);
-  }
-
-  @Override
-  public Function<SegmentReference, SegmentReference> createSegmentMapFunction(
-      Query query,
-      AtomicLong cpuTime
-  )
-  {
-    return Function.identity();
   }
 
   @Override

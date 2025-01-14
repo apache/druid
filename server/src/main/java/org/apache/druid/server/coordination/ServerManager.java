@@ -66,6 +66,7 @@ import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
+import org.apache.druid.utils.JvmUtils;
 import org.joda.time.Interval;
 
 import java.util.Collections;
@@ -194,9 +195,10 @@ public class ServerManager implements QuerySegmentWalker
     } else {
       return new ReportTimelineMissingSegmentQueryRunner<>(Lists.newArrayList(specs));
     }
-    final Function<SegmentReference, SegmentReference> segmentMapFn =
-        dataSourceFromQuery
-             .createSegmentMapFunction(newQuery, cpuTimeAccumulator);
+    final Function<SegmentReference, SegmentReference> segmentMapFn = JvmUtils.safeAccumulateThreadCpuTime(
+        cpuTimeAccumulator,
+        () -> dataSourceFromQuery.createSegmentMapFunction(newQuery)
+    );
 
     // We compute the datasource's cache key here itself so it doesn't need to be re-computed for every segment
     final Optional<byte[]> cacheKeyPrefix = Optional.ofNullable(dataSourceFromQuery.getCacheKey());
