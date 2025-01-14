@@ -123,7 +123,7 @@ public class FilteredDataSource implements DataSource
   @Override
   public Function<SegmentReference, SegmentReference> createSegmentMapFunction(Query query)
   {
-    final Function<SegmentReference, SegmentReference> segmentMapFn = base.createSegmentMapFunction(        query    );
+    final Function<SegmentReference, SegmentReference> segmentMapFn = base.createSegmentMapFunction(query);
     return baseSegment -> new FilteredSegment(segmentMapFn.apply(baseSegment), filter);
   }
 
