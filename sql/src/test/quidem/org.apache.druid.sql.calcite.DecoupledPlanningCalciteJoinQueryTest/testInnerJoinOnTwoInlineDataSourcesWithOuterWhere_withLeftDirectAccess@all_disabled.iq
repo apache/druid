@@ -1,5 +1,5 @@
-# testInnerJoinOnTwoInlineDataSourcesWithOuterWhere_withLeftDirectAccess@all_disabled case-crc:c8387bad
-# quidem testcase reason: JOIN_LEFT_DIRECT_ACCESS
+# testInnerJoinOnTwoInlineDataSourcesWithOuterWhere_withLeftDirectAccess@all_disabled case-crc:aab6bd1a
+# quidem testcase reason: USES_SCAN_DATASOURCE
 !set debug true
 !set defaultTimeout 300000
 !set enableJoinFilterRewrite false

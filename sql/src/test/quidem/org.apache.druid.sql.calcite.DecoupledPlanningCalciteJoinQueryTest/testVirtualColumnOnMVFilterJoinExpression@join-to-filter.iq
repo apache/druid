@@ -1,5 +1,5 @@
-# testVirtualColumnOnMVFilterJoinExpression@join-to-filter case-crc:30584b55
-# quidem testcase reason: SLIGHTLY_WORSE_FILTER_PUSHED_TO_JOIN_OPERAND
+# testVirtualColumnOnMVFilterJoinExpression@join-to-filter case-crc:2f72477e
+# quidem testcase reason: USES_SCAN_DATASOURCE
 !set debug true
 !set defaultTimeout 300000
 !set enableJoinFilterRewrite false

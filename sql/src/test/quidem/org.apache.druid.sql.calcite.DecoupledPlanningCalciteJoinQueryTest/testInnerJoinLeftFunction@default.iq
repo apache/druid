@@ -1,5 +1,5 @@
-# testInnerJoinLeftFunction@default case-crc:cbea2a3d
-# quidem testcase reason: JOIN_FILTER_LOCATIONS
+# testInnerJoinLeftFunction@default case-crc:f957629f
+# quidem testcase reason: USES_SCAN_DATASOURCE
 !set debug true
 !set defaultTimeout 300000
 !set maxScatterGatherBytes 9223372036854775807

@@ -1,5 +1,5 @@
-# testUsingSubqueryWithExtractionFns@join-to-filter case-crc:7dafda1a
-# quidem testcase reason: JOIN_FILTER_LOCATIONS
+# testUsingSubqueryWithExtractionFns@join-to-filter case-crc:abe2b41e
+# quidem testcase reason: USES_SCAN_DATASOURCE
 !set debug true
 !set defaultTimeout 300000
 !set enableJoinFilterRewrite false

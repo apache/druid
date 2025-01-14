@@ -1,5 +1,5 @@
-# testVirtualColumnOnMVFilterMultiJoinExpression@filter-rewrites-disabled case-crc:daa5d2d1
-# quidem testcase reason: DEFINETLY_WORSE_PLAN
+# testVirtualColumnOnMVFilterMultiJoinExpression@filter-rewrites-disabled case-crc:15dba2ee
+# quidem testcase reason: USES_SCAN_DATASOURCE
 !set debug true
 !set defaultTimeout 300000
 !set enableJoinFilterRewrite false

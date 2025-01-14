@@ -1,5 +1,5 @@
-# testInnerJoinWithIsNullFilter@default case-crc:a18273fc
-# quidem testcase reason: EQUIV_PLAN
+# testInnerJoinWithIsNullFilter@default case-crc:22d898f7
+# quidem testcase reason: USES_SCAN_DATASOURCE
 !set debug true
 !set defaultTimeout 300000
 !set maxScatterGatherBytes 9223372036854775807

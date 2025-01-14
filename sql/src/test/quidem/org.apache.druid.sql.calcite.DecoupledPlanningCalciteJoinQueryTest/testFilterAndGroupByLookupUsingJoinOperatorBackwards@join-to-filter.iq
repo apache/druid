@@ -1,5 +1,5 @@
-# testFilterAndGroupByLookupUsingJoinOperatorBackwards@join-to-filter case-crc:5a34c7c1
-# quidem testcase reason: SLIGHTLY_WORSE_FILTER_PUSHED_TO_JOIN_OPERAND
+# testFilterAndGroupByLookupUsingJoinOperatorBackwards@join-to-filter case-crc:21b2132b
+# quidem testcase reason: USES_SCAN_DATASOURCE
 !set debug true
 !set defaultTimeout 300000
 !set enableJoinFilterRewrite false

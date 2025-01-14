@@ -1,5 +1,5 @@
-# testUsingSubqueryAsPartOfAndFilter@all_enabled case-crc:a7bb9ccc
-# quidem testcase reason: SLIGHTLY_WORSE_FILTER_PUSHED_TO_JOIN_OPERAND
+# testUsingSubqueryAsPartOfAndFilter@all_enabled case-crc:48112eac
+# quidem testcase reason: USES_SCAN_DATASOURCE
 !set debug true
 !set defaultTimeout 300000
 !set enableJoinFilterRewrite true

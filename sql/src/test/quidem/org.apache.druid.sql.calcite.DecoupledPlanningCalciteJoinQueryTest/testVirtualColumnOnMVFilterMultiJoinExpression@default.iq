@@ -1,5 +1,5 @@
-# testVirtualColumnOnMVFilterMultiJoinExpression@default case-crc:0f7e2c53
-# quidem testcase reason: DEFINETLY_WORSE_PLAN
+# testVirtualColumnOnMVFilterMultiJoinExpression@default case-crc:a9bb2495
+# quidem testcase reason: USES_SCAN_DATASOURCE
 !set debug true
 !set defaultTimeout 300000
 !set maxScatterGatherBytes 9223372036854775807

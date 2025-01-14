@@ -1,5 +1,5 @@
-# testInnerJoinWithFilterPushdownAndManyFiltersNonEmptyResults@join-to-filter case-crc:fffc987b
-# quidem testcase reason: SLIGHTLY_WORSE_FILTER_PUSHED_TO_JOIN_OPERAND
+# testInnerJoinWithFilterPushdownAndManyFiltersNonEmptyResults@join-to-filter case-crc:40e8406a
+# quidem testcase reason: USES_SCAN_DATASOURCE
 !set debug true
 !set defaultTimeout 300000
 !set enableJoinFilterRewrite false

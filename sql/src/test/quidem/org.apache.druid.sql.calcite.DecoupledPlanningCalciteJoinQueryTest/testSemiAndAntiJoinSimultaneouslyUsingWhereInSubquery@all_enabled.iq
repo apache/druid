@@ -1,5 +1,5 @@
-# testSemiAndAntiJoinSimultaneouslyUsingWhereInSubquery@all_enabled case-crc:588e02ac
-# quidem testcase reason: SLIGHTLY_WORSE_FILTER_PUSHED_TO_JOIN_OPERAND
+# testSemiAndAntiJoinSimultaneouslyUsingWhereInSubquery@all_enabled case-crc:bddf0e29
+# quidem testcase reason: USES_SCAN_DATASOURCE
 !set debug true
 !set defaultTimeout 300000
 !set enableJoinFilterRewrite true

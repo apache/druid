@@ -1,5 +1,5 @@
-# testJoinOnGroupByInsteadOfTimeseriesWithFloorOnTimeWithNoAggregateMultipleValues case-crc:86f4769d
-# quidem testcase reason: JOIN_FILTER_LOCATIONS
+# testJoinOnGroupByInsteadOfTimeseriesWithFloorOnTimeWithNoAggregateMultipleValues case-crc:21a302d7
+# quidem testcase reason: USES_SCAN_DATASOURCE
 !set debug true
 !set defaultTimeout 300000
 !set maxScatterGatherBytes 9223372036854775807

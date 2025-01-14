@@ -1,5 +1,5 @@
-# testFilterAndGroupByLookupUsingJoinOperatorBackwards@default case-crc:b7b60a5e
-# quidem testcase reason: SLIGHTLY_WORSE_FILTER_PUSHED_TO_JOIN_OPERAND
+# testFilterAndGroupByLookupUsingJoinOperatorBackwards@default case-crc:fac38688
+# quidem testcase reason: USES_SCAN_DATASOURCE
 !set debug true
 !set defaultTimeout 300000
 !set maxScatterGatherBytes 9223372036854775807

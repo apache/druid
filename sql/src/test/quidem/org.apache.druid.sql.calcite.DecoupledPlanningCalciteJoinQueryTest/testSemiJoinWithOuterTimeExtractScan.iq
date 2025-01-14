@@ -1,5 +1,5 @@
-# testSemiJoinWithOuterTimeExtractScan case-crc:f91c4c1d
-# quidem testcase reason: SLIGHTLY_WORSE_FILTER_PUSHED_TO_JOIN_OPERAND
+# testSemiJoinWithOuterTimeExtractScan case-crc:0d8ae350
+# quidem testcase reason: USES_SCAN_DATASOURCE
 !set debug true
 !set defaultTimeout 300000
 !set maxScatterGatherBytes 9223372036854775807

@@ -1,5 +1,5 @@
-# testInnerJoinCastLeft@all_disabled case-crc:8cd9e460
-# quidem testcase reason: JOIN_FILTER_LOCATIONS
+# testInnerJoinCastLeft@all_disabled case-crc:fdb7fc7c
+# quidem testcase reason: USES_SCAN_DATASOURCE
 !set debug true
 !set defaultTimeout 300000
 !set enableJoinFilterRewrite false

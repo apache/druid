@@ -1,5 +1,5 @@
-# testLeftJoinOnTwoInlineDataSourcesWithTimeFilter_withLeftDirectAccess@all_disabled case-crc:8c906e38
-# quidem testcase reason: JOIN_LEFT_DIRECT_ACCESS
+# testLeftJoinOnTwoInlineDataSourcesWithTimeFilter_withLeftDirectAccess@all_disabled case-crc:b18b973e
+# quidem testcase reason: USES_SCAN_DATASOURCE_INTERVALS
 !set debug true
 !set defaultTimeout 300000
 !set enableJoinFilterRewrite false

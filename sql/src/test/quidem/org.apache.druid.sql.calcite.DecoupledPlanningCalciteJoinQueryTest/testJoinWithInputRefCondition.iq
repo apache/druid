@@ -1,5 +1,5 @@
-# testJoinWithInputRefCondition case-crc:9a6c217b
-# quidem testcase reason: JOIN_FILTER_LOCATIONS
+# testJoinWithInputRefCondition case-crc:b9eeef1b
+# quidem testcase reason: USES_SCAN_DATASOURCE
 !set debug true
 !set defaultTimeout 300000
 !set maxScatterGatherBytes 9223372036854775807

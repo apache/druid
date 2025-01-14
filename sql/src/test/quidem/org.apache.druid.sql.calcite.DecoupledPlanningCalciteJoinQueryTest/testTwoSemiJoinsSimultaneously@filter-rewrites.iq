@@ -1,5 +1,5 @@
-# testTwoSemiJoinsSimultaneously@filter-rewrites case-crc:dfbbc9bc
-# quidem testcase reason: SLIGHTLY_WORSE_FILTER_PUSHED_TO_JOIN_OPERAND
+# testTwoSemiJoinsSimultaneously@filter-rewrites case-crc:a931c598
+# quidem testcase reason: USES_SCAN_DATASOURCE
 !set debug true
 !set defaultTimeout 300000
 !set enableJoinFilterRewrite true

@@ -1,5 +1,5 @@
-# testInnerJoinWithIsNullFilter@all_disabled case-crc:d168560a
-# quidem testcase reason: EQUIV_PLAN
+# testInnerJoinWithIsNullFilter@all_disabled case-crc:bc0ad946
+# quidem testcase reason: USES_SCAN_DATASOURCE
 !set debug true
 !set defaultTimeout 300000
 !set enableJoinFilterRewrite false
