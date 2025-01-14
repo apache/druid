@@ -615,12 +615,10 @@ public class OverlordResource
           authorizerMapper
       );
       if (!authResult.isAllowed()) {
-        throw new WebApplicationException(
-            Response.status(Response.Status.FORBIDDEN)
+        return Response.status(Response.Status.FORBIDDEN)
                     .type(MediaType.TEXT_PLAIN)
                     .entity(StringUtils.format("Access-Check-Result: %s", authResult.toString()))
-                    .build()
-        );
+                    .build();
       }
     }
 
