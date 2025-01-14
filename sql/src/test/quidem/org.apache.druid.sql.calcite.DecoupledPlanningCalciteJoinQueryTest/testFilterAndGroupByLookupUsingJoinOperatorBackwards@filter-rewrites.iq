@@ -15,12 +15,15 @@ SELECT lookyloo.v, COUNT(*)
 FROM lookup.lookyloo RIGHT JOIN foo ON foo.dim2 = lookyloo.k
 WHERE lookyloo.v <> 'xa'
 GROUP BY lookyloo.v;
-+------+--------+
-| v    | EXPR$1 |
-+------+--------+
-| xabc |      1 |
-+------+--------+
-(1 row)
++--------------+--------+
+| v            | EXPR$1 |
++--------------+--------+
+| mysteryvalue |      1 |
+| x6           |      1 |
+| xa           |      1 |
+| xabc         |      1 |
++--------------+--------+
+(4 rows)
 
 !ok
 LogicalAggregate(group=[{1}], EXPR$1=[COUNT()])
