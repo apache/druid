@@ -20,16 +20,16 @@ set -u
 export DEBIAN_FRONTEND=noninteractive
 APACHE_ARCHIVE_MIRROR_HOST=${APACHE_ARCHIVE_MIRROR_HOST:-https://downloads.apache.org}
 
-apt-get -qq update
+apt-get update
 
 # wget
-apt-get -qq install -y wget
+apt-get install -y wget
 
 # MySQL (Metadata store)
-apt-get -qq install -y default-mysql-server
+apt-get install -y default-mysql-server
 
 # Supervisor
-apt-get -qq install -y supervisor
+apt-get install -y supervisor
 
 # Download function
 download_file() {
