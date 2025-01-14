@@ -54,7 +54,7 @@ import java.util.function.Function;
  * putting more work to be done at the broker level. This pushes the operations down to the
  * segments and is more performant.
  */
-@JsonInclude(Include.NON_NULL)
+@JsonInclude(Include.NON_DEFAULT)
 public class FilteredDataSource implements DataSource
 {
   private final DataSource base;
@@ -79,11 +79,17 @@ public class FilteredDataSource implements DataSource
     return virtualColumns;
   }
 
+  // To provide defaults for Jackson
+  private FilteredDataSource()
+  {
+    this(null, null, null);
+  }
+
   private FilteredDataSource(DataSource base, @Nullable DimFilter filter, VirtualColumns virtualColumns)
   {
     this.base = base;
     this.filter = filter;
-    this.virtualColumns = virtualColumns;
+    this.virtualColumns = virtualColumns == null ? VirtualColumns.EMPTY : virtualColumns;
   }
 
   @JsonCreator
@@ -192,6 +198,9 @@ public class FilteredDataSource implements DataSource
   private Query overrideQueryRequiredColumns(Query query, Set<String> requiredColumns) throws Exception
   {
 
+//    if(true) {
+//      return query;
+//    }
     Class proxyClass = Proxy.getProxyClass(getClass().getClassLoader(), Query.class);
     return (Query) proxyClass.getConstructor(InvocationHandler.class).newInstance(new QueryInvocationHandler(query, requiredColumns));
   }
