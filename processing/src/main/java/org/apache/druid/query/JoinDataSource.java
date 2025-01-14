@@ -439,7 +439,7 @@ public class JoinDataSource implements DataSource
   private Function<SegmentReference, SegmentReference> createSegmentMapFunctionInternal(
       @Nullable final Filter baseFilter,
       final List<PreJoinableClause> clauses,
-      final SegmentMapConfig sMapConfig
+      final Query<?> query
   )
   {
     // compute column correlations here and RHS correlated values
@@ -450,13 +450,14 @@ public class JoinDataSource implements DataSource
                 clauses,
                 joinableFactoryWrapper.getJoinableFactory()
             );
+            final JoinFilterRewriteConfig filterRewriteConfig = JoinFilterRewriteConfig.forQuery(query);
 
             // Pick off any join clauses that can be converted into filters.
             final Set<String> requiredColumns = query.getRequiredColumns();
             final Filter baseFilterToUse;
             final List<JoinableClause> clausesToUse;
 
-            if (requiredColumns != null && sMapConfig.isEnableRewriteJoinToFilter()) {
+            if (requiredColumns != null && filterRewriteConfig.isEnableRewriteJoinToFilter()) {
               final Pair<List<Filter>, List<JoinableClause>> conversionResult = JoinableFactoryWrapper.convertJoinsToFilters(
                   joinableClauses.getJoinableClauses(),
                   requiredColumns,
@@ -500,7 +501,7 @@ public class JoinDataSource implements DataSource
               baseMapFn = Function.identity();
             } else {
               baseMapFn = left.createSegmentMapFunction(
-                  sMapConfig
+                  query
               );
             }
             return baseSegment ->
