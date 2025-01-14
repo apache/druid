@@ -91,6 +91,7 @@ public class InputNumberDataSource implements DataSource
     return true;
   }
 
+
   @Override
   public DataSource withUpdatedDataSource(DataSource newSource)
   {
