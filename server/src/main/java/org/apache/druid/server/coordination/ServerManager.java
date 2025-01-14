@@ -53,6 +53,7 @@ import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.query.ReferenceCountingSegmentQueryRunner;
 import org.apache.druid.query.ReportTimelineMissingSegmentQueryRunner;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.query.DataSource.SegmentMapConfig;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.spec.SpecificSegmentQueryRunner;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
@@ -197,7 +198,7 @@ public class ServerManager implements QuerySegmentWalker
     }
     final Function<SegmentReference, SegmentReference> segmentMapFn = JvmUtils.safeAccumulateThreadCpuTime(
         cpuTimeAccumulator,
-        () -> dataSourceFromQuery.createSegmentMapFunction1(newQuery)
+        () -> dataSourceFromQuery.createSegmentMapFunction(SegmentMapConfig.of(newQuery))
     );
 
     // We compute the datasource's cache key here itself so it doesn't need to be re-computed for every segment

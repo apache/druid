@@ -40,6 +40,7 @@ import org.apache.druid.query.DataSource;
 import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.DataSource.SegmentMapConfig;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.SegmentReference;
@@ -193,7 +194,7 @@ public class BroadcastJoinSegmentMapFnProcessor implements FrameProcessor<Functi
 
   private Function<SegmentReference, SegmentReference> createSegmentMapFunction()
   {
-    return inlineChannelData(query.getDataSource()).createSegmentMapFunction1(query);
+    return inlineChannelData(query.getDataSource()).createSegmentMapFunction(SegmentMapConfig.of(query));
   }
 
   DataSource inlineChannelData(final DataSource originalDataSource)

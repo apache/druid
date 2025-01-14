@@ -41,6 +41,7 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.BySegmentQueryRunner;
 import org.apache.druid.query.CPUTimeMetricQueryRunner;
 import org.apache.druid.query.DataSource;
+import org.apache.druid.query.DataSource.SegmentMapConfig;
 import org.apache.druid.query.DefaultQueryMetrics;
 import org.apache.druid.query.DirectQueryProcessingPool;
 import org.apache.druid.query.FinalizeResultsQueryRunner;
@@ -204,7 +205,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
     // segmentMapFn maps each base Segment into a joined Segment if necessary.
     final Function<SegmentReference, SegmentReference> segmentMapFn = JvmUtils.safeAccumulateThreadCpuTime(
         cpuTimeAccumulator,
-        () -> dataSourceFromQuery.createSegmentMapFunction1(query)
+        () -> dataSourceFromQuery.createSegmentMapFunction(SegmentMapConfig.of(query))
     );
 
     // We compute the join cache key here itself so it doesn't need to be re-computed for every segment

@@ -120,7 +120,7 @@ public interface DataSource
       this.requiredColumns=requiredColumns;
     }
 
-    static SegmentMapConfig of(Query query)
+    public static SegmentMapConfig of(Query query)
     {
       return new SegmentMapConfig(query);
     }
@@ -155,14 +155,6 @@ public interface DataSource
    * Returns a segment function on to how to segment should be modified.
    */
   Function<SegmentReference, SegmentReference> createSegmentMapFunction(SegmentMapConfig query);
-
-  /**
-   * Returns a segment function on to how to segment should be modified.
-   */
-  default Function<SegmentReference, SegmentReference> createSegmentMapFunction1(Query query)
-  {
-    return Function.identity();
-  }
 
   /**
    * Returns an updated datasource based on the specified new source.

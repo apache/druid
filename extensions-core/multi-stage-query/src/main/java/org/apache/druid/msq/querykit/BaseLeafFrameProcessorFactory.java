@@ -49,6 +49,7 @@ import org.apache.druid.msq.kernel.FrameContext;
 import org.apache.druid.msq.kernel.ProcessorsAndChannels;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.DataSource.SegmentMapConfig;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.utils.CollectionUtils;
 
@@ -162,7 +163,7 @@ public abstract class BaseLeafFrameProcessorFactory extends BaseFrameProcessorFa
 
     if (segmentMapFnProcessor == null) {
       final Function<SegmentReference, SegmentReference> segmentMapFn =
-          query.getDataSource().createSegmentMapFunction1(query);
+          query.getDataSource().createSegmentMapFunction(SegmentMapConfig.of(query));
       processorManager = processorManagerFn.apply(ImmutableList.of(segmentMapFn));
     } else {
       processorManager = new ChainedProcessorManager<>(ProcessorManagers.of(() -> segmentMapFnProcessor), processorManagerFn);
