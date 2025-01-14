@@ -101,27 +101,14 @@ public interface DataSource
    */
   boolean isConcrete();
 
-  static class SegmentMapConfig {
-
-    private Query query;
-    private AtomicLong cpuTimeAcc;
-
-    public SegmentMapConfig(Query query, AtomicLong cpuTimeAcc)
-    {
-      this.query = query;
-      this.cpuTimeAcc = cpuTimeAcc;
-    }
-
-    static SegmentMapConfig of(Query query, AtomicLong cpuTimeAcc)
-    {
-      return new SegmentMapConfig(query,cpuTimeAcc);
-    }
-  }
-
   /**
    * Returns a segment function on to how to segment should be modified.
+   *
+   * @param query      the input query
+   * @param cpuTimeAcc the cpu time accumulator
+   * @return the segment function
    */
-  Function<SegmentReference, SegmentReference> createSegmentMapFunction(SegmentMapConfig req);
+  Function<SegmentReference, SegmentReference> createSegmentMapFunction(Query query, AtomicLong cpuTimeAcc);
 
   /**
    * Returns an updated datasource based on the specified new source.
