@@ -147,8 +147,8 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
     }
 
     SegmentMapConfig cfg = new SegmentMapConfig(query);
-    final Function<SegmentReference, SegmentReference> segmentMapFn = dataSourceFromQuery.createSegmentMapFunction(
-        cfg
+    final Function<SegmentReference, SegmentReference> segmentMapFn = dataSourceFromQuery.createSegmentMapFunction1(
+        query
     );
 
     final QueryRunner<T> baseRunner = new FinalizeResultsQueryRunner<>(

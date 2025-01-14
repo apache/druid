@@ -151,12 +151,23 @@ public class FilteredDataSource implements DataSource
   }
 
   @Override
-  public Function<SegmentReference, SegmentReference> createSegmentMapFunction(SegmentMapConfig cfg)
+  public Function<SegmentReference, SegmentReference> createSegmentMapFunction1(Query query)
   {
-    SegmentMapConfig newCfg = cfg.withColumns(virtualColumns.getRequiredColumns());
+    Set<String> requiredColumns = new LinkedHashSet<>(query.getRequiredColumns());
+    requiredColumns.addAll(virtualColumns.getRequiredColumns());
 
-    final Function<SegmentReference, SegmentReference> segmentMapFn = base.createSegmentMapFunction(
-        newCfg
+    Query newQuery;
+    try {
+      newQuery = overrideQueryRequiredColumns(query, requiredColumns);
+    }
+    catch (Exception e) {
+
+      throw new RuntimeException(e);
+
+    }
+
+    final Function<SegmentReference, SegmentReference> segmentMapFn = base.createSegmentMapFunction1(
+        newQuery
     );
     return baseSegment -> new FilteredSegment(segmentMapFn.apply(baseSegment), filter, virtualColumns);
   }
@@ -184,8 +195,6 @@ public class FilteredDataSource implements DataSource
       }
   }
 
-  //FIXME
-  @Deprecated
   private Query overrideQueryRequiredColumns(Query query, Set<String> requiredColumns) throws Exception
   {
 

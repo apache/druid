@@ -25,13 +25,10 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.planning.DataSourceAnalysis;
-import org.apache.druid.segment.SegmentReference;
-
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-import java.util.function.Function;
 
 /**
  * Represents an input number, i.e., a positional index into
@@ -99,12 +96,6 @@ public class InputNumberDataSource implements DataSource
   public DataSource withUpdatedDataSource(DataSource newSource)
   {
     return newSource;
-  }
-
-  @Override
-  public Function<SegmentReference, SegmentReference> createSegmentMapFunction(SegmentMapConfig query)
-  {
-    return Function.identity();
   }
 
   @Override

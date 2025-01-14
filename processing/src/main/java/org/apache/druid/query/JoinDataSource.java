@@ -296,17 +296,14 @@ public class JoinDataSource implements DataSource
   }
 
   @Override
-  public Function<SegmentReference, SegmentReference> createSegmentMapFunction(SegmentMapConfig cfg)
+  public Function<SegmentReference, SegmentReference> createSegmentMapFunction1(
+      Query query
+  )
   {
-    // FIXME
-    if (analysis.getBaseQuery().isPresent()) {
-      throw new RuntimeException("need to analyze this further");
-    }
-
     return createSegmentMapFunctionInternal(
         analysis.getJoinBaseTableFilter().map(Filters::toFilter).orElse(null),
         analysis.getPreJoinableClauses(),
-        cfg
+        analysis.getBaseQuery().orElse(query)
     );
   }
 
@@ -431,6 +428,8 @@ public class JoinDataSource implements DataSource
    *
    * @param baseFilter         Filter to apply before the join takes place
    * @param clauses            Pre-joinable clauses
+   * @param cpuTimeAccumulator An accumulator that we will add CPU nanos to; this is part of the function to encourage
+   *                           callers to remember to track metrics on CPU time required for creation of Joinables
    * @param query              The query that will be run on the mapped segments. Usually this should be
    *                           {@code analysis.getBaseQuery().orElse(query)}, where "analysis" is a
    *                           {@link DataSourceAnalysis} and "query" is the original
@@ -439,7 +438,7 @@ public class JoinDataSource implements DataSource
   private Function<SegmentReference, SegmentReference> createSegmentMapFunctionInternal(
       @Nullable final Filter baseFilter,
       final List<PreJoinableClause> clauses,
-      SegmentMapConfig cfg
+      final Query<?> query
   )
   {
     // compute column correlations here and RHS correlated values
@@ -450,10 +449,10 @@ public class JoinDataSource implements DataSource
                 clauses,
                 joinableFactoryWrapper.getJoinableFactory()
             );
-            final JoinFilterRewriteConfig filterRewriteConfig = cfg.getJoinFilterRewriteConfig();
+            final JoinFilterRewriteConfig filterRewriteConfig = JoinFilterRewriteConfig.forQuery(query);
 
             // Pick off any join clauses that can be converted into filters.
-            final Set<String> requiredColumns = cfg.getRequiredColumns();
+            final Set<String> requiredColumns = query.getRequiredColumns();
             final Filter baseFilterToUse;
             final List<JoinableClause> clausesToUse;
 
@@ -484,13 +483,11 @@ public class JoinDataSource implements DataSource
                 new JoinFilterPreAnalysisKey(
                     filterRewriteConfig,
                     clausesToUse,
-                    cfg.getVirtualColumns(),
-                    Filters.maybeAnd(Arrays.asList(baseFilterToUse, Filters.toFilter(cfg.getFilter())))
+                    query.getVirtualColumns(),
+                    Filters.maybeAnd(Arrays.asList(baseFilterToUse, Filters.toFilter(query.getFilter())))
                            .orElse(null)
                 )
             );
-            // FIXME
-            SegmentMapConfig newCfg = cfg;
             final Function<SegmentReference, SegmentReference> baseMapFn;
             // A join data source is not concrete
             // And isConcrete() of an unnest datasource delegates to its base
@@ -501,11 +498,10 @@ public class JoinDataSource implements DataSource
             // only when it is not a JoinDataSource
             if (left instanceof JoinDataSource) {
               baseMapFn = Function.identity();
-              if(true) {
-                throw new RuntimeException("whot");
-              }
             } else {
-              baseMapFn = left.createSegmentMapFunction(newCfg);
+              baseMapFn = left.createSegmentMapFunction1(
+                  query
+              );
             }
             return baseSegment ->
                 new HashJoinSegment(
