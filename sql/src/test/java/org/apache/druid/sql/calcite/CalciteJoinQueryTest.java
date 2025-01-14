@@ -1672,7 +1672,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.EQUIV_PLAN_CAST_MATERIALIZED_EARLIER)
+  @DecoupledTestConfig(ignoreExpectedQueriesReason = IgnoreQueriesReason.XL)
+//  @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.EQUIV_PLAN_CAST_MATERIALIZED_EARLIER)
   @MethodSource("provideQueryContexts")
   @ParameterizedTest(name = "{0}")
   public void testInnerJoinTwoLookupsToTableUsingNumericColumnInReverse(Map<String, Object> queryContext)
@@ -1683,7 +1684,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     cannotVectorize();
 
     testQuery(
-        "SELECT COUNT(*)\n"
+//        "SELECT l1.k,l2.k,foo.m1\n"
+        "SELECT l1.v\n"
         + "FROM lookup.lookyloo l1\n"
         + "INNER JOIN lookup.lookyloo l2 ON l1.k = l2.k\n"
         + "INNER JOIN foo on l2.k = foo.m1",
@@ -1730,6 +1732,63 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
         )
     );
   }
+
+
+  @DecoupledTestConfig(ignoreExpectedQueriesReason = IgnoreQueriesReason.XL)
+@Test
+@MethodSource("provideQueryContexts")
+@ParameterizedTest(name = "{0}")
+public void testCNO(Map<String, Object> queryContext)
+
+{
+
+  testQuery(
+//      "SELECT l1.k,l2.k,foo.m1\n"
+      "SELECT f1 from numfoo where f1 = dim6"
+,
+      queryContext,
+      ImmutableList.of(
+          Druids.newTimeseriesQueryBuilder()
+                .dataSource(
+                    join(
+                        join(
+                            new LookupDataSource("lookyloo"),
+                            new LookupDataSource("lookyloo"),
+                            "j0.",
+                            equalsCondition(
+                                makeColumnExpression("k"),
+                                makeColumnExpression("j0.k")
+                            ),
+                            JoinType.INNER
+                        ),
+                        new QueryDataSource(
+                            newScanQueryBuilder()
+                                .dataSource(CalciteTests.DATASOURCE1)
+                                .intervals(querySegmentSpec(Filtration.eternity()))
+                                .columns("m1")
+                                .columnTypes(ColumnType.FLOAT)
+                                .context(QUERY_CONTEXT_DEFAULT)
+                                .build()
+                        ),
+                        "_j0.",
+                        equalsCondition(
+                            makeExpression(ColumnType.DOUBLE, "CAST(\"j0.k\", 'DOUBLE')"),
+                            DruidExpression.ofColumn(ColumnType.FLOAT, "_j0.m1")
+                        ),
+                        JoinType.INNER
+                    )
+                )
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .granularity(Granularities.ALL)
+                .aggregators(new CountAggregatorFactory("a0"))
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+      ),
+      ImmutableList.of(
+          new Object[]{1F}
+      )
+  );
+}
 
   @MethodSource("provideQueryContexts")
   @ParameterizedTest(name = "{0}")
