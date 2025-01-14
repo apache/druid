@@ -33,7 +33,7 @@ public class DefaultColumnFormatConfig
   public static void validateNestedFormatVersion(@Nullable Integer formatVersion)
   {
     if (formatVersion != null) {
-      if (formatVersion < 4 || formatVersion > 5) {
+      if (formatVersion != 5) {
         throw DruidException.forPersona(DruidException.Persona.USER)
                             .ofCategory(DruidException.Category.INVALID_INPUT)
                             .build("Unsupported nested column format version[%s]", formatVersion);
