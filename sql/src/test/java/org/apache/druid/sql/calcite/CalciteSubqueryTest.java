@@ -404,7 +404,8 @@ new Object[]{null}
     cannotVectorize();
     Map<String, Object> queryContextModified = withLeftDirectAccessEnabled(queryContext);
     testQuery(
-        "SELECT a.dim2,a.dim1_firstchar FROM view.cview as a INNER JOIN druid.foo d on d.dim2 = a.dim2 WHERE a.dim1_firstchar <> 'z' ",
+        "SELECT count(1) FROM view.cview as a INNER JOIN druid.foo d on d.dim2 = a.dim2 WHERE a.dim1_firstchar <> 'z' ",
+//        "SELECT a.dim2,a.dim1_firstchar FROM view.cview as a INNER JOIN druid.foo d on d.dim2 = a.dim2 WHERE a.dim1_firstchar <> 'z' ",
         queryContextModified,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()

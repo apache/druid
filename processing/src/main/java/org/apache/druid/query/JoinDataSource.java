@@ -438,14 +438,20 @@ public class JoinDataSource implements DataSource
    */
   private Function<SegmentReference, SegmentReference> createSegmentMapFunctionInternal(
       @Nullable final Filter baseFilter,
-      final List<PreJoinableClause> clauses,
+      final List<PreJoinableClause> clauses1,
       SegmentMapConfig cfg
   )
   {
     // compute column correlations here and RHS correlated values
-          if (clauses.isEmpty()) {
+          if (clauses1.isEmpty()) {
             return Function.identity();
           } else {
+
+            // this is pretty hairy; the DataSourceAnalysis class tries to replace the DataSource tree with the List<PreJoinables>
+            // which covers reality as long as there are no other DataSources (which is not true).
+            // simple fix is to limit this method to only process one level at a time.
+            List<PreJoinableClause> clauses = clauses1.subList(0, 1);
+
             final JoinableClauses joinableClauses = JoinableClauses.createClauses(
                 clauses,
                 joinableFactoryWrapper.getJoinableFactory()
@@ -475,7 +481,7 @@ public class JoinDataSource implements DataSource
                       )
                   ).orElse(null);
               clausesToUse = conversionResult.rhs;
-              if (false) {
+              if (true) {
                 // FIXME doesn't seem like this is needed
                 Set<String> a = conversionResult.lhs.stream().flatMap(f -> f.getRequiredColumns().stream())
                     .collect(Collectors.toSet());
