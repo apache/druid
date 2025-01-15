@@ -54,6 +54,7 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
+import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.calcite.parser.DruidSqlIngest;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.parser.DruidSqlReplace;
@@ -116,6 +117,9 @@ public class MSQTaskQueryMaker implements QueryMaker
   @Override
   public QueryResponse<Object[]> runQuery(final DruidQuery druidQuery)
   {
+    if (!plannerContext.getAuthorizationResult().allowAccessWithNoRestriction()) {
+      throw new ForbiddenException(plannerContext.getAuthorizationResult().getErrorMessage());
+    }
     Hook.QUERY_PLAN.run(druidQuery.getQuery());
     plannerContext.dispatchHook(DruidHook.NATIVE_PLAN, druidQuery.getQuery());
 
