@@ -126,7 +126,7 @@ public interface Query<T>
 
   /**
    * Get context value and cast to ContextType in an unsafe way.
-   *
+   * <p>
    * For safe conversion, it's recommended to use following methods instead:
    * <p>
    * {@link QueryContext#getBoolean(String)} <br/>
@@ -178,7 +178,7 @@ public interface Query<T>
    * {@link QueryRunnerFactory#mergeRunners(QueryProcessingPool, Iterable)} calls. This is used to combine streams of
    * results from different sources; for example, it's used by historicals to combine streams from different segments,
    * and it's used by the broker to combine streams from different historicals.
-   *
+   * <p>
    * Important note: sometimes, this ordering is used in a type-unsafe way to order @{code Result<BySegmentResultValue>}
    * objects. Because of this, implementations should fall back to {@code Ordering.natural()} when they are given an
    * object that is not of type T.
@@ -189,7 +189,7 @@ public interface Query<T>
 
   /**
    * Returns a new query, identical to this one, but with a different associated {@link QuerySegmentSpec}.
-   *
+   * <p>
    * This often changes the behavior of {@link #getRunner(QuerySegmentWalker)}, since most queries inherit that method
    * from {@link BaseQuery}, which implements it by calling {@link QuerySegmentSpec#lookup}.
    */
@@ -264,12 +264,12 @@ public interface Query<T>
 
   /**
    * Returns the set of columns that this query will need to access out of its datasource.
-   *
+   * <p>
    * This method does not "look into" what the datasource itself is doing. For example, if a query is built on a
    * {@link QueryDataSource}, this method will not return the columns used by that subquery. As another example, if a
    * query is built on a {@link JoinDataSource}, this method will not return the columns from the underlying datasources
    * that are used by the join condition, unless those columns are also used by this query in other ways.
-   *
+   * <p>
    * Returns null if the set of required columns cannot be known ahead of time.
    */
   @Nullable

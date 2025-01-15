@@ -21,7 +21,6 @@ package org.apache.druid.query.expression;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionType;
@@ -37,10 +36,6 @@ import org.junit.Test;
  */
 public class TimestampExtractExprMacroTest
 {
-  static {
-    NullHandling.initializeForTests();
-  }
-
   private TimestampExtractExprMacro target;
 
   @Before

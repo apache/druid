@@ -21,7 +21,6 @@ package org.apache.druid.query.aggregation.variance;
 
 import com.google.common.collect.ImmutableMap;
 import nl.jqno.equalsverifier.EqualsVerifier;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -99,7 +98,7 @@ public class StandardDeviationPostAggregatorTest extends InitializedNullHandling
   public void testComputeForNullVarianceShouldReturnDefaultDoubleValue()
   {
     Mockito.when(collector.getVariance(true)).thenReturn(null);
-    Assert.assertEquals(NullHandling.defaultDoubleValue(), target.compute(combinedAggregators));
+    Assert.assertNull(target.compute(combinedAggregators));
   }
 
   @Test

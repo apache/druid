@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.aggregation.cardinality.vector;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.query.aggregation.cardinality.types.StringCardinalityAggregatorColumnSelectorStrategy;
 import org.apache.druid.segment.data.IndexedInts;
@@ -84,7 +83,7 @@ public class MultiValueStringCardinalityVectorProcessor implements CardinalityVe
 
         for (int j = 0; j < sz; j++) {
           final String s = selector.lookupName(ids.get(j));
-          if (NullHandling.replaceWithDefault() || s != null) {
+          if (s != null) {
             final int position = positions[i] + positionOffset;
             buf.limit(position + HyperLogLogCollector.getLatestNumBytesForDenseStorage());
             buf.position(position);

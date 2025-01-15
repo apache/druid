@@ -23,7 +23,7 @@ import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ContainerRequest;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.server.http.security.AbstractResourceFilter;
-import org.apache.druid.server.security.Access;
+import org.apache.druid.server.security.AuthorizationResult;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Resource;
@@ -54,17 +54,17 @@ public class BasicSecurityResourceFilter extends AbstractResourceFilter
         getAction(request)
     );
 
-    final Access authResult = AuthorizationUtils.authorizeResourceAction(
+    final AuthorizationResult authResult = AuthorizationUtils.authorizeResourceAction(
         getReq(),
         resourceAction,
         getAuthorizerMapper()
     );
 
-    if (!authResult.isAllowed()) {
+    if (!authResult.allowAccessWithNoRestriction()) {
       throw new WebApplicationException(
           Response.status(Response.Status.FORBIDDEN)
                   .type(MediaType.TEXT_PLAIN)
-                  .entity(StringUtils.format("Access-Check-Result: %s", authResult.toString()))
+                  .entity(StringUtils.format("Access-Check-Result: %s", authResult.getErrorMessage()))
                   .build()
       );
     }

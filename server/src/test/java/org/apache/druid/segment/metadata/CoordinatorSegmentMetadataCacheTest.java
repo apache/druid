@@ -78,8 +78,8 @@ import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.loading.SegmentReplicaCount;
 import org.apache.druid.server.coordinator.loading.SegmentReplicationStatus;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
-import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AllowAllAuthenticator;
+import org.apache.druid.server.security.AuthorizationResult;
 import org.apache.druid.server.security.NoopEscalator;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
@@ -1064,7 +1064,11 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
 
     EasyMock.expect(factoryMock.factorize()).andReturn(lifecycleMock).once();
     // This is the mat of the test, making sure that the query created by the method under test matches the expected query, specifically the operator configured context
-    EasyMock.expect(lifecycleMock.runSimple(expectedMetadataQuery, AllowAllAuthenticator.ALLOW_ALL_RESULT, Access.OK))
+    EasyMock.expect(lifecycleMock.runSimple(
+                expectedMetadataQuery,
+                AllowAllAuthenticator.ALLOW_ALL_RESULT,
+                AuthorizationResult.ALLOW_NO_RESTRICTION
+            ))
             .andReturn(QueryResponse.withEmptyContext(Sequences.empty()));
 
     EasyMock.replay(factoryMock, lifecycleMock);
@@ -2299,7 +2303,11 @@ public class CoordinatorSegmentMetadataCacheTest extends CoordinatorSegmentMetad
     );
 
     EasyMock.expect(factoryMock.factorize()).andReturn(lifecycleMock).once();
-    EasyMock.expect(lifecycleMock.runSimple(expectedMetadataQuery, AllowAllAuthenticator.ALLOW_ALL_RESULT, Access.OK))
+    EasyMock.expect(lifecycleMock.runSimple(
+                expectedMetadataQuery,
+                AllowAllAuthenticator.ALLOW_ALL_RESULT,
+                AuthorizationResult.ALLOW_NO_RESTRICTION
+            ))
             .andReturn(QueryResponse.withEmptyContext(Sequences.empty())).once();
 
     EasyMock.replay(factoryMock, lifecycleMock);

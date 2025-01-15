@@ -24,7 +24,6 @@ import org.apache.druid.collections.bitmap.ConciseBitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.bitmap.MutableBitmap;
 import org.apache.druid.collections.bitmap.RoaringBitmapFactory;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -73,10 +72,6 @@ public class UniformBitmapBenchmark
 
   private List<ImmutableBitmap> bitmaps;
   private BitmapFactory bitmapFactory;
-
-  static {
-    NullHandling.initializeForTests();
-  }
 
   @Setup(Level.Trial)
   public void setup() throws IOException

@@ -24,12 +24,12 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterators;
 import nl.jqno.equalsverifier.EqualsVerifier;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.TrueDimFilter;
 import org.apache.druid.query.planning.DataSourceAnalysis;
+import org.apache.druid.query.policy.NoRestrictionPolicy;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
@@ -503,10 +503,30 @@ public class JoinDataSourceTest
   }
 
   @Test
+  public void testGetAnalysisWithRestrictedDS()
+  {
+    JoinDataSource dataSource = JoinDataSource.create(
+        RestrictedDataSource.create(
+            new TableDataSource("table1"),
+            NoRestrictionPolicy.instance()
+        ),
+        new TableDataSource("table2"),
+        "j.",
+        "x == \"j.x\"",
+        JoinType.LEFT,
+        null,
+        ExprMacroTable.nil(),
+        null,
+        JoinAlgorithm.BROADCAST
+    );
+    DataSourceAnalysis analysis = dataSource.getAnalysis();
+    Assert.assertEquals("table1", analysis.getBaseDataSource().getTableNames().iterator().next());
+  }
+
+  @Test
   public void test_computeJoinDataSourceCacheKey_keyChangesWithBaseFilter()
   {
     JoinableFactoryWrapper joinableFactoryWrapper = new JoinableFactoryWrapper(new JoinableFactoryWithCacheKey());
-    NullHandling.initializeForTests();
     final InDimFilter expectedInDimFilter = new InDimFilter("dimTest", Arrays.asList("good", "bad"), null);
 
     JoinDataSource joinDataSource = JoinDataSource.create(

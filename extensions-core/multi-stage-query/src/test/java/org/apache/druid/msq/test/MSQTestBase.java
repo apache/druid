@@ -40,7 +40,6 @@ import org.apache.calcite.avatica.remote.TypedValue;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.collections.ReferenceCountingResourceHolder;
 import org.apache.druid.collections.ResourceHolder;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
@@ -317,8 +316,6 @@ public class MSQTestBase extends BaseCalciteQueryTest
   public static final String DURABLE_STORAGE = "durable_storage";
   public static final String DEFAULT = "default";
   public static final String PARALLEL_MERGE = "parallel_merge";
-
-  public final boolean useDefault = NullHandling.replaceWithDefault();
 
   protected File localFileStorageDir;
   protected LocalFileStorageConnector localFileStorageConnector;

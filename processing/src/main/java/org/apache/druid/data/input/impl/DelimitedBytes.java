@@ -19,7 +19,6 @@
 
 package org.apache.druid.data.input.impl;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
 
 import java.util.ArrayList;
@@ -36,8 +35,7 @@ public class DelimitedBytes
   public static final int UNKNOWN_FIELD_COUNT = -1;
 
   /**
-   * Split UTF-8 bytes by a particular delimiter. When {@link NullHandling#sqlCompatible()}, empty parts are
-   * returned as nulls. When {@link NullHandling#replaceWithDefault()}, empty parts are returned as empty strings.
+   * Split UTF-8 bytes by a particular delimiter. Empty parts are returned as nulls.
    *
    * @param bytes         utf-8 bytes
    * @param delimiter     the delimiter
@@ -53,7 +51,7 @@ public class DelimitedBytes
     while (position < bytes.length) {
       if (bytes[position] == delimiter) {
         final String s = StringUtils.fromUtf8(bytes, start, position - start);
-        out.add(s.isEmpty() && NullHandling.sqlCompatible() ? null : s);
+        out.add(s.isEmpty() ? null : s);
         start = position + 1;
       }
 
@@ -61,7 +59,7 @@ public class DelimitedBytes
     }
 
     final String s = StringUtils.fromUtf8(bytes, start, position - start);
-    out.add(s.isEmpty() && NullHandling.sqlCompatible() ? null : s);
+    out.add(s.isEmpty() ? null : s);
     return out;
   }
 }

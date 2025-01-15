@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.aggregation;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.TestColumnSelectorFactory;
@@ -114,13 +113,8 @@ public class SingleValueAggregationTest extends InitializedNullHandlingTest
     Assert.assertThrows(DruidException.class, () -> longAggFactory.getComparator());
 
     Aggregator agg = longAggFactory.factorize(colSelectorFactoryLong);
-    if (NullHandling.replaceWithDefault()) {
-      Assert.assertFalse(agg.isNull());
-      Assert.assertEquals(0L, agg.getLong());
-    } else {
-      Assert.assertTrue(agg.isNull());
-      Assert.assertThrows(AssertionError.class, () -> agg.getLong());
-    }
+    Assert.assertTrue(agg.isNull());
+    Assert.assertThrows(AssertionError.class, () -> agg.getLong());
 
     aggregate(selectorLong, agg);
     Assert.assertEquals(longValues[0], ((Long) agg.get()).longValue());
@@ -155,11 +149,7 @@ public class SingleValueAggregationTest extends InitializedNullHandlingTest
   public void testDoubleAggregator()
   {
     Aggregator agg = doubleAggFactory.factorize(colSelectorFactoryDouble);
-    if (NullHandling.replaceWithDefault()) {
-      Assert.assertEquals(0.0d, agg.getDouble(), 0.000001);
-    } else {
-      Assert.assertThrows(AssertionError.class, () -> agg.getDouble());
-    }
+    Assert.assertThrows(AssertionError.class, () -> agg.getDouble());
 
     aggregate(selectorDouble, agg);
     Assert.assertEquals(doubleValues[0], ((Double) agg.get()).doubleValue(), 0.000001);
@@ -188,11 +178,7 @@ public class SingleValueAggregationTest extends InitializedNullHandlingTest
   public void testFloatAggregator()
   {
     Aggregator agg = floatAggFactory.factorize(colSelectorFactoryFloat);
-    if (NullHandling.replaceWithDefault()) {
-      Assert.assertEquals(0.0f, agg.getFloat(), 0.000001);
-    } else {
-      Assert.assertThrows(AssertionError.class, () -> agg.getFloat());
-    }
+    Assert.assertThrows(AssertionError.class, () -> agg.getFloat());
 
     aggregate(selectorFloat, agg);
     Assert.assertEquals(floatValues[0], ((Float) agg.get()).floatValue(), 0.000001);

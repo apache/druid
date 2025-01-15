@@ -22,8 +22,6 @@ package org.apache.druid.segment.join;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Sets;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
@@ -48,7 +46,6 @@ import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -70,9 +67,7 @@ public class JoinableFactoryWrapperTest extends InitializedNullHandlingTest
                   .build();
 
   private static final Set<String> TEST_LOOKUP_KEYS =
-      NullHandling.sqlCompatible()
-      ? TEST_LOOKUP.keySet()
-      : Sets.difference(TEST_LOOKUP.keySet(), Collections.singleton(""));
+      TEST_LOOKUP.keySet();
 
   private static final InlineDataSource INDEXED_TABLE_DS = InlineDataSource.fromIterable(
       ImmutableList.of(

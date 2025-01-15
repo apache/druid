@@ -161,7 +161,6 @@ public class MovingAverageQueryTest extends InitializedNullHandlingTest
         }
     );
 
-    System.setProperty("druid.generic.useDefaultValueForNull", "true");
     System.setProperty("druid.processing.buffer.sizeBytes", "655360");
     Injector baseInjector = GuiceInjectors.makeStartupInjector();
     Injector injector = Initialization.makeInjectorWithModules(baseInjector, modules);

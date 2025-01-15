@@ -21,7 +21,6 @@ package org.apache.druid.query.aggregation.histogram.sql;
 
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Injector;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -284,12 +283,7 @@ public class QuantileSqlAggregatorTest extends BaseCalciteQueryTest
   @Test
   public void testQuantileOnInnerQuery()
   {
-    final List<Object[]> expectedResults;
-    if (NullHandling.replaceWithDefault()) {
-      expectedResults = ImmutableList.of(new Object[]{7.0, 8.26386833190918});
-    } else {
-      expectedResults = ImmutableList.of(new Object[]{5.25, 6.59091854095459});
-    }
+    final List<Object[]> expectedResults = ImmutableList.of(new Object[]{5.25, 6.59091854095459});
 
     testQuery(
         "SELECT AVG(x), APPROX_QUANTILE(x, 0.98)\n"
@@ -316,8 +310,6 @@ public class QuantileSqlAggregatorTest extends BaseCalciteQueryTest
                         .setGranularity(Granularities.ALL)
                         .setAggregatorSpecs(
                             new DoubleSumAggregatorFactory("_a0:sum", "a0"),
-                            NullHandling.replaceWithDefault() ?
-                            new CountAggregatorFactory("_a0:count") :
                             new FilteredAggregatorFactory(
                                 new CountAggregatorFactory("_a0:count"),
                                 notNull("a0")
@@ -357,25 +349,14 @@ public class QuantileSqlAggregatorTest extends BaseCalciteQueryTest
   {
     cannotVectorize();
 
-    final List<Object[]> expectedResults;
-    if (NullHandling.replaceWithDefault()) {
-      expectedResults = ImmutableList.of(
-          new Object[]{"", 0.0d},
-          new Object[]{"a", 0.0d},
-          new Object[]{"b", 0.0d},
-          new Object[]{"c", 10.100000381469727d},
-          new Object[]{"d", 2.0d}
-      );
-    } else {
-      expectedResults = ImmutableList.of(
-          new Object[]{null, Double.NaN},
-          new Object[]{"", 1.0d},
-          new Object[]{"a", Double.NaN},
-          new Object[]{"b", 10.100000381469727d},
-          new Object[]{"c", 10.100000381469727d},
-          new Object[]{"d", 2.0d}
-      );
-    }
+    final List<Object[]> expectedResults = ImmutableList.of(
+        new Object[]{null, Double.NaN},
+        new Object[]{"", 1.0d},
+        new Object[]{"a", Double.NaN},
+        new Object[]{"b", 10.100000381469727d},
+        new Object[]{"c", 10.100000381469727d},
+        new Object[]{"d", 2.0d}
+    );
     testQuery(
         "SELECT dim3, APPROX_QUANTILE(CAST(dim1 as DOUBLE), 0.5) from foo group by dim3",
         ImmutableList.of(
@@ -428,7 +409,7 @@ public class QuantileSqlAggregatorTest extends BaseCalciteQueryTest
                   .dataSource(CalciteTests.DATASOURCE1)
                   .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
                   .granularity(Granularities.ALL)
-                  .filters(numericEquality("dim2", 0L, ColumnType.LONG))
+                  .filters(equality("dim2", 0L, ColumnType.LONG))
                   .aggregators(
                       ImmutableList.of(
                           new ApproximateHistogramFoldingAggregatorFactory(

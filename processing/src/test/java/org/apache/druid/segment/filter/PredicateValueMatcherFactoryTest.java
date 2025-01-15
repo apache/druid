@@ -21,7 +21,6 @@ package org.apache.druid.segment.filter;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.collections.bitmap.RoaringBitmapFactory;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.filter.SelectorPredicateFactory;
 import org.apache.druid.query.filter.ValueMatcher;
@@ -274,11 +273,7 @@ public class PredicateValueMatcherFactoryTest extends InitializedNullHandlingTes
     );
     columnValueSelector.advance();
     final ValueMatcher matcher = forSelector(null).makeComplexProcessor(columnValueSelector);
-    if (NullHandling.sqlCompatible()) {
-      Assert.assertFalse(matcher.matches(false));
-    } else {
-      Assert.assertTrue(matcher.matches(false));
-    }
+    Assert.assertFalse(matcher.matches(false));
   }
 
   @Test

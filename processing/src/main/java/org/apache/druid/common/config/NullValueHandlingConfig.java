@@ -29,10 +29,6 @@ public class NullValueHandlingConfig
   private static final Logger LOG = new Logger(NullValueHandlingConfig.class);
   public static final String NULL_HANDLING_CONFIG_STRING = "druid.generic.useDefaultValueForNull";
   public static final String THREE_VALUE_LOGIC_CONFIG_STRING = "druid.generic.useThreeValueLogicForNativeFilters";
-
-  //added to preserve backward compatibility
-  //and not count nulls during cardinality aggrgation over strings
-
   public static final String NULL_HANDLING_DURING_STRING_CARDINALITY = "druid.generic.ignoreNullsForStringCardinality";
 
   @JsonProperty("useDefaultValueForNull")
@@ -83,30 +79,15 @@ public class NullValueHandlingConfig
 
     if (this.useDefaultValuesForNull) {
       LOG.warn(
-          "druid.generic.useDefaultValueForNull set to 'true', we recommend using 'false' if using SQL to query Druid for the most SQL compliant behavior, see %s for details",
+          "druid.generic.useDefaultValueForNull set to 'true', but has been removed and is always 'false' for the most SQL compliant behavior, see %s for details",
           StringUtils.format(docsBaseFormat, version, "null-values")
       );
     }
     if (!this.useThreeValueLogicForNativeFilters) {
       LOG.warn(
-          "druid.generic.useThreeValueLogic set to 'false', we recommend using 'true' if using SQL to query Druid for the most SQL compliant behavior, see %s for details",
+          "druid.generic.useThreeValueLogicForNativeFilters set to 'false', but has been removed and is always 'true' for the most SQL compliant behavior, see %s for details",
           StringUtils.format(docsBaseFormat, version, "boolean-logic")
       );
     }
-  }
-
-  public boolean isIgnoreNullsForStringCardinality()
-  {
-    return ignoreNullsForStringCardinality;
-  }
-
-  public boolean isUseDefaultValuesForNull()
-  {
-    return useDefaultValuesForNull;
-  }
-
-  public boolean isUseThreeValueLogicForNativeFilters()
-  {
-    return useThreeValueLogicForNativeFilters;
   }
 }
