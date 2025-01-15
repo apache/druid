@@ -295,7 +295,7 @@ const Redirects=[
     "to": "/docs/latest/development/extensions-core/google"
   },
   {
-    "from": "/docs/latest/development/extensions-contrib/k8s-jobs.html",
+    "from": "/docs/latest/development/extensions-contrib/k8s-jobs",
     "to": "/docs/latest/development/extensions-core/k8s-jobs"
   },
   {
