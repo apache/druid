@@ -24,7 +24,14 @@ import {
   SqlQuery,
 } from 'druid-query-toolkit';
 
-import { changeByIndex, deleteKeys, isEmpty, mapRecord, mapRecordOrReturn } from '../../../utils';
+import {
+  changeByIndex,
+  deleteKeys,
+  filterOrReturn,
+  isEmpty,
+  mapRecord,
+  mapRecordOrReturn,
+} from '../../../utils';
 import type { Rename } from '../utils';
 import { renameColumnsInExpression } from '../utils';
 
@@ -222,16 +229,21 @@ export class ExploreState {
   }
 
   public restrictToQuerySource(querySource: QuerySource): ExploreState {
-    const { where, moduleStates } = this;
+    const { where, moduleStates, helpers } = this;
     const newWhere = querySource.restrictWhere(where);
     const newModuleStates = mapRecordOrReturn(moduleStates, moduleState =>
       moduleState.restrictToQuerySource(querySource, newWhere),
     );
-    if (where === newWhere && moduleStates === newModuleStates) return this;
+    const newHelpers = filterOrReturn(helpers, helper =>
+      querySource.validateExpressionMeta(helper),
+    );
+    if (where === newWhere && moduleStates === newModuleStates && helpers === newHelpers)
+      return this;
 
     return this.change({
       where: newWhere,
       moduleStates: newModuleStates,
+      helpers: newHelpers,
     });
   }
 

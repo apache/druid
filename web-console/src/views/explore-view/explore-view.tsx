@@ -42,7 +42,7 @@ import { Loader, SplitterLayout } from '../../components';
 import { ShowValueDialog } from '../../dialogs/show-value-dialog/show-value-dialog';
 import { useHashAndLocalStorageHybridState, useQueryManager } from '../../hooks';
 import { Api, AppToaster } from '../../singletons';
-import { DruidError, LocalStorageKeys, queryDruidSql } from '../../utils';
+import { capitalizeFirst, DruidError, LocalStorageKeys, queryDruidSql } from '../../utils';
 
 import {
   DroppableContainer,
@@ -327,22 +327,6 @@ export const ExploreView = React.memo(function ExploreView() {
                   position={Position.BOTTOM_RIGHT}
                   content={
                     <Menu>
-                      <MenuItem icon={IconNames.CONTROL} text="Layout">
-                        {ExploreState.LAYOUTS.map(layout => (
-                          <MenuItem
-                            key={layout}
-                            icon={LAYOUT_TO_ICON[layout]}
-                            text={layout.replace(/-/g, ' ')}
-                            labelElement={
-                              selectedLayout === layout ? <Icon icon={IconNames.TICK} /> : undefined
-                            }
-                            onClick={() => {
-                              setExploreState(effectiveExploreState.change({ layout }));
-                            }}
-                          />
-                        ))}
-                      </MenuItem>
-                      <MenuDivider />
                       <MenuItem
                         icon={IconNames.DUPLICATE}
                         text="Copy last query"
@@ -377,6 +361,27 @@ export const ExploreView = React.memo(function ExploreView() {
                   }
                 >
                   <Button icon={IconNames.MORE} data-tooltip="More options" minimal />
+                </Popover>
+                <Popover
+                  content={
+                    <Menu>
+                      {ExploreState.LAYOUTS.map(layout => (
+                        <MenuItem
+                          key={layout}
+                          icon={LAYOUT_TO_ICON[layout]}
+                          text={capitalizeFirst(layout.replace(/-/g, ' '))}
+                          labelElement={
+                            selectedLayout === layout ? <Icon icon={IconNames.TICK} /> : undefined
+                          }
+                          onClick={() => {
+                            setExploreState(effectiveExploreState.change({ layout }));
+                          }}
+                        />
+                      ))}
+                    </Menu>
+                  }
+                >
+                  <Button icon={IconNames.CONTROL} data-tooltip="Layout" minimal />
                 </Popover>
                 <Button
                   icon={IconNames.PANEL_STATS}
