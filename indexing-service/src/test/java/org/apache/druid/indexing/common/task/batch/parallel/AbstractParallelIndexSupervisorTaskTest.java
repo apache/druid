@@ -716,7 +716,7 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
           location.getBucketId()
       );
       if (!zippedFile.isPresent()) {
-        throw new ISE("Can't find segment file for location[%s] at path[%s]", location);
+        throw new ISE("Can't find segment file for location[%s] at path[%s]", location, zippedFile);
       }
       final File fetchedFile = new File(partitionDir, StringUtils.format("temp_%s", location.getSubTaskId()));
       FileUtils.writeAtomically(

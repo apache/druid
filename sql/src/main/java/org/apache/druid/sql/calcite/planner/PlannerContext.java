@@ -47,8 +47,8 @@ import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.lookup.RegisteredLookupExtractionFn;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
-import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthenticationResult;
+import org.apache.druid.server.security.AuthorizationResult;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.calcite.expression.SqlOperatorConversion;
 import org.apache.druid.sql.calcite.expression.builtin.QueryLookupOperatorConversion;
@@ -146,7 +146,7 @@ public class PlannerContext
   // set of datasources and views which must be authorized, initialized to null so we can detect if it has been set.
   private Set<ResourceAction> resourceActions;
   // result of authorizing set of resources against authentication identity
-  private Access authorizationResult;
+  private AuthorizationResult authorizationResult;
   // error messages encountered while planning the query
   @Nullable
   private String planningError;
@@ -574,7 +574,7 @@ public class PlannerContext
   }
 
 
-  public Access getAuthorizationResult()
+  public AuthorizationResult getAuthorizationResult()
   {
     return Preconditions.checkNotNull(authorizationResult, "Authorization result not available");
   }
@@ -594,7 +594,7 @@ public class PlannerContext
     this.authenticationResult = Preconditions.checkNotNull(authenticationResult, "authenticationResult");
   }
 
-  public void setAuthorizationResult(Access access)
+  public void setAuthorizationResult(AuthorizationResult access)
   {
     if (this.authorizationResult != null) {
       // It's a bug if this happens, because setAuthorizationResult should be called exactly once.
@@ -636,7 +636,7 @@ public class PlannerContext
 
   /**
    * Checks if the current {@link SqlEngine} supports a particular feature.
-   *
+   * <p>
    * When executing a specific query, use this method instead of {@link SqlEngine#featureAvailable(EngineFeature)}
    * because it also verifies feature flags.
    */
