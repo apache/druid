@@ -36,7 +36,7 @@ download_file() {
   local dest=$1
   local host=$2
 
-  wget --retry-connrefused --no-verbose --continue --output-document="$dest" "$host"
+  wget --retry-connrefused --continue --output-document="$dest" "$host"
 }
 
 # Zookeeper
