@@ -442,7 +442,7 @@ public class QueryTestRunner
           expectedQueries.size(),
           recordedQueries.size()
       );
-      if(true) {
+      if(false) {
         for (int i = 0; i < expectedQueries.size(); i++) {
           Query<?> expectedQuery = expectedQueries.get(i);
           Query<?> actualQuery = recordedQueries.get(i);

@@ -376,6 +376,26 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
         )
     );
   }
+  /**
+  /**
+   *
+   * a.dim1_firstchar
+   * new Object[]{"a", null},
+new Object[]{"a", null},
+new Object[]{"a", "1"},
+new Object[]{"a", "1
+   * @param testName
+   * @param queryContext
+   *
+   *  d.dim2
+   * new Object[]{"a"},
+new Object[]{null},
+new Object[]{""},
+new Object[]{"a"},
+new Object[]{"abc"},
+new Object[]{null}
+
+   */
 
   @MethodSource("constructorFeeder")
   @ParameterizedTest(name = "{0}")
@@ -384,7 +404,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
     cannotVectorize();
     Map<String, Object> queryContextModified = withLeftDirectAccessEnabled(queryContext);
     testQuery(
-        "SELECT COUNT(*) FROM view.cview as a INNER JOIN druid.foo d on d.dim2 = a.dim2 WHERE a.dim1_firstchar <> 'z' ",
+        "SELECT a.dim2,a.dim1_firstchar FROM view.cview as a INNER JOIN druid.foo d on d.dim2 = a.dim2 WHERE a.dim1_firstchar <> 'z' ",
         queryContextModified,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
