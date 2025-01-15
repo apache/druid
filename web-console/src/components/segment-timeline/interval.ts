@@ -16,9 +16,9 @@
  * limitations under the License.
  */
 
+import type { Duration } from 'chronoshift';
 import { sum } from 'd3-array';
 
-import type { Duration } from '../../utils';
 import { formatBytes, formatInteger } from '../../utils';
 
 export type IntervalStat = 'segments' | 'size' | 'rows';

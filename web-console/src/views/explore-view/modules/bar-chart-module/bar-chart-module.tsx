@@ -16,26 +16,31 @@
  * limitations under the License.
  */
 
+import { Button, Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { L } from 'druid-query-toolkit';
+import { F, L } from 'druid-query-toolkit';
 import type { ECharts } from 'echarts';
 import * as echarts from 'echarts';
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
-import { Loader } from '../../../components';
-import { useQueryManager } from '../../../hooks';
-import { formatEmpty } from '../../../utils';
-import { Issue } from '../components';
-import { highlightStore } from '../highlight-store/highlight-store';
-import type { ExpressionMeta } from '../models';
-import { ModuleRepository } from '../module-repository/module-repository';
-
-import './record-table-module.scss';
+import { Loader, PortalBubble, type PortalBubbleOpenOn } from '../../../../components';
+import { useQueryManager } from '../../../../hooks';
+import { formatEmpty } from '../../../../utils';
+import { Issue } from '../../components';
+import type { ExpressionMeta } from '../../models';
+import { ModuleRepository } from '../../module-repository/module-repository';
+import { updateFilterClause } from '../../utils';
 
 const OVERALL_LABEL = 'Overall';
 
+interface BarChartHighlight extends PortalBubbleOpenOn {
+  dim: number;
+  met: number;
+}
+
 interface BarChartParameterValues {
   splitColumn: ExpressionMeta;
+  timeBucket: string;
   measure: ExpressionMeta;
   measureToSort: ExpressionMeta;
   limit: number;
@@ -51,17 +56,37 @@ ModuleRepository.registerModule<BarChartParameterValues>({
       label: 'Bar column',
       transferGroup: 'show',
       required: true,
+      important: true,
     },
+    timeBucket: {
+      type: 'option',
+      label: 'Time bucket',
+      options: ['PT1M', 'PT5M', 'PT1H', 'P1D', 'P1M'],
+      optionLabels: {
+        PT1M: '1 minute',
+        PT5M: '5 minutes',
+        PT1H: '1 hour',
+        P1D: '1 day',
+        P1M: '1 month',
+      },
+      defaultValue: 'PT1H',
+      important: true,
+      defined: ({ parameterValues, querySource }) =>
+        parameterValues.splitColumn?.evaluateSqlType(querySource?.columns) === 'TIMESTAMP',
+    },
+
     measure: {
       type: 'measure',
       label: 'Measure to show',
       transferGroup: 'show-agg',
-      defaultValue: querySource => querySource.getFirstAggregateMeasure(),
+      defaultValue: ({ querySource }) => querySource?.getFirstAggregateMeasure(),
       required: true,
+      important: true,
     },
     measureToSort: {
       type: 'measure',
-      label: 'Measure to sort (default to shown)',
+      label: 'Measure to sort',
+      description: 'Default to shown measure',
     },
     limit: {
       type: 'number',
@@ -72,25 +97,34 @@ ModuleRepository.registerModule<BarChartParameterValues>({
   },
   component: function BarChartModule(props) {
     const { querySource, where, setWhere, parameterValues, stage, runSqlQuery } = props;
+    const containerRef = useRef<HTMLDivElement>();
     const chartRef = useRef<ECharts>();
+    const [highlight, setHighlight] = useState<BarChartHighlight | undefined>();
 
-    const { splitColumn, measure, measureToSort, limit } = parameterValues;
+    const { splitColumn, timeBucket, measure, measureToSort, limit } = parameterValues;
 
     const dataQuery = useMemo(() => {
       const splitExpression = splitColumn ? splitColumn.expression : L(OVERALL_LABEL);
 
       return querySource
         .getInitQuery(where)
-        .addSelect(splitExpression.as('dim'), { addToGroupBy: 'end' })
+        .addSelect(
+          splitExpression.applyIf(timeBucket, ex => F.timeFloor(ex, timeBucket)).as('dim'),
+          {
+            addToGroupBy: 'end',
+            addToOrderBy: !measureToSort && timeBucket ? 'end' : undefined,
+            direction: 'ASC',
+          },
+        )
         .addSelect(measure.expression.as('met'), {
-          addToOrderBy: measureToSort ? undefined : 'end',
+          addToOrderBy: !measureToSort && !timeBucket ? 'end' : undefined,
           direction: 'DESC',
         })
         .applyIf(measureToSort, q =>
           q.addOrderBy(measureToSort.expression.toOrderByExpression('DESC')),
         )
         .changeLimitValue(limit);
-    }, [querySource, where, splitColumn, measure, measureToSort, limit]);
+    }, [querySource, where, splitColumn, timeBucket, measure, measureToSort, limit]);
 
     const [sourceDataState, queryManager] = useQueryManager({
       query: dataQuery,
@@ -155,23 +189,36 @@ ModuleRepository.registerModule<BarChartParameterValues>({
 
         const [x, y] = myChart.convertToPixel({ seriesIndex: 0 }, [dim, met]);
 
-        highlightStore.getState().setHighlight({
-          label: formatEmpty(label),
-          x,
+        setHighlight({
+          title: formatEmpty(label),
+          x: x,
           y: y - 20,
-          data: [dim, met],
-          onDrop: () => {
-            highlightStore.getState().dropHighlight();
-          },
-          onSave:
-            label !== OVERALL_LABEL
-              ? () => {
-                  if (splitColumn) {
-                    setWhere(where.toggleClauseInWhere(splitColumn.expression.equal(label)));
-                  }
-                  highlightStore.getState().dropHighlight();
-                }
-              : undefined,
+          dim,
+          met,
+          text: (
+            <div className="button-bar">
+              {label !== OVERALL_LABEL && (
+                <Button
+                  text="Zoom in"
+                  intent={Intent.PRIMARY}
+                  small
+                  onClick={() => {
+                    if (splitColumn) {
+                      setWhere(updateFilterClause(where, splitColumn.expression.equal(label)));
+                    }
+                    setHighlight(undefined);
+                  }}
+                />
+              )}
+              <Button
+                text="Close"
+                small
+                onClick={() => {
+                  setHighlight(undefined);
+                }}
+              />
+            </div>
+          ),
         });
       });
       // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -184,12 +231,12 @@ ModuleRepository.registerModule<BarChartParameterValues>({
 
       // if there is a highlight, update its x position
       // by calculating new pixel position from the highlight's data
-      const highlight = highlightStore.getState().highlight;
       if (highlight) {
-        const [x, y] = myChart.convertToPixel({ seriesIndex: 0 }, highlight.data as number[]);
+        const [x, y] = myChart.convertToPixel({ seriesIndex: 0 }, [highlight.dim, highlight.met]);
 
-        highlightStore.getState().updateHighlight({
-          x,
+        setHighlight({
+          ...highlight,
+          x: x,
           y: y - 20,
         });
       }
@@ -202,6 +249,7 @@ ModuleRepository.registerModule<BarChartParameterValues>({
           className="echart-container"
           ref={container => {
             if (chartRef.current || !container) return;
+            containerRef.current = container;
             chartRef.current = setupChart(container);
           }}
         />
@@ -209,6 +257,11 @@ ModuleRepository.registerModule<BarChartParameterValues>({
         {sourceDataState.loading && (
           <Loader cancelText="Cancel query" onCancel={() => queryManager.cancelCurrent()} />
         )}
+        <PortalBubble
+          className="module-bubble"
+          openOn={highlight}
+          offsetElement={containerRef.current}
+        />
       </div>
     );
   },

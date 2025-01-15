@@ -30,6 +30,7 @@ import type { NonNullDateRange } from '@blueprintjs/datetime';
 import { DateRangePicker3 } from '@blueprintjs/datetime2';
 import { IconNames } from '@blueprintjs/icons';
 import { Select } from '@blueprintjs/select';
+import { day, Duration, Timezone } from 'chronoshift';
 import { C, L, N, SqlExpression, SqlQuery } from 'druid-query-toolkit';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -38,40 +39,31 @@ import type { Capabilities } from '../../helpers';
 import { useQueryManager } from '../../hooks';
 import {
   checkedCircleIcon,
-  day,
-  Duration,
   getApiArray,
   isNonNullRange,
   localToUtcDateRange,
   maxDate,
   queryDruidSql,
-  TZ_UTC,
+  Stage,
   utcToLocalDateRange,
 } from '../../utils';
-import { Stage } from '../../utils/stage';
 import { Loader } from '../loader/loader';
 
-import type { IntervalStat } from './common';
-import { formatIsoDateOnly, getIntervalStatTitle, INTERVAL_STATS } from './common';
+import type { IntervalStat } from './interval';
+import { formatIsoDateOnly, getIntervalStatTitle, INTERVAL_STATS } from './interval';
 import type { SegmentBarChartProps } from './segment-bar-chart';
 import { SegmentBarChart } from './segment-bar-chart';
 
 import './segment-timeline.scss';
 
 const DEFAULT_SHOWN_DURATION = new Duration('P1Y');
-const SHOWN_DURATION_OPTIONS: Duration[] = [
-  new Duration('P1D'),
-  new Duration('P1W'),
-  new Duration('P1M'),
-  new Duration('P3M'),
-  new Duration('P1Y'),
-  new Duration('P5Y'),
-  new Duration('P10Y'),
-];
+const SHOWN_DURATION_OPTIONS: Duration[] = ['P1D', 'P1W', 'P1M', 'P3M', 'P1Y', 'P5Y', 'P10Y'].map(
+  d => new Duration(d),
+);
 
 function getDateRange(shownDuration: Duration): NonNullDateRange {
-  const end = day.ceil(new Date(), TZ_UTC);
-  return [shownDuration.shift(end, TZ_UTC, -1), end];
+  const end = day.ceil(new Date(), Timezone.UTC);
+  return [shownDuration.shift(end, Timezone.UTC, -1), end];
 }
 
 function formatDateRange(dateRange: NonNullDateRange): string {
@@ -149,7 +141,7 @@ export const SegmentTimeline = function SegmentTimeline(props: SegmentTimelinePr
           return getDateRange(DEFAULT_SHOWN_DURATION);
         }
 
-        queriedEnd = day.ceil(new Date(endRes[0].end), TZ_UTC);
+        queriedEnd = day.ceil(new Date(endRes[0].end), Timezone.UTC);
 
         const startQuery = baseQuery
           .addSelect(C('start'), { addToOrderBy: 'end', direction: 'ASC' })
@@ -160,17 +152,17 @@ export const SegmentTimeline = function SegmentTimeline(props: SegmentTimelinePr
           cancelToken,
         ).catch(() => []);
         if (startRes.length !== 1) {
-          return [DEFAULT_SHOWN_DURATION.shift(queriedEnd, TZ_UTC, -1), queriedEnd]; // Should not really get here
+          return [DEFAULT_SHOWN_DURATION.shift(queriedEnd, Timezone.UTC, -1), queriedEnd]; // Should not really get here
         }
 
-        queriedStart = day.floor(new Date(startRes[0].start), TZ_UTC);
+        queriedStart = day.floor(new Date(startRes[0].start), Timezone.UTC);
       } else {
         // Don't bother querying if there is no SQL
         return getDateRange(DEFAULT_SHOWN_DURATION);
       }
 
       return [
-        maxDate(queriedStart, DEFAULT_SHOWN_DURATION.shift(queriedEnd, TZ_UTC, -1)),
+        maxDate(queriedStart, DEFAULT_SHOWN_DURATION.shift(queriedEnd, Timezone.UTC, -1)),
         queriedEnd,
       ];
     },
@@ -185,10 +177,10 @@ export const SegmentTimeline = function SegmentTimeline(props: SegmentTimelinePr
   let zoomedOutDateRange: NonNullDateRange | undefined;
   let nextDateRange: NonNullDateRange | undefined;
   if (effectiveDateRange) {
-    const d = Duration.fromRange(effectiveDateRange[0], effectiveDateRange[1], TZ_UTC);
-    const shiftStartBack = d.shift(effectiveDateRange[0], TZ_UTC, -1);
-    const shiftEndForward = d.shift(effectiveDateRange[1], TZ_UTC);
-    const now = day.ceil(new Date(), TZ_UTC);
+    const d = Duration.fromRange(effectiveDateRange[0], effectiveDateRange[1], Timezone.UTC);
+    const shiftStartBack = d.shift(effectiveDateRange[0], Timezone.UTC, -1);
+    const shiftEndForward = d.shift(effectiveDateRange[1], Timezone.UTC);
+    const now = day.ceil(new Date(), Timezone.UTC);
     previousDateRange = [shiftStartBack, effectiveDateRange[0]];
     zoomedOutDateRange = [shiftStartBack, shiftEndForward < now ? shiftEndForward : now];
     nextDateRange = [effectiveDateRange[1], shiftEndForward];

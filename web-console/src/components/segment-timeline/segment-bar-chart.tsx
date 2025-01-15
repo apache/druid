@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 
+import { Duration, Timezone } from 'chronoshift';
 import { C, F, L, N, sql, SqlExpression, SqlQuery } from 'druid-query-toolkit';
 import { useMemo } from 'react';
 
@@ -23,10 +24,10 @@ import { END_OF_TIME_DATE, type Rule, RuleUtil, START_OF_TIME_DATE } from '../..
 import type { Capabilities } from '../../helpers';
 import { useQueryManager } from '../../hooks';
 import { Api } from '../../singletons';
-import { Duration, filterMap, getApiArray, queryDruidSql, TZ_UTC } from '../../utils';
+import { filterMap, getApiArray, queryDruidSql } from '../../utils';
 import { Loader } from '../loader/loader';
 
-import type { IntervalRow } from './common';
+import type { IntervalRow } from './interval';
 import type { SegmentBarChartRenderProps } from './segment-bar-chart-render';
 import { SegmentBarChartRender } from './segment-bar-chart-render';
 
@@ -80,7 +81,7 @@ export const SegmentBarChart = function SegmentBarChart(props: SegmentBarChartPr
             start,
             end,
             realtime: Boolean(sr.realtime),
-            originalTimeSpan: Duration.fromRange(start, end, TZ_UTC),
+            originalTimeSpan: Duration.fromRange(start, end, Timezone.UTC),
           } as IntervalRow;
         });
       } else {
@@ -104,7 +105,7 @@ export const SegmentBarChart = function SegmentBarChart(props: SegmentBarChartPr
               end,
               datasource: segment.dataSource,
               realtime: Boolean(segment.realtime),
-              originalTimeSpan: Duration.fromRange(start, end, TZ_UTC),
+              originalTimeSpan: Duration.fromRange(start, end, Timezone.UTC),
               segments: 1,
               size: segment.size,
               rows: segment.num_rows || 0, // segment.num_rows is really null on this API :-(

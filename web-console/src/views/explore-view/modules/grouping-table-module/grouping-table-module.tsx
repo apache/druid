@@ -22,12 +22,12 @@ import type { SqlExpression, SqlOrderByDirection, SqlQuery } from 'druid-query-t
 import { C, F } from 'druid-query-toolkit';
 import { useMemo } from 'react';
 
-import { Loader } from '../../../components';
-import { useQueryManager } from '../../../hooks';
-import { formatInteger } from '../../../utils';
-import { calculateInitPageSize, GenericOutputTable } from '../components';
-import type { ExpressionMeta, Measure } from '../models';
-import { ModuleRepository } from '../module-repository/module-repository';
+import { Loader } from '../../../../components';
+import { useQueryManager } from '../../../../hooks';
+import { formatInteger } from '../../../../utils';
+import { calculateInitPageSize, GenericOutputTable } from '../../components';
+import type { ExpressionMeta, Measure } from '../../models';
+import { ModuleRepository } from '../../module-repository/module-repository';
 import type {
   Compare,
   CompareStrategy,
@@ -35,8 +35,8 @@ import type {
   MultipleValueMode,
   QueryAndHints,
   RestrictTop,
-} from '../utils';
-import { DEFAULT_TOP_VALUES_K, makeTableQueryAndHints } from '../utils';
+} from '../../utils';
+import { DEFAULT_TOP_VALUES_K, makeTableQueryAndHints } from '../../utils';
 
 import './grouping-table-module.scss';
 
@@ -78,6 +78,7 @@ ModuleRepository.registerModule<GroupingTableParameterValues>({
       label: 'Group by',
       transferGroup: 'show',
       defaultValue: [],
+      important: true,
     },
 
     timeBucket: {
@@ -92,8 +93,11 @@ ModuleRepository.registerModule<GroupingTableParameterValues>({
         P1M: '1 month',
       },
       defaultValue: 'PT1H',
-      visible: ({ parameterValues }) =>
-        (parameterValues.splitColumns || []).some((c: any) => c.name === '__time'),
+      important: true,
+      defined: ({ parameterValues, querySource }) =>
+        (parameterValues.splitColumns || []).some(
+          (c: ExpressionMeta) => c.evaluateSqlType(querySource?.columns) === 'TIMESTAMP',
+        ),
     },
 
     showColumns: {
@@ -129,8 +133,9 @@ ModuleRepository.registerModule<GroupingTableParameterValues>({
     measures: {
       type: 'measures',
       transferGroup: 'show-agg',
-      defaultValue: querySource => querySource.getFirstAggregateMeasureArray(),
+      defaultValue: ({ querySource }) => querySource?.getFirstAggregateMeasureArray(),
       nonEmpty: true,
+      important: true,
     },
 
     compares: {

@@ -16,21 +16,20 @@
  * limitations under the License.
  */
 
+import { Button, Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { C, L } from 'druid-query-toolkit';
+import { C, F, L } from 'druid-query-toolkit';
 import type { ECharts } from 'echarts';
 import * as echarts from 'echarts';
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
-import { Loader } from '../../../components';
-import { useQueryManager } from '../../../hooks';
-import { formatEmpty, formatNumber } from '../../../utils';
-import { Issue } from '../components';
-import { highlightStore } from '../highlight-store/highlight-store';
-import type { ExpressionMeta } from '../models';
-import { ModuleRepository } from '../module-repository/module-repository';
-
-import './record-table-module.scss';
+import { Loader, PortalBubble, type PortalBubbleOpenOn } from '../../../../components';
+import { useQueryManager } from '../../../../hooks';
+import { formatEmpty, formatNumber } from '../../../../utils';
+import { Issue } from '../../components';
+import type { ExpressionMeta } from '../../models';
+import { ModuleRepository } from '../../module-repository/module-repository';
+import { updateFilterClause } from '../../utils';
 
 const OVERALL_LABEL = 'Overall';
 
@@ -54,6 +53,11 @@ function getCentroid(chart: echarts.ECharts, dataIndex: number) {
   return { x, y };
 }
 
+interface PieChartHighlight extends PortalBubbleOpenOn {
+  name: string;
+  dataIndex: number;
+}
+
 interface PieChartParameterValues {
   splitColumn: ExpressionMeta;
   measure: ExpressionMeta;
@@ -71,12 +75,14 @@ ModuleRepository.registerModule<PieChartParameterValues>({
       label: 'Slice column',
       transferGroup: 'show',
       required: true,
+      important: true,
     },
     measure: {
       type: 'measure',
       transferGroup: 'show',
-      defaultValue: querySource => querySource.getFirstAggregateMeasure(),
+      defaultValue: ({ querySource }) => querySource?.getFirstAggregateMeasure(),
       required: true,
+      important: true,
     },
     limit: {
       type: 'number',
@@ -92,7 +98,9 @@ ModuleRepository.registerModule<PieChartParameterValues>({
   },
   component: function PieChartModule(props) {
     const { querySource, where, setWhere, parameterValues, stage, runSqlQuery } = props;
+    const containerRef = useRef<HTMLDivElement>();
     const chartRef = useRef<ECharts>();
+    const [highlight, setHighlight] = useState<PieChartHighlight | undefined>();
 
     const { splitColumn, measure, limit, showOthers } = parameterValues;
 
@@ -102,7 +110,7 @@ ModuleRepository.registerModule<PieChartParameterValues>({
       return {
         mainQuery: querySource
           .getInitQuery(where)
-          .addSelect(splitExpression.as('name'), { addToGroupBy: 'end' })
+          .addSelect(F.cast(splitExpression, 'VARCHAR').as('name'), { addToGroupBy: 'end' })
           .addSelect(measure.expression.as('value'), {
             addToOrderBy: 'end',
             direction: 'DESC',
@@ -191,31 +199,47 @@ ModuleRepository.registerModule<PieChartParameterValues>({
       });
 
       myChart.on('click', 'series', p => {
-        if (highlightStore.getState().highlight?.data.name === p.name) {
-          highlightStore.getState().dropHighlight();
+        if (highlight?.name === p.name) {
+          setHighlight(undefined);
           return;
         }
 
         const centroid = getCentroid(myChart, p.dataIndex);
-
         if (!centroid) return;
 
         const { name, value, __isOthers } = p.data as any;
 
-        highlightStore.getState().setHighlight({
-          label: formatEmpty(name) + ': ' + formatNumber(value),
+        setHighlight({
+          title: formatEmpty(name),
           x: centroid.x,
           y: centroid.y - 20,
-          data: { name, value, dataIndex: p.dataIndex },
-          onDrop: () => {
-            highlightStore.getState().dropHighlight();
-          },
-          onSave: __isOthers
-            ? undefined
-            : () => {
-                setWhere(where.toggleClauseInWhere(C(splitColumn.name).equal(name)));
-                highlightStore.getState().dropHighlight();
-              },
+          name,
+          dataIndex: p.dataIndex,
+          text: (
+            <>
+              {formatNumber(value)}
+              <div className="button-bar">
+                {!__isOthers && (
+                  <Button
+                    text="Zoom in"
+                    intent={Intent.PRIMARY}
+                    small
+                    onClick={() => {
+                      setWhere(updateFilterClause(where, C(splitColumn.name).equal(name)));
+                      setHighlight(undefined);
+                    }}
+                  />
+                )}
+                <Button
+                  text="Close"
+                  small
+                  onClick={() => {
+                    setHighlight(undefined);
+                  }}
+                />
+              </div>
+            </>
+          ),
         });
       });
       // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -228,15 +252,15 @@ ModuleRepository.registerModule<PieChartParameterValues>({
 
       // if there is a highlight, update its x position
       // by calculating new pixel position from the highlight's data
-      const highlight = highlightStore.getState().highlight;
       if (highlight) {
-        const { dataIndex } = highlight.data;
+        const { dataIndex } = highlight;
 
         const centroid = getCentroid(myChart, dataIndex);
 
         if (!centroid) return;
 
-        highlightStore.getState().updateHighlight({
+        setHighlight({
+          ...highlight,
           x: centroid.x,
           y: centroid.y - 20,
         });
@@ -250,6 +274,7 @@ ModuleRepository.registerModule<PieChartParameterValues>({
           className="echart-container"
           ref={container => {
             if (chartRef.current || !container) return;
+            containerRef.current = container;
             chartRef.current = setupChart(container);
           }}
         />
@@ -257,6 +282,11 @@ ModuleRepository.registerModule<PieChartParameterValues>({
         {sourceDataState.loading && (
           <Loader cancelText="Cancel query" onCancel={() => queryManager.cancelCurrent()} />
         )}
+        <PortalBubble
+          className="module-bubble"
+          openOn={highlight}
+          offsetElement={containerRef.current}
+        />
       </div>
     );
   },

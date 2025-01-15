@@ -5072,7 +5072,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Palantir Technologies
-version: 5.1.2
+version: 5.1.4
 
 ---
 
@@ -5081,7 +5081,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Palantir Technologies
-version: 5.13.1
+version: 5.16.0
 
 ---
 
@@ -5090,7 +5090,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Palantir Technologies
-version: 2.3.11
+version: 2.3.17
 
 ---
 
@@ -5099,7 +5099,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Palantir Technologies
-version: 5.3.11
+version: 5.3.17
 
 ---
 
@@ -5108,7 +5108,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Palantir Technologies
-version: 5.13.0
+version: 5.15.0
 
 ---
 
@@ -5117,7 +5117,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Palantir Technologies
-version: 5.2.5
+version: 5.3.5
 
 ---
 
@@ -5419,6 +5419,15 @@ license_file_path: licenses/bin/change-case.MIT
 
 ---
 
+name: "chronoshift"
+license_category: binary
+module: web-console
+license_name: Apache License version 2.0
+copyright: Vadim Ogievetsky
+version: 1.1.0
+
+---
+
 name: "classnames"
 license_category: binary
 module: web-console
@@ -5589,13 +5598,13 @@ license_file_path: licenses/bin/d3-interpolate.ISC
 
 ---
 
-name: "d3-scale-chromatic"
+name: "d3-path"
 license_category: binary
 module: web-console
 license_name: ISC License
 copyright: Mike Bostock
 version: 3.1.0
-license_file_path: licenses/bin/d3-scale-chromatic.ISC
+license_file_path: licenses/bin/d3-path.ISC
 
 ---
 
@@ -5616,6 +5625,16 @@ license_name: ISC License
 copyright: Mike Bostock
 version: 3.0.0
 license_file_path: licenses/bin/d3-selection.ISC
+
+---
+
+name: "d3-shape"
+license_category: binary
+module: web-console
+license_name: ISC License
+copyright: Mike Bostock
+version: 3.2.0
+license_file_path: licenses/bin/d3-shape.ISC
 
 ---
 
@@ -5713,7 +5732,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Imply Data
-version: 1.0.0
+version: 1.0.2
 
 ---
 
