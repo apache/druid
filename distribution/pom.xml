@@ -459,7 +459,7 @@
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:grpc-query</argument>
                                         <argument>-c</argument>
-                                        <argument>org.apache.druid.extensions:druid-ranger-security</argument>
+                                        <argument>org.apache.druid.extensions.contrib:druid-ranger-security</argument>
                                     </arguments>
                                 </configuration>
                             </execution>
