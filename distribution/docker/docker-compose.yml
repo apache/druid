@@ -51,7 +51,7 @@ services:
       - ZOO_MY_ID=1
 
   coordinator:
-    image: apache/druid:31.0.0
+    image: apache/druid:32.0.0
     container_name: coordinator
     volumes:
       - druid_shared:/opt/shared
