@@ -539,21 +539,22 @@ public class ControllerImpl implements Controller
 
   private void emitSummaryMetrics(final MSQTaskReportPayload msqTaskReportPayload, final MSQSpec querySpec)
   {
-    long totalProcessedBytes = msqTaskReportPayload.getCounters() != null
-        ? msqTaskReportPayload.getCounters().copyMap().values().stream().mapToLong(
-            integerCounterSnapshotsMap -> integerCounterSnapshotsMap.values().stream()
-                .mapToLong(counterSnapshots -> {
-                  Map<String, QueryCounterSnapshot> workerCounters = counterSnapshots.getMap();
-                  return workerCounters.entrySet().stream().mapToLong(
-                      channel -> {
-                        if (channel.getKey().startsWith("input")) {
-                          ChannelCounters.Snapshot snapshot = (ChannelCounters.Snapshot) channel.getValue();
-                          return snapshot.getBytes() == null ? 0L : Arrays.stream(snapshot.getBytes()).sum();
-                        }
-                        return 0L;
-                      }).sum();
-                }).sum()).sum()
-        : 0;
+    long totalProcessedBytes = 0;
+
+    if (msqTaskReportPayload.getCounters() != null) {
+      totalProcessedBytes = msqTaskReportPayload.getCounters()
+          .copyMap()
+          .values()
+          .stream()
+          .flatMap(counterSnapshotsMap -> counterSnapshotsMap.values().stream())
+          .flatMap(counterSnapshots -> counterSnapshots.getMap().entrySet().stream())
+          .filter(entry -> entry.getKey().startsWith("input"))
+          .mapToLong(entry -> {
+            ChannelCounters.Snapshot snapshot = (ChannelCounters.Snapshot) entry.getValue();
+            return snapshot.getBytes() == null ? 0L : Arrays.stream(snapshot.getBytes()).sum();
+          })
+          .sum();
+    }
 
     log.debug("Processed bytes[%d] for query[%s].", totalProcessedBytes, querySpec.getQuery());
     context.emitMetric("ingest/processed/bytes", totalProcessedBytes);
