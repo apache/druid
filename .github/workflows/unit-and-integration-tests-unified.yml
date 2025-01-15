@@ -170,6 +170,7 @@ jobs:
             echo "isPR=true" >> $GITHUB_ENV
           else
             echo "isPR=false" >> $GITHUB_ENV
+          fi
 
       - name: Check PR Approval (if applicable)
         id: check
