@@ -33,6 +33,7 @@ import org.apache.druid.segment.join.JoinPrefixUtils;
 
 import javax.annotation.Nullable;
 
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -79,13 +80,13 @@ public class DataSourceAnalysis
   private final Query<?> baseQuery;
   @Nullable
   private final DimFilter joinBaseTableFilter;
-  private final PreJoinableClause preJoinableClauses;
+  private final List<PreJoinableClause> preJoinableClauses;
 
   public DataSourceAnalysis(
       DataSource baseDataSource,
       @Nullable Query<?> baseQuery,
       @Nullable DimFilter joinBaseTableFilter,
-      PreJoinableClause preJoinableClauses
+      List<PreJoinableClause> preJoinableClauses
   )
   {
     if (baseDataSource instanceof JoinDataSource) {
@@ -190,7 +191,7 @@ public class DataSourceAnalysis
   /**
    * Returns join clauses corresponding to joinable leaf datasources (every leaf except the bottom-leftmost).
    */
-  public PreJoinableClause getPreJoinableClauses()
+  public List<PreJoinableClause> getPreJoinableClauses()
   {
     return preJoinableClauses;
   }
@@ -201,7 +202,8 @@ public class DataSourceAnalysis
    */
   public boolean isConcreteBased()
   {
-    return baseDataSource.isConcrete() && preJoinableClauses.getDataSource().isGlobal();
+    return baseDataSource.isConcrete() && preJoinableClauses.stream()
+                                                            .allMatch(clause -> clause.getDataSource().isGlobal());
   }
 
   /**
@@ -244,7 +246,7 @@ public class DataSourceAnalysis
    */
   public boolean isJoin()
   {
-    return true;
+    return !preJoinableClauses.isEmpty();
   }
 
   /**
@@ -256,9 +258,11 @@ public class DataSourceAnalysis
       return false;
     }
 
-      if (JoinPrefixUtils.isPrefixedBy(column, preJoinableClauses.getPrefix())) {
+    for (final PreJoinableClause clause : preJoinableClauses) {
+      if (JoinPrefixUtils.isPrefixedBy(column, clause.getPrefix())) {
         return false;
       }
+    }
 
     return true;
   }
@@ -297,8 +301,10 @@ public class DataSourceAnalysis
    */
   public boolean isGlobal()
   {
-      if (!preJoinableClauses.getDataSource().isGlobal()) {
+    for (PreJoinableClause preJoinableClause : preJoinableClauses) {
+      if (!preJoinableClause.getDataSource().isGlobal()) {
         return false;
+      }
     }
     return baseDataSource.isGlobal();
   }
