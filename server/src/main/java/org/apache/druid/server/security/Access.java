@@ -28,7 +28,8 @@ import java.util.Optional;
 
 /**
  * Represents the outcome of verifying permissions to perform an {@link Action} on a {@link Resource}, along with any
- * policy restrictions.
+ * applicable policy restrictions. The restriction should only exist for {@link Action#READ} and
+ * {@link ResourceType#DATASOURCE}, i.e, reading a table.
  */
 public class Access
 {
@@ -40,9 +41,10 @@ public class Access
 
   private final boolean allowed;
   private final String message;
-  // A policy restriction on top of table-level read access. It should be empty if there are no policy restrictions
-  // or if access is requested for an action other than reading the table.
-  private final Optional<Policy> policy; // should this be a list?
+  /**
+   * A policy restriction on top of table-level read access.
+   */
+  private final Optional<Policy> policy;
 
   /**
    * @deprecated use {@link #allow()} or {@link #deny(String)} instead
@@ -101,6 +103,12 @@ public class Access
     return allowed;
   }
 
+  /**
+   * Returns an optional {@link Policy} restriction if permission is granted. Only applies to read table access.
+   * <p>
+   * An empty value indicates either no policy restrictions exist, or access is being requested for an action other than
+   * reading a table.
+   */
   public Optional<Policy> getPolicy()
   {
     return policy;
