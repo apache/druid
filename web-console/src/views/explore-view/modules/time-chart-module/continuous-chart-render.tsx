@@ -389,13 +389,13 @@ export const ContinuousChartRender = function ContinuousChartRender(
 
     const effectiveStacks = stacks || ['undefined'];
     const numStacks = effectiveStacks.length;
-    if (numStacks === 1) return [stackedData];
 
     // Fill in 0s and make sure that the stacks are in the same order
     const fullTimeIntervals = groupBy(
       stackedData,
       d => String(d.start),
       dataForStart => {
+        if (numStacks === 1) return [dataForStart[0]];
         const stackToDatum = lookupBy(dataForStart, d => d.stack!);
         return effectiveStacks.map(
           (stack, stackIndex) =>
@@ -655,6 +655,30 @@ export const ContinuousChartRender = function ContinuousChartRender(
                   />
                 );
               })}
+            {(markType === 'area' || markType === 'line') &&
+              byStack.flatMap(ds =>
+                filterMap(ds, (d, i) => {
+                  if (!d || ds[i - 1] || ds[i + 1]) return; // Not a single point
+                  const x = timeScale((d.start + d.end) / 2);
+                  return (
+                    <line
+                      key={`single_${i}_${d.stack}`}
+                      className="single-point"
+                      x1={x}
+                      x2={x}
+                      y1={measureScale(d.measure + d.offset)}
+                      y2={measureScale(d.offset)}
+                      style={
+                        typeof d.stack !== 'undefined'
+                          ? {
+                              stroke: stackColorizer(d.stack),
+                            }
+                          : undefined
+                      }
+                    />
+                  );
+                }),
+              )}
             {(markType === 'area' || markType === 'line') && selection?.selectedDatum && (
               <circle
                 className={classNames('selected-point', { finalized: selection.finalized })}
