@@ -588,7 +588,9 @@ public class JoinDataSource implements DataSource
       }
     }
 
-
+    if (currentDimFilter == TrueDimFilter.instance()) {
+      currentDimFilter = null;
+    }
 
     // Join clauses were added in the order we saw them while traversing down, but we need to apply them in the
     // going-up order. So reverse them.
