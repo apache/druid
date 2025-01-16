@@ -70,4 +70,24 @@ public class DimFilters
   {
     return Lists.newArrayList(Iterables.filter(optimized, Predicates.notNull()));
   }
+
+  public static DimFilter conjunction(List<DimFilter> filters)
+  {
+    switch (filters.size())
+    {
+      case 0:
+        return TrueDimFilter.instance();
+      case 1:
+        return filters.get(0);
+      default:
+        return and(filters);
+    }
+  }
+
+  public static DimFilter conjunction(DimFilter... filters)
+  {
+    List<DimFilter> list = Arrays.asList(filters);
+    list.removeIf(v -> v == null);
+    return conjunction(list);
+  }
 }

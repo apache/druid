@@ -37,7 +37,9 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.filter.DimFilters;
 import org.apache.druid.query.filter.Filter;
+import org.apache.druid.query.filter.TrueDimFilter;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.planning.PreJoinableClause;
 import org.apache.druid.segment.SegmentReference;
@@ -531,6 +533,9 @@ public class JoinDataSource implements DataSource
       List<JoinableClause> clausesToUse,
       JoinFilterPreAnalysis joinFilterPreAnalysis)
   {
+    if(sourceSegment instanceof HashJoinSegment ) {
+      // FIXME concat
+    }
     return new HashJoinSegment(sourceSegment, baseFilterToUse, clausesToUse, joinFilterPreAnalysis);
   }
 
@@ -543,7 +548,7 @@ public class JoinDataSource implements DataSource
   private static Triple<DataSource, DimFilter, List<PreJoinableClause>> flattenJoin(final JoinDataSource dataSource)
   {
     DataSource current = dataSource;
-    DimFilter currentDimFilter = null;
+    DimFilter currentDimFilter = TrueDimFilter.instance();
     final List<PreJoinableClause> preJoinableClauses = new ArrayList<>();
 
     // There can be queries like
@@ -562,7 +567,7 @@ public class JoinDataSource implements DataSource
     while (current instanceof JoinDataSource || current instanceof UnnestDataSource || current instanceof FilteredDataSource) {
       if (current instanceof JoinDataSource) {
         final JoinDataSource joinDataSource = (JoinDataSource) current;
-        currentDimFilter = joinDataSource.getLeftFilter();
+        currentDimFilter = DimFilters.conjunction(currentDimFilter, joinDataSource.getLeftFilter());
         PreJoinableClause e = new PreJoinableClause(
             joinDataSource.getRightPrefix(),
             joinDataSource.getRight(),
@@ -582,6 +587,8 @@ public class JoinDataSource implements DataSource
         current = filteredDataSource.getBase();
       }
     }
+
+
 
     // Join clauses were added in the order we saw them while traversing down, but we need to apply them in the
     // going-up order. So reverse them.
