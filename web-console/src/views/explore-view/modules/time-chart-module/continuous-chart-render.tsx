@@ -18,7 +18,8 @@
 
 import { Button, Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { day, Duration, minute, second, Timezone } from 'chronoshift';
+import type { Timezone } from 'chronoshift';
+import { day, Duration, minute, second } from 'chronoshift';
 import classNames from 'classnames';
 import { max, sort, sum } from 'd3-array';
 import { axisBottom, axisLeft, axisRight } from 'd3-axis';
@@ -41,6 +42,8 @@ import {
   formatStartDuration,
   groupBy,
   lookupBy,
+  tickFormatWithTimezone,
+  timezoneAwareTicks,
 } from '../../../../utils';
 
 import './continuous-chart-render.scss';
@@ -141,8 +144,9 @@ export interface ContinuousChartRenderProps {
    */
   stage: Stage;
   margin?: Margin;
+  timezone: Timezone;
 
-  yAxis?: 'left' | 'right';
+  yAxisPosition?: 'left' | 'right';
   showHorizontalGridlines?: 'auto' | 'always' | 'never';
 
   /**
@@ -165,7 +169,8 @@ export const ContinuousChartRender = function ContinuousChartRender(
 
     stage,
     margin,
-    yAxis,
+    timezone,
+    yAxisPosition,
     showHorizontalGridlines,
     domainRange,
     onChangeRange,
@@ -241,14 +246,14 @@ export const ContinuousChartRender = function ContinuousChartRender(
     return (v: string) => (v === OTHER_VALUE ? OTHER_COLOR : s(v));
   }, []);
 
-  const chartMargin = { ...margin, ...getDefaultChartMargin(yAxis) };
+  const chartMargin = { ...margin, ...getDefaultChartMargin(yAxisPosition) };
   const innerStage = stage.applyMargin(chartMargin);
 
   const effectiveDomainRange =
     domainRange ||
     (stackedData.length
       ? [stackedData[stackedData.length - 1].start, stackedData[0].end]
-      : getTodayRange(Timezone.UTC));
+      : getTodayRange(timezone));
 
   const baseTimeScale = scaleUtc()
     .domain(effectiveDomainRange)
@@ -281,10 +286,10 @@ export const ContinuousChartRender = function ContinuousChartRender(
       action,
     });
     if (action === 'select') {
-      const start = granularity.floor(new Date(time), Timezone.UTC);
+      const start = granularity.floor(new Date(time), timezone);
       setSelectionIfNeeded({
         start: start.valueOf(),
-        end: granularity.shift(start, Timezone.UTC, 1).valueOf(),
+        end: granularity.shift(start, timezone, 1).valueOf(),
       });
     } else {
       setSelection(undefined);
@@ -310,13 +315,13 @@ export const ContinuousChartRender = function ContinuousChartRender(
           .valueOf();
         if (mouseDownAt.time < b) {
           setSelectionIfNeeded({
-            start: granularity.floor(new Date(mouseDownAt.time), Timezone.UTC).valueOf(),
-            end: granularity.ceil(new Date(b), Timezone.UTC).valueOf(),
+            start: granularity.floor(new Date(mouseDownAt.time), timezone).valueOf(),
+            end: granularity.ceil(new Date(b), timezone).valueOf(),
           });
         } else {
           setSelectionIfNeeded({
-            start: granularity.floor(new Date(b), Timezone.UTC).valueOf(),
-            end: granularity.ceil(new Date(mouseDownAt.time), Timezone.UTC).valueOf(),
+            start: granularity.floor(new Date(b), timezone).valueOf(),
+            end: granularity.ceil(new Date(mouseDownAt.time), timezone).valueOf(),
           });
         }
       }
@@ -331,8 +336,8 @@ export const ContinuousChartRender = function ContinuousChartRender(
         const time = baseTimeScale.invert(x).valueOf();
         const measure = measureScale.invert(y);
 
-        const start = granularity.floor(new Date(time), Timezone.UTC);
-        const end = granularity.shift(start, Timezone.UTC, 1);
+        const start = granularity.floor(new Date(time), timezone);
+        const end = granularity.shift(start, timezone, 1);
 
         setSelectionIfNeeded({
           start: start.valueOf(),
@@ -363,7 +368,7 @@ export const ContinuousChartRender = function ContinuousChartRender(
             : new Duration('PT1S');
         onChangeRange(
           offsetRange(effectiveDomainRange, shiftOffset, n =>
-            snapGranularity.round(new Date(n), Timezone.UTC).valueOf(),
+            snapGranularity.round(new Date(n), timezone).valueOf(),
           ),
         );
       }
@@ -506,10 +511,10 @@ export const ContinuousChartRender = function ContinuousChartRender(
       title = formatStartDuration(new Date(selectedDatum.start), granularity);
       info = formatNumber(selectedDatum.measure);
     } else {
-      if (granularity.shift(new Date(start), Timezone.UTC).valueOf() === end) {
+      if (granularity.shift(new Date(start), timezone).valueOf() === end) {
         title = formatStartDuration(new Date(start), granularity);
       } else {
-        title = formatIsoDateRange(new Date(start), new Date(end));
+        title = formatIsoDateRange(new Date(start), new Date(end), timezone);
       }
 
       const selectedData = stackedData.filter(d => start <= d.start && d.start < end);
@@ -555,7 +560,7 @@ export const ContinuousChartRender = function ContinuousChartRender(
   const d = effectiveDomainRange[1] - effectiveDomainRange[0];
   const shiftStartBack = effectiveDomainRange[0] - d;
   const shiftEndForward = effectiveDomainRange[1] + d;
-  const nowDayCeil = day.ceil(now, Timezone.UTC);
+  const nowDayCeil = day.ceil(now, timezone);
   const zoomedOutRange: Range = [
     shiftStartBack,
     shiftEndForward < nowDayCeil.valueOf() ? shiftEndForward : nowDayCeil.valueOf(),
@@ -710,7 +715,20 @@ export const ContinuousChartRender = function ContinuousChartRender(
           <g
             className="axis-x"
             transform={`translate(0,${innerStage.height + 1})`}
-            ref={(node: any) => select(node).call(axisBottom(timeScale))}
+            ref={(node: any) =>
+              select(node).call(
+                axisBottom(timeScale)
+                  .tickValues(
+                    timezoneAwareTicks(
+                      new Date(effectiveDomainRange[0]),
+                      new Date(effectiveDomainRange[1]),
+                      10,
+                      timezone,
+                    ),
+                  )
+                  .tickFormat(x => tickFormatWithTimezone(x as Date, timezone)),
+              )
+            }
           />
           <rect
             className={classNames('time-shift-indicator', {
@@ -721,7 +739,7 @@ export const ContinuousChartRender = function ContinuousChartRender(
             width={innerStage.width}
             height={chartMargin.bottom}
           />
-          {yAxis === 'left' && (
+          {yAxisPosition === 'left' && (
             <g
               className="axis-y"
               ref={(node: any) =>
@@ -733,7 +751,7 @@ export const ContinuousChartRender = function ContinuousChartRender(
               }
             />
           )}
-          {yAxis === 'right' && (
+          {yAxisPosition === 'right' && (
             <g
               className="axis-y"
               transform={`translate(${innerStage.width},0)`}

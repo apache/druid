@@ -32,13 +32,14 @@ import {
 import type { IconName } from '@blueprintjs/icons';
 import { IconNames } from '@blueprintjs/icons';
 import type { CancelToken } from 'axios';
+import { Timezone } from 'chronoshift';
 import classNames from 'classnames';
 import copy from 'copy-to-clipboard';
 import type { Column, QueryResult, SqlExpression } from 'druid-query-toolkit';
 import { QueryRunner, SqlQuery } from 'druid-query-toolkit';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 
-import { Loader, SplitterLayout } from '../../components';
+import { Loader, SplitterLayout, TimezoneMenuItems } from '../../components';
 import { ShowValueDialog } from '../../dialogs/show-value-dialog/show-value-dialog';
 import { useHashAndLocalStorageHybridState, useQueryManager } from '../../hooks';
 import { Api, AppToaster } from '../../singletons';
@@ -93,6 +94,7 @@ const queryRunner = new QueryRunner({
 
 async function runSqlQuery(
   query: string | SqlQuery,
+  timezone: Timezone | undefined,
   cancelToken?: CancelToken,
 ): Promise<QueryResult> {
   try {
@@ -101,6 +103,7 @@ async function runSqlQuery(
       defaultQueryContext: {
         sqlStringifyArrays: false,
       },
+      extraQueryContext: timezone ? { sqlTimeZone: timezone.toString() } : undefined,
       cancelToken,
     });
   } catch (e) {
@@ -110,13 +113,18 @@ async function runSqlQuery(
 
 async function introspectSource(source: string, cancelToken?: CancelToken): Promise<QuerySource> {
   const query = SqlQuery.parse(source);
-  const introspectResult = await runSqlQuery(QuerySource.makeLimitZeroIntrospectionQuery(query));
+  const introspectResult = await runSqlQuery(
+    QuerySource.makeLimitZeroIntrospectionQuery(query),
+    undefined,
+    cancelToken,
+  );
 
   cancelToken?.throwIfRequested();
   const baseIntrospectResult = QuerySource.isSingleStarQuery(query)
     ? introspectResult
     : await runSqlQuery(
         QuerySource.makeLimitZeroIntrospectionQuery(QuerySource.stripToBaseSource(query)),
+        undefined,
         cancelToken,
       );
 
@@ -194,6 +202,7 @@ export const ExploreView = React.memo(function ExploreView() {
 
   const { source, parseError, where, showSourceQuery, hideResources, hideHelpers } =
     effectiveExploreState;
+  const timezone = effectiveExploreState.getEffectiveTimezone();
 
   function setModuleState(index: number, moduleState: ModuleState) {
     setExploreState(effectiveExploreState.changeModuleState(index, moduleState));
@@ -226,19 +235,33 @@ export const ExploreView = React.memo(function ExploreView() {
   const querySource = querySourceState.getSomeData();
 
   const runSqlPlusQuery = useMemo(() => {
-    return async (query: string | SqlQuery, cancelToken?: CancelToken) => {
+    return async (
+      query: string | SqlQuery | { query: string | SqlQuery; timezone?: Timezone },
+      cancelToken?: CancelToken,
+    ) => {
       if (!querySource) throw new Error('no querySource');
-      const parsedQuery = SqlQuery.parse(query);
+      let parsedQuery: SqlQuery;
+      let queryTimezone: Timezone;
+      if (typeof query === 'string' || query instanceof SqlQuery) {
+        parsedQuery = SqlQuery.parse(query);
+        queryTimezone = timezone;
+      } else if (query.query) {
+        parsedQuery = SqlQuery.parse(query.query);
+        queryTimezone = query.timezone || timezone;
+      } else {
+        throw new TypeError('invalid arguments');
+      }
+
       const { query: rewrittenQuery, maxTime } = await rewriteMaxDataTime(
         rewriteAggregate(parsedQuery, querySource.measures),
       );
-      const results = await runSqlQuery(rewrittenQuery, cancelToken);
+      const results = await runSqlQuery(rewrittenQuery, queryTimezone, cancelToken);
 
       return results
         .attachQuery({ query: '' }, parsedQuery)
         .changeResultContext({ ...results.resultContext, maxTime });
     };
-  }, [querySource]);
+  }, [querySource, timezone]);
 
   const selectedLayout = effectiveExploreState.getLayout();
   return (
@@ -298,6 +321,7 @@ export const ExploreView = React.memo(function ExploreView() {
               <FilterPane
                 ref={filterPane}
                 querySource={querySource}
+                timezone={timezone}
                 filter={where}
                 onFilterChange={setWhere}
                 runSqlQuery={runSqlPlusQuery}
@@ -327,6 +351,30 @@ export const ExploreView = React.memo(function ExploreView() {
                   position={Position.BOTTOM_RIGHT}
                   content={
                     <Menu>
+                      {' '}
+                      <MenuItem
+                        icon={IconNames.GLOBE_NETWORK}
+                        text="Timezone"
+                        label={
+                          effectiveExploreState.timezone
+                            ? effectiveExploreState.timezone.toString()
+                            : 'Etc/UTC'
+                        }
+                      >
+                        <TimezoneMenuItems
+                          sqlTimeZone={effectiveExploreState.timezone?.toString()}
+                          setSqlTimeZone={timezone =>
+                            setExploreState(
+                              effectiveExploreState.changeTimezone(
+                                timezone ? Timezone.fromJS(timezone) : undefined,
+                              ),
+                            )
+                          }
+                          defaultSqlTimeZone="Etc/UTC"
+                          namedOnly
+                        />
+                      </MenuItem>
+                      <MenuDivider />
                       <MenuItem
                         icon={IconNames.DUPLICATE}
                         text="Copy last query"
@@ -446,6 +494,7 @@ export const ExploreView = React.memo(function ExploreView() {
                           setModuleState={moduleState => setModuleState(i, moduleState)}
                           onDelete={() => setExploreState(effectiveExploreState.removeModule(i))}
                           querySource={querySource}
+                          timezone={timezone}
                           where={where}
                           setWhere={setWhere}
                           runSqlQuery={runSqlPlusQuery}

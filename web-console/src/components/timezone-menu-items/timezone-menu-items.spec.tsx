@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { shallow } from '../../../utils/shallow-renderer';
+import { shallow } from '../../utils/shallow-renderer';
 
 import { TimezoneMenuItems } from './timezone-menu-items';
 

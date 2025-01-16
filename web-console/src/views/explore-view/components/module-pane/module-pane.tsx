@@ -27,6 +27,7 @@ import {
   ResizeSensor,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
+import type { Timezone } from 'chronoshift';
 import classNames from 'classnames';
 import type { Column, QueryResult, SqlExpression, SqlQuery } from 'druid-query-toolkit';
 import React, { useState } from 'react';
@@ -88,10 +89,13 @@ export interface ModulePaneProps {
   setModuleState(moduleState: ModuleState): void;
   onDelete(): void;
   querySource: QuerySource;
+  timezone: Timezone;
   where: SqlExpression;
   setWhere(where: SqlExpression): void;
 
-  runSqlQuery(query: string | SqlQuery): Promise<QueryResult>;
+  runSqlQuery(
+    query: string | SqlQuery | { query: string | SqlQuery; timezone?: Timezone },
+  ): Promise<QueryResult>;
 
   onAddToSourceQueryAsColumn?(expression: SqlExpression): void;
   onAddToSourceQueryAsMeasure?(measure: Measure): void;
@@ -104,6 +108,7 @@ export const ModulePane = function ModulePane(props: ModulePaneProps) {
     setModuleState,
     onDelete,
     querySource,
+    timezone,
     where,
     setWhere,
     runSqlQuery,
@@ -166,6 +171,7 @@ export const ModulePane = function ModulePane(props: ModulePaneProps) {
       content = React.createElement(module.component, {
         stage,
         querySource,
+        timezone,
         where,
         setWhere,
         parameterValues: parameterValuesWithDefaults,

@@ -2,9 +2,6 @@
 
 exports[`TimezoneMenuItems matches snapshot 1`] = `
 [
-  <Blueprint5.MenuDivider
-    title="Timezone type"
-  />,
   <Blueprint5.MenuItem
     active={false}
     disabled={false}

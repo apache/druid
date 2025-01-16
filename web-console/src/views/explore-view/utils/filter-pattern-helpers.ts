@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 
+import type { Timezone } from 'chronoshift';
 import { Duration } from 'chronoshift';
 import { isDate } from 'date-fns';
 import type { Column, FilterPattern, SqlExpression } from 'druid-query-toolkit';
@@ -73,7 +74,7 @@ export function initPatternForColumn(column: Column): FilterPattern {
   }
 }
 
-export function formatPatternWithoutNegation(pattern: FilterPattern): string {
+export function formatPatternWithoutNegation(pattern: FilterPattern, timezone: Timezone): string {
   switch (pattern.type) {
     case 'values':
       return `${pattern.column}: ${pattern.values
@@ -91,7 +92,7 @@ export function formatPatternWithoutNegation(pattern: FilterPattern): string {
       return `${pattern.column} ~ /${pattern.regexp}/`;
 
     case 'timeInterval': {
-      return formatIsoDateRange(pattern.start, pattern.end);
+      return formatIsoDateRange(pattern.start, pattern.end, timezone);
     }
 
     case 'timeRelative': {
