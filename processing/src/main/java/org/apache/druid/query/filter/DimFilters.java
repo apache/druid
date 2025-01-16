@@ -25,6 +25,7 @@ import com.google.common.collect.Lists;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  *
@@ -82,5 +83,11 @@ public class DimFilters
       default:
         return and(filters);
     }
+  }
+
+  public static DimFilter conjunction(DimFilter... filters)
+  {
+    List<DimFilter> list = Arrays.stream(filters).filter(v -> v != null).collect(Collectors.toList());
+    return conjunction(list);
   }
 }
