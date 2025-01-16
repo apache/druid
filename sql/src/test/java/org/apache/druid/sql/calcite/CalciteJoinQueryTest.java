@@ -5978,7 +5978,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     testQuery(
         "with t1 as (\n"
-        + "select * from foo, unnest(MV_TO_ARRAY(\"dim3\")) as u(d3)\n"
+        + "select * from foo f, foo f2, unnest(MV_TO_ARRAY(f.dim3)) as u(d3), foo f3 where f.dim1 != f2.dim2 || 'x' and f2.dim1 = '2' and f3.dim1 = '2' and ( d3!=f3.dim2  or d3 is null)\n"
         + ")\n"
         + "select t1.dim3, t1.d3, t2.dim2 from t1 JOIN numfoo as t2\n"
         + "ON t1.d3 = t2.\"dim2\"",

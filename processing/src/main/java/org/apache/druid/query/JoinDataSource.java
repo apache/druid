@@ -29,7 +29,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
-import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
@@ -515,15 +514,24 @@ public class JoinDataSource implements DataSource
               );
             }
             return baseSegment ->
-                new HashJoinSegment(
+                newHashJoinSegment(
                     baseMapFn.apply(baseSegment),
                     baseFilterToUse,
-                    GuavaUtils.firstNonNull(clausesToUse, ImmutableList.of()),
+                    clausesToUse,
                     joinFilterPreAnalysis
                 );
           }
         }
     );
+  }
+
+  private HashJoinSegment newHashJoinSegment(
+      SegmentReference sourceSegment,
+      Filter baseFilterToUse,
+      List<JoinableClause> clausesToUse,
+      JoinFilterPreAnalysis joinFilterPreAnalysis)
+  {
+    return new HashJoinSegment(sourceSegment, baseFilterToUse, clausesToUse, joinFilterPreAnalysis);
   }
 
   /**
@@ -554,17 +562,18 @@ public class JoinDataSource implements DataSource
     while (current instanceof JoinDataSource || current instanceof UnnestDataSource || current instanceof FilteredDataSource) {
       if (current instanceof JoinDataSource) {
         final JoinDataSource joinDataSource = (JoinDataSource) current;
-        current = joinDataSource.getLeft();
-        currentDimFilter = validateLeftFilter(current, joinDataSource.getLeftFilter());
-        preJoinableClauses.add(
-            new PreJoinableClause(
-                joinDataSource.getRightPrefix(),
-                joinDataSource.getRight(),
-                joinDataSource.getJoinType(),
-                joinDataSource.getConditionAnalysis(),
-                joinDataSource.getJoinAlgorithm()
-            )
+        currentDimFilter = joinDataSource.getLeftFilter();
+        PreJoinableClause e = new PreJoinableClause(
+            joinDataSource.getRightPrefix(),
+            joinDataSource.getRight(),
+            joinDataSource.getJoinType(),
+            joinDataSource.getConditionAnalysis(),
+            joinDataSource.getJoinAlgorithm()
         );
+        preJoinableClauses.add(
+            e
+        );
+        current = joinDataSource.getLeft();
       } else if (current instanceof UnnestDataSource) {
         final UnnestDataSource unnestDataSource = (UnnestDataSource) current;
         current = unnestDataSource.getBase();
