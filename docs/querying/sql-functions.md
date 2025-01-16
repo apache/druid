@@ -853,11 +853,84 @@ Returns true if the IPv6 `address` belongs to the `subnet` literal, else false.
 
 ## JSON_KEYS
 
-**Function type:** [JSON](sql-json-functions.md)
+Returns an array of field names from an expression, at a specified path.
 
-`JSON_KEYS(expr, path)`
+* **Syntax:** `JSON_KEYS(expr, path)`
+* **Function type:** JSON
 
-Returns an array of field names from `expr` at the specified `path`.
+<details><summary>Example</summary>
+
+Example data from `kttm_nested` in a nested JSON column `agent`:
+
+```json
+{
+  "type":"Browser",
+  "category":"Personal computer",
+  "browser":"Chrome",
+  "browser_version":"76.0.3809.100",
+  "os":"Windows 7",
+  "platform":"Windows"
+}
+```
+The following example returns an array of field names from `agent`:
+
+```sql
+SELECT
+  JSON_KEYS(agent, '$.') AS agent_keys
+FROM "kttm_nested"
+```
+
+Returns the following:
+
+| `agent_keys` |
+| -- |
+| `[type, category, browser, browser_version, os, platform]` |
+
+</details>
+
+
+[Learn more](sql-json-functions.md)
+
+## JSON_MERGE
+
+Merges two or more JSON `STRING` or `COMPLEX<json>` into one, preserving the rightmost value when there are key overlaps.
+The function always returns a `COMPLEX<json>` object.
+
+* **Syntax:** `JSON_MERGE(expr1, expr2[, expr3 ...])`
+* **Function type:** JSON
+
+<details><summary>Example</summary>
+
+Example data from `kttm_nested` in a nested JSON column `agent`:
+
+```json
+{
+  "type":"Browser",
+  "category":"Personal computer",
+  "browser":"Chrome",
+  "browser_version":"76.0.3809.100",
+  "os":"Windows 7",
+  "platform":"Windows"
+}
+```
+The following example returns an array of field names from `agent`:
+
+```sql
+SELECT
+  JSON_KEYS(agent, '$.') AS agent_keys
+FROM "kttm_nested"
+```
+
+Returns the following:
+
+| `agent_keys` |
+| -- |
+| `[type, category, browser, browser_version, os, platform]` |
+
+</details>
+
+
+
 
 ## JSON_MERGE
 
