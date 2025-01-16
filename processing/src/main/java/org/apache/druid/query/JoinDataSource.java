@@ -507,7 +507,7 @@ public class JoinDataSource implements DataSource
             // the segment map function for the unnest would never get called
             // This calls us to delegate to the segmentMapFunction of the left
             // only when it is not a JoinDataSource
-            if (left instanceof JoinDataSource) {
+            if (false && left instanceof JoinDataSource) {
               baseMapFn = Function.identity();
             } else {
               baseMapFn = left.createSegmentMapFunction(
