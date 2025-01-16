@@ -78,16 +78,17 @@ public class ExpressionProcessingConfig
         allowVectorizeFallback,
         ALLOW_VECTORIZE_FALLBACK
     );
-    String version = ExpressionProcessingConfig.class.getPackage().getImplementationVersion();
-    if (version == null || version.contains("SNAPSHOT")) {
-      version = "latest";
-    }
-    final String docsBaseFormat = "https://druid.apache.org/docs/%s/querying/sql-data-types#%s";
     if (!this.useStrictBooleans) {
-      LOG.warn(
-          "druid.expressions.useStrictBooleans set to 'false', but has been removed from Druid and is always 'true' now for the most SQL compliant behavior, see %s for details",
-          StringUtils.format(docsBaseFormat, version, "boolean-logic")
+      String version = ExpressionProcessingConfig.class.getPackage().getImplementationVersion();
+      if (version == null || version.contains("SNAPSHOT")) {
+        version = "latest";
+      }
+      final String docsLink = StringUtils.format("https://druid.apache.org/docs/%s/release-info/migr-ansi-sql-null", version);
+      LOG.error(
+          "druid.expressions.useStrictBooleans set to 'false', but has been removed see %s for details for how to migrate to SQL compliant behavior",
+          docsLink
       );
+      System.exit(1);
     }
   }
 

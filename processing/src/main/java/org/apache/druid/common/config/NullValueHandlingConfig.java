@@ -75,19 +75,21 @@ public class NullValueHandlingConfig
     if (version == null || version.contains("SNAPSHOT")) {
       version = "latest";
     }
-    final String docsBaseFormat = "https://druid.apache.org/docs/%s/querying/sql-data-types#%s";
-
+    final String docsLink = StringUtils.format("https://druid.apache.org/docs/%s/release-info/migr-ansi-sql-null", version);
     if (this.useDefaultValuesForNull) {
-      LOG.warn(
-          "druid.generic.useDefaultValueForNull set to 'true', but has been removed and is always 'false' for the most SQL compliant behavior, see %s for details",
-          StringUtils.format(docsBaseFormat, version, "null-values")
+
+      LOG.error(
+          "druid.generic.useDefaultValueForNull set to 'true', but has been removed, see %s for details for how to migrate to SQL compliant behavior",
+          docsLink
       );
+      System.exit(1);
     }
     if (!this.useThreeValueLogicForNativeFilters) {
-      LOG.warn(
-          "druid.generic.useThreeValueLogicForNativeFilters set to 'false', but has been removed and is always 'true' for the most SQL compliant behavior, see %s for details",
-          StringUtils.format(docsBaseFormat, version, "boolean-logic")
+      LOG.error(
+          "druid.generic.useThreeValueLogicForNativeFilters set to 'false', but has been removed, see %s for details for how to migrate to SQL compliant behavior",
+          docsLink
       );
+      System.exit(1);
     }
   }
 }
