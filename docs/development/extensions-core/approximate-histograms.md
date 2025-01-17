@@ -226,7 +226,7 @@ For performance and accuracy reasons, we recommend avoiding aggregation of histo
 
 ### Null handling
 
-Null values will be tracked in the `missingValueCount` field of the histogram.
+Druid tracks null values in the `missingValueCount` field of the histogram.
 
 ## Histogram post-aggregators
 

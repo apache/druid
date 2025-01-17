@@ -21,7 +21,6 @@ package org.apache.druid.common.config;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 
 public class NullValueHandlingConfig
@@ -70,26 +69,6 @@ public class NullValueHandlingConfig
       } else {
         this.ignoreNullsForStringCardinality = false;
       }
-    }
-    String version = NullValueHandlingConfig.class.getPackage().getImplementationVersion();
-    if (version == null || version.contains("SNAPSHOT")) {
-      version = "latest";
-    }
-    final String docsLink = StringUtils.format("https://druid.apache.org/docs/%s/release-info/migr-ansi-sql-null", version);
-    if (this.useDefaultValuesForNull) {
-
-      LOG.error(
-          "druid.generic.useDefaultValueForNull set to 'true', but has been removed, see %s for details for how to migrate to SQL compliant behavior",
-          docsLink
-      );
-      System.exit(1);
-    }
-    if (!this.useThreeValueLogicForNativeFilters) {
-      LOG.error(
-          "druid.generic.useThreeValueLogicForNativeFilters set to 'false', but has been removed, see %s for details for how to migrate to SQL compliant behavior",
-          docsLink
-      );
-      System.exit(1);
     }
   }
 }
