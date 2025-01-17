@@ -64,6 +64,7 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.SegmentSchemaMapping;
@@ -1251,12 +1252,19 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
    */
   private TaskReport.ReportMap getTaskCompletionReports(TaskStatus taskStatus)
   {
-    return buildIngestionStatsAndContextReport(
+    final var taskCompletionReport =  buildIngestionStatsAndContextReport(
         IngestionState.COMPLETED,
         taskStatus.getErrorMsg(),
         segmentsRead,
         segmentsPublished
     );
+    final var totalProcessedBytes = indexGenerateRowStats.lhs.get("processedBytes");
+    // Emit the processed bytes metric
+    final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
+    //IndexTaskUtils.setTaskDimensions(metricBuilder, task);
+    toolbox.getEmitter().emit(
+        metricBuilder.setMetric("ingest/processed/bytes", (Number) totalProcessedBytes));
+    return taskCompletionReport;
   }
 
   @Override

@@ -993,7 +993,6 @@ public class IndexTask extends AbstractBatchIndexTask implements ChatHandler, Pe
         emitMetric(toolbox.getEmitter(), "ingest/segments/count",
                    published.getSegments().size() + tombStones.size()
         );
-        emitMetric(toolbox.getEmitter(), "ingest/processed/bytes", buildSegmentsMeters.getProcessedBytes());
 
         log.debugSegments(published.getSegments(), "Published segments");
 

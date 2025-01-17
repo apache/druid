@@ -78,7 +78,6 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.PendingSegmentRecord;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
@@ -657,12 +656,6 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
                 record.getSequenceNumber(),
                 shouldProcess
             );
-
-            // Emit the processed bytes metric
-            final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
-            IndexTaskUtils.setTaskDimensions(metricBuilder, task);
-            toolbox.getEmitter().emit(
-                metricBuilder.setMetric("ingest/processed/bytes", rowIngestionMeters.getProcessedBytes()));
 
             if (shouldProcess) {
               final List<InputRow> rows = parser.parse(record.getData(), isEndOfShard(record.getSequenceNumber()));
