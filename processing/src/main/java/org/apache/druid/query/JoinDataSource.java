@@ -452,7 +452,11 @@ public class JoinDataSource implements DataSource
             // this is pretty hairy; the DataSourceAnalysis class tries to replace the DataSource tree with the List<PreJoinables>
             // which covers reality as long as there are no other DataSources (which is not true).
             // simple fix is to limit this method to only process one level at a time.
-            List<PreJoinableClause> clauses = clauses1.subList(0, 1);
+//            PreJoinableClause lastClause = Iterables.getLast(clauses1, null);
+
+            List<PreJoinableClause> clauses =
+
+            clauses1.size() > 0 ? clauses1.subList(clauses1.size()-1, 1) : Collections.emptyList();
 
             final JoinableClauses joinableClauses = JoinableClauses.createClauses(
                 clauses,
@@ -466,7 +470,7 @@ public class JoinDataSource implements DataSource
             final List<JoinableClause> clausesToUse;
             SegmentMapConfig subCfg = cfg;
 
-            if (requiredColumns != null && filterRewriteConfig.isEnableRewriteJoinToFilter()) {
+            if (false && requiredColumns != null && filterRewriteConfig.isEnableRewriteJoinToFilter()) {
               final Pair<List<Filter>, List<JoinableClause>> conversionResult = JoinableFactoryWrapper.convertJoinsToFilters(
                   joinableClauses.getJoinableClauses(),
                   requiredColumns,

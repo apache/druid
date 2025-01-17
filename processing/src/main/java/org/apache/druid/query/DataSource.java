@@ -29,7 +29,9 @@ import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.join.filter.rewrite.JoinFilterRewriteConfig;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 
@@ -107,17 +109,26 @@ public interface DataSource
   static class SegmentMapConfig
   {
     private Query query;
-    private Set requiredColumns;
+    private VirtualColumns virtualColumns;
+    private Optional<Set > neededColumns;
+    private boolean trackRequiredColumns;
+    private DimFilter filter;
 
     public SegmentMapConfig(Query query)
     {
-      this(query,query.getRequiredColumns());
+      this(query, query.getVirtualColumns(), Optional.ofNullable(query.getRequiredColumns()), query.getFilter());
     }
 
-    public SegmentMapConfig(Query query, Set requiredColumns)
+    public SegmentMapConfig(
+        Query query,
+        VirtualColumns virtualColumns,
+        Optional<Set> requiredColumns,
+        DimFilter dimFilter)
     {
       this.query = query;
-      this.requiredColumns=requiredColumns;
+      this.virtualColumns =virtualColumns;
+      this.neededColumns=requiredColumns;
+      this.filter=dimFilter;
     }
 
     public static SegmentMapConfig of(Query query)
@@ -132,27 +143,45 @@ public interface DataSource
 
     public Set<String> getRequiredColumns()
     {
-      return requiredColumns;
+      if(neededColumns.isEmpty()) {
+        return null;
+      }
+      Set<String> re = new HashSet<>(neededColumns.get());
+      re.removeAll(virtualColumns.getColumnNames());
+      return re;
     }
 
     public VirtualColumns getVirtualColumns()
     {
-      return query.getVirtualColumns();
+      return virtualColumns;
     }
 
     public DimFilter getFilter()
     {
-      return query.getFilter();
+      return filter;
     }
 
     public SegmentMapConfig withColumns(Set<String> requiredColumns)
     {
-      return new SegmentMapConfig(query, Sets.union(this.requiredColumns, requiredColumns));
+      return new SegmentMapConfig(query, virtualColumns, unionColumnNames(this.neededColumns , requiredColumns),filter);
+    }
+
+    private Optional<Set> unionColumnNames(Optional<Set> s1, Set<String> s2)
+    {
+      if(s1.isEmpty()) {
+        return s1;
+      }
+      return Optional.of(Sets.union(s1.get(),s2));
     }
 
     public SegmentMapConfig withVirtualColumns(VirtualColumns virtualColumns)
     {
-      return new SegmentMapConfig(query, Sets.union(this.requiredColumns, virtualColumns.getRequiredColumns()));
+      return new SegmentMapConfig(
+          query,
+          VirtualColumns.union(this.virtualColumns, virtualColumns),
+          unionColumnNames(this.neededColumns, virtualColumns.getRequiredColumns()),
+          filter
+      );
     }
 
 //    public SegmentMapConfig withFilters(@Nullable DimFilter ...filters)

@@ -582,4 +582,12 @@ public class VirtualColumns implements Cacheable
     }
     return requiredColumns;
   }
+
+  public static VirtualColumns union(VirtualColumns v1, VirtualColumns v2)
+  {
+    List<VirtualColumn> li =new ArrayList<VirtualColumn>();
+    li.addAll(v1.virtualColumns);
+    li.addAll(v2.virtualColumns);
+    return VirtualColumns.create(li);
+  }
 }

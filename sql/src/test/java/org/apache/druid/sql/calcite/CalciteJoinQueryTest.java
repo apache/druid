@@ -1684,8 +1684,8 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
     cannotVectorize();
 
     testQuery(
-//        "SELECT l1.k,l2.k,foo.m1\n"
-        "SELECT count(1)\n"
+        "SELECT l1.k,l2.k,foo.m1\n"
+//        "SELECT count(1)\n"
         + "FROM lookup.lookyloo l1\n"
         + "INNER JOIN lookup.lookyloo l2 ON l1.k = l2.k\n"
         + "INNER JOIN foo on l2.k = foo.m1",

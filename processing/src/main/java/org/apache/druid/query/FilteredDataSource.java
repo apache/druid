@@ -149,7 +149,8 @@ public class FilteredDataSource implements DataSource
   @Override
   public Function<SegmentReference, SegmentReference> createSegmentMapFunction(SegmentMapConfig cfg)
   {
-    SegmentMapConfig newCfg = cfg.withColumns(virtualColumns.getRequiredColumns());
+    SegmentMapConfig newCfg = cfg
+        .withVirtualColumns(virtualColumns);
 
     final Function<SegmentReference, SegmentReference> segmentMapFn = base.createSegmentMapFunction(
         newCfg
