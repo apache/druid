@@ -860,19 +860,7 @@ Returns an array of field names from an expression, at a specified path.
 
 <details><summary>Example</summary>
 
-Example data from `kttm_nested` in a nested JSON column `agent`:
-
-```json
-{
-  "type":"Browser",
-  "category":"Personal computer",
-  "browser":"Chrome",
-  "browser_version":"76.0.3809.100",
-  "os":"Windows 7",
-  "platform":"Windows"
-}
-```
-The following example returns an array of field names from `agent`:
+The following example returns an array of field names from the nested column `agent`:
 
 ```sql
 SELECT
@@ -887,7 +875,6 @@ Returns the following:
 | `[type, category, browser, browser_version, os, platform]` |
 
 </details>
-
 
 [Learn more](sql-json-functions.md)
 
@@ -929,9 +916,6 @@ Returns the following:
 
 </details>
 
-
-
-
 ## JSON_MERGE
 
 **Function type:** [JSON](sql-json-functions.md)
@@ -941,27 +925,102 @@ Merges two or more JSON `STRING` or `COMPLEX<json>` into one. Preserves the righ
 
 ## JSON_OBJECT
 
-**Function type:** [JSON](sql-json-functions.md)
+Constructs a new `COMPLEX<json>` object from one or more expressions. 
+The `KEY` expressions must evaluate to string types.
+The `VALUE` expressions can be composed of any input type, including other `COMPLEX<json>` objects.
+The function can accept colon-separated key-value pairs.
 
-`JSON_OBJECT(KEY expr1 VALUE expr2[, KEY expr3 VALUE expr4, ...])`
+* **Syntax:** `JSON_OBJECT(KEY expr1 VALUE expr2[, KEY expr3 VALUE expr4, ...])`  
+  or  
+  `JSON_OBJECT(expr1:expr2[, expr3:expr4, ...])`
+* **Function type:** JSON
 
-Constructs a new `COMPLEX<json>` object. The `KEY` expressions must evaluate to string types. The `VALUE` expressions can be composed of any input type, including other `COMPLEX<json>` values. `JSON_OBJECT` can accept colon-separated key-value pairs. The following syntax is equivalent: `JSON_OBJECT(expr1:expr2[, expr3:expr4, ...])`.
+<details><summary>Example</summary>
+
+The following example creates a new object `combinedJSON` from the `geo_ip` and `event` nested columns:
+
+```sql
+SELECT
+  JSON_OBJECT(
+     KEY 'geo_ip' VALUE JSON_QUERY(geo_ip, '$.continent'),
+     KEY 'event' VALUE JSON_QUERY(event, '$.type')
+     )
+  as combinedJSON
+FROM "kttm_nested"
+```
+
+Returns the following:
+
+```json
+combinedJSON
+--
+{
+  "geo_ip": {
+    "continent": "South America"
+  },
+  "event": {
+    "type": "PercentClear"
+  }
+}
+```
+
+</details>
+
+[Learn more](sql-json-functions.md)
 
 ## JSON_PATHS
 
-**Function type:** [JSON](sql-json-functions.md)
+Returns an array of all paths which refer to literal values in an expression, in JSONPath format.
 
-`JSON_PATHS(expr)`
+* **Syntax:** `JSON_PATHS(expr)`  
+* **Function type:** JSON
 
-Returns an array of all paths which refer to literal values in `expr` in JSONPath format.
+<details><summary>Example</summary>
+
+The following example returns an array of distinct paths in the nested column `geo_ip`:
+
+```sql
+SELECT
+  ARRAY_CONCAT_AGG(DISTINCT JSON_PATHS(geo_ip)) AS geo_ip_paths
+from "kttm_nested"
+```
+
+Returns the following:
+
+| `geo_ip_paths` |
+| -- |
+| `[$.city, $.continent, $.country, $.region]` |
+
+</details>
+
+[Learn more](sql-json-functions.md)
 
 ## JSON_QUERY
 
-**Function type:** [JSON](sql-json-functions.md)
+Extracts a `COMPLEX<json>` value from an expression, at a specified path.
 
-`JSON_QUERY(expr, path)`
+* **Syntax:** `JSON_QUERY(expr, path)`  
+* **Function type:** JSON
 
-Extracts a `COMPLEX<json>` value from `expr`, at the specified `path`.
+<details><summary>Example</summary>
+
+The following example returns an array of distinct paths in the nested column `geo_ip`:
+
+```sql
+SELECT
+  ARRAY_CONCAT_AGG(DISTINCT JSON_PATHS(geo_ip)) AS geo_ip_paths
+from "kttm_nested"
+```
+
+Returns the following:
+
+| `geo_ip_paths` |
+| -- |
+| `[$.city, $.continent, $.country, $.region]` |
+
+</details>
+
+[Learn more](sql-json-functions.md)
 
 ## JSON_QUERY_ARRAY
 
