@@ -888,19 +888,7 @@ The function always returns a `COMPLEX<json>` object.
 
 <details><summary>Example</summary>
 
-Example data from `kttm_nested` in a nested JSON column `agent`:
-
-```json
-{
-  "type":"Browser",
-  "category":"Personal computer",
-  "browser":"Chrome",
-  "browser_version":"76.0.3809.100",
-  "os":"Windows 7",
-  "platform":"Windows"
-}
-```
-The following example returns an array of field names from `agent`:
+The following example...
 
 ```sql
 SELECT
@@ -916,12 +904,7 @@ Returns the following:
 
 </details>
 
-## JSON_MERGE
-
-**Function type:** [JSON](sql-json-functions.md)
-
-`JSON_MERGE(expr1, expr2[, expr3 ...])`
-Merges two or more JSON `STRING` or `COMPLEX<json>` into one. Preserves the rightmost value when there are key overlaps. Returning always a `COMPLEX<json>` type.
+[Learn more](sql-json-functions.md)
 
 ## JSON_OBJECT
 
