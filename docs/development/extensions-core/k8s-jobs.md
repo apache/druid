@@ -696,6 +696,10 @@ roleRef:
 ```
 
 ## Migration/Kubernetes and Worker Task Runner
+:::info
+This feature is only available starting in Druid 28. If you require a rolling update to enable Kubernetes-based ingestion, first update your cluster to Druid 28 then apply the overlord configurations mentioned in this section.
+:::
+
 If you are running a cluster with tasks running on middle managers or indexers and want to do a zero downtime migration to mm-less ingestion, the mm-less ingestion system is capable of running in migration mode by reading tasks from middle managers/indexers and Kubernetes and writing tasks to either middle managers or to Kubernetes.
 
 To do this, set the following property.
