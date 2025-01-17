@@ -784,15 +784,15 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     );
     Assert.assertEquals(
         SegmentPublishResult.fail(
-            InvalidInput.exception(
+            new RetryTransactionException(
                 "The new start metadata state[ObjectMetadata{theObject={foo=bar}}] is ahead of the last committed"
                 + " end state[null]. Try resetting the supervisor."
             ).toString()),
         result1
     );
 
-    // Should only be tried once.
-    Assert.assertEquals(1, metadataUpdateCounter.get());
+    // Should be retried.
+    Assert.assertEquals(2, metadataUpdateCounter.get());
   }
 
   @Test
@@ -2280,7 +2280,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     final PartialShardSpec partialShardSpec = NumberedPartialShardSpec.instance();
     final String dataSource = "ds";
     final Interval interval = Intervals.of("2017-01-01/2017-02-01");
-    final SegmentIdWithShardSpec identifier = coordinator.allocatePendingSegment(
+    final SegmentIdWithShardSpec identifier = allocatePendingSegment(
         dataSource,
         "seq",
         null,
@@ -2293,7 +2293,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
 
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_version", identifier.toString());
 
-    final SegmentIdWithShardSpec identifier1 = coordinator.allocatePendingSegment(
+    final SegmentIdWithShardSpec identifier1 = allocatePendingSegment(
         dataSource,
         "seq",
         identifier.toString(),
@@ -2306,7 +2306,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
 
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_version_1", identifier1.toString());
 
-    final SegmentIdWithShardSpec identifier2 = coordinator.allocatePendingSegment(
+    final SegmentIdWithShardSpec identifier2 = allocatePendingSegment(
         dataSource,
         "seq",
         identifier1.toString(),
@@ -2319,7 +2319,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
 
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_version_2", identifier2.toString());
 
-    final SegmentIdWithShardSpec identifier3 = coordinator.allocatePendingSegment(
+    final SegmentIdWithShardSpec identifier3 = allocatePendingSegment(
         dataSource,
         "seq",
         identifier1.toString(),
@@ -2333,7 +2333,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_version_2", identifier3.toString());
     Assert.assertEquals(identifier2, identifier3);
 
-    final SegmentIdWithShardSpec identifier4 = coordinator.allocatePendingSegment(
+    final SegmentIdWithShardSpec identifier4 = allocatePendingSegment(
         dataSource,
         "seq1",
         null,
@@ -2370,7 +2370,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     final PartialShardSpec partialShardSpec = NumberedPartialShardSpec.instance();
     final String dataSource = "ds";
     final Interval interval = Intervals.of("2017-01-01/2017-02-01");
-    final SegmentIdWithShardSpec identifier = coordinator.allocatePendingSegment(
+    final SegmentIdWithShardSpec identifier = allocatePendingSegment(
         dataSource,
         "seq",
         null,
@@ -2385,7 +2385,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     Assert.assertEquals(0, identifier.getShardSpec().getNumCorePartitions());
 
     // simulate one more load using kafka streaming (as if previous segment was published, note different sequence name)
-    final SegmentIdWithShardSpec identifier1 = coordinator.allocatePendingSegment(
+    final SegmentIdWithShardSpec identifier1 = allocatePendingSegment(
         dataSource,
         "seq2",
         identifier.toString(),
@@ -2400,7 +2400,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     Assert.assertEquals(0, identifier1.getShardSpec().getNumCorePartitions());
 
     // simulate one more load using kafka streaming (as if previous segment was published, note different sequence name)
-    final SegmentIdWithShardSpec identifier2 = coordinator.allocatePendingSegment(
+    final SegmentIdWithShardSpec identifier2 = allocatePendingSegment(
         dataSource,
         "seq3",
         identifier1.toString(),
@@ -2431,7 +2431,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_version_new", ids.get(0));
 
     // one more load on same interval:
-    final SegmentIdWithShardSpec identifier3 = coordinator.allocatePendingSegment(
+    final SegmentIdWithShardSpec identifier3 = allocatePendingSegment(
         dataSource,
         "seq4",
         identifier1.toString(),
@@ -2450,7 +2450,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
 
     // and final load, this reproduces an issue that could happen with multiple streaming appends,
     // followed by a reindex, followed by a drop, and more streaming data coming in for same interval
-    final SegmentIdWithShardSpec identifier4 = coordinator.allocatePendingSegment(
+    final SegmentIdWithShardSpec identifier4 = allocatePendingSegment(
         dataSource,
         "seq5",
         identifier1.toString(),
@@ -2484,7 +2484,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     final PartialShardSpec partialShardSpec = NumberedPartialShardSpec.instance();
     final String dataSource = "ds";
     final Interval interval = Intervals.of("2017-01-01/2017-02-01");
-    final SegmentIdWithShardSpec identifier = coordinator.allocatePendingSegment(
+    final SegmentIdWithShardSpec identifier = allocatePendingSegment(
         dataSource,
         "seq",
         null,
@@ -2513,7 +2513,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
 
 
     // 1.1) simulate one more append load  (as if previous segment was published, note different sequence name)
-    final SegmentIdWithShardSpec identifier1 = coordinator.allocatePendingSegment(
+    final SegmentIdWithShardSpec identifier1 = allocatePendingSegment(
         dataSource,
         "seq2",
         identifier.toString(),
@@ -2542,7 +2542,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
 
 
     // 1.2) simulate one more append load  (as if previous segment was published, note different sequence name)
-    final SegmentIdWithShardSpec identifier2 = coordinator.allocatePendingSegment(
+    final SegmentIdWithShardSpec identifier2 = allocatePendingSegment(
         dataSource,
         "seq3",
         identifier1.toString(),
@@ -2597,7 +2597,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     // unused segment:
 
     // 4) pending segment of version = B, id = 1 <= appending new data, aborted
-    final SegmentIdWithShardSpec identifier3 = coordinator.allocatePendingSegment(
+    final SegmentIdWithShardSpec identifier3 = allocatePendingSegment(
         dataSource,
         "seq4",
         identifier2.toString(),
@@ -2632,7 +2632,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     Assert.assertEquals(1, unused.size());
 
     // Simulate one more append load
-    final SegmentIdWithShardSpec identifier4 = coordinator.allocatePendingSegment(
+    final SegmentIdWithShardSpec identifier4 = allocatePendingSegment(
         dataSource,
         "seq5",
         identifier1.toString(),
@@ -2678,7 +2678,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     final Interval interval = Intervals.of("2017-01-01/2017-02-01");
     final String sequenceName = "seq";
 
-    final SegmentCreateRequest request = new SegmentCreateRequest(sequenceName, null, "v1", partialShardSpec, null, null);
+    final SegmentCreateRequest request = new SegmentCreateRequest(sequenceName, null, "v1", partialShardSpec, null);
     final SegmentIdWithShardSpec segmentId0 = coordinator.allocatePendingSegments(
         dataSource,
         interval,
@@ -2690,7 +2690,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_v1", segmentId0.toString());
 
     final SegmentCreateRequest request1 =
-        new SegmentCreateRequest(sequenceName, segmentId0.toString(), segmentId0.getVersion(), partialShardSpec, null, null);
+        new SegmentCreateRequest(sequenceName, segmentId0.toString(), segmentId0.getVersion(), partialShardSpec, null);
     final SegmentIdWithShardSpec segmentId1 = coordinator.allocatePendingSegments(
         dataSource,
         interval,
@@ -2702,7 +2702,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_v1_1", segmentId1.toString());
 
     final SegmentCreateRequest request2 =
-        new SegmentCreateRequest(sequenceName, segmentId1.toString(), segmentId1.getVersion(), partialShardSpec, null, null);
+        new SegmentCreateRequest(sequenceName, segmentId1.toString(), segmentId1.getVersion(), partialShardSpec, null);
     final SegmentIdWithShardSpec segmentId2 = coordinator.allocatePendingSegments(
         dataSource,
         interval,
@@ -2714,7 +2714,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_v1_2", segmentId2.toString());
 
     final SegmentCreateRequest request3 =
-        new SegmentCreateRequest(sequenceName, segmentId1.toString(), segmentId1.getVersion(), partialShardSpec, null, null);
+        new SegmentCreateRequest(sequenceName, segmentId1.toString(), segmentId1.getVersion(), partialShardSpec, null);
     final SegmentIdWithShardSpec segmentId3 = coordinator.allocatePendingSegments(
         dataSource,
         interval,
@@ -2727,7 +2727,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     Assert.assertEquals(segmentId2, segmentId3);
 
     final SegmentCreateRequest request4 =
-        new SegmentCreateRequest("seq1", null, "v1", partialShardSpec, null, null);
+        new SegmentCreateRequest("seq1", null, "v1", partialShardSpec, null);
     final SegmentIdWithShardSpec segmentId4 = coordinator.allocatePendingSegments(
         dataSource,
         interval,
@@ -2747,7 +2747,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     final Interval interval = Intervals.of("2017-01-01/2017-02-01");
     final String sequenceName = "seq";
 
-    final SegmentCreateRequest request = new SegmentCreateRequest(sequenceName, null, "v1", partialShardSpec, null, null);
+    final SegmentCreateRequest request = new SegmentCreateRequest(sequenceName, null, "v1", partialShardSpec, null);
     final SegmentIdWithShardSpec segmentId0 = coordinator.allocatePendingSegments(
         dataSource,
         interval,
@@ -2759,7 +2759,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_v1", segmentId0.toString());
 
     final SegmentCreateRequest request1 =
-        new SegmentCreateRequest(sequenceName, segmentId0.toString(), segmentId0.getVersion(), partialShardSpec, null, null);
+        new SegmentCreateRequest(sequenceName, segmentId0.toString(), segmentId0.getVersion(), partialShardSpec, null);
     final SegmentIdWithShardSpec segmentId1 = coordinator.allocatePendingSegments(
         dataSource,
         interval,
@@ -2771,7 +2771,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_v1_1", segmentId1.toString());
 
     final SegmentCreateRequest request2 =
-        new SegmentCreateRequest(sequenceName, segmentId1.toString(), segmentId1.getVersion(), partialShardSpec, null, null);
+        new SegmentCreateRequest(sequenceName, segmentId1.toString(), segmentId1.getVersion(), partialShardSpec, null);
     final SegmentIdWithShardSpec segmentId2 = coordinator.allocatePendingSegments(
         dataSource,
         interval,
@@ -2783,7 +2783,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     Assert.assertEquals("ds_2017-01-01T00:00:00.000Z_2017-02-01T00:00:00.000Z_v1_2", segmentId2.toString());
 
     final SegmentCreateRequest request3 =
-        new SegmentCreateRequest(sequenceName, segmentId1.toString(), segmentId1.getVersion(), partialShardSpec, null, null);
+        new SegmentCreateRequest(sequenceName, segmentId1.toString(), segmentId1.getVersion(), partialShardSpec, null);
     final SegmentIdWithShardSpec segmentId3 = coordinator.allocatePendingSegments(
         dataSource,
         interval,
@@ -2796,7 +2796,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     Assert.assertEquals(segmentId2, segmentId3);
 
     final SegmentCreateRequest request4 =
-        new SegmentCreateRequest("seq1", null, "v1", partialShardSpec, null, null);
+        new SegmentCreateRequest("seq1", null, "v1", partialShardSpec, null);
     final SegmentIdWithShardSpec segmentId4 = coordinator.allocatePendingSegments(
         dataSource,
         interval,
@@ -2833,7 +2833,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     final PartialShardSpec partialShardSpec = NumberedPartialShardSpec.instance();
     final String dataSource = "ds";
     final Interval interval = Intervals.of("2017-01-01/2017-02-01");
-    final SegmentIdWithShardSpec identifier = coordinator.allocatePendingSegment(
+    final SegmentIdWithShardSpec identifier = allocatePendingSegment(
         dataSource,
         "seq",
         null,
@@ -2857,7 +2857,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     final DateTime begin = DateTimes.nowUtc();
 
     for (int i = 0; i < 10; i++) {
-      final SegmentIdWithShardSpec identifier = coordinator.allocatePendingSegment(
+      final SegmentIdWithShardSpec identifier = allocatePendingSegment(
           dataSource,
           "seq",
           prevSegmentId,
@@ -2873,7 +2873,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
 
     final DateTime secondBegin = DateTimes.nowUtc();
     for (int i = 0; i < 5; i++) {
-      final SegmentIdWithShardSpec identifier = coordinator.allocatePendingSegment(
+      final SegmentIdWithShardSpec identifier = allocatePendingSegment(
           dataSource,
           "seq",
           prevSegmentId,
@@ -2901,7 +2901,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     String prevSegmentId = null;
 
     for (int i = 0; i < 10; i++) {
-      final SegmentIdWithShardSpec identifier = coordinator.allocatePendingSegment(
+      final SegmentIdWithShardSpec identifier = allocatePendingSegment(
           dataSource,
           "seq",
           prevSegmentId,
@@ -2970,7 +2970,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     final String dataSource = "ds";
     final Interval interval = Intervals.of("2017-01-01/2017-02-01");
 
-    SegmentIdWithShardSpec id = coordinator.allocatePendingSegment(
+    SegmentIdWithShardSpec id = allocatePendingSegment(
         dataSource,
         "seq",
         null,
@@ -3003,7 +3003,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
     );
 
-    id = coordinator.allocatePendingSegment(
+    id = allocatePendingSegment(
         dataSource,
         "seq2",
         null,
@@ -3036,7 +3036,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)
     );
 
-    id = coordinator.allocatePendingSegment(
+    id = allocatePendingSegment(
         dataSource,
         "seq3",
         null,
@@ -3084,7 +3084,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
       );
     }
     coordinator.commitSegments(originalSegments, new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
-    final SegmentIdWithShardSpec id = coordinator.allocatePendingSegment(
+    final SegmentIdWithShardSpec id = allocatePendingSegment(
         datasource,
         "seq",
         null,
@@ -3130,7 +3130,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
       );
     }
     coordinator.commitSegments(originalSegments, new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION));
-    final SegmentIdWithShardSpec id = coordinator.allocatePendingSegment(
+    final SegmentIdWithShardSpec id = allocatePendingSegment(
         datasource,
         "seq",
         null,
@@ -3377,7 +3377,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     Assert.assertTrue(coordinator.commitSegments(tombstones, new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)).containsAll(tombstones));
 
     // Allocate and commit a data segment by appending to the same interval
-    final SegmentIdWithShardSpec identifier = coordinator.allocatePendingSegment(
+    final SegmentIdWithShardSpec identifier = allocatePendingSegment(
         TestDataSource.WIKI,
         "seq",
         tombstoneSegment.getVersion(),
@@ -3432,7 +3432,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     Assert.assertTrue(coordinator.commitSegments(tombstones, new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION)).containsAll(tombstones));
 
     // Allocate and commit a data segment by appending to the same interval
-    final SegmentIdWithShardSpec identifier = coordinator.allocatePendingSegment(
+    final SegmentIdWithShardSpec identifier = allocatePendingSegment(
         TestDataSource.WIKI,
         "seq",
         tombstoneSegment.getVersion(),
@@ -3471,7 +3471,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
   @Test
   public void testSegmentIdShouldNotBeReallocated()
   {
-    final SegmentIdWithShardSpec idWithNullTaskAllocator = coordinator.allocatePendingSegment(
+    final SegmentIdWithShardSpec idWithNullTaskAllocator = allocatePendingSegment(
         TestDataSource.WIKI,
         "seq",
         "0",
@@ -3487,7 +3487,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         idWithNullTaskAllocator.getShardSpec()
     );
 
-    final SegmentIdWithShardSpec idWithValidTaskAllocator = coordinator.allocatePendingSegment(
+    final SegmentIdWithShardSpec idWithValidTaskAllocator = allocatePendingSegment(
         TestDataSource.WIKI,
         "seq",
         "1",
@@ -3510,7 +3510,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     // Mark all segments as unused
     coordinator.markSegmentsAsUnusedWithinInterval(TestDataSource.WIKI, Intervals.ETERNITY);
 
-    final SegmentIdWithShardSpec theId = coordinator.allocatePendingSegment(
+    final SegmentIdWithShardSpec theId = allocatePendingSegment(
         TestDataSource.WIKI,
         "seq",
         "2",
@@ -3791,6 +3791,30 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     );
   }
 
+  private SegmentIdWithShardSpec allocatePendingSegment(
+      String datasource,
+      String sequenceName,
+      String previousSegmentId,
+      Interval interval,
+      PartialShardSpec partialShardSpec,
+      String maxVersion,
+      boolean skipSegmentLineageCheck,
+      String taskAllocatorId
+  )
+  {
+    return coordinator.allocatePendingSegment(
+        datasource,
+        interval,
+        skipSegmentLineageCheck,
+        new SegmentCreateRequest(
+            sequenceName,
+            previousSegmentId,
+            maxVersion,
+            partialShardSpec,
+            taskAllocatorId
+        )
+    );
+  }
 
   private void insertUsedSegments(Set<DataSegment> segments, Map<String, String> upgradedFromSegmentIdMap)
   {

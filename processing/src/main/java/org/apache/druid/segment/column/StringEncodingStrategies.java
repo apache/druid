@@ -140,7 +140,7 @@ public class StringEncodingStrategies
     public Iterator<String> iterator()
     {
       final Iterator<ByteBuffer> delegateIterator = delegate.iterator();
-      return new Iterator<String>()
+      return new Iterator<>()
       {
         @Override
         public boolean hasNext()

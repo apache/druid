@@ -19,6 +19,9 @@
 
 package org.apache.druid.sql.calcite.planner;
 
+import org.apache.calcite.rel.core.Join;
+import org.apache.calcite.rel.hint.RelHint;
+import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 
 import java.util.ArrayList;
@@ -54,5 +57,22 @@ public class QueryUtils
     }
 
     return columnMappings;
+  }
+
+  public static JoinAlgorithm getJoinAlgorithm(Join join, PlannerContext plannerContext)
+  {
+    RelHint closestHint = null;
+    for (RelHint hint : join.getHints()) {
+      if ((closestHint == null || hint.inheritPath.size() < closestHint.inheritPath.size())
+          && DruidHint.DruidJoinHint.fromString(hint.hintName) != null) {
+        closestHint = hint;
+      }
+    }
+
+    if (closestHint != null) {
+      return DruidHint.DruidJoinHint.fromString(closestHint.hintName).asJoinAlgorithm();
+    } else {
+      return plannerContext.getJoinAlgorithm();
+    }
   }
 }

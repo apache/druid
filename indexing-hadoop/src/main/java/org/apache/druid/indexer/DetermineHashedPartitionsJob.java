@@ -159,9 +159,7 @@ public class DetermineHashedPartitionsJob implements Jobby
         }
         List<Interval> intervals = HadoopDruidIndexerConfig.JSON_MAPPER.readValue(
             Utils.openInputStream(groupByJob, intervalInfoPath),
-            new TypeReference<List<Interval>>()
-            {
-            }
+            new TypeReference<>() {}
         );
         config.setGranularitySpec(
             new UniformGranularitySpec(

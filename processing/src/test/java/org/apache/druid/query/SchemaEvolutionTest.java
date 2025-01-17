@@ -25,7 +25,6 @@ import com.google.common.collect.Lists;
 import com.google.common.io.Closeables;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.MapInputRowParser;
@@ -148,8 +147,6 @@ public class SchemaEvolutionTest
   @Before
   public void setUp() throws IOException
   {
-    NullHandling.initializeForTests();
-
     // Index1: c1 is a string, c2 nonexistent, "uniques" nonexistent
     index1 = IndexBuilder.create()
                          .tmpDir(temporaryFolder.newFolder())
@@ -297,10 +294,10 @@ public class SchemaEvolutionTest
 
     // Only nonexistent(4)
     Map<String, Object> result = new HashMap<>();
-    result.put("a", NullHandling.defaultLongValue());
-    result.put("b", NullHandling.defaultDoubleValue());
-    result.put("c", NullHandling.defaultLongValue());
-    result.put("d", NullHandling.defaultDoubleValue());
+    result.put("a", null);
+    result.put("b", null);
+    result.put("c", null);
+    result.put("d", null);
     Assert.assertEquals(
         timeseriesResult(result),
         runQuery(query, factory, ImmutableList.of(index4))
@@ -377,15 +374,15 @@ public class SchemaEvolutionTest
     Assert.assertEquals(
         timeseriesResult(TestHelper.makeMap(
             "a",
-            NullHandling.defaultLongValue(),
+            null,
             "b",
-            NullHandling.defaultDoubleValue(),
+            null,
             "c",
             0L,
             "d",
-            NullHandling.defaultFloatValue(),
+            null,
             "e",
-            NullHandling.sqlCompatible() ? null : Long.MAX_VALUE
+            null
         )),
         runQuery(query, factory, ImmutableList.of(index4))
     );

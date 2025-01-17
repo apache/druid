@@ -47,7 +47,7 @@ import java.util.Set;
 @Deprecated
 public class JSONToLowerParser implements Parser<String, Object>
 {
-  private static final Function<JsonNode, Object> VALUE_FUNCTION = new Function<JsonNode, Object>()
+  private static final Function<JsonNode, Object> VALUE_FUNCTION = new Function<>()
   {
     @Override
     public Object apply(JsonNode node)

@@ -19,7 +19,6 @@
 
 package org.apache.druid.math.expr.vector;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.ExprEval;
@@ -68,7 +67,7 @@ public final class ExprEvalObjectVector extends BaseExprEvalVector<Object[]>
           } else {
             longs[i] = 0L;
             doubles[i] = 0.0;
-            numericNulls[i] = NullHandling.sqlCompatible();
+            numericNulls[i] = true;
           }
         } else {
           // ARRAY, COMPLEX

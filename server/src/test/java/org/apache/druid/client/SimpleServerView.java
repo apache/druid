@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Ordering;
 import org.apache.druid.client.selector.HighestPriorityTierSelectorStrategy;
-import org.apache.druid.client.selector.QueryableDruidServer;
 import org.apache.druid.client.selector.RandomServerSelectorStrategy;
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.client.selector.TierSelectorStrategy;
@@ -82,7 +81,7 @@ public class SimpleServerView implements TimelineServerView
 
   public void addServer(DruidServer server, DataSegment dataSegment)
   {
-    servers.put(server, new QueryableDruidServer<>(server, clientFactory.makeDirectClient(server)));
+    servers.put(server, new QueryableDruidServer(server, clientFactory.makeDirectClient(server)));
     addSegmentToServer(server, dataSegment);
   }
 
@@ -139,11 +138,12 @@ public class SimpleServerView implements TimelineServerView
     return Collections.emptyList();
   }
 
+  @SuppressWarnings("unchecked")
   @Override
   public <T> QueryRunner<T> getQueryRunner(DruidServer server)
   {
     final QueryableDruidServer queryableDruidServer = Preconditions.checkNotNull(servers.get(server), "server");
-    return queryableDruidServer.getQueryRunner();
+    return (QueryRunner<T>) queryableDruidServer.getQueryRunner();
   }
 
   @Override

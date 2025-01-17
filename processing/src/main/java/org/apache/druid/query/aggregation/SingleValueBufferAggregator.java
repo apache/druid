@@ -103,7 +103,7 @@ public class SingleValueBufferAggregator implements BufferAggregator
   public float getFloat(ByteBuffer buf, int position)
   {
     return TypeStrategies.isNullableNull(buf, position)
-           ? NullHandling.ZERO_FLOAT
+           ? 0.0f
            : TypeStrategies.readNotNullNullableFloat(buf, position);
   }
 
@@ -111,7 +111,7 @@ public class SingleValueBufferAggregator implements BufferAggregator
   public double getDouble(ByteBuffer buf, int position)
   {
     return TypeStrategies.isNullableNull(buf, position)
-           ? NullHandling.ZERO_DOUBLE
+           ? 0.0d
            : TypeStrategies.readNotNullNullableDouble(buf, position);
   }
 
@@ -119,7 +119,7 @@ public class SingleValueBufferAggregator implements BufferAggregator
   public long getLong(ByteBuffer buf, int position)
   {
     return TypeStrategies.isNullableNull(buf, position)
-           ? NullHandling.ZERO_LONG
+           ? 0L
            : TypeStrategies.readNotNullNullableLong(buf, position);
   }
 

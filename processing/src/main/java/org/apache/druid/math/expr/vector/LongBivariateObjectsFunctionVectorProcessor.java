@@ -19,7 +19,6 @@
 
 package org.apache.druid.math.expr.vector;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.vector.functional.LongBivariateObjectsFunction;
 
@@ -51,7 +50,7 @@ public final class LongBivariateObjectsFunctionVectorProcessor
     final Long outVal = objectsFunction.process(in1[i], in2[i]);
     if (outVal == null) {
       outValues[i] = 0L;
-      outNulls[i] = NullHandling.sqlCompatible();
+      outNulls[i] = true;
     } else {
       outValues[i] = outVal;
       outNulls[i] = false;
@@ -62,7 +61,7 @@ public final class LongBivariateObjectsFunctionVectorProcessor
   void processNull(int i)
   {
     outValues[i] = 0L;
-    outNulls[i] = NullHandling.sqlCompatible();
+    outNulls[i] = true;
   }
 
   @Override

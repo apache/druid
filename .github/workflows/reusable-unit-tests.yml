@@ -21,11 +21,6 @@ on:
         required: true
         type: string
         description: 'JDK version used to test Druid'
-      sql_compatibility:
-        required: false
-        type: boolean
-        default: true
-        description: 'For SQL compatibility'
       module:
         required: true
         type: string
@@ -84,13 +79,6 @@ jobs:
         run: |
           export base_ref=${{ github.base_ref }}
           echo "GITHUB_BASE_REF=${base_ref}" >> $GITHUB_ENV
-          # If sql_compatibilty is true, we want to set default_value_for_null
-          # which enables compatibility mode
-          if (${{ inputs.sql_compatibility }} == true); then
-            echo "DRUID_USE_DEFAULT_VALUE_FOR_NULL=false" >> $GITHUB_ENV
-          else
-            echo "DRUID_USE_DEFAULT_VALUE_FOR_NULL=true" >> $GITHUB_ENV
-          fi
 
       - name: test profiling
         run: | 

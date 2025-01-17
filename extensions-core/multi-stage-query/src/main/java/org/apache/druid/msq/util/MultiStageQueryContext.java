@@ -448,9 +448,7 @@ public class MultiStageQueryContext
       try {
         // Not caching this ObjectMapper in a static, because we expect to use it infrequently (once per INSERT
         // query that uses this feature) and there is no need to keep it around longer than that.
-        return new ObjectMapper().readValue(listString, new TypeReference<List<String>>()
-        {
-        });
+        return new ObjectMapper().readValue(listString, new TypeReference<>() {});
       }
       catch (JsonProcessingException e) {
         throw QueryContexts.badValueException(keyName, "CSV or JSON array", listString);

@@ -47,9 +47,7 @@ class LookupListeningResource extends ListenerResource
   private static final Logger LOG = new Logger(LookupListeningResource.class);
 
   private static final TypeReference<LookupsState<Object>> LOOKUPS_STATE_GENERIC_REFERENCE =
-      new TypeReference<LookupsState<Object>>()
-      {
-      };
+      new TypeReference<>() {};
 
   @Inject
   public LookupListeningResource(
@@ -61,9 +59,7 @@ class LookupListeningResource extends ListenerResource
     super(
         jsonMapper,
         smileMapper,
-        new AbstractListenerHandler<LookupExtractorFactory>(new TypeReference<LookupExtractorFactory>()
-        {
-        })
+        new AbstractListenerHandler<LookupExtractorFactory>(new TypeReference<>() {})
         {
           @Override
           public Response handleUpdates(InputStream inputStream, ObjectMapper mapper)

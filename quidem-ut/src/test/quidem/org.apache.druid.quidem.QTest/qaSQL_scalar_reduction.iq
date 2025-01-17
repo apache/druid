@@ -1,0 +1,266 @@
+!set useApproximateCountDistinct false
+!use druidtest:///?componentSupplier=KttmNestedComponentSupplier
+!set outputformat mysql
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00';
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TEST_ID: A1: greatest
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||greatest(session_length, 1, NULL) IS NULL
+       OR ('1'||greatest(session_length, 1, NULL) = 1||greatest(session_length, 1, NULL)
+           AND '1'||greatest(session_length, 1, NULL) IS NOT DISTINCT
+           FROM 1||greatest(session_length, 1, NULL)
+           AND '1'||greatest(session_length, 1, NULL) <> '0'||greatest(session_length, 1, NULL)
+           AND ('1'||greatest(session_length, 1, NULL) IS DISTINCT
+                FROM '0'||greatest(session_length, 1, NULL))
+           AND '1'||greatest(session_length, 1, NULL) > '0'||greatest(session_length, 1, NULL)
+           AND '1'||greatest(session_length, 1, NULL) >= '0'||greatest(session_length, 1, NULL)
+           AND '1'||greatest(session_length, 1, NULL) < 2||greatest(session_length, 1, NULL)
+           AND '1'||greatest(session_length, 1, NULL) <= 2||greatest(session_length, 1, NULL)
+           AND ('1'||greatest(session_length, 1, NULL) <> '0'||greatest(session_length, 1, NULL)) IS TRUE
+           AND ('1'||greatest(session_length, 1, NULL) = '0'||greatest(session_length, 1, NULL)) IS NOT TRUE
+           AND ('1'||greatest(session_length, 1, NULL) = '0'||greatest(session_length, 1, NULL)) IS FALSE
+           AND ('1'||greatest(session_length, 1, NULL) <> '0'||greatest(session_length, 1, NULL)) IS NOT FALSE
+           AND '1'||greatest(session_length, 1, NULL) BETWEEN '0'||greatest(session_length, 1, NULL) AND 2||greatest(session_length, 1, NULL)
+           AND '1'||greatest(session_length, 1, NULL) NOT BETWEEN '1'||greatest(session_length, 1, NULL) AND '0'||greatest(session_length, 1, NULL)
+           AND '1'||greatest(session_length, 1, NULL) like '%'
+           AND '1'||greatest(session_length, 1, NULL) not like '__DOES_NOT_EXIST__%'
+           AND '1'||greatest(session_length, 1, NULL) IN ('0'||greatest(session_length, 1, NULL),
+                                                          1||greatest(session_length, 1, NULL),
+                                                          2||greatest(session_length, 1, NULL))
+           AND '1'||greatest(session_length, 1, NULL) NOT IN ('0'||greatest(session_length, 1, NULL),
+                                                              2||greatest(session_length, 1, NULL)))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||greatest(session_length, 1, NULL) IS NULL
+       OR '1'||greatest(session_length, 1, NULL) IN
+         (SELECT '1'||greatest(session_length, 1, NULL)
+          FROM kttm_nested
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND ('1'||greatest(session_length, 1, NULL) IS NULL
+                 OR ('1'||greatest(session_length, 1, NULL) = 1||greatest(session_length, 1, NULL)
+                     AND '1'||greatest(session_length, 1, NULL) IS NOT DISTINCT
+                     FROM 1||greatest(session_length, 1, NULL)
+                     AND '1'||greatest(session_length, 1, NULL) <> '0'||greatest(session_length, 1, NULL)
+                     AND ('1'||greatest(session_length, 1, NULL) IS DISTINCT
+                          FROM '0'||greatest(session_length, 1, NULL))
+                     AND '1'||greatest(session_length, 1, NULL) > '0'||greatest(session_length, 1, NULL)
+                     AND '1'||greatest(session_length, 1, NULL) >= '0'||greatest(session_length, 1, NULL)
+                     AND '1'||greatest(session_length, 1, NULL) < 2||greatest(session_length, 1, NULL)
+                     AND '1'||greatest(session_length, 1, NULL) <= 2||greatest(session_length, 1, NULL)
+                     AND ('1'||greatest(session_length, 1, NULL) <> '0'||greatest(session_length, 1, NULL)) IS TRUE
+                     AND ('1'||greatest(session_length, 1, NULL) = '0'||greatest(session_length, 1, NULL)) IS NOT TRUE
+                     AND ('1'||greatest(session_length, 1, NULL) = '0'||greatest(session_length, 1, NULL)) IS FALSE
+                     AND ('1'||greatest(session_length, 1, NULL) <> '0'||greatest(session_length, 1, NULL)) IS NOT FALSE
+                     AND '1'||greatest(session_length, 1, NULL) BETWEEN '0'||greatest(session_length, 1, NULL) AND 2||greatest(session_length, 1, NULL)
+                     AND '1'||greatest(session_length, 1, NULL) NOT BETWEEN '1'||greatest(session_length, 1, NULL) AND '0'||greatest(session_length, 1, NULL)
+                     AND '1'||greatest(session_length, 1, NULL) like '%'
+                     AND '1'||greatest(session_length, 1, NULL) not like '__DOES_NOT_EXIST__%'
+                     AND '1'||greatest(session_length, 1, NULL) IN ('0'||greatest(session_length, 1, NULL),
+                                                                    1||greatest(session_length, 1, NULL),
+                                                                    2||greatest(session_length, 1, NULL))
+                     AND '1'||greatest(session_length, 1, NULL) NOT IN ('0'||greatest(session_length, 1, NULL),
+                                                                        2||greatest(session_length, 1, NULL))))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          '1'||greatest(session_length, 1, NULL),
+                          count(*)
+   FROM kttm_nested
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND ('1'||greatest(session_length, 1, NULL) IS NULL
+          OR ('1'||greatest(session_length, 1, NULL) = 1||greatest(session_length, 1, NULL)
+              AND '1'||greatest(session_length, 1, NULL) IS NOT DISTINCT
+              FROM 1||greatest(session_length, 1, NULL)
+              AND '1'||greatest(session_length, 1, NULL) <> '0'||greatest(session_length, 1, NULL)
+              AND ('1'||greatest(session_length, 1, NULL) IS DISTINCT
+                   FROM '0'||greatest(session_length, 1, NULL))
+              AND '1'||greatest(session_length, 1, NULL) > '0'||greatest(session_length, 1, NULL)
+              AND '1'||greatest(session_length, 1, NULL) >= '0'||greatest(session_length, 1, NULL)
+              AND '1'||greatest(session_length, 1, NULL) < 2||greatest(session_length, 1, NULL)
+              AND '1'||greatest(session_length, 1, NULL) <= 2||greatest(session_length, 1, NULL)
+              AND ('1'||greatest(session_length, 1, NULL) <> '0'||greatest(session_length, 1, NULL)) IS TRUE
+              AND ('1'||greatest(session_length, 1, NULL) = '0'||greatest(session_length, 1, NULL)) IS NOT TRUE
+              AND ('1'||greatest(session_length, 1, NULL) = '0'||greatest(session_length, 1, NULL)) IS FALSE
+              AND ('1'||greatest(session_length, 1, NULL) <> '0'||greatest(session_length, 1, NULL)) IS NOT FALSE
+              AND '1'||greatest(session_length, 1, NULL) BETWEEN '0'||greatest(session_length, 1, NULL) AND 2||greatest(session_length, 1, NULL)
+              AND '1'||greatest(session_length, 1, NULL) NOT BETWEEN '1'||greatest(session_length, 1, NULL) AND '0'||greatest(session_length, 1, NULL)
+              AND '1'||greatest(session_length, 1, NULL) like '%'
+              AND '1'||greatest(session_length, 1, NULL) not like '__DOES_NOT_EXIST__%'
+              AND '1'||greatest(session_length, 1, NULL) IN ('0'||greatest(session_length, 1, NULL),
+                                                             1||greatest(session_length, 1, NULL),
+                                                             2||greatest(session_length, 1, NULL))
+              AND '1'||greatest(session_length, 1, NULL) NOT IN ('0'||greatest(session_length, 1, NULL),
+                                                                 2||greatest(session_length, 1, NULL))))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TEST_ID: A2: least
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||least(loaded_image, '1', NULL) IS NULL
+       OR ('1'||least(loaded_image, '1', NULL) = 1||least(loaded_image, '1', NULL)
+           AND '1'||least(loaded_image, '1', NULL) IS NOT DISTINCT
+           FROM 1||least(loaded_image, '1', NULL)
+           AND '1'||least(loaded_image, '1', NULL) <> '0'||least(loaded_image, '1', NULL)
+           AND ('1'||least(loaded_image, '1', NULL) IS DISTINCT
+                FROM '0'||least(loaded_image, '1', NULL))
+           AND '1'||least(loaded_image, '1', NULL) > '0'||least(loaded_image, '1', NULL)
+           AND '1'||least(loaded_image, '1', NULL) >= '0'||least(loaded_image, '1', NULL)
+           AND '1'||least(loaded_image, '1', NULL) < 2||least(loaded_image, '1', NULL)
+           AND '1'||least(loaded_image, '1', NULL) <= 2||least(loaded_image, '1', NULL)
+           AND ('1'||least(loaded_image, '1', NULL) <> '0'||least(loaded_image, '1', NULL)) IS TRUE
+           AND ('1'||least(loaded_image, '1', NULL) = '0'||least(loaded_image, '1', NULL)) IS NOT TRUE
+           AND ('1'||least(loaded_image, '1', NULL) = '0'||least(loaded_image, '1', NULL)) IS FALSE
+           AND ('1'||least(loaded_image, '1', NULL) <> '0'||least(loaded_image, '1', NULL)) IS NOT FALSE
+           AND '1'||least(loaded_image, '1', NULL) BETWEEN '0'||least(loaded_image, '1', NULL) AND 2||least(loaded_image, '1', NULL)
+           AND '1'||least(loaded_image, '1', NULL) NOT BETWEEN '1'||least(loaded_image, '1', NULL) AND '0'||least(loaded_image, '1', NULL)
+           AND '1'||least(loaded_image, '1', NULL) like '%'
+           AND '1'||least(loaded_image, '1', NULL) not like '__DOES_NOT_EXIST__%'
+           AND '1'||least(loaded_image, '1', NULL) IN ('0'||least(loaded_image, '1', NULL),
+                                                       1||least(loaded_image, '1', NULL),
+                                                       2||least(loaded_image, '1', NULL))
+           AND '1'||least(loaded_image, '1', NULL) NOT IN ('0'||least(loaded_image, '1', NULL),
+                                                           2||least(loaded_image, '1', NULL)))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||least(loaded_image, '1', NULL) IS NULL
+       OR '1'||least(loaded_image, '1', NULL) IN
+         (SELECT '1'||least(loaded_image, '1', NULL)
+          FROM kttm_nested
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND ('1'||least(loaded_image, '1', NULL) IS NULL
+                 OR ('1'||least(loaded_image, '1', NULL) = 1||least(loaded_image, '1', NULL)
+                     AND '1'||least(loaded_image, '1', NULL) IS NOT DISTINCT
+                     FROM 1||least(loaded_image, '1', NULL)
+                     AND '1'||least(loaded_image, '1', NULL) <> '0'||least(loaded_image, '1', NULL)
+                     AND ('1'||least(loaded_image, '1', NULL) IS DISTINCT
+                          FROM '0'||least(loaded_image, '1', NULL))
+                     AND '1'||least(loaded_image, '1', NULL) > '0'||least(loaded_image, '1', NULL)
+                     AND '1'||least(loaded_image, '1', NULL) >= '0'||least(loaded_image, '1', NULL)
+                     AND '1'||least(loaded_image, '1', NULL) < 2||least(loaded_image, '1', NULL)
+                     AND '1'||least(loaded_image, '1', NULL) <= 2||least(loaded_image, '1', NULL)
+                     AND ('1'||least(loaded_image, '1', NULL) <> '0'||least(loaded_image, '1', NULL)) IS TRUE
+                     AND ('1'||least(loaded_image, '1', NULL) = '0'||least(loaded_image, '1', NULL)) IS NOT TRUE
+                     AND ('1'||least(loaded_image, '1', NULL) = '0'||least(loaded_image, '1', NULL)) IS FALSE
+                     AND ('1'||least(loaded_image, '1', NULL) <> '0'||least(loaded_image, '1', NULL)) IS NOT FALSE
+                     AND '1'||least(loaded_image, '1', NULL) BETWEEN '0'||least(loaded_image, '1', NULL) AND 2||least(loaded_image, '1', NULL)
+                     AND '1'||least(loaded_image, '1', NULL) NOT BETWEEN '1'||least(loaded_image, '1', NULL) AND '0'||least(loaded_image, '1', NULL)
+                     AND '1'||least(loaded_image, '1', NULL) like '%'
+                     AND '1'||least(loaded_image, '1', NULL) not like '__DOES_NOT_EXIST__%'
+                     AND '1'||least(loaded_image, '1', NULL) IN ('0'||least(loaded_image, '1', NULL),
+                                                                 1||least(loaded_image, '1', NULL),
+                                                                 2||least(loaded_image, '1', NULL))
+                     AND '1'||least(loaded_image, '1', NULL) NOT IN ('0'||least(loaded_image, '1', NULL),
+                                                                     2||least(loaded_image, '1', NULL))))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          '1'||least(loaded_image, '1', NULL),
+                          count(*)
+   FROM kttm_nested
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND ('1'||least(loaded_image, '1', NULL) IS NULL
+          OR ('1'||least(loaded_image, '1', NULL) = 1||least(loaded_image, '1', NULL)
+              AND '1'||least(loaded_image, '1', NULL) IS NOT DISTINCT
+              FROM 1||least(loaded_image, '1', NULL)
+              AND '1'||least(loaded_image, '1', NULL) <> '0'||least(loaded_image, '1', NULL)
+              AND ('1'||least(loaded_image, '1', NULL) IS DISTINCT
+                   FROM '0'||least(loaded_image, '1', NULL))
+              AND '1'||least(loaded_image, '1', NULL) > '0'||least(loaded_image, '1', NULL)
+              AND '1'||least(loaded_image, '1', NULL) >= '0'||least(loaded_image, '1', NULL)
+              AND '1'||least(loaded_image, '1', NULL) < 2||least(loaded_image, '1', NULL)
+              AND '1'||least(loaded_image, '1', NULL) <= 2||least(loaded_image, '1', NULL)
+              AND ('1'||least(loaded_image, '1', NULL) <> '0'||least(loaded_image, '1', NULL)) IS TRUE
+              AND ('1'||least(loaded_image, '1', NULL) = '0'||least(loaded_image, '1', NULL)) IS NOT TRUE
+              AND ('1'||least(loaded_image, '1', NULL) = '0'||least(loaded_image, '1', NULL)) IS FALSE
+              AND ('1'||least(loaded_image, '1', NULL) <> '0'||least(loaded_image, '1', NULL)) IS NOT FALSE
+              AND '1'||least(loaded_image, '1', NULL) BETWEEN '0'||least(loaded_image, '1', NULL) AND 2||least(loaded_image, '1', NULL)
+              AND '1'||least(loaded_image, '1', NULL) NOT BETWEEN '1'||least(loaded_image, '1', NULL) AND '0'||least(loaded_image, '1', NULL)
+              AND '1'||least(loaded_image, '1', NULL) like '%'
+              AND '1'||least(loaded_image, '1', NULL) not like '__DOES_NOT_EXIST__%'
+              AND '1'||least(loaded_image, '1', NULL) IN ('0'||least(loaded_image, '1', NULL),
+                                                          1||least(loaded_image, '1', NULL),
+                                                          2||least(loaded_image, '1', NULL))
+              AND '1'||least(loaded_image, '1', NULL) NOT IN ('0'||least(loaded_image, '1', NULL),
+                                                              2||least(loaded_image, '1', NULL))))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# Total query count 7
+#-------------------------------------------------------------------------

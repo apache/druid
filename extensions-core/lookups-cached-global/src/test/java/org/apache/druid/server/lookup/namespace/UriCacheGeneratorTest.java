@@ -182,7 +182,7 @@ public class UriCacheGeneratorTest
             new NamespaceExtractionConfig()
         )
     );
-    return () -> new Iterator<Object[]>()
+    return () -> new Iterator<>()
     {
       Iterator<Object[]> compressionIt = compressionParams.iterator();
       Iterator<Function<Lifecycle, NamespaceExtractionCacheManager>> cacheManagerCreatorsIt =

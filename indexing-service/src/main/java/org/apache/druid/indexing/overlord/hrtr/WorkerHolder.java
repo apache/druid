@@ -62,9 +62,7 @@ public class WorkerHolder
 {
   private static final EmittingLogger log = new EmittingLogger(WorkerHolder.class);
 
-  public static final TypeReference<ChangeRequestsSnapshot<WorkerHistoryItem>> WORKER_SYNC_RESP_TYPE_REF = new TypeReference<ChangeRequestsSnapshot<WorkerHistoryItem>>()
-  {
-  };
+  public static final TypeReference<ChangeRequestsSnapshot<WorkerHistoryItem>> WORKER_SYNC_RESP_TYPE_REF = new TypeReference<>() {};
 
 
   private final Worker worker;
@@ -318,7 +316,7 @@ public class WorkerHolder
 
   public ChangeRequestHttpSyncer.Listener<WorkerHistoryItem> createSyncListener()
   {
-    return new ChangeRequestHttpSyncer.Listener<WorkerHistoryItem>()
+    return new ChangeRequestHttpSyncer.Listener<>()
     {
       @Override
       public void fullSync(List<WorkerHistoryItem> changes)

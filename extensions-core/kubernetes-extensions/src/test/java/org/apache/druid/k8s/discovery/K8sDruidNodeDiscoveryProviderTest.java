@@ -240,7 +240,7 @@ public class K8sDruidNodeDiscoveryProviderTest
             )
         )
     );
-    List<Watch.Response<DiscoveryDruidNodeAndResourceVersion>> nullList = new ArrayList<Watch.Response<DiscoveryDruidNodeAndResourceVersion>>();
+    List<Watch.Response<DiscoveryDruidNodeAndResourceVersion>> nullList = new ArrayList<>();
     nullList.add(null);
     EasyMock.expect(mockK8sApiClient.watchPods(
         podInfo.getPodNamespace(), labelSelector, "v1", NodeRole.ROUTER)).andReturn(

@@ -488,7 +488,7 @@ public class HadoopDruidIndexerConfig
                     return FunctionalIterable
                         .create(specs)
                         .transform(
-                            new Function<HadoopyShardSpec, Bucket>()
+                            new Function<>()
                             {
                               int i = 0;
 

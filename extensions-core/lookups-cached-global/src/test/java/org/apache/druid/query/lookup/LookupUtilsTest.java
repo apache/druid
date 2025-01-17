@@ -42,14 +42,10 @@ import java.util.Map;
 public class LookupUtilsTest
 {
   private static final TypeReference<Map<String, Object>> LOOKUPS_ALL_GENERIC_REFERENCE =
-      new TypeReference<Map<String, Object>>()
-      {
-      };
+      new TypeReference<>() {};
 
   private static final TypeReference<Map<String, LookupExtractorFactoryContainer>> LOOKUPS_ALL_REFERENCE =
-      new TypeReference<Map<String, LookupExtractorFactoryContainer>>()
-      {
-      };
+      new TypeReference<>() {};
 
   private static final String LOOKUP_VALID_INNER = "  \"lookup_uri_good\": {\n"
                                                    + "    \"version\": \"2021-12-03T01:04:05.151Z\",\n"

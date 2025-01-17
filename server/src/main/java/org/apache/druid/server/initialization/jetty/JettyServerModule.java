@@ -597,7 +597,7 @@ public class JettyServerModule extends JerseyServletModule
   }
 
   @VisibleForTesting
-  public static void setJettyServerThreadPool(QueuedThreadPool threadPool)
+  protected static void setJettyServerThreadPool(QueuedThreadPool threadPool)
   {
     jettyServerThreadPool = threadPool;
   }

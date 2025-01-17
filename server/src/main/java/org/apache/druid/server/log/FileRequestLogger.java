@@ -102,7 +102,7 @@ public class FileRequestLogger implements RequestLogger
           exec,
           initialDelay,
           Duration.standardDays(1),
-          new Callable<ScheduledExecutors.Signal>()
+          new Callable<>()
           {
             @Override
             public ScheduledExecutors.Signal call()

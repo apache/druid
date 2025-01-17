@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
@@ -81,10 +80,10 @@ public class StandardDeviationPostAggregator implements PostAggregator
   {
     Object varianceAggregatorCollector = combinedAggregators.get(fieldName);
     if (!(varianceAggregatorCollector instanceof VarianceAggregatorCollector)) {
-      return NullHandling.defaultDoubleValue();
+      return null;
     }
     Double variance = ((VarianceAggregatorCollector) varianceAggregatorCollector).getVariance(isVariancePop);
-    return variance == null ? NullHandling.defaultDoubleValue() : (Double) Math.sqrt(variance);
+    return variance == null ? null : (Double) Math.sqrt(variance);
   }
 
   @Override

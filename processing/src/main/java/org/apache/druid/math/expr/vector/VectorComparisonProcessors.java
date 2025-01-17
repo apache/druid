@@ -19,59 +19,37 @@
 
 package org.apache.druid.math.expr.vector;
 
-import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.math.expr.Evals;
-import org.apache.druid.math.expr.ExpressionProcessing;
-
-import java.util.Objects;
 
 public class VectorComparisonProcessors
 {
   public static BivariateFunctionVectorProcessorFactory equals()
   {
-    if (!ExpressionProcessing.useStrictBooleans()) {
-      return LegacyEqual.INSTANCE;
-    }
     return Equal.INSTANCE;
   }
 
   public static BivariateFunctionVectorProcessorFactory notEquals()
   {
-    if (!ExpressionProcessing.useStrictBooleans()) {
-      return LegacyNotEqual.INSTANCE;
-    }
     return NotEqual.INSTANCE;
   }
 
   public static BivariateFunctionVectorProcessorFactory greaterThanOrEquals()
   {
-    if (!ExpressionProcessing.useStrictBooleans()) {
-      return LegacyGreaterThanOrEqual.INSTANCE;
-    }
     return GreaterThanOrEqual.INSTANCE;
   }
 
   public static BivariateFunctionVectorProcessorFactory greaterThan()
   {
-    if (!ExpressionProcessing.useStrictBooleans()) {
-      return LegacyGreaterThan.INSTANCE;
-    }
     return GreaterThan.INSTANCE;
   }
 
   public static BivariateFunctionVectorProcessorFactory lessThanOrEquals()
   {
-    if (!ExpressionProcessing.useStrictBooleans()) {
-      return LegacyLessThanOrEqual.INSTANCE;
-    }
     return LessThanOrEqual.INSTANCE;
   }
 
   public static BivariateFunctionVectorProcessorFactory lessThan()
   {
-    if (!ExpressionProcessing.useStrictBooleans()) {
-      return LegacyLessThan.INSTANCE;
-    }
     return LessThan.INSTANCE;
   }
 
@@ -167,110 +145,6 @@ public class VectorComparisonProcessors
           (left, right) -> Evals.asLong(left < right),
           (left, right) -> Evals.asLong(left < right),
           (left, right) -> Evals.asLong(left < right)
-      );
-    }
-  }
-
-  public static class LegacyEqual extends SimpleVectorComparisonLegacyProcessorFactory
-  {
-    private static final LegacyEqual INSTANCE = new LegacyEqual();
-
-    public LegacyEqual()
-    {
-      super(
-          (left, right) -> Evals.asLong(Objects.equals(left, right)),
-          (left, right) -> Evals.asLong(left == right),
-          (left, right) -> Evals.asDouble(left == right),
-          (left, right) -> Evals.asDouble(left == right),
-          (left, right) -> Evals.asDouble(left == right)
-      );
-    }
-  }
-
-  public static class LegacyNotEqual extends SimpleVectorComparisonLegacyProcessorFactory
-  {
-    private static final LegacyNotEqual INSTANCE = new LegacyNotEqual();
-
-    public LegacyNotEqual()
-    {
-      super(
-          (left, right) -> Evals.asLong(!Objects.equals(left, right)),
-          (left, right) -> Evals.asLong(left != right),
-          (left, right) -> Evals.asDouble(left != right),
-          (left, right) -> Evals.asDouble(left != right),
-          (left, right) -> Evals.asDouble(left != right)
-      );
-    }
-  }
-
-  public static class LegacyGreaterThanOrEqual extends SimpleVectorComparisonLegacyProcessorFactory
-  {
-    private static final LegacyGreaterThanOrEqual INSTANCE = new LegacyGreaterThanOrEqual();
-
-    public LegacyGreaterThanOrEqual()
-    {
-      super(
-          (left, right) -> Evals.asLong(
-              Comparators.<String>naturalNullsFirst().compare((String) left, (String) right) >= 0
-          ),
-          (left, right) -> Evals.asLong(left >= right),
-          (left, right) -> Evals.asDouble(left >= right),
-          (left, right) -> Evals.asDouble(left >= right),
-          (left, right) -> Evals.asDouble(left >= right)
-      );
-    }
-  }
-
-  public static class LegacyGreaterThan extends SimpleVectorComparisonLegacyProcessorFactory
-  {
-    private static final LegacyGreaterThan INSTANCE = new LegacyGreaterThan();
-
-    public LegacyGreaterThan()
-    {
-      super(
-          (left, right) -> Evals.asLong(
-              Comparators.<String>naturalNullsFirst().compare((String) left, (String) right) > 0
-          ),
-          (left, right) -> Evals.asLong(left > right),
-          (left, right) -> Evals.asDouble(left > right),
-          (left, right) -> Evals.asDouble(left > right),
-          (left, right) -> Evals.asDouble(left > right)
-      );
-    }
-  }
-
-  public static class LegacyLessThanOrEqual extends SimpleVectorComparisonLegacyProcessorFactory
-  {
-    private static final LegacyLessThanOrEqual INSTANCE = new LegacyLessThanOrEqual();
-
-    public LegacyLessThanOrEqual()
-    {
-      super(
-          (left, right) -> Evals.asLong(
-              Comparators.<String>naturalNullsFirst().compare((String) left, (String) right) <= 0
-          ),
-          (left, right) -> Evals.asLong(left <= right),
-          (left, right) -> Evals.asDouble(left <= right),
-          (left, right) -> Evals.asDouble(left <= right),
-          (left, right) -> Evals.asDouble(left <= right)
-      );
-    }
-  }
-
-  public static class LegacyLessThan extends SimpleVectorComparisonLegacyProcessorFactory
-  {
-    private static final LegacyLessThan INSTANCE = new LegacyLessThan();
-
-    public LegacyLessThan()
-    {
-      super(
-          (left, right) -> Evals.asLong(
-              Comparators.<String>naturalNullsFirst().compare((String) left, (String) right) < 0
-          ),
-          (left, right) -> Evals.asLong(left < right),
-          (left, right) -> Evals.asDouble(left < right),
-          (left, right) -> Evals.asDouble(left < right),
-          (left, right) -> Evals.asDouble(left < right)
       );
     }
   }

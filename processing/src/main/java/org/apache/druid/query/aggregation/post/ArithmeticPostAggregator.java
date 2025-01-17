@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.Queries;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -35,7 +34,6 @@ import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.column.ColumnType;
 
 import javax.annotation.Nullable;
-
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -115,7 +113,7 @@ public class ArithmeticPostAggregator implements PostAggregator
   public Object compute(Map<String, Object> values)
   {
     Iterator<PostAggregator> fieldsIter = fields.iterator();
-    Double retVal = NullHandling.defaultDoubleValue();
+    Double retVal = null;
     if (fieldsIter.hasNext()) {
       Number nextVal = (Number) fieldsIter.next().compute(values);
       if (nextVal == null) {
