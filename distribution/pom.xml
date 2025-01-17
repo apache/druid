@@ -252,8 +252,6 @@
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:druid-pac4j</argument>
                                         <argument>-c</argument>
-                                        <argument>org.apache.druid.extensions:druid-ranger-security</argument>
-                                        <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:druid-kubernetes-extensions</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions:druid-catalog</argument>
@@ -460,6 +458,8 @@
                                         <argument>org.apache.druid.extensions.contrib:druid-rabbit-indexing-service</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:grpc-query</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions.contrib:druid-ranger-security</argument>
                                     </arguments>
                                 </configuration>
                             </execution>

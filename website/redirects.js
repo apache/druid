@@ -341,6 +341,10 @@ const Redirects=[
   {
     "from":  "/docs/latest/operations/api-reference/",
     "to": "/docs/latest/api-reference/"
+  },
+  {
+    "from": "/docs/latest/development/extensions-core/druid-ranger-security",
+    "to": "/docs/latest/development/extensions-contrib/druid-ranger-security"
   }
 ]
 

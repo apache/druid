@@ -220,7 +220,6 @@
         <module>extensions-core/simple-client-sslcontext</module>
         <module>extensions-core/druid-basic-security</module>
         <module>extensions-core/google-extensions</module>
-        <module>extensions-core/druid-ranger-security</module>
         <module>extensions-core/druid-catalog</module>
         <module>extensions-core/testing-tools</module>
         <!-- Community extensions -->
@@ -257,6 +256,7 @@
         <module>extensions-contrib/druid-deltalake-extensions</module>
         <module>extensions-contrib/spectator-histogram</module>
         <module>extensions-contrib/rabbit-stream-indexing-service</module>
+        <module>extensions-contrib/druid-ranger-security</module>
         <!-- distribution packaging -->
         <module>distribution</module>
         <!-- Revised integration tests -->
