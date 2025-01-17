@@ -1,5 +1,5 @@
-# testUnnestWithMultipleOrFiltersOnVariationsOfUnnestedColumns case-crc:02630011
-# quidem testcase reason: UNNEST_DIFFERENT_RESULTSET
+# testUnnestWithGroupByHavingSelector case-crc:76a4f833
+# quidem testcase reason: IMPROVED_PLAN
 !set debug true
 !set defaultTimeout 300000
 !set maxScatterGatherBytes 9223372036854775807
@@ -9,34 +9,29 @@
 !set sqlStringifyArrays false
 !set outputformat mysql
 !use druidtest:///
-SELECT d3 FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3) where strlen(d3) < 2 or d3='d' ;
-+----+
-| d3 |
-+----+
-|    |
-| a  |
-| b  |
-| b  |
-| c  |
-| d  |
-+----+
-(6 rows)
+SELECT d3, COUNT(*) FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) AS unnested(d3) GROUP BY d3 HAVING d3='b';
++----+--------+
+| d3 | EXPR$1 |
++----+--------+
+| b  |      2 |
++----+--------+
+(1 row)
 
 !ok
-LogicalProject(d3=[$1])
-  LogicalUnnest(unnestExpr=[MV_TO_ARRAY($0)], filter=[OR(<(STRLEN($0), 2), =($0, 'd'))])
+LogicalAggregate(group=[{1}], EXPR$1=[COUNT()])
+  LogicalUnnest(unnestExpr=[MV_TO_ARRAY($0)], filter=[=($0, 'b')])
     LogicalProject(dim3=[$3])
       LogicalTableScan(table=[[druid, numfoo]])
 
 !logicalPlan
-DruidProject(d3=[$1], druid=[logical])
-  DruidUnnest(unnestExpr=[MV_TO_ARRAY($0)], filter=[OR(<(STRLEN($0), 2), =($0, 'd'))])
+DruidAggregate(group=[{1}], EXPR$1=[COUNT()], druid=[logical])
+  DruidUnnest(unnestExpr=[MV_TO_ARRAY($0)], filter=[=($0, 'b')])
     DruidProject(dim3=[$3], druid=[logical])
       DruidTableScan(table=[[druid, numfoo]], druid=[logical])
 
 !druidPlan
 {
-  "queryType" : "scan",
+  "queryType" : "groupBy",
   "dataSource" : {
     "type" : "unnest",
     "base" : {
@@ -50,28 +45,31 @@ DruidProject(d3=[$1], druid=[logical])
       "outputType" : "ARRAY<STRING>"
     },
     "unnestFilter" : {
-      "type" : "or",
-      "fields" : [ {
-        "type" : "expression",
-        "expression" : "(strlen(\"j0.unnest\") < 2)"
-      }, {
-        "type" : "equals",
-        "column" : "j0.unnest",
-        "matchValueType" : "STRING",
-        "matchValue" : "d"
-      } ]
+      "type" : "equals",
+      "column" : "j0.unnest",
+      "matchValueType" : "STRING",
+      "matchValue" : "b"
     }
   },
   "intervals" : {
     "type" : "intervals",
     "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
   },
-  "resultFormat" : "compactedList",
-  "columns" : [ "j0.unnest" ],
-  "columnTypes" : [ "STRING" ],
   "granularity" : {
     "type" : "all"
   },
-  "legacy" : false
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "j0.unnest",
+    "outputName" : "d0",
+    "outputType" : "STRING"
+  } ],
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  } ],
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  }
 }
 !nativePlan
