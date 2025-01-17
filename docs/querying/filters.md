@@ -68,7 +68,7 @@ When the selector filter matches against numeric inputs, the string `value` will
 
 The equality filter is a replacement for the selector filter with the ability to match against any type of column. The equality filter is designed to have more SQL compatible behavior than the selector filter and so can not match null values. To match null values use the null filter.
 
-Druid's SQL planner uses the equality filter by default instead of selector filter whenever `druid.generic.useDefaultValueForNull=false`, or if `sqlUseBoundAndSelectors` is set to false on the [SQL query context](./sql-query-context.md).
+Druid's SQL planner uses the equality filter by default instead of selector filter whenever unless `sqlUseBoundAndSelectors` is set to true on the [SQL query context](./sql-query-context.md).
 
 | Property | Description | Required |
 | -------- | ----------- | -------- |
@@ -99,7 +99,7 @@ Druid's SQL planner uses the equality filter by default instead of selector filt
 
 The null filter is a partial replacement for the selector filter. It is dedicated to matching NULL values.
 
-Druid's SQL planner uses the null filter by default instead of selector filter whenever `druid.generic.useDefaultValueForNull=false`, or if `sqlUseBoundAndSelectors` is set to false on the [SQL query context](./sql-query-context.md).
+Druid's SQL planner uses the null filter by default instead of selector filter unless `sqlUseBoundAndSelectors` is set to true on the [SQL query context](./sql-query-context.md).
 
 | Property | Description | Required |
 | -------- | ----------- | -------- |
@@ -310,7 +310,7 @@ Note that the bound filter matches null values if you don't specify a lower boun
 
 The range filter is a replacement for the bound filter. It compares against any type of column and is designed to have has more SQL compliant behavior than the bound filter. It won't match null values, even if you don't specify a lower bound.
 
-Druid's SQL planner uses the range filter by default instead of bound filter whenever `druid.generic.useDefaultValueForNull=false`, or if `sqlUseBoundAndSelectors` is set to false on the [SQL query context](./sql-query-context.md).
+Druid's SQL planner uses the range filter by default instead of bound filter unless `sqlUseBoundAndSelectors` is set to true on the [SQL query context](./sql-query-context.md).
 
 | Property | Description | Required |
 | -------- | ----------- | -------- |
