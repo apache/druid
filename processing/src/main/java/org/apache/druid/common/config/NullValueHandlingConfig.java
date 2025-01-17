@@ -21,7 +21,6 @@ package org.apache.druid.common.config;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 
 public class NullValueHandlingConfig
@@ -70,24 +69,6 @@ public class NullValueHandlingConfig
       } else {
         this.ignoreNullsForStringCardinality = false;
       }
-    }
-    String version = NullValueHandlingConfig.class.getPackage().getImplementationVersion();
-    if (version == null || version.contains("SNAPSHOT")) {
-      version = "latest";
-    }
-    final String docsBaseFormat = "https://druid.apache.org/docs/%s/querying/sql-data-types#%s";
-
-    if (this.useDefaultValuesForNull) {
-      LOG.warn(
-          "druid.generic.useDefaultValueForNull set to 'true', but has been removed and is always 'false' for the most SQL compliant behavior, see %s for details",
-          StringUtils.format(docsBaseFormat, version, "null-values")
-      );
-    }
-    if (!this.useThreeValueLogicForNativeFilters) {
-      LOG.warn(
-          "druid.generic.useThreeValueLogicForNativeFilters set to 'false', but has been removed and is always 'true' for the most SQL compliant behavior, see %s for details",
-          StringUtils.format(docsBaseFormat, version, "boolean-logic")
-      );
     }
   }
 }
