@@ -70,7 +70,7 @@ export const SupervisorHistoryPanel = React.memo(function SupervisorHistoryPanel
           <Tab
             id={i}
             key={i}
-            data-tooltip={pastSupervisor.version}
+            title={pastSupervisor.version}
             panelClassName="panel"
             panel={
               <ShowValue

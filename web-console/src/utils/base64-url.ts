@@ -17,18 +17,34 @@
  */
 
 export function base64UrlEncode(input: string): string {
-  const base64 = btoa(input); // Encode to base64
-  return base64
+  return base64Encode(input) // Encode to base64
     .replace(/\+/g, '-') // Replace '+' with '-'
     .replace(/\//g, '_') // Replace '/' with '_'
     .replace(/=+$/, ''); // Remove any trailing '='
 }
 
 export function base64UrlDecode(input: string): string {
-  const base64 = input
-    .replace(/-/g, '+') // Replace '-' with '+'
-    .replace(/_/g, '/'); // Replace '_' with '/'
+  return base64Decode(
+    padEndWithEquals(
+      input
+        .replace(/-/g, '+') // Replace '-' with '+'
+        .replace(/_/g, '/'), // Replace '_' with '/'
+    ),
+  );
+}
 
-  // Add padding '=' if necessary
-  return atob(base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=')); // Decode from base64
+function base64Encode(data: string): string {
+  const bytes = new TextEncoder().encode(data);
+  const binString = String.fromCodePoint(...bytes);
+  return btoa(binString);
+}
+
+function base64Decode(base64: string): string {
+  const binString = atob(base64);
+  const bytes = Uint8Array.from(binString.split('').map(m => m.codePointAt(0)!));
+  return new TextDecoder().decode(bytes);
+}
+
+function padEndWithEquals(input: string): string {
+  return input.padEnd(input.length + ((4 - (input.length % 4)) % 4), '=');
 }

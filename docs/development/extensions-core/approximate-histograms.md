@@ -226,9 +226,7 @@ For performance and accuracy reasons, we recommend avoiding aggregation of histo
 
 ### Null handling
 
-If `druid.generic.useDefaultValueForNull` is false, null values will be tracked in the `missingValueCount` field of the histogram.
-
-If `druid.generic.useDefaultValueForNull` is true, null values will be added to the histogram as the default 0.0 value.
+Druid tracks null values in the `missingValueCount` field of the histogram.
 
 ## Histogram post-aggregators
 

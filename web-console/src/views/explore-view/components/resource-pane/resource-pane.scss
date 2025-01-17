@@ -19,46 +19,61 @@
 @import '../../../../variables';
 
 .resource-pane {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  grid-template-areas:
+    'search'
+    'resources';
 
   .search-input {
+    grid-area: search;
     margin: 4px;
   }
 
-  .list-header {
-    padding: 6px;
-    text-transform: uppercase;
-    font-weight: bold;
-    position: relative;
+  .splitter-layout {
+    grid-area: resources;
 
-    .header-buttons {
+    .layout-splitter {
+      background-color: $light-gray4;
+
+      .#{$bp-ns}-dark & {
+        border-bottom: 2px solid $dark-gray2;
+      }
+    }
+
+    .resource-sub-pane {
       position: absolute;
-      top: 0;
-      right: 0;
-    }
-  }
+      width: 100%;
+      height: 100%;
+      display: grid;
+      grid-template-rows: auto 1fr;
+      grid-template-areas:
+        'header'
+        'list';
 
-  .column-resource-list {
-    flex: 3;
-    overflow: auto;
-    border-bottom: 2px solid $light-gray4;
+      .list-header {
+        grid-area: header;
+        padding: 6px;
+        text-transform: uppercase;
+        font-weight: bold;
+        position: relative;
 
-    .#{$bp-ns}-dark & {
-      border-bottom: 2px solid $dark-gray2;
-    }
+        .header-buttons {
+          position: absolute;
+          top: 0;
+          right: 0;
+        }
+      }
 
-    .column-resource {
-      display: block;
-    }
-  }
+      .resource-list {
+        grid-area: list;
+        overflow: auto;
 
-  .measure-resource-list {
-    flex: 1;
-    overflow: auto;
-
-    .measure-resource {
-      display: block;
+        .column-resource,
+        .measure-resource {
+          display: block;
+        }
+      }
     }
   }
 }
