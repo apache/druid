@@ -24,6 +24,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.policy.Policy;
 
 import javax.annotation.Nullable;
+import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -136,4 +137,25 @@ public class Access
     return StringUtils.format("Allowed:%s, Message:%s, Policy: %s", allowed, message, policy);
   }
 
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    Access access = (Access) o;
+    return allowed == access.allowed && Objects.equals(message, access.message) && Objects.equals(
+        policy,
+        access.policy
+    );
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(allowed, message, policy);
+  }
 }
