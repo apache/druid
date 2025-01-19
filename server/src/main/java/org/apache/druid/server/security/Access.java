@@ -147,10 +147,9 @@ public class Access
       return false;
     }
     Access access = (Access) o;
-    return allowed == access.allowed && Objects.equals(message, access.message) && Objects.equals(
-        policy,
-        access.policy
-    );
+    return allowed == access.allowed
+           && Objects.equals(message, access.message)
+           && Objects.equals(policy, access.policy);
   }
 
   @Override
