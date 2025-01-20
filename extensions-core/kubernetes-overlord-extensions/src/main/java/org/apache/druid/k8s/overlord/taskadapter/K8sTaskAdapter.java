@@ -316,7 +316,7 @@ public abstract class K8sTaskAdapter implements TaskAdapter
     addEnvironmentVariables(mainContainer, context, taskContents);
 
     mainContainer.setCommand(mainCommand);
-    mainContainer.setArgs(Collections.singletonList(Joiner.on(" ").join(context.getComamnd())));
+    mainContainer.setArgs(Collections.singletonList(Joiner.on(" ").join(context.getCommand())));
 
     mainContainer.setName("main");
     ResourceRequirements requirements = getResourceRequirements(
