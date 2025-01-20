@@ -34,12 +34,12 @@ public class JavaScriptConfigTest
     String json = "{\"enabled\":true}";
 
     JavaScriptConfig config = mapper.readValue(
-            mapper.writeValueAsString(
-                    mapper.readValue(
-                            json,
-                            JavaScriptConfig.class
-                    )
-            ), JavaScriptConfig.class
+        mapper.writeValueAsString(
+            mapper.readValue(
+                json,
+                JavaScriptConfig.class
+            )
+        ), JavaScriptConfig.class
     );
 
     Assert.assertTrue(config.isEnabled());
@@ -51,12 +51,12 @@ public class JavaScriptConfigTest
     String json = "{}";
 
     JavaScriptConfig config = mapper.readValue(
-            mapper.writeValueAsString(
-                    mapper.readValue(
-                            json,
-                            JavaScriptConfig.class
-                    )
-            ), JavaScriptConfig.class
+        mapper.writeValueAsString(
+            mapper.readValue(
+                json,
+                JavaScriptConfig.class
+            )
+        ), JavaScriptConfig.class
     );
 
     Assert.assertFalse(config.isEnabled());
