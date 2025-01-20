@@ -20,7 +20,7 @@ export * from './control-pane/control-pane';
 export * from './droppable-container/droppable-container';
 export * from './filter-pane/filter-pane';
 export * from './generic-output-table/generic-output-table';
-export * from './highlight-bubble/highlight-bubble';
+export * from './helper-table/helper-table';
 export * from './issue/issue';
 export * from './module-pane/module-pane';
 export * from './module-picker/module-picker';

@@ -76,9 +76,9 @@ import org.apache.druid.server.mocks.MockHttpServletRequest;
 import org.apache.druid.server.mocks.MockHttpServletResponse;
 import org.apache.druid.server.scheduling.HiLoQueryLaningStrategy;
 import org.apache.druid.server.scheduling.ManualQueryPrioritizationStrategy;
-import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
+import org.apache.druid.server.security.AuthorizationResult;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.DirectStatement;
@@ -350,17 +350,36 @@ public class SqlResourceTest extends CalciteTestBase
   @Test
   public void testUnauthorized()
   {
-    try {
-      postForAsyncResponse(
-          createSimpleQueryWithId("id", "select count(*) from forbiddenDatasource"),
-          request()
-      );
-      Assert.fail("doPost did not throw ForbiddenException for an unauthorized query");
-    }
-    catch (ForbiddenException e) {
-      // expected
-    }
+    ForbiddenException e = Assert.assertThrows(ForbiddenException.class, () -> {
+      postForAsyncResponse(createSimpleQueryWithId("id", "select count(*) from forbiddenDatasource"), request());
+    });
+    Assert.assertEquals("Unauthorized", e.getMessage());
     Assert.assertEquals(1, testRequestLogger.getSqlQueryLogs().size());
+    Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
+  }
+
+  @Test
+  public void testRestricted() throws Exception
+  {
+    req = makeSuperUserReq();
+    final List<Map<String, Object>> resultAsSuperUser = doPost(createSimpleQueryWithId(
+        "id",
+        "select count(*) as cnt from restrictedDatasource_m1_is_6"
+    )).rhs;
+    Assert.assertEquals(ImmutableList.of(ImmutableMap.of("cnt", 6)), resultAsSuperUser);
+
+    checkSqlRequestLog(true, CalciteTests.TEST_SUPERUSER_NAME);
+    testRequestLogger.clear();
+    Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
+
+    req = makeRegularUserReq();
+    final List<Map<String, Object>> resultAsRegularUser = doPost(createSimpleQueryWithId(
+        "id",
+        "select count(*) as cnt from restrictedDatasource_m1_is_6"
+    )).rhs;
+    Assert.assertEquals(ImmutableList.of(ImmutableMap.of("cnt", 1)), resultAsRegularUser);
+    checkSqlRequestLog(true);
+    testRequestLogger.clear();
     Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
   }
 
@@ -1555,7 +1574,7 @@ public class SqlResourceTest extends CalciteTestBase
   /**
    * See class-level javadoc for {@link org.apache.druid.sql.calcite.util.testoperator.AssertionErrorOperatorConversion}
    * for rationale as to why this test exists.
-   *
+   * <p>
    * If this test starts failing, it could be indicative of us not handling the AssertionErrors well anymore,
    * OR it could be indicative of this specific code path not throwing an AssertionError anymore.  If we run
    * into the latter case, we should seek out a new code path that generates the error from Calcite.  In the best
@@ -1878,15 +1897,22 @@ public class SqlResourceTest extends CalciteTestBase
     checkSqlRequestLog(false);
   }
 
-  @SuppressWarnings("unchecked")
   private void checkSqlRequestLog(boolean success)
+  {
+    checkSqlRequestLog(success, CalciteTests.REGULAR_USER_AUTH_RESULT.getIdentity());
+  }
+
+  @SuppressWarnings("unchecked")
+  private void checkSqlRequestLog(boolean success, String user)
   {
     Assert.assertEquals(1, testRequestLogger.getSqlQueryLogs().size());
 
     final Map<String, Object> stats = testRequestLogger.getSqlQueryLogs().get(0).getQueryStats().getStats();
-    final Map<String, Object> queryContext = (Map<String, Object>) testRequestLogger.getSqlQueryLogs().get(0).getSqlQueryContext();
+    final Map<String, Object> queryContext = (Map<String, Object>) testRequestLogger.getSqlQueryLogs()
+                                                                                    .get(0)
+                                                                                    .getSqlQueryContext();
     Assert.assertEquals(success, stats.get("success"));
-    Assert.assertEquals(CalciteTests.REGULAR_USER_AUTH_RESULT.getIdentity(), stats.get("identity"));
+    Assert.assertEquals(user, stats.get("identity"));
     Assert.assertTrue(stats.containsKey("sqlQuery/time"));
     Assert.assertTrue(stats.containsKey("sqlQuery/planningTimeMs"));
     Assert.assertTrue(queryContext.containsKey(QueryContexts.CTX_SQL_QUERY_ID));
@@ -2163,7 +2189,7 @@ public class SqlResourceTest extends CalciteTestBase
     @Override
     protected void authorize(
         DruidPlanner planner,
-        Function<Set<ResourceAction>, Access> authorizer
+        Function<Set<ResourceAction>, AuthorizationResult> authorizer
     )
     {
       if (validateAndAuthorizeLatchSupplier.get() != null) {

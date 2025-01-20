@@ -16,7 +16,11 @@
  * limitations under the License.
  */
 
+import { TextDecoder, TextEncoder } from 'util';
+
 import { base64UrlDecode, base64UrlEncode } from './base64-url';
+
+Object.assign(global, { TextDecoder, TextEncoder });
 
 describe('base64-url', () => {
   it('works in simple case', () => {
@@ -28,8 +32,17 @@ describe('base64-url', () => {
     expect(decoded).toEqual(originalString);
   });
 
+  it('works outside of latin1', () => {
+    const originalString = 'Chodzież_שלום';
+    const encoded = base64UrlEncode(originalString);
+    expect(encoded).toEqual('Q2hvZHppZcW8X9ep15zXlded');
+
+    const decoded = base64UrlDecode(encoded);
+    expect(decoded).toEqual(originalString);
+  });
+
   it('works for all ascii chars', () => {
-    for (let c = 0; c < 256; c++) {
+    for (let c = 0; c < 1e3; c++) {
       const originalString = String.fromCharCode(c);
       const encoded = base64UrlEncode(originalString);
       const decoded = base64UrlDecode(encoded);
