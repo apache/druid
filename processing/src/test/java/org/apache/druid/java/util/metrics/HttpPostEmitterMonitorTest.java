@@ -22,7 +22,6 @@ package org.apache.druid.java.util.metrics;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.emitter.core.ConcurrentTimeCounter;
 import org.apache.druid.java.util.emitter.core.HttpPostEmitter;
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -54,47 +53,38 @@ public class HttpPostEmitterMonitorTest
     when(mockHttpPostEmitter.getTotalDroppedBuffers()).thenReturn(10);
     when(mockHttpPostEmitter.getTotalAllocatedBuffers()).thenReturn(20);
     when(mockHttpPostEmitter.getTotalFailedBuffers()).thenReturn(5);
-    when(mockHttpPostEmitter.getBatchFillingTimeCounter()).thenReturn(mock(ConcurrentTimeCounter.class));
-    when(mockHttpPostEmitter.getSuccessfulSendingTimeCounter()).thenReturn(mock(ConcurrentTimeCounter.class));
-    when(mockHttpPostEmitter.getFailedSendingTimeCounter()).thenReturn(mock(ConcurrentTimeCounter.class));
     when(mockHttpPostEmitter.getEventsToEmit()).thenReturn(200L);
     when(mockHttpPostEmitter.getLargeEventsToEmit()).thenReturn(75L);
     when(mockHttpPostEmitter.getBuffersToEmit()).thenReturn(30);
     when(mockHttpPostEmitter.getBuffersToReuse()).thenReturn(15);
+    when(mockHttpPostEmitter.getBatchFillingTimeCounter()).thenReturn(mock(ConcurrentTimeCounter.class));
+    when(mockHttpPostEmitter.getSuccessfulSendingTimeCounter()).thenReturn(mock(ConcurrentTimeCounter.class));
+    when(mockHttpPostEmitter.getFailedSendingTimeCounter()).thenReturn(mock(ConcurrentTimeCounter.class));
 
     final StubServiceEmitter stubServiceEmitter = new StubServiceEmitter("service", "host");
 
     assertTrue(monitor.doMonitor(stubServiceEmitter));
 
-    Map<String, List<StubServiceEmitter.ServiceMetricEventSnapshot>> metricEvents = stubServiceEmitter.getMetricEvents();
+    final Map<String, List<StubServiceEmitter.ServiceMetricEventSnapshot>> metricEvents = stubServiceEmitter.getMetricEvents();
 
-    assertMetricNameAndValue(metricEvents, "emitter/successfulSending/maxTimeMs", 0);
-    assertMetricNameAndValue(metricEvents, "emitter/events/emitted/delta", 100L);
-    assertMetricNameAndValue(metricEvents, "emitter/successfulSending/minTimeMs", 0);
-    assertMetricNameAndValue(metricEvents, "emitter/buffers/emitQueue", 30);
-    assertMetricNameAndValue(metricEvents, "emitter/failedSending/minTimeMs", 0);
-    assertMetricNameAndValue(metricEvents, "emitter/buffers/allocated/delta", 20);
-    assertMetricNameAndValue(metricEvents, "emitter/batchFilling/maxTimeMs", 0);
-    assertMetricNameAndValue(metricEvents, "emitter/buffers/dropped/delta", 10);
-    assertMetricNameAndValue(metricEvents, "emitter/batchFilling/minTimeMs", 0);
-    assertMetricNameAndValue(metricEvents, "emitter/events/emitQueue", 200L);
-    assertMetricNameAndValue(metricEvents, "emitter/events/large/emitQueue", 75L);
-    assertMetricNameAndValue(metricEvents, "emitter/buffers/reuseQueue", 15);
-    assertMetricNameAndValue(metricEvents, "emitter/buffers/failed/delta", 5);
-    assertMetricNameAndValue(metricEvents, "emitter/failedSending/maxTimeMs", 0L);
+    assertMetricValue(metricEvents, "emitter/successfulSending/maxTimeMs", 0);
+    assertMetricValue(metricEvents, "emitter/events/emitted/delta", 100L);
+    assertMetricValue(metricEvents, "emitter/successfulSending/minTimeMs", 0);
+    assertMetricValue(metricEvents, "emitter/buffers/emitQueue", 30);
+    assertMetricValue(metricEvents, "emitter/failedSending/minTimeMs", 0);
+    assertMetricValue(metricEvents, "emitter/buffers/allocated/delta", 20);
+    assertMetricValue(metricEvents, "emitter/batchFilling/maxTimeMs", 0);
+    assertMetricValue(metricEvents, "emitter/buffers/dropped/delta", 10);
+    assertMetricValue(metricEvents, "emitter/batchFilling/minTimeMs", 0);
+    assertMetricValue(metricEvents, "emitter/events/emitQueue", 200L);
+    assertMetricValue(metricEvents, "emitter/events/large/emitQueue", 75L);
+    assertMetricValue(metricEvents, "emitter/buffers/reuseQueue", 15);
+    assertMetricValue(metricEvents, "emitter/buffers/failed/delta", 5);
+    assertMetricValue(metricEvents, "emitter/failedSending/maxTimeMs", 0L);
   }
 
-  private void assertMetricNameAndValue(Map<String, List<StubServiceEmitter.ServiceMetricEventSnapshot>> metricEvents, String metricName, Number expectedValue)
+  private void assertMetricValue(Map<String, List<StubServiceEmitter.ServiceMetricEventSnapshot>> metricEvents, String metricName, Number expectedValue)
   {
-    assertEquals(metricEvents.get(metricName).get(0).getMetricEvent().getMetric(), metricName);
-
-    if (metricEvents.get(metricName).get(0).getMetricEvent().getValue() instanceof Long)
-    {
-      assertEquals(metricEvents.get(metricName).get(0).getMetricEvent().getValue(), expectedValue.longValue());
-    }
-    else if (metricEvents.get(metricName).get(0).getMetricEvent().getValue() instanceof Integer)
-    {
-      assertEquals(metricEvents.get(metricName).get(0).getMetricEvent().getValue(), expectedValue.intValue());
-    }
+    assertEquals(metricEvents.get(metricName).get(0).getMetricEvent().getValue().doubleValue(), expectedValue.doubleValue());
   }
 }
