@@ -20,6 +20,7 @@
 package org.apache.druid.js;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -33,12 +34,12 @@ public class JavaScriptConfigTest
     String json = "{\"enabled\":true}";
 
     JavaScriptConfig config = mapper.readValue(
-        mapper.writeValueAsString(
-            mapper.readValue(
-                json,
-                JavaScriptConfig.class
-            )
-        ), JavaScriptConfig.class
+            mapper.writeValueAsString(
+                    mapper.readValue(
+                            json,
+                            JavaScriptConfig.class
+                    )
+            ), JavaScriptConfig.class
     );
 
     Assert.assertTrue(config.isEnabled());
@@ -50,42 +51,25 @@ public class JavaScriptConfigTest
     String json = "{}";
 
     JavaScriptConfig config = mapper.readValue(
-        mapper.writeValueAsString(
-            mapper.readValue(
-                json,
-                JavaScriptConfig.class
-            )
-        ), JavaScriptConfig.class
+            mapper.writeValueAsString(
+                    mapper.readValue(
+                            json,
+                            JavaScriptConfig.class
+                    )
+            ), JavaScriptConfig.class
     );
 
     Assert.assertFalse(config.isEnabled());
   }
 
   @Test
-  public void testEquals()
+  public void testEqualsAndHashCode()
   {
-    JavaScriptConfig config1 = new JavaScriptConfig(true);
-    JavaScriptConfig config2 = new JavaScriptConfig(true);
-    JavaScriptConfig config3 = new JavaScriptConfig(false);
-
-    Assert.assertEquals(config1, config2);
-    Assert.assertNotEquals(config1, config3);
-    Assert.assertNotEquals(config2, config3);
-    Assert.assertNotEquals(config1, null);
-    Assert.assertNotEquals(config1, new Object());
-
-    Assert.assertTrue(config1.equals(config1));
-  }
-
-  @Test
-  public void testHashCode()
-  {
-    JavaScriptConfig config1 = new JavaScriptConfig(true);
-    JavaScriptConfig config2 = new JavaScriptConfig(true);
-    JavaScriptConfig config3 = new JavaScriptConfig(false);
-
-    Assert.assertEquals(config1.hashCode(), config2.hashCode());
-    Assert.assertNotEquals(config1.hashCode(), config3.hashCode());
+    EqualsVerifier.simple()
+            .forClass(JavaScriptConfig.class)
+            .usingGetClass()
+            .withNonnullFields("enabled")
+            .verify();
   }
 
   @Test

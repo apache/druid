@@ -23,28 +23,21 @@ import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.emitter.core.ConcurrentTimeCounter;
 import org.apache.druid.java.util.emitter.core.HttpPostEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
-import org.junit.Assert;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
+import java.util.List;
+import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.atLeastOnce;
-import static org.mockito.Mockito.atMost;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 public class HttpPostEmitterMonitorTest
 {
   private HttpPostEmitter mockHttpPostEmitter;
   private ServiceEmitter mockServiceEmitter;
-  private ImmutableMap<String, String> mockExtraDimensions;
   private HttpPostEmitterMonitor monitor;
 
   @BeforeEach
@@ -52,9 +45,8 @@ public class HttpPostEmitterMonitorTest
   {
     mockHttpPostEmitter = mock(HttpPostEmitter.class);
     mockServiceEmitter = mock(ServiceEmitter.class);
-    mockExtraDimensions = ImmutableMap.of("dimensionKey", "dimensionValue");
-
-    monitor = new HttpPostEmitterMonitor("testFeed", mockHttpPostEmitter, mockExtraDimensions);
+    monitor = new HttpPostEmitterMonitor("testFeed", mockHttpPostEmitter,
+            ImmutableMap.of("dimensionKey", "dimensionValue"));
   }
 
   @Test
@@ -68,87 +60,70 @@ public class HttpPostEmitterMonitorTest
     when(mockHttpPostEmitter.getSuccessfulSendingTimeCounter()).thenReturn(mock(ConcurrentTimeCounter.class));
     when(mockHttpPostEmitter.getFailedSendingTimeCounter()).thenReturn(mock(ConcurrentTimeCounter.class));
     when(mockHttpPostEmitter.getEventsToEmit()).thenReturn(200L);
-    when(mockHttpPostEmitter.getLargeEventsToEmit()).thenReturn(50L);
+    when(mockHttpPostEmitter.getLargeEventsToEmit()).thenReturn(75L);
     when(mockHttpPostEmitter.getBuffersToEmit()).thenReturn(30);
     when(mockHttpPostEmitter.getBuffersToReuse()).thenReturn(15);
 
-    assertTrue(monitor.doMonitor(mockServiceEmitter));
+    final StubServiceEmitter stubServiceEmitter = new StubServiceEmitter("service", "host");
 
-    ArgumentCaptor<ServiceMetricEvent.Builder> captor = ArgumentCaptor.forClass(ServiceMetricEvent.Builder.class);
-    verify(mockServiceEmitter, atLeastOnce()).emit(captor.capture());
-  }
+    assertTrue(monitor.doMonitor(stubServiceEmitter));
 
-  @Test
-  public void testEmitEmittedEvents()
-  {
-    when(mockHttpPostEmitter.getTotalEmittedEvents()).thenReturn(100L);
-    when(mockHttpPostEmitter.getTotalDroppedBuffers()).thenReturn(10);
-    when(mockHttpPostEmitter.getTotalAllocatedBuffers()).thenReturn(20);
-    when(mockHttpPostEmitter.getTotalFailedBuffers()).thenReturn(5);
-    when(mockHttpPostEmitter.getBatchFillingTimeCounter()).thenReturn(mock(ConcurrentTimeCounter.class));
-    when(mockHttpPostEmitter.getSuccessfulSendingTimeCounter()).thenReturn(mock(ConcurrentTimeCounter.class));
-    when(mockHttpPostEmitter.getFailedSendingTimeCounter()).thenReturn(mock(ConcurrentTimeCounter.class));
-    when(mockHttpPostEmitter.getEventsToEmit()).thenReturn(200L);
-    when(mockHttpPostEmitter.getLargeEventsToEmit()).thenReturn(50L);
-    when(mockHttpPostEmitter.getBuffersToEmit()).thenReturn(30);
-    when(mockHttpPostEmitter.getBuffersToReuse()).thenReturn(15);
+    Map<String, List<StubServiceEmitter.ServiceMetricEventSnapshot>> metricEvents = stubServiceEmitter.getMetricEvents();
 
-    monitor.doMonitor(mockServiceEmitter);
+    final String emitter_successful_sending_max_time_ms = "emitter/successfulSending/maxTimeMs";
+    assertEquals(metricEvents.get(emitter_successful_sending_max_time_ms).get(0).getMetricEvent().getMetric(), emitter_successful_sending_max_time_ms);
+    assertEquals(metricEvents.get(emitter_successful_sending_max_time_ms).get(0).getMetricEvent().getValue(), 0);
 
-    ArgumentCaptor<ServiceMetricEvent.Builder> captor = ArgumentCaptor.forClass(ServiceMetricEvent.Builder.class);
-    verify(mockServiceEmitter, atLeastOnce()).emit(captor.capture());
-  }
+    final String emitter_events_emitted_delta = "emitter/events/emitted/delta";
+    assertEquals(metricEvents.get(emitter_events_emitted_delta).get(0).getMetricEvent().getMetric(), emitter_events_emitted_delta);
+    assertEquals(metricEvents.get(emitter_events_emitted_delta).get(0).getMetricEvent().getValue(), 100l);
 
+    final String emitter_successful_sending_min_time_ms = "emitter/successfulSending/minTimeMs";
+    assertEquals(metricEvents.get(emitter_successful_sending_min_time_ms).get(0).getMetricEvent().getMetric(), emitter_successful_sending_min_time_ms);
+    assertEquals(metricEvents.get(emitter_successful_sending_min_time_ms).get(0).getMetricEvent().getValue(), 0);
 
-  @Test
-  public void testEmitFailedBuffers() throws NoSuchMethodException, InvocationTargetException, IllegalAccessException
-  {
-    when(mockHttpPostEmitter.getTotalFailedBuffers()).thenReturn(5);
+    final String emitter_buffers_emit_queue = "emitter/buffers/emitQueue";
+    assertEquals(metricEvents.get(emitter_buffers_emit_queue).get(0).getMetricEvent().getMetric(), emitter_buffers_emit_queue);
+    assertEquals(metricEvents.get(emitter_buffers_emit_queue).get(0).getMetricEvent().getValue(), 30);
 
-    // Use reflection to call the private emitFailedBuffers method
-    Method emitFailedBuffersMethod = HttpPostEmitterMonitor.class.getDeclaredMethod("emitFailedBuffers", ServiceEmitter.class);
-    emitFailedBuffersMethod.setAccessible(true);
-    emitFailedBuffersMethod.invoke(monitor, mockServiceEmitter);
+    final String emitter_failed_sending_min_time_ms = "emitter/failedSending/minTimeMs";
+    assertEquals(metricEvents.get(emitter_failed_sending_min_time_ms).get(0).getMetricEvent().getMetric(), emitter_failed_sending_min_time_ms);
+    assertEquals(metricEvents.get(emitter_failed_sending_min_time_ms).get(0).getMetricEvent().getValue(), 0);
 
-    // Capture the emitted metrics
-    ArgumentCaptor<ServiceMetricEvent.Builder> captor = ArgumentCaptor.forClass(ServiceMetricEvent.Builder.class);
-    verify(mockServiceEmitter, atLeastOnce()).emit(captor.capture());
+    final String emitter_buffers_allocated_delta = "emitter/buffers/allocated/delta";
+    assertEquals(metricEvents.get(emitter_buffers_allocated_delta).get(0).getMetricEvent().getMetric(), emitter_buffers_allocated_delta);
+    assertEquals(metricEvents.get(emitter_buffers_allocated_delta).get(0).getMetricEvent().getValue(), 20);
 
-    // Verify the failed buffers metric
-    Assert.assertTrue(captor.getAllValues().stream().anyMatch(builder -> builder.build(ImmutableMap.of()).getMetric().equals("emitter/buffers/failed/delta") && builder.build(ImmutableMap.of()).getValue().equals(5)));
-  }
+    final String emitter_batch_filling_max_time_ms = "emitter/batchFilling/maxTimeMs";
+    assertEquals(metricEvents.get(emitter_batch_filling_max_time_ms).get(0).getMetricEvent().getMetric(), emitter_batch_filling_max_time_ms);
+    assertEquals(metricEvents.get(emitter_batch_filling_max_time_ms).get(0).getMetricEvent().getValue(), 0);
 
-  @Test
-  public void testEmitTimeCounterMetrics() throws NoSuchMethodException, InvocationTargetException, IllegalAccessException
-  {
-    ConcurrentTimeCounter mockTimeCounter = mock(ConcurrentTimeCounter.class);
+    final String emitter_buffers_dropped_delta = "emitter/buffers/dropped/delta";
+    assertEquals(metricEvents.get(emitter_buffers_dropped_delta).get(0).getMetricEvent().getMetric(), emitter_buffers_dropped_delta);
+    assertEquals(metricEvents.get(emitter_buffers_dropped_delta).get(0).getMetricEvent().getValue(), 10);
 
-    when(mockTimeCounter.getTimeSumAndCountAndReset()).thenReturn(1311768465173141116L);
-    when(mockTimeCounter.getAndResetMaxTime()).thenReturn(300);
-    when(mockTimeCounter.getAndResetMinTime()).thenReturn(100);
+    final String emitter_batch_filling_min_time_ms = "emitter/batchFilling/minTimeMs";
+    assertEquals(metricEvents.get(emitter_batch_filling_min_time_ms).get(0).getMetricEvent().getMetric(), emitter_batch_filling_min_time_ms);
+    assertEquals(metricEvents.get(emitter_batch_filling_min_time_ms).get(0).getMetricEvent().getValue(), 0);
 
-    Method emitTimeCounterMetricsMethod = HttpPostEmitterMonitor.class.getDeclaredMethod("emitTimeCounterMetrics", ServiceEmitter.class, ConcurrentTimeCounter.class, String.class);
-    emitTimeCounterMetricsMethod.setAccessible(true);
-    emitTimeCounterMetricsMethod.invoke(monitor, mockServiceEmitter, mockTimeCounter, "emitter/test/");
+    final String emitter_events_emit_queue = "emitter/events/emitQueue";
+    assertEquals(metricEvents.get(emitter_events_emit_queue).get(0).getMetricEvent().getMetric(), emitter_events_emit_queue);
+    assertEquals(metricEvents.get(emitter_events_emit_queue).get(0).getMetricEvent().getValue(), 200l);
 
-    ArgumentCaptor<ServiceMetricEvent.Builder> captor = ArgumentCaptor.forClass(ServiceMetricEvent.Builder.class);
-    verify(mockServiceEmitter, atMost(4)).emit(captor.capture());
-  }
+    final String emitter_events_large_emit_queue = "emitter/events/large/emitQueue";
+    assertEquals(metricEvents.get(emitter_events_large_emit_queue).get(0).getMetricEvent().getMetric(), emitter_events_large_emit_queue);
+    assertEquals(metricEvents.get(emitter_events_large_emit_queue).get(0).getMetricEvent().getValue(), 75l);
 
-  @Test
-  public void testEmitTimeCounterMetricsDoesNotEmit() throws NoSuchMethodException, InvocationTargetException, IllegalAccessException
-  {
-    ConcurrentTimeCounter mockTimeCounter = mock(ConcurrentTimeCounter.class);
+    final String emitter_buffers_reuse_queue = "emitter/buffers/reuseQueue";
+    assertEquals(metricEvents.get(emitter_buffers_reuse_queue).get(0).getMetricEvent().getMetric(), emitter_buffers_reuse_queue);
+    assertEquals(metricEvents.get(emitter_buffers_reuse_queue).get(0).getMetricEvent().getValue(), 15);
 
-    when(mockTimeCounter.getTimeSumAndCountAndReset()).thenReturn(0L);
-    when(mockTimeCounter.getAndResetMaxTime()).thenReturn(null);
-    when(mockTimeCounter.getAndResetMinTime()).thenReturn(null);
+    final String emitter_buffers_failed_delta = "emitter/buffers/failed/delta";
+    assertEquals(metricEvents.get(emitter_buffers_failed_delta).get(0).getMetricEvent().getMetric(), emitter_buffers_failed_delta);
+    assertEquals(metricEvents.get(emitter_buffers_failed_delta).get(0).getMetricEvent().getValue(), 5);
 
-    Method emitTimeCounterMetricsMethod = HttpPostEmitterMonitor.class.getDeclaredMethod("emitTimeCounterMetrics", ServiceEmitter.class, ConcurrentTimeCounter.class, String.class);
-    emitTimeCounterMetricsMethod.setAccessible(true);
-    emitTimeCounterMetricsMethod.invoke(monitor, mockServiceEmitter, mockTimeCounter, "emitter/test/");
-
-    ArgumentCaptor<ServiceMetricEvent.Builder> captor = ArgumentCaptor.forClass(ServiceMetricEvent.Builder.class);
-    verify(mockServiceEmitter, never()).emit(captor.capture());
+    final String emitter_failed_sending_max_time_ms = "emitter/failedSending/maxTimeMs";
+    assertEquals(metricEvents.get(emitter_failed_sending_max_time_ms).get(0).getMetricEvent().getMetric(), emitter_failed_sending_max_time_ms);
+    assertEquals(metricEvents.get(emitter_failed_sending_max_time_ms).get(0).getMetricEvent().getValue(), 0);
   }
 }
