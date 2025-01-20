@@ -89,11 +89,14 @@ public class AWSCredentialsConfigTest
   @Test
   public void testStringProperty()
   {
+    final String filePath = "/path/to/credentials";
+    properties.put(PROPERTY_PREFIX + ".fileSessionCredentials", filePath);
     properties.put(PROPERTY_PREFIX + ".accessKey", SOME_SECRET);
     properties.put(PROPERTY_PREFIX + ".secretKey", SOME_SECRET);
 
     final Injector injector = createInjector();
     final AWSCredentialsConfig credentialsConfig = injector.getInstance(AWSCredentialsConfig.class);
+    Assert.assertEquals(filePath, credentialsConfig.getFileSessionCredentials());
     Assert.assertEquals(SOME_SECRET, credentialsConfig.getAccessKey().getPassword());
     Assert.assertEquals(SOME_SECRET, credentialsConfig.getSecretKey().getPassword());
   }
@@ -101,42 +104,16 @@ public class AWSCredentialsConfigTest
   @Test
   public void testJsonProperty() throws Exception
   {
+    final String filePath = "/path/to/credentials";
     final String someSecret = new ObjectMapper().writeValueAsString(new DefaultPasswordProvider(SOME_SECRET));
+    properties.put(PROPERTY_PREFIX + ".fileSessionCredentials", filePath);
     properties.put(PROPERTY_PREFIX + ".accessKey", someSecret);
     properties.put(PROPERTY_PREFIX + ".secretKey", someSecret);
 
     final Injector injector = createInjector();
     final AWSCredentialsConfig credentialsConfig = injector.getInstance(AWSCredentialsConfig.class);
+    Assert.assertEquals(filePath, credentialsConfig.getFileSessionCredentials());
     Assert.assertEquals(SOME_SECRET, credentialsConfig.getAccessKey().getPassword());
     Assert.assertEquals(SOME_SECRET, credentialsConfig.getSecretKey().getPassword());
-  }
-
-  @Test
-  public void testFileSessionCredentials()
-  {
-    String filePath = "/path/to/credentials";
-    properties.put(PROPERTY_PREFIX + ".fileSessionCredentials", filePath);
-
-    final Injector injector = createInjector();
-    final AWSCredentialsConfig config = injector.getInstance(AWSCredentialsConfig.class);
-
-    Assert.assertEquals(filePath, config.getFileSessionCredentials());
-  }
-
-  @Test
-  public void testMixedConfiguration() throws Exception
-  {
-    ObjectMapper mapper = new ObjectMapper();
-    String jsonSecret = mapper.writeValueAsString(new DefaultPasswordProvider(SOME_SECRET));
-    properties.put(PROPERTY_PREFIX + ".accessKey", jsonSecret);
-    properties.put(PROPERTY_PREFIX + ".secretKey", SOME_SECRET + "randomKey");
-    properties.put(PROPERTY_PREFIX + ".fileSessionCredentials", "/path/to/credentials");
-
-    final Injector injector = createInjector();
-    final AWSCredentialsConfig config = injector.getInstance(AWSCredentialsConfig.class);
-
-    Assert.assertEquals(SOME_SECRET, config.getAccessKey().getPassword());
-    Assert.assertEquals(SOME_SECRET + "randomKey", config.getSecretKey().getPassword());
-    Assert.assertEquals("/path/to/credentials", config.getFileSessionCredentials());
   }
 }
