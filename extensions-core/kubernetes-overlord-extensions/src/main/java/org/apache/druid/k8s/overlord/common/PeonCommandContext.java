@@ -27,35 +27,35 @@ import java.util.List;
 public class PeonCommandContext
 {
 
-  private final List<String> comamnd;
+  private final List<String> command;
   private final List<String> javaOpts;
   private final File taskDir;
   private final boolean enableTls;
   private final int cpuMicroCore;
 
-  public PeonCommandContext(List<String> comamnd, List<String> javaOpts, File taskDir, int cpuMicroCore)
+  public PeonCommandContext(List<String> command, List<String> javaOpts, File taskDir, int cpuMicroCore)
   {
-    this(comamnd, javaOpts, taskDir, cpuMicroCore, false);
+    this(command, javaOpts, taskDir, cpuMicroCore, false);
   }
 
   public PeonCommandContext(
-      List<String> comamnd,
+      List<String> command,
       List<String> javaOpts,
       File taskDir,
       int cpuMicroCore,
       boolean enableTls
   )
   {
-    this.comamnd = comamnd;
+    this.command = command;
     this.javaOpts = javaOpts;
     this.taskDir = taskDir;
     this.cpuMicroCore = cpuMicroCore;
     this.enableTls = enableTls;
   }
 
-  public List<String> getComamnd()
+  public List<String> getCommand()
   {
-    return comamnd;
+    return command;
   }
 
   public List<String> getJavaOpts()
