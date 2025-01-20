@@ -37,14 +37,12 @@ import static org.mockito.Mockito.when;
 public class HttpPostEmitterMonitorTest
 {
   private HttpPostEmitter mockHttpPostEmitter;
-  private ServiceEmitter mockServiceEmitter;
   private HttpPostEmitterMonitor monitor;
 
   @BeforeEach
   public void setUp()
   {
     mockHttpPostEmitter = mock(HttpPostEmitter.class);
-    mockServiceEmitter = mock(ServiceEmitter.class);
     monitor = new HttpPostEmitterMonitor("testFeed", mockHttpPostEmitter,
             ImmutableMap.of("dimensionKey", "dimensionValue"));
   }
@@ -70,60 +68,33 @@ public class HttpPostEmitterMonitorTest
 
     Map<String, List<StubServiceEmitter.ServiceMetricEventSnapshot>> metricEvents = stubServiceEmitter.getMetricEvents();
 
-    final String emitter_successful_sending_max_time_ms = "emitter/successfulSending/maxTimeMs";
-    assertEquals(metricEvents.get(emitter_successful_sending_max_time_ms).get(0).getMetricEvent().getMetric(), emitter_successful_sending_max_time_ms);
-    assertEquals(metricEvents.get(emitter_successful_sending_max_time_ms).get(0).getMetricEvent().getValue(), 0);
+    assertMetricNameAndValue(metricEvents, "emitter/successfulSending/maxTimeMs", 0);
+    assertMetricNameAndValue(metricEvents, "emitter/events/emitted/delta", 100L);
+    assertMetricNameAndValue(metricEvents, "emitter/successfulSending/minTimeMs", 0);
+    assertMetricNameAndValue(metricEvents, "emitter/buffers/emitQueue", 30);
+    assertMetricNameAndValue(metricEvents, "emitter/failedSending/minTimeMs", 0);
+    assertMetricNameAndValue(metricEvents, "emitter/buffers/allocated/delta", 20);
+    assertMetricNameAndValue(metricEvents, "emitter/batchFilling/maxTimeMs", 0);
+    assertMetricNameAndValue(metricEvents, "emitter/buffers/dropped/delta", 10);
+    assertMetricNameAndValue(metricEvents, "emitter/batchFilling/minTimeMs", 0);
+    assertMetricNameAndValue(metricEvents, "emitter/events/emitQueue", 200L);
+    assertMetricNameAndValue(metricEvents, "emitter/events/large/emitQueue", 75L);
+    assertMetricNameAndValue(metricEvents, "emitter/buffers/reuseQueue", 15);
+    assertMetricNameAndValue(metricEvents, "emitter/buffers/failed/delta", 5);
+    assertMetricNameAndValue(metricEvents, "emitter/failedSending/maxTimeMs", 0L);
+  }
 
-    final String emitter_events_emitted_delta = "emitter/events/emitted/delta";
-    assertEquals(metricEvents.get(emitter_events_emitted_delta).get(0).getMetricEvent().getMetric(), emitter_events_emitted_delta);
-    assertEquals(metricEvents.get(emitter_events_emitted_delta).get(0).getMetricEvent().getValue(), 100l);
+  private void assertMetricNameAndValue(Map<String, List<StubServiceEmitter.ServiceMetricEventSnapshot>> metricEvents, String metricName, Number expectedValue)
+  {
+    assertEquals(metricEvents.get(metricName).get(0).getMetricEvent().getMetric(), metricName);
 
-    final String emitter_successful_sending_min_time_ms = "emitter/successfulSending/minTimeMs";
-    assertEquals(metricEvents.get(emitter_successful_sending_min_time_ms).get(0).getMetricEvent().getMetric(), emitter_successful_sending_min_time_ms);
-    assertEquals(metricEvents.get(emitter_successful_sending_min_time_ms).get(0).getMetricEvent().getValue(), 0);
-
-    final String emitter_buffers_emit_queue = "emitter/buffers/emitQueue";
-    assertEquals(metricEvents.get(emitter_buffers_emit_queue).get(0).getMetricEvent().getMetric(), emitter_buffers_emit_queue);
-    assertEquals(metricEvents.get(emitter_buffers_emit_queue).get(0).getMetricEvent().getValue(), 30);
-
-    final String emitter_failed_sending_min_time_ms = "emitter/failedSending/minTimeMs";
-    assertEquals(metricEvents.get(emitter_failed_sending_min_time_ms).get(0).getMetricEvent().getMetric(), emitter_failed_sending_min_time_ms);
-    assertEquals(metricEvents.get(emitter_failed_sending_min_time_ms).get(0).getMetricEvent().getValue(), 0);
-
-    final String emitter_buffers_allocated_delta = "emitter/buffers/allocated/delta";
-    assertEquals(metricEvents.get(emitter_buffers_allocated_delta).get(0).getMetricEvent().getMetric(), emitter_buffers_allocated_delta);
-    assertEquals(metricEvents.get(emitter_buffers_allocated_delta).get(0).getMetricEvent().getValue(), 20);
-
-    final String emitter_batch_filling_max_time_ms = "emitter/batchFilling/maxTimeMs";
-    assertEquals(metricEvents.get(emitter_batch_filling_max_time_ms).get(0).getMetricEvent().getMetric(), emitter_batch_filling_max_time_ms);
-    assertEquals(metricEvents.get(emitter_batch_filling_max_time_ms).get(0).getMetricEvent().getValue(), 0);
-
-    final String emitter_buffers_dropped_delta = "emitter/buffers/dropped/delta";
-    assertEquals(metricEvents.get(emitter_buffers_dropped_delta).get(0).getMetricEvent().getMetric(), emitter_buffers_dropped_delta);
-    assertEquals(metricEvents.get(emitter_buffers_dropped_delta).get(0).getMetricEvent().getValue(), 10);
-
-    final String emitter_batch_filling_min_time_ms = "emitter/batchFilling/minTimeMs";
-    assertEquals(metricEvents.get(emitter_batch_filling_min_time_ms).get(0).getMetricEvent().getMetric(), emitter_batch_filling_min_time_ms);
-    assertEquals(metricEvents.get(emitter_batch_filling_min_time_ms).get(0).getMetricEvent().getValue(), 0);
-
-    final String emitter_events_emit_queue = "emitter/events/emitQueue";
-    assertEquals(metricEvents.get(emitter_events_emit_queue).get(0).getMetricEvent().getMetric(), emitter_events_emit_queue);
-    assertEquals(metricEvents.get(emitter_events_emit_queue).get(0).getMetricEvent().getValue(), 200l);
-
-    final String emitter_events_large_emit_queue = "emitter/events/large/emitQueue";
-    assertEquals(metricEvents.get(emitter_events_large_emit_queue).get(0).getMetricEvent().getMetric(), emitter_events_large_emit_queue);
-    assertEquals(metricEvents.get(emitter_events_large_emit_queue).get(0).getMetricEvent().getValue(), 75l);
-
-    final String emitter_buffers_reuse_queue = "emitter/buffers/reuseQueue";
-    assertEquals(metricEvents.get(emitter_buffers_reuse_queue).get(0).getMetricEvent().getMetric(), emitter_buffers_reuse_queue);
-    assertEquals(metricEvents.get(emitter_buffers_reuse_queue).get(0).getMetricEvent().getValue(), 15);
-
-    final String emitter_buffers_failed_delta = "emitter/buffers/failed/delta";
-    assertEquals(metricEvents.get(emitter_buffers_failed_delta).get(0).getMetricEvent().getMetric(), emitter_buffers_failed_delta);
-    assertEquals(metricEvents.get(emitter_buffers_failed_delta).get(0).getMetricEvent().getValue(), 5);
-
-    final String emitter_failed_sending_max_time_ms = "emitter/failedSending/maxTimeMs";
-    assertEquals(metricEvents.get(emitter_failed_sending_max_time_ms).get(0).getMetricEvent().getMetric(), emitter_failed_sending_max_time_ms);
-    assertEquals(metricEvents.get(emitter_failed_sending_max_time_ms).get(0).getMetricEvent().getValue(), 0);
+    if (metricEvents.get(metricName).get(0).getMetricEvent().getValue() instanceof Long)
+    {
+      assertEquals(metricEvents.get(metricName).get(0).getMetricEvent().getValue(), expectedValue.longValue());
+    }
+    else if (metricEvents.get(metricName).get(0).getMetricEvent().getValue() instanceof Integer)
+    {
+      assertEquals(metricEvents.get(metricName).get(0).getMetricEvent().getValue(), expectedValue.intValue());
+    }
   }
 }
