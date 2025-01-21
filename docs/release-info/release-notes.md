@@ -82,11 +82,19 @@ APIs for marking segments as used or unused have been moved from the Coordinator
 
 ### ANSI-SQL compatibility and upgrades
 
-The configs that let you maintain older behavior that wasn't ANSI-SQL compliant, such as  `druid.expressions.useStrictBooleans` have been removed. If these settings are detected, any upgrade will fail.
+Support for the configs that let you maintain older behavior that wasn't ANSI-SQL compliant have been removed:
+
+- `druid.generic.useDefaultValueForNull` 
+- `druid.generic.useThreeValueLogicForNativeFilters`
+- `druid.expressions.useStrictBooleans` 
+
+If these settings are detected, a warning message gets logged. They no longer affect your query results. Only SQL-compliant non-legacy behavior is supported now. 
+
+If you still depended on these configs for your queries, you must update your queries or your results will be incorrect after you upgrade.
 
 For more information about how to update your queries, see the [migration guide](https://druid.apache.org/docs/latest/release-info/migr-ansi-sql-null).
 
-[#17568](https://github.com/apache/druid/pull/17568)
+[#17568](https://github.com/apache/druid/pull/17568) [#17609](https://github.com/apache/druid/pull/17609)
 
 ## Functional area and related changes
 
@@ -94,11 +102,32 @@ This section contains detailed release notes separated by areas.
 
 ### Web console
 
+#### Explore view (exerimental)
+
+Several improvements have been made to the Explore view in the web console:
+
+The time chart visualization now supports zooming, dragging, and is smarter about granularity detection:
+![](./explore_timechart.png)
+
+
+Filters been improved with helper tables and additional context:
+![](./explore_filtering.png)
+
+Tiles can now be shown side-by-side:
+![](./explore_tiles.png)
+
+[#17627](https://github.com/apache/druid/pull/17627)
+
 #### Segment timeline view
 
 The segment timeline is now more interactive and no longer forces day granularity.
 
-![New segment timeline view](segment_timeline.png)
+**New view**
+![](./webconsole_segmenttimeline2.png)
+
+
+**Old view:**
+![](./webconsole_segmenttimeline1.png)
 
 [#17521](https://github.com/apache/druid/pull/17521)
 
@@ -297,3 +326,4 @@ The following dependencies have had their versions bumped:
 * Removed `file-loader` dependency for the web console [#17346](https://github.com/apache/druid/pull/17346)
 * Guice from 4.2.2 to 5.1.0
 * `git-commit-id-maven-plugin` from 4.9.10 to 9.0.1 [#17571](https://github.com/apache/druid/pull/17571)
+* Netty from version `4.1.108.Final` to `4.1.116.Final`
