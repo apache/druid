@@ -57,6 +57,22 @@ For tips about how to write a good release note, see [Release notes](https://git
 
 This section contains important information about new and existing features.
 
+### ANSI-SQL compatibility and query results
+
+Support for the configs that let you maintain older behavior that wasn't ANSI-SQL compliant have been removed:
+
+- `druid.generic.useDefaultValueForNull` 
+- `druid.generic.useThreeValueLogicForNativeFilters`
+- `druid.expressions.useStrictBooleans` 
+
+If these settings are detected, a warning message gets logged. They no longer affect your query results. Only SQL-compliant non-legacy behavior is supported now. 
+
+If you still depended on these configs for your queries, you must update your queries or your results will be incorrect after you upgrade.
+
+For more information about how to update your queries, see the [migration guide](https://druid.apache.org/docs/latest/release-info/migr-ansi-sql-null).
+
+[#17568](https://github.com/apache/druid/pull/17568) [#17609](https://github.com/apache/druid/pull/17609)
+
 ### New Overlord APIs
 
 APIs for marking segments as used or unused have been moved from the Coordinator to the Overlord service:
@@ -80,21 +96,10 @@ APIs for marking segments as used or unused have been moved from the Coordinator
 
 [#17545](https://github.com/apache/druid/pull/17545)
 
-### ANSI-SQL compatibility and upgrades
 
-Support for the configs that let you maintain older behavior that wasn't ANSI-SQL compliant have been removed:
+### 17386
 
-- `druid.generic.useDefaultValueForNull` 
-- `druid.generic.useThreeValueLogicForNativeFilters`
-- `druid.expressions.useStrictBooleans` 
-
-If these settings are detected, a warning message gets logged. They no longer affect your query results. Only SQL-compliant non-legacy behavior is supported now. 
-
-If you still depended on these configs for your queries, you must update your queries or your results will be incorrect after you upgrade.
-
-For more information about how to update your queries, see the [migration guide](https://druid.apache.org/docs/latest/release-info/migr-ansi-sql-null).
-
-[#17568](https://github.com/apache/druid/pull/17568) [#17609](https://github.com/apache/druid/pull/17609)
+https://github.com/apache/druid/pull/17386
 
 ## Functional area and related changes
 
