@@ -73,6 +73,12 @@ For more information about how to update your queries, see the [migration guide]
 
 [#17568](https://github.com/apache/druid/pull/17568) [#17609](https://github.com/apache/druid/pull/17609)
 
+### Java 8
+
+Support for Java 8 has been removed starting in Druid 32.0.0. Druid now supports only Java 11 or 17.
+
+[#17466](https://github.com/apache/druid/pull/17466)
+
 ### New Overlord APIs
 
 APIs for marking segments as used or unused have been moved from the Coordinator to the Overlord service:
@@ -203,6 +209,7 @@ SQL JOIN queries now include hints. This allows queries to hint the JOIN type th
 - Improved error handling for incomplete queries. A trailer header to indicate an error is returned now [#16672](https://github.com/apache/druid/pull/16672)
 - Improved scan queries to account for column types in more situations [#17463](https://github.com/apache/druid/pull/17463)
 - Improved lookups so that they can now iterate over fetched data [#17212](https://github.com/apache/druid/pull/17212)
+- Improved projections so that theycan contain only aggregators and no grouping columns [#17484](https://github.com/apache/druid/pull/17484)
 - Removed microseconds as a supported unit for EXTRACT [#17247](https://github.com/apache/druid/pull/17247)
 
 
