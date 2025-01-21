@@ -61,23 +61,34 @@ This section contains important information about new and existing features.
 
 Support for the configs that let you maintain older behavior that wasn't ANSI-SQL compliant have been removed:
 
-- `druid.generic.useDefaultValueForNull` 
-- `druid.generic.useThreeValueLogicForNativeFilters`
-- `druid.expressions.useStrictBooleans` 
+- `druid.generic.useDefaultValueForNull=true`
+- `druid.expressions.useStrictBooleans=false`
+- `druid.generic.useThreeValueLogicForNativeFilters=false` 
 
-If these settings are detected, a warning message gets logged. They no longer affect your query results. Only SQL-compliant non-legacy behavior is supported now. 
+They no longer affect your query results. Only SQL-compliant non-legacy behavior is supported now. 
 
-If you still depended on these configs for your queries, you must update your queries or your results will be incorrect after you upgrade.
+If the configs are set to the legacy behavior, Druid services will fail to start. 
+
+If you want to continue to get the same results without these settings, you must update your queries or your results will be incorrect after you upgrade.
 
 For more information about how to update your queries, see the [migration guide](https://druid.apache.org/docs/latest/release-info/migr-ansi-sql-null).
 
 [#17568](https://github.com/apache/druid/pull/17568) [#17609](https://github.com/apache/druid/pull/17609)
 
-### Java 8
+### Java support
 
-Support for Java 8 has been removed starting in Druid 32.0.0. Druid now supports only Java 11 or 17.
+Java support in Druid has been updated:
+
+- Java 8 support has been removed
+- Java 11 support is deprecated
+
+We recommend that you upgrade to Java 17.
 
 [#17466](https://github.com/apache/druid/pull/17466)
+
+### Hadoop-based ingestion
+
+Hadoop-based ingestion is now deprecated. We recommend that you migrate to SQL-based ingestion. f
 
 ### New Overlord APIs
 
