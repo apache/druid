@@ -113,7 +113,7 @@ This section contains detailed release notes separated by areas.
 
 ### Web console
 
-#### Explore view (exerimental)
+#### Explore view (experimental)
 
 Several improvements have been made to the Explore view in the web console:
 
@@ -134,7 +134,7 @@ Tiles can now be shown side-by-side:
 The segment timeline is now more interactive and no longer forces day granularity.
 
 **New view**
-![](./webconsole_segmenttimeline2.png)
+![](./webconsole_segment_timeline2.png)
 
 
 **Old view:**
