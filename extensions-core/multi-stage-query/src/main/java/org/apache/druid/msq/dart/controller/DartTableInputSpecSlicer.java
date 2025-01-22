@@ -23,8 +23,8 @@ import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+import org.apache.druid.client.QueryableDruidServer;
 import org.apache.druid.client.TimelineServerView;
-import org.apache.druid.client.selector.QueryableDruidServer;
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.JodaUtils;
@@ -162,13 +162,13 @@ public class DartTableInputSpecSlicer implements InputSpecSlicer
    */
   int findWorkerForServerSelector(final ServerSelector serverSelector, final int maxNumSlices)
   {
-    final QueryableDruidServer<?> server = serverSelector.pick(null);
+    final QueryableDruidServer server = serverSelector.pick(null);
 
     if (server == null) {
       return UNKNOWN;
     }
 
-    final String serverHostAndPort = server.getServer().getHostAndPort();
+    final String serverHostAndPort = server.getServer().getHost();
     final int workerNumber = workerIdToNumber.getInt(serverHostAndPort);
 
     // The worker number may be UNKNOWN in a race condition, such as the set of Historicals changing while

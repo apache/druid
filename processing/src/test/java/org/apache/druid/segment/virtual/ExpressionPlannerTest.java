@@ -21,11 +21,11 @@ package org.apache.druid.segment.virtual;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
+import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.query.expression.TestExprMacroTable;
@@ -343,11 +343,7 @@ public class ExpressionPlannerTest extends InitializedNullHandlingTest
     ColumnCapabilities inferred = thePlan.inferColumnCapabilities(null);
     Assert.assertNotNull(inferred);
     Assert.assertEquals(ValueType.LONG, inferred.getType());
-    if (NullHandling.sqlCompatible()) {
-      Assert.assertTrue(inferred.hasNulls().isMaybeTrue());
-    } else {
-      Assert.assertFalse(inferred.hasNulls().isMaybeTrue());
-    }
+    Assert.assertTrue(inferred.hasNulls().isMaybeTrue());
     Assert.assertFalse(inferred.isDictionaryEncoded().isMaybeTrue());
     Assert.assertFalse(inferred.areDictionaryValuesSorted().isMaybeTrue());
     Assert.assertFalse(inferred.areDictionaryValuesUnique().isMaybeTrue());
@@ -382,11 +378,7 @@ public class ExpressionPlannerTest extends InitializedNullHandlingTest
     inferred = thePlan.inferColumnCapabilities(null);
     Assert.assertNotNull(inferred);
     Assert.assertEquals(ValueType.DOUBLE, inferred.getType());
-    if (NullHandling.sqlCompatible()) {
-      Assert.assertTrue(inferred.hasNulls().isMaybeTrue());
-    } else {
-      Assert.assertFalse(inferred.hasNulls().isMaybeTrue());
-    }
+    Assert.assertTrue(inferred.hasNulls().isMaybeTrue());
     Assert.assertFalse(inferred.isDictionaryEncoded().isMaybeTrue());
     Assert.assertFalse(inferred.areDictionaryValuesSorted().isMaybeTrue());
     Assert.assertFalse(inferred.areDictionaryValuesUnique().isMaybeTrue());
@@ -1151,8 +1143,7 @@ public class ExpressionPlannerTest extends InitializedNullHandlingTest
     Assert.assertTrue(
         thePlan.is(
             ExpressionPlan.Trait.NON_SCALAR_INPUTS,
-            ExpressionPlan.Trait.NEEDS_APPLIED,
-            ExpressionPlan.Trait.VECTORIZABLE
+            ExpressionPlan.Trait.NEEDS_APPLIED
         )
     );
     Assert.assertFalse(
@@ -1164,6 +1155,7 @@ public class ExpressionPlannerTest extends InitializedNullHandlingTest
             ExpressionPlan.Trait.UNKNOWN_INPUTS
         )
     );
+    assertFallbackVectorizable(thePlan);
 
     Assert.assertEquals(
         "array_to_string(map((\"multi_dictionary_string\") -> array_append(\"scalar_string\", \"multi_dictionary_string\"), \"multi_dictionary_string\"), ',')",
@@ -1251,8 +1243,7 @@ public class ExpressionPlannerTest extends InitializedNullHandlingTest
     ExpressionPlan thePlan = plan("array(long1, long2)");
     Assert.assertTrue(
         thePlan.is(
-            ExpressionPlan.Trait.NON_SCALAR_OUTPUT,
-            ExpressionPlan.Trait.VECTORIZABLE
+            ExpressionPlan.Trait.NON_SCALAR_OUTPUT
         )
     );
     Assert.assertFalse(
@@ -1265,6 +1256,7 @@ public class ExpressionPlannerTest extends InitializedNullHandlingTest
             ExpressionPlan.Trait.NON_SCALAR_INPUTS
         )
     );
+    assertFallbackVectorizable(thePlan);
     Assert.assertEquals(ExpressionType.LONG_ARRAY, thePlan.getOutputType());
 
     thePlan = plan("array(long1, double1)");
@@ -1341,10 +1333,11 @@ public class ExpressionPlannerTest extends InitializedNullHandlingTest
     );
     Assert.assertTrue(
         thePlan.is(
-            ExpressionPlan.Trait.SINGLE_INPUT_SCALAR,
-            ExpressionPlan.Trait.VECTORIZABLE
+            ExpressionPlan.Trait.SINGLE_INPUT_SCALAR
         )
     );
+    assertFallbackVectorizable(thePlan);
+
     Assert.assertEquals(ExpressionType.STRING, thePlan.getOutputType());
     ColumnCapabilities inferred = thePlan.inferColumnCapabilities(
         ExpressionType.toColumnType(thePlan.getOutputType())
@@ -1387,8 +1380,7 @@ public class ExpressionPlannerTest extends InitializedNullHandlingTest
   {
     Assert.assertTrue(
         thePlan.is(
-            ExpressionPlan.Trait.NON_SCALAR_INPUTS,
-            ExpressionPlan.Trait.VECTORIZABLE
+            ExpressionPlan.Trait.NON_SCALAR_INPUTS
         )
     );
     Assert.assertFalse(
@@ -1401,6 +1393,7 @@ public class ExpressionPlannerTest extends InitializedNullHandlingTest
             ExpressionPlan.Trait.NEEDS_APPLIED
         )
     );
+    assertFallbackVectorizable(thePlan);
   }
 
   private static void assertArrayInAndOut(ExpressionPlan thePlan)
@@ -1408,8 +1401,7 @@ public class ExpressionPlannerTest extends InitializedNullHandlingTest
     Assert.assertTrue(
         thePlan.is(
             ExpressionPlan.Trait.NON_SCALAR_INPUTS,
-            ExpressionPlan.Trait.NON_SCALAR_OUTPUT,
-            ExpressionPlan.Trait.VECTORIZABLE
+            ExpressionPlan.Trait.NON_SCALAR_OUTPUT
         )
     );
     Assert.assertFalse(
@@ -1421,6 +1413,25 @@ public class ExpressionPlannerTest extends InitializedNullHandlingTest
             ExpressionPlan.Trait.NEEDS_APPLIED
         )
     );
+    assertFallbackVectorizable(thePlan);
+  }
+
+
+  private static void assertFallbackVectorizable(ExpressionPlan thePlan)
+  {
+    if (ExpressionProcessing.allowVectorizeFallback()) {
+      Assert.assertTrue(
+          thePlan.is(
+              ExpressionPlan.Trait.VECTORIZABLE
+          )
+      );
+    } else {
+      Assert.assertFalse(
+          thePlan.is(
+              ExpressionPlan.Trait.VECTORIZABLE
+          )
+      );
+    }
   }
 
   private static class TestMacroTable extends ExprMacroTable

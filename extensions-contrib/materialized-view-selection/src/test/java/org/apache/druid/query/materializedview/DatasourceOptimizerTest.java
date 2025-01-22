@@ -35,7 +35,6 @@ import org.apache.druid.client.DirectDruidClientFactory;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.selector.HighestPriorityTierSelectorStrategy;
 import org.apache.druid.client.selector.RandomServerSelectorStrategy;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.curator.CuratorTestBase;
 import org.apache.druid.indexing.materializedview.DerivativeDataSourceMetadata;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -44,8 +43,8 @@ import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QueryRunnerTestHelper;
-import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
@@ -77,10 +76,6 @@ import java.util.concurrent.TimeUnit;
 
 public class DatasourceOptimizerTest extends CuratorTestBase
 {
-  static {
-    NullHandling.initializeForTests();
-  }
-
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
   private DerivativeDataSourceManager derivativesManager;
@@ -307,7 +302,7 @@ public class DatasourceOptimizerTest extends CuratorTestBase
 
     DirectDruidClientFactory druidClientFactory = new DirectDruidClientFactory(
         new NoopServiceEmitter(),
-        EasyMock.createMock(QueryToolChestWarehouse.class),
+        EasyMock.createMock(QueryRunnerFactoryConglomerate.class),
         EasyMock.createMock(QueryWatcher.class),
         getSmileMapper(),
         EasyMock.createMock(HttpClient.class)

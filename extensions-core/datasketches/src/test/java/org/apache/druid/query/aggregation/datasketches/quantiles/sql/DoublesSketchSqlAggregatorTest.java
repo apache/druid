@@ -22,11 +22,11 @@ package org.apache.druid.query.aggregation.datasketches.quantiles.sql;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Injector;
-import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.guice.DruidInjectorBuilder;
+import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
@@ -68,6 +68,7 @@ import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
 import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.calcite.util.DruidModuleCollection;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.timeline.DataSegment;
@@ -90,10 +91,9 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
     }
 
     @Override
-    public void configureGuice(DruidInjectorBuilder builder)
+    public DruidModule getCoreModule()
     {
-      super.configureGuice(builder);
-      builder.addModule(new DoublesSketchModule());
+      return DruidModuleCollection.of(super.getCoreModule(), new DoublesSketchModule());
     }
 
     @Override
@@ -390,7 +390,8 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                         JoinType.INNER,
                         null,
                         TestExprMacroTable.INSTANCE,
-                        null
+                        null,
+                        JoinAlgorithm.BROADCAST
                     )
                 )
                 .intervals(querySegmentSpec(Intervals.ETERNITY))
@@ -398,7 +399,8 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                     new ExpressionVirtualColumn("v0", "946684800000", ColumnType.LONG, TestExprMacroTable.INSTANCE),
                     new ExpressionVirtualColumn("v1", "case_searched((\"j0.a0\" < \"_a0\"),'val2',((\"j0.a0\" >= \"_a0\") && (\"j0.a0\" < \"_a1\")),'val3',(\"j0.a0\" >= \"_a1\"),'val1',null)", ColumnType.STRING, TestExprMacroTable.INSTANCE)
                 )
-                .columns("j0.a0", "j0.d0", "v0", "v1")
+                .columns("v0", "j0.d0", "j0.a0", "v1")
+                .columnTypes(ColumnType.LONG, ColumnType.STRING, ColumnType.LONG, ColumnType.STRING)
                 .build()
         ),
         expectedResults
@@ -409,34 +411,18 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
   @Test
   public void testQuantileOnCastedString()
   {
-    final List<Object[]> expectedResults;
-    if (NullHandling.replaceWithDefault()) {
-      expectedResults = ImmutableList.of(
-          new Object[]{
-              0.0,
-              0.0,
-              10.1,
-              10.1,
-              20.2,
-              0.0,
-              10.1,
-              0.0
-          }
-      );
-    } else {
-      expectedResults = ImmutableList.of(
-          new Object[]{
-              1.0,
-              2.0,
-              10.1,
-              10.1,
-              20.2,
-              Double.NaN,
-              2.0,
-              Double.NaN
-          }
-      );
-    }
+    final List<Object[]> expectedResults = ImmutableList.of(
+        new Object[]{
+            1.0,
+            2.0,
+            10.1,
+            10.1,
+            20.2,
+            Double.NaN,
+            2.0,
+            Double.NaN
+        }
+    );
 
     testQuery(
         "SELECT\n"
@@ -502,12 +488,7 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
   @Test
   public void testQuantileOnInnerQuery()
   {
-    final List<Object[]> expectedResults;
-    if (NullHandling.replaceWithDefault()) {
-      expectedResults = ImmutableList.of(new Object[]{7.0, 11.0});
-    } else {
-      expectedResults = ImmutableList.of(new Object[]{5.25, 8.0});
-    }
+    final List<Object[]> expectedResults = ImmutableList.of(new Object[]{5.25, 8.0});
 
     testQuery(
         "SELECT AVG(x), APPROX_QUANTILE_DS(x, 0.98)\n"
@@ -534,8 +515,6 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                         .setGranularity(Granularities.ALL)
                         .setAggregatorSpecs(
                             new DoubleSumAggregatorFactory("_a0:sum", "a0"),
-                            NullHandling.replaceWithDefault() ?
-                            new CountAggregatorFactory("_a0:count") :
                             new FilteredAggregatorFactory(
                                 new CountAggregatorFactory("_a0:count"),
                                 notNull("a0")
@@ -889,7 +868,7 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                   .dataSource(CalciteTests.DATASOURCE1)
                   .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
                   .granularity(Granularities.ALL)
-                  .filters(numericEquality("dim2", 0L, ColumnType.LONG))
+                  .filters(equality("dim2", 0L, ColumnType.LONG))
                   .aggregators(ImmutableList.of(
                       new DoublesSketchAggregatorFactory("a0:agg", "m1", null),
                       new DoublesSketchAggregatorFactory("a1:agg", "qsketch_m1", null),
@@ -936,7 +915,7 @@ public class DoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                   .dataSource(CalciteTests.DATASOURCE1)
                   .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
                   .granularity(Granularities.ALL)
-                  .filters(numericEquality("dim2", 0L, ColumnType.LONG))
+                  .filters(equality("dim2", 0L, ColumnType.LONG))
                   .aggregators(ImmutableList.of(
                       new DoublesSketchAggregatorFactory("a0:agg", "m1", null),
                       new DoublesSketchAggregatorFactory("a1:agg", "qsketch_m1", null),

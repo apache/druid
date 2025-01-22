@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputRow;
@@ -60,10 +59,6 @@ import java.util.Optional;
 
 public class KafkaInputFormatTest
 {
-  static {
-    NullHandling.initializeForTests();
-  }
-
   private static final long TIMESTAMP_MILLIS = DateTimes.of("2021-06-24").getMillis();
   private static final String TOPIC = "sample";
   private static final byte[] SIMPLE_JSON_KEY_BYTES = StringUtils.toUtf8(
@@ -685,6 +680,105 @@ public class KafkaInputFormatTest
         Assert.assertTrue(row.getDimension("root_baz2").isEmpty());
         Assert.assertTrue(row.getDimension("path_omg2").isEmpty());
         Assert.assertTrue(row.getDimension("jq_omg2").isEmpty());
+
+        numActualIterations++;
+      }
+
+      Assert.assertEquals(numExpectedIterations, numActualIterations);
+    }
+  }
+
+  @Test
+  public void testKeyInCsvFormat() throws IOException
+  {
+    format = new KafkaInputFormat(
+        new KafkaStringHeaderFormat(null),
+        // Key Format
+        new CsvInputFormat(
+            // name of the field doesn't matter, it just has to be something
+            Collections.singletonList("foo"),
+            null,
+            false,
+            false,
+            0,
+            null
+        ),
+        // Value Format
+        new JsonInputFormat(
+            new JSONPathSpec(true, ImmutableList.of()),
+            null,
+            null,
+            false,
+            false
+        ),
+        "kafka.newheader.",
+        "kafka.newkey.key",
+        "kafka.newts.timestamp",
+        "kafka.newtopic.topic"
+    );
+
+    Headers headers = new RecordHeaders(SAMPLE_HEADERS);
+    KafkaRecordEntity inputEntity =
+        makeInputEntity(
+            // x,y,z are ignored; key will be "sampleKey"
+            StringUtils.toUtf8("sampleKey,x,y,z"),
+            SIMPLE_JSON_VALUE_BYTES,
+            headers
+        );
+
+    final InputEntityReader reader = format.createReader(
+        new InputRowSchema(
+            new TimestampSpec("timestamp", "iso", null),
+            new DimensionsSpec(
+                DimensionsSpec.getDefaultSchemas(
+                    ImmutableList.of(
+                        "bar",
+                        "foo",
+                        "kafka.newkey.key",
+                        "kafka.newheader.encoding",
+                        "kafka.newheader.kafkapkc",
+                        "kafka.newts.timestamp",
+                        "kafka.newtopic.topic"
+                    )
+                )
+            ),
+            ColumnsFilter.all()
+        ),
+        newSettableByteEntity(inputEntity),
+        null
+    );
+
+    final int numExpectedIterations = 1;
+    try (CloseableIterator<InputRow> iterator = reader.read()) {
+      int numActualIterations = 0;
+      while (iterator.hasNext()) {
+
+        final InputRow row = iterator.next();
+        Assert.assertEquals(
+            Arrays.asList(
+                "bar",
+                "foo",
+                "kafka.newkey.key",
+                "kafka.newheader.encoding",
+                "kafka.newheader.kafkapkc",
+                "kafka.newts.timestamp",
+                "kafka.newtopic.topic"
+            ),
+            row.getDimensions()
+        );
+        // Payload verifications
+        // this isn't super realistic, since most of these columns are not actually defined in the dimensionSpec
+        // but test reading them anyway since it isn't technically illegal
+
+        Assert.assertEquals(DateTimes.of("2021-06-25"), row.getTimestamp());
+        Assert.assertEquals("x", Iterables.getOnlyElement(row.getDimension("foo")));
+        Assert.assertEquals("4", Iterables.getOnlyElement(row.getDimension("baz")));
+        Assert.assertTrue(row.getDimension("bar").isEmpty());
+
+        verifyHeader(row);
+
+        // Key verification
+        Assert.assertEquals("sampleKey", Iterables.getOnlyElement(row.getDimension("kafka.newkey.key")));
 
         numActualIterations++;
       }

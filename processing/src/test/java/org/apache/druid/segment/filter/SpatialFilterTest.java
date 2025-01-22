@@ -578,7 +578,7 @@ public class SpatialFilterTest extends InitializedNullHandlingTest
                                   .build();
 
     List<Result<TimeseriesResultValue>> expectedResults = Collections.singletonList(
-        new Result<TimeseriesResultValue>(
+        new Result<>(
             DateTimes.of("2013-01-01T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
@@ -630,7 +630,7 @@ public class SpatialFilterTest extends InitializedNullHandlingTest
                                   .build();
 
     List<Result<TimeseriesResultValue>> expectedResults = Collections.singletonList(
-        new Result<TimeseriesResultValue>(
+        new Result<>(
             DateTimes.of("2013-01-01T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
@@ -681,7 +681,7 @@ public class SpatialFilterTest extends InitializedNullHandlingTest
                                   .build();
 
     List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
-        new Result<TimeseriesResultValue>(
+        new Result<>(
             DateTimes.of("2013-01-01T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
@@ -690,7 +690,7 @@ public class SpatialFilterTest extends InitializedNullHandlingTest
                             .build()
             )
         ),
-        new Result<TimeseriesResultValue>(
+        new Result<>(
             DateTimes.of("2013-01-02T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
@@ -699,7 +699,7 @@ public class SpatialFilterTest extends InitializedNullHandlingTest
                             .build()
             )
         ),
-        new Result<TimeseriesResultValue>(
+        new Result<>(
             DateTimes.of("2013-01-03T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
@@ -708,7 +708,7 @@ public class SpatialFilterTest extends InitializedNullHandlingTest
                             .build()
             )
         ),
-        new Result<TimeseriesResultValue>(
+        new Result<>(
             DateTimes.of("2013-01-04T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
@@ -717,7 +717,7 @@ public class SpatialFilterTest extends InitializedNullHandlingTest
                             .build()
             )
         ),
-        new Result<TimeseriesResultValue>(
+        new Result<>(
             DateTimes.of("2013-01-05T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()

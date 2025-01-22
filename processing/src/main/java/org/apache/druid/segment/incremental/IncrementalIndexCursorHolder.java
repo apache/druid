@@ -29,10 +29,13 @@ import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.Cursors;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.filter.ValueMatchers;
+import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
 import java.util.Iterator;
 import java.util.List;
+import java.util.function.Supplier;
 
 public class IncrementalIndexCursorHolder implements CursorHolder
 {
@@ -70,10 +73,13 @@ public class IncrementalIndexCursorHolder implements CursorHolder
       spec.getQueryMetrics().vectorized(false);
     }
 
+    IncrementalIndexRowHolder currentRow = new IncrementalIndexRowHolder();
     return new IncrementalIndexCursor(
         rowSelector,
+        currentRow,
+        () -> makeSelectorFactory(spec, currentRow),
         spec,
-        Cursors.getTimeOrdering(ordering)
+        getTimeOrder(ordering)
     );
   }
 
@@ -83,47 +89,50 @@ public class IncrementalIndexCursorHolder implements CursorHolder
     return ordering;
   }
 
+  public ColumnSelectorFactory makeSelectorFactory(CursorBuildSpec buildSpec, IncrementalIndexRowHolder currEntry)
+  {
+    return new IncrementalIndexColumnSelectorFactory(
+        rowSelector,
+        currEntry,
+        buildSpec,
+        getTimeOrder()
+    );
+  }
+
   static class IncrementalIndexCursor implements Cursor
   {
-    private final IncrementalIndexRowSelector rowSelector;
+    private final Iterable<IncrementalIndexRow> cursorIterable;
     private final IncrementalIndexRowHolder currEntry;
     private final ColumnSelectorFactory columnSelectorFactory;
     private final ValueMatcher filterMatcher;
     private final int maxRowIndex;
+    @MonotonicNonNull
     private Iterator<IncrementalIndexRow> baseIter;
-    private Iterable<IncrementalIndexRow> cursorIterable;
-    private boolean emptyRange;
     private int numAdvanced;
     private boolean done;
 
     IncrementalIndexCursor(
-        IncrementalIndexRowSelector index,
+        IncrementalIndexRowSelector rowSelector,
+        IncrementalIndexRowHolder currentRow,
+        Supplier<ColumnSelectorFactory> columnSelectorFactorySupplier,
         CursorBuildSpec buildSpec,
         Order timeOrder
     )
     {
-      currEntry = new IncrementalIndexRowHolder();
+      currEntry = currentRow;
       // Set maxRowIndex before creating the filterMatcher. See https://github.com/apache/druid/pull/6340
-      maxRowIndex = index.getLastRowIndex();
+      maxRowIndex = rowSelector.getLastRowIndex();
+      columnSelectorFactory = columnSelectorFactorySupplier.get();
       numAdvanced = -1;
 
-      rowSelector = index;
       cursorIterable = rowSelector.getFacts().timeRangeIterable(
           timeOrder == Order.DESCENDING,
           buildSpec.getInterval().getStartMillis(),
           buildSpec.getInterval().getEndMillis()
       );
-      columnSelectorFactory = new IncrementalIndexColumnSelectorFactory(
-          rowSelector,
-          buildSpec.getVirtualColumns(),
-          timeOrder,
-          currEntry
-      );
       filterMatcher = buildSpec.getFilter() == null
                       ? ValueMatchers.allTrue()
                       : buildSpec.getFilter().makeMatcher(columnSelectorFactory);
-      emptyRange = !cursorIterable.iterator().hasNext();
-
       reset();
     }
 
@@ -228,7 +237,7 @@ public class IncrementalIndexCursorHolder implements CursorHolder
         numAdvanced++;
       }
 
-      done = !foundMatched && (emptyRange || !baseIter.hasNext());
+      done = !foundMatched;
     }
 
     private boolean beyondMaxRowIndex(int rowIndex)
@@ -237,6 +246,15 @@ public class IncrementalIndexCursorHolder implements CursorHolder
       // rows are order by timestamp, not rowIndex,
       // so we still need to go through all rows to skip rows added after cursor created
       return rowIndex > maxRowIndex;
+    }
+  }
+
+  private static Order getTimeOrder(List<OrderBy> ordering)
+  {
+    if (!ordering.isEmpty() && ColumnHolder.TIME_COLUMN_NAME.equals(ordering.get(0).getColumnName())) {
+      return ordering.get(0).getOrder();
+    } else {
+      return Order.NONE;
     }
   }
 }

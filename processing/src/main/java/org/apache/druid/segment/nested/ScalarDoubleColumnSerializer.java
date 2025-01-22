@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment.nested;
 
-import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
@@ -35,6 +34,7 @@ import org.apache.druid.segment.serde.ColumnSerializerUtils;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
 import javax.annotation.Nullable;
+import java.io.File;
 import java.io.IOException;
 import java.nio.ByteOrder;
 
@@ -66,7 +66,7 @@ public class ScalarDoubleColumnSerializer extends ScalarNestedCommonFormatColumn
   }
 
   @Override
-  public void openDictionaryWriter() throws IOException
+  public void openDictionaryWriter(File segmentBaseDir) throws IOException
   {
     dictionaryWriter = new FixedIndexedWriter<>(
         segmentWriteOutMedium,
@@ -79,7 +79,7 @@ public class ScalarDoubleColumnSerializer extends ScalarNestedCommonFormatColumn
     dictionaryIdLookup = closer.register(
         new DictionaryIdLookup(
             name,
-            FileUtils.getTempDir(),
+            segmentBaseDir,
             null,
             null,
             dictionaryWriter,
@@ -136,10 +136,19 @@ public class ScalarDoubleColumnSerializer extends ScalarNestedCommonFormatColumn
   @Override
   protected void writeDictionaryFile(FileSmoosher smoosher) throws IOException
   {
-    if (dictionaryIdLookup.getDoubleBuffer() != null) {
-      writeInternal(smoosher, dictionaryIdLookup.getDoubleBuffer(), ColumnSerializerUtils.DOUBLE_DICTIONARY_FILE_NAME);
+    if (dictionaryIdLookup.getDoubleBufferMapper() != null) {
+      copyFromTempSmoosh(smoosher, dictionaryIdLookup.getDoubleBufferMapper());
     } else {
       writeInternal(smoosher, dictionaryWriter, ColumnSerializerUtils.DOUBLE_DICTIONARY_FILE_NAME);
     }
+  }
+
+  @Override
+  public int getCardinality()
+  {
+    if (writeDictionary) {
+      return dictionaryWriter.getCardinality();
+    }
+    return dictionaryIdLookup.getDoubleCardinality();
   }
 }

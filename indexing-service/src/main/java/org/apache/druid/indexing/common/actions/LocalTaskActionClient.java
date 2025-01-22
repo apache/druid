@@ -69,6 +69,7 @@ public class LocalTaskActionClient implements TaskActionClient
       return result;
     }
     catch (Throwable t) {
+      log.error(t, "Failed to perform action[%s]", taskAction);
       throw new RuntimeException(t);
     }
   }

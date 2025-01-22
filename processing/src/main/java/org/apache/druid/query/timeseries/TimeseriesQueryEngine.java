@@ -20,6 +20,7 @@
 package org.apache.druid.query.timeseries;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import org.apache.druid.collections.NonBlockingPool;
@@ -38,7 +39,6 @@ import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorAdapters;
 import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.vector.VectorCursorGranularizer;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
@@ -104,7 +104,7 @@ public class TimeseriesQueryEngine
 
     final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(makeCursorBuildSpec(query, timeseriesQueryMetrics));
     if (cursorHolder.isPreAggregated()) {
-      query = query.withAggregatorSpecs(AggregatorUtil.getCombiningAggregators(query.getAggregatorSpecs()));
+      query = query.withAggregatorSpecs(Preconditions.checkNotNull(cursorHolder.getAggregatorsForPreAggregated()));
     }
     try {
       final Sequence<Result<TimeseriesResultValue>> result;
@@ -333,6 +333,7 @@ public class TimeseriesQueryEngine
                        .setInterval(query.getSingleInterval())
                        .setFilter(Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getFilter())))
                        .setVirtualColumns(query.getVirtualColumns())
+                       .setPhysicalColumns(query.getRequiredColumns())
                        .setAggregators(query.getAggregatorSpecs())
                        .setQueryContext(query.context())
                        .setPreferredOrdering(

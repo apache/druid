@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
-import { dedupe, F, SqlExpression, SqlFunction } from '@druid-toolkit/query';
 import type { CancelToken } from 'axios';
+import { dedupe, F, SqlExpression, SqlFunction } from 'druid-query-toolkit';
 import * as JSONBig from 'json-bigint-native';
 
 import type {

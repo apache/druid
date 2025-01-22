@@ -46,7 +46,7 @@ public class MetadataStorageActionHandlerTest
   @Before
   public void setup()
   {
-    this.handler = new MetadataStorageActionHandler<String, String, String, String>()
+    this.handler = new MetadataStorageActionHandler<>()
     {
       @Override
       public void insert(

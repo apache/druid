@@ -22,12 +22,17 @@ package org.apache.druid.segment;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.last.LongLastAggregatorFactory;
+import org.apache.druid.testing.InitializedNullHandlingTest;
+import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -40,7 +45,7 @@ import java.util.stream.Collectors;
 /**
  *
  */
-public class MetadataTest
+public class MetadataTest extends InitializedNullHandlingTest
 {
   @Test
   public void testSerde() throws Exception
@@ -57,6 +62,7 @@ public class MetadataTest
         null,
         Granularities.ALL,
         Boolean.FALSE,
+        null,
         null
     );
 
@@ -83,13 +89,32 @@ public class MetadataTest
     AggregatorFactory[] aggs = new AggregatorFactory[]{
         new LongMaxAggregatorFactory("n", "f")
     };
+    List<AggregateProjectionMetadata> projectionSpecs = ImmutableList.of(
+        new AggregateProjectionMetadata(
+            new AggregateProjectionMetadata.Schema(
+                "some_projection",
+                "__gran",
+                VirtualColumns.create(
+                    Granularities.toVirtualColumn(Granularities.HOUR, "__gran")
+                ),
+                Arrays.asList("a", "b", "__gran"),
+                new AggregatorFactory[]{
+                    new LongLastAggregatorFactory("atLongLast", "d", null)
+                },
+                makeOrderBy("a", "b", "__gran")
+            ),
+            1234
+        )
+    );
+
     final Metadata m1 = new Metadata(
         Collections.singletonMap("k", "v"),
         aggs,
         new TimestampSpec("ds", "auto", null),
         Granularities.ALL,
         Boolean.FALSE,
-        null
+        null,
+        projectionSpecs
     );
 
     final Metadata m2 = new Metadata(
@@ -98,7 +123,8 @@ public class MetadataTest
         new TimestampSpec("ds", "auto", null),
         Granularities.ALL,
         Boolean.FALSE,
-        null
+        null,
+        projectionSpecs
     );
 
     final Metadata m3 = new Metadata(
@@ -107,7 +133,8 @@ public class MetadataTest
         new TimestampSpec("ds", "auto", null),
         Granularities.ALL,
         Boolean.TRUE,
-        null
+        null,
+        projectionSpecs
     );
 
     final Metadata merged = new Metadata(
@@ -118,7 +145,8 @@ public class MetadataTest
         new TimestampSpec("ds", "auto", null),
         Granularities.ALL,
         Boolean.FALSE,
-        Cursors.ascendingTimeOrder()
+        Cursors.ascendingTimeOrder(),
+        projectionSpecs
     );
     Assert.assertEquals(merged, Metadata.merge(ImmutableList.of(m1, m2), null));
 
@@ -129,7 +157,15 @@ public class MetadataTest
     metadataToBeMerged.add(null);
 
     final Metadata merged2 =
-        new Metadata(Collections.singletonMap("k", "v"), null, null, null, null, Cursors.ascendingTimeOrder());
+        new Metadata(
+            Collections.singletonMap("k", "v"),
+            null,
+            null,
+            null,
+            null,
+            Cursors.ascendingTimeOrder(),
+            projectionSpecs
+        );
 
     Assert.assertEquals(merged2, Metadata.merge(metadataToBeMerged, null));
 
@@ -139,7 +175,15 @@ public class MetadataTest
     };
 
     final Metadata merged3 =
-        new Metadata(Collections.singletonMap("k", "v"), explicitAggs, null, null, null, Cursors.ascendingTimeOrder());
+        new Metadata(
+            Collections.singletonMap("k", "v"),
+            explicitAggs,
+            null,
+            null,
+            null,
+            Cursors.ascendingTimeOrder(),
+            projectionSpecs
+        );
 
     Assert.assertEquals(
         merged3,
@@ -152,7 +196,8 @@ public class MetadataTest
         new TimestampSpec("ds", "auto", null),
         Granularities.ALL,
         null,
-        Cursors.ascendingTimeOrder()
+        Cursors.ascendingTimeOrder(),
+        projectionSpecs
     );
     Assert.assertEquals(
         merged4,
@@ -216,6 +261,107 @@ public class MetadataTest
                 makeOrderBy("bar", "foo")
             )
         )
+    );
+  }
+
+  @Test
+  public void testMergeProjectionsUnexpectedMismatch()
+  {
+    List<AggregateProjectionMetadata> p1 = ImmutableList.of(
+        new AggregateProjectionMetadata(
+            new AggregateProjectionMetadata.Schema(
+                "some_projection",
+                "__gran",
+                VirtualColumns.create(
+                    Granularities.toVirtualColumn(Granularities.HOUR, "__gran")
+                ),
+                Arrays.asList("a", "b", "__gran"),
+                new AggregatorFactory[]{
+                    new LongLastAggregatorFactory("atLongLast", "d", null)
+                },
+                makeOrderBy("a", "b", "__gran")
+            ),
+            654321
+        )
+    );
+
+    List<AggregateProjectionMetadata> p2 = ImmutableList.of(
+        new AggregateProjectionMetadata(
+            new AggregateProjectionMetadata.Schema(
+                "some_projection",
+                "__gran",
+                VirtualColumns.create(
+                    Granularities.toVirtualColumn(Granularities.HOUR, "__gran")
+                ),
+                Arrays.asList("a", "b", "_gran"),
+                new AggregatorFactory[]{
+                    new LongSumAggregatorFactory("longSum", "d")
+                },
+                makeOrderBy("a", "b", "__gran")
+            ),
+            1234
+        )
+    );
+
+    List<AggregateProjectionMetadata> p3 = ImmutableList.of(
+        new AggregateProjectionMetadata(
+            new AggregateProjectionMetadata.Schema(
+                "some_projection",
+                "__gran",
+                VirtualColumns.create(
+                    Granularities.toVirtualColumn(Granularities.HOUR, "__gran")
+                ),
+                Arrays.asList("a", "b", "__gran"),
+                new AggregatorFactory[]{
+                    new LongLastAggregatorFactory("atLongLast", "d", null)
+                },
+                makeOrderBy("a", "b", "__gran")
+            ),
+            12121
+        ),
+        new AggregateProjectionMetadata(
+            new AggregateProjectionMetadata.Schema(
+                "some_projection2",
+                "__gran",
+                VirtualColumns.create(
+                    Granularities.toVirtualColumn(Granularities.DAY, "__gran")
+                ),
+                Arrays.asList("__gran", "a"),
+                new AggregatorFactory[]{
+                    new LongSumAggregatorFactory("longSum", "d")
+                },
+                makeOrderBy("__gran", "a")
+            ),
+            555
+        )
+    );
+
+    Throwable t = Assert.assertThrows(
+        DruidException.class,
+        () -> Metadata.validateProjections(Arrays.asList(p1, p2))
+    );
+    MatcherAssert.assertThat(
+        t.getMessage(),
+        CoreMatchers.startsWith("Unable to merge projections: mismatched projections")
+    );
+
+    t = Assert.assertThrows(
+        DruidException.class,
+        () -> Metadata.validateProjections(Arrays.asList(p1, p3))
+    );
+
+    MatcherAssert.assertThat(
+        t.getMessage(),
+        CoreMatchers.startsWith("Unable to merge projections: mismatched projections count")
+    );
+
+    t = Assert.assertThrows(
+        DruidException.class,
+        () -> Metadata.validateProjections(Arrays.asList(p1, null))
+    );
+    MatcherAssert.assertThat(
+        t.getMessage(),
+        CoreMatchers.startsWith("Unable to merge projections: some projections were null")
     );
   }
 

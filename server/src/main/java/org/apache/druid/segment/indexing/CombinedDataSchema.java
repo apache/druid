@@ -53,6 +53,7 @@ public class CombinedDataSchema extends DataSchema
         granularitySpec,
         transformSpec,
         null,
+        null,
         null
     );
     this.multiValuedDimensions = multiValuedDimensions;

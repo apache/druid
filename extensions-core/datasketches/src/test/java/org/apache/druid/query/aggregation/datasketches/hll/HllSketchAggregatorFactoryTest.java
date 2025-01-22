@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.aggregation.datasketches.hll;
 
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.datasketches.hll.HllSketch;
 import org.apache.datasketches.hll.TgtHllType;
 import org.apache.druid.java.util.common.StringEncoding;
@@ -120,11 +121,9 @@ public class HllSketchAggregatorFactoryTest
   }
 
   @Test
-  public void testEqualsSameObject()
+  public void testEquals()
   {
-    //noinspection EqualsWithItself
-    Assert.assertEquals(target, target);
-    Assert.assertArrayEquals(target.getCacheKey(), target.getCacheKey());
+    EqualsVerifier.forClass(HllSketchAggregatorFactory.class).usingGetClass().verify();
   }
 
   @Test
@@ -229,6 +228,42 @@ public class HllSketchAggregatorFactoryTest
     );
     Assert.assertEquals(target, other);
     Assert.assertArrayEquals(target.getCacheKey(), other.getCacheKey());
+  }
+
+  @Test
+  public void testCanSubstitute()
+  {
+    HllSketchBuildAggregatorFactory factory = new HllSketchBuildAggregatorFactory(
+        NAME,
+        FIELD_NAME,
+        LG_K,
+        TGT_HLL_TYPE,
+        STRING_ENCODING,
+        true,
+        true
+    );
+    HllSketchBuildAggregatorFactory other = new HllSketchBuildAggregatorFactory(
+        "other name",
+        FIELD_NAME,
+        LG_K,
+        TGT_HLL_TYPE,
+        STRING_ENCODING,
+        false,
+        false
+    );
+
+    HllSketchBuildAggregatorFactory incompatible = new HllSketchBuildAggregatorFactory(
+        NAME,
+        "different field",
+        LG_K,
+        TGT_HLL_TYPE,
+        STRING_ENCODING,
+        false,
+        false
+    );
+    Assert.assertNotNull(other.substituteCombiningFactory(factory));
+    Assert.assertNotNull(factory.substituteCombiningFactory(other));
+    Assert.assertNull(factory.substituteCombiningFactory(incompatible));
   }
 
   @Test

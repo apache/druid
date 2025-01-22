@@ -16,15 +16,16 @@
  * limitations under the License.
  */
 
-import { C, SqlFunction, SqlQuery } from '@druid-toolkit/query';
+import { C, SqlFunction, SqlQuery } from 'druid-query-toolkit';
 
 import { filterMap, uniq } from '../../../utils';
 import { Measure } from '../models';
 import { KNOWN_AGGREGATIONS } from '../utils';
 
 export function rewriteAggregate(query: SqlQuery, measures: Measure[]): SqlQuery {
-  const usedMeasures: Map<string, boolean> = new Map();
-  return query.walk(ex => {
+  const usedMeasures = new Map<string, boolean>();
+  const queriesToRewrite: SqlQuery[] = [];
+  const newQuery = query.walk(ex => {
     if (ex instanceof SqlFunction && ex.getEffectiveFunctionName() === Measure.AGGREGATE) {
       if (ex.numArgs() !== 1)
         throw new Error(`${Measure.AGGREGATE} function must have exactly 1 argument`);
@@ -50,17 +51,27 @@ export function rewriteAggregate(query: SqlQuery, measures: Measure[]): SqlQuery
     if (ex instanceof SqlQuery) {
       const queryMeasures = Measure.extractQueryMeasures(ex);
       if (queryMeasures.length) {
-        return ex.applyForEach(
-          uniq(
-            filterMap(queryMeasures, queryMeasure =>
-              usedMeasures.get(queryMeasure.name) ? queryMeasure.expression : undefined,
-            ).flatMap(ex => ex.getUsedColumnNames()),
-          ).filter(columnName => !ex.getSelectIndexForOutputColumn(columnName)),
-          (q, columnName) => q.addSelect(C(columnName)),
-        );
+        queriesToRewrite.push(ex);
       }
     }
 
     return ex;
+  }) as SqlQuery;
+
+  if (!queriesToRewrite.length) return newQuery;
+
+  return newQuery.walk(subQuery => {
+    if (subQuery instanceof SqlQuery && queriesToRewrite.includes(subQuery)) {
+      return subQuery.applyForEach(
+        uniq(
+          filterMap(measures, queryMeasure =>
+            usedMeasures.get(queryMeasure.name) ? queryMeasure.expression : undefined,
+          ).flatMap(ex => ex.getUsedColumnNames()),
+        ).filter(columnName => subQuery.getSelectIndexForOutputColumn(columnName) === -1),
+        (q, columnName) => q.addSelect(C(columnName)),
+      );
+    }
+
+    return subQuery;
   }) as SqlQuery;
 }

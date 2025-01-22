@@ -18,7 +18,7 @@
 
 import { Button, Menu, MenuDivider, MenuItem, Popover, Position } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { SqlQuery, SqlTable } from '@druid-toolkit/query';
+import { SqlQuery, SqlTable } from 'druid-query-toolkit';
 import type { JSX } from 'react';
 import React from 'react';
 
@@ -31,9 +31,14 @@ function formatQuerySource(source: SqlQuery | undefined): string | JSX.Element {
   if (!(source instanceof SqlQuery)) return 'No source selected';
   const fromExpressions = source.getFromExpressions();
   if (fromExpressions.length !== 1) return 'Multiple FROM expressions';
-  const fromExpression = fromExpressions[0];
-  if (!(fromExpression instanceof SqlTable)) return 'Complex FROM expression';
-  return fromExpression.getName();
+  const fromExpression = fromExpressions[0].getUnderlyingExpression();
+  if (fromExpression instanceof SqlTable) {
+    return fromExpression.getName();
+  } else if (fromExpression instanceof SqlQuery) {
+    return formatQuerySource(fromExpression);
+  } else {
+    return 'Complex FROM expression';
+  }
 }
 
 export interface SourcePaneProps {
@@ -48,8 +53,8 @@ export interface SourcePaneProps {
 export const SourcePane = React.memo(function SourcePane(props: SourcePaneProps) {
   const { selectedSource, onSelectTable, onShowSourceQuery, fill, minimal, disabled } = props;
 
-  const [tables] = useQueryManager<string, string[]>({
-    initQuery: '',
+  const [tables] = useQueryManager<null, string[]>({
+    initQuery: null,
     processQuery: async () => {
       const tables = await queryDruidSql<{ TABLE_NAME: string }>({
         query: `SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'TABLE'`,

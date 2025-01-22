@@ -43,7 +43,7 @@ import java.util.Objects;
  */
 public class IndexSpec
 {
-  public static IndexSpec DEFAULT = IndexSpec.builder().build();
+  public static final IndexSpec DEFAULT = IndexSpec.builder().build();
 
   public static Builder builder()
   {
@@ -169,9 +169,7 @@ public class IndexSpec
   {
     return objectMapper.convertValue(
         this,
-        new TypeReference<Map<String, Object>>()
-        {
-        }
+        new TypeReference<>() {}
     );
   }
 

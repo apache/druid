@@ -30,7 +30,6 @@ import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.calcite.avatica.SqlType;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.exception.AllowedRegexErrorResponseTransformStrategy;
 import org.apache.druid.common.exception.ErrorResponseTransformStrategy;
 import org.apache.druid.common.guava.SettableSupplier;
@@ -77,9 +76,9 @@ import org.apache.druid.server.mocks.MockHttpServletRequest;
 import org.apache.druid.server.mocks.MockHttpServletResponse;
 import org.apache.druid.server.scheduling.HiLoQueryLaningStrategy;
 import org.apache.druid.server.scheduling.ManualQueryPrioritizationStrategy;
-import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthenticationResult;
+import org.apache.druid.server.security.AuthorizationResult;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.DirectStatement;
@@ -119,7 +118,6 @@ import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.StreamingOutput;
-
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -235,7 +233,7 @@ public class SqlResourceTest extends CalciteTestBase
 
     executorService = MoreExecutors.listeningDecorator(Execs.multiThreaded(8, "test_sql_resource_%s"));
 
-    final PlannerConfig plannerConfig = PlannerConfig.builder().serializeComplexValues(false).build();
+    final PlannerConfig plannerConfig = PlannerConfig.builder().build();
     final DruidSchemaCatalog rootSchema = CalciteTests.createMockRootSchema(
         conglomerate,
         walker,
@@ -352,17 +350,36 @@ public class SqlResourceTest extends CalciteTestBase
   @Test
   public void testUnauthorized()
   {
-    try {
-      postForAsyncResponse(
-          createSimpleQueryWithId("id", "select count(*) from forbiddenDatasource"),
-          request()
-      );
-      Assert.fail("doPost did not throw ForbiddenException for an unauthorized query");
-    }
-    catch (ForbiddenException e) {
-      // expected
-    }
+    ForbiddenException e = Assert.assertThrows(ForbiddenException.class, () -> {
+      postForAsyncResponse(createSimpleQueryWithId("id", "select count(*) from forbiddenDatasource"), request());
+    });
+    Assert.assertEquals("Unauthorized", e.getMessage());
     Assert.assertEquals(1, testRequestLogger.getSqlQueryLogs().size());
+    Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
+  }
+
+  @Test
+  public void testRestricted() throws Exception
+  {
+    req = makeSuperUserReq();
+    final List<Map<String, Object>> resultAsSuperUser = doPost(createSimpleQueryWithId(
+        "id",
+        "select count(*) as cnt from restrictedDatasource_m1_is_6"
+    )).rhs;
+    Assert.assertEquals(ImmutableList.of(ImmutableMap.of("cnt", 6)), resultAsSuperUser);
+
+    checkSqlRequestLog(true, CalciteTests.TEST_SUPERUSER_NAME);
+    testRequestLogger.clear();
+    Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
+
+    req = makeRegularUserReq();
+    final List<Map<String, Object>> resultAsRegularUser = doPost(createSimpleQueryWithId(
+        "id",
+        "select count(*) as cnt from restrictedDatasource_m1_is_6"
+    )).rhs;
+    Assert.assertEquals(ImmutableList.of(ImmutableMap.of("cnt", 1)), resultAsRegularUser);
+    checkSqlRequestLog(true);
+    testRequestLogger.clear();
     Assert.assertTrue(lifecycleManager.getAll("id").isEmpty());
   }
 
@@ -555,11 +572,6 @@ public class SqlResourceTest extends CalciteTestBase
     ).rhs;
 
     Assert.assertEquals(
-        NullHandling.replaceWithDefault() ?
-        ImmutableList.of(
-            ImmutableMap.of("t1", "2001-01-03T00:00:00.000Z", "t2", "-292275055-05-16T16:47:04.192Z")
-            // t2 represents Long.MIN converted to a timestamp
-        ) :
         ImmutableList.of(
             Maps.transformValues(
                 ImmutableMap.of("t1", "2001-01-03T00:00:00.000Z", "t2", ""),
@@ -609,12 +621,6 @@ public class SqlResourceTest extends CalciteTestBase
     ).rhs;
 
     Assert.assertEquals(
-        NullHandling.replaceWithDefault() ?
-        ImmutableList.of(
-            ImmutableMap.of("x", "", "y", ""),
-            ImmutableMap.of("x", "a", "y", "a"),
-            ImmutableMap.of("x", "abc", "y", "abc")
-        ) :
         ImmutableList.of(
             // x and y both should be null instead of empty string
             Maps.transformValues(ImmutableMap.of("x", "", "y", ""), (val) -> null),
@@ -630,7 +636,6 @@ public class SqlResourceTest extends CalciteTestBase
   public void testArrayResultFormat() throws Exception
   {
     final String query = "SELECT *, CASE dim2 WHEN '' THEN dim2 END FROM foo LIMIT 2";
-    final String nullStr = NullHandling.replaceWithDefault() ? "" : null;
 
     Assert.assertEquals(
         ImmutableList.of(
@@ -642,19 +647,19 @@ public class SqlResourceTest extends CalciteTestBase
                 1,
                 1.0,
                 1.0,
-                "org.apache.druid.hll.VersionOneHyperLogLogCollector",
-                nullStr
+                "\"AQAAAEAAAA==\"",
+                null
             ),
             Arrays.asList(
                 "2000-01-02T00:00:00.000Z",
                 "10.1",
-                nullStr,
+                null,
                 "[\"b\",\"c\"]",
                 1,
                 2.0,
                 2.0,
-                "org.apache.druid.hll.VersionOneHyperLogLogCollector",
-                nullStr
+                "\"AQAAAQAAAAHNBA==\"",
+                null
             )
         ),
         doPost(
@@ -741,12 +746,10 @@ public class SqlResourceTest extends CalciteTestBase
   public void testArrayResultFormatWithHeader() throws Exception
   {
     final String query = "SELECT *, CASE dim2 WHEN '' THEN dim2 END FROM foo LIMIT 2";
-    final String nullStr = NullHandling.replaceWithDefault() ? "" : null;
 
-    final String hllStr = "org.apache.druid.hll.VersionOneHyperLogLogCollector";
     List[] expectedQueryResults = new List[]{
-        Arrays.asList("2000-01-01T00:00:00.000Z", "", "a", "[\"a\",\"b\"]", 1, 1.0, 1.0, hllStr, nullStr),
-        Arrays.asList("2000-01-02T00:00:00.000Z", "10.1", nullStr, "[\"b\",\"c\"]", 1, 2.0, 2.0, hllStr, nullStr)
+        Arrays.asList("2000-01-01T00:00:00.000Z", "", "a", "[\"a\",\"b\"]", 1, 1.0, 1.0, "\"AQAAAEAAAA==\"", null),
+        Arrays.asList("2000-01-02T00:00:00.000Z", "10.1", null, "[\"b\",\"c\"]", 1, 2.0, 2.0, "\"AQAAAQAAAAHNBA==\"", null)
     };
 
     MockHttpServletResponse response = postForAsyncResponse(
@@ -866,7 +869,6 @@ public class SqlResourceTest extends CalciteTestBase
     );
     Assert.assertNull(pair.lhs);
     final String response = pair.rhs;
-    final String nullStr = NullHandling.replaceWithDefault() ? "" : null;
     final List<String> lines = Splitter.on('\n').splitToList(response);
 
     Assert.assertEquals(4, lines.size());
@@ -879,8 +881,8 @@ public class SqlResourceTest extends CalciteTestBase
             1,
             1.0,
             1.0,
-            "org.apache.druid.hll.VersionOneHyperLogLogCollector",
-            nullStr
+            "\"AQAAAEAAAA==\"",
+            null
         ),
         JSON_MAPPER.readValue(lines.get(0), List.class)
     );
@@ -888,13 +890,13 @@ public class SqlResourceTest extends CalciteTestBase
         Arrays.asList(
             "2000-01-02T00:00:00.000Z",
             "10.1",
-            nullStr,
+            null,
             "[\"b\",\"c\"]",
             1,
             2.0,
             2.0,
-            "org.apache.druid.hll.VersionOneHyperLogLogCollector",
-            nullStr
+            "\"AQAAAQAAAAHNBA==\"",
+            null
         ),
         JSON_MAPPER.readValue(lines.get(1), List.class)
     );
@@ -911,7 +913,6 @@ public class SqlResourceTest extends CalciteTestBase
     );
     Assert.assertNull(pair.lhs);
     final String response = pair.rhs;
-    final String nullStr = NullHandling.replaceWithDefault() ? "" : null;
     final List<String> lines = Splitter.on('\n').splitToList(response);
 
     Assert.assertEquals(7, lines.size());
@@ -927,8 +928,8 @@ public class SqlResourceTest extends CalciteTestBase
             1,
             1.0,
             1.0,
-            "org.apache.druid.hll.VersionOneHyperLogLogCollector",
-            nullStr
+            "\"AQAAAEAAAA==\"",
+            null
         ),
         JSON_MAPPER.readValue(lines.get(3), List.class)
     );
@@ -936,13 +937,13 @@ public class SqlResourceTest extends CalciteTestBase
         Arrays.asList(
             "2000-01-02T00:00:00.000Z",
             "10.1",
-            nullStr,
+            null,
             "[\"b\",\"c\"]",
             1,
             2.0,
             2.0,
-            "org.apache.druid.hll.VersionOneHyperLogLogCollector",
-            nullStr
+            "\"AQAAAQAAAAHNBA==\"",
+            null
         ),
         JSON_MAPPER.readValue(lines.get(4), List.class)
     );
@@ -982,10 +983,9 @@ public class SqlResourceTest extends CalciteTestBase
   public void testObjectResultFormat() throws Exception
   {
     final String query = "SELECT *, CASE dim2 WHEN '' THEN dim2 END FROM foo  LIMIT 2";
-    final String nullStr = NullHandling.replaceWithDefault() ? "" : null;
     final Function<Map<String, Object>, Map<String, Object>> transformer = m -> Maps.transformEntries(
         m,
-        (k, v) -> "EXPR$8".equals(k) || ("dim2".equals(k) && v.toString().isEmpty()) ? nullStr : v
+        (k, v) -> "EXPR$8".equals(k) || ("dim2".equals(k) && v.toString().isEmpty()) ? null : v
     );
 
     Assert.assertEquals(
@@ -999,7 +999,7 @@ public class SqlResourceTest extends CalciteTestBase
                 .put("dim3", "[\"a\",\"b\"]")
                 .put("m1", 1.0)
                 .put("m2", 1.0)
-                .put("unique_dim1", "org.apache.druid.hll.VersionOneHyperLogLogCollector")
+                .put("unique_dim1", "\"AQAAAEAAAA==\"")
                 .put("EXPR$8", "")
                 .build(),
             ImmutableMap
@@ -1011,7 +1011,7 @@ public class SqlResourceTest extends CalciteTestBase
                 .put("dim3", "[\"b\",\"c\"]")
                 .put("m1", 2.0)
                 .put("m2", 2.0)
-                .put("unique_dim1", "org.apache.druid.hll.VersionOneHyperLogLogCollector")
+                .put("unique_dim1", "\"AQAAAQAAAAHNBA==\"")
                 .put("EXPR$8", "")
                 .build()
         ).stream().map(transformer).collect(Collectors.toList()),
@@ -1033,11 +1033,10 @@ public class SqlResourceTest extends CalciteTestBase
     );
     Assert.assertNull(pair.lhs);
     final String response = pair.rhs;
-    final String nullStr = NullHandling.replaceWithDefault() ? "" : null;
     final Function<Map<String, Object>, Map<String, Object>> transformer = m -> {
       return Maps.transformEntries(
           m,
-          (k, v) -> "EXPR$8".equals(k) || ("dim2".equals(k) && v.toString().isEmpty()) ? nullStr : v
+          (k, v) -> "EXPR$8".equals(k) || ("dim2".equals(k) && v.toString().isEmpty()) ? null : v
       );
     };
     final List<String> lines = Splitter.on('\n').splitToList(response);
@@ -1054,7 +1053,7 @@ public class SqlResourceTest extends CalciteTestBase
                 .put("dim3", "[\"a\",\"b\"]")
                 .put("m1", 1.0)
                 .put("m2", 1.0)
-                .put("unique_dim1", "org.apache.druid.hll.VersionOneHyperLogLogCollector")
+                .put("unique_dim1", "\"AQAAAEAAAA==\"")
                 .put("EXPR$8", "")
                 .build()
         ),
@@ -1071,7 +1070,7 @@ public class SqlResourceTest extends CalciteTestBase
                 .put("dim3", "[\"b\",\"c\"]")
                 .put("m1", 2.0)
                 .put("m2", 2.0)
-                .put("unique_dim1", "org.apache.druid.hll.VersionOneHyperLogLogCollector")
+                .put("unique_dim1", "\"AQAAAQAAAAHNBA==\"")
                 .put("EXPR$8", "")
                 .build()
         ),
@@ -1089,10 +1088,9 @@ public class SqlResourceTest extends CalciteTestBase
         doPostRaw(new SqlQuery(query, ResultFormat.OBJECTLINES, true, false, false, null, null));
     Assert.assertNull(pair.lhs);
     final String response = pair.rhs;
-    final String nullStr = NullHandling.replaceWithDefault() ? "" : null;
     final Function<Map<String, Object>, Map<String, Object>> transformer = m -> Maps.transformEntries(
         m,
-        (k, v) -> "EXPR$8".equals(k) || ("dim2".equals(k) && v.toString().isEmpty()) ? nullStr : v
+        (k, v) -> "EXPR$8".equals(k) || ("dim2".equals(k) && v.toString().isEmpty()) ? null : v
     );
     final List<String> lines = Splitter.on('\n').splitToList(response);
 
@@ -1114,7 +1112,7 @@ public class SqlResourceTest extends CalciteTestBase
                 .put("dim3", "[\"a\",\"b\"]")
                 .put("m1", 1.0)
                 .put("m2", 1.0)
-                .put("unique_dim1", "org.apache.druid.hll.VersionOneHyperLogLogCollector")
+                .put("unique_dim1", "\"AQAAAEAAAA==\"")
                 .put("EXPR$8", "")
                 .build()
         ),
@@ -1131,7 +1129,7 @@ public class SqlResourceTest extends CalciteTestBase
                 .put("dim3", "[\"b\",\"c\"]")
                 .put("m1", 2.0)
                 .put("m2", 2.0)
-                .put("unique_dim1", "org.apache.druid.hll.VersionOneHyperLogLogCollector")
+                .put("unique_dim1", "\"AQAAAQAAAAHNBA==\"")
                 .put("EXPR$8", "")
                 .build()
         ),
@@ -1149,10 +1147,9 @@ public class SqlResourceTest extends CalciteTestBase
         doPostRaw(new SqlQuery(query, ResultFormat.OBJECTLINES, true, true, true, null, null));
     Assert.assertNull(pair.lhs);
     final String response = pair.rhs;
-    final String nullStr = NullHandling.replaceWithDefault() ? "" : null;
     final Function<Map<String, Object>, Map<String, Object>> transformer = m -> Maps.transformEntries(
         m,
-        (k, v) -> "EXPR$8".equals(k) || ("dim2".equals(k) && v.toString().isEmpty()) ? nullStr : v
+        (k, v) -> "EXPR$8".equals(k) || ("dim2".equals(k) && v.toString().isEmpty()) ? null : v
     );
     final List<String> lines = Splitter.on('\n').splitToList(response);
 
@@ -1180,7 +1177,7 @@ public class SqlResourceTest extends CalciteTestBase
                 .put("dim3", "[\"a\",\"b\"]")
                 .put("m1", 1.0)
                 .put("m2", 1.0)
-                .put("unique_dim1", "org.apache.druid.hll.VersionOneHyperLogLogCollector")
+                .put("unique_dim1", "\"AQAAAEAAAA==\"")
                 .put("EXPR$8", "")
                 .build()
         ),
@@ -1197,7 +1194,7 @@ public class SqlResourceTest extends CalciteTestBase
                 .put("dim3", "[\"b\",\"c\"]")
                 .put("m1", 2.0)
                 .put("m2", 2.0)
-                .put("unique_dim1", "org.apache.druid.hll.VersionOneHyperLogLogCollector")
+                .put("unique_dim1", "\"AQAAAQAAAAHNBA==\"")
                 .put("EXPR$8", "")
                 .build()
         ),
@@ -1249,8 +1246,8 @@ public class SqlResourceTest extends CalciteTestBase
 
     Assert.assertEquals(
         ImmutableList.of(
-            "2000-01-01T00:00:00.000Z,,a,\"[\"\"a\"\",\"\"b\"\"]\",1,1.0,1.0,org.apache.druid.hll.VersionOneHyperLogLogCollector,",
-            "2000-01-02T00:00:00.000Z,10.1,,\"[\"\"b\"\",\"\"c\"\"]\",1,2.0,2.0,org.apache.druid.hll.VersionOneHyperLogLogCollector,",
+            "2000-01-01T00:00:00.000Z,,a,\"[\"\"a\"\",\"\"b\"\"]\",1,1.0,1.0,\"\"\"AQAAAEAAAA==\"\"\",",
+            "2000-01-02T00:00:00.000Z,10.1,,\"[\"\"b\"\",\"\"c\"\"]\",1,2.0,2.0,\"\"\"AQAAAQAAAAHNBA==\"\"\",",
             "",
             ""
         ),
@@ -1274,8 +1271,8 @@ public class SqlResourceTest extends CalciteTestBase
             String.join(",", EXPECTED_COLUMNS_FOR_RESULT_FORMAT_TESTS),
             String.join(",", EXPECTED_TYPES_FOR_RESULT_FORMAT_TESTS),
             String.join(",", EXPECTED_SQL_TYPES_FOR_RESULT_FORMAT_TESTS),
-            "2000-01-01T00:00:00.000Z,,a,\"[\"\"a\"\",\"\"b\"\"]\",1,1.0,1.0,org.apache.druid.hll.VersionOneHyperLogLogCollector,",
-            "2000-01-02T00:00:00.000Z,10.1,,\"[\"\"b\"\",\"\"c\"\"]\",1,2.0,2.0,org.apache.druid.hll.VersionOneHyperLogLogCollector,",
+            "2000-01-01T00:00:00.000Z,,a,\"[\"\"a\"\",\"\"b\"\"]\",1,1.0,1.0,\"\"\"AQAAAEAAAA==\"\"\",",
+            "2000-01-02T00:00:00.000Z,10.1,,\"[\"\"b\"\",\"\"c\"\"]\",1,2.0,2.0,\"\"\"AQAAAQAAAAHNBA==\"\"\",",
             "",
             ""
         ),
@@ -1386,7 +1383,7 @@ public class SqlResourceTest extends CalciteTestBase
     validateErrorResponse(
         exception,
         "general",
-        DruidException.Persona.ADMIN,
+        DruidException.Persona.USER,
         DruidException.Category.INVALID_INPUT,
         "Query could not be planned. A possible reason is "
         + "[SQL query requires ordering a table by non-time column [[dim1]], which is not supported.]"
@@ -1577,7 +1574,7 @@ public class SqlResourceTest extends CalciteTestBase
   /**
    * See class-level javadoc for {@link org.apache.druid.sql.calcite.util.testoperator.AssertionErrorOperatorConversion}
    * for rationale as to why this test exists.
-   *
+   * <p>
    * If this test starts failing, it could be indicative of us not handling the AssertionErrors well anymore,
    * OR it could be indicative of this specific code path not throwing an AssertionError anymore.  If we run
    * into the latter case, we should seek out a new code path that generates the error from Calcite.  In the best
@@ -1900,15 +1897,22 @@ public class SqlResourceTest extends CalciteTestBase
     checkSqlRequestLog(false);
   }
 
-  @SuppressWarnings("unchecked")
   private void checkSqlRequestLog(boolean success)
+  {
+    checkSqlRequestLog(success, CalciteTests.REGULAR_USER_AUTH_RESULT.getIdentity());
+  }
+
+  @SuppressWarnings("unchecked")
+  private void checkSqlRequestLog(boolean success, String user)
   {
     Assert.assertEquals(1, testRequestLogger.getSqlQueryLogs().size());
 
     final Map<String, Object> stats = testRequestLogger.getSqlQueryLogs().get(0).getQueryStats().getStats();
-    final Map<String, Object> queryContext = (Map<String, Object>) stats.get("context");
+    final Map<String, Object> queryContext = (Map<String, Object>) testRequestLogger.getSqlQueryLogs()
+                                                                                    .get(0)
+                                                                                    .getSqlQueryContext();
     Assert.assertEquals(success, stats.get("success"));
-    Assert.assertEquals(CalciteTests.REGULAR_USER_AUTH_RESULT.getIdentity(), stats.get("identity"));
+    Assert.assertEquals(user, stats.get("identity"));
     Assert.assertTrue(stats.containsKey("sqlQuery/time"));
     Assert.assertTrue(stats.containsKey("sqlQuery/planningTimeMs"));
     Assert.assertTrue(queryContext.containsKey(QueryContexts.CTX_SQL_QUERY_ID));
@@ -2185,7 +2189,7 @@ public class SqlResourceTest extends CalciteTestBase
     @Override
     protected void authorize(
         DruidPlanner planner,
-        Function<Set<ResourceAction>, Access> authorizer
+        Function<Set<ResourceAction>, AuthorizationResult> authorizer
     )
     {
       if (validateAndAuthorizeLatchSupplier.get() != null) {

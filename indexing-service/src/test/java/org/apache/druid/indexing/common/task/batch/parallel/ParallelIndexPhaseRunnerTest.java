@@ -142,7 +142,7 @@ public class ParallelIndexPhaseRunnerTest extends AbstractParallelIndexSuperviso
     @Override
     Iterator<SubTaskSpec<ReportingNoopTask>> subTaskSpecIterator()
     {
-      return new Iterator<SubTaskSpec<ReportingNoopTask>>()
+      return new Iterator<>()
       {
         int subTaskCount = 0;
 

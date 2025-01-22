@@ -29,7 +29,6 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -192,7 +191,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
 
   public static MapBasedInputRow getRow(long timestamp, int rowID, int dimensionCount)
   {
-    List<String> dimensionList = new ArrayList<String>(dimensionCount);
+    List<String> dimensionList = new ArrayList<>(dimensionCount);
     ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
     for (int i = 0; i < dimensionCount; i++) {
       String dimName = StringUtils.format("Dim_%d", i);
@@ -204,7 +203,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
 
   private static MapBasedInputRow getLongRow(long timestamp, int dimensionCount)
   {
-    List<String> dimensionList = new ArrayList<String>(dimensionCount);
+    List<String> dimensionList = new ArrayList<>(dimensionCount);
     ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
     for (int i = 0; i < dimensionCount; i++) {
       String dimName = StringUtils.format("Dim_%d", i);
@@ -233,7 +232,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
     populateIndex(timestamp, index);
     Assert.assertEquals(Arrays.asList("__time", "dim1", "dim2"), index.getDimensionNames(true));
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), index.getDimensionNames(false));
-    Assert.assertEquals(2, index.size());
+    Assert.assertEquals(2, index.numRows());
 
     final Iterator<Row> rows = index.iterator();
     Row row = rows.next();
@@ -299,7 +298,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
         ),
         index.getMetricNames()
     );
-    Assert.assertEquals(2, index.size());
+    Assert.assertEquals(2, index.numRows());
 
     final Iterator<Row> rows = index.iterator();
     Row row = rows.next();
@@ -561,7 +560,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
 
                     Double[] results = sequence.accumulate(
                         new Double[0],
-                        new Accumulator<Double[], Result<TimeseriesResultValue>>()
+                        new Accumulator<>()
                         {
                           @Override
                           public Double[] accumulate(Double[] accumulated, Result<TimeseriesResultValue> in)
@@ -687,7 +686,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
         )
     );
 
-    Assert.assertEquals(2, index.size());
+    Assert.assertEquals(2, index.numRows());
   }
 
   @Test
@@ -727,7 +726,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
         )
     );
 
-    Assert.assertEquals(index.isRollup() ? 1 : 4, index.size());
+    Assert.assertEquals(index.isRollup() ? 1 : 4, index.numRows());
     Iterator<Row> iterator = index.iterator();
     int rowCount = 0;
     while (iterator.hasNext()) {
@@ -749,8 +748,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
             Assert.assertEquals(1 + rowCount, row.getMetric("sum_of_x").intValue());
           } else {
             Assert.assertEquals(1, row.getMetric("count").intValue());
-            // The rows does not have the dim "x", hence metric is null (useDefaultValueForNull=false) or 0 (useDefaultValueForNull=true)
-            Assert.assertEquals(NullHandling.sqlCompatible() ? null : 0L, row.getMetric("sum_of_x"));
+            Assert.assertNull(row.getMetric("sum_of_x"));
           }
         }
       }
@@ -795,7 +793,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
         )
     );
 
-    Assert.assertEquals(index.isRollup() ? 1 : 4, index.size());
+    Assert.assertEquals(index.isRollup() ? 1 : 4, index.numRows());
     Iterator<Row> iterator = index.iterator();
     int rowCount = 0;
     while (iterator.hasNext()) {
@@ -817,8 +815,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
             Assert.assertEquals(1 + rowCount, row.getMetric("sum_of_x").intValue());
           } else {
             Assert.assertEquals(1, row.getMetric("count").intValue());
-            // The rows does not have the dim "x", hence metric is null (useDefaultValueForNull=false) or 0 (useDefaultValueForNull=true)
-            Assert.assertEquals(NullHandling.sqlCompatible() ? null : 0.0f, row.getMetric("sum_of_x"));
+            Assert.assertNull(row.getMetric("sum_of_x"));
           }
         }
       }
@@ -848,7 +845,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
         )
     );
 
-    Assert.assertEquals(index.isRollup() ? 1 : 2, index.size());
+    Assert.assertEquals(index.isRollup() ? 1 : 2, index.numRows());
     Iterator<Row> iterator = index.iterator();
     int rowCount = 0;
     while (iterator.hasNext()) {
@@ -867,8 +864,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
             Assert.assertEquals(4, row.getMetric("sum_of_x").intValue());
           } else {
             Assert.assertEquals(1, row.getMetric("count").intValue());
-            // The rows does not have the dim "x", hence metric is null (useDefaultValueForNull=false) or 0 (useDefaultValueForNull=true)
-            Assert.assertEquals(NullHandling.sqlCompatible() ? null : 0L, row.getMetric("sum_of_x"));
+            Assert.assertNull(row.getMetric("sum_of_x"));
           }
         } else {
           Assert.assertEquals(isPreserveExistingMetrics ? 3 : 1, row.getMetric("count").intValue());
@@ -901,7 +897,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
         )
     );
 
-    Assert.assertEquals(index.isRollup() ? 1 : 2, index.size());
+    Assert.assertEquals(index.isRollup() ? 1 : 2, index.numRows());
     Iterator<Row> iterator = index.iterator();
     int rowCount = 0;
     while (iterator.hasNext()) {
@@ -951,7 +947,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
         )
     );
 
-    Assert.assertEquals(index.isRollup() ? 1 : 2, index.size());
+    Assert.assertEquals(index.isRollup() ? 1 : 2, index.numRows());
     Iterator<Row> iterator = index.iterator();
     int rowCount = 0;
     while (iterator.hasNext()) {
@@ -966,8 +962,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
         // We still have 2 rows
         if (rowCount == 1) {
           Assert.assertEquals(1, row.getMetric("count").intValue());
-          // The rows does not have the dim "x", hence metric is null (useDefaultValueForNull=false) or 0 (useDefaultValueForNull=true)
-          Assert.assertEquals(NullHandling.sqlCompatible() ? null : 0L, row.getMetric("sum_of_x"));
+          Assert.assertNull(row.getMetric("sum_of_x"));
         } else {
           Assert.assertEquals(1, row.getMetric("count").intValue());
           Assert.assertEquals(3, row.getMetric("sum_of_x").intValue());
@@ -999,7 +994,7 @@ public class IncrementalIndexTest extends InitializedNullHandlingTest
         )
     );
 
-    Assert.assertEquals(index.isRollup() ? 1 : 2, index.size());
+    Assert.assertEquals(index.isRollup() ? 1 : 2, index.numRows());
     Iterator<Row> iterator = index.iterator();
     int rowCount = 0;
     while (iterator.hasNext()) {

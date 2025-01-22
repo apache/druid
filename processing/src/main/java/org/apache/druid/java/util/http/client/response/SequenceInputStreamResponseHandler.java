@@ -70,7 +70,7 @@ public class SequenceInputStreamResponseHandler implements HttpResponseHandler<I
     byteCount.addAndGet(response.getContent().readableBytes());
     return ClientResponse.finished(
         new SequenceInputStream(
-            new Enumeration<InputStream>()
+            new Enumeration<>()
             {
               @Override
               public boolean hasMoreElements()

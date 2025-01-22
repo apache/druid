@@ -25,7 +25,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.guava.SettableSupplier;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.DimensionSchema;
@@ -48,6 +47,7 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprType;
+import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.Parser;
 import org.apache.druid.query.QueryContext;
@@ -107,7 +107,6 @@ import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
-import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
@@ -115,8 +114,6 @@ import org.junit.runners.Parameterized;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
-import java.io.File;
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -413,11 +410,6 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
   protected final boolean optimize;
   protected final String testName;
 
-  // 'rowBasedWithoutTypeSignature' does not handle numeric null default values correctly, is equivalent to
-  // druid.generic.useDefaultValueForNull being set to false, regardless of how it is actually set.
-  // In other words, numeric null values will be treated as nulls instead of the default value
-  protected final boolean canTestNumericNullsAsDefaultValues;
-
   protected CursorFactory cursorFactory;
 
   protected VirtualColumns virtualColumns;
@@ -444,8 +436,6 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
     this.finisher = finisher;
     this.cnf = cnf;
     this.optimize = optimize;
-    this.canTestNumericNullsAsDefaultValues =
-        NullHandling.replaceWithDefault() && !testName.contains("finisher[rowBasedWithoutTypeSignature]");
   }
 
   @Before
@@ -542,7 +532,8 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                                                 .collect(Collectors.toList())
                                       ),
                                       schema.getMetrics(),
-                                      schema.isRollup()
+                                      schema.isRollup(),
+                                      schema.getProjections()
                                   )
                           );
                           final IncrementalIndex index = input.buildIncrementalIndex();
@@ -570,7 +561,8 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                                                 .collect(Collectors.toList())
                                       ),
                                       schema.getMetrics(),
-                                      schema.isRollup()
+                                      schema.isRollup(),
+                                      schema.getProjections()
                                   )
                           );
                           final QueryableIndex index = input.buildMMappedIndex();
@@ -599,7 +591,8 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                                                         .collect(Collectors.toList())
                                               ),
                                               schema.getMetrics(),
-                                              schema.isRollup()
+                                              schema.isRollup(),
+                                              schema.getProjections()
                                           )
                                   )
                                   // if 1 row per segment some of the columns have null values for the row which causes 'auto'
@@ -627,31 +620,6 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                         }
                     )
                     .put(
-                        "mmappedWithSqlCompatibleNulls",
-                        input -> {
-                          // Build mmapped index in SQL-compatible null handling mode; read it in default-value mode.
-                          Assume.assumeTrue(NullHandling.replaceWithDefault());
-                          final File file;
-                          try {
-                            NullHandling.initializeForTestsWithValues(false, null);
-                            Assert.assertTrue(NullHandling.sqlCompatible());
-                            file = input.buildMMappedIndexFile();
-                          }
-                          finally {
-                            NullHandling.initializeForTests();
-                          }
-
-                          Assert.assertTrue(NullHandling.replaceWithDefault());
-                          try {
-                            final QueryableIndex index = input.getIndexIO().loadIndex(file);
-                            return Pair.of(new QueryableIndexCursorFactory(index), index);
-                          }
-                          catch (IOException e) {
-                            throw new RuntimeException(e);
-                          }
-                        }
-                    )
-                    .put(
                         "rowBasedWithoutTypeSignature",
                         input -> Pair.of(input.buildRowBasedSegmentWithoutTypeSignature().asCursorFactory(), () -> {})
                     )
@@ -676,7 +644,8 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                                             .collect(Collectors.toList())
                                   ),
                                   schema.getMetrics(),
-                                  schema.isRollup()
+                                  schema.isRollup(),
+                                  schema.getProjections()
                               )
                       );
                       final FrameSegment segment = input.buildFrameSegment(FrameType.ROW_BASED);
@@ -699,7 +668,8 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                                             .collect(Collectors.toList())
                                   ),
                                   schema.getMetrics(),
-                                  schema.isRollup()
+                                  schema.isRollup(),
+                                  schema.getProjections()
                               )
                       );
                       final FrameSegment segment = input.buildFrameSegment(FrameType.COLUMNAR);
@@ -776,7 +746,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
       return null;
     }
 
-    final DimFilter maybeOptimized = optimize ? dimFilter.optimize(false) : dimFilter;
+    final DimFilter maybeOptimized = maybeOptimize(dimFilter);
     final Filter filter = maybeOptimized.toFilter();
     try {
       return cnf ? Filters.toCnf(filter) : filter;
@@ -1189,6 +1159,19 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
     // test double inverted
     if (!StringUtils.toLowerCase(testName).contains("concise")) {
       assertFilterMatches(NotDimFilter.of(NotDimFilter.of(filter)), expectedRows, false);
+    }
+  }
+
+  protected void assertFilterMatchesSkipVectorizeUnlessFallback(
+      final DimFilter filter,
+      final List<String> expectedRows
+  )
+  {
+    final boolean vectorize = ExpressionProcessing.allowVectorizeFallback();
+    assertFilterMatches(filter, expectedRows, vectorize);
+    // test double inverted
+    if (!StringUtils.toLowerCase(testName).contains("concise")) {
+      assertFilterMatches(NotDimFilter.of(NotDimFilter.of(filter)), expectedRows, vectorize);
     }
   }
 

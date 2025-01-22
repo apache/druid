@@ -52,8 +52,7 @@ public class BytesFullResponseHolderTest
     final BytesFullResponseHolder target = spy(new BytesFullResponseHolder(response));
     target.addChunk(objectMapper.writeValueAsBytes(payload));
 
-    final ResponseObject deserialize = target.deserialize(objectMapper, new TypeReference<ResponseObject>() {
-    });
+    final ResponseObject deserialize = target.deserialize(objectMapper, new TypeReference<>() {});
 
     Assert.assertEquals(payload, deserialize);
     Mockito.verify(target, Mockito.times(1)).deserialize(ArgumentMatchers.any(), ArgumentMatchers.any());

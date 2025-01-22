@@ -90,7 +90,7 @@ public class FrameFileTest extends InitializedNullHandlingTest
       @Override
       int getRowCount()
       {
-        return TestIndex.getNoRollupIncrementalTestIndex().size();
+        return TestIndex.getNoRollupIncrementalTestIndex().numRows();
       }
     },
     MMAP {
@@ -427,7 +427,7 @@ public class FrameFileTest extends InitializedNullHandlingTest
                                 .maxRowsPerFrame(frameFileKey.maxRowsPerFrame)
                                 .frames()
                                 .map(
-                                    new Function<Frame, IntObjectPair<Frame>>()
+                                    new Function<>()
                                     {
                                       private int rows = 0;
 

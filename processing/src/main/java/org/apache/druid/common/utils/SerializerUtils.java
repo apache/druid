@@ -33,7 +33,6 @@ import java.nio.channels.WritableByteChannel;
 
 public class SerializerUtils
 {
-
   public <T extends OutputStream> void writeString(T out, String name) throws IOException
   {
     byte[] nameBytes = StringUtils.toUtf8(name);

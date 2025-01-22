@@ -383,7 +383,7 @@ public class StreamingMergeSortedGrouper<KeyType> implements Grouper<KeyType>
       throw new ISE("Grouper should be initialized first");
     }
 
-    return new CloseableIterator<Entry<KeyType>>()
+    return new CloseableIterator<>()
     {
       final ReusableEntry<KeyType> reusableEntry = ReusableEntry.create(keySerde, aggregators.length);
 

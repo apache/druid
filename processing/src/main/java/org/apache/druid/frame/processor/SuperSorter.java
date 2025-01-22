@@ -391,6 +391,11 @@ public class SuperSorter
   @GuardedBy("runWorkersLock")
   private void setAllDoneIfPossible()
   {
+    if (isAllDone()) {
+      // Already done, no need to set allDone again.
+      return;
+    }
+
     try {
       if (totalInputFrames == 0 && outputPartitionsFuture.isDone()) {
         // No input data -- generate empty output channels.
@@ -784,7 +789,7 @@ public class SuperSorter
   {
     Futures.addCallback(
         exec.runFully(processorDecorator.decorate(worker), cancellationId),
-        new FutureCallback<T>()
+        new FutureCallback<>()
         {
           @Override
           public void onSuccess(T result)

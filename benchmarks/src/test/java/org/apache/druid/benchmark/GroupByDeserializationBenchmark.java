@@ -22,7 +22,6 @@ package org.apache.druid.benchmark;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.jackson.AggregatorsModule;
 import org.apache.druid.java.util.common.DateTimes;
@@ -37,6 +36,7 @@ import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryQueryToolChest;
+import org.apache.druid.query.groupby.GroupByStatsProvider;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
@@ -65,9 +65,7 @@ import java.util.concurrent.TimeUnit;
 @Measurement(iterations = 5)
 public class GroupByDeserializationBenchmark
 {
-
   static {
-    NullHandling.initializeForTests();
     BuiltInTypesModule.registerHandlersAndSerde();
     AggregatorsModule.registerComplexMetricsAndSerde();
   }
@@ -115,7 +113,8 @@ public class GroupByDeserializationBenchmark
           }
         },
         null,
-        null
+        null,
+        new GroupByStatsProvider()
     );
 
     decoratedMapper = groupByQueryQueryToolChest.decorateObjectMapper(undecoratedMapper, sqlQuery);

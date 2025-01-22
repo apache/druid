@@ -17,10 +17,10 @@
 
 import argparse
 from enum import Enum
-
+from decimal import Decimal
 from delta import *
 import pyspark
-from pyspark.sql.types import MapType, StructType, StructField, ShortType, StringType, TimestampType, LongType, IntegerType, DoubleType, FloatType, DateType, BooleanType, ArrayType
+from pyspark.sql.types import MapType, StructType, StructField, ShortType, StringType, TimestampType, LongType, IntegerType, DoubleType, FloatType, DateType, BooleanType, ArrayType, DecimalType
 from pyspark.sql.functions import expr
 from datetime import datetime, timedelta
 import random
@@ -73,6 +73,7 @@ def create_dataset_with_complex_types(num_records):
             StructField("nested", StructType([
                 StructField("nested_int", IntegerType(), False),
                 StructField("nested_double", DoubleType(), True),
+                StructField("nested_decimal", DecimalType(4, 2), True),
             ]))
         ])),
         StructField("map_info", MapType(StringType(), FloatType()))
@@ -85,7 +86,7 @@ def create_dataset_with_complex_types(num_records):
             idx,
             (idx, idx + 1, idx + 2, idx + 3),
             (idx, f"{idx}"),
-            (idx, f"{idx}", (idx, idx + 1.0)),
+            (idx, f"{idx}", (idx, idx + 1.0, Decimal(idx + 0.23))),
             {"key1": idx + 1.0, "key2": idx + 1.0}
         )
         data.append(record)

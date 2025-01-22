@@ -174,9 +174,10 @@ public class FixedIndexedWriter<T> implements DictionaryWriter<T>
     final int totalCount = cardinality;
 
     final int startPos = hasNulls ? 1 : 0;
-    return new Iterator<T>()
+    return new Iterator<>()
     {
       int pos = 0;
+
       @Override
       public boolean hasNext()
       {

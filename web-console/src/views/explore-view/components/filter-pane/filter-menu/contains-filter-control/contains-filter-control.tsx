@@ -18,8 +18,9 @@
 
 import { FormGroup, InputGroup, Menu, MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import type { ContainsFilterPattern, QueryResult } from '@druid-toolkit/query';
-import { C, F, filterPatternToExpression, SqlExpression, SqlQuery } from '@druid-toolkit/query';
+import type { CancelToken } from 'axios';
+import type { ContainsFilterPattern, QueryResult, SqlQuery } from 'druid-query-toolkit';
+import { C, F, filterPatternToExpression, SqlExpression } from 'druid-query-toolkit';
 import React, { useMemo } from 'react';
 
 import { useQueryManager } from '../../../../../../hooks';
@@ -29,10 +30,10 @@ import './contains-filter-control.scss';
 
 export interface ContainsFilterControlProps {
   querySource: QuerySource;
-  filter: SqlExpression | undefined;
+  filter: SqlExpression;
   filterPattern: ContainsFilterPattern;
   setFilterPattern(filterPattern: ContainsFilterPattern): void;
-  runSqlQuery(query: string | SqlQuery): Promise<QueryResult>;
+  runSqlQuery(query: string | SqlQuery, cancelToken?: CancelToken): Promise<QueryResult>;
 }
 
 export const ContainsFilterControl = React.memo(function ContainsFilterControl(
@@ -43,14 +44,14 @@ export const ContainsFilterControl = React.memo(function ContainsFilterControl(
 
   const previewQuery = useMemo(
     () =>
-      SqlQuery.from(querySource.query)
-        .addSelect(F.cast(C(column), 'VARCHAR').as('c'), { addToGroupBy: 'end' })
-        .changeWhereExpression(
+      querySource
+        .getInitQuery(
           SqlExpression.and(
             filter,
             contains ? filterPatternToExpression(filterPattern) : undefined,
           ),
         )
+        .addSelect(F.cast(C(column), 'VARCHAR').as('c'), { addToGroupBy: 'end' })
         .changeOrderByExpression(F.count().toOrderByExpression('DESC'))
         .changeLimitValue(101)
         .toString(),
@@ -62,8 +63,8 @@ export const ContainsFilterControl = React.memo(function ContainsFilterControl(
     query: previewQuery,
     debounceIdle: 100,
     debounceLoading: 500,
-    processQuery: async query => {
-      const vs = await runSqlQuery(query);
+    processQuery: async (query, cancelToken) => {
+      const vs = await runSqlQuery(query, cancelToken);
       return (vs.getColumnByName('c') || []).map(String);
     },
   });

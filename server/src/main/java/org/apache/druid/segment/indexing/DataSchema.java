@@ -30,6 +30,7 @@ import com.google.common.base.Strings;
 import com.google.common.collect.Multiset;
 import com.google.common.collect.TreeMultiset;
 import org.apache.druid.common.utils.IdUtils;
+import org.apache.druid.data.input.impl.AggregateProjectionSpec;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.InputRowParser;
@@ -87,6 +88,7 @@ public class DataSchema
 
   // This is used for backward compatibility
   private InputRowParser inputRowParser;
+  private List<AggregateProjectionSpec> projections;
 
   @JsonCreator
   public DataSchema(
@@ -96,6 +98,7 @@ public class DataSchema
       @JsonProperty("metricsSpec") AggregatorFactory[] aggregators,
       @JsonProperty("granularitySpec") GranularitySpec granularitySpec,
       @JsonProperty("transformSpec") TransformSpec transformSpec,
+      @JsonProperty("projections") @Nullable List<AggregateProjectionSpec> projections,
       @Deprecated @JsonProperty("parser") @Nullable Map<String, Object> parserMap,
       @JacksonInject ObjectMapper objectMapper
   )
@@ -120,6 +123,7 @@ public class DataSchema
       this.granularitySpec = granularitySpec;
     }
     this.transformSpec = transformSpec == null ? TransformSpec.NONE : transformSpec;
+    this.projections = projections;
     this.parserMap = parserMap;
     this.objectMapper = objectMapper;
 
@@ -351,6 +355,13 @@ public class DataSchema
     return transformSpec;
   }
 
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public List<AggregateProjectionSpec> getProjections()
+  {
+    return projections;
+  }
+
   @Deprecated
   @JsonProperty("parser")
   @Nullable
@@ -410,6 +421,7 @@ public class DataSchema
            ", parserMap=" + parserMap +
            ", timestampSpec=" + timestampSpec +
            ", dimensionsSpec=" + dimensionsSpec +
+           ", projections=" + projections +
            ", inputRowParser=" + inputRowParser +
            '}';
   }
@@ -422,10 +434,9 @@ public class DataSchema
     private TransformSpec transformSpec;
     private Map<String, Object> parserMap;
     private ObjectMapper objectMapper;
-
-    // The below fields can be initialized lazily from parser for backward compatibility.
     private TimestampSpec timestampSpec;
     private DimensionsSpec dimensionsSpec;
+    private List<AggregateProjectionSpec> projections;
 
     public Builder()
     {
@@ -435,13 +446,14 @@ public class DataSchema
     public Builder(DataSchema schema)
     {
       this.dataSource = schema.dataSource;
-      this.aggregators = schema.aggregators;
-      this.granularitySpec = schema.granularitySpec;
-      this.transformSpec = schema.transformSpec;
-      this.parserMap = schema.parserMap;
-      this.objectMapper = schema.objectMapper;
       this.timestampSpec = schema.timestampSpec;
       this.dimensionsSpec = schema.dimensionsSpec;
+      this.transformSpec = schema.transformSpec;
+      this.aggregators = schema.aggregators;
+      this.projections = schema.projections;
+      this.granularitySpec = schema.granularitySpec;
+      this.parserMap = schema.parserMap;
+      this.objectMapper = schema.objectMapper;
     }
 
     public Builder withDataSource(String dataSource)
@@ -491,6 +503,12 @@ public class DataSchema
       return this;
     }
 
+    public Builder withProjections(List<AggregateProjectionSpec> projections)
+    {
+      this.projections = projections;
+      return this;
+    }
+
     @Deprecated
     public Builder withObjectMapper(ObjectMapper objectMapper)
     {
@@ -514,6 +532,7 @@ public class DataSchema
           aggregators,
           granularitySpec,
           transformSpec,
+          projections,
           parserMap,
           objectMapper
       );

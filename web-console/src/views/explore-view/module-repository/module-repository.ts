@@ -16,14 +16,18 @@
  * limitations under the License.
  */
 
-import type { QueryResult, SqlExpression, SqlQuery } from '@druid-toolkit/query';
+import type { IconName } from '@blueprintjs/icons';
+import type { CancelToken } from 'axios';
+import type { QueryResult, SqlExpression, SqlQuery } from 'druid-query-toolkit';
 
-import type { ParameterDefinition, QuerySource, Stage } from '../models';
+import type { Stage } from '../../../utils';
+import type { ParameterDefinition, QuerySource } from '../models';
 
 interface ModuleDefinition<P> {
   id: string;
+  icon: IconName;
   title: string;
-  parameters: Record<keyof P, ParameterDefinition>;
+  parameters: Readonly<Record<keyof P, ParameterDefinition>>;
   component: (props: ModuleComponentProps<P>) => any;
 }
 
@@ -34,7 +38,7 @@ interface ModuleComponentProps<P> {
   setWhere(where: SqlExpression): void;
   parameterValues: P;
   setParameterValues: (parameters: Partial<P>) => void;
-  runSqlQuery(query: string | SqlQuery): Promise<QueryResult>;
+  runSqlQuery(query: string | SqlQuery, cancelToken?: CancelToken): Promise<QueryResult>;
 }
 
 export class ModuleRepository {
@@ -51,7 +55,7 @@ export class ModuleRepository {
     return ModuleRepository.repo.get(id);
   }
 
-  static getAllModuleIds(): string[] {
-    return [...ModuleRepository.repo.keys()];
+  static getAllModuleEntries(): ModuleDefinition<any>[] {
+    return [...ModuleRepository.repo.values()];
   }
 }

@@ -16,8 +16,6 @@
  * limitations under the License.
  */
 
-import React from 'react';
-
 import { DEFAULT_SERVER_QUERY_CONTEXT } from '../../../druid-models';
 import { shallow } from '../../../utils/shallow-renderer';
 

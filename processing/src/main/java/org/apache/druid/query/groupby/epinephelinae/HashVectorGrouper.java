@@ -219,7 +219,7 @@ public class HashVectorGrouper implements VectorGrouper
 
     final IntIterator baseIterator = hashTable.bucketIterator();
 
-    return new CloseableIterator<Grouper.Entry<MemoryPointer>>()
+    return new CloseableIterator<>()
     {
       final MemoryPointer reusableKey = new MemoryPointer();
       final ReusableEntry<MemoryPointer> reusableEntry = new ReusableEntry<>(reusableKey, new Object[aggregators.size()]);

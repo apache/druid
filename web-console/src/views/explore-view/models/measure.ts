@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
-import type { Column, SqlBase, SqlQuery } from '@druid-toolkit/query';
-import { C, F, filterMap, L, SqlAlias, SqlExpression, SqlFunction } from '@druid-toolkit/query';
+import type { Column, SqlBase, SqlQuery } from 'druid-query-toolkit';
+import { C, F, filterMap, L, SqlAlias, SqlExpression, SqlFunction } from 'druid-query-toolkit';
 
 import { uniq } from '../../../utils';
 
@@ -199,7 +199,15 @@ export class Measure extends ExpressionMeta {
     (this as any).name = this.as || Measure.defaultNameFromExpression(this.expression);
   }
 
-  public equivalent(other: ExpressionMeta | undefined): boolean {
+  public equals(other: Measure | undefined): boolean {
+    return (
+      other instanceof Measure &&
+      this.name === other.name &&
+      this.expression.equals(other.expression)
+    );
+  }
+
+  public equivalent(other: Measure | undefined): boolean {
     if (!other || this.name !== other.name) return false;
 
     if (Measure.getAggregateMeasureName(this.expression) === other.name) {
@@ -215,6 +223,10 @@ export class Measure extends ExpressionMeta {
 
   public toAggregateBasedMeasure(): Measure {
     return this.changeExpression(F(Measure.AGGREGATE, L(this.name)));
+  }
+
+  public getAggregateMeasureName(): string | undefined {
+    return Measure.getAggregateMeasureName(this.expression);
   }
 
   public getUsedAggregates(): string[] {

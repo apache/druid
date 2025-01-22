@@ -219,12 +219,12 @@ public class CompressedVSizeColumnarIntsSupplier implements WritableSupplier<Col
         chunkFactor,
         numBytes,
         GenericIndexed.ofCompressedByteBuffers(
-            new Iterable<ByteBuffer>()
+            new Iterable<>()
             {
               @Override
               public Iterator<ByteBuffer> iterator()
               {
-                return new Iterator<ByteBuffer>()
+                return new Iterator<>()
                 {
                   int position = 0;
                   private final ByteBuffer retVal =
@@ -308,7 +308,7 @@ public class CompressedVSizeColumnarIntsSupplier implements WritableSupplier<Col
     }
   }
 
-  private class CompressedVSizeColumnarInts implements ColumnarInts
+  public class CompressedVSizeColumnarInts implements ColumnarInts
   {
     final Indexed<ResourceHolder<ByteBuffer>> singleThreadedBuffers = baseBuffers.singleThreaded();
 
@@ -327,6 +327,11 @@ public class CompressedVSizeColumnarIntsSupplier implements WritableSupplier<Col
     public int size()
     {
       return totalSize;
+    }
+
+    public CompressionStrategy getCompressionStrategy()
+    {
+      return compression;
     }
 
     /**
@@ -355,6 +360,12 @@ public class CompressedVSizeColumnarIntsSupplier implements WritableSupplier<Col
     @Override
     public void get(int[] out, int start, int length)
     {
+      get(out, 0, start, length);
+    }
+
+    @Override
+    public void get(int[] out, int offset, int start, int length)
+    {
       int p = 0;
 
       while (p < length) {
@@ -374,7 +385,7 @@ public class CompressedVSizeColumnarIntsSupplier implements WritableSupplier<Col
             break;
           }
 
-          out[i] = _get(buffer, bigEndian, index - currBufferStart);
+          out[offset + i] = _get(buffer, bigEndian, index - currBufferStart);
         }
 
         assert i > p;

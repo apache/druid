@@ -30,7 +30,6 @@ import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.ListBasedInputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
@@ -52,6 +51,7 @@ import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
+import org.apache.druid.segment.CursorBuildSpec;
 import org.apache.druid.segment.DimensionHandler;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.DimensionIndexer;
@@ -75,6 +75,7 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
+import org.apache.druid.segment.projections.QueryableProjection;
 import org.apache.druid.segment.serde.ComplexMetricExtractor;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
 import org.apache.druid.segment.serde.ComplexMetrics;
@@ -85,6 +86,7 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -363,9 +365,15 @@ public abstract class IncrementalIndex implements IncrementalIndexRowSelector, C
         incrementalIndexSchema.getTimestampSpec(),
         this.queryGranularity,
         this.rollup,
-        getDimensionOrder().stream().map(OrderBy::ascending).collect(Collectors.toList())
+        getDimensionOrder().stream().map(OrderBy::ascending).collect(Collectors.toList()),
+        Collections.emptyList()
     );
   }
+
+  @Nullable
+  public abstract QueryableProjection<IncrementalIndexRowSelector> getProjection(CursorBuildSpec buildSpec);
+
+  public abstract IncrementalIndexRowSelector getProjection(String name);
 
   public abstract boolean canAppendRow();
 
@@ -436,6 +444,7 @@ public abstract class IncrementalIndex implements IncrementalIndexRowSelector, C
   }
 
   @Nullable
+  @Override
   public ColumnFormat getColumnFormat(String columnName)
   {
     if (timeAndMetricsColumnFormats.containsKey(columnName)) {
@@ -670,7 +679,8 @@ public abstract class IncrementalIndex implements IncrementalIndexRowSelector, C
     return numEntries.get() == 0;
   }
 
-  public int size()
+  @Override
+  public int numRows()
   {
     return numEntries.get();
   }
@@ -718,6 +728,7 @@ public abstract class IncrementalIndex implements IncrementalIndexRowSelector, C
    *
    * @param includeTime whether to include {@link ColumnHolder#TIME_COLUMN_NAME}.
    */
+  @Override
   public List<String> getDimensionNames(final boolean includeTime)
   {
     synchronized (dimensionDescs) {
@@ -745,6 +756,7 @@ public abstract class IncrementalIndex implements IncrementalIndexRowSelector, C
   /**
    * Returns a descriptor for each dimension. Does not inclue {@link ColumnHolder#TIME_COLUMN_NAME}.
    */
+  @Override
   public List<DimensionDesc> getDimensions()
   {
     synchronized (dimensionDescs) {
@@ -775,6 +787,12 @@ public abstract class IncrementalIndex implements IncrementalIndexRowSelector, C
   public List<OrderBy> getOrdering()
   {
     return metadata.getOrdering();
+  }
+
+  @Override
+  public int getTimePosition()
+  {
+    return timePosition;
   }
 
   public static ColumnValueSelector<?> makeMetricColumnValueSelector(
@@ -861,7 +879,7 @@ public abstract class IncrementalIndex implements IncrementalIndexRowSelector, C
   )
   {
     synchronized (dimensionDescs) {
-      if (size() != 0) {
+      if (numRows() != 0) {
         throw new ISE("Cannot load dimension order[%s] when existing index is not empty.", dimensionDescs.keySet());
       }
       for (String dim : oldDimensionOrder) {
@@ -888,6 +906,7 @@ public abstract class IncrementalIndex implements IncrementalIndexRowSelector, C
     return new DimensionDesc(dimensionIndex, dimensionName, dimensionHandler, useMaxMemoryEstimates);
   }
 
+  @Override
   public List<String> getMetricNames()
   {
     return ImmutableList.copyOf(metricDescs.keySet());
@@ -931,7 +950,6 @@ public abstract class IncrementalIndex implements IncrementalIndexRowSelector, C
   {
     return new IncrementalIndexRowComparator(timePosition, dimensionDescsList);
   }
-
 
   private static String getSimplifiedEventStringFromRow(InputRow inputRow)
   {
@@ -983,6 +1001,14 @@ public abstract class IncrementalIndex implements IncrementalIndexRowSelector, C
       this.name = name;
       this.handler = handler;
       this.indexer = handler.makeIndexer(useMaxMemoryEstimates);
+    }
+
+    public DimensionDesc(int index, String name, DimensionHandler<?, ?, ?> handler, DimensionIndexer<?, ?, ?> indexer)
+    {
+      this.index = index;
+      this.name = name;
+      this.handler = handler;
+      this.indexer = indexer;
     }
 
     public int getIndex()
@@ -1312,7 +1338,7 @@ public abstract class IncrementalIndex implements IncrementalIndexRowSelector, C
     @Override
     public double getDouble()
     {
-      assert NullHandling.replaceWithDefault() || !isNull();
+      assert !isNull();
       return rowSelector.getMetricDoubleValue(currEntry.get().getRowIndex(), metricIndex);
     }
 

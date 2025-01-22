@@ -24,7 +24,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
-import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.appenderator.ActionBasedPublishedSegmentRetriever;
@@ -180,6 +179,16 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
     return (queryPlus, responseContext) -> queryPlus.run(getRunner().getAppenderator(), responseContext);
   }
 
+  /**
+   * @return the current status of this task.
+   */
+  @Nullable
+  public String getCurrentRunnerStatus()
+  {
+    SeekableStreamIndexTaskRunner.Status status = (getRunner() != null) ? getRunner().getStatus() : null;
+    return (status != null) ? status.toString() : null;
+  }
+
   public Appenderator newAppenderator(
       TaskToolbox toolbox,
       SegmentGenerationMetrics metrics,
@@ -242,32 +251,6 @@ public abstract class SeekableStreamIndexTask<PartitionIdType, SequenceOffsetTyp
         toolbox.getJsonMapper(),
         metrics
     );
-  }
-
-  public boolean withinMinMaxRecordTime(final InputRow row)
-  {
-    final boolean beforeMinimumMessageTime = ioConfig.getMinimumMessageTime().isPresent()
-                                             && ioConfig.getMinimumMessageTime().get().isAfter(row.getTimestamp());
-
-    final boolean afterMaximumMessageTime = ioConfig.getMaximumMessageTime().isPresent()
-                                            && ioConfig.getMaximumMessageTime().get().isBefore(row.getTimestamp());
-
-    if (log.isDebugEnabled()) {
-      if (beforeMinimumMessageTime) {
-        log.debug(
-            "CurrentTimeStamp[%s] is before MinimumMessageTime[%s]",
-            row.getTimestamp(),
-            ioConfig.getMinimumMessageTime().get()
-        );
-      } else if (afterMaximumMessageTime) {
-        log.debug(
-            "CurrentTimeStamp[%s] is after MaximumMessageTime[%s]",
-            row.getTimestamp(),
-            ioConfig.getMaximumMessageTime().get()
-        );
-      }
-    }
-    return !beforeMinimumMessageTime && !afterMaximumMessageTime;
   }
 
   @Override

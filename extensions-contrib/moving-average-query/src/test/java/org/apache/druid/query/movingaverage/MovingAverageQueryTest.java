@@ -56,8 +56,8 @@ import org.apache.druid.query.BrokerParallelMergeConfig;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
+import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
-import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.RetryQueryRunnerConfig;
 import org.apache.druid.query.SegmentDescriptor;
@@ -104,7 +104,7 @@ import java.util.concurrent.ForkJoinPool;
 public class MovingAverageQueryTest extends InitializedNullHandlingTest
 {
   private final ObjectMapper jsonMapper;
-  private final QueryToolChestWarehouse warehouse;
+  private final QueryRunnerFactoryConglomerate conglomerate;
   private final RetryQueryRunnerConfig retryConfig;
   private final ServerConfig serverConfig;
 
@@ -161,13 +161,12 @@ public class MovingAverageQueryTest extends InitializedNullHandlingTest
         }
     );
 
-    System.setProperty("druid.generic.useDefaultValueForNull", "true");
     System.setProperty("druid.processing.buffer.sizeBytes", "655360");
     Injector baseInjector = GuiceInjectors.makeStartupInjector();
     Injector injector = Initialization.makeInjectorWithModules(baseInjector, modules);
 
     jsonMapper = injector.getInstance(ObjectMapper.class);
-    warehouse = injector.getInstance(QueryToolChestWarehouse.class);
+    conglomerate = injector.getInstance(QueryRunnerFactoryConglomerate.class);
     retryConfig = injector.getInstance(RetryQueryRunnerConfig.class);
     serverConfig = injector.getInstance(ServerConfig.class);
 
@@ -234,9 +233,7 @@ public class MovingAverageQueryTest extends InitializedNullHandlingTest
 
   private TypeReference<List<MapBasedRow>> getExpectedResultType()
   {
-    return new TypeReference<List<MapBasedRow>>()
-    {
-    };
+    return new TypeReference<>() {};
   }
 
   /**
@@ -321,7 +318,7 @@ public class MovingAverageQueryTest extends InitializedNullHandlingTest
     };
 
     CachingClusteredClient baseClient = new CachingClusteredClient(
-        warehouse,
+        conglomerate,
         new TimelineServerView()
         {
           @Override
@@ -375,7 +372,7 @@ public class MovingAverageQueryTest extends InitializedNullHandlingTest
         new NoopServiceEmitter(),
         baseClient,
         null /* local client; unused in this test, so pass in null */,
-        warehouse,
+        conglomerate,
         new MapJoinableFactory(ImmutableSet.of(), ImmutableMap.of()),
         retryConfig,
         jsonMapper,
@@ -392,7 +389,7 @@ public class MovingAverageQueryTest extends InitializedNullHandlingTest
     final Sequence<?> res = query.getRunner(walker).run(queryPlus);
 
     List actualResults = new ArrayList();
-    actualResults = (List<MapBasedRow>) res.accumulate(actualResults, Accumulators.list());
+    actualResults = res.accumulate(actualResults, Accumulators.list());
 
     expectedResults = consistentTypeCasting(expectedResults);
     actualResults = consistentTypeCasting(actualResults);

@@ -145,11 +145,11 @@ public class FrameProcessorExecutorTest
       final ListenableFuture<Long> blasterFuture = exec.runFully(blaster, null);
       final ListenableFuture<Long> muxerFuture = exec.runFully(muxer, null);
 
-      Assert.assertEquals(index.size(), (long) blasterFuture.get());
-      Assert.assertEquals(index.size() * 2, (long) muxerFuture.get());
+      Assert.assertEquals(index.numRows(), (long) blasterFuture.get());
+      Assert.assertEquals(index.numRows() * 2, (long) muxerFuture.get());
 
       Assert.assertEquals(
-          index.size() * 2,
+          index.numRows() * 2,
           FrameTestUtil.readRowsFromFrameChannel(
               new ReadableFileFrameChannel(FrameFile.open(outFile, null)),
               FrameReader.create(cursorFactory.getRowSignature())
@@ -470,7 +470,7 @@ public class FrameProcessorExecutorTest
         }
 
         // Write to input files.
-        final Consumer<Frame> writer = new Consumer<Frame>()
+        final Consumer<Frame> writer = new Consumer<>()
         {
           private int j = 0;
 

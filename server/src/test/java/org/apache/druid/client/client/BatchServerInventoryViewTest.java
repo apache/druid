@@ -197,7 +197,7 @@ public class BatchServerInventoryViewTest
         },
         cf,
         jsonMapper,
-        new Predicate<Pair<DruidServerMetadata, DataSegment>>()
+        new Predicate<>()
         {
           @Override
           public boolean apply(@Nullable Pair<DruidServerMetadata, DataSegment> input)
@@ -324,7 +324,7 @@ public class BatchServerInventoryViewTest
             )
         )
         .andAnswer(
-            new IAnswer<ServerView.CallbackAction>()
+            new IAnswer<>()
             {
               @Override
               public ServerView.CallbackAction answer()
@@ -342,7 +342,7 @@ public class BatchServerInventoryViewTest
     filteredBatchServerInventoryView.registerSegmentCallback(
         Execs.directExecutor(),
         callback,
-        new Predicate<Pair<DruidServerMetadata, DataSegment>>()
+        new Predicate<>()
         {
           @Override
           public boolean apply(@Nullable Pair<DruidServerMetadata, DataSegment> input)
@@ -443,7 +443,7 @@ public class BatchServerInventoryViewTest
       final int ii = i;
       futures.add(
           executor.submit(
-              new Callable<BatchDataSegmentAnnouncer>()
+              new Callable<>()
               {
                 @Override
                 public BatchDataSegmentAnnouncer call()
@@ -477,7 +477,7 @@ public class BatchServerInventoryViewTest
                       announcer,
                       jsonMapper
                   );
-                  List<DataSegment> segments = new ArrayList<DataSegment>();
+                  List<DataSegment> segments = new ArrayList<>();
                   try {
                     for (int j = 0; j < INITIAL_SEGMENTS / numThreads; ++j) {
                       segments.add(makeSegment(INITIAL_SEGMENTS + ii + numThreads * j));

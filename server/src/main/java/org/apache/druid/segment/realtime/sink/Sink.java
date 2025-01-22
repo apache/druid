@@ -231,7 +231,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
   public boolean swappable()
   {
     synchronized (hydrantLock) {
-      return writable && currHydrant.getIndex() != null && currHydrant.getIndex().size() != 0;
+      return writable && currHydrant.getIndex() != null && currHydrant.getIndex().numRows() != 0;
     }
   }
 
@@ -286,7 +286,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
         return 0;
       }
 
-      return index.size();
+      return index.numRows();
     }
   }
 
@@ -327,6 +327,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
         .withDimensionsSpec(schema.getDimensionsSpec())
         .withMetrics(schema.getAggregators())
         .withRollup(schema.getGranularitySpec().isRollup())
+        .withProjections(schema.getProjections())
         .build();
 
     // Build the incremental-index according to the spec that was chosen by the user
@@ -381,7 +382,7 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
         }
         currHydrant = new FireHydrant(newIndex, newCount, getSegment().getId());
         if (old != null) {
-          numRowsExcludingCurrIndex.addAndGet(old.getIndex().size());
+          numRowsExcludingCurrIndex.addAndGet(old.getIndex().numRows());
         }
         hydrants.add(currHydrant);
       } else {
@@ -442,13 +443,13 @@ public class Sink implements Iterable<FireHydrant>, Overshadowable<Sink>
   {
     return Iterators.filter(
         hydrants.iterator(),
-        new Predicate<FireHydrant>()
+        new Predicate<>()
         {
           @Override
           public boolean apply(FireHydrant input)
           {
             final IncrementalIndex index = input.getIndex();
-            return index == null || index.size() != 0;
+            return index == null || index.numRows() != 0;
           }
         }
     );

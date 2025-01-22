@@ -46,6 +46,7 @@ import org.apache.druid.segment.serde.NestedCommonFormatColumnPartSerde;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
 import javax.annotation.Nullable;
+import java.io.File;
 import java.io.IOException;
 import java.nio.ByteOrder;
 import java.nio.IntBuffer;
@@ -75,6 +76,7 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
       SimpleDictionaryMergingIterator.makePeekingComparator();
 
   private final String name;
+  private final String outputName;
   private final IndexSpec indexSpec;
   private final SegmentWriteOutMedium segmentWriteOutMedium;
   private final Closer closer;
@@ -84,20 +86,39 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
   @Nullable
   private final ColumnType castToType;
   private boolean isVariantType = false;
+  private byte variantTypeByte = 0x00;
 
+  private final File segmentBaseDir;
+
+  /**
+   * @param name                  column name
+   * @param outputName            output smoosh file name. if this is a base table column, it will be the equivalent to
+   *                              name, however if this merger is for a projection, this will be prefixed with the
+   *                              projection name so that multiple projections can store the same column name at
+   *                              different smoosh file "paths"
+   * @param castToType            optional mechanism to enforce that all values are a specific type
+   * @param indexSpec             segment level storage options such as compression format and bitmap type
+   * @param segmentWriteOutMedium temporary storage location to stage segment outputs before finalizing into the segment
+   * @param closer                resource closer if this merger needs to attach any closables that should be cleaned up
+   *                              when the segment is finished writing
+   */
   public AutoTypeColumnMerger(
       String name,
+      String outputName,
       @Nullable ColumnType castToType,
       IndexSpec indexSpec,
       SegmentWriteOutMedium segmentWriteOutMedium,
+      File segmentBaseDir,
       Closer closer
   )
   {
 
     this.name = name;
+    this.outputName = outputName;
     this.castToType = castToType;
     this.indexSpec = indexSpec;
     this.segmentWriteOutMedium = segmentWriteOutMedium;
+    this.segmentBaseDir = segmentBaseDir;
     this.closer = closer;
   }
 
@@ -165,7 +186,7 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
       if (explicitType == null && !forceNested && ((isConstant && constantValue == null) || numMergeIndex == 0)) {
         logicalType = ColumnType.STRING;
         serializer = new ScalarStringColumnSerializer(
-            name,
+            outputName,
             indexSpec,
             segmentWriteOutMedium,
             closer
@@ -179,7 +200,7 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
         switch (logicalType.getType()) {
           case LONG:
             serializer = new ScalarLongColumnSerializer(
-                name,
+                outputName,
                 indexSpec,
                 segmentWriteOutMedium,
                 closer
@@ -187,7 +208,7 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
             break;
           case DOUBLE:
             serializer = new ScalarDoubleColumnSerializer(
-                name,
+                outputName,
                 indexSpec,
                 segmentWriteOutMedium,
                 closer
@@ -195,7 +216,7 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
             break;
           case STRING:
             serializer = new ScalarStringColumnSerializer(
-                name,
+                outputName,
                 indexSpec,
                 segmentWriteOutMedium,
                 closer
@@ -203,7 +224,7 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
             break;
           case ARRAY:
             serializer = new VariantColumnSerializer(
-                name,
+                outputName,
                 logicalType,
                 null,
                 indexSpec,
@@ -222,6 +243,7 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
         // mixed type column, but only root path, we can use VariantArrayColumnSerializer
         // pick the least restrictive type for the logical type
         isVariantType = true;
+        variantTypeByte = rootTypes.getByteValue();
         for (ColumnType type : FieldTypeInfo.convertToSet(rootTypes.getByteValue())) {
           logicalType = ColumnType.leastRestrictiveType(logicalType, type);
         }
@@ -230,9 +252,9 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
           logicalType = ColumnTypeFactory.getInstance().ofArray(logicalType);
         }
         serializer = new VariantColumnSerializer(
-            name,
+            outputName,
             null,
-            rootTypes.getByteValue(),
+            variantTypeByte,
             indexSpec,
             segmentWriteOutMedium,
             closer
@@ -241,14 +263,14 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
         // all the bells and whistles
         logicalType = ColumnType.NESTED_DATA;
         serializer = new NestedDataColumnSerializer(
-            name,
+            outputName,
             indexSpec,
             segmentWriteOutMedium,
             closer
         );
       }
 
-      serializer.openDictionaryWriter();
+      serializer.openDictionaryWriter(segmentBaseDir);
       serializer.serializeFields(mergedFields);
 
       int stringCardinality;
@@ -262,7 +284,7 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
             sortedLookup.getSortedDoubles(),
             () -> new ArrayDictionaryMergingIterator(
                 sortedArrayLookups,
-                serializer.getGlobalLookup()
+                serializer.getDictionaryIdLookup()
             )
         );
         stringCardinality = sortedLookup.getStringCardinality();
@@ -284,7 +306,7 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
         );
         final ArrayDictionaryMergingIterator arrayIterator = new ArrayDictionaryMergingIterator(
             sortedArrayLookups,
-            serializer.getGlobalLookup()
+            serializer.getDictionaryIdLookup()
         );
         serializer.serializeDictionaries(
             () -> stringIterator,
@@ -365,6 +387,76 @@ public class AutoTypeColumnMerger implements DimensionMergerV9
                      .setHasMultipleValues(false)
                      .addSerde(partSerde);
     return descriptorBuilder.build();
+  }
+
+  protected DictionaryIdLookup getIdLookup()
+  {
+    return serializer.getDictionaryIdLookup();
+  }
+
+  @Override
+  public void attachParent(DimensionMergerV9 parent, List<IndexableAdapter> projectionAdapters) throws IOException
+  {
+    DruidException.conditionalDefensive(
+        parent instanceof AutoTypeColumnMerger,
+        "Projection parent dimension must be same type, got [%s]",
+        parent.getClass()
+    );
+    AutoTypeColumnMerger autoParent = (AutoTypeColumnMerger) parent;
+    logicalType = autoParent.logicalType;
+    isVariantType = autoParent.isVariantType;
+    if (autoParent.serializer instanceof ScalarStringColumnSerializer) {
+      serializer = new ScalarStringColumnSerializer(
+          outputName,
+          indexSpec,
+          segmentWriteOutMedium,
+          closer
+      );
+    } else if (autoParent.serializer instanceof ScalarLongColumnSerializer) {
+      serializer = new ScalarLongColumnSerializer(
+          outputName,
+          indexSpec,
+          segmentWriteOutMedium,
+          closer
+      );
+    } else if (autoParent.serializer instanceof ScalarDoubleColumnSerializer) {
+      serializer = new ScalarDoubleColumnSerializer(
+          outputName,
+          indexSpec,
+          segmentWriteOutMedium,
+          closer
+      );
+    } else if (autoParent.serializer instanceof VariantColumnSerializer) {
+      if (autoParent.isVariantType) {
+        serializer = new VariantColumnSerializer(
+            outputName,
+            null,
+            variantTypeByte,
+            indexSpec,
+            segmentWriteOutMedium,
+            closer
+        );
+      } else {
+        serializer = new VariantColumnSerializer(
+            outputName,
+            logicalType,
+            null,
+            indexSpec,
+            segmentWriteOutMedium,
+            closer
+        );
+      }
+    } else {
+      serializer = new NestedDataColumnSerializer(
+          outputName,
+          indexSpec,
+          segmentWriteOutMedium,
+          closer
+      );
+    }
+
+    serializer.setDictionaryIdLookup(autoParent.getIdLookup());
+    serializer.open();
   }
 
   public static class ArrayDictionaryMergingIterator implements Iterator<int[]>

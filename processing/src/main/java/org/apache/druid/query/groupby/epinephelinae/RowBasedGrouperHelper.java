@@ -58,6 +58,7 @@ import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
+import org.apache.druid.query.groupby.GroupByStatsProvider;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.Grouper.BufferComparator;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
@@ -131,7 +132,8 @@ public class RowBasedGrouperHelper
       final Supplier<ByteBuffer> bufferSupplier,
       final LimitedTemporaryStorage temporaryStorage,
       final ObjectMapper spillMapper,
-      final int mergeBufferSize
+      final int mergeBufferSize,
+      final GroupByStatsProvider.PerQueryStats perQueryStats
   )
   {
     return createGrouperAccumulatorPair(
@@ -148,7 +150,8 @@ public class RowBasedGrouperHelper
         UNKNOWN_THREAD_PRIORITY,
         false,
         UNKNOWN_TIMEOUT,
-        mergeBufferSize
+        mergeBufferSize,
+        perQueryStats
     );
   }
 
@@ -197,7 +200,8 @@ public class RowBasedGrouperHelper
       final int priority,
       final boolean hasQueryTimeout,
       final long queryTimeoutAt,
-      final int mergeBufferSize
+      final int mergeBufferSize,
+      final GroupByStatsProvider.PerQueryStats perQueryStats
   )
   {
     // concurrencyHint >= 1 for concurrent groupers, -1 for single-threaded
@@ -276,7 +280,8 @@ public class RowBasedGrouperHelper
           true,
           limitSpec,
           sortHasNonGroupingFields,
-          mergeBufferSize
+          mergeBufferSize,
+          perQueryStats
       );
     } else {
       final Grouper.KeySerdeFactory<RowBasedKey> combineKeySerdeFactory = new RowBasedKeySerdeFactory(
@@ -305,7 +310,8 @@ public class RowBasedGrouperHelper
           grouperSorter,
           priority,
           hasQueryTimeout,
-          queryTimeoutAt
+          queryTimeoutAt,
+          perQueryStats
       );
     }
 
@@ -373,7 +379,7 @@ public class RowBasedGrouperHelper
     final RowSignature signature = query.getResultRowSignature(finalization);
 
     final RowAdapter<ResultRow> adapter =
-        new RowAdapter<ResultRow>()
+        new RowAdapter<>()
         {
           @Override
           public ToLongFunction<ResultRow> timestampFunction()
@@ -638,10 +644,7 @@ public class RowBasedGrouperHelper
           for (int i = resultRowDimensionStart; i < entry.getKey().getKey().length; i++) {
             if (dimsToInclude == null || dimsToIncludeBitSet.get(i - resultRowDimensionStart)) {
               final Object dimVal = entry.getKey().getKey()[i];
-              resultRow.set(
-                  i,
-                  dimVal instanceof String ? NullHandling.emptyToNullIfNeeded((String) dimVal) : dimVal
-              );
+              resultRow.set(i, dimVal);
             }
           }
 
@@ -1112,12 +1115,17 @@ public class RowBasedGrouperHelper
               DimensionHandlerUtils.convertObjectToType(rhs, fieldType)
           );
         } else if (fieldType.equals(ColumnType.STRING_ARRAY)) {
-          cmp = new DimensionComparisonUtils.ArrayComparator<String>(
-              comparator == null ? StringComparators.LEXICOGRAPHIC : comparator
-          ).compare(
-              DimensionHandlerUtils.coerceToStringArray(lhs),
-              DimensionHandlerUtils.coerceToStringArray(rhs)
-          );
+          if (useNaturalStringArrayComparator(comparator)) {
+            cmp = fieldType.getNullableStrategy().compare(
+                DimensionHandlerUtils.coerceToStringArray(lhs),
+                DimensionHandlerUtils.coerceToStringArray(rhs)
+            );
+          } else {
+            cmp = new DimensionComparisonUtils.ArrayComparator<>(comparator).compare(
+                DimensionHandlerUtils.coerceToStringArray(lhs),
+                DimensionHandlerUtils.coerceToStringArray(rhs)
+            );
+          }
         } else if (fieldType.equals(ColumnType.LONG_ARRAY)
                    || fieldType.equals(ColumnType.DOUBLE_ARRAY)) {
           cmp = fieldType.getNullableStrategy().compare(
@@ -1278,6 +1286,12 @@ public class RowBasedGrouperHelper
     }
 
     @Override
+    public Long getDictionarySize()
+    {
+      return currentEstimatedSize;
+    }
+
+    @Override
     public ByteBuffer toByteBuffer(RowBasedKey key)
     {
       keyBuffer.rewind();
@@ -1365,7 +1379,7 @@ public class RowBasedGrouperHelper
     public ObjectMapper decorateObjectMapper(ObjectMapper spillMapper)
     {
 
-      final JsonDeserializer<RowBasedKey> deserializer = new JsonDeserializer<RowBasedKey>()
+      final JsonDeserializer<RowBasedKey> deserializer = new JsonDeserializer<>()
       {
         @Override
         public RowBasedKey deserialize(
@@ -1554,19 +1568,15 @@ public class RowBasedGrouperHelper
         @Nullable StringComparator stringComparator
     )
     {
-      if (NullHandling.sqlCompatible()) {
-        return new NullableRowBasedKeySerdeHelper(
-            makeNumericSerdeHelper(
-                valueType,
-                keyBufferPosition + Byte.BYTES,
-                pushLimitDown,
-                stringComparator
-            ),
-            keyBufferPosition
-        );
-      } else {
-        return makeNumericSerdeHelper(valueType, keyBufferPosition, pushLimitDown, stringComparator);
-      }
+      return new NullableRowBasedKeySerdeHelper(
+          makeNumericSerdeHelper(
+              valueType,
+              keyBufferPosition + Byte.BYTES,
+              pushLimitDown,
+              stringComparator
+          ),
+          keyBufferPosition
+      );
     }
 
     private RowBasedKeySerdeHelper makeNumericSerdeHelper(
@@ -1806,13 +1816,17 @@ public class RowBasedGrouperHelper
       )
       {
         super(keyBufferPosition);
+        final Comparator<Object[]> comparator;
+        if (useNaturalStringArrayComparator(stringComparator)) {
+          comparator = ColumnType.STRING_ARRAY.getNullableStrategy();
+        } else {
+          comparator = new DimensionComparisonUtils.ArrayComparator<>(stringComparator);
+        }
         bufferComparator = (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) ->
-            new DimensionComparisonUtils.ArrayComparator<>(
-                stringComparator == null ? StringComparators.LEXICOGRAPHIC : stringComparator)
-                .compare(
-                    stringArrayDictionary.get(lhsBuffer.getInt(lhsPosition + keyBufferPosition)),
-                    stringArrayDictionary.get(rhsBuffer.getInt(rhsPosition + keyBufferPosition))
-                );
+            comparator.compare(
+                stringArrayDictionary.get(lhsBuffer.getInt(lhsPosition + keyBufferPosition)),
+                stringArrayDictionary.get(rhsBuffer.getInt(rhsPosition + keyBufferPosition))
+            );
       }
 
       @Override
@@ -1859,7 +1873,7 @@ public class RowBasedGrouperHelper
               rankOfDictionaryIds[rhsBuffer.getInt(rhsPosition + keyBufferPosition)]
           );
         } else {
-          final StringComparator realComparator = stringComparator == null ?
+          final StringComparator realComparator = useNaturalStringArrayComparator(stringComparator) ?
                                                   StringComparators.LEXICOGRAPHIC :
                                                   stringComparator;
           bufferComparator = (lhsBuffer, rhsBuffer, lhsPosition, rhsPosition) -> {
@@ -2181,5 +2195,17 @@ public class RowBasedGrouperHelper
         return delegate.getClazz();
       }
     }
+  }
+
+  /**
+   * Check if the {@link StringComparator} is the 'natural' {@link ColumnType#STRING_ARRAY} comparator. If so,
+   * callers can safely use the column type to compare values. If false, the {@link StringComparator} must be called
+   * against each array element for the comparison of values.
+   */
+  private static boolean useNaturalStringArrayComparator(@Nullable StringComparator stringComparator)
+  {
+    return stringComparator == null
+           || StringComparators.NATURAL.equals(stringComparator)
+           || StringComparators.LEXICOGRAPHIC.equals(stringComparator);
   }
 }

@@ -20,7 +20,6 @@
 package org.apache.druid.sql.calcite.util;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.segment.column.ColumnType;
@@ -50,7 +49,6 @@ public abstract class CalciteTestBase
   @BeforeAll
   public static void setupCalciteProperties()
   {
-    NullHandling.initializeForTests();
     ExpressionProcessing.initializeForTests();
   }
 

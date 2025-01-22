@@ -17,11 +17,12 @@
  */
 
 import { Callout } from '@blueprintjs/core';
-import type { SqlQuery } from '@druid-toolkit/query';
-import { type QueryResult } from '@druid-toolkit/query';
+import classNames from 'classnames';
+import type { QueryResult, SqlQuery } from 'druid-query-toolkit';
 import React from 'react';
 
 import { useQueryManager } from '../../../../hooks';
+import { formatEmpty } from '../../../../utils';
 
 import './preview-pane.scss';
 
@@ -58,8 +59,11 @@ export const PreviewPane = React.memo(function PreviewPane(props: PreviewPanePro
           <div className="preview-values-wrapper">
             <div className="preview-values">
               {previewValues.map((v, i) => (
-                <div className="preview-value" key={i}>
-                  {String(v)}
+                <div
+                  className={classNames('preview-value', { special: v == null || v === '' })}
+                  key={i}
+                >
+                  {formatEmpty(v)}
                 </div>
               ))}
             </div>

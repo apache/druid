@@ -172,7 +172,7 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
     @SuppressWarnings("unchecked")
     DictionaryEncodedColumn<T> dict = (DictionaryEncodedColumn<T>) col;
 
-    return new CloseableIndexed<T>()
+    return new CloseableIndexed<>()
     {
 
       @Override
@@ -260,6 +260,14 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
   public RowIteratorImpl getRows()
   {
     return new RowIteratorImpl();
+  }
+
+  @Override
+  public IndexableAdapter getProjectionAdapter(String projection)
+  {
+    QueryableIndex projectionIndex = input.getProjectionQueryableIndex(projection);
+    DruidException.conditionalDefensive(projectionIndex != null, "Projection[%s] was not found", projection);
+    return new QueryableIndexIndexableAdapter(projectionIndex);
   }
 
   /**

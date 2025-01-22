@@ -64,6 +64,41 @@ import java.nio.ByteOrder;
  */
 public interface StagedSerde<T>
 {
+  static StagedSerde<byte[]> forBytes()
+  {
+    return new StagedSerde<>()
+    {
+      @Override
+      public byte[] serialize(byte[] value)
+      {
+        return value;
+      }
+
+      @Override
+      public byte[] deserialize(byte[] bytes)
+      {
+        return bytes;
+      }
+
+      @Override
+      public StorableBuffer serializeDelayed(@Nullable byte[] value)
+      {
+        throw new UnsupportedOperationException();
+      }
+
+      @Nullable
+      @Override
+      public byte[] deserialize(ByteBuffer byteBuffer)
+      {
+        byte[] retVal = new byte[byteBuffer.remaining()];
+        int position = byteBuffer.position();
+        byteBuffer.get(retVal);
+        byteBuffer.position(position);
+        return retVal;
+      }
+    };
+  }
+
   /**
    * Useful method when some computation is necessary to prepare for serialization without actually writing out
    * all the bytes in order to determine the serialized size. It allows encapsulation of the size computation and

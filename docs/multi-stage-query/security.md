@@ -62,7 +62,7 @@ Depending on what a user is trying to do, they might also need the following per
 
 ## Permissions for durable storage
 
-The MSQ task engine can use Amazon S3 or Azure Blog Storage to store intermediate files when running queries. To upload, read, move and delete these intermediate files, the MSQ task engine requires certain permissions specific to the storage provider. 
+The MSQ task engine can use Amazon S3 or Azure Blob Storage to store intermediate files when running queries. To upload, read, move and delete these intermediate files, the MSQ task engine requires certain permissions specific to the storage provider. 
 
 ### S3
 
@@ -81,3 +81,6 @@ The MSQ task engine needs the following permissions for pushing, fetching, and r
 - `Microsoft.Storage/storageAccounts/blobServices/containers/blobs/write` to write files in durable storage.
 - `Microsoft.Storage/storageAccounts/blobServices/containers/blobs/add/action` to create files in durable storage.
 - `Microsoft.Storage/storageAccounts/blobServices/containers/blobs/delete` to delete files when they're no longer needed.
+
+<!--TBD GCS-->
+

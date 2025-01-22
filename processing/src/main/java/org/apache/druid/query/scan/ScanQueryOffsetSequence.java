@@ -64,7 +64,7 @@ public class ScanQueryOffsetSequence extends YieldingSequenceBase<ScanResultValu
       final SkippingYieldingAccumulator<OutType> accumulator
   )
   {
-    return new Yielder<OutType>()
+    return new Yielder<>()
     {
       @Override
       public OutType get()

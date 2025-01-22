@@ -23,25 +23,37 @@
   width: 100%;
   overflow: auto;
 
-  .clickable-cell {
-    cursor: pointer;
-  }
-
-  .ReactTable {
+  .splitter-layout.timeline-datasources-splitter {
     position: absolute;
     top: $view-control-bar-height + $standard-padding;
     bottom: 0;
     width: 100%;
+
+    & > .layout-splitter:hover {
+      background: black;
+      opacity: 0.1;
+      border-radius: 2px;
+    }
   }
 
-  &.show-segment-timeline {
-    .segment-timeline {
-      height: calc(50% - 55px);
-      margin-top: 10px;
+  .segment-timeline {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+  }
+
+  .ReactTable {
+    @include pin-full;
+
+    .datasource-color-tab {
+      display: inline-block;
+      width: 10px;
+      height: 20px;
+      border-radius: 3px;
     }
 
-    .ReactTable {
-      top: 50%;
+    .clickable-cell {
+      cursor: pointer;
     }
   }
 }

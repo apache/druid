@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.topn;
 
+import com.google.common.base.Preconditions;
 import com.google.common.base.Predicates;
 import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.collections.ResourceHolder;
@@ -27,10 +28,10 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.ColumnSelectorPlus;
 import org.apache.druid.query.CursorGranularizer;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.query.aggregation.AggregatorUtil;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.topn.types.TopNColumnAggregatesProcessor;
 import org.apache.druid.query.topn.types.TopNColumnAggregatesProcessorFactory;
@@ -89,7 +90,7 @@ public class TopNQueryEngine
     final CursorBuildSpec buildSpec = makeCursorBuildSpec(query, queryMetrics);
     final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(buildSpec);
     if (cursorHolder.isPreAggregated()) {
-      query = query.withAggregatorSpecs(AggregatorUtil.getCombiningAggregators(query.getAggregatorSpecs()));
+      query = query.withAggregatorSpecs(Preconditions.checkNotNull(cursorHolder.getAggregatorsForPreAggregated()));
     }
     final Cursor cursor = cursorHolder.asCursor();
     if (cursor == null) {
@@ -245,6 +246,11 @@ public class TopNQueryEngine
       final int numBytesPerRecord
   )
   {
+    if (cardinality < 0) {
+      // unknown cardinality doesn't work with the pooled algorithm which requires an exact count of dictionary ids
+      return false;
+    }
+
     if (selector.isHasExtractionFn()) {
       // extraction functions can have a many to one mapping, and should use a heap algorithm
       return false;
@@ -254,28 +260,35 @@ public class TopNQueryEngine
       // non-string output cannot use the pooled algorith, even if the underlying selector supports it
       return false;
     }
+
     if (!Types.is(capabilities, ValueType.STRING)) {
       // non-strings are not eligible to use the pooled algorithm, and should use a heap algorithm
       return false;
     }
 
-    // string columns must use the on heap algorithm unless they have the following capabilites
     if (!capabilities.isDictionaryEncoded().isTrue() || !capabilities.areDictionaryValuesUnique().isTrue()) {
+      // string columns must use the on heap algorithm unless they have the following capabilites
       return false;
     }
-    if (Granularities.ALL.equals(query.getGranularity())) {
-      // all other requirements have been satisfied, ALL granularity can always use the pooled algorithms
-      return true;
-    }
-    // if not using ALL granularity, we can still potentially use the pooled algorithm if we are certain it doesn't
-    // need to make multiple passes (e.g. reset the cursor)
+
+    // num values per pass must be greater than 0 or else the pooled algorithm cannot progress
     try (final ResourceHolder<ByteBuffer> resultsBufHolder = bufferPool.take()) {
       final ByteBuffer resultsBuf = resultsBufHolder.get();
 
       final int numBytesToWorkWith = resultsBuf.capacity();
       final int numValuesPerPass = numBytesPerRecord > 0 ? numBytesToWorkWith / numBytesPerRecord : cardinality;
 
-      return numValuesPerPass <= cardinality;
+      final boolean allowMultiPassPooled = query.context().getBoolean(
+          QueryContexts.TOPN_USE_MULTI_PASS_POOLED_QUERY_GRANULARITY,
+          false
+      );
+      if (Granularities.ALL.equals(query.getGranularity()) || allowMultiPassPooled) {
+        return numValuesPerPass > 0;
+      }
+
+      // if not using multi-pass for pooled + query granularity other than 'ALL', we must check that all values can fit
+      // in a single pass
+      return numValuesPerPass >= cardinality;
     }
   }
 
@@ -297,6 +310,7 @@ public class TopNQueryEngine
                        .setFilter(Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getFilter())))
                        .setGroupingColumns(Collections.singletonList(query.getDimensionSpec().getDimension()))
                        .setVirtualColumns(query.getVirtualColumns())
+                       .setPhysicalColumns(query.getRequiredColumns())
                        .setAggregators(query.getAggregatorSpecs())
                        .setQueryContext(query.context())
                        .setQueryMetrics(queryMetrics)

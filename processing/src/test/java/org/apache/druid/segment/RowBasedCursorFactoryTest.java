@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.math.LongMath;
 import junitparams.converters.Nullable;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -99,8 +98,6 @@ public class RowBasedCursorFactoryTest
   @BeforeClass
   public static void setUpClass()
   {
-    NullHandling.initializeForTests();
-
     PROCESSORS.clear();
 
     // Read all the types as all the other types.
@@ -180,7 +177,7 @@ public class RowBasedCursorFactoryTest
    * other columns return null.
    */
   private static final RowAdapter<Integer> ROW_ADAPTER =
-      new RowAdapter<Integer>()
+      new RowAdapter<>()
       {
         @Override
         public ToLongFunction<Integer> timestampFunction()
@@ -209,9 +206,10 @@ public class RowBasedCursorFactoryTest
       };
 
   private static final RowAdapter<Integer> SAME_TIME_ROW_ADAPTER =
-      new RowAdapter<Integer>()
+      new RowAdapter<>()
       {
         private DateTime startTime = DateTimes.nowUtc();
+
         @Override
         public ToLongFunction<Integer> timestampFunction()
         {
@@ -634,9 +632,9 @@ public class RowBasedCursorFactoryTest
                   "0",
 
                   // COMPLEX
-                  NullHandling.defaultFloatValue(),
-                  NullHandling.defaultDoubleValue(),
-                  NullHandling.defaultLongValue(),
+                  null,
+                  null,
+                  null,
                   null,
                   null,
 
@@ -678,9 +676,9 @@ public class RowBasedCursorFactoryTest
                   "1",
 
                   // COMPLEX
-                  NullHandling.defaultFloatValue(),
-                  NullHandling.defaultDoubleValue(),
-                  NullHandling.defaultLongValue(),
+                  null,
+                  null,
+                  null,
                   null,
                   null,
 
