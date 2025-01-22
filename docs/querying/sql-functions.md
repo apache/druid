@@ -1364,7 +1364,7 @@ Returns `e2` if `e1` is null, else returns `e1`.
 Parses an expression into a `COMPLEX<json>` object. 
 
 The function deserializes JSON values when processing them, translating stringified JSON into a nested structure.
-If the input is invalid JSON or not a `VARCHAR`, it produces an error.
+If the input is invalid JSON or not a `VARCHAR`, it returns an error.
 
 * **Syntax:** `PARSE_JSON(expr)`
 * **Function type:** JSON
