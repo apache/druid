@@ -1008,7 +1008,7 @@ Returns the following:
 Extracts an `ARRAY<COMPLEX<json>>` value from an expression at a specified path.
 
 If the value isn't an array, the function translates it into a single element `ARRAY` containing the value at `path`.
-This function is mainly used extract arrays of objects to use as inputs to other [array functions](./sql-array-functions.md).
+This function is mainly used to extract arrays of objects to use as inputs to other [array functions](./sql-array-functions.md).
 
 * **Syntax:** `JSON_QUERY_ARRAY(expr, path)`
 * **Function type:** JSON
