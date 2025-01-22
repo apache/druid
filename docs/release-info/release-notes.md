@@ -88,7 +88,7 @@ We recommend that you upgrade to Java 17.
 
 ### Hadoop-based ingestion
 
-Hadoop-based ingestion is now deprecated. We recommend that you migrate to SQL-based ingestion. f
+Hadoop-based ingestion is now deprecated. We recommend that you migrate to SQL-based ingestion. 
 
 ### New Overlord APIs
 
@@ -220,7 +220,7 @@ SQL JOIN queries now include hints. This allows queries to hint the JOIN type th
 - Improved error handling for incomplete queries. A trailer header to indicate an error is returned now [#16672](https://github.com/apache/druid/pull/16672)
 - Improved scan queries to account for column types in more situations [#17463](https://github.com/apache/druid/pull/17463)
 - Improved lookups so that they can now iterate over fetched data [#17212](https://github.com/apache/druid/pull/17212)
-- Improved projections so that theycan contain only aggregators and no grouping columns [#17484](https://github.com/apache/druid/pull/17484)
+- Improved projections so that they can contain only aggregators and no grouping columns [#17484](https://github.com/apache/druid/pull/17484)
 - Removed microseconds as a supported unit for EXTRACT [#17247](https://github.com/apache/druid/pull/17247)
 
 
