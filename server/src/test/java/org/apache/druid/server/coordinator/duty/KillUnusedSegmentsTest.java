@@ -108,8 +108,7 @@ public class KillUnusedSegmentsTest
   public void setup()
   {
     connector = derbyConnectorRule.getConnector();
-    SegmentsMetadataManagerConfig config = new SegmentsMetadataManagerConfig();
-    config.setPollDuration(Period.millis(1));
+    SegmentsMetadataManagerConfig config = new SegmentsMetadataManagerConfig(Period.millis(1), false);
     sqlSegmentsMetadataManager = new SqlSegmentsMetadataManager(
         TestHelper.makeJsonMapper(),
         Suppliers.ofInstance(config),

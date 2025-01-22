@@ -40,6 +40,7 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.metadata.segment.cache.SegmentsMetadataCache;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordinator.CoordinatorOverlordServiceConfig;
 
@@ -88,6 +89,7 @@ public class DruidOverlord
       final OverlordDutyExecutor overlordDutyExecutor,
       @IndexingService final DruidLeaderSelector overlordLeaderSelector,
       final SegmentAllocationQueue segmentAllocationQueue,
+      final SegmentsMetadataCache segmentsMetadataCache,
       final CompactionScheduler compactionScheduler,
       final ObjectMapper mapper,
       final TaskContextEnricher taskContextEnricher
@@ -132,6 +134,7 @@ public class DruidOverlord
 
           // First add "half leader" services: everything required for APIs except the supervisor manager.
           // Then, become "half leader" so those APIs light up and supervisor initialization can proceed.
+          leaderLifecycle.addManagedInstance(segmentsMetadataCache);
           leaderLifecycle.addManagedInstance(taskRunner);
           leaderLifecycle.addManagedInstance(taskQueue);
           leaderLifecycle.addHandler(

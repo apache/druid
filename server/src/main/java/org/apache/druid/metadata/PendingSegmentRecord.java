@@ -111,6 +111,13 @@ public class PendingSegmentRecord
     return taskAllocatorId;
   }
 
+  /**
+   * Computes a hash for this record to serve as UNIQUE key, ensuring we don't
+   * have more than one segment per sequence per interval.
+   * A single column is used instead of (sequence_name, sequence_prev_id) as
+   * some MySQL storage engines have difficulty with large unique keys
+   * (see <a href="https://github.com/apache/druid/issues/2319">#2319</a>)
+   */
   @SuppressWarnings("UnstableApiUsage")
   public String computeSequenceNamePrevIdSha1(boolean skipSegmentLineageCheck)
   {

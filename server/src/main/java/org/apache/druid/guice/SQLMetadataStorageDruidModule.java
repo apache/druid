@@ -41,6 +41,9 @@ import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.metadata.SegmentsMetadataManagerProvider;
 import org.apache.druid.metadata.SqlSegmentsMetadataManager;
 import org.apache.druid.metadata.SqlSegmentsMetadataManagerProvider;
+import org.apache.druid.metadata.segment.SqlSegmentsMetadataTransactionFactory;
+import org.apache.druid.metadata.segment.cache.SegmentsMetadataCache;
+import org.apache.druid.metadata.segment.cache.SqlSegmentsMetadataCache;
 import org.apache.druid.server.audit.AuditManagerConfig;
 import org.apache.druid.server.audit.AuditSerdeHelper;
 import org.apache.druid.server.audit.SQLAuditManager;
@@ -72,6 +75,8 @@ public class SQLMetadataStorageDruidModule implements Module
     PolyBind.createChoiceWithDefault(binder, prop, Key.get(SegmentsMetadataManagerProvider.class), defaultValue);
     PolyBind.createChoiceWithDefault(binder, prop, Key.get(MetadataRuleManager.class), defaultValue);
     PolyBind.createChoiceWithDefault(binder, prop, Key.get(MetadataRuleManagerProvider.class), defaultValue);
+    PolyBind.createChoiceWithDefault(binder, prop, Key.get(SegmentsMetadataCache.class), defaultValue);
+    PolyBind.createChoiceWithDefault(binder, prop, Key.get(SqlSegmentsMetadataTransactionFactory.class), defaultValue);
     PolyBind.createChoiceWithDefault(binder, prop, Key.get(IndexerMetadataStorageCoordinator.class), defaultValue);
     PolyBind.createChoiceWithDefault(binder, prop, Key.get(MetadataStorageActionHandlerFactory.class), defaultValue);
     PolyBind.createChoiceWithDefault(binder, prop, Key.get(MetadataStorageUpdaterJobHandler.class), defaultValue);
@@ -101,6 +106,16 @@ public class SQLMetadataStorageDruidModule implements Module
     PolyBind.optionBinder(binder, Key.get(MetadataRuleManagerProvider.class))
             .addBinding(type)
             .to(SQLMetadataRuleManagerProvider.class)
+            .in(LazySingleton.class);
+
+    PolyBind.optionBinder(binder, Key.get(SegmentsMetadataCache.class))
+            .addBinding(type)
+            .to(SqlSegmentsMetadataCache.class)
+            .in(LazySingleton.class);
+
+    PolyBind.optionBinder(binder, Key.get(SqlSegmentsMetadataTransactionFactory.class))
+            .addBinding(type)
+            .to(SqlSegmentsMetadataTransactionFactory.class)
             .in(LazySingleton.class);
 
     PolyBind.optionBinder(binder, Key.get(IndexerMetadataStorageCoordinator.class))

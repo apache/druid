@@ -42,6 +42,8 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.metadata.TestDerbyConnector;
+import org.apache.druid.metadata.segment.SqlSegmentsMetadataTransactionFactory;
+import org.apache.druid.metadata.segment.cache.NoopSegmentsMetadataCache;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QueryRunnerTestHelper;
@@ -56,6 +58,7 @@ import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.segment.realtime.appenderator.SegmentSchemas;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
+import org.apache.druid.server.coordinator.simulate.TestDruidLeaderSelector;
 import org.apache.druid.server.initialization.ZkPathsConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.timeline.DataSegment;
@@ -112,6 +115,13 @@ public class DatasourceOptimizerTest extends CuratorTestBase
     );
 
     metadataStorageCoordinator = new IndexerSQLMetadataStorageCoordinator(
+        new SqlSegmentsMetadataTransactionFactory(
+            jsonMapper,
+            derbyConnectorRule.metadataTablesConfigSupplier().get(),
+            derbyConnector,
+            new TestDruidLeaderSelector(),
+            new NoopSegmentsMetadataCache()
+        ),
         jsonMapper,
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         derbyConnector,

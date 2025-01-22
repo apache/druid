@@ -28,6 +28,9 @@ import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.metadata.segment.SegmentsMetadataTransaction;
+import org.apache.druid.metadata.segment.SqlSegmentsMetadataTransactionFactory;
+import org.apache.druid.metadata.segment.cache.NoopSegmentsMetadataCache;
 import org.apache.druid.segment.SchemaPayload;
 import org.apache.druid.segment.SchemaPayloadPlus;
 import org.apache.druid.segment.SegmentSchemaMapping;
@@ -37,6 +40,7 @@ import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.FingerprintGenerator;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.segment.metadata.SegmentSchemaTestUtils;
+import org.apache.druid.server.coordinator.simulate.TestDruidLeaderSelector;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.LinearShardSpec;
@@ -45,7 +49,6 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.skife.jdbi.v2.Handle;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -89,6 +92,13 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
     centralizedDatasourceSchemaConfig.setEnabled(true);
 
     coordinator = new IndexerSQLMetadataStorageCoordinator(
+        new SqlSegmentsMetadataTransactionFactory(
+            mapper,
+            derbyConnectorRule.metadataTablesConfigSupplier().get(),
+            derbyConnector,
+            new TestDruidLeaderSelector(),
+            new NoopSegmentsMetadataCache()
+        ),
         mapper,
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         derbyConnector,
@@ -98,7 +108,7 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
     {
       @Override
       protected DataStoreMetadataUpdateResult updateDataSourceMetadataWithHandle(
-          Handle handle,
+          SegmentsMetadataTransaction transaction,
           String dataSource,
           DataSourceMetadata startMetadata,
           DataSourceMetadata endMetadata
@@ -106,7 +116,7 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
       {
         // Count number of times this method is called.
         metadataUpdateCounter.getAndIncrement();
-        return super.updateDataSourceMetadataWithHandle(handle, dataSource, startMetadata, endMetadata);
+        return super.updateDataSourceMetadataWithHandle(transaction, dataSource, startMetadata, endMetadata);
       }
 
       @Override
