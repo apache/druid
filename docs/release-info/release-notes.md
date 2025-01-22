@@ -226,6 +226,12 @@ SQL JOIN queries now include hints. This allows queries to hint the JOIN type th
 
 ### Cluster management
 
+#### Reduced metadata IO
+
+The Overlord runtime property `druid.indexer.tasklock.batchAllocationReduceMetadataIO` can help reduce IO during segment allocation. Setting this flag to true (default value) allows the Overlord to fetch only necessary segment payloads during segment allocation.
+
+[#17496](https://github.com/apache/druid/pull/17496)
+
 #### Other cluster management improvements
 
 - Druid can now run non-G1 Garbage Collectors with `JAVA_OPTS` [#17078](https://github.com/apache/druid/pull/17078)
