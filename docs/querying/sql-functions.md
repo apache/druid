@@ -371,19 +371,74 @@ Returns the bitwise exclusive OR between the two expressions, that is, `expr1 ^ 
 
 ## BLOOM_FILTER
 
-`BLOOM_FILTER(expr, <NUMERIC>)`
+Computes a [bloom filter](../development/extensions-core/bloom-filter.md) from values provided in an expression.
 
-**Function type:** [Aggregation](sql-aggregations.md)
+`numEntries` specifies the maximum number of distinct values before the false positive rate increases.
 
-Computes a Bloom filter from values produced by the specified expression.
+* **Syntax:** `BLOOM_FILTER(expr, numEntries)`
+* **Function type:** SQL aggregation
+
+<details><summary>Example</summary>
+
+The following example returns a base64-encoded bloom filter string for entries in agent_category, 
+with a maximum of 10 distinct values:
+
+```sql
+SELECT
+  agent_category,
+  BLOOM_FILTER(agent_category, 10) as bloom
+FROM "kttm"
+  GROUP BY agent_category
+```
+
+Returns the following:
+
+| `agent_keys` | `bloom` |
+| -- | -- |
+| _`empty`_ | `"BAAAAAgAAAAAABAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEABAAAAAA"` |
+| `Game console` | `"BAAAAAgAAAAAAAAAAAAAAAAAAAAAAAAAQAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgBAAAAAAAAAAAAAAAA"` |
+| `Personal computer` | `"BAAAAAgAAAAAAEAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAA"` |
+| `Smart TV` | `"BAAAAAgAAAAAAAAAAAAAgAAAAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAA"` |
+| `Smartphone` | `"BAAAAAgAAACAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAA"` |
+| `Tablet` | `"BAAAAAgAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAAAgAAAAAAAAAAAAAAAAAAAAACAAAAAAAAAAAAAAAAAAAAAAIA"` |
+
+</details>
+
+[Learn more](sql-aggregations.md)
 
 ## BLOOM_FILTER_TEST
 
-`BLOOM_FILTER_TEST(expr, <STRING>)`
+Returns true if an expression is contained in a base64-encoded [bloom filter](../development/extensions-core/bloom-filter.md) string.
 
-**Function type:** [Scalar, other](sql-scalar.md#other-scalar-functions)
+* **Syntax:** `BLOOM_FILTER_TEST(expr, <STRING>)`
+* **Function type:** SQL aggregation
 
-Returns true if the expression is contained in a Base64-serialized Bloom filter.
+<details><summary>Example</summary>
+
+The following example returns `true` for the bloom filter string associated with `agent_filter` entry `Game console`:
+
+```sql
+SELECT
+  agent_category,
+  BLOOM_FILTER_TEST(agent_category, 'BAAAAAgAAAAAAAAAAAAAAAAAAAAAAAAAQAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgBAAAAAAAAAAAAAAAA') as bloom
+FROM "kttm"
+GROUP BY agent_category
+```
+
+Returns the following:
+
+| `agent_keys` | `bloom` |
+| -- | -- |
+| _`empty`_ | `false` |
+| `Game console` | `true` |
+| `Personal computer` | `false` |
+| `Smart TV` | `false` |
+| `Smartphone` | `false` |
+| `Tablet` | `false` |
+
+</details>
+
+[Learn more](sql-aggregations.md)
 
 ## BTRIM
 
