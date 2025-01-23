@@ -20,16 +20,14 @@
 package org.apache.druid.msq.indexing;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class MSQTaskListTest
 {
@@ -49,36 +47,13 @@ public class MSQTaskListTest
   }
 
   @Test
-  public void testEquals()
+  public void testEqualsAndHashCode()
   {
-    List<String> taskIds1 = Arrays.asList("task1", "task2");
-    List<String> taskIds2 = Arrays.asList("task1", "task2");
-    MSQTaskList msqTaskList1 = new MSQTaskList(taskIds1);
-    MSQTaskList msqTaskList2 = new MSQTaskList(taskIds2);
-    assertEquals(msqTaskList1, msqTaskList2);
-    assertTrue(msqTaskList1.equals(msqTaskList1));
-    assertFalse(msqTaskList1.equals(null));
-  }
-
-  @Test
-  public void testNotEquals()
-  {
-    List<String> taskIds1 = Arrays.asList("task1", "task2");
-    List<String> taskIds2 = Arrays.asList("task3", "task4");
-    MSQTaskList msqTaskList1 = new MSQTaskList(taskIds1);
-    MSQTaskList msqTaskList2 = new MSQTaskList(taskIds2);
-    assertNotEquals(msqTaskList1, msqTaskList2);
-    assertFalse(msqTaskList1.equals(msqTaskList2));
-    assertFalse(msqTaskList1.equals(new Object()));
-  }
-
-  @Test
-  public void testHashCode()
-  {
-    List<String> taskIds1 = Arrays.asList("task1", "task2");
-    MSQTaskList msqTaskList1 = new MSQTaskList(taskIds1);
-    MSQTaskList msqTaskList2 = new MSQTaskList(taskIds1);
-    assertEquals(msqTaskList1.hashCode(), msqTaskList2.hashCode());
+    EqualsVerifier.simple()
+            .forClass(MSQTaskList.class)
+            .usingGetClass()
+            .withNonnullFields("taskIds")
+            .verify();
   }
 
   @Test
