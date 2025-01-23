@@ -538,13 +538,15 @@ public class ControllerImpl implements Controller
 
   private void emitSummaryMetrics(final MSQTaskReportPayload msqTaskReportPayload, final MSQSpec querySpec)
   {
-    final List<Integer> stagesToInclude = new ArrayList<>();
-    for (MSQStagesReport.Stage stage : msqTaskReportPayload.getStages().getStages()) {
-      boolean hasParentStage = stage.getStageDefinition().getInputSpecs().stream()
-          .anyMatch(stageInput -> stageInput instanceof StageInputSpec);
-
-      if (!hasParentStage) {
-        stagesToInclude.add(stage.getStageNumber());
+    final Set<Integer> stagesToInclude = new HashSet<>();
+    final MSQStagesReport stagesReport = msqTaskReportPayload.getStages();
+    if (stagesReport != null) {
+      for (MSQStagesReport.Stage stage : stagesReport.getStages()) {
+        boolean hasParentStage = stage.getStageDefinition().getInputSpecs().stream()
+            .anyMatch(stageInput -> stageInput instanceof StageInputSpec);
+        if (!hasParentStage) {
+          stagesToInclude.add(stage.getStageNumber());
+        }
       }
     }
     long totalProcessedBytes = 0;
@@ -554,7 +556,7 @@ public class ControllerImpl implements Controller
           .copyMap()
           .entrySet()
           .stream()
-          .filter(entry -> stagesToInclude.contains(entry.getKey())) // Filter by stagesToInclude
+          .filter(entry -> stagesReport == null || stagesToInclude.contains(entry.getKey()))
           .flatMap(counterSnapshotsMap -> counterSnapshotsMap.getValue().values().stream())
           .flatMap(counterSnapshots -> counterSnapshots.getMap().entrySet().stream())
           .filter(entry -> entry.getKey().startsWith("input"))

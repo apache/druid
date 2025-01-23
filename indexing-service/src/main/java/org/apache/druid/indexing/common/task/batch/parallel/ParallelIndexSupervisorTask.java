@@ -1252,12 +1252,6 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
    */
   private TaskReport.ReportMap getTaskCompletionReports(TaskStatus taskStatus)
   {
-    final Number totalProcessedBytes = (Number) indexGenerateRowStats.lhs.get("processedBytes");
-    // Emit the processed bytes metric
-    final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
-    IndexTaskUtils.setTaskDimensions(metricBuilder, this);
-    toolbox.getEmitter().emit(
-        metricBuilder.setMetric("ingest/input/bytes", (Number) totalProcessedBytes));
     return buildIngestionStatsAndContextReport(
         IngestionState.COMPLETED,
         taskStatus.getErrorMsg(),
@@ -1286,9 +1280,27 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
 
   private void writeCompletionReports()
   {
+    emitCompletionMetrics();
     if (!isCompactionTask) {
       toolbox.getTaskReportFileWriter().write(getId(), completionReports);
     }
+  }
+
+  private void emitCompletionMetrics()
+  {
+    final Map<String, Object> rowStats = getTaskCompletionRowStats();
+    if (rowStats == null) {
+      return;
+    }
+
+    final Number totalProcessedBytes = (Number) rowStats.get("processedBytes");
+    if (totalProcessedBytes == null) {
+      return;
+    }
+
+    final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
+    IndexTaskUtils.setTaskDimensions(metricBuilder, this);
+    toolbox.getEmitter().emit(metricBuilder.setMetric("ingest/input/bytes", totalProcessedBytes));
   }
 
   private static IndexTuningConfig convertToIndexTuningConfig(ParallelIndexTuningConfig tuningConfig)
