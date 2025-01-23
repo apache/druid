@@ -181,7 +181,7 @@ Returns the array element at the 0-based index supplied, or null for an out of r
 
 **Function type:** [Array](./sql-array-functions.md)
 
-Returns the 0-based index of the first occurrence of `expr` in the array. If no matching elements exist in the array, returns `null` or `-1` if `druid.generic.useDefaultValueForNull=true` (deprecated legacy mode).
+Returns the 0-based index of the first occurrence of `expr` in the array. If no matching elements exist in the array, returns `null`.
 
 ## ARRAY_ORDINAL
 
@@ -196,7 +196,7 @@ Returns the array element at the 1-based index supplied, or null for an out of r
 
 **Function type:** [Array](./sql-array-functions.md)
 
-Returns the 1-based index of the first occurrence of `expr` in the array. If no matching elements exist in the array, returns `null` or `-1` if `druid.generic.useDefaultValueForNull=true` (deprecated legacy mode).
+Returns the 1-based index of the first occurrence of `expr` in the array. If no matching elements exist in the array, returns `null`.
 
 ## ARRAY_OVERLAP
 

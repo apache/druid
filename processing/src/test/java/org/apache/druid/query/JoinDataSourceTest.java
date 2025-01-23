@@ -29,6 +29,7 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.TrueDimFilter;
 import org.apache.druid.query.planning.DataSourceAnalysis;
+import org.apache.druid.query.policy.NoRestrictionPolicy;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
@@ -487,6 +488,27 @@ public class JoinDataSourceTest
             ),
             new ExpressionVirtualColumn("j0.unnest", "\"dim3\"", ColumnType.STRING, ExprMacroTable.nil()),
             null
+        ),
+        new TableDataSource("table2"),
+        "j.",
+        "x == \"j.x\"",
+        JoinType.LEFT,
+        null,
+        ExprMacroTable.nil(),
+        null,
+        JoinAlgorithm.BROADCAST
+    );
+    DataSourceAnalysis analysis = dataSource.getAnalysis();
+    Assert.assertEquals("table1", analysis.getBaseDataSource().getTableNames().iterator().next());
+  }
+
+  @Test
+  public void testGetAnalysisWithRestrictedDS()
+  {
+    JoinDataSource dataSource = JoinDataSource.create(
+        RestrictedDataSource.create(
+            new TableDataSource("table1"),
+            NoRestrictionPolicy.instance()
         ),
         new TableDataSource("table2"),
         "j.",
