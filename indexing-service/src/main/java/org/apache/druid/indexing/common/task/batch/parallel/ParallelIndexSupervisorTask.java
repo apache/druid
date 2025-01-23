@@ -1252,19 +1252,18 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
    */
   private TaskReport.ReportMap getTaskCompletionReports(TaskStatus taskStatus)
   {
-    final TaskReport.ReportMap taskCompletionReport = buildIngestionStatsAndContextReport(
-        IngestionState.COMPLETED,
-        taskStatus.getErrorMsg(),
-        segmentsRead,
-        segmentsPublished
-    );
-    final var totalProcessedBytes = indexGenerateRowStats.lhs.get("processedBytes");
+    final Number totalProcessedBytes = (Number) indexGenerateRowStats.lhs.get("processedBytes");
     // Emit the processed bytes metric
     final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
     IndexTaskUtils.setTaskDimensions(metricBuilder, this);
     toolbox.getEmitter().emit(
         metricBuilder.setMetric("ingest/input/bytes", (Number) totalProcessedBytes));
-    return taskCompletionReport;
+    return buildIngestionStatsAndContextReport(
+        IngestionState.COMPLETED,
+        taskStatus.getErrorMsg(),
+        segmentsRead,
+        segmentsPublished
+    );
   }
 
   @Override
