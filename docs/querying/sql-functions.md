@@ -376,12 +376,11 @@ Computes a [bloom filter](../development/extensions-core/bloom-filter.md) from v
 `numEntries` specifies the maximum number of distinct values before the false positive rate increases.
 
 * **Syntax:** `BLOOM_FILTER(expr, numEntries)`
-* **Function type:** SQL aggregation
+* **Function type:** Aggregation
 
 <details><summary>Example</summary>
 
-The following example returns a base64-encoded bloom filter string for entries in agent_category, 
-with a maximum of 10 distinct values:
+The following example returns a base64-encoded bloom filter string for entries in `agent_category`:
 
 ```sql
 SELECT
@@ -411,7 +410,7 @@ Returns the following:
 Returns true if an expression is contained in a base64-encoded [bloom filter](../development/extensions-core/bloom-filter.md) string.
 
 * **Syntax:** `BLOOM_FILTER_TEST(expr, <STRING>)`
-* **Function type:** SQL aggregation
+* **Function type:** Aggregation
 
 <details><summary>Example</summary>
 
@@ -580,20 +579,55 @@ Rounds down a timestamp by a given time unit.
 
 ## DECODE_BASE64_COMPLEX
 
-`DECODE_BASE64_COMPLEX(dataType, expr)`
+Decodes a base64-encoded expression into a complex data type.
 
-**Function type:** [Scalar, other](sql-scalar.md#other-scalar-functions)
+* **Syntax:** `DECODE_BASE64_COMPLEX(dataType, expr)`
+* **Function type:** Scalar
 
-Decodes a Base64-encoded string into a complex data type, where `dataType` is the complex data type and `expr` is the Base64-encoded string to decode.
+<details><summary>Example</summary>
+
+The following example decodes the base64-encoded representation of "Hello, World!":
+
+```sql
+SELECT
+   DECODE_BASE64_COMPLEX('thetaSketch', "theta_input") as theta
+```
+
+Returns the following:
+
+| `agent_keys` |
+| -- |
+| `Hello, World!` |
+
+</details>
+
+[Learn more](./sql-scalar.md#other-scalar-functions)
 
 ## DECODE_BASE64_UTF8
 
-`DECODE_BASE64_UTF8(expr)`
+Decodes a base64-encoded expression into a UTF-8 encoded string.
 
-**Function type:** [Scalar, string](sql-scalar.md#string-functions)
+* **Syntax:** `DECODE_BASE64_UTF8(expr)`
+* **Function type:** Scalar
 
+<details><summary>Example</summary>
 
-Decodes a Base64-encoded string into a UTF-8 encoded string.
+The following example decodes the base64-encoded representation of "Hello, World!":
+
+```sql
+SELECT
+  DECODE_BASE64_UTF8('SGVsbG8sIFdvcmxkIQ==') as decoded
+```
+
+Returns the following:
+
+| `agent_keys` |
+| -- |
+| `Hello, World!` |
+
+</details>
+
+[Learn more](./sql-scalar.md#string-functions)
 
 ## DEGREES
 
