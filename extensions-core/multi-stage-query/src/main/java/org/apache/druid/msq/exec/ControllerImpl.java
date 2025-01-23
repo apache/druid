@@ -538,14 +538,24 @@ public class ControllerImpl implements Controller
 
   private void emitSummaryMetrics(final MSQTaskReportPayload msqTaskReportPayload, final MSQSpec querySpec)
   {
+    final List<Integer> stagesToInclude = new ArrayList<>();
+    for (MSQStagesReport.Stage stage : msqTaskReportPayload.getStages().getStages()) {
+      boolean hasParentStage = stage.getStageDefinition().getInputSpecs().stream()
+          .anyMatch(stageInput -> stageInput instanceof StageInputSpec);
+
+      if (!hasParentStage) {
+        stagesToInclude.add(stage.getStageNumber());
+      }
+    }
     long totalProcessedBytes = 0;
 
     if (msqTaskReportPayload.getCounters() != null) {
       totalProcessedBytes = msqTaskReportPayload.getCounters()
           .copyMap()
-          .values()
+          .entrySet()
           .stream()
-          .flatMap(counterSnapshotsMap -> counterSnapshotsMap.values().stream())
+          .filter(entry -> stagesToInclude.contains(entry.getKey())) // Filter by stagesToInclude
+          .flatMap(counterSnapshotsMap -> counterSnapshotsMap.getValue().values().stream())
           .flatMap(counterSnapshots -> counterSnapshots.getMap().entrySet().stream())
           .filter(entry -> entry.getKey().startsWith("input"))
           .mapToLong(entry -> {
