@@ -833,7 +833,7 @@ export const SchemaStep = function SchemaStep(props: SchemaStepProps) {
                 className="column-filter-control"
                 value={columnSearch}
                 placeholder="Search columns"
-                onChange={setColumnSearch}
+                onValueChange={setColumnSearch}
               />
             </div>
           )}

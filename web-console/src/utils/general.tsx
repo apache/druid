@@ -194,9 +194,9 @@ export function mapRecord<T, Q>(
   return newRecord;
 }
 
-export function mapRecordIfChanged<T>(
+export function mapRecordOrReturn<T>(
   record: Record<string, T>,
-  fn: (value: T, key: string) => T,
+  fn: (value: T, key: string) => T | undefined,
 ): Record<string, T> {
   const newRecord: Record<string, T> = {};
   let changed = false;
@@ -433,7 +433,10 @@ export function filterMap<T, Q>(xs: readonly T[], f: (x: T, i: number) => Q | un
   return xs.map(f).filter((x: Q | undefined) => typeof x !== 'undefined') as Q[];
 }
 
-export function filterMapIfChanged<T>(xs: T[], f: (x: T, i: number) => T | undefined): T[] {
+export function filterMapOrReturn<T>(
+  xs: readonly T[],
+  f: (x: T, i: number) => T | undefined,
+): readonly T[] {
   let changed = false;
   const newXs = filterMap(xs, (x, i) => {
     const newX = f(x, i);
@@ -441,6 +444,11 @@ export function filterMapIfChanged<T>(xs: T[], f: (x: T, i: number) => T | undef
     return newX;
   });
   return changed ? newXs : xs;
+}
+
+export function filterOrReturn<T>(xs: readonly T[], f: (x: T, i: number) => unknown): readonly T[] {
+  const newXs = xs.filter(f);
+  return newXs.length === xs.length ? xs : newXs;
 }
 
 export function findMap<T, Q>(
@@ -638,8 +646,8 @@ export function hasOverlayOpen(): boolean {
   return Boolean(document.querySelector(OVERLAY_OPEN_SELECTOR));
 }
 
-export function checkedCircleIcon(checked: boolean): IconName {
-  return checked ? IconNames.TICK_CIRCLE : IconNames.CIRCLE;
+export function checkedCircleIcon(checked: boolean, exclude?: boolean): IconName {
+  return checked ? (exclude ? IconNames.CROSS_CIRCLE : IconNames.TICK_CIRCLE) : IconNames.CIRCLE;
 }
 
 export function tickIcon(checked: boolean): IconName {
@@ -673,4 +681,8 @@ export function offsetToRowColumn(str: string, offset: number): RowColumn | unde
   }
 
   return;
+}
+
+export function xor(a: unknown, b: unknown): boolean {
+  return Boolean(a ? !b : b);
 }
