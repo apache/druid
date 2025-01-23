@@ -1252,7 +1252,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
    */
   private TaskReport.ReportMap getTaskCompletionReports(TaskStatus taskStatus)
   {
-    final var taskCompletionReport =  buildIngestionStatsAndContextReport(
+    final TaskReport.ReportMap taskCompletionReport = buildIngestionStatsAndContextReport(
         IngestionState.COMPLETED,
         taskStatus.getErrorMsg(),
         segmentsRead,
@@ -1261,9 +1261,9 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
     final var totalProcessedBytes = indexGenerateRowStats.lhs.get("processedBytes");
     // Emit the processed bytes metric
     final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
-    //IndexTaskUtils.setTaskDimensions(metricBuilder, task);
+    IndexTaskUtils.setTaskDimensions(metricBuilder, this);
     toolbox.getEmitter().emit(
-        metricBuilder.setMetric("ingest/processed/bytes", (Number) totalProcessedBytes));
+        metricBuilder.setMetric("ingest/input/bytes", (Number) totalProcessedBytes));
     return taskCompletionReport;
   }
 
@@ -1640,9 +1640,6 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
         includeUnparseable
     );
     buildSegmentsRowStats.addRowIngestionMetersTotals(rowStatsForRunningTasks);
-
-    // Emit the processed bytes metric
-    emitMetric(toolbox.getEmitter(), "ingest/processed/bytes", rowStatsForRunningTasks.getProcessedBytes());
 
     return createStatsAndErrorsReport(buildSegmentsRowStats.getTotals(), unparseableEvents);
   }

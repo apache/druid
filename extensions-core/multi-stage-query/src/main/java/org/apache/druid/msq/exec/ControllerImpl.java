@@ -556,7 +556,7 @@ public class ControllerImpl implements Controller
     }
 
     log.debug("Processed bytes[%d] for query[%s].", totalProcessedBytes, querySpec.getQuery());
-    context.emitMetric("ingest/processed/bytes", totalProcessedBytes);
+    context.emitMetric("ingest/input/bytes", totalProcessedBytes);
   }
 
   /**
