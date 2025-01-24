@@ -64,6 +64,7 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.SegmentSchemaMapping;
@@ -1279,9 +1280,27 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
 
   private void writeCompletionReports()
   {
+    emitCompletionMetrics();
     if (!isCompactionTask) {
       toolbox.getTaskReportFileWriter().write(getId(), completionReports);
     }
+  }
+
+  private void emitCompletionMetrics()
+  {
+    final Map<String, Object> rowStats = getTaskCompletionRowStats();
+    if (rowStats == null) {
+      return;
+    }
+
+    final Number totalProcessedBytes = (Number) rowStats.get("processedBytes");
+    if (totalProcessedBytes == null) {
+      return;
+    }
+
+    final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
+    IndexTaskUtils.setTaskDimensions(metricBuilder, this);
+    toolbox.getEmitter().emit(metricBuilder.setMetric("ingest/input/bytes", totalProcessedBytes));
   }
 
   private static IndexTuningConfig convertToIndexTuningConfig(ParallelIndexTuningConfig tuningConfig)
