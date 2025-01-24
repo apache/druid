@@ -581,23 +581,34 @@ Rounds down a timestamp by a given time unit.
 
 Decodes a base64-encoded expression into a complex data type.
 
+You can use the function to ingest data when a column contains an encoded data sketch such as Theta or HLL.
+
+The function supports `hyperUnique` and `serializablePairLongString` data types by default.
+You can enable support for the following complex data types by [loading their extensions](../configuration/extensions.md):
+
+- `druid-bloom-filter`: `bloom`
+- `druid-datasketches`: `arrayOfDoublesSketch`, `HLLSketch`, `KllDoublesSketch`, `KllFloatsSketch`, `quantilesDoublesSketch`, `thetaSketch`
+- `druid-histogram`: `approximateHistogram`, `fixedBucketsHistogram`
+- `druid-stats`: `variance`
+- `druid-compressed-bigdecimal`: `compressedBigDecimal`
+- `druid-momentsketch`: `momentSketch`
+- `druid-tdigestsketch`: `tDigestSketch`
+
 * **Syntax:** `DECODE_BASE64_COMPLEX(dataType, expr)`
 * **Function type:** Scalar
 
 <details><summary>Example</summary>
 
-The following example decodes the base64-encoded representation of "Hello, World!":
+The following example decodes a Theta sketch from a base64-encoded sketch contained in `theta_input`:
 
 ```sql
-SELECT
-   DECODE_BASE64_COMPLEX('thetaSketch', "theta_input") as theta
+DECODE_BASE64_COMPLEX('thetaSketch', "theta_input")
 ```
+The following example counts the distinct values in an encoded Theta sketch column using [`APPROX_COUNT_DISTINCT_DS_THETA`](#approx_count_distinct_ds_theta):
 
-Returns the following:
-
-| `agent_keys` |
-| -- |
-| `Hello, World!` |
+```sql
+APPROX_COUNT_DISTINCT_DS_THETA(DECODE_BASE64_COMPLEX('thetaSketch', "theta_input"))
+```
 
 </details>
 
