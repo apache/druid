@@ -26,6 +26,7 @@ import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.filter.Filter;
+import org.apache.druid.segment.vector.VectorCursor;
 import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.Interval;
 
@@ -34,6 +35,23 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
+/**
+ * Defines the plan for how the reader will scan, filter, transform, group and aggregate, and or order the data from a
+ * {@link CursorFactory} so that an appropriate {@link CursorHolder} can be constructed. The {@link CursorBuildSpec}
+ * includes physical and virtual columns will be read from the data, a {@link Filter} so that the {@link Cursor} and
+ * {@link VectorCursor} only provide matching rows, and details on how the scanned, transformed, and filtered data will
+ * be grouped, aggegated, and ordered if applicable to allow {@link CursorHolder} construction to provide optimized
+ * {@link Cursor} or {@link VectorCursor} such as providing cursors for pre-aggregated data with
+ * {@link org.apache.druid.segment.projections.Projections}.
+ *
+ * @see #getFilter()
+ * @see #getInterval()
+ * @see #getPhysicalColumns()
+ * @see #getVirtualColumns()
+ * @see #getGroupingColumns()
+ * @see #getAggregators()
+ * @see #getPreferredOrdering()
+ */
 public class CursorBuildSpec
 {
   public static final CursorBuildSpec FULL_SCAN = builder().build();
@@ -114,7 +132,7 @@ public class CursorBuildSpec
 
   /**
    * Set of physical columns required from a cursor. If null, and {@link #groupingColumns} is null or empty and
-   * {@link #aggregators} is null or empty, then a {@link CursorHolder} must assume that ALL columns are required
+   * {@link #aggregators} is null or empty, then a {@link CursorHolder} must assume that ALL columns are required.
    */
   @Nullable
   public Set<String> getPhysicalColumns()
@@ -235,6 +253,7 @@ public class CursorBuildSpec
     private List<OrderBy> preferredOrdering = Collections.emptyList();
 
     private QueryContext queryContext = QueryContext.empty();
+
     @Nullable
     private QueryMetrics<?> queryMetrics;
 
@@ -257,7 +276,17 @@ public class CursorBuildSpec
     }
 
     /**
-     * @see CursorBuildSpec#getFilter()
+     * @see CursorBuildSpec#getFilter() for usage.
+     */
+    @Nullable
+    public Filter getFilter()
+    {
+      return filter;
+    }
+
+    /**
+     * @see CursorBuildSpec#getFilter() for usage. All {@link Filter#getRequiredColumns()} must be explicitly added to
+     * {@link #virtualColumns} if virtual or, if set to a non-null value, {@link #physicalColumns}.
      */
     public CursorBuildSpecBuilder setFilter(@Nullable Filter filter)
     {
@@ -266,7 +295,15 @@ public class CursorBuildSpec
     }
 
     /**
-     * @see CursorBuildSpec#getInterval()
+     * @see CursorBuildSpec#getInterval() for usage.
+     */
+    public Interval getInterval()
+    {
+      return interval;
+    }
+
+    /**
+     * @see CursorBuildSpec#getInterval() for usage.
      */
     public CursorBuildSpecBuilder setInterval(Interval interval)
     {
@@ -275,7 +312,20 @@ public class CursorBuildSpec
     }
 
     /**
-     * @see CursorBuildSpec#getPhysicalColumns()
+     * @see CursorBuildSpec#getPhysicalColumns() for usage.
+     */
+    @Nullable
+    public Set<String> getPhysicalColumns()
+    {
+      return physicalColumns;
+    }
+
+    /**
+     * @see CursorBuildSpec#getPhysicalColumns() for usage. The backing value is not automatically populated by calls to
+     * {@link #setFilter(Filter)}, {@link #setVirtualColumns(VirtualColumns)}, {@link #setAggregators(List)}, or
+     * {@link #setPreferredOrdering(List)}, so this must be explicitly set for all required physical columns. If set to
+     * null, and {@link #groupingColumns} is null or empty and {@link #aggregators} is null or empty, then a
+     * {@link CursorHolder} must assume that ALL columns are required
      */
     public CursorBuildSpecBuilder setPhysicalColumns(@Nullable Set<String> physicalColumns)
     {
@@ -284,7 +334,16 @@ public class CursorBuildSpec
     }
 
     /**
-     * @see CursorBuildSpec#getVirtualColumns()
+     * @see CursorBuildSpec#getVirtualColumns() for usage. All {@link VirtualColumn#requiredColumns()} must be
+     * explicitly added to {@link #physicalColumns} if it is set to a non-null value.
+     */
+    public VirtualColumns getVirtualColumns()
+    {
+      return virtualColumns;
+    }
+
+    /**
+     * @see CursorBuildSpec#getVirtualColumns() for usage.
      */
     public CursorBuildSpecBuilder setVirtualColumns(VirtualColumns virtualColumns)
     {
@@ -293,7 +352,16 @@ public class CursorBuildSpec
     }
 
     /**
-     * @see CursorBuildSpec#getGroupingColumns()
+     * @see CursorBuildSpec#getGroupingColumns() for usage.
+     */
+    @Nullable
+    public List<String> getGroupingColumns()
+    {
+      return groupingColumns;
+    }
+
+    /**
+     * @see CursorBuildSpec#getGroupingColumns() for usage.
      */
     public CursorBuildSpecBuilder setGroupingColumns(@Nullable List<String> groupingColumns)
     {
@@ -302,7 +370,17 @@ public class CursorBuildSpec
     }
 
     /**
-     * @see CursorBuildSpec#getAggregators()
+     * @see CursorBuildSpec#getAggregators() for usage.
+     */
+    @Nullable
+    public List<AggregatorFactory> getAggregators()
+    {
+      return aggregators;
+    }
+
+    /**
+     * @see CursorBuildSpec#getAggregators() for usage. All {@link AggregatorFactory#requiredFields()} must be
+     * explicitly added to {@link #virtualColumns} if virtual or, if set to a non-null value, {@link #physicalColumns}.
      */
     public CursorBuildSpecBuilder setAggregators(@Nullable List<AggregatorFactory> aggregators)
     {
@@ -311,7 +389,16 @@ public class CursorBuildSpec
     }
 
     /**
-     * @see CursorBuildSpec#getPreferredOrdering()
+     * @see CursorBuildSpec#getPreferredOrdering() for usage.
+     */
+    public List<OrderBy> getPreferredOrdering()
+    {
+      return preferredOrdering;
+    }
+
+    /**
+     * @see CursorBuildSpec#getPreferredOrdering() for usage. All {@link OrderBy#getColumnName()} must be explicitly
+     * added to {@link #virtualColumns} if virtual or, if set to a non-null value, {@link #physicalColumns}.
      */
     public CursorBuildSpecBuilder setPreferredOrdering(List<OrderBy> preferredOrdering)
     {
@@ -322,10 +409,27 @@ public class CursorBuildSpec
     /**
      * @see CursorBuildSpec#getQueryContext()
      */
+    public QueryContext getQueryContext()
+    {
+      return queryContext;
+    }
+
+    /**
+     * @see CursorBuildSpec#getQueryContext()
+     */
     public CursorBuildSpecBuilder setQueryContext(QueryContext queryContext)
     {
       this.queryContext = queryContext;
       return this;
+    }
+
+    /**
+     * @see CursorBuildSpec#getQueryMetrics()
+     */
+    @Nullable
+    public QueryMetrics<?> getQueryMetrics()
+    {
+      return queryMetrics;
     }
 
     /**

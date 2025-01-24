@@ -21,6 +21,7 @@ package org.apache.druid.query.policy;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.EqualityFilter;
@@ -82,12 +83,17 @@ public class RowFilterPolicyTest
   public void testVisit_combineFilters()
   {
     Filter filter = new EqualityFilter("col0", ColumnType.STRING, "val0", null);
-    CursorBuildSpec spec = CursorBuildSpec.builder().setFilter(filter).build();
+    CursorBuildSpec spec = CursorBuildSpec.builder()
+                                          .setFilter(filter).
+                                          setPhysicalColumns(filter.getRequiredColumns())
+                                          .build();
 
     DimFilter policyFilter = new EqualityFilter("col", ColumnType.STRING, "val", null);
     final RowFilterPolicy policy = RowFilterPolicy.from(policyFilter);
 
     Filter expected = new AndFilter(ImmutableList.of(policyFilter.toFilter(), filter));
-    Assert.assertEquals(expected, policy.visit(spec).getFilter());
+    final CursorBuildSpec transformed = policy.visit(spec);
+    Assert.assertEquals(expected, transformed.getFilter());
+    Assert.assertEquals(ImmutableSet.of("col", "col0"), transformed.getPhysicalColumns());
   }
 }

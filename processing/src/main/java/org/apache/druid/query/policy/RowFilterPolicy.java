@@ -23,12 +23,10 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.query.filter.DimFilter;
-import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.CursorBuildSpec;
-import org.apache.druid.segment.filter.Filters;
+import org.apache.druid.segment.FilteredCursorFactory;
 
 import javax.annotation.Nonnull;
-import java.util.Arrays;
 import java.util.Objects;
 
 /**
@@ -58,12 +56,7 @@ public class RowFilterPolicy implements Policy
   @Override
   public CursorBuildSpec visit(CursorBuildSpec spec)
   {
-    CursorBuildSpec.CursorBuildSpecBuilder builder = CursorBuildSpec.builder(spec);
-    final Filter filter = spec.getFilter();
-    final Filter policyFilter = this.rowFilter.toFilter();
-
-    builder.setFilter(Filters.and(Arrays.asList(policyFilter, filter)));
-    return builder.build();
+    return FilteredCursorFactory.addFilter(spec, rowFilter);
   }
 
   @Override
