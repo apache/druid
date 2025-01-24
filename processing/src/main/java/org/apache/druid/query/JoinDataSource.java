@@ -456,7 +456,7 @@ public class JoinDataSource implements DataSource
 
             List<PreJoinableClause> clauses =
 
-            clauses1.size() > 0 ? clauses1.subList(clauses1.size()-1, 1) : Collections.emptyList();
+            clauses1.size() > 0 ? clauses1.subList(clauses1.size()-1, clauses1.size()) : Collections.emptyList();
 
             final JoinableClauses joinableClauses = JoinableClauses.createClauses(
                 clauses,
@@ -520,14 +520,14 @@ public class JoinDataSource implements DataSource
           }
   }
 
-  private HashJoinSegment newHashJoinSegment(
+  private SegmentReference newHashJoinSegment(
       SegmentReference sourceSegment,
       Filter baseFilterToUse,
       List<JoinableClause> clausesToUse,
       JoinFilterPreAnalysis joinFilterPreAnalysis)
   {
-    if(sourceSegment instanceof HashJoinSegment ) {
-      // FIXME concat
+    if(clausesToUse.isEmpty() && baseFilterToUse == null ) {
+      return sourceSegment;
     }
     return new HashJoinSegment(sourceSegment, baseFilterToUse, clausesToUse, joinFilterPreAnalysis);
   }
