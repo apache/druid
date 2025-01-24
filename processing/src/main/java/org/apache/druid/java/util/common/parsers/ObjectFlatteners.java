@@ -78,12 +78,12 @@ public class ObjectFlatteners
       }
     }
 
-    return new ObjectFlattener<T>()
+    return new ObjectFlattener<>()
     {
       @Override
       public Map<String, Object> flatten(final T obj)
       {
-        return new AbstractMap<String, Object>()
+        return new AbstractMap<>()
         {
           @Override
           public int size()

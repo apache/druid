@@ -80,7 +80,7 @@ public class StableLimitingSorter<T>
    */
   public Iterator<T> drain()
   {
-    return new Iterator<T>()
+    return new Iterator<>()
     {
       @Override
       public boolean hasNext()

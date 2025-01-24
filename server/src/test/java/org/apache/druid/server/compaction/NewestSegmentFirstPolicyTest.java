@@ -26,7 +26,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
@@ -1217,7 +1216,6 @@ public class NewestSegmentFirstPolicyTest
   @Test
   public void testIteratorReturnsSegmentsAsSegmentsWasCompactedAndHaveDifferentFilter() throws Exception
   {
-    NullHandling.initializeForTests();
     // Same indexSpec as what is set in the auto compaction config
     Map<String, Object> indexSpec = IndexSpec.DEFAULT.asMap(mapper);
     // Same partitionsSpec as what is set in the auto compaction config
@@ -1237,7 +1235,7 @@ public class NewestSegmentFirstPolicyTest
                     partitionsSpec,
                     null,
                     null,
-                    mapper.readValue(mapper.writeValueAsString(new TransformSpec(new SelectorDimFilter("dim1", "foo", null), null)), new TypeReference<Map<String, Object>>() {}),
+                    mapper.readValue(mapper.writeValueAsString(new TransformSpec(new SelectorDimFilter("dim1", "foo", null), null)), new TypeReference<>() {}),
                     indexSpec,
                     null
                 )
@@ -1250,7 +1248,7 @@ public class NewestSegmentFirstPolicyTest
                     partitionsSpec,
                     null,
                     null,
-                    mapper.readValue(mapper.writeValueAsString(new TransformSpec(new SelectorDimFilter("dim1", "bar", null), null)), new TypeReference<Map<String, Object>>() {}),
+                    mapper.readValue(mapper.writeValueAsString(new TransformSpec(new SelectorDimFilter("dim1", "bar", null), null)), new TypeReference<>() {}),
                     indexSpec,
                     null
                 )
@@ -1263,7 +1261,7 @@ public class NewestSegmentFirstPolicyTest
                     partitionsSpec,
                     null,
                     null,
-                    mapper.readValue(mapper.writeValueAsString(new TransformSpec(null, null)), new TypeReference<Map<String, Object>>() {}),
+                    mapper.readValue(mapper.writeValueAsString(new TransformSpec(null, null)), new TypeReference<>() {}),
                     indexSpec,
                     null
                 )
@@ -1323,7 +1321,6 @@ public class NewestSegmentFirstPolicyTest
   @Test
   public void testIteratorReturnsSegmentsAsSegmentsWasCompactedAndHaveDifferentMetricsSpec()
   {
-    NullHandling.initializeForTests();
     mapper.setInjectableValues(
         new InjectableValues.Std()
             .addValue(ExprMacroTable.class.getName(), TestExprMacroTable.INSTANCE)
@@ -1346,7 +1343,7 @@ public class NewestSegmentFirstPolicyTest
                 new CompactionState(
                     partitionsSpec,
                     null,
-                    mapper.convertValue(new AggregatorFactory[] {new CountAggregatorFactory("cnt")}, new TypeReference<List<Object>>() {}),
+                    mapper.convertValue(new AggregatorFactory[] {new CountAggregatorFactory("cnt")}, new TypeReference<>() {}),
                     null,
                     indexSpec,
                     null
@@ -1359,7 +1356,7 @@ public class NewestSegmentFirstPolicyTest
                 new CompactionState(
                     partitionsSpec,
                     null,
-                    mapper.convertValue(new AggregatorFactory[] {new CountAggregatorFactory("cnt"), new LongSumAggregatorFactory("val", "val")}, new TypeReference<List<Object>>() {}),
+                    mapper.convertValue(new AggregatorFactory[] {new CountAggregatorFactory("cnt"), new LongSumAggregatorFactory("val", "val")}, new TypeReference<>() {}),
                     null,
                     indexSpec,
                     null
@@ -1372,7 +1369,7 @@ public class NewestSegmentFirstPolicyTest
                 new CompactionState(
                     partitionsSpec,
                     null,
-                    mapper.convertValue(new AggregatorFactory[] {}, new TypeReference<List<Object>>() {}),
+                    mapper.convertValue(new AggregatorFactory[] {}, new TypeReference<>() {}),
                     null,
                     indexSpec,
                     null
@@ -1464,7 +1461,7 @@ public class NewestSegmentFirstPolicyTest
   {
     // Different indexSpec as what is set in the auto compaction config
     IndexSpec newIndexSpec = IndexSpec.builder().withBitmapSerdeFactory(new ConciseBitmapSerdeFactory()).build();
-    Map<String, Object> newIndexSpecMap = mapper.convertValue(newIndexSpec, new TypeReference<Map<String, Object>>() {});
+    Map<String, Object> newIndexSpecMap = mapper.convertValue(newIndexSpec, new TypeReference<>() {});
     PartitionsSpec partitionsSpec = CompactionStatus.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null));
 
     // Create segments that were compacted (CompactionState != null) and have segmentGranularity=DAY
@@ -1507,7 +1504,6 @@ public class NewestSegmentFirstPolicyTest
   @Test
   public void testIteratorDoesNotReturnSegmentWithChangingAppendableIndexSpec()
   {
-    NullHandling.initializeForTests();
     PartitionsSpec partitionsSpec = CompactionStatus.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null));
     final SegmentTimeline timeline = createTimeline(
         createSegments()

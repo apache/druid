@@ -220,7 +220,7 @@ public class LocalDataSegmentPuller implements URIDataPuller
     // not found, there's only so much that retries would do (unless the file was temporarily absent for some reason).
     // Since this is not a commonly used puller in production, and in general is more useful in testing/debugging,
     // I do not have a good sense of what kind of Exceptions people would expect to encounter in the wild
-    return new Predicate<Throwable>()
+    return new Predicate<>()
     {
       @Override
       public boolean apply(Throwable input)

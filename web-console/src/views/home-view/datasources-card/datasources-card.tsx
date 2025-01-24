@@ -21,8 +21,7 @@ import React from 'react';
 
 import type { Capabilities } from '../../../helpers';
 import { useQueryManager } from '../../../hooks';
-import { Api } from '../../../singletons';
-import { pluralIfNeeded, queryDruidSql } from '../../../utils';
+import { getApiArray, pluralIfNeeded, queryDruidSql } from '../../../utils';
 import { HomeViewCard } from '../home-view-card/home-view-card';
 
 export interface DatasourcesCardProps {
@@ -31,22 +30,24 @@ export interface DatasourcesCardProps {
 
 export const DatasourcesCard = React.memo(function DatasourcesCard(props: DatasourcesCardProps) {
   const [datasourceCountState] = useQueryManager<Capabilities, number>({
-    processQuery: async capabilities => {
-      let datasources: any[];
+    initQuery: props.capabilities,
+    processQuery: async (capabilities, cancelToken) => {
+      let datasources: string[];
       if (capabilities.hasSql()) {
-        datasources = await queryDruidSql({
-          query: `SELECT datasource FROM sys.segments GROUP BY 1`,
-        });
+        datasources = await queryDruidSql(
+          {
+            query: `SELECT datasource FROM sys.segments GROUP BY 1`,
+          },
+          cancelToken,
+        );
       } else if (capabilities.hasCoordinatorAccess()) {
-        const datasourcesResp = await Api.instance.get('/druid/coordinator/v1/datasources');
-        datasources = datasourcesResp.data;
+        datasources = await getApiArray<string>('/druid/coordinator/v1/datasources', cancelToken);
       } else {
         throw new Error(`must have SQL or coordinator access`);
       }
 
       return datasources.length;
     },
-    initQuery: props.capabilities,
   });
 
   return (

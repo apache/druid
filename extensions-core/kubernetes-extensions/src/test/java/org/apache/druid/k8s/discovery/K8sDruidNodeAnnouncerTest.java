@@ -67,9 +67,7 @@ public class K8sDruidNodeAnnouncerTest
 
     List<Map<String, Object>> actualPatchList = jsonMapper.readValue(
         patchArg.getValue(),
-        new TypeReference<List<Map<String, Object>>>()
-        {
-        }
+        new TypeReference<>() {}
     );
 
     List<Map<String, Object>> expectedPatchList = Lists.newArrayList(
@@ -115,9 +113,7 @@ public class K8sDruidNodeAnnouncerTest
 
     List<Map<String, String>> actualPatchList = jsonMapper.readValue(
         patchArg.getValue(),
-        new TypeReference<List<Map<String, String>>>()
-        {
-        }
+        new TypeReference<>() {}
     );
 
     List<Map<String, String>> expectedPatchList = Lists.newArrayList(

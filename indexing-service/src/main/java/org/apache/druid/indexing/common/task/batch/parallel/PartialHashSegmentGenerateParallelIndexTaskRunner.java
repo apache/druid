@@ -67,7 +67,7 @@ class PartialHashSegmentGenerateParallelIndexTaskRunner
       ParallelIndexIngestionSpec subTaskIngestionSpec
   )
   {
-    return new SubTaskSpec<PartialHashSegmentGenerateTask>(
+    return new SubTaskSpec<>(
         id,
         groupId,
         supervisorTaskId,

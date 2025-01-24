@@ -323,9 +323,12 @@ public class ControllerImpl implements Controller
   @Override
   public void run(final QueryListener queryListener) throws Exception
   {
+    final MSQTaskReportPayload reportPayload;
     try (final Closer closer = Closer.create()) {
-      runInternal(queryListener, closer);
+      reportPayload = runInternal(queryListener, closer);
     }
+    // Call onQueryComplete after Closer is fully closed, ensuring no controller-related processing is ongoing.
+    queryListener.onQueryComplete(reportPayload);
   }
 
   @Override
@@ -348,7 +351,7 @@ public class ControllerImpl implements Controller
     }
   }
 
-  private void runInternal(final QueryListener queryListener, final Closer closer)
+  private MSQTaskReportPayload runInternal(final QueryListener queryListener, final Closer closer)
   {
     QueryDefinition queryDef = null;
     ControllerQueryKernel queryKernel = null;
@@ -511,7 +514,7 @@ public class ControllerImpl implements Controller
       stagesReport = null;
     }
 
-    final MSQTaskReportPayload taskReportPayload = new MSQTaskReportPayload(
+    return new MSQTaskReportPayload(
         makeStatusReport(
             taskStateForReport,
             errorForReport,
@@ -526,8 +529,6 @@ public class ControllerImpl implements Controller
         countersSnapshot,
         null
     );
-
-    queryListener.onQueryComplete(taskReportPayload);
   }
 
   /**
@@ -570,9 +571,9 @@ public class ControllerImpl implements Controller
 
     final QueryContext queryContext = querySpec.getQuery().context();
     final QueryDefinition queryDef = makeQueryDefinition(
-        context.makeQueryKitSpec(makeQueryControllerToolKit(), queryId, querySpec, queryKernelConfig),
+        context.makeQueryKitSpec(makeQueryControllerToolKit(queryContext), queryId, querySpec, queryKernelConfig),
         querySpec,
-        context.jsonMapper(),
+        context,
         resultsContext
     );
 
@@ -1210,13 +1211,19 @@ public class ControllerImpl implements Controller
   }
 
   @SuppressWarnings("rawtypes")
-  private QueryKit<Query<?>> makeQueryControllerToolKit()
+  private QueryKit<Query<?>> makeQueryControllerToolKit(QueryContext queryContext)
   {
     final Map<Class<? extends Query>, QueryKit> kitMap =
         ImmutableMap.<Class<? extends Query>, QueryKit>builder()
                     .put(ScanQuery.class, new ScanQueryKit(context.jsonMapper()))
                     .put(GroupByQuery.class, new GroupByQueryKit(context.jsonMapper()))
-                    .put(WindowOperatorQuery.class, new WindowOperatorQueryKit(context.jsonMapper()))
+                    .put(
+                        WindowOperatorQuery.class,
+                        new WindowOperatorQueryKit(
+                            context.jsonMapper(),
+                            MultiStageQueryContext.isWindowFunctionOperatorTransformationEnabled(queryContext)
+                        )
+                    )
                     .build();
 
     return new MultiQueryKit(kitMap);
@@ -1565,26 +1572,7 @@ public class ControllerImpl implements Controller
     } else if (MSQControllerTask.isExport(querySpec)) {
       // Write manifest file.
       ExportMSQDestination destination = (ExportMSQDestination) querySpec.getDestination();
-      ExportMetadataManager exportMetadataManager = new ExportMetadataManager(destination.getExportStorageProvider());
-
-      final StageId finalStageId = queryKernel.getStageId(queryDef.getFinalStageDefinition().getStageNumber());
-      //noinspection unchecked
-
-
-      Object resultObjectForStage = queryKernel.getResultObjectForStage(finalStageId);
-      if (!(resultObjectForStage instanceof List)) {
-        // This might occur if all workers are running on an older version. We are not able to write a manifest file in this case.
-        log.warn("Was unable to create manifest file due to ");
-        return;
-      }
-      @SuppressWarnings("unchecked")
-      List<String> exportedFiles = (List<String>) queryKernel.getResultObjectForStage(finalStageId);
-      log.info("Query [%s] exported %d files.", queryDef.getQueryId(), exportedFiles.size());
-      exportMetadataManager.writeMetadata(exportedFiles);
-    } else if (MSQControllerTask.isExport(querySpec)) {
-      // Write manifest file.
-      ExportMSQDestination destination = (ExportMSQDestination) querySpec.getDestination();
-      ExportMetadataManager exportMetadataManager = new ExportMetadataManager(destination.getExportStorageProvider());
+      ExportMetadataManager exportMetadataManager = new ExportMetadataManager(destination.getExportStorageProvider(), context.taskTempDir());
 
       final StageId finalStageId = queryKernel.getStageId(queryDef.getFinalStageDefinition().getStageNumber());
       //noinspection unchecked
@@ -1733,10 +1721,11 @@ public class ControllerImpl implements Controller
   private static QueryDefinition makeQueryDefinition(
       final QueryKitSpec queryKitSpec,
       final MSQSpec querySpec,
-      final ObjectMapper jsonMapper,
+      final ControllerContext controllerContext,
       final ResultsContext resultsContext
   )
   {
+    final ObjectMapper jsonMapper = controllerContext.jsonMapper();
     final MSQTuningConfig tuningConfig = querySpec.getTuningConfig();
     final ColumnMappings columnMappings = querySpec.getColumnMappings();
     final Query<?> queryToPlan;
@@ -1854,7 +1843,7 @@ public class ControllerImpl implements Controller
 
       try {
         // Check that the export destination is empty as a sanity check. We want to avoid modifying any other files with export.
-        Iterator<String> filesIterator = exportStorageProvider.get().listDir("");
+        Iterator<String> filesIterator = exportStorageProvider.createStorageConnector(controllerContext.taskTempDir()).listDir("");
         if (filesIterator.hasNext()) {
           throw DruidException.forPersona(DruidException.Persona.USER)
                               .ofCategory(DruidException.Category.RUNTIME_FAILURE)

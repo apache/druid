@@ -20,7 +20,6 @@
 package org.apache.druid.query.aggregation.histogram;
 
 import com.google.common.collect.Lists;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -84,15 +83,9 @@ public class FixedBucketsHistogramAggregationTest extends InitializedNullHandlin
   public void testIngestWithNullsIgnoredAndQuery() throws Exception
   {
     MapBasedRow row = ingestAndQuery();
-    if (!NullHandling.replaceWithDefault()) {
-      Assert.assertEquals(92.782760, row.getMetric("index_min").floatValue(), 0.0001);
-      Assert.assertEquals(135.109191, row.getMetric("index_max").floatValue(), 0.0001);
-      Assert.assertEquals(135.9499969482422, row.getMetric("index_quantile").floatValue(), 0.0001);
-    } else {
-      Assert.assertEquals(0.0, row.getMetric("index_min"));
-      Assert.assertEquals(135.109191, row.getMetric("index_max").floatValue(), 0.0001);
-      Assert.assertEquals(135.8699951171875, row.getMetric("index_quantile").floatValue(), 0.0001);
-    }
+    Assert.assertEquals(92.782760, row.getMetric("index_min").floatValue(), 0.0001);
+    Assert.assertEquals(135.109191, row.getMetric("index_max").floatValue(), 0.0001);
+    Assert.assertEquals(135.9499969482422, row.getMetric("index_quantile").floatValue(), 0.0001);
   }
 
   private MapBasedRow ingestAndQuery() throws Exception

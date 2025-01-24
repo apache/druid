@@ -30,7 +30,7 @@ For the full release notes for a specific version, see the [releases page](https
 
 #### Front-coded dictionaries
 
-In Druid 32.0.0, the front coded dictionaries feature will be turned on by default. Front-coded dictionaries reduce storage and improve performance by optimizing for strings where the front part looks similar.
+Front-coded dictionaries reduce storage and improve performance by optimizing for strings where the front part looks similar.
 
 Once this feature is on, you cannot easily downgrade to an earlier version that does not support the feature. 
 

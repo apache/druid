@@ -16,8 +16,6 @@
  * limitations under the License.
  */
 
-import React from 'react';
-
 import type { QueryExplanation } from '../../../utils';
 import { QueryState } from '../../../utils';
 import { shallow } from '../../../utils/shallow-renderer';

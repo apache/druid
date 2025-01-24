@@ -31,6 +31,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.topn.TopNQueryConfig;
 import org.apache.druid.quidem.DruidAvaticaTestDriver;
+import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.sql.calcite.util.CacheTestHelperModule.ResultCacheMode;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.QueryComponentSupplier;
@@ -94,10 +95,10 @@ public class SqlTestFrameworkConfig
 {
   @Retention(RetentionPolicy.RUNTIME)
   @Target({ElementType.METHOD, ElementType.TYPE})
-  @NumMergeBuffers(0)
+  @NumMergeBuffers(QueryStackTests.DEFAULT_NUM_MERGE_BUFFERS)
   public @interface NumMergeBuffers
   {
-    ConfigOptionProcessor<Integer> PROCESSOR = new ConfigOptionProcessor<Integer>(NumMergeBuffers.class)
+    ConfigOptionProcessor<Integer> PROCESSOR = new ConfigOptionProcessor<>(NumMergeBuffers.class)
     {
       @Override
       public Integer fromString(String str) throws NumberFormatException
@@ -114,7 +115,7 @@ public class SqlTestFrameworkConfig
   @MinTopNThreshold(TopNQueryConfig.DEFAULT_MIN_TOPN_THRESHOLD)
   public @interface MinTopNThreshold
   {
-    ConfigOptionProcessor<Integer> PROCESSOR = new ConfigOptionProcessor<Integer>(MinTopNThreshold.class)
+    ConfigOptionProcessor<Integer> PROCESSOR = new ConfigOptionProcessor<>(MinTopNThreshold.class)
     {
       @Override
       public Integer fromString(String str) throws NumberFormatException
@@ -131,7 +132,7 @@ public class SqlTestFrameworkConfig
   @ResultCache(ResultCacheMode.DISABLED)
   public @interface ResultCache
   {
-    ConfigOptionProcessor<ResultCacheMode> PROCESSOR = new ConfigOptionProcessor<ResultCacheMode>(ResultCache.class)
+    ConfigOptionProcessor<ResultCacheMode> PROCESSOR = new ConfigOptionProcessor<>(ResultCache.class)
     {
       @Override
       public ResultCacheMode fromString(String str)
@@ -151,7 +152,7 @@ public class SqlTestFrameworkConfig
   @ComponentSupplier(StandardComponentSupplier.class)
   public @interface ComponentSupplier
   {
-    ConfigOptionProcessor<Class<? extends QueryComponentSupplier>> PROCESSOR = new ConfigOptionProcessor<Class<? extends QueryComponentSupplier>>(
+    ConfigOptionProcessor<Class<? extends QueryComponentSupplier>> PROCESSOR = new ConfigOptionProcessor<>(
         ComponentSupplier.class
     )
     {
@@ -298,16 +299,21 @@ public class SqlTestFrameworkConfig
     @Override
     public void beforeEach(ExtensionContext context)
     {
-      setConfig(context);
+      makeConfigFromContext(context);
     }
 
-    private void setConfig(ExtensionContext context)
+    public void makeConfigFromContext(ExtensionContext context)
     {
       testName = buildTestCaseName(context);
       method = context.getTestMethod().get();
       Class<?> testClass = context.getTestClass().get();
       List<Annotation> annotations = collectAnnotations(testClass, method);
-      config = new SqlTestFrameworkConfig(annotations);
+      setConfig(new SqlTestFrameworkConfig(annotations));
+    }
+
+    public void setConfig(SqlTestFrameworkConfig config)
+    {
+      this.config = config;
     }
 
     /**
@@ -317,7 +323,7 @@ public class SqlTestFrameworkConfig
      */
     public String buildTestCaseName(ExtensionContext context)
     {
-      List<String> names = new ArrayList<String>();
+      List<String> names = new ArrayList<>();
       Pattern pattern = Pattern.compile("\\([^)]*\\)");
       // this will add all name pieces - except the "last" which would be the
       // Class level name
@@ -503,7 +509,7 @@ public class SqlTestFrameworkConfig
 
   static LoadingCache<String, Set<Class<? extends QueryComponentSupplier>>> componentSupplierClassCache = CacheBuilder
       .newBuilder()
-      .build(new CacheLoader<String, Set<Class<? extends QueryComponentSupplier>>>()
+      .build(new CacheLoader<>()
       {
         @Override
         public Set<Class<? extends QueryComponentSupplier>> load(String pkg)

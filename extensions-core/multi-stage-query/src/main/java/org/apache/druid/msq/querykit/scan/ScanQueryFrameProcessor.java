@@ -137,7 +137,7 @@ public class ScanQueryFrameProcessor extends BaseLeafFrameProcessor
     frameWriterVirtualColumns.add(partitionBoostVirtualColumn);
 
     final VirtualColumn segmentGranularityVirtualColumn =
-        QueryKitUtils.makeSegmentGranularityVirtualColumn(jsonMapper, query);
+        QueryKitUtils.makeSegmentGranularityVirtualColumn(jsonMapper, query.context());
 
     if (segmentGranularityVirtualColumn != null) {
       frameWriterVirtualColumns.add(segmentGranularityVirtualColumn);

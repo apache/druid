@@ -66,7 +66,7 @@ public abstract class TextReader<T> extends IntermediateRowParsingReader<T>
       processHeaderLine(delegate.next());
     }
 
-    return new CloseableIteratorWithMetadata<T>()
+    return new CloseableIteratorWithMetadata<>()
     {
       private static final String LINE_KEY = "Line";
       private long currentLineNumber = numHeaderLines + (needsToProcessHeaderLine() ? 1 : 0);

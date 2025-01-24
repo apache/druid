@@ -80,7 +80,7 @@ exports[`ExecutionStagesPane matches snapshot 1`] = `
         "accessor": "stageNumber",
         "className": "padded",
         "id": "stage",
-        "width": 140,
+        "width": 160,
       },
       {
         "Cell": [Function],
@@ -102,7 +102,7 @@ exports[`ExecutionStagesPane matches snapshot 1`] = `
         "accessor": [Function],
         "className": "padded",
         "id": "rows_processed",
-        "width": 160,
+        "width": 200,
       },
       {
         "Cell": [Function],

@@ -19,9 +19,9 @@
 import { Button, Icon, Intent, Menu, MenuItem, Popover } from '@blueprintjs/core';
 import type { IconName } from '@blueprintjs/icons';
 import { IconNames } from '@blueprintjs/icons';
-import type { Column, QueryResult } from '@druid-toolkit/query';
-import { SqlColumn, SqlExpression, SqlLiteral, trimString } from '@druid-toolkit/query';
 import classNames from 'classnames';
+import type { Column, QueryResult } from 'druid-query-toolkit';
+import { SqlColumn, SqlExpression, SqlLiteral, trimString } from 'druid-query-toolkit';
 import type { JSX } from 'react';
 import React, { useEffect, useState } from 'react';
 import type { Column as TableColumn } from 'react-table';
@@ -122,17 +122,14 @@ export const GenericOutputTable = React.memo(function GenericOutputTable(
     columnHints,
   } = props;
   const parsedQuery = queryResult.sqlQuery;
-  const [pagination, setPagination] = useState<Pagination>({
-    page: 0,
-    pageSize: initPageSize || 20,
-  });
+  const [pagination, setPagination] = useState<Pagination | undefined>();
+  const effectivePagination: Pagination = pagination || { page: 0, pageSize: initPageSize || 20 };
   const [showValue, setShowValue] = useState<string>();
 
   // Reset page to 0 if number of results changes
   useEffect(() => {
-    setPagination(pagination => {
-      return pagination.page ? { ...pagination, page: 0 } : pagination;
-    });
+    if (!pagination?.page) return;
+    setPagination(undefined);
   }, [queryResult.rows.length]);
 
   function hasFilterOnHeader(header: string, headerIndex: number): boolean {
@@ -382,9 +379,10 @@ export const GenericOutputTable = React.memo(function GenericOutputTable(
   const outerLimit = queryResult.getSqlOuterLimit();
   const hasMoreResults = queryResult.rows.length === outerLimit;
   const finalPage =
-    hasMoreResults && Math.floor(queryResult.rows.length / pagination.pageSize) === pagination.page; // on the last page
+    hasMoreResults &&
+    Math.floor(queryResult.rows.length / effectivePagination.pageSize) === effectivePagination.page; // on the last page
 
-  const numericColumnBraces = getNumericColumnBraces(queryResult, columnHints, pagination);
+  const numericColumnBraces = getNumericColumnBraces(queryResult, columnHints, effectivePagination);
   return (
     <div className={classNames('generic-output-table', { 'more-results': hasMoreResults })}>
       {finalPage ? (
@@ -406,7 +404,9 @@ export const GenericOutputTable = React.memo(function GenericOutputTable(
             icon={IconNames.ARROW_LEFT}
             text="Go to previous page"
             fill
-            onClick={() => setPagination({ ...pagination, page: pagination.page - 1 })}
+            onClick={() =>
+              setPagination({ ...effectivePagination, page: effectivePagination.page - 1 })
+            }
           />
         </div>
       ) : (
@@ -415,15 +415,15 @@ export const GenericOutputTable = React.memo(function GenericOutputTable(
           data={queryResult.rows as any[][]}
           ofText={hasMoreResults ? '' : 'of'}
           noDataText={queryResult.rows.length ? '' : 'Query returned no data'}
-          page={pagination.page}
-          pageSize={pagination.pageSize}
-          onPageChange={page => setPagination({ ...pagination, page })}
+          page={effectivePagination.page}
+          pageSize={effectivePagination.pageSize}
+          onPageChange={page => setPagination({ ...effectivePagination, page })}
           onPageSizeChange={(pageSize, page) => setPagination({ page, pageSize })}
           sortable={false}
           defaultPageSize={SMALL_TABLE_PAGE_SIZE}
           pageSizeOptions={SMALL_TABLE_PAGE_SIZE_OPTIONS}
           showPagination={
-            queryResult.rows.length > Math.min(SMALL_TABLE_PAGE_SIZE, pagination.pageSize)
+            queryResult.rows.length > Math.min(SMALL_TABLE_PAGE_SIZE, effectivePagination.pageSize)
           }
           columns={columnNester(
             queryResult.header.map((column, i) => {

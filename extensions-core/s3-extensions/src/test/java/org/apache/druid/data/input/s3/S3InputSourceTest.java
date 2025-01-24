@@ -1352,8 +1352,8 @@ public class S3InputSourceTest extends InitializedNullHandlingTest
       // See https://github.com/FasterXML/jackson-databind/issues/962.
       return ImmutableList.of(
           new SimpleModule()
-              .addDeserializer(AmazonS3.class, new ItemDeserializer<AmazonS3>())
-              .addDeserializer(AmazonS3ClientBuilder.class, new ItemDeserializer<AmazonS3ClientBuilder>())
+              .addDeserializer(AmazonS3.class, new ItemDeserializer<>())
+              .addDeserializer(AmazonS3ClientBuilder.class, new ItemDeserializer<>())
       );
     }
 

@@ -644,7 +644,7 @@ public class UriExtractionNamespace implements ExtractionNamespace
       final JsonFactory jsonFactory = jsonMapper.getFactory().copy();
       jsonFactory.configure(JsonFactory.Feature.CANONICALIZE_FIELD_NAMES, false);
 
-      parser = new Parser<String, String>()
+      parser = new Parser<>()
       {
         @Override
         public Map<String, String> parseToMap(String input)

@@ -456,7 +456,8 @@ public class IndexIO
                 new StringUtf8DictionaryEncodedColumnSupplier<>(
                     index.getDimValueUtf8Lookup(dimension)::singleThreaded,
                     null,
-                    Suppliers.ofInstance(index.getDimColumn(dimension))
+                    Suppliers.ofInstance(index.getDimColumn(dimension)),
+                    LEGACY_FACTORY.getBitmapFactory()
                 )
             );
         GenericIndexed<ImmutableBitmap> bitmaps = index.getBitmapIndexes().get(dimension);
@@ -719,6 +720,7 @@ public class IndexIO
 
         if (groupingColumn.equals(projectionSpec.getSchema().getTimeColumnName())) {
           projectionColumns.put(ColumnHolder.TIME_COLUMN_NAME, projectionColumns.get(groupingColumn));
+          projectionColumns.remove(groupingColumn);
         }
       }
       for (AggregatorFactory aggregator : projectionSpec.getSchema().getAggregators()) {

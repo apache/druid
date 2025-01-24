@@ -118,8 +118,8 @@ public class AuthConfig
     this.allowUnauthenticatedHttpOptions = allowUnauthenticatedHttpOptions;
     this.authorizeQueryContextParams = authorizeQueryContextParams;
     this.unsecuredContextKeys = unsecuredContextKeys == null
-        ? Collections.emptySet()
-        : unsecuredContextKeys;
+                                ? Collections.emptySet()
+                                : unsecuredContextKeys;
     this.securedContextKeys = securedContextKeys;
     this.enableInputSourceSecurity = enableInputSourceSecurity;
   }

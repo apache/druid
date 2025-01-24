@@ -63,7 +63,6 @@ exports[`SuggestionMenu matches snapshot 1`] = `
       tabindex="0"
     >
       <a
-        aria-expanded="false"
         aria-haspopup="menu"
         class="bp5-menu-item"
         role="none"

@@ -22,6 +22,7 @@ package org.apache.druid.data.input.kafkainput;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.druid.data.input.kafka.KafkaRecordEntity;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Pair;
@@ -72,15 +73,11 @@ public class KafkaStringHeaderFormatTest
       }
   );
   private KafkaRecordEntity inputEntity;
-  private long timestamp = DateTimes.of("2021-06-24T00:00:00.000Z").getMillis();
+  private final long timestamp = DateTimes.of("2021-06-24T00:00:00.000Z").getMillis();
 
   @Test
   public void testSerde() throws JsonProcessingException
   {
-    Assert.assertEquals(
-        KAFKAHEADERNOENCODE,
-        KAFKAHEADERNOENCODE
-    );
     Assert.assertEquals(
         KAFKAHEADERNOENCODE,
         MAPPER.readValue(MAPPER.writeValueAsString(KAFKAHEADERNOENCODE), KafkaStringHeaderFormat.class)
@@ -93,11 +90,17 @@ public class KafkaStringHeaderFormatTest
   }
 
   @Test
+  public void testEquals()
+  {
+    EqualsVerifier.forClass(KafkaStringHeaderFormat.class).usingGetClass().verify();
+  }
+
+  @Test
   public void testDefaultHeaderFormat()
   {
     String headerLabelPrefix = "test.kafka.header.";
     Headers headers = new RecordHeaders(SAMPLE_HEADERS);
-    inputEntity = new KafkaRecordEntity(new ConsumerRecord<byte[], byte[]>(
+    inputEntity = new KafkaRecordEntity(new ConsumerRecord<>(
         "sample", 0, 0, timestamp,
         null, null, 0, 0,
         null, "sampleValue".getBytes(StandardCharsets.UTF_8), headers
@@ -148,7 +151,7 @@ public class KafkaStringHeaderFormatTest
 
     String headerLabelPrefix = "test.kafka.header.";
     Headers headers = new RecordHeaders(header);
-    inputEntity = new KafkaRecordEntity(new ConsumerRecord<byte[], byte[]>(
+    inputEntity = new KafkaRecordEntity(new ConsumerRecord<>(
         "sample", 0, 0, timestamp,
         null, null, 0, 0,
         null, "sampleValue".getBytes(StandardCharsets.UTF_8), headers
@@ -200,7 +203,7 @@ public class KafkaStringHeaderFormatTest
 
     String headerLabelPrefix = "test.kafka.header.";
     Headers headers = new RecordHeaders(header);
-    inputEntity = new KafkaRecordEntity(new ConsumerRecord<byte[], byte[]>(
+    inputEntity = new KafkaRecordEntity(new ConsumerRecord<>(
         "sample", 0, 0, timestamp,
         null, null, 0, 0,
         null, "sampleValue".getBytes(StandardCharsets.UTF_8), headers

@@ -80,7 +80,7 @@ public class TimewarpOperatorTest
   public void testPostProcess()
   {
     QueryRunner<Result<TimeseriesResultValue>> queryRunner = testOperator.postProcess(
-        new QueryRunner<Result<TimeseriesResultValue>>()
+        new QueryRunner<>()
         {
           @Override
           public Sequence<Result<TimeseriesResultValue>> run(
@@ -142,7 +142,7 @@ public class TimewarpOperatorTest
     );
 
     QueryRunner<Result<TimeBoundaryResultValue>> timeBoundaryRunner = timeBoundaryOperator.postProcess(
-        new QueryRunner<Result<TimeBoundaryResultValue>>()
+        new QueryRunner<>()
         {
           @Override
           public Sequence<Result<TimeBoundaryResultValue>> run(
@@ -189,7 +189,7 @@ public class TimewarpOperatorTest
   public void testPostProcessWithTimezonesAndDstShift()
   {
     QueryRunner<Result<TimeseriesResultValue>> queryRunner = testOperator.postProcess(
-        new QueryRunner<Result<TimeseriesResultValue>>()
+        new QueryRunner<>()
         {
           @Override
           public Sequence<Result<TimeseriesResultValue>> run(
@@ -249,7 +249,7 @@ public class TimewarpOperatorTest
   public void testPostProcessWithTimezonesAndNoDstShift()
   {
     QueryRunner<Result<TimeseriesResultValue>> queryRunner = testOperator.postProcess(
-        new QueryRunner<Result<TimeseriesResultValue>>()
+        new QueryRunner<>()
         {
           @Override
           public Sequence<Result<TimeseriesResultValue>> run(

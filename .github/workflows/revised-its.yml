@@ -66,8 +66,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        #jdk: [8, 11, 17]
-        jdk: [8]
+        # jdk: [11, 17]
+        jdk: [17]
         it: [HighAvailability, MultiStageQuery, Catalog, BatchIndex, MultiStageQueryWithMM, InputSource, InputFormat, Security, Query]
         #indexer: [indexer, middleManager]
         indexer: [middleManager]
@@ -86,8 +86,8 @@ jobs:
     uses: ./.github/workflows/reusable-revised-its.yml
     if: ${{ needs.changes.outputs.core == 'true' || needs.changes.outputs.common-extensions == 'true' }}
     with:
-      build_jdk: 8
-      runtime_jdk: 11
+      build_jdk: 17
+      runtime_jdk: 17
       use_indexer: middleManager
       script: ./it.sh github S3DeepStorage
       it: S3DeepStorage
@@ -103,8 +103,8 @@ jobs:
     uses: ./.github/workflows/reusable-revised-its.yml
     if: ${{ inputs.BACKWARD_COMPATIBILITY_IT_ENABLED == 'true' && (needs.changes.outputs.core == 'true' || needs.changes.outputs.common-extensions == 'true') }}
     with:
-      build_jdk: 8
-      runtime_jdk: 8
+      build_jdk: 17
+      runtime_jdk: 17
       use_indexer: middleManager
       script: ./it.sh github BackwardCompatibilityMain
       it: BackwardCompatibilityMain

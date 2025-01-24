@@ -22,7 +22,6 @@ package org.apache.druid.segment.virtual;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.guava.SettableSupplier;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.TimestampSpec;
@@ -70,7 +69,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 public class ExpressionSelectorsTest extends InitializedNullHandlingTest
@@ -616,7 +614,7 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
     // DimensionSelector.nameLookupPossibleInAdvance in the indexers of an IncrementalIndex, which resulted in an
     // exception trying to make an optimized string expression selector that was not appropriate to use for the
     // underlying dimension selector.
-    // This occurred during schemaless ingestion with spare dimension values and no explicit null rows, so the
+    // This occurred during schemaless ingestion with sparse dimension values and no explicit null rows, so the
     // conditions are replicated by this test. See https://github.com/apache/druid/pull/10248 for details
     IncrementalIndexSchema schema = IncrementalIndexSchema.builder()
                                                           .withTimestampSpec(new TimestampSpec("time", "millis", DateTimes.nowUtc()))
@@ -656,15 +654,12 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
       while (!cursor.isDone()) {
         Object x = xExprSelector.getObject();
         Object y = yExprSelector.getObject();
-        List<String> expectedFoo = Collections.singletonList("foofoo");
-        List<String> expectedNull = NullHandling.replaceWithDefault()
-                                    ? Collections.singletonList("foo")
-                                    : Collections.singletonList(null);
+        String expectedFoo = "foofoo";
         if (rowCount == 0) {
           Assert.assertEquals(expectedFoo, x);
-          Assert.assertEquals(expectedNull, y);
+          Assert.assertNull(y);
         } else {
-          Assert.assertEquals(expectedNull, x);
+          Assert.assertNull(x);
           Assert.assertEquals(expectedFoo, y);
         }
         rowCount++;
@@ -672,6 +667,43 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
       }
 
       Assert.assertEquals(2, rowCount);
+    }
+  }
+
+  @Test
+  public void test_incrementalIndexStringSelectorCast() throws IndexSizeExceededException
+  {
+    IncrementalIndexSchema schema = IncrementalIndexSchema.builder()
+                                                          .withTimestampSpec(new TimestampSpec("time", "millis", DateTimes.nowUtc()))
+                                                          .withMetrics(new AggregatorFactory[]{new CountAggregatorFactory("count")})
+                                                          .build();
+
+    IncrementalIndex index = new OnheapIncrementalIndex.Builder().setMaxRowCount(100).setIndexSchema(schema).build();
+    index.add(
+        new MapBasedInputRow(
+            DateTimes.nowUtc().getMillis(),
+            ImmutableList.of("x"),
+            ImmutableMap.of("x", "1.1")
+        )
+    );
+
+    IncrementalIndexCursorFactory cursorFactory = new IncrementalIndexCursorFactory(index);
+    try (final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+      Cursor cursor = cursorHolder.asCursor();
+      ColumnValueSelector<?> xExprSelector = ExpressionSelectors.makeColumnValueSelector(
+          cursor.getColumnSelectorFactory(),
+          Parser.parse("cast(x, 'DOUBLE')", ExprMacroTable.nil())
+      );
+      int rowCount = 0;
+      while (!cursor.isDone()) {
+        Object x = xExprSelector.getObject();
+        double expectedFoo = 1.1;
+        Assert.assertEquals(expectedFoo, x);
+        rowCount++;
+        cursor.advance();
+      }
+
+      Assert.assertEquals(1, rowCount);
     }
   }
 
@@ -700,7 +732,7 @@ public class ExpressionSelectorsTest extends InitializedNullHandlingTest
       final Class<T> clazz
   )
   {
-    return new TestObjectColumnSelector<T>()
+    return new TestObjectColumnSelector<>()
     {
       @Override
       public Class<T> classOfObject()

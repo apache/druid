@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.expression;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.InputBindings;
@@ -33,7 +32,6 @@ public class IPv4AddressStringifyExprMacroTest extends MacroTestBase
 {
   private static final Expr VALID = ExprEval.of(3232235521L).toExpr();
   private static final String EXPECTED = "192.168.0.1";
-  private static final String NULL = NullHandling.replaceWithDefault() ? "0.0.0.0" : null;
 
   public IPv4AddressStringifyExprMacroTest()
   {
@@ -60,7 +58,7 @@ public class IPv4AddressStringifyExprMacroTest extends MacroTestBase
   public void testNullLongArg()
   {
     Expr nullNumeric = ExprEval.ofLong(null).toExpr();
-    Assert.assertEquals(NULL, eval(nullNumeric));
+    Assert.assertNull(eval(nullNumeric));
   }
 
   @Test
@@ -108,7 +106,7 @@ public class IPv4AddressStringifyExprMacroTest extends MacroTestBase
   public void testNullStringArg()
   {
     Expr nullString = ExprEval.of(null).toExpr();
-    Assert.assertNull(NULL, eval(nullString));
+    Assert.assertNull(eval(nullString));
   }
 
   @Test

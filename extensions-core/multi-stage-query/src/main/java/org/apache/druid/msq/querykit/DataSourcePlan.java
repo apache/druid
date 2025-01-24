@@ -32,6 +32,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.input.InputSpec;
+import org.apache.druid.msq.input.InputSpecs;
 import org.apache.druid.msq.input.external.ExternalInputSpec;
 import org.apache.druid.msq.input.inline.InlineInputSpec;
 import org.apache.druid.msq.input.lookup.LookupInputSpec;
@@ -46,6 +47,7 @@ import org.apache.druid.msq.querykit.common.SortMergeJoinFrameProcessorFactory;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.FilteredDataSource;
 import org.apache.druid.query.InlineDataSource;
+import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.QueryContext;
@@ -64,8 +66,6 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.sql.calcite.external.ExternalDataSource;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
-import org.apache.druid.sql.calcite.planner.JoinAlgorithm;
-import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -123,7 +123,7 @@ public class DataSourcePlan
   /**
    * Build a plan.
    *
-   * @param queryKitSpec reference for recursive planning
+   * @param queryKitSpec     reference for recursive planning
    * @param queryContext     query context
    * @param dataSource       datasource to plan
    * @param querySegmentSpec intervals for mandatory pruning. Must be {@link MultipleIntervalSegmentSpec}. The returned
@@ -134,7 +134,6 @@ public class DataSourcePlan
    * @param minStageNumber   starting stage number for subqueries
    * @param broadcast        whether the plan should broadcast data for this datasource
    */
-  @SuppressWarnings("rawtypes")
   public static DataSourcePlan forDataSource(
       final QueryKitSpec queryKitSpec,
       final QueryContext queryContext,
@@ -212,10 +211,11 @@ public class DataSourcePlan
           broadcast
       );
     } else if (dataSource instanceof JoinDataSource) {
-      final JoinAlgorithm preferredJoinAlgorithm = PlannerContext.getJoinAlgorithm(queryContext);
+      JoinDataSource joinDataSource = (JoinDataSource) dataSource;
+      final JoinAlgorithm preferredJoinAlgorithm = joinDataSource.getJoinAlgorithm();
       final JoinAlgorithm deducedJoinAlgorithm = deduceJoinAlgorithm(
           preferredJoinAlgorithm,
-          ((JoinDataSource) dataSource)
+          joinDataSource
       );
 
       switch (deducedJoinAlgorithm) {
@@ -223,7 +223,7 @@ public class DataSourcePlan
           return forBroadcastHashJoin(
               queryKitSpec,
               queryContext,
-              (JoinDataSource) dataSource,
+              joinDataSource,
               querySegmentSpec,
               filter,
               filterFields,
@@ -234,7 +234,7 @@ public class DataSourcePlan
         case SORT_MERGE:
           return forSortMergeJoin(
               queryKitSpec,
-              (JoinDataSource) dataSource,
+              joinDataSource,
               querySegmentSpec,
               minStageNumber,
               broadcast
@@ -272,6 +272,20 @@ public class DataSourcePlan
   public IntSet getBroadcastInputs()
   {
     return broadcastInputs;
+  }
+
+  /**
+   * Figure for {@link StageDefinition#getMaxWorkerCount()} that should be used when processing.
+   */
+  public int getMaxWorkerCount(final QueryKitSpec queryKitSpec)
+  {
+    if (isSingleWorker()) {
+      return 1;
+    } else if (InputSpecs.hasLeafInputs(inputSpecs, broadcastInputs)) {
+      return queryKitSpec.getMaxLeafWorkerCount();
+    } else {
+      return queryKitSpec.getMaxNonLeafWorkerCount();
+    }
   }
 
   /**
@@ -601,7 +615,8 @@ public class DataSourcePlan
           clause.getJoinType(),
           // First JoinDataSource (i == 0) involves the base table, so we need to propagate the base table filter.
           i == 0 ? analysis.getJoinBaseTableFilter().orElse(null) : null,
-          dataSource.getJoinableFactoryWrapper()
+          dataSource.getJoinableFactoryWrapper(),
+          clause.getJoinAlgorithm()
       );
       inputSpecs.addAll(clausePlan.getInputSpecs());
       clausePlan.getBroadcastInputs().intStream().forEach(n -> broadcastInputs.add(n + shift));

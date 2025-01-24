@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.aggregation.histogram;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.segment.BaseFloatColumnValueSelector;
 
@@ -53,10 +52,7 @@ public class ApproximateHistogramAggregator implements Aggregator
   @Override
   public void aggregate()
   {
-    // In case of ExpressionColumnValueSelector isNull will compute the expression and then give the result,
-    // the check for is NullHandling.replaceWithDefault is there to not have any performance impact of calling
-    // isNull for default case.
-    if (NullHandling.replaceWithDefault() || !selector.isNull()) {
+    if (!selector.isNull()) {
       histogram.offer(selector.getFloat());
     }
   }

@@ -58,6 +58,8 @@ public class TaskActionTestKit extends ExternalResource
   private SegmentSchemaManager segmentSchemaManager;
   private SegmentSchemaCache segmentSchemaCache;
 
+  private boolean skipSegmentPayloadFetchForAllocation = new TaskLockConfig().isBatchAllocationReduceMetadataIO();
+
   public TaskLockbox getTaskLockbox()
   {
     return taskLockbox;
@@ -76,6 +78,11 @@ public class TaskActionTestKit extends ExternalResource
   public TaskActionToolbox getTaskActionToolbox()
   {
     return taskActionToolbox;
+  }
+
+  public void setSkipSegmentPayloadFetchForAllocation(boolean skipSegmentPayloadFetchForAllocation)
+  {
+    this.skipSegmentPayloadFetchForAllocation = skipSegmentPayloadFetchForAllocation;
   }
 
   @Override
@@ -125,6 +132,12 @@ public class TaskActionTestKit extends ExternalResource
       public long getBatchAllocationWaitTime()
       {
         return 10L;
+      }
+
+      @Override
+      public boolean isBatchAllocationReduceMetadataIO()
+      {
+        return skipSegmentPayloadFetchForAllocation;
       }
     };
 

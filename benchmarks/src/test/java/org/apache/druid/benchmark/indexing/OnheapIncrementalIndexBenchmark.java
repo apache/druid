@@ -26,7 +26,6 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
@@ -90,10 +89,6 @@ public class OnheapIncrementalIndexBenchmark
 {
   static final int DIMENSION_COUNT = 5;
 
-  static {
-    NullHandling.initializeForTests();
-  }
-
   /**
    * Number of index and query tasks.
    */
@@ -116,7 +111,7 @@ public class OnheapIncrementalIndexBenchmark
 
   private static MapBasedInputRow getLongRow(long timestamp, int rowID, int dimensionCount)
   {
-    List<String> dimensionList = new ArrayList<String>(dimensionCount);
+    List<String> dimensionList = new ArrayList<>(dimensionCount);
     ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
     for (int i = 0; i < dimensionCount; i++) {
       String dimName = StringUtils.format("Dim_%d", i);

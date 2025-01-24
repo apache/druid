@@ -18,8 +18,8 @@
 
 import { MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import type { SqlExpression, SqlQuery } from '@druid-toolkit/query';
-import { C, F, L } from '@druid-toolkit/query';
+import type { SqlExpression, SqlQuery } from 'druid-query-toolkit';
+import { C, F, L } from 'druid-query-toolkit';
 import type { JSX } from 'react';
 import React from 'react';
 
@@ -135,10 +135,11 @@ export const NumberMenuItems = React.memo(function NumberMenuItems(props: Number
 
     return (
       <MenuItem icon={IconNames.FUNCTION} text="Aggregate">
-        {aggregateMenuItem(F('SUM', column), `sum_${columnName}`)}
-        {aggregateMenuItem(F('MIN', column), `min_${columnName}`)}
-        {aggregateMenuItem(F('MAX', column), `max_${columnName}`)}
-        {aggregateMenuItem(F('AVG', column), `avg_${columnName}`)}
+        {aggregateMenuItem(F.sum(column), `sum_${columnName}`)}
+        {aggregateMenuItem(F.min(column), `min_${columnName}`)}
+        {aggregateMenuItem(F.max(column), `max_${columnName}`)}
+        {aggregateMenuItem(F.avg(column), `avg_${columnName}`)}
+        {aggregateMenuItem(F.countDistinct(column), `dist_${columnName}`)}
         {aggregateMenuItem(F('APPROX_QUANTILE', column, 0.98), `p98_${columnName}`)}
         {aggregateMenuItem(F('LATEST', column), `latest_${columnName}`)}
       </MenuItem>

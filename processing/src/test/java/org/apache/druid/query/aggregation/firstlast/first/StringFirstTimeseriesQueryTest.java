@@ -106,7 +106,7 @@ public class StringFirstTimeseriesQueryTest extends InitializedNullHandlingTest
         )
     );
 
-    queryableIndex = TestIndex.persistRealtimeAndLoadMMapped(incrementalIndex);
+    queryableIndex = TestIndex.persistAndMemoryMap(incrementalIndex);
   }
 
   @Test

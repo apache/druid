@@ -186,7 +186,7 @@ public class InformationSchema extends AbstractSchema
       final FluentIterable<Object[]> results = FluentIterable
           .from(rootSchema.getSubSchemaNames())
           .transform(
-              new Function<String, Object[]>()
+              new Function<>()
               {
                 @Override
                 public Object[] apply(final String schemaName)
@@ -282,7 +282,7 @@ public class InformationSchema extends AbstractSchema
                               }
                           ),
                           FluentIterable.from(authorizedFunctionNames).transform(
-                              new Function<String, Object[]>()
+                              new Function<>()
                               {
                                 @Override
                                 public Object[] apply(final String functionName)
@@ -364,7 +364,7 @@ public class InformationSchema extends AbstractSchema
                       Iterables.filter(
                           Iterables.concat(
                               FluentIterable.from(authorizedTableNames).transform(
-                                  new Function<String, Iterable<Object[]>>()
+                                  new Function<>()
                                   {
                                     @Override
                                     public Iterable<Object[]> apply(final String tableName)
@@ -384,7 +384,7 @@ public class InformationSchema extends AbstractSchema
                                   }
                               ),
                               FluentIterable.from(authorizedFunctionNames).transform(
-                                  new Function<String, Iterable<Object[]>>()
+                                  new Function<>()
                                   {
                                     @Override
                                     public Iterable<Object[]> apply(final String functionName)
@@ -449,7 +449,7 @@ public class InformationSchema extends AbstractSchema
       return FluentIterable
           .from(tableSchema.getFieldList())
           .transform(
-              new Function<RelDataTypeField, Object[]>()
+              new Function<>()
               {
                 @Override
                 public Object[] apply(final RelDataTypeField field)

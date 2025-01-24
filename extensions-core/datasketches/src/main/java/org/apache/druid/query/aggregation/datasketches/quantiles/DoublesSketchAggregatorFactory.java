@@ -170,7 +170,7 @@ public class DoublesSketchAggregatorFactory extends AggregatorFactory
   {
     return ColumnProcessors.makeVectorProcessor(
         fieldName,
-        new VectorColumnProcessorFactory<VectorAggregator>()
+        new VectorColumnProcessorFactory<>()
         {
           @Override
           public VectorAggregator makeSingleValueDimensionProcessor(
@@ -422,6 +422,25 @@ public class DoublesSketchAggregatorFactory extends AggregatorFactory
   {
     // maxStreamLength is not included in the cache key as it does nothing with query result.
     return new CacheKeyBuilder(cacheTypeId).appendString(name).appendString(fieldName).appendInt(k).build();
+  }
+
+  @Nullable
+  @Override
+  public AggregatorFactory substituteCombiningFactory(AggregatorFactory preAggregated)
+  {
+    if (this == preAggregated) {
+      return getCombiningFactory();
+    }
+
+    if (getClass() != preAggregated.getClass()) {
+      return null;
+    }
+
+    DoublesSketchAggregatorFactory that = (DoublesSketchAggregatorFactory) preAggregated;
+    if (k <= that.k && maxStreamLength <= that.getMaxStreamLength() && Objects.equals(fieldName, that.fieldName)) {
+      return getCombiningFactory();
+    }
+    return null;
   }
 
   @Override

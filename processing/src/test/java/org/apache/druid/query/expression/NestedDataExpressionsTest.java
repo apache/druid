@@ -419,6 +419,22 @@ public class NestedDataExpressionsTest extends InitializedNullHandlingTest
     eval = expr.eval(inputBindings);
     Assert.assertEquals(3L, eval.value());
     Assert.assertEquals(ExpressionType.LONG, eval.type());
+
+    expr = Parser.parse("array_contains(json_query_array(nest, '$.x'), 100)", MACRO_TABLE);
+    expr = expr.asSingleThreaded(inputBindings);
+    Assert.assertEquals(1L, expr.eval(inputBindings).value());
+
+    expr = Parser.parse("array_contains(json_query_array(nest, '$.x'), 101)", MACRO_TABLE);
+    expr = expr.asSingleThreaded(inputBindings);
+    Assert.assertEquals(0L, expr.eval(inputBindings).value());
+
+    expr = Parser.parse("array_overlap(json_query_array(nest, '$.x'), [100, 101])", MACRO_TABLE);
+    expr = expr.asSingleThreaded(inputBindings);
+    Assert.assertEquals(1L, expr.eval(inputBindings).value());
+
+    expr = Parser.parse("array_overlap(json_query_array(nest, '$.x'), [101, 102])", MACRO_TABLE);
+    expr = expr.asSingleThreaded(inputBindings);
+    Assert.assertEquals(0L, expr.eval(inputBindings).value());
   }
 
   @Test

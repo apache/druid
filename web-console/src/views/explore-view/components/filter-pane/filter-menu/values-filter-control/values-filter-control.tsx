@@ -18,8 +18,9 @@
 
 import { FormGroup, Menu, MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import type { QueryResult, SqlQuery, ValuesFilterPattern } from '@druid-toolkit/query';
-import { C, F, SqlExpression } from '@druid-toolkit/query';
+import type { CancelToken } from 'axios';
+import type { QueryResult, SqlQuery, ValuesFilterPattern } from 'druid-query-toolkit';
+import { C, F, SqlExpression } from 'druid-query-toolkit';
 import React, { useMemo, useState } from 'react';
 
 import { ClearableInput } from '../../../../../../components';
@@ -27,16 +28,16 @@ import { useQueryManager } from '../../../../../../hooks';
 import { caseInsensitiveContains, filterMap } from '../../../../../../utils';
 import type { QuerySource } from '../../../../models';
 import { toggle } from '../../../../utils';
-import { ColumnValue } from '../../column-value/column-value';
+import { ColumnValue } from '../../../column-value/column-value';
 
 import './values-filter-control.scss';
 
 export interface ValuesFilterControlProps {
   querySource: QuerySource;
-  filter: SqlExpression | undefined;
+  filter: SqlExpression;
   filterPattern: ValuesFilterPattern;
   setFilterPattern(filterPattern: ValuesFilterPattern): void;
-  runSqlQuery(query: string | SqlQuery): Promise<QueryResult>;
+  runSqlQuery(query: string | SqlQuery, cancelToken?: CancelToken): Promise<QueryResult>;
 }
 
 export const ValuesFilterControl = React.memo(function ValuesFilterControl(
@@ -60,6 +61,7 @@ export const ValuesFilterControl = React.memo(function ValuesFilterControl(
         .changeOrderByExpression(F.count().toOrderByExpression('DESC'))
         .changeLimitValue(101)
         .toString(),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [querySource.query, filter, column, searchString],
   );
 
@@ -67,8 +69,8 @@ export const ValuesFilterControl = React.memo(function ValuesFilterControl(
     query: valuesQuery,
     debounceIdle: 100,
     debounceLoading: 500,
-    processQuery: async query => {
-      const vs = await runSqlQuery(query);
+    processQuery: async (query, cancelToken) => {
+      const vs = await runSqlQuery(query, cancelToken);
       return vs.getColumnByName('c') || [];
     },
   });
@@ -83,7 +85,7 @@ export const ValuesFilterControl = React.memo(function ValuesFilterControl(
   return (
     <FormGroup className="values-filter-control">
       {showSearch && (
-        <ClearableInput value={searchString} onChange={setSearchString} placeholder="Search" />
+        <ClearableInput value={searchString} onValueChange={setSearchString} placeholder="Search" />
       )}
       <Menu className="value-list">
         {filterMap(valuesToShow, (v, i) => {

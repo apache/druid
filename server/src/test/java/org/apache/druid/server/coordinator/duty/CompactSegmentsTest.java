@@ -39,9 +39,7 @@ import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
 import org.apache.druid.client.indexing.ClientMSQContext;
 import org.apache.druid.client.indexing.ClientTaskQuery;
 import org.apache.druid.client.indexing.IndexingTotalWorkerCapacityInfo;
-import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.RunnerTaskState;
@@ -66,6 +64,7 @@ import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.indexing.BatchIOConfig;
@@ -105,7 +104,6 @@ import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
 import javax.annotation.Nullable;
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -176,6 +174,7 @@ public class CompactSegmentsTest
   private final BiFunction<Integer, Integer, ShardSpec> shardSpecFactory;
   private final CompactionEngine engine;
 
+  private final List<DataSegment> allSegments = new ArrayList<>();
   private DataSourcesSnapshot dataSources;
   private CompactionStatusTracker statusTracker;
   Map<String, List<DataSegment>> datasourceToSegments = new HashMap<>();
@@ -194,7 +193,7 @@ public class CompactSegmentsTest
   @Before
   public void setup()
   {
-    List<DataSegment> allSegments = new ArrayList<>();
+    allSegments.clear();
     for (int i = 0; i < 3; i++) {
       final String dataSource = DATA_SOURCE_PREFIX + i;
       for (int j : new int[]{0, 1, 2, 3, 7, 8}) {
@@ -209,7 +208,7 @@ public class CompactSegmentsTest
         }
       }
     }
-    dataSources = DataSourcesSnapshot.fromUsedSegments(allSegments, ImmutableMap.of());
+    dataSources = DataSourcesSnapshot.fromUsedSegments(allSegments);
     statusTracker = new CompactionStatusTracker(JSON_MAPPER);
   }
 
@@ -270,7 +269,7 @@ public class CompactSegmentsTest
     final TestOverlordClient overlordClient = new TestOverlordClient(JSON_MAPPER);
     final CompactSegments compactSegments = new CompactSegments(statusTracker, overlordClient);
 
-    final Supplier<String> expectedVersionSupplier = new Supplier<String>()
+    final Supplier<String> expectedVersionSupplier = new Supplier<>()
     {
       private int i = 0;
 
@@ -435,7 +434,7 @@ public class CompactSegmentsTest
       }
     }
 
-    dataSources = DataSourcesSnapshot.fromUsedSegments(segments, ImmutableMap.of());
+    dataSources = DataSourcesSnapshot.fromUsedSegments(segments);
 
     final TestOverlordClient overlordClient = new TestOverlordClient(JSON_MAPPER);
     final CompactSegments compactSegments = new CompactSegments(statusTracker, overlordClient);
@@ -589,7 +588,7 @@ public class CompactSegmentsTest
       }
     }
 
-    dataSources = DataSourcesSnapshot.fromUsedSegments(segments, ImmutableMap.of());
+    dataSources = DataSourcesSnapshot.fromUsedSegments(segments);
 
     final TestOverlordClient overlordClient = new TestOverlordClient(JSON_MAPPER);
     final CompactSegments compactSegments = new CompactSegments(statusTracker, overlordClient);
@@ -1312,7 +1311,6 @@ public class CompactSegmentsTest
   @Test
   public void testCompactWithTransformSpec()
   {
-    NullHandling.initializeForTests();
     final OverlordClient mockClient = Mockito.mock(OverlordClient.class);
     final ArgumentCaptor<Object> payloadCaptor = setUpMockClient(mockClient);
     final CompactSegments compactSegments = new CompactSegments(statusTracker, mockClient);
@@ -1415,7 +1413,6 @@ public class CompactSegmentsTest
   @Test
   public void testCompactWithMetricsSpec()
   {
-    NullHandling.initializeForTests();
     AggregatorFactory[] aggregatorFactories = new AggregatorFactory[] {new CountAggregatorFactory("cnt")};
     final OverlordClient mockClient = Mockito.mock(OverlordClient.class);
     final ArgumentCaptor<Object> payloadCaptor = setUpMockClient(mockClient);
@@ -1497,7 +1494,7 @@ public class CompactSegmentsTest
             10L
         )
     );
-    dataSources = DataSourcesSnapshot.fromUsedSegments(segments, ImmutableMap.of());
+    dataSources = DataSourcesSnapshot.fromUsedSegments(segments);
 
     final OverlordClient mockClient = Mockito.mock(OverlordClient.class);
     final ArgumentCaptor<Object> payloadCaptor = setUpMockClient(mockClient);
@@ -1584,7 +1581,7 @@ public class CompactSegmentsTest
             10L
         )
     );
-    dataSources = DataSourcesSnapshot.fromUsedSegments(segments, ImmutableMap.of());
+    dataSources = DataSourcesSnapshot.fromUsedSegments(segments);
 
     final OverlordClient mockClient = Mockito.mock(OverlordClient.class);
     final ArgumentCaptor<Object> payloadCaptor = setUpMockClient(mockClient);
@@ -1988,22 +1985,14 @@ public class CompactSegmentsTest
 
   private void addMoreData(String dataSource, int day)
   {
-    final SegmentTimeline timeline
-        = dataSources.getUsedSegmentsTimelinesPerDataSource().get(dataSource);
     for (int i = 0; i < 2; i++) {
-      DataSegment newSegment = createSegment(dataSource, day, true, i);
-      timeline.add(
-          newSegment.getInterval(),
-          newSegment.getVersion(),
-          newSegment.getShardSpec().createChunk(newSegment)
-      );
-      newSegment = createSegment(dataSource, day, false, i);
-      timeline.add(
-          newSegment.getInterval(),
-          newSegment.getVersion(),
-          newSegment.getShardSpec().createChunk(newSegment)
-      );
+      allSegments.add(createSegment(dataSource, day, true, i));
+      allSegments.add(createSegment(dataSource, day, false, i));
     }
+
+    // Recreate the DataSourcesSnapshot with a future snapshotTime so that the
+    // statusTracker considers the intervals with new data eligible for compaction again
+    dataSources = DataSourcesSnapshot.fromUsedSegments(allSegments, DateTimes.nowUtc().plusMinutes(10));
   }
 
   private List<DataSourceCompactionConfig> createCompactionConfigs()
@@ -2085,12 +2074,6 @@ public class CompactSegmentsTest
     private TestOverlordClient(ObjectMapper jsonMapper)
     {
       this.jsonMapper = jsonMapper;
-    }
-
-    @Override
-    public ListenableFuture<URI> findCurrentLeader()
-    {
-      throw new UnsupportedOperationException();
     }
 
     @Override
@@ -2182,9 +2165,7 @@ public class CompactSegmentsTest
           transformSpec = jsonMapper.readValue(
               jsonMapper.writeValueAsString(new TransformSpec(clientCompactionTaskQuery.getTransformSpec()
                                                                                        .getFilter(), null)),
-              new TypeReference<Map<String, Object>>()
-              {
-              }
+              new TypeReference<>() {}
           );
         }
       }
@@ -2194,7 +2175,7 @@ public class CompactSegmentsTest
 
       List<Object> metricsSpec = null;
       if (clientCompactionTaskQuery.getMetricsSpec() != null) {
-        metricsSpec = jsonMapper.convertValue(clientCompactionTaskQuery.getMetricsSpec(), new TypeReference<List<Object>>() {});
+        metricsSpec = jsonMapper.convertValue(clientCompactionTaskQuery.getMetricsSpec(), new TypeReference<>() {});
       }
 
       for (int i = 0; i < 2; i++) {

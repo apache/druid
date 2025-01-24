@@ -27,7 +27,11 @@ a Java runtime for Druid.
 
 ## Selecting a Java runtime
 
-Druid fully supports Java 8u92+, Java 11, and Java 17. The project team recommends Java 17.
+Druid fully supports Java 11 and Java 17. The project team recommends Java 17.
+
+:::info
+Note: Starting with Apache Druid 32.0.0, support for Java 8 has been removed.
+:::
 
 The project team recommends using an OpenJDK-based Java distribution. There are many free and actively-supported
 distributions available, including
@@ -43,8 +47,7 @@ Druid relies on the environment variables `JAVA_HOME` or `DRUID_JAVA_HOME` to fi
 ## Garbage collection
 
 In general, the project team recommends using the G1 collector with default settings. This is the default collector in
-Java 11 and 17. To enable G1 on Java 8, use `-XX:+UseG1GC`. There is no harm in explicitly specifying this on Java 11
-or 17 as well.
+Java 11 and 17.
 
 Garbage collector selection and tuning is a form of sport in the Java community. There may be situations where adjusting
 garbage collection configuration improves or worsens performance. The project team's guidance is that most people do

@@ -21,6 +21,7 @@ package org.apache.druid.query;
 
 import com.google.inject.Injector;
 import com.google.inject.ProvisionException;
+import org.apache.druid.error.ExceptionMatcher;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.utils.JvmUtils;
@@ -133,14 +134,13 @@ public class DruidProcessingConfigTest
         HEAP_SIZE,
         props
     );
-    Throwable t = Assert.assertThrows(
-        ProvisionException.class,
-        () -> injector.getInstance(DruidProcessingConfig.class)
-    );
-    Assert.assertTrue(
-        t.getMessage()
-         .contains("Cannot construct instance of `org.apache.druid.java.util.common.HumanReadableBytes`, problem: Invalid format of number: -1. Negative value is not allowed.")
-    );
+
+    ExceptionMatcher
+        .of(ProvisionException.class)
+        .expectMessageContains(
+            "Cannot construct instance of `HumanReadableBytes`, problem: Invalid format of number: -1. Negative value is not allowed."
+        )
+        .assertThrowsAndMatches(() -> injector.getInstance(DruidProcessingConfig.class));
   }
 
   @Test

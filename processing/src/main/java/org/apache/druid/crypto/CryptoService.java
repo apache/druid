@@ -42,7 +42,7 @@ import java.security.spec.KeySpec;
  * using javax.crypto package.
  *
  * To learn about possible algorithms supported and their names,
- * See https://docs.oracle.com/javase/8/docs/technotes/guides/security/StandardNames.html
+ * See https://docs.oracle.com/en/java/javase/11/docs/specs/security/standard-names.html
  */
 public class CryptoService
 {

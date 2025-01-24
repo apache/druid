@@ -91,14 +91,14 @@ public class SQLAuditManagerTest
     final AuditEntry entry = createAuditEntry("testKey", "testType", DateTimes.nowUtc());
     auditManager.doAudit(entry);
 
-    Map<String, List<ServiceMetricEvent>> metricEvents = serviceEmitter.getMetricEvents();
+    Map<String, List<StubServiceEmitter.ServiceMetricEventSnapshot>> metricEvents = serviceEmitter.getMetricEvents();
     Assert.assertEquals(1, metricEvents.size());
 
-    List<ServiceMetricEvent> auditMetricEvents = metricEvents.get("config/audit");
+    List<StubServiceEmitter.ServiceMetricEventSnapshot> auditMetricEvents = metricEvents.get("config/audit");
     Assert.assertNotNull(auditMetricEvents);
     Assert.assertEquals(1, auditMetricEvents.size());
 
-    ServiceMetricEvent metric = auditMetricEvents.get(0);
+    ServiceMetricEvent metric = auditMetricEvents.get(0).getMetricEvent();
 
     final AuditEntry dbEntry = lookupAuditEntryForKey("testKey");
     Assert.assertNotNull(dbEntry);
@@ -120,14 +120,14 @@ public class SQLAuditManagerTest
     Assert.assertEquals(entry, dbEntry);
 
     // Verify emitted metrics
-    Map<String, List<ServiceMetricEvent>> metricEvents = serviceEmitter.getMetricEvents();
+    Map<String, List<StubServiceEmitter.ServiceMetricEventSnapshot>> metricEvents = serviceEmitter.getMetricEvents();
     Assert.assertEquals(1, metricEvents.size());
 
-    List<ServiceMetricEvent> auditMetricEvents = metricEvents.get("config/audit");
+    List<StubServiceEmitter.ServiceMetricEventSnapshot> auditMetricEvents = metricEvents.get("config/audit");
     Assert.assertNotNull(auditMetricEvents);
     Assert.assertEquals(1, auditMetricEvents.size());
 
-    ServiceMetricEvent metric = auditMetricEvents.get(0);
+    ServiceMetricEvent metric = auditMetricEvents.get(0).getMetricEvent();
     Assert.assertEquals(dbEntry.getKey(), metric.getUserDims().get("key"));
     Assert.assertEquals(dbEntry.getType(), metric.getUserDims().get("type"));
     Assert.assertNull(metric.getUserDims().get("payload"));
