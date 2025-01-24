@@ -17,8 +17,9 @@ GROUP BY 1;
 +------+--------+
 | dim1 | EXPR$1 |
 +------+--------+
+| abc  |      1 |
 +------+--------+
-(0 rows)
+(1 row)
 
 !ok
 LogicalAggregate(group=[{1}], EXPR$1=[COUNT()])
