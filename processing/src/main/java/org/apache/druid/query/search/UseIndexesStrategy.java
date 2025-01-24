@@ -41,13 +41,11 @@ import org.apache.druid.segment.DeprecatedQueryableIndexColumnSelector;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.VirtualColumns;
-import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
 import org.apache.druid.segment.column.NumericColumn;
 import org.apache.druid.segment.index.BitmapColumnIndex;
 import org.apache.druid.segment.index.semantic.DictionaryEncodedStringValueIndex;
-import org.apache.druid.segment.virtual.VirtualizedColumnInspector;
 import org.joda.time.Interval;
 
 import java.util.ArrayList;
@@ -80,21 +78,22 @@ public class UseIndexesStrategy extends SearchStrategy
 
     if (index != null) {
       // pair of bitmap dims and non-bitmap dims
+
+      final ColumnIndexSelector selector = new ColumnSelectorColumnIndexSelector(
+          index.getBitmapFactoryForDimensions(),
+          query.getVirtualColumns(),
+          new DeprecatedQueryableIndexColumnSelector(index)
+      );
+
       final Pair<List<DimensionSpec>, List<DimensionSpec>> pair = partitionDimensionList(
           segment,
-          cursorFactory,
-          query.getVirtualColumns(),
+          selector,
           searchDims
       );
       final List<DimensionSpec> bitmapSuppDims = pair.lhs;
       final List<DimensionSpec> nonBitmapSuppDims = pair.rhs;
 
       if (bitmapSuppDims.size() > 0) {
-        final ColumnIndexSelector selector = new ColumnSelectorColumnIndexSelector(
-            index.getBitmapFactoryForDimensions(),
-            query.getVirtualColumns(),
-            new DeprecatedQueryableIndexColumnSelector(index)
-        );
 
         // Index-only plan is used only when any filter is not specified or the filter supports bitmap indexes.
         //
@@ -128,13 +127,12 @@ public class UseIndexesStrategy extends SearchStrategy
   }
 
   /**
-   * Split the given dimensions list into bitmap-supporting dimensions and non-bitmap supporting ones.
-   * Note that the returned lists are free to modify.
+   * Split the given dimensions list into columns which provide {@link DictionaryEncodedStringValueIndex} and those
+   * which do not. Note that the returned lists are free to modify.
    */
   private static Pair<List<DimensionSpec>, List<DimensionSpec>> partitionDimensionList(
       Segment segment,
-      CursorFactory cursorFactory,
-      VirtualColumns virtualColumns,
+      ColumnIndexSelector columnIndexSelector,
       List<DimensionSpec> dimensions
   )
   {
@@ -144,15 +142,14 @@ public class UseIndexesStrategy extends SearchStrategy
         segment,
         dimensions
     );
-    VirtualizedColumnInspector columnInspector = new VirtualizedColumnInspector(cursorFactory, virtualColumns);
-
     for (DimensionSpec spec : dimsToSearch) {
-      ColumnCapabilities capabilities = columnInspector.getColumnCapabilities(spec.getDimension());
-      if (capabilities == null) {
+      ColumnIndexSupplier indexSupplier = columnIndexSelector.getIndexSupplier(spec.getDimension());
+      if (indexSupplier == null) {
+        // column doesn't exist, ignore it
         continue;
       }
 
-      if (capabilities.hasBitmapIndexes()) {
+      if (indexSupplier.as(DictionaryEncodedStringValueIndex.class) != null) {
         bitmapDims.add(spec);
       } else {
         nonBitmapDims.add(spec);
