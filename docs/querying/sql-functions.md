@@ -1669,7 +1669,7 @@ Returns the cumulative distribution of the current row within the window calcula
 
 <details><summary>Example</summary>
 
-The following example returns the cumulative distribution of number of flights by carrier from two airports on a single day.
+The following example returns the cumulative distribution of number of flights by airline from two airports on a single day.
 
 ```sql
 SELECT FLOOR("__time" TO DAY)  AS "flight_day",
@@ -1848,7 +1848,7 @@ Returns the rank for a row within a window without gaps. For example, if two row
 
 <details><summary>Example</summary>
 
-The following example returns the dense rank of number of flights by carrier from two airports on a single day.
+The following example returns the dense rank of number within the window of flights by airline from two airports on a single day.
 
 ```sql
 SELECT FLOOR("__time" TO DAY)  AS "flight_day",
@@ -2354,7 +2354,7 @@ Returns the value evaluated for the expression for the first row within the wind
 
 <details><summary>Example</summary>
 
-The following example returns the first airline name in the window for two airports on a single day.
+The following example returns the first airline name in the window of flights by airline for two airports on a single day.
 
 ```sql
 SELECT FLOOR("__time" TO DAY)  AS "flight_day",
@@ -2948,7 +2948,7 @@ If you do not supply an `offset`, returns the value evaluated at the row precedi
 
 <details><summary>Example</summary>
 
-The following example returns the subsequent airline value in the window for flights by carrier from two airports on a single day.
+The following example returns the subsequent airline in the window for flights by airline from two airports on a single day.
 
 ```sql
 SELECT FLOOR("__time" TO DAY)  AS "flight_day",
@@ -3936,7 +3936,7 @@ Divides the rows within a window as evenly as possible into the number of tiles,
 
 <details><summary>Example</summary>
 
-The following example returns the results for flights by carrier from two airports on a single day divided into 3 tiles.
+The following example returns the results for flights by airline from two airports on a single day divided into 3 tiles.
 
 ```sql
 SELECT FLOOR("__time" TO DAY)  AS "flight_day",
@@ -4186,7 +4186,7 @@ Returns the rank with gaps for a row within a window. For example, if two rows t
 
 <details><summary>Example</summary>
 
-The following example returns the rank for flights by carrier from two airports on a single day.
+The following example returns the rank within the window for flights by airline from two airports on a single day.
 
 ```sql
 SELECT FLOOR("__time" TO DAY)  AS "flight_day",
@@ -4448,7 +4448,7 @@ Returns the number of the row within the window starting from 1.
 
 <details><summary>Example</summary>
 
-The following example returns the window row number for flights by carrier from two airports on a single day.
+The following example returns the row number within the window for flights by airline from two airports on a single day.
 
 ```sql
 SELECT FLOOR("__time" TO DAY)  AS "flight_day",
