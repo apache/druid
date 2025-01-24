@@ -37,6 +37,19 @@ sidebar_label: "Aggregation functions"
 
 You can use aggregation functions in the SELECT clause of any [Druid SQL](./sql.md) query.
 
+In the aggregation functions supported by Druid, only `COUNT`, `ARRAY_AGG`, and `STRING_AGG` accept the DISTINCT keyword.
+
+:::info
+ The order of aggregation operations across segments is not deterministic. This means that non-commutative aggregation
+ functions can produce inconsistent results across the same query.
+
+ Functions that operate on an input type of "float" or "double" may also see these differences in aggregation
+ results across multiple query runs because of this. If precisely the same value is desired across multiple query runs,
+ consider using the `ROUND` function to smooth out the inconsistencies between queries.
+:::
+
+## Filter aggregations
+
 Filter any aggregator using the FILTER clause, for example:
 
 ```
@@ -56,16 +69,7 @@ When no rows are selected, aggregation functions return their initial value. Thi
 The initial value varies by aggregator. `COUNT` and the approximate count distinct sketch functions
 always return 0 as the initial value.
 
-In the aggregation functions supported by Druid, only `COUNT`, `ARRAY_AGG`, and `STRING_AGG` accept the DISTINCT keyword.
-
-:::info
- The order of aggregation operations across segments is not deterministic. This means that non-commutative aggregation
- functions can produce inconsistent results across the same query.
-
- Functions that operate on an input type of "float" or "double" may also see these differences in aggregation
- results across multiple query runs because of this. If precisely the same value is desired across multiple query runs,
- consider using the `ROUND` function to smooth out the inconsistencies between queries.
-:::
+## General aggregation functions
 
 |Function|Notes|Default|
 |--------|-----|-------|
@@ -104,7 +108,7 @@ In the aggregation functions supported by Druid, only `COUNT`, `ARRAY_AGG`, and 
 
 These functions create sketch objects that you can use to perform fast, approximate analyses.
 For advice on choosing approximate aggregation functions, check out our [approximate aggregations documentation](aggregations.md#approx).
-To operate on sketch objects, also see the [DataSketches post aggregator functions](sql-scalar.md#sketch-functions).
+To operate on sketch objects, see the scalar [DataSketches post aggregator functions](sql-scalar.md#sketch-functions).
 
 ### HLL sketch functions
 
