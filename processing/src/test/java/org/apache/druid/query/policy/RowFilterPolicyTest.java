@@ -84,8 +84,8 @@ public class RowFilterPolicyTest
   {
     Filter filter = new EqualityFilter("col0", ColumnType.STRING, "val0", null);
     CursorBuildSpec spec = CursorBuildSpec.builder()
-                                          .setFilter(filter).
-                                          setPhysicalColumns(filter.getRequiredColumns())
+                                          .setFilter(filter)
+                                          .setPhysicalColumns(filter.getRequiredColumns())
                                           .build();
 
     DimFilter policyFilter = new EqualityFilter("col", ColumnType.STRING, "val", null);
