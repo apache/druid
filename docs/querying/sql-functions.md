@@ -1508,7 +1508,7 @@ Returns the cumulative distribution of the current row within the window calcula
 
 <details><summary>Example</summary>
 
-The following example returns the cumulative distribution of flights by carrier from two airports on a single day.
+The following example returns the cumulative distribution of number of flights by carrier from two airports on a single day.
 
 ```sql
 SELECT FLOOR("__time" TO DAY)  AS "flight_day",
@@ -1687,7 +1687,7 @@ Returns the rank for a row within a window without gaps. For example, if two row
 
 <details><summary>Example</summary>
 
-The following example returns the dense rank of flights by carrier from two airports on a single day.
+The following example returns the dense rank of number of flights by carrier from two airports on a single day.
 
 ```sql
 SELECT FLOOR("__time" TO DAY)  AS "flight_day",
@@ -1705,7 +1705,7 @@ Returns the following:
 
 | `flight_day` | `airport` | `airline` | `num_flights` | `dense_rank` |
 | --- | --- | --- | --- | ---|
-| `2005-11-01T00:00:00.000Z` | `KOA` | `HA` | `11` | `01` |
+| `2005-11-01T00:00:00.000Z` | `KOA` | `HA` | `11` | `1` |
 | `2005-11-01T00:00:00.000Z` | `KOA` | `UA` | `4` | `2` |
 | `2005-11-01T00:00:00.000Z` | `KOA` | `AA` | `1` | `3` |
 | `2005-11-01T00:00:00.000Z` | `KOA` | `NW` | `1` | `3` |
@@ -2147,7 +2147,7 @@ Returns the value evaluated for the expression for the first row within the wind
 
 <details><summary>Example</summary>
 
-The following example returns the first airline name in the window for flights by carrier from two airports on a single day.
+The following example returns the first airline name in the window for two airports on a single day.
 
 ```sql
 SELECT FLOOR("__time" TO DAY)  AS "flight_day",
@@ -2708,7 +2708,7 @@ If you do not supply an `offset`, returns the value evaluated at the row precedi
 
 <details><summary>Example</summary>
 
-The following example returns the subsequent value for airline in the window for flights by carrier from two airports on a single day.
+The following example returns the subsequent airline value in the window for flights by carrier from two airports on a single day.
 
 ```sql
 SELECT FLOOR("__time" TO DAY)  AS "flight_day",
@@ -2749,7 +2749,7 @@ Returns the value evaluated for the expression for the last row within the windo
 
 <details><summary>Example</summary>
 
-The following example returns the subsequent value for airline in the window for flights by carrier from two airports on a single day.
+The following example returns the last airline name in the window for flights for two airports on a single day.
 
 ```sql
 SELECT FLOOR("__time" TO DAY)  AS "flight_day",
@@ -2808,7 +2808,7 @@ If you do not supply an `offset`, returns the value evaluated at the row followi
 
 <details><summary>Example</summary>
 
-The following example returns the previous value for airline in the window for flights by carrier from two airports on a single day.
+The following example returns the previous value for airline in the window for flights from two airports on a single day.
 
 ```sql
 SELECT FLOOR("__time" TO DAY)  AS "flight_day",
@@ -3613,7 +3613,7 @@ Divides the rows within a window as evenly as possible into the number of tiles,
 
 <details><summary>Example</summary>
 
-The following example returns the results for the number of flights by carrier from two airports on a single day divided into 3 tiles.
+The following example returns the results for flights by carrier from two airports on a single day divided into 3 tiles.
 
 ```sql
 SELECT FLOOR("__time" TO DAY)  AS "flight_day",
@@ -3629,7 +3629,7 @@ GROUP BY 2, 3, 1
 
 Returns the following:
 
-| `flight_day` | `airport` | `airline` | `lead` | `` |
+| `flight_day` | `airport` | `airline` | `lead` | `ntile` |
 | --- | --- | --- | --- | ---|
 | `2005-11-01T00:00:00.000Z` | `KOA` | `HA` | `11` | `1` |
 | `2005-11-01T00:00:00.000Z` | `KOA` | `UA` | `4` | `1` |
@@ -3748,7 +3748,7 @@ Returns the relative rank of the row calculated as a percentage according to the
 
 <details><summary>Example</summary>
 
-The following example returns the percent rank for flights by carrier from two airports on a single day.
+The following example returns the percent rank for flights from two airports on a single day.
 
 ```sql
 SELECT FLOOR("__time" TO DAY)  AS "flight_day",
@@ -3764,7 +3764,7 @@ GROUP BY 2, 3, 1
 
 Returns the following:
 
-| `flight_day` | `airport` | `airline` | `lead` | `pct_rank` |
+| `flight_day` | `airport` | `airline` | `num_flights` | `pct_rank` |
 | --- | --- | --- | --- | ---|
 | `2005-11-01T00:00:00.000Z` | `KOA` | `HA` | `11` | `0` |
 | `2005-11-01T00:00:00.000Z` | `KOA` | `UA` | `4` | `0.3333333333333333` |
@@ -3863,7 +3863,7 @@ Returns the rank with gaps for a row within a window. For example, if two rows t
 
 <details><summary>Example</summary>
 
-The following example returns the rank for number of flights by carrier from two airports on a single day.
+The following example returns the rank for flights by carrier from two airports on a single day.
 
 ```sql
 SELECT FLOOR("__time" TO DAY)  AS "flight_day",
@@ -3879,7 +3879,7 @@ GROUP BY 2, 3, 1
 
 Returns the following:
 
-| `flight_day` | `airport` | `airline` | `lead` | `pct_rank` |
+| `flight_day` | `airport` | `airline` | `lead` | `rank` |
 | --- | --- | --- | --- | ---|
 | `2005-11-01T00:00:00.000Z` | `KOA` | `HA` | `11` | `1` |
 | `2005-11-01T00:00:00.000Z` | `KOA` | `UA` | `4` | `2` |
@@ -4125,7 +4125,7 @@ Returns the number of the row within the window starting from 1.
 
 <details><summary>Example</summary>
 
-The following example returns the rank for number of flights by carrier from two airports on a single day.
+The following example returns the window row number for flights by carrier from two airports on a single day.
 
 ```sql
 SELECT FLOOR("__time" TO DAY)  AS "flight_day",
