@@ -27,7 +27,7 @@ sidebar_label: "All functions"
  Apache Druid supports two query languages: Druid SQL and [native queries](querying.md).
  This document describes the SQL language.
 :::
-<!-- The **Learn More** at the end of each function section provides further documentation. -->
+
 This page provides a reference of Apache Druid&circledR; SQL functions in alphabetical order. For more details on a function, refer to the following:
 * [Aggregation functions](sql-aggregations.md)
 * [Array functions](sql-array-functions.md)
@@ -36,10 +36,80 @@ This page provides a reference of Apache Druid&circledR; SQL functions in alphab
 * [Scalar functions](sql-scalar.md)
 * [Window functions](sql-window-functions.md)
 
+## Example data
+
 The examples on this page use the following example datasources:
-* `flight-carriers` using `FlightCarrierOnTime (1 month)` 
-* `taxi-trips` using `NYC Taxi cabs (3 files)`
-* `kttm` using `KoalasToTheMax one day`
+* `array-example` created with [SQL-based ingestion](../multi-stage-query/index.md)
+* `flight-carriers` using `FlightCarrierOnTime (1 month)` included with Druid
+* `kttm` using `KoalasToTheMax one day` included with Druid
+* `mvd-example` using [SQL-based ingestion](multi-value-dimensions.md#sql-based-ingestion)
+* `taxi-trips` using `NYC Taxi cabs (3 files)` included with Druid
+
+To load a datasource included with Druid,
+access the [web console](../operations/web-console.md)
+and go to **Load data > Batch - SQL > Example data**.
+Select **Connect data**, and parse using the default settings.
+On the page to configure the schema, select the datasource label
+and enter the name of the datasource listed above.
+
+Use the following query to create the `array-example` datasource:
+
+<details><summary>Datasource for arrays</summary>
+
+```sql
+REPLACE INTO "array-example" OVERWRITE ALL
+WITH "ext" AS (
+  SELECT *
+  FROM TABLE(
+    EXTERN(
+      '{"type":"inline","data":"{\"timestamp\": \"2023-01-01T00:00:00\", \"label\": \"row1\", \"arrayString\": [\"a\", \"b\"],  \"arrayLong\":[1, null,3], \"arrayDouble\":[1.1, 2.2, null]}\n{\"timestamp\": \"2023-01-01T00:00:00\", \"label\": \"row2\", \"arrayString\": [null, \"b\"], \"arrayLong\":null,        \"arrayDouble\":[999, null, 5.5]}\n{\"timestamp\": \"2023-01-01T00:00:00\", \"label\": \"row3\", \"arrayString\": [],          \"arrayLong\":[1, 2, 3],   \"arrayDouble\":[null, 2.2, 1.1]} \n{\"timestamp\": \"2023-01-01T00:00:00\", \"label\": \"row4\", \"arrayString\": [\"a\", \"b\"],  \"arrayLong\":[1, 2, 3],   \"arrayDouble\":[]}\n{\"timestamp\": \"2023-01-01T00:00:00\", \"label\": \"row5\", \"arrayString\": null,        \"arrayLong\":[],          \"arrayDouble\":null}"}',
+      '{"type":"json"}'
+    )
+  ) EXTEND (
+    "timestamp" VARCHAR,
+    "label" VARCHAR,
+    "arrayString" VARCHAR ARRAY,
+    "arrayLong" BIGINT ARRAY,
+    "arrayDouble" DOUBLE ARRAY
+  )
+)
+SELECT
+    TIME_PARSE("timestamp") AS "__time",
+    "label",
+    "arrayString",
+    "arrayLong",
+    "arrayDouble"
+FROM "ext"
+PARTITIONED BY DAY
+```
+
+</details>
+
+Use the following query to create the `mvd-example` datasource:
+
+<details><summary>Datasource for multi-value string dimensions</summary>
+
+```sql
+REPLACE INTO "mvd-example" OVERWRITE ALL
+WITH "ext" AS (
+  SELECT *
+  FROM TABLE(
+    EXTERN(
+      '{"type":"inline","data":"{\"timestamp\": \"2011-01-12T00:00:00.000Z\", \"label\": \"row1\", \"tags\": [\"t1\",\"t2\",\"t3\"]}\n{\"timestamp\": \"2011-01-13T00:00:00.000Z\", \"label\": \"row2\", \"tags\": [\"t3\",\"t4\",\"t5\"]}\n{\"timestamp\": \"2011-01-14T00:00:00.000Z\", \"label\": \"row3\", \"tags\": [\"t5\",\"t6\",\"t7\"]}\n{\"timestamp\": \"2011-01-14T00:00:00.000Z\", \"label\": \"row4\", \"tags\": []}"}',
+      '{"type":"json"}',
+      '[{"name":"timestamp", "type":"STRING"},{"name":"label", "type":"STRING"},{"name":"tags", "type":"ARRAY<STRING>"}]'
+    )
+  )
+)
+SELECT
+  TIME_PARSE("timestamp") AS "__time",
+  "label",
+  ARRAY_TO_MV("tags") AS "tags"
+FROM "ext"
+PARTITIONED BY DAY
+```
+
+</details>
 
 ## ABS
 
@@ -62,9 +132,9 @@ LIMIT 1
 ```
 Returns the following:
 
-| `arrival_delay` | `absolute_arrival_delay` | 
-| -- | -- | 
-| `-27` | `27` | 
+| `arrival_delay` | `absolute_arrival_delay` |
+| -- | -- |
+| `-27` | `27` |
 </details>
 
 [Learn more](sql-scalar.md#numeric-functions)
@@ -86,7 +156,7 @@ SELECT ACOS(0) AS "arc_cosine"
 Returns the following:
 
 | `arc_cosine` |  
-| -- | 
+| -- |
 | `1.5707963267948966` |
 </details>
 
@@ -94,26 +164,65 @@ Returns the following:
 
 ## ANY_VALUE
 
-`ANY_VALUE(expr, [maxBytesPerValue, [aggregateMultipleValues]])`
-
-**Function type:** [Aggregation](sql-aggregations.md)
-
 Returns any value of the specified expression.
+
+* **Syntax**: `ANY_VALUE(expr, [maxBytesPerValue, [aggregateMultipleValues]])`
+* **Function type:** Aggregation
+
+[Learn more](sql-aggregations.md)
 
 ## APPROX_COUNT_DISTINCT
 
-`APPROX_COUNT_DISTINCT(expr)`
+Counts distinct values of a regular column or a prebuilt sketch column using an approximate algorithm.
 
-**Function type:** [Aggregation](sql-aggregations.md)
+* **Syntax**: `APPROX_COUNT_DISTINCT(expr)`
+* **Function type:** Aggregation
 
-Counts distinct values of a regular column or a prebuilt sketch column.
+<details><summary>Example</summary>
+
+The following example counts the number of distinct airlines reported in `flight-carriers`:
+
+```sql
+SELECT APPROX_COUNT_DISTINCT("Reporting_Airline") AS "num_airlines"
+FROM "flight-carriers"
+```
+
+Returns the following:
+
+| `num_airlines` |
+| -- |
+| `20` |
+
+</details>
+
+[Learn more](sql-aggregations.md)
 
 ## APPROX_COUNT_DISTINCT_BUILTIN
-`APPROX_COUNT_DISTINCT_BUILTIN(expr)`
-
-**Function type:** [Aggregation](sql-aggregations.md)
 
 Counts distinct values of a string, numeric, or `hyperUnique` column using Druid's built-in `cardinality` or `hyperUnique` aggregators.
+Consider using `APPROX_COUNT_DISTINCT_DS_HLL` instead, which offers better accuracy in many cases.
+
+* **Syntax**: `APPROX_COUNT_DISTINCT_BUILTIN(expr)`
+* **Function type:** Aggregation
+
+<details><summary>Example</summary>
+
+The following example counts the number of distinct airlines reported in `flight-carriers`:
+
+```sql
+SELECT APPROX_COUNT_DISTINCT_BUILTIN("Reporting_Airline") AS "num_airlines"
+FROM "flight-carriers"
+```
+
+Returns the following:
+
+| `num_airlines` |
+| -- |
+| `20` |
+
+</details>
+
+[Learn more](sql-aggregations.md)
 
 ## APPROX_COUNT_DISTINCT_DS_HLL
 
@@ -185,7 +294,6 @@ Computes approximate quantiles on a Quantiles sketch column or a regular numeric
 * **Syntax:** `APPROX_QUANTILE_DS(expr, probability, [k])`
 * **Function type:** Aggregation
 
-
 <details><summary>Example</summary>
 
 The following example approximates the median of the `Distance` column from the `flight-carriers` datasource. The query may return a different approximation on each execution.
@@ -198,7 +306,7 @@ FROM "flight-carriers"
 Returns a result similar to the following:
 
 | `estimate_median` |
-| -- | 
+| -- |
 | `569` |
 
 </details>
@@ -212,7 +320,6 @@ Computes approximate quantiles on fixed buckets histogram column or a regular nu
 * **Syntax:** `APPROX_QUANTILE_FIXED_BUCKETS(expr, probability, numBuckets, lowerLimit, upperLimit, [outlierHandlingMode])`
 * **Function type:** Aggregation
 
-
 <details><summary>Example</summary>
 
 The following example approximates the median of a histogram on the `Distance` column from the `flight-carriers` datasource. The histogram has 10 buckets, a lower limit of zero, an upper limit of 2500, and ignores outlier values. 
@@ -225,151 +332,557 @@ FROM "flight-carriers"
 Returns the following:
 
 | `estimate_median` |
-| -- | 
+| -- |
 | `571.6983032226562` |
 
 </details>
 
 [Learn more](sql-aggregations.md)
 
-## ARRAY[]
+## ARRAY
 
-`ARRAY[expr1, expr2, ...]`
+Constructs a SQL `ARRAY` literal from the provided expression arguments. All arguments must be of the same type.
 
-**Function type:** [Array](sql-array-functions.md)
+* **Syntax**: `ARRAY[expr1, expr2, ...]`
+* **Function type:** Array
 
-Constructs a SQL ARRAY literal from the expression arguments. The arguments must be of the same type.
+<details><summary>Example</summary>
+
+The following example constructs arrays from the values of the `agent_category`, `browser`, and `browser_version` columns in the `kttm` datasource.
+
+```sql
+SELECT ARRAY["agent_category", "browser", "browser_version"] AS "user_agent_details"
+FROM "kttm"
+LIMIT 5
+```
+
+Returns the following:
+
+| `user_agent_details` |
+| -- |
+| `["Personal computer","Chrome","76.0.3809.100"]` |
+| `["Smartphone","Chrome Mobile","50.0.2661.89"]` |
+| `["Personal computer","Chrome","76.0.3809.100"]` |
+| `["Personal computer","Opera","62.0.3331.116"]` |
+| `["Smartphone","Mobile Safari","12.0"]` |
+
+</details>
+
+[Learn more](sql-array-functions.md)
 
 ## ARRAY_AGG
 
-`ARRAY_AGG([DISTINCT] expr, [<NUMERIC>])`
+Returns an array of all values of the specified expression. To include only unique values, specify `DISTINCT`.
 
-**Function type:** [Aggregation](sql-aggregations.md)
+* **Syntax**: `ARRAY_AGG([DISTINCT] expr, [size])`
+* **Function type:** Aggregation
 
-Returns an array of all values of the specified expression.
+<details><summary>Example</summary>
+
+The following example returns arrays of unique values from the `OriginState` column in the `flight-carriers` datasource, grouped by `Reporting_Airline`.
+
+```sql
+SELECT "Reporting_Airline", ARRAY_AGG(DISTINCT "OriginState", 50000) AS "Origin"
+FROM "flight-carriers"
+GROUP BY "Reporting_Airline"
+LIMIT 5
+```
+
+Returns the following:
+
+| `Reporting_Airline` | `Origin` |
+| -- | -- |
+| `AA` |`["AL","AR","AZ","CA","CO","CT","FL","GA","HI","IL","IN","KS","KY","LA","MA","MD","MI","MN","MO","NC","NE","NJ","NM","NV","NY","OH","OK","OR","PA","PR","RI","TN","TX","UT","VA","VI","WA"]`|
+| `AS` |`["AK","AZ","CA","CO","FL","ID","IL","MA","NJ","NV","OR","TX","VA","WA"]`|
+| `B6` |`["AZ","CA","CO","FL","LA","MA","NJ","NV","NY","OR","PR","UT","VA","VT","WA"]`|
+| `CO` |`["AK","AL","AZ","CA","CO","CT","FL","GA","HI","IL","IN","LA","MA","MD","MI","MN","MO","MS","NC","NE","NH","NJ","NM","NV","NY","OH","OK","OR","PA","PR","RI","SC","TN","TX","UT","VA","VI","WA"]`|
+| `DH` |`["AL","CA","CT","FL","GA","IL","MA","ME","MI","NC","NH","NJ","NV","NY","OH","PA","RI","SC","TN","VA","VT","WA","WV"]`|
+
+</details>
+
+[Learn more](sql-aggregations.md)
 
 ## ARRAY_APPEND
 
-`ARRAY_APPEND(arr1, expr)`
+Appends the expression to the array. The source array type determines the resulting array type.
 
-**Function type:** [Array](./sql-array-functions.md)
+* **Syntax**: `ARRAY_APPEND(arr, expr)`
+* **Function type:** Array
 
-Appends `expr` to `arr`, the resulting array type determined by the type of `arr1`.
+<details><summary>Example</summary>
+
+The following example appends `c` to the values in the `arrayString` column from the `array-example` datasource.
+
+```sql
+SELECT ARRAY_APPEND("arrayString",'c') AS "array_appended"
+FROM "array-example"
+```
+
+Returns the following:
+
+| `array_appended` |
+| -- |
+| `[a, b, c]` |
+| `[null,"b","c"]`|
+| `[c]` |
+| `[a, b, c]`|
+| `null` |
+
+</details>
+
+[Learn more](sql-array-functions.md)
 
 ## ARRAY_CONCAT
 
-`ARRAY_CONCAT(arr1, arr2)`
+Concatenates two arrays. The type of `arr1` determines the resulting array type.
 
-**Function type:** [Array](./sql-array-functions.md)
+* **Syntax**: `ARRAY_CONCAT(arr1, arr2)`
+* **Function type:** Array
 
-Concatenates `arr2` to `arr1`. The resulting array type is determined by the type of `arr1`.|
+<details><summary>Example</summary>
+
+The following example concatenates the arrays in the `arrayLong` and `arrayDouble` columns from the `array-example` datasource.
+
+```sql
+SELECT ARRAY_CONCAT("arrayLong", "arrayDouble") AS "arrayConcatenated" 
+FROM "array-example"
+```
+
+Returns the following:
+
+| `arrayConcatenated` |
+| -- |
+| `[1,null,3,1.1,2.2,null]` |
+| `null`|
+| `[1,2,3,null,2.2,1.1]` |
+| `[1,2,3]`|
+| `null` |
+
+</details>
+
+[Learn more](sql-array-functions.md)
 
 ## ARRAY_CONCAT_AGG
 
-`ARRAY_CONCAT_AGG([DISTINCT] expr, [<NUMERIC>])`
+Concatenates array inputs into a single array. To include only unique values, specify `DISTINCT`.
 
-**Function type:** [Aggregation](sql-aggregations.md)
+* **Syntax**: `ARRAY_CONCAT_AGG([DISTINCT] expr, [size])`
+* **Function type:** Aggregation
 
-Concatenates array inputs into a single array.
+<details><summary>Example</summary>
+
+The following example concatenates the array inputs from the `arrayDouble` column of the `array-example` datasource into a single array.
+
+```sql
+SELECT ARRAY_CONCAT_AGG( DISTINCT "arrayDouble") AS "array_concat_agg_distinct"
+FROM "array-example"
+```
+
+Returns the following:
+
+| `array_concat_agg_distinct` |
+| -- |
+| `[null,1.1,2.2,5.5,999]` |
+
+</details>
+
+[Learn more](sql-aggregations.md)
 
 ## ARRAY_CONTAINS
 
-`ARRAY_CONTAINS(arr, expr)`
+Checks if the array contains the specified expression.
 
-**Function type:** [Array](./sql-array-functions.md)
+### Scalar
 
-If `expr` is a scalar type, returns true if `arr` contains `expr`. If `expr` is an array, returns 1 if `arr` contains all elements of `expr`. Otherwise returns false.
+If the specified expression is a scalar value, returns true if the source array contains the value.
 
+* **Syntax**: `ARRAY_CONTAINS(arr, expr)`
+* **Function type:** Array
+
+<details><summary>Example</summary>
+
+The following example returns true if the `arraySring` column from the `array-example` datasource contains `2`.
+
+```sql
+SELECT "arrayLong", ARRAY_CONTAINS("arrayLong", 2) AS "arrayContains"
+FROM "array-example"
+```
+
+Returns the following:
+
+| `arrayLong` | `arrayContains` |
+| -- | --|
+| `[1,null,3]` | `false` |
+| `null` | `null` |
+| `[1,2,3]` |  `true` |
+| `[1,2,3]` | `true` |
+| `[]` | `false` |
+
+</details>
+
+[Learn more](sql-array-functions.md)
+
+### Array
+
+If the specified expression is an array, returns true if the source array contains all elements of the expression.
+
+* **Syntax**: `ARRAY_CONTAINS(arr, expr)`
+* **Function type:** Array
+
+<details><summary>Example</summary>
+
+The following example returns true if the `arrayLong` column from the `array-example` datasource contains all elements of the provided expression.
+
+```sql
+SELECT "label", "arrayLong", ARRAY_CONTAINS("arrayLong", ARRAY[1,2,3]) AS "arrayContains"
+FROM "array-example"
+```
+
+Returns the following:
+
+| `label` | `arrayLong` | `arrayContains` |
+| -- | -- | -- |
+| `row1` | `[1,null,3]` | `false` |
+| `row2`| `null` | `null` |
+| `row3`| `[1,2,3]` | `true` |
+| `row4`| `[1,2,3]` | `true` |
+| `row5`| `[]` | `false` |
+
+</details>
+
+[Learn more](sql-array-functions.md)
 
 ## ARRAY_LENGTH
 
-`ARRAY_LENGTH(arr)`
+Returns the length of the array.
 
-**Function type:** [Array](./sql-array-functions.md)
+* **Syntax**: `ARRAY_LENGTH(arr)`
+* **Function type:** Array
 
-Returns length of the array expression.
+<details><summary>Example</summary>
+
+The following example returns the length of array expressions in the `arrayDouble` column from the `array-example` datasource.
+
+```sql
+SELECT "arrayDouble" AS "array", ARRAY_LENGTH("arrayDouble") AS "arrayLength"
+FROM "array-example"
+```
+
+Returns the following:
+
+| `larray` | `arrayLength` |
+| -- | -- |
+| `row1` | 3 |
+| `row2`| 3 |
+| `row3`| 3 |
+| `row4`| 0 |
+| `row5`| `null` |
+
+</details>
+
+[Learn more](sql-array-functions.md)
 
 ## ARRAY_OFFSET
 
-`ARRAY_OFFSET(arr, long)`
+Returns the array element at the specified zero-based index. Returns null if the index is out of bounds.
 
-**Function type:** [Array](./sql-array-functions.md)
+* **Syntax**: `ARRAY_OFFSET(arr, long)`
+* **Function type:** Array
 
-Returns the array element at the 0-based index supplied, or null for an out of range index.
+<details><summary>Example</summary>
+
+The following example returns the element at the specified zero-based index from the arrays in the `arrayLong` column of the `array-example` datasource.
+
+```sql
+SELECT "arrayLong" as "array", ARRAY_OFFSET("arrayLong", 2) AS "elementAtIndex"
+FROM "array-example"
+```
+
+Returns the following:
+
+| `array` | `elementAtIndex` |
+| -- | -- |
+| `[1,null,3]` | 3 |
+| `null`| `null` |
+| `[1,2,3]`| 3 |
+| `[1,2,3]`| 3 |
+| `[]`| `null` |
+
+</details>
+
+[Learn more](sql-array-functions.md)
 
 ## ARRAY_OFFSET_OF
 
-`ARRAY_OFFSET_OF(arr, expr)`
+Returns the zero-based index of the first occurrence of the expression in the array. Returns null if the value isn't present, or `-1` if `druid.generic.useDefaultValueForNull=true` (deprecated legacy mode).
 
-**Function type:** [Array](./sql-array-functions.md)
+* **Syntax**: `ARRAY_OFFSET_OF(arr, expr)`
+* **Function type:** Array
 
-Returns the 0-based index of the first occurrence of `expr` in the array. If no matching elements exist in the array, returns `null` or `-1` if `druid.generic.useDefaultValueForNull=true` (deprecated legacy mode).
+<details><summary>Example</summary>
+
+The following example returns the zero-based index of the fist occurrence of `3` in the arrays in the `arrayLong` column of the `array-example` datasource.
+
+```sql
+SELECT "arrayLong" as "array", ARRAY_OFFSET_OF("arrayLong", 3) AS "offset"
+FROM "array-example"
+```
+
+Returns the following:
+
+| `array` | `offset` |
+| -- | -- |
+| `[1,null,3]` | 2 |
+| `null`| `null` |
+| `[1,2,3]`| 2 |
+| `[1,2,3]`| 2 |
+| `[]`| `null` |
+
+</details>
+
+[Learn more](sql-array-functions.md)
 
 ## ARRAY_ORDINAL
 
-**Function type:** [Array](./sql-array-functions.md)
+Returns the array element at the specified one-based index. Returns null if the index is out of bounds.
 
-`ARRAY_ORDINAL(arr, long)`
+* **Syntax**: `ARRAY_ORDINAL(arr, long)`
+* **Function type:** Array
 
-Returns the array element at the 1-based index supplied, or null for an out of range index.
+<details><summary>Example</summary>
+
+The following example returns the element at the specified one-based index from the arrays in the `arrayLong` column of the `array-example` datasource.
+
+```sql
+SELECT "arrayLong" as "array", ARRAY_ORDINAL("arrayLong", 2) AS "elementAtIndex"
+FROM "array-example"
+```
+
+Returns the following:
+
+| `array` | `elementAtIndex` |
+| -- | -- |
+| `[1,null,3]` | `null` |
+| `null`| `null` |
+| `[1,2,3]`| 2 |
+| `[1,2,3]`| 2 |
+| `[]`| `null` |
+
+</details>
+
+[Learn more](sql-array-functions.md)
+
 ## ARRAY_ORDINAL_OF
 
-`ARRAY_ORDINAL_OF(arr, expr)`
+Returns the one-based index of the first occurrence of the expression in the array. Returns null if the value isn't present, or `-1` if `druid.generic.useDefaultValueForNull=true` (deprecated legacy mode).
 
-**Function type:** [Array](./sql-array-functions.md)
+* **Syntax**: `ARRAY_ORDINAL_OF(arr, expr)`
+* **Function type:** Array
 
-Returns the 1-based index of the first occurrence of `expr` in the array. If no matching elements exist in the array, returns `null` or `-1` if `druid.generic.useDefaultValueForNull=true` (deprecated legacy mode).
+<details><summary>Example</summary>
+
+The following example returns the one-based index of the fist occurrence of `3` in the arrays in the `arrayLong` column of the `array-example` datasource.
+
+```sql
+SELECT "arrayLong" as "array", ARRAY_ORDINAL_OF("arrayLong", 3) AS "ordinal"
+FROM "array-example"
+```
+
+Returns the following:
+
+| `array` | `ordinal` |
+| -- | -- |
+| `[1,null,3]` | 3 |
+| `null`| `null` |
+| `[1,2,3]`| 3 |
+| `[1,2,3]`| 3 |
+| `[]`| `null` |
+
+</details>
+
+[Learn more](sql-array-functions.md)
 
 ## ARRAY_OVERLAP
 
-`ARRAY_OVERLAP(arr1, arr2)`
+Returns true if two arrays have any elements in common. Treats `NULL` values as known elements.
 
-**Function type:** [Array](./sql-array-functions.md)
+* **Syntax**: `ARRAY_OVERLAP(arr1, arr2)`
+* **Function type:** Array
 
-Returns true if `arr1` and `arr2` have any elements in common, else false.
+<details><summary>Example</summary>
+
+The following example returns true if columns `arrayString` and `arrayDouble` from the `array-example` datasource have common elements.
+
+```sql
+SELECT "arrayString", "arrayDouble",  ARRAY_OVERLAP("arrayString", "arrayDouble") AS "overlap"
+FROM "array-example"
+```
+
+Returns the following:
+
+| `arrayString` | `arrayDouble` | `overlap`|
+| -- | -- | -- |
+| `["a","b"]` | `[1.1,2.2,null]` | false |
+| `[null,"b"]`| `[999,null,5.5]` | true |
+| `[]`| `[null,2.2,1.1]` | false |
+| `["a","b"]`| `[]` | false |
+| `null`| `null` | `null` |
+
+</details>
+
+[Learn more](sql-array-functions.md)
 
 ## SCALAR_IN_ARRAY
 
-`SCALAR_IN_ARRAY(expr, arr)`
+Checks if the scalar value is present in the array. Returns false if the value is non-null, or `UNKNOWN` if the value is `NULL`. Returns `UNKNOWN` if the array is `NULL`.
 
-**Function type:** [Array](./sql-array-functions.md)
+* **Syntax**: `SCALAR_IN_ARRAY(expr, arr)`
+* **Function type:** Array
 
-Returns true if the scalar `expr` is present in `arr`. Otherwise, returns false if the scalar `expr` is non-null or
-`UNKNOWN` if the scalar `expr` is `NULL`.
+<details><summary>Example</summary>
 
-Returns `UNKNOWN` if `arr` is `NULL`.
+The following example returns true if the value `36` is present in the array generated from the elements in the `DestStateFips` column from the `flight-carriers` datasource.
+
+```sql
+SELECT "Reporting_Airline", ARRAY_AGG(DISTINCT "DestStateFips") AS "StateFipsArray", SCALAR_IN_ARRAY(36, ARRAY_AGG(DISTINCT "DestStateFips")) AS "ValueInArray"
+FROM "flight-carriers"
+GROUP BY "Reporting_Airline"
+LIMIT 5
+```
+
+Returns the following:
+
+| `Reporting_Airline` | `StateFipsArray` | `ValueInArray`|
+| -- | -- | -- |
+| `AA` | `[1,4,5,6,8,9,12,13,15,17,18,20,21,22,24,25,26,27,29,31,32,34,35,36,37,39,40,41,42,44,47,48,49,51,53,72,78]` | true |
+| `AS`| `[2,4,6,8,12,16,17,25,32,34,41,48,51,53]` | false |
+| `B6`| `[4,6,8,12,22,25,32,34,36,41,49,50,51,53,72]` | true |
+| `CO`| `[1,2,4,6,8,9,12,13,15,17,18,22,24,25,26,27,28,29,31,32,33,34,35,36,37,39,40,41,42,44,45,47,48,49,51,53,72,78]` | true |
+| `DH`| `[1,6,9,12,13,17,23,25,26,32,33,34,36,37,39,42,44,45,47,50,51,53,54]` | true |
+
+</details>
+
+[Learn more](sql-array-functions.md)
 
 ## ARRAY_PREPEND
 
-`ARRAY_PREPEND(expr, arr)`
+Prepends the expression to the array. The source array type determines the resulting array type.
 
-**Function type:** [Array](./sql-array-functions.md)
+* **Syntax**: `ARRAY_PREPEND(expr, arr)`
+* **Function type:** Array
 
-Prepends `expr` to `arr` at the beginning, the resulting array type determined by the type of `arr`.
+<details><summary>Example</summary>
+
+The following example prepends `c` to the arrays in the `arrayString` column from the `array-example` datasource.
+
+```sql
+SELECT ARRAY_PREPEND('c', "arrayString") AS "arrayPrepended"
+FROM "array-example"
+```
+
+Returns the following:
+
+| `arrayPrepended` |
+| -- |
+| `[c, a, b]` |
+| `["c",null,"b"]`|
+| `[c]`|
+| `[c,a,b]`|
+| `null`|
+
+</details>
+
+[Learn more](sql-array-functions.md)
 
 ## ARRAY_SLICE
 
-`ARRAY_SLICE(arr, start, end)`
+Returns a subset of the array from the zero-based index `start` (inclusive) to `end` (exclusive). Returns null if `start` is less than 0, greater than the length of the array, or greater than `end`.
 
-**Function type:** [Array](./sql-array-functions.md)
+* **Syntax**: `ARRAY_SLICE(arr, start, end)`
+* **Function type:** Array
 
-Returns the subarray of `arr` from the 0-based index `start` (inclusive) to `end` (exclusive). Returns `null`, if `start` is less than 0, greater than length of `arr`, or greater than `end`.
+<details><summary>Example</summary>
+
+The following example constructs a new array from the elements of arrays in the `arrayDouble` column from the `array-example` datasource.
+
+```sql
+SELECT "arrayDouble", ARRAY_SLICE("arrayDouble", 0, 2) AS "arrayNew"
+FROM "array-example"
+```
+
+Returns the following:
+
+| `arrayDouble` | `arrayNew` |
+| -- | -- |
+| `[1.1,2.2,null]` | `[1.1,2.2]` |
+| `[999,null,5.5]`| `[999,null]` |
+| `[null,2.2,1.1]`| `[null,2.2]` |
+| `[]`| `[null,null]` |
+| `null`| `null` |
+
+</details>
+
+[Learn more](sql-array-functions.md)
 
 ## ARRAY_TO_MV
 
-`ARRAY_TO_MV(arr)`
+Converts an array of any type into a [multi-value string](sql-data-types.md#multi-value-strings).
 
-**Function type:** [Array](./sql-array-functions.md)
+* **Syntax**: `ARRAY_TO_MV(arr)`
+* **Function type:** Array
 
-Converts an `ARRAY` of any type into a multi-value string `VARCHAR`.
+<details><summary>Example</summary>
+
+The following example converts the arrays in the `arrayDouble` column from the `array-example` datasource into multi-value strings.
+
+```sql
+SELECT ARRAY_TO_MV("arrayDouble") AS "multiValueString"
+FROM "array-example"
+```
+
+Returns the following:
+
+| `multiValueString` |
+| -- |
+| `["1.1","2.2",null]` |
+| `["999.0",null,"5.5"]`|
+| `[null,"2.2","1.1"]`|
+| `[]`|
+| `null`|
+
+</details>
+
+[Learn more](sql-array-functions.md)
 
 ## ARRAY_TO_STRING
 
-`ARRAY_TO_STRING(arr, str)`
+Joins all elements of the array into a string using the specified delimiter.
 
-**Function type:** [Array](./sql-array-functions.md)
+* **Syntax**: `ARRAY_TO_STRING(arr, delimiter)`
+* **Function type:** Array
 
-Joins all elements of `arr` by the delimiter specified by `str`.
+<details><summary>Example</summary>
+
+The following example converts the arrays in the `arrayDouble` column of the `array-example` datasource into concatenated strings.
+
+```sql
+SELECT ARRAY_TO_STRING("arrayDouble", '') AS "notSeparated"
+FROM "array-example"
+```
+
+Returns the following:
+
+| `multiValueString` |
+| -- |
+| `1.12.2null` |
+| `999.0null5.5` |
+| `null2.21.1` |
+| ` ` |
+| `null`|
+
+</details>
+
+[Learn more](sql-array-functions.md)
 
 ## ASIN
 
@@ -388,7 +901,7 @@ SELECT ASIN(1) AS "arc_sine"
 Returns the following:
 
 | `arc_sine` |  
-| -- | 
+| -- |
 | `1.5707963267948966` |
 </details>
 
@@ -411,7 +924,7 @@ SELECT ATAN(1) AS "arc_tangent"
 Returns the following:
 
 | `arc_tangent` |  
-| -- | 
+| -- |
 | `0.7853981633974483` |
 </details>
 
@@ -434,7 +947,7 @@ SELECT ATAN2(1,-1) AS "arc_tangent_2"
 Returns the following:
 
 | `arc_tangent_2` |  
-| -- | 
+| -- |
 | `2.356194490192345` |
 </details>
 
@@ -442,35 +955,58 @@ Returns the following:
 
 ## AVG
 
-`AVG(<NUMERIC>)`
-
-**Function type:** [Aggregation](sql-aggregations.md)
-
 Calculates the average of a set of values.
+
+* **Syntax**: `AVG(<NUMERIC>)`
+* **Function type:** Aggregation
+
+
+<details><summary>Example</summary>
+
+The following example calculates the average minutes of delay for a particular airlines in `flight-carriers`:
+
+```sql
+SELECT AVG("DepDelayMinutes") AS avg_delay
+FROM "flight-carriers"
+WHERE "Reporting_Airline" = 'AA'
+```
+
+Returns the following:
+
+| `avg_delay` |
+| -- |
+| `8.936` |
+
+</details>
+
+[Learn more](sql-aggregations.md)
 
 ## BIT_AND
 
-`BIT_AND(expr)`
-
-**Function type:** [Aggregation](sql-aggregations.md)
-
 Performs a bitwise AND operation on all input values.
+
+* **Syntax**: `BIT_AND(expr)`
+* **Function type:** Aggregation
+
+[Learn more](sql-aggregations.md)
 
 ## BIT_OR
 
-`BIT_OR(expr)`
-
-**Function type:** [Aggregation](sql-aggregations.md)
-
 Performs a bitwise OR operation on all input values.
+
+* **Syntax**: `BIT_OR(expr)`
+* **Function type:** Aggregation
+
+[Learn more](sql-aggregations.md)
 
 ## BIT_XOR
 
-`BIT_XOR(expr)`
-
-**Function type:** [Aggregation](sql-aggregations.md)
-
 Performs a bitwise XOR operation on all input values.
+
+* **Syntax**: `BIT_XOR(expr)`
+* **Function type:** Aggregation
+
+[Learn more](sql-aggregations.md)
 
 ## BITWISE_AND
 
@@ -488,9 +1024,9 @@ SELECT BITWISE_AND(12, 10) AS "bitwise_and"
 ```
 Returns the following:
 
-| `bitwise_and` | 
+| `bitwise_and` |
 | -- |
-| 8 | 
+| 8 |
 </details>
 
 [Learn more](sql-scalar.md#numeric-functions)
@@ -511,9 +1047,9 @@ SELECT BITWISE_COMPLEMENT(12) AS "bitwise_complement"
 ```
 Returns the following:
 
-| `bitwise_complement` | 
+| `bitwise_complement` |
 | -- |
-| -13 | 
+| -13 |
 </details>
 
 [Learn more](sql-scalar.md#numeric-functions)
@@ -534,9 +1070,9 @@ SELECT BITWISE_CONVERT_DOUBLE_TO_LONG_BITS(255) AS "ieee_754_double_to_long"
 ```
 Returns the following:
 
-| `ieee_754_double_to_long` | 
+| `ieee_754_double_to_long` |
 | -- |
-| `4643176031446892544` | 
+| `4643176031446892544` |
 </details>
 
 [Learn more](sql-scalar.md#numeric-functions)
@@ -558,9 +1094,9 @@ SELECT BITWISE_CONVERT_LONG_BITS_TO_DOUBLE(4643176031446892544) AS "long_to_ieee
 ```
 Returns the following:
 
-| `long_to_ieee_754_double` | 
+| `long_to_ieee_754_double` |
 | -- |
-| `255` | 
+| `255` |
 </details>
 
 [Learn more](sql-scalar.md#numeric-functions)
@@ -581,9 +1117,9 @@ SELECT BITWISE_OR(12, 10) AS "bitwise_or"
 ```
 Returns the following:
 
-| `bitwise_or` | 
+| `bitwise_or` |
 | -- |
-| `14` | 
+| `14` |
 </details>
 
 [Learn more](sql-scalar.md#numeric-functions)
@@ -604,9 +1140,9 @@ SELECT BITWISE_SHIFT_LEFT(2, 3) AS "bitwise_shift_left"
 ```
 Returns the following:
 
-| `bitwise_shift_left` | 
+| `bitwise_shift_left` |
 | -- |
-| `16` | 
+| `16` |
 </details>
 
 [Learn more](sql-scalar.md#numeric-functions)
@@ -627,9 +1163,9 @@ SELECT BITWISE_SHIFT_RIGHT(16, 3) AS "bitwise_shift_right"
 ```
 Returns the following:
 
-| `bitwise_shift_right` | 
+| `bitwise_shift_right` |
 | -- |
-| `2` | 
+| `2` |
 </details>
 
 [Learn more](sql-scalar.md#numeric-functions)
@@ -650,28 +1186,30 @@ SELECT BITWISE_XOR(12, 10) AS "bitwise_xor"
 ```
 Returns the following:
 
-| `bitwise_xor` | 
+| `bitwise_xor` |
 | -- |
-| `6` | 
+| `6` |
 </details>
 
 [Learn more](sql-scalar.md#numeric-functions)
 
 ## BLOOM_FILTER
 
-`BLOOM_FILTER(expr, <NUMERIC>)`
-
-**Function type:** [Aggregation](sql-aggregations.md)
-
 Computes a Bloom filter from values produced by the specified expression.
+
+* **Syntax**: `BLOOM_FILTER(expr, <NUMERIC>)`
+* **Function type:** Aggregation
+
+[Learn more](sql-aggregations.md)
 
 ## BLOOM_FILTER_TEST
 
-`BLOOM_FILTER_TEST(expr, <STRING>)`
-
-**Function type:** [Scalar, other](sql-scalar.md#other-scalar-functions)
-
 Returns true if the expression is contained in a Base64-serialized Bloom filter.
+
+* **Syntax**: `BLOOM_FILTER_TEST(expr, <STRING>)`
+* **Function type:** Scalar, other
+
+[Learn more](sql-scalar.md#other-scalar-functions)
 
 ## BTRIM
 
@@ -693,7 +1231,7 @@ SELECT
 Returns the following:
 
 | `original_string` | `trim_both_ends` |
-| -- | -- | 
+| -- | -- |
 | `___abc___` | `abc` |
 
 </details>
@@ -702,15 +1240,16 @@ Returns the following:
 
 ## CASE
 
-Returns a result based on given conditions:
-* Simple CASE compares an expression to a set of values or expressions.
-* Searched CASE evaluates a set of Boolean expressions.
+Returns a result based on given conditions.
+
+### Simple CASE
+
+Compares an expression to a set of values or expressions.
 
 * **Syntax:** `CASE expr WHEN value1 THEN result1 \[ WHEN value2 THEN result2 ... \] \[ ELSE resultN \] END`
-* **Syntax:** `CASE WHEN boolean_expr1 THEN result1 \[ WHEN boolean_expr2 THEN result2 ... \] \[ ELSE resultN \] END`
 * **Function type:** Scalar, other
 
-<details><summary>Examples</summary>
+<details><summary>Example</summary>
 
 The following example returns a UI type based on the value of `agent_category` from the `kttm` datasource.
 
@@ -731,6 +1270,19 @@ Returns the following:
 | -- | -- |
 | `Personal computer` | `Large UI` |
 | `Smartphone` | `Mobile UI` |
+
+</details>
+
+[Lean more](sql-scalar.md#other-scalar-functions)
+
+### Searched CASE
+
+Evaluates a set of Boolean expressions.
+
+* **Syntax:** `CASE WHEN boolean_expr1 THEN result1 \[ WHEN boolean_expr2 THEN result2 ... \] \[ ELSE resultN \] END`
+* **Function type:** Scalar, other
+
+<details><summary>Example</summary>
 
 The following example returns the departure location corresponding to the value of the `OriginStateName` column from the `flight-carriers` datasource.
 
@@ -756,7 +1308,6 @@ Returns the following:
 
 [Lean more](sql-scalar.md#other-scalar-functions)
 
-
 ## CAST
 
 Converts a value into the specified data type.
@@ -778,14 +1329,16 @@ LIMIT 1
 Returns the following:
 
 | `original_column` | `cast_to_string` |
-| -- | -- | 
+| -- | -- |
 | `1571` | `1571.0` |
 
 </details>
 
 [Learn more](sql-scalar.md#other-scalar-functions)
 
-## CEIL (date and time)
+## CEIL
+
+### Date and time
 
 Rounds up a timestamp by a given time unit.
 
@@ -814,7 +1367,7 @@ Returns the following:
 
 [Learn more](sql-scalar.md#date-and-time-functions)
 
-## CEIL (numeric)
+### Numeric
 
 Calculates the smallest integer value greater than or equal to the numeric expression.
 * **Syntax:** `CEIL(<NUMERIC>)`
@@ -833,9 +1386,9 @@ LIMIT 1
 ```
 Returns the following:
 
-| `fare_amount` | `ceiling_fare_amount` | 
-| -- | -- | 
-| `21.25` | `22` | 
+| `fare_amount` | `ceiling_fare_amount` |
+| -- | -- |
+| `21.25` | `22` |
 </details>
 
 [Learn more](sql-scalar.md#numeric-functions)
@@ -907,7 +1460,7 @@ Returns the following:
 
 | `origin_city` | `destination_city` | `concatenate_flight_details` |
 | -- | -- | -- |
-| `San Juan, PR` | `Washington, DC` | `San Juan, PR to Washington, DC` | 
+| `San Juan, PR` | `Washington, DC` | `San Juan, PR to Washington, DC` |
 
 </details>
 
@@ -934,7 +1487,7 @@ LIMIT 2
 
 Returns the following:
 
-| `origin_city` | `contains_string` | 
+| `origin_city` | `contains_string` |
 | -- | -- |
 | `San Juan, PR` | `true` |
 | `Boston, MA` | `false` |
@@ -961,7 +1514,7 @@ SELECT COS(PI / 3) AS "cosine"
 Returns the following:
 
 | `cosine` |  
-| -- | 
+| -- |
 | `0.5000000000000001` |
 </details>
 
@@ -984,7 +1537,7 @@ SELECT COT(PI / 3) AS "cotangent"
 Returns the following:
 
 | `cotangent` |  
-| -- | 
+| -- |
 | `0.577350269189626` |
 </details>
 
@@ -992,21 +1545,39 @@ Returns the following:
 
 ## COUNT
 
-`COUNT([DISTINCT] expr)`
-
-`COUNT(*)`
-
-**Function type:** [Aggregation](sql-aggregations.md)
-
 Counts the number of rows.
+
+* **Syntax**: `COUNT([DISTINCT] expr)` `COUNT(*)`  
+COUNT DISTINCT is an alias for [`APPROX_COUNT_DISTINCT`](#approx_count_distinct).
+* **Function type:** Aggregation
+
+<details><summary>Example</summary>
+
+The following example counts the number of distinct airlines reported in `flight-carriers`:
+
+```sql
+SELECT COUNT(DISTINCT "Reporting_Airline") AS "num_airlines"
+FROM "flight-carriers"
+```
+
+Returns the following:
+
+| `num_airlines` |
+| -- |
+| `20` |
+
+</details>
+
+[Learn more](sql-aggregations.md)
 
 ## CUME_DIST
 
-`CUME_DIST()`
-
-**Function type:** [Window](sql-window-functions.md#window-function-reference)
-
 Returns the cumulative distribution of the current row within the window calculated as `number of window rows at the same rank or higher than current row` / `total window rows`. The return value ranges between `1/number of rows` and 1.
+
+* **Syntax**: `CUME_DIST()`
+* **Function type:** Window
+
+[Learn more](sql-window-functions.md#window-function-reference)
 
 ## CURRENT_DATE
 
@@ -1025,7 +1596,7 @@ SELECT CURRENT_DATE AS "current_date"
 
 Returns the following:
 
-| `current_date` | 
+| `current_date` |
 | -- |
 | `2024-08-14T00:00:00.000Z `|
 
@@ -1091,11 +1662,12 @@ Returns the following:
 
 ## DECODE_BASE64_COMPLEX
 
-`DECODE_BASE64_COMPLEX(dataType, expr)`
-
-**Function type:** [Scalar, other](sql-scalar.md#other-scalar-functions)
-
 Decodes a Base64-encoded string into a complex data type, where `dataType` is the complex data type and `expr` is the Base64-encoded string to decode.
+
+* **Syntax**: `DECODE_BASE64_COMPLEX(dataType, expr)`
+* **Function type:** Scalar, other
+
+[Learn more](sql-scalar.md#other-scalar-functions)
 
 ## DECODE_BASE64_UTF8
 
@@ -1141,7 +1713,7 @@ SELECT DEGREES(PI) AS "degrees"
 Returns the following:
 
 | `degrees` |  
-| -- | 
+| -- |
 | `180` |
 </details>
 
@@ -1149,11 +1721,12 @@ Returns the following:
 
 ## DENSE_RANK
 
-`DENSE_RANK()`
-
-**Function type:** [Window](sql-window-functions.md#window-function-reference)
-
 Returns the rank for a row within a window without gaps. For example, if two rows tie for a rank of 1, the subsequent row is ranked 2.
+
+* **Syntax**: `DENSE_RANK()`
+* **Function type:** Window
+
+[Learn more](sql-window-functions.md#window-function-reference)
 
 ## DIV
 
@@ -1204,7 +1777,7 @@ FROM "flight-carriers"
 
 Returns a result similar to the following:
 
-| `estimate_cdf` | 
+| `estimate_cdf` |
 | -- |
 | `[0.6332237016416492,0.8908411023460711,0.9612303007393957,1.0]` |
 
@@ -1231,7 +1804,7 @@ FROM "flight-carriers"
 Returns a result similar to the following:
 
 | `estimate_median` |
-| -- | 
+| -- |
 | `569` |
 
 </details>
@@ -1257,7 +1830,7 @@ FROM "flight-carriers"
 Returns a result similar to the following:
 
 | `estimate_fractions` |
-| -- | 
+| -- |
 | `[316.0,571.0,951.0]` |
 
 </details>
@@ -1283,7 +1856,7 @@ FROM "flight-carriers"
 
 Returns a result similar to the following:
 
-| `estimate_histogram` | 
+| `estimate_histogram` |
 | -- |
 | `[358496.0,153974.99999999997,39909.99999999999,13757.000000000005]` |
 
@@ -1314,8 +1887,8 @@ LIMIT 1
 
 Returns the following:
 
-| `origin_state` | `destination_state` | `hll_tail_number` | 
-| -- | -- | -- | 
+| `origin_state` | `destination_state` | `hll_tail_number` |
+| -- | -- | -- |
 | `AK` | `AK` | `"AwEHDAcIAAFBAAAAfY..."` |
 
 </details>
@@ -1394,8 +1967,8 @@ FROM "flight-carriers"
 
 Returns the following:
 
-| `quantile_sketch` | 
-| -- | 
+| `quantile_sketch` |
+| -- |
 | `AgMIGoAAAAB6owgAA...` |
 
 </details>
@@ -1462,61 +2035,67 @@ Returns the following:
 
 ## DS_TUPLE_DOUBLES
 
-`DS_TUPLE_DOUBLES(expr, [nominalEntries])`
-
-`DS_TUPLE_DOUBLES(dimensionColumnExpr, metricColumnExpr, ..., [nominalEntries])`
-
-**Function type:** [Aggregation](sql-aggregations.md)
-
 Creates a Tuple sketch which contains an array of double values as the Summary Object. If the last value of the array is a numeric literal, Druid assumes that the value is an override parameter for [nominal entries](../development/extensions-core/datasketches-tuple.md).
+
+* **Syntax**: `DS_TUPLE_DOUBLES(expr, [nominalEntries])`  
+              `DS_TUPLE_DOUBLES(dimensionColumnExpr, metricColumnExpr, ..., [nominalEntries])`
+* **Function type:** Aggregation
+
+[Learn more](sql-aggregations.md)
 
 ## DS_TUPLE_DOUBLES_INTERSECT
 
-`DS_TUPLE_DOUBLES_INTERSECT(expr, ..., [nominalEntries])`
-
-**Function type:** [Scalar, sketch](sql-scalar.md#tuple-sketch-functions)
-
 Returns an intersection of Tuple sketches which each contain an array of double values as their Summary Objects. The values contained in the Summary Objects are summed when combined. If the last value of the array is a numeric literal, Druid assumes that the value is an override parameter for [nominal entries](../development/extensions-core/datasketches-tuple.md).
+
+* **Syntax**: `DS_TUPLE_DOUBLES_INTERSECT(expr, ..., [nominalEntries])`
+* **Function type:** Scalar, sketch
+
+[Learn more](sql-scalar.md#tuple-sketch-functions)
 
 ## DS_TUPLE_DOUBLES_METRICS_SUM_ESTIMATE
 
-`DS_TUPLE_DOUBLES_METRICS_SUM_ESTIMATE(expr)`
-
-**Function type:** [Scalar, sketch](sql-scalar.md#tuple-sketch-functions)
-
 Computes approximate sums of the values contained within a Tuple sketch which contains an array of double values as the Summary Object.
+
+* **Syntax**: `DS_TUPLE_DOUBLES_METRICS_SUM_ESTIMATE(expr)`
+* **Function type:** Scalar, sketch
+
+[Learn more](sql-scalar.md#tuple-sketch-functions)
 
 ## DS_TUPLE_DOUBLES_NOT
 
-`DS_TUPLE_DOUBLES_NOT(expr, ..., [nominalEntries])`
-
-**Function type:** [Scalar, sketch](sql-scalar.md#tuple-sketch-functions)
-
 Returns a set difference of Tuple sketches which each contain an array of double values as their Summary Objects. The values contained in the Summary Object are preserved as is. If the last value of the array is a numeric literal, Druid assumes that the value is an override parameter for [nominal entries](../development/extensions-core/datasketches-tuple.md).
+
+* **Syntax**: `DS_TUPLE_DOUBLES_NOT(expr, ..., [nominalEntries])`
+* **Function type:** Scalar, sketch
+
+[Learn more](sql-scalar.md#tuple-sketch-functions)
 
 ## DS_TUPLE_DOUBLES_UNION
 
-`DS_TUPLE_DOUBLES_UNION(expr, ..., [nominalEntries])`
-
-**Function type:** [Scalar, sketch](sql-scalar.md#tuple-sketch-functions)
-
 Returns a union of Tuple sketches which each contain an array of double values as their Summary Objects. The values contained in the Summary Objects are summed when combined. If the last value of the array is a numeric literal, Druid assumes that the value is an override parameter for [nominal entries](../development/extensions-core/datasketches-tuple.md).
+
+* **Syntax**: `DS_TUPLE_DOUBLES_UNION(expr, ..., [nominalEntries])`
+* **Function type:** Scalar, sketch
+
+[Learn more](sql-scalar.md#tuple-sketch-functions)
 
 ## EARLIEST
 
-`EARLIEST(expr, [maxBytesPerValue])`
-
-**Function type:** [Aggregation](sql-aggregations.md)
-
 Returns the value of a numeric or string expression corresponding to the earliest `__time` value.
+
+* **Syntax**: `EARLIEST(expr, [maxBytesPerValue])`
+* **Function type:** Aggregation
+
+[Learn more](sql-aggregations.md)
 
 ## EARLIEST_BY
 
-`EARLIEST_BY(expr, timestampExpr, [maxBytesPerValue])`
-
-**Function type:** [Aggregation](sql-aggregations.md)
-
 Returns the value of a numeric or string expression corresponding to the earliest time value from `timestampExpr`.
+
+* **Syntax**: `EARLIEST_BY(expr, timestampExpr, [maxBytesPerValue])`
+* **Function type:** Aggregation
+
+[Learn more](sql-aggregations.md)
 
 ## EXP
 
@@ -1572,17 +2151,20 @@ Returns the following:
 
 ## FIRST_VALUE
 
-`FIRST_VALUE(expr)`
-
-**Function type:** [Window](sql-window-functions.md#window-function-reference)
-
 Returns the value evaluated for the expression for the first row within the window.
 
-## FLOOR (date and time)
+* **Syntax**: `FIRST_VALUE(expr)`
+* **Function type:** Window
+
+[Learn more](sql-window-functions.md#window-function-reference)
+
+## FLOOR
+
+### Date and time
 
 Rounds down a timestamp by a given time unit. 
 
-* **Syntax:** `FLOOR(timestamp_expr TO unit>)`
+* **Syntax:** `FLOOR(timestamp_expr TO unit)`
 * **Function type:** Scalar, date and time
 
 <details><summary>Example</summary>
@@ -1607,11 +2189,11 @@ Returns the following:
 
 [Learn more](sql-scalar.md#date-and-time-functions)
 
-## FLOOR (numeric)
+### Numeric
 
 Calculates the largest integer less than or equal to the numeric expression.
 
-* **Syntax:** `FLOOR(<NUMERIC>)`
+* **Syntax:** `FLOOR(expr)`
 * **Function type:** Scalar, numeric
 
 <details><summary>Example</summary>
@@ -1627,9 +2209,9 @@ LIMIT 1
 ```
 Returns the following:
 
-| `fare_amount` | `floor_fare_amount` | 
-| -- | -- | 
-| `21.25` | `21` | 
+| `fare_amount` | `floor_fare_amount` |
+| -- | -- |
+| `21.25` | `21` |
 </details>
 
 [Learn more](sql-scalar.md#numeric-functions)
@@ -1652,7 +2234,7 @@ SELECT GREATEST(PI, 4, -5.0) AS "greatest"
 Returns the following:
 
 | `greatest` |
-| -- | 
+| -- |
 | `4` |
 
 </details>
@@ -1662,11 +2244,12 @@ Returns the following:
 
 ## GROUPING
 
-`GROUPING(expr, expr...)`
-
-**Function type:** [Aggregation](sql-aggregations.md)
-
 Returns a number for each output row of a groupBy query, indicating whether the specified dimension is included for that row.
+
+* **Syntax**: `GROUPING(expr, expr...)`
+* **Function type:** Aggregation
+
+[Learn more](sql-aggregations.md)
 
 ## HLL_SKETCH_ESTIMATE
 
@@ -1688,7 +2271,7 @@ FROM "flight-carriers"
 
 Returns the following:
 
-| `estimate` | 
+| `estimate` |
 | -- |
 | `4685.8815405960595` |
 
@@ -1935,7 +2518,7 @@ LIMIT 2
 Returns the following:
 
 | `ipv4_address` | `belongs_in_subnet`|
-| -- | -- | 
+| -- | -- |
 | `181.13.41.82` | `true`|
 | `177.242.100.0` | `false`|
 
@@ -2018,9 +2601,9 @@ SELECT
 
 Returns the following: 
 
-| `ipv6_address` | `belongs_in_subnet` | 
+| `ipv6_address` | `belongs_in_subnet` |
 | -- | -- |
-| `75e9:efa4:29c6:85f6::232c` | `true` | 
+| `75e9:efa4:29c6:85f6::232c` | `true` |
 
 
 </details>
@@ -2030,98 +2613,116 @@ Returns the following:
 
 ## JSON_KEYS
 
-**Function type:** [JSON](sql-json-functions.md)
-
-`JSON_KEYS(expr, path)`
-
 Returns an array of field names from `expr` at the specified `path`.
+
+* **Syntax**: `JSON_KEYS(expr, path)`
+* **Function type:** JSON
+
+[Learn more](sql-json-functions.md)
+
 
 ## JSON_MERGE
 
-**Function type:** [JSON](sql-json-functions.md)
-
-`JSON_MERGE(expr1, expr2[, expr3 ...])`
 Merges two or more JSON `STRING` or `COMPLEX<json>` into one. Preserves the rightmost value when there are key overlaps. Returning always a `COMPLEX<json>` type.
+
+* **Syntax:** `JSON_MERGE(expr1, expr2[, expr3 ...])`
+* **Function type:** JSON
+
+[Learn more](sql-json-functions.md)
+
 
 ## JSON_OBJECT
 
-**Function type:** [JSON](sql-json-functions.md)
-
-`JSON_OBJECT(KEY expr1 VALUE expr2[, KEY expr3 VALUE expr4, ...])`
-
 Constructs a new `COMPLEX<json>` object. The `KEY` expressions must evaluate to string types. The `VALUE` expressions can be composed of any input type, including other `COMPLEX<json>` values. `JSON_OBJECT` can accept colon-separated key-value pairs. The following syntax is equivalent: `JSON_OBJECT(expr1:expr2[, expr3:expr4, ...])`.
+
+* **Syntax**: `JSON_OBJECT(KEY expr1 VALUE expr2[, KEY expr3 VALUE expr4, ...])`
+* **Function type:** JSON
+
+[Learn more](sql-json-functions.md)
+
 
 ## JSON_PATHS
 
-**Function type:** [JSON](sql-json-functions.md)
-
-`JSON_PATHS(expr)`
-
 Returns an array of all paths which refer to literal values in `expr` in JSONPath format.
+
+* **Syntax**: `JSON_PATHS(expr)`
+* **Function type:** JSON
+
+[Learn more](sql-json-functions.md)
+
 
 ## JSON_QUERY
 
-**Function type:** [JSON](sql-json-functions.md)
-
-`JSON_QUERY(expr, path)`
-
 Extracts a `COMPLEX<json>` value from `expr`, at the specified `path`.
+
+* **Syntax**: `JSON_QUERY(expr, path)`
+* **Function type:** JSON
+
+[Learn more](sql-json-functions.md)
+
 
 ## JSON_QUERY_ARRAY
 
-**Function type:** [JSON](sql-json-functions.md)
-
-`JSON_QUERY_ARRAY(expr, path)`
-
 Extracts an `ARRAY<COMPLEX<json>>` value from `expr` at the specified `path`. If value is not an `ARRAY`, it gets translated into a single element `ARRAY` containing the value at `path`. The primary use of this function is to extract arrays of objects to use as inputs to other [array functions](./sql-array-functions.md).
+
+* **Syntax**: `JSON_QUERY_ARRAY(expr, path)`
+* **Function type:** JSON
+
+[Learn more](sql-json-functions.md)
 
 ## JSON_VALUE
 
-**Function type:** [JSON](sql-json-functions.md)
-
-`JSON_VALUE(expr, path [RETURNING sqlType])`
-
 Extracts a literal value from `expr` at the specified `path`. If you specify `RETURNING` and an SQL type name (such as `VARCHAR`, `BIGINT`, `DOUBLE`, etc) the function plans the query using the suggested type. Otherwise, it attempts to infer the type based on the context. If it can't infer the type, it defaults to `VARCHAR`.
+
+* **Syntax**: `JSON_VALUE(expr, path [RETURNING sqlType])`
+* **Function type:** JSON
+
+[Learn more](sql-json-functions.md)
 
 ## LAG
 
-`LAG(expr[, offset])`
-
-**Function type:** [Window](sql-window-functions.md#window-function-reference)
-
 If you do not supply an `offset`, returns the value evaluated at the row preceding the current row. Specify an offset number `n` to return the value evaluated at `n` rows preceding the current one.
+
+* **Syntax**: `LAG(expr[, offset])`
+* **Function type:** Window
+
+[Learn more](sql-window-functions.md#window-function-reference)
 
 ## LAST_VALUE
 
-`LAST_VALUE(expr)`
-
-**Function type:** [Window](sql-window-functions.md#window-function-reference)
-
 Returns the value evaluated for the expression for the last row within the window.
+
+* **Syntax**: `LAST_VALUE(expr)`
+* **Function type:** Window
+
+[Learn more](sql-window-functions.md#window-function-reference)
 
 ## LATEST
 
-`LATEST(expr, [maxBytesPerValue])`
-
-**Function type:** [Aggregation](sql-aggregations.md)
-
 Returns the value of a numeric or string expression corresponding to the latest `__time` value.
+
+* **Syntax**: `LATEST(expr, [maxBytesPerValue])`
+* **Function type:** Aggregation
+
+[Learn more](sql-aggregations.md)
 
 ## LATEST_BY
 
-`LATEST_BY(expr, timestampExpr, [maxBytesPerValue])`
-
-**Function type:** [Aggregation](sql-aggregations.md)
-
 Returns the value of a numeric or string expression corresponding to the latest time value from `timestampExpr`.
+
+* **Syntax**: `LATEST_BY(expr, timestampExpr, [maxBytesPerValue])`
+* **Function type:** Aggregation
+
+[Learn more](sql-aggregations.md)
 
 ## LEAD
 
-`LEAD(expr[, offset])`
-
-**Function type:** [Window](sql-window-functions.md#window-function-reference)
-
 If you do not supply an `offset`, returns the value evaluated at the row following the current row. Specify an offset number `n` to return the value evaluated at `n` rows following the current one; if there is no such row, returns the given default value.
+
+* **Syntax**: `LEAD(expr[, offset])`
+* **Function type:** Window
+
+[Learn more](sql-window-functions.md#window-function-reference)
 
 ## LEAST
 
@@ -2197,13 +2798,22 @@ LIMIT 1
 
 Returns the following:
 
-| `origin_city_name` | `city_name_length` | 
+| `origin_city_name` | `city_name_length` |
 | -- | -- |
 | `San Juan, PR` | `12` |
 
 </details>
 
 [Learn more](sql-scalar.md#string-functions)
+
+## LISTAGG
+
+Alias for [`STRING_AGG`](#string_agg).
+
+* **Syntax:** `LISTAGG([DISTINCT] expr, [separator, [size]])`
+* **Function type:** Aggregation
+
+[Learn more](sql-aggregations.md)
 
 ## LN
 
@@ -2226,9 +2836,9 @@ LIMIT 1
 
 Returns the following:
 
-| `max_temperature` | `natural_log_max_temp` | 
-| -- | -- | 
-| `76` | `4.330733340286331` | 
+| `max_temperature` | `natural_log_max_temp` |
+| -- | -- |
+| `76` | `4.330733340286331` |
 
 </details>
 
@@ -2254,9 +2864,9 @@ LIMIT 1
 ```
 Returns the following:
 
-| `max_temperature` | `log10_max_temp` | 
-| -- | -- | 
-| `76` | `1.8808135922807914` | 
+| `max_temperature` | `log10_max_temp` |
+| -- | -- |
+| `76` | `1.8808135922807914` |
 </details>
 
 [Learn more](sql-scalar.md#numeric-functions)
@@ -2291,7 +2901,7 @@ LIMIT 2
 
 Returns the following:
 
-| `origin_airport` | `full_airport_name` | 
+| `origin_airport` | `full_airport_name` |
 | -- | -- |
 | `SJU` | `Luis Munoz Marin International Airport` |
 | `BOS` | `key not found` |
@@ -2382,7 +2992,7 @@ SELECT
 Returns the following:
 
 | `original_string` | `trim_leading_end_of_expression` |
-| -- | -- | 
+| -- | -- |
 | `___abc___` | `abc___` |
 
 </details>
@@ -2391,11 +3001,31 @@ Returns the following:
 
 ## MAX
 
-`MAX(expr)`
-
-**Function type:** [Aggregation](sql-aggregations.md)
-
 Returns the maximum value of a set of values.
+
+* **Syntax**: `MAX(expr)`
+* **Function type:** Aggregation
+
+
+<details><summary>Example</summary>
+
+The following example calculates the maximum delay in minutes for an airline in `flight-carriers`:
+
+```sql
+SELECT MAX("DepDelayMinutes") AS max_delay
+FROM "flight-carriers"
+WHERE "Reporting_Airline" = 'AA'
+```
+
+Returns the following:
+
+| `max_delay` |
+| -- |
+| `1210` |
+
+</details>
+
+[Learn more](sql-aggregations.md)
 
 ## MILLIS_TO_TIMESTAMP
 
@@ -2424,11 +3054,30 @@ Returns the following:
 
 ## MIN
 
-`MIN(expr)`
-
-**Function type:** [Aggregation](sql-aggregations.md)
-
 Returns the minimum value of a set of values.
+
+* **Syntax**: `MIN(expr)`
+* **Function type:** Aggregation
+
+<details><summary>Example</summary>
+
+The following example calculates the minimum delay in minutes for an airline in `flight-carriers`:
+
+```sql
+SELECT MIN("DepDelayMinutes") AS min_delay
+FROM "flight-carriers"
+WHERE "Reporting_Airline" = 'AA'
+```
+
+Returns the following:
+
+| `min_delay` |
+| -- |
+| `0` |
+
+</details>
+
+[Learn more](sql-aggregations.md)
 
 ## MOD
 
@@ -2446,140 +3095,446 @@ SELECT MOD(78, 10) as "modulo"
 ```
 Returns the following:
 
-| `modulo` | 
-| -- | 
-| `8` | 
+| `modulo` |
+| -- |
+| `8` |
 </details>
 
 [Learn more](sql-scalar.md#numeric-functions)
 
 ## MV_APPEND
 
-`MV_APPEND(arr1, expr)`
-
-**Function type:** [Multi-value string](sql-multivalue-string-functions.md)
-
 Adds the expression to the end of the array.
+
+* **Syntax:** `MV_APPEND(arr1, expr)`
+* **Function type:** Multi-value string
+
+<details><summary>Example</summary>
+
+The following example appends the string `label` to the multi-value string `tags` from `mvd-example`:
+
+```sql
+SELECT MV_APPEND("tags", "label") AS append
+FROM "mvd-example"
+LIMIT 1
+```
+
+Returns the following:
+
+| `append` |
+| -- |
+| `["t1","t2","t3","row1"]` |
+
+</details>
+
+[Learn more](sql-multivalue-string-functions.md)
 
 ## MV_CONCAT
 
-`MV_CONCAT(arr1, arr2)`
-
-**Function type:** [Multi-value string](sql-multivalue-string-functions.md)
-
 Concatenates two arrays.
+
+* **Syntax:** `MV_CONCAT(arr1, arr2)`
+* **Function type:** Multi-value string
+
+<details><summary>Example</summary>
+
+The following example concatenates `tags` from `mvd-example` to itself:
+
+```sql
+SELECT MV_CONCAT("tags", "tags") AS cat
+FROM "mvd-example"
+LIMIT 1
+```
+
+Returns the following:
+
+| `cat` |
+| -- |
+| `["t1","t2","t3","t1","t2","t3"]` |
+
+</details>
+
+[Learn more](sql-multivalue-string-functions.md)
+
 
 ## MV_CONTAINS
 
-`MV_CONTAINS(arr, expr)`
-
-**Function type:** [Multi-value string](sql-multivalue-string-functions.md)
-
 Returns true if the expression is in the array, false otherwise.
+
+* **Syntax:** `MV_CONTAINS(arr, expr)`
+* **Function type:** Multi-value string
+
+<details><summary>Example</summary>
+
+The following example checks if the string `t3` exists within `tags` from `mvd-example`:
+
+```sql
+SELECT "tags", MV_CONTAINS("tags", 't3') AS contained
+FROM "mvd-example"
+```
+
+Returns the following:
+
+|`tags`|`contained`|
+|------|-----------|
+|`["t1","t2","t3"]`|`true`|
+|`["t3","t4","t5"]`|`true`|
+|`["t5","t6","t7"]`|`false`|
+|`null`|`false`|
+
+</details>
+
+[Learn more](sql-multivalue-string-functions.md)
 
 ## MV_FILTER_NONE
 
-`MV_FILTER_NONE(expr, arr)`
+Filters a multi-value expression to exclude values from an array.
 
-**Function type:** [Multi-value string](sql-multivalue-string-functions.md)
+* **Syntax:** `MV_FILTER_NONE(expr, arr)`
+* **Function type:** Multi-value string
 
-Filters a multi-value expression to include no values contained in the array.
+<details><summary>Example</summary>
+
+The following example filters `tags` from `mvd-example` to remove values `t1` or `t3`, if present:
+
+```sql
+SELECT MV_FILTER_NONE("tags", ARRAY['t1', 't3']) AS exclude
+FROM "mvd-example"
+LIMIT 3
+```
+
+Returns the following:
+
+| `exclude` |
+| -- |
+| `t2` |
+| `["t4", "t5"]` |
+| `["t5","t6","t7"]` |
+
+</details>
+
+[Learn more](sql-multivalue-string-functions.md)
 
 ## MV_FILTER_ONLY
 
-`MV_FILTER_ONLY(expr, arr)`
-
-**Function type:** [Multi-value string](sql-multivalue-string-functions.md)
-
 Filters a multi-value expression to include only values contained in the array.
+
+* **Syntax:** `MV_FILTER_ONLY(expr, arr)`
+* **Function type:** Multi-value string
+
+<details><summary>Example</summary>
+
+The following example filters `tags` from `mvd-example` to only contain the values `t1` or `t3`:
+
+```sql
+SELECT MV_FILTER_ONLY("tags", ARRAY['t1', 't3']) AS filt
+FROM "mvd-example"
+LIMIT 3
+```
+
+Returns the following:
+
+| `filt` |
+| -- |
+| `["t1","t3"]` |
+| `t3` |
+| null |
+
+</details>
+
+[Learn more](sql-multivalue-string-functions.md)
 
 ## MV_LENGTH
 
-`MV_LENGTH(arr)`
-
-**Function type:** [Multi-value string](sql-multivalue-string-functions.md)
-
 Returns the length of an array expression.
+
+* **Syntax:** `MV_LENGTH(arr)`
+* **Function type:** Multi-value string
+
+<details><summary>Example</summary>
+
+The following example returns the length of the `tags` multi-value strings from `mvd-example`:
+
+```sql
+SELECT MV_LENGTH("tags") AS len
+FROM "mvd-example"
+LIMIT 1
+```
+
+Returns the following:
+
+| `len` |
+| -- |
+| `3` |
+
+</details>
+
+[Learn more](sql-multivalue-string-functions.md)
 
 ## MV_OFFSET
 
-`MV_OFFSET(arr, long)`
-
-**Function type:** [Multi-value string](sql-multivalue-string-functions.md)
-
 Returns the array element at the given zero-based index.
+
+* **Syntax:** `MV_OFFSET(arr, long)`
+* **Function type:** Multi-value string
+
+<details><summary>Example</summary>
+
+The following example returns `tags` and the element at the third position of `tags` in `mvd-example`:
+
+```sql
+SELECT "tags", MV_OFFSET("tags", 2) AS elem
+FROM "mvd-example"
+```
+
+Returns the following:
+
+|`tags`|`elem`|
+|------|------|
+|`["t1","t2","t3"]`|`t3`|
+|`["t3","t4","t5"]`|`t5`|
+|`["t5","t6","t7"]`|`t7`|
+|`null`|`null`|
+
+</details>
+
+[Learn more](sql-multivalue-string-functions.md)
 
 ## MV_OFFSET_OF
 
-`MV_OFFSET_OF(arr, expr)`
-
-**Function type:** [Multi-value string](sql-multivalue-string-functions.md)
-
 Returns the zero-based index of the first occurrence of a given expression in the array.
+
+* **Syntax:** `MV_OFFSET_OF(arr, expr)`
+* **Function type:** Multi-value string
+
+<details><summary>Example</summary>
+
+The following example returns `tags` and the zero-based index of the string `t3` from `tags` in `mvd-example`:
+
+```sql
+SELECT "tags", MV_OFFSET_OF("tags", 't3') AS index
+FROM "mvd-example"
+```
+
+Returns the following:
+
+|`tags`|`index`|
+|------|-------|
+|`["t1","t2","t3"]`|`2`|
+|`["t3","t4","t5"]`|`0`|
+|`["t5","t6","t7"]`|`null`|
+|`null`|`null`|
+
+</details>
+
+[Learn more](sql-multivalue-string-functions.md)
 
 ## MV_ORDINAL
 
-`MV_ORDINAL(arr, long)`
-
-**Function type:** [Multi-value string](sql-multivalue-string-functions.md)
-
 Returns the array element at the given one-based index.
+
+* **Syntax:** `MV_ORDINAL(arr, long)`
+* **Function type:** Multi-value string
+
+<details><summary>Example</summary>
+
+The following example returns `tags` and the element at the third position of `tags` in `mvd-example`:
+
+```sql
+SELECT "tags", MV_ORDINAL("tags", 3) AS elem
+FROM "mvd-example"
+```
+
+Returns the following:
+
+|`tags`|`elem`|
+|------|------|
+|`["t1","t2","t3"]`|`t3`|
+|`["t3","t4","t5"]`|`t5`|
+|`["t5","t6","t7"]`|`t7`|
+|`null`|`null`|
+
+</details>
+
+[Learn more](sql-multivalue-string-functions.md)
 
 ## MV_ORDINAL_OF
 
-`MV_ORDINAL_OF(arr, expr)`
-
-**Function type:** [Multi-value string](sql-multivalue-string-functions.md)
-
 Returns the one-based index of the first occurrence of a given expression.
+
+* **Syntax:** `MV_ORDINAL_OF(arr, expr)`
+* **Function type:** Multi-value string
+
+<details><summary>Example</summary>
+
+The following example returns `tags` and the one-based index of the string `t3` from `tags` in `mvd-example`:
+
+```sql
+SELECT "tags", MV_ORDINAL_OF("tags", 't3') AS index
+FROM "mvd-example"
+```
+
+Returns the following:
+
+|`tags`|`index`|
+|------|-------|
+|`["t1","t2","t3"]`|`3`|
+|`["t3","t4","t5"]`|`1`|
+|`["t5","t6","t7"]`|`null`|
+|`null`|`null`|
+
+</details>
+
+[Learn more](sql-multivalue-string-functions.md)
 
 ## MV_OVERLAP
 
-`MV_OVERLAP(arr1, arr2)`
-
-**Function type:** [Multi-value string](sql-multivalue-string-functions.md)
-
 Returns true if the two arrays have any elements in common, false otherwise.
+
+* **Syntax:** `MV_OVERLAP(arr1, arr2)`
+* **Function type:** Multi-value string
+
+<details><summary>Example</summary>
+
+The following example identifies rows that contain `t1` or `t3` in `tags` from `mvd-example`:
+
+```sql
+SELECT "tags", MV_OVERLAP("tags", ARRAY['t1', 't3']) AS overlap
+FROM "mvd_example"
+```
+
+Returns the following:
+
+|`tags`|`overlap`|
+|------|---------|
+|`["t1","t2","t3"]`|`true`|
+|`["t3","t4","t5"]`|`true`|
+|`["t5","t6","t7"]`|`false`|
+|`null`|`false`|
+
+</details>
+
+[Learn more](sql-multivalue-string-functions.md)
 
 ## MV_PREPEND
 
-`MV_PREPEND(expr, arr)`
-
-**Function type:** [Multi-value string](sql-multivalue-string-functions.md)
-
 Adds the expression to the beginning of the array.
+
+* **Syntax:** `MV_PREPEND(expr, arr)`
+* **Function type:** Multi-value string
+
+<details><summary>Example</summary>
+
+The following example prepends the string dimension `label` to the multi-value string dimension `tags` from `mvd-example`:
+
+```sql
+SELECT MV_PREPEND("label", "tags") AS prepend
+FROM "mvd-example"
+LIMIT 1
+```
+
+Returns the following:
+
+| `prepend` |
+| -- |
+| `["row1","t1","t2","t3"]` |
+
+
+</details>
+
+[Learn more](sql-multivalue-string-functions.md)
 
 ## MV_SLICE
 
-`MV_SLICE(arr, start, end)`
-
-**Function type:** [Multi-value string](sql-multivalue-string-functions.md)
-
 Returns a slice of the array from the zero-based start and end indexes.
+
+* **Syntax:** `MV_SLICE(arr, start, end)`
+* **Function type:** Multi-value string
+
+<details><summary>Example</summary>
+
+The following example returns `tags` and the second and third values of `tags` from `mvd-example`:
+
+```sql
+SELECT "tags", MV_SLICE(tags, 1, 3) AS slice
+FROM "mvd-example"
+```
+
+Returns the following:
+
+|`tags`|`slice`|
+|------|-------|
+|`["t1"","t2","t3"]`|`["t2","t3"]`|
+|`["t3"","t4","t5"]`|`["t4","t5"]`|
+|`["t5"","t6","t7"]`|`["t6","t7"]`|
+|`null`|`null`|
+
+</details>
+
+[Learn more](sql-multivalue-string-functions.md)
 
 ## MV_TO_ARRAY
 
-`MV_TO_ARRAY(str)`
-
-**Function type:** [Multi-value string](sql-multivalue-string-functions.md)
-
 Converts a multi-value string from a `VARCHAR` to a `VARCHAR ARRAY`.
+
+* **Syntax:** `MV_TO_ARRAY(str)`
+* **Function type:** Multi-value string
+
+<details><summary>Example</summary>
+
+The following example transforms the `tags` column from `mvd-example` to arrays:
+
+```sql
+SELECT MV_TO_ARRAY(tags) AS arr
+FROM "mvd-example"
+LIMIT 1
+```
+
+Returns the following:
+
+| `arr` |
+| -- |
+| `[t1, t2, t3]` |
+
+</details>
+
+[Learn more](sql-multivalue-string-functions.md)
 
 ## MV_TO_STRING
 
-`MV_TO_STRING(arr, str)`
-
-**Function type:** [Multi-value string](sql-multivalue-string-functions.md)
-
 Joins all elements of the array together by the given delimiter.
+
+* **Syntax:** `MV_TO_STRING(arr, str)`
+* **Function type:** Multi-value string
+
+<details><summary>Example</summary>
+
+The following example transforms the `tags` column from `mvd-example` to strings delimited by a space character:
+
+```sql
+SELECT MV_TO_STRING("tags", ' ') AS str
+FROM mvd-example
+LIMIT 1
+```
+
+Returns the following:
+
+| `str` |
+| -- |
+| `t1 t2 t3` |
+
+</details>
+
+[Learn more](sql-multivalue-string-functions.md)
 
 ## NTILE
 
-`NTILE(tiles)`
-
-**Function type:** [Window](sql-window-functions.md#window-function-reference)
-
 Divides the rows within a window as evenly as possible into the number of tiles, also called buckets, and returns the value of the tile that the row falls into.
+
+* **Syntax**: `NTILE(tiles)`
+* **Function type:** Window
+
+[Learn more](sql-window-functions.md#window-function-reference)
 
 ## NULLIF
 
@@ -2642,11 +3597,12 @@ Returns the following:
 
 ## PARSE_JSON
 
-**Function type:** [JSON](sql-json-functions.md)
-
-`PARSE_JSON(expr)`
-
 Parses `expr` into a `COMPLEX<json>` object. This operator deserializes JSON values when processing them, translating stringified JSON into a nested structure. If the input is not a `VARCHAR` or it is invalid JSON, this function will result in an error.
+
+* **Syntax**: `PARSE_JSON(expr)`
+* **Function type:** JSON
+
+[Learn more](sql-json-functions.md)
 
 ## PARSE_LONG
 
@@ -2678,11 +3634,12 @@ Returns the following:
 
 ## PERCENT_RANK
 
-`PERCENT_RANK()`
-
-**Function type:** [Window](sql-window-functions.md#window-function-reference)
-
 Returns the relative rank of the row calculated as a percentage according to the formula: `RANK() OVER (window) / COUNT(1) OVER (window)`.
+
+* **Syntax**: `PERCENT_RANK()`
+* **Function type:** Window
+
+[Learn more](sql-window-functions.md#window-function-reference)
 
 ## POSITION
 
@@ -2732,7 +3689,7 @@ Returns the following:
 
 | `power` |
 | -- |
-| `25` | 
+| `25` |
 </details>
 
 [Learn more](sql-scalar.md#numeric-functions)
@@ -2754,7 +3711,7 @@ SELECT RADIANS(180) AS "radians"
 Returns the following:
 
 | `radians` |  
-| -- | 
+| -- |
 | `3.141592653589793` |
 </details>
 
@@ -2762,15 +3719,16 @@ Returns the following:
 
 ## RANK
 
-`RANK()`
-
-**Function type:** [Window](sql-window-functions.md#window-function-reference)
-
 Returns the rank with gaps for a row within a window. For example, if two rows tie for rank 1, the next rank is 3.
+
+* **Syntax**: `RANK()`
+* **Function type:** Window
+
+[Learn more](sql-window-functions.md#window-function-reference)
 
 ## REGEXP_EXTRACT
 
-Apply regular expression `pattern` to `expr` and extract the Nth capture group. If `N` is unspecified or zero, returns the first substring that matches the pattern. Returns `null` if there is no matching pattern.
+Apply regular expression `pattern` to `expr` and extract the Nth capture group. If `N` is unspecified or zero, returns the first substring that matches the pattern. Returns null if there is no matching pattern.
 
 * **Syntax:** `REGEXP_EXTRACT(expr, pattern[, N])`
 * **Function type:** Scalar, string 
@@ -2901,7 +3859,7 @@ SELECT
 
 Returns the following:
 
-| `original_string` | `modified_string` | 
+| `original_string` | `modified_string` |
 | -- | -- |
 | `abc 123 abc 123` | `XYZ 123 XYZ 123` |
 
@@ -2984,20 +3942,21 @@ LIMIT 1
 ```
 Returns the following:
 
-| `pickup_longitude` | `rounded_pickup_longitude` | 
-| -- | -- | 
-| `-73.9377670288086` | `-74` | 
+| `pickup_longitude` | `rounded_pickup_longitude` |
+| -- | -- |
+| `-73.9377670288086` | `-74` |
 </details>
 
 [Learn more](sql-scalar.md#numeric-functions)
 
 ## ROW_NUMBER
 
-`ROW_NUMBER()`
-
-**Function type:** [Window](sql-window-functions.md#window-function-reference)
-
 Returns the number of the row within the window starting from 1.
+
+* **Syntax**: `ROW_NUMBER()`
+* **Function type:** Window
+
+[Learn more](sql-window-functions.md#window-function-reference)
 
 ## RPAD
 
@@ -3050,7 +4009,7 @@ SELECT
 Returns the following:
 
 | `original_string` | `trim_end` |
-| -- | -- | 
+| -- | -- |
 | `___abc___` | `___abc` |
 
 </details>
@@ -3099,7 +4058,7 @@ SELECT SIN(PI / 3) AS "sine"
 Returns the following:
 
 | `sine` |  
-| -- | 
+| -- |
 | `0.8660254037844386` |
 </details>
 
@@ -3122,7 +4081,7 @@ SELECT SQRT(25) AS "square_root"
 Returns the following:
 
 | `square_root` |  
-| -- | 
+| -- |
 | `5` |
 </details>
 
@@ -3130,44 +4089,78 @@ Returns the following:
 
 ## STDDEV
 
-`STDDEV(expr)`
+Alias for [`STDDEV_SAMP`](#stddev_samp).  
+Requires the [`druid-stats` extension](../development/extensions-core/stats.md).
 
-**Function type:** [Aggregation](sql-aggregations.md)
+* **Syntax**: `STDDEV(expr)`
+* **Function type:** Aggregation
 
-Alias for [`STDDEV_SAMP`](#stddev_samp).
+[Learn more](sql-aggregations.md)
 
 ## STDDEV_POP
 
-`STDDEV_POP(expr)`
+Calculates the population standard deviation of a set of values.  
+Requires the [`druid-stats` extension](../development/extensions-core/stats.md).
 
-**Function type:** [Aggregation](sql-aggregations.md)
+* **Syntax**: `STDDEV_POP(expr)`
+* **Function type:** Aggregation
 
-Calculates the population standard deviation of a set of values.
+<details><summary>Example</summary>
+
+The following example calculates the population standard deviation for minutes of delay for an airline in `flight-carriers`:
+
+```sql
+SELECT STDDEV_POP("DepDelayMinutes") AS sd_delay
+FROM "flight-carriers"
+WHERE "Reporting_Airline" = 'AA'
+```
+
+Returns the following:
+
+| `sd_delay` |
+| -- |
+| `27.083557` |
+
+</details>
+
+[Learn more](sql-aggregations.md)
 
 ## STDDEV_SAMP
 
-`STDDEV_SAMP(expr)`
+Calculates the sample standard deviation of a set of values.  
+Requires the [`druid-stats` extension](../development/extensions-core/stats.md).
 
-**Function type:** [Aggregation](sql-aggregations.md)
+* **Syntax**: `STDDEV_SAMP(expr)`
+* **Function type:** Aggregation
 
-Calculates the sample standard deviation of a set of values.
+<details><summary>Example</summary>
+
+The following example calculates the sample standard deviation for minutes of delay for an airline in `flight-carriers`:
+
+```sql
+SELECT STDDEV_SAMP("DepDelayMinutes") AS sd_delay
+FROM "flight-carriers"
+WHERE "Reporting_Airline" = 'AA'
+```
+
+Returns the following:
+
+| `sd_delay` |
+| -- |
+| `27.083811` |
+
+</details>
+
+[Learn more](sql-aggregations.md)
 
 ## STRING_AGG
 
-`STRING_AGG(expr, separator, [size])`
-
-**Function type:** [Aggregation](sql-aggregations.md)
-
 Collects all values of an expression into a single string.
 
-## STRING_TO_ARRAY
+* **Syntax**: `STRING_AGG(expr, separator, [size])`
+* **Function type:** Aggregation
 
-`STRING_TO_ARRAY(str1, str2)`
-
-**Function type:** [Array](sql-array-functions.md)
-
-Splits `str1` into an array on the delimiter specified by `str2`, which is a regular expression.
-
+[Learn more](sql-aggregations.md)
 
 ## STRING_FORMAT
 
@@ -3199,13 +4192,39 @@ Returns the following:
 
 [Learn more](sql-scalar.md#string-functions)
 
+## STRING_TO_ARRAY
+
+Splits the string into an array of substrings using the specified delimiter. The delimiter must be a valid regular expression.
+
+* **Syntax**: `STRING_TO_ARRAY(string, delimiter)`
+* **Function type:** Array
+
+[Learn more](sql-array-functions.md)
+
 ## STRING_TO_MV
 
-`STRING_TO_MV(str1, str2)`
-
-**Function type:** [Multi-value string](sql-multivalue-string-functions.md)
-
 Splits `str1` into an multi-value string on the delimiter specified by `str2`, which is a regular expression.
+
+* **Syntax:** `STRING_TO_MV(str1, str2)`
+* **Function type:** Multi-value string
+
+<details><summary>Example</summary>
+
+The following example splits a street address by whitespace characters:
+
+```sql
+SELECT STRING_TO_MV('123 Rose Lane', '\s+') AS mv
+```
+
+Returns the following:
+
+| `mv` |
+| -- |
+| `["123","Rose","Lane"]` |
+
+</details>
+
+[Learn more](sql-multivalue-string-functions.md)
 
 ## STRLEN
 
@@ -3284,11 +4303,30 @@ Returns the following:
 
 ## SUM
 
-`SUM(expr)`
-
-**Function type:** [Aggregation](sql-aggregations.md)
-
 Calculates the sum of a set of values.
+
+* **Syntax**: `SUM(expr)`
+* **Function type:** Aggregation
+
+<details><summary>Example</summary>
+
+The following example calculates the total minutes of delay for an airline in `flight-carriers`:
+
+```sql
+SELECT SUM("DepDelayMinutes") AS tot_delay
+FROM "flight-carriers"
+WHERE "Reporting_Airline" = 'AA'
+```
+
+Returns the following:
+
+| `tot_delay` |
+| -- |
+| `475735` |
+
+</details>
+
+[Learn more](sql-aggregations.md)
 
 ## TAN
 
@@ -3307,7 +4345,7 @@ SELECT TAN(PI / 3) AS "tangent"
 Returns the following:
 
 | `tangent` |  
-| -- | 
+| -- |
 | `1.7320508075688767` |
 </details>
 
@@ -3315,19 +4353,21 @@ Returns the following:
 
 ## TDIGEST_GENERATE_SKETCH
 
-`TDIGEST_GENERATE_SKETCH(expr, [compression])`
-
-**Function type:** [Aggregation](sql-aggregations.md)
-
 Generates a T-digest sketch from values of the specified expression.
+
+* **Syntax**: `TDIGEST_GENERATE_SKETCH(expr, [compression])`
+* **Function type:** Aggregation
+
+[Learn more](sql-aggregations.md)
 
 ## TDIGEST_QUANTILE
 
-`TDIGEST_QUANTILE(expr, quantileFraction, [compression])`
-
-**Function type:** [Aggregation](sql-aggregations.md)
-
 Returns the quantile for the specified fraction from a T-Digest sketch constructed from values of the expression.
+
+* **Syntax**: `TDIGEST_QUANTILE(expr, quantileFraction, [compression])`
+* **Function type:** Aggregation
+
+[Learn more](sql-aggregations.md)
 
 ## TEXTCAT
 
@@ -3350,9 +4390,9 @@ LIMIT 1
 
 Returns the following:
 
-| `origin_state` | `concatenate_state_with_USA` | 
-| -- | -- | 
-| `PR` | `PR, USA` | 
+| `origin_state` | `concatenate_state_with_USA` |
+| -- | -- |
+| `PR` | `PR, USA` |
 
 </details>
 
@@ -3377,7 +4417,7 @@ FROM "flight-carriers"
 Returns the following:
 
 | `estimate` |
-| -- | 
+| -- |
 | `4667` |
 
 </details>
@@ -3470,7 +4510,7 @@ FROM "flight-carriers"
 Returns the following:
 
 | `estimate_not` |
-| -- | 
+| -- |
 | `145` |
 
 </details>
@@ -3559,8 +4599,8 @@ LIMIT 2
 
 Returns the following:
 
-| `original_timestamp` | `extract_hour` | 
-| -- | -- | 
+| `original_timestamp` | `extract_hour` |
+| -- | -- |
 | `2013-08-01T08:14:37.000Z` | `4` |
 | `2013-08-01T09:13:00.000Z` | `5` |
 
@@ -3650,8 +4690,8 @@ Returns the following:
 
 | `original_time` | `in_interval` |
 | -- | -- |
-| `2013-08-01T08:14:37.000Z` | `true` | 
-| `2013-08-01T09:13:00.000Z` | `false` | 
+| `2013-08-01T08:14:37.000Z` | `true` |
+| `2013-08-01T09:13:00.000Z` | `false` |
 
 </details>
 
@@ -3678,7 +4718,7 @@ LIMIT 1
 
 Returns the following:
 
-| `original_string` | `timestamp` | 
+| `original_string` | `timestamp` |
 | -- | -- |
 | `2005-11-01` | `2005-11-01T05:00:00.000Z` |
 
@@ -3709,7 +4749,7 @@ Returns the following:
 
 | `original_timestamp` | `shift_back` |
 | -- | -- |
-| `2013-08-01T08:14:37.000Z` | `2013-07-31T08:14:37.000Z` | 
+| `2013-08-01T08:14:37.000Z` | `2013-07-31T08:14:37.000Z` |
 
 </details>
 
@@ -3804,10 +4844,12 @@ Returns the following:
 
 ## TO_JSON_STRING
 
-**Function type:** [JSON](sql-json-functions.md)
-
-`TO_JSON_STRING(expr)`
 Serializes `expr` into a JSON string.
+
+* **Syntax**: `TO_JSON_STRING(expr)`
+* **Function type:** JSON
+
+[Learn more](sql-json-functions.md)
 
 
 ## TRIM
@@ -3867,9 +4909,10 @@ LIMIT 1
 ```
 Returns the following:
 
-| `pickup_longitude` | `truncate_pickup_longitude` | 
-| -- | -- | 
-| `-73.9377670288086` | `-73.9` | 
+| `pickup_longitude` | `truncate_pickup_longitude` |
+| -- | -- |
+| `-73.9377670288086` | `-73.9` |
+
 </details>
 
 
@@ -3877,19 +4920,13 @@ Returns the following:
 
 ## TRY_PARSE_JSON
 
-**Function type:** [JSON](sql-json-functions.md)
-
-`TRY_PARSE_JSON(expr)`
-
 Parses `expr` into a `COMPLEX<json>` object. This operator deserializes JSON values when processing them, translating stringified JSON into a nested structure. If the input is not a `VARCHAR` or it is invalid JSON, this function will result in a `NULL` value.
 
-## UNNEST
+* **Syntax**: `TRY_PARSE_JSON(expr)`
+* **Function type:** JSON
 
-`UNNEST(source_expression) as table_alias_name(column_alias_name)`
+[Learn more](sql-json-functions.md)
 
-Unnests a source expression that includes arrays into a target column with an aliased name. 
-
-For more information, see [UNNEST](./sql.md#unnest).
 
 ## UPPER
 
@@ -3922,24 +4959,67 @@ Returns the following:
 
 ## VAR_POP
 
-`VAR_POP(expr)`
+Calculates the population variance of a set of values.  
+Requires the [`druid-stats` extension](../development/extensions-core/stats.md).
 
-**Function type:** [Aggregation](sql-aggregations.md)
+* **Syntax**: `VAR_POP(expr)`
+* **Function type:** Aggregation
 
-Calculates the population variance of a set of values.
+<details><summary>Example</summary>
+
+The following example calculates the population variance for minutes of delay by a particular airlines in `flight-carriers`:
+
+```sql
+SELECT VAR_POP("DepDelayMinutes") AS varpop_delay
+FROM "flight-carriers"
+WHERE "Reporting_Airline" = 'AA'
+```
+
+Returns the following:
+
+| `varpop_delay` |
+| -- |
+| `733.51908` |
+
+</details>
+
+[Learn more](sql-aggregations.md)
 
 ## VAR_SAMP
 
-`VAR_SAMP(expr)`
+Calculates the sample variance of a set of values.  
+Requires the [`druid-stats` extension](../development/extensions-core/stats.md).
 
-**Function type:** [Aggregation](sql-aggregations.md)
+* **Syntax**: `VAR_SAMP(expr)`
+* **Function type:** Aggregation
 
-Calculates the sample variance of a set of values.
+<details><summary>Example</summary>
+
+The following example calculates the sample variance for minutes of delay for an airline in `flight-carriers`:
+
+```sql
+SELECT VAR_SAMP("DepDelayMinutes") AS varsamp_delay
+FROM "flight-carriers"
+WHERE "Reporting_Airline" = 'AA'
+```
+
+Returns the following:
+
+| `varsamp_delay` |
+| -- |
+| `733.53286` |
+
+</details>
+
+[Learn more](sql-aggregations.md)
 
 ## VARIANCE
 
-`VARIANCE(expr)`
+Alias for [`VAR_SAMP`](#var_samp).  
+Requires the [`druid-stats` extension](../development/extensions-core/stats.md).
 
-**Function type:** [Aggregation](sql-aggregations.md)
+* **Syntax**: `VARIANCE(expr)`
+* **Function type:** Aggregation
 
-Alias for [`VAR_SAMP`](#var_samp).
+[Learn more](sql-aggregations.md)
+
