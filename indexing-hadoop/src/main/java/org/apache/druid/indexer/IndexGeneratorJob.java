@@ -293,7 +293,7 @@ public class IndexGeneratorJob implements Jobby
       AggregatorFactory[] aggs,
       HadoopDruidIndexerConfig config,
       @Nullable Iterable<String> oldDimOrder,
-      Map<String, ColumnFormat> oldCapabilities
+      @Nullable Map<String, ColumnFormat> oldCapabilities
   )
   {
     final HadoopTuningConfig tuningConfig = config.getSchema().getTuningConfig();

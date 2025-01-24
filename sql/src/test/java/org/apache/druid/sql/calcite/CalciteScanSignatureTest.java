@@ -65,6 +65,7 @@ public class CalciteScanSignatureTest extends BaseCalciteQueryTest
                     ColumnType.STRING
                 ))
                 .columns("v0")
+                .columnTypes(ColumnType.STRING)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(context)
                 .build()
@@ -91,6 +92,7 @@ public class CalciteScanSignatureTest extends BaseCalciteQueryTest
                 .dataSource(CalciteTests.DATASOURCE2)
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("v0")
+                .columnTypes(ColumnType.LONG)
                 .virtualColumns(expressionVirtualColumn(
                     "v0",
                     "CAST(\"dim1\", 'LONG')",
@@ -101,9 +103,7 @@ public class CalciteScanSignatureTest extends BaseCalciteQueryTest
                 .limit(2)
                 .build()
         ),
-        useDefault ? ImmutableList.of(
-            new Object[]{0L}, new Object[]{0L}
-        ) : ImmutableList.of(
+        ImmutableList.of(
             new Object[]{null}, new Object[]{null}
         )
     );

@@ -19,10 +19,11 @@
 
 package org.apache.druid.client.selector;
 
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import it.unimi.dsi.fastutil.ints.Int2ObjectRBTreeMap;
 import org.apache.druid.client.DataSegmentInterner;
+import org.apache.druid.client.QueryableDruidServer;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.QueryRunner;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
@@ -40,9 +41,10 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public class ServerSelector implements Overshadowable<ServerSelector>
 {
-
+  @GuardedBy("this")
   private final Int2ObjectRBTreeMap<Set<QueryableDruidServer>> historicalServers;
 
+  @GuardedBy("this")
   private final Int2ObjectRBTreeMap<Set<QueryableDruidServer>> realtimeServers;
 
   private final TierSelectorStrategy strategy;
@@ -145,24 +147,27 @@ public class ServerSelector implements Overshadowable<ServerSelector>
 
   public List<DruidServerMetadata> getAllServers()
   {
-    List<DruidServerMetadata> servers = new ArrayList<>();
-    historicalServers.values()
-        .stream()
-        .flatMap(Collection::stream)
-        .map(server -> server.getServer().getMetadata())
-        .forEach(servers::add);
+    final List<DruidServerMetadata> servers = new ArrayList<>();
 
-    realtimeServers.values()
-        .stream()
-        .flatMap(Collection::stream)
-        .map(server -> server.getServer().getMetadata())
-        .forEach(servers::add);
+    synchronized (this) {
+      historicalServers.values()
+                       .stream()
+                       .flatMap(Collection::stream)
+                       .map(server -> server.getServer().getMetadata())
+                       .forEach(servers::add);
+
+      realtimeServers.values()
+                     .stream()
+                     .flatMap(Collection::stream)
+                     .map(server -> server.getServer().getMetadata())
+                     .forEach(servers::add);
+    }
 
     return servers;
   }
 
   @Nullable
-  public <T> QueryableDruidServer<? extends QueryRunner<T>> pick(@Nullable Query<T> query)
+  public <T> QueryableDruidServer pick(@Nullable Query<T> query)
   {
     synchronized (this) {
       if (!historicalServers.isEmpty()) {

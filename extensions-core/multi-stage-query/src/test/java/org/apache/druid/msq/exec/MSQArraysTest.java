@@ -21,7 +21,6 @@ package org.apache.druid.msq.exec;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.InlineInputSource;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LocalInputSource;
@@ -59,7 +58,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -232,20 +230,11 @@ public class MSQArraysTest extends MSQTestBase
         .setExpectedRowSignature(rowSignature)
         .setExpectedSegments(ImmutableSet.of(SegmentId.of("foo", Intervals.ETERNITY, "test", 0)))
         .setExpectedResultRows(
-            NullHandling.sqlCompatible()
-            ? ImmutableList.of(
+            ImmutableList.of(
                 new Object[]{0L, null},
                 new Object[]{0L, null},
                 new Object[]{0L, new Object[]{"a", "b"}},
                 new Object[]{0L, new Object[]{""}},
-                new Object[]{0L, new Object[]{"b", "c"}},
-                new Object[]{0L, new Object[]{"d"}}
-            )
-            : ImmutableList.of(
-                new Object[]{0L, null},
-                new Object[]{0L, null},
-                new Object[]{0L, null},
-                new Object[]{0L, new Object[]{"a", "b"}},
                 new Object[]{0L, new Object[]{"b", "c"}},
                 new Object[]{0L, new Object[]{"d"}}
             )
@@ -283,7 +272,7 @@ public class MSQArraysTest extends MSQTestBase
             ImmutableList.of(
                 new Object[]{0L, null},
                 new Object[]{0L, null},
-                new Object[]{0L, NullHandling.sqlCompatible() ? "" : null},
+                new Object[]{0L, ""},
                 new Object[]{0L, ImmutableList.of("a", "b")},
                 new Object[]{0L, ImmutableList.of("b", "c")},
                 new Object[]{0L, "d"}
@@ -304,20 +293,12 @@ public class MSQArraysTest extends MSQTestBase
                                             .add("dim3", ColumnType.STRING_ARRAY)
                                             .build();
 
-    List<Object[]> expectedRows = new ArrayList<>(
-        ImmutableList.of(
-            new Object[]{0L, null},
-            new Object[]{0L, new Object[]{"a", "b"}}
-        )
-    );
-    if (!useDefault) {
-      expectedRows.add(new Object[]{0L, new Object[]{""}});
-    }
-    expectedRows.addAll(
-        ImmutableList.of(
-            new Object[]{0L, new Object[]{"b", "c"}},
-            new Object[]{0L, new Object[]{"d"}}
-        )
+    List<Object[]> expectedRows = ImmutableList.of(
+        new Object[]{0L, null},
+        new Object[]{0L, new Object[]{"a", "b"}},
+        new Object[]{0L, new Object[]{""}},
+        new Object[]{0L, new Object[]{"b", "c"}},
+        new Object[]{0L, new Object[]{"d"}}
     );
 
     testIngestQuery().setSql(
@@ -758,13 +739,13 @@ public class MSQArraysTest extends MSQTestBase
                                             .build();
 
     RowSignature scanSignature = RowSignature.builder()
-                                             .add("arrayDouble", ColumnType.DOUBLE_ARRAY)
-                                             .add("arrayDoubleNulls", ColumnType.DOUBLE_ARRAY)
-                                             .add("arrayLong", ColumnType.LONG_ARRAY)
-                                             .add("arrayLongNulls", ColumnType.LONG_ARRAY)
+                                             .add("v0", ColumnType.LONG)
                                              .add("arrayString", ColumnType.STRING_ARRAY)
                                              .add("arrayStringNulls", ColumnType.STRING_ARRAY)
-                                             .add("v0", ColumnType.LONG)
+                                             .add("arrayLong", ColumnType.LONG_ARRAY)
+                                             .add("arrayLongNulls", ColumnType.LONG_ARRAY)
+                                             .add("arrayDouble", ColumnType.DOUBLE_ARRAY)
+                                             .add("arrayDoubleNulls", ColumnType.DOUBLE_ARRAY)
                                              .build();
 
     final Map<String, Object> adjustedContext = new HashMap<>(context);
@@ -773,15 +754,8 @@ public class MSQArraysTest extends MSQTestBase
     Query<?> expectedQuery = newScanQueryBuilder()
         .dataSource(dataFileExternalDataSource)
         .intervals(querySegmentSpec(Filtration.eternity()))
-        .columns(
-            "arrayDouble",
-            "arrayDoubleNulls",
-            "arrayLong",
-            "arrayLongNulls",
-            "arrayString",
-            "arrayStringNulls",
-            "v0"
-        )
+        .columns(scanSignature.getColumnNames())
+        .columnTypes(scanSignature.getColumnTypes())
         .virtualColumns(new ExpressionVirtualColumn(
             "v0",
             "timestamp_parse(\"timestamp\",null,'UTC')",
@@ -862,6 +836,7 @@ public class MSQArraysTest extends MSQTestBase
         .dataSource(dataFileExternalDataSource)
         .intervals(querySegmentSpec(Filtration.eternity()))
         .columns("arrayString")
+        .columnTypes(scanSignature.getColumnTypes())
         .orderBy(Collections.singletonList(OrderBy.descending("arrayString")))
         .context(defaultScanQueryContext(context, scanSignature))
         .build();
@@ -925,6 +900,7 @@ public class MSQArraysTest extends MSQTestBase
         .dataSource(dataFileExternalDataSource)
         .intervals(querySegmentSpec(Filtration.eternity()))
         .columns("arrayLong")
+        .columnTypes(scanSignature.getColumnTypes())
         .orderBy(Collections.singletonList(OrderBy.ascending("arrayLong")))
         .context(defaultScanQueryContext(context, scanSignature))
         .build();
@@ -988,6 +964,7 @@ public class MSQArraysTest extends MSQTestBase
         .dataSource(dataFileExternalDataSource)
         .intervals(querySegmentSpec(Filtration.eternity()))
         .columns("arrayDouble")
+        .columnTypes(scanSignature.getColumnTypes())
         .orderBy(Collections.singletonList(OrderBy.ascending("arrayDouble")))
         .context(defaultScanQueryContext(context, scanSignature))
         .build();
@@ -1040,6 +1017,7 @@ public class MSQArraysTest extends MSQTestBase
         )
         .intervals(querySegmentSpec(Filtration.eternity()))
         .columns("a_bool")
+        .columnTypes(scanSignature.getColumnTypes())
         .context(defaultScanQueryContext(context, scanSignature))
         .build();
 
@@ -1088,6 +1066,7 @@ public class MSQArraysTest extends MSQTestBase
         )
         .intervals(querySegmentSpec(Filtration.eternity()))
         .columns("a_bool")
+        .columnTypes(scanSignature.getColumnTypes())
         .context(defaultScanQueryContext(context, scanSignature))
         .build();
 

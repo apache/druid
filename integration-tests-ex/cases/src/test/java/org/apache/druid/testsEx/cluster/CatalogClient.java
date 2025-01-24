@@ -131,7 +131,7 @@ public class CatalogClient
         clusterClient.leadCoordinatorUrl(),
         CatalogResource.ROOT_PATH
     );
-    return clusterClient.getAs(url, new TypeReference<List<String>>() { });
+    return clusterClient.getAs(url, new TypeReference<>() {});
   }
 
   public List<TableId> listTables()
@@ -141,7 +141,7 @@ public class CatalogClient
         clusterClient.leadCoordinatorUrl(),
         CatalogResource.ROOT_PATH
     );
-    return clusterClient.getAs(url, new TypeReference<List<TableId>>() { });
+    return clusterClient.getAs(url, new TypeReference<>() {});
   }
 
   public List<String> listTableNamesInSchema(String schemaName)
@@ -152,7 +152,7 @@ public class CatalogClient
         CatalogResource.ROOT_PATH,
         schemaName
     );
-    return clusterClient.getAs(url, new TypeReference<List<String>>() { });
+    return clusterClient.getAs(url, new TypeReference<>() {});
   }
 
   public List<TableMetadata> listTablesInSchema(String schemaName)
@@ -163,6 +163,6 @@ public class CatalogClient
         CatalogResource.ROOT_PATH,
         schemaName
     );
-    return clusterClient.getAs(url, new TypeReference<List<TableMetadata>>() { });
+    return clusterClient.getAs(url, new TypeReference<>() {});
   }
 }

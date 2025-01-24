@@ -237,7 +237,7 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
       final FixedIndexed<Long> longDictionary = longDictionarySupplier.get();
       final FixedIndexed<Double> doubleDictionary = doubleDictionarySupplier.get();
 
-      return new Iterator<Object[]>()
+      return new Iterator<>()
       {
         final Iterator<int[]> delegate = arrayDictionarySupplier.get().iterator();
 
@@ -276,7 +276,7 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
         }
       };
     };
-    return new Indexed<Object[]>()
+    return new Indexed<>()
     {
       @Override
       public int size()
@@ -553,7 +553,7 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
             arrayFieldIndex
         ).getColumn();
         ColumnValueSelector arraySelector = col.makeColumnValueSelector(readableOffset);
-        return new ColumnValueSelector<Object>()
+        return new ColumnValueSelector<>()
         {
           @Override
           public boolean isNull()

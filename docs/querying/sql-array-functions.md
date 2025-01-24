@@ -54,9 +54,9 @@ The following table describes array functions. To learn more about array aggrega
 |`ARRAY_CONTAINS(arr, expr)`|Checks if the array contains the specified expression. If the specified expression is a scalar value, returns true if the source array contains the value. If the specified expression is an array, returns true if the source array contains all elements of the expression.|
 |`ARRAY_LENGTH(arr)`|Returns the length of the array.|
 |`ARRAY_OFFSET(arr, long)`|Returns the array element at the specified zero-based index. Returns null if the index is out of bounds.|
-|`ARRAY_OFFSET_OF(arr, expr)`|Returns the zero-based index of the first occurrence of the expression in the array. Returns null if the value isn't present, or `-1` if `druid.generic.useDefaultValueForNull=true` (deprecated legacy mode).|
+|`ARRAY_OFFSET_OF(arr, expr)`|Returns the 0-based index of the first occurrence of `expr` in the array. If no matching elements exist in the array, returns `null`.|
 |`ARRAY_ORDINAL(arr, long)`|Returns the array element at the specified one-based index. Returns null if the index is out of bounds.|
-|`ARRAY_ORDINAL_OF(arr, expr)`|Returns the one-based index of the first occurrence of the expression in the array. Returns null if the value isn't present, or `-1` if `druid.generic.useDefaultValueForNull=true` (deprecated legacy mode).|
+|`ARRAY_ORDINAL_OF(arr, expr)`|Returns the 1-based index of the first occurrence of `expr` in the array. If no matching elements exist in the array, returns `null`.|
 |`ARRAY_OVERLAP(arr1, arr2)`|Returns true if two arrays have any elements in common. Treats `NULL` values as known elements.|
 |`ARRAY_PREPEND(expr, arr)`|Prepends the expression to the array. The source array type determines the resulting array type.|
 |`ARRAY_SLICE(arr, start, end)`|Returns a subset of the array from the zero-based index `start` (inclusive) to `end` (exclusive). Returns null if `start` is less than 0, greater than the length of the array, or greater than `end`.|

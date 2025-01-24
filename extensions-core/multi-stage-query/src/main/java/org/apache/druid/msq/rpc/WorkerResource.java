@@ -120,12 +120,10 @@ public class WorkerResource
           public void onTimeout(AsyncEvent event)
           {
             if (responseResolved.compareAndSet(false, true)) {
-              return;
+              HttpServletResponse response = (HttpServletResponse) asyncContext.getResponse();
+              response.setStatus(HttpServletResponse.SC_OK);
+              event.getAsyncContext().complete();
             }
-
-            HttpServletResponse response = (HttpServletResponse) asyncContext.getResponse();
-            response.setStatus(HttpServletResponse.SC_OK);
-            event.getAsyncContext().complete();
           }
 
           @Override
@@ -146,7 +144,7 @@ public class WorkerResource
 
     Futures.addCallback(
         dataFuture,
-        new FutureCallback<InputStream>()
+        new FutureCallback<>()
         {
           @Override
           public void onSuccess(final InputStream inputStream)

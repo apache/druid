@@ -53,7 +53,7 @@ public class ShuffleModuleTest
            .thenReturn(Optional.of(shuffleMonitor));
     final Injector injector = createInjector(monitorScheduler);
     final Optional<ShuffleMetrics> optional = injector.getInstance(
-        Key.get(new TypeLiteral<Optional<ShuffleMetrics>>() {})
+        Key.get(new TypeLiteral<>() {})
     );
     Assert.assertTrue(optional.isPresent());
   }
@@ -66,7 +66,7 @@ public class ShuffleModuleTest
            .thenReturn(Optional.empty());
     final Injector injector = createInjector(monitorScheduler);
     final Optional<ShuffleMetrics> optional = injector.getInstance(
-        Key.get(new TypeLiteral<Optional<ShuffleMetrics>>() {})
+        Key.get(new TypeLiteral<>() {})
     );
     Assert.assertFalse(optional.isPresent());
   }

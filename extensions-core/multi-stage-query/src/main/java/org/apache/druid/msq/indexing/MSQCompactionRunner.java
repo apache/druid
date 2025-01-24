@@ -29,6 +29,7 @@ import com.google.common.collect.Iterables;
 import com.google.inject.Injector;
 import org.apache.druid.client.indexing.ClientCompactionRunnerInfo;
 import org.apache.druid.data.input.impl.DimensionSchema;
+import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
@@ -84,6 +85,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -130,7 +132,7 @@ public class MSQCompactionRunner implements CompactionRunner
    * The following configs aren't supported:
    * <ul>
    * <li>partitionsSpec of type HashedParititionsSpec.</li>
-   * <li>'range' partitionsSpec with non-string partition dimensions.</li>
+   * <li>'range' partitionsSpec with multi-valued or non-string partition dimensions.</li>
    * <li>maxTotalRows in DynamicPartitionsSpec.</li>
    * <li>Rollup without metricsSpec being specified or vice-versa.</li>
    * <li>Any aggregatorFactory {@code A} s.t. {@code A != A.combiningFactory()}.</li>
@@ -153,13 +155,24 @@ public class MSQCompactionRunner implements CompactionRunner
       );
     }
     List<CompactionConfigValidationResult> validationResults = new ArrayList<>();
+    DataSchema dataSchema = Iterables.getOnlyElement(intervalToDataSchemaMap.values());
     if (compactionTask.getTuningConfig() != null) {
       validationResults.add(
           ClientCompactionRunnerInfo.validatePartitionsSpecForMSQ(
               compactionTask.getTuningConfig().getPartitionsSpec(),
-              Iterables.getOnlyElement(intervalToDataSchemaMap.values()).getDimensionsSpec().getDimensions()
+              dataSchema.getDimensionsSpec().getDimensions()
           )
       );
+      validationResults.add(
+          validatePartitionDimensionsAreNotMultiValued(
+              compactionTask.getTuningConfig().getPartitionsSpec(),
+              dataSchema.getDimensionsSpec(),
+              dataSchema instanceof CombinedDataSchema
+              ? ((CombinedDataSchema) dataSchema).getMultiValuedDimensions()
+              : null
+          )
+      );
+
     }
     if (compactionTask.getGranularitySpec() != null) {
       validationResults.add(ClientCompactionRunnerInfo.validateRollupForMSQ(
@@ -173,6 +186,32 @@ public class MSQCompactionRunner implements CompactionRunner
                             .filter(result -> !result.isValid())
                             .findFirst()
                             .orElse(CompactionConfigValidationResult.success());
+  }
+
+  private CompactionConfigValidationResult validatePartitionDimensionsAreNotMultiValued(
+      PartitionsSpec partitionsSpec,
+      DimensionsSpec dimensionsSpec,
+      Set<String> multiValuedDimensions
+  )
+  {
+    List<String> dimensionSchemas = dimensionsSpec.getDimensionNames();
+    if (partitionsSpec instanceof DimensionRangePartitionsSpec
+        && dimensionSchemas != null
+        && multiValuedDimensions != null
+        && !multiValuedDimensions.isEmpty()) {
+      Optional<String> multiValuedDimension = ((DimensionRangePartitionsSpec) partitionsSpec)
+          .getPartitionDimensions()
+          .stream()
+          .filter(multiValuedDimensions::contains)
+          .findAny();
+      if (multiValuedDimension.isPresent()) {
+        return CompactionConfigValidationResult.failure(
+            "MSQ: Multi-valued string partition dimension[%s] not supported with 'range' partition spec",
+            multiValuedDimension.get()
+        );
+      }
+    }
+    return CompactionConfigValidationResult.success();
   }
 
   @Override
@@ -309,7 +348,10 @@ public class MSQCompactionRunner implements CompactionRunner
   private static RowSignature getRowSignature(DataSchema dataSchema)
   {
     RowSignature.Builder rowSignatureBuilder = RowSignature.builder();
-    rowSignatureBuilder.add(dataSchema.getTimestampSpec().getTimestampColumn(), ColumnType.LONG);
+    if (dataSchema.getDimensionsSpec().isForceSegmentSortByTime() == true) {
+      // If sort not forced by time, __time appears as part of dimensions in DimensionsSpec
+      rowSignatureBuilder.add(dataSchema.getTimestampSpec().getTimestampColumn(), ColumnType.LONG);
+    }
     if (!isQueryGranularityEmptyOrNone(dataSchema)) {
       // A virtual column for query granularity would have been added. Add corresponding column type.
       rowSignatureBuilder.add(TIME_VIRTUAL_COLUMN, ColumnType.LONG);
@@ -359,25 +401,31 @@ public class MSQCompactionRunner implements CompactionRunner
 
   private static ColumnMappings getColumnMappings(DataSchema dataSchema)
   {
-    List<ColumnMapping> columnMappings = dataSchema.getDimensionsSpec()
-                                                   .getDimensions()
-                                                   .stream()
-                                                   .map(dim -> new ColumnMapping(
-                                                       dim.getName(), dim.getName()))
-                                                   .collect(Collectors.toList());
+    List<ColumnMapping> columnMappings = new ArrayList<>();
+    // For scan queries, a virtual column is created from __time if a custom query granularity is provided. For
+    // group-by queries, as insert needs __time, it will always be one of the dimensions. Since dimensions in groupby
+    // aren't allowed to have time column as the output name, we map time dimension to TIME_VIRTUAL_COLUMN in
+    // dimensions, and map it back to the time column here.
+    String timeColumn = (isGroupBy(dataSchema) || !isQueryGranularityEmptyOrNone(dataSchema))
+                        ? TIME_VIRTUAL_COLUMN
+                        : ColumnHolder.TIME_COLUMN_NAME;
+    ColumnMapping timeColumnMapping = new ColumnMapping(timeColumn, ColumnHolder.TIME_COLUMN_NAME);
+    if (dataSchema.getDimensionsSpec().isForceSegmentSortByTime()) {
+      // When not sorted by time, the __time column is missing from dimensionsSpec
+      columnMappings.add(timeColumnMapping);
+    }
+    columnMappings.addAll(
+        dataSchema.getDimensionsSpec()
+                  .getDimensions()
+                  .stream()
+                  .map(dim -> dim.getName().equals(ColumnHolder.TIME_COLUMN_NAME)
+                              ? timeColumnMapping
+                              : new ColumnMapping(dim.getName(), dim.getName()))
+                  .collect(Collectors.toList())
+    );
     columnMappings.addAll(Arrays.stream(dataSchema.getAggregators())
                                 .map(agg -> new ColumnMapping(agg.getName(), agg.getName()))
-                                .collect(
-                                    Collectors.toList()));
-    if (isGroupBy(dataSchema) || !isQueryGranularityEmptyOrNone(dataSchema)) {
-      // For scan queries, a virtual column is created from __time if a custom query granularity is provided. For
-      // group-by queries, as insert needs __time, it will always be one of the dimensions. Since dimensions in groupby
-      // aren't allowed to have time column as the output name, we map time dimension to TIME_VIRTUAL_COLUMN in
-      // dimensions, and map it back to the time column here.
-      columnMappings.add(new ColumnMapping(TIME_VIRTUAL_COLUMN, ColumnHolder.TIME_COLUMN_NAME));
-    } else {
-      columnMappings.add(new ColumnMapping(ColumnHolder.TIME_COLUMN_NAME, ColumnHolder.TIME_COLUMN_NAME));
-    }
+                                .collect(Collectors.toList()));
     return new ColumnMappings(columnMappings);
   }
 
@@ -390,6 +438,19 @@ public class MSQCompactionRunner implements CompactionRunner
                        .collect(Collectors.toList());
     }
     return Collections.emptyList();
+  }
+
+  private static Map<String, Object> buildQueryContext(
+      Map<String, Object> taskContext,
+      DataSchema dataSchema
+  )
+  {
+    if (dataSchema.getDimensionsSpec().isForceSegmentSortByTime()) {
+      return taskContext;
+    }
+    Map<String, Object> queryContext = new HashMap<>(taskContext);
+    queryContext.put(MultiStageQueryContext.CTX_FORCE_TIME_SORT, false);
+    return queryContext;
   }
 
   private static Query<?> buildScanQuery(
@@ -408,7 +469,7 @@ public class MSQCompactionRunner implements CompactionRunner
         .columnTypes(rowSignature.getColumnTypes())
         .intervals(new MultipleIntervalSegmentSpec(Collections.singletonList(interval)))
         .filters(dataSchema.getTransformSpec().getFilter())
-        .context(compactionTask.getContext());
+        .context(buildQueryContext(compactionTask.getContext(), dataSchema));
 
     if (compactionTask.getTuningConfig() != null && compactionTask.getTuningConfig().getPartitionsSpec() != null) {
       List<OrderByColumnSpec> orderByColumnSpecs = getOrderBySpec(compactionTask.getTuningConfig().getPartitionsSpec());
@@ -560,7 +621,7 @@ public class MSQCompactionRunner implements CompactionRunner
         .setDimensions(getAggregateDimensions(dataSchema, inputColToVirtualCol))
         .setAggregatorSpecs(Arrays.asList(dataSchema.getAggregators()))
         .setPostAggregatorSpecs(postAggregators)
-        .setContext(compactionTask.getContext())
+        .setContext(buildQueryContext(compactionTask.getContext(), dataSchema))
         .setInterval(interval);
 
     if (compactionTask.getTuningConfig() != null && compactionTask.getTuningConfig().getPartitionsSpec() != null) {

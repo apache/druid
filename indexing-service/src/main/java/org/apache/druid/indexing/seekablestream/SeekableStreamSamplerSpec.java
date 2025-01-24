@@ -193,7 +193,7 @@ public abstract class SeekableStreamSamplerSpec<PartitionIdType, SequenceOffsetT
     @Override
     public CloseableIterator<InputRow> read()
     {
-      return new CloseableIterator<InputRow>()
+      return new CloseableIterator<>()
       {
 
         @Override
@@ -225,7 +225,7 @@ public abstract class SeekableStreamSamplerSpec<PartitionIdType, SequenceOffsetT
     @Override
     public CloseableIterator<InputRowListPlusRawValues> sample()
     {
-      return new CloseableIterator<InputRowListPlusRawValues>()
+      return new CloseableIterator<>()
       {
         @Override
         public boolean hasNext()

@@ -1,0 +1,1653 @@
+!set useApproximateCountDistinct false
+!use druidtest:///?componentSupplier=KttmNestedComponentSupplier
+!set outputformat mysql
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00';
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TEST_ID: A1: json_keys
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (array_prepend('1', json_keys(agent, '$.')) IS NULL
+       OR (array_prepend('1', json_keys(agent, '$.')) = array_prepend('1', json_keys(agent, '$.'))
+           AND array_prepend('1', json_keys(agent, '$.')) IS NOT DISTINCT
+           FROM array_prepend('1', json_keys(agent, '$.'))
+           AND array_prepend('1', json_keys(agent, '$.')) <> array_prepend('0', json_keys(agent, '$.'))
+           AND (array_prepend('1', json_keys(agent, '$.')) IS DISTINCT
+                FROM array_prepend('0', json_keys(agent, '$.')))
+           AND array_prepend('1', json_keys(agent, '$.')) > array_prepend('0', json_keys(agent, '$.'))
+           AND array_prepend('1', json_keys(agent, '$.')) >= array_prepend('0', json_keys(agent, '$.'))
+           AND array_prepend('1', json_keys(agent, '$.')) < array_prepend('2', json_keys(agent, '$.'))
+           AND array_prepend('1', json_keys(agent, '$.')) <= array_prepend('2', json_keys(agent, '$.'))
+           AND (array_prepend('1', json_keys(agent, '$.')) <> array_prepend('0', json_keys(agent, '$.'))) IS TRUE
+           AND (array_prepend('1', json_keys(agent, '$.')) = array_prepend('0', json_keys(agent, '$.'))) IS NOT TRUE
+           AND (array_prepend('1', json_keys(agent, '$.')) = array_prepend('0', json_keys(agent, '$.'))) IS FALSE
+           AND (array_prepend('1', json_keys(agent, '$.')) <> array_prepend('0', json_keys(agent, '$.'))) IS NOT FALSE
+           AND array_prepend('1', json_keys(agent, '$.')) BETWEEN array_prepend('0', json_keys(agent, '$.')) AND array_prepend('2', json_keys(agent, '$.'))
+           AND array_prepend('1', json_keys(agent, '$.')) NOT BETWEEN array_prepend('1', json_keys(agent, '$.')) AND array_prepend('0', json_keys(agent, '$.'))
+           AND array_prepend('1', json_keys(agent, '$.')) IN (array_prepend('0', json_keys(agent, '$.')),
+                                                              array_prepend('1', json_keys(agent, '$.')),
+                                                              array_prepend('2', json_keys(agent, '$.')))
+           AND array_prepend('1', json_keys(agent, '$.')) NOT IN (array_prepend('0', json_keys(agent, '$.')),
+                                                                  array_prepend('2', json_keys(agent, '$.'))))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          array_prepend('1', json_keys(agent, '$.')),
+                          count(*)
+   FROM kttm_nested
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND (array_prepend('1', json_keys(agent, '$.')) IS NULL
+          OR (array_prepend('1', json_keys(agent, '$.')) = array_prepend('1', json_keys(agent, '$.'))
+              AND array_prepend('1', json_keys(agent, '$.')) IS NOT DISTINCT
+              FROM array_prepend('1', json_keys(agent, '$.'))
+              AND array_prepend('1', json_keys(agent, '$.')) <> array_prepend('0', json_keys(agent, '$.'))
+              AND (array_prepend('1', json_keys(agent, '$.')) IS DISTINCT
+                   FROM array_prepend('0', json_keys(agent, '$.')))
+              AND array_prepend('1', json_keys(agent, '$.')) > array_prepend('0', json_keys(agent, '$.'))
+              AND array_prepend('1', json_keys(agent, '$.')) >= array_prepend('0', json_keys(agent, '$.'))
+              AND array_prepend('1', json_keys(agent, '$.')) < array_prepend('2', json_keys(agent, '$.'))
+              AND array_prepend('1', json_keys(agent, '$.')) <= array_prepend('2', json_keys(agent, '$.'))
+              AND (array_prepend('1', json_keys(agent, '$.')) <> array_prepend('0', json_keys(agent, '$.'))) IS TRUE
+              AND (array_prepend('1', json_keys(agent, '$.')) = array_prepend('0', json_keys(agent, '$.'))) IS NOT TRUE
+              AND (array_prepend('1', json_keys(agent, '$.')) = array_prepend('0', json_keys(agent, '$.'))) IS FALSE
+              AND (array_prepend('1', json_keys(agent, '$.')) <> array_prepend('0', json_keys(agent, '$.'))) IS NOT FALSE
+              AND array_prepend('1', json_keys(agent, '$.')) BETWEEN array_prepend('0', json_keys(agent, '$.')) AND array_prepend('2', json_keys(agent, '$.'))
+              AND array_prepend('1', json_keys(agent, '$.')) NOT BETWEEN array_prepend('1', json_keys(agent, '$.')) AND array_prepend('0', json_keys(agent, '$.'))
+              AND array_prepend('1', json_keys(agent, '$.')) IN (array_prepend('0', json_keys(agent, '$.')),
+                                                                 array_prepend('1', json_keys(agent, '$.')),
+                                                                 array_prepend('2', json_keys(agent, '$.')))
+              AND array_prepend('1', json_keys(agent, '$.')) NOT IN (array_prepend('0', json_keys(agent, '$.')),
+                                                                     array_prepend('2', json_keys(agent, '$.')))))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TEST_ID: A2: json_object
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||to_json_string(json_object(KEY 'c1' value number)) IS NULL
+       OR ('1'||to_json_string(json_object(KEY 'c1' value number)) = 1||to_json_string(json_object(KEY 'c1' value number))
+           AND '1'||to_json_string(json_object(KEY 'c1' value number)) IS NOT DISTINCT
+           FROM 1||to_json_string(json_object(KEY 'c1' value number))
+           AND '1'||to_json_string(json_object(KEY 'c1' value number)) <> '0'||to_json_string(json_object(KEY 'c1' value number))
+           AND ('1'||to_json_string(json_object(KEY 'c1' value number)) IS DISTINCT
+                FROM '0'||to_json_string(json_object(KEY 'c1' value number)))
+           AND '1'||to_json_string(json_object(KEY 'c1' value number)) > '0'||to_json_string(json_object(KEY 'c1' value number))
+           AND '1'||to_json_string(json_object(KEY 'c1' value number)) >= '0'||to_json_string(json_object(KEY 'c1' value number))
+           AND '1'||to_json_string(json_object(KEY 'c1' value number)) < 2||to_json_string(json_object(KEY 'c1' value number))
+           AND '1'||to_json_string(json_object(KEY 'c1' value number)) <= 2||to_json_string(json_object(KEY 'c1' value number))
+           AND ('1'||to_json_string(json_object(KEY 'c1' value number)) <> '0'||to_json_string(json_object(KEY 'c1' value number))) IS TRUE
+           AND ('1'||to_json_string(json_object(KEY 'c1' value number)) = '0'||to_json_string(json_object(KEY 'c1' value number))) IS NOT TRUE
+           AND ('1'||to_json_string(json_object(KEY 'c1' value number)) = '0'||to_json_string(json_object(KEY 'c1' value number))) IS FALSE
+           AND ('1'||to_json_string(json_object(KEY 'c1' value number)) <> '0'||to_json_string(json_object(KEY 'c1' value number))) IS NOT FALSE
+           AND '1'||to_json_string(json_object(KEY 'c1' value number)) BETWEEN '0'||to_json_string(json_object(KEY 'c1' value number)) AND 2||to_json_string(json_object(KEY 'c1' value number))
+           AND '1'||to_json_string(json_object(KEY 'c1' value number)) NOT BETWEEN '1'||to_json_string(json_object(KEY 'c1' value number)) AND '0'||to_json_string(json_object(KEY 'c1' value number))
+           AND '1'||to_json_string(json_object(KEY 'c1' value number)) like '%'
+           AND '1'||to_json_string(json_object(KEY 'c1' value number)) not like '__DOES_NOT_EXIST__%'
+           AND '1'||to_json_string(json_object(KEY 'c1' value number)) IN ('0'||to_json_string(json_object(KEY 'c1' value number)),
+                                                                           1||to_json_string(json_object(KEY 'c1' value number)),
+                                                                           2||to_json_string(json_object(KEY 'c1' value number)))
+           AND '1'||to_json_string(json_object(KEY 'c1' value number)) NOT IN ('0'||to_json_string(json_object(KEY 'c1' value number)),
+                                                                               2||to_json_string(json_object(KEY 'c1' value number))))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||to_json_string(json_object(KEY 'c1' value number)) IS NULL
+       OR '1'||to_json_string(json_object(KEY 'c1' value number)) IN
+         (SELECT '1'||to_json_string(json_object(KEY 'c1' value number))
+          FROM kttm_nested
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND ('1'||to_json_string(json_object(KEY 'c1' value number)) IS NULL
+                 OR ('1'||to_json_string(json_object(KEY 'c1' value number)) = 1||to_json_string(json_object(KEY 'c1' value number))
+                     AND '1'||to_json_string(json_object(KEY 'c1' value number)) IS NOT DISTINCT
+                     FROM 1||to_json_string(json_object(KEY 'c1' value number))
+                     AND '1'||to_json_string(json_object(KEY 'c1' value number)) <> '0'||to_json_string(json_object(KEY 'c1' value number))
+                     AND ('1'||to_json_string(json_object(KEY 'c1' value number)) IS DISTINCT
+                          FROM '0'||to_json_string(json_object(KEY 'c1' value number)))
+                     AND '1'||to_json_string(json_object(KEY 'c1' value number)) > '0'||to_json_string(json_object(KEY 'c1' value number))
+                     AND '1'||to_json_string(json_object(KEY 'c1' value number)) >= '0'||to_json_string(json_object(KEY 'c1' value number))
+                     AND '1'||to_json_string(json_object(KEY 'c1' value number)) < 2||to_json_string(json_object(KEY 'c1' value number))
+                     AND '1'||to_json_string(json_object(KEY 'c1' value number)) <= 2||to_json_string(json_object(KEY 'c1' value number))
+                     AND ('1'||to_json_string(json_object(KEY 'c1' value number)) <> '0'||to_json_string(json_object(KEY 'c1' value number))) IS TRUE
+                     AND ('1'||to_json_string(json_object(KEY 'c1' value number)) = '0'||to_json_string(json_object(KEY 'c1' value number))) IS NOT TRUE
+                     AND ('1'||to_json_string(json_object(KEY 'c1' value number)) = '0'||to_json_string(json_object(KEY 'c1' value number))) IS FALSE
+                     AND ('1'||to_json_string(json_object(KEY 'c1' value number)) <> '0'||to_json_string(json_object(KEY 'c1' value number))) IS NOT FALSE
+                     AND '1'||to_json_string(json_object(KEY 'c1' value number)) BETWEEN '0'||to_json_string(json_object(KEY 'c1' value number)) AND 2||to_json_string(json_object(KEY 'c1' value number))
+                     AND '1'||to_json_string(json_object(KEY 'c1' value number)) NOT BETWEEN '1'||to_json_string(json_object(KEY 'c1' value number)) AND '0'||to_json_string(json_object(KEY 'c1' value number))
+                     AND '1'||to_json_string(json_object(KEY 'c1' value number)) like '%'
+                     AND '1'||to_json_string(json_object(KEY 'c1' value number)) not like '__DOES_NOT_EXIST__%'
+                     AND '1'||to_json_string(json_object(KEY 'c1' value number)) IN ('0'||to_json_string(json_object(KEY 'c1' value number)),
+                                                                                     1||to_json_string(json_object(KEY 'c1' value number)),
+                                                                                     2||to_json_string(json_object(KEY 'c1' value number)))
+                     AND '1'||to_json_string(json_object(KEY 'c1' value number)) NOT IN ('0'||to_json_string(json_object(KEY 'c1' value number)),
+                                                                                         2||to_json_string(json_object(KEY 'c1' value number)))))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          '1'||to_json_string(json_object(KEY 'c1' value number)),
+                          count(*)
+   FROM kttm_nested
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND ('1'||to_json_string(json_object(KEY 'c1' value number)) IS NULL
+          OR ('1'||to_json_string(json_object(KEY 'c1' value number)) = 1||to_json_string(json_object(KEY 'c1' value number))
+              AND '1'||to_json_string(json_object(KEY 'c1' value number)) IS NOT DISTINCT
+              FROM 1||to_json_string(json_object(KEY 'c1' value number))
+              AND '1'||to_json_string(json_object(KEY 'c1' value number)) <> '0'||to_json_string(json_object(KEY 'c1' value number))
+              AND ('1'||to_json_string(json_object(KEY 'c1' value number)) IS DISTINCT
+                   FROM '0'||to_json_string(json_object(KEY 'c1' value number)))
+              AND '1'||to_json_string(json_object(KEY 'c1' value number)) > '0'||to_json_string(json_object(KEY 'c1' value number))
+              AND '1'||to_json_string(json_object(KEY 'c1' value number)) >= '0'||to_json_string(json_object(KEY 'c1' value number))
+              AND '1'||to_json_string(json_object(KEY 'c1' value number)) < 2||to_json_string(json_object(KEY 'c1' value number))
+              AND '1'||to_json_string(json_object(KEY 'c1' value number)) <= 2||to_json_string(json_object(KEY 'c1' value number))
+              AND ('1'||to_json_string(json_object(KEY 'c1' value number)) <> '0'||to_json_string(json_object(KEY 'c1' value number))) IS TRUE
+              AND ('1'||to_json_string(json_object(KEY 'c1' value number)) = '0'||to_json_string(json_object(KEY 'c1' value number))) IS NOT TRUE
+              AND ('1'||to_json_string(json_object(KEY 'c1' value number)) = '0'||to_json_string(json_object(KEY 'c1' value number))) IS FALSE
+              AND ('1'||to_json_string(json_object(KEY 'c1' value number)) <> '0'||to_json_string(json_object(KEY 'c1' value number))) IS NOT FALSE
+              AND '1'||to_json_string(json_object(KEY 'c1' value number)) BETWEEN '0'||to_json_string(json_object(KEY 'c1' value number)) AND 2||to_json_string(json_object(KEY 'c1' value number))
+              AND '1'||to_json_string(json_object(KEY 'c1' value number)) NOT BETWEEN '1'||to_json_string(json_object(KEY 'c1' value number)) AND '0'||to_json_string(json_object(KEY 'c1' value number))
+              AND '1'||to_json_string(json_object(KEY 'c1' value number)) like '%'
+              AND '1'||to_json_string(json_object(KEY 'c1' value number)) not like '__DOES_NOT_EXIST__%'
+              AND '1'||to_json_string(json_object(KEY 'c1' value number)) IN ('0'||to_json_string(json_object(KEY 'c1' value number)),
+                                                                              1||to_json_string(json_object(KEY 'c1' value number)),
+                                                                              2||to_json_string(json_object(KEY 'c1' value number)))
+              AND '1'||to_json_string(json_object(KEY 'c1' value number)) NOT IN ('0'||to_json_string(json_object(KEY 'c1' value number)),
+                                                                                  2||to_json_string(json_object(KEY 'c1' value number)))))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TEST_ID: A3: json_paths
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (array_prepend('1', json_paths(agent)) IS NULL
+       OR (array_prepend('1', json_paths(agent)) = array_prepend('1', json_paths(agent))
+           AND array_prepend('1', json_paths(agent)) IS NOT DISTINCT
+           FROM array_prepend('1', json_paths(agent))
+           AND array_prepend('1', json_paths(agent)) <> array_prepend('0', json_paths(agent))
+           AND (array_prepend('1', json_paths(agent)) IS DISTINCT
+                FROM array_prepend('0', json_paths(agent)))
+           AND array_prepend('1', json_paths(agent)) > array_prepend('0', json_paths(agent))
+           AND array_prepend('1', json_paths(agent)) >= array_prepend('0', json_paths(agent))
+           AND array_prepend('1', json_paths(agent)) < array_prepend('2', json_paths(agent))
+           AND array_prepend('1', json_paths(agent)) <= array_prepend('2', json_paths(agent))
+           AND (array_prepend('1', json_paths(agent)) <> array_prepend('0', json_paths(agent))) IS TRUE
+           AND (array_prepend('1', json_paths(agent)) = array_prepend('0', json_paths(agent))) IS NOT TRUE
+           AND (array_prepend('1', json_paths(agent)) = array_prepend('0', json_paths(agent))) IS FALSE
+           AND (array_prepend('1', json_paths(agent)) <> array_prepend('0', json_paths(agent))) IS NOT FALSE
+           AND array_prepend('1', json_paths(agent)) BETWEEN array_prepend('0', json_paths(agent)) AND array_prepend('2', json_paths(agent))
+           AND array_prepend('1', json_paths(agent)) NOT BETWEEN array_prepend('1', json_paths(agent)) AND array_prepend('0', json_paths(agent))
+           AND array_prepend('1', json_paths(agent)) IN (array_prepend('0', json_paths(agent)),
+                                                         array_prepend('1', json_paths(agent)),
+                                                         array_prepend('2', json_paths(agent)))
+           AND array_prepend('1', json_paths(agent)) NOT IN (array_prepend('0', json_paths(agent)),
+                                                             array_prepend('2', json_paths(agent))))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          array_prepend('1', json_paths(agent)),
+                          count(*)
+   FROM kttm_nested
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND (array_prepend('1', json_paths(agent)) IS NULL
+          OR (array_prepend('1', json_paths(agent)) = array_prepend('1', json_paths(agent))
+              AND array_prepend('1', json_paths(agent)) IS NOT DISTINCT
+              FROM array_prepend('1', json_paths(agent))
+              AND array_prepend('1', json_paths(agent)) <> array_prepend('0', json_paths(agent))
+              AND (array_prepend('1', json_paths(agent)) IS DISTINCT
+                   FROM array_prepend('0', json_paths(agent)))
+              AND array_prepend('1', json_paths(agent)) > array_prepend('0', json_paths(agent))
+              AND array_prepend('1', json_paths(agent)) >= array_prepend('0', json_paths(agent))
+              AND array_prepend('1', json_paths(agent)) < array_prepend('2', json_paths(agent))
+              AND array_prepend('1', json_paths(agent)) <= array_prepend('2', json_paths(agent))
+              AND (array_prepend('1', json_paths(agent)) <> array_prepend('0', json_paths(agent))) IS TRUE
+              AND (array_prepend('1', json_paths(agent)) = array_prepend('0', json_paths(agent))) IS NOT TRUE
+              AND (array_prepend('1', json_paths(agent)) = array_prepend('0', json_paths(agent))) IS FALSE
+              AND (array_prepend('1', json_paths(agent)) <> array_prepend('0', json_paths(agent))) IS NOT FALSE
+              AND array_prepend('1', json_paths(agent)) BETWEEN array_prepend('0', json_paths(agent)) AND array_prepend('2', json_paths(agent))
+              AND array_prepend('1', json_paths(agent)) NOT BETWEEN array_prepend('1', json_paths(agent)) AND array_prepend('0', json_paths(agent))
+              AND array_prepend('1', json_paths(agent)) IN (array_prepend('0', json_paths(agent)),
+                                                            array_prepend('1', json_paths(agent)),
+                                                            array_prepend('2', json_paths(agent)))
+              AND array_prepend('1', json_paths(agent)) NOT IN (array_prepend('0', json_paths(agent)),
+                                                                array_prepend('2', json_paths(agent)))))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TEST_ID: A4: json_query
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||to_json_string(json_query(agent, '$.')) IS NULL
+       OR ('1'||to_json_string(json_query(agent, '$.')) = 1||to_json_string(json_query(agent, '$.'))
+           AND '1'||to_json_string(json_query(agent, '$.')) IS NOT DISTINCT
+           FROM 1||to_json_string(json_query(agent, '$.'))
+           AND '1'||to_json_string(json_query(agent, '$.')) <> '0'||to_json_string(json_query(agent, '$.'))
+           AND ('1'||to_json_string(json_query(agent, '$.')) IS DISTINCT
+                FROM '0'||to_json_string(json_query(agent, '$.')))
+           AND '1'||to_json_string(json_query(agent, '$.')) > '0'||to_json_string(json_query(agent, '$.'))
+           AND '1'||to_json_string(json_query(agent, '$.')) >= '0'||to_json_string(json_query(agent, '$.'))
+           AND '1'||to_json_string(json_query(agent, '$.')) < 2||to_json_string(json_query(agent, '$.'))
+           AND '1'||to_json_string(json_query(agent, '$.')) <= 2||to_json_string(json_query(agent, '$.'))
+           AND ('1'||to_json_string(json_query(agent, '$.')) <> '0'||to_json_string(json_query(agent, '$.'))) IS TRUE
+           AND ('1'||to_json_string(json_query(agent, '$.')) = '0'||to_json_string(json_query(agent, '$.'))) IS NOT TRUE
+           AND ('1'||to_json_string(json_query(agent, '$.')) = '0'||to_json_string(json_query(agent, '$.'))) IS FALSE
+           AND ('1'||to_json_string(json_query(agent, '$.')) <> '0'||to_json_string(json_query(agent, '$.'))) IS NOT FALSE
+           AND '1'||to_json_string(json_query(agent, '$.')) BETWEEN '0'||to_json_string(json_query(agent, '$.')) AND 2||to_json_string(json_query(agent, '$.'))
+           AND '1'||to_json_string(json_query(agent, '$.')) NOT BETWEEN '1'||to_json_string(json_query(agent, '$.')) AND '0'||to_json_string(json_query(agent, '$.'))
+           AND '1'||to_json_string(json_query(agent, '$.')) like '%'
+           AND '1'||to_json_string(json_query(agent, '$.')) not like '__DOES_NOT_EXIST__%'
+           AND '1'||to_json_string(json_query(agent, '$.')) IN ('0'||to_json_string(json_query(agent, '$.')),
+                                                                1||to_json_string(json_query(agent, '$.')),
+                                                                2||to_json_string(json_query(agent, '$.')))
+           AND '1'||to_json_string(json_query(agent, '$.')) NOT IN ('0'||to_json_string(json_query(agent, '$.')),
+                                                                    2||to_json_string(json_query(agent, '$.'))))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||to_json_string(json_query(agent, '$.')) IS NULL
+       OR '1'||to_json_string(json_query(agent, '$.')) IN
+         (SELECT '1'||to_json_string(json_query(agent, '$.'))
+          FROM kttm_nested
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND ('1'||to_json_string(json_query(agent, '$.')) IS NULL
+                 OR ('1'||to_json_string(json_query(agent, '$.')) = 1||to_json_string(json_query(agent, '$.'))
+                     AND '1'||to_json_string(json_query(agent, '$.')) IS NOT DISTINCT
+                     FROM 1||to_json_string(json_query(agent, '$.'))
+                     AND '1'||to_json_string(json_query(agent, '$.')) <> '0'||to_json_string(json_query(agent, '$.'))
+                     AND ('1'||to_json_string(json_query(agent, '$.')) IS DISTINCT
+                          FROM '0'||to_json_string(json_query(agent, '$.')))
+                     AND '1'||to_json_string(json_query(agent, '$.')) > '0'||to_json_string(json_query(agent, '$.'))
+                     AND '1'||to_json_string(json_query(agent, '$.')) >= '0'||to_json_string(json_query(agent, '$.'))
+                     AND '1'||to_json_string(json_query(agent, '$.')) < 2||to_json_string(json_query(agent, '$.'))
+                     AND '1'||to_json_string(json_query(agent, '$.')) <= 2||to_json_string(json_query(agent, '$.'))
+                     AND ('1'||to_json_string(json_query(agent, '$.')) <> '0'||to_json_string(json_query(agent, '$.'))) IS TRUE
+                     AND ('1'||to_json_string(json_query(agent, '$.')) = '0'||to_json_string(json_query(agent, '$.'))) IS NOT TRUE
+                     AND ('1'||to_json_string(json_query(agent, '$.')) = '0'||to_json_string(json_query(agent, '$.'))) IS FALSE
+                     AND ('1'||to_json_string(json_query(agent, '$.')) <> '0'||to_json_string(json_query(agent, '$.'))) IS NOT FALSE
+                     AND '1'||to_json_string(json_query(agent, '$.')) BETWEEN '0'||to_json_string(json_query(agent, '$.')) AND 2||to_json_string(json_query(agent, '$.'))
+                     AND '1'||to_json_string(json_query(agent, '$.')) NOT BETWEEN '1'||to_json_string(json_query(agent, '$.')) AND '0'||to_json_string(json_query(agent, '$.'))
+                     AND '1'||to_json_string(json_query(agent, '$.')) like '%'
+                     AND '1'||to_json_string(json_query(agent, '$.')) not like '__DOES_NOT_EXIST__%'
+                     AND '1'||to_json_string(json_query(agent, '$.')) IN ('0'||to_json_string(json_query(agent, '$.')),
+                                                                          1||to_json_string(json_query(agent, '$.')),
+                                                                          2||to_json_string(json_query(agent, '$.')))
+                     AND '1'||to_json_string(json_query(agent, '$.')) NOT IN ('0'||to_json_string(json_query(agent, '$.')),
+                                                                              2||to_json_string(json_query(agent, '$.')))))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          '1'||to_json_string(json_query(agent, '$.')),
+                          count(*)
+   FROM kttm_nested
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND ('1'||to_json_string(json_query(agent, '$.')) IS NULL
+          OR ('1'||to_json_string(json_query(agent, '$.')) = 1||to_json_string(json_query(agent, '$.'))
+              AND '1'||to_json_string(json_query(agent, '$.')) IS NOT DISTINCT
+              FROM 1||to_json_string(json_query(agent, '$.'))
+              AND '1'||to_json_string(json_query(agent, '$.')) <> '0'||to_json_string(json_query(agent, '$.'))
+              AND ('1'||to_json_string(json_query(agent, '$.')) IS DISTINCT
+                   FROM '0'||to_json_string(json_query(agent, '$.')))
+              AND '1'||to_json_string(json_query(agent, '$.')) > '0'||to_json_string(json_query(agent, '$.'))
+              AND '1'||to_json_string(json_query(agent, '$.')) >= '0'||to_json_string(json_query(agent, '$.'))
+              AND '1'||to_json_string(json_query(agent, '$.')) < 2||to_json_string(json_query(agent, '$.'))
+              AND '1'||to_json_string(json_query(agent, '$.')) <= 2||to_json_string(json_query(agent, '$.'))
+              AND ('1'||to_json_string(json_query(agent, '$.')) <> '0'||to_json_string(json_query(agent, '$.'))) IS TRUE
+              AND ('1'||to_json_string(json_query(agent, '$.')) = '0'||to_json_string(json_query(agent, '$.'))) IS NOT TRUE
+              AND ('1'||to_json_string(json_query(agent, '$.')) = '0'||to_json_string(json_query(agent, '$.'))) IS FALSE
+              AND ('1'||to_json_string(json_query(agent, '$.')) <> '0'||to_json_string(json_query(agent, '$.'))) IS NOT FALSE
+              AND '1'||to_json_string(json_query(agent, '$.')) BETWEEN '0'||to_json_string(json_query(agent, '$.')) AND 2||to_json_string(json_query(agent, '$.'))
+              AND '1'||to_json_string(json_query(agent, '$.')) NOT BETWEEN '1'||to_json_string(json_query(agent, '$.')) AND '0'||to_json_string(json_query(agent, '$.'))
+              AND '1'||to_json_string(json_query(agent, '$.')) like '%'
+              AND '1'||to_json_string(json_query(agent, '$.')) not like '__DOES_NOT_EXIST__%'
+              AND '1'||to_json_string(json_query(agent, '$.')) IN ('0'||to_json_string(json_query(agent, '$.')),
+                                                                   1||to_json_string(json_query(agent, '$.')),
+                                                                   2||to_json_string(json_query(agent, '$.')))
+              AND '1'||to_json_string(json_query(agent, '$.')) NOT IN ('0'||to_json_string(json_query(agent, '$.')),
+                                                                       2||to_json_string(json_query(agent, '$.')))))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TEST_ID: A5: json_query_array
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||to_json_string(json_query_array(array[client_ip, server_ip], '$.')) IS NULL
+       OR ('1'||to_json_string(json_query_array(array[client_ip, server_ip], '$.')) = 1||to_json_string(json_query_array(array[client_ip, server_ip], '$.'))
+           AND '1'||to_json_string(json_query_array(array[client_ip, server_ip], '$.')) IS NOT DISTINCT
+           FROM 1||to_json_string(json_query_array(array[client_ip, server_ip], '$.'))
+           AND '1'||to_json_string(json_query_array(array[client_ip, server_ip], '$.')) <> '0'||to_json_string(json_query_array(array[client_ip, server_ip], '$.'))
+           AND ('1'||to_json_string(json_query_array(array[client_ip, server_ip], '$.')) IS DISTINCT
+                FROM '0'||to_json_string(json_query_array(array[client_ip, server_ip], '$.')))
+           AND '1'||to_json_string(json_query_array(array[client_ip, server_ip], '$.')) > '0'||to_json_string(json_query_array(array[client_ip, server_ip], '$.'))
+           AND '1'||to_json_string(json_query_array(array[client_ip, server_ip], '$.')) >= '0'||to_json_string(json_query_array(array[client_ip, server_ip], '$.'))
+           AND '1'||to_json_string(json_query_array(array[client_ip, server_ip], '$.')) < 2||to_json_string(json_query_array(array[client_ip, server_ip], '$.'))
+           AND '1'||to_json_string(json_query_array(array[client_ip, server_ip], '$.')) <= 2||to_json_string(json_query_array(array[client_ip, server_ip], '$.'))
+           AND ('1'||to_json_string(json_query_array(array[client_ip, server_ip], '$.')) <> '0'||to_json_string(json_query_array(array[client_ip, server_ip], '$.'))) IS TRUE
+           AND ('1'||to_json_string(json_query_array(array[client_ip, server_ip], '$.')) = '0'||to_json_string(json_query_array(array[client_ip, server_ip], '$.'))) IS NOT TRUE
+           AND ('1'||to_json_string(json_query_array(array[client_ip, server_ip], '$.')) = '0'||to_json_string(json_query_array(array[client_ip, server_ip], '$.'))) IS FALSE
+           AND ('1'||to_json_string(json_query_array(array[client_ip, server_ip], '$.')) <> '0'||to_json_string(json_query_array(array[client_ip, server_ip], '$.'))) IS NOT FALSE
+           AND '1'||to_json_string(json_query_array(array[client_ip, server_ip], '$.')) BETWEEN '0'||to_json_string(json_query_array(array[client_ip, server_ip], '$.')) AND 2||to_json_string(json_query_array(array[client_ip, server_ip], '$.'))
+           AND '1'||to_json_string(json_query_array(array[client_ip, server_ip], '$.')) NOT BETWEEN '1'||to_json_string(json_query_array(array[client_ip, server_ip], '$.')) AND '0'||to_json_string(json_query_array(array[client_ip, server_ip], '$.'))
+           AND '1'||to_json_string(json_query_array(array[client_ip, server_ip], '$.')) like '%'
+           AND '1'||to_json_string(json_query_array(array[client_ip, server_ip], '$.')) not like '__DOES_NOT_EXIST__%'
+           AND '1'||to_json_string(json_query_array(array[client_ip, server_ip], '$.')) IN ('0'||to_json_string(json_query_array(array[client_ip, server_ip], '$.')),
+                                                                                            1||to_json_string(json_query_array(array[client_ip, server_ip], '$.')),
+                                                                                            2||to_json_string(json_query_array(array[client_ip, server_ip], '$.')))
+           AND '1'||to_json_string(json_query_array(array[client_ip, server_ip], '$.')) NOT IN ('0'||to_json_string(json_query_array(array[client_ip, server_ip], '$.')),
+                                                                                                2||to_json_string(json_query_array(array[client_ip, server_ip], '$.'))))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||to_json_string(json_query_array(array[client_ip, server_ip], '$.')) IS NULL
+       OR '1'||to_json_string(json_query_array(array[client_ip, server_ip], '$.')) IN
+         (SELECT '1'||to_json_string(json_query_array(array[client_ip, server_ip], '$.'))
+          FROM kttm_nested
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND ('1'||to_json_string(json_query_array(array[client_ip, server_ip], '$.')) IS NULL
+                 OR ('1'||to_json_string(json_query_array(array[client_ip, server_ip], '$.')) = 1||to_json_string(json_query_array(array[client_ip, server_ip], '$.'))
+                     AND '1'||to_json_string(json_query_array(array[client_ip, server_ip], '$.')) IS NOT DISTINCT
+                     FROM 1||to_json_string(json_query_array(array[client_ip, server_ip], '$.'))
+                     AND '1'||to_json_string(json_query_array(array[client_ip, server_ip], '$.')) <> '0'||to_json_string(json_query_array(array[client_ip, server_ip], '$.'))
+                     AND ('1'||to_json_string(json_query_array(array[client_ip, server_ip], '$.')) IS DISTINCT
+                          FROM '0'||to_json_string(json_query_array(array[client_ip, server_ip], '$.')))
+                     AND '1'||to_json_string(json_query_array(array[client_ip, server_ip], '$.')) > '0'||to_json_string(json_query_array(array[client_ip, server_ip], '$.'))
+                     AND '1'||to_json_string(json_query_array(array[client_ip, server_ip], '$.')) >= '0'||to_json_string(json_query_array(array[client_ip, server_ip], '$.'))
+                     AND '1'||to_json_string(json_query_array(array[client_ip, server_ip], '$.')) < 2||to_json_string(json_query_array(array[client_ip, server_ip], '$.'))
+                     AND '1'||to_json_string(json_query_array(array[client_ip, server_ip], '$.')) <= 2||to_json_string(json_query_array(array[client_ip, server_ip], '$.'))
+                     AND ('1'||to_json_string(json_query_array(array[client_ip, server_ip], '$.')) <> '0'||to_json_string(json_query_array(array[client_ip, server_ip], '$.'))) IS TRUE
+                     AND ('1'||to_json_string(json_query_array(array[client_ip, server_ip], '$.')) = '0'||to_json_string(json_query_array(array[client_ip, server_ip], '$.'))) IS NOT TRUE
+                     AND ('1'||to_json_string(json_query_array(array[client_ip, server_ip], '$.')) = '0'||to_json_string(json_query_array(array[client_ip, server_ip], '$.'))) IS FALSE
+                     AND ('1'||to_json_string(json_query_array(array[client_ip, server_ip], '$.')) <> '0'||to_json_string(json_query_array(array[client_ip, server_ip], '$.'))) IS NOT FALSE
+                     AND '1'||to_json_string(json_query_array(array[client_ip, server_ip], '$.')) BETWEEN '0'||to_json_string(json_query_array(array[client_ip, server_ip], '$.')) AND 2||to_json_string(json_query_array(array[client_ip, server_ip], '$.'))
+                     AND '1'||to_json_string(json_query_array(array[client_ip, server_ip], '$.')) NOT BETWEEN '1'||to_json_string(json_query_array(array[client_ip, server_ip], '$.')) AND '0'||to_json_string(json_query_array(array[client_ip, server_ip], '$.'))
+                     AND '1'||to_json_string(json_query_array(array[client_ip, server_ip], '$.')) like '%'
+                     AND '1'||to_json_string(json_query_array(array[client_ip, server_ip], '$.')) not like '__DOES_NOT_EXIST__%'
+                     AND '1'||to_json_string(json_query_array(array[client_ip, server_ip], '$.')) IN ('0'||to_json_string(json_query_array(array[client_ip, server_ip], '$.')),
+                                                                                                      1||to_json_string(json_query_array(array[client_ip, server_ip], '$.')),
+                                                                                                      2||to_json_string(json_query_array(array[client_ip, server_ip], '$.')))
+                     AND '1'||to_json_string(json_query_array(array[client_ip, server_ip], '$.')) NOT IN ('0'||to_json_string(json_query_array(array[client_ip, server_ip], '$.')),
+                                                                                                          2||to_json_string(json_query_array(array[client_ip, server_ip], '$.')))))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          '1'||to_json_string(json_query_array(array[client_ip, server_ip], '$.')),
+                          count(*)
+   FROM kttm_nested
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND ('1'||to_json_string(json_query_array(array[client_ip, server_ip], '$.')) IS NULL
+          OR ('1'||to_json_string(json_query_array(array[client_ip, server_ip], '$.')) = 1||to_json_string(json_query_array(array[client_ip, server_ip], '$.'))
+              AND '1'||to_json_string(json_query_array(array[client_ip, server_ip], '$.')) IS NOT DISTINCT
+              FROM 1||to_json_string(json_query_array(array[client_ip, server_ip], '$.'))
+              AND '1'||to_json_string(json_query_array(array[client_ip, server_ip], '$.')) <> '0'||to_json_string(json_query_array(array[client_ip, server_ip], '$.'))
+              AND ('1'||to_json_string(json_query_array(array[client_ip, server_ip], '$.')) IS DISTINCT
+                   FROM '0'||to_json_string(json_query_array(array[client_ip, server_ip], '$.')))
+              AND '1'||to_json_string(json_query_array(array[client_ip, server_ip], '$.')) > '0'||to_json_string(json_query_array(array[client_ip, server_ip], '$.'))
+              AND '1'||to_json_string(json_query_array(array[client_ip, server_ip], '$.')) >= '0'||to_json_string(json_query_array(array[client_ip, server_ip], '$.'))
+              AND '1'||to_json_string(json_query_array(array[client_ip, server_ip], '$.')) < 2||to_json_string(json_query_array(array[client_ip, server_ip], '$.'))
+              AND '1'||to_json_string(json_query_array(array[client_ip, server_ip], '$.')) <= 2||to_json_string(json_query_array(array[client_ip, server_ip], '$.'))
+              AND ('1'||to_json_string(json_query_array(array[client_ip, server_ip], '$.')) <> '0'||to_json_string(json_query_array(array[client_ip, server_ip], '$.'))) IS TRUE
+              AND ('1'||to_json_string(json_query_array(array[client_ip, server_ip], '$.')) = '0'||to_json_string(json_query_array(array[client_ip, server_ip], '$.'))) IS NOT TRUE
+              AND ('1'||to_json_string(json_query_array(array[client_ip, server_ip], '$.')) = '0'||to_json_string(json_query_array(array[client_ip, server_ip], '$.'))) IS FALSE
+              AND ('1'||to_json_string(json_query_array(array[client_ip, server_ip], '$.')) <> '0'||to_json_string(json_query_array(array[client_ip, server_ip], '$.'))) IS NOT FALSE
+              AND '1'||to_json_string(json_query_array(array[client_ip, server_ip], '$.')) BETWEEN '0'||to_json_string(json_query_array(array[client_ip, server_ip], '$.')) AND 2||to_json_string(json_query_array(array[client_ip, server_ip], '$.'))
+              AND '1'||to_json_string(json_query_array(array[client_ip, server_ip], '$.')) NOT BETWEEN '1'||to_json_string(json_query_array(array[client_ip, server_ip], '$.')) AND '0'||to_json_string(json_query_array(array[client_ip, server_ip], '$.'))
+              AND '1'||to_json_string(json_query_array(array[client_ip, server_ip], '$.')) like '%'
+              AND '1'||to_json_string(json_query_array(array[client_ip, server_ip], '$.')) not like '__DOES_NOT_EXIST__%'
+              AND '1'||to_json_string(json_query_array(array[client_ip, server_ip], '$.')) IN ('0'||to_json_string(json_query_array(array[client_ip, server_ip], '$.')),
+                                                                                               1||to_json_string(json_query_array(array[client_ip, server_ip], '$.')),
+                                                                                               2||to_json_string(json_query_array(array[client_ip, server_ip], '$.')))
+              AND '1'||to_json_string(json_query_array(array[client_ip, server_ip], '$.')) NOT IN ('0'||to_json_string(json_query_array(array[client_ip, server_ip], '$.')),
+                                                                                                   2||to_json_string(json_query_array(array[client_ip, server_ip], '$.')))))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TEST_ID: A6: json_value
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (('1'||json_value(agent, '$.type')) IS NULL
+       OR (('1'||json_value(agent, '$.type')) = (1||json_value(agent, '$.type'))
+           AND ('1'||json_value(agent, '$.type')) IS NOT DISTINCT
+           FROM (1||json_value(agent, '$.type'))
+           AND ('1'||json_value(agent, '$.type')) <> ('0'||json_value(agent, '$.type'))
+           AND (('1'||json_value(agent, '$.type')) IS DISTINCT
+                FROM ('0'||json_value(agent, '$.type')))
+           AND ('1'||json_value(agent, '$.type')) > ('0'||json_value(agent, '$.type'))
+           AND ('1'||json_value(agent, '$.type')) >= ('0'||json_value(agent, '$.type'))
+           AND ('1'||json_value(agent, '$.type')) < (2||json_value(agent, '$.type'))
+           AND ('1'||json_value(agent, '$.type')) <= (2||json_value(agent, '$.type'))
+           AND (('1'||json_value(agent, '$.type')) <> ('0'||json_value(agent, '$.type'))) IS TRUE
+           AND (('1'||json_value(agent, '$.type')) = ('0'||json_value(agent, '$.type'))) IS NOT TRUE
+           AND (('1'||json_value(agent, '$.type')) = ('0'||json_value(agent, '$.type'))) IS FALSE
+           AND (('1'||json_value(agent, '$.type')) <> ('0'||json_value(agent, '$.type'))) IS NOT FALSE
+           AND ('1'||json_value(agent, '$.type')) BETWEEN ('0'||json_value(agent, '$.type')) AND (2||json_value(agent, '$.type'))
+           AND ('1'||json_value(agent, '$.type')) NOT BETWEEN ('1'||json_value(agent, '$.type')) AND ('0'||json_value(agent, '$.type'))
+           AND ('1'||json_value(agent, '$.type')) like '%'
+           AND ('1'||json_value(agent, '$.type')) not like '__DOES_NOT_EXIST__%'
+           AND ('1'||json_value(agent, '$.type')) IN (('0'||json_value(agent, '$.type')), (1||json_value(agent, '$.type')), (2||json_value(agent, '$.type')))
+           AND ('1'||json_value(agent, '$.type')) NOT IN (('0'||json_value(agent, '$.type')), (2||json_value(agent, '$.type'))))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (('1'||json_value(agent, '$.type')) IS NULL
+       OR ('1'||json_value(agent, '$.type')) IN
+         (SELECT ('1'||json_value(agent, '$.type'))
+          FROM kttm_nested
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND (('1'||json_value(agent, '$.type')) IS NULL
+                 OR (('1'||json_value(agent, '$.type')) = (1||json_value(agent, '$.type'))
+                     AND ('1'||json_value(agent, '$.type')) IS NOT DISTINCT
+                     FROM (1||json_value(agent, '$.type'))
+                     AND ('1'||json_value(agent, '$.type')) <> ('0'||json_value(agent, '$.type'))
+                     AND (('1'||json_value(agent, '$.type')) IS DISTINCT
+                          FROM ('0'||json_value(agent, '$.type')))
+                     AND ('1'||json_value(agent, '$.type')) > ('0'||json_value(agent, '$.type'))
+                     AND ('1'||json_value(agent, '$.type')) >= ('0'||json_value(agent, '$.type'))
+                     AND ('1'||json_value(agent, '$.type')) < (2||json_value(agent, '$.type'))
+                     AND ('1'||json_value(agent, '$.type')) <= (2||json_value(agent, '$.type'))
+                     AND (('1'||json_value(agent, '$.type')) <> ('0'||json_value(agent, '$.type'))) IS TRUE
+                     AND (('1'||json_value(agent, '$.type')) = ('0'||json_value(agent, '$.type'))) IS NOT TRUE
+                     AND (('1'||json_value(agent, '$.type')) = ('0'||json_value(agent, '$.type'))) IS FALSE
+                     AND (('1'||json_value(agent, '$.type')) <> ('0'||json_value(agent, '$.type'))) IS NOT FALSE
+                     AND ('1'||json_value(agent, '$.type')) BETWEEN ('0'||json_value(agent, '$.type')) AND (2||json_value(agent, '$.type'))
+                     AND ('1'||json_value(agent, '$.type')) NOT BETWEEN ('1'||json_value(agent, '$.type')) AND ('0'||json_value(agent, '$.type'))
+                     AND ('1'||json_value(agent, '$.type')) like '%'
+                     AND ('1'||json_value(agent, '$.type')) not like '__DOES_NOT_EXIST__%'
+                     AND ('1'||json_value(agent, '$.type')) IN (('0'||json_value(agent, '$.type')), (1||json_value(agent, '$.type')), (2||json_value(agent, '$.type')))
+                     AND ('1'||json_value(agent, '$.type')) NOT IN (('0'||json_value(agent, '$.type')), (2||json_value(agent, '$.type')))))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip, ('1'||json_value(agent, '$.type')), count(*)
+   FROM kttm_nested
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND (('1'||json_value(agent, '$.type')) IS NULL
+          OR (('1'||json_value(agent, '$.type')) = (1||json_value(agent, '$.type'))
+              AND ('1'||json_value(agent, '$.type')) IS NOT DISTINCT
+              FROM (1||json_value(agent, '$.type'))
+              AND ('1'||json_value(agent, '$.type')) <> ('0'||json_value(agent, '$.type'))
+              AND (('1'||json_value(agent, '$.type')) IS DISTINCT
+                   FROM ('0'||json_value(agent, '$.type')))
+              AND ('1'||json_value(agent, '$.type')) > ('0'||json_value(agent, '$.type'))
+              AND ('1'||json_value(agent, '$.type')) >= ('0'||json_value(agent, '$.type'))
+              AND ('1'||json_value(agent, '$.type')) < (2||json_value(agent, '$.type'))
+              AND ('1'||json_value(agent, '$.type')) <= (2||json_value(agent, '$.type'))
+              AND (('1'||json_value(agent, '$.type')) <> ('0'||json_value(agent, '$.type'))) IS TRUE
+              AND (('1'||json_value(agent, '$.type')) = ('0'||json_value(agent, '$.type'))) IS NOT TRUE
+              AND (('1'||json_value(agent, '$.type')) = ('0'||json_value(agent, '$.type'))) IS FALSE
+              AND (('1'||json_value(agent, '$.type')) <> ('0'||json_value(agent, '$.type'))) IS NOT FALSE
+              AND ('1'||json_value(agent, '$.type')) BETWEEN ('0'||json_value(agent, '$.type')) AND (2||json_value(agent, '$.type'))
+              AND ('1'||json_value(agent, '$.type')) NOT BETWEEN ('1'||json_value(agent, '$.type')) AND ('0'||json_value(agent, '$.type'))
+              AND ('1'||json_value(agent, '$.type')) like '%'
+              AND ('1'||json_value(agent, '$.type')) not like '__DOES_NOT_EXIST__%'
+              AND ('1'||json_value(agent, '$.type')) IN (('0'||json_value(agent, '$.type')), (1||json_value(agent, '$.type')), (2||json_value(agent, '$.type')))
+              AND ('1'||json_value(agent, '$.type')) NOT IN (('0'||json_value(agent, '$.type')), (2||json_value(agent, '$.type')))))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TEST_ID: A7: json_value_returning_char
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||json_value(event, '$.percentage' RETURNING char) IS NULL
+       OR ('1'||json_value(event, '$.percentage' RETURNING char) = 1||json_value(event, '$.percentage' RETURNING char)
+           AND '1'||json_value(event, '$.percentage' RETURNING char) IS NOT DISTINCT
+           FROM 1||json_value(event, '$.percentage' RETURNING char)
+           AND '1'||json_value(event, '$.percentage' RETURNING char) <> '0'||json_value(event, '$.percentage' RETURNING char)
+           AND ('1'||json_value(event, '$.percentage' RETURNING char) IS DISTINCT
+                FROM '0'||json_value(event, '$.percentage' RETURNING char))
+           AND '1'||json_value(event, '$.percentage' RETURNING char) > '0'||json_value(event, '$.percentage' RETURNING char)
+           AND '1'||json_value(event, '$.percentage' RETURNING char) >= '0'||json_value(event, '$.percentage' RETURNING char)
+           AND '1'||json_value(event, '$.percentage' RETURNING char) < 2||json_value(event, '$.percentage' RETURNING char)
+           AND '1'||json_value(event, '$.percentage' RETURNING char) <= 2||json_value(event, '$.percentage' RETURNING char)
+           AND ('1'||json_value(event, '$.percentage' RETURNING char) <> '0'||json_value(event, '$.percentage' RETURNING char)) IS TRUE
+           AND ('1'||json_value(event, '$.percentage' RETURNING char) = '0'||json_value(event, '$.percentage' RETURNING char)) IS NOT TRUE
+           AND ('1'||json_value(event, '$.percentage' RETURNING char) = '0'||json_value(event, '$.percentage' RETURNING char)) IS FALSE
+           AND ('1'||json_value(event, '$.percentage' RETURNING char) <> '0'||json_value(event, '$.percentage' RETURNING char)) IS NOT FALSE
+           AND '1'||json_value(event, '$.percentage' RETURNING char) BETWEEN '0'||json_value(event, '$.percentage' RETURNING char) AND 2||json_value(event, '$.percentage' RETURNING char)
+           AND '1'||json_value(event, '$.percentage' RETURNING char) NOT BETWEEN '1'||json_value(event, '$.percentage' RETURNING char) AND '0'||json_value(event, '$.percentage' RETURNING char)
+           AND '1'||json_value(event, '$.percentage' RETURNING char) like '%'
+           AND '1'||json_value(event, '$.percentage' RETURNING char) not like '__DOES_NOT_EXIST__%'
+           AND '1'||json_value(event, '$.percentage' RETURNING char) IN ('0'||json_value(event, '$.percentage' RETURNING char),
+                                                                         1||json_value(event, '$.percentage' RETURNING char),
+                                                                         2||json_value(event, '$.percentage' RETURNING char))
+           AND '1'||json_value(event, '$.percentage' RETURNING char) NOT IN ('0'||json_value(event, '$.percentage' RETURNING char),
+                                                                             2||json_value(event, '$.percentage' RETURNING char)))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||json_value(event, '$.percentage' RETURNING char) IS NULL
+       OR '1'||json_value(event, '$.percentage' RETURNING char) IN
+         (SELECT '1'||json_value(event, '$.percentage' RETURNING char)
+          FROM kttm_nested
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND ('1'||json_value(event, '$.percentage' RETURNING char) IS NULL
+                 OR ('1'||json_value(event, '$.percentage' RETURNING char) = 1||json_value(event, '$.percentage' RETURNING char)
+                     AND '1'||json_value(event, '$.percentage' RETURNING char) IS NOT DISTINCT
+                     FROM 1||json_value(event, '$.percentage' RETURNING char)
+                     AND '1'||json_value(event, '$.percentage' RETURNING char) <> '0'||json_value(event, '$.percentage' RETURNING char)
+                     AND ('1'||json_value(event, '$.percentage' RETURNING char) IS DISTINCT
+                          FROM '0'||json_value(event, '$.percentage' RETURNING char))
+                     AND '1'||json_value(event, '$.percentage' RETURNING char) > '0'||json_value(event, '$.percentage' RETURNING char)
+                     AND '1'||json_value(event, '$.percentage' RETURNING char) >= '0'||json_value(event, '$.percentage' RETURNING char)
+                     AND '1'||json_value(event, '$.percentage' RETURNING char) < 2||json_value(event, '$.percentage' RETURNING char)
+                     AND '1'||json_value(event, '$.percentage' RETURNING char) <= 2||json_value(event, '$.percentage' RETURNING char)
+                     AND ('1'||json_value(event, '$.percentage' RETURNING char) <> '0'||json_value(event, '$.percentage' RETURNING char)) IS TRUE
+                     AND ('1'||json_value(event, '$.percentage' RETURNING char) = '0'||json_value(event, '$.percentage' RETURNING char)) IS NOT TRUE
+                     AND ('1'||json_value(event, '$.percentage' RETURNING char) = '0'||json_value(event, '$.percentage' RETURNING char)) IS FALSE
+                     AND ('1'||json_value(event, '$.percentage' RETURNING char) <> '0'||json_value(event, '$.percentage' RETURNING char)) IS NOT FALSE
+                     AND '1'||json_value(event, '$.percentage' RETURNING char) BETWEEN '0'||json_value(event, '$.percentage' RETURNING char) AND 2||json_value(event, '$.percentage' RETURNING char)
+                     AND '1'||json_value(event, '$.percentage' RETURNING char) NOT BETWEEN '1'||json_value(event, '$.percentage' RETURNING char) AND '0'||json_value(event, '$.percentage' RETURNING char)
+                     AND '1'||json_value(event, '$.percentage' RETURNING char) like '%'
+                     AND '1'||json_value(event, '$.percentage' RETURNING char) not like '__DOES_NOT_EXIST__%'
+                     AND '1'||json_value(event, '$.percentage' RETURNING char) IN ('0'||json_value(event, '$.percentage' RETURNING char),
+                                                                                   1||json_value(event, '$.percentage' RETURNING char),
+                                                                                   2||json_value(event, '$.percentage' RETURNING char))
+                     AND '1'||json_value(event, '$.percentage' RETURNING char) NOT IN ('0'||json_value(event, '$.percentage' RETURNING char),
+                                                                                       2||json_value(event, '$.percentage' RETURNING char))))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          '1'||json_value(event, '$.percentage' RETURNING char),
+                          count(*)
+   FROM kttm_nested
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND ('1'||json_value(event, '$.percentage' RETURNING char) IS NULL
+          OR ('1'||json_value(event, '$.percentage' RETURNING char) = 1||json_value(event, '$.percentage' RETURNING char)
+              AND '1'||json_value(event, '$.percentage' RETURNING char) IS NOT DISTINCT
+              FROM 1||json_value(event, '$.percentage' RETURNING char)
+              AND '1'||json_value(event, '$.percentage' RETURNING char) <> '0'||json_value(event, '$.percentage' RETURNING char)
+              AND ('1'||json_value(event, '$.percentage' RETURNING char) IS DISTINCT
+                   FROM '0'||json_value(event, '$.percentage' RETURNING char))
+              AND '1'||json_value(event, '$.percentage' RETURNING char) > '0'||json_value(event, '$.percentage' RETURNING char)
+              AND '1'||json_value(event, '$.percentage' RETURNING char) >= '0'||json_value(event, '$.percentage' RETURNING char)
+              AND '1'||json_value(event, '$.percentage' RETURNING char) < 2||json_value(event, '$.percentage' RETURNING char)
+              AND '1'||json_value(event, '$.percentage' RETURNING char) <= 2||json_value(event, '$.percentage' RETURNING char)
+              AND ('1'||json_value(event, '$.percentage' RETURNING char) <> '0'||json_value(event, '$.percentage' RETURNING char)) IS TRUE
+              AND ('1'||json_value(event, '$.percentage' RETURNING char) = '0'||json_value(event, '$.percentage' RETURNING char)) IS NOT TRUE
+              AND ('1'||json_value(event, '$.percentage' RETURNING char) = '0'||json_value(event, '$.percentage' RETURNING char)) IS FALSE
+              AND ('1'||json_value(event, '$.percentage' RETURNING char) <> '0'||json_value(event, '$.percentage' RETURNING char)) IS NOT FALSE
+              AND '1'||json_value(event, '$.percentage' RETURNING char) BETWEEN '0'||json_value(event, '$.percentage' RETURNING char) AND 2||json_value(event, '$.percentage' RETURNING char)
+              AND '1'||json_value(event, '$.percentage' RETURNING char) NOT BETWEEN '1'||json_value(event, '$.percentage' RETURNING char) AND '0'||json_value(event, '$.percentage' RETURNING char)
+              AND '1'||json_value(event, '$.percentage' RETURNING char) like '%'
+              AND '1'||json_value(event, '$.percentage' RETURNING char) not like '__DOES_NOT_EXIST__%'
+              AND '1'||json_value(event, '$.percentage' RETURNING char) IN ('0'||json_value(event, '$.percentage' RETURNING char),
+                                                                            1||json_value(event, '$.percentage' RETURNING char),
+                                                                            2||json_value(event, '$.percentage' RETURNING char))
+              AND '1'||json_value(event, '$.percentage' RETURNING char) NOT IN ('0'||json_value(event, '$.percentage' RETURNING char),
+                                                                                2||json_value(event, '$.percentage' RETURNING char))))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TEST_ID: A8: json_value_returning_varchar
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||json_value(event, '$.percentage' RETURNING varchar) IS NULL
+       OR ('1'||json_value(event, '$.percentage' RETURNING varchar) = 1||json_value(event, '$.percentage' RETURNING varchar)
+           AND '1'||json_value(event, '$.percentage' RETURNING varchar) IS NOT DISTINCT
+           FROM 1||json_value(event, '$.percentage' RETURNING varchar)
+           AND '1'||json_value(event, '$.percentage' RETURNING varchar) <> '0'||json_value(event, '$.percentage' RETURNING varchar)
+           AND ('1'||json_value(event, '$.percentage' RETURNING varchar) IS DISTINCT
+                FROM '0'||json_value(event, '$.percentage' RETURNING varchar))
+           AND '1'||json_value(event, '$.percentage' RETURNING varchar) > '0'||json_value(event, '$.percentage' RETURNING varchar)
+           AND '1'||json_value(event, '$.percentage' RETURNING varchar) >= '0'||json_value(event, '$.percentage' RETURNING varchar)
+           AND '1'||json_value(event, '$.percentage' RETURNING varchar) < 2||json_value(event, '$.percentage' RETURNING varchar)
+           AND '1'||json_value(event, '$.percentage' RETURNING varchar) <= 2||json_value(event, '$.percentage' RETURNING varchar)
+           AND ('1'||json_value(event, '$.percentage' RETURNING varchar) <> '0'||json_value(event, '$.percentage' RETURNING varchar)) IS TRUE
+           AND ('1'||json_value(event, '$.percentage' RETURNING varchar) = '0'||json_value(event, '$.percentage' RETURNING varchar)) IS NOT TRUE
+           AND ('1'||json_value(event, '$.percentage' RETURNING varchar) = '0'||json_value(event, '$.percentage' RETURNING varchar)) IS FALSE
+           AND ('1'||json_value(event, '$.percentage' RETURNING varchar) <> '0'||json_value(event, '$.percentage' RETURNING varchar)) IS NOT FALSE
+           AND '1'||json_value(event, '$.percentage' RETURNING varchar) BETWEEN '0'||json_value(event, '$.percentage' RETURNING varchar) AND 2||json_value(event, '$.percentage' RETURNING varchar)
+           AND '1'||json_value(event, '$.percentage' RETURNING varchar) NOT BETWEEN '1'||json_value(event, '$.percentage' RETURNING varchar) AND '0'||json_value(event, '$.percentage' RETURNING varchar)
+           AND '1'||json_value(event, '$.percentage' RETURNING varchar) like '%'
+           AND '1'||json_value(event, '$.percentage' RETURNING varchar) not like '__DOES_NOT_EXIST__%'
+           AND '1'||json_value(event, '$.percentage' RETURNING varchar) IN ('0'||json_value(event, '$.percentage' RETURNING varchar),
+                                                                            1||json_value(event, '$.percentage' RETURNING varchar),
+                                                                            2||json_value(event, '$.percentage' RETURNING varchar))
+           AND '1'||json_value(event, '$.percentage' RETURNING varchar) NOT IN ('0'||json_value(event, '$.percentage' RETURNING varchar),
+                                                                                2||json_value(event, '$.percentage' RETURNING varchar)))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||json_value(event, '$.percentage' RETURNING varchar) IS NULL
+       OR '1'||json_value(event, '$.percentage' RETURNING varchar) IN
+         (SELECT '1'||json_value(event, '$.percentage' RETURNING varchar)
+          FROM kttm_nested
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND ('1'||json_value(event, '$.percentage' RETURNING varchar) IS NULL
+                 OR ('1'||json_value(event, '$.percentage' RETURNING varchar) = 1||json_value(event, '$.percentage' RETURNING varchar)
+                     AND '1'||json_value(event, '$.percentage' RETURNING varchar) IS NOT DISTINCT
+                     FROM 1||json_value(event, '$.percentage' RETURNING varchar)
+                     AND '1'||json_value(event, '$.percentage' RETURNING varchar) <> '0'||json_value(event, '$.percentage' RETURNING varchar)
+                     AND ('1'||json_value(event, '$.percentage' RETURNING varchar) IS DISTINCT
+                          FROM '0'||json_value(event, '$.percentage' RETURNING varchar))
+                     AND '1'||json_value(event, '$.percentage' RETURNING varchar) > '0'||json_value(event, '$.percentage' RETURNING varchar)
+                     AND '1'||json_value(event, '$.percentage' RETURNING varchar) >= '0'||json_value(event, '$.percentage' RETURNING varchar)
+                     AND '1'||json_value(event, '$.percentage' RETURNING varchar) < 2||json_value(event, '$.percentage' RETURNING varchar)
+                     AND '1'||json_value(event, '$.percentage' RETURNING varchar) <= 2||json_value(event, '$.percentage' RETURNING varchar)
+                     AND ('1'||json_value(event, '$.percentage' RETURNING varchar) <> '0'||json_value(event, '$.percentage' RETURNING varchar)) IS TRUE
+                     AND ('1'||json_value(event, '$.percentage' RETURNING varchar) = '0'||json_value(event, '$.percentage' RETURNING varchar)) IS NOT TRUE
+                     AND ('1'||json_value(event, '$.percentage' RETURNING varchar) = '0'||json_value(event, '$.percentage' RETURNING varchar)) IS FALSE
+                     AND ('1'||json_value(event, '$.percentage' RETURNING varchar) <> '0'||json_value(event, '$.percentage' RETURNING varchar)) IS NOT FALSE
+                     AND '1'||json_value(event, '$.percentage' RETURNING varchar) BETWEEN '0'||json_value(event, '$.percentage' RETURNING varchar) AND 2||json_value(event, '$.percentage' RETURNING varchar)
+                     AND '1'||json_value(event, '$.percentage' RETURNING varchar) NOT BETWEEN '1'||json_value(event, '$.percentage' RETURNING varchar) AND '0'||json_value(event, '$.percentage' RETURNING varchar)
+                     AND '1'||json_value(event, '$.percentage' RETURNING varchar) like '%'
+                     AND '1'||json_value(event, '$.percentage' RETURNING varchar) not like '__DOES_NOT_EXIST__%'
+                     AND '1'||json_value(event, '$.percentage' RETURNING varchar) IN ('0'||json_value(event, '$.percentage' RETURNING varchar),
+                                                                                      1||json_value(event, '$.percentage' RETURNING varchar),
+                                                                                      2||json_value(event, '$.percentage' RETURNING varchar))
+                     AND '1'||json_value(event, '$.percentage' RETURNING varchar) NOT IN ('0'||json_value(event, '$.percentage' RETURNING varchar),
+                                                                                          2||json_value(event, '$.percentage' RETURNING varchar))))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          '1'||json_value(event, '$.percentage' RETURNING varchar),
+                          count(*)
+   FROM kttm_nested
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND ('1'||json_value(event, '$.percentage' RETURNING varchar) IS NULL
+          OR ('1'||json_value(event, '$.percentage' RETURNING varchar) = 1||json_value(event, '$.percentage' RETURNING varchar)
+              AND '1'||json_value(event, '$.percentage' RETURNING varchar) IS NOT DISTINCT
+              FROM 1||json_value(event, '$.percentage' RETURNING varchar)
+              AND '1'||json_value(event, '$.percentage' RETURNING varchar) <> '0'||json_value(event, '$.percentage' RETURNING varchar)
+              AND ('1'||json_value(event, '$.percentage' RETURNING varchar) IS DISTINCT
+                   FROM '0'||json_value(event, '$.percentage' RETURNING varchar))
+              AND '1'||json_value(event, '$.percentage' RETURNING varchar) > '0'||json_value(event, '$.percentage' RETURNING varchar)
+              AND '1'||json_value(event, '$.percentage' RETURNING varchar) >= '0'||json_value(event, '$.percentage' RETURNING varchar)
+              AND '1'||json_value(event, '$.percentage' RETURNING varchar) < 2||json_value(event, '$.percentage' RETURNING varchar)
+              AND '1'||json_value(event, '$.percentage' RETURNING varchar) <= 2||json_value(event, '$.percentage' RETURNING varchar)
+              AND ('1'||json_value(event, '$.percentage' RETURNING varchar) <> '0'||json_value(event, '$.percentage' RETURNING varchar)) IS TRUE
+              AND ('1'||json_value(event, '$.percentage' RETURNING varchar) = '0'||json_value(event, '$.percentage' RETURNING varchar)) IS NOT TRUE
+              AND ('1'||json_value(event, '$.percentage' RETURNING varchar) = '0'||json_value(event, '$.percentage' RETURNING varchar)) IS FALSE
+              AND ('1'||json_value(event, '$.percentage' RETURNING varchar) <> '0'||json_value(event, '$.percentage' RETURNING varchar)) IS NOT FALSE
+              AND '1'||json_value(event, '$.percentage' RETURNING varchar) BETWEEN '0'||json_value(event, '$.percentage' RETURNING varchar) AND 2||json_value(event, '$.percentage' RETURNING varchar)
+              AND '1'||json_value(event, '$.percentage' RETURNING varchar) NOT BETWEEN '1'||json_value(event, '$.percentage' RETURNING varchar) AND '0'||json_value(event, '$.percentage' RETURNING varchar)
+              AND '1'||json_value(event, '$.percentage' RETURNING varchar) like '%'
+              AND '1'||json_value(event, '$.percentage' RETURNING varchar) not like '__DOES_NOT_EXIST__%'
+              AND '1'||json_value(event, '$.percentage' RETURNING varchar) IN ('0'||json_value(event, '$.percentage' RETURNING varchar),
+                                                                               1||json_value(event, '$.percentage' RETURNING varchar),
+                                                                               2||json_value(event, '$.percentage' RETURNING varchar))
+              AND '1'||json_value(event, '$.percentage' RETURNING varchar) NOT IN ('0'||json_value(event, '$.percentage' RETURNING varchar),
+                                                                                   2||json_value(event, '$.percentage' RETURNING varchar))))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TEST_ID: A9: json_value_returning_bigint
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (json_value(event, '$.percentage' RETURNING bigint)+1 IS NULL
+       OR (json_value(event, '$.percentage' RETURNING bigint)+1 = json_value(event, '$.percentage' RETURNING bigint)+1
+           AND json_value(event, '$.percentage' RETURNING bigint)+1 IS NOT DISTINCT
+           FROM json_value(event, '$.percentage' RETURNING bigint)+1
+           AND json_value(event, '$.percentage' RETURNING bigint)+1 <> json_value(event, '$.percentage' RETURNING bigint)
+           AND (json_value(event, '$.percentage' RETURNING bigint)+1 IS DISTINCT
+                FROM json_value(event, '$.percentage' RETURNING bigint))
+           AND json_value(event, '$.percentage' RETURNING bigint)+1 > json_value(event, '$.percentage' RETURNING bigint)
+           AND json_value(event, '$.percentage' RETURNING bigint)+1 >= json_value(event, '$.percentage' RETURNING bigint)
+           AND json_value(event, '$.percentage' RETURNING bigint)+1 < json_value(event, '$.percentage' RETURNING bigint)+2
+           AND json_value(event, '$.percentage' RETURNING bigint)+1 <= json_value(event, '$.percentage' RETURNING bigint)+2
+           AND (json_value(event, '$.percentage' RETURNING bigint)+1 <> json_value(event, '$.percentage' RETURNING bigint)) IS TRUE
+           AND (json_value(event, '$.percentage' RETURNING bigint)+1 = json_value(event, '$.percentage' RETURNING bigint)) IS NOT TRUE
+           AND (json_value(event, '$.percentage' RETURNING bigint)+1 = json_value(event, '$.percentage' RETURNING bigint)) IS FALSE
+           AND (json_value(event, '$.percentage' RETURNING bigint)+1 <> json_value(event, '$.percentage' RETURNING bigint)) IS NOT FALSE
+           AND json_value(event, '$.percentage' RETURNING bigint)+1 BETWEEN json_value(event, '$.percentage' RETURNING bigint) AND json_value(event, '$.percentage' RETURNING bigint)+2
+           AND json_value(event, '$.percentage' RETURNING bigint)+1 NOT BETWEEN json_value(event, '$.percentage' RETURNING bigint)+1 AND json_value(event, '$.percentage' RETURNING bigint)
+           AND json_value(event, '$.percentage' RETURNING bigint)+1 like '%'
+           AND json_value(event, '$.percentage' RETURNING bigint)+1 not like '__DOES_NOT_EXIST__%'
+           AND json_value(event, '$.percentage' RETURNING bigint)+1 IN (json_value(event, '$.percentage' RETURNING bigint),
+                                                                        json_value(event, '$.percentage' RETURNING bigint)+1,
+                                                                        json_value(event, '$.percentage' RETURNING bigint)+2)
+           AND json_value(event, '$.percentage' RETURNING bigint)+1 NOT IN (json_value(event, '$.percentage' RETURNING bigint),
+                                                                            json_value(event, '$.percentage' RETURNING bigint)+2))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (json_value(event, '$.percentage' RETURNING bigint)+1 IS NULL
+       OR json_value(event, '$.percentage' RETURNING bigint)+1 IN
+         (SELECT json_value(event, '$.percentage' RETURNING bigint)+1
+          FROM kttm_nested
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND (json_value(event, '$.percentage' RETURNING bigint)+1 IS NULL
+                 OR (json_value(event, '$.percentage' RETURNING bigint)+1 = json_value(event, '$.percentage' RETURNING bigint)+1
+                     AND json_value(event, '$.percentage' RETURNING bigint)+1 IS NOT DISTINCT
+                     FROM json_value(event, '$.percentage' RETURNING bigint)+1
+                     AND json_value(event, '$.percentage' RETURNING bigint)+1 <> json_value(event, '$.percentage' RETURNING bigint)
+                     AND (json_value(event, '$.percentage' RETURNING bigint)+1 IS DISTINCT
+                          FROM json_value(event, '$.percentage' RETURNING bigint))
+                     AND json_value(event, '$.percentage' RETURNING bigint)+1 > json_value(event, '$.percentage' RETURNING bigint)
+                     AND json_value(event, '$.percentage' RETURNING bigint)+1 >= json_value(event, '$.percentage' RETURNING bigint)
+                     AND json_value(event, '$.percentage' RETURNING bigint)+1 < json_value(event, '$.percentage' RETURNING bigint)+2
+                     AND json_value(event, '$.percentage' RETURNING bigint)+1 <= json_value(event, '$.percentage' RETURNING bigint)+2
+                     AND (json_value(event, '$.percentage' RETURNING bigint)+1 <> json_value(event, '$.percentage' RETURNING bigint)) IS TRUE
+                     AND (json_value(event, '$.percentage' RETURNING bigint)+1 = json_value(event, '$.percentage' RETURNING bigint)) IS NOT TRUE
+                     AND (json_value(event, '$.percentage' RETURNING bigint)+1 = json_value(event, '$.percentage' RETURNING bigint)) IS FALSE
+                     AND (json_value(event, '$.percentage' RETURNING bigint)+1 <> json_value(event, '$.percentage' RETURNING bigint)) IS NOT FALSE
+                     AND json_value(event, '$.percentage' RETURNING bigint)+1 BETWEEN json_value(event, '$.percentage' RETURNING bigint) AND json_value(event, '$.percentage' RETURNING bigint)+2
+                     AND json_value(event, '$.percentage' RETURNING bigint)+1 NOT BETWEEN json_value(event, '$.percentage' RETURNING bigint)+1 AND json_value(event, '$.percentage' RETURNING bigint)
+                     AND json_value(event, '$.percentage' RETURNING bigint)+1 like '%'
+                     AND json_value(event, '$.percentage' RETURNING bigint)+1 not like '__DOES_NOT_EXIST__%'
+                     AND json_value(event, '$.percentage' RETURNING bigint)+1 IN (json_value(event, '$.percentage' RETURNING bigint),
+                                                                                  json_value(event, '$.percentage' RETURNING bigint)+1,
+                                                                                  json_value(event, '$.percentage' RETURNING bigint)+2)
+                     AND json_value(event, '$.percentage' RETURNING bigint)+1 NOT IN (json_value(event, '$.percentage' RETURNING bigint),
+                                                                                      json_value(event, '$.percentage' RETURNING bigint)+2)))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          json_value(event, '$.percentage' RETURNING bigint)+1,
+                          count(*)
+   FROM kttm_nested
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND (json_value(event, '$.percentage' RETURNING bigint)+1 IS NULL
+          OR (json_value(event, '$.percentage' RETURNING bigint)+1 = json_value(event, '$.percentage' RETURNING bigint)+1
+              AND json_value(event, '$.percentage' RETURNING bigint)+1 IS NOT DISTINCT
+              FROM json_value(event, '$.percentage' RETURNING bigint)+1
+              AND json_value(event, '$.percentage' RETURNING bigint)+1 <> json_value(event, '$.percentage' RETURNING bigint)
+              AND (json_value(event, '$.percentage' RETURNING bigint)+1 IS DISTINCT
+                   FROM json_value(event, '$.percentage' RETURNING bigint))
+              AND json_value(event, '$.percentage' RETURNING bigint)+1 > json_value(event, '$.percentage' RETURNING bigint)
+              AND json_value(event, '$.percentage' RETURNING bigint)+1 >= json_value(event, '$.percentage' RETURNING bigint)
+              AND json_value(event, '$.percentage' RETURNING bigint)+1 < json_value(event, '$.percentage' RETURNING bigint)+2
+              AND json_value(event, '$.percentage' RETURNING bigint)+1 <= json_value(event, '$.percentage' RETURNING bigint)+2
+              AND (json_value(event, '$.percentage' RETURNING bigint)+1 <> json_value(event, '$.percentage' RETURNING bigint)) IS TRUE
+              AND (json_value(event, '$.percentage' RETURNING bigint)+1 = json_value(event, '$.percentage' RETURNING bigint)) IS NOT TRUE
+              AND (json_value(event, '$.percentage' RETURNING bigint)+1 = json_value(event, '$.percentage' RETURNING bigint)) IS FALSE
+              AND (json_value(event, '$.percentage' RETURNING bigint)+1 <> json_value(event, '$.percentage' RETURNING bigint)) IS NOT FALSE
+              AND json_value(event, '$.percentage' RETURNING bigint)+1 BETWEEN json_value(event, '$.percentage' RETURNING bigint) AND json_value(event, '$.percentage' RETURNING bigint)+2
+              AND json_value(event, '$.percentage' RETURNING bigint)+1 NOT BETWEEN json_value(event, '$.percentage' RETURNING bigint)+1 AND json_value(event, '$.percentage' RETURNING bigint)
+              AND json_value(event, '$.percentage' RETURNING bigint)+1 like '%'
+              AND json_value(event, '$.percentage' RETURNING bigint)+1 not like '__DOES_NOT_EXIST__%'
+              AND json_value(event, '$.percentage' RETURNING bigint)+1 IN (json_value(event, '$.percentage' RETURNING bigint),
+                                                                           json_value(event, '$.percentage' RETURNING bigint)+1,
+                                                                           json_value(event, '$.percentage' RETURNING bigint)+2)
+              AND json_value(event, '$.percentage' RETURNING bigint)+1 NOT IN (json_value(event, '$.percentage' RETURNING bigint),
+                                                                               json_value(event, '$.percentage' RETURNING bigint)+2)))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TEST_ID: A10: json_value_returning_double
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (json_value(event, '$.percentage' RETURNING DOUBLE)+1 IS NULL
+       OR (json_value(event, '$.percentage' RETURNING DOUBLE)+1 = json_value(event, '$.percentage' RETURNING DOUBLE)+1
+           AND json_value(event, '$.percentage' RETURNING DOUBLE)+1 IS NOT DISTINCT
+           FROM json_value(event, '$.percentage' RETURNING DOUBLE)+1
+           AND json_value(event, '$.percentage' RETURNING DOUBLE)+1 <> json_value(event, '$.percentage' RETURNING DOUBLE)
+           AND (json_value(event, '$.percentage' RETURNING DOUBLE)+1 IS DISTINCT
+                FROM json_value(event, '$.percentage' RETURNING DOUBLE))
+           AND json_value(event, '$.percentage' RETURNING DOUBLE)+1 > json_value(event, '$.percentage' RETURNING DOUBLE)
+           AND json_value(event, '$.percentage' RETURNING DOUBLE)+1 >= json_value(event, '$.percentage' RETURNING DOUBLE)
+           AND json_value(event, '$.percentage' RETURNING DOUBLE)+1 < json_value(event, '$.percentage' RETURNING DOUBLE)+2
+           AND json_value(event, '$.percentage' RETURNING DOUBLE)+1 <= json_value(event, '$.percentage' RETURNING DOUBLE)+2
+           AND (json_value(event, '$.percentage' RETURNING DOUBLE)+1 <> json_value(event, '$.percentage' RETURNING DOUBLE)) IS TRUE
+           AND (json_value(event, '$.percentage' RETURNING DOUBLE)+1 = json_value(event, '$.percentage' RETURNING DOUBLE)) IS NOT TRUE
+           AND (json_value(event, '$.percentage' RETURNING DOUBLE)+1 = json_value(event, '$.percentage' RETURNING DOUBLE)) IS FALSE
+           AND (json_value(event, '$.percentage' RETURNING DOUBLE)+1 <> json_value(event, '$.percentage' RETURNING DOUBLE)) IS NOT FALSE
+           AND json_value(event, '$.percentage' RETURNING DOUBLE)+1 BETWEEN json_value(event, '$.percentage' RETURNING DOUBLE) AND json_value(event, '$.percentage' RETURNING DOUBLE)+2
+           AND json_value(event, '$.percentage' RETURNING DOUBLE)+1 NOT BETWEEN json_value(event, '$.percentage' RETURNING DOUBLE)+1 AND json_value(event, '$.percentage' RETURNING DOUBLE)
+           AND json_value(event, '$.percentage' RETURNING DOUBLE)+1 like '%'
+           AND json_value(event, '$.percentage' RETURNING DOUBLE)+1 not like '__DOES_NOT_EXIST__%'
+           AND json_value(event, '$.percentage' RETURNING DOUBLE)+1 IN (json_value(event, '$.percentage' RETURNING DOUBLE),
+                                                                        json_value(event, '$.percentage' RETURNING DOUBLE)+1,
+                                                                        json_value(event, '$.percentage' RETURNING DOUBLE)+2)
+           AND json_value(event, '$.percentage' RETURNING DOUBLE)+1 NOT IN (json_value(event, '$.percentage' RETURNING DOUBLE),
+                                                                            json_value(event, '$.percentage' RETURNING DOUBLE)+2))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (json_value(event, '$.percentage' RETURNING DOUBLE)+1 IS NULL
+       OR json_value(event, '$.percentage' RETURNING DOUBLE)+1 IN
+         (SELECT json_value(event, '$.percentage' RETURNING DOUBLE)+1
+          FROM kttm_nested
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND (json_value(event, '$.percentage' RETURNING DOUBLE)+1 IS NULL
+                 OR (json_value(event, '$.percentage' RETURNING DOUBLE)+1 = json_value(event, '$.percentage' RETURNING DOUBLE)+1
+                     AND json_value(event, '$.percentage' RETURNING DOUBLE)+1 IS NOT DISTINCT
+                     FROM json_value(event, '$.percentage' RETURNING DOUBLE)+1
+                     AND json_value(event, '$.percentage' RETURNING DOUBLE)+1 <> json_value(event, '$.percentage' RETURNING DOUBLE)
+                     AND (json_value(event, '$.percentage' RETURNING DOUBLE)+1 IS DISTINCT
+                          FROM json_value(event, '$.percentage' RETURNING DOUBLE))
+                     AND json_value(event, '$.percentage' RETURNING DOUBLE)+1 > json_value(event, '$.percentage' RETURNING DOUBLE)
+                     AND json_value(event, '$.percentage' RETURNING DOUBLE)+1 >= json_value(event, '$.percentage' RETURNING DOUBLE)
+                     AND json_value(event, '$.percentage' RETURNING DOUBLE)+1 < json_value(event, '$.percentage' RETURNING DOUBLE)+2
+                     AND json_value(event, '$.percentage' RETURNING DOUBLE)+1 <= json_value(event, '$.percentage' RETURNING DOUBLE)+2
+                     AND (json_value(event, '$.percentage' RETURNING DOUBLE)+1 <> json_value(event, '$.percentage' RETURNING DOUBLE)) IS TRUE
+                     AND (json_value(event, '$.percentage' RETURNING DOUBLE)+1 = json_value(event, '$.percentage' RETURNING DOUBLE)) IS NOT TRUE
+                     AND (json_value(event, '$.percentage' RETURNING DOUBLE)+1 = json_value(event, '$.percentage' RETURNING DOUBLE)) IS FALSE
+                     AND (json_value(event, '$.percentage' RETURNING DOUBLE)+1 <> json_value(event, '$.percentage' RETURNING DOUBLE)) IS NOT FALSE
+                     AND json_value(event, '$.percentage' RETURNING DOUBLE)+1 BETWEEN json_value(event, '$.percentage' RETURNING DOUBLE) AND json_value(event, '$.percentage' RETURNING DOUBLE)+2
+                     AND json_value(event, '$.percentage' RETURNING DOUBLE)+1 NOT BETWEEN json_value(event, '$.percentage' RETURNING DOUBLE)+1 AND json_value(event, '$.percentage' RETURNING DOUBLE)
+                     AND json_value(event, '$.percentage' RETURNING DOUBLE)+1 like '%'
+                     AND json_value(event, '$.percentage' RETURNING DOUBLE)+1 not like '__DOES_NOT_EXIST__%'
+                     AND json_value(event, '$.percentage' RETURNING DOUBLE)+1 IN (json_value(event, '$.percentage' RETURNING DOUBLE),
+                                                                                  json_value(event, '$.percentage' RETURNING DOUBLE)+1,
+                                                                                  json_value(event, '$.percentage' RETURNING DOUBLE)+2)
+                     AND json_value(event, '$.percentage' RETURNING DOUBLE)+1 NOT IN (json_value(event, '$.percentage' RETURNING DOUBLE),
+                                                                                      json_value(event, '$.percentage' RETURNING DOUBLE)+2)))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          json_value(event, '$.percentage' RETURNING DOUBLE)+1,
+                          count(*)
+   FROM kttm_nested
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND (json_value(event, '$.percentage' RETURNING DOUBLE)+1 IS NULL
+          OR (json_value(event, '$.percentage' RETURNING DOUBLE)+1 = json_value(event, '$.percentage' RETURNING DOUBLE)+1
+              AND json_value(event, '$.percentage' RETURNING DOUBLE)+1 IS NOT DISTINCT
+              FROM json_value(event, '$.percentage' RETURNING DOUBLE)+1
+              AND json_value(event, '$.percentage' RETURNING DOUBLE)+1 <> json_value(event, '$.percentage' RETURNING DOUBLE)
+              AND (json_value(event, '$.percentage' RETURNING DOUBLE)+1 IS DISTINCT
+                   FROM json_value(event, '$.percentage' RETURNING DOUBLE))
+              AND json_value(event, '$.percentage' RETURNING DOUBLE)+1 > json_value(event, '$.percentage' RETURNING DOUBLE)
+              AND json_value(event, '$.percentage' RETURNING DOUBLE)+1 >= json_value(event, '$.percentage' RETURNING DOUBLE)
+              AND json_value(event, '$.percentage' RETURNING DOUBLE)+1 < json_value(event, '$.percentage' RETURNING DOUBLE)+2
+              AND json_value(event, '$.percentage' RETURNING DOUBLE)+1 <= json_value(event, '$.percentage' RETURNING DOUBLE)+2
+              AND (json_value(event, '$.percentage' RETURNING DOUBLE)+1 <> json_value(event, '$.percentage' RETURNING DOUBLE)) IS TRUE
+              AND (json_value(event, '$.percentage' RETURNING DOUBLE)+1 = json_value(event, '$.percentage' RETURNING DOUBLE)) IS NOT TRUE
+              AND (json_value(event, '$.percentage' RETURNING DOUBLE)+1 = json_value(event, '$.percentage' RETURNING DOUBLE)) IS FALSE
+              AND (json_value(event, '$.percentage' RETURNING DOUBLE)+1 <> json_value(event, '$.percentage' RETURNING DOUBLE)) IS NOT FALSE
+              AND json_value(event, '$.percentage' RETURNING DOUBLE)+1 BETWEEN json_value(event, '$.percentage' RETURNING DOUBLE) AND json_value(event, '$.percentage' RETURNING DOUBLE)+2
+              AND json_value(event, '$.percentage' RETURNING DOUBLE)+1 NOT BETWEEN json_value(event, '$.percentage' RETURNING DOUBLE)+1 AND json_value(event, '$.percentage' RETURNING DOUBLE)
+              AND json_value(event, '$.percentage' RETURNING DOUBLE)+1 like '%'
+              AND json_value(event, '$.percentage' RETURNING DOUBLE)+1 not like '__DOES_NOT_EXIST__%'
+              AND json_value(event, '$.percentage' RETURNING DOUBLE)+1 IN (json_value(event, '$.percentage' RETURNING DOUBLE),
+                                                                           json_value(event, '$.percentage' RETURNING DOUBLE)+1,
+                                                                           json_value(event, '$.percentage' RETURNING DOUBLE)+2)
+              AND json_value(event, '$.percentage' RETURNING DOUBLE)+1 NOT IN (json_value(event, '$.percentage' RETURNING DOUBLE),
+                                                                               json_value(event, '$.percentage' RETURNING DOUBLE)+2)))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TEST_ID: A11: json_value_returning_timestamp
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (json_value(event, '$.percentage' RETURNING timestamp)+interval '1' YEAR IS NULL
+       OR (json_value(event, '$.percentage' RETURNING timestamp)+interval '1' YEAR = json_value(event, '$.percentage' RETURNING timestamp)+interval '1' YEAR
+           AND json_value(event, '$.percentage' RETURNING timestamp)+interval '1' YEAR IS NOT DISTINCT
+           FROM json_value(event, '$.percentage' RETURNING timestamp)+interval '1' YEAR
+           AND json_value(event, '$.percentage' RETURNING timestamp)+interval '1' YEAR <> json_value(event, '$.percentage' RETURNING timestamp)
+           AND (json_value(event, '$.percentage' RETURNING timestamp)+interval '1' YEAR IS DISTINCT
+                FROM json_value(event, '$.percentage' RETURNING timestamp))
+           AND json_value(event, '$.percentage' RETURNING timestamp)+interval '1' YEAR > json_value(event, '$.percentage' RETURNING timestamp)
+           AND json_value(event, '$.percentage' RETURNING timestamp)+interval '1' YEAR >= json_value(event, '$.percentage' RETURNING timestamp)
+           AND json_value(event, '$.percentage' RETURNING timestamp)+interval '1' YEAR < json_value(event, '$.percentage' RETURNING timestamp)+interval '2' YEAR
+           AND json_value(event, '$.percentage' RETURNING timestamp)+interval '1' YEAR <= json_value(event, '$.percentage' RETURNING timestamp)+interval '2' YEAR
+           AND (json_value(event, '$.percentage' RETURNING timestamp)+interval '1' YEAR <> json_value(event, '$.percentage' RETURNING timestamp)) IS TRUE
+           AND (json_value(event, '$.percentage' RETURNING timestamp)+interval '1' YEAR = json_value(event, '$.percentage' RETURNING timestamp)) IS NOT TRUE
+           AND (json_value(event, '$.percentage' RETURNING timestamp)+interval '1' YEAR = json_value(event, '$.percentage' RETURNING timestamp)) IS FALSE
+           AND (json_value(event, '$.percentage' RETURNING timestamp)+interval '1' YEAR <> json_value(event, '$.percentage' RETURNING timestamp)) IS NOT FALSE
+           AND json_value(event, '$.percentage' RETURNING timestamp)+interval '1' YEAR BETWEEN json_value(event, '$.percentage' RETURNING timestamp) AND json_value(event, '$.percentage' RETURNING timestamp)+interval '2' YEAR
+           AND json_value(event, '$.percentage' RETURNING timestamp)+interval '1' YEAR NOT BETWEEN json_value(event, '$.percentage' RETURNING timestamp)+interval '1' YEAR AND json_value(event, '$.percentage' RETURNING timestamp)
+           AND json_value(event, '$.percentage' RETURNING timestamp)+interval '1' YEAR like '%'
+           AND json_value(event, '$.percentage' RETURNING timestamp)+interval '1' YEAR not like '__DOES_NOT_EXIST__%'
+           AND json_value(event, '$.percentage' RETURNING timestamp)+interval '1' YEAR IN (json_value(event, '$.percentage' RETURNING timestamp),
+                                                                                           json_value(event, '$.percentage' RETURNING timestamp)+interval '1' YEAR,
+                                                                                           json_value(event, '$.percentage' RETURNING timestamp)+interval '2' YEAR)
+           AND json_value(event, '$.percentage' RETURNING timestamp)+interval '1' YEAR NOT IN (json_value(event, '$.percentage' RETURNING timestamp),
+                                                                                               json_value(event, '$.percentage' RETURNING timestamp)+interval '2' YEAR))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (json_value(event, '$.percentage' RETURNING timestamp)+interval '1' YEAR IS NULL
+       OR json_value(event, '$.percentage' RETURNING timestamp)+interval '1' YEAR IN
+         (SELECT json_value(event, '$.percentage' RETURNING timestamp)+interval '1' YEAR
+          FROM kttm_nested
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND (json_value(event, '$.percentage' RETURNING timestamp)+interval '1' YEAR IS NULL
+                 OR (json_value(event, '$.percentage' RETURNING timestamp)+interval '1' YEAR = json_value(event, '$.percentage' RETURNING timestamp)+interval '1' YEAR
+                     AND json_value(event, '$.percentage' RETURNING timestamp)+interval '1' YEAR IS NOT DISTINCT
+                     FROM json_value(event, '$.percentage' RETURNING timestamp)+interval '1' YEAR
+                     AND json_value(event, '$.percentage' RETURNING timestamp)+interval '1' YEAR <> json_value(event, '$.percentage' RETURNING timestamp)
+                     AND (json_value(event, '$.percentage' RETURNING timestamp)+interval '1' YEAR IS DISTINCT
+                          FROM json_value(event, '$.percentage' RETURNING timestamp))
+                     AND json_value(event, '$.percentage' RETURNING timestamp)+interval '1' YEAR > json_value(event, '$.percentage' RETURNING timestamp)
+                     AND json_value(event, '$.percentage' RETURNING timestamp)+interval '1' YEAR >= json_value(event, '$.percentage' RETURNING timestamp)
+                     AND json_value(event, '$.percentage' RETURNING timestamp)+interval '1' YEAR < json_value(event, '$.percentage' RETURNING timestamp)+interval '2' YEAR
+                     AND json_value(event, '$.percentage' RETURNING timestamp)+interval '1' YEAR <= json_value(event, '$.percentage' RETURNING timestamp)+interval '2' YEAR
+                     AND (json_value(event, '$.percentage' RETURNING timestamp)+interval '1' YEAR <> json_value(event, '$.percentage' RETURNING timestamp)) IS TRUE
+                     AND (json_value(event, '$.percentage' RETURNING timestamp)+interval '1' YEAR = json_value(event, '$.percentage' RETURNING timestamp)) IS NOT TRUE
+                     AND (json_value(event, '$.percentage' RETURNING timestamp)+interval '1' YEAR = json_value(event, '$.percentage' RETURNING timestamp)) IS FALSE
+                     AND (json_value(event, '$.percentage' RETURNING timestamp)+interval '1' YEAR <> json_value(event, '$.percentage' RETURNING timestamp)) IS NOT FALSE
+                     AND json_value(event, '$.percentage' RETURNING timestamp)+interval '1' YEAR BETWEEN json_value(event, '$.percentage' RETURNING timestamp) AND json_value(event, '$.percentage' RETURNING timestamp)+interval '2' YEAR
+                     AND json_value(event, '$.percentage' RETURNING timestamp)+interval '1' YEAR NOT BETWEEN json_value(event, '$.percentage' RETURNING timestamp)+interval '1' YEAR AND json_value(event, '$.percentage' RETURNING timestamp)
+                     AND json_value(event, '$.percentage' RETURNING timestamp)+interval '1' YEAR like '%'
+                     AND json_value(event, '$.percentage' RETURNING timestamp)+interval '1' YEAR not like '__DOES_NOT_EXIST__%'
+                     AND json_value(event, '$.percentage' RETURNING timestamp)+interval '1' YEAR IN (json_value(event, '$.percentage' RETURNING timestamp),
+                                                                                                     json_value(event, '$.percentage' RETURNING timestamp)+interval '1' YEAR,
+                                                                                                     json_value(event, '$.percentage' RETURNING timestamp)+interval '2' YEAR)
+                     AND json_value(event, '$.percentage' RETURNING timestamp)+interval '1' YEAR NOT IN (json_value(event, '$.percentage' RETURNING timestamp),
+                                                                                                         json_value(event, '$.percentage' RETURNING timestamp)+interval '2' YEAR)))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          json_value(event, '$.percentage' RETURNING timestamp)+interval '1' YEAR,
+                          count(*)
+   FROM kttm_nested
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND (json_value(event, '$.percentage' RETURNING timestamp)+interval '1' YEAR IS NULL
+          OR (json_value(event, '$.percentage' RETURNING timestamp)+interval '1' YEAR = json_value(event, '$.percentage' RETURNING timestamp)+interval '1' YEAR
+              AND json_value(event, '$.percentage' RETURNING timestamp)+interval '1' YEAR IS NOT DISTINCT
+              FROM json_value(event, '$.percentage' RETURNING timestamp)+interval '1' YEAR
+              AND json_value(event, '$.percentage' RETURNING timestamp)+interval '1' YEAR <> json_value(event, '$.percentage' RETURNING timestamp)
+              AND (json_value(event, '$.percentage' RETURNING timestamp)+interval '1' YEAR IS DISTINCT
+                   FROM json_value(event, '$.percentage' RETURNING timestamp))
+              AND json_value(event, '$.percentage' RETURNING timestamp)+interval '1' YEAR > json_value(event, '$.percentage' RETURNING timestamp)
+              AND json_value(event, '$.percentage' RETURNING timestamp)+interval '1' YEAR >= json_value(event, '$.percentage' RETURNING timestamp)
+              AND json_value(event, '$.percentage' RETURNING timestamp)+interval '1' YEAR < json_value(event, '$.percentage' RETURNING timestamp)+interval '2' YEAR
+              AND json_value(event, '$.percentage' RETURNING timestamp)+interval '1' YEAR <= json_value(event, '$.percentage' RETURNING timestamp)+interval '2' YEAR
+              AND (json_value(event, '$.percentage' RETURNING timestamp)+interval '1' YEAR <> json_value(event, '$.percentage' RETURNING timestamp)) IS TRUE
+              AND (json_value(event, '$.percentage' RETURNING timestamp)+interval '1' YEAR = json_value(event, '$.percentage' RETURNING timestamp)) IS NOT TRUE
+              AND (json_value(event, '$.percentage' RETURNING timestamp)+interval '1' YEAR = json_value(event, '$.percentage' RETURNING timestamp)) IS FALSE
+              AND (json_value(event, '$.percentage' RETURNING timestamp)+interval '1' YEAR <> json_value(event, '$.percentage' RETURNING timestamp)) IS NOT FALSE
+              AND json_value(event, '$.percentage' RETURNING timestamp)+interval '1' YEAR BETWEEN json_value(event, '$.percentage' RETURNING timestamp) AND json_value(event, '$.percentage' RETURNING timestamp)+interval '2' YEAR
+              AND json_value(event, '$.percentage' RETURNING timestamp)+interval '1' YEAR NOT BETWEEN json_value(event, '$.percentage' RETURNING timestamp)+interval '1' YEAR AND json_value(event, '$.percentage' RETURNING timestamp)
+              AND json_value(event, '$.percentage' RETURNING timestamp)+interval '1' YEAR like '%'
+              AND json_value(event, '$.percentage' RETURNING timestamp)+interval '1' YEAR not like '__DOES_NOT_EXIST__%'
+              AND json_value(event, '$.percentage' RETURNING timestamp)+interval '1' YEAR IN (json_value(event, '$.percentage' RETURNING timestamp),
+                                                                                              json_value(event, '$.percentage' RETURNING timestamp)+interval '1' YEAR,
+                                                                                              json_value(event, '$.percentage' RETURNING timestamp)+interval '2' YEAR)
+              AND json_value(event, '$.percentage' RETURNING timestamp)+interval '1' YEAR NOT IN (json_value(event, '$.percentage' RETURNING timestamp),
+                                                                                                  json_value(event, '$.percentage' RETURNING timestamp)+interval '2' YEAR)))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TEST_ID: A12: parse_json
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||to_json_string(parse_json(to_json_string(agent))) IS NULL
+       OR ('1'||to_json_string(parse_json(to_json_string(agent))) = 1||to_json_string(parse_json(to_json_string(agent)))
+           AND '1'||to_json_string(parse_json(to_json_string(agent))) IS NOT DISTINCT
+           FROM 1||to_json_string(parse_json(to_json_string(agent)))
+           AND '1'||to_json_string(parse_json(to_json_string(agent))) <> '0'||to_json_string(parse_json(to_json_string(agent)))
+           AND ('1'||to_json_string(parse_json(to_json_string(agent))) IS DISTINCT
+                FROM '0'||to_json_string(parse_json(to_json_string(agent))))
+           AND '1'||to_json_string(parse_json(to_json_string(agent))) > '0'||to_json_string(parse_json(to_json_string(agent)))
+           AND '1'||to_json_string(parse_json(to_json_string(agent))) >= '0'||to_json_string(parse_json(to_json_string(agent)))
+           AND '1'||to_json_string(parse_json(to_json_string(agent))) < 2||to_json_string(parse_json(to_json_string(agent)))
+           AND '1'||to_json_string(parse_json(to_json_string(agent))) <= 2||to_json_string(parse_json(to_json_string(agent)))
+           AND ('1'||to_json_string(parse_json(to_json_string(agent))) <> '0'||to_json_string(parse_json(to_json_string(agent)))) IS TRUE
+           AND ('1'||to_json_string(parse_json(to_json_string(agent))) = '0'||to_json_string(parse_json(to_json_string(agent)))) IS NOT TRUE
+           AND ('1'||to_json_string(parse_json(to_json_string(agent))) = '0'||to_json_string(parse_json(to_json_string(agent)))) IS FALSE
+           AND ('1'||to_json_string(parse_json(to_json_string(agent))) <> '0'||to_json_string(parse_json(to_json_string(agent)))) IS NOT FALSE
+           AND '1'||to_json_string(parse_json(to_json_string(agent))) BETWEEN '0'||to_json_string(parse_json(to_json_string(agent))) AND 2||to_json_string(parse_json(to_json_string(agent)))
+           AND '1'||to_json_string(parse_json(to_json_string(agent))) NOT BETWEEN '1'||to_json_string(parse_json(to_json_string(agent))) AND '0'||to_json_string(parse_json(to_json_string(agent)))
+           AND '1'||to_json_string(parse_json(to_json_string(agent))) like '%'
+           AND '1'||to_json_string(parse_json(to_json_string(agent))) not like '__DOES_NOT_EXIST__%'
+           AND '1'||to_json_string(parse_json(to_json_string(agent))) IN ('0'||to_json_string(parse_json(to_json_string(agent))),
+                                                                          1||to_json_string(parse_json(to_json_string(agent))),
+                                                                          2||to_json_string(parse_json(to_json_string(agent))))
+           AND '1'||to_json_string(parse_json(to_json_string(agent))) NOT IN ('0'||to_json_string(parse_json(to_json_string(agent))),
+                                                                              2||to_json_string(parse_json(to_json_string(agent)))))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||to_json_string(parse_json(to_json_string(agent))) IS NULL
+       OR '1'||to_json_string(parse_json(to_json_string(agent))) IN
+         (SELECT '1'||to_json_string(parse_json(to_json_string(agent)))
+          FROM kttm_nested
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND ('1'||to_json_string(parse_json(to_json_string(agent))) IS NULL
+                 OR ('1'||to_json_string(parse_json(to_json_string(agent))) = 1||to_json_string(parse_json(to_json_string(agent)))
+                     AND '1'||to_json_string(parse_json(to_json_string(agent))) IS NOT DISTINCT
+                     FROM 1||to_json_string(parse_json(to_json_string(agent)))
+                     AND '1'||to_json_string(parse_json(to_json_string(agent))) <> '0'||to_json_string(parse_json(to_json_string(agent)))
+                     AND ('1'||to_json_string(parse_json(to_json_string(agent))) IS DISTINCT
+                          FROM '0'||to_json_string(parse_json(to_json_string(agent))))
+                     AND '1'||to_json_string(parse_json(to_json_string(agent))) > '0'||to_json_string(parse_json(to_json_string(agent)))
+                     AND '1'||to_json_string(parse_json(to_json_string(agent))) >= '0'||to_json_string(parse_json(to_json_string(agent)))
+                     AND '1'||to_json_string(parse_json(to_json_string(agent))) < 2||to_json_string(parse_json(to_json_string(agent)))
+                     AND '1'||to_json_string(parse_json(to_json_string(agent))) <= 2||to_json_string(parse_json(to_json_string(agent)))
+                     AND ('1'||to_json_string(parse_json(to_json_string(agent))) <> '0'||to_json_string(parse_json(to_json_string(agent)))) IS TRUE
+                     AND ('1'||to_json_string(parse_json(to_json_string(agent))) = '0'||to_json_string(parse_json(to_json_string(agent)))) IS NOT TRUE
+                     AND ('1'||to_json_string(parse_json(to_json_string(agent))) = '0'||to_json_string(parse_json(to_json_string(agent)))) IS FALSE
+                     AND ('1'||to_json_string(parse_json(to_json_string(agent))) <> '0'||to_json_string(parse_json(to_json_string(agent)))) IS NOT FALSE
+                     AND '1'||to_json_string(parse_json(to_json_string(agent))) BETWEEN '0'||to_json_string(parse_json(to_json_string(agent))) AND 2||to_json_string(parse_json(to_json_string(agent)))
+                     AND '1'||to_json_string(parse_json(to_json_string(agent))) NOT BETWEEN '1'||to_json_string(parse_json(to_json_string(agent))) AND '0'||to_json_string(parse_json(to_json_string(agent)))
+                     AND '1'||to_json_string(parse_json(to_json_string(agent))) like '%'
+                     AND '1'||to_json_string(parse_json(to_json_string(agent))) not like '__DOES_NOT_EXIST__%'
+                     AND '1'||to_json_string(parse_json(to_json_string(agent))) IN ('0'||to_json_string(parse_json(to_json_string(agent))),
+                                                                                    1||to_json_string(parse_json(to_json_string(agent))),
+                                                                                    2||to_json_string(parse_json(to_json_string(agent))))
+                     AND '1'||to_json_string(parse_json(to_json_string(agent))) NOT IN ('0'||to_json_string(parse_json(to_json_string(agent))),
+                                                                                        2||to_json_string(parse_json(to_json_string(agent))))))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          '1'||to_json_string(parse_json(to_json_string(agent))),
+                          count(*)
+   FROM kttm_nested
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND ('1'||to_json_string(parse_json(to_json_string(agent))) IS NULL
+          OR ('1'||to_json_string(parse_json(to_json_string(agent))) = 1||to_json_string(parse_json(to_json_string(agent)))
+              AND '1'||to_json_string(parse_json(to_json_string(agent))) IS NOT DISTINCT
+              FROM 1||to_json_string(parse_json(to_json_string(agent)))
+              AND '1'||to_json_string(parse_json(to_json_string(agent))) <> '0'||to_json_string(parse_json(to_json_string(agent)))
+              AND ('1'||to_json_string(parse_json(to_json_string(agent))) IS DISTINCT
+                   FROM '0'||to_json_string(parse_json(to_json_string(agent))))
+              AND '1'||to_json_string(parse_json(to_json_string(agent))) > '0'||to_json_string(parse_json(to_json_string(agent)))
+              AND '1'||to_json_string(parse_json(to_json_string(agent))) >= '0'||to_json_string(parse_json(to_json_string(agent)))
+              AND '1'||to_json_string(parse_json(to_json_string(agent))) < 2||to_json_string(parse_json(to_json_string(agent)))
+              AND '1'||to_json_string(parse_json(to_json_string(agent))) <= 2||to_json_string(parse_json(to_json_string(agent)))
+              AND ('1'||to_json_string(parse_json(to_json_string(agent))) <> '0'||to_json_string(parse_json(to_json_string(agent)))) IS TRUE
+              AND ('1'||to_json_string(parse_json(to_json_string(agent))) = '0'||to_json_string(parse_json(to_json_string(agent)))) IS NOT TRUE
+              AND ('1'||to_json_string(parse_json(to_json_string(agent))) = '0'||to_json_string(parse_json(to_json_string(agent)))) IS FALSE
+              AND ('1'||to_json_string(parse_json(to_json_string(agent))) <> '0'||to_json_string(parse_json(to_json_string(agent)))) IS NOT FALSE
+              AND '1'||to_json_string(parse_json(to_json_string(agent))) BETWEEN '0'||to_json_string(parse_json(to_json_string(agent))) AND 2||to_json_string(parse_json(to_json_string(agent)))
+              AND '1'||to_json_string(parse_json(to_json_string(agent))) NOT BETWEEN '1'||to_json_string(parse_json(to_json_string(agent))) AND '0'||to_json_string(parse_json(to_json_string(agent)))
+              AND '1'||to_json_string(parse_json(to_json_string(agent))) like '%'
+              AND '1'||to_json_string(parse_json(to_json_string(agent))) not like '__DOES_NOT_EXIST__%'
+              AND '1'||to_json_string(parse_json(to_json_string(agent))) IN ('0'||to_json_string(parse_json(to_json_string(agent))),
+                                                                             1||to_json_string(parse_json(to_json_string(agent))),
+                                                                             2||to_json_string(parse_json(to_json_string(agent))))
+              AND '1'||to_json_string(parse_json(to_json_string(agent))) NOT IN ('0'||to_json_string(parse_json(to_json_string(agent))),
+                                                                                 2||to_json_string(parse_json(to_json_string(agent))))))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TEST_ID: A13: try_parse_json
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||to_json_string(try_parse_json(to_json_string(agent))) IS NULL
+       OR ('1'||to_json_string(try_parse_json(to_json_string(agent))) = 1||to_json_string(try_parse_json(to_json_string(agent)))
+           AND '1'||to_json_string(try_parse_json(to_json_string(agent))) IS NOT DISTINCT
+           FROM 1||to_json_string(try_parse_json(to_json_string(agent)))
+           AND '1'||to_json_string(try_parse_json(to_json_string(agent))) <> '0'||to_json_string(try_parse_json(to_json_string(agent)))
+           AND ('1'||to_json_string(try_parse_json(to_json_string(agent))) IS DISTINCT
+                FROM '0'||to_json_string(try_parse_json(to_json_string(agent))))
+           AND '1'||to_json_string(try_parse_json(to_json_string(agent))) > '0'||to_json_string(try_parse_json(to_json_string(agent)))
+           AND '1'||to_json_string(try_parse_json(to_json_string(agent))) >= '0'||to_json_string(try_parse_json(to_json_string(agent)))
+           AND '1'||to_json_string(try_parse_json(to_json_string(agent))) < 2||to_json_string(try_parse_json(to_json_string(agent)))
+           AND '1'||to_json_string(try_parse_json(to_json_string(agent))) <= 2||to_json_string(try_parse_json(to_json_string(agent)))
+           AND ('1'||to_json_string(try_parse_json(to_json_string(agent))) <> '0'||to_json_string(try_parse_json(to_json_string(agent)))) IS TRUE
+           AND ('1'||to_json_string(try_parse_json(to_json_string(agent))) = '0'||to_json_string(try_parse_json(to_json_string(agent)))) IS NOT TRUE
+           AND ('1'||to_json_string(try_parse_json(to_json_string(agent))) = '0'||to_json_string(try_parse_json(to_json_string(agent)))) IS FALSE
+           AND ('1'||to_json_string(try_parse_json(to_json_string(agent))) <> '0'||to_json_string(try_parse_json(to_json_string(agent)))) IS NOT FALSE
+           AND '1'||to_json_string(try_parse_json(to_json_string(agent))) BETWEEN '0'||to_json_string(try_parse_json(to_json_string(agent))) AND 2||to_json_string(try_parse_json(to_json_string(agent)))
+           AND '1'||to_json_string(try_parse_json(to_json_string(agent))) NOT BETWEEN '1'||to_json_string(try_parse_json(to_json_string(agent))) AND '0'||to_json_string(try_parse_json(to_json_string(agent)))
+           AND '1'||to_json_string(try_parse_json(to_json_string(agent))) like '%'
+           AND '1'||to_json_string(try_parse_json(to_json_string(agent))) not like '__DOES_NOT_EXIST__%'
+           AND '1'||to_json_string(try_parse_json(to_json_string(agent))) IN ('0'||to_json_string(try_parse_json(to_json_string(agent))),
+                                                                              1||to_json_string(try_parse_json(to_json_string(agent))),
+                                                                              2||to_json_string(try_parse_json(to_json_string(agent))))
+           AND '1'||to_json_string(try_parse_json(to_json_string(agent))) NOT IN ('0'||to_json_string(try_parse_json(to_json_string(agent))),
+                                                                                  2||to_json_string(try_parse_json(to_json_string(agent)))))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||to_json_string(try_parse_json(to_json_string(agent))) IS NULL
+       OR '1'||to_json_string(try_parse_json(to_json_string(agent))) IN
+         (SELECT '1'||to_json_string(try_parse_json(to_json_string(agent)))
+          FROM kttm_nested
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND ('1'||to_json_string(try_parse_json(to_json_string(agent))) IS NULL
+                 OR ('1'||to_json_string(try_parse_json(to_json_string(agent))) = 1||to_json_string(try_parse_json(to_json_string(agent)))
+                     AND '1'||to_json_string(try_parse_json(to_json_string(agent))) IS NOT DISTINCT
+                     FROM 1||to_json_string(try_parse_json(to_json_string(agent)))
+                     AND '1'||to_json_string(try_parse_json(to_json_string(agent))) <> '0'||to_json_string(try_parse_json(to_json_string(agent)))
+                     AND ('1'||to_json_string(try_parse_json(to_json_string(agent))) IS DISTINCT
+                          FROM '0'||to_json_string(try_parse_json(to_json_string(agent))))
+                     AND '1'||to_json_string(try_parse_json(to_json_string(agent))) > '0'||to_json_string(try_parse_json(to_json_string(agent)))
+                     AND '1'||to_json_string(try_parse_json(to_json_string(agent))) >= '0'||to_json_string(try_parse_json(to_json_string(agent)))
+                     AND '1'||to_json_string(try_parse_json(to_json_string(agent))) < 2||to_json_string(try_parse_json(to_json_string(agent)))
+                     AND '1'||to_json_string(try_parse_json(to_json_string(agent))) <= 2||to_json_string(try_parse_json(to_json_string(agent)))
+                     AND ('1'||to_json_string(try_parse_json(to_json_string(agent))) <> '0'||to_json_string(try_parse_json(to_json_string(agent)))) IS TRUE
+                     AND ('1'||to_json_string(try_parse_json(to_json_string(agent))) = '0'||to_json_string(try_parse_json(to_json_string(agent)))) IS NOT TRUE
+                     AND ('1'||to_json_string(try_parse_json(to_json_string(agent))) = '0'||to_json_string(try_parse_json(to_json_string(agent)))) IS FALSE
+                     AND ('1'||to_json_string(try_parse_json(to_json_string(agent))) <> '0'||to_json_string(try_parse_json(to_json_string(agent)))) IS NOT FALSE
+                     AND '1'||to_json_string(try_parse_json(to_json_string(agent))) BETWEEN '0'||to_json_string(try_parse_json(to_json_string(agent))) AND 2||to_json_string(try_parse_json(to_json_string(agent)))
+                     AND '1'||to_json_string(try_parse_json(to_json_string(agent))) NOT BETWEEN '1'||to_json_string(try_parse_json(to_json_string(agent))) AND '0'||to_json_string(try_parse_json(to_json_string(agent)))
+                     AND '1'||to_json_string(try_parse_json(to_json_string(agent))) like '%'
+                     AND '1'||to_json_string(try_parse_json(to_json_string(agent))) not like '__DOES_NOT_EXIST__%'
+                     AND '1'||to_json_string(try_parse_json(to_json_string(agent))) IN ('0'||to_json_string(try_parse_json(to_json_string(agent))),
+                                                                                        1||to_json_string(try_parse_json(to_json_string(agent))),
+                                                                                        2||to_json_string(try_parse_json(to_json_string(agent))))
+                     AND '1'||to_json_string(try_parse_json(to_json_string(agent))) NOT IN ('0'||to_json_string(try_parse_json(to_json_string(agent))),
+                                                                                            2||to_json_string(try_parse_json(to_json_string(agent))))))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          '1'||to_json_string(try_parse_json(to_json_string(agent))),
+                          count(*)
+   FROM kttm_nested
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND ('1'||to_json_string(try_parse_json(to_json_string(agent))) IS NULL
+          OR ('1'||to_json_string(try_parse_json(to_json_string(agent))) = 1||to_json_string(try_parse_json(to_json_string(agent)))
+              AND '1'||to_json_string(try_parse_json(to_json_string(agent))) IS NOT DISTINCT
+              FROM 1||to_json_string(try_parse_json(to_json_string(agent)))
+              AND '1'||to_json_string(try_parse_json(to_json_string(agent))) <> '0'||to_json_string(try_parse_json(to_json_string(agent)))
+              AND ('1'||to_json_string(try_parse_json(to_json_string(agent))) IS DISTINCT
+                   FROM '0'||to_json_string(try_parse_json(to_json_string(agent))))
+              AND '1'||to_json_string(try_parse_json(to_json_string(agent))) > '0'||to_json_string(try_parse_json(to_json_string(agent)))
+              AND '1'||to_json_string(try_parse_json(to_json_string(agent))) >= '0'||to_json_string(try_parse_json(to_json_string(agent)))
+              AND '1'||to_json_string(try_parse_json(to_json_string(agent))) < 2||to_json_string(try_parse_json(to_json_string(agent)))
+              AND '1'||to_json_string(try_parse_json(to_json_string(agent))) <= 2||to_json_string(try_parse_json(to_json_string(agent)))
+              AND ('1'||to_json_string(try_parse_json(to_json_string(agent))) <> '0'||to_json_string(try_parse_json(to_json_string(agent)))) IS TRUE
+              AND ('1'||to_json_string(try_parse_json(to_json_string(agent))) = '0'||to_json_string(try_parse_json(to_json_string(agent)))) IS NOT TRUE
+              AND ('1'||to_json_string(try_parse_json(to_json_string(agent))) = '0'||to_json_string(try_parse_json(to_json_string(agent)))) IS FALSE
+              AND ('1'||to_json_string(try_parse_json(to_json_string(agent))) <> '0'||to_json_string(try_parse_json(to_json_string(agent)))) IS NOT FALSE
+              AND '1'||to_json_string(try_parse_json(to_json_string(agent))) BETWEEN '0'||to_json_string(try_parse_json(to_json_string(agent))) AND 2||to_json_string(try_parse_json(to_json_string(agent)))
+              AND '1'||to_json_string(try_parse_json(to_json_string(agent))) NOT BETWEEN '1'||to_json_string(try_parse_json(to_json_string(agent))) AND '0'||to_json_string(try_parse_json(to_json_string(agent)))
+              AND '1'||to_json_string(try_parse_json(to_json_string(agent))) like '%'
+              AND '1'||to_json_string(try_parse_json(to_json_string(agent))) not like '__DOES_NOT_EXIST__%'
+              AND '1'||to_json_string(try_parse_json(to_json_string(agent))) IN ('0'||to_json_string(try_parse_json(to_json_string(agent))),
+                                                                                 1||to_json_string(try_parse_json(to_json_string(agent))),
+                                                                                 2||to_json_string(try_parse_json(to_json_string(agent))))
+              AND '1'||to_json_string(try_parse_json(to_json_string(agent))) NOT IN ('0'||to_json_string(try_parse_json(to_json_string(agent))),
+                                                                                     2||to_json_string(try_parse_json(to_json_string(agent))))))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TEST_ID: A14: to_json_string
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||to_json_string(agent) IS NULL
+       OR ('1'||to_json_string(agent) = 1||to_json_string(agent)
+           AND '1'||to_json_string(agent) IS NOT DISTINCT
+           FROM 1||to_json_string(agent)
+           AND '1'||to_json_string(agent) <> '0'||to_json_string(agent)
+           AND ('1'||to_json_string(agent) IS DISTINCT
+                FROM '0'||to_json_string(agent))
+           AND '1'||to_json_string(agent) > '0'||to_json_string(agent)
+           AND '1'||to_json_string(agent) >= '0'||to_json_string(agent)
+           AND '1'||to_json_string(agent) < 2||to_json_string(agent)
+           AND '1'||to_json_string(agent) <= 2||to_json_string(agent)
+           AND ('1'||to_json_string(agent) <> '0'||to_json_string(agent)) IS TRUE
+           AND ('1'||to_json_string(agent) = '0'||to_json_string(agent)) IS NOT TRUE
+           AND ('1'||to_json_string(agent) = '0'||to_json_string(agent)) IS FALSE
+           AND ('1'||to_json_string(agent) <> '0'||to_json_string(agent)) IS NOT FALSE
+           AND '1'||to_json_string(agent) BETWEEN '0'||to_json_string(agent) AND 2||to_json_string(agent)
+           AND '1'||to_json_string(agent) NOT BETWEEN '1'||to_json_string(agent) AND '0'||to_json_string(agent)
+           AND '1'||to_json_string(agent) like '%'
+           AND '1'||to_json_string(agent) not like '__DOES_NOT_EXIST__%'
+           AND '1'||to_json_string(agent) IN ('0'||to_json_string(agent),
+                                              1||to_json_string(agent),
+                                              2||to_json_string(agent))
+           AND '1'||to_json_string(agent) NOT IN ('0'||to_json_string(agent),
+                                                  2||to_json_string(agent)))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||to_json_string(agent) IS NULL
+       OR '1'||to_json_string(agent) IN
+         (SELECT '1'||to_json_string(agent)
+          FROM kttm_nested
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND ('1'||to_json_string(agent) IS NULL
+                 OR ('1'||to_json_string(agent) = 1||to_json_string(agent)
+                     AND '1'||to_json_string(agent) IS NOT DISTINCT
+                     FROM 1||to_json_string(agent)
+                     AND '1'||to_json_string(agent) <> '0'||to_json_string(agent)
+                     AND ('1'||to_json_string(agent) IS DISTINCT
+                          FROM '0'||to_json_string(agent))
+                     AND '1'||to_json_string(agent) > '0'||to_json_string(agent)
+                     AND '1'||to_json_string(agent) >= '0'||to_json_string(agent)
+                     AND '1'||to_json_string(agent) < 2||to_json_string(agent)
+                     AND '1'||to_json_string(agent) <= 2||to_json_string(agent)
+                     AND ('1'||to_json_string(agent) <> '0'||to_json_string(agent)) IS TRUE
+                     AND ('1'||to_json_string(agent) = '0'||to_json_string(agent)) IS NOT TRUE
+                     AND ('1'||to_json_string(agent) = '0'||to_json_string(agent)) IS FALSE
+                     AND ('1'||to_json_string(agent) <> '0'||to_json_string(agent)) IS NOT FALSE
+                     AND '1'||to_json_string(agent) BETWEEN '0'||to_json_string(agent) AND 2||to_json_string(agent)
+                     AND '1'||to_json_string(agent) NOT BETWEEN '1'||to_json_string(agent) AND '0'||to_json_string(agent)
+                     AND '1'||to_json_string(agent) like '%'
+                     AND '1'||to_json_string(agent) not like '__DOES_NOT_EXIST__%'
+                     AND '1'||to_json_string(agent) IN ('0'||to_json_string(agent),
+                                                        1||to_json_string(agent),
+                                                        2||to_json_string(agent))
+                     AND '1'||to_json_string(agent) NOT IN ('0'||to_json_string(agent),
+                                                            2||to_json_string(agent))))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          '1'||to_json_string(agent),
+                          count(*)
+   FROM kttm_nested
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND ('1'||to_json_string(agent) IS NULL
+          OR ('1'||to_json_string(agent) = 1||to_json_string(agent)
+              AND '1'||to_json_string(agent) IS NOT DISTINCT
+              FROM 1||to_json_string(agent)
+              AND '1'||to_json_string(agent) <> '0'||to_json_string(agent)
+              AND ('1'||to_json_string(agent) IS DISTINCT
+                   FROM '0'||to_json_string(agent))
+              AND '1'||to_json_string(agent) > '0'||to_json_string(agent)
+              AND '1'||to_json_string(agent) >= '0'||to_json_string(agent)
+              AND '1'||to_json_string(agent) < 2||to_json_string(agent)
+              AND '1'||to_json_string(agent) <= 2||to_json_string(agent)
+              AND ('1'||to_json_string(agent) <> '0'||to_json_string(agent)) IS TRUE
+              AND ('1'||to_json_string(agent) = '0'||to_json_string(agent)) IS NOT TRUE
+              AND ('1'||to_json_string(agent) = '0'||to_json_string(agent)) IS FALSE
+              AND ('1'||to_json_string(agent) <> '0'||to_json_string(agent)) IS NOT FALSE
+              AND '1'||to_json_string(agent) BETWEEN '0'||to_json_string(agent) AND 2||to_json_string(agent)
+              AND '1'||to_json_string(agent) NOT BETWEEN '1'||to_json_string(agent) AND '0'||to_json_string(agent)
+              AND '1'||to_json_string(agent) like '%'
+              AND '1'||to_json_string(agent) not like '__DOES_NOT_EXIST__%'
+              AND '1'||to_json_string(agent) IN ('0'||to_json_string(agent),
+                                                 1||to_json_string(agent),
+                                                 2||to_json_string(agent))
+              AND '1'||to_json_string(agent) NOT IN ('0'||to_json_string(agent),
+                                                     2||to_json_string(agent))))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# Total query count 41
+#-------------------------------------------------------------------------

@@ -22,12 +22,12 @@ import React, { useState } from 'react';
 
 import type { FormJsonTabs } from '../../components';
 import { ExternalLink, FormJsonSelector, JsonInput, RuleEditor } from '../../components';
+import type { Rule } from '../../druid-models';
 import type { Capabilities } from '../../helpers';
 import { useQueryManager } from '../../hooks';
 import { getLink } from '../../links';
 import { Api } from '../../singletons';
-import { filterMap, queryDruidSql, swapElements } from '../../utils';
-import type { Rule } from '../../utils/load-rule';
+import { filterMap, getApiArray, queryDruidSql, swapElements } from '../../utils';
 import { SnitchDialog } from '..';
 
 import './retention-dialog.scss';
@@ -52,21 +52,24 @@ export const RetentionDialog = React.memo(function RetentionDialog(props: Retent
 
   const [tiersState] = useQueryManager<Capabilities, string[]>({
     initQuery: capabilities,
-    processQuery: async capabilities => {
+    processQuery: async (capabilities, cancelToken) => {
       if (capabilities.hasSql()) {
-        const sqlResp = await queryDruidSql<{ tier: string }>({
-          query: `SELECT "tier"
+        const sqlResp = await queryDruidSql<{ tier: string }>(
+          {
+            query: `SELECT "tier"
 FROM "sys"."servers"
 WHERE "server_type" = 'historical'
 GROUP BY 1
 ORDER BY 1`,
-        });
+          },
+          cancelToken,
+        );
 
         return sqlResp.map(d => d.tier);
       } else if (capabilities.hasCoordinatorAccess()) {
-        const allServiceResp = await Api.instance.get('/druid/coordinator/v1/servers?simple');
-        return filterMap(allServiceResp.data, (s: any) =>
-          s.type === 'historical' ? s.tier : undefined,
+        return filterMap(
+          await getApiArray('/druid/coordinator/v1/servers?simple', cancelToken),
+          (s: any) => (s.type === 'historical' ? s.tier : undefined),
         );
       } else {
         throw new Error(`must have sql or coordinator access`);
@@ -78,11 +81,11 @@ ORDER BY 1`,
 
   const [historyQueryState] = useQueryManager<string, any[]>({
     initQuery: props.datasource,
-    processQuery: async datasource => {
-      const historyResp = await Api.instance.get(
+    processQuery: async (datasource, cancelToken) => {
+      return await getApiArray(
         `/druid/coordinator/v1/rules/${Api.encodePath(datasource)}/history?count=200`,
+        cancelToken,
       );
-      return historyResp.data;
     },
   });
 

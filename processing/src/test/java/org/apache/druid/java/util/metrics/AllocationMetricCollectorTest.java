@@ -48,7 +48,6 @@ public class AllocationMetricCollectorTest
     }
 
     long delta = collector.calculateDelta();
-    Assert.assertNotNull(delta);
     Assert.assertTrue(delta > 0);
     log.info("First delta: %s", delta);
 

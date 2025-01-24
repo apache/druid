@@ -270,7 +270,7 @@ public class CompressionFactory
       Function<T, CompressionStrategy> getCompressionStrategy
   )
   {
-    return new MetaSerdeHelper.FieldWriter<T>()
+    return new MetaSerdeHelper.FieldWriter<>()
     {
       @Override
       public void writeTo(ByteBuffer buffer, T x)
@@ -303,7 +303,6 @@ public class CompressionFactory
      */
     LongEncodingReader duplicate();
 
-    @SuppressWarnings("unused")
     LongEncodingStrategy getStrategy();
   }
 

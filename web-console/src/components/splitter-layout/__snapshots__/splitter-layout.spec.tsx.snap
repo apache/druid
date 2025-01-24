@@ -1,0 +1,41 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`SplitterLayout matches snapshot one child 1`] = `
+<div
+  class="splitter-layout splitter-layout-horizontal"
+>
+  <div
+    class="layout-pane layout-pane-primary"
+  >
+    <div
+      class="child1"
+    />
+  </div>
+</div>
+`;
+
+exports[`SplitterLayout matches snapshot two children 1`] = `
+<div
+  class="splitter-layout splitter-layout-vertical"
+>
+  <div
+    class="layout-pane layout-pane-primary"
+  >
+    <div
+      class="child1"
+    />
+  </div>
+  <div
+    class="layout-splitter"
+    role="separator"
+  />
+  <div
+    class="layout-pane"
+    style="height: 50%;"
+  >
+    <div
+      class="child2"
+    />
+  </div>
+</div>
+`;

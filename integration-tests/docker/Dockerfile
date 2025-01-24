@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-ARG JDK_VERSION=8-slim-buster
+ARG JDK_VERSION=17-slim-buster
 FROM openjdk:$JDK_VERSION as druidbase
 
 # Bundle everything into one script so cleanup can reduce image size.
@@ -24,8 +24,9 @@ ARG KAFKA_VERSION
 # ZooKeeper version to install in the base image
 # This is passed in by maven at build time to align with the client version we depend on in the pom file
 ARG ZK_VERSION
-ARG APACHE_ARCHIVE_MIRROR_HOST=https://archive.apache.org
+ARG APACHE_ARCHIVE_MIRROR_HOST=https://downloads.apache.org
 RUN APACHE_ARCHIVE_MIRROR_HOST=${APACHE_ARCHIVE_MIRROR_HOST} /root/base-setup.sh && rm -f /root/base-setup.sh
+
 
 FROM druidbase
 ARG MYSQL_VERSION

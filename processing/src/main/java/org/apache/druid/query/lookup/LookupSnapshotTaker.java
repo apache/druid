@@ -69,7 +69,7 @@ public class LookupSnapshotTaker
         LOGGER.warn("found empty file no lookups to load from [%s]", persistFile.getAbsolutePath());
         return Collections.emptyList();
       }
-      lookupBeanList = objectMapper.readValue(persistFile, new TypeReference<List<LookupBean>>() {});
+      lookupBeanList = objectMapper.readValue(persistFile, new TypeReference<>() {});
       return lookupBeanList;
     }
     catch (IOException e) {

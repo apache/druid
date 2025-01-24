@@ -75,7 +75,7 @@ public class AggregateProjectionSpecTest extends InitializedNullHandlingTest
             null
         )
     );
-    Assert.assertEquals("groupingColumns must not be null or empty", t.getMessage());
+    Assert.assertEquals("groupingColumns and aggregators must not both be null or empty", t.getMessage());
 
     t = Assert.assertThrows(
         DruidException.class,
@@ -86,7 +86,7 @@ public class AggregateProjectionSpecTest extends InitializedNullHandlingTest
             null
         )
     );
-    Assert.assertEquals("groupingColumns must not be null or empty", t.getMessage());
+    Assert.assertEquals("groupingColumns and aggregators must not both be null or empty", t.getMessage());
   }
 
   @Test

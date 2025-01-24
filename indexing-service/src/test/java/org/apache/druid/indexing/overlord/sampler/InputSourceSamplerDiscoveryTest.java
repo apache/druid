@@ -31,7 +31,6 @@ import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
-import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -55,71 +54,6 @@ public class InputSourceSamplerDiscoveryTest extends InitializedNullHandlingTest
       "{ \"t\": \"bad_timestamp\", \"string\": \"e\", \"long\": 6, \"double\":6.6, \"bool\":true, \"variant\":\"4\", \"array\":[16, 17, 18], \"nested\": {\"x\":6, \"y\": 12.0} }"
   );
   private InputSourceSampler inputSourceSampler = new InputSourceSampler(OBJECT_MAPPER);
-
-  @Test
-  public void testDiscoveredTypesNonStrictBooleans()
-  {
-
-    try {
-      ExpressionProcessing.initializeForStrictBooleansTests(false);
-      final InputSource inputSource = new InlineInputSource(Strings.join(STR_JSON_ROWS, '\n'));
-      final SamplerResponse response = inputSourceSampler.sample(
-          inputSource,
-          new JsonInputFormat(null, null, null, null, null),
-          DataSchema.builder()
-                    .withDataSource("test")
-                    .withTimestamp(new TimestampSpec("t", null, null))
-                    .withDimensions(DimensionsSpec.builder().useSchemaDiscovery(true).build())
-                    .build(),
-          null
-      );
-
-      Assert.assertEquals(6, response.getNumRowsRead());
-      Assert.assertEquals(5, response.getNumRowsIndexed());
-      Assert.assertEquals(6, response.getData().size());
-      Assert.assertEquals(
-          ImmutableList.of(
-              new StringDimensionSchema("string"),
-              new LongDimensionSchema("long"),
-              new DoubleDimensionSchema("double"),
-              new StringDimensionSchema("bool"),
-              new StringDimensionSchema("variant"),
-              new AutoTypeColumnSchema("array", null),
-              new AutoTypeColumnSchema("nested", null)
-          ),
-          response.getLogicalDimensions()
-      );
-
-      Assert.assertEquals(
-          ImmutableList.of(
-              new AutoTypeColumnSchema("string", null),
-              new AutoTypeColumnSchema("long", null),
-              new AutoTypeColumnSchema("double", null),
-              new AutoTypeColumnSchema("bool", null),
-              new AutoTypeColumnSchema("variant", null),
-              new AutoTypeColumnSchema("array", null),
-              new AutoTypeColumnSchema("nested", null)
-          ),
-          response.getPhysicalDimensions()
-      );
-      Assert.assertEquals(
-          RowSignature.builder()
-                      .addTimeColumn()
-                      .add("string", ColumnType.STRING)
-                      .add("long", ColumnType.LONG)
-                      .add("double", ColumnType.DOUBLE)
-                      .add("bool", ColumnType.STRING)
-                      .add("variant", ColumnType.STRING)
-                      .add("array", ColumnType.LONG_ARRAY)
-                      .add("nested", ColumnType.NESTED_DATA)
-                      .build(),
-          response.getLogicalSegmentSchema()
-      );
-    }
-    finally {
-      ExpressionProcessing.initializeForTests();
-    }
-  }
 
   @Test
   public void testDiscoveredTypesStrictBooleans()

@@ -169,20 +169,84 @@ Returns any value of the specified expression.
 * **Syntax**: `ANY_VALUE(expr, [maxBytesPerValue, [aggregateMultipleValues]])`
 * **Function type:** Aggregation
 
+<details><summary>Example</summary>
+
+The following example returns the state abbrevation, state name, and average flight time grouped by each state in `flight-carriers`:
+
+```sql
+SELECT
+  "OriginState",
+  ANY_VALUE("OriginStateName") AS "OriginStateName",
+  AVG("ActualElapsedTime") AS "AverageFlightTime"
+FROM "flight-carriers"
+GROUP BY 1
+LIMIT 3
+```
+
+Returns the following:
+
+|`OriginState`|`OriginStateName`|`AverageFlightTime`|
+|-------------|-----------------|-------------------|
+|`AK`|`Alaska`|`113.2777967841259`|
+|`AL`|`Alabama`|`92.28766697732215`|
+|`AR`|`Arkansas`|`95.0391382405745`|
+
+</details>
+
 [Learn more](sql-aggregations.md)
 
 ## APPROX_COUNT_DISTINCT
 
-Counts distinct values of a regular column or a prebuilt sketch column.
+Counts distinct values of a regular column or a prebuilt sketch column using an approximate algorithm.
 
 * **Syntax**: `APPROX_COUNT_DISTINCT(expr)`
 * **Function type:** Aggregation
+
+<details><summary>Example</summary>
+
+The following example counts the number of distinct airlines reported in `flight-carriers`:
+
+```sql
+SELECT APPROX_COUNT_DISTINCT("Reporting_Airline") AS "num_airlines"
+FROM "flight-carriers"
+```
+
+Returns the following:
+
+| `num_airlines` |
+| -- |
+| `20` |
+
+</details>
 
 [Learn more](sql-aggregations.md)
 
 ## APPROX_COUNT_DISTINCT_BUILTIN
 
 Counts distinct values of a string, numeric, or `hyperUnique` column using Druid's built-in `cardinality` or `hyperUnique` aggregators.
+Consider using `APPROX_COUNT_DISTINCT_DS_HLL` instead, which offers better accuracy in many cases.
+
+* **Syntax**: `APPROX_COUNT_DISTINCT_BUILTIN(expr)`
+* **Function type:** Aggregation
+
+<details><summary>Example</summary>
+
+The following example counts the number of distinct airlines reported in `flight-carriers`:
+
+```sql
+SELECT APPROX_COUNT_DISTINCT_BUILTIN("Reporting_Airline") AS "num_airlines"
+FROM "flight-carriers"
+```
+
+Returns the following:
+
+| `num_airlines` |
+| -- |
+| `20` |
+
+</details>
+
+[Learn more](sql-aggregations.md)
 
 * **Syntax**: `APPROX_COUNT_DISTINCT_BUILTIN(expr)`
 * **Function type:** Aggregation
@@ -925,6 +989,25 @@ Calculates the average of a set of values.
 * **Syntax**: `AVG(<NUMERIC>)`
 * **Function type:** Aggregation
 
+
+<details><summary>Example</summary>
+
+The following example calculates the average minutes of delay for a particular airlines in `flight-carriers`:
+
+```sql
+SELECT AVG("DepDelayMinutes") AS avg_delay
+FROM "flight-carriers"
+WHERE "Reporting_Airline" = 'AA'
+```
+
+Returns the following:
+
+| `avg_delay` |
+| -- |
+| `8.936` |
+
+</details>
+
 [Learn more](sql-aggregations.md)
 
 ## BIT_AND
@@ -933,6 +1016,24 @@ Performs a bitwise AND operation on all input values.
 
 * **Syntax**: `BIT_AND(expr)`
 * **Function type:** Aggregation
+
+<details><summary>Example</summary>
+
+The following example returns the bitwise AND operation for all values in `passenger-count` from `taxi-trips`:
+
+```sql
+SELECT
+  BIT_AND("passenger_count") AS "bit_and"
+FROM "taxi-trips"
+```
+
+Returns the following:
+
+| `bit_and` |
+| -- |
+| `0` |
+
+</details>
 
 [Learn more](sql-aggregations.md)
 
@@ -943,6 +1044,24 @@ Performs a bitwise OR operation on all input values.
 * **Syntax**: `BIT_OR(expr)`
 * **Function type:** Aggregation
 
+<details><summary>Example</summary>
+
+The following example returns the bitwise OR operation for all values in `passenger-count` from `taxi-trips`:
+
+```sql
+SELECT
+  BIT_OR("passenger_count") AS "bit_or"
+FROM "taxi-trips"
+```
+
+Returns the following:
+
+| `bit_or` |
+| -- |
+| `15` |
+
+</details>
+
 [Learn more](sql-aggregations.md)
 
 ## BIT_XOR
@@ -951,6 +1070,24 @@ Performs a bitwise XOR operation on all input values.
 
 * **Syntax**: `BIT_XOR(expr)`
 * **Function type:** Aggregation
+
+<details><summary>Example</summary>
+
+The following example returns the bitwise XOR operation for all values in `passenger-count` from `taxi-trips`:
+
+```sql
+SELECT
+  BIT_OR("passenger_count") AS "bit_xor"
+FROM "taxi-trips"
+```
+
+Returns the following:
+
+| `bit_xor` |
+| -- |
+| `6` |
+
+</details>
 
 [Learn more](sql-aggregations.md)
 
@@ -973,6 +1110,10 @@ Returns the following:
 | `bitwise_and` |
 | -- |
 | 8 |
+<<<<<<< HEAD
+=======
+
+>>>>>>> upstream/master
 </details>
 
 [Learn more](sql-scalar.md#numeric-functions)
@@ -996,6 +1137,10 @@ Returns the following:
 | `bitwise_complement` |
 | -- |
 | -13 |
+<<<<<<< HEAD
+=======
+
+>>>>>>> upstream/master
 </details>
 
 [Learn more](sql-scalar.md#numeric-functions)
@@ -1019,6 +1164,10 @@ Returns the following:
 | `ieee_754_double_to_long` |
 | -- |
 | `4643176031446892544` |
+<<<<<<< HEAD
+=======
+
+>>>>>>> upstream/master
 </details>
 
 [Learn more](sql-scalar.md#numeric-functions)
@@ -1043,6 +1192,10 @@ Returns the following:
 | `long_to_ieee_754_double` |
 | -- |
 | `255` |
+<<<<<<< HEAD
+=======
+
+>>>>>>> upstream/master
 </details>
 
 [Learn more](sql-scalar.md#numeric-functions)
@@ -1493,9 +1646,33 @@ Returns the following:
 
 Counts the number of rows.
 
-* **Syntax**: `COUNT([DISTINCT] expr)`  
-              `COUNT(*)`
+* **Syntax**: `COUNT([DISTINCT] expr)` `COUNT(*)`  
+COUNT DISTINCT is an alias for [`APPROX_COUNT_DISTINCT`](#approx_count_distinct).
 * **Function type:** Aggregation
+
+<details><summary>Example</summary>
+
+The following example counts the number of distinct flights per day after `'2005-01-01 00:00:00'` in `flight-carriers`:
+
+```sql
+SELECT
+  TIME_FLOOR(__time, 'P1D') AS "flight_day",
+  COUNT(*) AS "num_flights"
+FROM "flight-carriers"
+WHERE __time > '2005-01-01 00:00:00'
+GROUP BY 1
+LIMIT 3
+```
+
+Returns the following:
+
+|`flight_day`|`num_flights`|
+|------------|------------|
+|`2005-11-01T00:00:00.000Z`|`18961`|
+|`2005-11-02T00:00:00.000Z`|`19434`|
+|`2005-11-03T00:00:00.000Z`|`19745`|
+
+</details>
 
 [Learn more](sql-aggregations.md)
 
@@ -2075,6 +2252,29 @@ Returns the value of a numeric or string expression corresponding to the earlies
 * **Syntax**: `EARLIEST(expr, [maxBytesPerValue])`
 * **Function type:** Aggregation
 
+<details><summary>Example</summary>
+
+The following example returns the origin airport code associated with the earliest departing flight daily after `'2005-01-01 00:00:00'` in `flight-carriers`:
+
+```sql
+SELECT
+  TIME_FLOOR(__time, 'P1D') AS "departure_day",
+  EARLIEST("Origin") AS "origin"
+FROM "flight-carriers"
+WHERE __time >= TIMESTAMP '2005-01-01 00:00:00'
+GROUP BY 1
+LIMIT 2
+```
+
+Returns the following:
+
+|`departure_day`|`origin`|
+|------------|--------|
+|`2005-11-01T00:00:00.000Z`|`LAS`|
+|`2005-11-02T00:00:00.000Z`|`SDF`|
+
+</details>
+
 [Learn more](sql-aggregations.md)
 
 ## EARLIEST_BY
@@ -2083,6 +2283,29 @@ Returns the value of a numeric or string expression corresponding to the earlies
 
 * **Syntax**: `EARLIEST_BY(expr, timestampExpr, [maxBytesPerValue])`
 * **Function type:** Aggregation
+
+<details><summary>Example</summary>
+
+The following example returns the destination airport code associated with the earliest arriving flight daily after `'2005-01-01 00:00:00'` in `flight-carriers`:
+
+```sql
+SELECT
+  TIME_FLOOR(TIME_PARSE("arrivalime"), 'P1D') AS "arrival_day",
+  EARLIEST_BY("Dest", TIME_PARSE("arrivalime")) AS "dest"
+FROM "flight-carriers"
+WHERE TIME_PARSE("arrivalime") >= TIMESTAMP '2005-01-01 00:00:00'
+GROUP BY 1
+LIMIT 2
+```
+
+Returns the following:
+
+|`arrival_day`|`origin`|
+|-------------|--------|
+|`2005-11-01T00:00:00.000Z`|`RSW`|
+|`2005-11-02T00:00:00.000Z`|`CLE`|
+
+</details>
 
 [Learn more](sql-aggregations.md)
 
@@ -2150,7 +2373,6 @@ Returns the value evaluated for the expression for the first row within the wind
 The following example returns the first airline name in the window for two airports on a single day.
 
 ```sql
-SELECT FLOOR("__time" TO DAY)  AS "flight_day",
 SELECT FLOOR("__time" TO DAY)  AS "flight_day",
     "Origin" AS "airport",
     "Reporting_Airline" as "airline",
@@ -2269,6 +2491,43 @@ Returns a number for each output row of a groupBy query, indicating whether the 
 * **Syntax**: `GROUPING(expr, expr...)`
 * **Function type:** Aggregation
 
+<<<<<<< HEAD
+=======
+<details><summary>Example</summary>
+
+The following example returns the total minutes of flight delay for each day of the week in `flight-carriers`.
+The GROUP BY clause creates two grouping sets, one for the day of the week and one for the grand total.
+
+For more information, refer to [CASE](#case) and grouping sets with [SQL GROUP BY](sql.md#group-by).
+
+```sql
+SELECT
+  CASE
+     WHEN GROUPING("DayOfWeek") = 1 THEN 'Total'
+     ELSE "DayOfWeek"
+  END AS "DayOfWeek",
+  GROUPING("DayOfWeek") AS Subgroup,
+  SUM("DepDelayMinutes") AS "MinutesDelayed"
+FROM "flight-carriers"
+GROUP BY GROUPING SETS("DayOfWeek", ())
+```
+
+Returns the following:
+
+|`DayOfWeek`|`Subgroup`|`MinutesDelayed`|
+|-----------|-----------|----------------|
+|`1`|`0`|`998505`|
+|`2`|`0`|`1031599`|
+|`3`|`0`|`884677`|
+|`4`|`0`|`525351`|
+|`5`|`0`|`519413`|
+|`6`|`0`|`354601`|
+|`7`|`0`|`848704`|
+|`Total`|`1`|`5162850`|
+
+</details>
+
+>>>>>>> upstream/master
 [Learn more](sql-aggregations.md)
 
 ## HLL_SKETCH_ESTIMATE
@@ -2706,6 +2965,7 @@ If you do not supply an `offset`, returns the value evaluated at the row precedi
 * **Syntax**: `LAG(expr[, offset])`
 * **Function type:** Window
 
+<<<<<<< HEAD
 <details><summary>Example</summary>
 
 The following example returns the subsequent airline value in the window for flights by carrier from two airports on a single day.
@@ -2736,6 +2996,8 @@ Returns the following:
  
 </details>
 
+=======
+>>>>>>> upstream/master
 [Learn more](sql-window-functions.md#window-function-reference)
 
 ## LAST_VALUE
@@ -2745,6 +3007,7 @@ Returns the value evaluated for the expression for the last row within the windo
 * **Syntax**: `LAST_VALUE(expr)`
 * **Function type:** Window
 
+<<<<<<< HEAD
 <!-- LAST_VALUE example not returning expected results
 
 <details><summary>Example</summary>
@@ -2779,6 +3042,8 @@ Returns the following:
 
 -->
 
+=======
+>>>>>>> upstream/master
 [Learn more](sql-window-functions.md#window-function-reference)
 
 ## LATEST
@@ -2788,6 +3053,32 @@ Returns the value of a numeric or string expression corresponding to the latest 
 * **Syntax**: `LATEST(expr, [maxBytesPerValue])`
 * **Function type:** Aggregation
 
+<<<<<<< HEAD
+=======
+<details><summary>Example</summary>
+
+The following example returns the origin airport code associated with the latest departing flight daily after `'2005-01-01 00:00:00'` in `flight-carriers`:
+
+```sql
+SELECT
+  TIME_FLOOR(__time, 'P1D') AS "departure_day",
+  LATEST("Origin") AS "origin"
+FROM "flight-carriers"
+WHERE __time >= TIMESTAMP '2005-01-01 00:00:00'
+GROUP BY 1
+LIMIT 2
+```
+
+Returns the following:
+
+|`departure_day`|`origin`|
+|------------|--------|
+|`2005-11-01T00:00:00.000Z`|`LAS`|
+|`2005-11-02T00:00:00.000Z`|`LAX`|
+
+</details>
+
+>>>>>>> upstream/master
 [Learn more](sql-aggregations.md)
 
 ## LATEST_BY
@@ -2797,6 +3088,32 @@ Returns the value of a numeric or string expression corresponding to the latest 
 * **Syntax**: `LATEST_BY(expr, timestampExpr, [maxBytesPerValue])`
 * **Function type:** Aggregation
 
+<<<<<<< HEAD
+=======
+<details><summary>Example</summary>
+
+The following example returns the destination airport code associated with the latest arriving flight daily after `'2005-01-01 00:00:00'` in `flight-carriers`:
+
+```sql
+SELECT
+  TIME_FLOOR(TIME_PARSE("arrivalime"), 'P1D') AS "arrival_day",
+  LATEST_BY("Dest", TIME_PARSE("arrivalime")) AS "dest"
+FROM "flight-carriers"
+WHERE TIME_PARSE("arrivalime") >= TIMESTAMP '2005-01-01 00:00:00'
+GROUP BY 1
+LIMIT 2
+```
+
+Returns the following:
+
+|`arrival_day`|`origin`|
+|-------------|--------|
+|`2005-11-01T00:00:00.000Z`|`MCO`|
+|`2005-11-02T00:00:00.000Z`|`BUF`|
+
+</details>
+
+>>>>>>> upstream/master
 [Learn more](sql-aggregations.md)
 
 ## LEAD
@@ -2806,6 +3123,7 @@ If you do not supply an `offset`, returns the value evaluated at the row followi
 * **Syntax**: `LEAD(expr[, offset])`
 * **Function type:** Window
 
+<<<<<<< HEAD
 <details><summary>Example</summary>
 
 The following example returns the previous value for airline in the window for flights from two airports on a single day.
@@ -2836,6 +3154,8 @@ Returns the following:
  
 </details>
 
+=======
+>>>>>>> upstream/master
 [Learn more](sql-window-functions.md#window-function-reference)
 
 ## LEAST
@@ -3120,6 +3440,28 @@ Returns the maximum value of a set of values.
 * **Syntax**: `MAX(expr)`
 * **Function type:** Aggregation
 
+<<<<<<< HEAD
+=======
+
+<details><summary>Example</summary>
+
+The following example calculates the maximum delay in minutes for an airline in `flight-carriers`:
+
+```sql
+SELECT MAX("DepDelayMinutes") AS max_delay
+FROM "flight-carriers"
+WHERE "Reporting_Airline" = 'AA'
+```
+
+Returns the following:
+
+| `max_delay` |
+| -- |
+| `1210` |
+
+</details>
+
+>>>>>>> upstream/master
 [Learn more](sql-aggregations.md)
 
 ## MILLIS_TO_TIMESTAMP
@@ -3154,6 +3496,27 @@ Returns the minimum value of a set of values.
 * **Syntax**: `MIN(expr)`
 * **Function type:** Aggregation
 
+<<<<<<< HEAD
+=======
+<details><summary>Example</summary>
+
+The following example calculates the minimum delay in minutes for an airline in `flight-carriers`:
+
+```sql
+SELECT MIN("DepDelayMinutes") AS min_delay
+FROM "flight-carriers"
+WHERE "Reporting_Airline" = 'AA'
+```
+
+Returns the following:
+
+| `min_delay` |
+| -- |
+| `0` |
+
+</details>
+
+>>>>>>> upstream/master
 [Learn more](sql-aggregations.md)
 
 ## MOD
@@ -3611,6 +3974,7 @@ Divides the rows within a window as evenly as possible into the number of tiles,
 * **Syntax**: `NTILE(tiles)`
 * **Function type:** Window
 
+<<<<<<< HEAD
 <details><summary>Example</summary>
 
 The following example returns the results for flights by carrier from two airports on a single day divided into 3 tiles.
@@ -3641,6 +4005,8 @@ Returns the following:
  
 </details>
 
+=======
+>>>>>>> upstream/master
 [Learn more](sql-window-functions.md#window-function-reference)
 
 ## NULLIF
@@ -3746,6 +4112,7 @@ Returns the relative rank of the row calculated as a percentage according to the
 * **Syntax**: `PERCENT_RANK()`
 * **Function type:** Window
 
+<<<<<<< HEAD
 <details><summary>Example</summary>
 
 The following example returns the percent rank for flights from two airports on a single day.
@@ -3776,6 +4143,8 @@ Returns the following:
  
 </details>
 
+=======
+>>>>>>> upstream/master
 [Learn more](sql-window-functions.md#window-function-reference)
 
 ## POSITION
@@ -4123,6 +4492,7 @@ Returns the number of the row within the window starting from 1.
 * **Syntax**: `ROW_NUMBER()`
 * **Function type:** Window
 
+<<<<<<< HEAD
 <details><summary>Example</summary>
 
 The following example returns the window row number for flights by carrier from two airports on a single day.
@@ -4154,6 +4524,8 @@ Returns the following:
  
 </details>
 
+=======
+>>>>>>> upstream/master
 [Learn more](sql-window-functions.md#window-function-reference)
 
 ## RPAD
@@ -4287,7 +4659,17 @@ Returns the following:
 
 ## STDDEV
 
+<<<<<<< HEAD
 Alias for [`STDDEV_SAMP`](#stddev_samp).
+=======
+Alias for [`STDDEV_SAMP`](#stddev_samp).  
+Requires the [`druid-stats` extension](../development/extensions-core/stats.md).
+
+* **Syntax**: `STDDEV(expr)`
+* **Function type:** Aggregation
+
+[Learn more](sql-aggregations.md)
+>>>>>>> upstream/master
 
 * **Syntax**: `STDDEV(expr)`
 * **Function type:** Aggregation
@@ -4296,7 +4678,35 @@ Alias for [`STDDEV_SAMP`](#stddev_samp).
 
 ## STDDEV_POP
 
+<<<<<<< HEAD
 Calculates the population standard deviation of a set of values.
+=======
+Calculates the population standard deviation of a set of values.  
+Requires the [`druid-stats` extension](../development/extensions-core/stats.md).
+
+* **Syntax**: `STDDEV_POP(expr)`
+* **Function type:** Aggregation
+
+<details><summary>Example</summary>
+
+The following example calculates the population standard deviation for minutes of delay for an airline in `flight-carriers`:
+
+```sql
+SELECT STDDEV_POP("DepDelayMinutes") AS sd_delay
+FROM "flight-carriers"
+WHERE "Reporting_Airline" = 'AA'
+```
+
+Returns the following:
+
+| `sd_delay` |
+| -- |
+| `27.083557` |
+
+</details>
+
+[Learn more](sql-aggregations.md)
+>>>>>>> upstream/master
 
 * **Syntax**: `STDDEV_POP(expr)`
 * **Function type:** Aggregation
@@ -4305,7 +4715,35 @@ Calculates the population standard deviation of a set of values.
 
 ## STDDEV_SAMP
 
+<<<<<<< HEAD
 Calculates the sample standard deviation of a set of values.
+=======
+Calculates the sample standard deviation of a set of values.  
+Requires the [`druid-stats` extension](../development/extensions-core/stats.md).
+
+* **Syntax**: `STDDEV_SAMP(expr)`
+* **Function type:** Aggregation
+
+<details><summary>Example</summary>
+
+The following example calculates the sample standard deviation for minutes of delay for an airline in `flight-carriers`:
+
+```sql
+SELECT STDDEV_SAMP("DepDelayMinutes") AS sd_delay
+FROM "flight-carriers"
+WHERE "Reporting_Airline" = 'AA'
+```
+
+Returns the following:
+
+| `sd_delay` |
+| -- |
+| `27.083811` |
+
+</details>
+
+[Learn more](sql-aggregations.md)
+>>>>>>> upstream/master
 
 * **Syntax**: `STDDEV_SAMP(expr)`
 * **Function type:** Aggregation
@@ -4318,7 +4756,29 @@ Collects all values of an expression into a single string.
 
 * **Syntax**: `STRING_AGG(expr, separator, [size])`
 * **Function type:** Aggregation
+<<<<<<< HEAD
 
+=======
+
+<details><summary>Example</summary>
+
+The following example returns all the distinct airlines from `flight-carriers` as a single space-delimited string:
+
+```sql
+SELECT
+  STRING_AGG(DISTINCT "Reporting_Airline", ' ') AS "AllCarriers"
+FROM "flight-carriers"
+```
+
+Returns the following:
+
+|`AllCarriers`|
+|-------------|
+|`AA AS B6 CO DH DL EV F9 FL HA HP MQ NW OH OO TZ UA US WN XE`|
+
+</details>
+
+>>>>>>> upstream/master
 [Learn more](sql-aggregations.md)
 
 ## STRING_FORMAT
@@ -4467,6 +4927,27 @@ Calculates the sum of a set of values.
 * **Syntax**: `SUM(expr)`
 * **Function type:** Aggregation
 
+<<<<<<< HEAD
+=======
+<details><summary>Example</summary>
+
+The following example calculates the total minutes of delay for an airline in `flight-carriers`:
+
+```sql
+SELECT SUM("DepDelayMinutes") AS tot_delay
+FROM "flight-carriers"
+WHERE "Reporting_Airline" = 'AA'
+```
+
+Returns the following:
+
+| `tot_delay` |
+| -- |
+| `475735` |
+
+</details>
+
+>>>>>>> upstream/master
 [Learn more](sql-aggregations.md)
 
 ## TAN
@@ -5100,7 +5581,35 @@ Returns the following:
 
 ## VAR_POP
 
+<<<<<<< HEAD
 Calculates the population variance of a set of values.
+=======
+Calculates the population variance of a set of values.  
+Requires the [`druid-stats` extension](../development/extensions-core/stats.md).
+
+* **Syntax**: `VAR_POP(expr)`
+* **Function type:** Aggregation
+
+<details><summary>Example</summary>
+
+The following example calculates the population variance for minutes of delay by a particular airlines in `flight-carriers`:
+
+```sql
+SELECT VAR_POP("DepDelayMinutes") AS varpop_delay
+FROM "flight-carriers"
+WHERE "Reporting_Airline" = 'AA'
+```
+
+Returns the following:
+
+| `varpop_delay` |
+| -- |
+| `733.51908` |
+
+</details>
+
+[Learn more](sql-aggregations.md)
+>>>>>>> upstream/master
 
 * **Syntax**: `VAR_POP(expr)`
 * **Function type:** Aggregation
@@ -5109,7 +5618,35 @@ Calculates the population variance of a set of values.
 
 ## VAR_SAMP
 
+<<<<<<< HEAD
 Calculates the sample variance of a set of values.
+=======
+Calculates the sample variance of a set of values.  
+Requires the [`druid-stats` extension](../development/extensions-core/stats.md).
+
+* **Syntax**: `VAR_SAMP(expr)`
+* **Function type:** Aggregation
+
+<details><summary>Example</summary>
+
+The following example calculates the sample variance for minutes of delay for an airline in `flight-carriers`:
+
+```sql
+SELECT VAR_SAMP("DepDelayMinutes") AS varsamp_delay
+FROM "flight-carriers"
+WHERE "Reporting_Airline" = 'AA'
+```
+
+Returns the following:
+
+| `varsamp_delay` |
+| -- |
+| `733.53286` |
+
+</details>
+
+[Learn more](sql-aggregations.md)
+>>>>>>> upstream/master
 
 * **Syntax**: `VAR_SAMP(expr)`
 * **Function type:** Aggregation
@@ -5118,7 +5655,12 @@ Calculates the sample variance of a set of values.
 
 ## VARIANCE
 
+<<<<<<< HEAD
 Alias for [`VAR_SAMP`](#var_samp).
+=======
+Alias for [`VAR_SAMP`](#var_samp).  
+Requires the [`druid-stats` extension](../development/extensions-core/stats.md).
+>>>>>>> upstream/master
 
 * **Syntax**: `VARIANCE(expr)`
 * **Function type:** Aggregation

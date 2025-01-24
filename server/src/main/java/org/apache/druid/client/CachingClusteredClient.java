@@ -38,7 +38,6 @@ import com.google.inject.Inject;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulator;
-import org.apache.druid.client.selector.QueryableDruidServer;
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.guice.annotations.Client;
 import org.apache.druid.guice.annotations.Merging;
@@ -65,9 +64,9 @@ import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
+import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChest;
-import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.aggregation.MetricManipulatorFns;
@@ -117,7 +116,7 @@ import java.util.stream.Collectors;
 public class CachingClusteredClient implements QuerySegmentWalker
 {
   private static final EmittingLogger log = new EmittingLogger(CachingClusteredClient.class);
-  private final QueryToolChestWarehouse warehouse;
+  private final QueryRunnerFactoryConglomerate conglomerate;
   private final TimelineServerView serverView;
   private final Cache cache;
   private final ObjectMapper objectMapper;
@@ -131,7 +130,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
 
   @Inject
   public CachingClusteredClient(
-      QueryToolChestWarehouse warehouse,
+      QueryRunnerFactoryConglomerate conglomerate,
       TimelineServerView serverView,
       Cache cache,
       @Smile ObjectMapper objectMapper,
@@ -144,7 +143,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
       ServiceEmitter emitter
   )
   {
-    this.warehouse = warehouse;
+    this.conglomerate = conglomerate;
     this.serverView = serverView;
     this.cache = cache;
     this.objectMapper = objectMapper;
@@ -180,7 +179,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
   @Override
   public <T> QueryRunner<T> getQueryRunnerForIntervals(final Query<T> query, final Iterable<Interval> intervals)
   {
-    return new QueryRunner<T>()
+    return new QueryRunner<>()
     {
       @Override
       public Sequence<T> run(final QueryPlus<T> queryPlus, final ResponseContext responseContext)
@@ -219,7 +218,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
   @Override
   public <T> QueryRunner<T> getQueryRunnerForSegments(final Query<T> query, final Iterable<SegmentDescriptor> specs)
   {
-    return new QueryRunner<T>()
+    return new QueryRunner<>()
     {
       @Override
       public Sequence<T> run(final QueryPlus<T> queryPlus, final ResponseContext responseContext)
@@ -274,7 +273,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
       this.queryPlus = queryPlus;
       this.responseContext = responseContext;
       this.query = queryPlus.getQuery();
-      this.toolChest = warehouse.getToolChest(query);
+      this.toolChest = conglomerate.getToolChest(query);
       this.strategy = toolChest.getCacheStrategy(query, objectMapper);
       this.dataSourceAnalysis = query.getDataSource().getAnalysis();
 
@@ -630,7 +629,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
       for (Pair<Interval, byte[]> cachedResultPair : cachedResults) {
         final byte[] cachedResult = cachedResultPair.rhs;
         Sequence<Object> cachedSequence = new BaseSequence<>(
-            new BaseSequence.IteratorMaker<Object, Iterator<Object>>()
+            new BaseSequence.IteratorMaker<>()
             {
               @Override
               public Iterator<Object> make()

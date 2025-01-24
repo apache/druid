@@ -86,7 +86,7 @@ public class AzureStorageConnector extends ChunkingStorageConnector<AzureInputRa
         objectPath(path)
     ));
     parameters.objectOpenFunction(
-        new ObjectOpenFunction<AzureInputRange>()
+        new ObjectOpenFunction<>()
         {
           @Override
           public InputStream open(AzureInputRange inputRange) throws IOException

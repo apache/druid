@@ -80,30 +80,24 @@ public class SQLMetadataStorageActionHandlerTest
     handler = new DerbyMetadataStorageActionHandler<>(
         connector,
         JSON_MAPPER,
-        new MetadataStorageActionHandlerTypes<Map<String, Object>, Map<String, Object>, Map<String, String>, Map<String, Object>>()
+        new MetadataStorageActionHandlerTypes<>()
         {
           @Override
           public TypeReference<Map<String, Object>> getEntryType()
           {
-            return new TypeReference<Map<String, Object>>()
-            {
-            };
+            return new TypeReference<>() {};
           }
 
           @Override
           public TypeReference<Map<String, Object>> getStatusType()
           {
-            return new TypeReference<Map<String, Object>>()
-            {
-            };
+            return new TypeReference<>() {};
           }
 
           @Override
           public TypeReference<Map<String, Object>> getLockType()
           {
-            return new TypeReference<Map<String, Object>>()
-            {
-            };
+            return new TypeReference<>() {};
           }
         },
         entryType,

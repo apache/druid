@@ -27,7 +27,7 @@ import org.apache.druid.catalog.model.TableMetadata;
 import org.apache.druid.catalog.model.table.DatasourceDefn;
 import org.apache.druid.catalog.model.table.TableBuilder;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.msq.sql.SqlTaskStatus;
+import org.apache.druid.query.http.SqlTaskStatus;
 import org.apache.druid.sql.http.SqlQuery;
 import org.apache.druid.testing.utils.MsqTestQueryHelper;
 import org.apache.druid.testsEx.categories.Catalog;

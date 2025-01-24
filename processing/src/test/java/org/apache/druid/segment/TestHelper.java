@@ -67,6 +67,11 @@ public class TestHelper
     return new IndexMergerV9(JSON_MAPPER, getTestIndexIO(), segmentWriteOutMediumFactory, true);
   }
 
+  public static IndexMergerV9 getTestIndexMergerV9(ObjectMapper jsonMapper, SegmentWriteOutMediumFactory segmentWriteOutMediumFactory)
+  {
+    return new IndexMergerV9(jsonMapper, getTestIndexIO(jsonMapper), segmentWriteOutMediumFactory, true);
+  }
+
   public static IndexMergerV9 getTestIndexMergerV9(SegmentWriteOutMediumFactory segmentWriteOutMediumFactory, ColumnConfig columnConfig)
   {
     return new IndexMergerV9(JSON_MAPPER, getTestIndexIO(columnConfig), segmentWriteOutMediumFactory, true);
@@ -80,6 +85,16 @@ public class TestHelper
   public static IndexIO getTestIndexIO(ColumnConfig columnConfig)
   {
     return new IndexIO(JSON_MAPPER, columnConfig);
+  }
+
+  public static IndexIO getTestIndexIO(ObjectMapper jsonMapper, ColumnConfig columnConfig)
+  {
+    return new IndexIO(jsonMapper, columnConfig);
+  }
+
+  public static IndexIO getTestIndexIO(ObjectMapper jsonMapper)
+  {
+    return new IndexIO(jsonMapper, ColumnConfig.SELECTION_SIZE);
   }
 
   public static AnnotationIntrospector makeAnnotationIntrospector()
@@ -432,6 +447,9 @@ public class TestHelper
           );
         }
       } else if (expectedValue instanceof Float || expectedValue instanceof Double) {
+        if (actualValue == null) {
+          Assert.fail(message + ": failed because expected numeric value is actually null");
+        }
         Assert.assertEquals(
             message,
             ((Number) expectedValue).doubleValue(),

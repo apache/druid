@@ -20,6 +20,7 @@
 package org.apache.druid.indexing.common.task;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.annotations.VisibleForTesting;
@@ -43,7 +44,6 @@ import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
 import org.apache.druid.server.coordinator.duty.CompactSegments;
 import org.apache.druid.utils.CollectionUtils;
-import org.codehaus.jackson.annotate.JsonCreator;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;

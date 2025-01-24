@@ -22,7 +22,7 @@ import type {
   SqlClusteredByClause,
   SqlExpression,
   SqlPartitionedByClause,
-} from '@druid-toolkit/query';
+} from 'druid-query-toolkit';
 import {
   C,
   F,
@@ -30,7 +30,7 @@ import {
   SqlOrderByClause,
   SqlOrderByExpression,
   SqlQuery,
-} from '@druid-toolkit/query';
+} from 'druid-query-toolkit';
 import Hjson from 'hjson';
 import * as JSONBig from 'json-bigint-native';
 import { v4 as uuidv4 } from 'uuid';
@@ -115,7 +115,7 @@ export class WorkbenchQuery {
     const headers: string[] = [];
     const bodies: string[] = [];
     for (const part of parts) {
-      const m = part.match(/^===== (Helper:.+|Query|Context) =====$/);
+      const m = /^===== (Helper:.+|Query|Context) =====$/.exec(part);
       if (m) {
         headers.push(m[1]);
       } else {
@@ -214,7 +214,7 @@ export class WorkbenchQuery {
   }
 
   static getRowColumnFromIssue(issue: string): RowColumn | undefined {
-    const m = issue.match(/at line (\d+),(\d+)/);
+    const m = /at line (\d+),(\d+)/.exec(issue);
     if (!m) return;
     return { row: Number(m[1]) - 1, column: Number(m[2]) - 1 };
   }

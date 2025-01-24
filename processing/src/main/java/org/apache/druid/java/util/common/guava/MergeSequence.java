@@ -65,7 +65,7 @@ public class MergeSequence<T> extends YieldingSequenceBase<T>
           (queue, in) -> {
             final Yielder<T> yielder = in.toYielder(
                 null,
-                new YieldingAccumulator<T, T>()
+                new YieldingAccumulator<>()
                 {
                   @Override
                   public T accumulate(T accumulated, T in)
@@ -159,7 +159,7 @@ public class MergeSequence<T> extends YieldingSequenceBase<T>
     }
 
     final OutType yieldVal = retVal;
-    return new Yielder<OutType>()
+    return new Yielder<>()
     {
       @Override
       public OutType get()

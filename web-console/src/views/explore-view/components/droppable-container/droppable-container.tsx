@@ -16,9 +16,10 @@
  * limitations under the License.
  */
 
-import type { Column } from '@druid-toolkit/query';
 import classNames from 'classnames';
-import React, { forwardRef, useState } from 'react';
+import type { Column } from 'druid-query-toolkit';
+import type React from 'react';
+import { forwardRef, useState } from 'react';
 
 import { DragHelper } from '../../drag-helper';
 import type { Measure } from '../../models';

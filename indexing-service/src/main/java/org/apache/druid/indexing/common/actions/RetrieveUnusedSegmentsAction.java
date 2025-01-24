@@ -91,7 +91,7 @@ public class RetrieveUnusedSegmentsAction implements TaskAction<List<DataSegment
   @Override
   public TypeReference<List<DataSegment>> getReturnTypeReference()
   {
-    return new TypeReference<List<DataSegment>>() {};
+    return new TypeReference<>() {};
   }
 
   @Override

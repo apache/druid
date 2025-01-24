@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
-import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.indexer.RunnerTaskState;
@@ -34,8 +33,10 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.msq.indexing.MSQWorkerTask;
 import org.apache.druid.msq.indexing.MSQWorkerTaskLauncher;
+import org.apache.druid.msq.indexing.error.InsertTimeNullFault;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.indexing.error.MSQFaultUtils;
@@ -46,6 +47,8 @@ import org.apache.druid.msq.indexing.error.TooManyColumnsFault;
 import org.apache.druid.msq.indexing.error.TooManyWorkersFault;
 import org.apache.druid.msq.indexing.error.UnknownFault;
 import org.apache.druid.msq.indexing.error.WorkerRpcFailedFault;
+import org.apache.druid.rpc.indexing.NoopOverlordClient;
+import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.utils.CollectionUtils;
 import org.junit.Assert;
 import org.junit.Test;
@@ -242,6 +245,42 @@ public class MSQTasksTest
           MSQFaultUtils.generateMessageWithErrorCode(((MSQException) e.getCause()).getFault())
       );
     }
+  }
+
+  @Test
+  public void test_getPrimaryTimestampFromObjectForInsert_longValue()
+  {
+    Assert.assertEquals(100, MSQTasks.primaryTimestampFromObjectForInsert(100L));
+  }
+
+  @Test
+  public void test_getPrimaryTimestampFromObjectForInsert_nullValueShouldThrowError()
+  {
+    final MSQException e = Assert.assertThrows(
+        MSQException.class,
+        () -> MSQTasks.primaryTimestampFromObjectForInsert(null)
+    );
+    Assert.assertEquals(InsertTimeNullFault.INSTANCE, e.getFault());
+  }
+
+  @Test
+  public void test_getPrimaryTimestampFromObjectForInsert_DoubleValueShouldThrowError()
+  {
+    final Object timestamp = 1.693837200123456E15;
+    final MSQException e = Assert.assertThrows(
+        MSQException.class,
+        () -> MSQTasks.primaryTimestampFromObjectForInsert(timestamp)
+    );
+    Assert.assertEquals(
+        UnknownFault.forMessage(
+            StringUtils.format(
+                "Incorrect type for column [%s]. Expected LONG but got type [%s]. Please ensure that the value is cast to LONG.",
+                ColumnHolder.TIME_COLUMN_NAME,
+                timestamp.getClass().getSimpleName()
+            )
+        ),
+        e.getFault()
+    );
   }
 
   static class TasksTestOverlordClient extends NoopOverlordClient

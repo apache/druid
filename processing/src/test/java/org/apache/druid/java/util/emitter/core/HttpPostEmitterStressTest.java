@@ -65,78 +65,80 @@ public class HttpPostEmitterStressTest
         // For this test, we don't need any batches to be dropped, i. e. "gaps" in data
         .setBatchQueueSizeLimit(1000)
         .build();
-    final HttpPostEmitter emitter = new HttpPostEmitter(config, httpClient, OBJECT_MAPPER);
-    int nThreads = Runtime.getRuntime().availableProcessors() * 2;
-    final List<IntList> eventsPerThread = new ArrayList<>(nThreads);
-    final List<List<Batch>> eventBatchesPerThread = new ArrayList<>(nThreads);
-    for (int i = 0; i < nThreads; i++) {
-      eventsPerThread.add(new IntArrayList());
-      eventBatchesPerThread.add(new ArrayList<Batch>());
-    }
-    for (int i = 0; i < N; i++) {
-      eventsPerThread.get(ThreadLocalRandom.current().nextInt(nThreads)).add(i);
-    }
-    final BitSet emittedEvents = new BitSet(N);
-    httpClient.setGoHandler(new GoHandler()
-    {
-      @Override
-      protected ListenableFuture<Response> go(Request request)
-      {
-        ByteBuffer batch = request.getByteBufferData().slice();
-        while (batch.remaining() > 0) {
-          emittedEvents.set(batch.getInt());
-        }
-        return GoHandlers.immediateFuture(EmitterTest.okResponse());
+    try (final HttpPostEmitter emitter = new HttpPostEmitter(config, httpClient, OBJECT_MAPPER)) {
+      int nThreads = Runtime.getRuntime().availableProcessors() * 2;
+      final List<IntList> eventsPerThread = new ArrayList<>(nThreads);
+      final List<List<Batch>> eventBatchesPerThread = new ArrayList<>(nThreads);
+      for (int i = 0; i < nThreads; i++) {
+        eventsPerThread.add(new IntArrayList());
+        eventBatchesPerThread.add(new ArrayList<>());
       }
-    });
-    emitter.start();
-    final CountDownLatch threadsCompleted = new CountDownLatch(nThreads);
-    for (int i = 0; i < nThreads; i++) {
-      final int threadIndex = i;
-      new Thread() {
+      for (int i = 0; i < N; i++) {
+        eventsPerThread.get(ThreadLocalRandom.current().nextInt(nThreads)).add(i);
+      }
+      final BitSet emittedEvents = new BitSet(N);
+      httpClient.setGoHandler(new GoHandler()
+      {
         @Override
-        public void run()
+        protected ListenableFuture<Response> go(Request request)
         {
-          IntList events = eventsPerThread.get(threadIndex);
-          List<Batch> eventBatches = eventBatchesPerThread.get(threadIndex);
-          IntEvent event = new IntEvent();
-          for (int i = 0, eventsSize = events.size(); i < eventsSize; i++) {
-            event.index = events.getInt(i);
-            eventBatches.add(emitter.emitAndReturnBatch(event));
-            if (i % 16 == 0) {
-              try {
-                Thread.sleep(10);
-              }
-              catch (InterruptedException e) {
-                throw new RuntimeException(e);
+          ByteBuffer batch = request.getByteBufferData().slice();
+          while (batch.remaining() > 0) {
+            emittedEvents.set(batch.getInt());
+          }
+          return GoHandlers.immediateFuture(EmitterTest.okResponse());
+        }
+      });
+      emitter.start();
+      final CountDownLatch threadsCompleted = new CountDownLatch(nThreads);
+      for (int i = 0; i < nThreads; i++) {
+        final int threadIndex = i;
+        new Thread()
+        {
+          @Override
+          public void run()
+          {
+            IntList events = eventsPerThread.get(threadIndex);
+            List<Batch> eventBatches = eventBatchesPerThread.get(threadIndex);
+            IntEvent event = new IntEvent();
+            for (int i = 0, eventsSize = events.size(); i < eventsSize; i++) {
+              event.index = events.getInt(i);
+              eventBatches.add(emitter.emitAndReturnBatch(event));
+              if (i % 16 == 0) {
+                try {
+                  Thread.sleep(10);
+                }
+                catch (InterruptedException e) {
+                  throw new RuntimeException(e);
+                }
               }
             }
+            threadsCompleted.countDown();
           }
-          threadsCompleted.countDown();
-        }
-      }.start();
-    }
-    threadsCompleted.await();
-    emitter.flush();
-    System.out.println("Allocated buffers: " + emitter.getTotalAllocatedBuffers());
-    for (int eventIndex = 0; eventIndex < N; eventIndex++) {
-      if (!emittedEvents.get(eventIndex)) {
-        for (int threadIndex = 0; threadIndex < eventsPerThread.size(); threadIndex++) {
-          IntList threadEvents = eventsPerThread.get(threadIndex);
-          int indexOfEvent = threadEvents.indexOf(eventIndex);
-          if (indexOfEvent >= 0) {
-            Batch batch = eventBatchesPerThread.get(threadIndex).get(indexOfEvent);
-            System.err.println(batch);
-            int bufferWatermark = batch.getSealedBufferWatermark();
-            ByteBuffer batchBuffer = ByteBuffer.wrap(batch.buffer);
-            batchBuffer.limit(bufferWatermark);
-            while (batchBuffer.remaining() > 0) {
-              System.err.println(batchBuffer.getInt());
+        }.start();
+      }
+      threadsCompleted.await();
+      emitter.flush();
+      System.out.println("Allocated buffers: " + emitter.getTotalAllocatedBuffers());
+      for (int eventIndex = 0; eventIndex < N; eventIndex++) {
+        if (!emittedEvents.get(eventIndex)) {
+          for (int threadIndex = 0; threadIndex < eventsPerThread.size(); threadIndex++) {
+            IntList threadEvents = eventsPerThread.get(threadIndex);
+            int indexOfEvent = threadEvents.indexOf(eventIndex);
+            if (indexOfEvent >= 0) {
+              Batch batch = eventBatchesPerThread.get(threadIndex).get(indexOfEvent);
+              System.err.println(batch);
+              int bufferWatermark = batch.getSealedBufferWatermark();
+              ByteBuffer batchBuffer = ByteBuffer.wrap(batch.buffer);
+              batchBuffer.limit(bufferWatermark);
+              while (batchBuffer.remaining() > 0) {
+                System.err.println(batchBuffer.getInt());
+              }
+              break;
             }
-            break;
           }
+          throw new AssertionError("event " + eventIndex);
         }
-        throw new AssertionError("event " + eventIndex);
       }
     }
   }
@@ -151,34 +153,36 @@ public class HttpPostEmitterStressTest
         .setMaxBatchSize(1024 * 1024)
         .setBatchQueueSizeLimit(10)
         .build();
-    final HttpPostEmitter emitter = new HttpPostEmitter(config, httpClient, new ObjectMapper());
+    try (final HttpPostEmitter emitter = new HttpPostEmitter(config, httpClient, new ObjectMapper())) {
 
-    emitter.start();
+      emitter.start();
 
-    httpClient.setGoHandler(new GoHandler() {
-      @Override
-      protected ListenableFuture<Response> go(Request request)
+      httpClient.setGoHandler(new GoHandler()
       {
-        return GoHandlers.immediateFuture(EmitterTest.BAD_RESPONSE);
+        @Override
+        protected ListenableFuture<Response> go(Request request)
+        {
+          return GoHandlers.immediateFuture(EmitterTest.BAD_RESPONSE);
+        }
+      });
+
+      char[] chars = new char[600000];
+      Arrays.fill(chars, '*');
+      String bigString = new String(chars);
+
+      Event bigEvent = ServiceMetricEvent.builder()
+                                         .setFeed("bigEvents")
+                                         .setDimension("test", bigString)
+                                         .setMetric("metric", 10)
+                                         .build("qwerty", "asdfgh");
+
+      for (int i = 0; i < 1000; i++) {
+        emitter.emit(bigEvent);
+        Assert.assertTrue(emitter.getLargeEventsToEmit() <= 11);
       }
-    });
 
-    char[] chars = new char[600000];
-    Arrays.fill(chars, '*');
-    String bigString = new String(chars);
-
-    Event bigEvent = ServiceMetricEvent.builder()
-                                       .setFeed("bigEvents")
-                                       .setDimension("test", bigString)
-                                       .setMetric("metric", 10)
-                                       .build("qwerty", "asdfgh");
-
-    for (int i = 0; i < 1000; i++) {
-      emitter.emit(bigEvent);
-      Assert.assertTrue(emitter.getLargeEventsToEmit() <= 11);
+      emitter.flush();
     }
-
-    emitter.flush();
   }
 
   @Test
@@ -191,64 +195,67 @@ public class HttpPostEmitterStressTest
         .setMaxBatchSize(1024 * 1024)
         .setBatchQueueSizeLimit(10)
         .build();
-    final HttpPostEmitter emitter = new HttpPostEmitter(config, httpClient, new ObjectMapper());
+    try (final HttpPostEmitter emitter = new HttpPostEmitter(config, httpClient, new ObjectMapper())) {
+      emitter.start();
 
-    emitter.start();
-
-    httpClient.setGoHandler(new GoHandler() {
-      @Override
-      protected ListenableFuture<Response> go(Request request)
+      httpClient.setGoHandler(new GoHandler()
       {
-        return GoHandlers.immediateFuture(EmitterTest.BAD_RESPONSE);
-      }
-    });
-
-    char[] chars = new char[600000];
-    Arrays.fill(chars, '*');
-    String bigString = new String(chars);
-
-    Event smallEvent = ServiceMetricEvent.builder()
-                                       .setFeed("smallEvents")
-                                       .setDimension("test", "hi")
-                                       .setMetric("metric", 10)
-                                       .build("qwerty", "asdfgh");
-
-    Event bigEvent = ServiceMetricEvent.builder()
-                                       .setFeed("bigEvents")
-                                       .setDimension("test", bigString)
-                                       .setMetric("metric", 10)
-                                       .build("qwerty", "asdfgh");
-
-    final CountDownLatch threadsCompleted = new CountDownLatch(2);
-    new Thread() {
-      @Override
-      public void run()
-      {
-        for (int i = 0; i < 1000; i++) {
-
-          emitter.emit(smallEvent);
-
-          Assert.assertTrue(emitter.getTotalFailedBuffers() <= 10);
-          Assert.assertTrue(emitter.getBuffersToEmit() <= 12);
+        @Override
+        protected ListenableFuture<Response> go(Request request)
+        {
+          return GoHandlers.immediateFuture(EmitterTest.BAD_RESPONSE);
         }
-        threadsCompleted.countDown();
-      }
-    }.start();
-    new Thread() {
-      @Override
-      public void run()
+      });
+
+      char[] chars = new char[600000];
+      Arrays.fill(chars, '*');
+      String bigString = new String(chars);
+
+      Event smallEvent = ServiceMetricEvent.builder()
+                                           .setFeed("smallEvents")
+                                           .setDimension("test", "hi")
+                                           .setMetric("metric", 10)
+                                           .build("qwerty", "asdfgh");
+
+      Event bigEvent = ServiceMetricEvent.builder()
+                                         .setFeed("bigEvents")
+                                         .setDimension("test", bigString)
+                                         .setMetric("metric", 10)
+                                         .build("qwerty", "asdfgh");
+
+      final CountDownLatch threadsCompleted = new CountDownLatch(2);
+      new Thread()
       {
-        for (int i = 0; i < 1000; i++) {
+        @Override
+        public void run()
+        {
+          for (int i = 0; i < 1000; i++) {
 
-          emitter.emit(bigEvent);
+            emitter.emit(smallEvent);
 
-          Assert.assertTrue(emitter.getTotalFailedBuffers() <= 10);
-          Assert.assertTrue(emitter.getBuffersToEmit() <= 12);
+            Assert.assertTrue(emitter.getTotalFailedBuffers() <= 10);
+            Assert.assertTrue(emitter.getBuffersToEmit() <= 12);
+          }
+          threadsCompleted.countDown();
         }
-        threadsCompleted.countDown();
-      }
-    }.start();
-    threadsCompleted.await();
-    emitter.flush();
+      }.start();
+      new Thread()
+      {
+        @Override
+        public void run()
+        {
+          for (int i = 0; i < 1000; i++) {
+
+            emitter.emit(bigEvent);
+
+            Assert.assertTrue(emitter.getTotalFailedBuffers() <= 10);
+            Assert.assertTrue(emitter.getBuffersToEmit() <= 12);
+          }
+          threadsCompleted.countDown();
+        }
+      }.start();
+      threadsCompleted.await();
+      emitter.flush();
+    }
   }
 }

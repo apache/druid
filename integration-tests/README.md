@@ -46,7 +46,7 @@ environment variable to localhost on your system, as follows:
 export DOCKER_IP=127.0.0.1
 ```
 
-Optionally, you can also set `APACHE_ARCHIVE_MIRROR_HOST` to override `https://archive.apache.org` host. This host is used to download archives such as hadoop and kafka during building docker images:
+Optionally, you can also set `APACHE_ARCHIVE_MIRROR_HOST` to override `https://downloads.apache.org` host. This host is used to download archives such as hadoop and kafka during building docker images:
 
 ```bash
 export APACHE_ARCHIVE_MIRROR_HOST=https://example.com/remote-generic-repo
@@ -88,8 +88,7 @@ if your test has the annotation: `@Test(groups = TestNGGroup.BATCH_INDEX)` then 
 * Add `-pl :druid-integration-tests` when running integration tests for the second time or later without changing
 the code of core modules in between to skip up-to-date checks for the whole module dependency tree.
 
-* Integration tests can also be run with either Java 8 or Java 11 by adding `-Djvm.runtime=#` to the `mvn` command, where `#`
-can either be 8 or 11.
+* Integration tests can also be run with a specific Java version by adding `-Djvm.runtime=#` to the `mvn` command (where `#` can be 11, for example).
 
 * Druid's configuration (using Docker) can be overridden by providing `-Doverride.config.path=<PATH_TO_FILE>`.
 The file must contain one property per line, the key must start with `druid_` and the format should be snake case.
