@@ -1110,10 +1110,6 @@ Returns the following:
 | `bitwise_and` |
 | -- |
 | 8 |
-<<<<<<< HEAD
-=======
-
->>>>>>> upstream/master
 </details>
 
 [Learn more](sql-scalar.md#numeric-functions)
@@ -1137,10 +1133,6 @@ Returns the following:
 | `bitwise_complement` |
 | -- |
 | -13 |
-<<<<<<< HEAD
-=======
-
->>>>>>> upstream/master
 </details>
 
 [Learn more](sql-scalar.md#numeric-functions)
@@ -1164,10 +1156,6 @@ Returns the following:
 | `ieee_754_double_to_long` |
 | -- |
 | `4643176031446892544` |
-<<<<<<< HEAD
-=======
-
->>>>>>> upstream/master
 </details>
 
 [Learn more](sql-scalar.md#numeric-functions)
@@ -1192,10 +1180,6 @@ Returns the following:
 | `long_to_ieee_754_double` |
 | -- |
 | `255` |
-<<<<<<< HEAD
-=======
-
->>>>>>> upstream/master
 </details>
 
 [Learn more](sql-scalar.md#numeric-functions)
@@ -2491,8 +2475,6 @@ Returns a number for each output row of a groupBy query, indicating whether the 
 * **Syntax**: `GROUPING(expr, expr...)`
 * **Function type:** Aggregation
 
-<<<<<<< HEAD
-=======
 <details><summary>Example</summary>
 
 The following example returns the total minutes of flight delay for each day of the week in `flight-carriers`.
@@ -2527,7 +2509,6 @@ Returns the following:
 
 </details>
 
->>>>>>> upstream/master
 [Learn more](sql-aggregations.md)
 
 ## HLL_SKETCH_ESTIMATE
@@ -2965,7 +2946,6 @@ If you do not supply an `offset`, returns the value evaluated at the row precedi
 * **Syntax**: `LAG(expr[, offset])`
 * **Function type:** Window
 
-<<<<<<< HEAD
 <details><summary>Example</summary>
 
 The following example returns the subsequent airline value in the window for flights by carrier from two airports on a single day.
@@ -2996,8 +2976,6 @@ Returns the following:
  
 </details>
 
-=======
->>>>>>> upstream/master
 [Learn more](sql-window-functions.md#window-function-reference)
 
 ## LAST_VALUE
@@ -3007,7 +2985,6 @@ Returns the value evaluated for the expression for the last row within the windo
 * **Syntax**: `LAST_VALUE(expr)`
 * **Function type:** Window
 
-<<<<<<< HEAD
 <!-- LAST_VALUE example not returning expected results
 
 <details><summary>Example</summary>
@@ -3042,8 +3019,6 @@ Returns the following:
 
 -->
 
-=======
->>>>>>> upstream/master
 [Learn more](sql-window-functions.md#window-function-reference)
 
 ## LATEST
@@ -3053,8 +3028,6 @@ Returns the value of a numeric or string expression corresponding to the latest 
 * **Syntax**: `LATEST(expr, [maxBytesPerValue])`
 * **Function type:** Aggregation
 
-<<<<<<< HEAD
-=======
 <details><summary>Example</summary>
 
 The following example returns the origin airport code associated with the latest departing flight daily after `'2005-01-01 00:00:00'` in `flight-carriers`:
@@ -3078,7 +3051,6 @@ Returns the following:
 
 </details>
 
->>>>>>> upstream/master
 [Learn more](sql-aggregations.md)
 
 ## LATEST_BY
@@ -3088,8 +3060,6 @@ Returns the value of a numeric or string expression corresponding to the latest 
 * **Syntax**: `LATEST_BY(expr, timestampExpr, [maxBytesPerValue])`
 * **Function type:** Aggregation
 
-<<<<<<< HEAD
-=======
 <details><summary>Example</summary>
 
 The following example returns the destination airport code associated with the latest arriving flight daily after `'2005-01-01 00:00:00'` in `flight-carriers`:
@@ -3113,7 +3083,6 @@ Returns the following:
 
 </details>
 
->>>>>>> upstream/master
 [Learn more](sql-aggregations.md)
 
 ## LEAD
@@ -3123,7 +3092,6 @@ If you do not supply an `offset`, returns the value evaluated at the row followi
 * **Syntax**: `LEAD(expr[, offset])`
 * **Function type:** Window
 
-<<<<<<< HEAD
 <details><summary>Example</summary>
 
 The following example returns the previous value for airline in the window for flights from two airports on a single day.
@@ -3154,8 +3122,6 @@ Returns the following:
  
 </details>
 
-=======
->>>>>>> upstream/master
 [Learn more](sql-window-functions.md#window-function-reference)
 
 ## LEAST
@@ -3440,8 +3406,6 @@ Returns the maximum value of a set of values.
 * **Syntax**: `MAX(expr)`
 * **Function type:** Aggregation
 
-<<<<<<< HEAD
-=======
 
 <details><summary>Example</summary>
 
@@ -3461,7 +3425,6 @@ Returns the following:
 
 </details>
 
->>>>>>> upstream/master
 [Learn more](sql-aggregations.md)
 
 ## MILLIS_TO_TIMESTAMP
@@ -3496,8 +3459,6 @@ Returns the minimum value of a set of values.
 * **Syntax**: `MIN(expr)`
 * **Function type:** Aggregation
 
-<<<<<<< HEAD
-=======
 <details><summary>Example</summary>
 
 The following example calculates the minimum delay in minutes for an airline in `flight-carriers`:
@@ -3516,7 +3477,6 @@ Returns the following:
 
 </details>
 
->>>>>>> upstream/master
 [Learn more](sql-aggregations.md)
 
 ## MOD
@@ -3974,7 +3934,6 @@ Divides the rows within a window as evenly as possible into the number of tiles,
 * **Syntax**: `NTILE(tiles)`
 * **Function type:** Window
 
-<<<<<<< HEAD
 <details><summary>Example</summary>
 
 The following example returns the results for flights by carrier from two airports on a single day divided into 3 tiles.
@@ -4005,8 +3964,6 @@ Returns the following:
  
 </details>
 
-=======
->>>>>>> upstream/master
 [Learn more](sql-window-functions.md#window-function-reference)
 
 ## NULLIF
@@ -4112,7 +4069,6 @@ Returns the relative rank of the row calculated as a percentage according to the
 * **Syntax**: `PERCENT_RANK()`
 * **Function type:** Window
 
-<<<<<<< HEAD
 <details><summary>Example</summary>
 
 The following example returns the percent rank for flights from two airports on a single day.
@@ -4143,8 +4099,6 @@ Returns the following:
  
 </details>
 
-=======
->>>>>>> upstream/master
 [Learn more](sql-window-functions.md#window-function-reference)
 
 ## POSITION
@@ -4492,7 +4446,6 @@ Returns the number of the row within the window starting from 1.
 * **Syntax**: `ROW_NUMBER()`
 * **Function type:** Window
 
-<<<<<<< HEAD
 <details><summary>Example</summary>
 
 The following example returns the window row number for flights by carrier from two airports on a single day.
@@ -4524,8 +4477,6 @@ Returns the following:
  
 </details>
 
-=======
->>>>>>> upstream/master
 [Learn more](sql-window-functions.md#window-function-reference)
 
 ## RPAD
@@ -4659,9 +4610,6 @@ Returns the following:
 
 ## STDDEV
 
-<<<<<<< HEAD
-Alias for [`STDDEV_SAMP`](#stddev_samp).
-=======
 Alias for [`STDDEV_SAMP`](#stddev_samp).  
 Requires the [`druid-stats` extension](../development/extensions-core/stats.md).
 
@@ -4669,7 +4617,6 @@ Requires the [`druid-stats` extension](../development/extensions-core/stats.md).
 * **Function type:** Aggregation
 
 [Learn more](sql-aggregations.md)
->>>>>>> upstream/master
 
 * **Syntax**: `STDDEV(expr)`
 * **Function type:** Aggregation
@@ -4678,9 +4625,6 @@ Requires the [`druid-stats` extension](../development/extensions-core/stats.md).
 
 ## STDDEV_POP
 
-<<<<<<< HEAD
-Calculates the population standard deviation of a set of values.
-=======
 Calculates the population standard deviation of a set of values.  
 Requires the [`druid-stats` extension](../development/extensions-core/stats.md).
 
@@ -4706,7 +4650,6 @@ Returns the following:
 </details>
 
 [Learn more](sql-aggregations.md)
->>>>>>> upstream/master
 
 * **Syntax**: `STDDEV_POP(expr)`
 * **Function type:** Aggregation
@@ -4715,9 +4658,6 @@ Returns the following:
 
 ## STDDEV_SAMP
 
-<<<<<<< HEAD
-Calculates the sample standard deviation of a set of values.
-=======
 Calculates the sample standard deviation of a set of values.  
 Requires the [`druid-stats` extension](../development/extensions-core/stats.md).
 
@@ -4743,7 +4683,6 @@ Returns the following:
 </details>
 
 [Learn more](sql-aggregations.md)
->>>>>>> upstream/master
 
 * **Syntax**: `STDDEV_SAMP(expr)`
 * **Function type:** Aggregation
@@ -4756,9 +4695,6 @@ Collects all values of an expression into a single string.
 
 * **Syntax**: `STRING_AGG(expr, separator, [size])`
 * **Function type:** Aggregation
-<<<<<<< HEAD
-
-=======
 
 <details><summary>Example</summary>
 
@@ -4778,7 +4714,6 @@ Returns the following:
 
 </details>
 
->>>>>>> upstream/master
 [Learn more](sql-aggregations.md)
 
 ## STRING_FORMAT
@@ -4927,8 +4862,6 @@ Calculates the sum of a set of values.
 * **Syntax**: `SUM(expr)`
 * **Function type:** Aggregation
 
-<<<<<<< HEAD
-=======
 <details><summary>Example</summary>
 
 The following example calculates the total minutes of delay for an airline in `flight-carriers`:
@@ -4947,7 +4880,6 @@ Returns the following:
 
 </details>
 
->>>>>>> upstream/master
 [Learn more](sql-aggregations.md)
 
 ## TAN
@@ -5581,9 +5513,6 @@ Returns the following:
 
 ## VAR_POP
 
-<<<<<<< HEAD
-Calculates the population variance of a set of values.
-=======
 Calculates the population variance of a set of values.  
 Requires the [`druid-stats` extension](../development/extensions-core/stats.md).
 
@@ -5609,7 +5538,6 @@ Returns the following:
 </details>
 
 [Learn more](sql-aggregations.md)
->>>>>>> upstream/master
 
 * **Syntax**: `VAR_POP(expr)`
 * **Function type:** Aggregation
@@ -5618,9 +5546,6 @@ Returns the following:
 
 ## VAR_SAMP
 
-<<<<<<< HEAD
-Calculates the sample variance of a set of values.
-=======
 Calculates the sample variance of a set of values.  
 Requires the [`druid-stats` extension](../development/extensions-core/stats.md).
 
@@ -5646,7 +5571,6 @@ Returns the following:
 </details>
 
 [Learn more](sql-aggregations.md)
->>>>>>> upstream/master
 
 * **Syntax**: `VAR_SAMP(expr)`
 * **Function type:** Aggregation
@@ -5655,12 +5579,8 @@ Returns the following:
 
 ## VARIANCE
 
-<<<<<<< HEAD
-Alias for [`VAR_SAMP`](#var_samp).
-=======
 Alias for [`VAR_SAMP`](#var_samp).  
 Requires the [`druid-stats` extension](../development/extensions-core/stats.md).
->>>>>>> upstream/master
 
 * **Syntax**: `VARIANCE(expr)`
 * **Function type:** Aggregation
