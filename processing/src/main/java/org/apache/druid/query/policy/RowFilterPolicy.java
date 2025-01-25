@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.segment.CursorBuildSpec;
-import org.apache.druid.segment.FilteredCursorFactory;
 
 import javax.annotation.Nonnull;
 import java.util.Objects;
