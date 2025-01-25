@@ -44,6 +44,7 @@ import org.apache.druid.msq.indexing.destination.DurableStorageMSQDestination;
 import org.apache.druid.msq.indexing.destination.MSQSelectDestination;
 import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
 import org.apache.druid.msq.indexing.report.MSQResultsReport;
+import org.apache.druid.msq.sql.MSQTaskQueryMaker;
 import org.apache.druid.msq.test.CounterSnapshotMatcher;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.util.MultiStageQueryContext;
@@ -52,6 +53,7 @@ import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.QueryDataSource;
+import org.apache.druid.query.RestrictedDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.UnnestDataSource;
@@ -74,7 +76,6 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
-import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.external.ExternalDataSource;
 import org.apache.druid.sql.calcite.filtration.Filtration;
@@ -85,6 +86,7 @@ import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentMatchers;
@@ -129,8 +131,14 @@ public class MSQSelectTest extends MSQTestBase
 
   public static Collection<Object[]> data()
   {
+    final Map<String, Object> superuserContext = new HashMap<>(DEFAULT_MSQ_CONTEXT);
+    superuserContext.put(
+        MSQTaskQueryMaker.USER_KEY,
+        CalciteTests.SUPER_USER_AUTH_RESULT.getIdentity()
+    );
     Object[][] data = new Object[][]{
         {DEFAULT, DEFAULT_MSQ_CONTEXT},
+        {"superuser", superuserContext},
         {DURABLE_STORAGE, DURABLE_STORAGE_MSQ_CONTEXT},
         {FAULT_TOLERANCE, FAULT_TOLERANCE_MSQ_CONTEXT},
         {PARALLEL_MERGE, PARALLEL_MERGE_MSQ_CONTEXT},
@@ -140,6 +148,7 @@ public class MSQSelectTest extends MSQTestBase
 
     return Arrays.asList(data);
   }
+
   @MethodSource("data")
   @ParameterizedTest(name = "{index}:with context {0}")
   public void testCalculator(String contextName, Map<String, Object> context)
@@ -741,7 +750,10 @@ public class MSQSelectTest extends MSQTestBase
         )
         .setExpectedCountersForStageWorkerChannel(
             CounterSnapshotMatcher
-                .with().rows(!context.containsKey(MultiStageQueryContext.CTX_ROWS_PER_PAGE) ? new long[] {6} : new long[] {2, 2, 2}),
+                .with()
+                .rows(!context.containsKey(MultiStageQueryContext.CTX_ROWS_PER_PAGE)
+                      ? new long[]{6}
+                      : new long[]{2, 2, 2}),
             1, 0, "shuffle"
         )
         .setExpectedResultRows(expectedResults)
@@ -798,16 +810,74 @@ public class MSQSelectTest extends MSQTestBase
 
   @MethodSource("data")
   @ParameterizedTest(name = "{index}:with context {0}")
-  public void testSelectRestricted(String contextName, Map<String, Object> context)
+  public void testSelectRestrictedAsRegularUser(String contextName, Map<String, Object> context)
   {
+    // only run this test for regular user
+    Assumptions.assumeTrue(context.get(MSQTaskQueryMaker.USER_KEY)
+                                  .equals(CalciteTests.REGULAR_USER_AUTH_RESULT.getIdentity()));
+    final RowSignature rowSignature = RowSignature.builder().add("EXPR$0", ColumnType.LONG).build();
+
     testSelectQuery()
         .setSql("select count(*) from druid.restrictedDatasource_m1_is_6")
         .setQueryContext(context)
-        .setExpectedExecutionErrorMatcher(CoreMatchers.allOf(
-            CoreMatchers.instanceOf(ForbiddenException.class),
-            ThrowableMessageMatcher.hasMessage(CoreMatchers.containsString("Unauthorized"))
-        ))
-        .verifyExecutionError();
+        .setExpectedMSQSpec(
+            MSQSpec.builder()
+                   .query(
+                       GroupByQuery.builder()
+                                   .setDataSource(RestrictedDataSource.create(
+                                       TableDataSource.create(CalciteTests.RESTRICTED_DATASOURCE),
+                                       CalciteTests.POLICY_RESTRICTION
+                                   ))
+                                   .setInterval(querySegmentSpec(Filtration.eternity()))
+                                   .setGranularity(Granularities.ALL)
+                                   .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
+                                   .setContext(context)
+                                   .build())
+                   .columnMappings(new ColumnMappings(ImmutableList.of(new ColumnMapping("a0", "EXPR$0"))))
+                   .tuningConfig(MSQTuningConfig.defaultConfig())
+                   .destination(isDurableStorageDestination(contextName, context)
+                                ? DurableStorageMSQDestination.INSTANCE
+                                : TaskReportMSQDestination.INSTANCE)
+                   .build())
+        .setExpectedRowSignature(rowSignature)
+        .setExpectedResultRows(ImmutableList.of(new Object[]{1L}))
+        .verifyResults();
+  }
+
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testSelectRestrictedAsSuperUser(String contextName, Map<String, Object> context)
+  {
+    // only run this test for superuser
+    Assumptions.assumeTrue(context.get(MSQTaskQueryMaker.USER_KEY).equals(CalciteTests.TEST_SUPERUSER_NAME));
+
+    final RowSignature rowSignature = RowSignature.builder().add("EXPR$0", ColumnType.LONG).build();
+
+    testSelectQuery()
+        .setSql("select count(*) from druid.restrictedDatasource_m1_is_6")
+        .setQueryContext(context)
+        .setExpectedMSQSpec(
+            MSQSpec.builder()
+                   .query(
+                       GroupByQuery.builder()
+                                   .setDataSource(RestrictedDataSource.create(
+                                       TableDataSource.create(CalciteTests.RESTRICTED_DATASOURCE),
+                                       CalciteTests.POLICY_NO_RESTRICTION_SUPERUSER
+                                   ))
+                                   .setInterval(querySegmentSpec(Filtration.eternity()))
+                                   .setGranularity(Granularities.ALL)
+                                   .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
+                                   .setContext(context)
+                                   .build())
+                   .columnMappings(new ColumnMappings(ImmutableList.of(new ColumnMapping("a0", "EXPR$0"))))
+                   .tuningConfig(MSQTuningConfig.defaultConfig())
+                   .destination(isDurableStorageDestination(contextName, context)
+                                ? DurableStorageMSQDestination.INSTANCE
+                                : TaskReportMSQDestination.INSTANCE)
+                   .build())
+        .setExpectedRowSignature(rowSignature)
+        .setExpectedResultRows(ImmutableList.of(new Object[]{6L}))
+        .verifyResults();
   }
 
   @MethodSource("data")
@@ -1483,9 +1553,9 @@ public class MSQSelectTest extends MSQTestBase
                              .context(defaultScanQueryContext(
                                  multipleWorkerContext,
                                  RowSignature.builder()
-                                     .add("v0", ColumnType.LONG)
-                                     .add("user", ColumnType.STRING)
-                                     .build()
+                                             .add("v0", ColumnType.LONG)
+                                             .add("user", ColumnType.STRING)
+                                             .build()
                              ))
                              .build();
 
@@ -1799,7 +1869,8 @@ public class MSQSelectTest extends MSQTestBase
                                      .build();
 
     testSelectQuery()
-        .setSql("SELECT dim1, cnt FROM (SELECT dim1, COUNT(*) AS cnt FROM foo GROUP BY dim1 HAVING dim1 != '' LIMIT 1) LIMIT 20")
+        .setSql(
+            "SELECT dim1, cnt FROM (SELECT dim1, COUNT(*) AS cnt FROM foo GROUP BY dim1 HAVING dim1 != '' LIMIT 1) LIMIT 20")
         .setExpectedMSQSpec(MSQSpec.builder()
                                    .query(query)
                                    .columnMappings(new ColumnMappings(ImmutableList.of(
@@ -1830,15 +1901,24 @@ public class MSQSelectTest extends MSQTestBase
     GroupByQuery query = GroupByQuery.builder()
                                      .setDataSource(
                                          new ExternalDataSource(
-                                             new InlineInputSource("dim1\nabc\nxyz\ndef\nxyz\nabc\nxyz\nabc\nxyz\ndef\nbbb\naaa"),
+                                             new InlineInputSource(
+                                                 "dim1\nabc\nxyz\ndef\nxyz\nabc\nxyz\nabc\nxyz\ndef\nbbb\naaa"),
                                              new CsvInputFormat(null, null, null, true, 0, null),
                                              RowSignature.builder().add("dim1", ColumnType.STRING).build()
                                          )
                                      )
                                      .setInterval(querySegmentSpec(Filtration.eternity()))
                                      .setGranularity(Granularities.ALL)
-                                     .addOrderByColumn(new OrderByColumnSpec("a0", OrderByColumnSpec.Direction.DESCENDING, StringComparators.NUMERIC))
-                                     .addOrderByColumn(new OrderByColumnSpec("d0", OrderByColumnSpec.Direction.ASCENDING, StringComparators.LEXICOGRAPHIC))
+                                     .addOrderByColumn(new OrderByColumnSpec(
+                                         "a0",
+                                         OrderByColumnSpec.Direction.DESCENDING,
+                                         StringComparators.NUMERIC
+                                     ))
+                                     .addOrderByColumn(new OrderByColumnSpec(
+                                         "d0",
+                                         OrderByColumnSpec.Direction.ASCENDING,
+                                         StringComparators.LEXICOGRAPHIC
+                                     ))
                                      .setDimensions(dimensions(new DefaultDimensionSpec("dim1", "d0")))
                                      .setAggregatorSpecs(
                                          aggregators(
@@ -1924,7 +2004,10 @@ public class MSQSelectTest extends MSQTestBase
         )
         .setExpectedCountersForStageWorkerChannel(
             CounterSnapshotMatcher
-                .with().rows(!context.containsKey(MultiStageQueryContext.CTX_ROWS_PER_PAGE) ? new long[] {4} : new long[] {2, 2}),
+                .with()
+                .rows(!context.containsKey(MultiStageQueryContext.CTX_ROWS_PER_PAGE)
+                      ? new long[]{4}
+                      : new long[]{2, 2}),
             2, 0, "shuffle"
         )
         .setQueryContext(context)
@@ -2326,7 +2409,8 @@ public class MSQSelectTest extends MSQTestBase
 
   @MethodSource("data")
   @ParameterizedTest(name = "{index}:with context {0}")
-  public void testGroupByOnFooWithDurableStoragePathAssertions(String contextName, Map<String, Object> context) throws IOException
+  public void testGroupByOnFooWithDurableStoragePathAssertions(String contextName, Map<String, Object> context)
+      throws IOException
   {
     RowSignature rowSignature = RowSignature.builder()
                                             .add("cnt", ColumnType.LONG)
@@ -2592,7 +2676,8 @@ public class MSQSelectTest extends MSQTestBase
     );
 
     testSelectQuery()
-        .setSql("SELECT d3 FROM (select * from druid.foo where dim2='a' LIMIT 10), UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3)")
+        .setSql(
+            "SELECT d3 FROM (select * from druid.foo where dim2='a' LIMIT 10), UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3)")
         .setExpectedMSQSpec(
             MSQSpec.builder()
                    .query(newScanQueryBuilder()

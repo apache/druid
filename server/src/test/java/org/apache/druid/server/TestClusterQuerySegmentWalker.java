@@ -41,7 +41,6 @@ import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.ReferenceCountingSegmentQueryRunner;
 import org.apache.druid.query.SegmentDescriptor;
-import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.context.ResponseContext.Keys;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTestHelper;
@@ -110,7 +109,7 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
         throw new ISE("Cannot handle datasource: %s", queryPlus.getQuery().getDataSource());
       }
 
-      final String dataSourceName = ((TableDataSource) analysis.getBaseDataSource()).getName();
+      final String dataSourceName = analysis.getBaseTableDataSource().get().getName();
 
       FunctionalIterable<SegmentDescriptor> segmentDescriptors = FunctionalIterable
           .create(intervals)
@@ -136,7 +135,7 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
       throw new ISE("Cannot handle datasource: %s", dataSourceFromQuery);
     }
 
-    final String dataSourceName = ((TableDataSource) analysis.getBaseDataSource()).getName();
+    final String dataSourceName = analysis.getBaseTableDataSource().get().getName();
 
     final QueryToolChest<T, Query<T>> toolChest = factory.getToolchest();
 

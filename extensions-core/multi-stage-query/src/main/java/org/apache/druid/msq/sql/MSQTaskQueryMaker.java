@@ -54,7 +54,6 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
-import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.calcite.parser.DruidSqlIngest;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.parser.DruidSqlReplace;
@@ -115,11 +114,9 @@ public class MSQTaskQueryMaker implements QueryMaker
   }
 
   @Override
-  public QueryResponse<Object[]> runQuery(final DruidQuery druidQuery)
+  public QueryResponse<Object[]> runQuery(DruidQuery druidQuery)
   {
-    if (!plannerContext.getAuthorizationResult().allowAccessWithNoRestriction()) {
-      throw new ForbiddenException(plannerContext.getAuthorizationResult().getErrorMessage());
-    }
+    druidQuery = druidQuery.withPolicies(plannerContext.getAuthorizationResult().getPolicyMap());
     Hook.QUERY_PLAN.run(druidQuery.getQuery());
     plannerContext.dispatchHook(DruidHook.NATIVE_PLAN, druidQuery.getQuery());
 
@@ -174,17 +171,17 @@ public class MSQTaskQueryMaker implements QueryMaker
     }
 
     Object segmentGranularity =
-          Optional.ofNullable(plannerContext.queryContext().get(DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY))
-                  .orElseGet(() -> {
-                    try {
-                      return plannerContext.getJsonMapper().writeValueAsString(DEFAULT_SEGMENT_GRANULARITY);
-                    }
-                    catch (JsonProcessingException e) {
-                      // This would only be thrown if we are unable to serialize the DEFAULT_SEGMENT_GRANULARITY,
-                      // which we don't expect to happen.
-                      throw DruidException.defensive().build(e, "Unable to serialize DEFAULT_SEGMENT_GRANULARITY");
-                    }
-                  });
+        Optional.ofNullable(plannerContext.queryContext().get(DruidSqlInsert.SQL_INSERT_SEGMENT_GRANULARITY))
+                .orElseGet(() -> {
+                  try {
+                    return plannerContext.getJsonMapper().writeValueAsString(DEFAULT_SEGMENT_GRANULARITY);
+                  }
+                  catch (JsonProcessingException e) {
+                    // This would only be thrown if we are unable to serialize the DEFAULT_SEGMENT_GRANULARITY,
+                    // which we don't expect to happen.
+                    throw DruidException.defensive().build(e, "Unable to serialize DEFAULT_SEGMENT_GRANULARITY");
+                  }
+                });
 
     final int maxNumTasks = MultiStageQueryContext.getMaxNumTasks(sqlQueryContext);
 
@@ -302,7 +299,13 @@ public class MSQTaskQueryMaker implements QueryMaker
                .columnMappings(new ColumnMappings(QueryUtils.buildColumnMappings(fieldMapping, druidQuery)))
                .destination(destination)
                .assignmentStrategy(MultiStageQueryContext.getAssignmentStrategy(sqlQueryContext))
-               .tuningConfig(new MSQTuningConfig(maxNumWorkers, maxRowsInMemory, rowsPerSegment, maxNumSegments, indexSpec))
+               .tuningConfig(new MSQTuningConfig(
+                   maxNumWorkers,
+                   maxRowsInMemory,
+                   rowsPerSegment,
+                   maxNumSegments,
+                   indexSpec
+               ))
                .build();
 
     MSQTaskQueryMakerUtils.validateRealtimeReindex(querySpec);

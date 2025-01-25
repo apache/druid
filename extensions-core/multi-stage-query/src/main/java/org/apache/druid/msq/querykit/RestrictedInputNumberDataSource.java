@@ -26,7 +26,10 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.planning.DataSourceAnalysis;
+import org.apache.druid.query.policy.Policy;
+import org.apache.druid.segment.RestrictedSegment;
 import org.apache.druid.segment.SegmentReference;
+import org.apache.druid.utils.JvmUtils;
 
 import java.util.Collections;
 import java.util.List;
@@ -37,7 +40,7 @@ import java.util.function.Function;
 
 /**
  * Represents an input number, i.e., a positional index into
- * {@link org.apache.druid.msq.kernel.StageDefinition#getInputSpecs()}.
+ * {@link org.apache.druid.msq.kernel.StageDefinition#getInputSpecs()}, with policy restriction.
  * <p>
  * Used by
  * <ul>
@@ -45,15 +48,20 @@ import java.util.function.Function;
  *   <li>{@link BroadcastJoinSegmentMapFnProcessor} to associate broadcast inputs with the correct datasources in a
  * join tree.
  */
-@JsonTypeName("inputNumber")
-public class InputNumberDataSource implements DataSource
+@JsonTypeName("restrictedInputNumber")
+public class RestrictedInputNumberDataSource implements DataSource
 {
   private final int inputNumber;
+  private final Policy policy;
 
   @JsonCreator
-  public InputNumberDataSource(@JsonProperty("inputNumber") int inputNumber)
+  public RestrictedInputNumberDataSource(
+      @JsonProperty("inputNumber") int inputNumber,
+      @JsonProperty("policy") Policy policy
+  )
   {
     this.inputNumber = inputNumber;
+    this.policy = policy;
   }
 
   @Override
@@ -93,14 +101,16 @@ public class InputNumberDataSource implements DataSource
   @Override
   public boolean isConcrete()
   {
-    // InputNumberDataSource represents InputSpecs, which are scannable via Segment adapters.
     return true;
   }
 
   @Override
   public Function<SegmentReference, SegmentReference> createSegmentMapFunction(Query query, AtomicLong cpuTimeAcc)
   {
-    return Function.identity();
+    return JvmUtils.safeAccumulateThreadCpuTime(
+        cpuTimeAcc,
+        () -> ((segment) -> (new RestrictedSegment(segment, policy)))
+    );
   }
 
   @Override
@@ -136,21 +146,22 @@ public class InputNumberDataSource implements DataSource
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    InputNumberDataSource that = (InputNumberDataSource) o;
-    return inputNumber == that.inputNumber;
+    RestrictedInputNumberDataSource that = (RestrictedInputNumberDataSource) o;
+    return inputNumber == that.inputNumber && policy.equals(that.policy);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(inputNumber);
+    return Objects.hash(inputNumber, policy);
   }
 
   @Override
   public String toString()
   {
-    return "InputNumberDataSource{" +
+    return "RestrictedInputNumberDataSource{" +
            "inputNumber=" + inputNumber +
+           ",policy=" + policy +
            '}';
   }
 }

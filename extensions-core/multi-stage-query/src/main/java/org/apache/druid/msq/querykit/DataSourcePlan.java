@@ -52,6 +52,7 @@ import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryDataSource;
+import org.apache.druid.query.RestrictedDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.UnnestDataSource;
@@ -160,6 +161,14 @@ public class DataSourcePlan
     if (dataSource instanceof TableDataSource) {
       return forTable(
           (TableDataSource) dataSource,
+          querySegmentSpecIntervals(querySegmentSpec),
+          filter,
+          filterFields,
+          broadcast
+      );
+    } else if (dataSource instanceof RestrictedDataSource) {
+      return forRestricted(
+          (RestrictedDataSource) dataSource,
           querySegmentSpecIntervals(querySegmentSpec),
           filter,
           filterFields,
@@ -329,7 +338,7 @@ public class DataSourcePlan
 
   /**
    * Checks if the sortMerge algorithm can execute a particular join condition.
-   *
+   * <p>
    * One check: join condition on two tables "table1" and "table2" is of the form
    * table1.columnA = table2.columnA && table1.columnB = table2.columnB && ....
    */
@@ -360,6 +369,25 @@ public class DataSourcePlan
     return new DataSourcePlan(
         (broadcast && dataSource.isGlobal()) ? dataSource : new InputNumberDataSource(0),
         Collections.singletonList(new TableInputSpec(dataSource.getName(), intervals, filter, filterFields)),
+        broadcast ? IntOpenHashSet.of(0) : IntSets.emptySet(),
+        null
+    );
+  }
+
+  private static DataSourcePlan forRestricted(
+      final RestrictedDataSource dataSource,
+      final List<Interval> intervals,
+      @Nullable final DimFilter filter,
+      @Nullable final Set<String> filterFields,
+      final boolean broadcast
+  )
+  {
+    // TODO: TableInputSpec should take policy as input.
+    return new DataSourcePlan(
+        (broadcast && dataSource.isGlobal())
+        ? dataSource
+        : new RestrictedInputNumberDataSource(0, dataSource.getPolicy()),
+        Collections.singletonList(new TableInputSpec(dataSource.getBase().getName(), intervals, filter, filterFields)),
         broadcast ? IntOpenHashSet.of(0) : IntSets.emptySet(),
         null
     );
@@ -764,10 +792,10 @@ public class DataSourcePlan
   /**
    * Verify that the provided {@link QuerySegmentSpec} is a {@link MultipleIntervalSegmentSpec} with
    * interval {@link Intervals#ETERNITY}. If not, throw an {@link UnsupportedOperationException}.
-   *
+   * <p>
    * Anywhere this appears is a place that we do not support using the "intervals" parameter of a query
    * (i.e., {@link org.apache.druid.query.BaseQuery#getQuerySegmentSpec()}) for time filtering.
-   *
+   * <p>
    * We don't need to support this for anything that is not {@link DataSourceAnalysis#isTableBased()}, because
    * the SQL layer avoids "intervals" in other cases. See
    * {@link org.apache.druid.sql.calcite.rel.DruidQuery#canUseIntervalFiltering(DataSource)}.

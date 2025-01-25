@@ -77,6 +77,7 @@ import org.apache.druid.query.operator.ScanOperatorFactory;
 import org.apache.druid.query.operator.WindowOperatorQuery;
 import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.query.planning.DataSourceAnalysis;
+import org.apache.druid.query.policy.Policy;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.spec.LegacySegmentSpec;
 import org.apache.druid.query.timeboundary.TimeBoundaryQuery;
@@ -121,14 +122,13 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * A fully formed Druid query, built from a {@link PartialDruidQuery}. The work to develop this query is done
- * during construction, which may throw {@link CannotBuildQueryException}.
+ * A fully formed Druid query.
  */
 public class DruidQuery
 {
   /**
    * Native query context key that is set when {@link EngineFeature#SCAN_NEEDS_SIGNATURE}.
-   *
+   * <p>
    * {@link Deprecated} Instead of the context value {@link ScanQuery#getRowSignature()} can be used.
    */
   @Deprecated
@@ -174,8 +174,10 @@ public class DruidQuery
       @Nullable final Sorting sorting,
       @Nullable final Windowing windowing,
       final RowSignature sourceRowSignature,
+      final RowSignature outputRowSignature,
       final RelDataType outputRowType,
-      final VirtualColumnRegistry virtualColumnRegistry
+      final VirtualColumnRegistry virtualColumnRegistry,
+      @Nullable Query<?> query
   )
   {
     this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
@@ -185,20 +187,40 @@ public class DruidQuery
     this.grouping = grouping;
     this.sorting = sorting;
     this.windowing = windowing;
-    this.sourceRowSignature = sourceRowSignature;
 
-    this.outputRowSignature = computeOutputRowSignature(
-        sourceRowSignature,
+    this.sourceRowSignature = Preconditions.checkNotNull(sourceRowSignature, "sourceRowSignature");
+    this.outputRowSignature = Preconditions.checkNotNull(outputRowSignature, "outputRowSignature");
+    this.outputRowType = Preconditions.checkNotNull(outputRowType, "outputRowType");
+    this.virtualColumnRegistry = Preconditions.checkNotNull(virtualColumnRegistry, "virtualColumnRegistry");
+    this.query = query == null ? computeQuery() : query;
+  }
+
+  /**
+   * Returns an updated {@link DruidQuery} based on the policy restrictions on tables.
+   */
+  public DruidQuery withPolicies(Map<String, Optional<Policy>> policyMap)
+  {
+    return new DruidQuery(
+        dataSource,
+        plannerContext,
+        filter,
         selectProjection,
         grouping,
         sorting,
-        windowing
+        windowing,
+        sourceRowSignature,
+        outputRowSignature,
+        outputRowType,
+        virtualColumnRegistry,
+        query.withDataSource(query.getDataSource().withPolicies(policyMap))
     );
-    this.outputRowType = Preconditions.checkNotNull(outputRowType, "outputRowType");
-    this.virtualColumnRegistry = Preconditions.checkNotNull(virtualColumnRegistry, "virtualColumnRegistry");
-    this.query = computeQuery();
   }
 
+  /**
+   * Builds a {@link DruidQuery} from a {@link PartialDruidQuery}.
+   *
+   * @throws CannotBuildQueryException if failed to build query
+   */
   public static DruidQuery fromPartialQuery(
       final PartialDruidQuery partialQuery,
       final DataSource dataSource,
@@ -310,8 +332,10 @@ public class DruidQuery
         sorting,
         windowing,
         sourceRowSignature,
+        computeOutputRowSignature(sourceRowSignature, selectProjection, grouping, sorting, windowing),
         outputRowType,
-        virtualColumnRegistry
+        virtualColumnRegistry,
+        null
     );
   }
 
@@ -450,9 +474,7 @@ public class DruidQuery
    * @param rowSignature          source row signature
    * @param virtualColumnRegistry re-usable virtual column references
    * @param typeFactory           factory for SQL types
-   *
    * @return dimensions
-   *
    * @throws CannotBuildQueryException if dimensions cannot be computed
    */
   private static List<DimensionExpression> computeDimensions(
@@ -491,7 +513,10 @@ public class DruidQuery
       }
       if (!outputType.getNullableStrategy().groupable()) {
         // Can't group on 'ungroupable' types.
-        plannerContext.setPlanningError("SQL requires a group-by on a column with type [%s] that is unsupported.", outputType);
+        plannerContext.setPlanningError(
+            "SQL requires a group-by on a column with type [%s] that is unsupported.",
+            outputType
+        );
         throw new CannotBuildQueryException(aggregate, rexNode);
       }
       final String dimOutputName = outputNamePrefix + outputNameCounter++;
@@ -563,9 +588,7 @@ public class DruidQuery
    * @param finalizeAggregations  true if this query should include explicit finalization for all of its
    *                              aggregators, where required. Useful for subqueries where Druid's native query layer
    *                              does not do this automatically.
-   *
    * @return aggregations
-   *
    * @throws CannotBuildQueryException if dimensions cannot be computed
    */
   private static List<Aggregation> computeAggregations(
@@ -589,10 +612,7 @@ public class DruidQuery
           rowSignature,
           virtualColumnRegistry,
           rexBuilder,
-          InputAccessor.buildFor(
-              aggregate,
-              partialQuery.getSelectProject(),
-              rowSignature),
+          InputAccessor.buildFor(aggregate, partialQuery.getSelectProject(), rowSignature),
           aggregations,
           aggName,
           aggCall,
@@ -889,7 +909,7 @@ public class DruidQuery
   private static boolean canUseIntervalFiltering(final DataSource dataSource)
   {
     final DataSourceAnalysis analysis = dataSource.getAnalysis();
-    return !analysis.getBaseQuery().isPresent() && analysis.isTableBased();
+    return analysis.getBaseQuery().isEmpty() && analysis.isTableBased();
   }
 
   private static Filtration toFiltration(
@@ -981,10 +1001,18 @@ public class DruidQuery
   }
 
   /**
-   * Return this query as some kind of Druid query. The returned query will either be {@link TopNQuery},
-   * {@link TimeseriesQuery}, {@link GroupByQuery}, {@link ScanQuery}
+   * Computes a native druid query, must be called from the constructor. The returned query will be one of following:
+   * <ul>
+   *   <li> {@link GroupByQuery}
+   *   <li> {@link WindowOperatorQuery}
+   *   <li> {@link TimeBoundaryQuery}
+   *   <li> {@link TimeseriesQuery}
+   *   <li> {@link TopNQuery}
+   *   <li> {@link ScanQuery}
+   * </ul>
    *
-   * @return Druid query
+   * @return Native druid query
+   * @throws CannotBuildQueryException if failed to build query
    */
   private Query<?> computeQuery()
   {
@@ -1485,15 +1513,16 @@ public class DruidQuery
       operators = windowing.getOperators();
     } else {
       operators = ImmutableList.<OperatorFactory>builder()
-          .add(new ScanOperatorFactory(
-              null,
-              null,
-              null,
-              null,
-              virtualColumns,
-              null))
-          .addAll(windowing.getOperators())
-          .build();
+                               .add(new ScanOperatorFactory(
+                                   null,
+                                   null,
+                                   null,
+                                   null,
+                                   virtualColumns,
+                                   null
+                               ))
+                               .addAll(windowing.getOperators())
+                               .build();
     }
     // if planning in native set to null
     // if planning in MSQ set to empty list
@@ -1547,12 +1576,12 @@ public class DruidQuery
     final Projection projection = sorting.getProjection();
 
     final org.apache.druid.query.operator.OffsetLimit offsetLimit = sorting.getOffsetLimit().isNone()
-        ? null
-        : sorting.getOffsetLimit().toOperatorOffsetLimit();
+                                                                    ? null
+                                                                    : sorting.getOffsetLimit().toOperatorOffsetLimit();
 
     final List<String> projectedColumns = projection == null
-        ? null
-        : projection.getOutputRowSignature().getColumnNames();
+                                          ? null
+                                          : projection.getOutputRowSignature().getColumnNames();
 
     if (offsetLimit != null || projectedColumns != null) {
       operators.add(
@@ -1580,8 +1609,8 @@ public class DruidQuery
   private void setPlanningErrorOrderByNonTimeIsUnsupported()
   {
     List<String> orderByColumnNames = sorting.getOrderBys()
-        .stream().map(OrderByColumnSpec::getDimension)
-        .collect(Collectors.toList());
+                                             .stream().map(OrderByColumnSpec::getDimension)
+                                             .collect(Collectors.toList());
     plannerContext.setPlanningError(
         "SQL query requires ordering a table by non-time column [%s], which is not supported.",
         orderByColumnNames
@@ -1593,8 +1622,8 @@ public class DruidQuery
     ArrayList<ColumnWithDirection> ordering = new ArrayList<>();
     for (OrderByColumnSpec orderBySpec : orderBys) {
       Direction direction = orderBySpec.getDirection() == OrderByColumnSpec.Direction.ASCENDING
-          ? ColumnWithDirection.Direction.ASC
-          : ColumnWithDirection.Direction.DESC;
+                            ? ColumnWithDirection.Direction.ASC
+                            : ColumnWithDirection.Direction.DESC;
       ordering.add(new ColumnWithDirection(orderBySpec.getDimension(), direction));
     }
     return ordering;
@@ -1602,6 +1631,7 @@ public class DruidQuery
 
   /**
    * Return this query as a Scan query, or null if this query is not compatible with Scan.
+   *
    * @param considerSorting can be used to ignore the current sorting requirements {@link #toScanAndSortQuery()} uses it to produce the non-sorted part
    * @return query or null
    */
@@ -1662,7 +1692,8 @@ public class DruidQuery
 
     if (!plannerContext.featureAvailable(EngineFeature.SCAN_ORDER_BY_NON_TIME) && !orderByColumns.isEmpty()) {
       if (orderByColumns.size() > 1
-          || orderByColumns.stream().anyMatch(orderBy -> !orderBy.getColumnName().equals(ColumnHolder.TIME_COLUMN_NAME))) {
+          || orderByColumns.stream()
+                           .anyMatch(orderBy -> !orderBy.getColumnName().equals(ColumnHolder.TIME_COLUMN_NAME))) {
         if (!plannerContext.queryContext().isDecoupledMode()) {
           // We cannot handle this ordering, but we encounter this ordering as part of the exploration of the volcano
           // planner, which means that the query that we are looking right now might only be doing this as one of the
@@ -1707,7 +1738,7 @@ public class DruidQuery
   /**
    * Returns a copy of "queryContext" with {@link #CTX_SCAN_SIGNATURE} added if the execution context has the
    * {@link EngineFeature#SCAN_NEEDS_SIGNATURE} feature.
-   *
+   * <p>
    * {@link Deprecated} Instead of the context value {@link ScanQuery#getRowSignature()} can be used.
    */
   @Deprecated

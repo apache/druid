@@ -97,7 +97,7 @@ public class MSQWorkerTaskLauncher implements RetryCapableWorkerManager
   private final AtomicReference<State> state = new AtomicReference<>(State.NEW);
   private final AtomicBoolean cancelTasksOnStop = new AtomicBoolean();
 
-  // Set by launchTasksIfNeeded.
+  // Set by launchWorkersIfNeeded.
   @GuardedBy("taskIds")
   private int desiredTaskCount = 0;
 
@@ -361,7 +361,7 @@ public class MSQWorkerTaskLauncher implements RetryCapableWorkerManager
         final long loopStartTime = System.currentTimeMillis();
 
         try {
-          runNewTasks();
+          runNewTasks(); // this runs on msq-task-launcher thread.
           updateTaskTrackersAndTaskIds();
           checkForErroneousTasks();
           relaunchTasks();
@@ -459,13 +459,7 @@ public class MSQWorkerTaskLauncher implements RetryCapableWorkerManager
       );
 
       taskTrackers.put(task.getId(), new TaskTracker(i, task));
-      workerToTaskIds.compute(i, (workerId, taskIds) -> {
-        if (taskIds == null) {
-          taskIds = new ArrayList<>();
-        }
-        taskIds.add(task.getId());
-        return taskIds;
-      });
+      workerToTaskIds.computeIfAbsent(i, (unused) -> (new ArrayList<>())).add(task.getId());
 
       FutureUtils.getUnchecked(overlordClient.runTask(task.getId(), task), true);
 
@@ -769,7 +763,7 @@ public class MSQWorkerTaskLauncher implements RetryCapableWorkerManager
       } else {
         // wait on taskIds so we can wake up early if needed.
         synchronized (taskIds) {
-          // desiredTaskCount is set by launchTasksIfNeeded, and acknowledgedDesiredTaskCount is set by mainLoop when
+          // desiredTaskCount is set by launchWorkersIfNeeded, and acknowledgedDesiredTaskCount is set by mainLoop when
           // it acknowledges a new target. If these are not equal, do another run immediately and launch more tasks.
           if (acknowledgedDesiredTaskCount == desiredTaskCount) {
             taskIds.wait(sleepMillis);

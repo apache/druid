@@ -19,7 +19,6 @@
 
 package org.apache.druid.msq.exec;
 
-import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
@@ -207,7 +206,7 @@ public class RunWorkOrder
 
   /**
    * Start execution of the provided {@link WorkOrder} in the provided {@link FrameProcessorExecutor}.
-   *
+   * <p>
    * Execution proceeds asynchronously after this method returns. The {@link RunWorkOrderListener} passed to the
    * constructor of this instance can be used to track progress.
    */
@@ -224,7 +223,7 @@ public class RunWorkOrder
       makeInputSliceReader();
       makeWorkOutputChannelFactory();
       makeShuffleOutputChannelFactory();
-      makeAndRunWorkProcessors();
+      makeAndRunWorkProcessors(); // get infos on outputChannels, starts work in processors async.
 
       if (stageDef.doesShuffle()) {
         makeAndRunShuffleProcessors();
@@ -245,7 +244,7 @@ public class RunWorkOrder
    * Stops an execution that was previously initiated through {@link #startAsync()} and closes the {@link FrameContext}.
    * May be called to cancel execution. Must also be called after successful execution in order to ensure that resources
    * are all properly cleaned up.
-   *
+   * <p>
    * Blocks until execution is fully stopped.
    *
    * @param t error to send to {@link RunWorkOrderListener#onFailure}, if success/failure has not already been sent.
@@ -399,29 +398,29 @@ public class RunWorkOrder
    * Use {@link FrameProcessorFactory#makeProcessors} to create {@link ProcessorsAndChannels}. Executes the
    * processors using {@link #exec} and sets the output channels in {@link #workResultAndOutputChannels}.
    *
-   * @param <FactoryType>         type of {@link StageDefinition#getProcessorFactory()}
-   * @param <ProcessorReturnType> return type of {@link FrameProcessor} created by the manager
-   * @param <ManagerReturnType>   result type of {@link ProcessorManager#result()}
-   * @param <ExtraInfoType>       type of {@link WorkOrder#getExtraInfo()}
+   * @param <FactoryT>         type of {@link StageDefinition#getProcessorFactory()}
+   * @param <ProcessorReturnT> return type of {@link FrameProcessor} created by the manager
+   * @param <ManagerReturnT>   result type of {@link ProcessorManager#result()}
+   * @param <ExtraInfoT>       type of {@link WorkOrder#getExtraInfo()}
    */
-  private <FactoryType extends FrameProcessorFactory<ProcessorReturnType, ManagerReturnType, ExtraInfoType>, ProcessorReturnType, ManagerReturnType, ExtraInfoType> void makeAndRunWorkProcessors()
-      throws IOException
+  private <FactoryT extends FrameProcessorFactory<ProcessorReturnT, ManagerReturnT, ExtraInfoT>, ProcessorReturnT, ManagerReturnT, ExtraInfoT>
+      void makeAndRunWorkProcessors() throws IOException
   {
     if (workResultAndOutputChannels != null) {
       throw new ISE("workResultAndOutputChannels already set");
     }
 
     @SuppressWarnings("unchecked")
-    final FactoryType processorFactory = (FactoryType) workOrder.getStageDefinition().getProcessorFactory();
+    final FactoryT processorFactory = (FactoryT) workOrder.getStageDefinition().getProcessorFactory();
 
     @SuppressWarnings("unchecked")
-    final ProcessorsAndChannels<ProcessorReturnType, ManagerReturnType> processors =
+    final ProcessorsAndChannels<ProcessorReturnT, ManagerReturnT> processors =
         processorFactory.makeProcessors(
             workOrder.getStageDefinition(),
             workOrder.getWorkerNumber(),
             workOrder.getInputs(),
             inputSliceReader,
-            (ExtraInfoType) workOrder.getExtraInfo(),
+            (ExtraInfoT) workOrder.getExtraInfo(),
             workOutputChannelFactory,
             frameContext,
             parallelism,
@@ -430,27 +429,19 @@ public class RunWorkOrder
             removeNullBytes
         );
 
-    final ProcessorManager<ProcessorReturnType, ManagerReturnType> processorManager = processors.getProcessorManager();
+    final ProcessorManager<ProcessorReturnT, ManagerReturnT> processorManager = processors.getProcessorManager();
+    final OutputChannels outputChannels = processors.getOutputChannels();
 
-    final int maxOutstandingProcessors;
-
-    if (processors.getOutputChannels().getAllChannels().isEmpty()) {
-      // No output channels: run up to "parallelism" processors at once.
-      maxOutstandingProcessors = Math.max(1, parallelism);
-    } else {
-      // If there are output channels, that acts as a ceiling on the number of processors that can run at once.
-      maxOutstandingProcessors =
-          Math.max(1, Math.min(parallelism, processors.getOutputChannels().getAllChannels().size()));
-    }
-
-    final ListenableFuture<ManagerReturnType> workResultFuture = exec.runAllFully(
+    final int channelSize = outputChannels.getAllChannels().size();
+    final int parallelismBoundedByChannelSize = channelSize == 0 ? parallelism : Math.min(parallelism, channelSize);
+    final int maxOutstandingProcessors = Math.max(1, parallelismBoundedByChannelSize);
+    final ListenableFuture<ManagerReturnT> workResultFuture = exec.runAllFully(
         counterTracker.trackCpu(processorManager, CpuCounters.LABEL_MAIN),
         maxOutstandingProcessors,
         processorFactory.usesProcessingBuffers() ? frameContext.processingBuffers().getBouncer() : Bouncer.unlimited(),
         cancellationId
     );
-
-    workResultAndOutputChannels = new ResultAndChannels<>(workResultFuture, processors.getOutputChannels());
+    workResultAndOutputChannels = new ResultAndChannels<>(workResultFuture, outputChannels);
   }
 
   private void makeAndRunShuffleProcessors()
@@ -764,7 +755,7 @@ public class RunWorkOrder
 
     /**
      * Add {@link KeyStatisticsCollectionProcessor} if {@link StageDefinition#mustGatherResultKeyStatistics()}.
-     *
+     * <p>
      * Calls {@link RunWorkOrderListener#onDoneReadingInput(ClusterByStatisticsSnapshot)} when statistics are gathered.
      * If statistics were not needed, calls the listener immediately.
      */
@@ -1016,21 +1007,11 @@ public class RunWorkOrder
      */
     public ListenableFuture<OutputChannels> build()
     {
-      if (pipelineFuture == null) {
-        throw new ISE("Not initialized");
-      }
+      Preconditions.checkState(pipelineFuture != null, "Not initialized");
 
       return Futures.transformAsync(
           pipelineFuture,
-          resultAndChannels ->
-              Futures.transform(
-                  resultAndChannels.getResultFuture(),
-                  (Function<Object, OutputChannels>) input -> {
-                    sanityCheckOutputChannels(resultAndChannels.getOutputChannels());
-                    return resultAndChannels.getOutputChannels();
-                  },
-                  Execs.directExecutor()
-              ),
+          ResultAndChannels::waitResultReadyAndGetSanityCheckedChannels,
           Execs.directExecutor()
       );
     }
@@ -1143,25 +1124,6 @@ public class RunWorkOrder
           )
       );
     }
-
-    /**
-     * Verifies there is exactly one channel per partition.
-     */
-    private void sanityCheckOutputChannels(final OutputChannels outputChannels)
-    {
-      for (int partitionNumber : outputChannels.getPartitionNumbers()) {
-        final List<OutputChannel> outputChannelsForPartition =
-            outputChannels.getChannelsForPartition(partitionNumber);
-
-        Preconditions.checkState(partitionNumber >= 0, "Expected partitionNumber >= 0, but got [%s]", partitionNumber);
-        Preconditions.checkState(
-            outputChannelsForPartition.size() == 1,
-            "Expected one channel for partition [%s], but got [%s]",
-            partitionNumber,
-            outputChannelsForPartition.size()
-        );
-      }
-    }
   }
 
   private static class ResultAndChannels<T>
@@ -1186,6 +1148,11 @@ public class RunWorkOrder
     public OutputChannels getOutputChannels()
     {
       return outputChannels;
+    }
+
+    public ListenableFuture<OutputChannels> waitResultReadyAndGetSanityCheckedChannels()
+    {
+      return Futures.transform(resultFuture, unused -> outputChannels.sanityCheck(), Execs.directExecutor());
     }
   }
 

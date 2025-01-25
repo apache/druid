@@ -190,8 +190,7 @@ public class RestrictedDataSource implements DataSource
   @Override
   public DataSourceAnalysis getAnalysis()
   {
-    final DataSource current = this.getBase();
-    return current.getAnalysis();
+    return new DataSourceAnalysis(this, null, null, ImmutableList.of());
   }
 
   @Override
