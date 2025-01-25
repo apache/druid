@@ -120,7 +120,7 @@ public class ResultLevelCachingQueryRunner<T> implements QueryRunner<T>
         return Sequences.wrap(
             Sequences.map(
                 resultFromClient,
-                new Function<T, T>()
+                new Function<>()
                 {
                   @Override
                   public T apply(T input)

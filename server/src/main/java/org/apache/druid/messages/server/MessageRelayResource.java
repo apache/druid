@@ -149,7 +149,7 @@ public class MessageRelayResource<MessageType>
 
     Futures.addCallback(
         batchFuture,
-        new FutureCallback<MessageBatch<MessageType>>()
+        new FutureCallback<>()
         {
           @Override
           public void onSuccess(MessageBatch<MessageType> result)

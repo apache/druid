@@ -184,7 +184,7 @@ public class DerbyConnector extends SQLMetadataConnector
   public boolean tableHasColumn(String tableName, String columnName)
   {
     return getDBI().withHandle(
-        new HandleCallback<Boolean>()
+        new HandleCallback<>()
         {
           @Override
           public Boolean withHandle(Handle handle)

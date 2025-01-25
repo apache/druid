@@ -173,7 +173,7 @@ public class FutureUtils
 
     Futures.addCallback(
         future,
-        new FutureCallback<T>()
+        new FutureCallback<>()
         {
           @Override
           public void onSuccess(@Nullable T result)

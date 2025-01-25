@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.aggregation;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.segment.ColumnValueSelector;
 
@@ -57,32 +56,32 @@ public class SingleValueAggregator implements Aggregator
   public float getFloat()
   {
     assert validObjectValue();
-    return (value == null) ? NullHandling.ZERO_FLOAT : ((Number) value).floatValue();
+    return (value == null) ? 0.0f : ((Number) value).floatValue();
   }
 
   @Override
   public long getLong()
   {
     assert validObjectValue();
-    return (value == null) ? NullHandling.ZERO_LONG : ((Number) value).longValue();
+    return (value == null) ? 0L : ((Number) value).longValue();
   }
 
   @Override
   public double getDouble()
   {
     assert validObjectValue();
-    return (value == null) ? NullHandling.ZERO_DOUBLE : ((Number) value).doubleValue();
+    return (value == null) ? 0.0d : ((Number) value).doubleValue();
   }
 
   @Override
   public boolean isNull()
   {
-    return NullHandling.sqlCompatible() && value == null;
+    return value == null;
   }
 
   private boolean validObjectValue()
   {
-    return NullHandling.replaceWithDefault() || !isNull();
+    return !isNull();
   }
 
   @Override

@@ -98,7 +98,7 @@ public class VectorGroupByEngine
 
             if (cursor == null) {
               // Return empty iterator.
-              return new CloseableIterator<ResultRow>()
+              return new CloseableIterator<>()
               {
                 @Override
                 public boolean hasNext()

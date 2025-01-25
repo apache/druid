@@ -60,7 +60,7 @@ public class ApproximateHistogramPostAggregatorTest extends InitializedNullHandl
       selector.increment();
     }
 
-    Map<String, Object> metricValues = new HashMap<String, Object>();
+    Map<String, Object> metricValues = new HashMap<>();
     metricValues.put("price", agg.get());
 
     ApproximateHistogramPostAggregator approximateHistogramPostAggregator = new EqualBucketsPostAggregator(

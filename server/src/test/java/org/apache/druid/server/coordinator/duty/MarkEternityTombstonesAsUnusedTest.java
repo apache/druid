@@ -484,7 +484,9 @@ public class MarkEternityTombstonesAsUnusedTest
       final ImmutableList<DataSegment> expectedUsedSegments
   )
   {
-    params = new MarkEternityTombstonesAsUnused(segmentsMetadataManager::markSegmentsAsUnused).run(params);
+    params = new MarkEternityTombstonesAsUnused(
+        (ds, segmentIds) -> segmentsMetadataManager.markSegmentsAsUnused(segmentIds)
+    ).run(params);
 
     final Set<DataSegment> actualUsedSegments = Sets.newHashSet(segmentsMetadataManager.iterateAllUsedSegments());
 

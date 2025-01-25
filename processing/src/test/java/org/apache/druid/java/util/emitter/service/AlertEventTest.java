@@ -169,7 +169,7 @@ public class AlertEventTest
 
   public Map<String, Object> contents(AlertEvent a)
   {
-    return Maps.filterKeys(a.toMap(), new Predicate<String>()
+    return Maps.filterKeys(a.toMap(), new Predicate<>()
     {
       @Override
       public boolean apply(String k)

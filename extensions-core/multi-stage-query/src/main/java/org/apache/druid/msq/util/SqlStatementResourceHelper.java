@@ -321,7 +321,7 @@ public class SqlStatementResourceHelper
                             .map(mapping -> columnSelectorFactory.makeColumnValueSelector(mapping.getQueryColumn()))
                             .collect(Collectors.toList());
 
-    final Iterable<Object[]> retVal = () -> new Iterator<Object[]>()
+    final Iterable<Object[]> retVal = () -> new Iterator<>()
     {
       @Override
       public boolean hasNext()

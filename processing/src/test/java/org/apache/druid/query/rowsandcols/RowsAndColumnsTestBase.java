@@ -20,7 +20,6 @@
 package org.apache.druid.query.rowsandcols;
 
 import com.google.common.collect.Lists;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.rowsandcols.concrete.ColumnBasedFrameRowsAndColumns;
 import org.apache.druid.query.rowsandcols.concrete.ColumnBasedFrameRowsAndColumnsTest;
@@ -52,10 +51,6 @@ import java.util.function.Function;
  */
 public abstract class RowsAndColumnsTestBase
 {
-  static {
-    NullHandling.initializeForTests();
-  }
-
   private final Class<?> expectedClass;
 
   private static final AtomicReference<Iterable<Object[]>> MAKERS = new AtomicReference<>();

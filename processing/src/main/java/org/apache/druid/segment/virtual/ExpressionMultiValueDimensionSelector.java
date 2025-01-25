@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment.virtual;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.query.extraction.ExtractionFn;
@@ -237,7 +236,7 @@ public class ExpressionMultiValueDimensionSelector implements DimensionSelector
     String getValue(ExprEval evaluated)
     {
       assert !evaluated.isArray();
-      return extractionFn.apply(NullHandling.emptyToNullIfNeeded(evaluated.asString()));
+      return extractionFn.apply(evaluated.asString());
     }
 
     @Override

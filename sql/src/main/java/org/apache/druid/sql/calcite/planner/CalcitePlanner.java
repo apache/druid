@@ -235,7 +235,7 @@ public class CalcitePlanner implements Planner, ViewExpander
   @Override
   public SqlNode validate(SqlNode sqlNode) throws ValidationException
   {
-    Hook.PARSE_TREE.run(new Object[] {null, sqlNode});
+    Hook.PARSE_TREE.run(new Object[]{null, sqlNode});
     ensure(CalcitePlanner.State.STATE_3_PARSED);
     this.validator = createSqlValidator(createCatalogReader());
     try {
@@ -295,10 +295,11 @@ public class CalcitePlanner implements Planner, ViewExpander
         rexBuilder
     );
     final SqlToRelConverter.Config config =
-        sqlToRelConverterConfig.withTrimUnusedFields(false);
+        sqlToRelConverterConfig.withTrimUnusedFields(false)
+                               .withHintStrategyTable(DruidHint.HINT_STRATEGY_TABLE);
     final SqlToRelConverter sqlToRelConverter =
         new DruidSqlToRelConverter(this, validator,
-                              createCatalogReader(), cluster, convertletTable, config
+                                   createCatalogReader(), cluster, convertletTable, config
         );
     RelRoot root =
         sqlToRelConverter.convertQuery(sql, false, true);

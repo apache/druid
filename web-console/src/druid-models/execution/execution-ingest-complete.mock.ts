@@ -443,7 +443,6 @@ export const EXECUTION_INGEST_COMPLETE = Execution.fromTaskReport({
       },
       sqlResultsContext: {
         timeZone: 'UTC',
-        serializeComplexValues: true,
         stringifyArrays: true,
       },
       sqlTypeNames: ['TIMESTAMP', 'VARCHAR'],

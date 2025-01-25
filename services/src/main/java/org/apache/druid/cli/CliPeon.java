@@ -134,6 +134,7 @@ import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
 import org.apache.druid.server.metrics.DataSourceTaskIdHolder;
 import org.apache.druid.server.metrics.ServiceStatusMonitor;
+import org.apache.druid.storage.local.LocalTmpStorageConfig;
 import org.apache.druid.tasklogs.TaskPayloadManager;
 import org.eclipse.jetty.server.Server;
 
@@ -354,6 +355,21 @@ public class CliPeon extends GuiceRunnable
           public BroadcastDatasourceLoadingSpec getBroadcastDatasourcesToLoad(final Task task)
           {
             return task.getBroadcastDatasourceLoadingSpec();
+          }
+
+          @Provides
+          @LazySingleton
+          public LocalTmpStorageConfig getLocalTmpStorage()
+          {
+            File tmpDir = new File(taskDirPath, "tmp");
+            try {
+              org.apache.druid.java.util.common.FileUtils.mkdirp(tmpDir);
+            }
+            catch (IOException e) {
+              log.error("Failed to create tmp directory for the task");
+              throw new RuntimeException(e);
+            }
+            return () -> tmpDir;
           }
         },
         new QueryablePeonModule(),

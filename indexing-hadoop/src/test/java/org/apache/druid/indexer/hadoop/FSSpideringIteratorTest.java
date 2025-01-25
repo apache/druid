@@ -63,7 +63,7 @@ public class FSSpideringIteratorTest
                   FileSystem.getLocal(new Configuration()),
                   new Path(baseDir.toString())
               ),
-              new Function<FileStatus, String>()
+              new Function<>()
               {
                 @Override
                 public String apply(@Nullable FileStatus input)
@@ -111,7 +111,7 @@ public class FSSpideringIteratorTest
                   FileSystem.getLocal(new Configuration()),
                   new Path(baseDir.toString())
               ),
-              new Function<FileStatus, String>()
+              new Function<>()
               {
                 @Override
                 public String apply(@Nullable FileStatus input)

@@ -21,6 +21,8 @@ package org.apache.druid.indexing.overlord.supervisor;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.SettableFuture;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 
@@ -43,6 +45,22 @@ public interface Supervisor
    *                       running tasks as they are.
    */
   void stop(boolean stopGracefully);
+
+  /**
+   * Starts non-graceful shutdown of the supervisor and returns a future that completes when shutdown is complete.
+   */
+  default ListenableFuture<Void> stopAsync()
+  {
+    SettableFuture<Void> stopFuture = SettableFuture.create();
+    try {
+      stop(false);
+      stopFuture.set(null);
+    }
+    catch (Exception e) {
+      stopFuture.setException(e);
+    }
+    return stopFuture;
+  }
 
   SupervisorReport getStatus();
 

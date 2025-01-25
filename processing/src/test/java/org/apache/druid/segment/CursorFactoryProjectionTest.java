@@ -26,7 +26,6 @@ import it.unimi.dsi.fastutil.objects.ObjectOpenCustomHashSet;
 import org.apache.druid.collections.CloseableDefaultBlockingPool;
 import org.apache.druid.collections.CloseableStupidPool;
 import org.apache.druid.collections.NonBlockingPool;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.ListBasedInputRow;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
@@ -987,10 +986,10 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
 
     final List<ResultRow> results = resultRows.toList();
     Assert.assertEquals(4, results.size());
-    Assert.assertArrayEquals(new Object[]{"aa", 9L, NullHandling.defaultFloatValue()}, results.get(0).getArray());
-    Assert.assertArrayEquals(new Object[]{"bb", 6L, NullHandling.defaultFloatValue()}, results.get(1).getArray());
-    Assert.assertArrayEquals(new Object[]{"cc", 2L, NullHandling.defaultFloatValue()}, results.get(2).getArray());
-    Assert.assertArrayEquals(new Object[]{"dd", 2L, NullHandling.defaultFloatValue()}, results.get(3).getArray());
+    Assert.assertArrayEquals(new Object[]{"aa", 9L, null}, results.get(0).getArray());
+    Assert.assertArrayEquals(new Object[]{"bb", 6L, null}, results.get(1).getArray());
+    Assert.assertArrayEquals(new Object[]{"cc", 2L, null}, results.get(2).getArray());
+    Assert.assertArrayEquals(new Object[]{"dd", 2L, null}, results.get(3).getArray());
   }
 
   @Test
@@ -1238,7 +1237,7 @@ public class CursorFactoryProjectionTest extends InitializedNullHandlingTest
   private static Set<Object[]> makeArrayResultSet()
   {
     Set<Object[]> resultsInNoParticularOrder = new ObjectOpenCustomHashSet<>(
-        new Hash.Strategy<Object[]>()
+        new Hash.Strategy<>()
         {
           @Override
           public int hashCode(Object[] o)

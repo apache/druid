@@ -156,7 +156,7 @@ public class ScanQueryEngine
             }
 
             final int batchSize = query.getBatchSize();
-            return new Iterator<ScanResultValue>()
+            return new Iterator<>()
             {
               private long offset = 0;
 

@@ -21,28 +21,24 @@ package org.apache.druid.quidem;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Binder;
+import com.google.inject.Injector;
 import com.google.inject.Provides;
 import com.google.inject.name.Named;
 import com.google.inject.name.Names;
 import org.apache.calcite.avatica.server.AbstractAvaticaHandler;
-import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.server.DruidNode;
-import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.avatica.AvaticaMonitor;
 import org.apache.druid.sql.avatica.DruidAvaticaJsonHandler;
 import org.apache.druid.sql.avatica.DruidMeta;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig.ConfigurationInstance;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig.SqlTestFrameworkConfigStore;
-import org.apache.druid.sql.calcite.planner.PlannerConfig;
-import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
-import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.calcite.util.DruidModuleCollection;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.QueryComponentSupplier;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.QueryComponentSupplierDelegate;
 import org.apache.druid.sql.hook.DruidHookDispatcher;
@@ -101,31 +97,25 @@ public class DruidAvaticaTestDriver implements Driver
 
     @Provides
     @LazySingleton
-    public DruidSchemaCatalog getLookupNodeService(QueryRunnerFactoryConglomerate conglomerate,
-        SpecificSegmentsQuerySegmentWalker walker, PlannerConfig plannerConfig)
+    public DruidConnectionExtras getConnectionExtras(
+        ObjectMapper objectMapper,
+        DruidHookDispatcher druidHookDispatcher,
+        @Named("isExplainSupported") Boolean isExplainSupported,
+        Injector injector
+    )
     {
-      return CalciteTests.createMockRootSchema(
-          conglomerate,
-          walker,
-          plannerConfig,
-          CalciteTests.TEST_AUTHORIZER_MAPPER
+      return new DruidConnectionExtras.DruidConnectionExtrasImpl(
+          objectMapper,
+          druidHookDispatcher,
+          isExplainSupported,
+          injector
       );
     }
 
     @Provides
     @LazySingleton
-    public DruidConnectionExtras getConnectionExtras(
-        ObjectMapper objectMapper,
-        DruidHookDispatcher druidHookDispatcher,
-        @Named("isExplainSupported") Boolean isExplainSupported
-    )
-    {
-      return new DruidConnectionExtras.DruidConnectionExtrasImpl(objectMapper, druidHookDispatcher, isExplainSupported);
-    }
-
-    @Provides
-    @LazySingleton
-    public AvaticaJettyServer getAvaticaServer(DruidMeta druidMeta, DruidConnectionExtras druidConnectionExtras) throws Exception
+    public AvaticaJettyServer getAvaticaServer(DruidMeta druidMeta, DruidConnectionExtras druidConnectionExtras)
+        throws Exception
     {
       AvaticaJettyServer avaticaJettyServer = new AvaticaJettyServer(druidMeta, druidConnectionExtras);
       closer.register(avaticaJettyServer);
@@ -210,16 +200,24 @@ public class DruidAvaticaTestDriver implements Driver
     }
 
     @Override
-    public void configureGuice(DruidInjectorBuilder builder)
+    public DruidModule getCoreModule()
     {
-      super.configureGuice(builder);
-      builder.addModule(connectionModule);
-      builder.addModule(
+      return DruidModuleCollection.of(
+          super.getCoreModule(),
           binder -> {
             binder.bindConstant().annotatedWith(Names.named("serviceName")).to("test");
             binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
             binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
           }
+      );
+    }
+
+    @Override
+    public DruidModule getOverrideModule()
+    {
+      return DruidModuleCollection.of(
+          super.getOverrideModule(),
+          connectionModule
       );
     }
 

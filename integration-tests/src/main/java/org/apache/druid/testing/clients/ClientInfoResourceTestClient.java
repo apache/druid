@@ -89,9 +89,7 @@ public class ClientInfoResourceTestClient
         );
       }
       return jsonMapper.readValue(
-          response.getContent(), new TypeReference<List<String>>()
-          {
-          }
+          response.getContent(), new TypeReference<>() {}
       );
     }
     catch (Exception e) {

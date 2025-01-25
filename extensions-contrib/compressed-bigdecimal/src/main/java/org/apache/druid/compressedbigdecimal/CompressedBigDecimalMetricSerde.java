@@ -49,7 +49,7 @@ public class CompressedBigDecimalMetricSerde extends ComplexMetricSerde
   @Override
   public ComplexMetricExtractor<CompressedBigDecimal> getExtractor()
   {
-    return new ComplexMetricExtractor<CompressedBigDecimal>()
+    return new ComplexMetricExtractor<>()
     {
       @Override
       public Class<CompressedBigDecimal> extractedClass()

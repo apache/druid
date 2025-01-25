@@ -54,7 +54,7 @@ public class FluentQueryRunner<T> implements QueryRunner<T>
 
   public FluentQueryRunner<T> from(QueryRunner<T> runner)
   {
-    return new FluentQueryRunner<T>(runner, toolChest);
+    return new FluentQueryRunner<>(runner, toolChest);
   }
 
   public FluentQueryRunner<T> applyPostMergeDecoration()

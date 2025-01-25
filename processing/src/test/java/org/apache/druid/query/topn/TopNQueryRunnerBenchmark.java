@@ -83,9 +83,9 @@ public class TopNQueryRunnerBenchmark extends AbstractBenchmark
   public static void setUp()
   {
     QueryRunnerFactory factory = new TopNQueryRunnerFactory(
-        new StupidPool<ByteBuffer>(
+        new StupidPool<>(
             "TopNQueryRunnerFactory-directBufferPool",
-            new Supplier<ByteBuffer>()
+            new Supplier<>()
             {
               @Override
               public ByteBuffer get()

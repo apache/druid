@@ -102,7 +102,7 @@ public class SerializablePairLongStringComplexMetricSerde extends ComplexMetricS
   @Override
   public ComplexMetricExtractor<?> getExtractor()
   {
-    return new ComplexMetricExtractor<Object>()
+    return new ComplexMetricExtractor<>()
     {
       @Override
       public Class<SerializablePairLongString> extractedClass()
@@ -137,7 +137,7 @@ public class SerializablePairLongStringComplexMetricSerde extends ComplexMetricS
   @Override
   public ObjectStrategy<SerializablePairLongString> getObjectStrategy()
   {
-    return new ObjectStrategy<SerializablePairLongString>()
+    return new ObjectStrategy<>()
     {
       @Override
       public int compare(@Nullable SerializablePairLongString o1, @Nullable SerializablePairLongString o2)
@@ -176,7 +176,7 @@ public class SerializablePairLongStringComplexMetricSerde extends ComplexMetricS
     return new ObjectStrategyComplexTypeStrategy<>(
         getObjectStrategy(),
         ColumnType.ofComplex(getTypeName()),
-        new Hash.Strategy<SerializablePairLongString>()
+        new Hash.Strategy<>()
         {
           @Override
           public int hashCode(SerializablePairLongString o)
@@ -215,7 +215,7 @@ public class SerializablePairLongStringComplexMetricSerde extends ComplexMetricS
   }
 
   private static final ObjectStrategy<SerializablePairLongString> LEGACY_STRATEGY =
-      new ObjectStrategy<SerializablePairLongString>()
+      new ObjectStrategy<>()
       {
         @Override
         public int compare(@Nullable SerializablePairLongString o1, @Nullable SerializablePairLongString o2)

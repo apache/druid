@@ -89,8 +89,8 @@ import org.apache.druid.segment.realtime.appenderator.AppenderatorDriverAddResul
 import org.apache.druid.segment.realtime.appenderator.SegmentsAndCommitMetadata;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderator;
 import org.apache.druid.segment.realtime.appenderator.StreamAppenderatorDriver;
-import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
+import org.apache.druid.server.security.AuthorizationResult;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.utils.CollectionUtils;
@@ -144,7 +144,8 @@ import java.util.stream.Collectors;
  * @param <SequenceOffsetType> Sequence Number Type
  */
 @SuppressWarnings("CheckReturnValue")
-public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType, RecordType extends ByteEntity> implements ChatHandler
+public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOffsetType, RecordType extends ByteEntity>
+    implements ChatHandler
 {
   private static final String CTX_KEY_LOOKUP_TIER = "lookupTier";
 
@@ -278,12 +279,11 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     rejectionPeriodUpdaterExec = Execs.scheduledSingleThreaded("RejectionPeriodUpdater-Exec--%d");
 
     if (ioConfig.getRefreshRejectionPeriodsInMinutes() != null) {
-      rejectionPeriodUpdaterExec
-           .scheduleWithFixedDelay(
-               this::refreshMinMaxMessageTime,
-               ioConfig.getRefreshRejectionPeriodsInMinutes(),
-               ioConfig.getRefreshRejectionPeriodsInMinutes(),
-               TimeUnit.MINUTES);
+      rejectionPeriodUpdaterExec.scheduleWithFixedDelay(this::refreshMinMaxMessageTime,
+                                                        ioConfig.getRefreshRejectionPeriodsInMinutes(),
+                                                        ioConfig.getRefreshRejectionPeriodsInMinutes(),
+                                                        TimeUnit.MINUTES
+      );
     }
     resetNextCheckpointTime();
   }
@@ -711,7 +711,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
               if (isPersistRequired) {
                 Futures.addCallback(
                     driver.persistAsync(committerSupplier.get()),
-                    new FutureCallback<Object>()
+                    new FutureCallback<>()
                     {
                       @Override
                       public void onSuccess(@Nullable Object result)
@@ -759,10 +759,18 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
           if (System.currentTimeMillis() > nextCheckpointTime) {
             sequenceToCheckpoint = getLastSequenceMetadata();
-            log.info("Next checkpoint time, updating sequenceToCheckpoint, SequenceToCheckpoint: [%s]", sequenceToCheckpoint);
+            log.info(
+                "Next checkpoint time, updating sequenceToCheckpoint, SequenceToCheckpoint: [%s]",
+                sequenceToCheckpoint
+            );
           }
           if (pushTriggeringAddResult != null) {
-            log.info("Hit the row limit updating sequenceToCheckpoint, SequenceToCheckpoint: [%s], rowInSegment: [%s], TotalRows: [%s]", sequenceToCheckpoint, pushTriggeringAddResult.getNumRowsInSegment(), pushTriggeringAddResult.getTotalNumRowsInAppenderator());
+            log.info(
+                "Hit the row limit updating sequenceToCheckpoint, SequenceToCheckpoint: [%s], rowInSegment: [%s], TotalRows: [%s]",
+                sequenceToCheckpoint,
+                pushTriggeringAddResult.getNumRowsInSegment(),
+                pushTriggeringAddResult.getTotalNumRowsInAppenderator()
+            );
           }
 
           if (sequenceToCheckpoint != null && stillReading) {
@@ -1022,7 +1030,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
     Futures.addCallback(
         publishFuture,
-        new FutureCallback<SegmentsAndCommitMetadata>()
+        new FutureCallback<>()
         {
           @Override
           public void onSuccess(SegmentsAndCommitMetadata publishedSegmentsAndCommitMetadata)
@@ -1128,14 +1136,14 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
   /**
    * Return a map of reports for the task.
-   *
+   * <p>
    * A successfull task should always have a null errorMsg. Segments availability is inherently confirmed
    * if the task was succesful.
-   *
+   * <p>
    * A falied task should always have a non-null errorMsg. Segment availability is never confirmed if the task
    * was not successful.
    *
-   * @param errorMsg Nullable error message for the task. null if task succeeded.
+   * @param errorMsg      Nullable error message for the task. null if task succeeded.
    * @param handoffWaitMs Milliseconds waited for segments to be handed off.
    * @return Map of reports for the task.
    */
@@ -1446,7 +1454,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
    *
    * @return authorization result
    */
-  private Access authorizationCheck(final HttpServletRequest req, Action action)
+  private AuthorizationResult authorizationCheck(final HttpServletRequest req, Action action)
   {
     return IndexTaskUtils.datasourceAuthorizationCheck(req, action, task.getDataSource(), authorizerMapper);
   }
@@ -2023,9 +2031,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
    *
    * @param toolbox           task toolbox
    * @param checkpointsString the json-serialized checkpoint string
-   *
    * @return checkpoint
-   *
    * @throws IOException jsonProcessingException
    */
   @Nullable
@@ -2039,7 +2045,6 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
    * This is what would become the start offsets of the next reader, if we stopped reading now.
    *
    * @param sequenceNumber the sequence number that has already been processed
-   *
    * @return next sequence number to be stored
    */
   protected abstract SequenceOffsetType getNextStartOffset(SequenceOffsetType sequenceNumber);
@@ -2049,7 +2054,6 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
    *
    * @param mapper json objectMapper
    * @param object metadata
-   *
    * @return SeekableStreamEndSequenceNumbers
    */
   protected abstract SeekableStreamEndSequenceNumbers<PartitionIdType, SequenceOffsetType> deserializePartitionsFromMetadata(
@@ -2063,9 +2067,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
    *
    * @param recordSupplier
    * @param toolbox
-   *
    * @return list of records polled, can be empty but cannot be null
-   *
    * @throws Exception
    */
   @NotNull
@@ -2078,7 +2080,6 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
    * creates specific implementations of kafka/kinesis datasource metadata
    *
    * @param partitions partitions used to create the datasource metadata
-   *
    * @return datasource metadata
    */
   protected abstract SeekableStreamDataSourceMetadata<PartitionIdType, SequenceOffsetType> createDataSourceMetadata(
@@ -2089,7 +2090,6 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
    * create a specific implementation of Kafka/Kinesis sequence number/offset used for comparison mostly
    *
    * @param sequenceNumber
-   *
    * @return a specific OrderedSequenceNumber instance for Kafka/Kinesis
    */
   protected abstract OrderedSequenceNumber<SequenceOffsetType> createSequenceNumber(SequenceOffsetType sequenceNumber);
@@ -2117,7 +2117,11 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     minMessageTime = minMessageTime.plusMinutes(ioConfig.getRefreshRejectionPeriodsInMinutes().intValue());
     maxMessageTime = maxMessageTime.plusMinutes(ioConfig.getRefreshRejectionPeriodsInMinutes().intValue());
 
-    log.info(StringUtils.format("Updated min and max messsage times to %s and %s respectively.", minMessageTime, maxMessageTime));
+    log.info(StringUtils.format(
+        "Updated min and max messsage times to %s and %s respectively.",
+        minMessageTime,
+        maxMessageTime
+    ));
   }
 
   public boolean withinMinMaxRecordTime(final InputRow row)
