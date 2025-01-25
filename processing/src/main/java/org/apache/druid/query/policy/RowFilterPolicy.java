@@ -56,7 +56,7 @@ public class RowFilterPolicy implements Policy
   @Override
   public CursorBuildSpec visit(CursorBuildSpec spec)
   {
-    return FilteredCursorFactory.addFilter(spec, rowFilter);
+    return CursorBuildSpec.builder(spec).addFilter(rowFilter.toFilter()).build();
   }
 
   @Override

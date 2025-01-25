@@ -20,15 +20,10 @@
 package org.apache.druid.segment;
 
 import org.apache.druid.query.filter.DimFilter;
-import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.filter.Filters;
 
 import javax.annotation.Nullable;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Set;
 
 public class FilteredCursorFactory implements CursorFactory
 {
@@ -48,7 +43,7 @@ public class FilteredCursorFactory implements CursorFactory
     if (filter == null) {
       return delegate.makeCursorHolder(spec);
     }
-    return delegate.makeCursorHolder(addFilter(CursorBuildSpec.builder(spec), filter).build());
+    return delegate.makeCursorHolder(CursorBuildSpec.builder(spec).addFilter(filter.toFilter()).build());
   }
 
   @Override
@@ -62,35 +57,5 @@ public class FilteredCursorFactory implements CursorFactory
   public ColumnCapabilities getColumnCapabilities(String column)
   {
     return delegate.getColumnCapabilities(column);
-  }
-
-  /**
-   * Adds a {@link Filter} from a {@link DimFilter} and its required physical columns to a
-   * {@link CursorBuildSpec.CursorBuildSpecBuilder}. If the {@link Filter} requires virtual columns, they must already
-   * be added to the {@link CursorBuildSpec.CursorBuildSpecBuilder} or they will be considered physical columns.
-   */
-  public static CursorBuildSpec.CursorBuildSpecBuilder addFilter(
-      CursorBuildSpec.CursorBuildSpecBuilder buildSpecBuilder,
-      DimFilter filter
-  )
-  {
-    final Filter newFilter;
-    final Set<String> physicalColumns;
-    if (buildSpecBuilder.getFilter() == null) {
-      newFilter = filter.toFilter();
-    } else {
-      newFilter = Filters.and(Arrays.asList(buildSpecBuilder.getFilter(), filter.toFilter()));
-    }
-    if (buildSpecBuilder.getPhysicalColumns() != null) {
-      physicalColumns = new HashSet<>(buildSpecBuilder.getPhysicalColumns());
-      for (String column : filter.getRequiredColumns()) {
-        if (!buildSpecBuilder.getVirtualColumns().exists(column)) {
-          physicalColumns.add(column);
-        }
-      }
-    } else {
-      physicalColumns = null;
-    }
-    return buildSpecBuilder.setFilter(newFilter).setPhysicalColumns(physicalColumns);
   }
 }

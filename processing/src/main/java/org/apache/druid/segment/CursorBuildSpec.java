@@ -26,12 +26,15 @@ import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryMetrics;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.filter.Filter;
+import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.vector.VectorCursor;
 import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -292,6 +295,36 @@ public class CursorBuildSpec
     {
       this.filter = filter;
       return this;
+    }
+
+    /**
+     * @see CursorBuildSpec#getFilter() for usage. Adds a {@link Filter} to the builder, if {@link #filter} is already
+     * set, the existing and new filters will be combined with an {@link org.apache.druid.segment.filter.AndFilter}.
+     * If {@link #physicalColumns} is set, {@link Filter#getRequiredColumns()} which are not present in
+     * {@link #virtualColumns} will be added to the existing set of {@link #physicalColumns}.
+     */
+    public CursorBuildSpecBuilder addFilter(
+        Filter filterToAdd
+    )
+    {
+      final Filter newFilter;
+      final Set<String> newPhysicalColumns;
+      if (filter == null) {
+        newFilter = filterToAdd;
+      } else {
+        newFilter = Filters.and(Arrays.asList(filter, filterToAdd));
+      }
+      if (physicalColumns != null) {
+        newPhysicalColumns = new HashSet<>(physicalColumns);
+        for (String column : filterToAdd.getRequiredColumns()) {
+          if (!virtualColumns.exists(column)) {
+            physicalColumns.add(column);
+          }
+        }
+      } else {
+        newPhysicalColumns = null;
+      }
+      return setFilter(newFilter).setPhysicalColumns(newPhysicalColumns);
     }
 
     /**
