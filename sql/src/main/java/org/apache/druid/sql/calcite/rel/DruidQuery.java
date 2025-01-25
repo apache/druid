@@ -1685,7 +1685,7 @@ public class DruidQuery
     }
 
     if (!plannerContext.featureAvailable(EngineFeature.SCAN_ORDER_BY_NON_TIME) && !orderByColumns.isEmpty()) {
-      if (orderByColumns.size() > 1 || ColumnHolder.TIME_COLUMN_NAME.equals(Iterables.getOnlyElement(orderByColumns)
+      if (orderByColumns.size() > 1 || !ColumnHolder.TIME_COLUMN_NAME.equals(Iterables.getOnlyElement(orderByColumns)
                                                                                      .getColumnName())) {
         if (!plannerContext.queryContext().isDecoupledMode()) {
           // We cannot handle this ordering, but we encounter this ordering as part of the exploration of the volcano
