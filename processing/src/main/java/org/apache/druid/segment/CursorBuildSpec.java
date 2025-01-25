@@ -467,7 +467,7 @@ public class CursorBuildSpec
         newPhysicalColumns = new HashSet<>(physicalColumns);
         for (String column : filterToAdd.getRequiredColumns()) {
           if (!virtualColumns.exists(column)) {
-            physicalColumns.add(column);
+            newPhysicalColumns.add(column);
           }
         }
       } else {
