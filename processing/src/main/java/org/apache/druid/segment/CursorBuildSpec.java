@@ -298,36 +298,6 @@ public class CursorBuildSpec
     }
 
     /**
-     * @see CursorBuildSpec#getFilter() for usage. Adds a {@link Filter} to the builder, if {@link #filter} is already
-     * set, the existing and new filters will be combined with an {@link org.apache.druid.segment.filter.AndFilter}.
-     * If {@link #physicalColumns} is set, {@link Filter#getRequiredColumns()} which are not present in
-     * {@link #virtualColumns} will be added to the existing set of {@link #physicalColumns}.
-     */
-    public CursorBuildSpecBuilder addFilter(
-        Filter filterToAdd
-    )
-    {
-      final Filter newFilter;
-      final Set<String> newPhysicalColumns;
-      if (filter == null) {
-        newFilter = filterToAdd;
-      } else {
-        newFilter = Filters.and(Arrays.asList(filter, filterToAdd));
-      }
-      if (physicalColumns != null) {
-        newPhysicalColumns = new HashSet<>(physicalColumns);
-        for (String column : filterToAdd.getRequiredColumns()) {
-          if (!virtualColumns.exists(column)) {
-            physicalColumns.add(column);
-          }
-        }
-      } else {
-        newPhysicalColumns = null;
-      }
-      return setFilter(newFilter).setPhysicalColumns(newPhysicalColumns);
-    }
-
-    /**
      * @see CursorBuildSpec#getInterval() for usage.
      */
     public Interval getInterval()
@@ -472,6 +442,38 @@ public class CursorBuildSpec
     {
       this.queryMetrics = queryMetrics;
       return this;
+    }
+
+
+
+    /**
+     * Adds a {@link Filter} to the builder, if {@link #filter} is already set, the existing and new filters will be
+     * combined with an {@link org.apache.druid.segment.filter.AndFilter}. If {@link #physicalColumns} is set,
+     * {@link Filter#getRequiredColumns()} which are not present in {@link #virtualColumns} will be added to the
+     * existing set of {@link #physicalColumns}.
+     */
+    public CursorBuildSpecBuilder andFilter(
+        Filter filterToAdd
+    )
+    {
+      final Filter newFilter;
+      final Set<String> newPhysicalColumns;
+      if (filter == null) {
+        newFilter = filterToAdd;
+      } else {
+        newFilter = Filters.and(Arrays.asList(filter, filterToAdd));
+      }
+      if (physicalColumns != null) {
+        newPhysicalColumns = new HashSet<>(physicalColumns);
+        for (String column : filterToAdd.getRequiredColumns()) {
+          if (!virtualColumns.exists(column)) {
+            physicalColumns.add(column);
+          }
+        }
+      } else {
+        newPhysicalColumns = null;
+      }
+      return setFilter(newFilter).setPhysicalColumns(newPhysicalColumns);
     }
 
     public CursorBuildSpec build()

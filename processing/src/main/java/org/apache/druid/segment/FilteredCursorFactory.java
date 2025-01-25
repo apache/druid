@@ -43,7 +43,7 @@ public class FilteredCursorFactory implements CursorFactory
     if (filter == null) {
       return delegate.makeCursorHolder(spec);
     }
-    return delegate.makeCursorHolder(CursorBuildSpec.builder(spec).addFilter(filter.toFilter()).build());
+    return delegate.makeCursorHolder(CursorBuildSpec.builder(spec).andFilter(filter.toFilter()).build());
   }
 
   @Override
