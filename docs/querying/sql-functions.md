@@ -172,7 +172,7 @@ Returns any value of the specified expression.
 
 <details><summary>Example</summary>
 
-The following example returns the state abbrevation, state name, and average flight time grouped by each state in `flight-carriers`:
+The following example returns the state abbreviation, state name, and average flight time grouped by each state in `flight-carriers`:
 
 ```sql
 SELECT
