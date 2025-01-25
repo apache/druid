@@ -298,6 +298,7 @@ public class UseIndexesStrategy extends SearchStrategy
             }
           }
         } else {
+          // these were checked to be non-null in partitionDimensionList
           final DictionaryEncodedStringValueIndex bitmapIndex =
               indexSupplier.as(DictionaryEncodedStringValueIndex.class);
           for (int i = 0; i < bitmapIndex.getCardinality(); ++i) {
