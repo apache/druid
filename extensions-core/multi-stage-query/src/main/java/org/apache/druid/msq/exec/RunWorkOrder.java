@@ -223,7 +223,7 @@ public class RunWorkOrder
       makeInputSliceReader();
       makeWorkOutputChannelFactory();
       makeShuffleOutputChannelFactory();
-      makeAndRunWorkProcessors(); // get infos on outputChannels, starts work in processors async.
+      makeAndRunWorkProcessors();
 
       if (stageDef.doesShuffle()) {
         makeAndRunShuffleProcessors();

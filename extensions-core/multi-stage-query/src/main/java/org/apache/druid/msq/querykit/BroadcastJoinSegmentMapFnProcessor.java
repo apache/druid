@@ -198,6 +198,7 @@ public class BroadcastJoinSegmentMapFnProcessor implements FrameProcessor<Functi
 
   DataSource inlineChannelData(final DataSource originalDataSource)
   {
+    // TODO: need to handle RestrictedInputNumberDataSource here
     if (originalDataSource instanceof InputNumberDataSource) {
       final int inputNumber = ((InputNumberDataSource) originalDataSource).getInputNumber();
       if (inputNumberToProcessorChannelMap.containsKey(inputNumber)) {

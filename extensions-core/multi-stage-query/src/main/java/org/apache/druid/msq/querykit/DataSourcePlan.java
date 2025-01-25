@@ -382,7 +382,7 @@ public class DataSourcePlan
       final boolean broadcast
   )
   {
-    // TODO: TableInputSpec should take policy as input.
+    // TODO: TableInputSpec should take policy into consideration.
     return new DataSourcePlan(
         (broadcast && dataSource.isGlobal())
         ? dataSource

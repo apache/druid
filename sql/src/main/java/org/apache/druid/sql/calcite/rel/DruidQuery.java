@@ -1513,14 +1513,7 @@ public class DruidQuery
       operators = windowing.getOperators();
     } else {
       operators = ImmutableList.<OperatorFactory>builder()
-                               .add(new ScanOperatorFactory(
-                                   null,
-                                   null,
-                                   null,
-                                   null,
-                                   virtualColumns,
-                                   null
-                               ))
+                               .add(new ScanOperatorFactory(null, null, null, null, virtualColumns, null))
                                .addAll(windowing.getOperators())
                                .build();
     }
@@ -1609,7 +1602,8 @@ public class DruidQuery
   private void setPlanningErrorOrderByNonTimeIsUnsupported()
   {
     List<String> orderByColumnNames = sorting.getOrderBys()
-                                             .stream().map(OrderByColumnSpec::getDimension)
+                                             .stream()
+                                             .map(OrderByColumnSpec::getDimension)
                                              .collect(Collectors.toList());
     plannerContext.setPlanningError(
         "SQL query requires ordering a table by non-time column [%s], which is not supported.",
@@ -1691,9 +1685,8 @@ public class DruidQuery
     }
 
     if (!plannerContext.featureAvailable(EngineFeature.SCAN_ORDER_BY_NON_TIME) && !orderByColumns.isEmpty()) {
-      if (orderByColumns.size() > 1
-          || orderByColumns.stream()
-                           .anyMatch(orderBy -> !orderBy.getColumnName().equals(ColumnHolder.TIME_COLUMN_NAME))) {
+      if (orderByColumns.size() > 1 || ColumnHolder.TIME_COLUMN_NAME.equals(Iterables.getOnlyElement(orderByColumns)
+                                                                                     .getColumnName())) {
         if (!plannerContext.queryContext().isDecoupledMode()) {
           // We cannot handle this ordering, but we encounter this ordering as part of the exploration of the volcano
           // planner, which means that the query that we are looking right now might only be doing this as one of the

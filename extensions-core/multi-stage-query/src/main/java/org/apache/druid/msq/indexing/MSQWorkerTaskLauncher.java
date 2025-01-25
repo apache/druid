@@ -361,7 +361,7 @@ public class MSQWorkerTaskLauncher implements RetryCapableWorkerManager
         final long loopStartTime = System.currentTimeMillis();
 
         try {
-          runNewTasks(); // this runs on msq-task-launcher thread.
+          runNewTasks();
           updateTaskTrackersAndTaskIds();
           checkForErroneousTasks();
           relaunchTasks();

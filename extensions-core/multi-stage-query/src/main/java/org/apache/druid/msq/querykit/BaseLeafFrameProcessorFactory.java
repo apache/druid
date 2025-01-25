@@ -124,7 +124,10 @@ public abstract class BaseLeafFrameProcessorFactory extends BaseFrameProcessorFa
       final OutputChannel outputChannel = outputChannelFactory.openChannel(0 /* Partition number doesn't matter */);
       outputChannels.add(outputChannel);
       channelQueue.add(outputChannel.getWritableChannel());
-      frameWriterFactoryQueue.add(stageDefinition.createFrameWriterFactory(outputChannel.getFrameMemoryAllocator(), removeNullBytes));
+      frameWriterFactoryQueue.add(stageDefinition.createFrameWriterFactory(
+          outputChannel.getFrameMemoryAllocator(),
+          removeNullBytes
+      ));
     }
 
     final FrameProcessor<Function<SegmentReference, SegmentReference>> segmentMapFnProcessor =
@@ -306,8 +309,8 @@ public abstract class BaseLeafFrameProcessorFactory extends BaseFrameProcessorFa
   }
 
   /**
-   * Creates a processor based on segmentMapFn on {@link Query#getDataSource()}. Must be run prior to all other
-   * processors being run.
+   * Creates a processor based on segmentMapFn on {@link Query#getDataSource()} and broadcast setting on
+   * {@link StageDefinition}. Must be run prior to all other processors being run.
    */
   private FrameProcessor<Function<SegmentReference, SegmentReference>> makeSegmentMapFnProcessor(
       StageDefinition stageDefinition,
