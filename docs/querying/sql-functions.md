@@ -1339,7 +1339,7 @@ Returns the following:
 
 | `agent_keys` | `bloom` |
 | -- | -- |
-| _`empty`_ | `false` |
+| `empty` | `false` |
 | `Game console` | `true` |
 | `Personal computer` | `false` |
 | `Smart TV` | `false` |
