@@ -166,7 +166,14 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         derbyConnector,
         leaderSelector,
         segmentsMetadataCache
-    );
+    )
+    {
+      @Override
+      public int getMaxRetries()
+      {
+        return MAX_SQL_MEATADATA_RETRY_FOR_TEST;
+      }
+    };
     coordinator = new IndexerSQLMetadataStorageCoordinator(
         transactionFactory,
         mapper,
@@ -187,12 +194,6 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         // Count number of times this method is called.
         metadataUpdateCounter.getAndIncrement();
         return super.updateDataSourceMetadataWithHandle(transaction, dataSource, startMetadata, endMetadata);
-      }
-
-      @Override
-      public int getSqlMetadataMaxRetry()
-      {
-        return MAX_SQL_MEATADATA_RETRY_FOR_TEST;
       }
     };
   }
@@ -241,7 +242,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
       expectedSegmentsToUpgrade.add(segment);
       // Add the same segment
       pendingSegmentsForTask.add(
-          new PendingSegmentRecord(
+          PendingSegmentRecord.create(
               SegmentIdWithShardSpec.fromDataSegment(segment),
               v1,
               segment.getId().toString(),
@@ -251,7 +252,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
       );
       // Add upgraded pending segment
       pendingSegmentsForTask.add(
-          new PendingSegmentRecord(
+          PendingSegmentRecord.create(
               new SegmentIdWithShardSpec(
                   TestDataSource.WIKI,
                   Intervals.of("2023-01-01/2023-02-01"),
@@ -276,7 +277,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
       expectedSegmentsToUpgrade.add(segment);
       // Add the same segment
       pendingSegmentsForTask.add(
-          new PendingSegmentRecord(
+          PendingSegmentRecord.create(
               SegmentIdWithShardSpec.fromDataSegment(segment),
               v2,
               segment.getId().toString(),
@@ -286,7 +287,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
       );
       // Add upgraded pending segment
       pendingSegmentsForTask.add(
-          new PendingSegmentRecord(
+          PendingSegmentRecord.create(
               new SegmentIdWithShardSpec(
                   TestDataSource.WIKI,
                   Intervals.of("2023-01-01/2023-02-01"),
@@ -310,7 +311,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
       appendSegments.add(segment);
       // Add the same segment
       pendingSegmentsForTask.add(
-          new PendingSegmentRecord(
+          PendingSegmentRecord.create(
               SegmentIdWithShardSpec.fromDataSegment(segment),
               v3,
               segment.getId().toString(),
@@ -320,7 +321,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
       );
       // Add upgraded pending segment
       pendingSegmentsForTask.add(
-          new PendingSegmentRecord(
+          PendingSegmentRecord.create(
               new SegmentIdWithShardSpec(
                   TestDataSource.WIKI,
                   Intervals.of("2023-01-01/2023-02-01"),
@@ -401,7 +402,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     final ReplaceTaskLock replaceLock = new ReplaceTaskLock("g1", Intervals.of("2023-01-01/2023-02-01"), "2023-02-01");
     final Set<DataSegment> segmentsAppendedWithReplaceLock = new HashSet<>();
     final Map<DataSegment, ReplaceTaskLock> appendedSegmentToReplaceLockMap = new HashMap<>();
-    final PendingSegmentRecord pendingSegmentForInterval = new PendingSegmentRecord(
+    final PendingSegmentRecord pendingSegmentForInterval = PendingSegmentRecord.create(
         new SegmentIdWithShardSpec(
             "foo",
             Intervals.of("2023-01-01/2024-01-01"),
@@ -461,7 +462,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     final ReplaceTaskLock replaceLock = new ReplaceTaskLock("g1", Intervals.of("2023-01-01/2023-02-01"), "2023-02-01");
     final Set<DataSegment> segmentsAppendedWithReplaceLock = new HashSet<>();
     final Map<DataSegment, ReplaceTaskLock> appendedSegmentToReplaceLockMap = new HashMap<>();
-    final PendingSegmentRecord pendingSegmentInInterval = new PendingSegmentRecord(
+    final PendingSegmentRecord pendingSegmentInInterval = PendingSegmentRecord.create(
         new SegmentIdWithShardSpec(
             "foo",
             Intervals.of("2023-01-01/2023-01-02"),
@@ -473,7 +474,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         null,
         "append"
     );
-    final PendingSegmentRecord pendingSegmentOutsideInterval = new PendingSegmentRecord(
+    final PendingSegmentRecord pendingSegmentOutsideInterval = PendingSegmentRecord.create(
         new SegmentIdWithShardSpec(
             "foo",
             Intervals.of("2023-04-01/2023-04-02"),
@@ -591,14 +592,14 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
   @Test
   public void testDuplicatePendingSegmentEntriesAreNotInserted()
   {
-    final PendingSegmentRecord pendingSegment0 = new PendingSegmentRecord(
+    final PendingSegmentRecord pendingSegment0 = PendingSegmentRecord.create(
         new SegmentIdWithShardSpec("foo", Intervals.ETERNITY, "version", new NumberedShardSpec(0, 0)),
         "sequenceName0",
         "sequencePrevId0",
         null,
         "taskAllocatorId"
     );
-    final PendingSegmentRecord pendingSegment1 = new PendingSegmentRecord(
+    final PendingSegmentRecord pendingSegment1 = PendingSegmentRecord.create(
         new SegmentIdWithShardSpec("foo", Intervals.ETERNITY, "version", new NumberedShardSpec(1, 0)),
         "sequenceName1",
         "sequencePrevId1",
@@ -3654,12 +3655,10 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     coordinator.commitSegments(ImmutableSet.of(usedSegmentForExactIntervalAndVersion), null);
 
 
-    Set<String> unusedSegmentIdsForIntervalAndVersion = derbyConnector.retryTransaction(
-        (handle, status) -> transactionFactory
-            .createTransactionForDatasource(TestDataSource.WIKI, handle, status)
-            .findUnusedSegmentIdsWithExactIntervalAndVersion(Intervals.of("2024/2025"), "v1"),
-        3,
-        SQLMetadataConnector.DEFAULT_MAX_TRIES
+    Set<String> unusedSegmentIdsForIntervalAndVersion = transactionFactory.retryDatasourceTransaction(
+        TestDataSource.WIKI,
+        transaction -> transaction
+            .findUnusedSegmentIdsWithExactIntervalAndVersion(Intervals.of("2024/2025"), "v1")
     );
     Assert.assertEquals(
         Set.of(unusedSegmentForExactIntervalAndVersion.getId().toString()),
@@ -3880,18 +3879,13 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
       }
     }
 
-    Set<SegmentIdWithShardSpec> observed = derbyConnector.retryTransaction(
-        (handle, transactionStatus) ->
-            coordinator.retrieveUsedSegmentsForAllocation(
-                           transactionFactory.createTransactionForDatasource(datasource, handle, transactionStatus),
-                           datasource,
-                           month
-                       )
+    Set<SegmentIdWithShardSpec> observed = transactionFactory.retryDatasourceTransaction(
+        datasource,
+        transaction ->
+            coordinator.retrieveUsedSegmentsForAllocation(transaction, datasource, month)
                        .stream()
                        .map(SegmentIdWithShardSpec::fromDataSegment)
-                       .collect(Collectors.toSet()),
-        3,
-        SQLMetadataConnector.DEFAULT_MAX_TRIES
+                       .collect(Collectors.toSet())
     );
 
     Assert.assertEquals(expected, observed);
@@ -3928,12 +3922,9 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
       boolean skipLineageCheck
   )
   {
-    return derbyConnector.retryTransaction(
-        (handle, transactionStatus) ->
-            transactionFactory.createTransactionForDatasource(dataSource, handle, transactionStatus)
-                              .insertPendingSegments(pendingSegments, skipLineageCheck),
-        3,
-        SQLMetadataConnector.DEFAULT_MAX_TRIES
+    return transactionFactory.retryDatasourceTransaction(
+        dataSource,
+        transaction -> transaction.insertPendingSegments(pendingSegments, skipLineageCheck)
     );
   }
 

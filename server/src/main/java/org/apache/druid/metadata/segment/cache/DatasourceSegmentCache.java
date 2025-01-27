@@ -23,8 +23,6 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.metadata.PendingSegmentRecord;
-import org.apache.druid.metadata.segment.DatasourceSegmentMetadataReader;
-import org.apache.druid.metadata.segment.DatasourceSegmentMetadataWriter;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.server.http.DataSegmentPlus;
 import org.apache.druid.timeline.DataSegment;
@@ -46,13 +44,8 @@ import java.util.stream.Collectors;
 
 /**
  * Datasource-level cache for segments and pending segments.
- *
- * TODO: track the created date for each pending segment as it might be needed
- *  for delete.
  */
-class DatasourceSegmentCache
-    extends BaseCache
-    implements DatasourceSegmentMetadataReader, DatasourceSegmentMetadataWriter
+class DatasourceSegmentCache extends BaseCache
 {
   private static final DatasourceSegmentCache EMPTY_INSTANCE = new DatasourceSegmentCache();
 
@@ -527,8 +520,13 @@ class DatasourceSegmentCache
   @Override
   public int deletePendingSegmentsCreatedIn(Interval interval)
   {
-    // TODO
-    return 0;
+    return withWriteLock(() -> {
+      List<String> idsToDelete = findPendingSegmentsMatching(
+          record -> interval.contains(record.getCreatedDate())
+      ).stream().map(record -> record.getId().toString()).collect(Collectors.toList());
+
+      return deletePendingSegments(idsToDelete);
+    });
   }
 
   /**

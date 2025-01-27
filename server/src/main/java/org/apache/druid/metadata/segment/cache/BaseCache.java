@@ -23,7 +23,7 @@ import com.google.common.base.Supplier;
 
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-public abstract class BaseCache
+public abstract class BaseCache implements SegmentsMetadataCache.DataSource
 {
   private final ReentrantReadWriteLock stateLock;
 
@@ -59,6 +59,30 @@ public abstract class BaseCache
     }
     finally {
       stateLock.readLock().unlock();
+    }
+  }
+
+  @Override
+  public <T> T withReadLock(SegmentsMetadataCache.Action<T> action) throws Exception
+  {
+    stateLock.readLock().lock();
+    try {
+      return action.perform(this);
+    }
+    finally {
+      stateLock.readLock().unlock();
+    }
+  }
+
+  @Override
+  public <T> T withWriteLock(SegmentsMetadataCache.Action<T> action) throws Exception
+  {
+    stateLock.writeLock().lock();
+    try {
+      return action.perform(this);
+    }
+    finally {
+      stateLock.writeLock().unlock();
     }
   }
 

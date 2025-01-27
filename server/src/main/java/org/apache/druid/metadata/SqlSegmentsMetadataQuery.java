@@ -720,11 +720,10 @@ public class SqlSegmentsMetadataQuery
   )
   {
     final String sql = StringUtils.format(
-        "SELECT payload, sequence_name, sequence_prev_id, task_allocator_id, upgraded_from_segment_id"
-        + " FROM %1$s WHERE"
-        + " dataSource = :dataSource"
-        + " AND start = :start"
-        + " AND %2$send%2$s = :end",
+        "SELECT payload, sequence_name, sequence_prev_id,"
+        + " task_allocator_id, upgraded_from_segment_id, created_date"
+        + " FROM %1$s WHERE dataSource = :dataSource"
+        + " AND start = :start AND %2$send%2$s = :end",
         dbTables.getPendingSegmentsTable(), connector.getQuoteString()
     );
     return handle
@@ -748,9 +747,9 @@ public class SqlSegmentsMetadataQuery
     final boolean compareIntervalEndpointsAsStrings = Intervals.canCompareEndpointsAsStrings(interval);
 
     String sql = StringUtils.format(
-        "SELECT payload, sequence_name, sequence_prev_id, task_allocator_id, upgraded_from_segment_id"
-        + " FROM %1$s"
-        + " WHERE dataSource = :dataSource",
+        "SELECT payload, sequence_name, sequence_prev_id,"
+        + " task_allocator_id, upgraded_from_segment_id, created_date"
+        + " FROM %1$s WHERE dataSource = :dataSource",
         dbTables.getPendingSegmentsTable()
     );
     if (compareIntervalEndpointsAsStrings) {
@@ -785,9 +784,10 @@ public class SqlSegmentsMetadataQuery
   )
   {
     final String sql = StringUtils.format(
-        "SELECT payload, sequence_name, sequence_prev_id, task_allocator_id, upgraded_from_segment_id"
-        + " FROM %1$s"
-        + " WHERE dataSource = :dataSource AND task_allocator_id = :task_allocator_id",
+        "SELECT payload, sequence_name, sequence_prev_id,"
+        + " task_allocator_id, upgraded_from_segment_id, created_date"
+        + " FROM %1$s WHERE dataSource = :dataSource"
+        + " AND task_allocator_id = :task_allocator_id",
         dbTables.getPendingSegmentsTable()
     );
 

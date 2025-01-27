@@ -91,14 +91,15 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
     CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig = new CentralizedDatasourceSchemaConfig();
     centralizedDatasourceSchemaConfig.setEnabled(true);
 
+    SqlSegmentsMetadataTransactionFactory transactionFactory = new SqlSegmentsMetadataTransactionFactory(
+        mapper,
+        derbyConnectorRule.metadataTablesConfigSupplier().get(),
+        derbyConnector,
+        new TestDruidLeaderSelector(),
+        new NoopSegmentsMetadataCache()
+    );
     coordinator = new IndexerSQLMetadataStorageCoordinator(
-        new SqlSegmentsMetadataTransactionFactory(
-            mapper,
-            derbyConnectorRule.metadataTablesConfigSupplier().get(),
-            derbyConnector,
-            new TestDruidLeaderSelector(),
-            new NoopSegmentsMetadataCache()
-        ),
+        transactionFactory,
         mapper,
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         derbyConnector,
@@ -117,12 +118,6 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
         // Count number of times this method is called.
         metadataUpdateCounter.getAndIncrement();
         return super.updateDataSourceMetadataWithHandle(transaction, dataSource, startMetadata, endMetadata);
-      }
-
-      @Override
-      public int getSqlMetadataMaxRetry()
-      {
-        return MAX_SQL_MEATADATA_RETRY_FOR_TEST;
       }
     };
   }

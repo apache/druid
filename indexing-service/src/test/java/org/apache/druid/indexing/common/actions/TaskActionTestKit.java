@@ -98,27 +98,28 @@ public class TaskActionTestKit extends ExternalResource
     );
     final ObjectMapper objectMapper = new TestUtils().getTestObjectMapper();
     segmentSchemaManager = new SegmentSchemaManager(metadataStorageTablesConfig, objectMapper, testDerbyConnector);
+    final SqlSegmentsMetadataTransactionFactory transactionFactory = new SqlSegmentsMetadataTransactionFactory(
+        objectMapper,
+        metadataStorageTablesConfig,
+        testDerbyConnector,
+        new TestDruidLeaderSelector(),
+        new NoopSegmentsMetadataCache()
+    )
+    {
+      @Override
+      public int getMaxRetries()
+      {
+        return 2;
+      }
+    };
     metadataStorageCoordinator = new IndexerSQLMetadataStorageCoordinator(
-        new SqlSegmentsMetadataTransactionFactory(
-            objectMapper,
-            metadataStorageTablesConfig,
-            testDerbyConnector,
-            new TestDruidLeaderSelector(),
-            new NoopSegmentsMetadataCache()
-        ),
+        transactionFactory,
         objectMapper,
         metadataStorageTablesConfig,
         testDerbyConnector,
         segmentSchemaManager,
         CentralizedDatasourceSchemaConfig.create()
-    )
-    {
-      @Override
-      public int getSqlMetadataMaxRetry()
-      {
-        return 2;
-      }
-    };
+    );
     taskLockbox = new TaskLockbox(taskStorage, metadataStorageCoordinator);
     segmentSchemaCache = new SegmentSchemaCache(NoopServiceEmitter.instance());
     segmentsMetadataManager = new SqlSegmentsMetadataManager(

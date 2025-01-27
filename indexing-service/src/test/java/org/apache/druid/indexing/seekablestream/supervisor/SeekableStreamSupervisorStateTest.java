@@ -2025,7 +2025,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         ImmutableSet.of()
     );
 
-    final PendingSegmentRecord pendingSegmentRecord0 = new PendingSegmentRecord(
+    final PendingSegmentRecord pendingSegmentRecord0 = PendingSegmentRecord.create(
         new SegmentIdWithShardSpec(
             "DS",
             Intervals.of("2024/2025"),
@@ -2037,7 +2037,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         "someAppendedSegment0",
         taskGroup0.getBaseSequenceName()
     );
-    final PendingSegmentRecord pendingSegmentRecord1 = new PendingSegmentRecord(
+    final PendingSegmentRecord pendingSegmentRecord1 = PendingSegmentRecord.create(
         new SegmentIdWithShardSpec(
             "DS",
             Intervals.of("2024/2025"),

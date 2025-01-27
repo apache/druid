@@ -20,6 +20,7 @@
 package org.apache.druid.metadata.segment;
 
 import org.apache.druid.discovery.DruidLeaderSelector;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InternalServerError;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.metadata.PendingSegmentRecord;
@@ -33,9 +34,11 @@ import org.joda.time.Interval;
 import org.skife.jdbi.v2.Handle;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 /**
@@ -43,25 +46,25 @@ import java.util.function.Function;
  * and sends writes first to the metadata store and then the cache (if the
  * metadata store persist succeeds).
  */
-public class SqlSegmentsMetadataCachedTransaction implements SegmentsMetadataTransaction
+class SqlSegmentsMetadataCachedTransaction implements SegmentsMetadataTransaction
 {
-  private final String dataSource;
   private final SegmentsMetadataTransaction delegate;
-  private final SegmentsMetadataCache metadataCache;
+  private final SegmentsMetadataCache.DataSource metadataCache;
   private final DruidLeaderSelector leaderSelector;
 
   private final int startTerm;
 
   private final AtomicBoolean isRollingBack = new AtomicBoolean(false);
+  private final AtomicBoolean isClosed = new AtomicBoolean(false);
 
-  public SqlSegmentsMetadataCachedTransaction(
-      String dataSource,
+  private final List<Consumer<DatasourceSegmentMetadataWriter>> pendingWrites = new ArrayList<>();
+
+  SqlSegmentsMetadataCachedTransaction(
       SegmentsMetadataTransaction delegate,
-      SegmentsMetadataCache metadataCache,
+      SegmentsMetadataCache.DataSource metadataCache,
       DruidLeaderSelector leaderSelector
   )
   {
-    this.dataSource = dataSource;
     this.delegate = delegate;
     this.metadataCache = metadataCache;
     this.leaderSelector = leaderSelector;
@@ -69,14 +72,14 @@ public class SqlSegmentsMetadataCachedTransaction implements SegmentsMetadataTra
     if (leaderSelector.isLeader()) {
       this.startTerm = leaderSelector.localTerm();
     } else {
-      throw InternalServerError.exception("Not leader anymore");
+      throw InternalServerError.exception("Not leader anymore. Cannot start transaction.");
     }
   }
 
   private void verifyStillLeaderWithSameTerm()
   {
     if (!isLeaderWithSameTerm()) {
-      throw InternalServerError.exception("Failing transaction. Not leader anymore");
+      throw InternalServerError.exception("Not leader anymore. Failing transaction.");
     }
   }
 
@@ -87,12 +90,12 @@ public class SqlSegmentsMetadataCachedTransaction implements SegmentsMetadataTra
 
   private DatasourceSegmentMetadataReader cacheReader()
   {
-    return metadataCache.readerForDatasource(dataSource);
+    return metadataCache;
   }
 
   private DatasourceSegmentMetadataWriter cacheWriter()
   {
-    return metadataCache.writerForDatasource(dataSource);
+    return metadataCache;
   }
 
   @Override
@@ -104,31 +107,34 @@ public class SqlSegmentsMetadataCachedTransaction implements SegmentsMetadataTra
   @Override
   public void setRollbackOnly()
   {
+    isRollingBack.set(true);
     delegate.setRollbackOnly();
   }
 
   @Override
-  public void complete()
+  public void close()
   {
-    // TODO: complete this implementation
-
-    if (isRollingBack.get()) {
-      // rollback the changes made to the cache
-    } else {
-      // commit the changes to the cache
-      // or may be we can commit right at the end
-      // since I don't think we ever read what we have just written
-      // so it should be okay to postpone the writes until the very end
-      // since reads from cache are going to be fast, it should be okay to hold
-      // a write lock for the entire duration of the transaction
-
-      // Is there any alternative? That is also consistent?
+    if (isClosed.get()) {
+      return;
+    } else if (isRollingBack.get()) {
+      isClosed.set(true);
+      return;
     }
 
-    // release the lock on the cache
-    // What if we don't acquire any lock?
-
-    delegate.complete();
+    // Commit the changes to the cache
+    try {
+      pendingWrites.forEach(action -> {
+        if (isLeaderWithSameTerm()) {
+          action.accept(cacheWriter());
+        } else {
+          // Leadership has been lost, cache would have been stopped and invalidated
+        }
+      });
+    }
+    finally {
+      delegate.close();
+      isClosed.set(true);
+    }
   }
 
   // READ METHODS
@@ -335,12 +341,18 @@ public class SqlSegmentsMetadataCachedTransaction implements SegmentsMetadataTra
 
   private <T> T performWriteAction(Function<DatasourceSegmentMetadataWriter, T> action)
   {
+    if (isClosed.get()) {
+      throw DruidException.defensive(
+          "Transaction has already been committed. No more writes can be performed."
+      );
+    }
+
     verifyStillLeaderWithSameTerm();
     final T result = action.apply(delegate);
 
-    if (isLeaderWithSameTerm()) {
-      action.apply(cacheWriter());
-    }
+    // TODO: verify if the write to metadata store was successful
+    //  Otherwise, throw an exception
+    pendingWrites.add(action::apply);
 
     return result;
   }

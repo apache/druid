@@ -26,7 +26,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InternalServerError;
-import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
@@ -55,7 +54,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-public class SqlSegmentsMetadataTransaction implements SegmentsMetadataTransaction
+class SqlSegmentsMetadataTransaction implements SegmentsMetadataTransaction
 {
   private static final int MAX_SEGMENTS_PER_BATCH = 100;
 
@@ -68,7 +67,7 @@ public class SqlSegmentsMetadataTransaction implements SegmentsMetadataTransacti
 
   private final SqlSegmentsMetadataQuery query;
 
-  public SqlSegmentsMetadataTransaction(
+  SqlSegmentsMetadataTransaction(
       String dataSource,
       Handle handle,
       TransactionStatus transactionStatus,
@@ -99,7 +98,7 @@ public class SqlSegmentsMetadataTransaction implements SegmentsMetadataTransacti
   }
 
   @Override
-  public void complete()
+  public void close()
   {
     // Do nothing here, the JDBI Handle will commit or rollback the transaction as needed
   }
@@ -335,7 +334,7 @@ public class SqlSegmentsMetadataTransaction implements SegmentsMetadataTransacti
     int updatedCount = handle.createStatement(getSqlToInsertPendingSegment())
           .bind("id", segmentId.toString())
           .bind("dataSource", dataSource)
-          .bind("created_date", DateTimes.nowUtc().toString())
+          .bind("created_date", nullSafeString(pendingSegment.getCreatedDate()))
           .bind("start", interval.getStart().toString())
           .bind("end", interval.getEnd().toString())
           .bind("sequence_name", pendingSegment.getSequenceName())
@@ -360,7 +359,6 @@ public class SqlSegmentsMetadataTransaction implements SegmentsMetadataTransacti
   {
     final PreparedBatch insertBatch = handle.prepareBatch(getSqlToInsertPendingSegment());
 
-    final String createdDate = DateTimes.nowUtc().toString();
     final Set<SegmentIdWithShardSpec> processedSegmentIds = new HashSet<>();
     for (PendingSegmentRecord pendingSegment : pendingSegments) {
       final SegmentIdWithShardSpec segmentId = pendingSegment.getId();
@@ -372,7 +370,7 @@ public class SqlSegmentsMetadataTransaction implements SegmentsMetadataTransacti
       insertBatch.add()
                  .bind("id", segmentId.toString())
                  .bind("dataSource", dataSource)
-                 .bind("created_date", createdDate)
+                 .bind("created_date", nullSafeString(pendingSegment.getCreatedDate()))
                  .bind("start", interval.getStart().toString())
                  .bind("end", interval.getEnd().toString())
                  .bind("sequence_name", pendingSegment.getSequenceName())

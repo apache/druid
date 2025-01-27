@@ -38,8 +38,6 @@ import org.apache.druid.metadata.PendingSegmentRecord;
 import org.apache.druid.metadata.SQLMetadataConnector;
 import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
 import org.apache.druid.metadata.SqlSegmentsMetadataQuery;
-import org.apache.druid.metadata.segment.DatasourceSegmentMetadataReader;
-import org.apache.druid.metadata.segment.DatasourceSegmentMetadataWriter;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.server.http.DataSegmentPlus;
 import org.joda.time.DateTime;
@@ -117,6 +115,11 @@ public class SqlSegmentsMetadataCache implements SegmentsMetadataCache
     }
   }
 
+  /**
+   * This method is called only when leadership is lost or when the service is
+   * being stopped. Any transaction that is in progress when this method is
+   * invoked will fail.
+   */
   @Override
   @LifecycleStop
   public synchronized void stop()
@@ -125,20 +128,6 @@ public class SqlSegmentsMetadataCache implements SegmentsMetadataCache
       currentCacheState.set(CacheState.STOPPED);
       tearDown();
     }
-
-    // TODO: Handle race conditions
-    // T1: sees cache as ready
-    // T2: stops the cache
-    // T1: tries to read some value from the cache and fails
-
-    // Should start-stop wait on everything else?
-    // When does stop happen?
-    // 1. Leadership changes: If leadership has changed, no point continuing the operation?
-    //    In the current implementation, a task action would continue executing even if leadership has been lost?
-    //    Yes, I do think so.
-    //    Solution: If leadership has changed, transaction would fail, we wouldn't need to read or write anymore
-
-    // 2. Service start-stop. Again no point worrying about the cache
   }
 
   @Override
@@ -148,14 +137,7 @@ public class SqlSegmentsMetadataCache implements SegmentsMetadataCache
   }
 
   @Override
-  public DatasourceSegmentMetadataReader readerForDatasource(String dataSource)
-  {
-    verifyCacheIsReady();
-    return datasourceToSegmentCache.getOrDefault(dataSource, DatasourceSegmentCache.empty());
-  }
-
-  @Override
-  public DatasourceSegmentMetadataWriter writerForDatasource(String dataSource)
+  public DataSource getDatasource(String dataSource)
   {
     verifyCacheIsReady();
     return datasourceToSegmentCache.computeIfAbsent(dataSource, ds -> new DatasourceSegmentCache());
@@ -191,11 +173,6 @@ public class SqlSegmentsMetadataCache implements SegmentsMetadataCache
     final Map<String, Set<String>> datasourceToKnownSegmentIds
         = retrieveAllSegmentIds(datasourceToRefreshSegmentIds);
 
-    // TODO: handle changes made to the metadata store between these two database calls
-    //    there doesn't seem to be much point to lock the cache during this period
-    //    so go and fetch the segments and then refresh them
-    //    it is possible that the cache is now updated and the refresh is not needed after all
-    //    so the refresh should be idempotent
     if (isStopped()) {
       tearDown();
       return;
@@ -244,9 +221,10 @@ public class SqlSegmentsMetadataCache implements SegmentsMetadataCache
     final Map<String, Set<String>> datasourceToKnownSegmentIds = new HashMap<>();
     final AtomicInteger countOfRefreshedUnusedSegments = new AtomicInteger(0);
 
-    // TODO: should we poll all segments here or just poll used
-    //  and then separately poll only the required stuff for unused segments
-    //  because the number of unused segments can be very large
+    // TODO: Consider improving this because the number of unused segments can be very large
+    //  Instead of polling all segments, we could just poll the used segments
+    //  and then fire a smarter query to determine the max unused ID or something
+    //  But it might be tricky
 
     final String sql = StringUtils.format(
         "SELECT id, dataSource, used, used_status_last_updated FROM %s",
@@ -282,7 +260,8 @@ public class SqlSegmentsMetadataCache implements SegmentsMetadataCache
         }
 
         return 0;
-      } catch (Exception e) {
+      }
+      catch (Exception e) {
         log.makeAlert(e, "Error while retrieving segment IDs from metadata store.");
         return 1;
       }
@@ -350,10 +329,6 @@ public class SqlSegmentsMetadataCache implements SegmentsMetadataCache
             .map((index, r, ctx) -> {
               try {
                 final PendingSegmentRecord record = PendingSegmentRecord.fromResultSet(r, jsonMapper);
-                final DateTime createdDate = nullSafeDate(r.getString("created_date"));
-
-                // TODO: use the created date
-
                 final DatasourceSegmentCache cache = datasourceToSegmentCache.computeIfAbsent(
                     record.getId().getDataSource(),
                     ds -> new DatasourceSegmentCache()
@@ -445,7 +420,8 @@ public class SqlSegmentsMetadataCache implements SegmentsMetadataCache
         final SegmentState storedState = new SegmentState(isUsed, lastUpdatedTime);
 
         return new SegmentRecord(segmentId, dataSource, storedState);
-      } catch (SQLException e) {
+      }
+      catch (SQLException e) {
         return null;
       }
     }

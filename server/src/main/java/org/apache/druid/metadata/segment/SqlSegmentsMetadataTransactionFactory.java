@@ -32,9 +32,15 @@ import org.skife.jdbi.v2.TransactionStatus;
  * Factory for {@link SegmentsMetadataTransaction}s. If the
  * {@link SegmentsMetadataCache} is enabled and ready, the transaction may
  * read/write from the cache as applicable.
+ * <p>
+ * This class serves as a wrapper over the {@link SQLMetadataConnector} to
+ * perform transactions specific to segment metadata.
  */
 public class SqlSegmentsMetadataTransactionFactory
 {
+  private static final int QUIET_RETRIES = 3;
+  private static final int MAX_RETRIES = 10;
+
   private final ObjectMapper jsonMapper;
   private final MetadataStorageTablesConfig tablesConfig;
   private final SQLMetadataConnector connector;
@@ -57,13 +63,66 @@ public class SqlSegmentsMetadataTransactionFactory
     this.segmentsMetadataCache = segmentsMetadataCache;
   }
 
-  public SegmentsMetadataTransaction createTransactionForDatasource(
+  public int getMaxRetries()
+  {
+    return MAX_RETRIES;
+  }
+
+  public <T> T inReadOnlyDatasourceTransaction(
+      String dataSource,
+      SegmentsMetadataReadTransaction.Callback<T> callback
+  )
+  {
+    return connector.inReadOnlyTransaction((handle, status) -> {
+      final SegmentsMetadataTransaction sqlTransaction
+          = createSqlTransaction(dataSource, handle, status);
+
+      if (segmentsMetadataCache.isReady()) {
+        final SegmentsMetadataCache.DataSource datasourceCache
+            = segmentsMetadataCache.getDatasource(dataSource);
+        final SegmentsMetadataReadTransaction cachedTransaction
+            = new SqlSegmentsMetadataCachedTransaction(sqlTransaction, datasourceCache, leaderSelector);
+
+        return datasourceCache.withReadLock(dc -> executeRead(cachedTransaction, callback));
+      } else {
+        return executeRead(createSqlTransaction(dataSource, handle, status), callback);
+      }
+    });
+  }
+
+  public <T> T retryDatasourceTransaction(
+      String dataSource,
+      SegmentsMetadataTransaction.Callback<T> callback
+  )
+  {
+    return connector.retryTransaction(
+        (handle, status) -> {
+          final SegmentsMetadataTransaction sqlTransaction
+              = createSqlTransaction(dataSource, handle, status);
+
+          if (segmentsMetadataCache.isReady()) {
+            final SegmentsMetadataCache.DataSource datasourceCache
+                = segmentsMetadataCache.getDatasource(dataSource);
+            final SegmentsMetadataTransaction cachedTransaction
+                = new SqlSegmentsMetadataCachedTransaction(sqlTransaction, datasourceCache, leaderSelector);
+
+            return datasourceCache.withWriteLock(dc -> executeWrite(cachedTransaction, callback));
+          } else {
+            return executeWrite(sqlTransaction, callback);
+          }
+        },
+        QUIET_RETRIES,
+        getMaxRetries()
+    );
+  }
+
+  private SegmentsMetadataTransaction createSqlTransaction(
       String dataSource,
       Handle handle,
       TransactionStatus transactionStatus
   )
   {
-    final SegmentsMetadataTransaction metadataTransaction = new SqlSegmentsMetadataTransaction(
+    return new SqlSegmentsMetadataTransaction(
         dataSource,
         handle,
         transactionStatus,
@@ -71,16 +130,33 @@ public class SqlSegmentsMetadataTransactionFactory
         tablesConfig,
         jsonMapper
     );
+  }
 
-    return
-        segmentsMetadataCache.isReady()
-        ? new SqlSegmentsMetadataCachedTransaction(
-            dataSource,
-            metadataTransaction,
-            segmentsMetadataCache,
-            leaderSelector
-        )
-        : metadataTransaction;
+  private <T> T executeWrite(
+      SegmentsMetadataTransaction transaction,
+      SegmentsMetadataTransaction.Callback<T> callback
+  ) throws Exception
+  {
+    try {
+      return callback.inTransaction(transaction);
+    }
+    catch (Exception e) {
+      transaction.setRollbackOnly();
+      throw e;
+    }
+    finally {
+      transaction.close();
+    }
+  }
+
+  private <T> T executeRead(
+      SegmentsMetadataReadTransaction transaction,
+      SegmentsMetadataReadTransaction.Callback<T> callback
+  ) throws Exception
+  {
+    try (transaction) {
+      return callback.inTransaction(transaction);
+    }
   }
 
 }
