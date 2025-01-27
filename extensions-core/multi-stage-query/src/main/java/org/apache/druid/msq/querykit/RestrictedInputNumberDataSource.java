@@ -22,6 +22,7 @@ package org.apache.druid.msq.querykit;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Query;
@@ -61,7 +62,19 @@ public class RestrictedInputNumberDataSource implements DataSource
   )
   {
     this.inputNumber = inputNumber;
-    this.policy = policy;
+    this.policy = Preconditions.checkNotNull(policy, "Policy can't be null");
+  }
+
+  @JsonProperty
+  public int getInputNumber()
+  {
+    return inputNumber;
+  }
+
+  @JsonProperty
+  public Policy getPolicy()
+  {
+    return policy;
   }
 
   @Override
@@ -131,12 +144,6 @@ public class RestrictedInputNumberDataSource implements DataSource
     return new DataSourceAnalysis(this, null, null, Collections.emptyList());
   }
 
-  @JsonProperty
-  public int getInputNumber()
-  {
-    return inputNumber;
-  }
-
   @Override
   public boolean equals(Object o)
   {
@@ -161,7 +168,7 @@ public class RestrictedInputNumberDataSource implements DataSource
   {
     return "RestrictedInputNumberDataSource{" +
            "inputNumber=" + inputNumber +
-           ",policy=" + policy +
-           '}';
+           ", policy=" + policy + "}";
+
   }
 }

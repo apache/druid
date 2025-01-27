@@ -53,26 +53,6 @@ public class OutputChannels
     }
   }
 
-  /**
-   * Verifies there is exactly one channel per partition.
-   */
-  public OutputChannels sanityCheck()
-  {
-    for (int partitionNumber : getPartitionNumbers()) {
-      final List<OutputChannel> outputChannelsForPartition =
-          getChannelsForPartition(partitionNumber);
-
-      Preconditions.checkState(partitionNumber >= 0, "Expected partitionNumber >= 0, but got [%s]", partitionNumber);
-      Preconditions.checkState(
-          outputChannelsForPartition.size() == 1,
-          "Expected one channel for partition [%s], but got [%s]",
-          partitionNumber,
-          outputChannelsForPartition.size()
-      );
-    }
-    return this;
-  }
-
   public static OutputChannels none()
   {
     return wrap(Collections.emptyList());
@@ -93,6 +73,26 @@ public class OutputChannels
   public static OutputChannels wrapReadOnly(final List<OutputChannel> outputChannels)
   {
     return new OutputChannels(outputChannels.stream().map(OutputChannel::readOnly).collect(Collectors.toList()));
+  }
+
+  /**
+   * Verifies there is exactly one channel per partition.
+   */
+  public OutputChannels sanityCheck()
+  {
+    for (int partitionNumber : getPartitionNumbers()) {
+      final List<OutputChannel> outputChannelsForPartition =
+          getChannelsForPartition(partitionNumber);
+
+      Preconditions.checkState(partitionNumber >= 0, "Expected partitionNumber >= 0, but got [%s]", partitionNumber);
+      Preconditions.checkState(
+          outputChannelsForPartition.size() == 1,
+          "Expected one channel for partition [%s], but got [%s]",
+          partitionNumber,
+          outputChannelsForPartition.size()
+      );
+    }
+    return this;
   }
 
   /**
