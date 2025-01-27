@@ -1849,7 +1849,7 @@ APPROX_COUNT_DISTINCT_DS_THETA(DECODE_BASE64_COMPLEX('thetaSketch', "theta_input
 Decodes a base64-encoded expression into a UTF-8 encoded string.
 
 * **Syntax:** `DECODE_BASE64_UTF8(expr)`
-* **Function type:** Scalar
+* **Function type:** Scalar, string
 
 <details><summary>Example</summary>
 
