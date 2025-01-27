@@ -1291,7 +1291,7 @@ Computes a [bloom filter](../development/extensions-core/bloom-filter.md) from v
 
 <details><summary>Example</summary>
 
-The following example returns a base64-encoded bloom filter string for entries in `agent_category`:
+The following example returns a Base64-encoded bloom filter string for entries in `agent_category`:
 
 ```sql
 SELECT
@@ -1305,7 +1305,7 @@ Returns the following:
 
 | `agent_keys` | `bloom` |
 | -- | -- |
-| _`empty`_ | `"BAAAAAgAAAAAABAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEABAAAAAA"` |
+| `empty` | `"BAAAAAgAAAAAABAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEABAAAAAA"` |
 | `Game console` | `"BAAAAAgAAAAAAAAAAAAAAAAAAAAAAAAAQAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgBAAAAAAAAAAAAAAAA"` |
 | `Personal computer` | `"BAAAAAgAAAAAAEAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAA"` |
 | `Smart TV` | `"BAAAAAgAAAAAAAAAAAAAgAAAAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAA"` |
@@ -1318,10 +1318,10 @@ Returns the following:
 
 ## BLOOM_FILTER_TEST
 
-Returns true if an expression is contained in a base64-encoded [bloom filter](../development/extensions-core/bloom-filter.md) string.
+Returns true if an expression is contained in a Base64-encoded [bloom filter](../development/extensions-core/bloom-filter.md) string.
 
 * **Syntax:** `BLOOM_FILTER_TEST(expr, <STRING>)`
-* **Function type:** Aggregation
+* **Function type:** Scalar, other
 
 <details><summary>Example</summary>
 
@@ -1809,7 +1809,7 @@ Returns the following:
 
 ## DECODE_BASE64_COMPLEX
 
-Decodes a base64-encoded expression into a complex data type.
+Decodes a Base64-encoded expression into a complex data type.
 
 You can use the function to ingest data when a column contains an encoded data sketch such as Theta or HLL.
 
@@ -1829,7 +1829,7 @@ You can enable support for the following complex data types by [loading their ex
 
 <details><summary>Example</summary>
 
-The following example decodes a Theta sketch from a base64-encoded sketch contained in `theta_input`:
+The following example decodes a Theta sketch from a Base64-encoded sketch contained in `theta_input`:
 
 ```sql
 DECODE_BASE64_COMPLEX('thetaSketch', "theta_input")
@@ -1846,14 +1846,14 @@ APPROX_COUNT_DISTINCT_DS_THETA(DECODE_BASE64_COMPLEX('thetaSketch', "theta_input
 
 ## DECODE_BASE64_UTF8
 
-Decodes a base64-encoded expression into a UTF-8 encoded string.
+Decodes a Base64-encoded expression into a UTF-8 encoded string.
 
 * **Syntax:** `DECODE_BASE64_UTF8(expr)`
 * **Function type:** Scalar, string
 
 <details><summary>Example</summary>
 
-The following example decodes the base64-encoded representation of "Hello, World!":
+The following example decodes the Base64-encoded representation of "Hello, World!":
 
 ```sql
 SELECT
