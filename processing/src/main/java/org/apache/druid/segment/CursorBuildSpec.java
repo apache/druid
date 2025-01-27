@@ -20,6 +20,7 @@
 package org.apache.druid.segment;
 
 import com.google.common.base.Preconditions;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.QueryContext;
@@ -36,6 +37,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -238,6 +240,42 @@ public class CursorBuildSpec
       }
     }
     return true;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    CursorBuildSpec that = (CursorBuildSpec) o;
+    return isAggregate == that.isAggregate &&
+           Objects.equals(filter, that.filter) &&
+           Objects.equals(interval, that.interval) &&
+           Objects.equals(groupingColumns, that.groupingColumns) &&
+           Objects.equals(virtualColumns, that.virtualColumns) &&
+           Objects.equals(aggregators, that.aggregators) &&
+           Objects.equals(preferredOrdering, that.preferredOrdering) &&
+           Objects.equals(queryContext, that.queryContext) &&
+           Objects.equals(physicalColumns, that.physicalColumns) &&
+           Objects.equals(queryMetrics, that.queryMetrics);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(
+        filter,
+        interval,
+        groupingColumns,
+        virtualColumns,
+        aggregators,
+        preferredOrdering,
+        queryContext,
+        isAggregate,
+        physicalColumns,
+        queryMetrics
+    );
   }
 
   public static class CursorBuildSpecBuilder
@@ -456,6 +494,7 @@ public class CursorBuildSpec
         Filter filterToAdd
     )
     {
+      DruidException.conditionalDefensive(filterToAdd != null, "filterToAdd must not be null");
       final Filter newFilter;
       final Set<String> newPhysicalColumns;
       if (filter == null) {
