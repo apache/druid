@@ -462,6 +462,8 @@
                                         <argument>org.apache.druid.extensions.contrib:grpc-query</argument>
                                         <argument>-c</argument>
                                         <argument>org.apache.druid.extensions.contrib:druid-ranger-security</argument>
+                                        <argument>-c</argument>
+                                        <argument>org.apache.druid.extensions:druid-exactcount</argument>
                                     </arguments>
                                 </configuration>
                             </execution>
