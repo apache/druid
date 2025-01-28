@@ -48,13 +48,7 @@ import java.util.stream.Collectors;
 class DatasourceSegmentCache extends BaseCache
 {
   private final String dataSource;
-
-  /**
-   * Used to obtain the segment for a given ID so that it can be updated in the
-   * timeline.
-   */
   private final Map<String, DataSegmentPlus> idToUsedSegment = new HashMap<>();
-
   private final Set<String> unusedSegmentIds = new HashSet<>();
 
   /**
@@ -62,6 +56,9 @@ class DatasourceSegmentCache extends BaseCache
    */
   private final SegmentTimeline usedSegmentTimeline = SegmentTimeline.forSegments(Set.of());
 
+  /**
+   * Map from interval to segment ID to pending segment record.
+   */
   private final Map<Interval, Map<String, PendingSegmentRecord>>
       intervalToPendingSegments = new HashMap<>();
 
@@ -74,9 +71,13 @@ class DatasourceSegmentCache extends BaseCache
     this.dataSource = dataSource;
   }
 
+  /**
+   * Removes all entries from the cache.
+   */
   void clear()
   {
     withWriteLock(() -> {
+      unusedSegmentIds.clear();
       idToUsedSegment.values().forEach(s -> usedSegmentTimeline.remove(s.getDataSegment()));
       idToUsedSegment.clear();
       intervalVersionToHighestUnusedPartitionNumber.clear();
@@ -548,10 +549,5 @@ class DatasourceSegmentCache extends BaseCache
   private static String getId(DataSegment segment)
   {
     return segment.getId().toString();
-  }
-
-  private static int nullSafeMax(Integer a, int b)
-  {
-    return (a == null || a < b) ? b : a;
   }
 }

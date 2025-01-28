@@ -70,7 +70,7 @@ import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
 import org.apache.druid.metadata.SqlSegmentsMetadataManager;
 import org.apache.druid.metadata.TestDerbyConnector;
-import org.apache.druid.metadata.segment.SqlSegmentsMetadataTransactionFactory;
+import org.apache.druid.metadata.segment.SqlSegmentMetadataTransactionFactory;
 import org.apache.druid.metadata.segment.cache.NoopSegmentMetadataCache;
 import org.apache.druid.segment.DataSegmentsWithSchemas;
 import org.apache.druid.segment.IndexIO;
@@ -150,7 +150,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
     );
 
     storageCoordinator = new IndexerSQLMetadataStorageCoordinator(
-        new SqlSegmentsMetadataTransactionFactory(
+        new SqlSegmentMetadataTransactionFactory(
             objectMapper,
             derbyConnectorRule.metadataTablesConfigSupplier().get(),
             derbyConnectorRule.getConnector(),

@@ -36,7 +36,7 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.metadata.segment.SegmentMetadataTransaction;
-import org.apache.druid.metadata.segment.SqlSegmentsMetadataTransactionFactory;
+import org.apache.druid.metadata.segment.SqlSegmentMetadataTransactionFactory;
 import org.apache.druid.metadata.segment.cache.HeapMemorySegmentMetadataCache;
 import org.apache.druid.metadata.segment.cache.NoopSegmentMetadataCache;
 import org.apache.druid.metadata.segment.cache.SegmentMetadataCache;
@@ -101,7 +101,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
   private TestDruidLeaderSelector leaderSelector;
   private SegmentMetadataCache segmentMetadataCache;
   private StubServiceEmitter emitter;
-  private SqlSegmentsMetadataTransactionFactory transactionFactory;
+  private SqlSegmentMetadataTransactionFactory transactionFactory;
   private BlockingExecutorService cachePollExecutor;
 
   private final boolean useSegmentCache;
@@ -160,7 +160,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
       cachePollExecutor.finishNextPendingTask();
     }
 
-    transactionFactory = new SqlSegmentsMetadataTransactionFactory(
+    transactionFactory = new SqlSegmentMetadataTransactionFactory(
         mapper,
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         derbyConnector,
@@ -762,7 +762,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     final AtomicLong attemptCounter = new AtomicLong();
 
     final IndexerSQLMetadataStorageCoordinator failOnceCoordinator = new IndexerSQLMetadataStorageCoordinator(
-        new SqlSegmentsMetadataTransactionFactory(
+        new SqlSegmentMetadataTransactionFactory(
             mapper,
             derbyConnectorRule.metadataTablesConfigSupplier().get(),
             derbyConnector,

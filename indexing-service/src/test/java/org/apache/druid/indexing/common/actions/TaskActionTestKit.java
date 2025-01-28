@@ -37,7 +37,7 @@ import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
 import org.apache.druid.metadata.SqlSegmentsMetadataManager;
 import org.apache.druid.metadata.TestDerbyConnector;
-import org.apache.druid.metadata.segment.SqlSegmentsMetadataTransactionFactory;
+import org.apache.druid.metadata.segment.SqlSegmentMetadataTransactionFactory;
 import org.apache.druid.metadata.segment.cache.NoopSegmentMetadataCache;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.SegmentSchemaCache;
@@ -98,7 +98,7 @@ public class TaskActionTestKit extends ExternalResource
     );
     final ObjectMapper objectMapper = new TestUtils().getTestObjectMapper();
     segmentSchemaManager = new SegmentSchemaManager(metadataStorageTablesConfig, objectMapper, testDerbyConnector);
-    final SqlSegmentsMetadataTransactionFactory transactionFactory = new SqlSegmentsMetadataTransactionFactory(
+    final SqlSegmentMetadataTransactionFactory transactionFactory = new SqlSegmentMetadataTransactionFactory(
         objectMapper,
         metadataStorageTablesConfig,
         testDerbyConnector,

@@ -36,7 +36,7 @@ import org.skife.jdbi.v2.TransactionStatus;
  * This class serves as a wrapper over the {@link SQLMetadataConnector} to
  * perform transactions specific to segment metadata.
  */
-public class SqlSegmentsMetadataTransactionFactory
+public class SqlSegmentMetadataTransactionFactory
 {
   private static final int QUIET_RETRIES = 3;
   private static final int MAX_RETRIES = 10;
@@ -48,7 +48,7 @@ public class SqlSegmentsMetadataTransactionFactory
   private final SegmentMetadataCache segmentMetadataCache;
 
   @Inject
-  public SqlSegmentsMetadataTransactionFactory(
+  public SqlSegmentMetadataTransactionFactory(
       ObjectMapper jsonMapper,
       MetadataStorageTablesConfig tablesConfig,
       SQLMetadataConnector connector,
@@ -83,9 +83,9 @@ public class SqlSegmentsMetadataTransactionFactory
         final SegmentsMetadataReadTransaction cachedTransaction
             = new CachedSegmentMetadataTransaction(sqlTransaction, datasourceCache, leaderSelector);
 
-        return datasourceCache.read(() -> executeRead(cachedTransaction, callback));
+        return datasourceCache.read(() -> executeReadAndClose(cachedTransaction, callback));
       } else {
-        return executeRead(createSqlTransaction(dataSource, handle, status), callback);
+        return executeReadAndClose(createSqlTransaction(dataSource, handle, status), callback);
       }
     });
   }
@@ -106,9 +106,9 @@ public class SqlSegmentsMetadataTransactionFactory
             final SegmentMetadataTransaction cachedTransaction
                 = new CachedSegmentMetadataTransaction(sqlTransaction, datasourceCache, leaderSelector);
 
-            return datasourceCache.write(() -> executeWrite(cachedTransaction, callback));
+            return datasourceCache.write(() -> executeWriteAndClose(cachedTransaction, callback));
           } else {
-            return executeWrite(sqlTransaction, callback);
+            return executeWriteAndClose(sqlTransaction, callback);
           }
         },
         QUIET_RETRIES,
@@ -132,7 +132,7 @@ public class SqlSegmentsMetadataTransactionFactory
     );
   }
 
-  private <T> T executeWrite(
+  private <T> T executeWriteAndClose(
       SegmentMetadataTransaction transaction,
       SegmentMetadataTransaction.Callback<T> callback
   ) throws Exception
@@ -149,7 +149,7 @@ public class SqlSegmentsMetadataTransactionFactory
     }
   }
 
-  private <T> T executeRead(
+  private <T> T executeReadAndClose(
       SegmentsMetadataReadTransaction transaction,
       SegmentsMetadataReadTransaction.Callback<T> callback
   ) throws Exception

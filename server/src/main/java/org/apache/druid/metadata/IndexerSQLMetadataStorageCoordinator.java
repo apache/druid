@@ -51,7 +51,7 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.metadata.segment.DatasourceSegmentMetadataWriter;
 import org.apache.druid.metadata.segment.SegmentMetadataTransaction;
 import org.apache.druid.metadata.segment.SegmentsMetadataReadTransaction;
-import org.apache.druid.metadata.segment.SqlSegmentsMetadataTransactionFactory;
+import org.apache.druid.metadata.segment.SqlSegmentMetadataTransactionFactory;
 import org.apache.druid.segment.SegmentMetadata;
 import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.SegmentUtils;
@@ -113,11 +113,11 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   private final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
   private final boolean schemaPersistEnabled;
 
-  private final SqlSegmentsMetadataTransactionFactory transactionFactory;
+  private final SqlSegmentMetadataTransactionFactory transactionFactory;
 
   @Inject
   public IndexerSQLMetadataStorageCoordinator(
-      SqlSegmentsMetadataTransactionFactory transactionFactory,
+      SqlSegmentMetadataTransactionFactory transactionFactory,
       ObjectMapper jsonMapper,
       MetadataStorageTablesConfig dbTables,
       SQLMetadataConnector connector,

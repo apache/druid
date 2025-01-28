@@ -42,7 +42,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.metadata.TestDerbyConnector;
-import org.apache.druid.metadata.segment.SqlSegmentsMetadataTransactionFactory;
+import org.apache.druid.metadata.segment.SqlSegmentMetadataTransactionFactory;
 import org.apache.druid.metadata.segment.cache.NoopSegmentMetadataCache;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
@@ -115,7 +115,7 @@ public class DatasourceOptimizerTest extends CuratorTestBase
     );
 
     metadataStorageCoordinator = new IndexerSQLMetadataStorageCoordinator(
-        new SqlSegmentsMetadataTransactionFactory(
+        new SqlSegmentMetadataTransactionFactory(
             jsonMapper,
             derbyConnectorRule.metadataTablesConfigSupplier().get(),
             derbyConnector,

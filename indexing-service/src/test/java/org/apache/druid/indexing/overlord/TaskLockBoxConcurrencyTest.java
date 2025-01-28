@@ -33,7 +33,7 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.metadata.DerbyMetadataStorageActionHandlerFactory;
 import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.metadata.TestDerbyConnector;
-import org.apache.druid.metadata.segment.SqlSegmentsMetadataTransactionFactory;
+import org.apache.druid.metadata.segment.SqlSegmentMetadataTransactionFactory;
 import org.apache.druid.metadata.segment.cache.NoopSegmentMetadataCache;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
@@ -83,7 +83,7 @@ public class TaskLockBoxConcurrencyTest
     lockbox = new TaskLockbox(
         taskStorage,
         new IndexerSQLMetadataStorageCoordinator(
-            new SqlSegmentsMetadataTransactionFactory(
+            new SqlSegmentMetadataTransactionFactory(
                 objectMapper,
                 derby.metadataTablesConfigSupplier().get(),
                 derbyConnector,

@@ -46,7 +46,8 @@ import java.util.function.Function;
  * writes to the metadata store. If the transaction succeeds, all the writes
  * made to the metadata store are also committed to the cache in {@link #close()}.
  * The cache is not updated right away in case the transaction needs to be
- * rolled back.
+ * rolled back. This is okay since we assume that a transaction does not read
+ * what it writes.
  */
 class CachedSegmentMetadataTransaction implements SegmentMetadataTransaction
 {
@@ -353,7 +354,9 @@ class CachedSegmentMetadataTransaction implements SegmentMetadataTransaction
 
     // Assume that the metadata write operation succeeded
     // Do not update the cache just yet, add to the list of pending writes
-    pendingCacheWrites.add(action::apply);
+    pendingCacheWrites.add(writer -> {
+      T ignored = action.apply(writer);
+    });
 
     return result;
   }
