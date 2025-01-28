@@ -164,7 +164,43 @@ public class SqlSegmentsMetadataQuery
     );
   }
 
-  public Set<String> retrieveUnusedSegmentIdsForExactIntervalAndVersion(
+  /**
+   * Determines the highest ID amongst unused segments for the given datasource,
+   * interval and version.
+   *
+   * @return null if no unused segment exists for the given parameters.
+   */
+  @Nullable
+  public SegmentId retrieveHighestUnusedSegmentId(
+      String datasource,
+      Interval interval,
+      String version
+  )
+  {
+    final Set<String> unusedSegmentIds =
+        retrieveUnusedSegmentIdsForExactIntervalAndVersion(datasource, interval, version);
+    log.debug(
+        "Found [%,d] unused segments for datasource[%s] for interval[%s] and version[%s].",
+        unusedSegmentIds.size(), datasource, interval, version
+    );
+
+    SegmentId unusedMaxId = null;
+    int maxPartitionNum = -1;
+    for (String id : unusedSegmentIds) {
+      final SegmentId segmentId = SegmentId.tryParse(datasource, id);
+      if (segmentId == null) {
+        continue;
+      }
+      int partitionNum = segmentId.getPartitionNum();
+      if (maxPartitionNum < partitionNum) {
+        maxPartitionNum = partitionNum;
+        unusedMaxId = segmentId;
+      }
+    }
+    return unusedMaxId;
+  }
+
+  private Set<String> retrieveUnusedSegmentIdsForExactIntervalAndVersion(
       String dataSource,
       Interval interval,
       String version

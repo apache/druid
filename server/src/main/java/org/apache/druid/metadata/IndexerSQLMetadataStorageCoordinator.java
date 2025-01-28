@@ -1537,9 +1537,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     }
 
     // If yes, try to compute allocated partition num using the max unused segment shard spec
-    SegmentId unusedMaxId = getMaxIdOfUnusedSegment(
-        transaction,
-        allocatedId.getDataSource(),
+    SegmentId unusedMaxId = transaction.findHighestUnusedSegmentId(
         allocatedId.getInterval(),
         allocatedId.getVersion()
     );
@@ -1561,43 +1559,6 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
             allocatedId.getShardSpec().getNumCorePartitions()
         )
     );
-  }
-
-  /**
-   * Determines the highest ID amongst unused segments for the given datasource,
-   * interval and version.
-   *
-   * @return null if no unused segment exists for the given parameters.
-   */
-  @Nullable
-  private SegmentId getMaxIdOfUnusedSegment(
-      SegmentsMetadataTransaction transaction,
-      String datasource,
-      Interval interval,
-      String version
-  )
-  {
-    Set<String> unusedSegmentIds =
-        transaction.findUnusedSegmentIdsWithExactIntervalAndVersion(interval, version);
-    log.debug(
-        "Found [%,d] unused segments for datasource[%s] for interval[%s] and version[%s].",
-        unusedSegmentIds.size(), datasource, interval, version
-    );
-
-    SegmentId unusedMaxId = null;
-    int maxPartitionNum = -1;
-    for (String id : unusedSegmentIds) {
-      final SegmentId segmentId = SegmentId.tryParse(datasource, id);
-      if (segmentId == null) {
-        continue;
-      }
-      int partitionNum = segmentId.getPartitionNum();
-      if (maxPartitionNum < partitionNum) {
-        maxPartitionNum = partitionNum;
-        unusedMaxId = segmentId;
-      }
-    }
-    return unusedMaxId;
   }
 
   @Override

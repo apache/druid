@@ -152,10 +152,9 @@ class SqlSegmentsMetadataCachedTransaction implements SegmentsMetadataTransactio
   }
 
   @Override
-  public Set<String> findUnusedSegmentIdsWithExactIntervalAndVersion(Interval interval, String version)
+  public SegmentId findHighestUnusedSegmentId(Interval interval, String version)
   {
-    // TODO: we need to start caching some info of unused segments to empower this method
-    return delegate.findUnusedSegmentIdsWithExactIntervalAndVersion(interval, version);
+    return cacheReader().findHighestUnusedSegmentId(interval, version);
   }
 
   @Override

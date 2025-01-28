@@ -134,9 +134,9 @@ class SqlSegmentsMetadataTransaction implements SegmentsMetadataTransaction
   }
 
   @Override
-  public Set<String> findUnusedSegmentIdsWithExactIntervalAndVersion(Interval interval, String version)
+  public SegmentId findHighestUnusedSegmentId(Interval interval, String version)
   {
-    return query.retrieveUnusedSegmentIdsForExactIntervalAndVersion(dataSource, interval, version);
+    return query.retrieveHighestUnusedSegmentId(dataSource, interval, version);
   }
 
   @Override

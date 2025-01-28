@@ -47,7 +47,7 @@ import java.util.stream.Collectors;
  */
 class DatasourceSegmentCache extends BaseCache
 {
-  private static final DatasourceSegmentCache EMPTY_INSTANCE = new DatasourceSegmentCache();
+  private final String dataSource;
 
   /**
    * Used to obtain the segment for a given ID so that it can be updated in the
@@ -68,16 +68,13 @@ class DatasourceSegmentCache extends BaseCache
   private final Map<Interval, Map<String, PendingSegmentRecord>>
       intervalToPendingSegments = new HashMap<>();
 
-  private final Set<String> unusedSegmentIds = new HashSet<>();
+  private final Map<Interval, Map<String, Integer>>
+      intervalVersionToHighestUnusedPartitionNumber = new HashMap<>();
 
-  static DatasourceSegmentCache empty()
-  {
-    return EMPTY_INSTANCE;
-  }
-
-  DatasourceSegmentCache()
+  DatasourceSegmentCache(String dataSource)
   {
     super(true);
+    this.dataSource = dataSource;
   }
 
   void clear()
@@ -85,7 +82,7 @@ class DatasourceSegmentCache extends BaseCache
     withWriteLock(() -> {
       idToSegmentState.clear();
       idToUsedSegment.clear();
-      unusedSegmentIds.clear();
+      intervalVersionToHighestUnusedPartitionNumber.clear();
       idToUsedSegment.values().forEach(s -> usedSegmentTimeline.remove(s.getDataSegment()));
     });
   }
@@ -142,7 +139,7 @@ class DatasourceSegmentCache extends BaseCache
         }
       }
 
-      unusedSegmentIds.add(segmentId);
+      addUnusedSegmentId(segmentId);
       return true;
     });
   }
@@ -177,7 +174,7 @@ class DatasourceSegmentCache extends BaseCache
         }
       } else {
         // Segment has transitioned from unused to used
-        unusedSegmentIds.remove(segmentId);
+        removeUnusedSegmentId(segmentId);
       }
 
       usedSegmentTimeline.add(segment);
@@ -195,7 +192,7 @@ class DatasourceSegmentCache extends BaseCache
           ++removedCount;
         }
 
-        unusedSegmentIds.remove(segmentId);
+        removeUnusedSegmentId(segmentId);
 
         final DataSegmentPlus segment = idToUsedSegment.remove(segmentId);
         if (segment != null) {
@@ -205,6 +202,40 @@ class DatasourceSegmentCache extends BaseCache
 
       return removedCount;
     });
+  }
+
+  void resetMaxUnusedIds(Map<Interval, Map<String, Integer>> intervalVersionToHighestPartitionNumber)
+  {
+    withWriteLock(() -> {
+      this.intervalVersionToHighestUnusedPartitionNumber.clear();
+      this.intervalVersionToHighestUnusedPartitionNumber.putAll(intervalVersionToHighestPartitionNumber);
+    });
+  }
+
+  private void addUnusedSegmentId(String id)
+  {
+    final SegmentId segmentId = SegmentId.tryParse(dataSource, id);
+    if (segmentId == null) {
+      return;
+    }
+
+    final int partitionNum = segmentId.getPartitionNum();
+    intervalVersionToHighestUnusedPartitionNumber
+        .computeIfAbsent(segmentId.getInterval(), i -> new HashMap<>())
+        .merge(segmentId.getVersion(), partitionNum, Math::max);
+  }
+
+  private void removeUnusedSegmentId(String segmentId)
+  {
+    // TODO: Do not update the highest unused id since we don't know the new max
+    // It is okay to keep working with the old max
+
+    // What are the things we can do here?
+    //  - reduce max partition number by at least 1
+    //  - keep a bool array for every interval / version to see which IDs are currently in use
+    //
+    //  - but all of this is overkill because this is meant to handle a very rare case
+    //  and even then it is okay to return an older max
   }
 
   /**
@@ -243,11 +274,15 @@ class DatasourceSegmentCache extends BaseCache
   }
 
   @Override
-  public Set<String> findUnusedSegmentIdsWithExactIntervalAndVersion(Interval interval, String version)
+  public SegmentId findHighestUnusedSegmentId(Interval interval, String version)
   {
-    // TODO: implement this or may be add a variant of this method to find the
-    //  max unused segment ID for an exact interval and version
-    throw DruidException.defensive("Unsupported: Unused segments are not cached");
+    final Integer highestPartitionNum = intervalVersionToHighestUnusedPartitionNumber
+        .getOrDefault(interval, Map.of())
+        .get(version);
+
+    return highestPartitionNum == null
+           ? null
+           : SegmentId.of(dataSource, interval, version, highestPartitionNum);
   }
 
   @Override
@@ -552,5 +587,10 @@ class DatasourceSegmentCache extends BaseCache
   private static String getId(DataSegment segment)
   {
     return segment.getId().toString();
+  }
+
+  private static int nullSafeMax(Integer a, int b)
+  {
+    return (a == null || a < b) ? b : a;
   }
 }

@@ -49,7 +49,13 @@ public interface DatasourceSegmentMetadataReader
    */
   Set<SegmentId> findUsedSegmentIdsOverlapping(Interval interval);
 
-  Set<String> findUnusedSegmentIdsWithExactIntervalAndVersion(Interval interval, String version);
+  /**
+   * Retrieves the ID of the unused segment that has the highest partition
+   * number amongst all unused segments that exactly match the given interval
+   * and version.
+   */
+  @Nullable
+  SegmentId findHighestUnusedSegmentId(Interval interval, String version);
 
   /**
    * Finds used segments that overlap with any of the given intervals.
@@ -63,8 +69,10 @@ public interface DatasourceSegmentMetadataReader
    */
   Set<DataSegmentPlus> findUsedSegmentsPlusOverlappingAnyOf(List<Interval> intervals);
 
+  @Nullable
   DataSegment findSegment(String segmentId);
 
+  @Nullable
   DataSegment findUsedSegment(String segmentId);
 
   List<DataSegmentPlus> findSegments(Set<String> segmentIds);

@@ -3655,14 +3655,13 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     coordinator.commitSegments(ImmutableSet.of(usedSegmentForExactIntervalAndVersion), null);
 
 
-    Set<String> unusedSegmentIdsForIntervalAndVersion = transactionFactory.retryDatasourceTransaction(
+    SegmentId highestUnusedId = transactionFactory.retryDatasourceTransaction(
         TestDataSource.WIKI,
-        transaction -> transaction
-            .findUnusedSegmentIdsWithExactIntervalAndVersion(Intervals.of("2024/2025"), "v1")
+        transaction -> transaction.findHighestUnusedSegmentId(Intervals.of("2024/2025"), "v1")
     );
     Assert.assertEquals(
-        Set.of(unusedSegmentForExactIntervalAndVersion.getId().toString()),
-        unusedSegmentIdsForIntervalAndVersion
+        unusedSegmentForExactIntervalAndVersion.getId(),
+        highestUnusedId
     );
   }
 

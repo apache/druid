@@ -40,8 +40,10 @@ import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
 import org.apache.druid.metadata.SqlSegmentsMetadataQuery;
 import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.server.http.DataSegmentPlus;
+import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
+import org.joda.time.Interval;
 import org.skife.jdbi.v2.ResultIterator;
 
 import javax.annotation.Nullable;
@@ -57,6 +59,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 public class SqlSegmentsMetadataCache implements SegmentsMetadataCache
 {
@@ -140,7 +143,12 @@ public class SqlSegmentsMetadataCache implements SegmentsMetadataCache
   public DataSource getDatasource(String dataSource)
   {
     verifyCacheIsReady();
-    return datasourceToSegmentCache.computeIfAbsent(dataSource, ds -> new DatasourceSegmentCache());
+    return getCacheForDatasource(dataSource);
+  }
+
+  private DatasourceSegmentCache getCacheForDatasource(String dataSource)
+  {
+    return datasourceToSegmentCache.computeIfAbsent(dataSource, DatasourceSegmentCache::new);
   }
 
   private void verifyCacheIsReady()
@@ -169,23 +177,38 @@ public class SqlSegmentsMetadataCache implements SegmentsMetadataCache
       return;
     }
 
-    final Map<String, Set<String>> datasourceToRefreshSegmentIds = new HashMap<>();
-    final Map<String, Set<String>> datasourceToKnownSegmentIds
-        = retrieveAllSegmentIds(datasourceToRefreshSegmentIds);
+    final Map<String, DatasourceSegmentSummary> datasourceToSummary = retrieveAllSegmentIds();
 
     if (isStopped()) {
       tearDown();
       return;
     }
 
-    removeUnknownSegmentIdsFromCache(datasourceToKnownSegmentIds);
+    removeUnknownDatasources(datasourceToSummary);
+    datasourceToSummary.forEach(this::removeUnknownSegmentIdsFromCache);
+    datasourceToSummary.forEach(
+        (datasource, summary) ->
+            getCacheForDatasource(datasource)
+                .resetMaxUnusedIds(summary.intervalVersionToMaxUnusedPartition)
+    );
 
     if (isStopped()) {
       tearDown();
       return;
     }
 
-    retrieveAndRefreshUsedSegmentsForIds(datasourceToRefreshSegmentIds);
+    final int countOfRefreshedUsedSegments = datasourceToSummary.entrySet().stream().mapToInt(
+        entry -> retrieveAndRefreshUsedSegments(
+            entry.getKey(),
+            entry.getValue().segmentIdsToRefresh
+        )
+    ).sum();
+    if (countOfRefreshedUsedSegments > 0) {
+      log.info(
+          "Refreshed total [%d] used segments from metadata store.",
+          countOfRefreshedUsedSegments
+      );
+    }
 
     if (isStopped()) {
       tearDown();
@@ -211,14 +234,11 @@ public class SqlSegmentsMetadataCache implements SegmentsMetadataCache
   /**
    * Retrieves all the segment IDs (used and unused) from the metadata store.
    *
-   * @return Map from datasource name to set of all segment IDs present in the
-   * metadata store for that datasource.
+   * @return Map from datasource name to segment summary.
    */
-  private Map<String, Set<String>> retrieveAllSegmentIds(
-      Map<String, Set<String>> datasourceToRefreshSegmentIds
-  )
+  private Map<String, DatasourceSegmentSummary> retrieveAllSegmentIds()
   {
-    final Map<String, Set<String>> datasourceToKnownSegmentIds = new HashMap<>();
+    final Map<String, DatasourceSegmentSummary> datasourceToSummary = new HashMap<>();
     final AtomicInteger countOfRefreshedUnusedSegments = new AtomicInteger(0);
 
     // TODO: Consider improving this because the number of unused segments can be very large
@@ -240,23 +260,31 @@ public class SqlSegmentsMetadataCache implements SegmentsMetadataCache
       ) {
         while (iterator.hasNext()) {
           final SegmentRecord record = iterator.next();
-          final DatasourceSegmentCache cache = datasourceToSegmentCache.computeIfAbsent(
-              record.dataSource,
-              ds -> new DatasourceSegmentCache()
-          );
+          final DatasourceSegmentCache cache = getCacheForDatasource(record.dataSource);
+          final DatasourceSegmentSummary summary = datasourceToSummary
+              .computeIfAbsent(record.dataSource, ds -> new DatasourceSegmentSummary());
 
           if (cache.shouldRefreshSegment(record.segmentId, record.state)) {
             if (record.state.isUsed()) {
-              datasourceToRefreshSegmentIds.computeIfAbsent(record.dataSource, ds -> new HashSet<>())
-                                           .add(record.segmentId);
+              summary.segmentIdsToRefresh.add(record.segmentId);
             } else if (cache.refreshUnusedSegment(record.segmentId, record.state)) {
               countOfRefreshedUnusedSegments.incrementAndGet();
               emitDatasourceMetric(record.dataSource, "refreshed/unused", 1);
             }
           }
 
-          datasourceToKnownSegmentIds.computeIfAbsent(record.dataSource, ds -> new HashSet<>())
-                                     .add(record.segmentId);
+          if (!record.state.isUsed()) {
+            final SegmentId segmentId = SegmentId.tryParse(record.dataSource, record.segmentId);
+            if (segmentId != null) {
+              final int partitionNum = segmentId.getPartitionNum();
+              summary
+                  .intervalVersionToMaxUnusedPartition
+                  .computeIfAbsent(segmentId.getInterval(), i -> new HashMap<>())
+                  .merge(segmentId.getVersion(), partitionNum, Math::max);
+            }
+          }
+
+          summary.persistedSegmentIds.add(record.segmentId);
         }
 
         return 0;
@@ -271,47 +299,36 @@ public class SqlSegmentsMetadataCache implements SegmentsMetadataCache
       log.info("Refreshed total [%d] unused segments from metadata store.", countOfRefreshedUnusedSegments.get());
     }
 
-    return datasourceToKnownSegmentIds;
+    return datasourceToSummary;
   }
 
-  private void retrieveAndRefreshUsedSegmentsForIds(
-      Map<String, Set<String>> datasourceToRefreshSegmentIds
+  private int retrieveAndRefreshUsedSegments(
+      String dataSource,
+      Set<String> segmentIdsToRefresh
   )
   {
-    final AtomicInteger countOfRefreshedUsedSegments = new AtomicInteger(0);
-    datasourceToRefreshSegmentIds.forEach((dataSource, segmentIds) -> {
-      final DatasourceSegmentCache cache
-          = datasourceToSegmentCache.computeIfAbsent(dataSource, ds -> new DatasourceSegmentCache());
-
-      int numUpdatedUsedSegments = 0;
-      try (
-          CloseableIterator<DataSegmentPlus> iterator = connector.inReadOnlyTransaction(
-              (handle, status) -> SqlSegmentsMetadataQuery
-                  .forHandle(handle, connector, tablesConfig.get(), jsonMapper)
-                  .retrieveSegmentsByIdIterator(dataSource, segmentIds)
-          )
-      ) {
-        while (iterator.hasNext()) {
-          if (cache.refreshUsedSegment(iterator.next())) {
-            ++numUpdatedUsedSegments;
-          }
+    final DatasourceSegmentCache cache = getCacheForDatasource(dataSource);
+    int numUpdatedUsedSegments = 0;
+    try (
+        CloseableIterator<DataSegmentPlus> iterator = connector.inReadOnlyTransaction(
+            (handle, status) -> SqlSegmentsMetadataQuery
+                .forHandle(handle, connector, tablesConfig.get(), jsonMapper)
+                .retrieveSegmentsByIdIterator(dataSource, segmentIdsToRefresh)
+        )
+    ) {
+      while (iterator.hasNext()) {
+        if (cache.refreshUsedSegment(iterator.next())) {
+          ++numUpdatedUsedSegments;
         }
       }
-      catch (IOException e) {
-        log.makeAlert(e, "Error retrieving segments for datasource[%s] from metadata store.", dataSource)
-           .emit();
-      }
-
-      emitDatasourceMetric(dataSource, "refresh/used", numUpdatedUsedSegments);
-      countOfRefreshedUsedSegments.addAndGet(numUpdatedUsedSegments);
-    });
-
-    if (countOfRefreshedUsedSegments.get() > 0) {
-      log.info(
-          "Refreshed total [%d] used segments from metadata store.",
-          countOfRefreshedUsedSegments.get()
-      );
     }
+    catch (IOException e) {
+      log.makeAlert(e, "Error retrieving segments for datasource[%s] from metadata store.", dataSource)
+         .emit();
+    }
+
+    emitDatasourceMetric(dataSource, "refresh/used", numUpdatedUsedSegments);
+    return numUpdatedUsedSegments;
   }
 
   private void retrieveAndRefreshAllPendingSegments()
@@ -329,10 +346,7 @@ public class SqlSegmentsMetadataCache implements SegmentsMetadataCache
             .map((index, r, ctx) -> {
               try {
                 final PendingSegmentRecord record = PendingSegmentRecord.fromResultSet(r, jsonMapper);
-                final DatasourceSegmentCache cache = datasourceToSegmentCache.computeIfAbsent(
-                    record.getId().getDataSource(),
-                    ds -> new DatasourceSegmentCache()
-                );
+                final DatasourceSegmentCache cache = getCacheForDatasource(record.getId().getDataSource());
 
                 if (cache.shouldRefreshPendingSegment(record)) {
                   cache.insertPendingSegment(record, false);
@@ -347,25 +361,36 @@ public class SqlSegmentsMetadataCache implements SegmentsMetadataCache
     );
   }
 
+  private void removeUnknownDatasources(Map<String, DatasourceSegmentSummary> datasourceToSummary)
+  {
+    final Set<String> datasourcesNotInMetadataStore =
+        datasourceToSegmentCache.keySet()
+                                .stream()
+                                .filter(ds -> !datasourceToSummary.containsKey(ds))
+                                .collect(Collectors.toSet());
+
+    datasourcesNotInMetadataStore.forEach(datasourceToSegmentCache::remove);
+  }
+
   /**
    * This is safe to do since updates are always made first to metadata store
    * and then to cache.
    */
-  private void removeUnknownSegmentIdsFromCache(Map<String, Set<String>> datasourceToKnownSegmentIds)
+  private void removeUnknownSegmentIdsFromCache(
+      String dataSource,
+      DatasourceSegmentSummary summary
+  )
   {
-    datasourceToSegmentCache.forEach((dataSource, cache) -> {
-      final Set<String> unknownSegmentIds = cache.getSegmentIdsNotIn(
-          datasourceToKnownSegmentIds.getOrDefault(dataSource, Set.of())
+    final DatasourceSegmentCache cache = getCacheForDatasource(dataSource);
+    final Set<String> unknownSegmentIds = cache.getSegmentIdsNotIn(summary.persistedSegmentIds);
+    final int numSegmentsRemoved = cache.removeSegmentIds(unknownSegmentIds);
+    if (numSegmentsRemoved > 0) {
+      log.info(
+          "Removed [%d] unknown segment IDs from cache of datasource[%s].",
+          numSegmentsRemoved, dataSource
       );
-      final int numSegmentsRemoved = cache.removeSegmentIds(unknownSegmentIds);
-      if (numSegmentsRemoved > 0) {
-        log.info(
-            "Removed [%d] unknown segment IDs from cache of datasource[%s].",
-            numSegmentsRemoved, dataSource
-        );
-        emitDatasourceMetric(dataSource, "deleted/unknown", numSegmentsRemoved);
-      }
-    });
+      emitDatasourceMetric(dataSource, "deleted/unknown", numSegmentsRemoved);
+    }
   }
 
   private String getSegmentsTable()
@@ -425,6 +450,16 @@ public class SqlSegmentsMetadataCache implements SegmentsMetadataCache
         return null;
       }
     }
+  }
+
+  /**
+   * Summary of segments of a datasource currently present in the metadata store.
+   */
+  private static class DatasourceSegmentSummary
+  {
+    final Set<String> persistedSegmentIds = new HashSet<>();
+    final Set<String> segmentIdsToRefresh = new HashSet<>();
+    final Map<Interval, Map<String, Integer>> intervalVersionToMaxUnusedPartition = new HashMap<>();
   }
 
 }
