@@ -146,9 +146,8 @@ Load the [DataSketches extension](../development/extensions-core/datasketches-ex
 
 |Function|Notes|Default|
 |--------|-----|-------|
-|`DS_TUPLE_DOUBLES(expr, [nominalEntries])`|Creates a [Tuple sketch](../development/extensions-core/datasketches-tuple.md) on the values of `expr` which is a column containing Tuple sketches which contain an array of double values as their Summary Objects. The `nominalEntries` override parameter is optional and described in the Tuple sketch documentation.
-|`DS_TUPLE_DOUBLES(dimensionColumnExpr, metricColumnExpr, ..., [nominalEntries])`|Creates a [Tuple sketch](../development/extensions-core/datasketches-tuple.md) which contains an array of double values as its Summary Object based on the dimension value of `dimensionColumnExpr` and the numeric metric values contained in one or more `metricColumnExpr` columns. If the last value of the array is a numeric literal, Druid assumes that the value is an override parameter for [nominal entries](../development/extensions-core/datasketches-tuple.md).
-
+|`DS_TUPLE_DOUBLES(expr[, nominalEntries])`|Creates a [Tuple sketch](../development/extensions-core/datasketches-tuple.md) on a precomputed sketch column `expr`, where the precomputed Tuple sketch contains an array of double values as its Summary Object. The `nominalEntries` override parameter is optional and described in the Tuple sketch documentation.
+|`DS_TUPLE_DOUBLES(dimensionColumnExpr, metricColumnExpr1[, metricColumnExpr2, ...], [nominalEntries])`|Creates a [Tuple sketch](../development/extensions-core/datasketches-tuple.md) on raw data. The Tuples sketch will contain an array of double values as its Summary Object based on the dimension value of `dimensionColumnExpr` and the numeric metric values contained in one or more `metricColumnExpr` columns. If the last value of the array is a numeric literal, Druid assumes that the value is an override parameter for [nominal entries](../development/extensions-core/datasketches-tuple.md).
 
 ### T-Digest sketch functions
 
