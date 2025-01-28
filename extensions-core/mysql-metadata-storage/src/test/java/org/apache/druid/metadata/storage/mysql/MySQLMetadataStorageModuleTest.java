@@ -33,6 +33,9 @@ import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.MetadataConfigModule;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.security.EscalatorModule;
+import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
+import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
+import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.emitter.core.NoopEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.junit.Assert;
@@ -128,6 +131,12 @@ public class MySQLMetadataStorageModuleTest
               public ServiceEmitter getEmitter()
               {
                 return new ServiceEmitter("test", "localhost", new NoopEmitter());
+              }
+
+              @Provides
+              public ScheduledExecutorFactory getScheduledExecutorFactory(Lifecycle lifecycle)
+              {
+                return ScheduledExecutors.createFactory(lifecycle);
               }
             }
         )
