@@ -351,7 +351,6 @@ export const ExploreView = React.memo(function ExploreView() {
                   position={Position.BOTTOM_RIGHT}
                   content={
                     <Menu>
-                      {' '}
                       <MenuItem
                         icon={IconNames.GLOBE_NETWORK}
                         text="Timezone"
