@@ -70,6 +70,7 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.ordering.StringComparators;
+import org.apache.druid.query.policy.Policy;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -86,7 +87,6 @@ import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
-import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentMatchers;
@@ -810,11 +810,12 @@ public class MSQSelectTest extends MSQTestBase
 
   @MethodSource("data")
   @ParameterizedTest(name = "{index}:with context {0}")
-  public void testSelectRestrictedAsRegularUser(String contextName, Map<String, Object> context)
+  public void testSelectRestricted(String contextName, Map<String, Object> context)
   {
-    // only run this test for regular user
-    Assumptions.assumeTrue(context.get(MSQTaskQueryMaker.USER_KEY)
-                                  .equals(CalciteTests.REGULAR_USER_AUTH_RESULT.getIdentity()));
+    boolean isSuperUser = context.get(MSQTaskQueryMaker.USER_KEY).equals(CalciteTests.TEST_SUPERUSER_NAME);
+    Policy policy = isSuperUser ? CalciteTests.POLICY_NO_RESTRICTION_SUPERUSER : CalciteTests.POLICY_RESTRICTION;
+    long expectedResultRows = isSuperUser ? 6L : 1L;
+
     final RowSignature rowSignature = RowSignature.builder().add("EXPR$0", ColumnType.LONG).build();
 
     testSelectQuery()
@@ -826,7 +827,7 @@ public class MSQSelectTest extends MSQTestBase
                        GroupByQuery.builder()
                                    .setDataSource(RestrictedDataSource.create(
                                        TableDataSource.create(CalciteTests.RESTRICTED_DATASOURCE),
-                                       CalciteTests.POLICY_RESTRICTION
+                                       policy
                                    ))
                                    .setInterval(querySegmentSpec(Filtration.eternity()))
                                    .setGranularity(Granularities.ALL)
@@ -840,43 +841,7 @@ public class MSQSelectTest extends MSQTestBase
                                 : TaskReportMSQDestination.INSTANCE)
                    .build())
         .setExpectedRowSignature(rowSignature)
-        .setExpectedResultRows(ImmutableList.of(new Object[]{1L}))
-        .verifyResults();
-  }
-
-  @MethodSource("data")
-  @ParameterizedTest(name = "{index}:with context {0}")
-  public void testSelectRestrictedAsSuperUser(String contextName, Map<String, Object> context)
-  {
-    // only run this test for superuser
-    Assumptions.assumeTrue(context.get(MSQTaskQueryMaker.USER_KEY).equals(CalciteTests.TEST_SUPERUSER_NAME));
-
-    final RowSignature rowSignature = RowSignature.builder().add("EXPR$0", ColumnType.LONG).build();
-
-    testSelectQuery()
-        .setSql("select count(*) from druid.restrictedDatasource_m1_is_6")
-        .setQueryContext(context)
-        .setExpectedMSQSpec(
-            MSQSpec.builder()
-                   .query(
-                       GroupByQuery.builder()
-                                   .setDataSource(RestrictedDataSource.create(
-                                       TableDataSource.create(CalciteTests.RESTRICTED_DATASOURCE),
-                                       CalciteTests.POLICY_NO_RESTRICTION_SUPERUSER
-                                   ))
-                                   .setInterval(querySegmentSpec(Filtration.eternity()))
-                                   .setGranularity(Granularities.ALL)
-                                   .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
-                                   .setContext(context)
-                                   .build())
-                   .columnMappings(new ColumnMappings(ImmutableList.of(new ColumnMapping("a0", "EXPR$0"))))
-                   .tuningConfig(MSQTuningConfig.defaultConfig())
-                   .destination(isDurableStorageDestination(contextName, context)
-                                ? DurableStorageMSQDestination.INSTANCE
-                                : TaskReportMSQDestination.INSTANCE)
-                   .build())
-        .setExpectedRowSignature(rowSignature)
-        .setExpectedResultRows(ImmutableList.of(new Object[]{6L}))
+        .setExpectedResultRows(ImmutableList.of(new Object[]{expectedResultRows}))
         .verifyResults();
   }
 
@@ -969,6 +934,71 @@ public class MSQSelectTest extends MSQTestBase
                 new Object[]{"xabc", 1L}
             )
         )
+        .setExpectedLookupLoadingSpec(LookupLoadingSpec.loadOnly(ImmutableSet.of("lookyloo")))
+        .verifyResults();
+  }
+
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testJoinRestrictedWithLookup(String contextName, Map<String, Object> context)
+  {
+    boolean isSuperUser = context.get(MSQTaskQueryMaker.USER_KEY).equals(CalciteTests.TEST_SUPERUSER_NAME);
+    Policy policy = isSuperUser ? CalciteTests.POLICY_NO_RESTRICTION_SUPERUSER : CalciteTests.POLICY_RESTRICTION;
+    ImmutableList<Object[]> expectedResult = isSuperUser ? ImmutableList.of(new Object[]{"xabc", 1L}) : ImmutableList.of();
+
+    final RowSignature rowSignature =
+        RowSignature.builder()
+                    .add("v", ColumnType.STRING)
+                    .add("cnt", ColumnType.LONG)
+                    .build();
+
+    testSelectQuery()
+        .setSql("SELECT lookyloo.v, COUNT(*) AS cnt\n"
+                + "FROM druid.restrictedDatasource_m1_is_6 as restricted LEFT JOIN lookup.lookyloo ON restricted.dim2 = lookyloo.k\n"
+                + "WHERE lookyloo.v <> 'xa'\n"
+                + "GROUP BY lookyloo.v")
+        .setQueryContext(context)
+        .setExpectedMSQSpec(
+            MSQSpec.builder()
+                   .query(
+                       GroupByQuery.builder()
+                                   .setDataSource(
+                                       join(
+                                           RestrictedDataSource.create(
+                                               TableDataSource.create(CalciteTests.RESTRICTED_DATASOURCE),
+                                               policy
+                                           ),
+                                           new LookupDataSource("lookyloo"),
+                                           "j0.",
+                                           equalsCondition(
+                                               DruidExpression.ofColumn(ColumnType.STRING, "dim2"),
+                                               DruidExpression.ofColumn(ColumnType.STRING, "j0.k")
+                                           ),
+                                           JoinType.INNER
+                                       )
+                                   )
+                                   .setInterval(querySegmentSpec(Filtration.eternity()))
+                                   .setDimFilter(not(equality("j0.v", "xa", ColumnType.STRING)))
+                                   .setGranularity(Granularities.ALL)
+                                   .setDimensions(dimensions(new DefaultDimensionSpec("j0.v", "d0")))
+                                   .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
+                                   .setContext(context)
+                                   .build())
+                   .columnMappings(
+                       new ColumnMappings(
+                           ImmutableList.of(
+                               new ColumnMapping("d0", "v"),
+                               new ColumnMapping("a0", "cnt")
+                           )
+                       )
+                   )
+                   .tuningConfig(MSQTuningConfig.defaultConfig())
+                   .destination(isDurableStorageDestination(contextName, context)
+                                ? DurableStorageMSQDestination.INSTANCE
+                                : TaskReportMSQDestination.INSTANCE)
+                   .build())
+        .setExpectedRowSignature(rowSignature)
+        .setExpectedResultRows(expectedResult)
         .setExpectedLookupLoadingSpec(LookupLoadingSpec.loadOnly(ImmutableSet.of("lookyloo")))
         .verifyResults();
   }
