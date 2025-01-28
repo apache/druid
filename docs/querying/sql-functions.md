@@ -1671,6 +1671,37 @@ Returns the cumulative distribution of the current row within the window calcula
 * **Syntax**: `CUME_DIST()`
 * **Function type:** Window
 
+<details><summary>Example</summary>
+
+The following example returns the cumulative distribution of number of flights by airline from two airports on a single day.
+
+```sql
+SELECT FLOOR("__time" TO DAY)  AS "flight_day",
+    "Origin" AS "airport",
+    "Reporting_Airline" as "airline",
+    COUNT("Flight_Number_Reporting_Airline") as "num_flights",
+    CUME_DIST() OVER (PARTITION BY "Origin" ORDER BY COUNT("Flight_Number_Reporting_Airline") DESC) AS "cume_dist"
+FROM "flight-carriers"
+WHERE FLOOR("__time" TO DAY) = '2005-11-01'
+   AND "Origin" IN ('KOA', 'LIH')
+GROUP BY 1, 2, 3
+```
+
+Returns the following:
+
+| `flight_day` | `airport` | `airline` | `num_flights` | `cume_dist` |
+| --- | --- | --- | --- | ---|
+| `2005-11-01T00:00:00.000Z` | `KOA` | `HA` | `11` | `0.25` |
+| `2005-11-01T00:00:00.000Z` | `KOA` | `UA` | `4` |  `0.5` |
+| `2005-11-01T00:00:00.000Z` | `KOA` | `AA` | `1` |  `1` |
+| `2005-11-01T00:00:00.000Z` | `KOA` | `NW` | `1` | `1` |
+| `2005-11-01T00:00:00.000Z` | `LIH` | `HA` | `15` |  `0.3333333333333333` |
+| `2005-11-01T00:00:00.000Z` | `LIH` | `AA` | `2` | `1`|
+| `2005-11-01T00:00:00.000Z` | `LIH` | `UA` | `2` | `1` |
+ 
+</details>
+
+
 [Learn more](sql-window-functions.md#window-function-reference)
 
 ## CURRENT_DATE
@@ -1819,6 +1850,36 @@ Returns the rank for a row within a window without gaps. For example, if two row
 
 * **Syntax**: `DENSE_RANK()`
 * **Function type:** Window
+
+<details><summary>Example</summary>
+
+The following example returns the dense rank by airline for flights from two airports on a single day.
+
+```sql
+SELECT FLOOR("__time" TO DAY)  AS "flight_day",
+    "Origin" AS "airport",
+    "Reporting_Airline" as "airline",
+    COUNT("Flight_Number_Reporting_Airline") as "num_flights",
+    DENSE_RANK() OVER (PARTITION BY "Origin" ORDER BY COUNT("Flight_Number_Reporting_Airline") DESC) AS "dense_rank"
+FROM "flight-carriers"
+WHERE FLOOR("__time" TO DAY) = '2005-11-01'
+    AND "Origin" IN ('KOA', 'LIH')
+GROUP BY 1, 2, 3
+```
+
+Returns the following:
+
+| `flight_day` | `airport` | `airline` | `num_flights` | `dense_rank` |
+| --- | --- | --- | --- | ---|
+| `2005-11-01T00:00:00.000Z` | `KOA` | `HA` | `11` | `1` |
+| `2005-11-01T00:00:00.000Z` | `KOA` | `UA` | `4` | `2` |
+| `2005-11-01T00:00:00.000Z` | `KOA` | `AA` | `1` | `3` |
+| `2005-11-01T00:00:00.000Z` | `KOA` | `NW` | `1` | `3` |
+| `2005-11-01T00:00:00.000Z` | `LIH` | `HA` | `15` | `1` |
+| `2005-11-01T00:00:00.000Z` | `LIH` | `AA` | `2` | `2`|
+| `2005-11-01T00:00:00.000Z` | `LIH` | `UA` | `2` | `2` |
+ 
+</details>
 
 [Learn more](sql-window-functions.md#window-function-reference)
 
@@ -2449,6 +2510,36 @@ Returns the value evaluated for the expression for the first row within the wind
 
 * **Syntax**: `FIRST_VALUE(expr)`
 * **Function type:** Window
+
+<details><summary>Example</summary>
+
+The following example returns the name of the first airline in the window of flights by airline for two airports on a single day.
+
+```sql
+SELECT FLOOR("__time" TO DAY)  AS "flight_day",
+    "Origin" AS "airport",
+    "Reporting_Airline" as "airline",
+    COUNT("Flight_Number_Reporting_Airline") as "num_flights",
+    FIRST_VALUE("Reporting_Airline") OVER (PARTITION BY "Origin" ORDER BY COUNT("Flight_Number_Reporting_Airline") DESC) AS "first_val"
+FROM "flight-carriers"
+WHERE FLOOR("__time" TO DAY) = '2005-11-01'
+    AND "Origin" IN ('KOA', 'LIH')
+GROUP BY 1, 2, 3
+```
+
+Returns the following:
+
+| `flight_day` | `airport` | `airline` | `num_flights` | `first_val` |
+| --- | --- | --- | --- | ---|
+| `2005-11-01T00:00:00.000Z` | `KOA` | `HA` | `11` | `HA` |
+| `2005-11-01T00:00:00.000Z` | `KOA` | `UA` | `4` | `HA` |
+| `2005-11-01T00:00:00.000Z` | `KOA` | `AA` | `1` | `HA` |
+| `2005-11-01T00:00:00.000Z` | `KOA` | `NW` | `1` | `HA` |
+| `2005-11-01T00:00:00.000Z` | `LIH` | `HA` | `15` | `HA` |
+| `2005-11-01T00:00:00.000Z` | `LIH` | `AA` | `2` | `HA` |
+| `2005-11-01T00:00:00.000Z` | `LIH` | `UA` | `2` | `HA` |
+ 
+</details>
 
 [Learn more](sql-window-functions.md#window-function-reference)
 
@@ -3166,6 +3257,36 @@ If you do not supply an `offset`, returns the value evaluated at the row precedi
 * **Syntax**: `LAG(expr[, offset])`
 * **Function type:** Window
 
+<details><summary>Example</summary>
+
+The following example returns the preceding airline in the window for flights by airline from two airports on a single day.
+
+```sql
+SELECT FLOOR("__time" TO DAY)  AS "flight_day",
+    "Origin" AS "airport",
+    "Reporting_Airline" as "airline",
+    COUNT("Flight_Number_Reporting_Airline") as "num_flights",
+    LAG("Reporting_Airline") OVER (PARTITION BY "Origin" ORDER BY COUNT("Flight_Number_Reporting_Airline") DESC) AS "lag"
+FROM "flight-carriers"
+WHERE FLOOR("__time" TO DAY) = '2005-11-01'
+    AND "Origin" IN ('KOA', 'LIH')
+GROUP BY 1, 2, 3
+```
+
+Returns the following:
+
+| `flight_day` | `airport` | `airline` | `num_flights` | `lag` |
+| --- | --- | --- | --- | ---|
+| `2005-11-01T00:00:00.000Z` | `KOA` | `HA` | `11` | `null` |
+| `2005-11-01T00:00:00.000Z` | `KOA` | `UA` | `4` | `HA` |
+| `2005-11-01T00:00:00.000Z` | `KOA` | `AA` | `1` | `UA` |
+| `2005-11-01T00:00:00.000Z` | `KOA` | `NW` | `1` | `AA` |
+| `2005-11-01T00:00:00.000Z` | `LIH` | `HA` | `15` | `null` |
+| `2005-11-01T00:00:00.000Z` | `LIH` | `AA` | `2` | `HA` |
+| `2005-11-01T00:00:00.000Z` | `LIH` | `UA` | `2` | `AA` |
+ 
+</details>
+
 [Learn more](sql-window-functions.md#window-function-reference)
 
 ## LAST_VALUE
@@ -3174,6 +3295,38 @@ Returns the value evaluated for the expression for the last row within the windo
 
 * **Syntax**: `LAST_VALUE(expr)`
 * **Function type:** Window
+
+<details><summary>Example</summary>
+
+The following example returns the last airline name in the window for flights for two airports on a single day.
+Note that the RANGE BETWEEN clause defines the window frame between the current row and the final row in the window instead of the default of RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW when using ORDER BY.
+
+```sql
+SELECT FLOOR("__time" TO DAY)  AS "flight_day",
+    "Origin" AS "airport",
+    "Reporting_Airline" as "airline",
+    COUNT("Flight_Number_Reporting_Airline") as "num_flights",
+    LAST_VALUE("Reporting_Airline") OVER (PARTITION BY "Origin" ORDER BY COUNT("Flight_Number_Reporting_Airline") DESC
+      RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) AS "last_value"
+FROM "flight-carriers"
+WHERE FLOOR("__time" TO DAY) = '2005-11-01'
+    AND "Origin" IN ('KOA', 'LIH')
+GROUP BY 1, 2, 3
+```
+
+Returns the following:
+
+| `flight_day` | `airport` | `airline` | `num_flights` | `last_value` |
+| --- | --- | --- | --- | ---|
+| `2005-11-01T00:00:00.000Z` | `KOA` | `HA` | `11` | `NW` |
+| `2005-11-01T00:00:00.000Z` | `KOA` | `UA` | `4` | `NW` |
+| `2005-11-01T00:00:00.000Z` | `KOA` | `AA` | `1` | `NW` |
+| `2005-11-01T00:00:00.000Z` | `KOA` | `NW` | `1` | `NW` |
+| `2005-11-01T00:00:00.000Z` | `LIH` | `HA` | `15` | `UA` |
+| `2005-11-01T00:00:00.000Z` | `LIH` | `AA` | `2` | `UA` |
+| `2005-11-01T00:00:00.000Z` | `LIH` | `UA` | `2` | `UA` |
+ 
+</details>
 
 [Learn more](sql-window-functions.md#window-function-reference)
 
@@ -3247,6 +3400,36 @@ If you do not supply an `offset`, returns the value evaluated at the row followi
 
 * **Syntax**: `LEAD(expr[, offset])`
 * **Function type:** Window
+
+<details><summary>Example</summary>
+
+The following example returns the subsequent value for an airline in the window for flights from two airports on a single day.
+
+```sql
+SELECT FLOOR("__time" TO DAY)  AS "flight_day",
+    "Origin" AS "airport",
+    "Reporting_Airline" as "airline",
+    COUNT("Flight_Number_Reporting_Airline") as "num_flights",
+    LEAD("Reporting_Airline") OVER (PARTITION BY "Origin" ORDER BY COUNT("Flight_Number_Reporting_Airline") DESC) AS "lead"
+FROM "flight-carriers"
+WHERE FLOOR("__time" TO DAY) = '2005-11-01'
+    AND "Origin" IN ('KOA', 'LIH')
+GROUP BY 1, 2, 3
+```
+
+Returns the following:
+
+| `flight_day` | `airport` | `airline` | `num_flights ` | `lead` |
+| --- | --- | --- | --- | ---|
+| `2005-11-01T00:00:00.000Z` | `KOA` | `HA` | `11` |`UA` |
+| `2005-11-01T00:00:00.000Z` | `KOA` | `UA` | `4` | `AA` |
+| `2005-11-01T00:00:00.000Z` | `KOA` | `AA` | `1` | `NW` |
+| `2005-11-01T00:00:00.000Z` | `KOA` | `NW` | `1` | `null` |
+| `2005-11-01T00:00:00.000Z` | `LIH` | `HA` | `15` | `AA` |
+| `2005-11-01T00:00:00.000Z` | `LIH` | `AA` | `2` | `UA` |
+| `2005-11-01T00:00:00.000Z` | `LIH` | `UA` | `2` | `null` |
+ 
+</details>
 
 [Learn more](sql-window-functions.md#window-function-reference)
 
@@ -4060,6 +4243,36 @@ Divides the rows within a window as evenly as possible into the number of tiles,
 * **Syntax**: `NTILE(tiles)`
 * **Function type:** Window
 
+<details><summary>Example</summary>
+
+The following example returns the results for flights by airline from two airports on a single day divided into 3 tiles.
+
+```sql
+SELECT FLOOR("__time" TO DAY)  AS "flight_day",
+    "Origin" AS "airport",
+    "Reporting_Airline" as "airline",
+    COUNT("Flight_Number_Reporting_Airline") as "num_flights",
+    NTILE(3) OVER (PARTITION BY "Origin" ORDER BY COUNT("Flight_Number_Reporting_Airline") DESC) AS "ntile"
+FROM "flight-carriers"
+WHERE FLOOR("__time" TO DAY) = '2005-11-01'
+    AND "Origin" IN ('KOA', 'LIH')
+GROUP BY 1, 2, 3
+```
+
+Returns the following:
+
+| `flight_day` | `airport` | `airline` | `lead` | `ntile` |
+| --- | --- | --- | --- | ---|
+| `2005-11-01T00:00:00.000Z` | `KOA` | `HA` | `11` | `1` |
+| `2005-11-01T00:00:00.000Z` | `KOA` | `UA` | `4` | `1` |
+| `2005-11-01T00:00:00.000Z` | `KOA` | `AA` | `1` | `2` |
+| `2005-11-01T00:00:00.000Z` | `KOA` | `NW` | `1` | `3` |
+| `2005-11-01T00:00:00.000Z` | `LIH` | `HA` | `15` | `1` |
+| `2005-11-01T00:00:00.000Z` | `LIH` | `AA` | `2` | `2` |
+| `2005-11-01T00:00:00.000Z` | `LIH` | `UA` | `2` | `3` |
+ 
+</details>
+
 [Learn more](sql-window-functions.md#window-function-reference)
 
 ## NULLIF
@@ -4184,6 +4397,37 @@ Returns the relative rank of the row calculated as a percentage according to the
 * **Syntax**: `PERCENT_RANK()`
 * **Function type:** Window
 
+<details><summary>Example</summary>
+
+The following example returns the percent rank within the window for flights by airline from two airports on a single day.
+
+```sql
+SELECT FLOOR("__time" TO DAY)  AS "flight_day",
+    "Origin" AS "airport",
+    "Reporting_Airline" as "airline",
+    COUNT("Flight_Number_Reporting_Airline") as "num_flights",
+    PERCENT_RANK() OVER (PARTITION BY "Origin" ORDER BY COUNT("Flight_Number_Reporting_Airline") DESC) AS "pct_rank"
+FROM "flight-carriers"
+WHERE FLOOR("__time" TO DAY) = '2005-11-01'
+    AND "Origin" IN ('KOA', 'LIH')
+GROUP BY 1, 2, 3
+```
+
+Returns the following:
+
+| `flight_day` | `airport` | `airline` | `num_flights` | `pct_rank` |
+| --- | --- | --- | --- | ---|
+| `2005-11-01T00:00:00.000Z` | `KOA` | `HA` | `11` | `0` |
+| `2005-11-01T00:00:00.000Z` | `KOA` | `UA` | `4` | `0.3333333333333333` |
+| `2005-11-01T00:00:00.000Z` | `KOA` | `AA` | `1` | `0.6666666666666666` |
+| `2005-11-01T00:00:00.000Z` | `KOA` | `NW` | `1` | `0.6666666666666666` |
+| `2005-11-01T00:00:00.000Z` | `LIH` | `HA` | `15` | `0` |
+| `2005-11-01T00:00:00.000Z` | `LIH` | `AA` | `2` | `0.5` |
+| `2005-11-01T00:00:00.000Z` | `LIH` | `UA` | `2` | `0.5` |
+ 
+</details>
+
+
 [Learn more](sql-window-functions.md#window-function-reference)
 
 ## POSITION
@@ -4268,6 +4512,36 @@ Returns the rank with gaps for a row within a window. For example, if two rows t
 
 * **Syntax**: `RANK()`
 * **Function type:** Window
+
+<details><summary>Example</summary>
+
+The following example returns the rank within the window for flights by airline from two airports on a single day.
+
+```sql
+SELECT FLOOR("__time" TO DAY)  AS "flight_day",
+    "Origin" AS "airport",
+    "Reporting_Airline" as "airline",
+    COUNT("Flight_Number_Reporting_Airline") as "num_flights",
+    RANK() OVER (PARTITION BY "Origin" ORDER BY COUNT("Flight_Number_Reporting_Airline") DESC) AS "rank"
+FROM "flight-carriers"
+WHERE FLOOR("__time" TO DAY) = '2005-11-01'
+    AND "Origin" IN ('KOA', 'LIH')
+GROUP BY 1, 2, 3
+```
+
+Returns the following:
+
+| `flight_day` | `airport` | `airline` | `num_flights` | `rank` |
+| --- | --- | --- | --- | ---|
+| `2005-11-01T00:00:00.000Z` | `KOA` | `HA` | `11` | `1` |
+| `2005-11-01T00:00:00.000Z` | `KOA` | `UA` | `4` | `2` |
+| `2005-11-01T00:00:00.000Z` | `KOA` | `AA` | `1` | `3` |
+| `2005-11-01T00:00:00.000Z` | `KOA` | `NW` | `1` | `3` |
+| `2005-11-01T00:00:00.000Z` | `LIH` | `HA` | `15` | `1` |
+| `2005-11-01T00:00:00.000Z` | `LIH` | `AA` | `2` | `2` |
+| `2005-11-01T00:00:00.000Z` | `LIH` | `UA` | `2` | `3` |
+ 
+</details>
 
 [Learn more](sql-window-functions.md#window-function-reference)
 
@@ -4500,6 +4774,36 @@ Returns the number of the row within the window starting from 1.
 
 * **Syntax**: `ROW_NUMBER()`
 * **Function type:** Window
+
+<details><summary>Example</summary>
+
+The following example returns the row number within the window for flights by airline from two airports on a single day.
+
+```sql
+SELECT FLOOR("__time" TO DAY)  AS "flight_day",
+    "Origin" AS "airport",
+    "Reporting_Airline" as "airline",
+    COUNT("Flight_Number_Reporting_Airline") as "num_flights",
+    ROW_NUMBER() OVER (PARTITION BY "Origin" ORDER BY COUNT("Flight_Number_Reporting_Airline") DESC) AS "row_num"
+FROM "flight-carriers"
+WHERE FLOOR("__time" TO DAY) = '2005-11-01'
+    AND "Origin" IN ('KOA', 'LIH')
+GROUP BY 1, 2, 3
+```
+
+Returns the following:
+
+| `flight_day` | `airport` | `airline` | `num_flights` | `row_num` |
+| --- | --- | --- | --- | ---|
+| `2005-11-01T00:00:00.000Z` | `KOA` | `HA` | `11` | `1` |
+| `2005-11-01T00:00:00.000Z` | `KOA` | `UA` | `4` | `2` |
+| `2005-11-01T00:00:00.000Z` | `KOA` | `AA` | `1` | `3` |
+| `2005-11-01T00:00:00.000Z` | `KOA` | `NW` | `1` | `4` |
+| `2005-11-01T00:00:00.000Z` | `LIH` | `HA` | `15` | `1` |
+| `2005-11-01T00:00:00.000Z` | `LIH` | `AA` | `2` | `2` |
+| `2005-11-01T00:00:00.000Z` | `LIH` | `UA` | `2` | `3` |
+ 
+</details>
 
 [Learn more](sql-window-functions.md#window-function-reference)
 
