@@ -23,19 +23,9 @@ import org.apache.druid.metadata.segment.DatasourceSegmentMetadataReader;
 import org.apache.druid.metadata.segment.DatasourceSegmentMetadataWriter;
 
 /**
- * TODO:
- * -[ ] Write unit test for DatasourceSegmentCache and SqlSegmentsMetadataCache
- *
- * -[ ] Wire up cache in OverlordCompactionScheduler and SqlSegmentsMetadataManager,
- * otherwise we will end up having two copies of the segment timeline and stuff
- * The timeline inside the cache can replace the SegmentTimeline of SqlSegmentsMetadataManager
- * -[ ] Add transaction API to return timeline and/or timeline holders
- * -[ ] Think about race conditions in the cache - leadership changes, multiple concurrent transactions
- * -[ ] Write unit tests
- * -[ ] Write integration tests
- * -[ ] Write a benchmark
+ * Cache for metadata of pending segments and committed segments.
  */
-public interface SegmentsMetadataCache
+public interface SegmentMetadataCache
 {
   void start();
 

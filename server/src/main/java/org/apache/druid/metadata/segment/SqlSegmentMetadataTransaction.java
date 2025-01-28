@@ -54,7 +54,11 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-class SqlSegmentsMetadataTransaction implements SegmentsMetadataTransaction
+/**
+ * Implementation of {@link SegmentMetadataTransaction} that reads from and
+ * writes to the SQL-based metadata store directly.
+ */
+class SqlSegmentMetadataTransaction implements SegmentMetadataTransaction
 {
   private static final int MAX_SEGMENTS_PER_BATCH = 100;
 
@@ -67,7 +71,7 @@ class SqlSegmentsMetadataTransaction implements SegmentsMetadataTransaction
 
   private final SqlSegmentsMetadataQuery query;
 
-  SqlSegmentsMetadataTransaction(
+  SqlSegmentMetadataTransaction(
       String dataSource,
       Handle handle,
       TransactionStatus transactionStatus,

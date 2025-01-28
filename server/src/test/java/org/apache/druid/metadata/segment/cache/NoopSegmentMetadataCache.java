@@ -19,7 +19,7 @@
 
 package org.apache.druid.metadata.segment.cache;
 
-public class NoopSegmentsMetadataCache implements SegmentsMetadataCache
+public class NoopSegmentMetadataCache implements SegmentMetadataCache
 {
   @Override
   public void start()

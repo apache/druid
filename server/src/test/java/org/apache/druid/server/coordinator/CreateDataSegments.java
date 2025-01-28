@@ -136,7 +136,8 @@ public class CreateDataSegments
     return this;
   }
 
-  public DataSegmentPlus ofSizeInMb(long sizeMb) {
+  public DataSegmentPlus ofSizeInMb(long sizeMb)
+  {
     final DataSegment segment = eachOfSizeInMb(sizeMb).get(0);
     return new DataSegmentPlus(
         segment,

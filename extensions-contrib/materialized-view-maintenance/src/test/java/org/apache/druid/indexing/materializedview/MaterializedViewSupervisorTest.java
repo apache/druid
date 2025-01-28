@@ -47,7 +47,7 @@ import org.apache.druid.metadata.MetadataSupervisorManager;
 import org.apache.druid.metadata.SqlSegmentsMetadataManager;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.metadata.segment.SqlSegmentsMetadataTransactionFactory;
-import org.apache.druid.metadata.segment.cache.NoopSegmentsMetadataCache;
+import org.apache.druid.metadata.segment.cache.NoopSegmentMetadataCache;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.segment.TestHelper;
@@ -113,7 +113,7 @@ public class MaterializedViewSupervisorTest
             derbyConnectorRule.metadataTablesConfigSupplier().get(),
             derbyConnector,
             new TestDruidLeaderSelector(),
-            new NoopSegmentsMetadataCache()
+            new NoopSegmentMetadataCache()
         ),
         objectMapper,
         derbyConnectorRule.metadataTablesConfigSupplier().get(),

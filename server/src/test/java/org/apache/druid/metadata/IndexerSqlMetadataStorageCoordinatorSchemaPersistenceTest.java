@@ -28,9 +28,9 @@ import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
-import org.apache.druid.metadata.segment.SegmentsMetadataTransaction;
+import org.apache.druid.metadata.segment.SegmentMetadataTransaction;
 import org.apache.druid.metadata.segment.SqlSegmentsMetadataTransactionFactory;
-import org.apache.druid.metadata.segment.cache.NoopSegmentsMetadataCache;
+import org.apache.druid.metadata.segment.cache.NoopSegmentMetadataCache;
 import org.apache.druid.segment.SchemaPayload;
 import org.apache.druid.segment.SchemaPayloadPlus;
 import org.apache.druid.segment.SegmentSchemaMapping;
@@ -96,7 +96,7 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         derbyConnector,
         new TestDruidLeaderSelector(),
-        new NoopSegmentsMetadataCache()
+        new NoopSegmentMetadataCache()
     );
     coordinator = new IndexerSQLMetadataStorageCoordinator(
         transactionFactory,
@@ -109,7 +109,7 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
     {
       @Override
       protected DataStoreMetadataUpdateResult updateDataSourceMetadataWithHandle(
-          SegmentsMetadataTransaction transaction,
+          SegmentMetadataTransaction transaction,
           String dataSource,
           DataSourceMetadata startMetadata,
           DataSourceMetadata endMetadata

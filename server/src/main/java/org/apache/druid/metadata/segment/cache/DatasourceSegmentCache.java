@@ -43,7 +43,7 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 /**
- * Datasource-level in-memory cache for segments and pending segments.
+ * In-memory cache for segments and pending segments of a single datasource.
  */
 class DatasourceSegmentCache extends BaseCache
 {
@@ -113,7 +113,8 @@ class DatasourceSegmentCache extends BaseCache
   /**
    * Adds or updates the given segment in the cache.
    */
-  boolean addSegment(DataSegmentPlus segmentPlus) {
+  boolean addSegment(DataSegmentPlus segmentPlus)
+  {
     if (Boolean.TRUE.equals(segmentPlus.getUsed())) {
       return addUsedSegment(segmentPlus);
     } else {

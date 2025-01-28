@@ -57,7 +57,7 @@ import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.metadata.segment.SqlSegmentsMetadataTransactionFactory;
-import org.apache.druid.metadata.segment.cache.NoopSegmentsMetadataCache;
+import org.apache.druid.metadata.segment.cache.NoopSegmentMetadataCache;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
@@ -136,7 +136,7 @@ public class TaskLockboxTest
             tablesConfig,
             derbyConnector,
             new TestDruidLeaderSelector(),
-            new NoopSegmentsMetadataCache()
+            new NoopSegmentMetadataCache()
         ),
         objectMapper,
         tablesConfig,
@@ -477,7 +477,7 @@ public class TaskLockboxTest
             derby.metadataTablesConfigSupplier().get(),
             derbyConnector,
             new TestDruidLeaderSelector(),
-            new NoopSegmentsMetadataCache()
+            new NoopSegmentMetadataCache()
         ),
         loadedMapper,
         derby.metadataTablesConfigSupplier().get(),

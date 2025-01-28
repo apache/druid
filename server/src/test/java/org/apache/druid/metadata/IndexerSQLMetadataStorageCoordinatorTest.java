@@ -35,11 +35,11 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
-import org.apache.druid.metadata.segment.SegmentsMetadataTransaction;
+import org.apache.druid.metadata.segment.SegmentMetadataTransaction;
 import org.apache.druid.metadata.segment.SqlSegmentsMetadataTransactionFactory;
-import org.apache.druid.metadata.segment.cache.NoopSegmentsMetadataCache;
-import org.apache.druid.metadata.segment.cache.SegmentsMetadataCache;
-import org.apache.druid.metadata.segment.cache.SqlSegmentsMetadataCache;
+import org.apache.druid.metadata.segment.cache.HeapMemorySegmentMetadataCache;
+import org.apache.druid.metadata.segment.cache.NoopSegmentMetadataCache;
+import org.apache.druid.metadata.segment.cache.SegmentMetadataCache;
 import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
@@ -99,7 +99,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
 
   private TestDruidLeaderSelector leaderSelector;
-  private SegmentsMetadataCache segmentsMetadataCache;
+  private SegmentMetadataCache segmentMetadataCache;
   private StubServiceEmitter emitter;
   private SqlSegmentsMetadataTransactionFactory transactionFactory;
   private BlockingExecutorService cachePollExecutor;
@@ -139,7 +139,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     leaderSelector = new TestDruidLeaderSelector();
 
     cachePollExecutor = new BlockingExecutorService("test-cache-poll-exec");
-    segmentsMetadataCache = new SqlSegmentsMetadataCache(
+    segmentMetadataCache = new HeapMemorySegmentMetadataCache(
         mapper,
         () -> new SegmentsMetadataManagerConfig(null, true),
         derbyConnectorRule.metadataTablesConfigSupplier(),
@@ -156,7 +156,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
 
     // Get the cache ready if required
     if (useSegmentCache) {
-      segmentsMetadataCache.start();
+      segmentMetadataCache.start();
       cachePollExecutor.finishNextPendingTask();
     }
 
@@ -165,7 +165,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         derbyConnector,
         leaderSelector,
-        segmentsMetadataCache
+        segmentMetadataCache
     )
     {
       @Override
@@ -185,7 +185,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     {
       @Override
       protected DataStoreMetadataUpdateResult updateDataSourceMetadataWithHandle(
-          SegmentsMetadataTransaction transaction,
+          SegmentMetadataTransaction transaction,
           String dataSource,
           DataSourceMetadata startMetadata,
           DataSourceMetadata endMetadata
@@ -201,7 +201,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
   @After
   public void tearDown()
   {
-    segmentsMetadataCache.stop();
+    segmentMetadataCache.stop();
     leaderSelector.stopBeingLeader();
   }
 
@@ -767,7 +767,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
             derbyConnectorRule.metadataTablesConfigSupplier().get(),
             derbyConnector,
             new TestDruidLeaderSelector(),
-            new NoopSegmentsMetadataCache()
+            new NoopSegmentMetadataCache()
         ),
         mapper,
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
@@ -778,7 +778,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     {
       @Override
       protected DataStoreMetadataUpdateResult updateDataSourceMetadataWithHandle(
-          SegmentsMetadataTransaction transaction,
+          SegmentMetadataTransaction transaction,
           String dataSource,
           DataSourceMetadata startMetadata,
           DataSourceMetadata endMetadata

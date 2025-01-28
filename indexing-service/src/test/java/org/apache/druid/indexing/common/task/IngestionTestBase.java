@@ -71,7 +71,7 @@ import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
 import org.apache.druid.metadata.SqlSegmentsMetadataManager;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.metadata.segment.SqlSegmentsMetadataTransactionFactory;
-import org.apache.druid.metadata.segment.cache.NoopSegmentsMetadataCache;
+import org.apache.druid.metadata.segment.cache.NoopSegmentMetadataCache;
 import org.apache.druid.segment.DataSegmentsWithSchemas;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9Factory;
@@ -155,7 +155,7 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
             derbyConnectorRule.metadataTablesConfigSupplier().get(),
             derbyConnectorRule.getConnector(),
             new TestDruidLeaderSelector(),
-            new NoopSegmentsMetadataCache()
+            new NoopSegmentMetadataCache()
         ),
         objectMapper,
         derbyConnectorRule.metadataTablesConfigSupplier().get(),

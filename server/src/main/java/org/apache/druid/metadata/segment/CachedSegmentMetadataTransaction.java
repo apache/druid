@@ -24,7 +24,7 @@ import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InternalServerError;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.metadata.PendingSegmentRecord;
-import org.apache.druid.metadata.segment.cache.SegmentsMetadataCache;
+import org.apache.druid.metadata.segment.cache.SegmentMetadataCache;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.server.http.DataSegmentPlus;
 import org.apache.druid.timeline.DataSegment;
@@ -42,14 +42,16 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 /**
- * A {@link SegmentsMetadataTransaction} that performs reads using the cache
- * and sends writes first to the metadata store and then the cache (if the
- * metadata store persist succeeds).
+ * A {@link SegmentMetadataTransaction} that reads only from the cache and sends
+ * writes to the metadata store. If the transaction succeeds, all the writes
+ * made to the metadata store are also committed to the cache in {@link #close()}.
+ * The cache is not updated right away in case the transaction needs to be
+ * rolled back.
  */
-class SqlSegmentsMetadataCachedTransaction implements SegmentsMetadataTransaction
+class CachedSegmentMetadataTransaction implements SegmentMetadataTransaction
 {
-  private final SegmentsMetadataTransaction delegate;
-  private final SegmentsMetadataCache.DataSource metadataCache;
+  private final SegmentMetadataTransaction delegate;
+  private final SegmentMetadataCache.DataSource metadataCache;
   private final DruidLeaderSelector leaderSelector;
 
   private final int startTerm;
@@ -57,11 +59,11 @@ class SqlSegmentsMetadataCachedTransaction implements SegmentsMetadataTransactio
   private final AtomicBoolean isRollingBack = new AtomicBoolean(false);
   private final AtomicBoolean isClosed = new AtomicBoolean(false);
 
-  private final List<Consumer<DatasourceSegmentMetadataWriter>> pendingWrites = new ArrayList<>();
+  private final List<Consumer<DatasourceSegmentMetadataWriter>> pendingCacheWrites = new ArrayList<>();
 
-  SqlSegmentsMetadataCachedTransaction(
-      SegmentsMetadataTransaction delegate,
-      SegmentsMetadataCache.DataSource metadataCache,
+  CachedSegmentMetadataTransaction(
+      SegmentMetadataTransaction delegate,
+      SegmentMetadataCache.DataSource metadataCache,
       DruidLeaderSelector leaderSelector
   )
   {
@@ -123,7 +125,7 @@ class SqlSegmentsMetadataCachedTransaction implements SegmentsMetadataTransactio
 
     // Commit the changes to the cache
     try {
-      pendingWrites.forEach(action -> {
+      pendingCacheWrites.forEach(action -> {
         if (isLeaderWithSameTerm()) {
           action.accept(cacheWriter());
         } else {
@@ -349,8 +351,9 @@ class SqlSegmentsMetadataCachedTransaction implements SegmentsMetadataTransactio
     verifyStillLeaderWithSameTerm();
     final T result = action.apply(delegate);
 
-    // TODO: Assume that the metadata write operation succeeded
-    pendingWrites.add(action::apply);
+    // Assume that the metadata write operation succeeded
+    // Do not update the cache just yet, add to the list of pending writes
+    pendingCacheWrites.add(action::apply);
 
     return result;
   }

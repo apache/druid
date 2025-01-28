@@ -26,7 +26,7 @@ import org.skife.jdbi.v2.Handle;
  * the metadata store. A transaction is associated with a single instance of a
  * {@link Handle} and is meant to be short-lived.
  */
-public interface SegmentsMetadataTransaction
+public interface SegmentMetadataTransaction
     extends SegmentsMetadataReadTransaction, DatasourceSegmentMetadataWriter
 {
   /**
@@ -37,6 +37,6 @@ public interface SegmentsMetadataTransaction
   @FunctionalInterface
   interface Callback<T>
   {
-    T inTransaction(SegmentsMetadataTransaction transaction) throws Exception;
+    T inTransaction(SegmentMetadataTransaction transaction) throws Exception;
   }
 }

@@ -47,6 +47,7 @@ import org.joda.time.Interval;
 import org.skife.jdbi.v2.ResultIterator;
 
 import javax.annotation.Nullable;
+import javax.annotation.concurrent.ThreadSafe;
 import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -61,9 +62,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
-public class SqlSegmentsMetadataCache implements SegmentsMetadataCache
+/**
+ * In-memory implementation of {@link SegmentMetadataCache}, with no persistence
+ * across restarts.
+ */
+@ThreadSafe
+public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
 {
-  private static final EmittingLogger log = new EmittingLogger(SqlSegmentsMetadataCache.class);
+  private static final EmittingLogger log = new EmittingLogger(HeapMemorySegmentMetadataCache.class);
   private static final String METRIC_PREFIX = "segment/metadataCache/";
 
   private enum CacheState
@@ -88,7 +94,7 @@ public class SqlSegmentsMetadataCache implements SegmentsMetadataCache
   private final AtomicReference<DateTime> pollFinishTime = new AtomicReference<>();
 
   @Inject
-  public SqlSegmentsMetadataCache(
+  public HeapMemorySegmentMetadataCache(
       ObjectMapper jsonMapper,
       Supplier<SegmentsMetadataManagerConfig> config,
       Supplier<MetadataStorageTablesConfig> tablesConfig,
@@ -240,11 +246,6 @@ public class SqlSegmentsMetadataCache implements SegmentsMetadataCache
   {
     final Map<String, DatasourceSegmentSummary> datasourceToSummary = new HashMap<>();
     final AtomicInteger countOfRefreshedUnusedSegments = new AtomicInteger(0);
-
-    // TODO: Consider improving this because the number of unused segments can be very large
-    //  Instead of polling all segments, we could just poll the used segments
-    //  and then fire a smarter query to determine the max unused ID or something
-    //  But it might be tricky
 
     final String sql = StringUtils.format(
         "SELECT id, dataSource, used, used_status_last_updated FROM %s",
