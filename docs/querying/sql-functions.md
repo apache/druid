@@ -1864,7 +1864,7 @@ SELECT FLOOR("__time" TO DAY)  AS "flight_day",
 FROM "flight-carriers"
 WHERE FLOOR("__time" TO DAY) = '2005-11-01'
     AND "Origin" IN ('KOA', 'LIH')
-GROUP BY 2, 3, 1
+GROUP BY 1, 2, 3
 ```
 
 Returns the following:
