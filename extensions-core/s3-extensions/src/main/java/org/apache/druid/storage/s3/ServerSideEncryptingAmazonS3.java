@@ -240,7 +240,7 @@ public class ServerSideEncryptingAmazonS3
         throw new RuntimeException(e);
       }
 
-      return new ServerSideEncryptingAmazonS3(amazonS3ClientBuilder.build(), s3StorageConfig.getServerSideEncryption(), s3StorageConfig.getS3TransferConfig());
+      return new ServerSideEncryptingAmazonS3(amazonS3Client, s3StorageConfig.getServerSideEncryption(), s3StorageConfig.getS3TransferConfig());
     }
   }
 }
