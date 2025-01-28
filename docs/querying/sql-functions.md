@@ -2941,69 +2941,221 @@ Returns the following:
 
 ## JSON_KEYS
 
-Returns an array of field names from `expr` at the specified `path`.
+Returns an array of field names from an expression, at a specified path.
 
-* **Syntax**: `JSON_KEYS(expr, path)`
+* **Syntax:** `JSON_KEYS(expr, path)`
 * **Function type:** JSON
+
+<details><summary>Example</summary>
+
+The following example returns an array of field names from the nested column `agent`:
+
+```sql
+SELECT
+  JSON_KEYS(agent, '$.') AS agent_keys
+FROM "kttm_nested"
+LIMIT 1
+```
+
+Returns the following:
+
+| `agent_keys` |
+| -- |
+| `[type, category, browser, browser_version, os, platform]` |
+
+</details>
 
 [Learn more](sql-json-functions.md)
 
-
 ## JSON_MERGE
 
-Merges two or more JSON `STRING` or `COMPLEX<json>` into one. Preserves the rightmost value when there are key overlaps. Returning always a `COMPLEX<json>` type.
+Merges two or more JSON `STRING` or `COMPLEX<json>` expressions into one, preserving the rightmost value when there are key overlaps.
+The function always returns a `COMPLEX<json>` object.
 
 * **Syntax:** `JSON_MERGE(expr1, expr2[, expr3 ...])`
 * **Function type:** JSON
 
-[Learn more](sql-json-functions.md)
+<details><summary>Example</summary>
 
+The following example merges the `event` object with a static string `example_string`:
+
+```sql
+SELECT 
+  event,
+  JSON_MERGE(event, '{"example_string": 123}') as event_with_string
+FROM "kttm_nested"
+LIMIT 1
+```
+
+Returns the following:
+
+| `event` | `event_with_string` |
+| -- | -- |
+| `{"type":"PercentClear","percentage":55}` | `{"type":"PercentClear","percentage":55,"example_string":123}` |
+
+</details>
+
+[Learn more](sql-json-functions.md)
 
 ## JSON_OBJECT
 
-Constructs a new `COMPLEX<json>` object. The `KEY` expressions must evaluate to string types. The `VALUE` expressions can be composed of any input type, including other `COMPLEX<json>` values. `JSON_OBJECT` can accept colon-separated key-value pairs. The following syntax is equivalent: `JSON_OBJECT(expr1:expr2[, expr3:expr4, ...])`.
+Constructs a new `COMPLEX<json>` object from one or more expressions. 
+The `KEY` expressions must evaluate to string types.
+The `VALUE` expressions can be composed of any input type, including other `COMPLEX<json>` objects.
+The function can accept colon-separated key-value pairs.
 
-* **Syntax**: `JSON_OBJECT(KEY expr1 VALUE expr2[, KEY expr3 VALUE expr4, ...])`
+* **Syntax:** `JSON_OBJECT(KEY expr1 VALUE expr2[, KEY expr3 VALUE expr4, ...])`  
+  or  
+  `JSON_OBJECT(expr1:expr2[, expr3:expr4, ...])`
 * **Function type:** JSON
 
-[Learn more](sql-json-functions.md)
+<details><summary>Example</summary>
 
+The following example creates a new object `combinedJSON` from `continent` in `geo_ip` and `type` in `event`:
+
+```sql
+SELECT
+  JSON_OBJECT(
+     KEY 'geo_ip' VALUE JSON_QUERY(geo_ip, '$.continent'),
+     KEY 'event' VALUE JSON_QUERY(event, '$.type')
+     )
+  as combined_JSON
+FROM "kttm_nested"
+LIMIT 1
+```
+
+Returns the following:
+
+| `combined_JSON` |
+| -- |
+| `{"geo_ip": {"continent": "South America"},"event": {"type": "PercentClear"}}` |
+
+</details>
+
+[Learn more](sql-json-functions.md)
 
 ## JSON_PATHS
 
-Returns an array of all paths which refer to literal values in `expr` in JSONPath format.
+Returns an array of all paths which refer to literal values in an expression, in JSONPath format.
 
-* **Syntax**: `JSON_PATHS(expr)`
+* **Syntax:** `JSON_PATHS(expr)`  
 * **Function type:** JSON
 
-[Learn more](sql-json-functions.md)
+<details><summary>Example</summary>
 
+The following example returns an array of distinct paths in the `geo_ip` nested column:
+
+```sql
+SELECT
+  ARRAY_CONCAT_AGG(DISTINCT JSON_PATHS(geo_ip)) AS geo_ip_paths
+from "kttm_nested"
+```
+
+Returns the following:
+
+| `geo_ip_paths` |
+| -- |
+| `[$.city, $.continent, $.country, $.region]` |
+
+</details>
+
+[Learn more](sql-json-functions.md)
 
 ## JSON_QUERY
 
-Extracts a `COMPLEX<json>` value from `expr`, at the specified `path`.
+Extracts a `COMPLEX<json>` value from an expression at a specified path.
 
-* **Syntax**: `JSON_QUERY(expr, path)`
+* **Syntax:** `JSON_QUERY(expr, path)`  
 * **Function type:** JSON
+
+<details><summary>Example</summary>
+
+The following example returns the values of `percentage` in the `event` nested column:
+
+```sql
+SELECT
+   "event",
+   JSON_QUERY("event", '$.percentage')
+FROM "kttm_nested"
+LIMIT 2
+```
+
+Returns the following:
+
+| `event` | `percentage` |
+| -- | -- |
+| `{"type":"PercentClear","percentage":55}` | `55` |
+| `{"type":"PercentClear","percentage":80}` | `80` |
+
+</details>
 
 [Learn more](sql-json-functions.md)
 
-
 ## JSON_QUERY_ARRAY
 
-Extracts an `ARRAY<COMPLEX<json>>` value from `expr` at the specified `path`. If value is not an `ARRAY`, it gets translated into a single element `ARRAY` containing the value at `path`. The primary use of this function is to extract arrays of objects to use as inputs to other [array functions](./sql-array-functions.md).
+Extracts an `ARRAY<COMPLEX<json>>` value from an expression at a specified path.
 
-* **Syntax**: `JSON_QUERY_ARRAY(expr, path)`
+If the value isn't an array, the function translates it into a single element `ARRAY` containing the value at `path`.
+This function is mainly used to extract arrays of objects to use as inputs to other [array functions](./sql-array-functions.md).
+
+* **Syntax:** `JSON_QUERY_ARRAY(expr, path)`
 * **Function type:** JSON
+
+<details><summary>Example</summary>
+
+The following example returns an array of `percentage` values in the `event` nested column:
+
+```sql
+SELECT
+   "event",
+   JSON_QUERY_ARRAY("event", '$.percentage')
+FROM "kttm_nested"
+LIMIT 2
+```
+
+Returns the following:
+
+| `event` | `percentage` |
+| -- | -- |
+| `{"type":"PercentClear","percentage":55}` | `[55]` |
+| `{"type":"PercentClear","percentage":80}` | `[80]` |
+
+</details>
 
 [Learn more](sql-json-functions.md)
 
 ## JSON_VALUE
 
-Extracts a literal value from `expr` at the specified `path`. If you specify `RETURNING` and an SQL type name (such as `VARCHAR`, `BIGINT`, `DOUBLE`, etc) the function plans the query using the suggested type. Otherwise, it attempts to infer the type based on the context. If it can't infer the type, it defaults to `VARCHAR`.
+Extracts a literal value from an expression at a specified path.
 
-* **Syntax**: `JSON_VALUE(expr, path [RETURNING sqlType])`
+If you include `RETURNING` and specify a SQL type (such as `VARCHAR`, `BIGINT`, `DOUBLE`) the function plans the query using the suggested type.
+If `RETURNING` isn't included, the function attempts to infer the type based on the context.
+If the function can't infer the type, it defaults to `VARCHAR`.
+
+* **Syntax:** `JSON_VALUE(expr, path [RETURNING sqlType])`
 * **Function type:** JSON
+
+<details><summary>Example</summary>
+
+The following example returns the value of `city` in the `geo_ip` nested column:
+
+```sql
+SELECT
+  geo_ip,
+  JSON_VALUE(geo_ip, '$.city' RETURNING VARCHAR) as city
+FROM "kttm_nested"
+WHERE JSON_VALUE(geo_ip, '$.continent') = 'Asia'
+LIMIT 2
+```
+
+Returns the following:
+
+| `geo_ip` | `city` |
+| -- | -- |
+| `{"continent":"Asia","country":"Taiwan","region":"Taipei City","city":"Taipei"}` | `Taipei` |
+| `{"continent":"Asia","country":"Thailand","region":"Bangkok","city":"Bangkok"}` | `Bangkok` |
+
+</details>
 
 [Learn more](sql-json-functions.md)
 
@@ -3971,13 +4123,32 @@ Returns the following:
 
 ## PARSE_JSON
 
-Parses `expr` into a `COMPLEX<json>` object. This operator deserializes JSON values when processing them, translating stringified JSON into a nested structure. If the input is not a `VARCHAR` or it is invalid JSON, this function will result in an error.
+Parses an expression into a `COMPLEX<json>` object. 
 
-* **Syntax**: `PARSE_JSON(expr)`
+The function deserializes JSON values when processing them, translating stringified JSON into a nested structure.
+If the input is invalid JSON or not a `VARCHAR`, it returns an error.
+
+* **Syntax:** `PARSE_JSON(expr)`
 * **Function type:** JSON
 
-[Learn more](sql-json-functions.md)
+<details><summary>Example</summary>
 
+The following example creates a `COMPLEX<json>` object `gus` from a string of fields:
+
+```sql
+SELECT
+  PARSE_JSON('{"name":"Gus","email":"gus_cat@example.com","type":"Pet"}') as gus
+```
+
+Returns the following:
+
+| `gus` |
+| -- |
+| `{"name":"Gus","email":"gus_cat@example.com","type":"Pet"}` |
+
+</details>
+
+[Learn more](sql-json-functions.md)
 ## PARSE_LONG
 
 Converts a string into a long(BIGINT) with the given radix, or into DECIMAL(base 10) if a radix is not provided.
@@ -5236,10 +5407,28 @@ Returns the following:
 
 ## TO_JSON_STRING
 
-Serializes `expr` into a JSON string.
+Serializes an expression into a JSON string.
 
-* **Syntax**: `TO_JSON_STRING(expr)`
+* **Syntax:** `TO_JSON_STRING(expr)`
 * **Function type:** JSON
+
+<details><summary>Example</summary>
+
+The following example writes the distinct column names in the `events` nested column to a JSON string:
+
+```sql
+SELECT
+  TO_JSON_STRING(ARRAY_CONCAT_AGG(DISTINCT JSON_KEYS(event, '$.'))) as json_string
+FROM "kttm_nested"
+```
+
+Returns the following:
+
+| `json_string` |
+| -- |
+| `["error","layer","percentage","saveNumber","type","url","userAgent"]` |
+
+</details>
 
 [Learn more](sql-json-functions.md)
 
@@ -5312,10 +5501,46 @@ Returns the following:
 
 ## TRY_PARSE_JSON
 
-Parses `expr` into a `COMPLEX<json>` object. This operator deserializes JSON values when processing them, translating stringified JSON into a nested structure. If the input is not a `VARCHAR` or it is invalid JSON, this function will result in a `NULL` value.
+Parses an expression into a `COMPLEX<json>` object.
 
-* **Syntax**: `TRY_PARSE_JSON(expr)`
+This function deserializes JSON values when processing them, translating stringified JSON into a nested structure.
+If the input is invalid JSON or not a `VARCHAR`, it returns a `NULL` value.
+
+You can use this function instead of [PARSE_JSON](#parse_json) to insert a null value when processing invalid data, instead of producing an error.
+
+* **Syntax:** `TRY_PARSE_JSON(expr)`
 * **Function type:** JSON
+
+<details><summary>Example</summary>
+
+The following example creates a `COMPLEX<json>` object `gus` from a string of fields:
+
+```sql
+SELECT
+  TRY_PARSE_JSON('{"name":"Gus","email":"gus_cat@example.com","type":"Pet"}') as gus
+```
+
+Returns the following:
+
+| `gus` |
+| -- |
+| `{"name":"Gus","email":"gus_cat@example.com","type":"Pet"}` |
+
+
+The following example contains invalid data `x:x`:
+
+```sql
+SELECT
+  TRY_PARSE_JSON('{"name":"Gus","email":"gus_cat@example.com","type":"Pet",x:x}') as gus
+```
+
+Returns the following:
+
+| `gus` |
+| -- |
+| `null` |
+
+</details>
 
 [Learn more](sql-json-functions.md)
 
@@ -5414,4 +5639,3 @@ Requires the [`druid-stats` extension](../development/extensions-core/stats.md).
 * **Function type:** Aggregation
 
 [Learn more](sql-aggregations.md)
-
