@@ -334,7 +334,7 @@ class SqlSegmentsMetadataTransaction implements SegmentsMetadataTransaction
     int updatedCount = handle.createStatement(getSqlToInsertPendingSegment())
           .bind("id", segmentId.toString())
           .bind("dataSource", dataSource)
-          .bind("created_date", nullSafeString(pendingSegment.getCreatedDate()))
+          .bind("created_date", toNonNullString(pendingSegment.getCreatedDate()))
           .bind("start", interval.getStart().toString())
           .bind("end", interval.getEnd().toString())
           .bind("sequence_name", pendingSegment.getSequenceName())
@@ -370,7 +370,7 @@ class SqlSegmentsMetadataTransaction implements SegmentsMetadataTransaction
       insertBatch.add()
                  .bind("id", segmentId.toString())
                  .bind("dataSource", dataSource)
-                 .bind("created_date", nullSafeString(pendingSegment.getCreatedDate()))
+                 .bind("created_date", toNonNullString(pendingSegment.getCreatedDate()))
                  .bind("start", interval.getStart().toString())
                  .bind("end", interval.getEnd().toString())
                  .bind("sequence_name", pendingSegment.getSequenceName())
@@ -491,14 +491,14 @@ class SqlSegmentsMetadataTransaction implements SegmentsMetadataTransaction
             batch.add()
                  .bind("id", segment.getId().toString())
                  .bind("dataSource", dataSource)
-                 .bind("created_date", nullSafeString(segmentPlus.getCreatedDate()))
+                 .bind("created_date", toNonNullString(segmentPlus.getCreatedDate()))
                  .bind("start", segment.getInterval().getStart().toString())
                  .bind("end", segment.getInterval().getEnd().toString())
                  .bind("partitioned", true)
                  .bind("version", segment.getVersion())
                  .bind("used", Boolean.TRUE.equals(segmentPlus.getUsed()))
                  .bind("payload", getJsonBytes(segment))
-                 .bind("used_status_last_updated", nullSafeString(segmentPlus.getUsedStatusLastUpdatedDate()))
+                 .bind("used_status_last_updated", toNonNullString(segmentPlus.getUsedStatusLastUpdatedDate()))
                  .bind("upgraded_from_segment_id", segmentPlus.getUpgradedFromSegmentId());
 
         if (persistAdditionalMetadata) {
@@ -542,9 +542,12 @@ class SqlSegmentsMetadataTransaction implements SegmentsMetadataTransaction
     );
   }
 
-  private static String nullSafeString(DateTime time)
+  private static String toNonNullString(DateTime date)
   {
-    return time == null ? null : time.toString();
+    if (date == null) {
+      throw DruidException.defensive("Created date cannot be null");
+    }
+    return date.toString();
   }
 
   private <T> byte[] getJsonBytes(T object)

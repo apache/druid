@@ -23,6 +23,11 @@ import org.skife.jdbi.v2.Handle;
 
 import java.io.Closeable;
 
+/**
+ * Represents a single transaction involving read of segment metadata into
+ * the metadata store. A transaction is associated with a single instance of a
+ * {@link Handle} and is meant to be short-lived.
+ */
 public interface SegmentsMetadataReadTransaction
     extends DatasourceSegmentMetadataReader, Closeable
 {

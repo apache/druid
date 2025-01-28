@@ -24,13 +24,8 @@ import org.apache.druid.metadata.segment.DatasourceSegmentMetadataWriter;
 
 /**
  * TODO:
- * -[x] Finish polling of pending segments properly
- * -[x] Implement rollback and commit for cached transaction
- * -[x] Acquire read/write lock on datasource cache when transaction starts.
- * -[x] Add different factory methods to create read vs write transaction
- * -[x] Write a basic unit test to verify that things are working as expected
  * -[ ] Write unit test for DatasourceSegmentCache and SqlSegmentsMetadataCache
- * -
+ *
  * -[ ] Wire up cache in OverlordCompactionScheduler and SqlSegmentsMetadataManager,
  * otherwise we will end up having two copies of the segment timeline and stuff
  * The timeline inside the cache can replace the SegmentTimeline of SqlSegmentsMetadataManager
@@ -46,20 +41,37 @@ public interface SegmentsMetadataCache
 
   void stop();
 
+  /**
+   * @return true if the cache is enabled and ready for reading and writing.
+   */
   boolean isReady();
 
   DataSource getDatasource(String dataSource);
 
+  /**
+   * Cache containing segment metadata of a single datasource.
+   */
   interface DataSource extends DatasourceSegmentMetadataWriter, DatasourceSegmentMetadataReader
   {
-    <T> T withReadLock(Action<T> action) throws Exception;
+    /**
+     * Performs a thread-safe read action on the cache.
+     */
+    <T> T read(Action<T> action) throws Exception;
 
-    <T> T withWriteLock(Action<T> action) throws Exception;
+    /**
+     * Performs a thread-safe write action on the cache.
+     */
+    <T> T write(Action<T> action) throws Exception;
   }
 
+  /**
+   * Represents a read or write action performed on the cache within required
+   * locks.
+   */
+  @FunctionalInterface
   interface Action<T>
   {
-    T perform(DataSource datasourceCache) throws Exception;
+    T perform() throws Exception;
   }
 
 }

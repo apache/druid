@@ -24,6 +24,7 @@ import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.segment.IndexIO;
+import org.apache.druid.server.http.DataSegmentPlus;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
@@ -53,6 +54,11 @@ public class CreateDataSegments
 
   private String version = "1";
   private CompactionState compactionState = null;
+
+  // Plus fields
+  private Boolean used;
+  private DateTime lastUpdatedTime;
+  private String upgradedFromSegmentId;
 
   public static CreateDataSegments ofDatasource(String datasource)
   {
@@ -99,6 +105,48 @@ public class CreateDataSegments
   {
     this.version = version;
     return this;
+  }
+
+  public CreateDataSegments markUnused()
+  {
+    this.used = false;
+    return this;
+  }
+
+  public CreateDataSegments markUsed()
+  {
+    this.used = true;
+    return this;
+  }
+
+  public CreateDataSegments lastUpdatedOn(DateTime updatedTime)
+  {
+    this.lastUpdatedTime = updatedTime;
+    return this;
+  }
+
+  public CreateDataSegments updatedNow()
+  {
+    return lastUpdatedOn(DateTimes.nowUtc());
+  }
+
+  public CreateDataSegments upgradedFromSegment(String segmentId)
+  {
+    this.upgradedFromSegmentId = segmentId;
+    return this;
+  }
+
+  public DataSegmentPlus ofSizeInMb(long sizeMb) {
+    final DataSegment segment = eachOfSizeInMb(sizeMb).get(0);
+    return new DataSegmentPlus(
+        segment,
+        null,
+        lastUpdatedTime,
+        used,
+        null,
+        null,
+        upgradedFromSegmentId
+    );
   }
 
   public List<DataSegment> eachOfSizeInMb(long sizeMb)

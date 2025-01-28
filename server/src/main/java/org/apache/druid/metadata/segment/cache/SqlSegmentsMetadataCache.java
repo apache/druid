@@ -264,18 +264,21 @@ public class SqlSegmentsMetadataCache implements SegmentsMetadataCache
           final DatasourceSegmentSummary summary = datasourceToSummary
               .computeIfAbsent(record.dataSource, ds -> new DatasourceSegmentSummary());
 
-          if (cache.shouldRefreshSegment(record.segmentId, record.state)) {
-            if (record.state.isUsed()) {
-              summary.segmentIdsToRefresh.add(record.segmentId);
-            } else if (cache.refreshUnusedSegment(record.segmentId, record.state)) {
-              countOfRefreshedUnusedSegments.incrementAndGet();
-              emitDatasourceMetric(record.dataSource, "refreshed/unused", 1);
-            }
+          // Refresh used segments if required
+          if (record.isUsed && cache.shouldRefreshUsedSegment(record.segmentId, record.lastUpdatedTime)) {
+            summary.segmentIdsToRefresh.add(record.segmentId);
           }
 
-          if (!record.state.isUsed()) {
+          // Track max partition number of unused segment if needed
+          if (!record.isUsed) {
             final SegmentId segmentId = SegmentId.tryParse(record.dataSource, record.segmentId);
+
             if (segmentId != null) {
+              if (cache.addUnusedSegmentId(segmentId)) {
+                countOfRefreshedUnusedSegments.incrementAndGet();
+                emitDatasourceMetric(record.dataSource, "refreshed/unused", 1);
+              }
+
               final int partitionNum = segmentId.getPartitionNum();
               summary
                   .intervalVersionToMaxUnusedPartition
@@ -317,7 +320,7 @@ public class SqlSegmentsMetadataCache implements SegmentsMetadataCache
         )
     ) {
       while (iterator.hasNext()) {
-        if (cache.refreshUsedSegment(iterator.next())) {
+        if (cache.addSegment(iterator.next())) {
           ++numUpdatedUsedSegments;
         }
       }
@@ -424,13 +427,15 @@ public class SqlSegmentsMetadataCache implements SegmentsMetadataCache
   {
     private final String segmentId;
     private final String dataSource;
-    private final SegmentState state;
+    private final boolean isUsed;
+    private final DateTime lastUpdatedTime;
 
-    SegmentRecord(String segmentId, String dataSource, SegmentState state)
+    SegmentRecord(String segmentId, String dataSource, boolean isUsed, DateTime lastUpdatedTime)
     {
       this.segmentId = segmentId;
       this.dataSource = dataSource;
-      this.state = state;
+      this.isUsed = isUsed;
+      this.lastUpdatedTime = lastUpdatedTime;
     }
 
     @Nullable
@@ -442,9 +447,7 @@ public class SqlSegmentsMetadataCache implements SegmentsMetadataCache
         final String dataSource = r.getString("dataSource");
         final DateTime lastUpdatedTime = nullSafeDate(r.getString("used_status_last_updated"));
 
-        final SegmentState storedState = new SegmentState(isUsed, lastUpdatedTime);
-
-        return new SegmentRecord(segmentId, dataSource, storedState);
+        return new SegmentRecord(segmentId, dataSource, isUsed, lastUpdatedTime);
       }
       catch (SQLException e) {
         return null;

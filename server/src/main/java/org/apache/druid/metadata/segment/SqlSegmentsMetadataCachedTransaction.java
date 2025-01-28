@@ -349,8 +349,7 @@ class SqlSegmentsMetadataCachedTransaction implements SegmentsMetadataTransactio
     verifyStillLeaderWithSameTerm();
     final T result = action.apply(delegate);
 
-    // TODO: verify if the write to metadata store was successful
-    //  Otherwise, throw an exception
+    // TODO: Assume that the metadata write operation succeeded
     pendingWrites.add(action::apply);
 
     return result;

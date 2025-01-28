@@ -83,7 +83,7 @@ public class SqlSegmentsMetadataTransactionFactory
         final SegmentsMetadataReadTransaction cachedTransaction
             = new SqlSegmentsMetadataCachedTransaction(sqlTransaction, datasourceCache, leaderSelector);
 
-        return datasourceCache.withReadLock(dc -> executeRead(cachedTransaction, callback));
+        return datasourceCache.read(() -> executeRead(cachedTransaction, callback));
       } else {
         return executeRead(createSqlTransaction(dataSource, handle, status), callback);
       }
@@ -106,7 +106,7 @@ public class SqlSegmentsMetadataTransactionFactory
             final SegmentsMetadataTransaction cachedTransaction
                 = new SqlSegmentsMetadataCachedTransaction(sqlTransaction, datasourceCache, leaderSelector);
 
-            return datasourceCache.withWriteLock(dc -> executeWrite(cachedTransaction, callback));
+            return datasourceCache.write(() -> executeWrite(cachedTransaction, callback));
           } else {
             return executeWrite(sqlTransaction, callback);
           }

@@ -43,7 +43,7 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 /**
- * Datasource-level cache for segments and pending segments.
+ * Datasource-level in-memory cache for segments and pending segments.
  */
 class DatasourceSegmentCache extends BaseCache
 {
@@ -55,13 +55,10 @@ class DatasourceSegmentCache extends BaseCache
    */
   private final Map<String, DataSegmentPlus> idToUsedSegment = new HashMap<>();
 
-  /**
-   * Current state of segments as seen by the cache.
-   */
-  private final Map<String, SegmentState> idToSegmentState = new HashMap<>();
+  private final Set<String> unusedSegmentIds = new HashSet<>();
 
   /**
-   * Allows lookup of visible segments for a given interval.
+   * Not being used right now. Could allow lookup of visible segments for a given interval.
    */
   private final SegmentTimeline usedSegmentTimeline = SegmentTimeline.forSegments(Set.of());
 
@@ -80,16 +77,10 @@ class DatasourceSegmentCache extends BaseCache
   void clear()
   {
     withWriteLock(() -> {
-      idToSegmentState.clear();
+      idToUsedSegment.values().forEach(s -> usedSegmentTimeline.remove(s.getDataSegment()));
       idToUsedSegment.clear();
       intervalVersionToHighestUnusedPartitionNumber.clear();
-      idToUsedSegment.values().forEach(s -> usedSegmentTimeline.remove(s.getDataSegment()));
     });
-  }
-
-  boolean isEmpty()
-  {
-    return withReadLock(() -> idToSegmentState.isEmpty() && intervalToPendingSegments.isEmpty());
   }
 
   /**
@@ -97,12 +88,13 @@ class DatasourceSegmentCache extends BaseCache
    * cache has no known state for the given segment or if the metadata store
    * has a more recent last_updated_time than the cache.
    */
-  boolean shouldRefreshSegment(String segmentId, SegmentState metadataState)
+  boolean shouldRefreshUsedSegment(String segmentId, DateTime metadataUpdatedTime)
   {
     return withReadLock(() -> {
-      final SegmentState cachedState = idToSegmentState.get(segmentId);
+      final DataSegmentPlus cachedState = idToUsedSegment.get(segmentId);
       return cachedState == null
-             || cachedState.getLastUpdatedTime().isBefore(metadataState.getLastUpdatedTime());
+             || cachedState.getUsedStatusLastUpdatedDate() == null
+             || cachedState.getUsedStatusLastUpdatedDate().isBefore(metadataUpdatedTime);
     });
   }
 
@@ -118,68 +110,72 @@ class DatasourceSegmentCache extends BaseCache
     );
   }
 
-  boolean refreshUnusedSegment(String segmentId, SegmentState newState)
+  /**
+   * Adds or updates the given segment in the cache.
+   */
+  boolean addSegment(DataSegmentPlus segmentPlus) {
+    if (Boolean.TRUE.equals(segmentPlus.getUsed())) {
+      return addUsedSegment(segmentPlus);
+    } else {
+      return addUnusedSegmentId(segmentPlus.getDataSegment().getId());
+    }
+  }
+
+  /**
+   * Adds or updates a used segment in the cache.
+   */
+  private boolean addUsedSegment(DataSegmentPlus segmentPlus)
   {
-    if (newState.isUsed()) {
+    // Process only used segments
+    if (!Boolean.TRUE.equals(segmentPlus.getUsed())) {
+      addUnusedSegmentId(segmentPlus.getDataSegment().getId());
       return false;
     }
 
+    final DataSegment segment = segmentPlus.getDataSegment();
+    final String segmentId = getId(segment);
+
     return withWriteLock(() -> {
-      if (!shouldRefreshSegment(segmentId, newState)) {
+      if (!shouldRefreshUsedSegment(segmentId, segmentPlus.getUsedStatusLastUpdatedDate())) {
         return false;
       }
 
-      final SegmentState oldState = idToSegmentState.put(segmentId, newState);
-
-      if (oldState != null && oldState.isUsed()) {
-        // Segment has transitioned from used to unused
-        DataSegmentPlus segment = idToUsedSegment.remove(segmentId);
-        if (segment != null) {
-          usedSegmentTimeline.remove(segment.getDataSegment());
-        }
+      final DataSegmentPlus oldSegmentPlus = idToUsedSegment.put(segmentId, segmentPlus);
+      if (oldSegmentPlus != null) {
+        // Segment payload may have changed, remove old value from timeline
+        usedSegmentTimeline.remove(oldSegmentPlus.getDataSegment());
       }
 
-      addUnusedSegmentId(segmentId);
+      unusedSegmentIds.remove(segmentId);
+      usedSegmentTimeline.add(segment);
       return true;
     });
   }
 
-  boolean refreshUsedSegment(DataSegmentPlus segmentPlus)
+  /**
+   * Adds or updates an unused segment in the cache.
+   */
+  boolean addUnusedSegmentId(SegmentId segmentId)
   {
-    final DataSegment segment = segmentPlus.getDataSegment();
-    final String segmentId = getId(segment);
-
-    final SegmentState newState = new SegmentState(
-        Boolean.TRUE.equals(segmentPlus.getUsed()),
-        segmentPlus.getUsedStatusLastUpdatedDate()
-    );
-    if (!newState.isUsed()) {
-      return refreshUnusedSegment(segmentId, newState);
+    if (unusedSegmentIds.contains(segmentId.toString())) {
+      return false;
     }
 
-    return withWriteLock(() -> {
-      if (!shouldRefreshSegment(segmentId, newState)) {
-        return false;
+    final int partitionNum = segmentId.getPartitionNum();
+    withWriteLock(() -> {
+      final DataSegmentPlus oldSegmentPlus = idToUsedSegment.remove(segmentId.toString());
+      if (oldSegmentPlus != null) {
+        // Segment has transitioned from used to unused
+        usedSegmentTimeline.remove(oldSegmentPlus.getDataSegment());
       }
 
-      final SegmentState oldState = idToSegmentState.put(segmentId, newState);
-      final DataSegmentPlus oldSegmentPlus = idToUsedSegment.put(segmentId, segmentPlus);
-
-      if (oldState == null) {
-        // This is a new segment
-      } else if (oldState.isUsed()) {
-        // Segment payload may have changed
-        if (oldSegmentPlus != null) {
-          usedSegmentTimeline.remove(oldSegmentPlus.getDataSegment());
-        }
-      } else {
-        // Segment has transitioned from unused to used
-        removeUnusedSegmentId(segmentId);
-      }
-
-      usedSegmentTimeline.add(segment);
-      return true;
+      unusedSegmentIds.add(segmentId.toString());
+      intervalVersionToHighestUnusedPartitionNumber
+          .computeIfAbsent(segmentId.getInterval(), i -> new HashMap<>())
+          .merge(segmentId.getVersion(), partitionNum, Math::max);
     });
+
+    return true;
   }
 
   int removeSegmentIds(Set<String> segmentIds)
@@ -187,16 +183,10 @@ class DatasourceSegmentCache extends BaseCache
     return withWriteLock(() -> {
       int removedCount = 0;
       for (String segmentId : segmentIds) {
-        SegmentState state = idToSegmentState.remove(segmentId);
-        if (state != null) {
-          ++removedCount;
-        }
-
-        removeUnusedSegmentId(segmentId);
-
         final DataSegmentPlus segment = idToUsedSegment.remove(segmentId);
         if (segment != null) {
           usedSegmentTimeline.remove(segment.getDataSegment());
+          ++removedCount;
         }
       }
 
@@ -204,38 +194,16 @@ class DatasourceSegmentCache extends BaseCache
     });
   }
 
+  /**
+   * Resets the {@link #intervalVersionToHighestUnusedPartitionNumber} with the
+   * new values.
+   */
   void resetMaxUnusedIds(Map<Interval, Map<String, Integer>> intervalVersionToHighestPartitionNumber)
   {
     withWriteLock(() -> {
       this.intervalVersionToHighestUnusedPartitionNumber.clear();
       this.intervalVersionToHighestUnusedPartitionNumber.putAll(intervalVersionToHighestPartitionNumber);
     });
-  }
-
-  private void addUnusedSegmentId(String id)
-  {
-    final SegmentId segmentId = SegmentId.tryParse(dataSource, id);
-    if (segmentId == null) {
-      return;
-    }
-
-    final int partitionNum = segmentId.getPartitionNum();
-    intervalVersionToHighestUnusedPartitionNumber
-        .computeIfAbsent(segmentId.getInterval(), i -> new HashMap<>())
-        .merge(segmentId.getVersion(), partitionNum, Math::max);
-  }
-
-  private void removeUnusedSegmentId(String segmentId)
-  {
-    // TODO: Do not update the highest unused id since we don't know the new max
-    // It is okay to keep working with the old max
-
-    // What are the things we can do here?
-    //  - reduce max partition number by at least 1
-    //  - keep a bool array for every interval / version to see which IDs are currently in use
-    //
-    //  - but all of this is overkill because this is meant to handle a very rare case
-    //  and even then it is okay to return an older max
   }
 
   /**
@@ -246,7 +214,7 @@ class DatasourceSegmentCache extends BaseCache
   {
     return withReadLock(
         () -> knownSegmentIds.stream()
-                             .filter(id -> !idToSegmentState.containsKey(id))
+                             .filter(id -> !isSegmentIdCached(id))
                              .collect(Collectors.toSet())
     );
   }
@@ -259,7 +227,7 @@ class DatasourceSegmentCache extends BaseCache
     return withReadLock(
         () -> segments.stream()
                       .map(DatasourceSegmentCache::getId)
-                      .filter(idToSegmentState::containsKey)
+                      .filter(this::isSegmentIdCached)
                       .collect(Collectors.toSet())
     );
   }
@@ -419,17 +387,7 @@ class DatasourceSegmentCache extends BaseCache
     return withWriteLock(() -> {
       int numInsertedSegments = 0;
       for (DataSegmentPlus segmentPlus : segments) {
-        final DataSegment segment = segmentPlus.getDataSegment();
-        final String segmentId = getId(segment);
-        final SegmentState state = new SegmentState(
-            Boolean.TRUE.equals(segmentPlus.getUsed()),
-            segmentPlus.getUsedStatusLastUpdatedDate()
-        );
-
-        final boolean updated = state.isUsed()
-                                ? refreshUsedSegment(segmentPlus)
-                                : refreshUnusedSegment(segmentId, state);
-        if (updated) {
+        if (addSegment(segmentPlus)) {
           ++numInsertedSegments;
         }
       }
@@ -451,10 +409,7 @@ class DatasourceSegmentCache extends BaseCache
     try (CloseableIterator<DataSegment> segmentIterator
              = findUsedSegmentsOverlappingAnyOf(List.of(interval))) {
       while (segmentIterator.hasNext()) {
-        boolean updated = refreshUnusedSegment(
-            getId(segmentIterator.next()),
-            new SegmentState(false, updateTime)
-        );
+        boolean updated = addUnusedSegmentId(segmentIterator.next().getId());
         if (updated) {
           ++updatedCount;
         }
@@ -576,6 +531,11 @@ class DatasourceSegmentCache extends BaseCache
                                        .filter(predicate)
                                        .collect(Collectors.toList())
     );
+  }
+
+  private boolean isSegmentIdCached(String id)
+  {
+    return idToUsedSegment.containsKey(id) || unusedSegmentIds.contains(id);
   }
 
   private static boolean anyIntervalOverlaps(List<Interval> intervals, Interval testInterval)

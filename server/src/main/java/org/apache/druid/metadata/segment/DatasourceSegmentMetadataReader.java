@@ -65,7 +65,8 @@ public interface DatasourceSegmentMetadataReader
   List<DataSegment> findUsedSegments(Set<String> segmentIds);
 
   /**
-   * Finds used segments that overlap with any of the given intervals.
+   * Finds used segments that overlap with any of the given intervals. If the
+   * given list of intervals is empty, all used segments are considered eligible.
    */
   Set<DataSegmentPlus> findUsedSegmentsPlusOverlappingAnyOf(List<Interval> intervals);
 
