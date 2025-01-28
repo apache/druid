@@ -1877,7 +1877,7 @@ Returns the following:
 | `2005-11-01T00:00:00.000Z` | `KOA` | `NW` | `1` | `3` |
 | `2005-11-01T00:00:00.000Z` | `LIH` | `HA` | `15` | `1` |
 | `2005-11-01T00:00:00.000Z` | `LIH` | `AA` | `2` | `2`|
-| `2005-11-01T00:00:00.000Z` | `LIH` | `UA` | `2` | `3` |
+| `2005-11-01T00:00:00.000Z` | `LIH` | `UA` | `2` | `2` |
  
 </details>
 
@@ -2366,11 +2366,11 @@ SELECT FLOOR("__time" TO DAY)  AS "flight_day",
     "Origin" AS "airport",
     "Reporting_Airline" as "airline",
     COUNT("Flight_Number_Reporting_Airline") as "num_flights",
-    FIRST_VALUE("Reporting_Airline") OVER (PARTITION BY "Origin" ORDER BY COUNT("Flight_Number_Reporting_Airline") DESC) AS "frist_val"
+    FIRST_VALUE("Reporting_Airline") OVER (PARTITION BY "Origin" ORDER BY COUNT("Flight_Number_Reporting_Airline") DESC) AS "first_val"
 FROM "flight-carriers"
 WHERE FLOOR("__time" TO DAY) = '2005-11-01'
     AND "Origin" IN ('KOA', 'LIH')
-GROUP BY 2, 3, 1
+GROUP BY 1, 2, 3
 ```
 
 Returns the following:
@@ -2964,7 +2964,7 @@ SELECT FLOOR("__time" TO DAY)  AS "flight_day",
 FROM "flight-carriers"
 WHERE FLOOR("__time" TO DAY) = '2005-11-01'
     AND "Origin" IN ('KOA', 'LIH')
-GROUP BY 2, 3, 1
+GROUP BY 1, 2, 3
 ```
 
 Returns the following:
@@ -3005,12 +3005,12 @@ SELECT FLOOR("__time" TO DAY)  AS "flight_day",
 FROM "flight-carriers"
 WHERE FLOOR("__time" TO DAY) = '2005-11-01'
     AND "Origin" IN ('KOA', 'LIH')
-GROUP BY 2, 3, 1
+GROUP BY 1, 2, 3
 ```
 
 Returns the following:
 
-| `flight_day` | `airport` | `airline` | `num_flights` | `` |
+| `flight_day` | `airport` | `airline` | `num_flights` | `last_value` |
 | --- | --- | --- | --- | ---|
 | `2005-11-01T00:00:00.000Z` | `KOA` | `HA` | `11` | NW |
 | `2005-11-01T00:00:00.000Z` | `KOA` | `UA` | `4` | NW |
@@ -3108,12 +3108,12 @@ SELECT FLOOR("__time" TO DAY)  AS "flight_day",
 FROM "flight-carriers"
 WHERE FLOOR("__time" TO DAY) = '2005-11-01'
     AND "Origin" IN ('KOA', 'LIH')
-GROUP BY 2, 3, 1
+GROUP BY 1, 2, 3
 ```
 
 Returns the following:
 
-| `flight_day` | `airport` | `airline` | `lead` | `` |
+| `flight_day` | `airport` | `airline` | `num_flights ` | `lead` |
 | --- | --- | --- | --- | ---|
 | `2005-11-01T00:00:00.000Z` | `KOA` | `HA` | `11` |`UA` |
 | `2005-11-01T00:00:00.000Z` | `KOA` | `UA` | `4` | `AA` |
@@ -3950,7 +3950,7 @@ SELECT FLOOR("__time" TO DAY)  AS "flight_day",
 FROM "flight-carriers"
 WHERE FLOOR("__time" TO DAY) = '2005-11-01'
     AND "Origin" IN ('KOA', 'LIH')
-GROUP BY 2, 3, 1
+GROUP BY 1, 2, 3
 ```
 
 Returns the following:
@@ -4085,7 +4085,7 @@ SELECT FLOOR("__time" TO DAY)  AS "flight_day",
 FROM "flight-carriers"
 WHERE FLOOR("__time" TO DAY) = '2005-11-01'
     AND "Origin" IN ('KOA', 'LIH')
-GROUP BY 2, 3, 1
+GROUP BY 1, 2, 3
 ```
 
 Returns the following:
@@ -4201,12 +4201,12 @@ SELECT FLOOR("__time" TO DAY)  AS "flight_day",
 FROM "flight-carriers"
 WHERE FLOOR("__time" TO DAY) = '2005-11-01'
     AND "Origin" IN ('KOA', 'LIH')
-GROUP BY 2, 3, 1
+GROUP BY 1, 2, 3
 ```
 
 Returns the following:
 
-| `flight_day` | `airport` | `airline` | `lead` | `rank` |
+| `flight_day` | `airport` | `airline` | `num_flights` | `rank` |
 | --- | --- | --- | --- | ---|
 | `2005-11-01T00:00:00.000Z` | `KOA` | `HA` | `11` | `1` |
 | `2005-11-01T00:00:00.000Z` | `KOA` | `UA` | `4` | `2` |
@@ -4456,7 +4456,6 @@ The following example returns the row number within the window for flights by ai
 
 ```sql
 SELECT FLOOR("__time" TO DAY)  AS "flight_day",
-SELECT FLOOR("__time" TO DAY)  AS "flight_day",
     "Origin" AS "airport",
     "Reporting_Airline" as "airline",
     COUNT("Flight_Number_Reporting_Airline") as "num_flights",
@@ -4464,12 +4463,12 @@ SELECT FLOOR("__time" TO DAY)  AS "flight_day",
 FROM "flight-carriers"
 WHERE FLOOR("__time" TO DAY) = '2005-11-01'
     AND "Origin" IN ('KOA', 'LIH')
-GROUP BY 2, 3, 1
+GROUP BY 1, 2, 3
 ```
 
 Returns the following:
 
-| `flight_day` | `airport` | `airline` | `lead` | `row_num` |
+| `flight_day` | `airport` | `airline` | `num_flights` | `row_num` |
 | --- | --- | --- | --- | ---|
 | `2005-11-01T00:00:00.000Z` | `KOA` | `HA` | `11` | `1` |
 | `2005-11-01T00:00:00.000Z` | `KOA` | `UA` | `4` | `2` |
