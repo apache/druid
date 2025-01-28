@@ -2828,14 +2828,14 @@ The following example merges the `event` object with a static string `example_st
 ```sql
 SELECT 
   event,
-  JSON_MERGE(event, '{"example_string": 123}') as eventAndstring
+  JSON_MERGE(event, '{"example_string": 123}') as event_with_string
 FROM "kttm_nested"
 LIMIT 1
 ```
 
 Returns the following:
 
-| `event` | `eventAndstring` |
+| `event` | `event_with_string` |
 | -- | -- |
 | `{"type":"PercentClear","percentage":55}` | `{"type":"PercentClear","percentage":55,"example_string":123}` |
 
@@ -2865,14 +2865,14 @@ SELECT
      KEY 'geo_ip' VALUE JSON_QUERY(geo_ip, '$.continent'),
      KEY 'event' VALUE JSON_QUERY(event, '$.type')
      )
-  as combinedJSON
+  as combined_JSON
 FROM "kttm_nested"
 LIMIT 1
 ```
 
 Returns the following:
 
-| `combinedJSON` |
+| `combined_JSON` |
 | -- |
 | `{"geo_ip": {"continent": "South America"},"event": {"type": "PercentClear"}}` |
 
