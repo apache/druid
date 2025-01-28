@@ -16,13 +16,13 @@
  * limitations under the License.
  */
 
-import { Icon, MenuDivider, MenuItem } from '@blueprintjs/core';
+import { Icon, MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import { fromDate, getLocalTimeZone } from '@internationalized/date';
 import { minute } from 'chronoshift';
 import { useMemo } from 'react';
 
-import { tickIcon, timezoneOffsetInMinutesToString } from '../../../utils';
+import { tickIcon, timezoneOffsetInMinutesToString } from '../../utils';
 
 const NAMED_TIMEZONES: string[] = [
   'America/Juneau', // -9:00
@@ -51,10 +51,11 @@ export interface TimezoneMenuItemsProps {
   sqlTimeZone: string | undefined;
   setSqlTimeZone(sqlTimeZone: string | undefined): void;
   defaultSqlTimeZone: string | undefined;
+  namedOnly?: boolean;
 }
 
 export const TimezoneMenuItems = function TimezoneMenuItems(props: TimezoneMenuItemsProps) {
-  const { sqlTimeZone, setSqlTimeZone, defaultSqlTimeZone } = props;
+  const { sqlTimeZone, setSqlTimeZone, defaultSqlTimeZone, namedOnly } = props;
 
   const { timezones, myTimezone, offsetsInMinutes, myOffsetInMinutes } = useMemo(() => {
     const now = new Date();
@@ -96,8 +97,7 @@ export const TimezoneMenuItems = function TimezoneMenuItems(props: TimezoneMenuI
     };
   }, []);
 
-  return [
-    <MenuDivider key="type" title="Timezone type" />,
+  const defaultItem = (
     <MenuItem
       key="default"
       icon={tickIcon(!sqlTimeZone)}
@@ -105,26 +105,36 @@ export const TimezoneMenuItems = function TimezoneMenuItems(props: TimezoneMenuI
       label={defaultSqlTimeZone}
       shouldDismissPopover={false}
       onClick={() => setSqlTimeZone(undefined)}
-    />,
+    />
+  );
+
+  const namedMenuItems = timezones.map(({ timezone, offsetInMinutes }) => (
+    <MenuItem
+      key={timezone}
+      icon={tickIcon(timezone === sqlTimeZone)}
+      text={
+        timezone === myTimezone ? (
+          <>
+            {timezone} <Icon icon={IconNames.STAR} data-tooltip="Browser timezone" />
+          </>
+        ) : (
+          timezone
+        )
+      }
+      label={`UTC${timezoneOffsetInMinutesToString(offsetInMinutes, false)}`}
+      shouldDismissPopover={false}
+      onClick={() => setSqlTimeZone(timezone)}
+    />
+  ));
+
+  if (namedOnly) {
+    return [defaultItem, ...namedMenuItems];
+  }
+
+  return [
+    defaultItem,
     <MenuItem key="named" icon={tickIcon(String(sqlTimeZone).includes('/'))} text="Named">
-      {timezones.map(({ timezone, offsetInMinutes }) => (
-        <MenuItem
-          key={timezone}
-          icon={tickIcon(timezone === sqlTimeZone)}
-          text={
-            timezone === myTimezone ? (
-              <>
-                {timezone} <Icon icon={IconNames.STAR} data-tooltip="Browser timezone" />
-              </>
-            ) : (
-              timezone
-            )
-          }
-          label={`UTC${timezoneOffsetInMinutesToString(offsetInMinutes, false)}`}
-          shouldDismissPopover={false}
-          onClick={() => setSqlTimeZone(timezone)}
-        />
-      ))}
+      {namedMenuItems}
     </MenuItem>,
     <MenuItem key="offset" icon={tickIcon(String(sqlTimeZone).includes(':'))} text="Offset">
       {offsetsInMinutes.map(offsetInMinutes => {
