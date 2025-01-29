@@ -115,7 +115,10 @@ class SqlSegmentMetadataTransaction implements SegmentMetadataTransaction
     final Set<String> existingSegmentIds = new HashSet<>();
     final String sql = "SELECT id FROM %s WHERE id in (%s)";
 
-    List<List<DataSegment>> partitions = Lists.partition(new ArrayList<>(segments), MAX_SEGMENTS_PER_BATCH);
+    List<List<DataSegment>> partitions = Lists.partition(
+        new ArrayList<>(segments),
+        MAX_SEGMENTS_PER_BATCH
+    );
     for (List<DataSegment> segmentList : partitions) {
       String segmentIds = segmentList.stream().map(
           segment -> "'" + StringUtils.escapeSql(segment.getId().toString()) + "'"
@@ -144,9 +147,17 @@ class SqlSegmentMetadataTransaction implements SegmentMetadataTransaction
   }
 
   @Override
-  public CloseableIterator<DataSegment> findUsedSegmentsOverlappingAnyOf(List<Interval> intervals)
+  public Set<DataSegment> findUsedSegmentsOverlappingAnyOf(List<Interval> intervals)
   {
-    return query.retrieveUsedSegments(dataSource, intervals);
+    try (CloseableIterator<DataSegment> iterator
+             = query.retrieveUsedSegments(dataSource, intervals)) {
+      final Set<DataSegment> segments = new HashSet<>();
+      iterator.forEachRemaining(segments::add);
+      return segments;
+    }
+    catch (IOException e) {
+      throw InternalServerError.exception(e, "Error while fetching segments overlapping intervals[%s].", intervals);
+    }
   }
 
   @Override

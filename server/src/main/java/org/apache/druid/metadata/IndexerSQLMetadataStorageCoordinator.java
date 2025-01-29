@@ -47,11 +47,10 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.metadata.segment.DatasourceSegmentMetadataWriter;
+import org.apache.druid.metadata.segment.SegmentMetadataReadTransaction;
 import org.apache.druid.metadata.segment.SegmentMetadataTransaction;
-import org.apache.druid.metadata.segment.SegmentsMetadataReadTransaction;
-import org.apache.druid.metadata.segment.SqlSegmentMetadataTransactionFactory;
+import org.apache.druid.metadata.segment.SegmentMetadataTransactionFactory;
 import org.apache.druid.segment.SegmentMetadata;
 import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.SegmentUtils;
@@ -92,7 +91,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -113,11 +111,11 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   private final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig;
   private final boolean schemaPersistEnabled;
 
-  private final SqlSegmentMetadataTransactionFactory transactionFactory;
+  private final SegmentMetadataTransactionFactory transactionFactory;
 
   @Inject
   public IndexerSQLMetadataStorageCoordinator(
-      SqlSegmentMetadataTransactionFactory transactionFactory,
+      SegmentMetadataTransactionFactory transactionFactory,
       ObjectMapper jsonMapper,
       MetadataStorageTablesConfig dbTables,
       SQLMetadataConnector connector,
@@ -183,7 +181,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
             final SegmentTimeline timeline = getTimelineForIntervals(transaction, intervals);
             return timeline.findNonOvershadowedObjectsInInterval(Intervals.ETERNITY, Partitions.ONLY_COMPLETE);
           } else {
-            return asSet(() -> transaction.findUsedSegmentsOverlappingAnyOf(intervals));
+            return transaction.findUsedSegmentsOverlappingAnyOf(intervals);
           }
         }
     );
@@ -262,21 +260,11 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   private SegmentTimeline getTimelineForIntervals(
       final SegmentMetadataTransaction transaction,
       final List<Interval> intervals
-  ) throws IOException
+  )
   {
-    try (final CloseableIterator<DataSegment> iterator
-             = transaction.findUsedSegmentsOverlappingAnyOf(intervals)) {
-      return SegmentTimeline.forSegments(iterator);
-    }
-  }
-
-  private static <T> Set<T> asSet(Supplier<CloseableIterator<T>> iteratorSupplier) throws IOException
-  {
-    try (CloseableIterator<T> iterator = iteratorSupplier.get()) {
-      final Set<T> retVal = new HashSet<>();
-      iterator.forEachRemaining(retVal::add);
-      return retVal;
-    }
+    return SegmentTimeline.forSegments(
+        transaction.findUsedSegmentsOverlappingAnyOf(intervals)
+    );
   }
 
   @Override
@@ -1963,7 +1951,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   private List<DataSegmentPlus> retrieveSegmentsById(
-      SegmentsMetadataReadTransaction transaction,
+      SegmentMetadataReadTransaction transaction,
       Set<String> segmentIds
   )
   {
@@ -2525,7 +2513,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
   private <T> T inReadOnlyDatasourceTransaction(
       String dataSource,
-      SegmentsMetadataReadTransaction.Callback<T> callback
+      SegmentMetadataReadTransaction.Callback<T> callback
   )
   {
     return transactionFactory.inReadOnlyDatasourceTransaction(dataSource, callback);

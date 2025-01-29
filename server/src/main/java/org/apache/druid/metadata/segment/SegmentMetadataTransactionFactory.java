@@ -17,31 +17,27 @@
  * under the License.
  */
 
-package org.apache.druid.metadata.segment.cache;
+package org.apache.druid.metadata.segment;
 
-public class NoopSegmentMetadataCache implements SegmentMetadataCache
+/**
+ * Factory for {@link SegmentMetadataTransaction}s.
+ */
+public interface SegmentMetadataTransactionFactory
 {
-  @Override
-  public void start()
-  {
+  /**
+   * Creates and executes a new read-only transaction for the given datasource.
+   */
+  <T> T inReadOnlyDatasourceTransaction(
+      String dataSource,
+      SegmentMetadataReadTransaction.Callback<T> callback
+  );
 
-  }
-
-  @Override
-  public void stop()
-  {
-
-  }
-
-  @Override
-  public boolean isReady()
-  {
-    return false;
-  }
-
-  @Override
-  public DataSource getDatasource(String dataSource)
-  {
-    throw new UnsupportedOperationException();
-  }
+  /**
+   * Creates and executes a new read-write transaction for the given datasource.
+   * The implementation may retry the transaction until it succeeds.
+   */
+  <T> T retryDatasourceTransaction(
+      String dataSource,
+      SegmentMetadataTransaction.Callback<T> callback
+  );
 }

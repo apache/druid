@@ -19,7 +19,6 @@
 
 package org.apache.druid.metadata.segment;
 
-import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.metadata.PendingSegmentRecord;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.server.http.DataSegmentPlus;
@@ -60,7 +59,7 @@ public interface DatasourceSegmentMetadataReader
   /**
    * Finds used segments that overlap with any of the given intervals.
    */
-  CloseableIterator<DataSegment> findUsedSegmentsOverlappingAnyOf(List<Interval> intervals);
+  Set<DataSegment> findUsedSegmentsOverlappingAnyOf(List<Interval> intervals);
 
   List<DataSegment> findUsedSegments(Set<String> segmentIds);
 

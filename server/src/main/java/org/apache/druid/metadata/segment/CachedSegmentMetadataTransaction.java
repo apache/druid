@@ -22,7 +22,6 @@ package org.apache.druid.metadata.segment;
 import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InternalServerError;
-import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.metadata.PendingSegmentRecord;
 import org.apache.druid.metadata.segment.cache.SegmentMetadataCache;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
@@ -175,7 +174,7 @@ class CachedSegmentMetadataTransaction implements SegmentMetadataTransaction
   }
 
   @Override
-  public CloseableIterator<DataSegment> findUsedSegmentsOverlappingAnyOf(List<Interval> intervals)
+  public Set<DataSegment> findUsedSegmentsOverlappingAnyOf(List<Interval> intervals)
   {
     return cacheReader().findUsedSegmentsOverlappingAnyOf(intervals);
   }

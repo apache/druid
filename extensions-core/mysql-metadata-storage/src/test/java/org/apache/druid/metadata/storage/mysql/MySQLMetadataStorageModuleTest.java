@@ -26,6 +26,8 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provides;
+import org.apache.druid.client.indexing.IndexingService;
+import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.JsonConfigurator;
@@ -33,9 +35,6 @@ import org.apache.druid.guice.LifecycleModule;
 import org.apache.druid.guice.MetadataConfigModule;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.security.EscalatorModule;
-import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
-import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
-import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.emitter.core.NoopEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.junit.Assert;
@@ -134,9 +133,11 @@ public class MySQLMetadataStorageModuleTest
               }
 
               @Provides
-              public ScheduledExecutorFactory getScheduledExecutorFactory(Lifecycle lifecycle)
+              @IndexingService
+              public DruidLeaderSelector getLeaderSelector()
               {
-                return ScheduledExecutors.createFactory(lifecycle);
+                // A provider for DruidLeaderSelector is needed by SqlSegmentMetadataTransactionFactory
+                return null;
               }
             }
         )

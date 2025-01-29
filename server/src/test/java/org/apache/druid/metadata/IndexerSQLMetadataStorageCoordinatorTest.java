@@ -141,7 +141,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     cachePollExecutor = new BlockingExecutorService("test-cache-poll-exec");
     segmentMetadataCache = new HeapMemorySegmentMetadataCache(
         mapper,
-        () -> new SegmentsMetadataManagerConfig(null, true),
+        () -> new SegmentsMetadataManagerConfig(null, useSegmentCache),
         derbyConnectorRule.metadataTablesConfigSupplier(),
         derbyConnector,
         (corePoolSize, nameFormat) -> new WrappingScheduledExecutorService(
@@ -157,6 +157,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     // Get the cache ready if required
     if (useSegmentCache) {
       segmentMetadataCache.start();
+      segmentMetadataCache.becomeLeader();
       cachePollExecutor.finishNextPendingTask();
     }
 
@@ -201,6 +202,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
   @After
   public void tearDown()
   {
+    segmentMetadataCache.stopBeingLeader();
     segmentMetadataCache.stop();
     leaderSelector.stopBeingLeader();
   }

@@ -21,22 +21,31 @@ package org.apache.druid.metadata.segment;
 
 import org.skife.jdbi.v2.Handle;
 
+import java.io.Closeable;
+
 /**
- * Represents a single transaction involving read/write of segment metadata into
+ * Represents a single transaction involving read of segment metadata into
  * the metadata store. A transaction is associated with a single instance of a
  * {@link Handle} and is meant to be short-lived.
  */
-public interface SegmentMetadataTransaction
-    extends SegmentMetadataReadTransaction, DatasourceSegmentMetadataWriter
+public interface SegmentMetadataReadTransaction
+    extends DatasourceSegmentMetadataReader, Closeable
 {
   /**
-   * Marks this transaction to be rolled back.
+   * @return The JDBI handle used in this transaction
    */
-  void setRollbackOnly();
+  Handle getHandle();
+
+  /**
+   * Completes the transaction by either committing it or rolling it back.
+   */
+  @Override
+  void close();
 
   @FunctionalInterface
   interface Callback<T>
   {
-    T inTransaction(SegmentMetadataTransaction transaction) throws Exception;
+    T inTransaction(SegmentMetadataReadTransaction transaction) throws Exception;
   }
+
 }

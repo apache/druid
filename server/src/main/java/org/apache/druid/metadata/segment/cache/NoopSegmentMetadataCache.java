@@ -17,35 +17,43 @@
  * under the License.
  */
 
-package org.apache.druid.metadata.segment;
+package org.apache.druid.metadata.segment.cache;
 
-import org.skife.jdbi.v2.Handle;
-
-import java.io.Closeable;
-
-/**
- * Represents a single transaction involving read of segment metadata into
- * the metadata store. A transaction is associated with a single instance of a
- * {@link Handle} and is meant to be short-lived.
- */
-public interface SegmentsMetadataReadTransaction
-    extends DatasourceSegmentMetadataReader, Closeable
+public class NoopSegmentMetadataCache implements SegmentMetadataCache
 {
-  /**
-   * @return The JDBI handle used in this transaction
-   */
-  Handle getHandle();
-
-  /**
-   * Completes the transaction by either committing it or rolling it back.
-   */
   @Override
-  void close();
-
-  @FunctionalInterface
-  interface Callback<T>
+  public void start()
   {
-    T inTransaction(SegmentsMetadataReadTransaction transaction) throws Exception;
+
   }
 
+  @Override
+  public void stop()
+  {
+
+  }
+
+  @Override
+  public void becomeLeader()
+  {
+
+  }
+
+  @Override
+  public void stopBeingLeader()
+  {
+
+  }
+
+  @Override
+  public boolean isEnabled()
+  {
+    return false;
+  }
+
+  @Override
+  public DataSource getDatasource(String dataSource)
+  {
+    throw new UnsupportedOperationException();
+  }
 }

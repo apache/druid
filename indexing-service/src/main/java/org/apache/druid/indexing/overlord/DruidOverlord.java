@@ -134,7 +134,6 @@ public class DruidOverlord
 
           // First add "half leader" services: everything required for APIs except the supervisor manager.
           // Then, become "half leader" so those APIs light up and supervisor initialization can proceed.
-          leaderLifecycle.addManagedInstance(segmentMetadataCache);
           leaderLifecycle.addManagedInstance(taskRunner);
           leaderLifecycle.addManagedInstance(taskQueue);
           leaderLifecycle.addHandler(
@@ -142,6 +141,7 @@ public class DruidOverlord
                 @Override
                 public void start()
                 {
+                  segmentMetadataCache.becomeLeader();
                   segmentAllocationQueue.becomeLeader();
                   taskMaster.becomeHalfLeader(taskRunner, taskQueue);
                 }
@@ -149,6 +149,7 @@ public class DruidOverlord
                 @Override
                 public void stop()
                 {
+                  segmentMetadataCache.stopBeingLeader();
                   taskMaster.stopBeingLeader();
                   segmentAllocationQueue.stopBeingLeader();
                 }

@@ -21,6 +21,7 @@ package org.apache.druid.metadata.segment;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
+import org.apache.druid.client.indexing.IndexingService;
 import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.SQLMetadataConnector;
@@ -36,7 +37,7 @@ import org.skife.jdbi.v2.TransactionStatus;
  * This class serves as a wrapper over the {@link SQLMetadataConnector} to
  * perform transactions specific to segment metadata.
  */
-public class SqlSegmentMetadataTransactionFactory
+public class SqlSegmentMetadataTransactionFactory implements SegmentMetadataTransactionFactory
 {
   private static final int QUIET_RETRIES = 3;
   private static final int MAX_RETRIES = 10;
@@ -52,7 +53,7 @@ public class SqlSegmentMetadataTransactionFactory
       ObjectMapper jsonMapper,
       MetadataStorageTablesConfig tablesConfig,
       SQLMetadataConnector connector,
-      DruidLeaderSelector leaderSelector,
+      @IndexingService DruidLeaderSelector leaderSelector,
       SegmentMetadataCache segmentMetadataCache
   )
   {
@@ -68,19 +69,20 @@ public class SqlSegmentMetadataTransactionFactory
     return MAX_RETRIES;
   }
 
+  @Override
   public <T> T inReadOnlyDatasourceTransaction(
       String dataSource,
-      SegmentsMetadataReadTransaction.Callback<T> callback
+      SegmentMetadataReadTransaction.Callback<T> callback
   )
   {
     return connector.inReadOnlyTransaction((handle, status) -> {
       final SegmentMetadataTransaction sqlTransaction
           = createSqlTransaction(dataSource, handle, status);
 
-      if (segmentMetadataCache.isReady()) {
+      if (segmentMetadataCache.isEnabled()) {
         final SegmentMetadataCache.DataSource datasourceCache
             = segmentMetadataCache.getDatasource(dataSource);
-        final SegmentsMetadataReadTransaction cachedTransaction
+        final SegmentMetadataReadTransaction cachedTransaction
             = new CachedSegmentMetadataTransaction(sqlTransaction, datasourceCache, leaderSelector);
 
         return datasourceCache.read(() -> executeReadAndClose(cachedTransaction, callback));
@@ -90,6 +92,7 @@ public class SqlSegmentMetadataTransactionFactory
     });
   }
 
+  @Override
   public <T> T retryDatasourceTransaction(
       String dataSource,
       SegmentMetadataTransaction.Callback<T> callback
@@ -100,7 +103,7 @@ public class SqlSegmentMetadataTransactionFactory
           final SegmentMetadataTransaction sqlTransaction
               = createSqlTransaction(dataSource, handle, status);
 
-          if (segmentMetadataCache.isReady()) {
+          if (segmentMetadataCache.isEnabled()) {
             final SegmentMetadataCache.DataSource datasourceCache
                 = segmentMetadataCache.getDatasource(dataSource);
             final SegmentMetadataTransaction cachedTransaction
@@ -124,11 +127,7 @@ public class SqlSegmentMetadataTransactionFactory
   {
     return new SqlSegmentMetadataTransaction(
         dataSource,
-        handle,
-        transactionStatus,
-        connector,
-        tablesConfig,
-        jsonMapper
+        handle, transactionStatus, connector, tablesConfig, jsonMapper
     );
   }
 
@@ -150,8 +149,8 @@ public class SqlSegmentMetadataTransactionFactory
   }
 
   private <T> T executeReadAndClose(
-      SegmentsMetadataReadTransaction transaction,
-      SegmentsMetadataReadTransaction.Callback<T> callback
+      SegmentMetadataReadTransaction transaction,
+      SegmentMetadataReadTransaction.Callback<T> callback
   ) throws Exception
   {
     try (transaction) {

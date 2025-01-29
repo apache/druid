@@ -20,8 +20,6 @@
 package org.apache.druid.metadata.segment.cache;
 
 import org.apache.druid.error.DruidException;
-import org.apache.druid.java.util.common.CloseableIterators;
-import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.metadata.PendingSegmentRecord;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.server.http.DataSegmentPlus;
@@ -32,7 +30,6 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -256,14 +253,12 @@ class DatasourceSegmentCache extends BaseCache
   }
 
   @Override
-  public CloseableIterator<DataSegment> findUsedSegmentsOverlappingAnyOf(List<Interval> intervals)
+  public Set<DataSegment> findUsedSegmentsOverlappingAnyOf(List<Interval> intervals)
   {
-    return CloseableIterators.withEmptyBaggage(
-        findUsedSegmentsPlusOverlappingAnyOf(intervals)
-            .stream()
-            .map(DataSegmentPlus::getDataSegment)
-            .iterator()
-    );
+    return findUsedSegmentsPlusOverlappingAnyOf(intervals)
+        .stream()
+        .map(DataSegmentPlus::getDataSegment)
+        .collect(Collectors.toSet());
   }
 
   @Override
@@ -408,17 +403,11 @@ class DatasourceSegmentCache extends BaseCache
   public int markSegmentsWithinIntervalAsUnused(Interval interval, DateTime updateTime)
   {
     int updatedCount = 0;
-    try (CloseableIterator<DataSegment> segmentIterator
-             = findUsedSegmentsOverlappingAnyOf(List.of(interval))) {
-      while (segmentIterator.hasNext()) {
-        boolean updated = addUnusedSegmentId(segmentIterator.next().getId());
-        if (updated) {
-          ++updatedCount;
-        }
+    for (DataSegment segment : findUsedSegmentsOverlappingAnyOf(List.of(interval))) {
+      boolean updated = addUnusedSegmentId(segment.getId());
+      if (updated) {
+        ++updatedCount;
       }
-    }
-    catch (IOException e) {
-      throw DruidException.defensive("Error while updating segments in cache");
     }
 
     return updatedCount;

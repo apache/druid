@@ -47,6 +47,7 @@ import org.joda.time.Interval;
 import org.skife.jdbi.v2.ResultIterator;
 
 import javax.annotation.Nullable;
+import javax.annotation.concurrent.GuardedBy;
 import javax.annotation.concurrent.ThreadSafe;
 import java.io.IOException;
 import java.sql.ResultSet;
@@ -58,13 +59,11 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 /**
- * In-memory implementation of {@link SegmentMetadataCache}, with no persistence
- * across restarts.
+ * In-memory implementation of {@link SegmentMetadataCache}.
  */
 @ThreadSafe
 public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
@@ -74,20 +73,22 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
 
   private enum CacheState
   {
-    STOPPED, STARTING, READY
+    STOPPED, STANDBY, SYNC_PENDING, SYNC_STARTED, READY
   }
 
   private final ObjectMapper jsonMapper;
   private final Duration pollDuration;
   private final boolean isCacheEnabled;
-  private final Supplier<MetadataStorageTablesConfig> tablesConfig;
+  private final MetadataStorageTablesConfig tablesConfig;
   private final SQLMetadataConnector connector;
 
   private final ScheduledExecutorService pollExecutor;
   private final ServiceEmitter emitter;
 
-  private final AtomicReference<CacheState> currentCacheState
-      = new AtomicReference<>(CacheState.STOPPED);
+  private final Object cacheStateLock = new Object();
+
+  @GuardedBy("cacheStateLock")
+  private volatile CacheState currentCacheState = CacheState.STOPPED;
 
   private final ConcurrentHashMap<String, DatasourceSegmentCache>
       datasourceToSegmentCache = new ConcurrentHashMap<>();
@@ -106,43 +107,66 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
     this.jsonMapper = jsonMapper;
     this.isCacheEnabled = config.get().isUseCache();
     this.pollDuration = config.get().getPollDuration().toStandardDuration();
-    this.tablesConfig = tablesConfig;
+    this.tablesConfig = tablesConfig.get();
     this.connector = connector;
-    this.pollExecutor = isCacheEnabled ? executorFactory.create(1, "SegmentsMetadataCache-%s") : null;
+    this.pollExecutor = isCacheEnabled ? executorFactory.create(1, "SegmentMetadataCache-%s") : null;
     this.emitter = emitter;
   }
 
 
   @Override
   @LifecycleStart
-  public synchronized void start()
+  public void start()
   {
-    if (isCacheEnabled && currentCacheState.compareAndSet(CacheState.STOPPED, CacheState.STARTING)) {
-      // Clean up any stray entries in the cache left over due to race conditions
-      tearDown();
-      pollExecutor.schedule(this::pollMetadataStore, pollDuration.getMillis(), TimeUnit.MILLISECONDS);
+    synchronized (cacheStateLock) {
+      if (isCacheEnabled && currentCacheState == CacheState.STOPPED) {
+        log.info("Starting poll of metadata store. Cache is now in STANDBY mode.");
+        pollExecutor.schedule(this::pollMetadataStore, pollDuration.getMillis(), TimeUnit.MILLISECONDS);
+        currentCacheState = CacheState.STANDBY;
+      }
     }
   }
 
-  /**
-   * This method is called only when leadership is lost or when the service is
-   * being stopped. Any transaction that is in progress when this method is
-   * invoked will fail.
-   */
   @Override
   @LifecycleStop
-  public synchronized void stop()
+  public void stop()
   {
-    if (isCacheEnabled) {
-      currentCacheState.set(CacheState.STOPPED);
-      tearDown();
+    synchronized (cacheStateLock) {
+      if (isCacheEnabled) {
+        log.info("Stopping poll of metadata store. Cache is now STOPPED.");
+        currentCacheState = CacheState.STOPPED;
+        pollExecutor.shutdownNow();
+        tearDown();
+      }
     }
   }
 
   @Override
-  public boolean isReady()
+  public void becomeLeader()
   {
-    return currentCacheState.get() == CacheState.READY;
+    synchronized (cacheStateLock) {
+      if (isCacheEnabled) {
+        log.info("We are now leader. Waiting to sync latest updates from metadata store.");
+        currentCacheState = CacheState.SYNC_PENDING;
+      }
+    }
+  }
+
+  @Override
+  public void stopBeingLeader()
+  {
+    synchronized (cacheStateLock) {
+      if (isCacheEnabled) {
+        log.info("Not leader anymore. Cache is now in STANDBY mode.");
+        currentCacheState = CacheState.STANDBY;
+      }
+    }
+  }
+
+  @Override
+  public boolean isEnabled()
+  {
+    return isCacheEnabled;
   }
 
   @Override
@@ -159,14 +183,47 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
 
   private void verifyCacheIsReady()
   {
-    if (!isReady()) {
-      throw DruidException.defensive("Segment metadata cache is not ready yet.");
+    synchronized (cacheStateLock) {
+      switch (currentCacheState) {
+        case STOPPED:
+        case STANDBY:
+          throw DruidException.defensive("Segment metadata cache has not been started.");
+        case SYNC_PENDING:
+        case SYNC_STARTED:
+          waitForCacheToFinishWarmup();
+          verifyCacheIsReady();
+        case READY:
+          // Cache is now ready for use
+      }
     }
   }
 
-  private boolean isStopped()
+  private void waitForCacheToFinishWarmup()
   {
-    return currentCacheState.get() == CacheState.STOPPED;
+    synchronized (cacheStateLock) {
+      while (currentCacheState == CacheState.SYNC_PENDING
+             || currentCacheState == CacheState.SYNC_STARTED) {
+        try {
+          cacheStateLock.wait();
+        }
+        catch (InterruptedException e) {
+          throw new RuntimeException(e);
+        }
+      }
+    }
+  }
+
+  private void markCacheAsReadyIfLeader()
+  {
+    synchronized (cacheStateLock) {
+      if (currentCacheState == CacheState.SYNC_STARTED) {
+        log.info("Sync has finished. Cache is now READY to serve requests.");
+        currentCacheState = CacheState.READY;
+
+        // State has changed from STARTING to READY, notify waiting threads
+        cacheStateLock.notifyAll();
+      }
+    }
   }
 
   private void tearDown()
@@ -178,63 +235,38 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
   private void pollMetadataStore()
   {
     final Stopwatch sincePollStart = Stopwatch.createStarted();
-    if (isStopped()) {
-      tearDown();
-      return;
+
+    synchronized (cacheStateLock) {
+      if (currentCacheState == CacheState.SYNC_PENDING) {
+        log.info("Started sync of latest updates from metadata store.");
+        currentCacheState = CacheState.SYNC_STARTED;
+      }
     }
 
     final Map<String, DatasourceSegmentSummary> datasourceToSummary = retrieveAllSegmentIds();
-
-    if (isStopped()) {
-      tearDown();
-      return;
-    }
+    log.info("Found segments for datasources: %s", datasourceToSummary);
 
     removeUnknownDatasources(datasourceToSummary);
     datasourceToSummary.forEach(this::removeUnknownSegmentIdsFromCache);
+
     datasourceToSummary.forEach(
         (datasource, summary) ->
             getCacheForDatasource(datasource)
                 .resetMaxUnusedIds(summary.intervalVersionToMaxUnusedPartition)
     );
 
-    if (isStopped()) {
-      tearDown();
-      return;
-    }
-
-    final int countOfRefreshedUsedSegments = datasourceToSummary.entrySet().stream().mapToInt(
-        entry -> retrieveAndRefreshUsedSegments(
-            entry.getKey(),
-            entry.getValue().segmentIdsToRefresh
-        )
-    ).sum();
-    if (countOfRefreshedUsedSegments > 0) {
-      log.info(
-          "Refreshed total [%d] used segments from metadata store.",
-          countOfRefreshedUsedSegments
-      );
-    }
-
-    if (isStopped()) {
-      tearDown();
-      return;
-    }
+    datasourceToSummary.forEach(this::retrieveAndRefreshUsedSegments);
 
     retrieveAndRefreshAllPendingSegments();
 
     emitMetric("poll/time", sincePollStart.millisElapsed());
     pollFinishTime.set(DateTimes.nowUtc());
 
-    if (isStopped()) {
-      tearDown();
-    } else {
-      currentCacheState.compareAndSet(CacheState.STARTING, CacheState.READY);
+    markCacheAsReadyIfLeader();
 
-      // Schedule the next poll
-      final long nextPollDelay = Math.max(pollDuration.getMillis() - sincePollStart.millisElapsed(), 0);
-      pollExecutor.schedule(this::pollMetadataStore, nextPollDelay, TimeUnit.MILLISECONDS);
-    }
+    // Schedule the next poll
+    final long nextPollDelay = Math.max(pollDuration.getMillis() - sincePollStart.millisElapsed(), 0);
+    pollExecutor.schedule(this::pollMetadataStore, nextPollDelay, TimeUnit.MILLISECONDS);
   }
 
   /**
@@ -245,11 +277,10 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
   private Map<String, DatasourceSegmentSummary> retrieveAllSegmentIds()
   {
     final Map<String, DatasourceSegmentSummary> datasourceToSummary = new HashMap<>();
-    final AtomicInteger countOfRefreshedUnusedSegments = new AtomicInteger(0);
 
     final String sql = StringUtils.format(
         "SELECT id, dataSource, used, used_status_last_updated FROM %s",
-        getSegmentsTable()
+        tablesConfig.getSegmentsTable()
     );
 
     connector.inReadOnlyTransaction((handle, status) -> {
@@ -276,8 +307,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
 
             if (segmentId != null) {
               if (cache.addUnusedSegmentId(segmentId)) {
-                countOfRefreshedUnusedSegments.incrementAndGet();
-                emitDatasourceMetric(record.dataSource, "refreshed/unused", 1);
+                summary.numUnusedSegmentsRefreshed++;
               }
 
               final int partitionNum = segmentId.getPartitionNum();
@@ -299,25 +329,26 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
       }
     });
 
-    if (countOfRefreshedUnusedSegments.get() > 0) {
-      log.info("Refreshed total [%d] unused segments from metadata store.", countOfRefreshedUnusedSegments.get());
-    }
-
     return datasourceToSummary;
   }
 
-  private int retrieveAndRefreshUsedSegments(
+  private void retrieveAndRefreshUsedSegments(
       String dataSource,
-      Set<String> segmentIdsToRefresh
+      DatasourceSegmentSummary summary
   )
   {
+    if (summary.segmentIdsToRefresh.isEmpty()) {
+      return;
+    }
+
     final DatasourceSegmentCache cache = getCacheForDatasource(dataSource);
     int numUpdatedUsedSegments = 0;
+
     try (
         CloseableIterator<DataSegmentPlus> iterator = connector.inReadOnlyTransaction(
             (handle, status) -> SqlSegmentsMetadataQuery
-                .forHandle(handle, connector, tablesConfig.get(), jsonMapper)
-                .retrieveSegmentsByIdIterator(dataSource, segmentIdsToRefresh)
+                .forHandle(handle, connector, tablesConfig, jsonMapper)
+                .retrieveSegmentsByIdIterator(dataSource, summary.segmentIdsToRefresh)
         )
     ) {
       while (iterator.hasNext()) {
@@ -332,7 +363,12 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
     }
 
     emitDatasourceMetric(dataSource, "refresh/used", numUpdatedUsedSegments);
-    return numUpdatedUsedSegments;
+    if (numUpdatedUsedSegments > 0) {
+      log.info(
+          "Refreshed [%d] used segments for datasource[%s] from metadata store.",
+          numUpdatedUsedSegments, dataSource
+      );
+    }
   }
 
   private void retrieveAndRefreshAllPendingSegments()
@@ -340,9 +376,10 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
     final String sql = StringUtils.format(
         "SELECT payload, sequence_name, sequence_prev_id, upgraded_from_segment_id"
         + " task_allocator_id, created_date FROM %1$s",
-        tablesConfig.get().getPendingSegmentsTable()
+        tablesConfig.getPendingSegmentsTable()
     );
 
+    final Map<String, Integer> datasourceToUpdatedCount = new HashMap<>();
     connector.inReadOnlyTransaction(
         (handle, status) -> handle
             .createQuery(sql)
@@ -352,16 +389,22 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
                 final PendingSegmentRecord record = PendingSegmentRecord.fromResultSet(r, jsonMapper);
                 final DatasourceSegmentCache cache = getCacheForDatasource(record.getId().getDataSource());
 
-                if (cache.shouldRefreshPendingSegment(record)) {
-                  cache.insertPendingSegment(record, false);
+                if (cache.shouldRefreshPendingSegment(record)
+                    && cache.insertPendingSegment(record, false)) {
+                  datasourceToUpdatedCount.merge(record.getId().getDataSource(), 1, Integer::sum);
                 }
-
-                return 0;
               }
               catch (Exception e) {
-                return 1;
+                log.makeAlert(e, "Error retrieving pending segments from metadata store.").emit();
+                return 0;
               }
-            })
+
+              return 0;
+            }).list()
+    );
+    datasourceToUpdatedCount.forEach(
+        (dataSource, updatedCount) ->
+            log.info("Refreshed [%d] pending segments for datasource[%s].", updatedCount, dataSource)
     );
   }
 
@@ -373,7 +416,10 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
                                 .filter(ds -> !datasourceToSummary.containsKey(ds))
                                 .collect(Collectors.toSet());
 
-    datasourcesNotInMetadataStore.forEach(datasourceToSegmentCache::remove);
+    if (!datasourcesNotInMetadataStore.isEmpty()) {
+      datasourcesNotInMetadataStore.forEach(datasourceToSegmentCache::remove);
+      log.info("Removed unknown datasources[%s] from cache.", datasourcesNotInMetadataStore);
+    }
   }
 
   /**
@@ -395,11 +441,6 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
       );
       emitDatasourceMetric(dataSource, "deleted/unknown", numSegmentsRemoved);
     }
-  }
-
-  private String getSegmentsTable()
-  {
-    return tablesConfig.get().getSegmentsTable();
   }
 
   private void emitMetric(String metric, long value)
@@ -464,6 +505,17 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
     final Set<String> persistedSegmentIds = new HashSet<>();
     final Set<String> segmentIdsToRefresh = new HashSet<>();
     final Map<Interval, Map<String, Integer>> intervalVersionToMaxUnusedPartition = new HashMap<>();
+    int numUnusedSegmentsRefreshed = 0;
+
+    @Override
+    public String toString()
+    {
+      return "DatasourceSegmentSummary{" +
+             "persistedSegmentIds=" + persistedSegmentIds +
+             ", segmentIdsToRefresh=" + segmentIdsToRefresh +
+             ", intervalVersionToMaxUnusedPartition=" + intervalVersionToMaxUnusedPartition +
+             '}';
+    }
   }
 
 }

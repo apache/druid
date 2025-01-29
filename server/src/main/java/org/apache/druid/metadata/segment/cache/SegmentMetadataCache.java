@@ -27,14 +27,30 @@ import org.apache.druid.metadata.segment.DatasourceSegmentMetadataWriter;
  */
 public interface SegmentMetadataCache
 {
+  /**
+   * Starts the cache on service start.
+   */
   void start();
 
+  /**
+   * Stops the cache on service stop.
+   */
   void stop();
 
   /**
-   * @return true if the cache is enabled and ready for reading and writing.
+   * Refreshes the cache once the service is elected leader.
    */
-  boolean isReady();
+  void becomeLeader();
+
+  /**
+   * Notifies the cache that the service has lost leadership.
+   */
+  void stopBeingLeader();
+
+  /**
+   * @return true if the cache is enabled
+   */
+  boolean isEnabled();
 
   DataSource getDatasource(String dataSource);
 

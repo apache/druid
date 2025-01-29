@@ -19,12 +19,10 @@
 
 package org.apache.druid.metadata.segment.cache;
 
-import com.google.common.collect.ImmutableList;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.http.DataSegmentPlus;
 import org.apache.druid.timeline.DataSegment;
@@ -36,7 +34,6 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.function.ThrowingRunnable;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -114,9 +111,9 @@ public class DatasourceSegmentCacheTest
     Assert.assertEquals(Set.of(segmentId), cache.findUsedSegmentIdsOverlapping(interval));
     Assert.assertEquals(Set.of(segmentId), cache.findUsedSegmentIdsOverlapping(Intervals.ETERNITY));
 
-    Assert.assertEquals(List.of(segment), asList(cache.findUsedSegmentsOverlappingAnyOf(List.of())));
-    Assert.assertEquals(List.of(segment), asList(cache.findUsedSegmentsOverlappingAnyOf(List.of(interval))));
-    Assert.assertEquals(List.of(segment), asList(cache.findUsedSegmentsOverlappingAnyOf(List.of(Intervals.ETERNITY))));
+    Assert.assertEquals(Set.of(segment), cache.findUsedSegmentsOverlappingAnyOf(List.of()));
+    Assert.assertEquals(Set.of(segment), cache.findUsedSegmentsOverlappingAnyOf(List.of(interval)));
+    Assert.assertEquals(Set.of(segment), cache.findUsedSegmentsOverlappingAnyOf(List.of(Intervals.ETERNITY)));
 
     Assert.assertEquals(Set.of(segmentPlus), cache.findUsedSegmentsPlusOverlappingAnyOf(List.of()));
     Assert.assertEquals(Set.of(segmentPlus), cache.findUsedSegmentsPlusOverlappingAnyOf(List.of(interval)));
@@ -154,7 +151,7 @@ public class DatasourceSegmentCacheTest
     Assert.assertNull(cache.findUsedSegment(segmentId.toString()));
     Assert.assertTrue(cache.findUsedSegments(Set.of(segmentId.toString())).isEmpty());
     Assert.assertTrue(cache.findUsedSegmentIdsOverlapping(segment.getInterval()).isEmpty());
-    Assert.assertTrue(asList(cache.findUsedSegmentsOverlappingAnyOf(List.of())).isEmpty());
+    Assert.assertTrue(cache.findUsedSegmentsOverlappingAnyOf(List.of()).isEmpty());
     Assert.assertTrue(cache.findUsedSegmentsPlusOverlappingAnyOf(List.of()).isEmpty());
 
     Assert.assertEquals(Set.of(segmentId.toString()), cache.findExistingSegmentIds(Set.of(segment)));
@@ -269,16 +266,6 @@ public class DatasourceSegmentCacheTest
     // Verify that only reset updates the highest ID
     cache.resetMaxUnusedIds(Map.of());
     Assert.assertNull(cache.findHighestUnusedSegmentId(segment.getInterval(), segment.getVersion()));
-  }
-
-  private static <T> List<T> asList(CloseableIterator<T> iterator)
-  {
-    try (iterator) {
-      return ImmutableList.copyOf(iterator);
-    }
-    catch (IOException e) {
-      throw new RuntimeException(e);
-    }
   }
 
   private static CreateDataSegments createUsedSegment()
