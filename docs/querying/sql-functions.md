@@ -1825,7 +1825,7 @@ You can enable support for the following complex data types by [loading their ex
 - `druid-tdigestsketch`: `tDigestSketch`
 
 * **Syntax:** `DECODE_BASE64_COMPLEX(dataType, expr)`
-* **Function type:** Scalar
+* **Function type:** Scalar, other
 
 <details><summary>Example</summary>
 
