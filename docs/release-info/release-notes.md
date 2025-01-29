@@ -30,7 +30,7 @@ Apache Druid 32.0.0 contains over $NUMBER_FEATURES new features, bug fixes, perf
 Replace {{MILESTONE}} with the correct milestone number. For example: https://github.com/apache/druid/issues?q=is%3Aclosed+milestone%3A28.0+sort%3Aupdated-desc+
 -->
 
-See the [complete set of changes](https://github.com/apache/druid/issues?q=is%3Aclosed+milestone%3A{{MILESTONE}}+sort%3Aupdated-desc+) for additional details, including bug fixes.
+See the [complete set of changes](https://github.com/apache/druid/issues?q=is%3Aclosed+milestone%3A32.0.0+sort%3Aupdated-desc+) for additional details, including bug fixes.
 
 Review the [upgrade notes](#upgrade-notes) and [incompatible changes](#incompatible-changes) before you upgrade to Druid {{DRUIDVERSION}}.
 If you are upgrading across multiple versions, see the [Upgrade notes](upgrade-notes.md) page, which lists upgrade notes for the most recent Druid versions.
