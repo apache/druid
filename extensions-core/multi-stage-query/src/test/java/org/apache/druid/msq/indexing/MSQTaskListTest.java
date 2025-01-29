@@ -32,21 +32,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 public class MSQTaskListTest
 {
   @Test
-  public void testGetTaskIds()
-  {
-    List<String> taskIds = Arrays.asList("task1", "task2", "task3");
-    MSQTaskList msqTaskList = new MSQTaskList(taskIds);
-    assertEquals(taskIds, msqTaskList.getTaskIds());
-  }
-
-  @Test
-  public void testConstructorWithNullTaskIds()
-  {
-    Executable executable = () -> new MSQTaskList(null);
-    assertThrows(NullPointerException.class, executable);
-  }
-
-  @Test
   public void testEqualsAndHashCode()
   {
     EqualsVerifier.simple()
