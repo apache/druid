@@ -60,6 +60,13 @@ public class GoogleByteSource extends ByteSource
   }
 
   @Override
+  public long size() throws IOException
+  {
+    return storage.size(bucket, path);
+  }
+
+
+  @Override
   public boolean equals(Object o)
   {
     if (this == o) {

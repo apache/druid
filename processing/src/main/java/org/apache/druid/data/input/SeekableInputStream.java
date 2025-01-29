@@ -17,23 +17,18 @@
  * under the License.
  */
 
-package org.apache.druid.data.input.parquet;
+package org.apache.druid.data.input;
 
-import org.apache.druid.java.util.common.parsers.JSONPathSpec;
-import org.apache.hadoop.conf.Configuration;
-import org.junit.Assert;
-import org.junit.Test;
+import java.io.IOException;
+import java.io.InputStream;
 
-public class ParquetInputFormatTest
+/**
+ * An InputStream that can seek to a specific position. This is useful for input formats that need to seek to a specific
+ * position in the input stream, such as Parquet. Seeking enables these formats to read partial data.
+ */
+public abstract class SeekableInputStream extends InputStream
 {
-  @Test
-  public void test_getWeightedSize_withoutCompression()
-  {
-    final ParquetInputFormat format = new ParquetInputFormat(JSONPathSpec.DEFAULT, false, false, new Configuration());
-    long unweightedSize = 100L;
-    Assert.assertEquals(
-        unweightedSize * ParquetInputFormat.SCALE_FACTOR,
-        format.getWeightedSize("file.parquet", unweightedSize)
-    );
-  }
+  public abstract long getPos() throws IOException;
+
+  public abstract void seek(long newPos) throws IOException;
 }
