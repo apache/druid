@@ -311,10 +311,8 @@ public class KillUnusedSegments implements CoordinatorDuty
   private int getAvailableKillTaskSlots(final CoordinatorDynamicConfig config, final CoordinatorRunStats stats)
   {
     final int killTaskCapacity = Math.min(
-        (int) (CoordinatorDutyUtils.getTotalWorkerCapacity(overlordClient) * Math.min(
-            config.getKillTaskSlotRatio(),
-            1.0
-        )),
+        (int) (CoordinatorDutyUtils.getTotalWorkerCapacity(overlordClient)
+               * Math.min(config.getKillTaskSlotRatio(), 1.0)),
         config.getMaxKillTaskSlots()
     );
 
@@ -338,8 +336,8 @@ public class KillUnusedSegments implements CoordinatorDuty
    */
   static List<Interval> limitToPeriod(final List<Interval> intervals, final Period maxPeriod)
   {
-    if (DateTimes.EPOCH.plus(maxPeriod).equals(DateTimes.EPOCH)) {
-      // maxPeriod is zero, return all intervals.
+    if (DateTimes.EPOCH.plus(maxPeriod).equals(DateTimes.EPOCH) || intervals.size() <= 1) {
+      // return all intervals.
       return intervals;
     } else {
       // maxPeriod is nonzero. First, find the earliest start.
