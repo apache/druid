@@ -1282,7 +1282,7 @@ Returns the following:
 
 ## BLOOM_FILTER
 
-Computes a [bloom filter](../development/extensions-core/bloom-filter.md) from values provided in an expression.
+Computes a [Bloom filter](../development/extensions-core/bloom-filter.md) from values provided in an expression.
 
 
 * **Syntax:** `BLOOM_FILTER(expr, numEntries)`  
@@ -1291,7 +1291,7 @@ Computes a [bloom filter](../development/extensions-core/bloom-filter.md) from v
 
 <details><summary>Example</summary>
 
-The following example returns a Base64-encoded bloom filter string for entries in `agent_category`:
+The following example returns a Base64-encoded Bloom filter string for entries in `agent_category`:
 
 ```sql
 SELECT
@@ -1318,14 +1318,14 @@ Returns the following:
 
 ## BLOOM_FILTER_TEST
 
-Returns true if an expression is contained in a Base64-encoded [bloom filter](../development/extensions-core/bloom-filter.md) string.
+Returns true if an expression is contained in a Base64-encoded [Bloom filter](../development/extensions-core/bloom-filter.md) string.
 
 * **Syntax:** `BLOOM_FILTER_TEST(expr, <STRING>)`
 * **Function type:** Scalar, other
 
 <details><summary>Example</summary>
 
-The following example returns `true` for the bloom filter string associated with `agent_filter` entry `Game console`:
+The following example returns `true` for the Bloom filter string associated with `agent_filter` entry `Game console`:
 
 ```sql
 SELECT
