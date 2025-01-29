@@ -1284,9 +1284,9 @@ Returns the following:
 
 Computes a [bloom filter](../development/extensions-core/bloom-filter.md) from values provided in an expression.
 
-`numEntries` specifies the maximum number of distinct values before the false positive rate increases.
 
-* **Syntax:** `BLOOM_FILTER(expr, numEntries)`
+* **Syntax:** `BLOOM_FILTER(expr, numEntries)`  
+  `numEntries` specifies the maximum number of distinct values before the false positive rate increases.
 * **Function type:** Aggregation
 
 <details><summary>Example</summary>
