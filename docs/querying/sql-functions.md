@@ -1348,7 +1348,7 @@ Returns the following:
 
 </details>
 
-[Learn more](sql-aggregations.md)
+[Learn more](sql-scalar.md#other-scalar-functions)
 
 
 ## BTRIM
