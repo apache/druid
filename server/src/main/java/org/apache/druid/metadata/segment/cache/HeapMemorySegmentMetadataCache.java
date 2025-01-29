@@ -21,6 +21,8 @@ package org.apache.druid.metadata.segment.cache;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
+import com.google.errorprone.annotations.ThreadSafe;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
@@ -47,8 +49,6 @@ import org.joda.time.Interval;
 import org.skife.jdbi.v2.ResultIterator;
 
 import javax.annotation.Nullable;
-import javax.annotation.concurrent.GuardedBy;
-import javax.annotation.concurrent.ThreadSafe;
 import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
