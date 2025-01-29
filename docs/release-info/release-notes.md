@@ -90,6 +90,22 @@ We recommend that you upgrade to Java 17.
 
 Hadoop-based ingestion is now deprecated. We recommend that you migrate to SQL-based ingestion. 
 
+#### Join hints in MSQ task engine queries
+
+Druid now supports hints for SQL JOIN queries that use the MSQ task engine. This allows queries to provide hints for the JOIN type that should be used at a per join level. Join hints recursively affect sub queries. 
+
+```sql
+select /*+ sort_merge */ w1.cityName, w2.countryName
+from
+(
+  select /*+ broadcast */ w3.cityName AS cityName, w4.countryName AS countryName from wikipedia w3 LEFT JOIN wikipedia-set2 w4 ON w3.regionName = w4.regionName
+) w1
+JOIN wikipedia-set1 w2 ON w1.cityName = w2.cityName
+where w1.cityName='New York';
+```
+
+(#17406)
+
 ### New Overlord APIs
 
 APIs for marking segments as used or unused have been moved from the Coordinator to the Overlord service:
@@ -208,9 +224,7 @@ The following fields are deprecated for window queries that use the MSQ task eng
 [#17433](https://github.com/apache/druid/pull/17433)
 
 
-#### Join hints
 
-SQL JOIN queries now include hints. This allows queries to hint the JOIN type that should be used at a per join level. Join hints recursively affect sub queries.
 
 [#17541](https://github.com/apache/druid/pull/17541)
 
