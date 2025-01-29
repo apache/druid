@@ -174,7 +174,7 @@ ModuleRepository.registerModule<TimeChartParameterValues>({
     },
   },
   component: function TimeChartModule(props) {
-    const { querySource, where, setWhere, parameterValues, stage, runSqlQuery } = props;
+    const { querySource, timezone, where, setWhere, parameterValues, stage, runSqlQuery } = props;
 
     const timeColumnName = querySource.columns.find(column => column.sqlType === 'TIMESTAMP')?.name;
     const timeGranularity =
@@ -191,6 +191,7 @@ ModuleRepository.registerModule<TimeChartParameterValues>({
     const dataQuery = useMemo(() => {
       return {
         querySource,
+        timezone,
         where,
         timeGranularity,
         measure,
@@ -201,6 +202,7 @@ ModuleRepository.registerModule<TimeChartParameterValues>({
       };
     }, [
       querySource,
+      timezone,
       where,
       timeGranularity,
       measure,
@@ -215,6 +217,7 @@ ModuleRepository.registerModule<TimeChartParameterValues>({
       processQuery: async (
         {
           querySource,
+          timezone,
           where,
           timeGranularity,
           measure,
@@ -234,11 +237,14 @@ ModuleRepository.registerModule<TimeChartParameterValues>({
         const vs = splitExpression
           ? (
               await runSqlQuery(
-                querySource
-                  .getInitQuery(where)
-                  .addSelect(splitExpression.cast('VARCHAR').as('v'), { addToGroupBy: 'end' })
-                  .changeOrderByExpression(measure.expression.toOrderByExpression('DESC'))
-                  .changeLimitValue(numberToStack),
+                {
+                  query: querySource
+                    .getInitQuery(where)
+                    .addSelect(splitExpression.cast('VARCHAR').as('v'), { addToGroupBy: 'end' })
+                    .changeOrderByExpression(measure.expression.toOrderByExpression('DESC'))
+                    .changeLimitValue(numberToStack),
+                  timezone,
+                },
                 cancelToken,
               )
             ).getColumnByIndex(0)!
@@ -259,30 +265,33 @@ ModuleRepository.registerModule<TimeChartParameterValues>({
         const effectiveVs = vs && showOthers ? vs.concat(OTHER_VALUE) : vs;
 
         const result = await runSqlQuery(
-          querySource
-            .getInitQuery(overqueryWhere(where, timeColumnName, granularity, oneExtra))
-            .applyIf(splitExpression && vs && !showOthers, q =>
-              q.addWhere(splitExpression!.cast('VARCHAR').in(vs!)),
-            )
-            .addSelect(F.timeFloor(C(timeColumnName), L(timeGranularity)).as(TIME_NAME), {
-              addToGroupBy: 'end',
-              addToOrderBy: 'end',
-              direction: 'DESC',
-            })
-            .applyIf(splitExpression, q => {
-              if (!splitExpression || !vs) return q; // Should never get here, doing this to make peace between eslint and TS
-              return q.addSelect(
-                (showOthers
-                  ? SqlCase.ifThenElse(splitExpression.in(vs), splitExpression, L(OTHER_VALUE))
-                  : splitExpression
-                )
-                  .cast('VARCHAR')
-                  .as(STACK_NAME),
-                { addToGroupBy: 'end' },
-              );
-            })
-            .addSelect(measure.expression.as(MEASURE_NAME))
-            .changeLimitValue(10000 * (effectiveVs ? Math.min(effectiveVs.length, 10) : 1)),
+          {
+            query: querySource
+              .getInitQuery(overqueryWhere(where, timeColumnName, granularity, oneExtra))
+              .applyIf(splitExpression && vs && !showOthers, q =>
+                q.addWhere(splitExpression!.cast('VARCHAR').in(vs!)),
+              )
+              .addSelect(F.timeFloor(C(timeColumnName), L(timeGranularity)).as(TIME_NAME), {
+                addToGroupBy: 'end',
+                addToOrderBy: 'end',
+                direction: 'DESC',
+              })
+              .applyIf(splitExpression, q => {
+                if (!splitExpression || !vs) return q; // Should never get here, doing this to make peace between eslint and TS
+                return q.addSelect(
+                  (showOthers
+                    ? SqlCase.ifThenElse(splitExpression.in(vs), splitExpression, L(OTHER_VALUE))
+                    : splitExpression
+                  )
+                    .cast('VARCHAR')
+                    .as(STACK_NAME),
+                  { addToGroupBy: 'end' },
+                );
+              })
+              .addSelect(measure.expression.as(MEASURE_NAME))
+              .changeLimitValue(10000 * (effectiveVs ? Math.min(effectiveVs.length, 10) : 1)),
+            timezone,
+          },
           cancelToken,
         );
 
@@ -322,7 +331,8 @@ ModuleRepository.registerModule<TimeChartParameterValues>({
             markType={parameterValues.markType}
             curveType={parameterValues.curveType}
             stage={stage}
-            yAxis="right"
+            timezone={timezone}
+            yAxisPosition="right"
             domainRange={domainRange}
             onChangeRange={([start, end]) => {
               setWhere(

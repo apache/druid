@@ -61,5 +61,6 @@ export * from './table-clickable-cell/table-clickable-cell';
 export * from './table-column-selector/table-column-selector';
 export * from './table-filterable-cell/table-filterable-cell';
 export * from './timed-button/timed-button';
+export * from './timezone-menu-items/timezone-menu-items';
 export * from './view-control-bar/view-control-bar';
 export * from './warning-checklist/warning-checklist';

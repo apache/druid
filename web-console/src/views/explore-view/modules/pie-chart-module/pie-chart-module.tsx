@@ -126,13 +126,13 @@ ModuleRepository.registerModule<PieChartParameterValues>({
     const [sourceDataState, queryManager] = useQueryManager({
       query: dataQueries,
       processQuery: async ({ mainQuery, splitExpression, othersPartialQuery }, cancelToken) => {
-        const result = await runSqlQuery(mainQuery, cancelToken);
+        const result = await runSqlQuery({ query: mainQuery }, cancelToken);
         const data = result.toObjectArray();
 
         if (splitExpression && othersPartialQuery) {
-          const othersResult = await runSqlQuery(
-            othersPartialQuery.addWhere(splitExpression.notIn(result.getColumnByIndex(0)!)),
-          );
+          const othersResult = await runSqlQuery({
+            query: othersPartialQuery.addWhere(splitExpression.notIn(result.getColumnByIndex(0)!)),
+          });
           data.push({ name: 'Others', value: othersResult.rows[0][0], __isOthers: true });
         }
 

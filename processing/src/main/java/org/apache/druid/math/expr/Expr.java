@@ -468,7 +468,7 @@ public interface Expr extends Cacheable
    */
   interface VectorInputBinding extends VectorInputBindingInspector
   {
-    <T> T[] getObjectVector(String name);
+    Object[] getObjectVector(String name);
 
     long[] getLongVector(String name);
 
