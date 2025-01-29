@@ -131,6 +131,7 @@ public class KillUnusedSegmentsTest
         .withCleanupPeriod(Duration.standardSeconds(0))
         .withDurationToRetain(Duration.standardHours(36))
         .withMaxSegmentsToKill(10)
+        .withMaxIntervalToKill(Period.ZERO)
         .withBufferPeriod(Duration.standardSeconds(1));
     dynamicConfigBuilder = CoordinatorDynamicConfig.builder()
         .withKillTaskSlotRatio(1.0);
@@ -142,6 +143,33 @@ public class KillUnusedSegmentsTest
   public void testKillWithDefaultCoordinatorConfig()
   {
     configBuilder = KillUnusedSegmentsConfig.builder();
+    dynamicConfigBuilder = CoordinatorDynamicConfig.builder();
+
+    final DateTime sixtyDaysAgo = NOW.minusDays(60);
+
+    createAndAddUnusedSegment(DS1, YEAR_OLD, VERSION, sixtyDaysAgo);
+    createAndAddUnusedSegment(DS1, MONTH_OLD, VERSION, sixtyDaysAgo);
+    createAndAddUnusedSegment(DS1, DAY_OLD, VERSION, sixtyDaysAgo);
+    createAndAddUnusedSegment(DS1, HOUR_OLD, VERSION, sixtyDaysAgo);
+    createAndAddUnusedSegment(DS1, NEXT_DAY, VERSION, sixtyDaysAgo);
+    createAndAddUnusedSegment(DS1, NEXT_MONTH, VERSION, sixtyDaysAgo);
+    createAndAddUnusedSegment(DS1, Intervals.ETERNITY, VERSION, sixtyDaysAgo);
+
+    initDuty();
+    final CoordinatorRunStats stats = runDutyAndGetStats();
+
+    Assert.assertEquals(1, stats.get(Stats.Kill.AVAILABLE_SLOTS));
+    Assert.assertEquals(1, stats.get(Stats.Kill.SUBMITTED_TASKS));
+    Assert.assertEquals(1, stats.get(Stats.Kill.MAX_SLOTS));
+    Assert.assertEquals(1, stats.get(Stats.Kill.ELIGIBLE_UNUSED_SEGMENTS, DS1_STAT_KEY));
+
+    validateLastKillStateAndReset(DS1, Intervals.ETERNITY);
+  }
+
+  @Test
+  public void testKillWithDefaultCoordinatorConfigPlusZeroMaxIntervalToKill()
+  {
+    configBuilder = KillUnusedSegmentsConfig.builder().withMaxIntervalToKill(Period.ZERO);
     dynamicConfigBuilder = CoordinatorDynamicConfig.builder();
 
     final DateTime sixtyDaysAgo = NOW.minusDays(60);
