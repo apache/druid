@@ -20,9 +20,11 @@
 package org.apache.druid.msq.indexing.error;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 
+import javax.annotation.Nullable;
 import java.util.Objects;
 
 @JsonTypeName(WorkerRpcFailedFault.CODE)
@@ -31,18 +33,31 @@ public class WorkerRpcFailedFault extends BaseMSQFault
   public static final String CODE = "WorkerRpcFailed";
 
   private final String workerTaskId;
+  private final String errorMsg;
 
   @JsonCreator
-  public WorkerRpcFailedFault(@JsonProperty("workerTaskId") final String workerTaskId)
+  public WorkerRpcFailedFault(
+      @JsonProperty("workerTaskId") final String workerTaskId,
+      @JsonProperty("errorMsg") @Nullable final String errorMsg
+  )
   {
-    super(CODE, "RPC call to task failed unrecoverably: [%s]", workerTaskId);
+    super(CODE, "RPC to worker[%s] failed%s", workerTaskId, errorMsg != null ? ": " + errorMsg : "");
     this.workerTaskId = workerTaskId;
+    this.errorMsg = errorMsg;
   }
 
   @JsonProperty
   public String getWorkerTaskId()
   {
     return workerTaskId;
+  }
+
+  @Nullable
+  @JsonProperty
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  public String getErrorMsg()
+  {
+    return errorMsg;
   }
 
   @Override
@@ -58,12 +73,12 @@ public class WorkerRpcFailedFault extends BaseMSQFault
       return false;
     }
     WorkerRpcFailedFault that = (WorkerRpcFailedFault) o;
-    return Objects.equals(workerTaskId, that.workerTaskId);
+    return Objects.equals(workerTaskId, that.workerTaskId) && Objects.equals(errorMsg, that.errorMsg);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(super.hashCode(), workerTaskId);
+    return Objects.hash(super.hashCode(), workerTaskId, errorMsg);
   }
 }
