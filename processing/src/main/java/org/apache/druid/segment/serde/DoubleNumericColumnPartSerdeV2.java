@@ -147,7 +147,8 @@ public class DoubleNumericColumnPartSerdeV2 implements ColumnPartSerde
       int initialPos = buffer.position();
       final Supplier<ColumnarDoubles> column = CompressedColumnarDoublesSuppliers.fromByteBuffer(
           buffer,
-          byteOrder
+          byteOrder,
+          builder.getFileMapper()
       );
 
       buffer.position(initialPos + offset);

@@ -142,7 +142,8 @@ public class ScalarDoubleColumnAndIndexSupplier implements Supplier<NestedCommon
 
         final Supplier<ColumnarDoubles> doubles = CompressedColumnarDoublesSuppliers.fromByteBuffer(
             doublesValueColumn,
-            byteOrder
+            byteOrder,
+            columnBuilder.getFileMapper()
         );
         final ByteBuffer valueIndexBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
             mapper,

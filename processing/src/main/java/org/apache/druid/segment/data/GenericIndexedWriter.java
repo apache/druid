@@ -52,6 +52,7 @@ import java.nio.channels.WritableByteChannel;
 public class GenericIndexedWriter<T> implements DictionaryWriter<T>
 {
   private static final int PAGE_SIZE = 4096;
+  public static final int MAX_FILE_SIZE = Integer.MAX_VALUE - PAGE_SIZE;
 
   private static final MetaSerdeHelper<GenericIndexedWriter> SINGLE_FILE_META_SERDE_HELPER = MetaSerdeHelper
       .firstWriteByte((GenericIndexedWriter x) -> GenericIndexed.VERSION_ONE)
@@ -77,13 +78,15 @@ public class GenericIndexedWriter<T> implements DictionaryWriter<T>
       final String filenameBase,
       final CompressionStrategy compressionStrategy,
       final int bufferSize,
+      final int fileSizeLimit,
       final Closer closer
   )
   {
     GenericIndexedWriter<ByteBuffer> writer = new GenericIndexedWriter<>(
         segmentWriteOutMedium,
         filenameBase,
-        compressedByteBuffersWriteObjectStrategy(compressionStrategy, bufferSize, closer)
+        compressedByteBuffersWriteObjectStrategy(compressionStrategy, bufferSize, closer),
+        fileSizeLimit
     );
     writer.objectsSorted = false;
     return writer;
@@ -169,7 +172,7 @@ public class GenericIndexedWriter<T> implements DictionaryWriter<T>
       ObjectStrategy<T> strategy
   )
   {
-    this(segmentWriteOutMedium, filenameBase, strategy, Integer.MAX_VALUE & ~PAGE_SIZE);
+    this(segmentWriteOutMedium, filenameBase, strategy, MAX_FILE_SIZE);
   }
 
   public GenericIndexedWriter(

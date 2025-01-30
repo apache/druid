@@ -40,7 +40,8 @@ public class V3CompressedVSizeColumnarMultiIntsSerializer extends ColumnarMultiI
       final SegmentWriteOutMedium segmentWriteOutMedium,
       final String filenameBase,
       final int maxValue,
-      final CompressionStrategy compression
+      final CompressionStrategy compression,
+      final int fileSizeLimit
   )
   {
     return new V3CompressedVSizeColumnarMultiIntsSerializer(
@@ -48,20 +49,22 @@ public class V3CompressedVSizeColumnarMultiIntsSerializer extends ColumnarMultiI
         new CompressedColumnarIntsSerializer(
             columnName,
             segmentWriteOutMedium,
-            filenameBase,
+            filenameBase + ".offsets",
             CompressedColumnarIntsSupplier.MAX_INTS_IN_BUFFER,
             IndexIO.BYTE_ORDER,
             compression,
+            fileSizeLimit,
             segmentWriteOutMedium.getCloser()
         ),
         new CompressedVSizeColumnarIntsSerializer(
             columnName,
             segmentWriteOutMedium,
-            filenameBase,
+            filenameBase + ".values",
             maxValue,
             CompressedVSizeColumnarIntsSupplier.maxIntsInBufferForValue(maxValue),
             IndexIO.BYTE_ORDER,
             compression,
+            fileSizeLimit,
             segmentWriteOutMedium.getCloser()
         )
     );
