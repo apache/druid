@@ -381,7 +381,7 @@ If you're already using this feature, you don't need to take any action.
 ### Developer notes
 
 - Improved dependency support between extensions. When an extension has a dependency on another extension, it now tries to use the dependency's class loader to find classes required classes [#16973](https://github.com/apache/druid/pull/16973)
-- Coordinator  APIs for marking segments as used or unused. Use the Overlord API instead. For a full list, see [New Overlord APIs](#new-overlord-apis) or [#17545](https://github.com/apache/druid/pull/17545)
+- Coordinator APIs for marking segments as used or unused are now deprecated and will be removed in a future release. Use the corresponding Overlord APIs instead. For a full list, see [New Overlord APIs](#new-overlord-apis) or [#17545](https://github.com/apache/druid/pull/17545)
 
 #### Dependency updates
 
