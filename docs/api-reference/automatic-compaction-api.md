@@ -49,7 +49,7 @@ Note that this endpoint returns an HTTP `200 OK` message code even if the dataso
 
 #### URL
 
-`POST` `/druid/coordinator/v1/config/compaction`
+<code class="postAPI">POST</code> <code>/druid/coordinator/v1/config/compaction</code>
 
 #### Responses
 
@@ -138,7 +138,7 @@ Removes the automatic compaction configuration for a datasource. This updates th
 
 #### URL
 
-`DELETE` `/druid/coordinator/v1/config/compaction/{dataSource}`
+<code class="deleteAPI">DELETE</code> <code>/druid/coordinator/v1/config/compaction/&#123;dataSource&#125;</code>
 
 #### Responses
 
@@ -196,7 +196,7 @@ Note that while the max compaction tasks can theoretically be set to 2147483647,
 
 #### URL
 
-`POST` `/druid/coordinator/v1/config/compaction/taskslots`
+<code class="postAPI">POST</code> <code>/druid/coordinator/v1/config/compaction/taskslots</code>
 
 #### Query parameters
 
@@ -268,7 +268,7 @@ You can use this endpoint to retrieve `compactionTaskSlotRatio` and `maxCompacti
 
 #### URL
 
-`GET` `/druid/coordinator/v1/config/compaction`
+<code class="getAPI">GET</code> <code>/druid/coordinator/v1/config/compaction</code>
 
 #### Responses
 
@@ -417,7 +417,7 @@ Retrieves the automatic compaction configuration for a datasource.
 
 #### URL
 
-`GET` `/druid/coordinator/v1/config/compaction/{dataSource}`
+<code class="getAPI">GET</code> <code>/druid/coordinator/v1/config/compaction/&#123;dataSource&#125;</code>
 
 #### Responses
 
@@ -529,7 +529,7 @@ The response contains a list of objects with the following keys:
 
 #### URL
 
-`GET` `/druid/coordinator/v1/config/compaction/{dataSource}/history`
+<code class="getAPI">GET</code> <code>/druid/coordinator/v1/config/compaction/&#123;dataSource&#125;/history</code>
 
 #### Query parameters
 * `interval` (optional)
@@ -689,7 +689,7 @@ Returns the total size of segments awaiting compaction for a given datasource. R
 
 #### URL
 
-`GET` `/druid/coordinator/v1/compaction/progress?dataSource={dataSource}`
+<code class="getAPI">GET</code> <code>druid/coordinator/v1/compaction/progress?dataSource=&#123;dataSource&#125;</code>
 
 #### Query parameter
 * `dataSource` (required)
@@ -773,7 +773,7 @@ The `latestStatus` object has the following properties:
 
 #### URL
 
-`GET` `/druid/coordinator/v1/compaction/status`
+<code class="getAPI">GET</code> <code>/druid/coordinator/v1/compaction/status</code>
 
 #### Query parameters
 * `dataSource` (optional)
