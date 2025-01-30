@@ -964,37 +964,31 @@ public class SqlTestFramework
     @Named("empty")
     public SpecificSegmentsQuerySegmentWalker createEmptyWalker(QueryRunnerFactoryConglomerate conglomerate,
         JoinableFactoryWrapper joinableFactory, Injector injector, QueryScheduler queryScheduler,
-        SegmentWrangler segmentWrangler, GroupByQueryConfig groupByQueryConfig)
+        SegmentWrangler segmentWrangler, GroupByQueryConfig groupByQueryConfig,
+        ServiceEmitter emitter         )
     {
-      final Injector injector1 = injector;
-      final QueryRunnerFactoryConglomerate conglomerate1 = conglomerate;
-      final SegmentWrangler segmentWrangler1 = segmentWrangler;
-      final JoinableFactoryWrapper joinableFactoryWrapper = joinableFactory;
-      final QueryScheduler scheduler = queryScheduler;
-      final GroupByQueryConfig groupByQueryConfig1 = groupByQueryConfig;
       Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> timelines = new HashMap<>();
-      NoopServiceEmitter emitter = new NoopServiceEmitter();
       ServerConfig serverConfig = new ServerConfig();
       SpecificSegmentsQuerySegmentWalker walker = new SpecificSegmentsQuerySegmentWalker(
           timelines,
           QueryStackTests.createClientQuerySegmentWalker(
-              injector1,
+              injector,
               QueryStackTests.createClusterQuerySegmentWalker(
                   timelines,
-                  conglomerate1,
-                  scheduler,
-                  groupByQueryConfig1,
-                  injector1
+                  conglomerate,
+                  queryScheduler,
+                  groupByQueryConfig,
+                  injector
               ),
               QueryStackTests.createLocalQuerySegmentWalker(
-                  conglomerate1,
-                  segmentWrangler1,
-                  joinableFactoryWrapper,
-                  scheduler,
+                  conglomerate,
+                  segmentWrangler,
+                  joinableFactory,
+                  queryScheduler,
                   emitter
               ),
-              conglomerate1,
-              joinableFactoryWrapper.getJoinableFactory(),
+              conglomerate,
+              joinableFactory.getJoinableFactory(),
               serverConfig,
               emitter
           )
