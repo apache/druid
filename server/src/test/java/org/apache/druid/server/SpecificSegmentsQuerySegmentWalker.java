@@ -119,6 +119,9 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
   )
   {
     Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> timelines = new HashMap<>();
+    NoopServiceEmitter emitter = new NoopServiceEmitter();
+    ServerConfig serverConfig = new ServerConfig();
+
     return new SpecificSegmentsQuerySegmentWalker(
         timelines,
         QueryStackTests.createClientQuerySegmentWalker(
@@ -135,12 +138,12 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
                 segmentWrangler,
                 joinableFactoryWrapper,
                 scheduler,
-                new NoopServiceEmitter()
+                emitter
             ),
             conglomerate,
             joinableFactoryWrapper.getJoinableFactory(),
-            new ServerConfig(),
-            new NoopServiceEmitter()
+            serverConfig,
+            emitter
         )
     );
   }
