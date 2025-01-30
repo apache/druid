@@ -69,6 +69,7 @@ import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.topn.TopNQueryConfig;
 import org.apache.druid.quidem.TestSqlModule;
 import org.apache.druid.segment.DefaultColumnFormatConfig;
+import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.QueryLifecycle;
 import org.apache.druid.server.QueryLifecycleFactory;
@@ -439,16 +440,17 @@ public class SqlTestFramework
     public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
         final QueryRunnerFactoryConglomerate conglomerate,
         final JoinableFactoryWrapper joinableFactory,
-        final Injector injector
-    )
+        final Injector injector)
     {
-      return TestDataBuilder.createMockWalker(
+      SpecificSegmentsQuerySegmentWalker walker = SpecificSegmentsQuerySegmentWalker.createWalker(
           injector,
           conglomerate,
-          tempDirProducer.newTempFolder("segments"),
+          injector.getInstance(SegmentWrangler.class),
+          joinableFactory,
           QueryStackTests.DEFAULT_NOOP_SCHEDULER,
-          joinableFactory
+          injector.getInstance(GroupByQueryConfig.class)
       );
+      return TestDataBuilder.addDataSetsToWalker(tempDirProducer.newTempFolder("segments"), walker);
     }
 
     @Override
