@@ -190,6 +190,32 @@ public class QueryStackTests
     );
   }
 
+  public static ClientQuerySegmentWalker createClientQuerySegmentWalker1(
+      final Injector injector,
+      final QuerySegmentWalker clusterWalker,
+      final QuerySegmentWalker localWalker,
+      final QueryRunnerFactoryConglomerate conglomerate,
+      final JoinableFactory joinableFactory,
+      final ServerConfig serverConfig,
+      final ServiceEmitter emitter
+  )
+  {
+    return new ClientQuerySegmentWalker(
+        emitter,
+        clusterWalker,
+        localWalker,
+        conglomerate,
+        joinableFactory,
+        new RetryQueryRunnerConfig(),
+        injector.getInstance(ObjectMapper.class),
+        serverConfig,
+        injector.getInstance(Cache.class),
+        injector.getInstance(CacheConfig.class),
+        new SubqueryGuardrailHelper(null, JvmUtils.getRuntimeInfo().getMaxHeapSizeBytes(), 1),
+        new SubqueryCountStatsProvider()
+    );
+  }
+
   public static TestClusterQuerySegmentWalker createClusterQuerySegmentWalker(
       Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> timelines,
       QueryRunnerFactoryConglomerate conglomerate,

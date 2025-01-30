@@ -29,6 +29,8 @@ import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.TypeLiteral;
+import org.apache.druid.client.cache.Cache;
+import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.guice.DruidInjectorBuilder;
@@ -57,6 +59,7 @@ import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryWatcher;
+import org.apache.druid.query.RetryQueryRunnerConfig;
 import org.apache.druid.query.TestBufferPool;
 import org.apache.druid.query.groupby.DefaultGroupByQueryMetricsFactory;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
@@ -72,17 +75,20 @@ import org.apache.druid.segment.DefaultColumnFormatConfig;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
+import org.apache.druid.server.ClientQuerySegmentWalker;
 import org.apache.druid.server.LocalQuerySegmentWalker;
 import org.apache.druid.server.QueryLifecycle;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
+import org.apache.druid.server.SubqueryGuardrailHelper;
 import org.apache.druid.server.TestClusterQuerySegmentWalker;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.log.TestRequestLogger;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
+import org.apache.druid.server.metrics.SubqueryCountStatsProvider;
 import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
@@ -110,6 +116,7 @@ import org.apache.druid.sql.guice.SqlModule;
 import org.apache.druid.sql.hook.DruidHookDispatcher;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
+import org.apache.druid.utils.JvmUtils;
 
 import javax.inject.Named;
 
@@ -974,25 +981,47 @@ public class SqlTestFramework
     @Named("empty")
     @LazySingleton
     public SpecificSegmentsQuerySegmentWalker createEmptyWalker(QueryRunnerFactoryConglomerate conglomerate,
-        JoinableFactoryWrapper joinableFactory, Injector injector, QueryScheduler queryScheduler,
+        JoinableFactoryWrapper joinableFactory, Injector injector,
         SegmentWrangler segmentWrangler, GroupByQueryConfig groupByQueryConfig,
         ServiceEmitter emitter,
         @Named(TestClusterQuerySegmentWalker.TIMELINES_KEY) Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> timelines,
-        TestClusterQuerySegmentWalker testClusterQuerySegmentWalker, LocalQuerySegmentWalker testLocalQuerySegmentWalker)
+        TestClusterQuerySegmentWalker testClusterQuerySegmentWalker, LocalQuerySegmentWalker testLocalQuerySegmentWalker, ServerConfig serverConfig,
+        ClientQuerySegmentWalker clientQuerySegmentWalker)
     {
-      ServerConfig serverConfig = new ServerConfig();
       return new SpecificSegmentsQuerySegmentWalker(
           timelines,
-          QueryStackTests.createClientQuerySegmentWalker(
-              injector,
-              testClusterQuerySegmentWalker,
-              testLocalQuerySegmentWalker,
-              conglomerate,
-              joinableFactory.getJoinableFactory(),
-              serverConfig,
-              emitter
-          )
+          clientQuerySegmentWalker
       );
+    }
+
+    @Provides
+    @LazySingleton
+    private ClientQuerySegmentWalker makeClientQuerySegmentWalker(QueryRunnerFactoryConglomerate conglomerate,
+        JoinableFactoryWrapper joinableFactory, Injector injector, ServiceEmitter emitter,
+        TestClusterQuerySegmentWalker testClusterQuerySegmentWalker,
+        LocalQuerySegmentWalker testLocalQuerySegmentWalker, ServerConfig serverConfig)
+    {
+      return new ClientQuerySegmentWalker(
+          emitter,
+          testClusterQuerySegmentWalker,
+          testLocalQuerySegmentWalker,
+          conglomerate,
+          joinableFactory.getJoinableFactory(),
+          new RetryQueryRunnerConfig(),
+          injector.getInstance(ObjectMapper.class),
+          serverConfig,
+          injector.getInstance(Cache.class),
+          injector.getInstance(CacheConfig.class),
+          new SubqueryGuardrailHelper(null, JvmUtils.getRuntimeInfo().getMaxHeapSizeBytes(), 1),
+          new SubqueryCountStatsProvider()
+      );
+    }
+
+    @Provides
+    @LazySingleton
+    public SubqueryGuardrailHelper makeSubqueryGuardrailHelper()
+    {
+      return new SubqueryGuardrailHelper(null, JvmUtils.getRuntimeInfo().getMaxHeapSizeBytes(), 1);
     }
 
     @Provides
