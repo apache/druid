@@ -73,7 +73,6 @@ import org.apache.druid.query.topn.TopNQueryConfig;
 import org.apache.druid.quidem.TestSqlModule;
 import org.apache.druid.segment.DefaultColumnFormatConfig;
 import org.apache.druid.segment.ReferenceCountingSegment;
-import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.ClientQuerySegmentWalker;
 import org.apache.druid.server.LocalQuerySegmentWalker;
@@ -980,12 +979,8 @@ public class SqlTestFramework
     @Provides
     @Named("empty")
     @LazySingleton
-    public SpecificSegmentsQuerySegmentWalker createEmptyWalker(QueryRunnerFactoryConglomerate conglomerate,
-        JoinableFactoryWrapper joinableFactory, Injector injector,
-        SegmentWrangler segmentWrangler, GroupByQueryConfig groupByQueryConfig,
-        ServiceEmitter emitter,
+    public SpecificSegmentsQuerySegmentWalker createEmptyWalker(
         @Named(TestClusterQuerySegmentWalker.TIMELINES_KEY) Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> timelines,
-        TestClusterQuerySegmentWalker testClusterQuerySegmentWalker, LocalQuerySegmentWalker testLocalQuerySegmentWalker, ServerConfig serverConfig,
         ClientQuerySegmentWalker clientQuerySegmentWalker)
     {
       return new SpecificSegmentsQuerySegmentWalker(
