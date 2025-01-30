@@ -21,7 +21,6 @@ package org.apache.druid.sql.calcite;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.inject.Injector;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -40,7 +39,6 @@ import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.Order;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
-import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -75,7 +73,6 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.join.JoinType;
-import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.writeout.OnHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
@@ -1605,15 +1602,8 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
     }
 
     @Override
-    public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
-        QueryRunnerFactoryConglomerate conglomerate,
-        JoinableFactoryWrapper joinableFactory,
-        Injector injector
-    )
+    public SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(SpecificSegmentsQuerySegmentWalker walker)
     {
-      SpecificSegmentsQuerySegmentWalker walker =
-          super.createQuerySegmentWalker(conglomerate, joinableFactory, injector);
-
       final String datasource1 = "dsMissingCol";
       final File tmpFolder = tempDirProducer.newTempFolder();
 

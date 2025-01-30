@@ -177,6 +177,11 @@ public class SqlTestFramework
      */
     void gatherProperties(Properties properties);
 
+    SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(SpecificSegmentsQuerySegmentWalker walker);
+
+    SpecificSegmentsQuerySegmentWalker createEmptyWalker(QueryRunnerFactoryConglomerate conglomerate,
+        JoinableFactoryWrapper joinableFactory, Injector injector);
+
     /**
      * Should return a module which provides the core Druid components.
      */
@@ -186,12 +191,6 @@ public class SqlTestFramework
      * Provides the overrides the core Druid components.
      */
     DruidModule getOverrideModule();
-
-    SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
-        QueryRunnerFactoryConglomerate conglomerate,
-        JoinableFactoryWrapper joinableFactory,
-        Injector injector
-    );
 
     SqlEngine createEngine(
         QueryLifecycleFactory qlf,
@@ -267,12 +266,16 @@ public class SqlTestFramework
     }
 
     @Override
-    public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
-        QueryRunnerFactoryConglomerate conglomerate,
-        JoinableFactoryWrapper joinableFactory,
-        Injector injector)
+    public SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(SpecificSegmentsQuerySegmentWalker walker)
     {
-      return delegate.createQuerySegmentWalker(conglomerate, joinableFactory, injector);
+      return delegate.addSegmentsToWalker(walker);
+    }
+
+    @Override
+    public SpecificSegmentsQuerySegmentWalker createEmptyWalker(QueryRunnerFactoryConglomerate conglomerate,
+        JoinableFactoryWrapper joinableFactory, Injector injector)
+    {
+      return delegate.createEmptyWalker(conglomerate, joinableFactory, injector);
     }
 
     @Override
@@ -437,10 +440,8 @@ public class SqlTestFramework
     }
 
     @Override
-    public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
-        final QueryRunnerFactoryConglomerate conglomerate,
-        final JoinableFactoryWrapper joinableFactory,
-        final Injector injector)
+    public SpecificSegmentsQuerySegmentWalker createEmptyWalker(final QueryRunnerFactoryConglomerate conglomerate,
+        final JoinableFactoryWrapper joinableFactory, final Injector injector)
     {
       SpecificSegmentsQuerySegmentWalker walker = SpecificSegmentsQuerySegmentWalker.createWalker(
           injector,
@@ -450,6 +451,12 @@ public class SqlTestFramework
           QueryStackTests.DEFAULT_NOOP_SCHEDULER,
           injector.getInstance(GroupByQueryConfig.class)
       );
+      return walker;
+    }
+
+    @Override
+    public SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(SpecificSegmentsQuerySegmentWalker walker)
+    {
       return TestDataBuilder.addDataSetsToWalker(tempDirProducer.newTempFolder("segments"), walker);
     }
 
@@ -966,12 +973,13 @@ public class SqlTestFramework
     @LazySingleton
     public SpecificSegmentsQuerySegmentWalker specificSegmentsQuerySegmentWalker(final Injector injector, Builder builder)
     {
-      SpecificSegmentsQuerySegmentWalker walker = builder.componentSupplier.createQuerySegmentWalker(
+      SpecificSegmentsQuerySegmentWalker walker = builder.componentSupplier.createEmptyWalker(
           injector.getInstance(QueryRunnerFactoryConglomerate.class),
           injector.getInstance(JoinableFactoryWrapper.class),
           injector
       );
       builder.resourceCloser.register(walker);
+      builder.componentSupplier.addSegmentsToWalker(walker);
       return walker;
     }
 

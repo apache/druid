@@ -202,18 +202,11 @@ public class MSQWindowFunctionsBenchmark extends BaseCalciteQueryTest
     }
 
     @Override
-    public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
-        QueryRunnerFactoryConglomerate conglomerate,
-        JoinableFactoryWrapper joinableFactory,
-        Injector injector
-    )
+    public SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(SpecificSegmentsQuerySegmentWalker walker)
     {
-      final SpecificSegmentsQuerySegmentWalker retVal = super.createQuerySegmentWalker(
-          conglomerate,
-          joinableFactory,
-          injector);
-      TestDataBuilder.attachIndexesForBenchmarkDatasource(retVal);
-      return retVal;
+      walker = super.addSegmentsToWalker(walker);
+      TestDataBuilder.attachIndexesForBenchmarkDatasource(walker);
+      return walker;
     }
   }
 }
