@@ -168,7 +168,8 @@ public class DruidCoordinatorConfigTest
         Period.parse("PT12H").toStandardDuration(),
         true,
         Period.parse("PT60M").toStandardDuration(),
-        500
+        500,
+        Period.days(2)
     );
     CoordinatorKillConfigs killConfigs = createKillConfig().unusedSegments(inputConfig).build();
 
@@ -542,7 +543,8 @@ public class DruidCoordinatorConfigTest
           unusedSegments == null ? null : unusedSegments.getDurationToRetain(),
           unusedSegments == null ? null : unusedSegments.isIgnoreDurationToRetain(),
           unusedSegments == null ? null : unusedSegments.getBufferPeriod(),
-          unusedSegments == null ? null : unusedSegments.getMaxSegments()
+          unusedSegments == null ? null : unusedSegments.getMaxSegments(),
+          unusedSegments == null ? null : unusedSegments.getMaxInterval()
       );
     }
   }
