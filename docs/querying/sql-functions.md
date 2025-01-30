@@ -5218,24 +5218,6 @@ Returns the following:
 
 [Learn more](sql-scalar.md#numeric-functions)
 
-## TDIGEST_GENERATE_SKETCH
-
-Generates a T-digest sketch from values of the specified expression.
-
-* **Syntax**: `TDIGEST_GENERATE_SKETCH(expr, [compression])`
-* **Function type:** Aggregation
-
-[Learn more](sql-aggregations.md)
-
-## TDIGEST_QUANTILE
-
-Returns the quantile for the specified fraction from a T-Digest sketch constructed from values of the expression.
-
-* **Syntax**: `TDIGEST_QUANTILE(expr, quantileFraction, [compression])`
-* **Function type:** Aggregation
-
-[Learn more](sql-aggregations.md)
-
 ## TEXTCAT
 
 Concatenates two string expressions.
