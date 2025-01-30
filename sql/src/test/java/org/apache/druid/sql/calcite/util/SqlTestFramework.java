@@ -29,11 +29,6 @@ import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.TypeLiteral;
-import org.apache.druid.client.BrokerServerView;
-import org.apache.druid.client.CachingClusteredClient;
-import org.apache.druid.client.FilteredServerInventoryView;
-import org.apache.druid.client.QueryableDruidServer;
-import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.collections.NonBlockingPool;
@@ -49,7 +44,6 @@ import org.apache.druid.guice.ServerModule;
 import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.guice.annotations.Merging;
-import org.apache.druid.guice.http.DruidHttpClientConfig;
 import org.apache.druid.initialization.CoreInjectorBuilder;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.initialization.ServiceInjectorBuilder;
@@ -999,7 +993,7 @@ public class SqlTestFramework
     @LazySingleton
     private ClientQuerySegmentWalker makeClientQuerySegmentWalker(QueryRunnerFactoryConglomerate conglomerate,
         JoinableFactoryWrapper joinableFactory, Injector injector, ServiceEmitter emitter,
-        CachingClusteredClient testClusterQuerySegmentWalker,
+        TestClusterQuerySegmentWalker testClusterQuerySegmentWalker,
         LocalQuerySegmentWalker testLocalQuerySegmentWalker, ServerConfig serverConfig)
     {
       return new ClientQuerySegmentWalker(
@@ -1026,13 +1020,6 @@ public class SqlTestFramework
     }
 
     @Provides
-    @LazySingleton
-    public DruidHttpClientConfig makeDruidHttpClientConfig()
-    {
-      return new DruidHttpClientConfig();
-    }
-
-    @Provides
     public QueryScheduler makeQueryScheduler()
     {
       return QueryStackTests.DEFAULT_NOOP_SCHEDULER;
@@ -1041,14 +1028,8 @@ public class SqlTestFramework
     @Override
     public void configure(Binder binder)
     {
-      binder.bind(QueryableDruidServer.Maker.class).to(LocalServerRemoteQueryOperatorFactory.class);
-      binder.bind(FilteredServerInventoryView.class).to(LocalServerRemoteQueryOperatorFactory.class);
-      binder.bind(LocalServerRemoteQueryOperatorFactory.class).in(LazySingleton.class);
-      binder.bind(TimelineServerView.class).to(BrokerServerView.class).in(LazySingleton.class);
     }
   }
-
-
 
   public static final DruidViewMacroFactory DRUID_VIEW_MACRO_FACTORY = new TestDruidViewMacroFactory();
 
