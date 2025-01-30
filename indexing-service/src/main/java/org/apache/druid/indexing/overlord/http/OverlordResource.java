@@ -66,9 +66,9 @@ import org.apache.druid.server.http.ServletResourceUtils;
 import org.apache.druid.server.http.security.ConfigResourceFilter;
 import org.apache.druid.server.http.security.DatasourceResourceFilter;
 import org.apache.druid.server.http.security.StateResourceFilter;
-import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthConfig;
+import org.apache.druid.server.security.AuthorizationResult;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
@@ -177,14 +177,13 @@ public class OverlordResource
                      .build();
     }
 
-    Access authResult = AuthorizationUtils.authorizeAllResourceActions(
+    AuthorizationResult authResult = AuthorizationUtils.authorizeAllResourceActions(
         req,
         resourceActions,
         authorizerMapper
     );
-
-    if (!authResult.isAllowed()) {
-      throw new ForbiddenException(authResult.getMessage());
+    if (!authResult.allowAccessWithNoRestriction()) {
+      throw new ForbiddenException(authResult.getErrorMessage());
     }
 
     return asLeaderWith(
@@ -609,16 +608,17 @@ public class OverlordResource
           new Resource(dataSource, ResourceType.DATASOURCE),
           Action.READ
       );
-      final Access authResult = AuthorizationUtils.authorizeResourceAction(
+      final AuthorizationResult authResult = AuthorizationUtils.authorizeResourceAction(
           req,
           resourceAction,
           authorizerMapper
       );
-      if (!authResult.isAllowed()) {
+
+      if (!authResult.allowAccessWithNoRestriction()) {
         throw new WebApplicationException(
             Response.status(Response.Status.FORBIDDEN)
                     .type(MediaType.TEXT_PLAIN)
-                    .entity(StringUtils.format("Access-Check-Result: %s", authResult.toString()))
+                    .entity(StringUtils.format("Access-Check-Result: %s", authResult.getErrorMessage()))
                     .build()
         );
       }
@@ -654,7 +654,7 @@ public class OverlordResource
   {
     final Interval deleteInterval = Intervals.of(deleteIntervalString);
     // check auth for dataSource
-    final Access authResult = AuthorizationUtils.authorizeAllResourceActions(
+    final AuthorizationResult authResult = AuthorizationUtils.authorizeAllResourceActions(
         request,
         ImmutableList.of(
             new ResourceAction(new Resource(dataSource, ResourceType.DATASOURCE), Action.READ),
@@ -663,8 +663,8 @@ public class OverlordResource
         authorizerMapper
     );
 
-    if (!authResult.isAllowed()) {
-      throw new ForbiddenException(authResult.getMessage());
+    if (!authResult.allowAccessWithNoRestriction()) {
+      throw new ForbiddenException(authResult.getErrorMessage());
     }
 
     if (overlord.isLeader()) {
@@ -678,7 +678,12 @@ public class OverlordResource
                        .build();
       }
       catch (Exception e) {
-        log.warn(e, "Failed to delete pending segments for datasource[%s] and interval[%s].", dataSource, deleteInterval);
+        log.warn(
+            e,
+            "Failed to delete pending segments for datasource[%s] and interval[%s].",
+            dataSource,
+            deleteInterval
+        );
         return Response.status(Status.INTERNAL_SERVER_ERROR)
                        .entity(ImmutableMap.<String, Object>of("error", e.getMessage()))
                        .build();

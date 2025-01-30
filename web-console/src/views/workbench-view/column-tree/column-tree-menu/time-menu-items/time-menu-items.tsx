@@ -18,12 +18,13 @@
 
 import { MenuDivider, MenuItem } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
+import { day, hour, month, Timezone, year } from 'chronoshift';
 import type { SqlQuery } from 'druid-query-toolkit';
 import { C, F, SqlExpression } from 'druid-query-toolkit';
 import type { JSX } from 'react';
 import React from 'react';
 
-import { day, hour, month, prettyPrintSql, TZ_UTC, year } from '../../../../../utils';
+import { prettyPrintSql } from '../../../../../utils';
 
 const LATEST_HOUR: SqlExpression = SqlExpression.parse(
   `? >= CURRENT_TIMESTAMP - INTERVAL '1' HOUR`,
@@ -77,10 +78,10 @@ export const TimeMenuItems = React.memo(function TimeMenuItems(props: TimeMenuIt
     }
 
     const now = new Date();
-    const hourStart = hour.floor(now, TZ_UTC);
-    const dayStart = day.floor(now, TZ_UTC);
-    const monthStart = month.floor(now, TZ_UTC);
-    const yearStart = year.floor(now, TZ_UTC);
+    const hourStart = hour.floor(now, Timezone.UTC);
+    const dayStart = day.floor(now, Timezone.UTC);
+    const monthStart = month.floor(now, Timezone.UTC);
+    const yearStart = year.floor(now, Timezone.UTC);
     return (
       <MenuItem icon={IconNames.FILTER} text="Filter">
         {filterMenuItem(`Latest hour`, fillWithColumn(LATEST_HOUR, columnName))}
@@ -91,19 +92,19 @@ export const TimeMenuItems = React.memo(function TimeMenuItems(props: TimeMenuIt
         <MenuDivider />
         {filterMenuItem(
           `Current hour`,
-          fillWithColumnStartEnd(columnName, hourStart, hour.shift(hourStart, TZ_UTC, 1)),
+          fillWithColumnStartEnd(columnName, hourStart, hour.shift(hourStart, Timezone.UTC, 1)),
         )}
         {filterMenuItem(
           `Current day`,
-          fillWithColumnStartEnd(columnName, dayStart, day.shift(dayStart, TZ_UTC, 1)),
+          fillWithColumnStartEnd(columnName, dayStart, day.shift(dayStart, Timezone.UTC, 1)),
         )}
         {filterMenuItem(
           `Current month`,
-          fillWithColumnStartEnd(columnName, monthStart, month.shift(monthStart, TZ_UTC, 1)),
+          fillWithColumnStartEnd(columnName, monthStart, month.shift(monthStart, Timezone.UTC, 1)),
         )}
         {filterMenuItem(
           `Current year`,
-          fillWithColumnStartEnd(columnName, yearStart, year.shift(yearStart, TZ_UTC, 1)),
+          fillWithColumnStartEnd(columnName, yearStart, year.shift(yearStart, Timezone.UTC, 1)),
         )}
       </MenuItem>
     );

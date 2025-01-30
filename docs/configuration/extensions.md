@@ -53,7 +53,6 @@ Core extensions are maintained by Druid committers.
 |druid-orc-extensions|Support for data in Apache ORC data format.|[link](../development/extensions-core/orc.md)|
 |druid-parquet-extensions|Support for data in Apache Parquet data format. Requires druid-avro-extensions to be loaded.|[link](../development/extensions-core/parquet.md)|
 |druid-protobuf-extensions| Support for data in Protobuf data format.|[link](../development/extensions-core/protobuf.md)|
-|druid-ranger-security|Support for access control through Apache Ranger.|[link](../development/extensions-core/druid-ranger-security.md)|
 |druid-s3-extensions|Interfacing with data in Amazon S3, and using S3 as deep storage.|[link](../development/extensions-core/s3.md)|
 |druid-ec2-extensions|Interfacing with AWS EC2 for autoscaling middle managers|UNDOCUMENTED|
 |druid-aws-rds-extensions|Support for AWS token based access to AWS RDS DB Cluster.|[link](../development/extensions-core/druid-aws-rds.md)|
@@ -104,6 +103,7 @@ All of these community extensions can be downloaded using [pull-deps](../operati
 |druid-kubernetes-overlord-extensions|Support for launching tasks in k8s without Middle Managers|[link](../development/extensions-contrib/k8s-jobs.md)|
 |druid-spectator-histogram|Support for efficient approximate percentile queries|[link](../development/extensions-contrib/spectator-histogram.md)|
 |druid-rabbit-indexing-service|Support for creating and managing [RabbitMQ](https://www.rabbitmq.com/) indexing tasks|[link](../development/extensions-contrib/rabbit-stream-ingestion.md)|
+|druid-ranger-security|Support for access control through Apache Ranger.|[link](../development/extensions-contrib/druid-ranger-security.md)|
 
 ## Promoting community extensions to core extensions
 
