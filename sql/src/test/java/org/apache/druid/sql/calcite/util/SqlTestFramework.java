@@ -1011,22 +1011,6 @@ public class SqlTestFramework
     }
 
     @Provides
-    @LazySingleton
-    private LocalQuerySegmentWalker makeTestLocalQuerySegmentWalker(QueryRunnerFactoryConglomerate conglomerate,
-        JoinableFactoryWrapper joinableFactory, QueryScheduler queryScheduler, SegmentWrangler segmentWrangler,
-        ServiceEmitter emitter)
-    {
-      return QueryStackTests.createLocalQuerySegmentWalker(
-          conglomerate,
-          segmentWrangler,
-          joinableFactory,
-          queryScheduler,
-          emitter
-      );
-    }
-
-
-    @Provides
     public QueryScheduler makeQueryScheduler()
     {
       return QueryStackTests.DEFAULT_NOOP_SCHEDULER;
