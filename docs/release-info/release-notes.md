@@ -78,7 +78,7 @@ APIs for marking segments as used or unused have been moved from the Coordinator
 - Mark a single segment as unused:
 `DELETE /druid/indexer/v1/datasources/{dataSourceName}/segments/{segmentId}`
 
-As part of this change, the corresponding Coordinator APIs are now deprecated:
+As part of this change, the corresponding Coordinator APIs have been deprecated and will be removed in a future release:
 
 - `POST /druid/coordinator/v1/datasources/{dataSourceName}`
 - `POST /druid/coordinator/v1/datasources/{dataSourceName}/markUsed`
