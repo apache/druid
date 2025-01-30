@@ -190,7 +190,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
           throw DruidException.defensive("Segment metadata cache has not been started.");
         case SYNC_PENDING:
         case SYNC_STARTED:
-          waitForCacheToFinishWarmup();
+          waitForCacheToFinishSync();
           verifyCacheIsReady();
         case READY:
           // Cache is now ready for use
@@ -198,9 +198,10 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
     }
   }
 
-  private void waitForCacheToFinishWarmup()
+  private void waitForCacheToFinishSync()
   {
     synchronized (cacheStateLock) {
+      log.info("Waiting for cache to finish sync with metadata store.");
       while (currentCacheState == CacheState.SYNC_PENDING
              || currentCacheState == CacheState.SYNC_STARTED) {
         try {
@@ -210,6 +211,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
           throw new RuntimeException(e);
         }
       }
+      log.info("Wait complete. Cache is now in state[%s].", currentCacheState);
     }
   }
 
@@ -235,38 +237,44 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
   private void pollMetadataStore()
   {
     final Stopwatch sincePollStart = Stopwatch.createStarted();
-
-    synchronized (cacheStateLock) {
-      if (currentCacheState == CacheState.SYNC_PENDING) {
-        log.info("Started sync of latest updates from metadata store.");
-        currentCacheState = CacheState.SYNC_STARTED;
+    try {
+      synchronized (cacheStateLock) {
+        if (currentCacheState == CacheState.SYNC_PENDING) {
+          log.info("Started sync of latest updates from metadata store.");
+          currentCacheState = CacheState.SYNC_STARTED;
+        }
       }
+
+      final Map<String, DatasourceSegmentSummary> datasourceToSummary = retrieveAllSegmentIds();
+
+      removeUnknownDatasources(datasourceToSummary);
+      datasourceToSummary.forEach(this::removeUnknownSegmentIdsFromCache);
+
+      datasourceToSummary.forEach(
+          (datasource, summary) ->
+              getCacheForDatasource(datasource)
+                  .resetMaxUnusedIds(summary.intervalVersionToMaxUnusedPartition)
+      );
+
+      datasourceToSummary.forEach(this::retrieveAndRefreshUsedSegments);
+
+      retrieveAndRefreshAllPendingSegments();
+
+      final long pollDurationMillis = sincePollStart.millisElapsed();
+      emitMetric("poll/time", pollDurationMillis);
+      pollFinishTime.set(DateTimes.nowUtc());
+
+      markCacheAsReadyIfLeader();
     }
-
-    final Map<String, DatasourceSegmentSummary> datasourceToSummary = retrieveAllSegmentIds();
-    log.info("Found segments for datasources: %s", datasourceToSummary);
-
-    removeUnknownDatasources(datasourceToSummary);
-    datasourceToSummary.forEach(this::removeUnknownSegmentIdsFromCache);
-
-    datasourceToSummary.forEach(
-        (datasource, summary) ->
-            getCacheForDatasource(datasource)
-                .resetMaxUnusedIds(summary.intervalVersionToMaxUnusedPartition)
-    );
-
-    datasourceToSummary.forEach(this::retrieveAndRefreshUsedSegments);
-
-    retrieveAndRefreshAllPendingSegments();
-
-    emitMetric("poll/time", sincePollStart.millisElapsed());
-    pollFinishTime.set(DateTimes.nowUtc());
-
-    markCacheAsReadyIfLeader();
-
-    // Schedule the next poll
-    final long nextPollDelay = Math.max(pollDuration.getMillis() - sincePollStart.millisElapsed(), 0);
-    pollExecutor.schedule(this::pollMetadataStore, nextPollDelay, TimeUnit.MILLISECONDS);
+    catch (Throwable t) {
+      log.error(t, "Error occurred while polling metadata store");
+      log.makeAlert(t, "Error occurred while polling metadata store");
+    }
+    finally {
+      // Schedule the next poll
+      final long nextPollDelay = Math.max(pollDuration.getMillis() - sincePollStart.millisElapsed(), 0);
+      pollExecutor.schedule(this::pollMetadataStore, nextPollDelay, TimeUnit.MILLISECONDS);
+    }
   }
 
   /**
@@ -374,8 +382,8 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
   private void retrieveAndRefreshAllPendingSegments()
   {
     final String sql = StringUtils.format(
-        "SELECT payload, sequence_name, sequence_prev_id, upgraded_from_segment_id"
-        + " task_allocator_id, created_date FROM %1$s",
+        "SELECT payload, sequence_name, sequence_prev_id,"
+        + " upgraded_from_segment_id, task_allocator_id, created_date FROM %1$s",
         tablesConfig.getPendingSegmentsTable()
     );
 
