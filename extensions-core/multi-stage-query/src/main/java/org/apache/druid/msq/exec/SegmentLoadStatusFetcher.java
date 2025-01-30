@@ -16,9 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-
  package org.apache.druid.msq.exec;
-
  import com.fasterxml.jackson.annotation.JsonCreator;
  import com.fasterxml.jackson.annotation.JsonIgnore;
  import com.fasterxml.jackson.annotation.JsonInclude;
@@ -38,7 +36,6 @@
  import org.apache.druid.timeline.DataSegment;
  import org.joda.time.DateTime;
  import org.joda.time.Interval;
- 
  import javax.annotation.Nullable;
  import javax.ws.rs.core.MediaType;
  import java.util.ArrayList;
@@ -48,7 +45,6 @@
  import java.util.Set;
  import java.util.concurrent.TimeUnit;
  import java.util.concurrent.atomic.AtomicReference;
- 
  /**
   * Class that periodically checks with the broker if all the segments generated are loaded by querying the sys table
   * and blocks till it is complete. This will account for and not wait for segments that would never be loaded due to
@@ -85,7 +81,6 @@
                                             + "COUNT(*) FILTER (WHERE replication_factor = -1) AS unknownSegments\n"
                                             + "FROM sys.segments\n"
                                             + "WHERE datasource = '%s' AND is_overshadowed = 0 AND (%s)";
- 
    private final BrokerClient brokerClient;
    private final ObjectMapper objectMapper;
    // Map of version vs latest load status.
@@ -96,9 +91,7 @@
    private final boolean doWait;
    // since live reports fetch the value in another thread, we need to use AtomicReference
    private final AtomicReference<SegmentLoadWaiterStatus> status;
- 
    private final ListeningExecutorService executorService;
- 
    public SegmentLoadStatusFetcher(
        BrokerClient brokerClient,
        ObjectMapper objectMapper,
@@ -130,7 +123,6 @@
          Execs.singleThreaded(StringUtils.encodeForFormat(queryId) + "-segment-load-waiter-%d")
      );
    }
- 
    /**
     * Uses broker client to check if all segments created by the ingestion have been loaded and updates the {@link #status)}
     * periodically.
@@ -201,14 +193,12 @@
        executorService.shutdownNow();
      }
    }
- 
    private void waitIfNeeded(long waitTimeMillis) throws Exception
    {
      if (doWait) {
        Thread.sleep(waitTimeMillis);
      }
    }
- 
    /**
     * Updates the {@link #status} with the latest details based on {@link #versionLoadStatusReference}
     */
@@ -230,7 +220,6 @@
          )
      );
    }
- 
    /**
     * Uses {@link #brokerClient} to fetch latest load status for a given set of versions. Converts the response into a
     * {@link VersionLoadStatus} and returns it.
@@ -243,7 +232,6 @@
          false, false, false, null, null
      );
      String response = brokerClient.submit(sqlQuery);
- 
      if (response == null) {
        // Unable to query broker
        return new VersionLoadStatus(0, 0, 0, 0, totalSegmentsGenerated);
@@ -254,7 +242,6 @@
        return objectMapper.readValue(response, VersionLoadStatus.class);
      }
    }
- 
    /**
     * Takes a list of segments and creates the condition for the broker query. Directly creates a string to avoid
     * computing it repeatedly.
@@ -264,7 +251,6 @@
      // Creates a map of version to earliest and latest partition numbers created. These would be contiguous since the task
      // holds the lock.
      Map<String, Pair<Integer, Integer>> versionsVsPartitionNumberRangeMap = new HashMap<>();
- 
      dataSegments.forEach(segment -> {
        final String version = segment.getVersion();
        final int partitionNum = segment.getId().getPartitionNum();
@@ -274,7 +260,6 @@
        ));
        versionsVsPartitionNumberRangeMap.computeIfAbsent(version, k -> Pair.of(partitionNum, partitionNum));
      });
- 
      // Create a condition for each version / partition
      List<String> versionConditionList = new ArrayList<>();
      for (Map.Entry<String, Pair<Integer, Integer>> stringPairEntry : versionsVsPartitionNumberRangeMap.entrySet()) {
@@ -285,7 +270,6 @@
      }
      return String.join(" OR ", versionConditionList);
    }
- 
    /**
     * Returns the current status of the load.
     */
@@ -293,7 +277,6 @@
    {
      return status.get();
    }
- 
    @Override
    public void close()
    {
@@ -304,7 +287,6 @@
        log.warn(suppressed, "Error shutting down SegmentLoadStatusFetcher");
      }
    }
- 
    public static class SegmentLoadWaiterStatus
    {
      private final State state;
@@ -316,7 +298,6 @@
      private final int onDemandSegments;
      private final int pendingSegments;
      private final int unknownSegments;
- 
      @JsonCreator
      public SegmentLoadWaiterStatus(
          @JsonProperty("state") SegmentLoadStatusFetcher.State state,
@@ -340,13 +321,11 @@
        this.pendingSegments = pendingSegments;
        this.unknownSegments = unknownSegments;
      }
- 
      @JsonProperty
      public SegmentLoadStatusFetcher.State getState()
      {
        return state;
      }
- 
      @Nullable
      @JsonProperty
      @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -354,50 +333,42 @@
      {
        return startTime;
      }
- 
      @JsonProperty
      public long getDuration()
      {
        return duration;
      }
- 
      @JsonProperty
      public long getTotalSegments()
      {
        return totalSegments;
      }
- 
      @JsonProperty
      public int getUsedSegments()
      {
        return usedSegments;
      }
- 
      @JsonProperty
      public int getPrecachedSegments()
      {
        return precachedSegments;
      }
- 
      @JsonProperty
      public int getOnDemandSegments()
      {
        return onDemandSegments;
      }
- 
      @JsonProperty
      public int getPendingSegments()
      {
        return pendingSegments;
      }
- 
      @JsonProperty
      public int getUnknownSegments()
      {
        return unknownSegments;
      }
    }
- 
    public enum State
    {
      /**
@@ -422,13 +393,11 @@
       * The SegmentLoadWaiter exited without failing the task.
       */
      TIMED_OUT;
- 
      public boolean isFinished()
      {
        return this == SUCCESS || this == FAILED || this == TIMED_OUT;
      }
    }
- 
    public static class VersionLoadStatus
    {
      private final int usedSegments;
@@ -436,7 +405,6 @@
      private final int onDemandSegments;
      private final int pendingSegments;
      private final int unknownSegments;
- 
      @JsonCreator
      public VersionLoadStatus(
          @JsonProperty("usedSegments") int usedSegments,
@@ -452,35 +420,29 @@
        this.pendingSegments = pendingSegments;
        this.unknownSegments = unknownSegments;
      }
- 
      @JsonProperty
      public int getUsedSegments()
      {
        return usedSegments;
      }
- 
      @JsonProperty
      public int getPrecachedSegments()
      {
        return precachedSegments;
      }
- 
      @JsonProperty
      public int getOnDemandSegments()
      {
        return onDemandSegments;
      }
- 
      @JsonProperty
      public int getPendingSegments()
      {
        return pendingSegments;
      }
- 
      @JsonProperty
      public int getUnknownSegments()
      {
        return unknownSegments;
      }
- 
      @JsonIgnore
