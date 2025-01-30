@@ -73,6 +73,7 @@ import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.QueryLifecycle;
 import org.apache.druid.server.QueryLifecycleFactory;
+import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.log.RequestLogger;
@@ -957,17 +958,24 @@ public class SqlTestFramework
     @Provides
     @Named("empty")
     public SpecificSegmentsQuerySegmentWalker createEmptyWalker(QueryRunnerFactoryConglomerate conglomerate,
-        JoinableFactoryWrapper joinableFactory, Injector injector)
+        JoinableFactoryWrapper joinableFactory, Injector injector, QueryScheduler queryScheduler,
+        SegmentWrangler segmentWrangler, GroupByQueryConfig groupByQueryConfig)
     {
       SpecificSegmentsQuerySegmentWalker walker = SpecificSegmentsQuerySegmentWalker.createWalker(
           injector,
           conglomerate,
-          injector.getInstance(SegmentWrangler.class),
+          segmentWrangler,
           joinableFactory,
-          QueryStackTests.DEFAULT_NOOP_SCHEDULER,
-          injector.getInstance(GroupByQueryConfig.class)
+          queryScheduler,
+          groupByQueryConfig
       );
       return walker;
+    }
+
+    @Provides
+    public QueryScheduler makeQueryScheduler()
+    {
+      return QueryStackTests.DEFAULT_NOOP_SCHEDULER;
     }
 
     @Override
