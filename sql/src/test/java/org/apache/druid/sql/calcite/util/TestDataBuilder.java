@@ -753,7 +753,23 @@ public class TestDataBuilder
       final QueryRunnerFactoryConglomerate conglomerate,
       final File tmpDir,
       final QueryScheduler scheduler,
-      final JoinableFactoryWrapper joinableFactoryWrapper
+      final JoinableFactoryWrapper joinableFactoryWrapper)
+  {
+    SpecificSegmentsQuerySegmentWalker walker = SpecificSegmentsQuerySegmentWalker.createWalker(
+        injector,
+        conglomerate,
+        injector.getInstance(SegmentWrangler.class),
+        joinableFactoryWrapper,
+        scheduler,
+        injector.getInstance(GroupByQueryConfig.class)
+    );
+    return addDataSetsToWalker(tmpDir, walker);
+  }
+
+  @SuppressWarnings("resource")
+  public static SpecificSegmentsQuerySegmentWalker addDataSetsToWalker(
+      final File tmpDir,
+      SpecificSegmentsQuerySegmentWalker walker
   )
   {
     final QueryableIndex index1 = IndexBuilder
@@ -852,14 +868,7 @@ public class TestDataBuilder
         .inputTmpDir(new File(tmpDir, "9-input"))
         .buildMMappedIndex();
 
-    return SpecificSegmentsQuerySegmentWalker.createWalker(
-        injector,
-        conglomerate,
-        injector.getInstance(SegmentWrangler.class),
-        joinableFactoryWrapper,
-        scheduler,
-        injector.getInstance(GroupByQueryConfig.class)
-    ).add(
+    return walker.add(
         DataSegment.builder()
                    .dataSource(CalciteTests.DATASOURCE1)
                    .interval(index1.getDataInterval())
