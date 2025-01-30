@@ -54,6 +54,7 @@ import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.sql.calcite.util.DruidModuleCollection;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
+import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier.TestDataSetRegistryX;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
@@ -118,7 +119,7 @@ public class ArrayOfDoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
     }
 
     @Override
-    public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
+    public TestDataSetRegistryX createQuerySegmentWalker(
         final QueryRunnerFactoryConglomerate conglomerate,
         final JoinableFactoryWrapper joinableFactory,
         final Injector injector
@@ -150,6 +151,7 @@ public class ArrayOfDoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                                                .rows(ROWS)
                                                .buildMMappedIndex();
 
+      TestDataBuilder.createEmptyMockWalker(injector, conglomerate, null, null, joinableFactory);
       return SpecificSegmentsQuerySegmentWalker.createWalker(injector, conglomerate).add(
           DataSegment.builder()
                      .dataSource(DATA_SOURCE)

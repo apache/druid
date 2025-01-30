@@ -755,6 +755,21 @@ public class TestDataBuilder
       final QueryScheduler scheduler,
       final JoinableFactoryWrapper joinableFactoryWrapper)
   {
+    SpecificSegmentsQuerySegmentWalker walker = createEmptyMockWalker(
+        injector, conglomerate, tmpDir, scheduler, joinableFactoryWrapper
+    );
+    return addDataSetsToWalker(tmpDir, walker);
+  }
+
+
+  @SuppressWarnings("resource")
+  public static SpecificSegmentsQuerySegmentWalker createEmptyMockWalker(
+      final Injector injector,
+      final QueryRunnerFactoryConglomerate conglomerate,
+      final File tmpDir,
+      final QueryScheduler scheduler,
+      final JoinableFactoryWrapper joinableFactoryWrapper)
+  {
     SpecificSegmentsQuerySegmentWalker walker = SpecificSegmentsQuerySegmentWalker.createWalker(
         injector,
         conglomerate,
@@ -763,7 +778,7 @@ public class TestDataBuilder
         scheduler,
         injector.getInstance(GroupByQueryConfig.class)
     );
-    return addDataSetsToWalker(tmpDir, walker);
+    return walker;
   }
 
   @SuppressWarnings("resource")

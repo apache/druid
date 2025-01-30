@@ -30,11 +30,11 @@ import org.apache.druid.msq.test.StandardMSQComponentSupplier;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
-import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.QueryTestBuilder;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
 import org.apache.druid.sql.calcite.TempDirProducer;
+import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier.TestDataSetRegistryX;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -202,17 +202,17 @@ public class MSQWindowFunctionsBenchmark extends BaseCalciteQueryTest
     }
 
     @Override
-    public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
+    public TestDataSetRegistryX createQuerySegmentWalker(
         QueryRunnerFactoryConglomerate conglomerate,
         JoinableFactoryWrapper joinableFactory,
         Injector injector
     )
     {
-      final SpecificSegmentsQuerySegmentWalker retVal = super.createQuerySegmentWalker(
+      TestDataSetRegistryX retVal = super.createQuerySegmentWalker(
           conglomerate,
           joinableFactory,
           injector);
-      TestDataBuilder.attachIndexesForBenchmarkDatasource(retVal);
+      TestDataBuilder.attachIndexesForBenchmarkDatasource(retVal.walker);
       return retVal;
     }
   }

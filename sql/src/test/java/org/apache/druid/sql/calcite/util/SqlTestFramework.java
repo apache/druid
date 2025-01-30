@@ -98,6 +98,7 @@ import org.apache.druid.sql.calcite.schema.DruidSchemaManager;
 import org.apache.druid.sql.calcite.schema.LookupSchema;
 import org.apache.druid.sql.calcite.schema.NoopDruidSchemaManager;
 import org.apache.druid.sql.calcite.schema.SystemSchema;
+import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier.TestDataSetRegistryX;
 import org.apache.druid.sql.calcite.view.DruidViewMacroFactory;
 import org.apache.druid.sql.calcite.view.InProcessViewManager;
 import org.apache.druid.sql.calcite.view.ViewManager;
@@ -187,7 +188,7 @@ public class SqlTestFramework
      */
     DruidModule getOverrideModule();
 
-    SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
+    TestDataSetRegistryX createQuerySegmentWalker(
         QueryRunnerFactoryConglomerate conglomerate,
         JoinableFactoryWrapper joinableFactory,
         Injector injector
@@ -267,7 +268,7 @@ public class SqlTestFramework
     }
 
     @Override
-    public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
+    public TestDataSetRegistryX createQuerySegmentWalker(
         QueryRunnerFactoryConglomerate conglomerate,
         JoinableFactoryWrapper joinableFactory,
         Injector injector)
@@ -436,8 +437,18 @@ public class SqlTestFramework
       configureGuice(builder);
     }
 
+    public static class TestDataSetRegistryX
+    {
+      public TestDataSetRegistryX(SpecificSegmentsQuerySegmentWalker addDataSetsToWalker)
+      {
+        walker = addDataSetsToWalker;
+      }
+
+      public final SpecificSegmentsQuerySegmentWalker walker;
+    }
+
     @Override
-    public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
+    public TestDataSetRegistryX createQuerySegmentWalker(
         final QueryRunnerFactoryConglomerate conglomerate,
         final JoinableFactoryWrapper joinableFactory,
         final Injector injector)
@@ -450,7 +461,8 @@ public class SqlTestFramework
           QueryStackTests.DEFAULT_NOOP_SCHEDULER,
           injector.getInstance(GroupByQueryConfig.class)
       );
-      return TestDataBuilder.addDataSetsToWalker(tempDirProducer.newTempFolder("segments"), walker);
+      SpecificSegmentsQuerySegmentWalker addDataSetsToWalker = TestDataBuilder.addDataSetsToWalker(tempDirProducer.newTempFolder("segments"), walker);
+      return new TestDataSetRegistryX(addDataSetsToWalker);
     }
 
     @Override
