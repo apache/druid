@@ -22,6 +22,8 @@ package org.apache.druid.server;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import com.google.inject.Inject;
+import com.google.inject.name.Named;
 import org.apache.druid.client.SegmentServerSelector;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -74,6 +76,8 @@ import java.util.function.Function;
  */
 public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
 {
+  public static final String TIMELINES_KEY = "timelines";
+
   private final Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> timelines;
   private final QueryRunnerFactoryConglomerate conglomerate;
   @Nullable
@@ -81,8 +85,9 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
   private final GroupByQueryConfig groupByQueryConfig;
   private final EtagProvider etagProvider;
 
+  @Inject
   TestClusterQuerySegmentWalker(
-      Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> timelines,
+      @Named(TIMELINES_KEY) Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> timelines,
       QueryRunnerFactoryConglomerate conglomerate,
       @Nullable QueryScheduler scheduler,
       GroupByQueryConfig groupByQueryConfig,

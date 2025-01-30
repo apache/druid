@@ -963,7 +963,7 @@ public class SqlTestFramework
     }
 
     @Provides
-    @Named("timelines")
+    @Named(TestClusterQuerySegmentWalker.TIMELINES_KEY)
     @LazySingleton
     public Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> makeTimelines()
     {
@@ -977,7 +977,7 @@ public class SqlTestFramework
         JoinableFactoryWrapper joinableFactory, Injector injector, QueryScheduler queryScheduler,
         SegmentWrangler segmentWrangler, GroupByQueryConfig groupByQueryConfig,
         ServiceEmitter emitter,
-        @Named("timelines") Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> timelines,
+        @Named(TestClusterQuerySegmentWalker.TIMELINES_KEY) Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> timelines,
         TestClusterQuerySegmentWalker testClusterQuerySegmentWalker, LocalQuerySegmentWalker testLocalQuerySegmentWalker)
     {
       ServerConfig serverConfig = new ServerConfig();
@@ -992,21 +992,6 @@ public class SqlTestFramework
               serverConfig,
               emitter
           )
-      );
-    }
-
-    @Provides
-    @LazySingleton
-    private TestClusterQuerySegmentWalker makeClusterQuerySegmentWalker(QueryRunnerFactoryConglomerate conglomerate, Injector injector,
-        QueryScheduler queryScheduler, GroupByQueryConfig groupByQueryConfig,
-        @Named("timelines") Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> timelines)
-    {
-      return QueryStackTests.createClusterQuerySegmentWalker(
-          timelines,
-          conglomerate,
-          queryScheduler,
-          groupByQueryConfig,
-          injector
       );
     }
 
