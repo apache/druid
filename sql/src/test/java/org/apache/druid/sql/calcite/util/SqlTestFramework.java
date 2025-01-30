@@ -72,11 +72,13 @@ import org.apache.druid.segment.DefaultColumnFormatConfig;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
+import org.apache.druid.server.LocalQuerySegmentWalker;
 import org.apache.druid.server.QueryLifecycle;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
+import org.apache.druid.server.TestClusterQuerySegmentWalker;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.log.TestRequestLogger;
@@ -961,40 +963,68 @@ public class SqlTestFramework
     }
 
     @Provides
+    @Named("timelines")
+    @LazySingleton
+    public Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> makeTimelines()
+    {
+      return new HashMap<>();
+    }
+
+    @Provides
     @Named("empty")
+    @LazySingleton
     public SpecificSegmentsQuerySegmentWalker createEmptyWalker(QueryRunnerFactoryConglomerate conglomerate,
         JoinableFactoryWrapper joinableFactory, Injector injector, QueryScheduler queryScheduler,
         SegmentWrangler segmentWrangler, GroupByQueryConfig groupByQueryConfig,
-        ServiceEmitter emitter         )
+        ServiceEmitter emitter,
+        @Named("timelines") Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> timelines,
+        TestClusterQuerySegmentWalker testClusterQuerySegmentWalker, LocalQuerySegmentWalker testLocalQuerySegmentWalker)
     {
-      Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> timelines = new HashMap<>();
       ServerConfig serverConfig = new ServerConfig();
-      SpecificSegmentsQuerySegmentWalker walker = new SpecificSegmentsQuerySegmentWalker(
+      return new SpecificSegmentsQuerySegmentWalker(
           timelines,
           QueryStackTests.createClientQuerySegmentWalker(
               injector,
-              QueryStackTests.createClusterQuerySegmentWalker(
-                  timelines,
-                  conglomerate,
-                  queryScheduler,
-                  groupByQueryConfig,
-                  injector
-              ),
-              QueryStackTests.createLocalQuerySegmentWalker(
-                  conglomerate,
-                  segmentWrangler,
-                  joinableFactory,
-                  queryScheduler,
-                  emitter
-              ),
+              testClusterQuerySegmentWalker,
+              testLocalQuerySegmentWalker,
               conglomerate,
               joinableFactory.getJoinableFactory(),
               serverConfig,
               emitter
           )
       );
-      return walker;
     }
+
+    @Provides
+    @LazySingleton
+    private TestClusterQuerySegmentWalker makeClusterQuerySegmentWalker(QueryRunnerFactoryConglomerate conglomerate, Injector injector,
+        QueryScheduler queryScheduler, GroupByQueryConfig groupByQueryConfig,
+        @Named("timelines") Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> timelines)
+    {
+      return QueryStackTests.createClusterQuerySegmentWalker(
+          timelines,
+          conglomerate,
+          queryScheduler,
+          groupByQueryConfig,
+          injector
+      );
+    }
+
+    @Provides
+    @LazySingleton
+    private LocalQuerySegmentWalker makeTestLocalQuerySegmentWalker(QueryRunnerFactoryConglomerate conglomerate,
+        JoinableFactoryWrapper joinableFactory, QueryScheduler queryScheduler, SegmentWrangler segmentWrangler,
+        ServiceEmitter emitter)
+    {
+      return QueryStackTests.createLocalQuerySegmentWalker(
+          conglomerate,
+          segmentWrangler,
+          joinableFactory,
+          queryScheduler,
+          emitter
+      );
+    }
+
 
     @Provides
     public QueryScheduler makeQueryScheduler()
