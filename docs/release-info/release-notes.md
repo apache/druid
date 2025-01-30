@@ -53,9 +53,66 @@ If your release note contains images, put the images in the release-info/assets 
 For tips about how to write a good release note, see [Release notes](https://github.com/apache/druid/blob/master/CONTRIBUTING.md#release-notes).
 -->
 
-## Important features, changes, and deprecations
+## Important features
 
 This section contains important information about new and existing features.
+
+### New Overlord APIs
+
+APIs for marking segments as used or unused have been moved from the Coordinator to the Overlord service:
+
+- Mark all segments of a datasource as unused:
+`POST /druid/indexer/v1/datasources/{dataSourceName}`
+
+- Mark all (non-overshadowed) segments of a datasource as used:
+`DELETE /druid/indexer/v1/datasources/{dataSourceName}`
+
+- Mark multiple segments as used
+`POST /druid/indexer/v1/datasources/{dataSourceName}/markUsed`
+- Mark multiple (non-overshadowed) segments as unused
+`POST /druid/indexer/v1/datasources/{dataSourceName}/markUnused`
+
+- Mark a single segment as used:
+`POST /druid/indexer/v1/datasources/{dataSourceName}/segments/{segmentId}`
+
+- Mark a single segment as unused:
+`DELETE /druid/indexer/v1/datasources/{dataSourceName}/segments/{segmentId}`
+
+As part of this change, the corresponding Coordinator APIs are now deprecated:
+
+- `POST /druid/coordinator/v1/datasources/{dataSourceName}`
+- `POST /druid/coordinator/v1/datasources/{dataSourceName}/markUsed`
+- `POST /druid/coordinator/v1/datasources/{dataSourceName}/markUnused`
+- `POST /druid/coordinator/v1/datasources/{dataSourceName}/segments/{segmentId}`
+- `DELETE /druid/coordinator/v1/datasources/{dataSourceName}/segments/{segmentId}`
+- `DELETE /druid/coordinator/v1/datasources/{dataSourceName}`
+
+The Coordinator now calls the Overlord to serve these requests.
+
+[#17545](https://github.com/apache/druid/pull/17545)
+
+
+### Realtime query processing for multi-value strings 
+
+Realtime query processing no longer considers all strings as multi-value strings during expression processing, fixing a number of bugs and unexpected failures. This should also improve realtime query performance of expressions on string columns.
+
+This change impacts topN queries for realtime segments where rows of data are implicitly null, such as from a property missing from a JSON object.
+
+Before this change, these were handled as [] instead of null, leading to inconsistency between processing realtime segments and published segments. When processing segments, the value was treated as [], which topN ignores. After publishing, the value became null, which topN does not ignore. The same query could have different results before and after being persisted
+
+After this change, the topN engine now treats [] as null when processing realtime segments, which is consistent with published segments.
+
+This change doesn't impact actual multi-value string columns, regardless of if they're realtime. 
+
+[#17386](https://github.com/apache/druid/pull/17386)
+
+### Join hints in MSQ task engine queries
+
+Druid now supports hints for SQL JOIN queries that use the MSQ task engine. This allows queries to provide hints for the JOIN type that should be used at a per join level. Join hints recursively affect sub queries.
+
+[#17541](https://github.com/apache/druid/pull/17541)
+
+## Changes and deprecations
 
 ### ANSI-SQL compatibility and query results
 
@@ -90,7 +147,7 @@ We recommend that you upgrade to Java 17.
 
 Hadoop-based ingestion is now deprecated. We recommend that you migrate to SQL-based ingestion. 
 
-#### Join hints in MSQ task engine queries
+### Join hints in MSQ task engine queries
 
 Druid now supports hints for SQL JOIN queries that use the MSQ task engine. This allows queries to provide hints for the JOIN type that should be used at a per join level. Join hints recursively affect sub queries. 
 
@@ -105,34 +162,6 @@ where w1.cityName='New York';
 ```
 
 (#17406)
-
-### New Overlord APIs
-
-APIs for marking segments as used or unused have been moved from the Coordinator to the Overlord service:
-
-- Mark all segments of a datasource as unused:
-`POST /druid/indexer/v1/datasources/{dataSourceName}`
-
-- Mark all (non-overshadowed) segments of a datasource as used:
-`DELETE /druid/indexer/v1/datasources/{dataSourceName}`
-
-- Mark multiple segments as used
-`POST /druid/indexer/v1/datasources/{dataSourceName}/markUsed`
-- Mark multiple (non-overshadowed) segments as unused
-`POST /druid/indexer/v1/datasources/{dataSourceName}/markUnused`
-
-- Mark a single segment as used:
-`POST /druid/indexer/v1/datasources/{dataSourceName}/segments/{segmentId}`
-
-- Mark a single segment as unused:
-`DELETE /druid/indexer/v1/datasources/{dataSourceName}/segments/{segmentId}`
-
-[#17545](https://github.com/apache/druid/pull/17545)
-
-
-### 17386
-
-https://github.com/apache/druid/pull/17386
 
 ## Functional area and related changes
 
@@ -171,7 +200,7 @@ The segment timeline is now more interactive and no longer forces day granularit
 
 #### Other web console improvements
 
-- The timezoner picker now always shows your timezone [#17521](https://github.com/apache/druid/pull/17521)
+- The timezone picker now always shows your timezone [#17521](https://github.com/apache/druid/pull/17521)
 - UNNEST is now supported for autocomplete suggestions [#17521](https://github.com/apache/druid/pull/17521)
 - Tables now support less than and greater than filters [#17521](https://github.com/apache/druid/pull/17521)
 - You can now resize the side panels in the Query view [#17387](https://github.com/apache/druid/pull/17387)
@@ -197,8 +226,6 @@ By default, this configuration is set to false, so numeric strings will be treat
  
 #### SQL-based ingestion
 
-##### Other SQL-based ingestion improvements
-
 - SQL-based ingestion now supports dynamic parameters for queries besides SELECT queries, such as REPLACE [#17126](https://github.com/apache/druid/pull/17126)
 - Improved thread names to include the stage ID and worker number to help with troubleshooting [#17324](https://github.com/apache/druid/pull/17324)
 
@@ -206,13 +233,13 @@ By default, this configuration is set to false, so numeric strings will be treat
 
 ##### Control how many segments get merged for publishing
 
-You can now use the `maxColumsnToMerge` property in your supervisor spec to specify the number of segments to merge in a single phase when merging segments for publishing. This limit affects the total number of columns present in a set of segments to merge. If the limit is exceeded, segment merging occurs in multiple phases. Druid merges at least 2 segments each phase, regardless of this setting.
+You can now use the `maxColumnsToMerge` property in your supervisor spec to specify the number of segments to merge in a single phase when merging segments for publishing. This limit affects the total number of columns present in a set of segments to merge. If the limit is exceeded, segment merging occurs in multiple phases. Druid merges at least 2 segments each phase, regardless of this setting.
 
 [#17030](https://github.com/apache/druid/pull/17030)
 
 ##### Other streaming ingestion improvements
 
-- Druid now properly supports early/late rejection periods when `stopTasksCount` is configured and streaming tasks run longer than the configured task duration [#17442](https://github.com/apache/druid/pull/17442)
+- Druid now fully supports early/late rejection periods when `stopTasksCount` is configured and streaming tasks run longer than the configured task duration [#17442](https://github.com/apache/druid/pull/17442)
 - Improved segment publishing when resubmitting supervisors or when task publishing takes a long time [#17509](https://github.com/apache/druid/pull/17509)
 
 ### Querying
@@ -222,11 +249,6 @@ You can now use the `maxColumsnToMerge` property in your supervisor spec to spec
 The following fields are deprecated for window queries that use the MSQ task engine: `maxRowsMaterializedInWindow` and `partitionColumnNames`. They will be removed in a future release.
 
 [#17433](https://github.com/apache/druid/pull/17433)
-
-
-
-
-[#17541](https://github.com/apache/druid/pull/17541)
 
 #### Other querying improvements
 
@@ -240,9 +262,9 @@ The following fields are deprecated for window queries that use the MSQ task eng
 
 ### Cluster management
 
-#### Reduced metadata IO
+#### Reduce metadata IO
 
-The Overlord runtime property `druid.indexer.tasklock.batchAllocationReduceMetadataIO` can help reduce IO during segment allocation. Setting this flag to true (default value) allows the Overlord to fetch only necessary segment payloads during segment allocation.
+The Overlord runtime property `druid.indexer.tasklock.batchAllocationReduceMetadataIO` can help reduce IO during batch segment allocation. Setting this flag to true (default value) allows the Overlord to fetch only necessary segment payloads during segment allocation.
 
 [#17496](https://github.com/apache/druid/pull/17496)
 
@@ -258,7 +280,7 @@ The Overlord runtime property `druid.indexer.tasklock.batchAllocationReduceMetad
 
 ### Data management
 
-#### Sorting columns for compaction with the MSQ task engine
+#### Sorting columns for compaction with the MSQ task engine (experimental)
 
 Compaction that uses the MSQ task engine now supports sorting segments with non-time columns.  If `forceSegmentSortByTime` is set in the compaction config or the inferred schema, the following happens:
 
@@ -268,15 +290,15 @@ Compaction that uses the MSQ task engine now supports sorting segments with non-
 
 #### Other data management improvements
 
-- Improved centeralized datasource schemas so that different permutations of the same column order do not result in distinct schemas [#17044](https://github.com/apache/druid/pull/17044)
-- Changed compaction tasks to always handle multivalue dimensions as arrays if the column schema is not explicitly specified [#17110](https://github.com/apache/druid/pull/17110)
+- Improved centralized datasource schemas so that different permutations of the same column order do not result in distinct schemas [#17044](https://github.com/apache/druid/pull/17044)
+- Changed compaction tasks to always handle multi-value dimensions as arrays if the column schema is not explicitly specified [#17110](https://github.com/apache/druid/pull/17110)
 
 
 ### Metrics and monitoring
 
-#### New metrics for GroupByStatsMonitor:
+#### New metrics for `GroupByStatsMonitor`:
 
-Druid now emits the folowing metrics for GroupBy queries:
+Druid now emits the following metrics for GroupBy queries:
 
 `mergeBuffer/used`: Number of merge buffers used
 `mergeBuffer/acquisitionTimeNs`: Total time required to acquire merge buffer
@@ -345,7 +367,7 @@ The Iceberg extension now supports the AWS Glue Iceberg catalog.
 
 <!--Carry this forward until 32. Then move it to incompatible changes -->
 
-In Druid 32.0.0, the front coded dictionaries feature will be turned on by default. Front-coded dictionaries reduce storage and improve performance by optimizing for strings where the front part looks similar.
+In Druid 32.0.0, you can specify that Druid uses front-coded dictionaries feature during segment creation. Front-coded dictionaries reduce storage and improve performance by optimizing for strings where the front part looks similar.
 
 Once this feature is on, you cannot easily downgrade to an earlier version that does not support the feature. 
 
@@ -359,6 +381,7 @@ If you're already using this feature, you don't need to take any action.
 ### Developer notes
 
 - Improved dependency support between extensions. When an extension has a dependency on another extension, it now tries to use the dependency's class loader to find classes required classes [#16973](https://github.com/apache/druid/pull/16973)
+- Coordinator  APIs for marking segments as used or unused. Use the Overlord API instead. For a full list, see [New Overlord APIs](#new-overlord-apis) or [#17545](https://github.com/apache/druid/pull/17545)
 
 #### Dependency updates
 
