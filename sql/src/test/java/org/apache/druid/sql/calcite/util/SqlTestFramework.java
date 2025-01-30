@@ -69,6 +69,7 @@ import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.topn.TopNQueryConfig;
 import org.apache.druid.quidem.TestSqlModule;
 import org.apache.druid.segment.DefaultColumnFormatConfig;
+import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.QueryLifecycle;
@@ -76,6 +77,7 @@ import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
+import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.log.TestRequestLogger;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -105,6 +107,7 @@ import org.apache.druid.sql.calcite.view.ViewManager;
 import org.apache.druid.sql.guice.SqlModule;
 import org.apache.druid.sql.hook.DruidHookDispatcher;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.VersionedIntervalTimeline;
 
 import javax.inject.Named;
 
@@ -113,7 +116,9 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
@@ -961,13 +966,38 @@ public class SqlTestFramework
         JoinableFactoryWrapper joinableFactory, Injector injector, QueryScheduler queryScheduler,
         SegmentWrangler segmentWrangler, GroupByQueryConfig groupByQueryConfig)
     {
-      SpecificSegmentsQuerySegmentWalker walker = SpecificSegmentsQuerySegmentWalker.createWalker(
-          injector,
-          conglomerate,
-          segmentWrangler,
-          joinableFactory,
-          queryScheduler,
-          groupByQueryConfig
+      final Injector injector1 = injector;
+      final QueryRunnerFactoryConglomerate conglomerate1 = conglomerate;
+      final SegmentWrangler segmentWrangler1 = segmentWrangler;
+      final JoinableFactoryWrapper joinableFactoryWrapper = joinableFactory;
+      final QueryScheduler scheduler = queryScheduler;
+      final GroupByQueryConfig groupByQueryConfig1 = groupByQueryConfig;
+      Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> timelines = new HashMap<>();
+      NoopServiceEmitter emitter = new NoopServiceEmitter();
+      ServerConfig serverConfig = new ServerConfig();
+      SpecificSegmentsQuerySegmentWalker walker = new SpecificSegmentsQuerySegmentWalker(
+          timelines,
+          QueryStackTests.createClientQuerySegmentWalker(
+              injector1,
+              QueryStackTests.createClusterQuerySegmentWalker(
+                  timelines,
+                  conglomerate1,
+                  scheduler,
+                  groupByQueryConfig1,
+                  injector1
+              ),
+              QueryStackTests.createLocalQuerySegmentWalker(
+                  conglomerate1,
+                  segmentWrangler1,
+                  joinableFactoryWrapper,
+                  scheduler,
+                  emitter
+              ),
+              conglomerate1,
+              joinableFactoryWrapper.getJoinableFactory(),
+              serverConfig,
+              emitter
+          )
       );
       return walker;
     }
