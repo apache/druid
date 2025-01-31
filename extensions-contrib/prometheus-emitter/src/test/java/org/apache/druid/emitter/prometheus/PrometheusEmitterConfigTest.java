@@ -93,7 +93,7 @@ public class PrometheusEmitterConfigTest
     IllegalArgumentException illegalArgumentException = Assert.assertThrows(IllegalArgumentException.class, () -> {
       new PrometheusEmitterConfig(PrometheusEmitterConfig.Strategy.pushgateway, null, null, null, "localhost:9091", false, false, 0, null, null, null);
     });
-    Assert.assertTrue(illegalArgumentException.getMessage().equals("flushPeriod must be greater than 0."));
+    Assert.assertEquals("flushPeriod must be greater than 0.", illegalArgumentException.getMessage());
   }
 
   @Test
@@ -104,7 +104,7 @@ public class PrometheusEmitterConfigTest
       extraLabels.put("invalid label", "value");
       new PrometheusEmitterConfig(null, null, null, null, null, false, false, null, extraLabels, null, null);
     });
-    Assert.assertTrue(druidException.getMessage().equals("Invalid metric label name [invalid label]. Label names must conform to the pattern [[a-zA-Z_:][a-zA-Z0-9_:]*]."));
+    Assert.assertEquals("Invalid metric label name [invalid label]. Label names must conform to the pattern [[a-zA-Z_:][a-zA-Z0-9_:]*].", druidException.getMessage());
   }
 
   @Test
@@ -113,6 +113,6 @@ public class PrometheusEmitterConfigTest
     DruidException druidException = Assert.assertThrows(DruidException.class, () -> {
       new PrometheusEmitterConfig(null, null, null, null, null, false, false, null, null, null, -1L);
     });
-    Assert.assertTrue(druidException.getMessage().equals("Invalid value for waitForShutdownDelay[-1] specified, waitForShutdownDelay must be >= 0."));
+    Assert.assertEquals("Invalid value for waitForShutdownDelay[-1] specified, waitForShutdownDelay must be >= 0.", druidException.getMessage());
   }
 }
