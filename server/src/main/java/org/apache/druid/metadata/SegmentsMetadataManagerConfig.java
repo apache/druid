@@ -45,7 +45,7 @@ public class SegmentsMetadataManagerConfig
   )
   {
     this.pollDuration = Configs.valueOrDefault(pollDuration, Period.minutes(1));
-    this.useCache = Configs.valueOrDefault(useCache, false);
+    this.useCache = Configs.valueOrDefault(useCache, true);
   }
 
   public boolean isUseCache()
