@@ -38,6 +38,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Test utility to create {@link DataSegment}s for a given datasource.
@@ -48,7 +49,7 @@ public class CreateDataSegments
 
   private final String datasource;
 
-  private DateTime startTime = DEFAULT_START.plusDays(new Random().nextInt(3000));
+  private DateTime startTime = DEFAULT_START.plusDays(ThreadLocalRandom.current().nextInt(3000));
   private Granularity granularity = Granularities.DAY;
   private int numPartitions = 1;
   private int numIntervals = 1;
