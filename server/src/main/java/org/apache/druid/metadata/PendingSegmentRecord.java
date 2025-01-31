@@ -79,7 +79,7 @@ public class PendingSegmentRecord
     );
   }
 
-  private PendingSegmentRecord(
+  public PendingSegmentRecord(
       SegmentIdWithShardSpec id,
       String sequenceName,
       String sequencePrevId,
@@ -90,7 +90,7 @@ public class PendingSegmentRecord
   {
     this.id = id;
     this.sequenceName = sequenceName;
-    this.sequencePrevId = sequencePrevId;
+    this.sequencePrevId = sequencePrevId == null ? "" : sequencePrevId;
     this.upgradedFromSegmentId = upgradedFromSegmentId;
     this.taskAllocatorId = taskAllocatorId;
     this.createdDate = createdDate;
@@ -108,6 +108,11 @@ public class PendingSegmentRecord
     return sequenceName;
   }
 
+  /**
+   * Previous segment ID allocated for the same sequence.
+   *
+   * @return Empty string if there is no previous segment in the sequence.
+   */
   @JsonProperty
   public String getSequencePrevId()
   {
@@ -178,6 +183,9 @@ public class PendingSegmentRecord
   /**
    * Creates a new record (with the current timestamp) that can be used to create
    * a new entry in the pending segments metadata table.
+   *
+   * @return A new PendingSegmentRecord with the given parameters and the current
+   * time as the created date.
    */
   public static PendingSegmentRecord create(
       SegmentIdWithShardSpec id,

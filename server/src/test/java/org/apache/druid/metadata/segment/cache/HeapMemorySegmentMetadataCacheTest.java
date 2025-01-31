@@ -19,41 +19,60 @@
 
 package org.apache.druid.metadata.segment.cache;
 
-public class NoopSegmentMetadataCache implements SegmentMetadataCache
+import org.junit.Test;
+
+public class HeapMemorySegmentMetadataCacheTest
 {
-  @Override
-  public void start()
+
+  @Test
+  public void testStart_isNoop_ifCacheIsDisabled()
   {
 
   }
 
-  @Override
-  public void stop()
+  @Test
+  public void testStart_startsPollingMetadataStore_ifCacheIsEnabled()
   {
 
   }
 
-  @Override
-  public void becomeLeader()
+  @Test
+  public void testStop_stopsPollingMetadataStore_ifCacheIsEnabled()
   {
 
   }
 
-  @Override
-  public void stopBeingLeader()
+  @Test
+  public void testBecomeLeader_isNoop_ifCacheIsDisabled()
   {
 
   }
 
-  @Override
-  public boolean isEnabled()
+  @Test
+  public void testGetDataSource_throwsException_ifCacheIsDisabled()
   {
-    return false;
+
   }
 
-  @Override
-  public DatasourceSegmentCache getDatasource(String dataSource)
+  @Test
+  public void testGetDataSource_throwsException_ifNotLeader()
   {
-    throw new UnsupportedOperationException();
+
   }
+
+  @Test
+  public void testGetDataSource_waitsForSync_afterBecomingLeader()
+  {
+
+  }
+
+  @Test
+  public void testGetDataSource_doesNotWait_afterOneSync()
+  {
+
+  }
+
+  // TESTS TO VERIFY THAT POLLS CAN BE BOTH FULL AND DELTA DEPENDING ON CACHE STATE
+  // PROBABLY BEST TO have a separate class performing these tests
+
 }

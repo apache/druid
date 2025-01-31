@@ -272,16 +272,12 @@ class SqlSegmentMetadataTransaction implements SegmentMetadataTransaction
   }
 
   @Override
-  public int deleteSegments(Set<DataSegment> segments)
+  public int deleteSegments(Set<String> segmentsIdsToDelete)
   {
     final String deleteSql = StringUtils.format("DELETE from %s WHERE id = :id", dbTables.getSegmentsTable());
 
-    // generate the IDs outside the transaction block
-    final List<String> ids = segments.stream().map(s -> s.getId().toString()).collect(Collectors.toList());
-
     final PreparedBatch batch = handle.prepareBatch(deleteSql);
-
-    for (final String id : ids) {
+    for (String id : segmentsIdsToDelete) {
       batch.bind("id", id).add();
     }
 
@@ -415,14 +411,14 @@ class SqlSegmentMetadataTransaction implements SegmentMetadataTransaction
   }
 
   @Override
-  public int deletePendingSegments(List<String> segmentIdsToDelete)
+  public int deletePendingSegments(Set<String> segmentIdsToDelete)
   {
     if (segmentIdsToDelete.isEmpty()) {
       return 0;
     }
 
     final List<List<String>> pendingSegmentIdBatches
-        = Lists.partition(segmentIdsToDelete, MAX_SEGMENTS_PER_BATCH);
+        = Lists.partition(List.copyOf(segmentIdsToDelete), MAX_SEGMENTS_PER_BATCH);
 
     int numDeletedPendingSegments = 0;
     for (List<String> pendingSegmentIdBatch : pendingSegmentIdBatches) {

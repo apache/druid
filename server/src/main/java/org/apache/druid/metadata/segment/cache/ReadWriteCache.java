@@ -26,11 +26,11 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 /**
  * Cache with standard read/write locking.
  */
-public abstract class BaseCache implements SegmentMetadataCache.DataSource
+public abstract class ReadWriteCache implements DatasourceSegmentCache
 {
   private final ReentrantReadWriteLock stateLock;
 
-  public BaseCache(boolean fair)
+  public ReadWriteCache(boolean fair)
   {
     stateLock = new ReentrantReadWriteLock(fair);
   }
@@ -66,7 +66,7 @@ public abstract class BaseCache implements SegmentMetadataCache.DataSource
   }
 
   @Override
-  public <T> T read(SegmentMetadataCache.Action<T> action) throws Exception
+  public <T> T read(DatasourceSegmentCache.Action<T> action) throws Exception
   {
     stateLock.readLock().lock();
     try {
@@ -78,7 +78,7 @@ public abstract class BaseCache implements SegmentMetadataCache.DataSource
   }
 
   @Override
-  public <T> T write(SegmentMetadataCache.Action<T> action) throws Exception
+  public <T> T write(DatasourceSegmentCache.Action<T> action) throws Exception
   {
     stateLock.writeLock().lock();
     try {

@@ -86,6 +86,7 @@ public interface DatasourceSegmentMetadataReader
       @Nullable DateTime maxUsedStatusLastUpdatedTime
   );
 
+  // javadoc - sequencePreviousId must be non-null
   List<SegmentIdWithShardSpec> findPendingSegmentIds(
       String sequenceName,
       String sequencePreviousId

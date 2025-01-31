@@ -25,6 +25,7 @@ import org.apache.druid.client.indexing.IndexingService;
 import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.metadata.MetadataStorageTablesConfig;
 import org.apache.druid.metadata.SQLMetadataConnector;
+import org.apache.druid.metadata.segment.cache.DatasourceSegmentCache;
 import org.apache.druid.metadata.segment.cache.SegmentMetadataCache;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.TransactionStatus;
@@ -80,7 +81,7 @@ public class SqlSegmentMetadataTransactionFactory implements SegmentMetadataTran
           = createSqlTransaction(dataSource, handle, status);
 
       if (segmentMetadataCache.isEnabled()) {
-        final SegmentMetadataCache.DataSource datasourceCache
+        final DatasourceSegmentCache datasourceCache
             = segmentMetadataCache.getDatasource(dataSource);
         final SegmentMetadataReadTransaction cachedTransaction
             = new CachedSegmentMetadataTransaction(sqlTransaction, datasourceCache, leaderSelector);
@@ -104,7 +105,7 @@ public class SqlSegmentMetadataTransactionFactory implements SegmentMetadataTran
               = createSqlTransaction(dataSource, handle, status);
 
           if (segmentMetadataCache.isEnabled()) {
-            final SegmentMetadataCache.DataSource datasourceCache
+            final DatasourceSegmentCache datasourceCache
                 = segmentMetadataCache.getDatasource(dataSource);
             final SegmentMetadataTransaction cachedTransaction
                 = new CachedSegmentMetadataTransaction(sqlTransaction, datasourceCache, leaderSelector);

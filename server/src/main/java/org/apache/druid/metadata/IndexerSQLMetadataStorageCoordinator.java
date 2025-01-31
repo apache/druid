@@ -1153,7 +1153,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
             int numDeletedPendingSegments = transaction.deletePendingSegments(
                 allSegmentsToInsert.stream()
                                    .map(pendingSegment -> pendingSegment.getId().toString())
-                                   .collect(Collectors.toList())
+                                   .collect(Collectors.toSet())
             );
             log.info("Deleted [%d] entries from pending segments table upon commit.", numDeletedPendingSegments);
 
@@ -2242,9 +2242,12 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     }
 
     final String dataSource = verifySegmentsToCommit(segments);
+    final Set<String> idsToDelete = segments.stream()
+                                            .map(s -> s.getId().toString())
+                                            .collect(Collectors.toSet());
     int numDeletedSegments = retryDatasourceTransaction(
         dataSource,
-        transaction -> transaction.deleteSegments(segments)
+        transaction -> transaction.deleteSegments(idsToDelete)
     );
 
     log.debugSegments(segments, "Delete the metadata of segments");

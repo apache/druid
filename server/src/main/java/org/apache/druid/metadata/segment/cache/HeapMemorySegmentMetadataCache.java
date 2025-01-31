@@ -60,7 +60,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
 
 /**
  * In-memory implementation of {@link SegmentMetadataCache}.
@@ -90,7 +89,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
   @GuardedBy("cacheStateLock")
   private volatile CacheState currentCacheState = CacheState.STOPPED;
 
-  private final ConcurrentHashMap<String, DatasourceSegmentCache>
+  private final ConcurrentHashMap<String, HeapMemoryDatasourceSegmentCache>
       datasourceToSegmentCache = new ConcurrentHashMap<>();
   private final AtomicReference<DateTime> pollFinishTime = new AtomicReference<>();
 
@@ -170,15 +169,15 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
   }
 
   @Override
-  public DataSource getDatasource(String dataSource)
+  public DatasourceSegmentCache getDatasource(String dataSource)
   {
     verifyCacheIsReady();
     return getCacheForDatasource(dataSource);
   }
 
-  private DatasourceSegmentCache getCacheForDatasource(String dataSource)
+  private HeapMemoryDatasourceSegmentCache getCacheForDatasource(String dataSource)
   {
-    return datasourceToSegmentCache.computeIfAbsent(dataSource, DatasourceSegmentCache::new);
+    return datasourceToSegmentCache.computeIfAbsent(dataSource, HeapMemoryDatasourceSegmentCache::new);
   }
 
   private void verifyCacheIsReady()
@@ -236,6 +235,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
 
   private void pollMetadataStore()
   {
+    final DateTime pollStartTime = DateTimes.nowUtc();
     final Stopwatch sincePollStart = Stopwatch.createStarted();
     try {
       synchronized (cacheStateLock) {
@@ -245,20 +245,26 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
         }
       }
 
-      final Map<String, DatasourceSegmentSummary> datasourceToSummary = retrieveAllSegmentIds();
+      final Map<String, DatasourceSegmentSummary> datasourceToSummary = new HashMap<>();
 
-      removeUnknownDatasources(datasourceToSummary);
-      datasourceToSummary.forEach(this::removeUnknownSegmentIdsFromCache);
+      retrieveAllSegmentIds(datasourceToSummary);
 
+      datasourceToSummary.forEach(
+          (datasource, summary) ->
+              removeUnknownSegmentsFromCache(datasource, summary, pollStartTime)
+      );
       datasourceToSummary.forEach(
           (datasource, summary) ->
               getCacheForDatasource(datasource)
                   .resetMaxUnusedIds(summary.intervalVersionToMaxUnusedPartition)
       );
-
       datasourceToSummary.forEach(this::retrieveAndRefreshUsedSegments);
 
-      retrieveAndRefreshAllPendingSegments();
+      retrieveAndRefreshAllPendingSegments(datasourceToSummary);
+      datasourceToSummary.forEach(
+          (datasource, summary) ->
+              removeUnknownPendingSegmentsFromCache(datasource, summary, pollStartTime)
+      );
 
       final long pollDurationMillis = sincePollStart.millisElapsed();
       emitMetric("poll/time", pollDurationMillis);
@@ -279,13 +285,12 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
 
   /**
    * Retrieves all the segment IDs (used and unused) from the metadata store.
-   *
-   * @return Map from datasource name to segment summary.
+   * Populates the summary for the datasources found in metadata store.
    */
-  private Map<String, DatasourceSegmentSummary> retrieveAllSegmentIds()
+  private void retrieveAllSegmentIds(
+      Map<String, DatasourceSegmentSummary> datasourceToSummary
+  )
   {
-    final Map<String, DatasourceSegmentSummary> datasourceToSummary = new HashMap<>();
-
     final String sql = StringUtils.format(
         "SELECT id, dataSource, used, used_status_last_updated FROM %s",
         tablesConfig.getSegmentsTable()
@@ -300,7 +305,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
       ) {
         while (iterator.hasNext()) {
           final SegmentRecord record = iterator.next();
-          final DatasourceSegmentCache cache = getCacheForDatasource(record.dataSource);
+          final HeapMemoryDatasourceSegmentCache cache = getCacheForDatasource(record.dataSource);
           final DatasourceSegmentSummary summary = datasourceToSummary
               .computeIfAbsent(record.dataSource, ds -> new DatasourceSegmentSummary());
 
@@ -314,7 +319,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
             final SegmentId segmentId = SegmentId.tryParse(record.dataSource, record.segmentId);
 
             if (segmentId != null) {
-              if (cache.addUnusedSegmentId(segmentId)) {
+              if (cache.addUnusedSegmentId(segmentId, record.lastUpdatedTime)) {
                 summary.numUnusedSegmentsRefreshed++;
               }
 
@@ -336,8 +341,6 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
         return 1;
       }
     });
-
-    return datasourceToSummary;
   }
 
   private void retrieveAndRefreshUsedSegments(
@@ -349,26 +352,30 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
       return;
     }
 
-    final DatasourceSegmentCache cache = getCacheForDatasource(dataSource);
-    int numUpdatedUsedSegments = 0;
+    final HeapMemoryDatasourceSegmentCache cache = getCacheForDatasource(dataSource);
 
-    try (
-        CloseableIterator<DataSegmentPlus> iterator = connector.inReadOnlyTransaction(
-            (handle, status) -> SqlSegmentsMetadataQuery
-                .forHandle(handle, connector, tablesConfig, jsonMapper)
-                .retrieveSegmentsByIdIterator(dataSource, summary.segmentIdsToRefresh)
-        )
-    ) {
-      while (iterator.hasNext()) {
-        if (cache.addSegment(iterator.next())) {
-          ++numUpdatedUsedSegments;
+    final int numUpdatedUsedSegments = connector.inReadOnlyTransaction((handle, status) -> {
+      int updatedCount = 0;
+      try (
+          CloseableIterator<DataSegmentPlus> iterator =
+              SqlSegmentsMetadataQuery
+                  .forHandle(handle, connector, tablesConfig, jsonMapper)
+                  .retrieveSegmentsByIdIterator(dataSource, summary.segmentIdsToRefresh)
+      ) {
+        while (iterator.hasNext()) {
+          if (cache.addSegment(iterator.next())) {
+            ++updatedCount;
+          }
         }
       }
-    }
-    catch (IOException e) {
-      log.makeAlert(e, "Error retrieving segments for datasource[%s] from metadata store.", dataSource)
-         .emit();
-    }
+      catch (IOException e) {
+        log.error(e, "Error retrieving segments");
+        log.makeAlert(e, "Error retrieving segments for datasource[%s] from metadata store.", dataSource)
+           .emit();
+      }
+
+      return updatedCount;
+    });
 
     emitDatasourceMetric(dataSource, "refresh/used", numUpdatedUsedSegments);
     if (numUpdatedUsedSegments > 0) {
@@ -379,7 +386,9 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
     }
   }
 
-  private void retrieveAndRefreshAllPendingSegments()
+  private void retrieveAndRefreshAllPendingSegments(
+      Map<String, DatasourceSegmentSummary> datasourceToSummary
+  )
   {
     final String sql = StringUtils.format(
         "SELECT payload, sequence_name, sequence_prev_id,"
@@ -395,12 +404,22 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
             .map((index, r, ctx) -> {
               try {
                 final PendingSegmentRecord record = PendingSegmentRecord.fromResultSet(r, jsonMapper);
-                final DatasourceSegmentCache cache = getCacheForDatasource(record.getId().getDataSource());
+                final String dataSource = record.getId().getDataSource();
 
-                if (cache.shouldRefreshPendingSegment(record)
-                    && cache.insertPendingSegment(record, false)) {
-                  datasourceToUpdatedCount.merge(record.getId().getDataSource(), 1, Integer::sum);
-                }
+                final HeapMemoryDatasourceSegmentCache cache = getCacheForDatasource(dataSource);
+
+                final boolean updated = cache.shouldRefreshPendingSegment(record)
+                                        && cache.insertPendingSegment(record, false);
+
+                datasourceToUpdatedCount.merge(
+                    dataSource,
+                    updated ? 1 : 0,
+                    Integer::sum
+                );
+                datasourceToSummary
+                    .computeIfAbsent(dataSource, ds -> new DatasourceSegmentSummary())
+                    .persistedPendingSegmentIds
+                    .add(record.getId().toString());
               }
               catch (Exception e) {
                 log.makeAlert(e, "Error retrieving pending segments from metadata store.").emit();
@@ -410,38 +429,41 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
               return 0;
             }).list()
     );
-    datasourceToUpdatedCount.forEach(
-        (dataSource, updatedCount) ->
-            log.info("Refreshed [%d] pending segments for datasource[%s].", updatedCount, dataSource)
-    );
+    datasourceToUpdatedCount.forEach((dataSource, updatedCount) -> {
+      if (updatedCount > 0) {
+        log.info("Refreshed [%d] pending segments for datasource[%s].", updatedCount, dataSource);
+      }
+    });
   }
 
-  private void removeUnknownDatasources(Map<String, DatasourceSegmentSummary> datasourceToSummary)
+  private void removeUnknownPendingSegmentsFromCache(
+      final String dataSource,
+      final DatasourceSegmentSummary summary,
+      final DateTime pollStartTime
+  )
   {
-    final Set<String> datasourcesNotInMetadataStore =
-        datasourceToSegmentCache.keySet()
-                                .stream()
-                                .filter(ds -> !datasourceToSummary.containsKey(ds))
-                                .collect(Collectors.toSet());
-
-    if (!datasourcesNotInMetadataStore.isEmpty()) {
-      datasourcesNotInMetadataStore.forEach(datasourceToSegmentCache::remove);
-      log.info("Removed unknown datasources[%s] from cache.", datasourcesNotInMetadataStore);
+    final HeapMemoryDatasourceSegmentCache cache = getCacheForDatasource(dataSource);
+    final int numSegmentsRemoved = cache.removeUnpersistedPendingSegments(
+        summary.persistedPendingSegmentIds,
+        pollStartTime
+    );
+    if (numSegmentsRemoved > 0) {
+      log.info(
+          "Removed [%d] unknown pending segments from cache of datasource[%s].",
+          numSegmentsRemoved, dataSource
+      );
+      emitDatasourceMetric(dataSource, "deleted/unknown", numSegmentsRemoved);
     }
   }
 
-  /**
-   * This is safe to do since updates are always made first to metadata store
-   * and then to cache.
-   */
-  private void removeUnknownSegmentIdsFromCache(
-      String dataSource,
-      DatasourceSegmentSummary summary
+  private void removeUnknownSegmentsFromCache(
+      final String dataSource,
+      final DatasourceSegmentSummary summary,
+      final DateTime pollStartTime
   )
   {
-    final DatasourceSegmentCache cache = getCacheForDatasource(dataSource);
-    final Set<String> unknownSegmentIds = cache.getSegmentIdsNotIn(summary.persistedSegmentIds);
-    final int numSegmentsRemoved = cache.removeSegmentIds(unknownSegmentIds);
+    final HeapMemoryDatasourceSegmentCache cache = getCacheForDatasource(dataSource);
+    final int numSegmentsRemoved = cache.removeUnpersistedSegments(summary.persistedSegmentIds, pollStartTime);
     if (numSegmentsRemoved > 0) {
       log.info(
           "Removed [%d] unknown segment IDs from cache of datasource[%s].",
@@ -511,6 +533,8 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
   private static class DatasourceSegmentSummary
   {
     final Set<String> persistedSegmentIds = new HashSet<>();
+    final Set<String> persistedPendingSegmentIds = new HashSet<>();
+
     final Set<String> segmentIdsToRefresh = new HashSet<>();
     final Map<Interval, Map<String, Integer>> intervalVersionToMaxUnusedPartition = new HashMap<>();
     int numUnusedSegmentsRefreshed = 0;

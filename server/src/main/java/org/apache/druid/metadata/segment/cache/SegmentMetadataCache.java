@@ -19,9 +19,6 @@
 
 package org.apache.druid.metadata.segment.cache;
 
-import org.apache.druid.metadata.segment.DatasourceSegmentMetadataReader;
-import org.apache.druid.metadata.segment.DatasourceSegmentMetadataWriter;
-
 /**
  * Cache for metadata of pending segments and committed segments.
  */
@@ -52,32 +49,9 @@ public interface SegmentMetadataCache
    */
   boolean isEnabled();
 
-  DataSource getDatasource(String dataSource);
-
   /**
-   * Cache containing segment metadata of a single datasource.
+   * Returns the cache for the given datasource.
    */
-  interface DataSource extends DatasourceSegmentMetadataWriter, DatasourceSegmentMetadataReader
-  {
-    /**
-     * Performs a thread-safe read action on the cache.
-     */
-    <T> T read(Action<T> action) throws Exception;
-
-    /**
-     * Performs a thread-safe write action on the cache.
-     */
-    <T> T write(Action<T> action) throws Exception;
-  }
-
-  /**
-   * Represents a read or write action performed on the cache within required
-   * locks.
-   */
-  @FunctionalInterface
-  interface Action<T>
-  {
-    T perform() throws Exception;
-  }
+  DatasourceSegmentCache getDatasource(String dataSource);
 
 }

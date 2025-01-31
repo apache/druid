@@ -74,7 +74,6 @@ import org.apache.druid.metadata.SqlSegmentsMetadataManager;
 import org.apache.druid.metadata.TestDerbyConnector;
 import org.apache.druid.metadata.segment.SqlSegmentMetadataTransactionFactory;
 import org.apache.druid.metadata.segment.cache.HeapMemorySegmentMetadataCache;
-import org.apache.druid.metadata.segment.cache.NoopSegmentMetadataCache;
 import org.apache.druid.metadata.segment.cache.SegmentMetadataCache;
 import org.apache.druid.segment.DataSegmentsWithSchemas;
 import org.apache.druid.segment.IndexIO;
@@ -316,18 +315,14 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
 
   private SqlSegmentMetadataTransactionFactory createTransactionFactory()
   {
-    if (useSegmentMetadataCache) {
-      segmentMetadataCache = new HeapMemorySegmentMetadataCache(
-          objectMapper,
-          Suppliers.ofInstance(new SegmentsMetadataManagerConfig(Period.millis(10), true)),
-          derbyConnectorRule.metadataTablesConfigSupplier(),
-          derbyConnectorRule.getConnector(),
-          ScheduledExecutors::fixed,
-          NoopServiceEmitter.instance()
-      );
-    } else {
-      segmentMetadataCache = new NoopSegmentMetadataCache();
-    }
+    segmentMetadataCache = new HeapMemorySegmentMetadataCache(
+        objectMapper,
+        Suppliers.ofInstance(new SegmentsMetadataManagerConfig(Period.millis(10), useSegmentMetadataCache)),
+        derbyConnectorRule.metadataTablesConfigSupplier(),
+        derbyConnectorRule.getConnector(),
+        ScheduledExecutors::fixed,
+        NoopServiceEmitter.instance()
+    );
 
     final TestDruidLeaderSelector leaderSelector = new TestDruidLeaderSelector();
     leaderSelector.becomeLeader();

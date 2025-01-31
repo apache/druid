@@ -37,6 +37,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.Random;
 
 /**
  * Test utility to create {@link DataSegment}s for a given datasource.
@@ -47,7 +48,7 @@ public class CreateDataSegments
 
   private final String datasource;
 
-  private DateTime startTime = DEFAULT_START;
+  private DateTime startTime = DEFAULT_START.plusDays(new Random().nextInt(3000));
   private Granularity granularity = Granularities.DAY;
   private int numPartitions = 1;
   private int numIntervals = 1;
@@ -130,7 +131,7 @@ public class CreateDataSegments
     return lastUpdatedOn(DateTimes.nowUtc());
   }
 
-  public CreateDataSegments upgradedFromSegment(String segmentId)
+  public CreateDataSegments upgradedFromSegmentId(String segmentId)
   {
     this.upgradedFromSegmentId = segmentId;
     return this;

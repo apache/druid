@@ -23,7 +23,7 @@ import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InternalServerError;
 import org.apache.druid.metadata.PendingSegmentRecord;
-import org.apache.druid.metadata.segment.cache.SegmentMetadataCache;
+import org.apache.druid.metadata.segment.cache.DatasourceSegmentCache;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.server.http.DataSegmentPlus;
 import org.apache.druid.timeline.DataSegment;
@@ -51,7 +51,7 @@ import java.util.function.Function;
 class CachedSegmentMetadataTransaction implements SegmentMetadataTransaction
 {
   private final SegmentMetadataTransaction delegate;
-  private final SegmentMetadataCache.DataSource metadataCache;
+  private final DatasourceSegmentCache metadataCache;
   private final DruidLeaderSelector leaderSelector;
 
   private final int startTerm;
@@ -63,7 +63,7 @@ class CachedSegmentMetadataTransaction implements SegmentMetadataTransaction
 
   CachedSegmentMetadataTransaction(
       SegmentMetadataTransaction delegate,
-      SegmentMetadataCache.DataSource metadataCache,
+      DatasourceSegmentCache metadataCache,
       DruidLeaderSelector leaderSelector
   )
   {
@@ -275,9 +275,9 @@ class CachedSegmentMetadataTransaction implements SegmentMetadataTransaction
   }
 
   @Override
-  public int deleteSegments(Set<DataSegment> segments)
+  public int deleteSegments(Set<String> segmentsIdsToDelete)
   {
-    return performWriteAction(writer -> writer.deleteSegments(segments));
+    return performWriteAction(writer -> writer.deleteSegments(segmentsIdsToDelete));
   }
 
   @Override
@@ -317,7 +317,7 @@ class CachedSegmentMetadataTransaction implements SegmentMetadataTransaction
   }
 
   @Override
-  public int deletePendingSegments(List<String> segmentIdsToDelete)
+  public int deletePendingSegments(Set<String> segmentIdsToDelete)
   {
     return performWriteAction(
         writer -> writer.deletePendingSegments(segmentIdsToDelete)

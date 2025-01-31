@@ -38,6 +38,10 @@ public interface DatasourceSegmentMetadataWriter
    */
   int insertSegments(Set<DataSegmentPlus> segments);
 
+  /**
+   * Inserts the given segments into the metadata store while also persisting
+   * additional metadata values such as number of rows and schema fingerprint.
+   */
   int insertSegmentsWithMetadata(Set<DataSegmentPlus> segments);
 
   /**
@@ -45,7 +49,7 @@ public interface DatasourceSegmentMetadataWriter
    */
   int markSegmentsWithinIntervalAsUnused(Interval interval, DateTime updateTime);
 
-  int deleteSegments(Set<DataSegment> segments);
+  int deleteSegments(Set<String> segmentsIdsToDelete);
 
   boolean updateSegmentPayload(DataSegment segment);
 
@@ -61,7 +65,7 @@ public interface DatasourceSegmentMetadataWriter
 
   int deleteAllPendingSegments();
 
-  int deletePendingSegments(List<String> segmentIdsToDelete);
+  int deletePendingSegments(Set<String> segmentIdsToDelete);
 
   int deletePendingSegments(String taskAllocatorId);
 
