@@ -192,7 +192,7 @@ public class CompressedLongsSerdeTest
             TmpFileSegmentWriteOutMediumFactory.instance().makeSegmentWriteOutMedium(temporaryFolder.newFolder());
         FileSmoosher smoosher = new FileSmoosher(columnDir)
     ) {
-      final Random random = new Random();
+      final Random random = new Random(0);
       final int fileSizeLimit = 128_000; // limit to 128KB so we switch to large-column mode sooner
       final ColumnarLongsSerializer serializer = new BlockLayoutColumnarLongsSerializer(
           columnName,
