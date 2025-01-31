@@ -162,7 +162,7 @@ Higher compression provides higher accuracy but requires more storage space.
 
 * **Syntax**: `TDIGEST_GENERATE_SKETCH(expr, [compression])`
 * **Default**: Empty Base64-encoded T-Digest sketch string
-* **Function type**: [Aggregation](sql-aggregations.md)
+* **Function type**: [Aggregation](../../querying/sql-aggregations.md)
 
 #### TDIGEST_QUANTILE
 
@@ -172,4 +172,4 @@ Higher compression provides higher accuracy but requires more storage space.
 
 * **Syntax**: `TDIGEST_QUANTILE(expr, quantileFraction, [compression])`
 * **Default**: `Double.NaN`
-* **Function type**: [Aggregation](sql-aggregations.md)
+* **Function type**: [Aggregation](../../querying/sql-aggregations.md)
