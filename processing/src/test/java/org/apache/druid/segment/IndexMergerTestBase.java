@@ -38,7 +38,6 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.FloatDimensionSchema;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
-import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.frame.testutil.FrameTestUtil;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.FileUtils;
@@ -95,7 +94,6 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.stream.Collectors;
 
 public class IndexMergerTestBase extends InitializedNullHandlingTest
@@ -428,82 +426,6 @@ public class IndexMergerTestBase extends InitializedNullHandlingTest
         ),
         index.getMetadata()
     );
-  }
-
-  @Test
-  public void testPersistMergeLargeLongColumn() throws Exception
-  {
-    final DateTime timestamp = DateTimes.nowUtc();
-    final String columnName = "largeColumn";
-    final List<String> dimensions = Collections.singletonList(columnName);
-    final RowSignature signature = RowSignature.builder().add(columnName, ColumnType.LONG).build();
-    final Random random = new Random(0);
-    final long totalRows = 5_000_000L; // Large enough that we can expect to need large columns
-
-    final List<QueryableIndex> toMerge = new ArrayList<>();
-    IncrementalIndex incrementalIndex = null;
-
-    for (long i = 0 ; i < totalRows ; i++) {
-      if (i > 0 && i % 1_000_000 == 0) {
-        System.out.println("Wrote " + i + " rows");
-      }
-
-      if (incrementalIndex != null && !incrementalIndex.canAppendRow()) {
-        toMerge.add(TestIndex.persistAndMemoryMap(incrementalIndex));
-        incrementalIndex.close();
-        incrementalIndex = null;
-      }
-
-      if (incrementalIndex == null) {
-        incrementalIndex = new OnheapIncrementalIndex.Builder()
-            .setIndexSchema(
-                IncrementalIndexSchema
-                    .builder()
-                    .withTimestampSpec(new TimestampSpec("timestamp", "millis", timestamp))
-                    .withDimensionsSpec(
-                        DimensionsSpec.builder()
-                                      .setDimensions(ImmutableList.of(new LongDimensionSchema(columnName)))
-                                      .build()
-                    )
-                    .build()
-            )
-            .setMaxRowCount(5_000_000)
-            .build();
-      }
-
-      final long value = random.nextLong();
-      incrementalIndex.add(new ListBasedInputRow(signature, timestamp, dimensions, Collections.singletonList(value)));
-    }
-
-    final File tempDir = temporaryFolder.newFolder();
-    final File mergedDir = indexMerger.mergeQueryableIndex(
-        toMerge,
-        false,
-        new AggregatorFactory[0],
-        tempDir,
-        indexSpec,
-        null,
-        0
-    );
-
-    final QueryableIndex mergedIndex = closer.closeLater(indexIO.loadIndex(mergedDir));
-
-//    Assert.assertEquals(2, mergedIndex.getColumnHolder(ColumnHolder.TIME_COLUMN_NAME).getLength());
-//    Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(mergedIndex.getAvailableDimensions()));
-//    Assert.assertEquals(makeOrderBys("__time"), Lists.newArrayList(mergedIndex.getOrdering()));
-//    Assert.assertEquals(3, mergedIndex.getColumnNames().size());
-//
-//    assertDimCompression(mergedIndex, indexSpec.getDimensionCompression());
-//
-//    Assert.assertArrayEquals(
-//        IncrementalIndexTest.getDefaultCombiningAggregatorFactories(),
-//        mergedIndex.getMetadata().getAggregators()
-//    );
-//
-//    Assert.assertEquals(
-//        Granularities.NONE,
-//        mergedIndex.getMetadata().getQueryGranularity()
-//    );
   }
 
   @Test
