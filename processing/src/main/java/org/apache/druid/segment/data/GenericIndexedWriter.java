@@ -73,6 +73,17 @@ public class GenericIndexedWriter<T> implements DictionaryWriter<T>
       .writeByteArray(x -> x.fileNameByteArray);
 
 
+  /**
+   * Creates a new writer that accepts byte buffers and compresses them.
+   *
+   * @param segmentWriteOutMedium supplier of temporary files
+   * @param filenameBase          base filename to be used for secondary files, if multiple files are needed
+   * @param compressionStrategy   compression strategy to apply
+   * @param bufferSize            size of the buffers that will be passed in
+   * @param fileSizeLimit         limit for files created by the writer. In production code, this should always be
+   *                              {@link GenericIndexedWriter#MAX_FILE_SIZE}. The parameter is exposed only for testing.
+   * @param closer                closer to attach temporary compression buffers to
+   */
   public static GenericIndexedWriter<ByteBuffer> ofCompressedByteBuffers(
       final SegmentWriteOutMedium segmentWriteOutMedium,
       final String filenameBase,
