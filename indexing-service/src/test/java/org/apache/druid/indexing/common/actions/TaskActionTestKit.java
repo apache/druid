@@ -99,6 +99,11 @@ public class TaskActionTestKit extends ExternalResource
     this.useSegmentMetadataCache = useSegmentMetadataCache;
   }
 
+  public void syncSegmentMetadataCache()
+  {
+    metadataCachePollExec.finishNextPendingTask();
+  }
+
   @Override
   public void before()
   {
@@ -171,7 +176,7 @@ public class TaskActionTestKit extends ExternalResource
 
     segmentMetadataCache.start();
     segmentMetadataCache.becomeLeader();
-    metadataCachePollExec.finishNextPendingTask();
+    syncSegmentMetadataCache();
   }
 
   private SqlSegmentMetadataTransactionFactory setupTransactionFactory(ObjectMapper objectMapper)
