@@ -84,14 +84,18 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache
 
   /**
    * Checks if a segment needs to be refreshed. A refresh is required if the
-   * cache has no known state for the given segment or if the metadata store
-   * has a more recent last_updated_time than the cache.
+   * cache has no entry for the given segment or if the metadata store has a
+   * more recently updated copy of the segment.
+   *
+   * @param persistedUpdateTime Last updated time of this segment as persisted
+   *                            in the metadata store. This value can be null
+   *                            for segments persisted before the column
+   *                            used_status_last_updated was added to the table.
    */
   boolean shouldRefreshUsedSegment(String segmentId, @Nullable DateTime persistedUpdateTime)
   {
     return withReadLock(() -> {
       final DataSegmentPlus cachedState = idToUsedSegment.get(segmentId);
-
       return cachedState == null
              || shouldUpdateCache(cachedState.getUsedStatusLastUpdatedDate(), persistedUpdateTime);
     });
@@ -109,21 +113,25 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache
     );
   }
 
+  /**
+   * Checks if a record in the cache needs to be updated.
+   *
+   * @param cachedUpdateTime Updated time of record already present in cache
+   * @param newUpdateTime    Updated time of record being considered to replace
+   *                         the existing one
+   */
   private boolean shouldUpdateCache(
       @Nullable DateTime cachedUpdateTime,
-      @Nullable DateTime persistedUpdateTime
+      @Nullable DateTime newUpdateTime
   )
   {
-    if (cachedUpdateTime == null) {
-      // Update cache as there is no existing entry
-      return true;
-    } else if (persistedUpdateTime == null) {
-      // Do not update cache as metadata store entry is from before
-      // the used_status_last_updated column was added
+    if (newUpdateTime == null) {
+      // Do not update cache as candidate entry is probably from before the
+      // used_status_last_updated column was added
       return false;
     } else {
       // Update cache as entry is older than that persisted in metadata store
-      return cachedUpdateTime.isBefore(persistedUpdateTime);
+      return cachedUpdateTime == null || cachedUpdateTime.isBefore(newUpdateTime);
     }
   }
 
@@ -172,8 +180,13 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache
 
   /**
    * Adds or updates an unused segment in the cache.
+   *
+   * @param updatedTime Last updated time of this segment as persisted in the
+   *                    metadata store. This value can be null for segments
+   *                    persisted to the metadata store before the column
+   *                    used_status_last_updated was added to the segments table.
    */
-  boolean addUnusedSegmentId(SegmentId segmentId, DateTime updatedTime)
+  boolean addUnusedSegmentId(SegmentId segmentId, @Nullable DateTime updatedTime)
   {
     final int partitionNum = segmentId.getPartitionNum();
     return withWriteLock(() -> {
@@ -183,15 +196,16 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache
         usedSegmentTimeline.remove(oldSegmentPlus.getDataSegment());
       }
 
-      final DateTime oldUpdatedTime = unusedSegmentIdToUpdatedTime.put(segmentId.toString(), updatedTime);
-      if (oldUpdatedTime == null) {
+      final String serializedId = segmentId.toString();
+      if (!unusedSegmentIdToUpdatedTime.containsKey(serializedId)
+          || shouldUpdateCache(unusedSegmentIdToUpdatedTime.get(serializedId), updatedTime)) {
+        unusedSegmentIdToUpdatedTime.put(serializedId, updatedTime);
         intervalVersionToHighestUnusedPartitionNumber
             .computeIfAbsent(segmentId.getInterval(), i -> new HashMap<>())
             .merge(segmentId.getVersion(), partitionNum, Math::max);
-
         return true;
       } else {
-        return !oldUpdatedTime.equals(updatedTime);
+        return false;
       }
     });
   }
@@ -218,7 +232,6 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache
    *
    * @param pollStartTime Entries updated after this time are not eligible for
    *                      removal
-   *
    * @return Number of unpersisted segments removed from cache.
    */
   int removeUnpersistedSegments(Set<String> persistedSegmentIds, DateTime pollStartTime)

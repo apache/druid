@@ -90,7 +90,7 @@ public class HeapMemoryDatasourceSegmentCacheTest
   }
 
   @Test
-  public void testAddSegment_whenSegmentIsUsed()
+  public void testAddSegment_withUsedSegment()
   {
     final DataSegmentPlus segmentPlus = createUsedSegment().ofSizeInMb(100);
     final DataSegment segment = segmentPlus.getDataSegment();
@@ -120,23 +120,30 @@ public class HeapMemoryDatasourceSegmentCacheTest
   }
 
   @Test
-  public void testAddSegment_overwritesOldValue()
+  public void testAddSegment_updatesCacheWithNewerEntry()
   {
-    final DataSegmentPlus segmentPlus = createUsedSegment().updatedNow().ofSizeInMb(100);
+    final DateTime now = DateTimes.nowUtc();
+    final DataSegmentPlus segmentPlus = createUsedSegment().lastUpdatedOn(now).ofSizeInMb(100);
     final DataSegment segment = segmentPlus.getDataSegment();
 
-    cache.addSegment(segmentPlus);
+    Assert.assertTrue(cache.addSegment(segmentPlus));
     Assert.assertEquals(Set.of(segmentPlus), cache.findUsedSegmentsPlusOverlappingAnyOf(List.of()));
 
-    // Update the segment and verify that the fields have been updated
-    final DataSegmentPlus updatedSegmentPlus
-        = new DataSegmentPlus(segment, null, DateTimes.EPOCH, true, null, 100L, null);
-    cache.addSegment(updatedSegmentPlus);
+    // Verify that a segment with older updated time does not update cache
+    final DataSegmentPlus oldSegmentPlus
+        = new DataSegmentPlus(segment, null, now.minus(1), true, null, 100L, null);
+    Assert.assertFalse(cache.addSegment(oldSegmentPlus));
     Assert.assertEquals(Set.of(segmentPlus), cache.findUsedSegmentsPlusOverlappingAnyOf(List.of()));
+
+    // Verify that a segment with newer updated time updates the cache
+    final DataSegmentPlus newSegmentPlus
+        = new DataSegmentPlus(segment, null, now.plus(1), true, null, 100L, null);
+    Assert.assertTrue(cache.addSegment(newSegmentPlus));
+    Assert.assertEquals(Set.of(newSegmentPlus), cache.findUsedSegmentsPlusOverlappingAnyOf(List.of()));
   }
 
   @Test
-  public void testAddSegment_whenSegmentIsUnused()
+  public void testAddSegment_withUnusedSegment()
   {
     final DataSegmentPlus segmentPlus = createUnusedSegment().ofSizeInMb(100);
     final DataSegment segment = segmentPlus.getDataSegment();
@@ -158,24 +165,32 @@ public class HeapMemoryDatasourceSegmentCacheTest
   }
 
   @Test
-  public void testShouldRefreshUsedSegment_returnsTrueWhenCacheIsOutdated()
+  public void testShouldRefreshUsedSegment_returnsTrueIfCacheHasNoEntry()
+  {
+    Assert.assertTrue(cache.shouldRefreshUsedSegment("abc", null));
+    Assert.assertTrue(cache.shouldRefreshUsedSegment("abc", DateTimes.EPOCH));
+    Assert.assertTrue(cache.shouldRefreshUsedSegment("abc", DateTimes.nowUtc()));
+  }
+
+  @Test
+  public void testShouldRefreshUsedSegment_returnsTrueIfCacheHasOutdatedEntry()
   {
     final DataSegmentPlus segmentPlus = createUsedSegment().updatedNow().ofSizeInMb(100);
     final DataSegment segment = segmentPlus.getDataSegment();
     final String segmentId = segment.getId().toString();
 
-    Assert.assertTrue(cache.shouldRefreshUsedSegment(segmentId, segmentPlus.getUsedStatusLastUpdatedDate()));
-
     cache.addSegment(segmentPlus);
     Assert.assertEquals(segment, cache.findUsedSegment(segmentId));
 
-    // Verify that segment refresh is required only if updated time has increased
-    final DateTime updatedTime = segmentPlus.getUsedStatusLastUpdatedDate();
-    Assert.assertNotNull(updatedTime);
+    final DateTime cachedUpdatedTime = segmentPlus.getUsedStatusLastUpdatedDate();
+    Assert.assertNotNull(cachedUpdatedTime);
 
-    Assert.assertFalse(cache.shouldRefreshUsedSegment(segmentId, updatedTime));
-    Assert.assertFalse(cache.shouldRefreshUsedSegment(segmentId, updatedTime.minus(1)));
-    Assert.assertTrue(cache.shouldRefreshUsedSegment(segmentId, updatedTime.plus(1)));
+    // Verify that segment refresh is required only if updated time has increased
+    Assert.assertFalse(cache.shouldRefreshUsedSegment(segmentId, null));
+    Assert.assertFalse(cache.shouldRefreshUsedSegment(segmentId, cachedUpdatedTime));
+    Assert.assertFalse(cache.shouldRefreshUsedSegment(segmentId, cachedUpdatedTime.minus(1)));
+
+    Assert.assertTrue(cache.shouldRefreshUsedSegment(segmentId, cachedUpdatedTime.plus(1)));
   }
 
   @Test
@@ -240,10 +255,30 @@ public class HeapMemoryDatasourceSegmentCacheTest
     final DataSegment segment = unusedSegmentPlus.getDataSegment();
     final SegmentId segmentId = segment.getId();
 
-    cache.addUnusedSegmentId(segmentId, null);
+    Assert.assertTrue(cache.addUnusedSegmentId(segmentId, null));
 
     Assert.assertEquals(Set.of(segmentId.toString()), cache.findExistingSegmentIds(Set.of(segment)));
     Assert.assertEquals(segmentId, cache.findHighestUnusedSegmentId(segment.getInterval(), segment.getVersion()));
+  }
+
+  @Test
+  public void testAddUnusedSegmentId_updatesCacheWithNewerEntry()
+  {
+    final DataSegmentPlus unusedSegmentPlus = createUnusedSegment().ofSizeInMb(100);
+    final DataSegment segment = unusedSegmentPlus.getDataSegment();
+    final SegmentId segmentId = segment.getId();
+
+    Assert.assertTrue(cache.addUnusedSegmentId(segmentId, null));
+
+    Assert.assertFalse(cache.addUnusedSegmentId(segmentId, null));
+
+    final DateTime now = DateTimes.nowUtc();
+    Assert.assertTrue(cache.addUnusedSegmentId(segmentId, now));
+
+    Assert.assertFalse(cache.addUnusedSegmentId(segmentId, null));
+    Assert.assertFalse(cache.addUnusedSegmentId(segmentId, now.minus(1)));
+
+    Assert.assertTrue(cache.addUnusedSegmentId(segmentId, now.plus(1)));
   }
 
   @Test
@@ -322,6 +357,40 @@ public class HeapMemoryDatasourceSegmentCacheTest
     Assert.assertEquals(
         List.of(pendingSegment.getId()),
         cache.findPendingSegmentIdsWithExactInterval("sequenceName", FIRST_WEEK_OF_JAN)
+    );
+  }
+
+  @Test
+  public void testInsertPendingSegment_doesNotUpdateEntry()
+  {
+    final DateTime now = DateTimes.nowUtc();
+    final PendingSegmentRecord pendingSegment = new PendingSegmentRecord(
+        new SegmentIdWithShardSpec(WIKI, FIRST_WEEK_OF_JAN, "v1", new NumberedShardSpec(0, 1)),
+        "sequenceName",
+        null,
+        null,
+        "allocatorId",
+        now
+    );
+    Assert.assertTrue(cache.insertPendingSegment(pendingSegment, false));
+    Assert.assertEquals(
+        List.of(pendingSegment),
+        cache.findPendingSegments(pendingSegment.getTaskAllocatorId())
+    );
+
+    // Verify that the pending segment does not get updated even with a newer created date
+    final PendingSegmentRecord updatedPendingSegment = new PendingSegmentRecord(
+        pendingSegment.getId(),
+        pendingSegment.getSequenceName(),
+        pendingSegment.getSequencePrevId(),
+        pendingSegment.getUpgradedFromSegmentId(),
+        pendingSegment.getTaskAllocatorId(),
+        now.plusDays(1)
+    );
+    Assert.assertFalse(cache.insertPendingSegment(updatedPendingSegment, false));
+    Assert.assertEquals(
+        List.of(pendingSegment),
+        cache.findPendingSegments(pendingSegment.getTaskAllocatorId())
     );
   }
 
