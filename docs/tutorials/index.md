@@ -53,7 +53,7 @@ dedicated user account for running Druid.
 
 ## Install Druid
 
-Download the [{{DRUIDVERSION}} release](https://druid.apache.org/downloads/) from Apache Druid. 
+Download the [\{\{DRUIDVERSION}} release](https://druid.apache.org/downloads/) from Apache Druid. 
 
 In your terminal, extract the file and change directories to the distribution directory:
 
@@ -71,7 +71,7 @@ This configuration includes default settings that are appropriate for this tutor
 
 You can view the default settings in the configuration files located in `conf/druid/auto`.
 
-From the apache-druid-{{DRUIDVERSION}} package root, run the following command:
+From the `apache-druid-{{DRUIDVERSION}}` package root, run the following command:
 
 ```bash
 ./bin/start-druid
