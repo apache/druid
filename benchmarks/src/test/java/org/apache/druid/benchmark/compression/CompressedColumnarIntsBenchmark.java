@@ -82,7 +82,8 @@ public class CompressedColumnarIntsBenchmark
     );
     this.compressed = CompressedVSizeColumnarIntsSupplier.fromByteBuffer(
         bufferCompressed,
-        ByteOrder.nativeOrder()
+        ByteOrder.nativeOrder(),
+        null
     ).get();
 
     final ByteBuffer bufferUncompressed = serialize(VSizeColumnarInts.fromArray(vals));

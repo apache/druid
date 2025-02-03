@@ -38,6 +38,9 @@ public class MetricHolder
   private static final byte[] VERSION = new byte[]{0x0};
   private static final SerializerUtils SERIALIZER_UTILS = new SerializerUtils();
 
+  /**
+   * Read a metric column from a legacy (v8) segment.
+   */
   public static MetricHolder fromByteBuffer(ByteBuffer buf)
   {
     final byte ver = buf.get();
@@ -51,7 +54,11 @@ public class MetricHolder
 
     switch (holder.type) {
       case FLOAT:
-        holder.floatType = CompressedColumnarFloatsSupplier.fromByteBuffer(buf, ByteOrder.nativeOrder());
+        holder.floatType = CompressedColumnarFloatsSupplier.fromByteBuffer(
+            buf,
+            ByteOrder.nativeOrder(),
+            null // OK since this method is only used for legacy segments, which always use version 1 indexed
+        );
         break;
       case COMPLEX:
         final ComplexMetricSerde serdeForType = ComplexMetrics.getSerdeForType(holder.getTypeName());
@@ -72,7 +79,7 @@ public class MetricHolder
 
   private static <T> GenericIndexed<T> read(ByteBuffer buf, ComplexMetricSerde serde)
   {
-    return GenericIndexed.read(buf, serde.getObjectStrategy());
+    return GenericIndexed.read(buf, serde.getObjectStrategy(), null);
   }
 
   public enum MetricType
