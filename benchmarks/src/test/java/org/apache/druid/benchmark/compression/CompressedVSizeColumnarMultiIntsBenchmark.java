@@ -95,7 +95,8 @@ public class CompressedVSizeColumnarMultiIntsBenchmark
     );
     this.compressed = CompressedVSizeColumnarMultiIntsSupplier.fromByteBuffer(
         bufferCompressed,
-        ByteOrder.nativeOrder()
+        ByteOrder.nativeOrder(),
+        null
     ).get();
 
     final ByteBuffer bufferUncompressed = serialize(

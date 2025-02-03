@@ -85,7 +85,8 @@ public class ScalarStringColumnAndIndexSupplier implements Supplier<NestedCommon
         );
         final CompressedVSizeColumnarIntsSupplier ints = CompressedVSizeColumnarIntsSupplier.fromByteBuffer(
             encodedValueColumn,
-            byteOrder
+            byteOrder,
+            columnBuilder.getFileMapper()
         );
         final ByteBuffer valueIndexBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
             mapper,
