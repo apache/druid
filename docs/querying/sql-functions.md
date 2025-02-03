@@ -1468,22 +1468,6 @@ Calculates the sum of a set of values.
 
 Calculates the trigonometric tangent of an angle expressed in radians.
 
-## TDIGEST_GENERATE_SKETCH
-
-`TDIGEST_GENERATE_SKETCH(expr, [compression])`
-
-**Function type:** [Aggregation](sql-aggregations.md)
-
-Generates a T-digest sketch from values of the specified expression.
-
-## TDIGEST_QUANTILE
-
-`TDIGEST_QUANTILE(expr, quantileFraction, [compression])`
-
-**Function type:** [Aggregation](sql-aggregations.md)
-
-Returns the quantile for the specified fraction from a T-Digest sketch constructed from values of the expression.
-
 ## TEXTCAT
 
 `TEXTCAT(<CHARACTER>, <CHARACTER>)`
