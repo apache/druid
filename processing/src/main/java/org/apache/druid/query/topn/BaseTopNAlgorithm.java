@@ -25,6 +25,7 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.BufferAggregator;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IdLookup;
@@ -75,13 +76,14 @@ public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Pa
       Parameters params,
       TopNResultBuilder resultBuilder,
       DimValSelector dimValSelector,
-      @Nullable TopNQueryMetrics queryMetrics
+      @Nullable TopNQueryMetrics queryMetrics,
+      ResponseContext responseContext
   )
   {
     if (params.getCardinality() != TopNParams.CARDINALITY_UNKNOWN) {
-      runWithCardinalityKnown(params, resultBuilder, dimValSelector, queryMetrics);
+      runWithCardinalityKnown(params, resultBuilder, dimValSelector, queryMetrics, responseContext);
     } else {
-      runWithCardinalityUnknown(params, resultBuilder, queryMetrics);
+      runWithCardinalityUnknown(params, resultBuilder, queryMetrics, responseContext);
     }
   }
 
@@ -89,7 +91,8 @@ public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Pa
       Parameters params,
       TopNResultBuilder resultBuilder,
       DimValSelector dimValSelector,
-      @Nullable TopNQueryMetrics queryMetrics
+      @Nullable TopNQueryMetrics queryMetrics,
+      ResponseContext responseContext
   )
   {
     if (queryMetrics != null) {
@@ -125,6 +128,7 @@ public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Pa
       numProcessed += numToProcess;
       params.getCursor().reset();
     }
+    responseContext.addRowScanCount(processedRows);
     if (queryMetrics != null) {
       queryMetrics.addProcessedRows(processedRows);
       queryMetrics.stopRecordingScanTime();
@@ -142,7 +146,8 @@ public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Pa
   private void runWithCardinalityUnknown(
       Parameters params,
       TopNResultBuilder resultBuilder,
-      @Nullable TopNQueryMetrics queryMetrics
+      @Nullable TopNQueryMetrics queryMetrics,
+      ResponseContext responseContext
   )
   {
     DimValAggregateStore aggregatesStore = makeDimValAggregateStore(params);
@@ -153,6 +158,7 @@ public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Pa
     updateResults(params, null, aggregatesStore, resultBuilder);
     resetAggregators(aggregatesStore);
     params.getCursor().reset();
+    responseContext.addRowScanCount(processedRows);
     if (queryMetrics != null) {
       queryMetrics.addProcessedRows(processedRows);
       queryMetrics.stopRecordingScanTime();

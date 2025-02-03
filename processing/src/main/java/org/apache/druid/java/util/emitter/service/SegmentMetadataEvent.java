@@ -97,6 +97,37 @@ public class SegmentMetadataEvent implements Event
   {
     return "segment_metadata";
   }
+
+  public DateTime getCreatedTime()
+  {
+    return createdTime;
+  }
+
+  public DateTime getStartTime()
+  {
+    return startTime;
+  }
+
+  public DateTime getEndTime()
+  {
+    return endTime;
+  }
+
+  public String getDataSource()
+  {
+    return dataSource;
+  }
+
+  public String getVersion()
+  {
+    return version;
+  }
+
+  public boolean isCompacted()
+  {
+    return isCompacted;
+  }
+
   @Override
   @JsonValue
   public EventMap toMap()

@@ -38,6 +38,7 @@ import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.JavaScriptAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.filter.ColumnIndexSelector;
 import org.apache.druid.query.filter.DimFilters;
@@ -149,6 +150,7 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
                                              .build();
       final Filter filter = Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getFilter()));
       final Interval interval = Iterables.getOnlyElement(query.getIntervals());
+      ResponseContext responseContext = ResponseContext.createEmpty();
       final Sequence<ResultRow> rows = GroupByQueryEngine.process(
           query,
           new IncrementalIndexStorageAdapter(index),
@@ -158,7 +160,8 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
           new DruidProcessingConfig(),
           filter,
           interval,
-          null
+          null,
+          responseContext
       );
 
       final List<ResultRow> results = rows.toList();
@@ -170,6 +173,8 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
 
       row = results.get(1);
       Assert.assertArrayEquals(new Object[]{"hi", NullHandling.defaultStringValue(), 1L}, row.getArray());
+
+      Assert.assertEquals(2L, (long) responseContext.getRowScanCount());
     }
   }
 
@@ -234,6 +239,7 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
           new DruidProcessingConfig(),
           filter,
           interval,
+          null,
           null
       );
 
@@ -346,7 +352,8 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
                   .aggregators(new LongSumAggregatorFactory("cnt", "cnt"))
                   .build(),
               new IncrementalIndexStorageAdapter(index),
-              null
+              null,
+              ResponseContext.createEmpty()
           )
           .toList();
 
@@ -403,6 +410,7 @@ public class IncrementalIndexStorageAdapterTest extends InitializedNullHandlingT
           new DruidProcessingConfig(),
           filter,
           interval,
+          null,
           null
       );
 

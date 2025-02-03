@@ -3133,6 +3133,7 @@ public class CachingClusteredClientTest
     final ResponseContext responseContext = initializeResponseContext();
 
     getDefaultQueryRunner().run(QueryPlus.wrap(query), responseContext);
+    Assert.assertEquals(1, (long) responseContext.get(ResponseContext.Keys.QUERY_SEGMENT_COUNT));
     final String etag1 = responseContext.getEntityTag();
     getDefaultQueryRunner().run(QueryPlus.wrap(query2), responseContext);
     final String etag2 = responseContext.getEntityTag();

@@ -74,7 +74,7 @@ public class TopNQueryRunnerFactory implements QueryRunnerFactory<Result<TopNRes
         }
 
         TopNQuery query = (TopNQuery) input.getQuery();
-        return queryEngine.query(query, segment.asStorageAdapter(), (TopNQueryMetrics) input.getQueryMetrics());
+        return queryEngine.query(query, segment.asStorageAdapter(), (TopNQueryMetrics) input.getQueryMetrics(), responseContext);
       }
     };
 

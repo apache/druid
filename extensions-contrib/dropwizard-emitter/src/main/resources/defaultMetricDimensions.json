@@ -7,6 +7,14 @@
     "type": "timer",
     "timeUnit": "MILLISECONDS"
   },
+  "query/planningTime": {
+    "dimensions": [
+      "dataSource",
+      "type"
+    ],
+    "type": "timer",
+    "timeUnit": "MILLISECONDS"
+  },
   "query/node/time": {
     "dimensions": [
       "server"

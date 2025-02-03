@@ -1,5 +1,6 @@
 {
   "query/time" : { "dimensions" : ["dataSource", "type"], "type" : "timer", "conversionFactor": 1000.0, "help":  "Seconds taken to complete a query."},
+"query/planningTime" : { "dimensions" : ["dataSource", "type"], "type" : "timer", "conversionFactor": 1000.0, "help":  "Seconds taken to complete query planning at Broker before query is fanned out to the Data nodes."},
   "query/bytes" : { "dimensions" : ["dataSource", "type"], "type" : "count", "help":  "Number of bytes returned in query response."},
   "query/node/time" : { "dimensions" : ["server"], "type" : "timer", "conversionFactor": 1000.0, "help": "Seconds taken to query individual historical/realtime processes."},
   "query/node/ttfb" : { "dimensions" : ["server"], "type" : "timer", "conversionFactor": 1000.0, "help":  "Time to first byte. Seconds elapsed until Broker starts receiving the response from individual historical/realtime processes."},

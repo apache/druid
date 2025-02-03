@@ -85,6 +85,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
+ * This class is called by Broker to send queries to Data nodes and process response from them.
  */
 public class DirectDruidClient<T> implements QueryRunner<T>
 {
@@ -253,6 +254,30 @@ public class DirectDruidClient<T> implements QueryRunner<T>
             if (responseContext != null) {
               context.merge(ResponseContext.deserialize(responseContext, objectMapper));
             }
+            long cpuTime = 0;
+            if (response.headers().get(QueryResource.QUERY_CPU_TIME) != null) {
+              try {
+                cpuTime = Long.parseLong(response.headers().get(QueryResource.QUERY_CPU_TIME));
+              }
+              catch (NumberFormatException ex) {
+                log.warn("Unexpected Cpu-Time header [%s] in response from url [%s] for query [%s]. Exception: [%s]",
+                        response.headers().get(QueryResource.QUERY_CPU_TIME),
+                        url,
+                        query.getId(),
+                        ex.getMessage());
+              }
+            }
+
+            // Add Cpu time at Data nodes.
+            context.addCpuNanos(cpuTime);
+
+            long scannedRows = 0l;
+            if (response.headers().get(QueryResource.NUM_SCANNED_ROWS) != null) {
+              scannedRows = Long.parseLong(response.headers().get(QueryResource.NUM_SCANNED_ROWS));
+            }
+
+            // Add rows scanned at Data nodes.
+            context.addRowScanCount(scannedRows);
             continueReading = enqueue(response.getContent(), 0L);
           }
           catch (final IOException e) {

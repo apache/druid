@@ -59,6 +59,25 @@ public class KafkaEmitterConfig
     }
   }
 
+  public enum SegmentMetadataTopicFormat
+  {
+    JSON,
+    PROTOBUF;
+
+    @JsonValue
+    @Override
+    public String toString()
+    {
+      return StringUtils.toLowerCase(this.name());
+    }
+
+    @JsonCreator
+    public static SegmentMetadataTopicFormat fromString(String name)
+    {
+      return valueOf(StringUtils.toUpperCase(name));
+    }
+  }
+
   public static final Set<EventType> DEFAULT_EVENT_TYPES = ImmutableSet.of(EventType.ALERTS, EventType.METRICS);
   @JsonProperty(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG)
   private final String bootstrapServers;
@@ -72,7 +91,9 @@ public class KafkaEmitterConfig
   private final String requestTopic;
   @Nullable @JsonProperty("segmentMetadata.topic")
   private final String segmentMetadataTopic;
-  @Nullable @JsonProperty
+  @Nullable @JsonProperty("segmentMetadata.topic.format")
+  private final SegmentMetadataTopicFormat segmentMetadataTopicFormat;
+  @JsonProperty
   private final String clusterName;
   @Nullable @JsonProperty("extra.dimensions")
   private final Map<String, String> extraDimensions;
@@ -89,7 +110,8 @@ public class KafkaEmitterConfig
       @Nullable @JsonProperty("alert.topic") String alertTopic,
       @Nullable @JsonProperty("request.topic") String requestTopic,
       @Nullable @JsonProperty("segmentMetadata.topic") String segmentMetadataTopic,
-      @Nullable @JsonProperty("clusterName") String clusterName,
+      @Nullable @JsonProperty("segmentMetadata.topic.format") SegmentMetadataTopicFormat segmentMetadataTopicFormat,
+      @JsonProperty("clusterName") String clusterName,
       @Nullable @JsonProperty("extra.dimensions") Map<String, String> extraDimensions,
       @JsonProperty("producer.config") @Nullable Map<String, String> kafkaProducerConfig,
       @JsonProperty("producer.hiddenProperties") @Nullable DynamicConfigProvider<String> kafkaProducerSecrets
@@ -134,6 +156,7 @@ public class KafkaEmitterConfig
     this.alertTopic = alertTopic;
     this.requestTopic = requestTopic;
     this.segmentMetadataTopic = segmentMetadataTopic;
+    this.segmentMetadataTopicFormat = segmentMetadataTopicFormat == null ? SegmentMetadataTopicFormat.JSON : segmentMetadataTopicFormat;
     this.clusterName = clusterName;
     this.extraDimensions = extraDimensions;
     this.kafkaProducerConfig = kafkaProducerConfig == null ? ImmutableMap.of() : kafkaProducerConfig;
@@ -206,6 +229,12 @@ public class KafkaEmitterConfig
   }
 
   @JsonProperty
+  public SegmentMetadataTopicFormat getSegmentMetadataTopicFormat()
+  {
+    return segmentMetadataTopicFormat;
+  }
+
+  @JsonProperty
   public Map<String, String> getKafkaProducerConfig()
   {
     return kafkaProducerConfig;
@@ -253,6 +282,10 @@ public class KafkaEmitterConfig
       return false;
     }
 
+    if (getSegmentMetadataTopicFormat() != null ? !getSegmentMetadataTopicFormat().equals(that.getSegmentMetadataTopicFormat()) : that.getSegmentMetadataTopicFormat() != null) {
+      return false;
+    }
+
     if (getClusterName() != null ? !getClusterName().equals(that.getClusterName()) : that.getClusterName() != null) {
       return false;
     }
@@ -271,6 +304,7 @@ public class KafkaEmitterConfig
     result = 31 * result + (getAlertTopic() != null ? getAlertTopic().hashCode() : 0);
     result = 31 * result + (getRequestTopic() != null ? getRequestTopic().hashCode() : 0);
     result = 31 * result + (getSegmentMetadataTopic() != null ? getSegmentMetadataTopic().hashCode() : 0);
+    result = 31 * result + (getSegmentMetadataTopicFormat() != null ? getSegmentMetadataTopicFormat().hashCode() : 0);
     result = 31 * result + (getClusterName() != null ? getClusterName().hashCode() : 0);
     result = 31 * result + (getExtraDimensions() != null ? getExtraDimensions().hashCode() : 0);
     result = 31 * result + getKafkaProducerConfig().hashCode();
@@ -288,6 +322,7 @@ public class KafkaEmitterConfig
            ", alert.topic='" + alertTopic + '\'' +
            ", request.topic='" + requestTopic + '\'' +
            ", segmentMetadata.topic='" + segmentMetadataTopic + '\'' +
+           ", segmentMetadata.topic.format='" + segmentMetadataTopicFormat + '\'' +
            ", clusterName='" + clusterName + '\'' +
            ", extra.dimensions='" + extraDimensions + '\'' +
            ", producer.config=" + kafkaProducerConfig + '\'' +

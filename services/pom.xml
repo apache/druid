@@ -200,8 +200,8 @@
             <artifactId>tesla-aether</artifactId>
         </dependency>
         <dependency>
-            <groupId>javax.xml.bind</groupId>
-            <artifactId>jaxb-api</artifactId>
+            <groupId>jakarta.xml.bind</groupId>
+            <artifactId>jakarta.xml.bind-api</artifactId>
         </dependency>
         <dependency>
             <groupId>org.jdbi</groupId>
@@ -307,15 +307,7 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-dependency-plugin</artifactId>
                 <configuration>
-                    <!--
-                      ~ The analysis gets confused between javax.xml.bind:jaxb-api and jakarta.xml.bind:jakarta.xml.bind-api.
-                      ~ The former is a direct dependency, and the latter is a transitive dependency of jackson 2.10+.
-                      -->
-                    <usedDependencies>
-                        <dependency>javax.xml.bind:jaxb-api</dependency>
-                    </usedDependencies>
                     <ignoredUsedUndeclaredDependencies>
-                        <ignoredUsedUndeclaredDependency>jakarta.xml.bind:jakarta.xml.bind-api</ignoredUsedUndeclaredDependency>
                         <ignoredUsedUndeclaredDependency>jakarta.inject:jakarta.inject-api</ignoredUsedUndeclaredDependency>
                     </ignoredUsedUndeclaredDependencies>
                 </configuration>

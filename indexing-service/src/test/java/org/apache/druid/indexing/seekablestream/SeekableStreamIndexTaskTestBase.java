@@ -634,7 +634,7 @@ public abstract class SeekableStreamIndexTaskTestBase extends EasyMockSupport
         taskActionToolbox,
         new TaskAuditLogConfig(false)
     );
-    final SegmentHandoffNotifierFactory handoffNotifierFactory = dataSource -> new SegmentHandoffNotifier()
+    final SegmentHandoffNotifierFactory handoffNotifierFactory = (dataSource, taskId) -> new SegmentHandoffNotifier()
     {
       @Override
       public boolean registerSegmentHandoffCallback(

@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.SegmentMissingException;
@@ -61,9 +62,10 @@ public class TopNQueryEngine
    * {@link AggregatorFactory} and create or update {@link TopNResultValue}
    */
   public Sequence<Result<TopNResultValue>> query(
-      final TopNQuery query,
-      final StorageAdapter adapter,
-      final @Nullable TopNQueryMetrics queryMetrics
+          final TopNQuery query,
+          final StorageAdapter adapter,
+          final @Nullable TopNQueryMetrics queryMetrics,
+          final ResponseContext responseContext
   )
   {
     if (adapter == null) {
@@ -97,7 +99,7 @@ public class TopNQueryEngine
               if (queryMetrics != null) {
                 queryMetrics.cursor(input);
               }
-              return mapFn.apply(input, queryMetrics);
+              return mapFn.apply(input, queryMetrics, responseContext);
             }
         ),
         Predicates.notNull()

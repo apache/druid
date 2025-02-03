@@ -190,7 +190,7 @@ public class RealtimePlumberSchoolTest extends InitializedNullHandlingTest
     dataSegmentPusher = EasyMock.createNiceMock(DataSegmentPusher.class);
     handoffNotifierFactory = EasyMock.createNiceMock(SegmentHandoffNotifierFactory.class);
     handoffNotifier = EasyMock.createNiceMock(SegmentHandoffNotifier.class);
-    EasyMock.expect(handoffNotifierFactory.createSegmentHandoffNotifier(EasyMock.anyString()))
+    EasyMock.expect(handoffNotifierFactory.createSegmentHandoffNotifier(EasyMock.anyString(), EasyMock.anyString()))
             .andReturn(handoffNotifier)
             .anyTimes();
     EasyMock.expect(

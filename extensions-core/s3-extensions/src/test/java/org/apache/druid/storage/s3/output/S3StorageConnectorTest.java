@@ -33,6 +33,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import org.apache.druid.storage.StorageConnector;
 import org.apache.druid.storage.s3.NoopServerSideEncryption;
+import org.apache.druid.storage.s3.S3TransferConfig;
 import org.apache.druid.storage.s3.ServerSideEncryptingAmazonS3;
 import org.easymock.Capture;
 import org.easymock.EasyMock;
@@ -64,7 +65,8 @@ public class S3StorageConnectorTest
   private final AmazonS3Client s3Client = EasyMock.createMock(AmazonS3Client.class);
   private final ServerSideEncryptingAmazonS3 service = new ServerSideEncryptingAmazonS3(
       s3Client,
-      new NoopServerSideEncryption()
+      new NoopServerSideEncryption(),
+      new S3TransferConfig()
   );
   private final ListObjectsV2Result testResult = EasyMock.createMock(ListObjectsV2Result.class);
 

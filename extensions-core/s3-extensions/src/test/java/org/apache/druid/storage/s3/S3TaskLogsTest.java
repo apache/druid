@@ -29,7 +29,6 @@ import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.Owner;
 import com.amazonaws.services.s3.model.Permission;
 import com.amazonaws.services.s3.model.PutObjectRequest;
-import com.amazonaws.services.s3.model.PutObjectResult;
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.google.common.base.Optional;
@@ -123,11 +122,10 @@ public class S3TaskLogsTest extends EasyMockSupport
   }
   
   @Test
-  public void test_pushTaskStatus() throws IOException 
+  public void test_pushTaskStatus() throws IOException, InterruptedException
   {
-    EasyMock.expect(s3Client.putObject(EasyMock.anyObject(PutObjectRequest.class)))
-        .andReturn(new PutObjectResult())
-        .once();
+    s3Client.upload(EasyMock.anyObject(PutObjectRequest.class));
+    EasyMock.expectLastCall().once();
 
     EasyMock.replay(s3Client);
 
@@ -148,12 +146,11 @@ public class S3TaskLogsTest extends EasyMockSupport
   }
 
   @Test
-  public void test_pushTaskPayload() throws IOException
+  public void test_pushTaskPayload() throws IOException, InterruptedException
   {
     Capture<PutObjectRequest> putObjectRequestCapture = Capture.newInstance(CaptureType.FIRST);
-    EasyMock.expect(s3Client.putObject(EasyMock.capture(putObjectRequestCapture)))
-        .andReturn(new PutObjectResult())
-        .once();
+    s3Client.upload(EasyMock.capture(putObjectRequestCapture));
+    EasyMock.expectLastCall().once();
 
     EasyMock.replay(s3Client);
 
@@ -617,9 +614,8 @@ public class S3TaskLogsTest extends EasyMockSupport
 
   private List<Grant> testPushInternal(boolean disableAcl, String ownerId, String ownerDisplayName) throws Exception
   {
-    EasyMock.expect(s3Client.putObject(EasyMock.anyObject()))
-            .andReturn(new PutObjectResult())
-            .once();
+    s3Client.upload(EasyMock.anyObject(PutObjectRequest.class));
+    EasyMock.expectLastCall().once();
 
     AccessControlList aclExpected = new AccessControlList();
     aclExpected.setOwner(new Owner(ownerId, ownerDisplayName));
@@ -628,9 +624,8 @@ public class S3TaskLogsTest extends EasyMockSupport
             .andReturn(aclExpected)
             .once();
 
-    EasyMock.expect(s3Client.putObject(EasyMock.anyObject(PutObjectRequest.class)))
-            .andReturn(new PutObjectResult())
-            .once();
+    s3Client.upload(EasyMock.anyObject(PutObjectRequest.class));
+    EasyMock.expectLastCall().once();
 
     EasyMock.replay(s3Client);
 

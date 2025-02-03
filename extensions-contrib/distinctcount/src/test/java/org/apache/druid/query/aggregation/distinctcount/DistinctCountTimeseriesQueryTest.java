@@ -28,6 +28,7 @@ import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
+import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.timeseries.DefaultTimeseriesQueryMetrics;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesQueryEngine;
@@ -39,6 +40,7 @@ import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.DateTime;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Collections;
@@ -100,8 +102,10 @@ public class DistinctCountTimeseriesQueryTest extends InitializedNullHandlingTes
                                   )
                                   .build();
 
+    ResponseContext responseContext = ResponseContext.createEmpty();
     final Iterable<Result<TimeseriesResultValue>> results =
-        engine.process(query, new IncrementalIndexStorageAdapter(index), new DefaultTimeseriesQueryMetrics()).toList();
+        engine.process(query, new IncrementalIndexStorageAdapter(index), new DefaultTimeseriesQueryMetrics(), responseContext).toList();
+    Assert.assertEquals(3L, (long) responseContext.getRowScanCount());
 
     List<Result<TimeseriesResultValue>> expectedResults = Collections.singletonList(
         new Result<>(

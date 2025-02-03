@@ -145,7 +145,7 @@ public class S3StorageConnectorProviderTest
         new InjectableValues.Std()
             .addValue(
                 ServerSideEncryptingAmazonS3.class,
-                new ServerSideEncryptingAmazonS3(null, new NoopServerSideEncryption())
+                new ServerSideEncryptingAmazonS3(null, new NoopServerSideEncryption(), new S3TransferConfig())
             ));
 
 

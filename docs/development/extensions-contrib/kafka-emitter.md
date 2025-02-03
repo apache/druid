@@ -44,6 +44,7 @@ All the configuration parameters for the Kafka emitter are under `druid.emitter.
 | `druid.emitter.kafka.alert.topic`                  | Kafka topic name for emitter's target to emit alerts. If `event.types` contains `alerts`, this field cannot empty.                        | no        | none                  |
 | `druid.emitter.kafka.request.topic`                | Kafka topic name for emitter's target to emit request logs. If `event.types` contains `requests`, this field cannot be empty.             | no        | none                  |
 | `druid.emitter.kafka.segmentMetadata.topic`        | Kafka topic name for emitter's target to emit segment metadata. If `event.types` contains `segment_metadata`, this field cannot be empty. | no        | none                  |
+| `druid.emitter.kafka.segmentMetadata.topic.format` | Format in which segment related metadata will be emitted. <br/>Choices: json, protobuf.<br/> If set to `protobuf`, then segment metadata is emitted in `DruidSegmentEvent.proto` format | no        | json                  |
 | `druid.emitter.kafka.producer.config`              | JSON configuration to set additional properties to Kafka producer.                                                                        | no        | none                  |
 | `druid.emitter.kafka.clusterName`                  | Optional value to specify the name of your Druid cluster. It can help make groups in your monitoring environment.                         | no        | none                  |
 | `druid.emitter.kafka.extra.dimensions` | Optional JSON configuration to specify a map of extra string dimensions for the events emitted. These can help make groups in your monitoring environment. | no | none |
@@ -56,8 +57,9 @@ druid.emitter.kafka.event.types=["metrics", alerts", "requests", "segment_metada
 druid.emitter.kafka.metric.topic=druid-metric
 druid.emitter.kafka.alert.topic=druid-alert
 druid.emitter.kafka.request.topic=druid-request-logs
-druid.emitter.kafka.segmentMetadata.topic=druid-segment-metadata 
+druid.emitter.kafka.segmentMetadata.topic=druid-segment-metadata
+druid.emitter.kafka.segmentMetadata.topic.format=protobuf
 druid.emitter.kafka.producer.config={"max.block.ms":10000}
 druid.emitter.kafka.extra.dimensions={"region":"us-east-1","environment":"preProd"}
 ```
-
+Whenever `druid.emitter.kafka.segmentMetadata.topic.format` field is updated, it is recommended to also update  `druid.emitter.kafka.segmentMetadata.topic` to avoid the same topic from getting polluted with different formats of segment metadata.

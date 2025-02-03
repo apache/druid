@@ -19,12 +19,13 @@
 
 package org.apache.druid.emitter.kafka;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.protobuf.Timestamp;
+import com.google.protobuf.util.Timestamps;
 import org.apache.druid.emitter.kafka.KafkaEmitterConfig.EventType;
+import org.apache.druid.emitter.proto.DruidSegmentEvent;
 import org.apache.druid.java.util.common.MemoryBoundLinkedBlockingQueue;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.core.Emitter;
@@ -39,6 +40,7 @@ import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.common.serialization.ByteArraySerializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 
 import java.util.Properties;
@@ -62,12 +64,12 @@ public class KafkaEmitter implements Emitter
   private final AtomicLong invalidLost;
 
   private final KafkaEmitterConfig config;
-  private final Producer<String, String> producer;
+  private final Producer<String, byte[]> producer;
   private final ObjectMapper jsonMapper;
-  private final MemoryBoundLinkedBlockingQueue<String> metricQueue;
-  private final MemoryBoundLinkedBlockingQueue<String> alertQueue;
-  private final MemoryBoundLinkedBlockingQueue<String> requestQueue;
-  private final MemoryBoundLinkedBlockingQueue<String> segmentMetadataQueue;
+  private final MemoryBoundLinkedBlockingQueue<byte[]> metricQueue;
+  private final MemoryBoundLinkedBlockingQueue<byte[]> alertQueue;
+  private final MemoryBoundLinkedBlockingQueue<byte[]> requestQueue;
+  private final MemoryBoundLinkedBlockingQueue<byte[]> segmentMetadataQueue;
   private final ScheduledExecutorService scheduler;
 
   protected int sendInterval = DEFAULT_SEND_INTERVAL_SECONDS;
@@ -105,7 +107,7 @@ public class KafkaEmitter implements Emitter
   }
 
   @VisibleForTesting
-  protected Producer<String, String> setKafkaProducer()
+  protected Producer<String, byte[]> setKafkaProducer()
   {
     ClassLoader currCtxCl = Thread.currentThread().getContextClassLoader();
     try {
@@ -114,7 +116,7 @@ public class KafkaEmitter implements Emitter
       Properties props = new Properties();
       props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, config.getBootstrapServers());
       props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
-      props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
+      props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class.getName());
       props.put(ProducerConfig.RETRIES_CONFIG, DEFAULT_RETRIES);
       props.putAll(config.getKafkaProducerConfig());
       props.putAll(config.getKafkaProducerSecrets().getConfig());
@@ -174,9 +176,9 @@ public class KafkaEmitter implements Emitter
     sendToKafka(config.getSegmentMetadataTopic(), segmentMetadataQueue, setProducerCallback(segmentMetadataLost));
   }
 
-  private void sendToKafka(final String topic, MemoryBoundLinkedBlockingQueue<String> recordQueue, Callback callback)
+  private void sendToKafka(final String topic, MemoryBoundLinkedBlockingQueue<byte[]> recordQueue, Callback callback)
   {
-    MemoryBoundLinkedBlockingQueue.ObjectContainer<String> objectToSend;
+    MemoryBoundLinkedBlockingQueue.ObjectContainer<byte[]> objectToSend;
     try {
       while (true) {
         objectToSend = recordQueue.take();
@@ -200,11 +202,10 @@ public class KafkaEmitter implements Emitter
         EventMap map = event.toMap();
         map = addExtraDimensionsToEvent(map);
 
-        String resultJson = jsonMapper.writeValueAsString(map);
-
-        MemoryBoundLinkedBlockingQueue.ObjectContainer<String> objectContainer = new MemoryBoundLinkedBlockingQueue.ObjectContainer<>(
-            resultJson,
-            StringUtils.toUtf8(resultJson).length
+        byte[] resultBytes = jsonMapper.writeValueAsBytes(map);
+        MemoryBoundLinkedBlockingQueue.ObjectContainer<byte[]> objectContainer = new MemoryBoundLinkedBlockingQueue.ObjectContainer<>(
+            resultBytes,
+            resultBytes.length
         );
 
         Set<EventType> eventTypes = config.getEventTypes();
@@ -221,14 +222,32 @@ public class KafkaEmitter implements Emitter
             requestLost.incrementAndGet();
           }
         } else if (event instanceof SegmentMetadataEvent) {
-          if (!eventTypes.contains(EventType.SEGMENT_METADATA) || !segmentMetadataQueue.offer(objectContainer)) {
+          if (!eventTypes.contains(EventType.SEGMENT_METADATA)) {
             segmentMetadataLost.incrementAndGet();
+          } else {
+            switch (config.getSegmentMetadataTopicFormat()) {
+              case PROTOBUF:
+                resultBytes = convertMetadataEventToProto((SegmentMetadataEvent) event, segmentMetadataLost);
+                objectContainer = new MemoryBoundLinkedBlockingQueue.ObjectContainer<>(
+                    resultBytes,
+                    resultBytes.length
+                );
+                break;
+              case JSON:
+                // Do Nothing. We already have the JSON object stored in objectContainer
+                break;
+              default:
+                throw new UnsupportedOperationException("segmentMetadata.topic.format has an invalid value " + config.getSegmentMetadataTopicFormat().toString());
+            }
+            if (!segmentMetadataQueue.offer(objectContainer)) {
+              segmentMetadataLost.incrementAndGet();
+            }
           }
         } else {
           invalidLost.incrementAndGet();
         }
       }
-      catch (JsonProcessingException e) {
+      catch (Exception e) {
         invalidLost.incrementAndGet();
         log.warn(e, "Exception while serializing event");
       }
@@ -248,6 +267,32 @@ public class KafkaEmitter implements Emitter
       map = eventMapBuilder.build();
     }
     return map;
+  }
+
+  private byte[] convertMetadataEventToProto(SegmentMetadataEvent event, AtomicLong segmentMetadataLost)
+  {
+    try {
+      Timestamp createdTimeTs = Timestamps.fromMillis(event.getCreatedTime().getMillis());
+      Timestamp startTimeTs = Timestamps.fromMillis(event.getStartTime().getMillis());
+      Timestamp endTimeTs = Timestamps.fromMillis(event.getEndTime().getMillis());
+
+      DruidSegmentEvent.Builder druidSegmentEventBuilder = DruidSegmentEvent.newBuilder()
+              .setDataSource(event.getDataSource())
+              .setCreatedTime(createdTimeTs)
+              .setStartTime(startTimeTs)
+              .setEndTime(endTimeTs)
+              .setVersion(event.getVersion())
+              .setIsCompacted(event.isCompacted());
+      if (config.getClusterName() != null) {
+        druidSegmentEventBuilder.setClusterName(config.getClusterName());
+      }
+      DruidSegmentEvent druidSegmentEvent = druidSegmentEventBuilder.build();
+      return druidSegmentEvent.toByteArray();
+    }
+    catch (Exception e) {
+      log.warn(e, "Exception while serializing SegmentMetadataEvent");
+      throw e;
+    }
   }
 
   @Override

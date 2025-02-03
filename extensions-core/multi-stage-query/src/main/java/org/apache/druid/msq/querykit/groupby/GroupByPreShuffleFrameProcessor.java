@@ -152,6 +152,7 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
           groupingEngine.process(
               query.withQuerySegmentSpec(new SpecificSegmentSpec(segment.getDescriptor())),
               mapSegment(segmentHolder.get()).asStorageAdapter(),
+              null,
               null
           );
 
@@ -184,6 +185,7 @@ public class GroupByPreShuffleFrameProcessor extends BaseLeafFrameProcessor
             groupingEngine.process(
                 query.withQuerySegmentSpec(new MultipleIntervalSegmentSpec(Intervals.ONLY_ETERNITY)),
                 mapSegment(frameSegment).asStorageAdapter(),
+                null,
                 null
             );
 

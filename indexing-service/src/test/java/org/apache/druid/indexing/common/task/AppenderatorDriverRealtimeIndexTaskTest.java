@@ -1593,7 +1593,7 @@ public class AppenderatorDriverRealtimeIndexTaskTest extends InitializedNullHand
     );
 
     handOffCallbacks = new ConcurrentHashMap<>();
-    final SegmentHandoffNotifierFactory handoffNotifierFactory = dataSource -> new SegmentHandoffNotifier()
+    final SegmentHandoffNotifierFactory handoffNotifierFactory = (dataSource, taskId) -> new SegmentHandoffNotifier()
     {
       @Override
       public boolean registerSegmentHandoffCallback(
