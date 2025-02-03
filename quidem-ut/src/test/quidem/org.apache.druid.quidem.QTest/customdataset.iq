@@ -1,4 +1,4 @@
-!use druidtest://?componentSupplier=NestedComponentSupplier
+!use druidtest://?componentSupplier=XComponentSupplier
 !set outputformat mysql
 
 {
@@ -7,10 +7,9 @@
     "ioConfig": {
       "type": "index_parallel",
       "inputSource": {
-        "type": "http",
-        "uris": [
-          "https://druid.apache.org/data/wikipedia.json.gz"
-        ]
+        "type": "local",
+        "baseDir": "/tmp/",
+        "filter": "wikipedia.json.gz"
       },
       "inputFormat": {
         "type": "json"
@@ -22,7 +21,7 @@
         "queryGranularity": "none",
         "rollup": false
       },
-      "dataSource": "wikipedia",
+      "dataSource": "wikipediax1",
       "timestampSpec": {
         "column": "timestamp",
         "format": "iso"

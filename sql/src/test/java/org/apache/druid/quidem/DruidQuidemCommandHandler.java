@@ -21,7 +21,6 @@ package org.apache.druid.quidem;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import com.google.inject.Injector;
 import net.hydromatic.quidem.AbstractCommand;
 import net.hydromatic.quidem.Command;
 import net.hydromatic.quidem.CommandHandler;
@@ -35,11 +34,8 @@ import org.apache.calcite.sql.SqlExplainFormat;
 import org.apache.calcite.sql.SqlExplainLevel;
 import org.apache.calcite.util.Util;
 import org.apache.druid.query.Query;
-import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
-import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.rel.DruidRel;
-import org.apache.druid.sql.calcite.util.datasets.TestDataSet;
 import org.apache.druid.sql.hook.DruidHook;
 import org.apache.druid.sql.hook.DruidHook.HookKey;
 import org.apache.druid.sql.hook.DruidHookDispatcher;
@@ -73,9 +69,6 @@ public class DruidQuidemCommandHandler implements CommandHandler
     }
     if (line.startsWith("msqPlan")) {
       return new MSQPlanCommand(lines, content);
-    }
-    if (line.startsWith("ingest")) {
-      return new IngestCommand(lines, content);
     }
     return null;
   }
@@ -325,64 +318,4 @@ public class DruidQuidemCommandHandler implements CommandHandler
       super(lines, content, DruidHook.MSQ_PLAN);
     }
   }
-
-  static class IngestCommand extends AbstractCommand
-  {
-    private final List<String> content;
-    private final List<String> lines;
-
-    IngestCommand(List<String> lines, List<String> content)
-    {
-      this.lines = ImmutableList.copyOf(lines);
-      this.content = content;
-    }
-
-    @Override
-    public final String describe(Context context)
-    {
-      return commandName();
-    }
-
-    @Override
-    public final void execute(Context context, boolean execute)
-    {
-      if (execute) {
-        try {
-          executeIngest(context);
-        }
-        catch (Exception e) {
-          throw new Error(e);
-        }
-      } else {
-        context.echo(content);
-      }
-      context.echo(lines);
-    }
-
-    private void executeIngest(Context context)
-    {
-      Injector injector = DruidConnectionExtras.unwrapOrThrow(context.connection()).getInjector();
-      SpecificSegmentsQuerySegmentWalker ss = injector.getInstance(SpecificSegmentsQuerySegmentWalker.class);
-      TempDirProducer tds = injector.getInstance(TempDirProducer.class);
-      TestDataSet tsd= null;
-      ss.add(tsd, tds.newTempFolder());
-    }
-
-    protected final void executeQuery(Context context, String sql)
-    {
-      try (
-          final Statement statement = context.connection().createStatement();
-          final ResultSet resultSet = statement.executeQuery(sql)) {
-        // throw away all results
-        while (resultSet.next()) {
-          Util.discard(false);
-        }
-      }
-      catch (Exception e) {
-        throw new RuntimeException(e);
-      }
-    }
-
-  }
-
 }
