@@ -281,15 +281,21 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
 
       retrieveAllSegmentIds(datasourceToSummary);
 
-      datasourceToSummary.forEach(
-          (datasource, summary) ->
-              removeUnknownSegmentsFromCache(datasource, summary, pollStartTime)
+      datasourceToSegmentCache.forEach(
+          (dataSource, cache) -> removeUnknownSegmentsFromCache(
+              dataSource,
+              datasourceToSummary.computeIfAbsent(dataSource, ds -> new DatasourceSegmentSummary()),
+              pollStartTime
+          )
       );
+
+      // TODO: ensure that last_updated_time is handled correctly for this operation
       datasourceToSummary.forEach(
           (datasource, summary) ->
               getCacheForDatasource(datasource)
                   .resetMaxUnusedIds(summary.intervalVersionToMaxUnusedPartition)
       );
+
       datasourceToSummary.forEach(this::retrieveAndRefreshUsedSegments);
 
       retrieveAndRefreshAllPendingSegments(datasourceToSummary);
@@ -297,6 +303,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
           (datasource, summary) ->
               removeUnknownPendingSegmentsFromCache(datasource, summary, pollStartTime)
       );
+
       datasourceToSummary.forEach(this::emitSummaryMetrics);
 
       final long pollDurationMillis = sincePollStart.millisElapsed();
@@ -427,7 +434,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
 
     final HeapMemoryDatasourceSegmentCache cache = getCacheForDatasource(dataSource);
 
-    final int numUpdatedUsedSegments = connector.inReadOnlyTransaction((handle, status) -> {
+    summary.numUsedSegmentsRefreshed = connector.inReadOnlyTransaction((handle, status) -> {
       int updatedCount = 0;
       try (
           CloseableIterator<DataSegmentPlus> iterator =
@@ -449,14 +456,6 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
 
       return updatedCount;
     });
-
-    summary.numUsedSegmentsRefreshed = numUpdatedUsedSegments;
-    if (numUpdatedUsedSegments > 0) {
-      log.info(
-          "Refreshed [%d] used segments for datasource[%s] from metadata store.",
-          numUpdatedUsedSegments, dataSource
-      );
-    }
   }
 
   /**

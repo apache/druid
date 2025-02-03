@@ -612,7 +612,7 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
                          .bind("end", segment.getInterval().getEnd().toString())
                          .bind("partitioned", !(segment.getShardSpec() instanceof NoneShardSpec))
                          .bind("version", segment.getVersion())
-                         .bind("used", true)
+                         .bind("used", Boolean.TRUE.equals(segmentPlus.getUsed()))
                          .bind("payload", jsonMapper.writeValueAsBytes(segment))
                          .bind("used_status_last_updated", toNonNullString(segmentPlus.getUsedStatusLastUpdatedDate()))
                          .bind("upgraded_from_segment_id", segmentPlus.getUpgradedFromSegmentId());

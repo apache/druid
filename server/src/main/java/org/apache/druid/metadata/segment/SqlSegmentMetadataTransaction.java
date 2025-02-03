@@ -210,7 +210,7 @@ class SqlSegmentMetadataTransaction implements SegmentMetadataTransaction
       Interval interval,
       @Nullable List<String> versions,
       @Nullable Integer limit,
-      @Nullable DateTime maxUsedStatusLastUpdatedTime
+      @Nullable DateTime maxUpdatedTime
   )
   {
     try (final CloseableIterator<DataSegment> iterator =
@@ -221,7 +221,7 @@ class SqlSegmentMetadataTransaction implements SegmentMetadataTransaction
                  limit,
                  null,
                  null,
-                 maxUsedStatusLastUpdatedTime
+                 maxUpdatedTime
              )
     ) {
       return ImmutableList.copyOf(iterator);

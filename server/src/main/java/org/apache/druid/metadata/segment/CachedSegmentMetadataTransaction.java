@@ -186,11 +186,11 @@ class CachedSegmentMetadataTransaction implements SegmentMetadataTransaction
       Interval interval,
       @Nullable List<String> versions,
       @Nullable Integer limit,
-      @Nullable DateTime maxUsedStatusLastUpdatedTime
+      @Nullable DateTime maxUpdatedTime
   )
   {
     // Read from metadata store since unused segment payloads are not cached
-    return delegate.findUnusedSegments(interval, versions, limit, maxUsedStatusLastUpdatedTime);
+    return delegate.findUnusedSegments(interval, versions, limit, maxUpdatedTime);
   }
 
   @Override
@@ -273,7 +273,8 @@ class CachedSegmentMetadataTransaction implements SegmentMetadataTransaction
   @Override
   public boolean updateSegmentPayload(DataSegment segment)
   {
-    return performWriteAction(writer -> writer.updateSegmentPayload(segment));
+    // Write only to metadata store since unused segment payloads are not cached
+    return delegate.updateSegmentPayload(segment);
   }
 
   @Override

@@ -445,7 +445,9 @@ public class SqlSegmentsMetadataQuery
     if (includeSchemaInfo) {
       final Query<Map<String, Object>> query = handle.createQuery(
           StringUtils.format(
-              "SELECT payload, used, schema_fingerprint, num_rows, upgraded_from_segment_id FROM %s WHERE dataSource = :dataSource %s",
+              "SELECT payload, used, schema_fingerprint, num_rows,"
+              + " upgraded_from_segment_id, used_status_last_updated"
+              + " FROM %s WHERE dataSource = :dataSource %s",
               dbTables.getSegmentsTable(), getParameterizedInConditionForColumn("id", segmentIds)
           )
       );
@@ -462,7 +464,7 @@ public class SqlSegmentsMetadataQuery
                 return new DataSegmentPlus(
                     JacksonUtils.readValue(jsonMapper, r.getBytes(1), DataSegment.class),
                     null,
-                    null,
+                    DateTimes.of(r.getString(6)),
                     r.getBoolean(2),
                     schemaFingerprint,
                     numRows,
@@ -474,7 +476,8 @@ public class SqlSegmentsMetadataQuery
     } else {
       final Query<Map<String, Object>> query = handle.createQuery(
           StringUtils.format(
-              "SELECT payload, used, upgraded_from_segment_id FROM %s WHERE dataSource = :dataSource %s",
+              "SELECT payload, used, upgraded_from_segment_id, used_status_last_updated"
+              + " FROM %s WHERE dataSource = :dataSource %s",
               dbTables.getSegmentsTable(), getParameterizedInConditionForColumn("id", segmentIds)
           )
       );
@@ -488,7 +491,7 @@ public class SqlSegmentsMetadataQuery
               (index, r, ctx) -> new DataSegmentPlus(
                   JacksonUtils.readValue(jsonMapper, r.getBytes(1), DataSegment.class),
                   null,
-                  null,
+                  DateTimes.of(r.getString(4)),
                   r.getBoolean(2),
                   null,
                   null,

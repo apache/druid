@@ -380,7 +380,7 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache
       Interval interval,
       @Nullable List<String> versions,
       @Nullable Integer limit,
-      @Nullable DateTime maxUsedStatusLastUpdatedTime
+      @Nullable DateTime maxUpdatedTime
   )
   {
     throw DruidException.defensive("Unsupported: Unused segments are not cached");

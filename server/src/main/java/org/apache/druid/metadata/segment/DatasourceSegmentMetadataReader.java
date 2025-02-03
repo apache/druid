@@ -37,7 +37,7 @@ import java.util.Set;
 public interface DatasourceSegmentMetadataReader
 {
   /**
-   * Returns the IDs of segments (out of the given set) which already exist in
+   * Retrieves the IDs of segments (out of the given set) which already exist in
    * the metadata store.
    */
   Set<String> findExistingSegmentIds(Set<DataSegment> segments);
@@ -57,49 +57,114 @@ public interface DatasourceSegmentMetadataReader
   SegmentId findHighestUnusedSegmentId(Interval interval, String version);
 
   /**
-   * Finds used segments that overlap with any of the given intervals.
+   * Retrieves used segments that overlap with any of the given intervals.
+   * If the given list of intervals is empty, all used segments are considered
+   * eligible.
    */
-  Set<DataSegment> findUsedSegmentsOverlappingAnyOf(List<Interval> intervals);
+  Set<DataSegment> findUsedSegmentsOverlappingAnyOf(
+      List<Interval> intervals
+  );
 
+  /**
+   * Retrieves used segments for the given segment IDs.
+   */
   List<DataSegment> findUsedSegments(Set<String> segmentIds);
 
   /**
-   * Finds used segments that overlap with any of the given intervals. If the
+   * Retrieves used segments that overlap with any of the given intervals. If the
    * given list of intervals is empty, all used segments are considered eligible.
    */
-  Set<DataSegmentPlus> findUsedSegmentsPlusOverlappingAnyOf(List<Interval> intervals);
+  Set<DataSegmentPlus> findUsedSegmentsPlusOverlappingAnyOf(
+      List<Interval> intervals
+  );
 
+  /**
+   * Retrieves the segment for the given segment ID.
+   *
+   * @return null if no such segment exists in the metadata store.
+   */
   @Nullable
   DataSegment findSegment(String segmentId);
 
+  /**
+   * Retrieves the used segment for the given segment ID.
+   *
+   * @return null if no such segment exists in the metadata store.
+   */
   @Nullable
   DataSegment findUsedSegment(String segmentId);
 
-  List<DataSegmentPlus> findSegments(Set<String> segmentIds);
+  /**
+   * Retrieves segments for the given segment IDs.
+   */
+  List<DataSegmentPlus> findSegments(
+      Set<String> segmentIds
+  );
 
-  List<DataSegmentPlus> findSegmentsWithSchema(Set<String> segmentIds);
+  /**
+   * Retrieves segments with additional metadata info such as number of rows and
+   * schema fingerprint for the given segment IDs.
+   */
+  List<DataSegmentPlus> findSegmentsWithSchema(
+      Set<String> segmentIds
+  );
 
+  /**
+   * Retrieves unused segments that are fully contained within the given interval.
+   *
+   * @param interval       Returned segments must be fully contained within this
+   *                       interval
+   * @param versions       Optional list of segment versions. If passed as null,
+   *                       all segment versions are eligible.
+   * @param limit          Maximum number of segments to return. If passed as null,
+   *                       all segments are returned.
+   * @param maxUpdatedTime Returned segments must have a {@code used_status_last_updated}
+   *                       which is either null or earlier than this value.
+   */
   List<DataSegment> findUnusedSegments(
       Interval interval,
       @Nullable List<String> versions,
       @Nullable Integer limit,
-      @Nullable DateTime maxUsedStatusLastUpdatedTime
+      @Nullable DateTime maxUpdatedTime
   );
 
-  // javadoc - sequencePreviousId must be non-null
+  /**
+   * Retrieves pending segment IDs for the given sequence name and previous ID.
+   */
   List<SegmentIdWithShardSpec> findPendingSegmentIds(
       String sequenceName,
       String sequencePreviousId
   );
 
+  /**
+   * Retrieves pending segment IDs that exactly match the given interval and
+   * sequence name.
+   */
   List<SegmentIdWithShardSpec> findPendingSegmentIdsWithExactInterval(
       String sequenceName,
       Interval interval
   );
 
-  List<PendingSegmentRecord> findPendingSegmentsOverlapping(Interval interval);
+  /**
+   * Retrieves pending segments overlapping the given interval.
+   */
+  List<PendingSegmentRecord> findPendingSegmentsOverlapping(
+      Interval interval
+  );
 
-  List<PendingSegmentRecord> findPendingSegmentsWithExactInterval(Interval interval);
+  /**
+   * Retrieves pending segments whose interval exactly aligns with the given
+   * interval.
+   */
+  List<PendingSegmentRecord> findPendingSegmentsWithExactInterval(
+      Interval interval
+  );
 
-  List<PendingSegmentRecord> findPendingSegments(String taskAllocatorId);
+  /**
+   * Retrieves pending segments that were allocated for the specified
+   * {@code taskAllocatorId}.
+   */
+  List<PendingSegmentRecord> findPendingSegments(
+      String taskAllocatorId
+  );
 }

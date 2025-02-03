@@ -35,39 +35,88 @@ public interface DatasourceSegmentMetadataWriter
 {
   /**
    * Inserts the given segments into the metadata store.
+   *
+   * @return Number of new segments inserted
    */
   int insertSegments(Set<DataSegmentPlus> segments);
 
   /**
    * Inserts the given segments into the metadata store while also persisting
    * additional metadata values such as number of rows and schema fingerprint.
+   *
+   * @return Number of new segments inserted
    */
   int insertSegmentsWithMetadata(Set<DataSegmentPlus> segments);
 
   /**
    * Marks the segments fully contained in the given interval as unused.
+   *
+   * @return Number of segments updated successfully
    */
   int markSegmentsWithinIntervalAsUnused(Interval interval, DateTime updateTime);
 
+  /**
+   * Deletes the segments for the given IDs from the metadata store.
+   *
+   * @return Number of segments deleted successfully
+   */
   int deleteSegments(Set<String> segmentsIdsToDelete);
 
+  /**
+   * Updates the payload of the given segment in the metadata store.
+   * This method is used only by legacy tasks "move", "archive" and "restore".
+   *
+   * @return true if the segment payload was updated successfully, false otherwise
+   */
   boolean updateSegmentPayload(DataSegment segment);
 
+  /**
+   * Inserts a pending segment into the metadata store.
+   *
+   * @return true if the pending segment was inserted successfully, false otherwise
+   */
   boolean insertPendingSegment(
       PendingSegmentRecord pendingSegment,
       boolean skipSegmentLineageCheck
   );
 
+  /**
+   * Inserts pending segments into the metadata store.
+   *
+   * @return Number of new pending segments inserted
+   */
   int insertPendingSegments(
       List<PendingSegmentRecord> pendingSegments,
       boolean skipSegmentLineageCheck
   );
 
+  /**
+   * Deletes all pending segments from the metadata store.
+   *
+   * @return Number of pending segments deleted
+   */
   int deleteAllPendingSegments();
 
+  /**
+   * Deletes pending segments for the given IDs from the metadata store.
+   *
+   * @return Number of pending segments deleted.
+   */
   int deletePendingSegments(Set<String> segmentIdsToDelete);
 
+  /**
+   * Deletes pending segments allocated for the given {@code taskAllocatorID}
+   * from the metadata store.
+   *
+   * @return Number of pending segments deleted
+   */
   int deletePendingSegments(String taskAllocatorId);
 
+  /**
+   * Deletes all pending segments which were created during the given interval
+   * from the metadata store.
+   *
+   * @return Number of pending segments deleted.
+   */
   int deletePendingSegmentsCreatedIn(Interval interval);
 }
