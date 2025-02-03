@@ -28,11 +28,7 @@ public interface TestDataSet
 {
   public static final String TIMESTAMP_COLUMN = "t";
 
-  public static final MapBasedTestDataset FOO = new Foo();
-  public static final MapBasedTestDataset FOO2 = new Foo2();
   public static final MapBasedTestDataset NUMFOO = new NumFoo();
-  public static final MapBasedTestDataset RESTRICTED1 = new Foo("restrictedDatasource_m1_is_6");
-  public static final MapBasedTestDataset BROADCAST = new NumFoo("broadcast");
 
   String getName();
 
