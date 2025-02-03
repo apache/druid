@@ -50,11 +50,14 @@ import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
+import org.apache.druid.sql.calcite.util.datasets.TestDataSet;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
+import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.joda.time.Interval;
 
 import java.io.Closeable;
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -238,5 +241,20 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
     for (Closeable closeable : closeables) {
       Closeables.close(closeable, true);
     }
+  }
+
+  public SpecificSegmentsQuerySegmentWalker add(TestDataSet dataset, File tmpDir)
+  {
+    QueryableIndex indexNumericDims = dataset.makeIndex(tmpDir);
+    return add(
+        DataSegment.builder()
+            .dataSource(dataset.getName())
+            .interval(indexNumericDims.getDataInterval())
+            .version("1")
+            .shardSpec(new LinearShardSpec(0))
+            .size(0)
+            .build(),
+        indexNumericDims
+    );
   }
 }
