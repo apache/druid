@@ -39,6 +39,7 @@ Core extensions are maintained by Druid committers.
 |druid-azure-extensions|Microsoft Azure deep storage.|[link](../development/extensions-core/azure.md)|
 |druid-basic-security|Support for Basic HTTP authentication and role-based access control.|[link](../development/extensions-core/druid-basic-security.md)|
 |druid-bloom-filter|Support for providing Bloom filters in druid queries.|[link](../development/extensions-core/bloom-filter.md)|
+|druid-catalog|This extension allows users to configure, update, retrieve, and manage metadata stored in Druid's catalog. |[link](../development/extensions-core/catalog.md)|
 |druid-datasketches|Support for approximate counts and set operations with [Apache DataSketches](https://datasketches.apache.org/).|[link](../development/extensions-core/datasketches-extension.md)|
 |druid-google-extensions|Google Cloud Storage deep storage.|[link](../development/extensions-core/google.md)|
 |druid-hdfs-storage|HDFS deep storage.|[link](../development/extensions-core/hdfs.md)|
@@ -62,6 +63,7 @@ Core extensions are maintained by Druid committers.
 |simple-client-sslcontext|Simple SSLContext provider module to be used by Druid's internal HttpClient when talking to other Druid processes over HTTPS.|[link](../development/extensions-core/simple-client-sslcontext.md)|
 |druid-pac4j|OpenID Connect authentication for druid processes.|[link](../development/extensions-core/druid-pac4j.md)|
 |druid-kubernetes-extensions|Druid cluster deployment on Kubernetes without Zookeeper.|[link](../development/extensions-core/kubernetes.md)|
+|druid-kubernetes-overlord-extensions|Support for launching tasks in k8s without Middle Managers|[link](../development/extensions-core/k8s-jobs.md)|
 
 ## Community extensions
 
@@ -100,7 +102,6 @@ All of these community extensions can be downloaded using [pull-deps](../operati
 |druid-tdigestsketch|Support for approximate sketch aggregators based on [T-Digest](https://github.com/tdunning/t-digest)|[link](../development/extensions-contrib/tdigestsketch-quantiles.md)|
 |gce-extensions|GCE Extensions|[link](../development/extensions-contrib/gce-extensions.md)|
 |prometheus-emitter|Exposes [Druid metrics](../operations/metrics.md) for Prometheus server collection (<https://prometheus.io/>)|[link](../development/extensions-contrib/prometheus.md)|
-|druid-kubernetes-overlord-extensions|Support for launching tasks in k8s without Middle Managers|[link](../development/extensions-contrib/k8s-jobs.md)|
 |druid-spectator-histogram|Support for efficient approximate percentile queries|[link](../development/extensions-contrib/spectator-histogram.md)|
 |druid-rabbit-indexing-service|Support for creating and managing [RabbitMQ](https://www.rabbitmq.com/) indexing tasks|[link](../development/extensions-contrib/rabbit-stream-ingestion.md)|
 |druid-ranger-security|Support for access control through Apache Ranger.|[link](../development/extensions-contrib/druid-ranger-security.md)|

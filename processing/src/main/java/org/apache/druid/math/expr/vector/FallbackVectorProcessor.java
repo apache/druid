@@ -205,6 +205,12 @@ public abstract class FallbackVectorProcessor<T> implements ExprVectorProcessor<
 
       return new ExprEvalObjectVector(outValues, getOutputType());
     }
+
+    @Override
+    public int maxVectorSize()
+    {
+      return outValues.length;
+    }
   }
 
   /**
@@ -250,6 +256,12 @@ public abstract class FallbackVectorProcessor<T> implements ExprVectorProcessor<
 
       return new ExprEvalLongVector(outValues, anyNulls ? outNulls : null);
     }
+
+    @Override
+    public int maxVectorSize()
+    {
+      return outValues.length;
+    }
   }
 
   /**
@@ -294,6 +306,12 @@ public abstract class FallbackVectorProcessor<T> implements ExprVectorProcessor<
       }
 
       return new ExprEvalDoubleVector(outValues, anyNulls ? outNulls : null);
+    }
+
+    @Override
+    public int maxVectorSize()
+    {
+      return outValues.length;
     }
   }
 

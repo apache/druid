@@ -133,7 +133,7 @@ public final class NullableTypeStrategy<T> implements Comparator<T>, Hash.Strate
   }
 
   @Override
-  public int compare(T o1, T o2)
+  public int compare(@Nullable T o1, @Nullable T o2)
   {
     return delegateComparator.compare(o1, o2);
   }

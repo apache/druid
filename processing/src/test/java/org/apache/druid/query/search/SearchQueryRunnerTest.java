@@ -40,6 +40,7 @@ import org.apache.druid.query.Result;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.ExtractionDimensionSpec;
+import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.extraction.JavaScriptExtractionFn;
 import org.apache.druid.query.extraction.MapLookupExtractor;
@@ -60,6 +61,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
+import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.virtual.ListFilteredVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.SegmentId;
@@ -825,6 +827,33 @@ public class SearchQueryRunnerTest extends InitializedNullHandlingTest
     expectedHits.add(new SearchHit("v1", "e", 93));
 
     checkSearchQuery(searchQuery, expectedHits);
+  }
+
+  @Test
+  public void testSearchVirtualColumns()
+  {
+    List<SearchHit> expectedHits = new ArrayList<>();
+    expectedHits.add(new SearchHit("vquality", "a", 93));
+    expectedHits.add(new SearchHit("vquality", "not a", 1116));
+
+    checkSearchQuery(
+        Druids.newSearchQueryBuilder()
+              .dataSource(QueryRunnerTestHelper.DATA_SOURCE)
+              .granularity(QueryRunnerTestHelper.ALL_GRAN)
+              .virtualColumns(
+                  new ExpressionVirtualColumn(
+                      "vquality",
+                      "case_searched(like(quality,'a%'), 'a', 'not a')",
+                      ColumnType.STRING,
+                      TestExprMacroTable.INSTANCE
+                  )
+              )
+              .dimensions("vquality")
+              .intervals(QueryRunnerTestHelper.FULL_ON_INTERVAL_SPEC)
+              .query("")
+              .build(),
+        expectedHits
+    );
   }
 
   private void checkSearchQuery(Query searchQuery, List<SearchHit> expectedResults)
