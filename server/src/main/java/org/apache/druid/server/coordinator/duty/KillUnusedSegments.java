@@ -40,8 +40,11 @@ import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
+import org.joda.time.Period;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
@@ -83,6 +86,7 @@ public class KillUnusedSegments implements CoordinatorDuty
   private final Duration durationToRetain;
   private final boolean ignoreDurationToRetain;
   private final int maxSegmentsToKill;
+  private final Period maxIntervalToKill;
   private final Duration bufferPeriod;
 
   /**
@@ -107,6 +111,7 @@ public class KillUnusedSegments implements CoordinatorDuty
   {
     this.period = killConfig.getCleanupPeriod();
     this.maxSegmentsToKill = killConfig.getMaxSegments();
+    this.maxIntervalToKill = killConfig.getMaxInterval();
     this.ignoreDurationToRetain = killConfig.isIgnoreDurationToRetain();
     this.durationToRetain = killConfig.getDurationToRetain();
     if (this.ignoreDurationToRetain) {
@@ -119,11 +124,13 @@ public class KillUnusedSegments implements CoordinatorDuty
     this.bufferPeriod = killConfig.getBufferPeriod();
 
     log.info(
-        "Kill task scheduling enabled with period[%s], durationToRetain[%s], bufferPeriod[%s], maxSegmentsToKill[%s]",
+        "Kill task scheduling enabled with period[%s], durationToRetain[%s], bufferPeriod[%s], "
+        + "maxSegmentsToKill[%s], maxIntervalToKill[%s]",
         this.period,
         this.ignoreDurationToRetain ? "IGNORING" : this.durationToRetain,
         this.bufferPeriod,
-        this.maxSegmentsToKill
+        this.maxSegmentsToKill,
+        this.maxIntervalToKill
     );
 
     this.segmentsMetadataManager = segmentsMetadataManager;
@@ -139,7 +146,8 @@ public class KillUnusedSegments implements CoordinatorDuty
     } else {
       log.debug(
           "Skipping KillUnusedSegments until period[%s] has elapsed after lastKillTime[%s].",
-          period, lastKillTime
+          period,
+          lastKillTime
       );
       return params;
     }
@@ -269,12 +277,15 @@ public class KillUnusedSegments implements CoordinatorDuty
                                 ? DateTimes.COMPARE_DATE_AS_STRING_MAX
                                 : DateTimes.nowUtc().minus(durationToRetain);
 
-    final List<Interval> unusedSegmentIntervals = segmentsMetadataManager.getUnusedSegmentIntervals(
-        dataSource,
-        minStartTime,
-        maxEndTime,
-        maxSegmentsToKill,
-        maxUsedStatusLastUpdatedTime
+    final List<Interval> unusedSegmentIntervals = limitToPeriod(
+        segmentsMetadataManager.getUnusedSegmentIntervals(
+            dataSource,
+            minStartTime,
+            maxEndTime,
+            maxSegmentsToKill,
+            maxUsedStatusLastUpdatedTime
+        ),
+        maxIntervalToKill
     );
 
     // Each unused segment interval returned above has a 1:1 correspondence with an unused segment. So we can assume
@@ -300,7 +311,8 @@ public class KillUnusedSegments implements CoordinatorDuty
   private int getAvailableKillTaskSlots(final CoordinatorDynamicConfig config, final CoordinatorRunStats stats)
   {
     final int killTaskCapacity = Math.min(
-        (int) (CoordinatorDutyUtils.getTotalWorkerCapacity(overlordClient) * Math.min(config.getKillTaskSlotRatio(), 1.0)),
+        (int) (CoordinatorDutyUtils.getTotalWorkerCapacity(overlordClient)
+               * Math.min(config.getKillTaskSlotRatio(), 1.0)),
         config.getMaxKillTaskSlots()
     );
 
@@ -312,5 +324,41 @@ public class KillUnusedSegments implements CoordinatorDuty
     stats.add(Stats.Kill.AVAILABLE_SLOTS, availableKillTaskSlots);
     stats.add(Stats.Kill.MAX_SLOTS, killTaskCapacity);
     return availableKillTaskSlots;
+  }
+
+  /**
+   * Return "intervals" limited to only the intervals that are contained within "maxPeriod" of the earliest start
+   * point of all "intervals". One exception: the very earliest-starting intervals are always included, regardless of
+   * whether they are contained in "maxPeriod".
+   *
+   * @param intervals intervals list
+   * @param maxPeriod period for limiting intervals. If zero, returns all intervals.
+   */
+  static List<Interval> limitToPeriod(final List<Interval> intervals, final Period maxPeriod)
+  {
+    if (DateTimes.EPOCH.plus(maxPeriod).equals(DateTimes.EPOCH) || intervals.size() <= 1) {
+      // return all intervals.
+      return intervals;
+    } else {
+      // maxPeriod is nonzero. First, find the earliest start.
+      final DateTime earliestStart =
+          Collections.min(intervals, Comparator.comparing(Interval::getStart))
+                     .getStart();
+
+      // Then keep intervals that fall within maxPeriod from the earliestStart.
+      final Interval retainInterval = new Interval(earliestStart, maxPeriod);
+      final List<Interval> retVal = new ArrayList<>();
+
+      for (final Interval interval : intervals) {
+        // Include all segments that start at the earliestStart (in case the segment interval is greater than
+        // maxIntervalToKill, we still want to pick that one up). For any other segments, only include them if their
+        // interval is contained entirely within intervalToKill.
+        if (interval.getStart().equals(earliestStart) || retainInterval.contains(interval)) {
+          retVal.add(interval);
+        }
+      }
+
+      return retVal;
+    }
   }
 }

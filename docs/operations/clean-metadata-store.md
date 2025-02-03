@@ -88,6 +88,7 @@ If `killDataSourceWhitelist` is not set or empty, then kill tasks can be submitt
 - `druid.coordinator.kill.ignoreDurationToRetain`: A way to override `druid.coordinator.kill.durationToRetain`. When enabled, the coordinator considers all unused segments as eligible to be killed.
 - `druid.coordinator.kill.bufferPeriod`: Defines the amount of time that a segment must be unused before it can be permanently removed from metadata and deep storage. This serves as a buffer period to prevent data loss if data ends up being needed after being marked unused.
 - `druid.coordinator.kill.maxSegments`: Defines the maximum number of segments to delete per kill task.
+- `druid.coordinator.kill.maxInterval`: Defines the largest interval, as an [ISO 8601 duration](https://en.wikipedia.org/wiki/ISO_8601#Durations), of segments to delete per kill task. Set to zero, e.g. `PT0S`, for unlimited.
 
 ### Audit records
 

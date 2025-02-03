@@ -67,7 +67,7 @@ ModuleRepository.registerModule<RecordTableParameterValues>({
     },
   },
   component: function RecordTableModule(props) {
-    const { stage, querySource, where, setWhere, parameterValues, runSqlQuery } = props;
+    const { stage, querySource, timezone, where, setWhere, parameterValues, runSqlQuery } = props;
 
     const query = useMemo((): string | undefined => {
       return SqlQuery.create(querySource.query)
@@ -82,7 +82,7 @@ ModuleRepository.registerModule<RecordTableParameterValues>({
     }, [querySource, where, parameterValues]);
 
     const [resultState, queryManager] = useQueryManager({
-      query: query,
+      query,
       processQuery: runSqlQuery,
     });
 
@@ -106,6 +106,7 @@ ModuleRepository.registerModule<RecordTableParameterValues>({
         ) : resultData ? (
           <GenericOutputTable
             queryResult={resultData}
+            timezone={timezone}
             columnHints={columnHints}
             showTypeIcons={parameterValues.showTypeIcons}
             onWhereChange={setWhere}

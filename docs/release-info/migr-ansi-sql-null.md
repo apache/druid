@@ -30,7 +30,7 @@ In Apache Druid 32.0.0, legacy configurations which were incompatible with the A
 These configurations were:
 * `druid.generic.useDefaultValueForNull`
 * `druid.expressions.useStrictBooleans`
-* `druid.generic.useThreeValueLogicForNativeFilters` 
+* `druid.generic.useThreeValueLogicForNativeFilters`
 
 This guide provides strategies for Druid operators who rely on legacy Druid null handling behavior in their applications to transition to Druid 32.0.0 or later.
 
@@ -50,7 +50,7 @@ Prior to Druid 28.0.0, Druid defaulted to a legacy mode which stored default val
 In this mode, Druid created segments with the following characteristics at ingestion time:
 
 - String columns couldn't distinguish an empty string, `''`, from null.
-    Therefore, Druid treated them both as interchangeable values.
+    Therefore, Druid treated both values as interchangeable.
 - Numeric columns couldn't represent null valued rows.
     Therefore, Druid stored `0` instead of `null`.
 
@@ -207,7 +207,7 @@ The following example shows how to coerce empty strings into null to accommodate
 
 <Tabs>
 
-<TabItem value="0" label="SQL-based batcn">
+<TabItem value="0" label="SQL-based batch">
 
 ```sql
 REPLACE INTO "null_string" OVERWRITE ALL
@@ -286,7 +286,7 @@ PARTITIONED BY MONTH
 
 Druid ingests the data with no empty strings as follows:
 
-| `__time` | `string_examle` |
+| `__time` | `string_example` |
 | -- | -- | -- |
 | `2024-01-01T00:00:00.000Z`| `my_string`|
 | `2024-01-02T00:00:00.000Z`| `null`|
@@ -305,7 +305,7 @@ If you want to maintain null values in your data within Druid, you can use the f
 
 Consider the following Druid datasource `null_example`:
 
-| `__time` | `string_examle` | `number_example`|
+| `__time` | `string_example` | `number_example`|
 | -- | -- | -- |
 | `2024-01-01T00:00:00.000Z`| `my_string`| 99 |
 | `2024-01-02T00:00:00.000Z`| `empty`| 0 |
