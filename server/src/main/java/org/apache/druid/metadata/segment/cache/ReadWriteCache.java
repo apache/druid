@@ -20,6 +20,7 @@
 package org.apache.druid.metadata.segment.cache;
 
 import com.google.common.base.Supplier;
+import org.apache.druid.error.DruidException;
 
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -29,10 +30,22 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 public abstract class ReadWriteCache implements DatasourceSegmentCache
 {
   private final ReentrantReadWriteLock stateLock;
+  private volatile boolean isStopped = false;
 
   public ReadWriteCache(boolean fair)
   {
     stateLock = new ReentrantReadWriteLock(fair);
+  }
+
+  /**
+   * Stops this cache. Any subsequent read/write action performed on this cache
+   * will throw a defensive DruidException.
+   */
+  public void stop()
+  {
+    withWriteLock(() -> {
+      isStopped = true;
+    });
   }
 
   public void withWriteLock(Action action)
@@ -47,6 +60,7 @@ public abstract class ReadWriteCache implements DatasourceSegmentCache
   {
     stateLock.writeLock().lock();
     try {
+      verifyCacheIsNotStopped();
       return action.get();
     }
     finally {
@@ -58,6 +72,7 @@ public abstract class ReadWriteCache implements DatasourceSegmentCache
   {
     stateLock.readLock().lock();
     try {
+      verifyCacheIsNotStopped();
       return action.get();
     }
     finally {
@@ -70,6 +85,7 @@ public abstract class ReadWriteCache implements DatasourceSegmentCache
   {
     stateLock.readLock().lock();
     try {
+      verifyCacheIsNotStopped();
       return action.perform();
     }
     finally {
@@ -82,10 +98,18 @@ public abstract class ReadWriteCache implements DatasourceSegmentCache
   {
     stateLock.writeLock().lock();
     try {
+      verifyCacheIsNotStopped();
       return action.perform();
     }
     finally {
       stateLock.writeLock().unlock();
+    }
+  }
+
+  private void verifyCacheIsNotStopped()
+  {
+    if (isStopped) {
+      throw DruidException.defensive("Cache is already stopped");
     }
   }
 

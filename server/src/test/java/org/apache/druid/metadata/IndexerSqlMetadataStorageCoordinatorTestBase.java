@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.common.config.Configs;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
@@ -562,6 +563,32 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
       ObjectMapper jsonMapper
   )
   {
+    final Set<DataSegmentPlus> usedSegments = new HashSet<>();
+    for (DataSegment segment : dataSegments) {
+      final DateTime now = DateTimes.nowUtc();
+      usedSegments.add(
+          new DataSegmentPlus(
+              segment,
+              now,
+              now,
+              true,
+              null,
+              null,
+              upgradedFromSegmentIdMap.get(segment.getId().toString())
+          )
+      );
+    }
+
+    insertSegments(usedSegments, connector, table, jsonMapper);
+  }
+
+  public static void insertSegments(
+      Set<DataSegmentPlus> dataSegments,
+      SQLMetadataConnector connector,
+      String table,
+      ObjectMapper jsonMapper
+  )
+  {
     connector.retryWithHandle(
         handle -> {
           PreparedBatch preparedBatch = handle.prepareBatch(
@@ -574,20 +601,21 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
                   connector.getQuoteString()
               )
           );
-          for (DataSegment segment : dataSegments) {
+          for (DataSegmentPlus segmentPlus : dataSegments) {
+            final DataSegment segment = segmentPlus.getDataSegment();
             String id = segment.getId().toString();
             preparedBatch.add()
                          .bind("id", id)
                          .bind("dataSource", segment.getDataSource())
-                         .bind("created_date", DateTimes.nowUtc().toString())
+                         .bind("created_date", toNonNullString(segmentPlus.getCreatedDate()))
                          .bind("start", segment.getInterval().getStart().toString())
                          .bind("end", segment.getInterval().getEnd().toString())
                          .bind("partitioned", !(segment.getShardSpec() instanceof NoneShardSpec))
                          .bind("version", segment.getVersion())
                          .bind("used", true)
                          .bind("payload", jsonMapper.writeValueAsBytes(segment))
-                         .bind("used_status_last_updated", DateTimes.nowUtc().toString())
-                         .bind("upgraded_from_segment_id", upgradedFromSegmentIdMap.get(segment.getId().toString()));
+                         .bind("used_status_last_updated", toNonNullString(segmentPlus.getUsedStatusLastUpdatedDate()))
+                         .bind("upgraded_from_segment_id", segmentPlus.getUpgradedFromSegmentId());
           }
 
           final int[] affectedRows = preparedBatch.execute();
@@ -598,5 +626,10 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
           return true;
         }
     );
+  }
+
+  private static String toNonNullString(DateTime date)
+  {
+    return Configs.valueOrDefault(date, DateTimes.nowUtc()).toString();
   }
 }

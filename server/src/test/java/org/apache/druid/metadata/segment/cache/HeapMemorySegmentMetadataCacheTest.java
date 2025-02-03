@@ -19,60 +19,349 @@
 
 package org.apache.druid.metadata.segment.cache;
 
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionMatcher;
+import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
+import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.java.util.metrics.StubServiceEmitter;
+import org.apache.druid.metadata.IndexerSqlMetadataStorageCoordinatorTestBase;
+import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
+import org.apache.druid.metadata.TestDerbyConnector;
+import org.apache.druid.segment.TestDataSource;
+import org.apache.druid.segment.TestHelper;
+import org.apache.druid.server.coordinator.CreateDataSegments;
+import org.apache.druid.server.coordinator.simulate.BlockingExecutorService;
+import org.apache.druid.server.coordinator.simulate.WrappingScheduledExecutorService;
+import org.apache.druid.server.http.DataSegmentPlus;
+import org.hamcrest.MatcherAssert;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.function.ThrowingRunnable;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
 
 public class HeapMemorySegmentMetadataCacheTest
 {
+  @Rule
+  public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule
+      = new TestDerbyConnector.DerbyConnectorRule();
 
-  @Test
-  public void testStart_isNoop_ifCacheIsDisabled()
+  private BlockingExecutorService pollExecutor;
+  private ScheduledExecutorFactory executorFactory;
+  private TestDerbyConnector derbyConnector;
+  private StubServiceEmitter serviceEmitter;
+
+  private HeapMemorySegmentMetadataCache cache;
+
+  @Before
+  public void setup()
   {
+    pollExecutor = new BlockingExecutorService("test-poll-exec");
+    executorFactory = (poolSize, name) -> new WrappingScheduledExecutorService(name, pollExecutor, false);
+    derbyConnector = derbyConnectorRule.getConnector();
+    serviceEmitter = new StubServiceEmitter();
 
+    derbyConnector.createSegmentTable();
+    derbyConnector.createPendingSegmentsTable();
+
+    EmittingLogger.registerEmitter(serviceEmitter);
+  }
+
+  @After
+  public void tearDown()
+  {
+    if (cache != null) {
+      cache.stopBeingLeader();
+      cache.stop();
+    }
+  }
+
+  /**
+   * Creates the target {@link #cache} to be tested in the current test.
+   */
+  private void setupTargetWithCaching(boolean enabled)
+  {
+    if (cache != null) {
+      throw new ISE("Test target has already been initialized with caching[%s]", cache.isEnabled());
+    }
+    final SegmentsMetadataManagerConfig metadataManagerConfig
+        = new SegmentsMetadataManagerConfig(null, enabled);
+    cache = new HeapMemorySegmentMetadataCache(
+        TestHelper.JSON_MAPPER,
+        () -> metadataManagerConfig,
+        derbyConnectorRule.metadataTablesConfigSupplier(),
+        derbyConnector,
+        executorFactory,
+        serviceEmitter
+    );
+  }
+
+  private void setupAndSyncCache()
+  {
+    setupTargetWithCaching(true);
+    cache.start();
+    cache.becomeLeader();
+    syncCache();
+  }
+
+  private void syncCache()
+  {
+    pollExecutor.finishNextPendingTask();
   }
 
   @Test
-  public void testStart_startsPollingMetadataStore_ifCacheIsEnabled()
+  public void testStart_schedulesDbPoll_ifCacheIsEnabled()
   {
+    setupTargetWithCaching(true);
+    Assert.assertTrue(cache.isEnabled());
 
+    cache.start();
+    Assert.assertTrue(pollExecutor.hasPendingTasks());
+
+    syncCache();
+    serviceEmitter.verifyEmitted(Metric.SYNC_DURATION_MILLIS, 1);
+
+    Assert.assertTrue(pollExecutor.hasPendingTasks());
   }
 
   @Test
-  public void testStop_stopsPollingMetadataStore_ifCacheIsEnabled()
+  public void testStart_doesNotScheduleDbPoll_ifCacheIsDisabled()
   {
+    setupTargetWithCaching(false);
+    Assert.assertFalse(cache.isEnabled());
 
+    cache.start();
+    Assert.assertFalse(cache.isEnabled());
+    Assert.assertFalse(pollExecutor.hasPendingTasks());
+  }
+
+  @Test
+  public void testStop_stopsDbPoll_ifCacheIsEnabled()
+  {
+    setupTargetWithCaching(true);
+    Assert.assertTrue(cache.isEnabled());
+
+    cache.start();
+    Assert.assertTrue(pollExecutor.hasPendingTasks());
+
+    cache.stop();
+    Assert.assertTrue(pollExecutor.isShutdown());
+    Assert.assertFalse(pollExecutor.hasPendingTasks());
   }
 
   @Test
   public void testBecomeLeader_isNoop_ifCacheIsDisabled()
   {
+    setupTargetWithCaching(false);
 
+    cache.start();
+    Assert.assertFalse(pollExecutor.hasPendingTasks());
+
+    cache.becomeLeader();
+    Assert.assertFalse(pollExecutor.hasPendingTasks());
+  }
+
+  @Test
+  public void testBecomeLeader_throwsException_ifCacheIsStopped()
+  {
+    setupTargetWithCaching(true);
+
+    verifyThrowsException(
+        () -> cache.becomeLeader(),
+        "Cache has not been started yet"
+    );
   }
 
   @Test
   public void testGetDataSource_throwsException_ifCacheIsDisabled()
   {
-
+    setupTargetWithCaching(false);
+    verifyThrowsException(
+        () -> cache.getDatasource(TestDataSource.WIKI),
+        "Segment metadata cache is not enabled."
+    );
   }
 
   @Test
-  public void testGetDataSource_throwsException_ifNotLeader()
+  public void testGetDataSource_throwsException_ifCacheIsStoppedOrNotLeader()
+  {
+    setupTargetWithCaching(true);
+    Assert.assertTrue(cache.isEnabled());
+
+    verifyThrowsException(
+        () -> cache.getDatasource(TestDataSource.WIKI),
+        "Segment metadata cache has not been started yet."
+    );
+
+    cache.start();
+    verifyThrowsException(
+        () -> cache.getDatasource(TestDataSource.WIKI),
+        "Not leader yet. Segment metadata cache is not usable."
+    );
+  }
+
+  @Test(timeout = 60_000)
+  public void testGetDataSource_waitsForOneSync_afterBecomingLeader() throws InterruptedException
+  {
+    setupTargetWithCaching(true);
+    cache.start();
+    cache.becomeLeader();
+
+    final List<String> observedEventOrder = new ArrayList<>();
+
+    // Invoke getDatasource in Thread 1
+    final Thread getDatasourceThread = new Thread(() -> {
+      cache.getDatasource(TestDataSource.WIKI);
+      observedEventOrder.add("getDatasource completed");
+    });
+    getDatasourceThread.start();
+
+    // Invoke becomeLeader in Thread 2 after a wait period
+    Thread.sleep(100);
+    final Thread syncCompleteThread = new Thread(() -> {
+      observedEventOrder.add("before first sync");
+      syncCache();
+    });
+    syncCompleteThread.start();
+
+    // Verify that the getDatasource call finishes only after the first sync
+    getDatasourceThread.join();
+    syncCompleteThread.join();
+    Assert.assertEquals(
+        List.of("before first sync", "getDatasource completed"),
+        observedEventOrder
+    );
+
+    // Verify that subsequent calls to getDatasource do not wait
+    final Thread getDatasourceThread2 = new Thread(() -> {
+      cache.getDatasource(TestDataSource.WIKI);
+      observedEventOrder.add("getDatasource 2 completed");
+    });
+    getDatasourceThread2.start();
+    getDatasourceThread2.join();
+
+    Assert.assertEquals(
+        List.of("before first sync", "getDatasource completed", "getDatasource 2 completed"),
+        observedEventOrder
+    );
+  }
+
+  @Test
+  public void testAddSegmentsToCache()
+  {
+    setupAndSyncCache();
+
+    final DatasourceSegmentCache wikiCache = cache.getDatasource(TestDataSource.WIKI);
+
+    final DataSegmentPlus segment = CreateDataSegments.ofDatasource(TestDataSource.WIKI)
+                                                      .markUsed().asPlus();
+    final String segmentId = segment.getDataSegment().getId().toString();
+
+    Assert.assertNull(wikiCache.findUsedSegment(segmentId));
+
+    Assert.assertEquals(1, wikiCache.insertSegments(Set.of(segment)));
+    Assert.assertEquals(segment.getDataSegment(), wikiCache.findUsedSegment(segmentId));
+  }
+
+  @Test
+  public void testSync_retrievesAllSegmentIds()
+  {
+    setupAndSyncCache();
+
+    final List<DataSegmentPlus> segments =
+        CreateDataSegments.ofDatasource(TestDataSource.WIKI)
+                          .forIntervals(5, Granularities.DAY)
+                          .markUsed()
+                          .asPlusList();
+    insertSegments(segments);
+
+    Assert.assertTrue(
+        cache.getDatasource(TestDataSource.WIKI)
+             .findUsedSegmentsPlusOverlappingAnyOf(List.of())
+             .isEmpty()
+    );
+
+    syncCache();
+    serviceEmitter.verifyValue(Metric.STALE_USED_SEGMENTS, 5L);
+    serviceEmitter.verifyValue(Metric.USED_SEGMENTS_UPDATED, 5L);
+    serviceEmitter.verifyValue(Metric.SEGMENTS_POLLED, 5L);
+
+    Assert.assertEquals(
+        Set.copyOf(segments),
+        cache.getDatasource(TestDataSource.WIKI).findUsedSegmentsPlusOverlappingAnyOf(List.of())
+    );
+  }
+
+  @Test
+  public void testSync_retrievesAllPendingSegments()
+  {
+    setupAndSyncCache();
+
+    // Create some pending segments and verify that they are polled
+  }
+
+  @Test
+  public void testSync_retrievesAndRefreshesNewSegments()
   {
 
   }
 
   @Test
-  public void testGetDataSource_waitsForSync_afterBecomingLeader()
+  public void testSync_retrievesAndRefreshesUpdatedSegments()
   {
 
   }
 
   @Test
-  public void testGetDataSource_doesNotWait_afterOneSync()
+  public void testSync_removesUnpersistedSegments()
   {
 
   }
 
-  // TESTS TO VERIFY THAT POLLS CAN BE BOTH FULL AND DELTA DEPENDING ON CACHE STATE
-  // PROBABLY BEST TO have a separate class performing these tests
+  @Test
+  public void testSync_removesUnpersistedPendingSegments()
+  {
+
+  }
+
+  private void insertSegments(List<DataSegmentPlus> segments)
+  {
+    final String table = derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable();
+
+    IndexerSqlMetadataStorageCoordinatorTestBase
+        .insertSegments(Set.copyOf(segments), derbyConnector, table, TestHelper.JSON_MAPPER);
+  }
+
+  private void verifyThrowsException(ThrowingRunnable runnable, String expectedMessage)
+  {
+    MatcherAssert.assertThat(
+        Assert.assertThrows(DruidException.class, runnable),
+        DruidExceptionMatcher.defensive().expectMessageIs(expectedMessage)
+    );
+  }
+
+  private static class Metric
+  {
+    static final String SYNC_DURATION_MILLIS = "segment/metadataCache/sync/time";
+
+    static final String SEGMENTS_POLLED = "segment/metadataCache/polled/total";
+    static final String PENDING_SEGMENTS_POLLED = "segment/metadataCache/polled/pending";
+
+    static final String STALE_USED_SEGMENTS = "segment/metadataCache/stale/used";
+
+    static final String DELETED_SEGMENTS = "segment/metadataCache/deleted/total";
+    static final String DELETED_PENDING_SEGMENTS = "segment/metadataCache/deleted/pending";
+
+    static final String USED_SEGMENTS_UPDATED = "segment/metadataCache/updated/used";
+    static final String UNUSED_SEGMENTS_UPDATED = "segment/metadataCache/updated/unused";
+    static final String PENDING_SEGMENTS_UPDATED = "segment/metadataCache/updated/pending";
+  }
 
 }

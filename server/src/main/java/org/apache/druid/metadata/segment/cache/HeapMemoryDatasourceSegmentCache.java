@@ -68,10 +68,8 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache
     this.dataSource = dataSource;
   }
 
-  /**
-   * Removes all entries from the cache.
-   */
-  void clear()
+  @Override
+  public void stop()
   {
     withWriteLock(() -> {
       unusedSegmentIdToUpdatedTime.clear();
@@ -79,6 +77,7 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache
       idToUsedSegment.clear();
       intervalVersionToHighestUnusedPartitionNumber.clear();
       intervalToPendingSegments.clear();
+      super.stop();
     });
   }
 
@@ -227,25 +226,25 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache
   }
 
   /**
-   * Removes all segments which are present in the cache but not present
-   * in the metadata store.
+   * Removes all segments which are not present in the metadata store and were
+   * updated before the current sync started.
    *
-   * @param pollStartTime Entries updated after this time are not eligible for
-   *                      removal
+   * @param persistedSegmentIds Segment IDs present in the metadata store
+   * @param syncStartTime       Start time of the current sync
    * @return Number of unpersisted segments removed from cache.
    */
-  int removeUnpersistedSegments(Set<String> persistedSegmentIds, DateTime pollStartTime)
+  int removeUnpersistedSegments(Set<String> persistedSegmentIds, DateTime syncStartTime)
   {
     return withWriteLock(() -> {
       final Set<String> unpersistedSegmentIds = new HashSet<>();
       unusedSegmentIdToUpdatedTime.entrySet().stream().filter(
           entry -> !persistedSegmentIds.contains(entry.getKey())
-                   && shouldUpdateCache(entry.getValue(), pollStartTime)
+                   && shouldUpdateCache(entry.getValue(), syncStartTime)
       ).map(Map.Entry::getKey).forEach(unpersistedSegmentIds::add);
 
       idToUsedSegment.entrySet().stream().filter(
           entry -> !persistedSegmentIds.contains(entry.getKey())
-                   && shouldUpdateCache(entry.getValue().getUsedStatusLastUpdatedDate(), pollStartTime)
+                   && shouldUpdateCache(entry.getValue().getUsedStatusLastUpdatedDate(), syncStartTime)
       ).map(Map.Entry::getKey).forEach(unpersistedSegmentIds::add);
 
       return removeSegmentsForIds(unpersistedSegmentIds);

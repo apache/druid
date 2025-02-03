@@ -38,6 +38,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Collectors;
 
 /**
  * Test utility to create {@link DataSegment}s for a given datasource.
@@ -52,6 +53,7 @@ public class CreateDataSegments
   private Granularity granularity = Granularities.DAY;
   private int numPartitions = 1;
   private int numIntervals = 1;
+  private long sizeInBytes = 500_000_000;
 
   private String version = "1";
   private CompactionState compactionState = null;
@@ -84,9 +86,9 @@ public class CreateDataSegments
     return this;
   }
 
-  public CreateDataSegments startingAt(long startOfFirstInterval)
+  public CreateDataSegments startingAt(DateTime startOfFirstInterval)
   {
-    this.startTime = DateTimes.utc(startOfFirstInterval);
+    this.startTime = startOfFirstInterval;
     return this;
   }
 
@@ -137,18 +139,33 @@ public class CreateDataSegments
     return this;
   }
 
-  public DataSegmentPlus ofSizeInMb(long sizeMb)
+  public CreateDataSegments sizeInMb(long sizeInMb)
   {
-    final DataSegment segment = eachOfSizeInMb(sizeMb).get(0);
-    return new DataSegmentPlus(
-        segment,
-        null,
-        lastUpdatedTime,
-        used,
-        null,
-        null,
-        upgradedFromSegmentId
-    );
+    this.sizeInBytes = sizeInMb * 1_000_000;
+    return this;
+  }
+
+  public CreateDataSegments size(long sizeInBytes)
+  {
+    this.sizeInBytes = sizeInBytes;
+    return this;
+  }
+
+  /**
+   * Creates a single {@link DataSegmentPlus} object with the specified parameters.
+   */
+  public DataSegmentPlus asPlus()
+  {
+    return plus(eachOfSize(sizeInBytes).get(0));
+  }
+
+  /**
+   * Creates a list of {@link DataSegmentPlus} objects with the specified
+   * parameters.
+   */
+  public List<DataSegmentPlus> asPlusList()
+  {
+    return eachOfSize(sizeInBytes).stream().map(this::plus).collect(Collectors.toList());
   }
 
   public List<DataSegment> eachOfSizeInMb(long sizeMb)
@@ -188,6 +205,19 @@ public class CreateDataSegments
     }
 
     return Collections.unmodifiableList(segments);
+  }
+
+  private DataSegmentPlus plus(DataSegment segment)
+  {
+    return new DataSegmentPlus(
+        segment,
+        null,
+        lastUpdatedTime,
+        used,
+        null,
+        null,
+        upgradedFromSegmentId
+    );
   }
 
   /**

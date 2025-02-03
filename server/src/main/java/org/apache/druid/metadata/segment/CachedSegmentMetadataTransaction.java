@@ -90,16 +90,6 @@ class CachedSegmentMetadataTransaction implements SegmentMetadataTransaction
     return leaderSelector.isLeader() && startTerm == leaderSelector.localTerm();
   }
 
-  private DatasourceSegmentMetadataReader cacheReader()
-  {
-    return metadataCache;
-  }
-
-  private DatasourceSegmentMetadataWriter cacheWriter()
-  {
-    return metadataCache;
-  }
-
   @Override
   public Handle getHandle()
   {
@@ -127,7 +117,7 @@ class CachedSegmentMetadataTransaction implements SegmentMetadataTransaction
     try {
       pendingCacheWrites.forEach(action -> {
         if (isLeaderWithSameTerm()) {
-          action.accept(cacheWriter());
+          action.accept(metadataCache);
         } else {
           // Leadership has been lost, cache would have been stopped and invalidated
         }
@@ -144,19 +134,19 @@ class CachedSegmentMetadataTransaction implements SegmentMetadataTransaction
   @Override
   public Set<String> findExistingSegmentIds(Set<DataSegment> segments)
   {
-    return cacheReader().findExistingSegmentIds(segments);
+    return metadataCache.findExistingSegmentIds(segments);
   }
 
   @Override
   public Set<SegmentId> findUsedSegmentIdsOverlapping(Interval interval)
   {
-    return cacheReader().findUsedSegmentIdsOverlapping(interval);
+    return metadataCache.findUsedSegmentIdsOverlapping(interval);
   }
 
   @Override
   public SegmentId findHighestUnusedSegmentId(Interval interval, String version)
   {
-    return cacheReader().findHighestUnusedSegmentId(interval, version);
+    return metadataCache.findHighestUnusedSegmentId(interval, version);
   }
 
   @Override
@@ -176,19 +166,19 @@ class CachedSegmentMetadataTransaction implements SegmentMetadataTransaction
   @Override
   public Set<DataSegment> findUsedSegmentsOverlappingAnyOf(List<Interval> intervals)
   {
-    return cacheReader().findUsedSegmentsOverlappingAnyOf(intervals);
+    return metadataCache.findUsedSegmentsOverlappingAnyOf(intervals);
   }
 
   @Override
   public List<DataSegment> findUsedSegments(Set<String> segmentIds)
   {
-    return cacheReader().findUsedSegments(segmentIds);
+    return metadataCache.findUsedSegments(segmentIds);
   }
 
   @Override
   public Set<DataSegmentPlus> findUsedSegmentsPlusOverlappingAnyOf(List<Interval> intervals)
   {
-    return cacheReader().findUsedSegmentsPlusOverlappingAnyOf(intervals);
+    return metadataCache.findUsedSegmentsPlusOverlappingAnyOf(intervals);
   }
 
   @Override
@@ -213,7 +203,7 @@ class CachedSegmentMetadataTransaction implements SegmentMetadataTransaction
   @Override
   public DataSegment findUsedSegment(String segmentId)
   {
-    return cacheReader().findUsedSegment(segmentId);
+    return metadataCache.findUsedSegment(segmentId);
   }
 
   @Override
@@ -222,7 +212,7 @@ class CachedSegmentMetadataTransaction implements SegmentMetadataTransaction
       String sequencePreviousId
   )
   {
-    return cacheReader().findPendingSegmentIds(sequenceName, sequencePreviousId);
+    return metadataCache.findPendingSegmentIds(sequenceName, sequencePreviousId);
   }
 
   @Override
@@ -231,25 +221,25 @@ class CachedSegmentMetadataTransaction implements SegmentMetadataTransaction
       Interval interval
   )
   {
-    return cacheReader().findPendingSegmentIdsWithExactInterval(sequenceName, interval);
+    return metadataCache.findPendingSegmentIdsWithExactInterval(sequenceName, interval);
   }
 
   @Override
   public List<PendingSegmentRecord> findPendingSegmentsOverlapping(Interval interval)
   {
-    return cacheReader().findPendingSegmentsOverlapping(interval);
+    return metadataCache.findPendingSegmentsOverlapping(interval);
   }
 
   @Override
   public List<PendingSegmentRecord> findPendingSegmentsWithExactInterval(Interval interval)
   {
-    return cacheReader().findPendingSegmentsWithExactInterval(interval);
+    return metadataCache.findPendingSegmentsWithExactInterval(interval);
   }
 
   @Override
   public List<PendingSegmentRecord> findPendingSegments(String taskAllocatorId)
   {
-    return cacheReader().findPendingSegments(taskAllocatorId);
+    return metadataCache.findPendingSegments(taskAllocatorId);
   }
 
   // WRITE METHODS
