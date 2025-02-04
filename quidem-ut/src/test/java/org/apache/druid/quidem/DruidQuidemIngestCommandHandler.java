@@ -158,6 +158,10 @@ public class DruidQuidemIngestCommandHandler extends DruidQuidemCommandHandler
         // spec.getIOConfig().getInputFormat();
         //
         // TestDataSet tsd= null;
+
+        // make incremental index - possibly
+        // incremental index is queriable -
+
       }
       catch (Exception e) {
         throw new RuntimeException(e);
