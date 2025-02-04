@@ -426,7 +426,7 @@
         </dependency>
         <dependency>
             <groupId>org.apache.druid</groupId>
-            <artifactId>indexing-service</artifactId>
+            <artifactId>druid-indexing-service</artifactId>
             <type>test-jar</type>
             <version>${project.parent.version}</version>
         </dependency>

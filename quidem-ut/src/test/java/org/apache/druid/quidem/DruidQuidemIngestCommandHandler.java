@@ -81,15 +81,14 @@ public class DruidQuidemIngestCommandHandler extends DruidQuidemCommandHandler
     @Override
     public final void execute(Context context, boolean execute)
     {
-      if (execute) {
-        try {
+      context.echo(content);
+      try {
+        if (execute) {
           executeIngest(context);
         }
-        catch (Exception e) {
-          throw new Error(e);
-        }
-      } else {
-        context.echo(content);
+      }
+      catch (Exception e) {
+        throw new Error(e);
       }
       context.echo(lines);
     }
@@ -132,11 +131,13 @@ public class DruidQuidemIngestCommandHandler extends DruidQuidemCommandHandler
         itb.prepareTaskForLocking(aa);
         aa.runTask(t);
 
-        SegmentCacheManagerFactory f1 = injector.getInstance(SegmentCacheManagerFactory.class);
+        if (false) {
+          SegmentCacheManagerFactory f1 = injector.getInstance(SegmentCacheManagerFactory.class);
 
-        SegmentLocalCacheManager sm = null;
-        DataSegment ds = null;
-        sm.getSegment(ds);
+          SegmentLocalCacheManager sm = null;
+          DataSegment ds = null;
+          sm.getSegment(ds);
+        }
 
         // TaskToolboxFactory aa1 =
         // injector.getInstance(TaskToolboxFactory.class);
