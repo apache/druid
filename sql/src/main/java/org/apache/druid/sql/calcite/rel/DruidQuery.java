@@ -1517,15 +1517,15 @@ public class DruidQuery
       operators = windowing.getOperators();
     } else {
       operators = ImmutableList.<OperatorFactory>builder()
-                               .add(new ScanOperatorFactory(
-                                   null,
-                                   null,
-                                   null,
-                                   null,
-                                   virtualColumns,
-                                   null))
-                               .addAll(windowing.getOperators())
-                               .build();
+          .add(new ScanOperatorFactory(
+              null,
+              null,
+              null,
+              null,
+              virtualColumns,
+              null))
+          .addAll(windowing.getOperators())
+          .build();
     }
     // if planning in native set to null
     // if planning in MSQ set to empty list
@@ -1544,6 +1544,7 @@ public class DruidQuery
         pushLeafOperator ? null : ImmutableList.of()
     );
   }
+
   /**
    * Create an OperatorQuery which runs an order on top of a scan.
    */
@@ -1555,29 +1556,35 @@ public class DruidQuery
         || (sorting.getProjection() != null && !sorting.getProjection().getVirtualColumns().isEmpty())) {
       return null;
     }
+
     ScanQuery scan = toScanQuery(false);
     if (scan == null) {
       return null;
     }
+
     if (dataSource.isConcrete()) {
       // Currently only non-time orderings of subqueries are allowed.
       setPlanningErrorOrderByNonTimeIsUnsupported();
       return null;
     }
+
     QueryDataSource newDataSource = new QueryDataSource(scan);
     List<ColumnWithDirection> sortColumns = getColumnWithDirectionsFromOrderBys(sorting.getOrderBys());
     RowSignature signature = getOutputRowSignature();
     List<OperatorFactory> operators = new ArrayList<>();
+
     operators.add(new NaiveSortOperatorFactory(sortColumns));
+
+
     final Projection projection = sorting.getProjection();
 
     final org.apache.druid.query.operator.OffsetLimit offsetLimit = sorting.getOffsetLimit().isNone()
-                                                                    ? null
-                                                                    : sorting.getOffsetLimit().toOperatorOffsetLimit();
+        ? null
+        : sorting.getOffsetLimit().toOperatorOffsetLimit();
 
     final List<String> projectedColumns = projection == null
-                                          ? null
-                                          : projection.getOutputRowSignature().getColumnNames();
+        ? null
+        : projection.getOutputRowSignature().getColumnNames();
 
     if (offsetLimit != null || projectedColumns != null) {
       operators.add(
@@ -1591,6 +1598,7 @@ public class DruidQuery
           )
       );
     }
+
     return new WindowOperatorQuery(
         newDataSource,
         new LegacySegmentSpec(Intervals.ETERNITY),
@@ -1600,23 +1608,25 @@ public class DruidQuery
         null
     );
   }
+
   private void setPlanningErrorOrderByNonTimeIsUnsupported()
   {
     List<String> orderByColumnNames = sorting.getOrderBys()
-                                             .stream().map(OrderByColumnSpec::getDimension)
-                                             .collect(Collectors.toList());
+        .stream().map(OrderByColumnSpec::getDimension)
+        .collect(Collectors.toList());
     plannerContext.setPlanningError(
         "SQL query requires ordering a table by non-time column [%s], which is not supported.",
         orderByColumnNames
     );
   }
+
   private ArrayList<ColumnWithDirection> getColumnWithDirectionsFromOrderBys(List<OrderByColumnSpec> orderBys)
   {
     ArrayList<ColumnWithDirection> ordering = new ArrayList<>();
     for (OrderByColumnSpec orderBySpec : orderBys) {
       Direction direction = orderBySpec.getDirection() == OrderByColumnSpec.Direction.ASCENDING
-                            ? ColumnWithDirection.Direction.ASC
-                            : ColumnWithDirection.Direction.DESC;
+          ? ColumnWithDirection.Direction.ASC
+          : ColumnWithDirection.Direction.DESC;
       ordering.add(new ColumnWithDirection(orderBySpec.getDimension(), direction));
     }
     return ordering;
@@ -1634,11 +1644,13 @@ public class DruidQuery
       // Scan cannot GROUP BY or do windows.
       return null;
     }
+
     if (outputRowSignature.size() == 0) {
       // Should never do a scan query without any columns that we're interested in. This is probably a planner bug.
       this.plannerContext.setPlanningError("Cannot convert to Scan query without any columns.");
       return null;
     }
+
     final Pair<DataSource, Filtration> dataSourceFiltrationPair = getFiltration(
         dataSource,
         filter,
@@ -1647,19 +1659,25 @@ public class DruidQuery
     );
     final DataSource newDataSource = dataSourceFiltrationPair.lhs;
     final Filtration filtration = dataSourceFiltrationPair.rhs;
+
     final List<OrderBy> orderByColumns;
     long scanOffset = 0L;
     long scanLimit = 0L;
+
     if (considerSorting && sorting != null) {
       scanOffset = sorting.getOffsetLimit().getOffset();
+
       if (sorting.getOffsetLimit().hasLimit()) {
         final long limit = sorting.getOffsetLimit().getLimit();
+
         if (limit == 0) {
           // Can't handle zero limit (the Scan query engine would treat it as unlimited).
           return null;
         }
+
         scanLimit = limit;
       }
+
       orderByColumns = sorting.getOrderBys().stream().map(
           orderBy ->
               new OrderBy(
@@ -1669,6 +1687,7 @@ public class DruidQuery
                   : Order.ASCENDING
               )
       ).collect(Collectors.toList());
+
     } else {
       orderByColumns = Collections.emptyList();
     }
@@ -1685,13 +1704,17 @@ public class DruidQuery
           setPlanningErrorOrderByNonTimeIsUnsupported();
         }
         return null;
+
       }
     }
+
     // Deduplicate column list
     final Set<String> scanColumns = new LinkedHashSet<>(outputRowSignature.getColumnNames());
     orderByColumns.forEach(column -> scanColumns.add(column.getColumnName()));
+
     final VirtualColumns virtualColumns = getVirtualColumns(true);
     final ImmutableList<String> scanColumnsList = ImmutableList.copyOf(scanColumns);
+
     return new ScanQuery(
         newDataSource,
         filtration.getQuerySegmentSpec(),
