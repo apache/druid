@@ -19,7 +19,6 @@
 
 package org.apache.druid.benchmark.compression;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.MappedByteBufferHandler;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -54,10 +53,6 @@ import java.util.concurrent.TimeUnit;
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
 public class VSizeSerdeBenchmark
 {
-  static {
-    NullHandling.initializeForTests();
-  }
-
   private static final Logger log = new Logger(VSizeSerdeBenchmark.class);
   @Param({"500000"})
   private int values;

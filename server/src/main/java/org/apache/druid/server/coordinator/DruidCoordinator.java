@@ -19,6 +19,7 @@
 
 package org.apache.druid.server.coordinator;
 
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Sets;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
@@ -27,16 +28,19 @@ import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMaps;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
+import org.apache.druid.client.DataSourcesSnapshot;
 import org.apache.druid.client.DruidDataSource;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ServerInventoryView;
 import org.apache.druid.client.coordinator.Coordinator;
+import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.curator.discovery.ServiceAnnouncer;
 import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexer.CompactionEngine;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
@@ -45,7 +49,9 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.metadata.SegmentsMetadataManager;
+import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.rpc.indexing.OverlordClient;
+import org.apache.druid.rpc.indexing.SegmentUpdateResponse;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.CoordinatorSegmentMetadataCache;
 import org.apache.druid.server.DruidNode;
@@ -87,9 +93,11 @@ import org.apache.druid.server.coordinator.stats.CoordinatorStat;
 import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
+import org.apache.druid.server.http.SegmentsToUpdateFilter;
 import org.apache.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
@@ -333,8 +341,7 @@ public class DruidCoordinator
     return new CompactionRunSimulator(compactionStatusTracker, overlordClient).simulateRunWithConfig(
         metadataManager.configs().getCurrentCompactionConfig().withClusterConfig(updateRequest),
         metadataManager.segments()
-                       .getSnapshotOfDataSourcesWithAllUsedSegments()
-                       .getUsedSegmentsTimelinesPerDataSource(),
+                       .getSnapshotOfDataSourcesWithAllUsedSegments(),
         CompactionEngine.NATIVE
     );
   }
@@ -444,16 +451,14 @@ public class DruidCoordinator
               config.getCoordinatorPeriod()
           )
       );
-      if (overlordClient != null) {
-        dutiesRunnables.add(
-            new DutiesRunnable(
-                makeIndexingServiceDuties(),
-                startingLeaderCounter,
-                INDEXING_SERVICE_DUTIES_DUTY_GROUP,
-                config.getCoordinatorIndexingPeriod()
-            )
-        );
-      }
+      dutiesRunnables.add(
+          new DutiesRunnable(
+              makeIndexingServiceDuties(),
+              startingLeaderCounter,
+              INDEXING_SERVICE_DUTIES_DUTY_GROUP,
+              config.getCoordinatorIndexingPeriod()
+          )
+      );
       dutiesRunnables.add(
           new DutiesRunnable(
               makeMetadataStoreManagementDuties(),
@@ -534,8 +539,7 @@ public class DruidCoordinator
 
   private List<CoordinatorDuty> makeHistoricalManagementDuties()
   {
-    final MetadataAction.DeleteSegments deleteSegments
-        = segments -> metadataManager.segments().markSegmentsAsUnused(segments);
+    final MetadataAction.DeleteSegments deleteSegments = this::markSegmentsAsUnused;
     final MetadataAction.GetDatasourceRules getRules
         = dataSource -> metadataManager.rules().getRulesWithDefault(dataSource);
 
@@ -628,6 +632,39 @@ public class DruidCoordinator
   }
 
   /**
+   * Makes an API call to Overlord to mark segments of a datasource as unused.
+   *
+   * @return Number of segments updated.
+   */
+  private int markSegmentsAsUnused(String datasource, Set<SegmentId> segmentIds)
+  {
+    try {
+      final Set<String> segmentIdsToUpdate
+          = segmentIds.stream().map(SegmentId::toString).collect(Collectors.toSet());
+      final SegmentsToUpdateFilter filter
+          = new SegmentsToUpdateFilter(null, segmentIdsToUpdate, null);
+      SegmentUpdateResponse response = FutureUtils.getUnchecked(
+          overlordClient.markSegmentsAsUnused(datasource, filter),
+          true
+      );
+      return response.getNumChangedSegments();
+    }
+    catch (Exception e) {
+      final Throwable rootCause = Throwables.getRootCause(e);
+      if (rootCause instanceof HttpResponseException) {
+        HttpResponseStatus status = ((HttpResponseException) rootCause).getResponse().getStatus();
+        if (status.getCode() == 404) {
+          log.info("Could not update segments via Overlord API. Updating metadata store directly.");
+          return metadataManager.segments().markSegmentsAsUnused(segmentIds);
+        }
+      }
+
+      log.error(e, "Could not mark segments as unused for datasource[%s].", datasource);
+      return 0;
+    }
+  }
+
+  /**
    * Used by {@link CoordinatorDutyGroup} to check leadership and emit stats.
    */
   public interface DutyGroupHelper
@@ -669,9 +706,23 @@ public class DruidCoordinator
         }
 
         if (metadataManager.isStarted() && serverInventoryView.isStarted()) {
+          final DataSourcesSnapshot dataSourcesSnapshot;
+          if (dutyGroup.getName().equals(COMPACT_SEGMENTS_DUTIES_DUTY_GROUP)) {
+            // If this is a compact segments duty group triggered by IT,
+            // use a future snapshotTime to ensure that compaction always runs
+            dataSourcesSnapshot = DataSourcesSnapshot.fromUsedSegments(
+                metadataManager.segments()
+                               .getSnapshotOfDataSourcesWithAllUsedSegments()
+                               .iterateAllUsedSegmentsInSnapshot(),
+                DateTimes.nowUtc().plusMinutes(60)
+            );
+          } else {
+            dataSourcesSnapshot = metadataManager.segments().getSnapshotOfDataSourcesWithAllUsedSegments();
+          }
+
           final DruidCoordinatorRuntimeParams params = DruidCoordinatorRuntimeParams
               .builder()
-              .withDataSourcesSnapshot(metadataManager.segments().getSnapshotOfDataSourcesWithAllUsedSegments())
+              .withDataSourcesSnapshot(dataSourcesSnapshot)
               .withDynamicConfigs(metadataManager.configs().getCurrentDynamicConfig())
               .withCompactionConfig(metadataManager.configs().getCurrentCompactionConfig())
               .build();

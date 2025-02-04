@@ -189,7 +189,7 @@ public class JsonConfigurator
       throw new ProvisionException(
           Iterables.transform(
               messages,
-              new Function<String, Message>()
+              new Function<>()
               {
                 @Override
                 public Message apply(String input)

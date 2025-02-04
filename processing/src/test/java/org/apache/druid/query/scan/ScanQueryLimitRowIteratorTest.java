@@ -27,6 +27,7 @@ import org.apache.druid.query.Order;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunnerTestHelper;
 import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -39,7 +40,7 @@ import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 
 @RunWith(Parameterized.class)
-public class ScanQueryLimitRowIteratorTest
+public class ScanQueryLimitRowIteratorTest extends InitializedNullHandlingTest
 {
   private static final int NUM_ELEMENTS = 1000;
   private final int batchSize;

@@ -50,7 +50,7 @@ public class FSSpideringIterator implements Iterator<FileStatus>
 
   public static Iterable<FileStatus> spiderIterable(final FileSystem fs, final Path path)
   {
-    return new Iterable<FileStatus>()
+    return new Iterable<>()
     {
       @Override
       public Iterator<FileStatus> iterator()

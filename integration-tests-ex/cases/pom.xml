@@ -31,7 +31,7 @@
     <parent>
         <groupId>org.apache.druid</groupId>
         <artifactId>druid</artifactId>
-        <version>32.0.0-SNAPSHOT</version>
+        <version>33.0.0-SNAPSHOT</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
@@ -82,10 +82,6 @@
         <dependency>
             <groupId>com.google.inject</groupId>
             <artifactId>guice</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.google.inject.extensions</groupId>
-            <artifactId>guice-multibindings</artifactId>
         </dependency>
         <dependency>
             <groupId>org.apache.curator</groupId>
@@ -478,6 +474,9 @@
                      <plugin>
                         <artifactId>maven-failsafe-plugin</artifactId>
                         <version>3.0.0-M7</version>
+                         <configuration>
+                             <argLine>--add-opens java.base/java.lang=ALL-UNNAMED</argLine>
+                         </configuration>
                         <dependencies>
                           <!-- Required to force Failsafe to use JUnit instead of TestNG.
                                junit47 is required to use test categories. -->

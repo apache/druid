@@ -19,15 +19,18 @@
 
 package org.apache.druid.sql.calcite.rule.logical;
 
+import com.google.common.collect.ImmutableSet;
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.plan.RelOptUtil.InputFinder;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.core.Project;
 import org.apache.calcite.rel.rules.SubstitutionRule;
+import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexInputRef;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexShuttle;
+import org.apache.calcite.tools.RelBuilder;
 import org.apache.calcite.util.ImmutableBitSet;
 import org.apache.druid.error.DruidException;
 import java.util.ArrayList;
@@ -56,7 +59,7 @@ public class UnnestInputCleanupRule extends RelOptRule implements SubstitutionRu
   public void onMatch(RelOptRuleCall call)
   {
     LogicalUnnest unnest = call.rel(0);
-    Project project = call.rel(1);
+    Project oldProject = call.rel(1);
 
     ImmutableBitSet input = InputFinder.analyze(unnest.unnestExpr).build();
     if (input.isEmpty()) {
@@ -71,35 +74,62 @@ public class UnnestInputCleanupRule extends RelOptRule implements SubstitutionRu
       return;
     }
 
+    RelBuilder builder = call.builder();
+    RexBuilder rexBuilder = builder.getRexBuilder();
+
     int inputIndex = input.nextSetBit(0);
+    List<RexNode> newProjects = new ArrayList<>(oldProject.getProjects());
+    RexNode unnestInput = newProjects.get(inputIndex);
 
-    List<RexNode> projects = new ArrayList<>(project.getProjects());
-    RexNode unnestInput = projects.get(inputIndex);
+    newProjects.set(inputIndex, null);
 
-    projects.set(
-        inputIndex,
-        call.builder().getRexBuilder().makeInputRef(project.getInput(), 0)
-    );
+    RexNode newUnnestExpr = unnestInput.accept(new ExpressionPullerRexShuttle(newProjects, inputIndex));
 
-    RexNode newUnnestExpr = unnestInput.accept(new ExpressionPullerRexShuttle(projects, inputIndex));
-
-    if (projects.size() != project.getProjects().size()) {
-      // lets leave this for later
+    if (newUnnestExpr instanceof RexInputRef) {
+      // this won't make it simpler
       return;
     }
 
+    if (newProjects.get(inputIndex) == null) {
+      newProjects.set(
+          inputIndex,
+          rexBuilder.makeInputRef(oldProject.getInput(), 0)
+      );
+    }
 
-    RelNode newInputRel = call.builder()
-        .push(project.getInput())
-        .project(projects)
+    RelNode newInputRel = builder
+        .push(oldProject.getInput())
+        .project(newProjects)
         .build();
 
 
     RelNode newUnnest = new LogicalUnnest(
-        unnest.getCluster(), unnest.getTraitSet(), newInputRel, newUnnestExpr,
-        unnest.getRowType(), unnest.filter
+        unnest.getCluster(),
+        unnest.getTraitSet(),
+        newInputRel,
+        newUnnestExpr,
+        unnest.unnestFieldType,
+        unnest.filter
     );
-    call.transformTo(newUnnest);
+
+    builder.push(newUnnest);
+    // Erase any extra fields created during the above transformation to be seen outside
+    // this could happen in case the pulled out expression referenced
+    // not-anymore referenced input columns beneath oldProject
+    List<RexNode> projectFields = new ArrayList<>(builder.fields());
+    int hideCount = newProjects.size() - oldProject.getProjects().size();
+    for (int i = 0; i < hideCount; i++) {
+      projectFields.remove(unnest.getRowType().getFieldCount() - 2);
+    }
+
+    projectFields.set(
+        inputIndex,
+        newUnnestExpr
+    );
+    builder.project(projectFields, ImmutableSet.of(), true);
+
+    RelNode build = builder.build();
+    call.transformTo(build);
     call.getPlanner().prune(unnest);
   }
 
@@ -111,12 +141,10 @@ public class UnnestInputCleanupRule extends RelOptRule implements SubstitutionRu
   private static class ExpressionPullerRexShuttle extends RexShuttle
   {
     private final List<RexNode> projects;
-    private int replaceableIndex;
 
     private ExpressionPullerRexShuttle(List<RexNode> projects, int replaceableIndex)
     {
       this.projects = projects;
-      this.replaceableIndex = replaceableIndex;
     }
 
     @Override
@@ -124,14 +152,8 @@ public class UnnestInputCleanupRule extends RelOptRule implements SubstitutionRu
     {
       int newIndex = projects.indexOf(inputRef);
       if (newIndex < 0) {
-        if (replaceableIndex >= 0) {
-          newIndex = replaceableIndex;
-          projects.set(replaceableIndex, inputRef);
-          replaceableIndex = -1;
-        } else {
-          newIndex = projects.size();
-          projects.add(inputRef);
-        }
+        newIndex = projects.size();
+        projects.add(inputRef);
       }
       if (newIndex == inputRef.getIndex()) {
         return inputRef;

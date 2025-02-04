@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import it.unimi.dsi.fastutil.objects.ObjectAVLTreeSet;
 import nl.jqno.equalsverifier.EqualsVerifier;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -33,6 +34,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.SortedSet;
 
 public class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
@@ -130,6 +132,42 @@ public class AggregateProjectionMetadataTest extends InitializedNullHandlingTest
     metadataBest.add(best);
     Assert.assertEquals(best, metadataBest.first());
     Assert.assertEquals(good, metadataBest.last());
+  }
+
+  @Test
+  public void testInvalidGrouping()
+  {
+    Throwable t = Assert.assertThrows(
+        DruidException.class,
+        () -> new AggregateProjectionMetadata(
+            new AggregateProjectionMetadata.Schema(
+            "other_projection",
+            null,
+            null,
+            null,
+            null,
+            null
+            ),
+            0
+        )
+    );
+    Assert.assertEquals("groupingColumns and aggregators must not both be null or empty", t.getMessage());
+
+    t = Assert.assertThrows(
+        DruidException.class,
+        () -> new AggregateProjectionMetadata(
+            new AggregateProjectionMetadata.Schema(
+            "other_projection",
+            null,
+            null,
+            Collections.emptyList(),
+            null,
+            null
+            ),
+            0
+        )
+    );
+    Assert.assertEquals("groupingColumns and aggregators must not both be null or empty", t.getMessage());
   }
 
   @Test

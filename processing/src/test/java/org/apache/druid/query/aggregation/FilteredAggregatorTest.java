@@ -20,7 +20,6 @@
 package org.apache.druid.query.aggregation;
 
 import com.google.common.collect.Lists;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.js.JavaScriptConfig;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.extraction.ExtractionFn;
@@ -99,7 +98,7 @@ public class FilteredAggregatorTest extends InitializedNullHandlingTest
         new SelectorDimFilter("dim", "a", null)
     );
 
-    final Float[] expectedValues = {NullHandling.defaultFloatValue(), NullHandling.defaultFloatValue()};
+    final Float[] expectedValues = {null, null};
     validateFilteredAggs(factory, selector, expectedValues);
   }
 
@@ -407,13 +406,8 @@ public class FilteredAggregatorTest extends InitializedNullHandlingTest
     );
 
     // Validate state before any aggregation
-    if (NullHandling.sqlCompatible()) {
-      Assert.assertTrue(agg.isNull());
-      Assert.assertNull(agg.get());
-    } else {
-      Assert.assertFalse(agg.isNull());
-      Assert.assertEquals(0.0f, agg.getFloat(), 0.001);
-    }
+    Assert.assertTrue(agg.isNull());
+    Assert.assertNull(agg.get());
 
     for (Float expectedValue : expectedValues) {
       aggregate(selector, agg);

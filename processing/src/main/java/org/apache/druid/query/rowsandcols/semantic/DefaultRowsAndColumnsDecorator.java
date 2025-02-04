@@ -133,7 +133,8 @@ public class DefaultRowsAndColumnsDecorator implements RowsAndColumnsDecorator
         virtualColumns,
         offsetLimit,
         ordering,
-        columns == null ? null : new LinkedHashSet<>(columns)
+        columns == null ? null : new LinkedHashSet<>(columns),
+        null
     );
   }
 

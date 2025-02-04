@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { sane, SqlQuery } from '@druid-toolkit/query';
+import { sane, SqlQuery } from 'druid-query-toolkit';
 
 import { fitIngestQueryPattern, ingestQueryPatternToQuery } from './ingest-query-pattern';
 

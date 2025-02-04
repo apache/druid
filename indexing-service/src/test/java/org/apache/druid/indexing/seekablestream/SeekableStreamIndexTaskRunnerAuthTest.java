@@ -44,6 +44,7 @@ import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.ResourceType;
 import org.easymock.EasyMock;
+import org.joda.time.Duration;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -380,7 +381,8 @@ public class SeekableStreamIndexTaskRunnerAuthTest
           false,
           DateTimes.nowUtc().minusDays(2),
           DateTimes.nowUtc(),
-          new CsvInputFormat(null, null, true, null, 0, null)
+          new CsvInputFormat(null, null, true, null, 0, null),
+          Duration.standardHours(2).getStandardMinutes()
       );
     }
   }

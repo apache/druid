@@ -149,7 +149,7 @@ public class ComplexFrameColumnReader implements FrameColumnReader
     @Override
     public ColumnValueSelector<?> makeColumnValueSelector(final ReadableOffset offset)
     {
-      return new ObjectColumnSelector<Object>()
+      return new ObjectColumnSelector<>()
       {
         @Nullable
         @Override

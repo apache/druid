@@ -1035,6 +1035,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
 
   private void doPollSegments()
   {
+    final DateTime startTime = DateTimes.nowUtc();
     final Stopwatch stopwatch = Stopwatch.createStarted();
 
     // Some databases such as PostgreSQL require auto-commit turned off
@@ -1071,11 +1072,12 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
         segments.size(), stopwatch.millisElapsed()
     );
 
-    createDatasourcesSnapshot(segments);
+    createDatasourcesSnapshot(startTime, segments);
   }
 
   private void doPollSegmentAndSchema()
   {
+    final DateTime startTime = DateTimes.nowUtc();
     final Stopwatch stopwatch = Stopwatch.createStarted();
 
     ImmutableMap.Builder<SegmentId, SegmentMetadata> segmentMetadataBuilder = new ImmutableMap.Builder<>();
@@ -1091,7 +1093,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
     // setting connection to read-only will allow some database such as MySQL
     // to automatically use read-only transaction mode, further optimizing the query
     final List<DataSegment> segments = connector.inReadOnlyTransaction(
-        new TransactionCallback<List<DataSegment>>()
+        new TransactionCallback<>()
         {
           @Override
           public List<DataSegment> inTransaction(Handle handle, TransactionStatus status)
@@ -1174,7 +1176,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
         segments.size(), schemaMap.size(), stopwatch.millisElapsed()
     );
 
-    createDatasourcesSnapshot(segments);
+    createDatasourcesSnapshot(startTime, segments);
   }
 
   private void emitMetric(String metricName, long value)
@@ -1182,7 +1184,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
     serviceEmitter.emit(new ServiceMetricEvent.Builder().setMetric(metricName, value));
   }
 
-  private void createDatasourcesSnapshot(List<DataSegment> segments)
+  private void createDatasourcesSnapshot(DateTime snapshotTime, List<DataSegment> segments)
   {
     final Stopwatch stopwatch = Stopwatch.createStarted();
     // dataSourcesSnapshot is updated only here and the DataSourcesSnapshot object is immutable. If data sources or
@@ -1193,22 +1195,16 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
     // segment mark calls in rapid succession. So the snapshot update is not done outside of database poll at this time.
     // Updates outside of database polls were primarily for the user experience, so users would immediately see the
     // effect of a segment mark call reflected in MetadataResource API calls.
-    ImmutableMap<String, String> dataSourceProperties = createDefaultDataSourceProperties();
 
     dataSourcesSnapshot = DataSourcesSnapshot.fromUsedSegments(
         Iterables.filter(segments, Objects::nonNull), // Filter corrupted entries (see above in this method).
-        dataSourceProperties
+        snapshotTime
     );
     emitMetric("segment/buildSnapshot/time", stopwatch.millisElapsed());
     log.debug(
         "Created snapshot from polled segments in [%d]ms. Found [%d] overshadowed segments.",
         stopwatch.millisElapsed(), dataSourcesSnapshot.getOvershadowedSegments().size()
     );
-  }
-
-  private static ImmutableMap<String, String> createDefaultDataSourceProperties()
-  {
-    return ImmutableMap.of("created", DateTimes.nowUtc().toString());
   }
 
   /**
@@ -1255,7 +1251,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   {
     // Note that we handle the case where used_status_last_updated IS NULL here to allow smooth transition to Druid version that uses used_status_last_updated column
     return connector.inReadOnlyTransaction(
-        new TransactionCallback<List<Interval>>()
+        new TransactionCallback<>()
         {
           @Override
           public List<Interval> inTransaction(Handle handle, TransactionStatus status)
@@ -1276,7 +1272,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
                 .bind("end", maxEndTime.toString())
                 .bind("used_status_last_updated", maxUsedStatusLastUpdatedTime.toString())
                 .map(
-                    new BaseResultSetMapper<Interval>()
+                    new BaseResultSetMapper<>()
                     {
                       @Override
                       protected Interval mapInternal(int index, Map<String, Object> row)

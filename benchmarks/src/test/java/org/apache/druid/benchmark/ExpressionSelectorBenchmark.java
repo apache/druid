@@ -20,7 +20,6 @@
 package org.apache.druid.benchmark;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -81,7 +80,6 @@ import java.util.concurrent.TimeUnit;
 public class ExpressionSelectorBenchmark
 {
   static {
-    NullHandling.initializeForTests();
     ExpressionProcessing.initializeForTests();
   }
 

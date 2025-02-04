@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.aggregation.datasketches.hll;
 
+import nl.jqno.equalsverifier.EqualsVerifier;
 import org.apache.datasketches.hll.HllSketch;
 import org.apache.datasketches.hll.TgtHllType;
 import org.apache.druid.java.util.common.StringEncoding;
@@ -120,11 +121,9 @@ public class HllSketchAggregatorFactoryTest
   }
 
   @Test
-  public void testEqualsSameObject()
+  public void testEquals()
   {
-    //noinspection EqualsWithItself
-    Assert.assertEquals(target, target);
-    Assert.assertArrayEquals(target.getCacheKey(), target.getCacheKey());
+    EqualsVerifier.forClass(HllSketchAggregatorFactory.class).usingGetClass().verify();
   }
 
   @Test

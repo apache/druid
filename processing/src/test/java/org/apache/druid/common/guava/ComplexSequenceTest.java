@@ -66,7 +66,7 @@ public class ComplexSequenceTest
 
     Yielder<Integer> yielder = complex.toYielder(
         null,
-        new YieldingAccumulator<Integer, Integer>()
+        new YieldingAccumulator<>()
         {
           @Override
           public Integer accumulate(Integer accumulated, Integer in)

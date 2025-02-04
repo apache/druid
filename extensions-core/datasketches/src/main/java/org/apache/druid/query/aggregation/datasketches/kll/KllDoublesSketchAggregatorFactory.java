@@ -158,7 +158,7 @@ public class KllDoublesSketchAggregatorFactory extends KllSketchAggregatorFactor
   {
     return ColumnProcessors.makeVectorProcessor(
         getFieldName(),
-        new VectorColumnProcessorFactory<VectorAggregator>()
+        new VectorColumnProcessorFactory<>()
         {
           @Override
           public VectorAggregator makeSingleValueDimensionProcessor(

@@ -73,7 +73,7 @@ public class TombstonePartitionedChunkTest
     Exception exception = Assert.assertThrows(
         IllegalArgumentException.class,
         () -> tombstonePartitionedChunk.compareTo(
-              new NumberedPartitionChunk<Object>(0, 1, new Object()))
+            new NumberedPartitionChunk<>(0, 1, new Object()))
     );
     Assert.assertEquals("Cannot compare against something that is not a TombstonePartitionedChunk.",
                         exception.getMessage());

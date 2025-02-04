@@ -141,6 +141,7 @@ public class NestedDataColumnSupplier implements Supplier<NestedCommonFormatColu
             ),
             rawBuffer,
             byteOrder,
+            byteOrder, // byte order doesn't matter since serde is byte blobs
             mapper
         );
         if (hasNulls) {

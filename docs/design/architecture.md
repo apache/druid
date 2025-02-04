@@ -41,7 +41,7 @@ Druid has several types of services:
 * [Router](../design/router.md) routes requests to Brokers, Coordinators, and Overlords.
 * [Historical](../design/historical.md) stores queryable data.
 * [Middle Manager](../design/middlemanager.md) and [Peon](../design/peons.md) ingest data.
-* [Indexer](../design/indexer.md) serves an alternative to the Middle Manager + Peon task execution system.
+* [Indexer](../design/indexer.md) serves as an alternative to the Middle Manager + Peon task execution system.
 
 You can view services in the **Services** tab in the web console: 
 
@@ -107,7 +107,7 @@ forking separate JVM processes per-task, the Indexer runs tasks as individual th
 
 The Indexer is designed to be easier to configure and deploy compared to the MiddleManager + Peon system and to better enable resource sharing across tasks, which can help streaming ingestion. The Indexer is currently designated [experimental](../development/experimental.md).
 
-Typically, you would deploy one of the following: MiddleManagers, [MiddleManager-less ingestion using Kubernetes](../development/extensions-contrib/k8s-jobs.md), or Indexers. You wouldn't deploy more than one of these options.
+Typically, you would deploy one of the following: MiddleManagers, [MiddleManager-less ingestion using Kubernetes](../development/extensions-core/k8s-jobs.md), or Indexers. You wouldn't deploy more than one of these options.
 
 ## Colocation of services
 

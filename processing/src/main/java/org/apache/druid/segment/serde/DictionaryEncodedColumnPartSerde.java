@@ -29,6 +29,7 @@ import org.apache.druid.collections.spatial.ImmutableRTree;
 import org.apache.druid.io.Channels;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
+import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnConfig;
@@ -332,10 +333,10 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
         final WritableSupplier<ColumnarMultiInts> rMultiValuedColumn;
 
         if (hasMultipleValues) {
-          rMultiValuedColumn = readMultiValuedColumn(rVersion, buffer, rFlags);
+          rMultiValuedColumn = readMultiValuedColumn(rVersion, buffer, rFlags, builder.getFileMapper());
           rSingleValuedColumn = null;
         } else {
-          rSingleValuedColumn = readSingleValuedColumn(rVersion, buffer);
+          rSingleValuedColumn = readSingleValuedColumn(rVersion, buffer, builder.getFileMapper());
           rMultiValuedColumn = null;
         }
 
@@ -344,7 +345,8 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
         final StringUtf8DictionaryEncodedColumnSupplier<?> supplier = new StringUtf8DictionaryEncodedColumnSupplier<>(
             dictionarySupplier,
             rSingleValuedColumn,
-            rMultiValuedColumn
+            rMultiValuedColumn,
+            bitmapSerdeFactory.getBitmapFactory()
         );
         builder.setHasMultipleValues(hasMultipleValues)
                .setHasNulls(hasNulls)
@@ -380,20 +382,29 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
         }
       }
 
-      private WritableSupplier<ColumnarInts> readSingleValuedColumn(VERSION version, ByteBuffer buffer)
+      private WritableSupplier<ColumnarInts> readSingleValuedColumn(
+          VERSION version,
+          ByteBuffer buffer,
+          SmooshedFileMapper smooshReader
+      )
       {
         switch (version) {
           case UNCOMPRESSED_SINGLE_VALUE:
           case UNCOMPRESSED_WITH_FLAGS:
             return VSizeColumnarInts.readFromByteBuffer(buffer);
           case COMPRESSED:
-            return CompressedVSizeColumnarIntsSupplier.fromByteBuffer(buffer, byteOrder);
+            return CompressedVSizeColumnarIntsSupplier.fromByteBuffer(buffer, byteOrder, smooshReader);
           default:
             throw new IAE("Unsupported single-value version[%s]", version);
         }
       }
 
-      private WritableSupplier<ColumnarMultiInts> readMultiValuedColumn(VERSION version, ByteBuffer buffer, int flags)
+      private WritableSupplier<ColumnarMultiInts> readMultiValuedColumn(
+          VERSION version,
+          ByteBuffer buffer,
+          int flags,
+          SmooshedFileMapper smooshReader
+      )
       {
         switch (version) {
           case UNCOMPRESSED_MULTI_VALUE: {
@@ -408,9 +419,9 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
           }
           case COMPRESSED: {
             if (Feature.MULTI_VALUE.isSet(flags)) {
-              return CompressedVSizeColumnarMultiIntsSupplier.fromByteBuffer(buffer, byteOrder);
+              return CompressedVSizeColumnarMultiIntsSupplier.fromByteBuffer(buffer, byteOrder, smooshReader);
             } else if (Feature.MULTI_VALUE_V3.isSet(flags)) {
-              return V3CompressedVSizeColumnarMultiIntsSupplier.fromByteBuffer(buffer, byteOrder);
+              return V3CompressedVSizeColumnarMultiIntsSupplier.fromByteBuffer(buffer, byteOrder, smooshReader);
             } else {
               throw new IAE("Unrecognized multi-value flag[%d] for version[%s]", flags, version);
             }

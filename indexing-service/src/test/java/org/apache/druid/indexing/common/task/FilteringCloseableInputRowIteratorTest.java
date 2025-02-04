@@ -95,7 +95,7 @@ public class FilteringCloseableInputRowIteratorTest
   public void testParseExceptionInDelegateNext()
   {
     // This iterator throws ParseException every other call to next().
-    final CloseableIterator<InputRow> parseExceptionThrowingIterator = new CloseableIterator<InputRow>()
+    final CloseableIterator<InputRow> parseExceptionThrowingIterator = new CloseableIterator<>()
     {
       final int numRowsToIterate = ROWS.size() * 2;
       int nextIdx = 0;
@@ -144,7 +144,7 @@ public class FilteringCloseableInputRowIteratorTest
         ROWS.iterator()
     );
     // This filter throws ParseException every other call to test().
-    final Predicate<InputRow> filter = new Predicate<InputRow>()
+    final Predicate<InputRow> filter = new Predicate<>()
     {
       boolean throwParseException = false;
 
@@ -183,7 +183,7 @@ public class FilteringCloseableInputRowIteratorTest
   public void testParseExceptionInDelegateHasNext()
   {
     // This iterator throws ParseException every other call to hasNext().
-    final CloseableIterator<InputRow> parseExceptionThrowingIterator = new CloseableIterator<InputRow>()
+    final CloseableIterator<InputRow> parseExceptionThrowingIterator = new CloseableIterator<>()
     {
       final int numRowsToIterate = ROWS.size() * 2;
       int currentIndex = 0;
@@ -229,7 +229,7 @@ public class FilteringCloseableInputRowIteratorTest
   public void testNonParseExceptionInDelegateHasNext()
   {
     // This iterator throws ParseException every other call to hasNext().
-    final CloseableIterator<InputRow> parseExceptionThrowingIterator = new CloseableIterator<InputRow>()
+    final CloseableIterator<InputRow> parseExceptionThrowingIterator = new CloseableIterator<>()
     {
       final int numRowsToIterate = ROWS.size() * 2;
       int currentIndex = 0;
@@ -294,7 +294,7 @@ public class FilteringCloseableInputRowIteratorTest
   {
 
     // This iterator throws ParseException every other call to hasNext().
-    final CloseableIterator<InputRow> parseExceptionThrowingIterator = new CloseableIterator<InputRow>()
+    final CloseableIterator<InputRow> parseExceptionThrowingIterator = new CloseableIterator<>()
     {
       final int numRowsToIterate = ROWS.size() * 2;
       int currentIndex = 0;

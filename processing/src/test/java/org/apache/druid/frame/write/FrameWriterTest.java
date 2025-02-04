@@ -19,9 +19,7 @@
 
 package org.apache.druid.frame.write;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocator;
@@ -56,9 +54,7 @@ import org.apache.druid.segment.RowIdSupplier;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
-import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.SegmentId;
@@ -291,60 +287,13 @@ public class FrameWriterTest extends InitializedNullHandlingTest
   }
 
   @Test
-  public void test_readNullsInDefaultValueMode()
-  {
-    // Test that nulls written in SQL-compatible mode are read as nulls in default-value mode.
-
-    final RowSignature signature =
-        RowSignature.builder()
-                    .add("l1", ColumnType.LONG)
-                    .add("f1", ColumnType.FLOAT)
-                    .add("d1", ColumnType.DOUBLE)
-                    .add("s1", ColumnType.STRING)
-                    .add("l2", ColumnType.LONG)
-                    .add("f2", ColumnType.FLOAT)
-                    .add("d2", ColumnType.DOUBLE)
-                    .add("s2", ColumnType.STRING)
-                    .build();
-
-    final Pair<Frame, Integer> writeResult;
-
-    try {
-      // Write frame in SQL-compatible mode.
-      NullHandling.initializeForTestsWithValues(false, null);
-      final Sequence<List<Object>> rowSequence =
-          Sequences.simple(ImmutableList.of(Arrays.asList(null, null, null, null, 0L, 0f, 0d, "")));
-      writeResult = writeFrame(rowSequence, signature, signature.getColumnNames());
-    }
-    finally {
-      NullHandling.initializeForTests();
-    }
-
-    Assert.assertEquals(1, (int) writeResult.rhs);
-
-    try {
-      // Read frame in default-value mode.
-      NullHandling.initializeForTestsWithValues(true, null);
-      verifyFrame(
-          // Empty string is read back as null.
-          Sequences.simple(ImmutableList.of(Arrays.asList(null, null, null, null, 0L, 0f, 0d, null))),
-          writeResult.lhs,
-          signature
-      );
-    }
-    finally {
-      NullHandling.initializeForTests();
-    }
-  }
-
-  @Test
   public void test_typePairs()
   {
     // Test all possible arrangements of two different types.
     for (final FrameWriterTestData.Dataset<?> dataset1 : FrameWriterTestData.DATASETS) {
       for (final FrameWriterTestData.Dataset<?> dataset2 : FrameWriterTestData.DATASETS) {
         final RowSignature signature = makeSignature(Arrays.asList(dataset1, dataset2));
-        final Sequence<List<Object>> rowSequence = unsortAndMakeRows(Arrays.asList(dataset1, dataset2));
+        final Sequence<List<Object>> rowSequence = unsortAndMakeRows(Arrays.asList(dataset1, dataset2), 1);
 
         final List<String> sortColumns = new ArrayList<>();
         sortColumns.add(signature.getColumnName(0));
@@ -378,7 +327,7 @@ public class FrameWriterTest extends InitializedNullHandlingTest
     // Test every possible capacity, up to the amount required to write all items from every list.
     Assume.assumeFalse(inputFrameType == FrameType.COLUMNAR || outputFrameType == FrameType.COLUMNAR);
     final RowSignature signature = makeSignature(FrameWriterTestData.DATASETS);
-    final Sequence<List<Object>> rowSequence = unsortAndMakeRows(FrameWriterTestData.DATASETS);
+    final Sequence<List<Object>> rowSequence = unsortAndMakeRows(FrameWriterTestData.DATASETS, 3);
     final int totalRows = rowSequence.toList().size();
 
     final List<String> sortColumns = new ArrayList<>();
@@ -613,24 +562,6 @@ public class FrameWriterTest extends InitializedNullHandlingTest
   }
 
   /**
-   * Returns a filler value for "type" if "o" is null. Used to pad value lists to the correct length.
-   */
-  @Nullable
-  private static Object fillerValueForType(final ValueType type)
-  {
-    switch (type) {
-      case LONG:
-        return NullHandling.defaultLongValue();
-      case FLOAT:
-        return NullHandling.defaultFloatValue();
-      case DOUBLE:
-        return NullHandling.defaultDoubleValue();
-      default:
-        return null;
-    }
-  }
-
-  /**
    * Create a row signature out of columnar lists of values.
    */
   private static RowSignature makeSignature(final List<FrameWriterTestData.Dataset<?>> datasets)
@@ -648,7 +579,10 @@ public class FrameWriterTest extends InitializedNullHandlingTest
   /**
    * Create rows out of shuffled (unsorted) datasets.
    */
-  private static Sequence<List<Object>> unsortAndMakeRows(final List<FrameWriterTestData.Dataset<?>> datasets)
+  private static Sequence<List<Object>> unsortAndMakeRows(
+      final List<FrameWriterTestData.Dataset<?>> datasets,
+      final int multiplicationFactor
+  )
   {
     final List<List<Object>> retVal = new ArrayList<>();
 
@@ -665,14 +599,19 @@ public class FrameWriterTest extends InitializedNullHandlingTest
         if (iterators.get(i).hasNext()) {
           row.add(iterators.get(i).next());
         } else {
-          row.add(fillerValueForType(datasets.get(i).getType().getType()));
+          row.add(null);
         }
       }
 
       retVal.add(row);
     }
 
-    return Sequences.simple(retVal);
+    List<List<Object>> multipliedRetVal = new ArrayList<>();
+    for (int i = 0; i < multiplicationFactor; ++i) {
+      multipliedRetVal.addAll(retVal);
+    }
+
+    return Sequences.simple(multipliedRetVal);
   }
 
   /**

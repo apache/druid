@@ -49,7 +49,7 @@ public class CompressedBigDecimalMetricSerde extends ComplexMetricSerde
   @Override
   public ComplexMetricExtractor<CompressedBigDecimal> getExtractor()
   {
-    return new ComplexMetricExtractor<CompressedBigDecimal>()
+    return new ComplexMetricExtractor<>()
     {
       @Override
       public Class<CompressedBigDecimal> extractedClass()
@@ -74,7 +74,7 @@ public class CompressedBigDecimalMetricSerde extends ComplexMetricSerde
   public void deserializeColumn(ByteBuffer buffer, ColumnBuilder builder)
   {
     builder.setComplexColumnSupplier(
-        CompressedBigDecimalColumnPartSupplier.fromByteBuffer(buffer)
+        CompressedBigDecimalColumnPartSupplier.fromByteBuffer(buffer, builder.getFileMapper())
     );
   }
 

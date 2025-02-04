@@ -21,7 +21,6 @@ package org.apache.druid.query.groupby.epinephelinae.vector;
 
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.datasketches.memory.WritableMemory;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.groupby.epinephelinae.DictionaryBuildingUtils;
 import org.apache.druid.query.groupby.epinephelinae.collection.MemoryPointer;
@@ -106,7 +105,7 @@ public class DictionaryBuildingSingleValueStringGroupByVectorColumnSelector impl
       final String value = dictionary.get(id);
       resultRow.set(resultRowPosition, value);
     } else {
-      resultRow.set(resultRowPosition, NullHandling.defaultStringValue());
+      resultRow.set(resultRowPosition, null);
     }
   }
 

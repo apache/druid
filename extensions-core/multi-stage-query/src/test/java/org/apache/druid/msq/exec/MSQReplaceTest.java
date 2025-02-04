@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.calcite.avatica.ColumnMetaData;
 import org.apache.calcite.avatica.remote.TypedValue;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.DoubleDimensionSchema;
@@ -74,7 +73,6 @@ import org.mockito.Mockito;
 import javax.annotation.Nonnull;
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -243,7 +241,7 @@ public class MSQReplaceTest extends MSQTestBase
                      .setExpectedShardSpec(DimensionRangeShardSpec.class)
                      .setExpectedResultRows(
                          ImmutableList.of(
-                             new Object[]{946684800000L, NullHandling.sqlCompatible() ? "" : null, 1.0f},
+                             new Object[]{946684800000L, "", 1.0f},
                              new Object[]{946771200000L, "10.1", 2.0f},
                              new Object[]{946857600000L, "2", 3.0f},
                              new Object[]{978307200000L, "1", 4.0f},
@@ -323,7 +321,7 @@ public class MSQReplaceTest extends MSQTestBase
                      .setExpectedShardSpec(NumberedShardSpec.class)
                      .setExpectedResultRows(
                          ImmutableList.of(
-                             new Object[]{946684800000L, NullHandling.sqlCompatible() ? "" : null, 1.0f},
+                             new Object[]{946684800000L, "", 1.0f},
                              new Object[]{946771200000L, "10.1", 2.0f},
                              new Object[]{946857600000L, "2", 3.0f},
                              new Object[]{978307200000L, "1", 4.0f},
@@ -405,7 +403,7 @@ public class MSQReplaceTest extends MSQTestBase
                      .setExpectedShardSpec(DimensionRangeShardSpec.class)
                      .setExpectedResultRows(
                          ImmutableList.of(
-                             new Object[]{NullHandling.sqlCompatible() ? "" : null, 946684800000L, 1.0f},
+                             new Object[]{"", 946684800000L, 1.0f},
                              new Object[]{"1", 978307200000L, 4.0f},
                              new Object[]{"10.1", 946771200000L, 2.0f},
                              new Object[]{"2", 946857600000L, 3.0f},
@@ -491,7 +489,7 @@ public class MSQReplaceTest extends MSQTestBase
                      .setExpectedShardSpec(DimensionRangeShardSpec.class)
                      .setExpectedResultRows(
                          ImmutableList.of(
-                             new Object[]{NullHandling.sqlCompatible() ? "" : null, 946684800000L, 1.0f},
+                             new Object[]{"", 946684800000L, 1.0f},
                              new Object[]{"1", 978307200000L, 4.0f},
                              new Object[]{"10.1", 946771200000L, 2.0f},
                              new Object[]{"2", 946857600000L, 3.0f},
@@ -617,7 +615,7 @@ public class MSQReplaceTest extends MSQTestBase
                      .setExpectedShardSpec(NumberedShardSpec.class)
                      .setExpectedResultRows(
                          ImmutableList.of(
-                             new Object[]{946684800000L, NullHandling.sqlCompatible() ? "" : null, 1.0f},
+                             new Object[]{946684800000L, "", 1.0f},
                              new Object[]{946771200000L, "10.1", 2.0f},
                              new Object[]{946857600000L, "2", 3.0f},
                              new Object[]{978307200000L, "1", 4.0f},
@@ -1444,7 +1442,7 @@ public class MSQReplaceTest extends MSQTestBase
                                                    .build();
 
     List<Object[]> expectedRows = ImmutableList.of(
-        new Object[]{946684800000L, NullHandling.sqlCompatible() ? "" : null},
+        new Object[]{946684800000L, ""},
         new Object[]{978307200000L, "1"},
         new Object[]{946771200000L, "10.1"},
         new Object[]{946857600000L, "2"}
@@ -1679,7 +1677,7 @@ public class MSQReplaceTest extends MSQTestBase
                      .setExpectedSegments(ImmutableSet.of(SegmentId.of("foo1", Intervals.ETERNITY, "test", 0)))
                      .setExpectedResultRows(
                          ImmutableList.of(
-                             new Object[]{0L, NullHandling.sqlCompatible() ? "" : null, 1.0f, 1L},
+                             new Object[]{0L, "", 1.0f, 1L},
                              new Object[]{0L, "1", 4.0f, 1L},
                              new Object[]{0L, "10.1", 2.0f, 1L},
                              new Object[]{0L, "2", 3.0f, 1L},
@@ -1858,7 +1856,7 @@ public class MSQReplaceTest extends MSQTestBase
                              new Object[]{946771200000L, "b"},
                              new Object[]{946771200000L, "c"},
                              new Object[]{946857600000L, "d"},
-                             new Object[]{978307200000L, NullHandling.sqlCompatible() ? "" : null},
+                             new Object[]{978307200000L, ""},
                              new Object[]{978393600000L, null},
                              new Object[]{978480000000L, null}
                          )
@@ -2016,7 +2014,7 @@ public class MSQReplaceTest extends MSQTestBase
                              new Object[]{946771200000L, "b"},
                              new Object[]{946771200000L, "c"},
                              new Object[]{946857600000L, "d"},
-                             new Object[]{978307200000L, NullHandling.sqlCompatible() ? "" : null},
+                             new Object[]{978307200000L, ""},
                              new Object[]{978393600000L, null},
                              new Object[]{978480000000L, null}
                          )
@@ -2077,25 +2075,14 @@ public class MSQReplaceTest extends MSQTestBase
                EasyMock.eq(ImmutableList.of(Intervals.of("2000/2002")))
            ));
 
-    List<Object[]> expectedResults;
-    if (NullHandling.sqlCompatible()) {
-      expectedResults = ImmutableList.of(
-          new Object[]{946684800000L, "", 1L},
-          new Object[]{946771200000L, "10.1", 1L},
-          new Object[]{946857600000L, "2", 1L},
-          new Object[]{978307200000L, "1", 1L},
-          new Object[]{978393600000L, "def", 1L},
-          new Object[]{978480000000L, "abc", 1L}
-      );
-    } else {
-      expectedResults = ImmutableList.of(
-          new Object[]{946771200000L, "10.1", 1L},
-          new Object[]{946857600000L, "2", 1L},
-          new Object[]{978307200000L, "1", 1L},
-          new Object[]{978393600000L, "def", 1L},
-          new Object[]{978480000000L, "abc", 1L}
-      );
-    }
+    List<Object[]> expectedResults = ImmutableList.of(
+        new Object[]{946684800000L, "", 1L},
+        new Object[]{946771200000L, "10.1", 1L},
+        new Object[]{946857600000L, "2", 1L},
+        new Object[]{978307200000L, "1", 1L},
+        new Object[]{978393600000L, "def", 1L},
+        new Object[]{978480000000L, "abc", 1L}
+    );
 
     testIngestQuery().setSql(
                          "REPLACE INTO foo1 "
@@ -2637,38 +2624,29 @@ public class MSQReplaceTest extends MSQTestBase
   @Nonnull
   private Set<SegmentId> expectedFooSegments()
   {
-    Set<SegmentId> expectedSegments = new TreeSet<>();
-
-    if (!useDefault) {
-      expectedSegments.add(SegmentId.of("foo1", Intervals.of("2000-01-01T/P1D"), "test", 0));
-    }
-    expectedSegments.addAll(
+    return new TreeSet<>(
         ImmutableSet.of(
+            SegmentId.of("foo1", Intervals.of("2000-01-01T/P1D"), "test", 0),
             SegmentId.of("foo1", Intervals.of("2000-01-02T/P1D"), "test", 0),
             SegmentId.of("foo1", Intervals.of("2000-01-03T/P1D"), "test", 0),
             SegmentId.of("foo1", Intervals.of("2001-01-01T/P1D"), "test", 0),
             SegmentId.of("foo1", Intervals.of("2001-01-02T/P1D"), "test", 0),
             SegmentId.of("foo1", Intervals.of("2001-01-03T/P1D"), "test", 0)
-        ));
-
-    return expectedSegments;
+        )
+    );
   }
 
   @Nonnull
   private List<Object[]> expectedFooRows()
   {
-    List<Object[]> expectedRows = new ArrayList<>();
-    if (!useDefault) {
-      expectedRows.add(new Object[]{946684800000L, "", 1L});
-    }
-    expectedRows.addAll(ImmutableList.of(
+    return ImmutableList.of(
+        new Object[]{946684800000L, "", 1L},
         new Object[]{946771200000L, "10.1", 1L},
         new Object[]{946857600000L, "2", 1L},
         new Object[]{978307200000L, "1", 1L},
         new Object[]{978393600000L, "def", 1L},
         new Object[]{978480000000L, "abc", 1L}
-    ));
-    return expectedRows;
+    );
   }
 
   private CompactionState expectedCompactionState(

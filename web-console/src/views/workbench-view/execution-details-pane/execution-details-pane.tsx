@@ -18,7 +18,7 @@
 
 import { Tag } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { T } from '@druid-toolkit/query';
+import { T } from 'druid-query-toolkit';
 import * as JSONBig from 'json-bigint-native';
 import React, { useState } from 'react';
 
@@ -78,7 +78,7 @@ export const ExecutionDetailsPane = React.memo(function ExecutionDetailsPane(
                 </>
               )}
             </p>
-            {execution.startTime && execution.duration && (
+            {execution.startTime && !!execution.duration && (
               <p>
                 Query took <Tag minimal>{formatDurationWithMsIfNeeded(execution.duration)}</Tag>{' '}
                 (starting at <Tag minimal>{prettyFormatIsoDate(execution.startTime)}</Tag>)

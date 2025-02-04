@@ -426,7 +426,8 @@ public class QueriesTest
                                                   JoinType.INNER,
                                                   null,
                                                   ExprMacroTable.nil(),
-                                                  null
+                                                  null,
+                                                  JoinAlgorithm.BROADCAST
                                               )
                                           )
                                           .intervals("2000/3000")
@@ -464,7 +465,8 @@ public class QueriesTest
                                                       JoinType.INNER,
                                                       null,
                                                       ExprMacroTable.nil(),
-                                                      null
+                                                      null,
+                                                      JoinAlgorithm.BROADCAST
                                                   )
                                               )
                                               .intervals("2000/3000")
@@ -503,7 +505,9 @@ public class QueriesTest
                                         JoinType.INNER,
                                         TrueDimFilter.instance(),
                                         ExprMacroTable.nil(),
-                                        null
+                                        null,
+                                        JoinAlgorithm.BROADCAST
+
                                     ),
                                     new TableDataSource("foo_outer"),
                                     "j0.",
@@ -511,7 +515,9 @@ public class QueriesTest
                                     JoinType.INNER,
                                     null,
                                     ExprMacroTable.nil(),
-                                    null
+                                    null,
+                                    JoinAlgorithm.BROADCAST
+
                                 )
 
                             )
@@ -538,7 +544,9 @@ public class QueriesTest
                                             JoinType.INNER,
                                             TrueDimFilter.instance(),
                                             ExprMacroTable.nil(),
-                                            null
+                                            null,
+                                            JoinAlgorithm.BROADCAST
+
                                         ),
                                         new TableDataSource("foo_outer"),
                                         "j0.",
@@ -546,7 +554,9 @@ public class QueriesTest
                                         JoinType.INNER,
                                         null,
                                         ExprMacroTable.nil(),
-                                        null
+                                        null,
+                                        JoinAlgorithm.BROADCAST
+
                                     )
 
                                 )

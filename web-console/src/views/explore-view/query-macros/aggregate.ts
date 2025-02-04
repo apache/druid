@@ -16,14 +16,14 @@
  * limitations under the License.
  */
 
-import { C, SqlFunction, SqlQuery } from '@druid-toolkit/query';
+import { C, SqlFunction, SqlQuery } from 'druid-query-toolkit';
 
 import { filterMap, uniq } from '../../../utils';
 import { Measure } from '../models';
 import { KNOWN_AGGREGATIONS } from '../utils';
 
 export function rewriteAggregate(query: SqlQuery, measures: Measure[]): SqlQuery {
-  const usedMeasures: Map<string, boolean> = new Map();
+  const usedMeasures = new Map<string, boolean>();
   const queriesToRewrite: SqlQuery[] = [];
   const newQuery = query.walk(ex => {
     if (ex instanceof SqlFunction && ex.getEffectiveFunctionName() === Measure.AGGREGATE) {

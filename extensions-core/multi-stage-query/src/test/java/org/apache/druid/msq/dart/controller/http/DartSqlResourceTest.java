@@ -331,9 +331,10 @@ public class DartSqlResourceTest extends MSQTestBase
         "sid",
         "did2",
         "SELECT 2",
+        "localhost:1002",
         AUTHENTICATOR_NAME,
         DIFFERENT_REGULAR_USER_NAME,
-        DateTimes.of("2000"),
+        DateTimes.of("2001"),
         ControllerHolder.State.RUNNING.toString()
     );
     Mockito.when(dartSqlClient.getRunningQueries(true))
@@ -398,6 +399,7 @@ public class DartSqlResourceTest extends MSQTestBase
         "sid",
         "did2",
         "SELECT 2",
+        "localhost:1002",
         AUTHENTICATOR_NAME,
         DIFFERENT_REGULAR_USER_NAME,
         DateTimes.of("2000"),
@@ -434,6 +436,7 @@ public class DartSqlResourceTest extends MSQTestBase
         "sid",
         "did2",
         "SELECT 2",
+        "localhost:1002",
         AUTHENTICATOR_NAME,
         DIFFERENT_REGULAR_USER_NAME,
         DateTimes.of("2000"),
@@ -507,6 +510,61 @@ public class DartSqlResourceTest extends MSQTestBase
   }
 
   @Test
+  public void test_doPost_regularUser_restricted_throwsForbidden()
+  {
+    final MockAsyncContext asyncContext = new MockAsyncContext();
+    final MockHttpServletResponse asyncResponse = new MockHttpServletResponse();
+    asyncContext.response = asyncResponse;
+
+    Mockito.when(httpServletRequest.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
+           .thenReturn(makeAuthenticationResult(REGULAR_USER_NAME));
+    Mockito.when(httpServletRequest.startAsync())
+           .thenReturn(asyncContext);
+
+    final SqlQuery sqlQuery = new SqlQuery(
+        StringUtils.format("SELECT * FROM \"%s\"", CalciteTests.RESTRICTED_DATASOURCE),
+        ResultFormat.ARRAY,
+        false,
+        false,
+        false,
+        Collections.emptyMap(),
+        Collections.emptyList()
+    );
+
+    ForbiddenException e = Assertions.assertThrows(
+        ForbiddenException.class,
+        () -> sqlResource.doPost(sqlQuery, httpServletRequest)
+    );
+    Assertions.assertEquals("Unauthorized", e.getMessage());
+  }
+
+  @Test
+  public void test_doPost_superUser_restricted_throwsServerError()
+  {
+    final MockAsyncContext asyncContext = new MockAsyncContext();
+    final MockHttpServletResponse asyncResponse = new MockHttpServletResponse();
+    asyncContext.response = asyncResponse;
+
+    Mockito.when(httpServletRequest.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT))
+           .thenReturn(makeAuthenticationResult(CalciteTests.TEST_SUPERUSER_NAME));
+    Mockito.when(httpServletRequest.startAsync())
+           .thenReturn(asyncContext);
+
+    final SqlQuery sqlQuery = new SqlQuery(
+        StringUtils.format("SELECT * FROM \"%s\"", CalciteTests.RESTRICTED_DATASOURCE),
+        ResultFormat.ARRAY,
+        false,
+        false,
+        false,
+        Collections.emptyMap(),
+        Collections.emptyList()
+    );
+    Assertions.assertNull(sqlResource.doPost(sqlQuery, httpServletRequest));
+    // Super user can run a dart query, but we don't support it yet.
+    Assertions.assertEquals(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), asyncResponse.getStatus());
+  }
+
+  @Test
   public void test_doPost_regularUser_runtimeError() throws IOException
   {
     final MockAsyncContext asyncContext = new MockAsyncContext();
@@ -568,7 +626,9 @@ public class DartSqlResourceTest extends MSQTestBase
 
     final List<List<TaskReport.ReportMap>> reportMaps = objectMapper.readValue(
         asyncResponse.baos.toByteArray(),
-        new TypeReference<List<List<TaskReport.ReportMap>>>() {}
+        new TypeReference<>()
+        {
+        }
     );
 
     Assertions.assertEquals(1, reportMaps.size());
@@ -607,7 +667,9 @@ public class DartSqlResourceTest extends MSQTestBase
 
     final List<List<TaskReport.ReportMap>> reportMaps = objectMapper.readValue(
         asyncResponse.baos.toByteArray(),
-        new TypeReference<List<List<TaskReport.ReportMap>>>() {}
+        new TypeReference<>()
+        {
+        }
     );
 
     Assertions.assertEquals(1, reportMaps.size());
@@ -724,7 +786,7 @@ public class DartSqlResourceTest extends MSQTestBase
            .thenReturn(makeAuthenticationResult(REGULAR_USER_NAME));
 
     final Response cancellationResponse = sqlResource.cancelQuery("nonexistent", httpServletRequest);
-    Assertions.assertEquals(Response.Status.NOT_FOUND.getStatusCode(), cancellationResponse.getStatus());
+    Assertions.assertEquals(Response.Status.ACCEPTED.getStatusCode(), cancellationResponse.getStatus());
   }
 
   /**
@@ -739,8 +801,15 @@ public class DartSqlResourceTest extends MSQTestBase
     Mockito.when(controller.queryId()).thenReturn("did_" + identity);
 
     final AuthenticationResult authenticationResult = makeAuthenticationResult(identity);
-    final ControllerHolder holder =
-        new ControllerHolder(controller, null, "sid", "SELECT 1", authenticationResult, DateTimes.of("2000"));
+    final ControllerHolder holder = new ControllerHolder(
+        controller,
+        null,
+        "sid",
+        "SELECT 1",
+        "localhost:1001",
+        authenticationResult,
+        DateTimes.of("2000")
+    );
 
     controllerRegistry.register(holder);
     return holder;

@@ -84,8 +84,8 @@ public class RequestLogLine
         Arrays.asList(
             timestamp,
             remoteAddr,
-            objectMapper.writeValueAsString(query),
-            objectMapper.writeValueAsString(queryStats)
+            objectMapper.writeValueAsString(queryStats),
+            objectMapper.writeValueAsString(query)
         )
     );
   }

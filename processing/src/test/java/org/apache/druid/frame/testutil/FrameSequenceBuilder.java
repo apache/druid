@@ -157,7 +157,7 @@ public class FrameSequenceBuilder
           {
             final ColumnSelectorFactory columnSelectorFactory = cursor.getColumnSelectorFactory();
 
-            return new Iterator<Frame>()
+            return new Iterator<>()
             {
               @Override
               public boolean hasNext()

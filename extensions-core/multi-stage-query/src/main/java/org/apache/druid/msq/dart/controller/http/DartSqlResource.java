@@ -36,9 +36,9 @@ import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.ResponseContextConfig;
 import org.apache.druid.server.initialization.ServerConfig;
-import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthenticationResult;
+import org.apache.druid.server.security.AuthorizationResult;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Resource;
@@ -144,7 +144,7 @@ public class DartSqlResource extends SqlResource
   )
   {
     final AuthenticationResult authenticationResult = AuthorizationUtils.authenticationResultFromRequest(req);
-    final Access stateReadAccess = AuthorizationUtils.authorizeAllResourceActions(
+    final AuthorizationResult stateReadAccess = AuthorizationUtils.authorizeAllResourceActions(
         authenticationResult,
         Collections.singletonList(new ResourceAction(Resource.STATE_RESOURCE, Action.READ)),
         authorizerMapper
@@ -154,7 +154,6 @@ public class DartSqlResource extends SqlResource
         controllerRegistry.getAllHolders()
                           .stream()
                           .map(DartQueryInfo::fromControllerHolder)
-                          .sorted(Comparator.comparing(DartQueryInfo::getStartTime))
                           .collect(Collectors.toList());
 
     // Add queries from all other servers, if "selfOnly" is not set.
@@ -172,8 +171,11 @@ public class DartSqlResource extends SqlResource
       }
     }
 
+    // Sort queries by start time, breaking ties by query ID, so the list comes back in a consistent and nice order.
+    queries.sort(Comparator.comparing(DartQueryInfo::getStartTime).thenComparing(DartQueryInfo::getDartQueryId));
+
     final GetQueriesResponse response;
-    if (stateReadAccess.isAllowed()) {
+    if (stateReadAccess.allowAccessWithNoRestriction()) {
       // User can READ STATE, so they can see all running queries, as well as authentication details.
       response = new GetQueriesResponse(queries);
     } else {
@@ -237,24 +239,25 @@ public class DartSqlResource extends SqlResource
 
     List<SqlLifecycleManager.Cancelable> cancelables = sqlLifecycleManager.getAll(sqlQueryId);
     if (cancelables.isEmpty()) {
-      return Response.status(Response.Status.NOT_FOUND).build();
+      // Return ACCEPTED even if the query wasn't found. When the Router broadcasts cancellation requests to all
+      // Brokers, this ensures the user sees a successful request.
+      AuthorizationUtils.setRequestAuthorizationAttributeIfNeeded(req);
+      return Response.status(Response.Status.ACCEPTED).build();
     }
 
-    final Access access = authorizeCancellation(req, cancelables);
+    final AuthorizationResult authResult = authorizeCancellation(req, cancelables);
 
-    if (access.isAllowed()) {
+    if (authResult.allowAccessWithNoRestriction()) {
       sqlLifecycleManager.removeAll(sqlQueryId, cancelables);
 
       // Don't call cancel() on the cancelables. That just cancels native queries, which is useless here. Instead,
       // get the controller and stop it.
-      boolean found = false;
       for (SqlLifecycleManager.Cancelable cancelable : cancelables) {
         final HttpStatement stmt = (HttpStatement) cancelable;
         final Object dartQueryId = stmt.context().get(DartSqlEngine.CTX_DART_QUERY_ID);
         if (dartQueryId instanceof String) {
           final ControllerHolder holder = controllerRegistry.get((String) dartQueryId);
           if (holder != null) {
-            found = true;
             holder.cancel();
           }
         } else {
@@ -267,7 +270,9 @@ public class DartSqlResource extends SqlResource
         }
       }
 
-      return Response.status(found ? Response.Status.ACCEPTED : Response.Status.NOT_FOUND).build();
+      // Return ACCEPTED even if the query wasn't found. When the Router broadcasts cancellation requests to all
+      // Brokers, this ensures the user sees a successful request.
+      return Response.status(Response.Status.ACCEPTED).build();
     } else {
       return Response.status(Response.Status.FORBIDDEN).build();
     }

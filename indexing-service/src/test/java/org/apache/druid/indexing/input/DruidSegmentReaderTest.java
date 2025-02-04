@@ -646,7 +646,7 @@ public class DruidSegmentReaderTest extends InitializedNullHandlingTest
     MutableBoolean isSequenceClosed = new MutableBoolean(false);
     MutableBoolean isFileClosed = new MutableBoolean(false);
     Sequence<Map<String, Object>> sequence = new BaseSequence<>(
-        new IteratorMaker<Map<String, Object>, Iterator<Map<String, Object>>>()
+        new IteratorMaker<>()
         {
           @Override
           public Iterator<Map<String, Object>> make()
