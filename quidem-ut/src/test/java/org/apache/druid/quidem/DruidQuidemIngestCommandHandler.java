@@ -97,27 +97,23 @@ public class DruidQuidemIngestCommandHandler extends DruidQuidemCommandHandler
     private void executeIngest(Context context)
     {
       try {
-             Injector injector = DruidConnectionExtras.unwrapOrThrow(context.connection()).getInjector();
-      ObjectMapper om = injector.getInstance(ObjectMapper.class);
-      SpecificSegmentsQuerySegmentWalker ss = injector.getInstance(SpecificSegmentsQuerySegmentWalker.class);
-      TempDirProducer tds = injector.getInstance(TempDirProducer.class);
+        Injector injector = DruidConnectionExtras.unwrapOrThrow(context.connection()).getInjector();
+        ObjectMapper om = injector.getInstance(ObjectMapper.class);
+        SpecificSegmentsQuerySegmentWalker ss = injector.getInstance(SpecificSegmentsQuerySegmentWalker.class);
+        TempDirProducer tds = injector.getInstance(TempDirProducer.class);
 
-      String ingestText = Joiner.on("\n").join(content);
-        ParallelIndexIngestionSpec spec =null;
-        //spec = om.readValue(ingestText, ParallelIndexIngestionSpec.class);
+        String ingestText = Joiner.on("\n").join(content);
+        ParallelIndexIngestionSpec spec = null;
+        // spec = om.readValue(ingestText, ParallelIndexIngestionSpec.class);
 
         ParallelIndexSupervisorTask aa;
-        aa = om.readValue(ingestText, ParallelIndexSupervisorTask .class);
-
-
+        aa = om.readValue(ingestText, ParallelIndexSupervisorTask.class);
 
         IngestionTestBase itb = new IngestionTestBase()
         {
         };
         itb.derbyConnectorRule.before();
         itb.setUpIngestionTestBase();
-
-
 
         TestTaskToolboxFactory.Builder builder = new TestTaskToolboxFactory.Builder()
             .setChatHandlerProvider(injector.getInstance(ChatHandlerProvider.class))
@@ -126,32 +122,32 @@ public class DruidQuidemIngestCommandHandler extends DruidQuidemCommandHandler
             .setAppenderatorsManager(new TestAppenderatorsManager())
             .setSegmentPusher(injector.getInstance(LocalDataSegmentPusher.class))
             .setDataSegmentKiller(new TestDataSegmentKiller())
-//            .setConfig(taskConfig)
-//            .setIndexIO(new IndexIO(getObjectMapper(), ColumnConfig.DEFAULT))
-//            .setTaskActionClientFactory(taskActionClientFactory)
-            .setCentralizedTableSchemaConfig(new CentralizedDatasourceSchemaConfig())
-            ;
+            // .setConfig(taskConfig)
+            // .setIndexIO(new IndexIO(getObjectMapper(), ColumnConfig.DEFAULT))
+            // .setTaskActionClientFactory(taskActionClientFactory)
+            .setCentralizedTableSchemaConfig(new CentralizedDatasourceSchemaConfig());
 
-            TestTaskToolboxFactory f = builder.build();
-            TaskToolbox t = f.build(aa);
-            itb.prepareTaskForLocking(aa);
-            aa.runTask(t);
+        TestTaskToolboxFactory f = builder.build();
+        TaskToolbox t = f.build(aa);
+        itb.prepareTaskForLocking(aa);
+        aa.runTask(t);
 
+        SegmentLocalCacheManager sm = null;
+        DataSegment ds = null;
+        sm.getSegment(ds);
 
-            SegmentLocalCacheManager  sm = null;
-            DataSegment ds =null;
-            sm.getSegment(ds);
-
-//        TaskToolboxFactory aa1 = injector.getInstance(TaskToolboxFactory.class);
-//        TaskToolbox toolbox = (TaskToolbox) Proxy
-//            .newProxyInstance(getClass().getClassLoader(), new Class<?>[] {TaskToolbox.class}, new Beloved());
-//
-//        aa.run(toolbox);
-//        spec.getIOConfig().getInputSource();
-//        spec.getIOConfig().getInputFormat();
-//
-//        TestDataSet tsd= null;
-//        ss.add(tsd, tds.newTempFolder());
+        // TaskToolboxFactory aa1 =
+        // injector.getInstance(TaskToolboxFactory.class);
+        // TaskToolbox toolbox = (TaskToolbox) Proxy
+        // .newProxyInstance(getClass().getClassLoader(), new Class<?>[]
+        // {TaskToolbox.class}, new Beloved());
+        //
+        // aa.run(toolbox);
+        // spec.getIOConfig().getInputSource();
+        // spec.getIOConfig().getInputFormat();
+        //
+        // TestDataSet tsd= null;
+        // ss.add(tsd, tds.newTempFolder());
       }
       catch (Exception e) {
         throw new RuntimeException(e);
@@ -159,7 +155,8 @@ public class DruidQuidemIngestCommandHandler extends DruidQuidemCommandHandler
       }
     }
 
-    static class Beloved implements InvocationHandler{
+    static class Beloved implements InvocationHandler
+    {
 
       @Override
       public Object invoke(Object proxy, Method method, Object[] args) throws Throwable
