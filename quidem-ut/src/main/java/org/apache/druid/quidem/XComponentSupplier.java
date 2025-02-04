@@ -66,7 +66,6 @@ public class XComponentSupplier extends StandardComponentSupplier
   @Override
   public SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(SpecificSegmentsQuerySegmentWalker walker)
   {
-    walker = super.addSegmentsToWalker(walker);
     return walker;
   }
 }

@@ -9,7 +9,7 @@
       "inputSource": {
         "type": "local",
         "baseDir": "/tmp/",
-        "filter": "wikiticker-2015-09-12-sampled.json.gz" 
+        "filter": "wikipedia.json.gz"
       },
       "inputFormat": {
         "type": "json"
@@ -21,7 +21,7 @@
         "queryGranularity": "none",
         "rollup": false
       },
-      "dataSource": "wikipediax2",
+      "dataSource": "wikipediaxaa",
       "timestampSpec": {
         "column": "timestamp",
         "format": "iso"

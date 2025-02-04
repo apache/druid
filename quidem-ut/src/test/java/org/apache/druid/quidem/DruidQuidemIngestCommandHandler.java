@@ -22,25 +22,29 @@ package org.apache.druid.quidem;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 import com.google.inject.Injector;
 import net.hydromatic.quidem.AbstractCommand;
 import net.hydromatic.quidem.Command;
 import org.apache.calcite.util.Util;
+import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.IngestionTestBase;
+import org.apache.druid.indexing.common.task.IngestionTestBase.TestLocalTaskActionClient;
+import org.apache.druid.indexing.common.task.IngestionTestBase.TestLocalTaskActionClientFactory;
 import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
-import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexIngestionSpec;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTask;
 import org.apache.druid.indexing.overlord.TestTaskToolboxFactory;
 import org.apache.druid.indexing.test.TestDataSegmentKiller;
+import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
-import org.apache.druid.segment.loading.SegmentLocalCacheManager;
+import org.apache.druid.segment.loading.LocalDataSegmentPusherConfig;
+import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.ChatHandlerProvider;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
-import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.timeline.DataSegment;
 
 import java.lang.reflect.InvocationHandler;
@@ -99,14 +103,11 @@ public class DruidQuidemIngestCommandHandler extends DruidQuidemCommandHandler
         Injector injector = DruidConnectionExtras.unwrapOrThrow(context.connection()).getInjector();
         ObjectMapper om = injector.getInstance(ObjectMapper.class);
         SpecificSegmentsQuerySegmentWalker ss = injector.getInstance(SpecificSegmentsQuerySegmentWalker.class);
-        TempDirProducer tdp = injector.getInstance(TempDirProducer.class);
 
         String ingestText = Joiner.on("\n").join(content);
-        ParallelIndexIngestionSpec spec = null;
-        // spec = om.readValue(ingestText, ParallelIndexIngestionSpec.class);
 
-        ParallelIndexSupervisorTask aa;
-        aa = om.readValue(ingestText, ParallelIndexSupervisorTask.class);
+        ParallelIndexSupervisorTask ingestTask;
+        ingestTask = om.readValue(ingestText, ParallelIndexSupervisorTask.class);
 
         IngestionTestBase itb = new IngestionTestBase()
         {
@@ -114,10 +115,11 @@ public class DruidQuidemIngestCommandHandler extends DruidQuidemCommandHandler
         itb.derbyConnectorRule.before();
         itb.setUpIngestionTestBase();
 
+        TestLocalTaskActionClientFactory taskActionClientFactory = itb.new TestLocalTaskActionClientFactory();
         TestTaskToolboxFactory.Builder builder = new TestTaskToolboxFactory.Builder()
             .setChatHandlerProvider(injector.getInstance(ChatHandlerProvider.class))
             .setRowIngestionMetersFactory(new DropwizardRowIngestionMetersFactory())
-            .setTaskActionClientFactory(itb.new TestLocalTaskActionClientFactory())
+            .setTaskActionClientFactory(taskActionClientFactory)
             .setAppenderatorsManager(new TestAppenderatorsManager())
             .setSegmentPusher(injector.getInstance(LocalDataSegmentPusher.class))
             .setDataSegmentKiller(new TestDataSegmentKiller())
@@ -127,16 +129,22 @@ public class DruidQuidemIngestCommandHandler extends DruidQuidemCommandHandler
             .setCentralizedTableSchemaConfig(new CentralizedDatasourceSchemaConfig());
 
         TestTaskToolboxFactory f = builder.build();
-        TaskToolbox t = f.build(aa);
-        itb.prepareTaskForLocking(aa);
-        aa.runTask(t);
+        TaskToolbox t = f.build(ingestTask);
+        itb.prepareTaskForLocking(ingestTask);
+        TaskStatus ts = ingestTask.runTask(t);
 
-        if (false) {
+        if (true) {
+
+          TestLocalTaskActionClient  taskActionClient = (TestLocalTaskActionClient) t.getTaskActionClient();
           SegmentCacheManagerFactory f1 = injector.getInstance(SegmentCacheManagerFactory.class);
 
-          SegmentLocalCacheManager sm = null;
-          DataSegment ds = null;
-          sm.getSegment(ds);
+//          ss.getSegments();
+          SegmentCacheManager sm = f1.manufacturate(new LocalDataSegmentPusherConfig().storageDirectory);
+          DataSegment ds = Iterables.getOnlyElement(taskActionClient.getPublishedSegments());
+          ReferenceCountingSegment segment = sm.getSegment(ds);
+
+          // ss.add(tsd, tds.newTempFolder());
+          ss.add(ds, segment);
         }
 
         // TaskToolboxFactory aa1 =
@@ -150,7 +158,6 @@ public class DruidQuidemIngestCommandHandler extends DruidQuidemCommandHandler
         // spec.getIOConfig().getInputFormat();
         //
         // TestDataSet tsd= null;
-        // ss.add(tsd, tds.newTempFolder());
       }
       catch (Exception e) {
         throw new RuntimeException(e);

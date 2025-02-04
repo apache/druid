@@ -74,6 +74,7 @@ import org.apache.druid.query.topn.TopNQueryConfig;
 import org.apache.druid.quidem.TestSqlModule;
 import org.apache.druid.segment.DefaultColumnFormatConfig;
 import org.apache.druid.segment.ReferenceCountingSegment;
+import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.realtime.ChatHandlerProvider;
 import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
@@ -946,6 +947,13 @@ public class SqlTestFramework
     {
       return CalciteTests
           .createMockSystemSchema(druidSchema, (SpecificSegmentsQuerySegmentWalker) walker, authorizerMapper);
+    }
+
+    @Provides
+    @LazySingleton
+    private  ColumnConfig getColumnConfig()
+    {
+      return ColumnConfig.DEFAULT;
     }
 
     @Provides
