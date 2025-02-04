@@ -232,7 +232,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
    * Returns a {@link TimeseriesResultValue} that corresponds to an empty-set aggregation, which is used in situations
    * where we want to return a single result representing "nothing was aggregated".
    */
-  public Result<TimeseriesResultValue> getEmptyTimeseriesResultValue(TimeseriesQuery query)
+  Result<TimeseriesResultValue> getEmptyTimeseriesResultValue(TimeseriesQuery query)
   {
     final Object[] resultArray = getEmptyAggregations(query.getAggregatorSpecs());
     final DateTime start = query.getIntervals().isEmpty() ? DateTimes.EPOCH : query.getIntervals().get(0).getStart();
