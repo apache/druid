@@ -117,17 +117,17 @@ public abstract class IngestionTestBase2 extends InitializedNullHandlingTest
       new TestDerbyConnector.DerbyConnectorRule(CentralizedDatasourceSchemaConfig.create(true));
 
   protected final TestUtils testUtils = new TestUtils();
-  private final ObjectMapper objectMapper = testUtils.getTestObjectMapper();
-  private SegmentCacheManagerFactory segmentCacheManagerFactory;
-  private TaskStorage taskStorage;
-  private IndexerSQLMetadataStorageCoordinator storageCoordinator;
-  private SegmentsMetadataManager segmentsMetadataManager;
-  private TaskLockbox lockbox;
-  private File baseDir;
-  private SegmentSchemaManager segmentSchemaManager;
-  private SegmentSchemaCache segmentSchemaCache;
-  private SupervisorManager supervisorManager;
-  private TestDataSegmentKiller dataSegmentKiller;
+  public final ObjectMapper objectMapper = testUtils.getTestObjectMapper();
+  public SegmentCacheManagerFactory segmentCacheManagerFactory;
+  public TaskStorage taskStorage;
+  public IndexerSQLMetadataStorageCoordinator storageCoordinator;
+  public SegmentsMetadataManager segmentsMetadataManager;
+  public TaskLockbox lockbox;
+  public File baseDir;
+  public SegmentSchemaManager segmentSchemaManager;
+  public SegmentSchemaCache segmentSchemaCache;
+  public SupervisorManager supervisorManager;
+  public TestDataSegmentKiller dataSegmentKiller;
   protected File reportsFile;
 
   @Before

@@ -136,7 +136,7 @@ public class DruidQuidemIngestCommandHandler extends DruidQuidemCommandHandler
         if (true) {
 
           TestLocalTaskActionClient  taskActionClient = (TestLocalTaskActionClient) t.getTaskActionClient();
-          SegmentCacheManagerFactory f1 = injector.getInstance(SegmentCacheManagerFactory.class);
+          SegmentCacheManagerFactory f1 = itb.segmentCacheManagerFactory;//injector.getInstance(SegmentCacheManagerFactory.class);
 
 //          ss.getSegments();
           SegmentCacheManager sm = f1.manufacturate(new LocalDataSegmentPusherConfig().storageDirectory);
