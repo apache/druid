@@ -19,7 +19,6 @@
 
 package org.apache.druid.quidem;
 
-import net.hydromatic.quidem.CommandHandler;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -34,13 +33,6 @@ public class QTest extends DruidQuidemTestBase
   {
     super();
   }
-
-  @Override
-  protected CommandHandler createCommandHandler()
-  {
-    return new DruidQuidemIngestCommandHandler();
-  }
-
 
   @Override
   protected File getTestRoot()
