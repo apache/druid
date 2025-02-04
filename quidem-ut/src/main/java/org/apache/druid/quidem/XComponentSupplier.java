@@ -44,7 +44,6 @@ public class XComponentSupplier extends StandardComponentSupplier
         new IndexingServiceTuningConfigModule(),
         new LocalModule()
     );
-
   }
 
   static class LocalModule implements DruidModule {

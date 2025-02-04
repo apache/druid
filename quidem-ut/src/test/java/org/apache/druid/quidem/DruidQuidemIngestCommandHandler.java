@@ -35,10 +35,13 @@ import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervi
 import org.apache.druid.indexing.overlord.TestTaskToolboxFactory;
 import org.apache.druid.indexing.test.TestDataSegmentKiller;
 import org.apache.druid.segment.loading.LocalDataSegmentPusher;
+import org.apache.druid.segment.loading.SegmentLocalCacheManager;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.realtime.ChatHandlerProvider;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.TempDirProducer;
+import org.apache.druid.timeline.DataSegment;
+
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.sql.ResultSet;
@@ -135,6 +138,9 @@ public class DruidQuidemIngestCommandHandler extends DruidQuidemCommandHandler
             aa.runTask(t);
 
 
+            SegmentLocalCacheManager  sm = null;
+            DataSegment ds =null;
+            sm.getSegment(ds);
 
 //        TaskToolboxFactory aa1 = injector.getInstance(TaskToolboxFactory.class);
 //        TaskToolbox toolbox = (TaskToolbox) Proxy
