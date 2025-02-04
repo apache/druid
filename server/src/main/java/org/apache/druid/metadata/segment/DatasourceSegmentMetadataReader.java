@@ -58,8 +58,8 @@ public interface DatasourceSegmentMetadataReader
 
   /**
    * Retrieves used segments that overlap with any of the given intervals.
-   * If the given list of intervals is empty, all used segments are considered
-   * eligible.
+   * If the given list of intervals is empty, all used segments are included in
+   * the result.
    */
   Set<DataSegment> findUsedSegmentsOverlappingAnyOf(
       List<Interval> intervals
@@ -72,7 +72,7 @@ public interface DatasourceSegmentMetadataReader
 
   /**
    * Retrieves used segments that overlap with any of the given intervals. If the
-   * given list of intervals is empty, all used segments are considered eligible.
+   * given list of intervals is empty, all used segments are included in the result.
    */
   Set<DataSegmentPlus> findUsedSegmentsPlusOverlappingAnyOf(
       List<Interval> intervals

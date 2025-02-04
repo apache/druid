@@ -46,7 +46,7 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache
 {
   private final String dataSource;
   private final Map<String, DataSegmentPlus> idToUsedSegment = new HashMap<>();
-  private final Map<String, DateTime> unusedSegmentIdToUpdatedTime = new HashMap<>();
+  private final Map<SegmentId, DateTime> unusedSegmentIdToUpdatedTime = new HashMap<>();
 
   /**
    * Not being used right now. Could allow lookup of visible segments for a given interval.
@@ -171,7 +171,7 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache
         usedSegmentTimeline.remove(oldSegmentPlus.getDataSegment());
       }
 
-      unusedSegmentIdToUpdatedTime.remove(segmentId);
+      unusedSegmentIdToUpdatedTime.remove(segment.getId());
       usedSegmentTimeline.add(segment);
       return true;
     });
@@ -187,7 +187,6 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache
    */
   boolean addUnusedSegmentId(SegmentId segmentId, @Nullable DateTime updatedTime)
   {
-    final int partitionNum = segmentId.getPartitionNum();
     return withWriteLock(() -> {
       final DataSegmentPlus oldSegmentPlus = idToUsedSegment.remove(segmentId.toString());
       if (oldSegmentPlus != null) {
@@ -195,13 +194,10 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache
         usedSegmentTimeline.remove(oldSegmentPlus.getDataSegment());
       }
 
-      final String serializedId = segmentId.toString();
-      if (!unusedSegmentIdToUpdatedTime.containsKey(serializedId)
-          || shouldUpdateCache(unusedSegmentIdToUpdatedTime.get(serializedId), updatedTime)) {
-        unusedSegmentIdToUpdatedTime.put(serializedId, updatedTime);
-        intervalVersionToHighestUnusedPartitionNumber
-            .computeIfAbsent(segmentId.getInterval(), i -> new HashMap<>())
-            .merge(segmentId.getVersion(), partitionNum, Math::max);
+      if (!unusedSegmentIdToUpdatedTime.containsKey(segmentId)
+          || shouldUpdateCache(unusedSegmentIdToUpdatedTime.get(segmentId), updatedTime)) {
+        unusedSegmentIdToUpdatedTime.put(segmentId, updatedTime);
+        updatePartitionNumber(segmentId);
         return true;
       } else {
         return false;
@@ -238,9 +234,9 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache
     return withWriteLock(() -> {
       final Set<String> unpersistedSegmentIds = new HashSet<>();
       unusedSegmentIdToUpdatedTime.entrySet().stream().filter(
-          entry -> !persistedSegmentIds.contains(entry.getKey())
+          entry -> !persistedSegmentIds.contains(entry.getKey().toString())
                    && shouldUpdateCache(entry.getValue(), syncStartTime)
-      ).map(Map.Entry::getKey).forEach(unpersistedSegmentIds::add);
+      ).map(entry -> entry.getKey().toString()).forEach(unpersistedSegmentIds::add);
 
       idToUsedSegment.entrySet().stream().filter(
           entry -> !persistedSegmentIds.contains(entry.getKey())
@@ -251,16 +247,23 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache
     });
   }
 
+  /**
+   * Removes the segments for the given IDs (used or unused) from the cache.
+   *
+   * @return Number of used and unused segments removed
+   */
   int removeSegmentsForIds(Set<String> segmentIds)
   {
     return withWriteLock(() -> {
       int removedCount = 0;
-      for (String segmentId : segmentIds) {
-        final DataSegmentPlus segment = idToUsedSegment.remove(segmentId);
+      for (String serializedId : segmentIds) {
+        final SegmentId segmentId = SegmentId.tryParse(dataSource, serializedId);
+
+        final DataSegmentPlus segment = idToUsedSegment.remove(serializedId);
         if (segment != null) {
           usedSegmentTimeline.remove(segment.getDataSegment());
           ++removedCount;
-        } else if (unusedSegmentIdToUpdatedTime.containsKey(segmentId)) {
+        } else if (segmentId != null && unusedSegmentIdToUpdatedTime.containsKey(segmentId)) {
           unusedSegmentIdToUpdatedTime.remove(segmentId);
           ++removedCount;
         }
@@ -271,15 +274,29 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache
   }
 
   /**
-   * Resets the {@link #intervalVersionToHighestUnusedPartitionNumber} with the
-   * new values.
+   * Recomputes the {@link #intervalVersionToHighestUnusedPartitionNumber}.
+   * This method must be called when all unused segments have been synced with
+   * the metadata store.
    */
-  void resetMaxUnusedIds(Map<Interval, Map<String, Integer>> intervalVersionToHighestPartitionNumber)
+  void recomputeMaxUnusedIds()
   {
     withWriteLock(() -> {
-      this.intervalVersionToHighestUnusedPartitionNumber.clear();
-      this.intervalVersionToHighestUnusedPartitionNumber.putAll(intervalVersionToHighestPartitionNumber);
+      intervalVersionToHighestUnusedPartitionNumber.clear();
+      unusedSegmentIdToUpdatedTime.keySet().forEach(this::updatePartitionNumber);
     });
+  }
+
+  /**
+   * Adds the partition number of this segment to the
+   * {@link #intervalVersionToHighestUnusedPartitionNumber}.
+   */
+  private void updatePartitionNumber(SegmentId segmentId)
+  {
+    withWriteLock(
+        () -> intervalVersionToHighestUnusedPartitionNumber
+            .computeIfAbsent(segmentId.getInterval(), i -> new HashMap<>())
+            .merge(segmentId.getVersion(), segmentId.getPartitionNum(), Math::max)
+    );
   }
 
   // READ METHODS
@@ -289,8 +306,9 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache
   {
     return withReadLock(
         () -> segments.stream()
-                      .map(HeapMemoryDatasourceSegmentCache::getId)
+                      .map(DataSegment::getId)
                       .filter(this::isSegmentIdCached)
+                      .map(SegmentId::toString)
                       .collect(Collectors.toSet())
     );
   }
@@ -584,9 +602,9 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache
     );
   }
 
-  private boolean isSegmentIdCached(String id)
+  private boolean isSegmentIdCached(SegmentId id)
   {
-    return idToUsedSegment.containsKey(id)
+    return idToUsedSegment.containsKey(id.toString())
            || unusedSegmentIdToUpdatedTime.containsKey(id);
   }
 

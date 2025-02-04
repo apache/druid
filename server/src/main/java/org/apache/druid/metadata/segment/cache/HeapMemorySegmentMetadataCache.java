@@ -278,30 +278,29 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
       }
 
       final Map<String, DatasourceSegmentSummary> datasourceToSummary = new HashMap<>();
-
       retrieveAllSegmentIds(datasourceToSummary);
 
-      datasourceToSegmentCache.forEach(
-          (dataSource, cache) -> removeUnknownSegmentsFromCache(
+      datasourceToSegmentCache.keySet().forEach(
+          dataSource -> removeUnknownSegmentsFromCache(
               dataSource,
               datasourceToSummary.computeIfAbsent(dataSource, ds -> new DatasourceSegmentSummary()),
               pollStartTime
           )
       );
 
-      // TODO: ensure that last_updated_time is handled correctly for this operation
-      datasourceToSummary.forEach(
-          (datasource, summary) ->
-              getCacheForDatasource(datasource)
-                  .resetMaxUnusedIds(summary.intervalVersionToMaxUnusedPartition)
+      datasourceToSegmentCache.values().forEach(
+          HeapMemoryDatasourceSegmentCache::recomputeMaxUnusedIds
       );
 
       datasourceToSummary.forEach(this::retrieveAndRefreshUsedSegments);
 
       retrieveAndRefreshAllPendingSegments(datasourceToSummary);
-      datasourceToSummary.forEach(
-          (datasource, summary) ->
-              removeUnknownPendingSegmentsFromCache(datasource, summary, pollStartTime)
+      datasourceToSegmentCache.keySet().forEach(
+          dataSource -> removeUnknownPendingSegmentsFromCache(
+              dataSource,
+              datasourceToSummary.computeIfAbsent(dataSource, ds -> new DatasourceSegmentSummary()),
+              pollStartTime
+          )
       );
 
       datasourceToSummary.forEach(this::emitSummaryMetrics);

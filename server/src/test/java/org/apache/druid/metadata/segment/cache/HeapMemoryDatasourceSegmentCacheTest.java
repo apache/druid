@@ -40,7 +40,6 @@ import org.junit.Test;
 import org.junit.function.ThrowingRunnable;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 public class HeapMemoryDatasourceSegmentCacheTest
@@ -311,7 +310,7 @@ public class HeapMemoryDatasourceSegmentCacheTest
   }
 
   @Test
-  public void testResetMaxUnusedIds_isNeededAfterUpdateOrRemove()
+  public void testRecomputeMaxUnusedIds_isNeededAfterUpdateOrRemove()
   {
     final DataSegmentPlus unusedSegmentPlus = createUnusedSegment().asPlus();
     final DataSegment segment = unusedSegmentPlus.getDataSegment();
@@ -338,7 +337,7 @@ public class HeapMemoryDatasourceSegmentCacheTest
     Assert.assertEquals(segmentId, cache.findHighestUnusedSegmentId(segment.getInterval(), segment.getVersion()));
 
     // Verify that only reset updates the highest ID
-    cache.resetMaxUnusedIds(Map.of());
+    cache.recomputeMaxUnusedIds();
     Assert.assertNull(cache.findHighestUnusedSegmentId(segment.getInterval(), segment.getVersion()));
   }
 
@@ -454,15 +453,147 @@ public class HeapMemoryDatasourceSegmentCacheTest
   }
 
   @Test
-  public void testRemoveUnpersistedSegments()
+  public void testRemoveUnpersistedSegments_removesUsedSegmentUpdatedBeforeSyncStart()
   {
-    // TODO: Add some used segments
+    final DateTime syncTime = DateTimes.nowUtc();
 
+    final DataSegmentPlus persistedSegment = createUsedSegment().asPlus();
+    final DataSegmentPlus unpersistedSegmentUpdatedBeforeSync =
+        createUsedSegment().lastUpdatedOn(syncTime.minus(1)).asPlus();
+    final DataSegmentPlus unpersistedSegmentUpdatedAfterSync =
+        createUsedSegment().lastUpdatedOn(syncTime.plus(1)).asPlus();
 
-    // TODO: Add some unused segments
+    // Add segments to the cache and verify that they have been added
+    final Set<DataSegmentPlus> allSegments = Set.of(
+        persistedSegment,
+        unpersistedSegmentUpdatedBeforeSync,
+        unpersistedSegmentUpdatedAfterSync
+    );
+    cache.insertSegments(allSegments);
+    Assert.assertEquals(
+        allSegments,
+        cache.findUsedSegmentsPlusOverlappingAnyOf(List.of())
+    );
 
+    // Remove unpersisted segments and verify that only unpersisted segments
+    // last updated before the sync time are remove
+    cache.removeUnpersistedSegments(
+        Set.of(persistedSegment.getDataSegment().getId().toString()),
+        syncTime
+    );
+    Assert.assertEquals(
+        Set.of(persistedSegment, unpersistedSegmentUpdatedAfterSync),
+        cache.findUsedSegmentsPlusOverlappingAnyOf(List.of())
+    );
+  }
 
-    cache.removeUnpersistedSegments(Set.of(), null);
+  @Test
+  public void testRemoveUnpersistedSegments_removesUnusedSegmentUpdatedBeforeSyncStart()
+  {
+    final DateTime syncTime = DateTimes.nowUtc();
+
+    final DataSegmentPlus persistedSegment = createUnusedSegment().asPlus();
+    final DataSegmentPlus unpersistedSegmentUpdatedBeforeSync =
+        createUnusedSegment().lastUpdatedOn(syncTime.minus(1)).asPlus();
+    final DataSegmentPlus unpersistedSegmentUpdatedAfterSync =
+        createUnusedSegment().lastUpdatedOn(syncTime.plus(1)).asPlus();
+
+    // Add unused segments to the cache and verify that they have been added
+    cache.insertSegments(
+        Set.of(
+            persistedSegment,
+            unpersistedSegmentUpdatedBeforeSync,
+            unpersistedSegmentUpdatedAfterSync
+        )
+    );
+    Assert.assertEquals(
+        Set.of(
+            persistedSegment.getDataSegment().getId().toString(),
+            unpersistedSegmentUpdatedBeforeSync.getDataSegment().getId().toString(),
+            unpersistedSegmentUpdatedAfterSync.getDataSegment().getId().toString()
+        ),
+        cache.findExistingSegmentIds(
+            Set.of(
+                persistedSegment.getDataSegment(),
+                unpersistedSegmentUpdatedBeforeSync.getDataSegment(),
+                unpersistedSegmentUpdatedAfterSync.getDataSegment()
+            )
+        )
+    );
+
+    // Remove unpersisted segments and verify that only unpersisted segments
+    // last updated before the sync time are remove
+    cache.removeUnpersistedSegments(
+        Set.of(persistedSegment.getDataSegment().getId().toString()),
+        syncTime
+    );
+    Assert.assertEquals(
+        Set.of(
+            persistedSegment.getDataSegment().getId().toString(),
+            unpersistedSegmentUpdatedAfterSync.getDataSegment().getId().toString()
+        ),
+        cache.findExistingSegmentIds(
+            Set.of(
+                persistedSegment.getDataSegment(),
+                unpersistedSegmentUpdatedBeforeSync.getDataSegment(),
+                unpersistedSegmentUpdatedAfterSync.getDataSegment()
+            )
+        )
+    );
+  }
+
+  @Test
+  public void testRemoveUnpersistedPendingSegments_removesPendingSegmentCreatedbeforeSyncStart()
+  {
+    final DateTime syncTime = DateTimes.nowUtc();
+    final String taskAllocator = "allocator1";
+    final PendingSegmentRecord persistedSegment = new PendingSegmentRecord(
+        new SegmentIdWithShardSpec(WIKI, FIRST_WEEK_OF_JAN, "v1", new NumberedShardSpec(0, 2)),
+        "sequenceName",
+        null,
+        null,
+        taskAllocator,
+        null
+    );
+    final PendingSegmentRecord unpersistedSegmentCreatedBeforeSync = new PendingSegmentRecord(
+        new SegmentIdWithShardSpec(WIKI, FIRST_WEEK_OF_JAN, "v1", new NumberedShardSpec(1, 2)),
+        "sequenceName",
+        null,
+        null,
+        taskAllocator,
+        syncTime.minus(1)
+    );
+    final PendingSegmentRecord unpersistedSegmentCreatedAfterSync = new PendingSegmentRecord(
+        new SegmentIdWithShardSpec(WIKI, FIRST_WEEK_OF_JAN, "v2", new NumberedShardSpec(0, 1)),
+        "sequenceName",
+        null,
+        null,
+        taskAllocator,
+        syncTime.plus(1)
+    );
+
+    // Add pending segments to the cache and verify that they have been added
+    final List<PendingSegmentRecord> allSegments = List.of(
+        persistedSegment,
+        unpersistedSegmentCreatedBeforeSync,
+        unpersistedSegmentCreatedAfterSync
+    );
+    cache.insertPendingSegments(allSegments, false);
+    Assert.assertEquals(
+        Set.copyOf(allSegments),
+        Set.copyOf(cache.findPendingSegments(taskAllocator))
+    );
+
+    // Remove unpersisted segments and verify that only segments which are not
+    // present in the metadata store and were created before the sync are removed
+    cache.removeUnpersistedPendingSegments(
+        Set.of(persistedSegment.getId().toString()),
+        syncTime
+    );
+    Assert.assertEquals(
+        Set.of(persistedSegment, unpersistedSegmentCreatedAfterSync),
+        Set.copyOf(cache.findPendingSegments(taskAllocator))
+    );
   }
 
   @Test
