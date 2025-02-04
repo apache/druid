@@ -359,6 +359,10 @@ The Iceberg extension now supports the AWS Glue Iceberg catalog.
 
 ### Documentation improvements
 
+The docs now include examples for all supported Apache Druid SQL functions. You can easily learn how to use each function by following along with the examples. These examples leverage datasets included with Druid, making it simple to get started quickly.
+
+Check out the examples at [All Druid SQL functions](../querying/sql-functions.md).
+
 ## Upgrade notes and incompatible changes
 
 ### Upgrade notes
