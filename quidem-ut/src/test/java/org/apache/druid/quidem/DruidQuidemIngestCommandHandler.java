@@ -31,9 +31,9 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
-import org.apache.druid.indexing.common.task.IngestionTestBase;
-import org.apache.druid.indexing.common.task.IngestionTestBase.TestLocalTaskActionClient;
-import org.apache.druid.indexing.common.task.IngestionTestBase.TestLocalTaskActionClientFactory;
+import org.apache.druid.indexing.common.task.IngestionTestBase2;
+import org.apache.druid.indexing.common.task.IngestionTestBase2.TestLocalTaskActionClient;
+import org.apache.druid.indexing.common.task.IngestionTestBase2.TestLocalTaskActionClientFactory;
 import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTask;
 import org.apache.druid.indexing.overlord.TestTaskToolboxFactory;
@@ -109,7 +109,7 @@ public class DruidQuidemIngestCommandHandler extends DruidQuidemCommandHandler
         ParallelIndexSupervisorTask ingestTask;
         ingestTask = om.readValue(ingestText, ParallelIndexSupervisorTask.class);
 
-        IngestionTestBase itb = new IngestionTestBase()
+        IngestionTestBase2 itb = new IngestionTestBase2()
         {
         };
         itb.derbyConnectorRule.before();
