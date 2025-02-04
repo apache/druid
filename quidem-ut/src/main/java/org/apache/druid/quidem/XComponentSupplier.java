@@ -22,8 +22,12 @@ package org.apache.druid.quidem;
 import com.google.inject.Binder;
 import com.google.inject.Provides;
 import org.apache.druid.guice.IndexingServiceTuningConfigModule;
+import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.annotations.AttemptId;
 import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.metadata.TestDerbyConnector;
+import org.apache.druid.metadata.TestDerbyConnector.DerbyConnectorRule;
+import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.util.DruidModuleCollection;
@@ -59,6 +63,19 @@ public class XComponentSupplier extends StandardComponentSupplier
     {
       return "test";
     }
+
+    @Provides
+    @LazySingleton
+    TestDerbyConnector makeDerbyConnector()
+    {
+      DerbyConnectorRule dcr = new TestDerbyConnector.DerbyConnectorRule(
+          CentralizedDatasourceSchemaConfig.create(true)
+      );
+      dcr.before();
+      // FIXME possible leak
+      return dcr.getConnector();
+    }
+
   }
 
 
