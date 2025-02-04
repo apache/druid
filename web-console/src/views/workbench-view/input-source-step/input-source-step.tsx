@@ -27,8 +27,8 @@ import {
   RadioGroup,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import type { QueryResult } from '@druid-toolkit/query';
 import classNames from 'classnames';
+import type { QueryResult } from 'druid-query-toolkit';
 import type { JSX } from 'react';
 import React, { useEffect, useState } from 'react';
 
@@ -170,6 +170,7 @@ export const InputSourceStep = React.memo(function InputSourceStep(props: InputS
   }, [guessedInputFormatState]);
 
   const effectiveType = typeof inputSource === 'string' ? 'example' : inputSource?.type;
+
   function renderIngestionCard(type: string): JSX.Element | undefined {
     const selected = type === effectiveType;
     return (
@@ -213,27 +214,25 @@ export const InputSourceStep = React.memo(function InputSourceStep(props: InputS
       <div className="config">
         <div className="top-controls">
           {typeof inputSource === 'string' ? (
-            <>
-              <FormGroup label="Select example dataset">
-                <RadioGroup
-                  selectedValue={inputSource}
-                  onChange={e => setInputSource(e.currentTarget.value)}
-                >
-                  {EXAMPLE_INPUTS.map((e, i) => (
-                    <Radio
-                      key={i}
-                      labelElement={
-                        <div className="example-label">
-                          <div className="name">{e.name}</div>
-                          <div className="description">{e.description}</div>
-                        </div>
-                      }
-                      value={e.name}
-                    />
-                  ))}
-                </RadioGroup>
-              </FormGroup>
-            </>
+            <FormGroup label="Select example dataset">
+              <RadioGroup
+                selectedValue={inputSource}
+                onChange={e => setInputSource(e.currentTarget.value)}
+              >
+                {EXAMPLE_INPUTS.map((e, i) => (
+                  <Radio
+                    key={i}
+                    labelElement={
+                      <div className="example-label">
+                        <div className="name">{e.name}</div>
+                        <div className="description">{e.description}</div>
+                      </div>
+                    }
+                    value={e.name}
+                  />
+                ))}
+              </RadioGroup>
+            </FormGroup>
           ) : inputSource ? (
             <>
               <FormGroup>

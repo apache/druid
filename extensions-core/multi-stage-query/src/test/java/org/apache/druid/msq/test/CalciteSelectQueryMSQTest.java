@@ -115,22 +115,6 @@ public class CalciteSelectQueryMSQTest extends CalciteQueryTest
   @Disabled
   @Override
   @Test
-  public void testUnplannableJoinQueriesInNonSQLCompatibleMode()
-  {
-
-  }
-
-  @Disabled
-  @Override
-  @Test
-  public void testQueryWithMoreThanMaxNumericInFilter()
-  {
-
-  }
-
-  @Disabled
-  @Override
-  @Test
   public void testUnSupportedNullsFirst()
   {
   }

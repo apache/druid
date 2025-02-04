@@ -112,7 +112,7 @@ public class RabbitStreamRecordSupplier implements RecordSupplier<String, Long, 
     // stateSemaphore protects isRunning and consumers
     stateSemaphore = new Semaphore(1, true);
     isRunning = false;
-    consumers = new ArrayList<Consumer>();
+    consumers = new ArrayList<>();
 
     this.password = null;
     this.username = null;
@@ -238,7 +238,7 @@ public class RabbitStreamRecordSupplier implements RecordSupplier<String, Long, 
     Iterator<Map.Entry<String, ConsumerBuilder>> streamBuilderIterator = streamBuilders.entrySet().iterator();
     while (streamBuilderIterator.hasNext()) {
       Map.Entry<String, ConsumerBuilder> entry = streamBuilderIterator.next();
-      StreamPartition<String> comparitor = new StreamPartition<String>(getStreamFromSubstream(entry.getKey()), entry.getKey());
+      StreamPartition<String> comparitor = new StreamPartition<>(getStreamFromSubstream(entry.getKey()), entry.getKey());
       if (!streamPartitionstoKeep.contains(comparitor)) {
         streamBuilderIterator.remove();
       }
@@ -247,7 +247,7 @@ public class RabbitStreamRecordSupplier implements RecordSupplier<String, Long, 
     Iterator<Map.Entry<String, OffsetSpecification>> offsetIterator = offsetMap.entrySet().iterator();
     while (offsetIterator.hasNext()) {
       Map.Entry<String, OffsetSpecification> entry = offsetIterator.next();
-      StreamPartition<String> comparitor = new StreamPartition<String>(getStreamFromSubstream(entry.getKey()), entry.getKey());
+      StreamPartition<String> comparitor = new StreamPartition<>(getStreamFromSubstream(entry.getKey()), entry.getKey());
       if (!streamPartitionstoKeep.contains(comparitor)) {
         offsetIterator.remove();
       }

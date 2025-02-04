@@ -33,7 +33,7 @@ public class DynamicCompositeTest
   @Test
   public void testCompose()
   {
-    HashSet<Integer> set = new HashSet<Integer>();
+    HashSet<Integer> set = new HashSet<>();
     Function<Integer, Integer> sq = x -> x * x;
     Set<Integer> composite = DynamicComposite.make(set, Set.class, sq, Function.class);
     composite.add(1);

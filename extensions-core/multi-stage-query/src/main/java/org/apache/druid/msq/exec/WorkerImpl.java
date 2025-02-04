@@ -867,7 +867,7 @@ public class WorkerImpl implements Worker
           @Override
           public <T> Callable<T> decorateCallable(Callable<T> callable)
           {
-            return new PrioritizedCallable<T>()
+            return new PrioritizedCallable<>()
             {
               @Override
               public int getPriority()
@@ -969,10 +969,11 @@ public class WorkerImpl implements Worker
 
   /**
    * Returns cancellation ID for a particular stage, to be used in {@link FrameProcessorExecutor#cancel(String)}.
+   * In addition to being a token for cancellation, this also appears in thread dumps, so make it a little descriptive.
    */
   private static String cancellationIdFor(final StageId stageId, final int workerNumber)
   {
-    return StringUtils.format("%s_%s", stageId, workerNumber);
+    return StringUtils.format("msq-worker[%s_%s]", stageId, workerNumber);
   }
 
   /**

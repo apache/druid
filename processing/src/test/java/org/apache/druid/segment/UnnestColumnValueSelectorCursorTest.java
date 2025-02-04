@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.monomorphicprocessing.StringRuntimeShape;
@@ -28,7 +27,6 @@ import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.AfterClass;
 import org.junit.Assert;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -39,12 +37,6 @@ import java.util.List;
 public class UnnestColumnValueSelectorCursorTest extends InitializedNullHandlingTest
 {
   private static String OUTPUT_NAME = "unnested-column";
-
-  @BeforeClass
-  public static void setUpClass()
-  {
-    NullHandling.initializeForTests();
-  }
 
   @AfterClass
   public static void tearDownClass()

@@ -176,7 +176,7 @@ public class ExecutorLifecycle
 
     statusFuture = Futures.transform(
         taskRunner.run(task),
-        new Function<TaskStatus, TaskStatus>()
+        new Function<>()
         {
           @Override
           public TaskStatus apply(TaskStatus taskStatus)

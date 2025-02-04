@@ -61,7 +61,7 @@ public class QueryResultPusherTest
     QueryResource.QueryMetricCounter counter = new NoopQueryMetricCounter();
     String queryId = "someQuery";
     MediaType contentType = MediaType.APPLICATION_JSON_TYPE;
-    Map<String, String> extraHeaders = new HashMap<String, String>();
+    Map<String, String> extraHeaders = new HashMap<>();
     AtomicBoolean recordFailureInvoked = new AtomicBoolean();
 
     String embeddedExceptionMessage = "Embedded Exception Message!";

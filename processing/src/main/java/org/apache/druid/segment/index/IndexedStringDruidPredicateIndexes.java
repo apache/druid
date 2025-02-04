@@ -59,7 +59,7 @@ public final class IndexedStringDruidPredicateIndexes<TDictionary extends Indexe
       @Override
       public Iterable<ImmutableBitmap> getBitmapIterable(boolean includeUnknown)
       {
-        return () -> new Iterator<ImmutableBitmap>()
+        return () -> new Iterator<>()
         {
           final Iterator<String> iterator = dictionary.iterator();
           boolean nextSet = false;

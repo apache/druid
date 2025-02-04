@@ -25,9 +25,9 @@ import com.google.common.collect.Ordering;
 import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.ints.IntLists;
 import org.apache.druid.client.DruidServer;
+import org.apache.druid.client.QueryableDruidServer;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.selector.HighestPriorityTierSelectorStrategy;
-import org.apache.druid.client.selector.QueryableDruidServer;
 import org.apache.druid.client.selector.RandomServerSelectorStrategy;
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.data.input.StringTuple;
@@ -227,7 +227,7 @@ public class DartTableInputSpecSlicerTest extends InitializedNullHandlingTest
             serverMetadata.getTier(),
             serverMetadata.getPriority()
         );
-        serverSelector.addServerAndUpdateSegment(new QueryableDruidServer<>(server, null), dataSegment);
+        serverSelector.addServerAndUpdateSegment(new QueryableDruidServer(server, null), dataSegment);
       }
       timeline.add(
           dataSegment.getInterval(),

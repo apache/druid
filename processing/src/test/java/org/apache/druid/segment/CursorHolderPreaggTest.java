@@ -35,6 +35,7 @@ import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByResourcesReservationPool;
+import org.apache.druid.query.groupby.GroupByStatsProvider;
 import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
@@ -86,22 +87,24 @@ public class CursorHolderPreaggTest extends InitializedNullHandlingTest
     );
     topNQueryEngine = new TopNQueryEngine(bufferPool);
     timeseriesQueryEngine = new TimeseriesQueryEngine(bufferPool);
+    CloseableDefaultBlockingPool<ByteBuffer> mergePool =
+        new CloseableDefaultBlockingPool<>(
+            () -> ByteBuffer.allocate(50000),
+            4
+        );
+    GroupByStatsProvider groupByStatsProvider = new GroupByStatsProvider();
     groupingEngine = new GroupingEngine(
         new DruidProcessingConfig(),
         GroupByQueryConfig::new,
         new GroupByResourcesReservationPool(
-            closer.closeLater(
-                new CloseableDefaultBlockingPool<>(
-                    () -> ByteBuffer.allocate(50000),
-                    4
-                )
-            ),
+            closer.closeLater(mergePool),
             new GroupByQueryConfig()
         ),
         TestHelper.makeJsonMapper(),
         TestHelper.makeSmileMapper(),
         (query, future) -> {
-        }
+        },
+        groupByStatsProvider
     );
 
     this.cursorFactory = new CursorFactory()

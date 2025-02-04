@@ -16,6 +16,8 @@
  * limitations under the License.
  */
 
+/* globals window */
+
 window.consoleConfig = {
   /* configs go here */
 };

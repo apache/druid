@@ -40,7 +40,6 @@ import org.apache.calcite.avatica.Meta;
 import org.apache.calcite.avatica.MissingResultsException;
 import org.apache.calcite.avatica.NoSuchStatementException;
 import org.apache.calcite.avatica.server.AbstractAvaticaHandler;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.initialization.CoreInjectorBuilder;
@@ -157,8 +156,6 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
   private static QueryRunnerFactoryConglomerate conglomerate;
   private static SpecificSegmentsQuerySegmentWalker walker;
   private static Closer resourceCloser;
-
-  private final boolean nullNumeric = !NullHandling.replaceWithDefault();
 
   @BeforeAll
   public static void setUpClass(@TempDir File tempDir)
@@ -564,6 +561,12 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
             ),
             row(
                 Pair.of("TABLE_CAT", "druid"),
+                Pair.of("TABLE_NAME", CalciteTests.RESTRICTED_DATASOURCE),
+                Pair.of("TABLE_SCHEM", "druid"),
+                Pair.of("TABLE_TYPE", "TABLE")
+            ),
+            row(
+                Pair.of("TABLE_CAT", "druid"),
                 Pair.of("TABLE_NAME", CalciteTests.SOME_DATASOURCE),
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_TYPE", "TABLE")
@@ -656,6 +659,12 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
             ),
             row(
                 Pair.of("TABLE_CAT", "druid"),
+                Pair.of("TABLE_NAME", CalciteTests.RESTRICTED_DATASOURCE),
+                Pair.of("TABLE_SCHEM", "druid"),
+                Pair.of("TABLE_TYPE", "TABLE")
+            ),
+            row(
+                Pair.of("TABLE_CAT", "druid"),
                 Pair.of("TABLE_NAME", CalciteTests.SOME_DATASOURCE),
                 Pair.of("TABLE_SCHEM", "druid"),
                 Pair.of("TABLE_TYPE", "TABLE")
@@ -736,7 +745,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
                 Pair.of("COLUMN_NAME", "cnt"),
                 Pair.of("DATA_TYPE", Types.BIGINT),
                 Pair.of("TYPE_NAME", "BIGINT"),
-                Pair.of("IS_NULLABLE", nullNumeric ? "YES" : "NO")
+                Pair.of("IS_NULLABLE", "YES")
             ),
             row(
                 Pair.of("TABLE_SCHEM", "druid"),
@@ -744,7 +753,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
                 Pair.of("COLUMN_NAME", "m1"),
                 Pair.of("DATA_TYPE", Types.FLOAT),
                 Pair.of("TYPE_NAME", "FLOAT"),
-                Pair.of("IS_NULLABLE", nullNumeric ? "YES" : "NO")
+                Pair.of("IS_NULLABLE", "YES")
             ),
             row(
                 Pair.of("TABLE_SCHEM", "druid"),
@@ -752,7 +761,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
                 Pair.of("COLUMN_NAME", "m2"),
                 Pair.of("DATA_TYPE", Types.DOUBLE),
                 Pair.of("TYPE_NAME", "DOUBLE"),
-                Pair.of("IS_NULLABLE", nullNumeric ? "YES" : "NO")
+                Pair.of("IS_NULLABLE", "YES")
             ),
             row(
                 Pair.of("TABLE_SCHEM", "druid"),
@@ -819,7 +828,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
                 Pair.of("COLUMN_NAME", "cnt"),
                 Pair.of("DATA_TYPE", Types.BIGINT),
                 Pair.of("TYPE_NAME", "BIGINT"),
-                Pair.of("IS_NULLABLE", nullNumeric ? "YES" : "NO")
+                Pair.of("IS_NULLABLE", "YES")
             ),
             row(
                 Pair.of("TABLE_SCHEM", "druid"),
@@ -827,7 +836,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
                 Pair.of("COLUMN_NAME", "m1"),
                 Pair.of("DATA_TYPE", Types.FLOAT),
                 Pair.of("TYPE_NAME", "FLOAT"),
-                Pair.of("IS_NULLABLE", nullNumeric ? "YES" : "NO")
+                Pair.of("IS_NULLABLE", "YES")
             ),
             row(
                 Pair.of("TABLE_SCHEM", "druid"),
@@ -835,7 +844,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
                 Pair.of("COLUMN_NAME", "m2"),
                 Pair.of("DATA_TYPE", Types.DOUBLE),
                 Pair.of("TYPE_NAME", "DOUBLE"),
-                Pair.of("IS_NULLABLE", nullNumeric ? "YES" : "NO")
+                Pair.of("IS_NULLABLE", "YES")
             ),
             row(
                 Pair.of("TABLE_SCHEM", "druid"),
@@ -1389,7 +1398,6 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
           ),
           rows
       );
-      Assert.assertEquals(rows, rows);
     }
   }
 
@@ -1601,7 +1609,7 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
   public void testArrayStuff() throws SQLException
   {
     try (PreparedStatement statement = client.prepareStatement(
-        "SELECT ARRAY_AGG(dim2) AS arr1, ARRAY_AGG(l1) AS arr2, ARRAY_AGG(d1)  AS arr3, ARRAY_AGG(f1) AS arr4 FROM druid.numfoo")) {
+        "SELECT ARRAY_AGG(dim2) AS arr1, ARRAY_AGG(l1) AS arr2, ARRAY_AGG(dbl1)  AS arr3, ARRAY_AGG(f1) AS arr4 FROM druid.numfoo")) {
       final ResultSet resultSet = statement.executeQuery();
       final List<Map<String, Object>> rows = getRows(resultSet);
       Assert.assertEquals(1, rows.size());
@@ -1609,17 +1617,10 @@ public class DruidAvaticaHandlerTest extends CalciteTestBase
       Assert.assertTrue(rows.get(0).containsKey("arr2"));
       Assert.assertTrue(rows.get(0).containsKey("arr3"));
       Assert.assertTrue(rows.get(0).containsKey("arr4"));
-      if (NullHandling.sqlCompatible()) {
-        Assert.assertArrayEquals(new Object[]{"a", null, "", "a", "abc", null}, (Object[]) rows.get(0).get("arr1"));
-        Assert.assertArrayEquals(new Object[]{7L, 325323L, 0L, null, null, null}, (Object[]) rows.get(0).get("arr2"));
-        Assert.assertArrayEquals(new Object[]{1.0, 1.7, 0.0, null, null, null}, (Object[]) rows.get(0).get("arr3"));
-        Assert.assertArrayEquals(new Object[]{1.0, 0.10000000149011612, 0.0, null, null, null}, (Object[]) rows.get(0).get("arr4"));
-      } else {
-        Assert.assertArrayEquals(new Object[]{"a", null, null, "a", "abc", null}, (Object[]) rows.get(0).get("arr1"));
-        Assert.assertArrayEquals(new Object[]{7L, 325323L, 0L, 0L, 0L, 0L}, (Object[]) rows.get(0).get("arr2"));
-        Assert.assertArrayEquals(new Object[]{1.0, 1.7, 0.0, 0.0, 0.0, 0.0}, (Object[]) rows.get(0).get("arr3"));
-        Assert.assertArrayEquals(new Object[]{1.0, 0.10000000149011612, 0.0, 0.0, 0.0, 0.0}, (Object[]) rows.get(0).get("arr4"));
-      }
+      Assert.assertArrayEquals(new Object[]{"a", null, "", "a", "abc", null}, (Object[]) rows.get(0).get("arr1"));
+      Assert.assertArrayEquals(new Object[]{7L, 325323L, 0L, null, null, null}, (Object[]) rows.get(0).get("arr2"));
+      Assert.assertArrayEquals(new Object[]{1.0, 1.7, 0.0, null, null, null}, (Object[]) rows.get(0).get("arr3"));
+      Assert.assertArrayEquals(new Object[]{1.0, 0.10000000149011612, 0.0, null, null, null}, (Object[]) rows.get(0).get("arr4"));
     }
   }
 

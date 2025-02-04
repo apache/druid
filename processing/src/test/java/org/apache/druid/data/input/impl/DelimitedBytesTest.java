@@ -19,7 +19,6 @@
 
 package org.apache.druid.data.input.impl;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
@@ -36,7 +35,7 @@ public class DelimitedBytesTest extends InitializedNullHandlingTest
   public void testEmpty()
   {
     Assert.assertEquals(
-        Collections.singletonList(NullHandling.sqlCompatible() ? null : ""),
+        Collections.singletonList(null),
         DelimitedBytes.split(new byte[0], TSV, DelimitedBytes.UNKNOWN_FIELD_COUNT)
     );
   }
@@ -63,7 +62,7 @@ public class DelimitedBytesTest extends InitializedNullHandlingTest
   public void testDelimiterAtStart()
   {
     Assert.assertEquals(
-        Arrays.asList(NullHandling.sqlCompatible() ? null : "", "abc"),
+        Arrays.asList(null, "abc"),
         DelimitedBytes.split(StringUtils.toUtf8("\tabc"), TSV, DelimitedBytes.UNKNOWN_FIELD_COUNT)
     );
   }
@@ -72,7 +71,7 @@ public class DelimitedBytesTest extends InitializedNullHandlingTest
   public void testDelimiterAtEnd()
   {
     Assert.assertEquals(
-        Arrays.asList("a", "bc", NullHandling.sqlCompatible() ? null : ""),
+        Arrays.asList("a", "bc", null),
         DelimitedBytes.split(StringUtils.toUtf8("a\tbc\t"), TSV, DelimitedBytes.UNKNOWN_FIELD_COUNT)
     );
   }

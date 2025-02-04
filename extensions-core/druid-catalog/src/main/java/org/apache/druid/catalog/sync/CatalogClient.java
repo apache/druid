@@ -59,13 +59,9 @@ public class CatalogClient implements CatalogSource
 {
   public static final String SCHEMA_SYNC_PATH = CatalogResource.ROOT_PATH + CatalogResource.SCHEMA_SYNC;
   public static final String TABLE_SYNC_PATH = CatalogResource.ROOT_PATH + CatalogResource.TABLE_SYNC;
-  private static final TypeReference<List<TableMetadata>> LIST_OF_TABLE_METADATA_TYPE = new TypeReference<List<TableMetadata>>()
-  {
-  };
+  private static final TypeReference<List<TableMetadata>> LIST_OF_TABLE_METADATA_TYPE = new TypeReference<>() {};
   // Not strictly needed as a TypeReference, but doing so makes the code simpler.
-  private static final TypeReference<TableMetadata> TABLE_METADATA_TYPE = new TypeReference<TableMetadata>()
-  {
-  };
+  private static final TypeReference<TableMetadata> TABLE_METADATA_TYPE = new TypeReference<>() {};
 
   private final DruidLeaderClient coordClient;
   private final ObjectMapper smileMapper;

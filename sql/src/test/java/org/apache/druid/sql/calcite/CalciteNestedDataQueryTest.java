@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Injector;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.ResourceInputSource;
@@ -35,7 +34,6 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.guice.BuiltInTypesModule;
-import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -75,7 +73,6 @@ import org.apache.druid.segment.virtual.NestedFieldVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.CalciteNestedDataQueryTest.NestedComponentSupplier;
-import org.apache.druid.sql.calcite.NotYetSupported.Modes;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
@@ -192,12 +189,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
     public NestedComponentSupplier(TempDirProducer tempFolderProducer)
     {
       super(tempFolderProducer);
-    }
-
-    @Override
-    public void configureGuice(DruidInjectorBuilder builder)
-    {
-      super.configureGuice(builder);
     }
 
     @SuppressWarnings("resource")
@@ -468,7 +459,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{NullHandling.defaultStringValue(), 4L},
+            new Object[]{null, 4L},
             new Object[]{"100", 2L},
             new Object[]{"200", 1L}
         ),
@@ -505,7 +496,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{NullHandling.defaultStringValue(), 4L},
+            new Object[]{null, 4L},
             new Object[]{"100", 2L},
             new Object[]{"200", 1L}
         ),
@@ -542,7 +533,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{NullHandling.defaultStringValue(), 4L},
+            new Object[]{null, 4L},
             new Object[]{"100", 2L},
             new Object[]{"200", 1L}
         ),
@@ -579,7 +570,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 .build()
         ),
         ImmutableList.of(
-            new Object[]{NullHandling.defaultStringValue(), 4L},
+            new Object[]{null, 4L},
             new Object[]{"100", 2L},
             new Object[]{"200", 1L}
         ),
@@ -822,7 +813,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{NullHandling.defaultStringValue(), 5L},
+            new Object[]{null, 5L},
             new Object[]{"2", 1L},
             new Object[]{"hello", 1L}
         ),
@@ -1000,7 +991,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{NullHandling.defaultStringValue(), 8L},
+            new Object[]{null, 8L},
             new Object[]{"10", 2L},
             new Object[]{"yyy", 2L},
             new Object[]{"zzz", 2L}
@@ -1107,7 +1098,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{NullHandling.defaultStringValue(), 8L},
+            new Object[]{null, 8L},
             new Object[]{"10", 2L},
             new Object[]{"yyy", 2L},
             new Object[]{"zzz", 2L}
@@ -1149,7 +1140,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{NullHandling.defaultStringValue(), 14L}
+            new Object[]{null, 14L}
         ),
         RowSignature.builder()
                     .add("EXPR$0", ColumnType.STRING)
@@ -1183,6 +1174,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                           new NestedFieldVirtualColumn("arrayNestedLong", "$[0]", "v3", ColumnType.LONG_ARRAY)
                       )
                       .columns("v0", "v1", "v2", "v3")
+                      .columnTypes(ColumnType.STRING_ARRAY, ColumnType.LONG_ARRAY, ColumnType.DOUBLE_ARRAY, ColumnType.LONG_ARRAY)
                       .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                       .build()
             )
@@ -1270,6 +1262,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                       )
                       .intervals(querySegmentSpec(Filtration.eternity()))
                       .columns("j0.unnest")
+                      .columnTypes(ColumnType.LONG)
                       .context(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
                       .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                       .build()
@@ -1329,6 +1322,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                       )
                       .intervals(querySegmentSpec(Filtration.eternity()))
                       .columns("j0.unnest")
+                      .columnTypes(ColumnType.STRING)
                       .context(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
                       .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                       .build()
@@ -1343,19 +1337,19 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                 new Object[]{"a"},
                 new Object[]{"b"},
                 new Object[]{"d"},
-                new Object[]{NullHandling.defaultStringValue()},
+                new Object[]{null},
                 new Object[]{"b"},
-                new Object[]{NullHandling.defaultStringValue()},
+                new Object[]{null},
                 new Object[]{"b"},
                 new Object[]{"a"},
                 new Object[]{"b"},
                 new Object[]{"b"},
                 new Object[]{"b"},
-                new Object[]{NullHandling.defaultStringValue()},
+                new Object[]{null},
                 new Object[]{"d"},
-                new Object[]{NullHandling.defaultStringValue()},
+                new Object[]{null},
                 new Object[]{"b"},
-                new Object[]{NullHandling.defaultStringValue()},
+                new Object[]{null},
                 new Object[]{"b"}
             )
         )
@@ -1385,6 +1379,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                       )
                       .intervals(querySegmentSpec(Filtration.eternity()))
                       .columns("j0.unnest")
+                      .columnTypes(ColumnType.DOUBLE)
                       .context(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
                       .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                       .build()
@@ -1625,10 +1620,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByRootSingleTypeArrayLongNullsFilteredArrayEquality()
   {
-    if (NullHandling.replaceWithDefault()) {
-      // this fails in default value mode because it relies on equality filter and null filter to behave correctly
-      return;
-    }
     cannotVectorize();
     testBuilder()
         .sql(
@@ -1709,7 +1700,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         )
         .expectedResults(
             ImmutableList.of(
-                new Object[]{NullHandling.defaultLongValue(), 5L},
+                new Object[]{null, 5L},
                 new Object[]{1L, 5L},
                 new Object[]{2L, 6L},
                 new Object[]{3L, 6L},
@@ -1977,7 +1968,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         )
         .expectedResults(
             ImmutableList.of(
-                new Object[]{NullHandling.defaultStringValue(), 5L},
+                new Object[]{null, 5L},
                 new Object[]{"a", 3L},
                 new Object[]{"b", 11L},
                 new Object[]{"d", 2L}
@@ -2192,7 +2183,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         )
         .expectedResults(
             ImmutableList.of(
-                new Object[]{NullHandling.defaultDoubleValue(), 12L},
+                new Object[]{null, 12L},
                 new Object[]{1.1D, 3L},
                 new Object[]{2.2D, 4L},
                 new Object[]{5.5D, 4L},
@@ -2303,7 +2294,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         )
         .expectedResults(
             ImmutableList.of(
-                new Object[]{NullHandling.defaultLongValue(), 4L},
+                new Object[]{null, 4L},
                 new Object[]{2L, 6L},
                 new Object[]{3L, 2L},
                 new Object[]{4L, 2L}
@@ -2397,7 +2388,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         )
         .expectedResults(
             ImmutableList.of(
-                new Object[]{NullHandling.defaultStringValue(), 4L},
+                new Object[]{null, 4L},
                 new Object[]{"2", 6L},
                 new Object[]{"3", 2L},
                 new Object[]{"4", 2L}
@@ -2444,7 +2435,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         )
         .expectedResults(
             ImmutableList.of(
-                new Object[]{NullHandling.defaultStringValue(), 7L},
+                new Object[]{null, 7L},
                 new Object[]{"b", 7L}
             )
         )
@@ -2629,7 +2620,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{NullHandling.defaultStringValue(), NullHandling.defaultStringValue(), 4L},
+            new Object[]{null, null, 4L},
             new Object[]{"100", "100", 2L},
             new Object[]{"200", "200", 1L}
         ),
@@ -3482,12 +3473,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        NullHandling.replaceWithDefault()
-        ? ImmutableList.of(
-            new Object[]{"", 4L},
-            new Object[]{"100", 2L}
-        )
-        : ImmutableList.of(
+        ImmutableList.of(
             new Object[]{"100", 2L}
         ),
         RowSignature.builder()
@@ -3710,12 +3696,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        NullHandling.replaceWithDefault()
-        ? ImmutableList.of(
-            new Object[]{"", 4L},
-            new Object[]{"2.02", 2L}
-        )
-        : ImmutableList.of(
+        ImmutableList.of(
             new Object[]{"2.02", 2L}
         ),
         RowSignature.builder()
@@ -3827,12 +3808,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        NullHandling.replaceWithDefault()
-        ? ImmutableList.of(
-            new Object[]{"", 4L},
-            new Object[]{"100", 2L}
-        )
-        : ImmutableList.of(
+        ImmutableList.of(
             new Object[]{"100", 2L}
         ),
         RowSignature.builder()
@@ -4801,7 +4777,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{NullHandling.defaultStringValue(), 5L},
+            new Object[]{null, 5L},
             new Object[]{"b", 2L}
         ),
         RowSignature.builder()
@@ -4856,6 +4832,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                       )
                   )
                   .columns("v0", "v1")
+                  .columnTypes(ColumnType.NESTED_DATA, ColumnType.NESTED_DATA)
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .build()
         ),
@@ -4905,6 +4882,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                       new NestedFieldVirtualColumn("nest", "$.x", "v2", ColumnType.STRING)
                   )
                   .columns("v0")
+                  .columnTypes(ColumnType.NESTED_DATA)
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .build()
         ),
@@ -4954,6 +4932,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                       )
                   )
                   .columns("v0")
+                  .columnTypes(ColumnType.ofComplex("json"))
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .build()
         ),
@@ -5001,17 +4980,18 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                       )
                   )
                   .columns("v0")
+                  .columnTypes(ColumnType.LONG)
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .build()
         ),
         ImmutableList.of(
             new Object[]{100L},
-            new Object[]{NullHandling.defaultLongValue()},
+            new Object[]{null},
             new Object[]{200L},
-            new Object[]{NullHandling.defaultLongValue()},
-            new Object[]{NullHandling.defaultLongValue()},
+            new Object[]{null},
+            new Object[]{null},
             new Object[]{100L},
-            new Object[]{NullHandling.defaultLongValue()}
+            new Object[]{null}
         ),
         RowSignature.builder()
                     .add("EXPR$0", ColumnType.LONG)
@@ -5051,6 +5031,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                       )
                   )
                   .columns("string", "v0", "v1", "v2")
+                  .columnTypes(ColumnType.STRING, ColumnType.NESTED_DATA, ColumnType.NESTED_DATA, ColumnType.NESTED_DATA)
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .build()
         ),
@@ -5105,7 +5086,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{NullHandling.defaultStringValue(), 5L},
+            new Object[]{null, 5L},
             new Object[]{"b", 2L}
         ),
         RowSignature.builder()
@@ -5146,17 +5127,18 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                       expressionVirtualColumn("v2", "json_keys(\"nester\",'$.array[-1]')", ColumnType.STRING_ARRAY)
                   )
                   .columns("v0", "v1", "v2")
+                  .columnTypes(ColumnType.STRING, ColumnType.NESTED_DATA, ColumnType.STRING_ARRAY)
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .build()
         ),
         ImmutableList.of(
             new Object[]{"b", "\"b\"", null},
-            new Object[]{NullHandling.defaultStringValue(), null, null},
-            new Object[]{NullHandling.defaultStringValue(), null, null},
-            new Object[]{NullHandling.defaultStringValue(), null, null},
-            new Object[]{NullHandling.defaultStringValue(), null, null},
+            new Object[]{null, null, null},
+            new Object[]{null, null, null},
+            new Object[]{null, null, null},
+            new Object[]{null, null, null},
             new Object[]{"b", "\"b\"", null},
-            new Object[]{NullHandling.defaultStringValue(), null, null}
+            new Object[]{null, null, null}
         ),
         RowSignature.builder()
                     .add("EXPR$0", ColumnType.STRING)
@@ -5182,6 +5164,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                       expressionVirtualColumn("v1", "array('$')", ColumnType.STRING_ARRAY)
                   )
                   .columns("v0", "v1")
+                  .columnTypes(ColumnType.STRING_ARRAY, ColumnType.STRING_ARRAY)
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .build()
         ),
@@ -5220,6 +5203,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                       expressionVirtualColumn("v1", "null", ColumnType.STRING_ARRAY)
                   )
                   .columns("v0", "v1")
+                  .columnTypes(ColumnType.STRING_ARRAY, ColumnType.STRING_ARRAY)
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .build()
         ),
@@ -5315,9 +5299,9 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{NullHandling.defaultStringValue(), NullHandling.defaultLongValue(), 4L},
-            new Object[]{"100", NullHandling.defaultLongValue(), 1L},
-            new Object[]{"200", NullHandling.defaultLongValue(), 1L}
+            new Object[]{null, null, 4L},
+            new Object[]{"100", null, 1L},
+            new Object[]{"200", null, 1L}
         ),
         RowSignature.builder()
                     .add("EXPR$0", ColumnType.STRING)
@@ -5343,9 +5327,8 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                       new NestedFieldVirtualColumn("nester", "$.n.x", "v0", ColumnType.LONG),
                       new NestedFieldVirtualColumn("nest", "$.x", "v1", ColumnType.STRING)
                   )
-                  .columns(
-                      "v0", "v1"
-                  )
+                  .columns("v1", "v0")
+                  .columnTypes(ColumnType.STRING, ColumnType.LONG)
                   .filters(isNull("v0"))
                   .context(QUERY_CONTEXT_DEFAULT)
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
@@ -5353,11 +5336,11 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{"100", null},
-            new Object[]{NullHandling.defaultStringValue(), null},
+            new Object[]{null, null},
             new Object[]{"200", null},
-            new Object[]{NullHandling.defaultStringValue(), null},
-            new Object[]{NullHandling.defaultStringValue(), null},
-            new Object[]{NullHandling.defaultStringValue(), null}
+            new Object[]{null, null},
+            new Object[]{null, null},
+            new Object[]{null, null}
         ),
         RowSignature.builder()
                     .add("EXPR$0", ColumnType.STRING)
@@ -5495,49 +5478,10 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   public void testScanStringNotNullCast()
   {
     skipVectorize();
-    final List<Object[]> expectedResults;
-    if (NullHandling.sqlCompatible()) {
-      expectedResults = ImmutableList.of(
-          new Object[]{10L},
-          new Object[]{10L}
-      );
-    } else {
-      if (isRunningMSQ()) {
-        expectedResults = ImmutableList.of(
-            new Object[]{0L},
-            new Object[]{0L},
-            new Object[]{0L},
-            new Object[]{0L},
-            new Object[]{10L},
-            new Object[]{10L},
-            new Object[]{0L},
-            new Object[]{0L},
-            new Object[]{0L},
-            new Object[]{0L},
-            new Object[]{0L},
-            new Object[]{0L},
-            new Object[]{0L},
-            new Object[]{0L}
-        );
-      } else {
-        expectedResults = ImmutableList.of(
-            new Object[]{0L},
-            new Object[]{0L},
-            new Object[]{10L},
-            new Object[]{0L},
-            new Object[]{0L},
-            new Object[]{0L},
-            new Object[]{0L},
-            new Object[]{0L},
-            new Object[]{0L},
-            new Object[]{10L},
-            new Object[]{0L},
-            new Object[]{0L},
-            new Object[]{0L},
-            new Object[]{0L}
-        );
-      }
-    }
+    final List<Object[]> expectedResults = ImmutableList.of(
+        new Object[]{10L},
+        new Object[]{10L}
+    );
     testQuery(
         "SELECT "
         + "CAST(string_sparse as BIGINT)"
@@ -5551,6 +5495,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   )
                   .filters(notNull("v0"))
                   .columns("v0")
+                  .columnTypes(ColumnType.LONG)
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .build()
         ),
@@ -5589,12 +5534,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        NullHandling.sqlCompatible() ?
         ImmutableList.of(
-            new Object[]{10L, 2L}
-        ) :
-        ImmutableList.of(
-            new Object[]{0L, 12L},
             new Object[]{10L, 2L}
         ),
         RowSignature.builder()
@@ -5644,7 +5584,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
             ImmutableList.of(
                 // implicit mvd unnest treats null and empty as [null] so we get extra null matches than unnest
                 // directly on the ARRAY
-                new Object[]{NullHandling.defaultStringValue(), 9L},
+                new Object[]{null, 9L},
                 new Object[]{"1", 5L},
                 new Object[]{"2", 6L},
                 new Object[]{"3", 6L},
@@ -5696,7 +5636,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         .expectedResults(
             // 9 isn't present in result because arrayLong rows are null in rows of arrayLongNulls that have value 9
             ImmutableList.of(
-                new Object[]{NullHandling.defaultStringValue(), 10L},
+                new Object[]{null, 10L},
                 new Object[]{"1", 12L},
                 new Object[]{"2", 7L},
                 new Object[]{"3", 9L},
@@ -5769,7 +5709,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         )
         .expectedResults(
             ImmutableList.of(
-                new Object[]{NullHandling.defaultStringValue(), 2L, 6L},
+                new Object[]{null, 2L, 6L},
                 new Object[]{"1", 5L, 13L},
                 new Object[]{"2", 2L, 6L},
                 new Object[]{"3", 4L, 12L}
@@ -5830,7 +5770,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         .expectedResults(
             // since array is converted to a MVD, implicit unnesting occurs
             ImmutableList.of(
-                new Object[]{NullHandling.defaultStringValue(), 4L},
+                new Object[]{null, 4L},
                 new Object[]{"1", 5L},
                 new Object[]{"2", 6L},
                 new Object[]{"3", 6L},
@@ -5885,7 +5825,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         .expectedResults(
             ImmutableList.of(
                 // count is 9 instead of 5 because implicit unnest treats null and empty as [null]
-                new Object[]{NullHandling.defaultStringValue(), 9L},
+                new Object[]{null, 9L},
                 new Object[]{"a", 3L},
                 new Object[]{"b", 11L},
                 new Object[]{"d", 2L}
@@ -5957,7 +5897,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         )
         .expectedResults(
             ImmutableList.of(
-                new Object[]{NullHandling.defaultStringValue(), 4L, 10L},
+                new Object[]{null, 4L, 10L},
                 new Object[]{"a", 3L, 6L},
                 new Object[]{"b", 11L, 24L},
                 new Object[]{"d", 2L, 6L}
@@ -6020,314 +5960,46 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .columns(
                       "__time",
-                      "arrayBool",
-                      "arrayDouble",
-                      "arrayDoubleNulls",
-                      "arrayLong",
-                      "arrayLongNulls",
-                      "arrayNestedLong",
-                      "arrayObject",
+                      "str",
+                      "long",
+                      "double",
+                      "bool",
+                      "variant",
+                      "variantNumeric",
+                      "variantEmptyObj",
+                      "variantEmtpyArray",
+                      "variantWithArrays",
+                      "obj",
+                      "complexObj",
                       "arrayString",
                       "arrayStringNulls",
+                      "arrayLong",
+                      "arrayLongNulls",
+                      "arrayDouble",
+                      "arrayDoubleNulls",
                       "arrayVariant",
-                      "bool",
+                      "arrayBool",
+                      "arrayNestedLong",
+                      "arrayObject",
+                      "null",
+                      "cstr",
+                      "clong",
+                      "cdouble",
+                      "cObj",
+                      "cstringArray",
+                      "cLongArray",
                       "cDoubleArray",
                       "cEmptyArray",
                       "cEmptyObj",
-                      "cEmptyObjectArray",
-                      "cLongArray",
                       "cNullArray",
-                      "cObj",
+                      "cEmptyObjectArray",
                       "cObjectArray",
-                      "cdouble",
-                      "clong",
-                      "cnt",
-                      "complexObj",
-                      "cstr",
-                      "cstringArray",
-                      "double",
-                      "long",
-                      "null",
-                      "obj",
-                      "str",
-                      "variant",
-                      "variantEmptyObj",
-                      "variantEmtpyArray",
-                      "variantNumeric",
-                      "variantWithArrays"
+                      "cnt"
                   )
+                  .columnTypes(ColumnType.LONG, ColumnType.STRING, ColumnType.LONG, ColumnType.DOUBLE, ColumnType.LONG, ColumnType.STRING, ColumnType.DOUBLE, ColumnType.ofComplex("json"), ColumnType.LONG_ARRAY, ColumnType.STRING_ARRAY, ColumnType.ofComplex("json"), ColumnType.ofComplex("json"), ColumnType.STRING_ARRAY, ColumnType.STRING_ARRAY, ColumnType.LONG_ARRAY, ColumnType.LONG_ARRAY, ColumnType.DOUBLE_ARRAY, ColumnType.DOUBLE_ARRAY, ColumnType.STRING_ARRAY, ColumnType.LONG_ARRAY, ColumnType.ofComplex("json"), ColumnType.ofComplex("json"), ColumnType.STRING, ColumnType.STRING, ColumnType.LONG, ColumnType.DOUBLE, ColumnType.ofComplex("json"), ColumnType.STRING_ARRAY, ColumnType.LONG_ARRAY, ColumnType.DOUBLE_ARRAY, ColumnType.LONG_ARRAY, ColumnType.ofComplex("json"), ColumnType.LONG_ARRAY, ColumnType.ofComplex("json"), ColumnType.ofComplex("json"), ColumnType.LONG)
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .build()
         ),
-        useDefault ?
-        ImmutableList.of(
-            new Object[]{
-                1672531200000L,
-                "",
-                0L,
-                0.0D,
-                1L,
-                "51",
-                -0.13D,
-                "1",
-                "[]",
-                "[51,-35]",
-                "{\"a\":700,\"b\":{\"x\":\"g\",\"y\":1.1,\"z\":[9,null,9,9]},\"v\":[]}",
-                "{\"x\":400,\"y\":[{\"l\":[null],\"m\":100,\"n\":5},{\"l\":[\"a\",\"b\",\"c\"],\"m\":\"a\",\"n\":1}],\"z\":{}}",
-                null,
-                "[\"a\",\"b\"]",
-                null,
-                "[2,3]",
-                null,
-                "[null]",
-                null,
-                "[1,0,1]",
-                null,
-                "[{\"x\":1},{\"x\":2}]",
-                "",
-                "hello",
-                1234L,
-                1.234D,
-                "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"],\"d\":[]}}",
-                "[\"a\",\"b\",\"c\"]",
-                "[1,2,3]",
-                "[1.1,2.2,3.3]",
-                "[]",
-                "{}",
-                "[null,null]",
-                "[{},{},{}]",
-                "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]",
-                1L
-            },
-            new Object[]{
-                1672531200000L,
-                "",
-                2L,
-                0.0D,
-                0L,
-                "b",
-                1.1D,
-                "\"b\"",
-                "2",
-                "b",
-                "{\"a\":200,\"b\":{\"x\":\"b\",\"y\":1.1,\"z\":[2,4,6]},\"v\":[]}",
-                "{\"x\":10,\"y\":[{\"l\":[\"b\",\"b\",\"c\"],\"m\":\"b\",\"n\":2},[1,2,3]],\"z\":{\"a\":[5.5],\"b\":false}}",
-                "[\"a\",\"b\",\"c\"]",
-                "[null,\"b\"]",
-                "[2,3]",
-                null,
-                "[3.3,4.4,5.5]",
-                "[999.0,null,5.5]",
-                "[null,null,2.2]",
-                "[1,1]",
-                "[null,[null],[]]",
-                "[{\"x\":3},{\"x\":4}]",
-                "",
-                "hello",
-                1234L,
-                1.234D,
-                "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"],\"d\":[]}}",
-                "[\"a\",\"b\",\"c\"]",
-                "[1,2,3]",
-                "[1.1,2.2,3.3]",
-                "[]",
-                "{}",
-                "[null,null]",
-                "[{},{},{}]",
-                "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]",
-                1L
-            },
-            new Object[]{
-                1672531200000L,
-                "a",
-                1L,
-                1.0D,
-                1L,
-                "1",
-                1.0D,
-                "1",
-                "1",
-                "1",
-                "{\"a\":100,\"b\":{\"x\":\"a\",\"y\":1.1,\"z\":[1,2,3,4]},\"v\":[]}",
-                "{\"x\":1234,\"y\":[{\"l\":[\"a\",\"b\",\"c\"],\"m\":\"a\",\"n\":1},{\"l\":[\"a\",\"b\",\"c\"],\"m\":\"a\",\"n\":1}],\"z\":{\"a\":[1.1,2.2,3.3],\"b\":true}}",
-                "[\"a\",\"b\"]",
-                "[\"a\",\"b\"]",
-                "[1,2,3]",
-                "[1,null,3]",
-                "[1.1,2.2,3.3]",
-                "[1.1,2.2,null]",
-                "[\"a\",\"1\",\"2.2\"]",
-                "[1,0,1]",
-                "[[1,2,null],[3,4]]",
-                "[{\"x\":1},{\"x\":2}]",
-                "",
-                "hello",
-                1234L,
-                1.234D,
-                "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"],\"d\":[]}}",
-                "[\"a\",\"b\",\"c\"]",
-                "[1,2,3]",
-                "[1.1,2.2,3.3]",
-                "[]",
-                "{}",
-                "[null,null]",
-                "[{},{},{}]",
-                "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]",
-                1L
-            },
-            new Object[]{
-                1672531200000L,
-                "b",
-                4L,
-                3.3D,
-                1L,
-                "1",
-                0.0D,
-                "{}",
-                "4",
-                "1",
-                "{\"a\":400,\"b\":{\"x\":\"d\",\"y\":1.1,\"z\":[3,4]},\"v\":[]}",
-                "{\"x\":1234,\"z\":{\"a\":[1.1,2.2,3.3],\"b\":true}}",
-                "[\"d\",\"e\"]",
-                "[\"b\",\"b\"]",
-                "[1,4]",
-                "[1]",
-                "[2.2,3.3,4.0]",
-                null,
-                "[\"a\",\"b\",\"c\"]",
-                "[null,0,1]",
-                "[[1,2],[3,4],[5,6,7]]",
-                "[{\"x\":null},{\"x\":2}]",
-                "",
-                "hello",
-                1234L,
-                1.234D,
-                "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"],\"d\":[]}}",
-                "[\"a\",\"b\",\"c\"]",
-                "[1,2,3]",
-                "[1.1,2.2,3.3]",
-                "[]",
-                "{}",
-                "[null,null]",
-                "[{},{},{}]",
-                "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]",
-                1L
-            },
-            new Object[]{
-                1672531200000L,
-                "c",
-                0L,
-                4.4D,
-                1L,
-                "hello",
-                -1000.0D,
-                "{}",
-                "[]",
-                "hello",
-                "{\"a\":500,\"b\":{\"x\":\"e\",\"z\":[1,2,3,4]},\"v\":\"a\"}",
-                "{\"x\":11,\"y\":[],\"z\":{\"a\":[null],\"b\":false}}",
-                null,
-                null,
-                "[1,2,3]",
-                "[]",
-                "[1.1,2.2,3.3]",
-                null,
-                null,
-                "[0]",
-                null,
-                "[{\"x\":1000},{\"y\":2000}]",
-                "",
-                "hello",
-                1234L,
-                1.234D,
-                "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"],\"d\":[]}}",
-                "[\"a\",\"b\",\"c\"]",
-                "[1,2,3]",
-                "[1.1,2.2,3.3]",
-                "[]",
-                "{}",
-                "[null,null]",
-                "[{},{},{}]",
-                "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]",
-                1L
-            },
-            new Object[]{
-                1672531200000L,
-                "d",
-                5L,
-                5.9D,
-                0L,
-                "",
-                3.33D,
-                "\"a\"",
-                "6",
-                null,
-                "{\"a\":600,\"b\":{\"x\":\"f\",\"y\":1.1,\"z\":[6,7,8,9]},\"v\":\"b\"}",
-                null,
-                "[\"a\",\"b\"]",
-                null,
-                null,
-                "[null,2,9]",
-                null,
-                "[999.0,5.5,null]",
-                "[\"a\",\"1\",\"2.2\"]",
-                "[]",
-                "[[1],[1,2,null]]",
-                "[{\"a\":1},{\"b\":2}]",
-                "",
-                "hello",
-                1234L,
-                1.234D,
-                "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"],\"d\":[]}}",
-                "[\"a\",\"b\",\"c\"]",
-                "[1,2,3]",
-                "[1.1,2.2,3.3]",
-                "[]",
-                "{}",
-                "[null,null]",
-                "[{},{},{}]",
-                "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]",
-                1L
-            },
-            new Object[]{
-                1672531200000L,
-                "null",
-                3L,
-                2.0D,
-                0L,
-                "3.0",
-                1.0D,
-                "3.3",
-                "3",
-                "3.0",
-                "{\"a\":300}",
-                "{\"x\":4.4,\"y\":[{\"l\":[],\"m\":100,\"n\":3},{\"l\":[\"a\"]},{\"l\":[\"b\"],\"n\":[]}],\"z\":{\"a\":[],\"b\":true}}",
-                "[\"b\",\"c\"]",
-                "[\"d\",null,\"b\"]",
-                "[1,2,3,4]",
-                "[1,2,3]",
-                "[1.1,3.3]",
-                "[null,2.2,null]",
-                "[1,null,1]",
-                "[1,null,1]",
-                "[[1],null,[1,2,3]]",
-                "[null,{\"x\":2}]",
-                "",
-                "hello",
-                1234L,
-                1.234D,
-                "{\"x\":1,\"y\":\"hello\",\"z\":{\"a\":1.1,\"b\":1234,\"c\":[\"a\",\"b\",\"c\"],\"d\":[]}}",
-                "[\"a\",\"b\",\"c\"]",
-                "[1,2,3]",
-                "[1.1,2.2,3.3]",
-                "[]",
-                "{}",
-                "[null,null]",
-                "[{},{},{}]",
-                "[{\"a\":\"b\",\"x\":1,\"y\":1.3}]",
-                1L
-            }
-        ) :
         ImmutableList.of(
             new Object[]{
                 1672531200000L,
@@ -6648,13 +6320,12 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   .dataSource(DATA_SOURCE)
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .columns("nest")
+                  .columnTypes(ColumnType.NESTED_DATA)
                   .filters(notNull("nest"))
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .build()
         ),
-        NullHandling.replaceWithDefault()
-        ? ImmutableList.of()
-        : ImmutableList.of(
+        ImmutableList.of(
             new Object[]{"{\"x\":100,\"y\":2.02,\"z\":\"300\",\"mixed\":1,\"mixed2\":\"1\"}"},
             new Object[]{"{\"x\":200,\"y\":3.03,\"z\":\"abcdef\",\"mixed\":1.1,\"mixed2\":1}"},
             new Object[]{"{\"x\":100,\"y\":2.02,\"z\":\"400\",\"mixed2\":1.1}"}
@@ -6677,28 +6348,12 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   .dataSource(DATA_SOURCE)
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .columns("nest", "nester")
+                  .columnTypes(ColumnType.ofComplex("json"), ColumnType.ofComplex("json"))
                   .filters(isNull("nest"))
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .build()
         ),
-        // selector filter is wrong
-        NullHandling.replaceWithDefault()
-        ? ImmutableList.of(
-            new Object[]{
-                "{\"x\":100,\"y\":2.02,\"z\":\"300\",\"mixed\":1,\"mixed2\":\"1\"}",
-                "{\"array\":[\"a\",\"b\"],\"n\":{\"x\":\"hello\"}}"
-            },
-            new Object[]{null, "\"hello\""},
-            new Object[]{"{\"x\":200,\"y\":3.03,\"z\":\"abcdef\",\"mixed\":1.1,\"mixed2\":1}", null},
-            new Object[]{null, null},
-            new Object[]{null, null},
-            new Object[]{
-                "{\"x\":100,\"y\":2.02,\"z\":\"400\",\"mixed2\":1.1}",
-                "{\"array\":[\"a\",\"b\"],\"n\":{\"x\":1}}"
-            },
-            new Object[]{null, "2"}
-        )
-        : ImmutableList.of(
+        ImmutableList.of(
             new Object[]{null, "\"hello\""},
             new Object[]{null, null},
             new Object[]{null, null},
@@ -6733,6 +6388,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                     .virtualColumns(expressionVirtualColumn("v0", "nvl(\"j0.unnest\",\"long\")", ColumnType.LONG))
                     .intervals(querySegmentSpec(Filtration.eternity()))
                     .columns("j0.unnest", "long", "v0")
+                    .columnTypes(ColumnType.LONG, ColumnType.LONG, ColumnType.LONG)
                     .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                     .context(QUERY_CONTEXT_DEFAULT)
                     .build()
@@ -6740,16 +6396,14 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         )
         .expectedResults(
             ImmutableList.of(
-                // with NullHandling.replaceWithDefault; isNull is not handled
-                // so COALESCE may never see `null`
-                new Object[]{null, 2L, NullHandling.sqlCompatible() ? 2L : 0L},
+                new Object[]{null, 2L, 2L},
                 new Object[]{3L, 1L, 3L},
                 new Object[]{4L, 1L, 4L},
                 new Object[]{3L, 4L, 3L},
                 new Object[]{4L, 4L, 4L},
                 new Object[]{1L, 5L, 1L},
                 new Object[]{2L, 5L, 2L},
-                new Object[]{null, 5L, NullHandling.sqlCompatible() ? 5L : 0L}
+                new Object[]{null, 5L, 5L}
             )
         )
         .expectedSignature(
@@ -6770,20 +6424,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
     testQuery(
         "select coalesce(long,c) as col "
         + " from druid.all_auto, unnest(json_value(arrayNestedLong, '$[1]' returning bigint array)) as u(c) ",
-        useDefault ?
-        ImmutableList.of(
-            Druids.newScanQueryBuilder()
-                  .dataSource(UnnestDataSource.create(
-                      new TableDataSource(DATA_SOURCE_ALL),
-                      new NestedFieldVirtualColumn("arrayNestedLong", "$[1]", "j0.unnest", ColumnType.LONG_ARRAY),
-                      null
-                  ))
-                  .intervals(querySegmentSpec(Filtration.eternity()))
-                  .columns("long")
-                  .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                  .context(QUERY_CONTEXT_DEFAULT)
-                  .build()
-        ) :
         ImmutableList.of(
             Druids.newScanQueryBuilder()
                   .dataSource(UnnestDataSource.create(
@@ -6794,6 +6434,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .virtualColumns(expressionVirtualColumn("v0", "nvl(\"long\",\"j0.unnest\")", ColumnType.LONG))
                   .columns("v0")
+                  .columnTypes(ColumnType.LONG)
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .context(QUERY_CONTEXT_DEFAULT)
                   .build()
@@ -6845,7 +6486,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{NullHandling.defaultStringValue(), 4L},
+            new Object[]{null, 4L},
             new Object[]{"100", 2L},
             new Object[]{"200", 1L}
         ),
@@ -6879,6 +6520,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                       )
                   )
                   .columns("v0", "v1")
+                  .columnTypes(ColumnType.STRING_ARRAY, ColumnType.ofComplex("json"))
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .build()
         ),
@@ -6919,6 +6561,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                           )
                       )
                       .columns("v0")
+                      .columnTypes(ColumnType.ofArray(ColumnType.NESTED_DATA))
                       .context(QUERY_CONTEXT_DEFAULT)
                       .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                       .build()
@@ -6972,6 +6615,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                       )
                       .filters(isNull("arrayObject"))
                       .columns("v0")
+                      .columnTypes(ColumnType.ofArray(ColumnType.NESTED_DATA))
                       .limit(1)
                       .context(QUERY_CONTEXT_DEFAULT)
                       .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
@@ -6979,8 +6623,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
             )
         )
         .expectedResults(
-            NullHandling.replaceWithDefault() ?
-            ImmutableList.of(new Object[]{null}) : ImmutableList.of()
+            ImmutableList.of()
         )
         .expectedSignature(
             RowSignature.builder()
@@ -7012,6 +6655,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                       )
                       .intervals(querySegmentSpec(Filtration.eternity()))
                       .columns("j0.unnest")
+                      .columnTypes(ColumnType.ofComplex("json"))
                       .context(QUERY_CONTEXT_NO_STRINGIFY_ARRAY)
                       .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                       .build()
@@ -7101,7 +6745,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
         )
         .expectedResults(
             ImmutableList.of(
-                new Object[]{NullHandling.defaultLongValue(), 10L},
+                new Object[]{null, 10L},
                 new Object[]{1L, 4L},
                 new Object[]{2L, 8L},
                 new Object[]{3L, 2L},
@@ -7182,9 +6826,8 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
             Druids.newScanQueryBuilder()
                   .dataSource(DATA_SOURCE_ALL)
                   .intervals(querySegmentSpec(Filtration.eternity()))
-                  .columns(
-                      "v0"
-                  )
+                  .columns("v0")
+                  .columnTypes(ColumnType.STRING)
                   .virtualColumns(
                       new NestedFieldVirtualColumn(
                           "cObj",
@@ -7236,14 +6879,13 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                     ),
                     expressionVirtualColumn("v2", "notnull(nvl(\"v1\",1.0))", ColumnType.LONG)
                 )
-                .filters(range("v0", ColumnType.LONG, NullHandling.sqlCompatible() ? 0.0 : "0", null, true, false))
+                .filters(range("v0", ColumnType.LONG, 0.0, null, true, false))
                 .limit(1)
-                .columns("v0", "v1", "v2")
+                .columns("v1", "v0", "v2")
+                .columnTypes(ColumnType.DOUBLE, ColumnType.DOUBLE, ColumnType.LONG)
                 .build()
         ),
-        NullHandling.sqlCompatible()
-        ? ImmutableList.of(new Object[]{null, 1.0, true})
-        : ImmutableList.of(),
+        ImmutableList.of(new Object[]{null, 1.0, true}),
         RowSignature.builder()
                     .add("EXPR$0", ColumnType.DOUBLE)
                     .add("EXPR$1", ColumnType.DOUBLE)
@@ -7273,10 +6915,10 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                     expressionVirtualColumn("v3", "(nvl(\"v0\",1.0) == 1.0)", ColumnType.LONG)
                 )
                 .columns("v0", "v1", "v2", "v3")
+                .columnTypes(ColumnType.DOUBLE, ColumnType.DOUBLE, ColumnType.LONG, ColumnType.LONG)
                 .build()
         ),
-        NullHandling.sqlCompatible()
-        ? ImmutableList.of(
+        ImmutableList.of(
             new Object[]{2.02, 2.02, true, false},
             new Object[]{null, 1.0, true, true},
             new Object[]{3.03, 3.03, true, false},
@@ -7284,15 +6926,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
             new Object[]{null, 1.0, true, true},
             new Object[]{2.02, 2.02, true, false},
             new Object[]{null, 1.0, true, true}
-        )
-        : ImmutableList.of(
-            new Object[]{2.02, 2.02, true, false},
-            new Object[]{null, 0.0, false, false},
-            new Object[]{3.03, 3.03, true, false},
-            new Object[]{null, 0.0, false, false},
-            new Object[]{null, 0.0, false, false},
-            new Object[]{2.02, 2.02, true, false},
-            new Object[]{null, 0.0, false, false}
         ),
         RowSignature.builder()
                     .add("EXPR$0", ColumnType.DOUBLE)
@@ -7322,12 +6955,12 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                     new NestedFieldVirtualColumn("nest", "$.y", "v1", ColumnType.DOUBLE),
                     expressionVirtualColumn("v2", "notnull(nvl(\"v1\",1.0))", ColumnType.LONG)
                 )
-                .filters(range("v0", ColumnType.LONG, NullHandling.sqlCompatible() ? 0.0 : "0", null, true, false))
-                .columns("v0", "v1", "v2")
+                .filters(range("v0", ColumnType.LONG, 0.0, null, true, false))
+                .columns("v1", "v0", "v2")
+                .columnTypes(ColumnType.DOUBLE, ColumnType.DOUBLE, ColumnType.LONG)
                 .build()
         ),
-        NullHandling.sqlCompatible()
-        ? ImmutableList.of(
+        ImmutableList.of(
             new Object[]{2.02, 2.02, true},
             new Object[]{null, 1.0, true},
             new Object[]{3.03, 3.03, true},
@@ -7335,11 +6968,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
             new Object[]{null, 1.0, true},
             new Object[]{2.02, 2.02, true},
             new Object[]{null, 1.0, true}
-        )
-        : ImmutableList.of(
-            new Object[]{2.02, 2.02, true},
-            new Object[]{3.03, 3.03, true},
-            new Object[]{2.02, 2.02, true}
         ),
         RowSignature.builder()
                     .add("EXPR$0", ColumnType.DOUBLE)
@@ -7349,13 +6977,12 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
     );
   }
 
-  @NotYetSupported(Modes.ERROR_CANNOT_TRANSLATE_COUNT_DISTINCT)
   @Test
   public void testApproxCountDistinctOnUnsupportedComplexColumn()
   {
     assertQueryIsUnplannable(
         "SELECT COUNT(DISTINCT nester) FROM druid.nested",
-        "Query could not be planned. A possible reason is [Using APPROX_COUNT_DISTINCT() or enabling "
+        "Using APPROX_COUNT_DISTINCT() or enabling "
         + "approximation with COUNT(DISTINCT) is not supported for column type [COMPLEX<json>]. "
         + "You can disable approximation by setting [useApproximateCountDistinct: false] in the query context."
     );
@@ -7397,17 +7024,16 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                     expressionVirtualColumn("v2", "notnull(nvl(\"v1\",1.0))", ColumnType.LONG)
                 )
                 .filters(equality("v0", 1.0, ColumnType.DOUBLE))
-                .columns("v0", "v1", "v2")
+                .columns("v1", "v0", "v2")
+                .columnTypes(ColumnType.DOUBLE, ColumnType.DOUBLE, ColumnType.LONG)
                 .build()
         ),
-        NullHandling.sqlCompatible()
-        ? ImmutableList.of(
+        ImmutableList.of(
             new Object[]{null, 1.0, true},
             new Object[]{null, 1.0, true},
             new Object[]{null, 1.0, true},
             new Object[]{null, 1.0, true}
-        )
-        : ImmutableList.of(),
+        ),
         RowSignature.builder()
                     .add("EXPR$0", ColumnType.DOUBLE)
                     .add("EXPR$1", ColumnType.DOUBLE)
@@ -7419,27 +7045,15 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByAutoString()
   {
-    final List<Object[]> expected;
-    if (NullHandling.sqlCompatible()) {
-      expected = ImmutableList.of(
-          new Object[]{null, 1L},
-          new Object[]{"", 1L},
-          new Object[]{"a", 1L},
-          new Object[]{"b", 1L},
-          new Object[]{"c", 1L},
-          new Object[]{"d", 1L},
-          new Object[]{"null", 1L}
-      );
-    } else {
-      expected = ImmutableList.of(
-          new Object[]{NullHandling.defaultStringValue(), 2L},
-          new Object[]{"a", 1L},
-          new Object[]{"b", 1L},
-          new Object[]{"c", 1L},
-          new Object[]{"d", 1L},
-          new Object[]{"null", 1L}
-      );
-    }
+    final List<Object[]> expected = ImmutableList.of(
+        new Object[]{null, 1L},
+        new Object[]{"", 1L},
+        new Object[]{"a", 1L},
+        new Object[]{"b", 1L},
+        new Object[]{"c", 1L},
+        new Object[]{"d", 1L},
+        new Object[]{"null", 1L}
+    );
     testQuery(
         "SELECT "
         + "str, "
@@ -7499,7 +7113,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   public void testGroupByAutoLong()
   {
     final List<Object[]> expected = ImmutableList.of(
-        new Object[]{NullHandling.defaultLongValue(), 2L},
+        new Object[]{null, 2L},
         new Object[]{1L, 1L},
         new Object[]{2L, 1L},
         new Object[]{3L, 1L},
@@ -7565,7 +7179,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
   public void testGroupByAutoDouble()
   {
     final List<Object[]> expected = ImmutableList.of(
-        new Object[]{NullHandling.defaultDoubleValue(), 2L},
+        new Object[]{null, 2L},
         new Object[]{1.0D, 1L},
         new Object[]{2.0D, 1L},
         new Object[]{3.3D, 1L},
@@ -7650,7 +7264,7 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{NullHandling.defaultStringValue()},
+            new Object[]{null},
             new Object[]{"\"hello\""},
             new Object[]{"2"},
             new Object[]{"{\"array\":[\"a\",\"b\"],\"n\":{\"x\":\"hello\"}}"},

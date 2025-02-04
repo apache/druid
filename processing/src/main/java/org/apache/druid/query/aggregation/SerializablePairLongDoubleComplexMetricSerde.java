@@ -84,7 +84,7 @@ public class SerializablePairLongDoubleComplexMetricSerde extends AbstractSerial
   @Override
   public ObjectStrategy<SerializablePairLongDouble> getObjectStrategy()
   {
-    return new ObjectStrategy<SerializablePairLongDouble>()
+    return new ObjectStrategy<>()
     {
       @Override
       public int compare(SerializablePairLongDouble o1, SerializablePairLongDouble o2)
@@ -128,7 +128,7 @@ public class SerializablePairLongDoubleComplexMetricSerde extends AbstractSerial
     return new ObjectStrategyComplexTypeStrategy<>(
         getObjectStrategy(),
         ColumnType.ofComplex(getTypeName()),
-        new Hash.Strategy<SerializablePairLongDouble>()
+        new Hash.Strategy<>()
         {
           @Override
           public int hashCode(SerializablePairLongDouble o)

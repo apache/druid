@@ -38,9 +38,7 @@ public class PlannerConfig
   public static final String CTX_KEY_USE_NATIVE_QUERY_EXPLAIN = "useNativeQueryExplain";
   public static final String CTX_KEY_FORCE_EXPRESSION_VIRTUAL_COLUMNS = "forceExpressionVirtualColumns";
   public static final String CTX_MAX_NUMERIC_IN_FILTERS = "maxNumericInFilters";
-  public static final String CTX_NATIVE_QUERY_SQL_PLANNING_MODE = "plannerStrategy";
   public static final int NUM_FILTER_NOT_USED = -1;
-
   @JsonProperty
   private int maxTopNLimit = 100_000;
 
@@ -75,11 +73,7 @@ public class PlannerConfig
   private int maxNumericInFilters = NUM_FILTER_NOT_USED;
 
   @JsonProperty
-  private String nativeQuerySqlPlanningMode = NATIVE_QUERY_SQL_PLANNING_MODE_COUPLED; // can be COUPLED or DECOUPLED
-  public static final String NATIVE_QUERY_SQL_PLANNING_MODE_COUPLED = "COUPLED";
-  public static final String NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED = "DECOUPLED";
-
-  private boolean serializeComplexValues = true;
+  private String nativeQuerySqlPlanningMode = QueryContexts.NATIVE_QUERY_SQL_PLANNING_MODE_COUPLED; // can be COUPLED or DECOUPLED
 
   public int getMaxNumericInFilters()
   {
@@ -114,11 +108,6 @@ public class PlannerConfig
   public DateTimeZone getSqlTimeZone()
   {
     return sqlTimeZone;
-  }
-
-  public boolean shouldSerializeComplexValues()
-  {
-    return serializeComplexValues;
   }
 
   public boolean isComputeInnerJoinCostAsFilter()
@@ -174,7 +163,6 @@ public class PlannerConfig
            useApproximateCountDistinct == that.useApproximateCountDistinct &&
            useApproximateTopN == that.useApproximateTopN &&
            requireTimeCondition == that.requireTimeCondition &&
-           serializeComplexValues == that.serializeComplexValues &&
            Objects.equals(sqlTimeZone, that.sqlTimeZone) &&
            useNativeQueryExplain == that.useNativeQueryExplain &&
            forceExpressionVirtualColumns == that.forceExpressionVirtualColumns &&
@@ -195,7 +183,6 @@ public class PlannerConfig
         useApproximateTopN,
         requireTimeCondition,
         sqlTimeZone,
-        serializeComplexValues,
         useNativeQueryExplain,
         forceExpressionVirtualColumns,
         nativeQuerySqlPlanningMode
@@ -211,7 +198,6 @@ public class PlannerConfig
            ", useApproximateTopN=" + useApproximateTopN +
            ", requireTimeCondition=" + requireTimeCondition +
            ", sqlTimeZone=" + sqlTimeZone +
-           ", serializeComplexValues=" + serializeComplexValues +
            ", useNativeQueryExplain=" + useNativeQueryExplain +
            ", nativeQuerySqlPlanningMode=" + nativeQuerySqlPlanningMode +
            '}';
@@ -246,7 +232,6 @@ public class PlannerConfig
     private boolean useNativeQueryExplain;
     private boolean forceExpressionVirtualColumns;
     private int maxNumericInFilters;
-    private boolean serializeComplexValues;
     private String nativeQuerySqlPlanningMode;
 
     public Builder(PlannerConfig base)
@@ -265,7 +250,6 @@ public class PlannerConfig
       useNativeQueryExplain = base.isUseNativeQueryExplain();
       forceExpressionVirtualColumns = base.isForceExpressionVirtualColumns();
       maxNumericInFilters = base.getMaxNumericInFilters();
-      serializeComplexValues = base.shouldSerializeComplexValues();
       nativeQuerySqlPlanningMode = base.getNativeQuerySqlPlanningMode();
     }
 
@@ -323,12 +307,6 @@ public class PlannerConfig
       return this;
     }
 
-    public Builder serializeComplexValues(boolean option)
-    {
-      this.serializeComplexValues = option;
-      return this;
-    }
-
     public Builder useNativeQueryExplain(boolean option)
     {
       this.useNativeQueryExplain = option;
@@ -383,7 +361,7 @@ public class PlannerConfig
           maxNumericInFilters);
       nativeQuerySqlPlanningMode = QueryContexts.parseString(
           queryContext,
-          CTX_NATIVE_QUERY_SQL_PLANNING_MODE,
+          QueryContexts.CTX_NATIVE_QUERY_SQL_PLANNING_MODE,
           nativeQuerySqlPlanningMode
       );
       return this;
@@ -425,7 +403,6 @@ public class PlannerConfig
       config.useNativeQueryExplain = useNativeQueryExplain;
       config.maxNumericInFilters = maxNumericInFilters;
       config.forceExpressionVirtualColumns = forceExpressionVirtualColumns;
-      config.serializeComplexValues = serializeComplexValues;
       config.nativeQuerySqlPlanningMode = nativeQuerySqlPlanningMode;
       return config;
     }

@@ -109,6 +109,6 @@ public class ColumnSelectorColumnIndexSelector implements ColumnIndexSelector
 
   private boolean isVirtualColumn(final String columnName)
   {
-    return virtualColumns.getVirtualColumn(columnName) != null;
+    return virtualColumns.exists(columnName);
   }
 }

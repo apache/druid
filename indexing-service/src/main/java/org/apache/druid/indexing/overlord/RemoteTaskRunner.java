@@ -248,7 +248,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
                 }
                 Futures.addCallback(
                     addWorker(worker),
-                    new FutureCallback<ZkWorker>()
+                    new FutureCallback<>()
                     {
                       @Override
                       public void onSuccess(ZkWorker zkWorker)
@@ -1515,7 +1515,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     boolean shouldRunPendingTasks = false;
 
     // must be synchronized while iterating:
-    // https://docs.oracle.com/javase/8/docs/api/java/util/Collections.html#synchronizedSet-java.util.Set-
+    // https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/util/Collections.html#synchronizedSet(java.util.Set)
     synchronized (blackListedWorkers) {
       for (Iterator<ZkWorker> iterator = blackListedWorkers.iterator(); iterator.hasNext(); ) {
         ZkWorker zkWorker = iterator.next();

@@ -23,14 +23,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Ordering;
 import org.apache.druid.client.selector.HighestPriorityTierSelectorStrategy;
-import org.apache.druid.client.selector.QueryableDruidServer;
 import org.apache.druid.client.selector.RandomServerSelectorStrategy;
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.client.selector.TierSelectorStrategy;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.query.QueryRunner;
-import org.apache.druid.query.QueryToolChestWarehouse;
+import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.planning.DataSourceAnalysis;
@@ -66,14 +65,14 @@ public class SimpleServerView implements TimelineServerView
   private final DirectDruidClientFactory clientFactory;
 
   public SimpleServerView(
-      QueryToolChestWarehouse warehouse,
+      QueryRunnerFactoryConglomerate conglomerate,
       ObjectMapper objectMapper,
       HttpClient httpClient
   )
   {
     this.clientFactory = new DirectDruidClientFactory(
         new NoopServiceEmitter(),
-        warehouse,
+        conglomerate,
         NOOP_QUERY_WATCHER,
         objectMapper,
         httpClient
@@ -82,7 +81,7 @@ public class SimpleServerView implements TimelineServerView
 
   public void addServer(DruidServer server, DataSegment dataSegment)
   {
-    servers.put(server, new QueryableDruidServer<>(server, clientFactory.makeDirectClient(server)));
+    servers.put(server, new QueryableDruidServer(server, clientFactory.makeDirectClient(server)));
     addSegmentToServer(server, dataSegment);
   }
 
@@ -139,6 +138,7 @@ public class SimpleServerView implements TimelineServerView
     return Collections.emptyList();
   }
 
+  @SuppressWarnings("unchecked")
   @Override
   public <T> QueryRunner<T> getQueryRunner(DruidServer server)
   {

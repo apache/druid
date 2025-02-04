@@ -16,12 +16,20 @@
  * limitations under the License.
  */
 
-.segment-timeline {
-  display: grid;
-  grid-template-columns: 1fr 220px;
+@import '../../variables';
 
-  .loader {
-    width: 85%;
+.segment-timeline {
+  .control-bar {
+    @include card-like;
+    height: 34px;
+    display: flex;
+    align-items: start;
+    padding: 5px;
+    gap: 10px;
+
+    & > .expander {
+      flex: 1;
+    }
   }
 
   .loading-error {
@@ -31,14 +39,16 @@
     transform: translate(-50%, -50%);
   }
 
-  .no-data-text {
+  .chart-container {
     position: absolute;
-    left: 30vw;
-    top: 15vh;
-    font-size: 20px;
-  }
+    top: 34px;
+    width: 100%;
+    bottom: 0;
+    overflow: hidden;
 
-  .side-control {
-    padding-top: 20px;
+    .segment-bar-chart,
+    .segment-bar-chart-render {
+      @include pin-full;
+    }
   }
 }

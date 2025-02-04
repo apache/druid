@@ -48,6 +48,7 @@ import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordination.DruidServerMetadata;
+import org.apache.druid.server.coordination.ServerType;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -122,7 +123,9 @@ public class DartControllerContext implements ControllerContext
     // since the serverView is referenced shortly after the worker list is created.
     final List<String> workerIds = new ArrayList<>(servers.size());
     for (final DruidServerMetadata server : servers) {
-      workerIds.add(WorkerId.fromDruidServerMetadata(server, queryId).toString());
+      if (server.getType() == ServerType.HISTORICAL) {
+        workerIds.add(WorkerId.fromDruidServerMetadata(server, queryId).toString());
+      }
     }
 
     // Shuffle workerIds, so we don't bias towards specific servers when running multiple queries concurrently. For any

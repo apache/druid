@@ -443,19 +443,21 @@ public class QueryTestRunner
           recordedQueries.size()
       );
       for (int i = 0; i < expectedQueries.size(); i++) {
+        Query<?> expectedQuery = expectedQueries.get(i);
+        Query<?> actualQuery = recordedQueries.get(i);
         Assert.assertEquals(
             StringUtils.format("query #%d: %s", i + 1, builder.sql),
-            expectedQueries.get(i),
-            recordedQueries.get(i)
+            expectedQuery,
+            actualQuery
         );
 
         try {
           // go through some JSON serde and back, round tripping both queries and comparing them to each other, because
           // Assert.assertEquals(recordedQueries.get(i), stringAndBack) is a failure due to a sorted map being present
           // in the recorded queries, but it is a regular map after deserialization
-          final String recordedString = queryJsonMapper.writeValueAsString(recordedQueries.get(i));
+          final String recordedString = queryJsonMapper.writeValueAsString(actualQuery);
           final Query<?> stringAndBack = queryJsonMapper.readValue(recordedString, Query.class);
-          final String expectedString = queryJsonMapper.writeValueAsString(expectedQueries.get(i));
+          final String expectedString = queryJsonMapper.writeValueAsString(expectedQuery);
           final Query<?> expectedStringAndBack = queryJsonMapper.readValue(expectedString, Query.class);
           Assert.assertEquals(expectedStringAndBack, stringAndBack);
         }
@@ -772,8 +774,11 @@ public class QueryTestRunner
 
   public QueryResults resultsOnly()
   {
-    ExecuteQuery execStep = (ExecuteQuery) runSteps.get(0);
-    execStep.run();
+    for (QueryRunStep runStep : runSteps) {
+      runStep.run();
+    }
+
+    BaseExecuteQuery execStep = (BaseExecuteQuery) runSteps.get(runSteps.size() - 1);
     return execStep.results().get(0);
   }
 }

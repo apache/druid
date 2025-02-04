@@ -33,7 +33,6 @@ import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.client.indexing.IndexingService;
-import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.guice.DruidGuiceExtensions;
@@ -48,9 +47,11 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.GenericQueryMetricsFactory;
+import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
+import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.loading.SegmentCacheManager;
@@ -118,6 +119,9 @@ public class SqlModuleTest
 
   @Mock
   private SegmentCacheManager segmentCacheManager;
+
+  @Mock
+  private QueryRunnerFactoryConglomerate conglomerate;
 
   private Injector injector;
 
@@ -200,6 +204,7 @@ public class SqlModuleTest
               binder.bind(GenericQueryMetricsFactory.class).toInstance(genericQueryMetricsFactory);
               binder.bind(QuerySegmentWalker.class).toInstance(querySegmentWalker);
               binder.bind(QueryToolChestWarehouse.class).toInstance(queryToolChestWarehouse);
+              binder.bind(QueryRunnerFactoryConglomerate.class).toInstance(conglomerate);
               binder.bind(LookupExtractorFactoryContainerProvider.class).toInstance(lookupExtractorFactoryContainerProvider);
               binder.bind(JoinableFactory.class).toInstance(joinableFactory);
               binder.bind(SegmentCacheManager.class).toInstance(segmentCacheManager);

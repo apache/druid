@@ -31,11 +31,8 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.query.GlobalTableDataSource;
-import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
-import org.apache.druid.query.QueryToolChest;
-import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.loading.SegmentCacheManager;
@@ -76,6 +73,7 @@ import org.apache.druid.sql.calcite.view.ViewManager;
 import org.easymock.EasyMock;
 
 import javax.annotation.Nullable;
+
 import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -90,14 +88,7 @@ public class QueryFrameworkUtils
   )
   {
     return new QueryLifecycleFactory(
-        new QueryToolChestWarehouse()
-        {
-          @Override
-          public <T, QueryType extends Query<T>> QueryToolChest<T, QueryType> getToolChest(final QueryType query)
-          {
-            return conglomerate.findFactory(query).getToolchest();
-          }
-        },
+        conglomerate,
         walker,
         new DefaultGenericQueryMetricsFactory(),
         new ServiceEmitter("dummy", "dummy", new NoopEmitter()),
@@ -148,6 +139,29 @@ public class QueryFrameworkUtils
         CalciteTests.createMockSystemSchema(druidSchema, walker, authorizerMapper);
 
     LookupSchema lookupSchema = createMockLookupSchema(injector);
+    DruidOperatorTable createOperatorTable = createOperatorTable(injector);
+
+    return createMockRootSchema(
+        plannerConfig,
+        viewManager,
+        authorizerMapper,
+        druidSchema,
+        systemSchema,
+        lookupSchema,
+        createOperatorTable
+    );
+  }
+
+  static DruidSchemaCatalog createMockRootSchema(
+      final PlannerConfig plannerConfig,
+      final ViewManager viewManager,
+      final AuthorizerMapper authorizerMapper,
+      DruidSchema druidSchema,
+      SystemSchema systemSchema,
+      LookupSchema lookupSchema,
+      DruidOperatorTable createOperatorTable
+  )
+  {
     ViewSchema viewSchema = viewManager != null ? new ViewSchema(viewManager) : null;
 
     SchemaPlus rootSchema = CalciteSchema.createRootSchema(false, false).plus();
@@ -168,7 +182,7 @@ public class QueryFrameworkUtils
         new InformationSchema(
             catalog,
             authorizerMapper,
-            createOperatorTable(injector)
+            createOperatorTable
         );
     rootSchema.add(CalciteTests.DRUID_SCHEMA_NAME, druidSchema);
     rootSchema.add(INFORMATION_SCHEMA_NAME, informationSchema);
@@ -202,7 +216,7 @@ public class QueryFrameworkUtils
     );
   }
 
-  private static DruidSchema createMockSchema(
+  static DruidSchema createMockSchema(
       final Injector injector,
       final QueryRunnerFactoryConglomerate conglomerate,
       final SpecificSegmentsQuerySegmentWalker walker,

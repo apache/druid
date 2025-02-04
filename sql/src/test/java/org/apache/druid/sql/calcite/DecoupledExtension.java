@@ -20,7 +20,6 @@
 package org.apache.druid.sql.calcite;
 
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
@@ -55,16 +54,10 @@ public class DecoupledExtension implements BeforeEachCallback
   }
 
   private static final ImmutableMap<String, Object> CONTEXT_OVERRIDES = ImmutableMap.<String, Object>builder()
-                                                                                    .putAll(BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT)
-                                                                                    .put(
-                                                                                        PlannerConfig.CTX_NATIVE_QUERY_SQL_PLANNING_MODE,
-                                                                                        PlannerConfig.NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED
-                                                                                    )
-                                                                                    .put(
-                                                                                        QueryContexts.ENABLE_DEBUG,
-                                                                                        true
-                                                                                    )
-                                                                                    .build();
+      .putAll(BaseCalciteQueryTest.QUERY_CONTEXT_DEFAULT)
+      .put(QueryContexts.CTX_NATIVE_QUERY_SQL_PLANNING_MODE, QueryContexts.NATIVE_QUERY_SQL_PLANNING_MODE_DECOUPLED)
+      .put(QueryContexts.ENABLE_DEBUG, true)
+      .build();
 
   public QueryTestBuilder testBuilder()
   {
@@ -90,16 +83,7 @@ public class DecoupledExtension implements BeforeEachCallback
       public DruidQTestInfo getQTestInfo()
       {
         if (runQuidem) {
-          final String testName;
-          if (decTestConfig.separateDefaultModeTest()) {
-            if (NullHandling.sqlCompatible()) {
-              testName = BaseCalciteQueryTest.queryFrameworkRule.testName() + "@NullHandling=sql";
-            } else {
-              testName = BaseCalciteQueryTest.queryFrameworkRule.testName() + "@NullHandling=default";
-            }
-          } else {
-            testName = BaseCalciteQueryTest.queryFrameworkRule.testName();
-          }
+          final String testName = BaseCalciteQueryTest.queryFrameworkRule.testName();
           return new DruidQTestInfo(
               qCaseDir,
               testName,
@@ -124,10 +108,9 @@ public class DecoupledExtension implements BeforeEachCallback
       }
     };
 
-    return builder.cannotVectorize(
-                      baseTest.cannotVectorize ||
-                      (!ExpressionProcessing.allowVectorizeFallback() && baseTest.cannotVectorizeUnlessFallback)
-                  )
-                  .skipVectorize(baseTest.skipVectorize);
+    boolean cannotVectorize = baseTest.cannotVectorize
+        || (!ExpressionProcessing.allowVectorizeFallback() && baseTest.cannotVectorizeUnlessFallback);
+    return builder.cannotVectorize(cannotVectorize)
+        .skipVectorize(baseTest.skipVectorize);
   }
 }

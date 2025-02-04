@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
-import { QueryResult } from '@druid-toolkit/query';
 import type { AxiosResponse, CancelToken } from 'axios';
+import { QueryResult } from 'druid-query-toolkit';
 
 import type { AsyncStatusResponse, MsqTaskPayloadResponse, QueryContext } from '../../druid-models';
 import { Execution } from '../../druid-models';

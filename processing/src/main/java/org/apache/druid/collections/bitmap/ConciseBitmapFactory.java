@@ -41,13 +41,13 @@ public class ConciseBitmapFactory implements BitmapFactory
       final Iterable<ImmutableBitmap> b
   )
   {
-    return new Iterable<ImmutableConciseSet>()
+    return new Iterable<>()
     {
       @Override
       public Iterator<ImmutableConciseSet> iterator()
       {
         final Iterator<ImmutableBitmap> i = b.iterator();
-        return new Iterator<ImmutableConciseSet>()
+        return new Iterator<>()
         {
           @Override
           public void remove()

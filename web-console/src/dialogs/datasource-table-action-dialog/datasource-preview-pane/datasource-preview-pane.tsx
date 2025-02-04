@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
-import type { QueryResult } from '@druid-toolkit/query';
-import { QueryRunner, T } from '@druid-toolkit/query';
+import type { QueryResult } from 'druid-query-toolkit';
+import { QueryRunner, T } from 'druid-query-toolkit';
 import React from 'react';
 
 import { Loader, RecordTablePane } from '../../../components';

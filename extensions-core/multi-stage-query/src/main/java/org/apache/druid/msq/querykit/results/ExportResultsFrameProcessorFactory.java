@@ -160,7 +160,7 @@ public class ExportResultsFrameProcessorFactory implements FrameProcessorFactory
             readableInput.getChannel(),
             exportFormat,
             readableInput.getChannelFrameReader(),
-            exportStorageProvider.get(),
+            exportStorageProvider.createStorageConnector(frameContext.tempDir()),
             frameContext.jsonMapper(),
             channelCounter,
             getExportFilePath(queryId, workerNumber, readableInput.getStagePartition().getPartitionNumber(), exportFormat),
@@ -184,7 +184,7 @@ public class ExportResultsFrameProcessorFactory implements FrameProcessorFactory
   @Override
   public TypeReference<Object> getResultTypeReference()
   {
-    return new TypeReference<Object>() {};
+    return new TypeReference<>() {};
   }
 
   @Override

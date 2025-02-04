@@ -389,7 +389,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
       if (elementNumber < 0) {
         throw new IAE("Cannot make array element selector, negative array index not supported");
       }
-      return new ColumnValueSelector<Object>()
+      return new ColumnValueSelector<>()
       {
         @Override
         public boolean isNull()

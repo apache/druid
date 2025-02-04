@@ -42,7 +42,7 @@ public class JavaScriptParser implements Parser<String, Object>
     final org.mozilla.javascript.Function fn = context.compileFunction(scope, function, "fn", 1, null);
     Context.exit();
 
-    return new Function<Object, Object>()
+    return new Function<>()
     {
       @Override
       public Object apply(Object input)

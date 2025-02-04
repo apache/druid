@@ -38,7 +38,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.http.client.HttpClient;
-import org.apache.druid.query.QueryToolChestWarehouse;
+import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.segment.TestHelper;
@@ -182,7 +182,7 @@ public class BrokerServerViewTest extends CuratorTestBase
             createExpected("2011-04-02/2011-04-06", "v2", druidServers.get(2), segments.get(2)),
             createExpected("2011-04-06/2011-04-09", "v3", druidServers.get(3), segments.get(3))
         ),
-        (List<TimelineObjectHolder>) timeline.lookup(
+        timeline.lookup(
             Intervals.of(
                 "2011-04-01/2011-04-09"
             )
@@ -206,7 +206,7 @@ public class BrokerServerViewTest extends CuratorTestBase
             createExpected("2011-04-03/2011-04-06", "v1", druidServers.get(1), segments.get(1)),
             createExpected("2011-04-06/2011-04-09", "v3", druidServers.get(3), segments.get(3))
         ),
-        (List<TimelineObjectHolder>) timeline.lookup(
+        timeline.lookup(
             Intervals.of(
                 "2011-04-01/2011-04-09"
             )
@@ -285,7 +285,7 @@ public class BrokerServerViewTest extends CuratorTestBase
             createExpected("2011-04-02/2011-04-06", "v2", druidServers.get(2), segments.get(2)),
             createExpected("2011-04-06/2011-04-09", "v3", druidServers.get(3), segments.get(3))
         ),
-        (List<TimelineObjectHolder>) timeline.lookup(
+        timeline.lookup(
             Intervals.of(
                 "2011-04-01/2011-04-09"
             )
@@ -316,7 +316,7 @@ public class BrokerServerViewTest extends CuratorTestBase
             createExpected("2011-04-02/2011-04-06", "v2", druidServers.get(2), segments.get(2)),
             createExpected("2011-04-06/2011-04-09", "v3", druidServers.get(3), segments.get(3))
         ),
-        (List<TimelineObjectHolder>) timeline.lookup(
+        timeline.lookup(
             Intervals.of(
                 "2011-04-01/2011-04-09"
             )
@@ -655,7 +655,7 @@ public class BrokerServerViewTest extends CuratorTestBase
 
     DirectDruidClientFactory druidClientFactory = new DirectDruidClientFactory(
         new NoopServiceEmitter(),
-        EasyMock.createMock(QueryToolChestWarehouse.class),
+        EasyMock.createMock(QueryRunnerFactoryConglomerate.class),
         EasyMock.createMock(QueryWatcher.class),
         getSmileMapper(),
         EasyMock.createMock(HttpClient.class)
