@@ -282,7 +282,6 @@ public class GroupByPostShuffleFrameProcessor implements FrameProcessor<Object>
    */
   private void writeEmptyAggregationsFrameIfNeeded() throws IOException
   {
-    // Check isIncludeNullResultRow, which is populated by the SQL planner when doing a query like GROUP BY ().
     if (outputRows == 0 && GroupingEngine.summaryRowPreconditions(query)) {
       final int resultRowSize = query.getResultRowSignature().size();
       this.outputRow = ResultRow.create(resultRowSize);
