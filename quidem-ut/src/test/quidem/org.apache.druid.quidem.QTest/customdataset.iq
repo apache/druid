@@ -9,7 +9,7 @@
       "inputSource": {
         "type": "local",
         "baseDir": "/tmp/",
-        "filter": "wikipedia.json.gz"
+        "filter": "wikiticker-2015-09-12-sampled.json.gz" 
       },
       "inputFormat": {
         "type": "json"

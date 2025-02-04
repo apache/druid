@@ -26,6 +26,7 @@ import com.google.inject.Injector;
 import net.hydromatic.quidem.AbstractCommand;
 import net.hydromatic.quidem.Command;
 import org.apache.calcite.util.Util;
+import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.IngestionTestBase;
@@ -50,7 +51,6 @@ import java.util.List;
 
 public class DruidQuidemIngestCommandHandler extends DruidQuidemCommandHandler
 {
-
   @Override
   public Command parseCommand(List<String> lines, List<String> content, String line)
   {
@@ -100,7 +100,7 @@ public class DruidQuidemIngestCommandHandler extends DruidQuidemCommandHandler
         Injector injector = DruidConnectionExtras.unwrapOrThrow(context.connection()).getInjector();
         ObjectMapper om = injector.getInstance(ObjectMapper.class);
         SpecificSegmentsQuerySegmentWalker ss = injector.getInstance(SpecificSegmentsQuerySegmentWalker.class);
-        TempDirProducer tds = injector.getInstance(TempDirProducer.class);
+        TempDirProducer tdp = injector.getInstance(TempDirProducer.class);
 
         String ingestText = Joiner.on("\n").join(content);
         ParallelIndexIngestionSpec spec = null;
@@ -131,6 +131,8 @@ public class DruidQuidemIngestCommandHandler extends DruidQuidemCommandHandler
         TaskToolbox t = f.build(aa);
         itb.prepareTaskForLocking(aa);
         aa.runTask(t);
+
+        SegmentCacheManagerFactory f1 = injector.getInstance(SegmentCacheManagerFactory.class);
 
         SegmentLocalCacheManager sm = null;
         DataSegment ds = null;
