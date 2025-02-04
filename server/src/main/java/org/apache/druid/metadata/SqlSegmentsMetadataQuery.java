@@ -21,6 +21,7 @@ package org.apache.druid.metadata;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.UnmodifiableIterator;
@@ -33,6 +34,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
+import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.server.http.DataSegmentPlus;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
@@ -44,8 +46,10 @@ import org.skife.jdbi.v2.Query;
 import org.skife.jdbi.v2.ResultIterator;
 import org.skife.jdbi.v2.SQLStatement;
 import org.skife.jdbi.v2.Update;
+import org.skife.jdbi.v2.util.StringMapper;
 
 import javax.annotation.Nullable;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -149,6 +153,82 @@ public class SqlSegmentsMetadataQuery
     );
   }
 
+  public CloseableIterator<DataSegmentPlus> retrieveUsedSegmentsPlus(
+      String dataSource,
+      Collection<Interval> intervals
+  )
+  {
+    return retrieveSegmentsPlus(
+        dataSource,
+        intervals, null, IntervalMode.OVERLAPS, true, null, null, null, null
+    );
+  }
+
+  /**
+   * Determines the highest ID amongst unused segments for the given datasource,
+   * interval and version.
+   *
+   * @return null if no unused segment exists for the given parameters.
+   */
+  @Nullable
+  public SegmentId retrieveHighestUnusedSegmentId(
+      String datasource,
+      Interval interval,
+      String version
+  )
+  {
+    final Set<String> unusedSegmentIds =
+        retrieveUnusedSegmentIdsForExactIntervalAndVersion(datasource, interval, version);
+    log.debug(
+        "Found [%,d] unused segments for datasource[%s] for interval[%s] and version[%s].",
+        unusedSegmentIds.size(), datasource, interval, version
+    );
+
+    SegmentId unusedMaxId = null;
+    int maxPartitionNum = -1;
+    for (String id : unusedSegmentIds) {
+      final SegmentId segmentId = SegmentId.tryParse(datasource, id);
+      if (segmentId == null) {
+        continue;
+      }
+      int partitionNum = segmentId.getPartitionNum();
+      if (maxPartitionNum < partitionNum) {
+        maxPartitionNum = partitionNum;
+        unusedMaxId = segmentId;
+      }
+    }
+    return unusedMaxId;
+  }
+
+  private Set<String> retrieveUnusedSegmentIdsForExactIntervalAndVersion(
+      String dataSource,
+      Interval interval,
+      String version
+  )
+  {
+    final String sql = StringUtils.format(
+        "SELECT id FROM %1$s"
+        + " WHERE used = :used"
+        + " AND dataSource = :dataSource"
+        + " AND version = :version"
+        + " AND start = :start AND %2$send%2$s = :end",
+        dbTables.getSegmentsTable(), connector.getQuoteString()
+    );
+
+    final Query<Map<String, Object>> query = handle
+        .createQuery(sql)
+        .setFetchSize(connector.getStreamingFetchSize())
+        .bind("used", false)
+        .bind("dataSource", dataSource)
+        .bind("version", version)
+        .bind("start", interval.getStart().toString())
+        .bind("end", interval.getEnd().toString());
+
+    try (final ResultIterator<String> iterator = query.map(StringMapper.FIRST).iterator()) {
+      return ImmutableSet.copyOf(iterator);
+    }
+  }
+
   /**
    * Retrieves segments for a given datasource that are marked unused and that are <b>fully contained by</b> any interval
    * in a particular collection of intervals. If the collection of intervals is empty, this method will retrieve all
@@ -244,6 +324,10 @@ public class SqlSegmentsMetadataQuery
     );
   }
 
+  /**
+   * Retrieves IDs of used segments that belong to the datasource and overlap
+   * the given interval.
+   */
   public Set<SegmentId> retrieveUsedSegmentIds(
       final String dataSource,
       final Interval interval
@@ -264,36 +348,34 @@ public class SqlSegmentsMetadataQuery
       );
     }
 
-    return connector.inReadOnlyTransaction(
-        (handle, status) -> {
-          final Query<Map<String, Object>> sql = handle
-              .createQuery(StringUtils.format(sb.toString(), dbTables.getSegmentsTable()))
-              .setFetchSize(connector.getStreamingFetchSize())
-              .bind("used", true)
-              .bind("dataSource", dataSource);
+    final Query<Map<String, Object>> sql = handle
+        .createQuery(StringUtils.format(sb.toString(), dbTables.getSegmentsTable()))
+        .setFetchSize(connector.getStreamingFetchSize())
+        .bind("used", true)
+        .bind("dataSource", dataSource);
 
-          if (compareAsString) {
-            bindIntervalsToQuery(sql, Collections.singletonList(interval));
-          }
+    if (compareAsString) {
+      bindIntervalsToQuery(sql, Collections.singletonList(interval));
+    }
 
-          final Set<SegmentId> segmentIds = new HashSet<>();
-          try (final ResultIterator<String> iterator = sql.map((index, r, ctx) -> r.getString(1)).iterator()) {
-            while (iterator.hasNext()) {
-              final String id = iterator.next();
-              final SegmentId segmentId = SegmentId.tryParse(dataSource, id);
-              if (segmentId == null) {
-                throw DruidException.defensive(
-                    "Failed to parse SegmentId for id[%s] and dataSource[%s].",
-                    id, dataSource
-                );
-              }
-              if (IntervalMode.OVERLAPS.apply(interval, segmentId.getInterval())) {
-                segmentIds.add(segmentId);
-              }
-            }
-          }
-          return segmentIds;
-        });
+    final Set<SegmentId> segmentIds = new HashSet<>();
+    try (final ResultIterator<String> iterator = sql.map(StringMapper.FIRST).iterator()) {
+      while (iterator.hasNext()) {
+        final String id = iterator.next();
+        final SegmentId segmentId = SegmentId.tryParse(dataSource, id);
+        if (segmentId == null) {
+          throw DruidException.defensive(
+              "Failed to parse SegmentId for id[%s] and dataSource[%s].",
+              id, dataSource
+          );
+        }
+        if (IntervalMode.OVERLAPS.apply(interval, segmentId.getInterval())) {
+          segmentIds.add(segmentId);
+        }
+      }
+    }
+    return segmentIds;
+
   }
 
   public List<DataSegmentPlus> retrieveSegmentsById(
@@ -301,14 +383,29 @@ public class SqlSegmentsMetadataQuery
       Set<String> segmentIds
   )
   {
+    try (CloseableIterator<DataSegmentPlus> iterator
+             = retrieveSegmentsByIdIterator(datasource, segmentIds)) {
+      return ImmutableList.copyOf(iterator);
+    }
+    catch (IOException e) {
+      throw DruidException.defensive(e, "Error while retrieving segments from metadata store");
+    }
+  }
+
+  public CloseableIterator<DataSegmentPlus> retrieveSegmentsByIdIterator(
+      String datasource,
+      Set<String> segmentIds
+  )
+  {
     final List<List<String>> partitionedSegmentIds
         = Lists.partition(new ArrayList<>(segmentIds), 100);
 
-    final List<DataSegmentPlus> fetchedSegments = new ArrayList<>(segmentIds.size());
+    final List<CloseableIterator<DataSegmentPlus>> fetchedSegments
+        = new ArrayList<>(partitionedSegmentIds.size());
     for (List<String> partition : partitionedSegmentIds) {
-      fetchedSegments.addAll(retrieveSegmentBatchById(datasource, partition, false));
+      fetchedSegments.add(retrieveSegmentBatchById(datasource, partition, false));
     }
-    return fetchedSegments;
+    return CloseableIterators.concat(fetchedSegments);
   }
 
   public List<DataSegmentPlus> retrieveSegmentsWithSchemaById(
@@ -319,28 +416,38 @@ public class SqlSegmentsMetadataQuery
     final List<List<String>> partitionedSegmentIds
         = Lists.partition(new ArrayList<>(segmentIds), 100);
 
-    final List<DataSegmentPlus> fetchedSegments = new ArrayList<>(segmentIds.size());
+    final List<CloseableIterator<DataSegmentPlus>> fetchedSegments
+        = new ArrayList<>(partitionedSegmentIds.size());
     for (List<String> partition : partitionedSegmentIds) {
-      fetchedSegments.addAll(retrieveSegmentBatchById(datasource, partition, true));
+      fetchedSegments.add(retrieveSegmentBatchById(datasource, partition, true));
     }
-    return fetchedSegments;
+
+    try (CloseableIterator<DataSegmentPlus> iterator
+             = CloseableIterators.concat(fetchedSegments)) {
+      return ImmutableList.copyOf(iterator);
+    }
+    catch (IOException e) {
+      throw DruidException.defensive(e, "Error while retrieving segments with schema from metadata store.");
+    }
   }
 
-  private List<DataSegmentPlus> retrieveSegmentBatchById(
+  private CloseableIterator<DataSegmentPlus> retrieveSegmentBatchById(
       String datasource,
       List<String> segmentIds,
       boolean includeSchemaInfo
   )
   {
     if (segmentIds.isEmpty()) {
-      return Collections.emptyList();
+      return CloseableIterators.withEmptyBaggage(Collections.emptyIterator());
     }
 
     ResultIterator<DataSegmentPlus> resultIterator;
     if (includeSchemaInfo) {
       final Query<Map<String, Object>> query = handle.createQuery(
           StringUtils.format(
-              "SELECT payload, used, schema_fingerprint, num_rows, upgraded_from_segment_id FROM %s WHERE dataSource = :dataSource %s",
+              "SELECT payload, used, schema_fingerprint, num_rows,"
+              + " upgraded_from_segment_id, used_status_last_updated"
+              + " FROM %s WHERE dataSource = :dataSource %s",
               dbTables.getSegmentsTable(), getParameterizedInConditionForColumn("id", segmentIds)
           )
       );
@@ -357,7 +464,7 @@ public class SqlSegmentsMetadataQuery
                 return new DataSegmentPlus(
                     JacksonUtils.readValue(jsonMapper, r.getBytes(1), DataSegment.class),
                     null,
-                    null,
+                    DateTimes.of(r.getString(6)),
                     r.getBoolean(2),
                     schemaFingerprint,
                     numRows,
@@ -369,7 +476,8 @@ public class SqlSegmentsMetadataQuery
     } else {
       final Query<Map<String, Object>> query = handle.createQuery(
           StringUtils.format(
-              "SELECT payload, used, upgraded_from_segment_id FROM %s WHERE dataSource = :dataSource %s",
+              "SELECT payload, used, upgraded_from_segment_id, used_status_last_updated"
+              + " FROM %s WHERE dataSource = :dataSource %s",
               dbTables.getSegmentsTable(), getParameterizedInConditionForColumn("id", segmentIds)
           )
       );
@@ -383,7 +491,7 @@ public class SqlSegmentsMetadataQuery
               (index, r, ctx) -> new DataSegmentPlus(
                   JacksonUtils.readValue(jsonMapper, r.getBytes(1), DataSegment.class),
                   null,
-                  null,
+                  DateTimes.of(r.getString(4)),
                   r.getBoolean(2),
                   null,
                   null,
@@ -393,7 +501,7 @@ public class SqlSegmentsMetadataQuery
           .iterator();
     }
 
-    return Lists.newArrayList(resultIterator);
+    return CloseableIterators.wrap(resultIterator, resultIterator);
   }
 
   /**
@@ -442,9 +550,9 @@ public class SqlSegmentsMetadataQuery
    *
    * @return Number of segments updated.
    */
-  public int markSegmentsUnused(final String dataSource, final Interval interval)
+  public int markSegmentsUnused(final String dataSource, final Interval interval, final DateTime updateTime)
   {
-    return markSegmentsUnused(dataSource, interval, null);
+    return markSegmentsUnused(dataSource, interval, null, updateTime);
   }
 
   /**
@@ -453,7 +561,12 @@ public class SqlSegmentsMetadataQuery
    *
    * @return Number of segments updated.
    */
-  public int markSegmentsUnused(final String dataSource, final Interval interval, @Nullable final List<String> versions)
+  public int markSegmentsUnused(
+      final String dataSource,
+      final Interval interval,
+      @Nullable final List<String> versions,
+      final DateTime updateTime
+  )
   {
     if (versions != null && versions.isEmpty()) {
       return 0;
@@ -477,7 +590,7 @@ public class SqlSegmentsMetadataQuery
           .createStatement(sb.toString())
           .bind("dataSource", dataSource)
           .bind("used", false)
-          .bind("used_status_last_updated", DateTimes.nowUtc().toString());
+          .bind("used_status_last_updated", updateTime.toString());
 
       if (versions != null) {
         bindColumnValuesToQueryWithInCondition("version", versions, stmt);
@@ -509,7 +622,7 @@ public class SqlSegmentsMetadataQuery
           .bind("used", false)
           .bind("start", interval.getStart().toString())
           .bind("end", interval.getEnd().toString())
-          .bind("used_status_last_updated", DateTimes.nowUtc().toString());
+          .bind("used_status_last_updated", updateTime.toString());
 
       if (versions != null) {
         bindColumnValuesToQueryWithInCondition("version", versions, stmt);
@@ -579,6 +692,160 @@ public class SqlSegmentsMetadataQuery
     }
 
     return null;
+  }
+
+  public List<SegmentIdWithShardSpec> retrievePendingSegmentIds(
+      final String dataSource,
+      final String sequenceName,
+      final String sequencePreviousId
+  )
+  {
+    final String sql = StringUtils.format(
+        "SELECT payload FROM %s WHERE "
+        + "dataSource = :dataSource AND "
+        + "sequence_name = :sequence_name AND "
+        + "sequence_prev_id = :sequence_prev_id",
+        dbTables.getPendingSegmentsTable()
+    );
+    return handle
+        .createQuery(sql)
+        .bind("dataSource", dataSource)
+        .bind("sequence_name", sequenceName)
+        .bind("sequence_prev_id", sequencePreviousId)
+        .map(
+            (index, r, ctx) -> JacksonUtils.readValue(
+                jsonMapper,
+                r.getBytes("payload"),
+                SegmentIdWithShardSpec.class
+            )
+        )
+        .list();
+  }
+
+  public List<SegmentIdWithShardSpec> retrievePendingSegmentIdsWithExactInterval(
+      final String dataSource,
+      final String sequenceName,
+      final Interval interval
+  )
+  {
+    final String sql = StringUtils.format(
+        "SELECT payload FROM %s WHERE "
+        + "dataSource = :dataSource AND "
+        + "sequence_name = :sequence_name AND "
+        + "start = :start AND "
+        + "%2$send%2$s = :end",
+        dbTables.getPendingSegmentsTable(),
+        connector.getQuoteString()
+    );
+    return handle
+        .createQuery(sql)
+        .bind("dataSource", dataSource)
+        .bind("sequence_name", sequenceName)
+        .bind("start", interval.getStart().toString())
+        .bind("end", interval.getEnd().toString())
+        .map(
+            (index, r, ctx) -> JacksonUtils.readValue(
+                jsonMapper,
+                r.getBytes("payload"),
+                SegmentIdWithShardSpec.class
+            )
+        )
+        .list();
+  }
+
+  public List<PendingSegmentRecord> retrievePendingSegmentsWithExactInterval(
+      final String dataSource,
+      final Interval interval
+  )
+  {
+    final String sql = StringUtils.format(
+        "SELECT payload, sequence_name, sequence_prev_id,"
+        + " task_allocator_id, upgraded_from_segment_id, created_date"
+        + " FROM %1$s WHERE dataSource = :dataSource"
+        + " AND start = :start AND %2$send%2$s = :end",
+        dbTables.getPendingSegmentsTable(), connector.getQuoteString()
+    );
+    return handle
+        .createQuery(sql)
+        .bind("dataSource", dataSource)
+        .bind("start", interval.getStart().toString())
+        .bind("end", interval.getEnd().toString())
+        .map((index, r, ctx) -> PendingSegmentRecord.fromResultSet(r, jsonMapper))
+        .list();
+  }
+
+  /**
+   * Fetches all the pending segments, whose interval overlaps with the given
+   * search interval, from the metadata store.
+   */
+  public List<PendingSegmentRecord> retrievePendingSegmentsOverlappingInterval(
+      final String dataSource,
+      final Interval interval
+  )
+  {
+    final boolean compareIntervalEndpointsAsStrings = Intervals.canCompareEndpointsAsStrings(interval);
+
+    String sql = StringUtils.format(
+        "SELECT payload, sequence_name, sequence_prev_id,"
+        + " task_allocator_id, upgraded_from_segment_id, created_date"
+        + " FROM %1$s WHERE dataSource = :dataSource",
+        dbTables.getPendingSegmentsTable()
+    );
+    if (compareIntervalEndpointsAsStrings) {
+      sql += " AND start < :end"
+             + StringUtils.format(" AND %1$send%1$s > :start", connector.getQuoteString());
+    }
+
+    Query<Map<String, Object>> query = handle.createQuery(sql)
+                                             .bind("dataSource", dataSource);
+    if (compareIntervalEndpointsAsStrings) {
+      query = query.bind("start", interval.getStart().toString())
+                   .bind("end", interval.getEnd().toString());
+    }
+
+    final ResultIterator<PendingSegmentRecord> pendingSegmentIterator =
+        query.map((index, r, ctx) -> PendingSegmentRecord.fromResultSet(r, jsonMapper))
+             .iterator();
+    final ImmutableList.Builder<PendingSegmentRecord> pendingSegments = ImmutableList.builder();
+    while (pendingSegmentIterator.hasNext()) {
+      final PendingSegmentRecord pendingSegment = pendingSegmentIterator.next();
+      if (compareIntervalEndpointsAsStrings || pendingSegment.getId().getInterval().overlaps(interval)) {
+        pendingSegments.add(pendingSegment);
+      }
+    }
+    pendingSegmentIterator.close();
+    return pendingSegments.build();
+  }
+
+  public List<PendingSegmentRecord> retrievePendingSegmentsForTaskAllocatorId(
+      final String dataSource,
+      final String taskAllocatorId
+  )
+  {
+    final String sql = StringUtils.format(
+        "SELECT payload, sequence_name, sequence_prev_id,"
+        + " task_allocator_id, upgraded_from_segment_id, created_date"
+        + " FROM %1$s WHERE dataSource = :dataSource"
+        + " AND task_allocator_id = :task_allocator_id",
+        dbTables.getPendingSegmentsTable()
+    );
+
+    Query<Map<String, Object>> query = handle.createQuery(sql)
+                                             .bind("dataSource", dataSource)
+                                             .bind("task_allocator_id", taskAllocatorId);
+
+    final ResultIterator<PendingSegmentRecord> pendingSegmentRecords =
+        query.map((index, r, ctx) -> PendingSegmentRecord.fromResultSet(r, jsonMapper))
+             .iterator();
+
+    final List<PendingSegmentRecord> pendingSegments = new ArrayList<>();
+    while (pendingSegmentRecords.hasNext()) {
+      pendingSegments.add(pendingSegmentRecords.next());
+    }
+
+    pendingSegmentRecords.close();
+
+    return pendingSegments;
   }
 
   /**
@@ -1012,7 +1279,7 @@ public class SqlSegmentsMetadataQuery
    *
    * @implNote JDBI 3.x has better support for binding {@code IN} clauses directly.
    */
-  static String getParameterizedInConditionForColumn(final String columnName, final List<String> values)
+  public static String getParameterizedInConditionForColumn(final String columnName, final List<String> values)
   {
     if (values == null) {
       return "";
@@ -1037,7 +1304,7 @@ public class SqlSegmentsMetadataQuery
    *
    * @see #getParameterizedInConditionForColumn(String, List)
    */
-  static void bindColumnValuesToQueryWithInCondition(
+  public static void bindColumnValuesToQueryWithInCondition(
       final String columnName,
       final List<String> values,
       final SQLStatement<?> query

@@ -34,6 +34,7 @@ import org.apache.druid.server.coordinator.loading.TestLoadQueuePeon;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.timeline.DataSegment;
+import org.joda.time.DateTime;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -390,7 +391,7 @@ public class CostBalancerStrategyTest
                           .startingAt("2012-10-24")
                           .eachOfSizeInMb(100).get(0);
 
-    long startTimeY = segmentX.getInterval().getStartMillis() + startGapMillis;
+    DateTime startTimeY = segmentX.getInterval().getStart().plus(startGapMillis);
     final DataSegment segmentY =
         CreateDataSegments.ofDatasource(TestDataSource.WIKI)
                           .forIntervals(1, granularityY.getDefaultGranularity())

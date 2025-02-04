@@ -1151,7 +1151,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
       appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo", 2), Suppliers.ofInstance(Committers.nil()));
       // Segment0 for interval upgraded after appends
       appenderator.registerUpgradedPendingSegment(
-          new PendingSegmentRecord(
+          PendingSegmentRecord.create(
               si("2000/2001", "B", 1),
               si("2000/2001", "B", 1).asSegmentId().toString(),
               IDENTIFIERS.get(0).asSegmentId().toString(),
@@ -1167,7 +1167,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
       appenderator.add(IDENTIFIERS.get(2), ir("2001T01", "foo", 16), Suppliers.ofInstance(Committers.nil()));
       // Concurrent replace registers a segment version upgrade for the second interval
       appenderator.registerUpgradedPendingSegment(
-          new PendingSegmentRecord(
+          PendingSegmentRecord.create(
               si("2001/2002", "B", 1),
               si("2001/2002", "B", 1).asSegmentId().toString(),
               IDENTIFIERS.get(2).asSegmentId().toString(),
@@ -1179,7 +1179,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
       appenderator.add(IDENTIFIERS.get(2), ir("2001T03", "foo", 64), Suppliers.ofInstance(Committers.nil()));
       // Another Concurrent replace registers upgrade with version C for the second interval
       appenderator.registerUpgradedPendingSegment(
-          new PendingSegmentRecord(
+          PendingSegmentRecord.create(
               si("2001/2002", "C", 7),
               si("2001/2002", "C", 7).asSegmentId().toString(),
               IDENTIFIERS.get(2).asSegmentId().toString(),
@@ -1634,7 +1634,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
       appenderator.add(IDENTIFIERS.get(0), ir("2000", "foo", 2), Suppliers.ofInstance(Committers.nil()));
       // Segment0 for interval upgraded after appends
       appenderator.registerUpgradedPendingSegment(
-          new PendingSegmentRecord(
+          PendingSegmentRecord.create(
               si("2000/2001", "B", 1),
               si("2000/2001", "B", 1).asSegmentId().toString(),
               IDENTIFIERS.get(0).asSegmentId().toString(),
@@ -1650,7 +1650,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
       appenderator.add(IDENTIFIERS.get(2), ir("2001T01", "foo", 16), Suppliers.ofInstance(Committers.nil()));
       // Concurrent replace registers a segment version upgrade for the second interval
       appenderator.registerUpgradedPendingSegment(
-          new PendingSegmentRecord(
+          PendingSegmentRecord.create(
               si("2001/2002", "B", 1),
               si("2001/2002", "B", 1).asSegmentId().toString(),
               IDENTIFIERS.get(2).asSegmentId().toString(),
@@ -1662,7 +1662,7 @@ public class StreamAppenderatorTest extends InitializedNullHandlingTest
       appenderator.add(IDENTIFIERS.get(2), ir("2001T03", "foo", 64), Suppliers.ofInstance(Committers.nil()));
       // Another Concurrent replace registers upgrade with version C for the second interval
       appenderator.registerUpgradedPendingSegment(
-          new PendingSegmentRecord(
+          PendingSegmentRecord.create(
               si("2001/2002", "C", 7),
               si("2001/2002", "C", 7).asSegmentId().toString(),
               IDENTIFIERS.get(2).asSegmentId().toString(),

@@ -59,15 +59,22 @@ public class SegmentAllocationQueueTest
 
   private final boolean reduceMetadataIO;
 
-  @Parameterized.Parameters(name = "reduceMetadataIO = {0}")
+  @Parameterized.Parameters(name = "reduceMetadataIO = {0}, useSegmentCache = {1}")
   public static Object[][] getTestParameters()
   {
-    return new Object[][]{{true}, {false}};
+    return new Object[][]{
+        {true, true},
+        {true, false},
+        {false, true},
+        {false, false}
+    };
   }
 
-  public SegmentAllocationQueueTest(boolean reduceMetadataIO)
+  public SegmentAllocationQueueTest(boolean reduceMetadataIO, boolean useSegmentMetadataCache)
   {
     this.reduceMetadataIO = reduceMetadataIO;
+
+    taskActionTestKit.setUseSegmentMetadataCache(useSegmentMetadataCache);
   }
 
   @Before

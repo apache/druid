@@ -29,8 +29,8 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.Interval;
 import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
+import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 
 import java.util.HashSet;
@@ -42,15 +42,15 @@ public class RetrieveSegmentsActionsTest
   private static final String UNUSED_V0 = "v0";
   private static final String UNUSED_V1 = "v1";
 
-  @ClassRule
-  public static TaskActionTestKit actionTestKit = new TaskActionTestKit();
+  @Rule
+  public TaskActionTestKit actionTestKit = new TaskActionTestKit();
 
   private static Task task;
   private static Set<DataSegment> expectedUnusedSegments;
   private static Set<DataSegment> expectedUsedSegments;
 
-  @BeforeClass
-  public static void setup()
+  @Before
+  public void setup()
   {
     task = NoopTask.create();
 
@@ -99,6 +99,7 @@ public class RetrieveSegmentsActionsTest
   @Test
   public void testRetrieveUsedSegmentsAction()
   {
+    actionTestKit.syncSegmentMetadataCache();
     final RetrieveUsedSegmentsAction action =
         new RetrieveUsedSegmentsAction(task.getDataSource(), ImmutableList.of(INTERVAL));
     final Set<DataSegment> observedUsedSegments = new HashSet<>(action.perform(task, actionTestKit.getTaskActionToolbox()));

@@ -172,12 +172,13 @@ public class CompactionTaskRunTest extends IngestionTestBase
       "2014-01-01T02:00:30Z,c|d|e,3\n"
   );
 
-  @Parameterized.Parameters(name = "{0}")
+  @Parameterized.Parameters(name = "lockGranularity={0}, useSegmentMetadataCache={1}")
   public static Iterable<Object[]> constructorFeeder()
   {
     return ImmutableList.of(
-        new Object[]{LockGranularity.TIME_CHUNK},
-        new Object[]{LockGranularity.SEGMENT}
+        new Object[]{LockGranularity.TIME_CHUNK, true},
+        new Object[]{LockGranularity.TIME_CHUNK, false},
+        new Object[]{LockGranularity.SEGMENT, true}
     );
   }
 
@@ -191,8 +192,9 @@ public class CompactionTaskRunTest extends IngestionTestBase
   private ExecutorService exec;
   private File localDeepStorage;
 
-  public CompactionTaskRunTest(LockGranularity lockGranularity)
+  public CompactionTaskRunTest(LockGranularity lockGranularity, boolean useSegmentMetadataCache)
   {
+    super(useSegmentMetadataCache);
     testUtils = new TestUtils();
     overlordClient = new NoopOverlordClient();
     coordinatorClient = new NoopCoordinatorClient()

@@ -21,6 +21,7 @@ package org.apache.druid.indexing.common.task;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
+import com.google.common.base.Suppliers;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.data.input.InputFormat;
@@ -63,6 +64,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.java.util.common.concurrent.ScheduledExecutors;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.metadata.SQLMetadataConnector;
@@ -70,6 +72,9 @@ import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.metadata.SegmentsMetadataManagerConfig;
 import org.apache.druid.metadata.SqlSegmentsMetadataManager;
 import org.apache.druid.metadata.TestDerbyConnector;
+import org.apache.druid.metadata.segment.SqlSegmentMetadataTransactionFactory;
+import org.apache.druid.metadata.segment.cache.HeapMemorySegmentMetadataCache;
+import org.apache.druid.metadata.segment.cache.SegmentMetadataCache;
 import org.apache.druid.segment.DataSegmentsWithSchemas;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9Factory;
@@ -85,10 +90,12 @@ import org.apache.druid.segment.metadata.SegmentSchemaCache;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
 import org.apache.druid.server.DruidNode;
+import org.apache.druid.server.coordinator.simulate.TestDruidLeaderSelector;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.apache.druid.timeline.DataSegment;
+import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -118,17 +125,28 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
 
   protected final TestUtils testUtils = new TestUtils();
   private final ObjectMapper objectMapper = testUtils.getTestObjectMapper();
+  private final boolean useSegmentMetadataCache;
   private SegmentCacheManagerFactory segmentCacheManagerFactory;
   private TaskStorage taskStorage;
   private IndexerSQLMetadataStorageCoordinator storageCoordinator;
   private SegmentsMetadataManager segmentsMetadataManager;
   private TaskLockbox lockbox;
   private File baseDir;
-  private SegmentSchemaManager segmentSchemaManager;
-  private SegmentSchemaCache segmentSchemaCache;
   private SupervisorManager supervisorManager;
   private TestDataSegmentKiller dataSegmentKiller;
+  private SegmentMetadataCache segmentMetadataCache;
   protected File reportsFile;
+
+  protected IngestionTestBase()
+  {
+    this(false);
+  }
+
+  protected IngestionTestBase(final boolean useSegmentMetadataCache)
+  {
+    this.useSegmentMetadataCache = useSegmentMetadataCache;
+  }
+
 
   @Before
   public void setUpIngestionTestBase() throws IOException
@@ -141,24 +159,26 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
     connector.createTaskTables();
     connector.createSegmentSchemasTable();
     connector.createSegmentTable();
+    connector.createPendingSegmentsTable();
     taskStorage = new HeapMemoryTaskStorage(new TaskStorageConfig(null));
-    segmentSchemaManager = new SegmentSchemaManager(
+    SegmentSchemaManager segmentSchemaManager = new SegmentSchemaManager(
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         objectMapper,
         derbyConnectorRule.getConnector()
     );
 
     storageCoordinator = new IndexerSQLMetadataStorageCoordinator(
+        createTransactionFactory(),
         objectMapper,
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         derbyConnectorRule.getConnector(),
         segmentSchemaManager,
         CentralizedDatasourceSchemaConfig.create()
     );
-    segmentSchemaCache = new SegmentSchemaCache(NoopServiceEmitter.instance());
+    SegmentSchemaCache segmentSchemaCache = new SegmentSchemaCache(NoopServiceEmitter.instance());
     segmentsMetadataManager = new SqlSegmentsMetadataManager(
         objectMapper,
-        SegmentsMetadataManagerConfig::new,
+        () -> new SegmentsMetadataManagerConfig(null, null),
         derbyConnectorRule.metadataTablesConfigSupplier(),
         derbyConnectorRule.getConnector(),
         segmentSchemaCache,
@@ -169,12 +189,17 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
     segmentCacheManagerFactory = new SegmentCacheManagerFactory(TestIndex.INDEX_IO, getObjectMapper());
     reportsFile = temporaryFolder.newFile();
     dataSegmentKiller = new TestDataSegmentKiller();
+
+    segmentMetadataCache.start();
+    segmentMetadataCache.becomeLeader();
   }
 
   @After
   public void tearDownIngestionTestBase()
   {
     temporaryFolder.delete();
+    segmentMetadataCache.stopBeingLeader();
+    segmentMetadataCache.stop();
   }
 
   public TestLocalTaskActionClientFactory createActionClientFactory()
@@ -286,6 +311,29 @@ public abstract class IngestionTestBase extends InitializedNullHandlingTest
         .attemptId("1")
         .centralizedTableSchemaConfig(centralizedDatasourceSchemaConfig)
         .build();
+  }
+
+  private SqlSegmentMetadataTransactionFactory createTransactionFactory()
+  {
+    segmentMetadataCache = new HeapMemorySegmentMetadataCache(
+        objectMapper,
+        Suppliers.ofInstance(new SegmentsMetadataManagerConfig(Period.millis(10), useSegmentMetadataCache)),
+        derbyConnectorRule.metadataTablesConfigSupplier(),
+        derbyConnectorRule.getConnector(),
+        ScheduledExecutors::fixed,
+        NoopServiceEmitter.instance()
+    );
+
+    final TestDruidLeaderSelector leaderSelector = new TestDruidLeaderSelector();
+    leaderSelector.becomeLeader();
+
+    return new SqlSegmentMetadataTransactionFactory(
+        objectMapper,
+        derbyConnectorRule.metadataTablesConfigSupplier().get(),
+        derbyConnectorRule.getConnector(),
+        leaderSelector,
+        segmentMetadataCache
+    );
   }
 
   public IndexIO getIndexIO()

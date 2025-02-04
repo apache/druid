@@ -54,8 +54,7 @@ public class SqlSegmentsMetadataManagerSchemaPollTest extends SqlSegmentsMetadat
   public void setUp() throws Exception
   {
     connector = derbyConnectorRule.getConnector();
-    SegmentsMetadataManagerConfig config = new SegmentsMetadataManagerConfig();
-    config.setPollDuration(Period.seconds(3));
+    SegmentsMetadataManagerConfig config = new SegmentsMetadataManagerConfig(Period.seconds(3), false);
 
     segmentSchemaCache = new SegmentSchemaCache(new NoopServiceEmitter());
     segmentSchemaManager = new SegmentSchemaManager(
@@ -130,8 +129,7 @@ public class SqlSegmentsMetadataManagerSchemaPollTest extends SqlSegmentsMetadat
 
     CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig = new CentralizedDatasourceSchemaConfig();
     centralizedDatasourceSchemaConfig.setEnabled(true);
-    config = new SegmentsMetadataManagerConfig();
-    config.setPollDuration(Period.seconds(3));
+    config = new SegmentsMetadataManagerConfig(Period.seconds(3), false);
     sqlSegmentsMetadataManager = new SqlSegmentsMetadataManager(
         jsonMapper,
         Suppliers.ofInstance(config),
@@ -219,8 +217,7 @@ public class SqlSegmentsMetadataManagerSchemaPollTest extends SqlSegmentsMetadat
 
     CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig = new CentralizedDatasourceSchemaConfig();
     centralizedDatasourceSchemaConfig.setEnabled(true);
-    config = new SegmentsMetadataManagerConfig();
-    config.setPollDuration(Period.seconds(3));
+    config = new SegmentsMetadataManagerConfig(Period.seconds(3), false);
     sqlSegmentsMetadataManager = new SqlSegmentsMetadataManager(
         jsonMapper,
         Suppliers.ofInstance(config),
