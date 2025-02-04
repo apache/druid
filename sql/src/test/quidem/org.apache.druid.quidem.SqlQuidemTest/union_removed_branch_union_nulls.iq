@@ -51,8 +51,8 @@ DruidProject(EXPR$0=[CAST($0):BIGINT], channel=[CAST($1):VARCHAR], druid=[logica
     "outputType" : "LONG"
   } ],
   "resultFormat" : "compactedList",
-  "columns" : [ "EXPR$1", "v0" ],
-  "columnTypes" : [ "STRING", "LONG" ],
+  "columns" : [ "v0", "EXPR$1" ],
+  "columnTypes" : [ "LONG", "STRING" ],
   "granularity" : {
     "type" : "all"
   },
