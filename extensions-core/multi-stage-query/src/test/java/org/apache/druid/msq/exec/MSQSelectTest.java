@@ -148,7 +148,6 @@ public class MSQSelectTest extends MSQTestBase
 
     return Arrays.asList(data);
   }
-
   @MethodSource("data")
   @ParameterizedTest(name = "{index}:with context {0}")
   public void testCalculator(String contextName, Map<String, Object> context)
@@ -750,10 +749,7 @@ public class MSQSelectTest extends MSQTestBase
         )
         .setExpectedCountersForStageWorkerChannel(
             CounterSnapshotMatcher
-                .with()
-                .rows(!context.containsKey(MultiStageQueryContext.CTX_ROWS_PER_PAGE)
-                      ? new long[]{6}
-                      : new long[]{2, 2, 2}),
+                .with().rows(!context.containsKey(MultiStageQueryContext.CTX_ROWS_PER_PAGE) ? new long[] {6} : new long[] {2, 2, 2}),
             1, 0, "shuffle"
         )
         .setExpectedResultRows(expectedResults)
@@ -1583,9 +1579,9 @@ public class MSQSelectTest extends MSQTestBase
                              .context(defaultScanQueryContext(
                                  multipleWorkerContext,
                                  RowSignature.builder()
-                                             .add("v0", ColumnType.LONG)
-                                             .add("user", ColumnType.STRING)
-                                             .build()
+                                     .add("v0", ColumnType.LONG)
+                                     .add("user", ColumnType.STRING)
+                                     .build()
                              ))
                              .build();
 
@@ -1899,8 +1895,7 @@ public class MSQSelectTest extends MSQTestBase
                                      .build();
 
     testSelectQuery()
-        .setSql(
-            "SELECT dim1, cnt FROM (SELECT dim1, COUNT(*) AS cnt FROM foo GROUP BY dim1 HAVING dim1 != '' LIMIT 1) LIMIT 20")
+        .setSql("SELECT dim1, cnt FROM (SELECT dim1, COUNT(*) AS cnt FROM foo GROUP BY dim1 HAVING dim1 != '' LIMIT 1) LIMIT 20")
         .setExpectedMSQSpec(MSQSpec.builder()
                                    .query(query)
                                    .columnMappings(new ColumnMappings(ImmutableList.of(
@@ -1931,24 +1926,15 @@ public class MSQSelectTest extends MSQTestBase
     GroupByQuery query = GroupByQuery.builder()
                                      .setDataSource(
                                          new ExternalDataSource(
-                                             new InlineInputSource(
-                                                 "dim1\nabc\nxyz\ndef\nxyz\nabc\nxyz\nabc\nxyz\ndef\nbbb\naaa"),
+                                             new InlineInputSource("dim1\nabc\nxyz\ndef\nxyz\nabc\nxyz\nabc\nxyz\ndef\nbbb\naaa"),
                                              new CsvInputFormat(null, null, null, true, 0, null),
                                              RowSignature.builder().add("dim1", ColumnType.STRING).build()
                                          )
                                      )
                                      .setInterval(querySegmentSpec(Filtration.eternity()))
                                      .setGranularity(Granularities.ALL)
-                                     .addOrderByColumn(new OrderByColumnSpec(
-                                         "a0",
-                                         OrderByColumnSpec.Direction.DESCENDING,
-                                         StringComparators.NUMERIC
-                                     ))
-                                     .addOrderByColumn(new OrderByColumnSpec(
-                                         "d0",
-                                         OrderByColumnSpec.Direction.ASCENDING,
-                                         StringComparators.LEXICOGRAPHIC
-                                     ))
+                                     .addOrderByColumn(new OrderByColumnSpec("a0", OrderByColumnSpec.Direction.DESCENDING, StringComparators.NUMERIC))
+                                     .addOrderByColumn(new OrderByColumnSpec("d0", OrderByColumnSpec.Direction.ASCENDING, StringComparators.LEXICOGRAPHIC))
                                      .setDimensions(dimensions(new DefaultDimensionSpec("dim1", "d0")))
                                      .setAggregatorSpecs(
                                          aggregators(
@@ -2034,10 +2020,7 @@ public class MSQSelectTest extends MSQTestBase
         )
         .setExpectedCountersForStageWorkerChannel(
             CounterSnapshotMatcher
-                .with()
-                .rows(!context.containsKey(MultiStageQueryContext.CTX_ROWS_PER_PAGE)
-                      ? new long[]{4}
-                      : new long[]{2, 2}),
+                .with().rows(!context.containsKey(MultiStageQueryContext.CTX_ROWS_PER_PAGE) ? new long[] {4} : new long[] {2, 2}),
             2, 0, "shuffle"
         )
         .setQueryContext(context)
@@ -2439,8 +2422,7 @@ public class MSQSelectTest extends MSQTestBase
 
   @MethodSource("data")
   @ParameterizedTest(name = "{index}:with context {0}")
-  public void testGroupByOnFooWithDurableStoragePathAssertions(String contextName, Map<String, Object> context)
-      throws IOException
+  public void testGroupByOnFooWithDurableStoragePathAssertions(String contextName, Map<String, Object> context) throws IOException
   {
     RowSignature rowSignature = RowSignature.builder()
                                             .add("cnt", ColumnType.LONG)
@@ -2706,8 +2688,7 @@ public class MSQSelectTest extends MSQTestBase
     );
 
     testSelectQuery()
-        .setSql(
-            "SELECT d3 FROM (select * from druid.foo where dim2='a' LIMIT 10), UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3)")
+        .setSql("SELECT d3 FROM (select * from druid.foo where dim2='a' LIMIT 10), UNNEST(MV_TO_ARRAY(dim3)) as unnested (d3)")
         .setExpectedMSQSpec(
             MSQSpec.builder()
                    .query(newScanQueryBuilder()

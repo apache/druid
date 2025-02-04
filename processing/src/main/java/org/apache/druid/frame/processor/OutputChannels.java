@@ -78,7 +78,7 @@ public class OutputChannels
   /**
    * Verifies there is exactly one channel per partition.
    */
-  public OutputChannels sanityCheck()
+  public OutputChannels verifySingleChannel()
   {
     for (int partitionNumber : getPartitionNumbers()) {
       final List<OutputChannel> outputChannelsForPartition =

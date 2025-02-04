@@ -424,8 +424,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
     ObjectMapper secondMapper = setupObjectMapper(secondInjector);
     indexIO = new IndexIO(secondMapper, ColumnConfig.DEFAULT);
 
-    segmentCacheManager = new SegmentCacheManagerFactory(TestIndex.INDEX_IO, secondMapper).manufacturate(newTempFolder(
-        "cacheManager"));
+    segmentCacheManager = new SegmentCacheManagerFactory(TestIndex.INDEX_IO, secondMapper).manufacturate(newTempFolder("cacheManager"));
 
     MSQSqlModule sqlModule = new MSQSqlModule();
 
@@ -469,10 +468,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
           binder.bind(QueryProcessingPool.class)
                 .toInstance(new ForwardingQueryProcessingPool(Execs.singleThreaded("Test-runner-processing-pool")));
           binder.bind(DataSegmentProvider.class)
-                .toInstance((segmentId, channelCounters, isReindex) -> getSupplierForSegment(
-                    this::newTempFolder,
-                    segmentId
-                ));
+                .toInstance((segmentId, channelCounters, isReindex) -> getSupplierForSegment(this::newTempFolder, segmentId));
           binder.bind(DataServerQueryHandlerFactory.class).toInstance(getTestDataServerQueryHandlerFactory());
           binder.bind(IndexIO.class).toInstance(indexIO);
           binder.bind(SpecificSegmentsQuerySegmentWalker.class).toInstance(qf.walker());
@@ -745,10 +741,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
                                          .shardSpec(new LinearShardSpec(0))
                                          .size(0)
                                          .build();
-    return () -> ReferenceCountingResourceHolder.fromCloseable(new CompleteSegment(
-        dataSegment,
-        segmentManager.getSegment(segmentId)
-    ));
+    return () -> ReferenceCountingResourceHolder.fromCloseable(new CompleteSegment(dataSegment, segmentManager.getSegment(segmentId)));
   }
 
   public SelectTester testSelectQuery()

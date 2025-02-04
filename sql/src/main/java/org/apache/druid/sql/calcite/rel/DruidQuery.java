@@ -474,7 +474,9 @@ public class DruidQuery
    * @param rowSignature          source row signature
    * @param virtualColumnRegistry re-usable virtual column references
    * @param typeFactory           factory for SQL types
+   *
    * @return dimensions
+   *
    * @throws CannotBuildQueryException if dimensions cannot be computed
    */
   private static List<DimensionExpression> computeDimensions(
@@ -513,10 +515,7 @@ public class DruidQuery
       }
       if (!outputType.getNullableStrategy().groupable()) {
         // Can't group on 'ungroupable' types.
-        plannerContext.setPlanningError(
-            "SQL requires a group-by on a column with type [%s] that is unsupported.",
-            outputType
-        );
+        plannerContext.setPlanningError("SQL requires a group-by on a column with type [%s] that is unsupported.", outputType);
         throw new CannotBuildQueryException(aggregate, rexNode);
       }
       final String dimOutputName = outputNamePrefix + outputNameCounter++;
@@ -588,7 +587,9 @@ public class DruidQuery
    * @param finalizeAggregations  true if this query should include explicit finalization for all of its
    *                              aggregators, where required. Useful for subqueries where Druid's native query layer
    *                              does not do this automatically.
+   *
    * @return aggregations
+   *
    * @throws CannotBuildQueryException if dimensions cannot be computed
    */
   private static List<Aggregation> computeAggregations(
@@ -612,7 +613,10 @@ public class DruidQuery
           rowSignature,
           virtualColumnRegistry,
           rexBuilder,
-          InputAccessor.buildFor(aggregate, partialQuery.getSelectProject(), rowSignature),
+          InputAccessor.buildFor(
+              aggregate,
+              partialQuery.getSelectProject(),
+              rowSignature),
           aggregations,
           aggName,
           aggCall,
@@ -909,7 +913,7 @@ public class DruidQuery
   private static boolean canUseIntervalFiltering(final DataSource dataSource)
   {
     final DataSourceAnalysis analysis = dataSource.getAnalysis();
-    return analysis.getBaseQuery().isEmpty() && analysis.isTableBased();
+    return !analysis.getBaseQuery().isPresent() && analysis.isTableBased();
   }
 
   private static Filtration toFiltration(
@@ -1513,7 +1517,13 @@ public class DruidQuery
       operators = windowing.getOperators();
     } else {
       operators = ImmutableList.<OperatorFactory>builder()
-                               .add(new ScanOperatorFactory(null, null, null, null, virtualColumns, null))
+                               .add(new ScanOperatorFactory(
+                                   null,
+                                   null,
+                                   null,
+                                   null,
+                                   virtualColumns,
+                                   null))
                                .addAll(windowing.getOperators())
                                .build();
     }
@@ -1534,7 +1544,6 @@ public class DruidQuery
         pushLeafOperator ? null : ImmutableList.of()
     );
   }
-
   /**
    * Create an OperatorQuery which runs an order on top of a scan.
    */
@@ -1546,26 +1555,20 @@ public class DruidQuery
         || (sorting.getProjection() != null && !sorting.getProjection().getVirtualColumns().isEmpty())) {
       return null;
     }
-
     ScanQuery scan = toScanQuery(false);
     if (scan == null) {
       return null;
     }
-
     if (dataSource.isConcrete()) {
       // Currently only non-time orderings of subqueries are allowed.
       setPlanningErrorOrderByNonTimeIsUnsupported();
       return null;
     }
-
     QueryDataSource newDataSource = new QueryDataSource(scan);
     List<ColumnWithDirection> sortColumns = getColumnWithDirectionsFromOrderBys(sorting.getOrderBys());
     RowSignature signature = getOutputRowSignature();
     List<OperatorFactory> operators = new ArrayList<>();
-
     operators.add(new NaiveSortOperatorFactory(sortColumns));
-
-
     final Projection projection = sorting.getProjection();
 
     final org.apache.druid.query.operator.OffsetLimit offsetLimit = sorting.getOffsetLimit().isNone()
@@ -1588,7 +1591,6 @@ public class DruidQuery
           )
       );
     }
-
     return new WindowOperatorQuery(
         newDataSource,
         new LegacySegmentSpec(Intervals.ETERNITY),
@@ -1598,19 +1600,16 @@ public class DruidQuery
         null
     );
   }
-
   private void setPlanningErrorOrderByNonTimeIsUnsupported()
   {
     List<String> orderByColumnNames = sorting.getOrderBys()
-                                             .stream()
-                                             .map(OrderByColumnSpec::getDimension)
+                                             .stream().map(OrderByColumnSpec::getDimension)
                                              .collect(Collectors.toList());
     plannerContext.setPlanningError(
         "SQL query requires ordering a table by non-time column [%s], which is not supported.",
         orderByColumnNames
     );
   }
-
   private ArrayList<ColumnWithDirection> getColumnWithDirectionsFromOrderBys(List<OrderByColumnSpec> orderBys)
   {
     ArrayList<ColumnWithDirection> ordering = new ArrayList<>();
@@ -1625,7 +1624,6 @@ public class DruidQuery
 
   /**
    * Return this query as a Scan query, or null if this query is not compatible with Scan.
-   *
    * @param considerSorting can be used to ignore the current sorting requirements {@link #toScanAndSortQuery()} uses it to produce the non-sorted part
    * @return query or null
    */
@@ -1636,13 +1634,11 @@ public class DruidQuery
       // Scan cannot GROUP BY or do windows.
       return null;
     }
-
     if (outputRowSignature.size() == 0) {
       // Should never do a scan query without any columns that we're interested in. This is probably a planner bug.
       this.plannerContext.setPlanningError("Cannot convert to Scan query without any columns.");
       return null;
     }
-
     final Pair<DataSource, Filtration> dataSourceFiltrationPair = getFiltration(
         dataSource,
         filter,
@@ -1651,25 +1647,19 @@ public class DruidQuery
     );
     final DataSource newDataSource = dataSourceFiltrationPair.lhs;
     final Filtration filtration = dataSourceFiltrationPair.rhs;
-
     final List<OrderBy> orderByColumns;
     long scanOffset = 0L;
     long scanLimit = 0L;
-
     if (considerSorting && sorting != null) {
       scanOffset = sorting.getOffsetLimit().getOffset();
-
       if (sorting.getOffsetLimit().hasLimit()) {
         final long limit = sorting.getOffsetLimit().getLimit();
-
         if (limit == 0) {
           // Can't handle zero limit (the Scan query engine would treat it as unlimited).
           return null;
         }
-
         scanLimit = limit;
       }
-
       orderByColumns = sorting.getOrderBys().stream().map(
           orderBy ->
               new OrderBy(
@@ -1679,14 +1669,13 @@ public class DruidQuery
                   : Order.ASCENDING
               )
       ).collect(Collectors.toList());
-
     } else {
       orderByColumns = Collections.emptyList();
     }
 
     if (!plannerContext.featureAvailable(EngineFeature.SCAN_ORDER_BY_NON_TIME) && !orderByColumns.isEmpty()) {
-      if (orderByColumns.size() > 1 || !ColumnHolder.TIME_COLUMN_NAME.equals(Iterables.getOnlyElement(orderByColumns)
-                                                                                     .getColumnName())) {
+      if (orderByColumns.size() > 1
+          || orderByColumns.stream().anyMatch(orderBy -> !orderBy.getColumnName().equals(ColumnHolder.TIME_COLUMN_NAME))) {
         if (!plannerContext.queryContext().isDecoupledMode()) {
           // We cannot handle this ordering, but we encounter this ordering as part of the exploration of the volcano
           // planner, which means that the query that we are looking right now might only be doing this as one of the
@@ -1696,17 +1685,13 @@ public class DruidQuery
           setPlanningErrorOrderByNonTimeIsUnsupported();
         }
         return null;
-
       }
     }
-
     // Deduplicate column list
     final Set<String> scanColumns = new LinkedHashSet<>(outputRowSignature.getColumnNames());
     orderByColumns.forEach(column -> scanColumns.add(column.getColumnName()));
-
     final VirtualColumns virtualColumns = getVirtualColumns(true);
     final ImmutableList<String> scanColumnsList = ImmutableList.copyOf(scanColumns);
-
     return new ScanQuery(
         newDataSource,
         filtration.getQuerySegmentSpec(),
@@ -1731,7 +1716,7 @@ public class DruidQuery
   /**
    * Returns a copy of "queryContext" with {@link #CTX_SCAN_SIGNATURE} added if the execution context has the
    * {@link EngineFeature#SCAN_NEEDS_SIGNATURE} feature.
-   * <p>
+   *
    * {@link Deprecated} Instead of the context value {@link ScanQuery#getRowSignature()} can be used.
    */
   @Deprecated

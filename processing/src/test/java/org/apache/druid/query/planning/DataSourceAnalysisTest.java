@@ -273,13 +273,7 @@ public class DataSourceAnalysisTest
         ImmutableList.of(
             new PreJoinableClause("1.", LOOKUP_LOOKYLOO, JoinType.INNER, joinClause("1."), JoinAlgorithm.BROADCAST),
             new PreJoinableClause("2.", INLINE, JoinType.LEFT, joinClause("2."), JoinAlgorithm.BROADCAST),
-            new PreJoinableClause(
-                "3.",
-                subquery(LOOKUP_LOOKYLOO),
-                JoinType.FULL,
-                joinClause("3."),
-                JoinAlgorithm.BROADCAST
-            )
+            new PreJoinableClause("3.", subquery(LOOKUP_LOOKYLOO), JoinType.FULL, joinClause("3."), JoinAlgorithm.BROADCAST)
         ),
         analysis.getPreJoinableClauses()
     );
@@ -330,13 +324,7 @@ public class DataSourceAnalysisTest
         ImmutableList.of(
             new PreJoinableClause("1.", LOOKUP_LOOKYLOO, JoinType.INNER, joinClause("1."), JoinAlgorithm.BROADCAST),
             new PreJoinableClause("2.", INLINE, JoinType.LEFT, joinClause("2."), JoinAlgorithm.BROADCAST),
-            new PreJoinableClause(
-                "3.",
-                subquery(LOOKUP_LOOKYLOO),
-                JoinType.FULL,
-                joinClause("3."),
-                JoinAlgorithm.BROADCAST
-            )
+            new PreJoinableClause("3.", subquery(LOOKUP_LOOKYLOO), JoinType.FULL, joinClause("3."), JoinAlgorithm.BROADCAST)
         ),
         analysis.getPreJoinableClauses()
     );
@@ -391,13 +379,7 @@ public class DataSourceAnalysisTest
     Assert.assertEquals(Optional.empty(), analysis.getBaseQuerySegmentSpec());
     Assert.assertEquals(
         ImmutableList.of(
-            new PreJoinableClause(
-                "3.",
-                rightLeaningJoinStack,
-                JoinType.RIGHT,
-                joinClause("3."),
-                JoinAlgorithm.BROADCAST
-            )
+            new PreJoinableClause("3.", rightLeaningJoinStack, JoinType.RIGHT, joinClause("3."), JoinAlgorithm.BROADCAST)
         ),
         analysis.getPreJoinableClauses()
     );
@@ -447,13 +429,7 @@ public class DataSourceAnalysisTest
     Assert.assertEquals(Optional.empty(), analysis.getBaseQuerySegmentSpec());
     Assert.assertEquals(
         ImmutableList.of(
-            new PreJoinableClause(
-                "3.",
-                rightLeaningJoinStack,
-                JoinType.RIGHT,
-                joinClause("3."),
-                JoinAlgorithm.BROADCAST
-            )
+            new PreJoinableClause("3.", rightLeaningJoinStack, JoinType.RIGHT, joinClause("3."), JoinAlgorithm.BROADCAST)
         ),
         analysis.getPreJoinableClauses()
     );

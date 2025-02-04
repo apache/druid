@@ -111,18 +111,18 @@ public class OutputChannelsTest
     ));
     final IllegalStateException e = Assert.assertThrows(
         IllegalStateException.class,
-        channelsDuplicatedPartition::sanityCheck
+        channelsDuplicatedPartition::verifySingleChannel
     );
     Assert.assertEquals("Expected one channel for partition [1], but got [2]", e.getMessage());
 
     final OutputChannels channelsNegativePartition = OutputChannels.wrap(ImmutableList.of(OutputChannel.nil(-1)));
     final IllegalStateException e2 = Assert.assertThrows(
         IllegalStateException.class,
-        channelsNegativePartition::sanityCheck
+        channelsNegativePartition::verifySingleChannel
     );
     Assert.assertEquals("Expected partitionNumber >= 0, but got [-1]", e2.getMessage());
 
     final OutputChannels channels = OutputChannels.wrap(ImmutableList.of(OutputChannel.nil(1), OutputChannel.nil(2)));
-    Assert.assertEquals(channels, channels.sanityCheck());
+    Assert.assertEquals(channels, channels.verifySingleChannel());
   }
 }
