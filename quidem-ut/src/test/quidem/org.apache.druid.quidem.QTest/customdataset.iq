@@ -1,8 +1,8 @@
-!use druidtest://?componentSupplier=StandardComponentSupplier&datasets=examples/quickstart/tutorial/wikipedia-index.json
+!use druidtest://?componentSupplier=StandardComponentSupplier&datasets=examples/quickstart/tutorial/rollup-index.json
 !set outputformat mysql
 
 
-select count(1) from wikipedia;
+select count(1) from "rollup-tutorial";
 +--------+
 | EXPR$0 |
 +--------+
