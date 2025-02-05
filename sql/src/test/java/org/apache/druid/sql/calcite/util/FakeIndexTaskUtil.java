@@ -25,6 +25,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;
+import org.apache.druid.data.input.impl.LocalInputSource;
+import org.apache.druid.quidem.ProjectPathUtils;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.IOConfig;
 import org.apache.druid.segment.indexing.IngestionSpec;
@@ -49,16 +51,37 @@ public class FakeIndexTaskUtil
       om.registerSubtypes(new NamedType(MyIOConfigType.class, "index_parallel"));
       FakeIndexTask indexTask = om.readValue(src, FakeIndexTask.class);
       FakeIngestionSpec spec = indexTask.spec;
+      InputSource inputSource = relativizeLocalInputSource(
+          spec.getIOConfig().inputSource, ProjectPathUtils.PROJECT_ROOT
+      );
       TestDataSet dataset = new InputSourceBasedTestDataset(
           spec.getDataSchema(),
           spec.getIOConfig().inputFormat,
-          spec.getIOConfig().inputSource
+          inputSource
       );
       return dataset;
     }
     catch (IOException e) {
       throw new RuntimeException(e);
     }
+  }
+
+  private static InputSource relativizeLocalInputSource(InputSource inputSource, File projectRoot)
+  {
+    if (!(inputSource instanceof LocalInputSource)) {
+      return inputSource;
+    }
+    LocalInputSource localInputSource = (LocalInputSource) inputSource;
+    if (localInputSource.getBaseDir().isAbsolute()) {
+      return inputSource;
+    }
+    File newBaseDir = localInputSource.getBaseDir().toPath().resolve(projectRoot.toPath()).toFile();
+    return new LocalInputSource(
+        newBaseDir,
+        localInputSource.getFilter(),
+        localInputSource.getFiles(),
+        localInputSource.getSystemFields()
+    );
   }
 
   static class FakeIndexTask
@@ -72,8 +95,7 @@ public class FakeIndexTaskUtil
     @JsonCreator
     public FakeIngestionSpec(
         @JsonProperty("dataSchema") DataSchema dataSchema,
-        @JsonProperty("ioConfig") MyIOConfigType ioConfig
-    )
+        @JsonProperty("ioConfig") MyIOConfigType ioConfig)
     {
       super(dataSchema, ioConfig, null);
     }

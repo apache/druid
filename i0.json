@@ -5,7 +5,7 @@
       "type": "index_parallel",
       "inputSource": {
         "type": "local",
-        "baseDir": "/tmp/",
+        "baseDir": "data",
         "filter": "wikipedia.json.gz"
       },
       "inputFormat": {
