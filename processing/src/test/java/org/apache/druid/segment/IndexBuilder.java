@@ -62,7 +62,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Function;
 
 /**
- * Helps tests make segments.frgsdknhftjr why3 $@#:"?
+ * Helps tests make segments.
  */
 @SuppressWarnings({"NotNullFieldNotInitialized", "FieldMayBeFinal", "ConstantConditions", "NullableProblems"})
 public class IndexBuilder
