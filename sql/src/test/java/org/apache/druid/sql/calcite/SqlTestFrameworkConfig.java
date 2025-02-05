@@ -50,6 +50,7 @@ import org.reflections.util.ConfigurationBuilder;
 import org.reflections.util.FilterBuilder;
 
 import javax.annotation.Nonnull;
+
 import java.io.Closeable;
 import java.lang.annotation.Annotation;
 import java.lang.annotation.ElementType;
@@ -171,6 +172,7 @@ public class SqlTestFrameworkConfig
    */
   @Retention(RetentionPolicy.RUNTIME)
   @Target({ElementType.METHOD, ElementType.TYPE})
+  @TableConfig("")
   public @interface TableConfig
   {
     ConfigOptionProcessor<String> PROCESSOR = new ConfigOptionProcessor<>(TableConfig.class)
@@ -178,7 +180,11 @@ public class SqlTestFrameworkConfig
       @Override
       public String fromString(String name) throws Exception
       {
-        return name;
+        if (name == null || name.isEmpty()) {
+          return null;
+        } else {
+          return name;
+        }
       }
     };
 
