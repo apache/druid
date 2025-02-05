@@ -29,6 +29,7 @@ public interface TestDataSet
   public static final String TIMESTAMP_COLUMN = "t";
 
   public static final MapBasedTestDataset NUMFOO = new NumFoo();
+  public static final MapBasedTestDataset BROADCAST = new NumFoo("broadcast");
 
   String getName();
 

@@ -33,7 +33,6 @@ import org.apache.druid.data.input.ResourceInputSource;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.DoubleDimensionSchema;
-import org.apache.druid.data.input.impl.FloatDimensionSchema;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.MapInputRowParser;
@@ -91,6 +90,7 @@ import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFacto
 import org.apache.druid.server.QueryScheduler;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
+import org.apache.druid.sql.calcite.util.datasets.TestDataSet;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
@@ -159,28 +159,7 @@ public class TestDataBuilder
       null
   );
 
-  private static final InputRowSchema NUMFOO_SCHEMA = new InputRowSchema(
-      new TimestampSpec(TIMESTAMP_COLUMN, "iso", null),
-      new DimensionsSpec(
-          ImmutableList.<DimensionSchema>builder()
-                       .addAll(DimensionsSpec.getDefaultSchemas(ImmutableList.of(
-                           "dim1",
-                           "dim2",
-                           "dim3",
-                           "dim4",
-                           "dim5",
-                           "dim6"
-                       )))
-                       .add(new DoubleDimensionSchema("dbl1"))
-                       .add(new DoubleDimensionSchema("dbl2"))
-                       .add(new FloatDimensionSchema("f1"))
-                       .add(new FloatDimensionSchema("f2"))
-                       .add(new LongDimensionSchema("l1"))
-                       .add(new LongDimensionSchema("l2"))
-                       .build()
-      ),
-      null
-  );
+  private static final InputRowSchema NUMFOO_SCHEMA = TestDataSet.NUMFOO.getInputRowSchema();
 
   private static final InputRowSchema LOTS_OF_COLUMNS_SCHEMA = new InputRowSchema(
       new TimestampSpec("timestamp", "millis", null),
@@ -244,16 +223,7 @@ public class TestDataBuilder
       .withRollup(false)
       .build();
 
-  public static final IncrementalIndexSchema INDEX_SCHEMA_NUMERIC_DIMS = new IncrementalIndexSchema.Builder()
-      .withMetrics(
-          new CountAggregatorFactory("cnt"),
-          new FloatSumAggregatorFactory("m1", "m1"),
-          new DoubleSumAggregatorFactory("m2", "m2"),
-          new HyperUniquesAggregatorFactory("unique_dim1", "dim1")
-      )
-      .withDimensionsSpec(NUMFOO_SCHEMA.getDimensionsSpec())
-      .withRollup(false)
-      .build();
+  public static final IncrementalIndexSchema INDEX_SCHEMA_NUMERIC_DIMS = TestDataSet.NUMFOO.getIndexSchema();
 
   public static final IncrementalIndexSchema INDEX_SCHEMA_LOTS_O_COLUMNS = new IncrementalIndexSchema.Builder()
       .withMetrics(
@@ -466,8 +436,7 @@ public class TestDataBuilder
                   .put("dim6", "6")
                   .build()
   );
-  public static final List<InputRow> ROWS1_WITH_NUMERIC_DIMS =
-      RAW_ROWS1_WITH_NUMERIC_DIMS.stream().map(raw -> createRow(raw, NUMFOO_SCHEMA)).collect(Collectors.toList());
+  public static final List<InputRow> ROWS1_WITH_NUMERIC_DIMS = ImmutableList.copyOf(TestDataSet.NUMFOO.getRows());
 
   public static final List<ImmutableMap<String, Object>> RAW_ROWS2 = ImmutableList.of(
       ImmutableMap.<String, Object>builder()
@@ -796,14 +765,6 @@ public class TestDataBuilder
         .rows(FORBIDDEN_ROWS)
         .buildMMappedIndex();
 
-    final QueryableIndex indexNumericDims = IndexBuilder
-        .create()
-        .tmpDir(new File(tmpDir, "3"))
-        .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
-        .schema(INDEX_SCHEMA_NUMERIC_DIMS)
-        .rows(ROWS1_WITH_NUMERIC_DIMS)
-        .buildMMappedIndex();
-
     final QueryableIndex index4 = IndexBuilder
         .create()
         .tmpDir(new File(tmpDir, "4"))
@@ -905,14 +866,8 @@ public class TestDataBuilder
                    .build(),
         forbiddenIndex
     ).add(
-        DataSegment.builder()
-                   .dataSource(CalciteTests.DATASOURCE3)
-                   .interval(indexNumericDims.getDataInterval())
-                   .version("1")
-                   .shardSpec(new LinearShardSpec(0))
-                   .size(0)
-                   .build(),
-        indexNumericDims
+        TestDataSet.NUMFOO,
+        new File(tmpDir, "3")
     ).add(
         DataSegment.builder()
                    .dataSource(CalciteTests.DATASOURCE4)
@@ -950,14 +905,8 @@ public class TestDataBuilder
                    .build(),
         someXDatasourceIndex
     ).add(
-        DataSegment.builder()
-                   .dataSource(CalciteTests.BROADCAST_DATASOURCE)
-                   .interval(indexNumericDims.getDataInterval())
-                   .version("1")
-                   .shardSpec(new LinearShardSpec(0))
-                   .size(0)
-                   .build(),
-        indexNumericDims
+        TestDataSet.BROADCAST,
+        new File(tmpDir,"3a")
     ).add(
         DataSegment.builder()
                    .dataSource(CalciteTests.USERVISITDATASOURCE)
