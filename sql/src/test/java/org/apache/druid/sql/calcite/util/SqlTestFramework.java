@@ -32,7 +32,6 @@ import com.google.inject.TypeLiteral;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.collections.NonBlockingPool;
-import org.apache.druid.data.input.impl.HttpInputSourceConfig;
 import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.guice.ExpressionModule;
@@ -743,12 +742,6 @@ public class SqlTestFramework
     ServiceEmitter getServiceEmitter()
     {
       return NoopServiceEmitter.instance();
-    }
-
-    @Provides
-    public HttpInputSourceConfig makeHttpInputSourceConfig()
-    {
-      return new HttpInputSourceConfig(null, null);
     }
 
     @Provides

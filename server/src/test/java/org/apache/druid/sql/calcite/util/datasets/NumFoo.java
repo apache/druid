@@ -49,6 +49,7 @@ public class NumFoo extends MapBasedTestDataset
     super(name);
   }
 
+  @Override
   public final InputRowSchema getInputRowSchema()
   {
     return new InputRowSchema(
@@ -90,6 +91,7 @@ public class NumFoo extends MapBasedTestDataset
     );
   }
 
+  @Override
   public List<Map<String, Object>> getRawRows()
   {
     return ImmutableList.of(
