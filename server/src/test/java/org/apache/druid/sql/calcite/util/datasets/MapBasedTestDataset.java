@@ -71,8 +71,8 @@ public abstract class MapBasedTestDataset implements TestDataSet
   {
     return IndexBuilder
         .create()
-        .tmpDir(new File(tmpDir,"idx"))
-        .inputTmpDir(new File(tmpDir,"input"))
+        .tmpDir(new File(tmpDir, "idx"))
+        .inputTmpDir(new File(tmpDir, "input"))
         .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
         .schema(getIndexSchema())
         .rows(getRows())
@@ -115,5 +115,4 @@ public abstract class MapBasedTestDataset implements TestDataSet
   public abstract List<Map<String, Object>> getRawRows();
 
   public abstract List<AggregatorFactory> getMetrics();
-
 }

@@ -82,13 +82,12 @@ public class NumFoo extends MapBasedTestDataset
   @Override
   public List<AggregatorFactory> getMetrics()
   {
-
-      return ImmutableList.of(
-          new CountAggregatorFactory("cnt"),
-          new FloatSumAggregatorFactory("m1", "m1"),
-          new DoubleSumAggregatorFactory("m2", "m2"),
-          new HyperUniquesAggregatorFactory("unique_dim1", "dim1")
-      );
+    return ImmutableList.of(
+        new CountAggregatorFactory("cnt"),
+        new FloatSumAggregatorFactory("m1", "m1"),
+        new DoubleSumAggregatorFactory("m2", "m2"),
+        new HyperUniquesAggregatorFactory("unique_dim1", "dim1")
+    );
   }
 
   public List<Map<String, Object>> getRawRows()

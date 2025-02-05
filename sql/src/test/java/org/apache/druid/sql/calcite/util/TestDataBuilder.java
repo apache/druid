@@ -897,7 +897,7 @@ public class TestDataBuilder
         someXDatasourceIndex
     ).add(
         TestDataSet.BROADCAST,
-        new File(tmpDir,"3a")
+        new File(tmpDir, "3a")
     ).add(
         DataSegment.builder()
                    .dataSource(CalciteTests.USERVISITDATASOURCE)
