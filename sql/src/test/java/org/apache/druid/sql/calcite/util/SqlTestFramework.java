@@ -36,10 +36,7 @@ import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.data.input.InputFormat;
-import org.apache.druid.data.input.InputRow;
-import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.InputSource;
-import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.impl.HttpInputSourceConfig;
 import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.guice.DruidInjectorBuilder;
@@ -53,13 +50,11 @@ import org.apache.druid.guice.ServerModule;
 import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.guice.annotations.Merging;
-import org.apache.druid.indexing.input.InputRowSchemas;
 import org.apache.druid.initialization.CoreInjectorBuilder;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.initialization.ServiceInjectorBuilder;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.io.Closer;
-import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
@@ -1009,6 +1004,7 @@ public class SqlTestFramework
       builder.componentSupplier.addSegmentsToWalker(walker);
 
       for (TestDataSet testDataSet : testDataSets) {
+
         walker.add(testDataSet, builder.componentSupplier.getTempDirProducer().newTempFolder());
       }
 
@@ -1024,23 +1020,14 @@ public class SqlTestFramework
         om.registerSubtypes(new NamedType(MyIOConfigType.class, "index_parallel"));
         FakeIndexTask q = om.readValue(new File("/home/dev/druid/i0.json"), FakeIndexTask.class);
         MyIOConfigType ioc = q.spec.getIOConfig();
+        MyIOConfigType ioConfig = q.spec.getIOConfig();
 
-        return Collections.singletonList(buildTestDataset(q.spec.getDataSchema(), q.spec.getIOConfig(), tdp));
+        TestDataSet dataset = new InputSourceBasedTestDataset(q.spec.getDataSchema(), ioConfig.inputFormat,ioConfig.inputSource);
+        return Collections.singletonList(dataset);
       }
       catch (IOException e) {
         throw new RuntimeException(e);
       }
-    }
-
-    private TestDataSet buildTestDataset(DataSchema dataSchema, MyIOConfigType ioConfig, TempDirProducer tdp) throws IOException
-    {
-      File tempDir=tdp.newTempFolder();
-      InputFormat inputFormat = ioConfig.inputFormat;
-      InputRowSchema inputRowSchema = InputRowSchemas.fromDataSchema(dataSchema);
-      InputSourceReader reader = ioConfig.inputSource.reader(inputRowSchema, inputFormat, tempDir);
-      CloseableIterator<InputRow> r = reader.read();
-
-      return new InputSourceBasedTestDataset(dataSchema, ioConfig.inputFormat,ioConfig.inputSource);
     }
 
     static class FakeIndexTask {

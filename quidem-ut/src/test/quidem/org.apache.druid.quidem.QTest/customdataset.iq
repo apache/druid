@@ -2,5 +2,5 @@
 !set outputformat mysql
 
 
-select count(1) from wikipediax2;
+select count(1) from wikipediaxaa;
 !ok

@@ -71,6 +71,7 @@ public class InputSourceBasedTestDataset implements TestDataSet
   {
     return IndexBuilder
         .create()
+        .inputTmpDir(tmpDir)
         .tmpDir(tmpDir)
         .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
         .schema(getIndexSchema())
@@ -82,6 +83,7 @@ public class InputSourceBasedTestDataset implements TestDataSet
   public IncrementalIndexSchema getIndexSchema()
   {
     return new IncrementalIndexSchema.Builder()
+        .withTimestampSpec(getDataSchema().getTimestampSpec())
         .withMetrics(getDataSchema().getAggregators())
         .withDimensionsSpec(getDataSchema().getDimensionsSpec())
         .withRollup(false)

@@ -71,7 +71,8 @@ public abstract class MapBasedTestDataset implements TestDataSet
   {
     return IndexBuilder
         .create()
-        .tmpDir(tmpDir)
+        .tmpDir(new File(tmpDir,"idx"))
+        .inputTmpDir(new File(tmpDir,"input"))
         .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
         .schema(getIndexSchema())
         .rows(getRows())
