@@ -25,7 +25,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.druid.curator.CuratorUtils;
-import org.apache.druid.curator.announcement.Announcer;
+import org.apache.druid.curator.announcement.NodeAnnouncer;
 import org.apache.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
@@ -54,7 +54,7 @@ public class WorkerCuratorCoordinator
   private final ObjectMapper jsonMapper;
   private final RemoteTaskRunnerConfig config;
   private final CuratorFramework curatorFramework;
-  private final Announcer announcer;
+  private final NodeAnnouncer announcer;
 
   private final String baseAnnouncementsPath;
   private final String baseTaskPath;
@@ -77,7 +77,7 @@ public class WorkerCuratorCoordinator
     this.curatorFramework = curatorFramework;
     this.worker = worker;
 
-    this.announcer = new Announcer(curatorFramework, Execs.directExecutor());
+    this.announcer = new NodeAnnouncer(curatorFramework, Execs.directExecutor());
 
     this.baseAnnouncementsPath = getPath(Arrays.asList(indexerZkConfig.getAnnouncementsPath(), worker.getHost()));
     this.baseTaskPath = getPath(Arrays.asList(indexerZkConfig.getTasksPath(), worker.getHost()));
@@ -87,7 +87,7 @@ public class WorkerCuratorCoordinator
   @LifecycleStart
   public void start() throws Exception
   {
-    log.info("WorkerCuratorCoordinator good to go sir. Server[%s]", worker.getHost());
+    log.info("WorkerCuratorCoordinator good to go. Server[%s]", worker.getHost());
     synchronized (lock) {
       if (started) {
         return;
