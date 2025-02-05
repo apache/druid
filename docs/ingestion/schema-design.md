@@ -259,7 +259,7 @@ When performing type-aware schema discovery, Druid can discover all the columns 
 the exclusion list). Druid automatically chooses the most appropriate native Druid type among `STRING`, `LONG`,
 `DOUBLE`, `ARRAY<STRING>`, `ARRAY<LONG>`, `ARRAY<DOUBLE>`, or `COMPLEX<json>` for nested data. For input formats with
 native boolean types, Druid ingests these values as longs. Array typed columns can be queried using
-the [array functions](../querying/sql-array-functions.md) or [UNNEST](../querying/sql-functions.md#unnest). Nested
+the [array functions](../querying/sql-array-functions.md) or [UNNEST](../querying/sql.md#unnest). Nested
 columns can be queried with the [JSON functions](../querying/sql-json-functions.md).
 
 Mixed type columns follow the same rules for schema differences between segments, and present as the _least_ restrictive
