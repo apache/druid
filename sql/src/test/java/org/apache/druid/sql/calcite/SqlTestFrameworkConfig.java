@@ -33,6 +33,7 @@ import org.apache.druid.query.topn.TopNQueryConfig;
 import org.apache.druid.quidem.DruidAvaticaTestDriver;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.sql.calcite.util.CacheTestHelperModule.ResultCacheMode;
+import org.apache.druid.sql.calcite.util.FakeIndexTaskUtil;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.QueryComponentSupplier;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
@@ -168,7 +169,10 @@ public class SqlTestFrameworkConfig
   }
 
   /**
-   * Declares which {@link QueryComponentSupplier} must be used for the class.
+   * Declares which tables to ingest into this {@link QueryComponentSupplier}.
+   *
+   * Can point to a file or a directory containing files. All files are
+   * interpreted as ingestions via {@link FakeIndexTaskUtil}.
    */
   @Retention(RetentionPolicy.RUNTIME)
   @Target({ElementType.METHOD, ElementType.TYPE})

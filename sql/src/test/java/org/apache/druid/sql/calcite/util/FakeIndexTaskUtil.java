@@ -73,7 +73,6 @@ public class FakeIndexTaskUtil
     public FakeIngestionSpec(
         @JsonProperty("dataSchema") DataSchema dataSchema,
         @JsonProperty("ioConfig") MyIOConfigType ioConfig
-
     )
     {
       super(dataSchema, ioConfig, null);
