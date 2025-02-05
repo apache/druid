@@ -75,6 +75,7 @@ import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.IntegerPartitionChunk;
 import org.apache.druid.timeline.partition.PartitionChunk;
 import org.apache.druid.utils.CloseableUtils;
+import org.apache.druid.utils.JvmUtils;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
@@ -201,11 +202,10 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
     }
 
     // segmentMapFn maps each base Segment into a joined Segment if necessary.
-    final Function<SegmentReference, SegmentReference> segmentMapFn =
-        dataSourceFromQuery.createSegmentMapFunction(
-            query,
-            cpuTimeAccumulator
-        );
+    final Function<SegmentReference, SegmentReference> segmentMapFn = JvmUtils.safeAccumulateThreadCpuTime(
+        cpuTimeAccumulator,
+        () -> dataSourceFromQuery.createSegmentMapFunction(query)
+    );
 
     // We compute the join cache key here itself so it doesn't need to be re-computed for every segment
     final Optional<byte[]> cacheKeyPrefix = Optional.ofNullable(query.getDataSource().getCacheKey());
@@ -453,7 +453,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
     // with subsegments (hydrants).
     return segmentId + "_H" + hydrantNumber;
   }
-  
+
   /**
    * This class is responsible for emitting query/segment/time, query/wait/time and query/segmentAndCache/Time metrics for a Sink.
    * It accumulates query/segment/time and query/segmentAndCache/time metric for each FireHydrant at the level of Sink.
@@ -599,7 +599,7 @@ public class SinkQuerySegmentWalker implements QuerySegmentWalker
       }
     }
   }
-  
+
   private static class SinkHolder implements Overshadowable<SinkHolder>
   {
     private final Sink sink;

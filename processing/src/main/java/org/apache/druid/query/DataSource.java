@@ -30,7 +30,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -113,7 +112,7 @@ public interface DataSource
    * @param cpuTimeAcc the cpu time accumulator
    * @return the segment function
    */
-  Function<SegmentReference, SegmentReference> createSegmentMapFunction(Query query, AtomicLong cpuTimeAcc);
+  Function<SegmentReference, SegmentReference> createSegmentMapFunction(Query query);
 
   /**
    * Returns an updated datasource based on the specified new source.
