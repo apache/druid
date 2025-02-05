@@ -1326,7 +1326,8 @@ The following example returns `true` when a device type, `agent_category`, exist
 SELECT agent_category,
 BLOOM_FILTER_TEST("agent_category", 'BAAAAAgAAACAAEAAAAAAAAAAAEIAAAAAAAAAAAAAAAAAAAAAAAIIAAAAAAAAAAAAAAAAAAIAAAAAAQAAAAAAAAAAAAAA') AS bloom_test
 FROM "kttm"
-GROUP BY 1```
+GROUP BY 1
+```
 
 Returns the following:
 
