@@ -22,6 +22,7 @@ package org.apache.druid.indexing.overlord.setup;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableMap;
+import org.apache.druid.common.config.Configs;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.overlord.ImmutableWorkerInfo;
 import org.apache.druid.indexing.overlord.config.WorkerTaskRunnerConfig;
@@ -32,19 +33,28 @@ import java.util.Objects;
 public class EqualDistributionWithCategorySpecWorkerSelectStrategy implements WorkerSelectStrategy
 {
   private final WorkerCategorySpec workerCategorySpec;
+  private final TaskLimits taskLimits;
 
   @JsonCreator
   public EqualDistributionWithCategorySpecWorkerSelectStrategy(
-      @JsonProperty("workerCategorySpec") WorkerCategorySpec workerCategorySpec
+      @JsonProperty("workerCategorySpec") WorkerCategorySpec workerCategorySpec,
+      @JsonProperty("taskLimits") @Nullable TaskLimits taskLimits
   )
   {
     this.workerCategorySpec = workerCategorySpec;
+    this.taskLimits = Configs.valueOrDefault(taskLimits, new TaskLimits());
   }
 
   @JsonProperty
   public WorkerCategorySpec getWorkerCategorySpec()
   {
     return workerCategorySpec;
+  }
+
+  @JsonProperty
+  public TaskLimits getTaskLimits()
+  {
+    return taskLimits;
   }
 
   @Nullable
@@ -60,7 +70,8 @@ public class EqualDistributionWithCategorySpecWorkerSelectStrategy implements Wo
         zkWorkers,
         config,
         workerCategorySpec,
-        EqualDistributionWorkerSelectStrategy::selectFromEligibleWorkers
+        EqualDistributionWorkerSelectStrategy::selectFromEligibleWorkers,
+        taskLimits
     );
   }
 
@@ -74,7 +85,10 @@ public class EqualDistributionWithCategorySpecWorkerSelectStrategy implements Wo
       return false;
     }
     final EqualDistributionWithCategorySpecWorkerSelectStrategy that = (EqualDistributionWithCategorySpecWorkerSelectStrategy) o;
-    return Objects.equals(workerCategorySpec, that.workerCategorySpec);
+    if (!Objects.equals(workerCategorySpec, that.workerCategorySpec)) {
+      return false;
+    }
+    return Objects.equals(taskLimits, that.taskLimits);
   }
 
   @Override
@@ -88,6 +102,7 @@ public class EqualDistributionWithCategorySpecWorkerSelectStrategy implements Wo
   {
     return "EqualDistributionWithCategorySpecWorkerSelectStrategy{" +
            "workerCategorySpec=" + workerCategorySpec +
+           ", taskLimits=" + taskLimits +
            '}';
   }
 }
