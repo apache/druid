@@ -22,6 +22,7 @@ package org.apache.druid.sql.calcite.util;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
@@ -47,7 +48,6 @@ import org.apache.druid.guice.ServerModule;
 import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.guice.annotations.Merging;
-import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.initialization.CoreInjectorBuilder;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.initialization.ServiceInjectorBuilder;
@@ -76,10 +76,8 @@ import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.topn.TopNQueryConfig;
 import org.apache.druid.quidem.TestSqlModule;
 import org.apache.druid.segment.DefaultColumnFormatConfig;
-import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.column.ColumnConfig;
-import org.apache.druid.segment.incremental.AppendableIndexSpec;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.IOConfig;
 import org.apache.druid.segment.indexing.IngestionSpec;
@@ -1013,7 +1011,9 @@ public class SqlTestFramework
     public List<TestDataSet> buildCustomTables(ObjectMapper objectMapper)
     {
       try {
-        objectMapper.readValue(new File("/tmp/i0.json"), FakeIndexTask.class);
+        ObjectMapper om = objectMapper.copy();
+        om.registerSubtypes(new NamedType(MyIOConfigType.class, "index_parallel"));
+        FakeIndexTask q = om.readValue(new File("/home/dev/druid/i0.json"), FakeIndexTask.class);
         return null;
       }
       catch (IOException e) {
@@ -1026,58 +1026,37 @@ public class SqlTestFramework
       public FakeIngestionSpec spec;
     }
 
-    static class FakeIngestionSpec extends IngestionSpec<MyIOConfigType,MyTuningConfigType>{
+    static class FakeIngestionSpec extends IngestionSpec<MyIOConfigType,TuningConfig>{
 
       @JsonCreator
       public FakeIngestionSpec(
           @JsonProperty("dataSchema") DataSchema dataSchema,
-          @JsonProperty("ioConfig") MyIOConfigType ioConfig,
-          @JsonProperty("tuningConfig") MyTuningConfigType tuningConfig
+          @JsonProperty("ioConfig") MyIOConfigType ioConfig
+
           )
       {
-        super(dataSchema, ioConfig, tuningConfig);
+        super(dataSchema, ioConfig, null);
       }
     }
+
+
     static class MyIOConfigType implements IOConfig{
+public MyIOConfigType()
+{
+  if (true) {
+    throw new RuntimeException("FIXME: Unimplemented!");
+  }
 
+}
     }
+    static class MyIOConfigType2 implements IOConfig{
 
-    static class MyTuningConfigType implements TuningConfig{
-
-      @Override
-      public AppendableIndexSpec getAppendableIndexSpec()
+      public MyIOConfigType2()
       {
+        if (true) {
           throw new RuntimeException("FIXME: Unimplemented!");
-      }
+        }
 
-      @Override
-      public int getMaxRowsInMemory()
-      {
-          throw new RuntimeException("FIXME: Unimplemented!");
-      }
-
-      @Override
-      public long getMaxBytesInMemory()
-      {
-          throw new RuntimeException("FIXME: Unimplemented!");
-      }
-
-      @Override
-      public PartitionsSpec getPartitionsSpec()
-      {
-          throw new RuntimeException("FIXME: Unimplemented!");
-      }
-
-      @Override
-      public IndexSpec getIndexSpec()
-      {
-          throw new RuntimeException("FIXME: Unimplemented!");
-      }
-
-      @Override
-      public IndexSpec getIndexSpecForIntermediatePersists()
-      {
-          throw new RuntimeException("FIXME: Unimplemented!");
       }
     }
 
