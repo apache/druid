@@ -3,4 +3,11 @@
 
 
 select count(1) from wikipediaxaa;
++--------+
+| EXPR$0 |
++--------+
+|  24433 |
++--------+
+(1 row)
+
 !ok

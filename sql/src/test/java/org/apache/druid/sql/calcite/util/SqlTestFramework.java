@@ -19,10 +19,7 @@
 
 package org.apache.druid.sql.calcite.util;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
@@ -35,8 +32,6 @@ import com.google.inject.TypeLiteral;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.collections.NonBlockingPool;
-import org.apache.druid.data.input.InputFormat;
-import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.impl.HttpInputSourceConfig;
 import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.guice.DruidInjectorBuilder;
@@ -80,10 +75,6 @@ import org.apache.druid.quidem.TestSqlModule;
 import org.apache.druid.segment.DefaultColumnFormatConfig;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.column.ColumnConfig;
-import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.indexing.IOConfig;
-import org.apache.druid.segment.indexing.IngestionSpec;
-import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.realtime.ChatHandlerProvider;
 import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
@@ -121,7 +112,6 @@ import org.apache.druid.sql.calcite.schema.DruidSchemaManager;
 import org.apache.druid.sql.calcite.schema.LookupSchema;
 import org.apache.druid.sql.calcite.schema.NoopDruidSchemaManager;
 import org.apache.druid.sql.calcite.schema.SystemSchema;
-import org.apache.druid.sql.calcite.util.datasets.InputSourceBasedTestDataset;
 import org.apache.druid.sql.calcite.util.datasets.TestDataSet;
 import org.apache.druid.sql.calcite.view.DruidViewMacroFactory;
 import org.apache.druid.sql.calcite.view.InProcessViewManager;
@@ -1004,7 +994,6 @@ public class SqlTestFramework
       builder.componentSupplier.addSegmentsToWalker(walker);
 
       for (TestDataSet testDataSet : testDataSets) {
-
         walker.add(testDataSet, builder.componentSupplier.getTempDirProducer().newTempFolder());
       }
 
@@ -1015,57 +1004,8 @@ public class SqlTestFramework
     @LazySingleton
     public List<TestDataSet> buildCustomTables(ObjectMapper objectMapper, TempDirProducer tdp)
     {
-      try {
-        ObjectMapper om = objectMapper.copy();
-        om.registerSubtypes(new NamedType(MyIOConfigType.class, "index_parallel"));
-        FakeIndexTask q = om.readValue(new File("/home/dev/druid/i0.json"), FakeIndexTask.class);
-        MyIOConfigType ioc = q.spec.getIOConfig();
-        MyIOConfigType ioConfig = q.spec.getIOConfig();
-
-        TestDataSet dataset = new InputSourceBasedTestDataset(q.spec.getDataSchema(), ioConfig.inputFormat,ioConfig.inputSource);
-        return Collections.singletonList(dataset);
-      }
-      catch (IOException e) {
-        throw new RuntimeException(e);
-      }
-    }
-
-    static class FakeIndexTask {
-      @JsonProperty
-      public FakeIngestionSpec spec;
-    }
-
-    static class FakeIngestionSpec extends IngestionSpec<MyIOConfigType,TuningConfig>{
-
-      @JsonCreator
-      public FakeIngestionSpec(
-          @JsonProperty("dataSchema") DataSchema dataSchema,
-          @JsonProperty("ioConfig") MyIOConfigType ioConfig
-
-          )
-      {
-        super(dataSchema, ioConfig, null);
-      }
-    }
-
-
-    static class MyIOConfigType implements IOConfig
-    {
-      @JsonProperty
-      public InputSource inputSource;
-      @JsonProperty
-      public InputFormat inputFormat;
-    }
-
-    static class MyIOConfigType2 implements IOConfig{
-
-      public MyIOConfigType2()
-      {
-        if (true) {
-          throw new RuntimeException("FIXME: Unimplemented!");
-        }
-
-      }
+      File src = new File("/home/dev/druid/i0.json");
+      return Collections.singletonList(FakeIndexTaskUtil.makeDS(objectMapper, src));
     }
 
     @Provides
