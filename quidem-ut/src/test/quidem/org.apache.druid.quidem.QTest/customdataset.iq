@@ -1,4 +1,4 @@
-!use druidtest://?componentSupplier=StandardComponentSupplier&tables=sql/src/test/quidem/qa1
+!use druidtest://?componentSupplier=XComponentSupplier
 !set outputformat mysql
 
 

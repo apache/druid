@@ -44,7 +44,7 @@ public class NumFoo extends MapBasedTestDataset
     this("numfoo");
   }
 
-  protected NumFoo(String name)
+  public NumFoo(String name)
   {
     super(name);
   }
@@ -82,6 +82,7 @@ public class NumFoo extends MapBasedTestDataset
   @Override
   public List<AggregatorFactory> getMetrics()
   {
+
       return ImmutableList.of(
           new CountAggregatorFactory("cnt"),
           new FloatSumAggregatorFactory("m1", "m1"),
