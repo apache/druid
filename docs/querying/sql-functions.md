@@ -1291,26 +1291,21 @@ Computes a [Bloom filter](../development/extensions-core/bloom-filter.md) from v
 
 <details><summary>Example</summary>
 
-The following example returns a Base64-encoded Bloom filter string for entries in `agent_category`:
+The following example returns a Base64-encoded Bloom filter representing the set of devices ,`agent_category`, used in Albania:
 
 ```sql
-SELECT
-  agent_category,
-  BLOOM_FILTER(agent_category, 10) as bloom
+SELECT "country",
+  BLOOM_FILTER(agent_category, 10) as albanian_bloom
 FROM "kttm"
-  GROUP BY agent_category
+WHERE "country" = 'Albania'
+GROUP BY "country"
 ```
 
 Returns the following:
 
-| `agent_keys` | `bloom` |
-| -- | -- |
-| `empty` | `"BAAAAAgAAAAAABAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEABAAAAAA"` |
-| `Game console` | `"BAAAAAgAAAAAAAAAAAAAAAAAAAAAAAAAQAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgBAAAAAAAAAAAAAAAA"` |
-| `Personal computer` | `"BAAAAAgAAAAAAEAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAA"` |
-| `Smart TV` | `"BAAAAAgAAAAAAAAAAAAAgAAAAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAA"` |
-| `Smartphone` | `"BAAAAAgAAACAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAA"` |
-| `Tablet` | `"BAAAAAgAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAAAgAAAAAAAAAAAAAAAAAAAAACAAAAAAAAAAAAAAAAAAAAAAIA"` |
+|`country`| `albanian_bloom`|
+|---| --- | 
+|`Albania`|`BAAAAAgAAACAAEAAAAAAAAAAAEIAAAAAAAAAAAAAAAAAAAAAAAIIAAAAAAAAAAAAAAAAAAIAAAAAAQAAAAAAAAAAAAAA`|
 
 </details>
 
@@ -1325,25 +1320,23 @@ Returns true if an expression is contained in a Base64-encoded [Bloom filter](..
 
 <details><summary>Example</summary>
 
-The following example returns `true` for the Bloom filter string associated with `agent_filter` entry `Game console`:
+The following example returns `true` when a device type, `agent_category`, exists in the Bloom filter representing the set of devices used in Albania:
 
 ```sql
-SELECT
-  agent_category,
-  BLOOM_FILTER_TEST(agent_category, 'BAAAAAgAAAAAAAAAAAAAAAAAAAAAAAAAQAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgBAAAAAAAAAAAAAAAA') as bloom
+SELECT agent_category,
+BLOOM_FILTER_TEST("agent_category", 'BAAAAAgAAACAAEAAAAAAAAAAAEIAAAAAAAAAAAAAAAAAAAAAAAIIAAAAAAAAAAAAAAAAAAIAAAAAAQAAAAAAAAAAAAAA') AS bloom_test
 FROM "kttm"
-GROUP BY agent_category
-```
+GROUP BY 1```
 
 Returns the following:
 
-| `agent_keys` | `bloom` |
-| -- | -- |
+| `agent_category` | `bloom_test` |
+| --- | --- |
 | `empty` | `false` |
-| `Game console` | `true` |
-| `Personal computer` | `false` |
+| `Game console` | `false` |
+| `Personal computer` | `true` |
 | `Smart TV` | `false` |
-| `Smartphone` | `false` |
+| `Smartphone` | `true` |
 | `Tablet` | `false` |
 
 </details>
@@ -1814,7 +1807,7 @@ Decodes a Base64-encoded expression into a complex data type.
 You can use the function to ingest data when a column contains an encoded data sketch such as Theta or HLL.
 
 The function supports `hyperUnique` and `serializablePairLongString` data types by default.
-You can enable support for the following complex data types by [loading their extensions](../configuration/extensions.md):
+To enable support for a complex data type, load the [corresponding extension](../configuration/extensions.md):
 
 - `druid-bloom-filter`: `bloom`
 - `druid-datasketches`: `arrayOfDoublesSketch`, `HLLSketch`, `KllDoublesSketch`, `KllFloatsSketch`, `quantilesDoublesSketch`, `thetaSketch`
@@ -1829,16 +1822,13 @@ You can enable support for the following complex data types by [loading their ex
 
 <details><summary>Example</summary>
 
-The following example decodes a Theta sketch from a Base64-encoded sketch contained in `theta_input`:
+The following example returns a Theta sketch complex type from a Base64-encoded string representation of the sketch:
 
 ```sql
-DECODE_BASE64_COMPLEX('thetaSketch', "theta_input")
+SELECT DECODE_BASE64_COMPLEX('thetaSketch','AgMDAAAazJNBAAAAAACAP+k/tkWGkSoFYWMAG0y+3gVabvKcIUNrBv0jAkGsw7sK5szX1k0ScwtMfCQmFP/rDhFK6yU7PPkObZ/Ugw5fcBQZ+GaO+Nt6FP+Whz6TmxkWyRJ+gaQLFhcts1+c0Q/vF9FLFfaVlOkb3/XpXaZ3JhyZ2dG8Di2/HO10sMs9C0AdM4FdHuye6SB+GYinIhTOITOHzB5SAfIiph3de9qIGSM89V+s/TkdI/WZVzK9wF0npfi4ZrmgBSnVjphCtQA5K2fp0x59UCwvMopZarsSkzEo81OIxjznNNXLr1BbQBo1Ei3OxJOoNzVs0x9xzsm4NfgAZSvZQvI1c2TmPsZvlzpW7tmIlizOOsr6pGWoh0U99/tV8RFwhz0SJoWyU1Z2P0hZ5d7KRnZBjlWC+e/FLEKrWsu14rlFRXhsOuxRId9FboEuH9PqMUixI2lB8MhLS803hJDoZ7tMy7Egl+YNU04QM11stXX4Tu96NHHcGiZRuCyciGiTGVQflMLmNt6lW6zIwJy0baNdbwjMCTjtUF7oZOtugWLYYJE9sJU3HuVijc0J10l6SmPslbfY6Fw0Za9w/Zdhn/5nIuKc1WMrYWnAJQJKXY73bHYWq7gI6dRvYdC2fLJyv3F8qwQcOJgFc0GaGXw8KRF3w3IVCwxsMntWhdTkaJ88e++5NFyM1Hd/D79wg0b9vH8=') AS "theta_sketch"
 ```
-The following example counts the distinct values in an encoded Theta sketch column using [`APPROX_COUNT_DISTINCT_DS_THETA`](#approx_count_distinct_ds_theta):
 
-```sql
-APPROX_COUNT_DISTINCT_DS_THETA(DECODE_BASE64_COMPLEX('thetaSketch', "theta_input"))
-```
+You can perform Theta sketch operations on the resulting `COMPLEX<thetaSketch>` value which resembles the input string. 
 
 </details>
 
@@ -1862,7 +1852,7 @@ SELECT
 
 Returns the following:
 
-| `agent_keys` |
+| `decoded` |
 | -- |
 | `Hello, World!` |
 
