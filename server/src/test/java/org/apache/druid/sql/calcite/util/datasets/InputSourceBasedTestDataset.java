@@ -19,44 +19,45 @@
 
 package org.apache.druid.sql.calcite.util.datasets;
 
-import org.apache.druid.data.input.InputRow;
-import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.data.input.InputFormat;
+import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.impl.DimensionSchema;
-import org.apache.druid.data.input.impl.MapInputRowParser;
-import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.RowSignature.Builder;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
+import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.LinearShardSpec;
 
 import java.io.File;
-import java.util.List;
-import java.util.Map;
 
-public abstract class MapBasedTestDataset2 implements TestDataSet
+public class InputSourceBasedTestDataset implements TestDataSet
 {
-  protected final String name;
+  protected final InputSource inputSource;
+  protected final InputFormat inputFormat;
+  protected final DataSchema dataSchema;
 
-  protected MapBasedTestDataset2(String name)
+  public InputSourceBasedTestDataset(DataSchema dataSchema, InputFormat inputFormat, InputSource inputSource)
   {
-    this.name = name;
+    this.inputSource = inputSource;
+    this.inputFormat = inputFormat;
+    this.dataSchema = dataSchema;
   }
 
   @Override
   public String getName()
   {
-    return name;
+    return getDataSchema().getDataSource();
   }
 
   @Override
   public final DataSegment makeSegment(final QueryableIndex index)
   {
     DataSegment segment = DataSegment.builder()
-        .dataSource(name)
+        .dataSource(getName())
         .interval(index.getDataInterval())
         .version("1")
         .shardSpec(new LinearShardSpec(0))
@@ -73,37 +74,41 @@ public abstract class MapBasedTestDataset2 implements TestDataSet
         .tmpDir(tmpDir)
         .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
         .schema(getIndexSchema())
-        .rows(getRows())
+        .inputSource(getInputSource())
+        .inputFormat(getInputFormat())
         .buildMMappedIndex();
   }
 
   public IncrementalIndexSchema getIndexSchema()
   {
     return new IncrementalIndexSchema.Builder()
-        .withMetrics(getMetrics().toArray(new AggregatorFactory[0]))
-        .withDimensionsSpec(getInputRowSchema().getDimensionsSpec())
+        .withMetrics(getDataSchema().getAggregators())
+        .withDimensionsSpec(getDataSchema().getDimensionsSpec())
         .withRollup(false)
         .build();
-  }
-
-  public abstract Iterable<InputRow> getRows();
-
-  public static InputRow createRow(final Map<String, ?> map, InputRowSchema inputRowSchema)
-  {
-    return MapInputRowParser.parse(inputRowSchema, (Map<String, Object>) map);
   }
 
   public RowSignature getInputRowSignature()
   {
     Builder rsBuilder = RowSignature.builder();
-    for (DimensionSchema dimensionSchema : getInputRowSchema().getDimensionsSpec().getDimensions()) {
+    for (DimensionSchema dimensionSchema : getDataSchema().getDimensionsSpec().getDimensions()) {
       rsBuilder.add(dimensionSchema.getName(), dimensionSchema.getColumnType());
     }
     return rsBuilder.build();
   }
 
-  public abstract InputRowSchema getInputRowSchema();
+  protected DataSchema getDataSchema() {
+    return dataSchema;
+  }
 
-  public abstract List<AggregatorFactory> getMetrics();
+  protected InputSource getInputSource() {
+    return inputSource;
+  }
+
+  protected InputFormat getInputFormat() {
+    return inputFormat;
+  }
+
+
 
 }

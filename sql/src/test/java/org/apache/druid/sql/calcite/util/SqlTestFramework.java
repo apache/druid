@@ -126,6 +126,7 @@ import org.apache.druid.sql.calcite.schema.DruidSchemaManager;
 import org.apache.druid.sql.calcite.schema.LookupSchema;
 import org.apache.druid.sql.calcite.schema.NoopDruidSchemaManager;
 import org.apache.druid.sql.calcite.schema.SystemSchema;
+import org.apache.druid.sql.calcite.util.datasets.InputSourceBasedTestDataset;
 import org.apache.druid.sql.calcite.util.datasets.TestDataSet;
 import org.apache.druid.sql.calcite.view.DruidViewMacroFactory;
 import org.apache.druid.sql.calcite.view.InProcessViewManager;
@@ -1039,7 +1040,7 @@ public class SqlTestFramework
       InputSourceReader reader = ioConfig.inputSource.reader(inputRowSchema, inputFormat, tempDir);
       CloseableIterator<InputRow> r = reader.read();
 
-      return null;
+      return new InputSourceBasedTestDataset(dataSchema, ioConfig.inputFormat,ioConfig.inputSource);
     }
 
     static class FakeIndexTask {
