@@ -21,16 +21,70 @@ package org.apache.druid.sql.calcite.util.datasets;
 
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.MapInputRowParser;
+import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.segment.IndexBuilder;
+import org.apache.druid.segment.QueryableIndex;
+import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.segment.column.RowSignature.Builder;
+import org.apache.druid.segment.incremental.IncrementalIndexSchema;
+import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
+import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.partition.LinearShardSpec;
+
+import java.io.File;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-public abstract class MapBasedTestDataset extends AbstractRowBasedTestDataset
+public abstract class MapBasedTestDataset implements TestDataSet
 {
+  protected final String name;
+
   protected MapBasedTestDataset(String name)
   {
-    super(name);
+    this.name = name;
+  }
+
+  @Override
+  public String getName()
+  {
+    return name;
+  }
+
+  @Override
+  public final DataSegment makeSegment(final QueryableIndex index)
+  {
+    DataSegment segment = DataSegment.builder()
+        .dataSource(name)
+        .interval(index.getDataInterval())
+        .version("1")
+        .shardSpec(new LinearShardSpec(0))
+        .size(0)
+        .build();
+    return segment;
+  }
+
+  @Override
+  public final QueryableIndex makeIndex(File tmpDir)
+  {
+    return IndexBuilder
+        .create()
+        .tmpDir(tmpDir)
+        .segmentWriteOutMediumFactory(OffHeapMemorySegmentWriteOutMediumFactory.instance())
+        .schema(getIndexSchema())
+        .rows(getRows())
+        .buildMMappedIndex();
+  }
+
+  public IncrementalIndexSchema getIndexSchema()
+  {
+    return new IncrementalIndexSchema.Builder()
+        .withMetrics(getMetrics().toArray(new AggregatorFactory[0]))
+        .withDimensionsSpec(getInputRowSchema().getDimensionsSpec())
+        .withRollup(false)
+        .build();
   }
 
   public final Iterable<InputRow> getRows()
@@ -46,5 +100,19 @@ public abstract class MapBasedTestDataset extends AbstractRowBasedTestDataset
     return MapInputRowParser.parse(inputRowSchema, (Map<String, Object>) map);
   }
 
+  public RowSignature getInputRowSignature()
+  {
+    Builder rsBuilder = RowSignature.builder();
+    for (DimensionSchema dimensionSchema : getInputRowSchema().getDimensionsSpec().getDimensions()) {
+      rsBuilder.add(dimensionSchema.getName(), dimensionSchema.getColumnType());
+    }
+    return rsBuilder.build();
+  }
+
+  public abstract InputRowSchema getInputRowSchema();
+
   public abstract List<Map<String, Object>> getRawRows();
+
+  public abstract List<AggregatorFactory> getMetrics();
+
 }

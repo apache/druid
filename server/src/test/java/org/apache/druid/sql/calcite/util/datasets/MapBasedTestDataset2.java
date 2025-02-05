@@ -22,6 +22,7 @@ package org.apache.druid.sql.calcite.util.datasets;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.DimensionSchema;
+import org.apache.druid.data.input.impl.MapInputRowParser;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
@@ -34,12 +35,13 @@ import org.apache.druid.timeline.partition.LinearShardSpec;
 
 import java.io.File;
 import java.util.List;
+import java.util.Map;
 
-public abstract class AbstractRowBasedTestDataset implements TestDataSet
+public abstract class MapBasedTestDataset2 implements TestDataSet
 {
   protected final String name;
 
-  protected AbstractRowBasedTestDataset(String name)
+  protected MapBasedTestDataset2(String name)
   {
     this.name = name;
   }
@@ -84,6 +86,13 @@ public abstract class AbstractRowBasedTestDataset implements TestDataSet
         .build();
   }
 
+  public abstract Iterable<InputRow> getRows();
+
+  public static InputRow createRow(final Map<String, ?> map, InputRowSchema inputRowSchema)
+  {
+    return MapInputRowParser.parse(inputRowSchema, (Map<String, Object>) map);
+  }
+
   public RowSignature getInputRowSignature()
   {
     Builder rsBuilder = RowSignature.builder();
@@ -92,8 +101,6 @@ public abstract class AbstractRowBasedTestDataset implements TestDataSet
     }
     return rsBuilder.build();
   }
-
-  public abstract Iterable<InputRow> getRows();
 
   public abstract InputRowSchema getInputRowSchema();
 
