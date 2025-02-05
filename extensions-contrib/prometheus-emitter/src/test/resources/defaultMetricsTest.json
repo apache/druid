@@ -1,3 +1,3 @@
 {
-  "query/nonExistent" : { "dimensions" : ["dataSource"], "type" : "nonExistent", "help":  "Non supported type."}
+  "query/time" : { "dimensions" : ["dataSource", "type"], "type" : "timer", "conversionFactor": 1000.0, "histogramBuckets": [10.0, 30.0, 60.0, 120.0, 200.0, 300.0], "help":  "Seconds taken to complete a query."}
 }
