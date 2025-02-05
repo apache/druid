@@ -166,6 +166,15 @@ public class FilteredDataSource implements DataSource
   }
 
   @Override
+  public boolean hasTimeFilter()
+  {
+    if (this.getBase() instanceof TableDataSource) {
+      return getFilter().getRequiredColumns().contains("__time");
+    }
+    return this.getBase().hasTimeFilter();
+  }
+
+  @Override
   public boolean equals(Object o)
   {
     if (this == o) {
