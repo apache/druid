@@ -53,6 +53,7 @@ import org.apache.druid.guice.ServerModule;
 import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.guice.annotations.Merging;
+import org.apache.druid.indexing.input.InputRowSchemas;
 import org.apache.druid.initialization.CoreInjectorBuilder;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.initialization.ServiceInjectorBuilder;
@@ -1015,17 +1016,15 @@ public class SqlTestFramework
 
     @Provides
     @LazySingleton
-    public List<TestDataSet> buildCustomTables(ObjectMapper objectMapper)
+    public List<TestDataSet> buildCustomTables(ObjectMapper objectMapper, TempDirProducer tdp)
     {
-
-
       try {
         ObjectMapper om = objectMapper.copy();
         om.registerSubtypes(new NamedType(MyIOConfigType.class, "index_parallel"));
         FakeIndexTask q = om.readValue(new File("/home/dev/druid/i0.json"), FakeIndexTask.class);
         MyIOConfigType ioc = q.spec.getIOConfig();
 
-        return Collections.singletonList(buildTestDataset(q.spec.getDataSchema(), q.spec.getIOConfig()));
+        return Collections.singletonList(buildTestDataset(q.spec.getDataSchema(), q.spec.getIOConfig(), tdp));
       }
       catch (IOException e) {
         throw new RuntimeException(e);
@@ -1035,7 +1034,7 @@ public class SqlTestFramework
     private TestDataSet buildTestDataset(DataSchema dataSchema, MyIOConfigType ioConfig, TempDirProducer tdp) throws IOException
     {
       File tempDir=tdp.newTempFolder();
-      InputFormat inputFormat;
+      InputFormat inputFormat = ioConfig.inputFormat;
       InputRowSchema inputRowSchema = InputRowSchemas.fromDataSchema(dataSchema);
       InputSourceReader reader = ioConfig.inputSource.reader(inputRowSchema, inputFormat, tempDir);
       CloseableIterator<InputRow> r = reader.read();
