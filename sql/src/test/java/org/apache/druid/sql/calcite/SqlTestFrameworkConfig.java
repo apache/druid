@@ -247,7 +247,7 @@ public class SqlTestFrameworkConfig
   @Override
   public int hashCode()
   {
-    return Objects.hash(minTopNThreshold, numMergeBuffers, resultCache, componentSupplier);
+    return Objects.hash(minTopNThreshold, numMergeBuffers, resultCache, componentSupplier, datasets);
   }
 
   @Override
@@ -260,7 +260,8 @@ public class SqlTestFrameworkConfig
     return minTopNThreshold == other.minTopNThreshold
         && numMergeBuffers == other.numMergeBuffers
         && resultCache == other.resultCache
-        && componentSupplier == other.componentSupplier;
+        && componentSupplier == other.componentSupplier
+        && Objects.equals(datasets, other.datasets);
   }
 
   public static class SqlTestFrameworkConfigStore implements Closeable
