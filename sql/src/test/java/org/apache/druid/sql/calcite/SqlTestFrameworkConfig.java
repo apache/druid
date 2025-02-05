@@ -166,17 +166,39 @@ public class SqlTestFrameworkConfig
     Class<? extends QueryComponentSupplier> value();
   }
 
+  /**
+   * Declares which {@link QueryComponentSupplier} must be used for the class.
+   */
+  @Retention(RetentionPolicy.RUNTIME)
+  @Target({ElementType.METHOD, ElementType.TYPE})
+  public @interface TableConfig
+  {
+    ConfigOptionProcessor<String> PROCESSOR = new ConfigOptionProcessor<>(TableConfig.class)
+    {
+      @Override
+      public String fromString(String name) throws Exception
+      {
+        return name;
+      }
+    };
+
+    String value();
+  }
+
   private static final Set<String> KNOWN_CONFIG_KEYS = ImmutableSet.<String>builder()
       .add(NumMergeBuffers.PROCESSOR.getConfigName())
       .add(MinTopNThreshold.PROCESSOR.getConfigName())
       .add(ResultCache.PROCESSOR.getConfigName())
       .add(ComponentSupplier.PROCESSOR.getConfigName())
+      .add(TableConfig.PROCESSOR.getConfigName())
       .build();
 
   public final int numMergeBuffers;
   public final int minTopNThreshold;
   public final ResultCacheMode resultCache;
   public final Class<? extends QueryComponentSupplier> componentSupplier;
+  public final String tableConfig;
+
 
   public SqlTestFrameworkConfig(List<Annotation> annotations)
   {
@@ -185,6 +207,7 @@ public class SqlTestFrameworkConfig
       minTopNThreshold = MinTopNThreshold.PROCESSOR.fromAnnotations(annotations);
       resultCache = ResultCache.PROCESSOR.fromAnnotations(annotations);
       componentSupplier = ComponentSupplier.PROCESSOR.fromAnnotations(annotations);
+      tableConfig = TableConfig.PROCESSOR.fromAnnotations(annotations);
     }
     catch (Exception e) {
       throw new RuntimeException(e);
@@ -199,6 +222,7 @@ public class SqlTestFrameworkConfig
       minTopNThreshold = MinTopNThreshold.PROCESSOR.fromMap(queryParams);
       resultCache = ResultCache.PROCESSOR.fromMap(queryParams);
       componentSupplier = ComponentSupplier.PROCESSOR.fromMap(queryParams);
+      tableConfig = TableConfig.PROCESSOR.fromMap(queryParams);
     }
     catch (Exception e) {
       throw new RuntimeException(e);
