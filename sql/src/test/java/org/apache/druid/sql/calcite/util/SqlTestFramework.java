@@ -1003,18 +1003,39 @@ public class SqlTestFramework
 
     @Provides
     @LazySingleton
-    public List<TestDataSet> buildCustomTables(ObjectMapper objectMapper, TempDirProducer tdp, SqlTestFrameworkConfig cfg)
+    public List<TestDataSet> buildCustomTables(ObjectMapper objectMapper, TempDirProducer tdp,
+        SqlTestFrameworkConfig cfg)
     {
       String tableConfig = cfg.tableConfig;
       if (tableConfig.isEmpty()) {
         return Collections.emptyList();
       }
+      final File[] inputFiles = getTableIngestFiles(tableConfig);
+      List<TestDataSet> ret = new ArrayList<TestDataSet>();
+      for (File src : inputFiles) {
+        ret.add(FakeIndexTaskUtil.makeDS(objectMapper, src));
+      }
+      return ret;
+    }
+
+    private File[] getTableIngestFiles(String tableConfig)
+    {
       File tableConfigFile = ProjectPathUtils.getPathFromProjectRoot(tableConfig);
-      if(!tableConfigFile.exists()) {
+      if (!tableConfigFile.exists()) {
         throw new RE("Table config file does not exist: %s", tableConfigFile);
       }
-      File src = tableConfigFile;
-      return Collections.singletonList(FakeIndexTaskUtil.makeDS(objectMapper, src));
+      final File[] inputFiles;
+      if (tableConfigFile.isDirectory()) {
+        inputFiles = tableConfigFile.listFiles(this::jsonFiles);
+      } else {
+        inputFiles = new File[] {tableConfigFile};
+      }
+      return inputFiles;
+    }
+
+    boolean jsonFiles(File f)
+    {
+      return !f.isDirectory() && f.getName().endsWith(".json");
     }
 
     @Provides
