@@ -159,8 +159,6 @@ public class TestDataBuilder
       null
   );
 
-  private static final InputRowSchema NUMFOO_SCHEMA = TestDataSet.NUMFOO.getInputRowSchema();
-
   private static final InputRowSchema LOTS_OF_COLUMNS_SCHEMA = new InputRowSchema(
       new TimestampSpec("timestamp", "millis", null),
       new DimensionsSpec(
@@ -234,13 +232,6 @@ public class TestDataBuilder
       .build();
 
   private static final List<String> USER_VISIT_DIMS = ImmutableList.of("user", "country", "city");
-  private static final IncrementalIndexSchema INDEX_SCHEMA_USER_VISIT = new IncrementalIndexSchema.Builder()
-      .withMetrics(
-          new CountAggregatorFactory("cnt")
-      )
-      .withRollup(false)
-      .withMinTimestamp(DateTimes.of("2020-12-31").getMillis())
-      .build();
 
   public static final List<ImmutableMap<String, Object>> RAW_ROWS1 = ImmutableList.of(
       ImmutableMap.<String, Object>builder()
