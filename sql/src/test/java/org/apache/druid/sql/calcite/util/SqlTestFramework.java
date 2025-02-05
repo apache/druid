@@ -992,10 +992,12 @@ public class SqlTestFramework
         List<TestDataSet> testDataSets)
     {
       builder.resourceCloser.register(walker);
-      builder.componentSupplier.addSegmentsToWalker(walker);
-
-      for (TestDataSet testDataSet : testDataSets) {
-        walker.add(testDataSet, builder.componentSupplier.getTempDirProducer().newTempFolder());
+      if (testDataSets.isEmpty()) {
+        builder.componentSupplier.addSegmentsToWalker(walker);
+      } else {
+        for (TestDataSet testDataSet : testDataSets) {
+          walker.add(testDataSet, builder.componentSupplier.getTempDirProducer().newTempFolder());
+        }
       }
 
       return walker;

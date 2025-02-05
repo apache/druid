@@ -1,12 +1,12 @@
-!use druidtest://?componentSupplier=XComponentSupplier&datasets=i0.json
+!use druidtest://?componentSupplier=StandardComponentSupplier&datasets=examples/quickstart/tutorial/wikipedia-index.json
 !set outputformat mysql
 
 
-select count(1) from wikipediaxaa;
+select count(1) from wikipedia;
 +--------+
 | EXPR$0 |
 +--------+
-|  24433 |
+| 117732 |
 +--------+
 (1 row)
 
