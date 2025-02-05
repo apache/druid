@@ -955,7 +955,7 @@ public class SqlTestFramework
 
     @Provides
     @LazySingleton
-    private  ColumnConfig getColumnConfig()
+    private ColumnConfig getColumnConfig()
     {
       return ColumnConfig.DEFAULT;
     }

@@ -452,7 +452,7 @@ public class IndexBuilder
         .setMaxRowCount(maxRows)
         .build();
 
-    while(rows.hasNext()) {
+    while (rows.hasNext()) {
       try {
         InputRow row = rows.next();
         incrementalIndex.add(row);
@@ -469,8 +469,7 @@ public class IndexBuilder
       InputSource inputSource,
       InputFormat inputFormat,
       @Nullable TransformSpec transformSpec,
-      File inputSourceTmpDir
-      )
+      File inputSourceTmpDir)
   {
     Preconditions.checkNotNull(schema, "schema");
     Preconditions.checkNotNull(inputSource, "inputSource");

@@ -99,18 +99,18 @@ public class InputSourceBasedTestDataset implements TestDataSet
     return rsBuilder.build();
   }
 
-  protected DataSchema getDataSchema() {
+  protected DataSchema getDataSchema()
+  {
     return dataSchema;
   }
 
-  protected InputSource getInputSource() {
+  protected InputSource getInputSource()
+  {
     return inputSource;
   }
 
-  protected InputFormat getInputFormat() {
+  protected InputFormat getInputFormat()
+  {
     return inputFormat;
   }
-
-
-
 }

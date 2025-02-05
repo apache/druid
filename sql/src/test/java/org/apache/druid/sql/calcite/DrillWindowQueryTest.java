@@ -224,6 +224,7 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     @Override
     public SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(SpecificSegmentsQuerySegmentWalker walker)
     {
+      super.addSegmentsToWalker(walker);
       final File tmpFolder = tempDirProducer.newTempFolder();
       TestDataBuilder.attachIndexesForDrillTestDatasources(walker, tmpFolder);
       return walker;

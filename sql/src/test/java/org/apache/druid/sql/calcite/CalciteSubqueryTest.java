@@ -1604,6 +1604,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
     @Override
     public SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(SpecificSegmentsQuerySegmentWalker walker)
     {
+
       final String datasource1 = "dsMissingCol";
       final File tmpFolder = tempDirProducer.newTempFolder();
 
@@ -1687,6 +1688,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
           .rows(rows2)
           .buildMMappedIndex();
 
+      super.addSegmentsToWalker(walker);
       walker.add(
           DataSegment.builder()
               .dataSource(datasource1)
