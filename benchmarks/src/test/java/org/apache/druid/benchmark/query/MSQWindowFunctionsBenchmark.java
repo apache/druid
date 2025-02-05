@@ -20,7 +20,6 @@
 package org.apache.druid.benchmark.query;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.inject.Injector;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
@@ -28,8 +27,6 @@ import org.apache.druid.msq.test.ExtractResultsFactory;
 import org.apache.druid.msq.test.MSQTestOverlordServiceClient;
 import org.apache.druid.msq.test.StandardMSQComponentSupplier;
 import org.apache.druid.msq.util.MultiStageQueryContext;
-import org.apache.druid.query.QueryRunnerFactoryConglomerate;
-import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.BaseCalciteQueryTest;
 import org.apache.druid.sql.calcite.QueryTestBuilder;
