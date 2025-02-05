@@ -53,6 +53,7 @@ import org.apache.druid.guice.ServerModule;
 import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.guice.annotations.Merging;
+import org.apache.druid.indexing.input.InputRowSchemas;
 import org.apache.druid.initialization.CoreInjectorBuilder;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.initialization.ServiceInjectorBuilder;
@@ -125,6 +126,7 @@ import org.apache.druid.sql.calcite.schema.DruidSchemaManager;
 import org.apache.druid.sql.calcite.schema.LookupSchema;
 import org.apache.druid.sql.calcite.schema.NoopDruidSchemaManager;
 import org.apache.druid.sql.calcite.schema.SystemSchema;
+import org.apache.druid.sql.calcite.util.datasets.RowBasedTestDataSet;
 import org.apache.druid.sql.calcite.util.datasets.TestDataSet;
 import org.apache.druid.sql.calcite.view.DruidViewMacroFactory;
 import org.apache.druid.sql.calcite.view.InProcessViewManager;
@@ -1015,32 +1017,26 @@ public class SqlTestFramework
 
     @Provides
     @LazySingleton
-    public List<TestDataSet> buildCustomTables(ObjectMapper objectMapper)
+    public List<TestDataSet> buildCustomTables(ObjectMapper objectMapper, TempDirProducer tempDirProducer)
     {
-
-
       try {
         ObjectMapper om = objectMapper.copy();
         om.registerSubtypes(new NamedType(MyIOConfigType.class, "index_parallel"));
         FakeIndexTask q = om.readValue(new File("/home/dev/druid/i0.json"), FakeIndexTask.class);
         MyIOConfigType ioc = q.spec.getIOConfig();
 
-        return Collections.singletonList(buildTestDataset(q.spec.getDataSchema(), q.spec.getIOConfig()));
+        return Collections.singletonList(
+            RowBasedTestDataSet.buildTestDataset(
+                q.spec.getDataSchema(),
+                q.spec.getIOConfig().inputFormat,
+                q.spec.getIOConfig().inputSource,
+                tempDirProducer.newTempFolder()
+            )
+        );
       }
       catch (IOException e) {
         throw new RuntimeException(e);
       }
-    }
-
-    private TestDataSet buildTestDataset(DataSchema dataSchema, MyIOConfigType ioConfig, TempDirProducer tdp) throws IOException
-    {
-      File tempDir=tdp.newTempFolder();
-      InputFormat inputFormat;
-      InputRowSchema inputRowSchema = InputRowSchemas.fromDataSchema(dataSchema);
-      InputSourceReader reader = ioConfig.inputSource.reader(inputRowSchema, inputFormat, tempDir);
-      CloseableIterator<InputRow> r = reader.read();
-
-      return null;
     }
 
     static class FakeIndexTask {
