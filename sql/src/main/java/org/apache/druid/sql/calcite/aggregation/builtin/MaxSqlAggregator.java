@@ -27,6 +27,7 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.FloatMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
+import org.apache.druid.query.aggregation.StringMaxAggregatorFactory;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
 import org.apache.druid.sql.calcite.planner.Calcites;
@@ -68,6 +69,8 @@ public class MaxSqlAggregator extends SimpleSqlAggregator
         return new FloatMaxAggregatorFactory(name, fieldName, null, macroTable);
       case DOUBLE:
         return new DoubleMaxAggregatorFactory(name, fieldName, null, macroTable);
+      case STRING:
+        return new StringMaxAggregatorFactory(name, fieldName, null, true, null, macroTable);
       default:
         // This error refers to the Druid type. But, we're in SQL validation.
         // It should refer to the SQL type.
