@@ -19,6 +19,8 @@
 
 package org.apache.druid.sql.calcite.util;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
@@ -45,6 +47,7 @@ import org.apache.druid.guice.ServerModule;
 import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.guice.annotations.Merging;
+import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.initialization.CoreInjectorBuilder;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.initialization.ServiceInjectorBuilder;
@@ -73,8 +76,14 @@ import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.topn.TopNQueryConfig;
 import org.apache.druid.quidem.TestSqlModule;
 import org.apache.druid.segment.DefaultColumnFormatConfig;
+import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.column.ColumnConfig;
+import org.apache.druid.segment.incremental.AppendableIndexSpec;
+import org.apache.druid.segment.indexing.DataSchema;
+import org.apache.druid.segment.indexing.IOConfig;
+import org.apache.druid.segment.indexing.IngestionSpec;
+import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.realtime.ChatHandlerProvider;
 import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
@@ -112,6 +121,7 @@ import org.apache.druid.sql.calcite.schema.DruidSchemaManager;
 import org.apache.druid.sql.calcite.schema.LookupSchema;
 import org.apache.druid.sql.calcite.schema.NoopDruidSchemaManager;
 import org.apache.druid.sql.calcite.schema.SystemSchema;
+import org.apache.druid.sql.calcite.util.datasets.TestDataSet;
 import org.apache.druid.sql.calcite.view.DruidViewMacroFactory;
 import org.apache.druid.sql.calcite.view.InProcessViewManager;
 import org.apache.druid.sql.calcite.view.ViewManager;
@@ -124,6 +134,7 @@ import org.apache.druid.utils.JvmUtils;
 import javax.inject.Named;
 
 import java.io.Closeable;
+import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.ByteBuffer;
@@ -984,11 +995,90 @@ public class SqlTestFramework
     @Provides
     @LazySingleton
     public SpecificSegmentsQuerySegmentWalker specificSegmentsQuerySegmentWalker(
-        @Named("empty") SpecificSegmentsQuerySegmentWalker walker, Builder builder)
+        @Named("empty") SpecificSegmentsQuerySegmentWalker walker, Builder builder,
+        List<TestDataSet> testDataSets)
     {
       builder.resourceCloser.register(walker);
       builder.componentSupplier.addSegmentsToWalker(walker);
+
+      for (TestDataSet testDataSet : testDataSets) {
+        walker.add(testDataSet, builder.componentSupplier.getTempDirProducer().newTempFolder());
+      }
+
       return walker;
+    }
+
+    @Provides
+    @LazySingleton
+    public List<TestDataSet> buildCustomTables(ObjectMapper objectMapper)
+    {
+      try {
+        objectMapper.readValue(new File("/tmp/i0.json"), FakeIndexTask.class);
+        return null;
+      }
+      catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    }
+
+    static class FakeIndexTask {
+      @JsonProperty
+      public FakeIngestionSpec spec;
+    }
+
+    static class FakeIngestionSpec extends IngestionSpec<MyIOConfigType,MyTuningConfigType>{
+
+      @JsonCreator
+      public FakeIngestionSpec(
+          @JsonProperty("dataSchema") DataSchema dataSchema,
+          @JsonProperty("ioConfig") MyIOConfigType ioConfig,
+          @JsonProperty("tuningConfig") MyTuningConfigType tuningConfig
+          )
+      {
+        super(dataSchema, ioConfig, tuningConfig);
+      }
+    }
+    static class MyIOConfigType implements IOConfig{
+
+    }
+
+    static class MyTuningConfigType implements TuningConfig{
+
+      @Override
+      public AppendableIndexSpec getAppendableIndexSpec()
+      {
+          throw new RuntimeException("FIXME: Unimplemented!");
+      }
+
+      @Override
+      public int getMaxRowsInMemory()
+      {
+          throw new RuntimeException("FIXME: Unimplemented!");
+      }
+
+      @Override
+      public long getMaxBytesInMemory()
+      {
+          throw new RuntimeException("FIXME: Unimplemented!");
+      }
+
+      @Override
+      public PartitionsSpec getPartitionsSpec()
+      {
+          throw new RuntimeException("FIXME: Unimplemented!");
+      }
+
+      @Override
+      public IndexSpec getIndexSpec()
+      {
+          throw new RuntimeException("FIXME: Unimplemented!");
+      }
+
+      @Override
+      public IndexSpec getIndexSpecForIntermediatePersists()
+      {
+          throw new RuntimeException("FIXME: Unimplemented!");
+      }
     }
 
     @Provides
