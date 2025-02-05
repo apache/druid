@@ -1006,11 +1006,11 @@ public class SqlTestFramework
     public List<TestDataSet> buildCustomTables(ObjectMapper objectMapper, TempDirProducer tdp,
         SqlTestFrameworkConfig cfg)
     {
-      String tableConfig = cfg.tableConfig;
-      if (tableConfig.isEmpty()) {
+      String datasets = cfg.datasets;
+      if (datasets.isEmpty()) {
         return Collections.emptyList();
       }
-      final File[] inputFiles = getTableIngestFiles(tableConfig);
+      final File[] inputFiles = getTableIngestFiles(datasets);
       List<TestDataSet> ret = new ArrayList<TestDataSet>();
       for (File src : inputFiles) {
         ret.add(FakeIndexTaskUtil.makeDS(objectMapper, src));
@@ -1018,17 +1018,17 @@ public class SqlTestFramework
       return ret;
     }
 
-    private File[] getTableIngestFiles(String tableConfig)
+    private File[] getTableIngestFiles(String datasets)
     {
-      File tableConfigFile = ProjectPathUtils.getPathFromProjectRoot(tableConfig);
-      if (!tableConfigFile.exists()) {
-        throw new RE("Table config file does not exist: %s", tableConfigFile);
+      File datasetsFile = ProjectPathUtils.getPathFromProjectRoot(datasets);
+      if (!datasetsFile.exists()) {
+        throw new RE("Table config file does not exist: %s", datasetsFile);
       }
       final File[] inputFiles;
-      if (tableConfigFile.isDirectory()) {
-        inputFiles = tableConfigFile.listFiles(this::jsonFiles);
+      if (datasetsFile.isDirectory()) {
+        inputFiles = datasetsFile.listFiles(this::jsonFiles);
       } else {
-        inputFiles = new File[] {tableConfigFile};
+        inputFiles = new File[] {datasetsFile};
       }
       return inputFiles;
     }

@@ -176,10 +176,10 @@ public class SqlTestFrameworkConfig
    */
   @Retention(RetentionPolicy.RUNTIME)
   @Target({ElementType.METHOD, ElementType.TYPE})
-  @TableConfig("")
-  public @interface TableConfig
+  @Datasets("")
+  public @interface Datasets
   {
-    ConfigOptionProcessor<String> PROCESSOR = new ConfigOptionProcessor<>(TableConfig.class)
+    ConfigOptionProcessor<String> PROCESSOR = new ConfigOptionProcessor<>(Datasets.class)
     {
       @Override
       public String fromString(String name) throws Exception
@@ -196,14 +196,14 @@ public class SqlTestFrameworkConfig
       .add(MinTopNThreshold.PROCESSOR.getConfigName())
       .add(ResultCache.PROCESSOR.getConfigName())
       .add(ComponentSupplier.PROCESSOR.getConfigName())
-      .add(TableConfig.PROCESSOR.getConfigName())
+      .add(Datasets.PROCESSOR.getConfigName())
       .build();
 
   public final int numMergeBuffers;
   public final int minTopNThreshold;
   public final ResultCacheMode resultCache;
   public final Class<? extends QueryComponentSupplier> componentSupplier;
-  public final String tableConfig;
+  public final String datasets;
 
 
   public SqlTestFrameworkConfig(List<Annotation> annotations)
@@ -213,7 +213,7 @@ public class SqlTestFrameworkConfig
       minTopNThreshold = MinTopNThreshold.PROCESSOR.fromAnnotations(annotations);
       resultCache = ResultCache.PROCESSOR.fromAnnotations(annotations);
       componentSupplier = ComponentSupplier.PROCESSOR.fromAnnotations(annotations);
-      tableConfig = TableConfig.PROCESSOR.fromAnnotations(annotations);
+      datasets = Datasets.PROCESSOR.fromAnnotations(annotations);
     }
     catch (Exception e) {
       throw new RuntimeException(e);
@@ -228,7 +228,7 @@ public class SqlTestFrameworkConfig
       minTopNThreshold = MinTopNThreshold.PROCESSOR.fromMap(queryParams);
       resultCache = ResultCache.PROCESSOR.fromMap(queryParams);
       componentSupplier = ComponentSupplier.PROCESSOR.fromMap(queryParams);
-      tableConfig = TableConfig.PROCESSOR.fromMap(queryParams);
+      datasets = Datasets.PROCESSOR.fromMap(queryParams);
     }
     catch (Exception e) {
       throw new RuntimeException(e);

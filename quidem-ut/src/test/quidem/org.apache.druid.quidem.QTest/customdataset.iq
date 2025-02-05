@@ -1,4 +1,4 @@
-!use druidtest://?componentSupplier=XComponentSupplier&tableConfig=i0.json
+!use druidtest://?componentSupplier=XComponentSupplier&datasets=i0.json
 !set outputformat mysql
 
 
