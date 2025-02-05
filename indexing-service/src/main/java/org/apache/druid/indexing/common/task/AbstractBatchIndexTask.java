@@ -761,7 +761,7 @@ public abstract class AbstractBatchIndexTask extends AbstractTask
       );
     }
   }
-
+  
   @Nullable
   public static String findVersion(Map<Interval, String> versions, Interval interval)
   {

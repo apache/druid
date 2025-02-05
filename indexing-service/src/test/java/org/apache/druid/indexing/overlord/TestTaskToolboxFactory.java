@@ -397,10 +397,5 @@ public class TestTaskToolboxFactory extends TaskToolboxFactory
       this.centralizedDatasourceSchemaConfig = centralizedDatasourceSchemaConfig;
       return this;
     }
-
-    public TestTaskToolboxFactory build()
-    {
-      return new TestTaskToolboxFactory(this);
-    }
   }
 }

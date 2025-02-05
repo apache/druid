@@ -424,12 +424,6 @@
             <type>test-jar</type>
             <version>${project.parent.version}</version>
         </dependency>
-        <dependency>
-            <groupId>org.apache.druid</groupId>
-            <artifactId>druid-indexing-service</artifactId>
-            <type>test-jar</type>
-            <version>${project.parent.version}</version>
-        </dependency>
 
         <dependency>
             <groupId>org.apache.druid.extensions</groupId>

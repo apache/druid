@@ -133,7 +133,7 @@ public class TestDerbyConnector extends DerbyConnector
     }
 
     @Override
-    public void before()
+    protected void before()
     {
       connector = new TestDerbyConnector(Suppliers.ofInstance(connectorConfig), dbTables, centralizedDatasourceSchemaConfig);
       connector.getDBI().open().close(); // create db
