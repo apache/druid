@@ -180,11 +180,7 @@ public class SqlTestFrameworkConfig
       @Override
       public String fromString(String name) throws Exception
       {
-        if (name == null || name.isEmpty()) {
-          return null;
-        } else {
-          return name;
-        }
+        return name;
       }
     };
 

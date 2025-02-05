@@ -71,6 +71,7 @@ import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.groupby.TestGroupByBuffers;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.query.topn.TopNQueryConfig;
+import org.apache.druid.quidem.ProjectPathUtils;
 import org.apache.druid.quidem.TestSqlModule;
 import org.apache.druid.segment.DefaultColumnFormatConfig;
 import org.apache.druid.segment.ReferenceCountingSegment;
@@ -1002,9 +1003,17 @@ public class SqlTestFramework
 
     @Provides
     @LazySingleton
-    public List<TestDataSet> buildCustomTables(ObjectMapper objectMapper, TempDirProducer tdp)
+    public List<TestDataSet> buildCustomTables(ObjectMapper objectMapper, TempDirProducer tdp, SqlTestFrameworkConfig cfg)
     {
-      File src = new File("/home/dev/druid/i0.json");
+      String tableConfig = cfg.tableConfig;
+      if (tableConfig.isEmpty()) {
+        return Collections.emptyList();
+      }
+      File tableConfigFile = ProjectPathUtils.getPathFromProjectRoot(tableConfig);
+      if(!tableConfigFile.exists()) {
+        throw new RE("Table config file does not exist: %s", tableConfigFile);
+      }
+      File src = tableConfigFile;
       return Collections.singletonList(FakeIndexTaskUtil.makeDS(objectMapper, src));
     }
 
