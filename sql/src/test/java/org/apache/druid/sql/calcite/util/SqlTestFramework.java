@@ -35,6 +35,11 @@ import com.google.inject.TypeLiteral;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.collections.NonBlockingPool;
+import org.apache.druid.data.input.InputFormat;
+import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.InputRowSchema;
+import org.apache.druid.data.input.InputSource;
+import org.apache.druid.data.input.InputSourceReader;
 import org.apache.druid.data.input.impl.HttpInputSourceConfig;
 import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.guice.DruidInjectorBuilder;
@@ -53,6 +58,7 @@ import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.initialization.ServiceInjectorBuilder;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
@@ -137,6 +143,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -1010,15 +1017,30 @@ public class SqlTestFramework
     @LazySingleton
     public List<TestDataSet> buildCustomTables(ObjectMapper objectMapper)
     {
+
+
       try {
         ObjectMapper om = objectMapper.copy();
         om.registerSubtypes(new NamedType(MyIOConfigType.class, "index_parallel"));
         FakeIndexTask q = om.readValue(new File("/home/dev/druid/i0.json"), FakeIndexTask.class);
-        return null;
+        MyIOConfigType ioc = q.spec.getIOConfig();
+
+        return Collections.singletonList(buildTestDataset(q.spec.getDataSchema(), q.spec.getIOConfig()));
       }
       catch (IOException e) {
         throw new RuntimeException(e);
       }
+    }
+
+    private TestDataSet buildTestDataset(DataSchema dataSchema, MyIOConfigType ioConfig, TempDirProducer tdp) throws IOException
+    {
+      File tempDir=tdp.newTempFolder();
+      InputFormat inputFormat;
+      InputRowSchema inputRowSchema = InputRowSchemas.fromDataSchema(dataSchema);
+      InputSourceReader reader = ioConfig.inputSource.reader(inputRowSchema, inputFormat, tempDir);
+      CloseableIterator<InputRow> r = reader.read();
+
+      return null;
     }
 
     static class FakeIndexTask {
@@ -1040,15 +1062,14 @@ public class SqlTestFramework
     }
 
 
-    static class MyIOConfigType implements IOConfig{
-public MyIOConfigType()
-{
-  if (true) {
-    throw new RuntimeException("FIXME: Unimplemented!");
-  }
-
-}
+    static class MyIOConfigType implements IOConfig
+    {
+      @JsonProperty
+      public InputSource inputSource;
+      @JsonProperty
+      public InputFormat inputFormat;
     }
+
     static class MyIOConfigType2 implements IOConfig{
 
       public MyIOConfigType2()
