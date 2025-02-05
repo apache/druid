@@ -412,7 +412,7 @@ public class DetermineHashedPartitionsJob implements Jobby
 
       try {
         HadoopDruidIndexerConfig.JSON_MAPPER
-            .writerWithType(Long.class)
+            .writerFor(Long.class)
             .writeValue(out, aggregate.estimateCardinalityRound());
       }
       finally {
@@ -430,7 +430,7 @@ public class DetermineHashedPartitionsJob implements Jobby
         final OutputStream out = Utils.makePathAndOutputStream(context, outPath, config.isOverwriteFiles());
 
         try {
-          HadoopDruidIndexerConfig.JSON_MAPPER.writerWithType(
+          HadoopDruidIndexerConfig.JSON_MAPPER.writerFor(
               new TypeReference<List<Interval>>()
               {
               }
