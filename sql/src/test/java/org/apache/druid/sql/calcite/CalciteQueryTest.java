@@ -6199,6 +6199,114 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testGroupByNullType()
+  {
+    // Cannot vectorize due to null constant expression.
+    cannotVectorize();
+    testQuery(
+        "SELECT NULL as nullcol, COUNT(*) FROM druid.foo GROUP BY 1",
+        ImmutableList.of(
+            new GroupByQuery.Builder()
+                .setDataSource(CalciteTests.DATASOURCE1)
+                .setInterval(querySegmentSpec(Filtration.eternity()))
+                .setGranularity(Granularities.ALL)
+                .setVirtualColumns(expressionVirtualColumn("v0", "null", ColumnType.STRING))
+                .setDimensions(dimensions(new DefaultDimensionSpec("v0", "d0", ColumnType.STRING)))
+                .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
+                .setContext(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{null, 6L}
+        )
+    );
+  }
+
+  @Test
+  public void testOrderByNullType()
+  {
+    testQuery(
+        // Order on subquery, since the native engine doesn't currently support ordering when selecting directly
+        // from a table.
+        "SELECT dim1, NULL as nullcol FROM (SELECT DISTINCT dim1 FROM druid.foo LIMIT 1) ORDER BY 2",
+        ImmutableList.of(
+            WindowOperatorQueryBuilder
+                .builder()
+                .setDataSource(
+                    new TopNQueryBuilder()
+                        .dataSource(CalciteTests.DATASOURCE1)
+                        .intervals(querySegmentSpec(Filtration.eternity()))
+                        .dimension(new DefaultDimensionSpec("dim1", "d0", ColumnType.STRING))
+                        .threshold(1)
+                        .metric(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC))
+                        .postAggregators(expressionPostAgg("s0", "null", ColumnType.STRING))
+                        .context(QUERY_CONTEXT_DEFAULT)
+                        .build()
+                )
+                .setSignature(
+                    RowSignature.builder()
+                                .add("d0", ColumnType.STRING)
+                                .add("s0", ColumnType.STRING)
+                                .build()
+                )
+                .setOperators(
+                    OperatorFactoryBuilders.naiveSortOperator("s0", ColumnWithDirection.Direction.ASC)
+                )
+                .setLeafOperators(
+                    OperatorFactoryBuilders
+                        .scanOperatorFactoryBuilder()
+                        .setOffsetLimit(0, Long.MAX_VALUE)
+                        .setProjectedColumns("d0", "s0")
+                        .build()
+                )
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"", null}
+        )
+    );
+  }
+
+  @Test
+  public void testGroupByOrderByNullType()
+  {
+    // Cannot vectorize due to null constant expression.
+    cannotVectorize();
+
+    testQuery(
+        "SELECT NULL as nullcol, COUNT(*) FROM druid.foo GROUP BY 1 ORDER BY 1",
+        ImmutableList.of(
+            new GroupByQuery.Builder()
+                .setDataSource(CalciteTests.DATASOURCE1)
+                .setInterval(querySegmentSpec(Filtration.eternity()))
+                .setGranularity(Granularities.ALL)
+                .setVirtualColumns(expressionVirtualColumn("v0", "null", ColumnType.STRING))
+                .setDimensions(dimensions(new DefaultDimensionSpec("v0", "d0", ColumnType.STRING)))
+                .setAggregatorSpecs(aggregators(new CountAggregatorFactory("a0")))
+                .setLimitSpec(
+                    queryFramework().engine().featureAvailable(EngineFeature.GROUPBY_IMPLICITLY_SORTS)
+                    ? NoopLimitSpec.instance()
+                    : new DefaultLimitSpec(
+                        ImmutableList.of(
+                            new OrderByColumnSpec(
+                                "d0",
+                                Direction.ASCENDING,
+                                StringComparators.NATURAL
+                            )
+                        ),
+                        Integer.MAX_VALUE
+                    )
+                )
+                .setContext(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{null, 6L}
+        )
+    );
+  }
+
+  @Test
   public void testCountStarWithTimeInIntervalFilterInvalidInterval()
   {
     msqIncompatible();

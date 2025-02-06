@@ -126,7 +126,7 @@ public class GenericIndexedTest extends InitializedNullHandlingTest
 
     final ByteBuffer byteBuffer = ByteBuffer.wrap(baos.toByteArray());
     Assert.assertEquals(indexed.getSerializedSize(), byteBuffer.remaining());
-    GenericIndexed<String> deserialized = GenericIndexed.read(byteBuffer, GenericIndexed.STRING_STRATEGY);
+    GenericIndexed<String> deserialized = GenericIndexed.read(byteBuffer, GenericIndexed.STRING_STRATEGY, null);
     Assert.assertEquals(0, byteBuffer.remaining());
     return deserialized;
   }
