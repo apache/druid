@@ -1,4 +1,4 @@
-!use druidtest://?componentSupplier=StandardComponentSupplier&datasets=examples/quickstart/tutorial/rollup-index.json
+!use druidtest://?componentSupplier=StandardComponentSupplier&datasets=sql/src/test/quidem/sampledataset
 !set outputformat mysql
 
 

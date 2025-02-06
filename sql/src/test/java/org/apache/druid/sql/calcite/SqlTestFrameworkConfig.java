@@ -171,8 +171,9 @@ public class SqlTestFrameworkConfig
   /**
    * Declares which tables to ingest into this {@link QueryComponentSupplier}.
    *
-   * Can point to a file or a directory containing files. All files are
-   * interpreted as ingestions via {@link FakeIndexTaskUtil}.
+   * May point to a directory containing json ingestion files.
+   * All files will be made available thru via {@link FakeIndexTaskUtil}.
+   * It may not support all ingestion feature.
    */
   @Retention(RetentionPolicy.RUNTIME)
   @Target({ElementType.METHOD, ElementType.TYPE})

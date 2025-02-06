@@ -1019,12 +1019,14 @@ public class SqlTestFramework
       if (!datasetsFile.exists()) {
         throw new RE("Table config file does not exist: %s", datasetsFile);
       }
-      final File[] inputFiles;
-      if (datasetsFile.isDirectory()) {
-        inputFiles = datasetsFile.listFiles(this::jsonFiles);
-      } else {
-        inputFiles = new File[] {datasetsFile};
+      if (!datasetsFile.isDirectory()) {
+        throw new RE("The option datasets [%s] must point to a directory relative to the project root!", datasetsFile);
       }
+      final File[] inputFiles = datasetsFile.listFiles(this::jsonFiles);
+      if (inputFiles.length == 0) {
+        throw new RE("There are no json files found in datasets directory [%s]!", datasetsFile);
+      }
+
       return inputFiles;
     }
 
