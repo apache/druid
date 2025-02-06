@@ -459,7 +459,7 @@ public class HeapMemorySegmentMetadataCacheTest
     setupAndSyncCache();
 
     // Create a pending segment and add it only to the metadata store
-    final PendingSegmentRecord pendingSegment = createPendingSegment();
+    final PendingSegmentRecord pendingSegment = createPendingSegment(DateTimes.nowUtc());
     derbyConnectorRule.pendingSegments().insert(
         List.of(pendingSegment),
         false,
@@ -494,7 +494,7 @@ public class HeapMemorySegmentMetadataCacheTest
     setupAndSyncCache();
 
     // Create a pending segment and add it only to the cache
-    final PendingSegmentRecord pendingSegment = createPendingSegment();
+    final PendingSegmentRecord pendingSegment = createPendingSegment(DateTimes.nowUtc().minusHours(1));
     final DatasourceSegmentCache wikiCache = cache.getDatasource(TestDataSource.WIKI);
     wikiCache.insertPendingSegment(pendingSegment, false);
 
@@ -539,7 +539,7 @@ public class HeapMemorySegmentMetadataCacheTest
     Assert.assertEquals(1, updatedRows);
   }
 
-  private static PendingSegmentRecord createPendingSegment()
+  private static PendingSegmentRecord createPendingSegment(DateTime createdTime)
   {
     SegmentIdWithShardSpec segmentId = new SegmentIdWithShardSpec(
         TestDataSource.WIKI,
@@ -549,7 +549,7 @@ public class HeapMemorySegmentMetadataCacheTest
     );
     return new PendingSegmentRecord(
         segmentId,
-        "sequence1", null, null, "allocator1", DateTimes.nowUtc()
+        "sequence1", null, null, "allocator1", createdTime
     );
   }
 
