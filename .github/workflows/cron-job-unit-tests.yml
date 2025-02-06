@@ -21,6 +21,7 @@ on:
 jobs:
   run-unit-tests:
     name: "unit tests"
+    if: (github.event_name == 'schedule' && github.repository == 'apache/druid')
     strategy:
       fail-fast: false
       matrix:
