@@ -29,8 +29,18 @@ public class ExpressionValidationException extends IAE
     super("Function[%s] %s", fn.name(), StringUtils.format(msg, formatArgs));
   }
 
+  public ExpressionValidationException(String name, String msg, Object... formatArgs)
+  {
+    super("Function[%s] %s", name, StringUtils.format(msg, formatArgs));
+  }
+
   public ExpressionValidationException(NamedFunction fn, Throwable e, String msg, Object... formatArgs)
   {
     super(e, "Function[%s] %s", fn.name(), StringUtils.format(msg, formatArgs));
+  }
+
+  public ExpressionValidationException(String name, Throwable e, String msg, Object... formatArgs)
+  {
+    super(e, "Function[%s] %s", name, StringUtils.format(msg, formatArgs));
   }
 }
