@@ -21,6 +21,7 @@ package org.apache.druid.k8s.overlord.execution;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.google.common.base.Supplier;
 import io.fabric8.kubernetes.api.model.PodTemplate;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.k8s.overlord.taskadapter.PodTemplateWithName;
@@ -45,5 +46,5 @@ public interface PodTemplateSelectStrategy
    * @param task The task for which the Pod template is determined.
    * @return The PodTemplateWithName POJO that contains the name of the template selected and the template itself.
    */
-  @NotNull PodTemplateWithName getPodTemplateForTask(Task task, Map<String, PodTemplate> templates);
+  @NotNull PodTemplateWithName getPodTemplateForTask(Task task, Map<String, Supplier<PodTemplate>> templates);
 }
