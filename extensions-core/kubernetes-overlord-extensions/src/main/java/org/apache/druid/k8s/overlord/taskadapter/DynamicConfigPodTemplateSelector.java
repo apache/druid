@@ -111,7 +111,8 @@ public class DynamicConfigPodTemplateSelector implements PodTemplateSelector
   }
 
   @SuppressWarnings("ResultOfMethodCallIgnored")
-  private void validateTemplateSupplier(Supplier<PodTemplate> templateSupplier) throws IAE {
+  private void validateTemplateSupplier(Supplier<PodTemplate> templateSupplier) throws IAE
+  {
     templateSupplier.get();
   }
 
