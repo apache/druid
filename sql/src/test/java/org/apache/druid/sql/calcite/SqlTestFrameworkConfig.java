@@ -182,7 +182,7 @@ public class SqlTestFrameworkConfig
     ConfigOptionProcessor<String> PROCESSOR = new ConfigOptionProcessor<>(Datasets.class)
     {
       @Override
-      public String fromString(String name) throws Exception
+      public String fromString(String name)
       {
         return name;
       }
