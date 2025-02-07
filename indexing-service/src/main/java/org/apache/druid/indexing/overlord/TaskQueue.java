@@ -1024,7 +1024,9 @@ public class TaskQueue
     }
   }
 
-  @SuppressWarnings("GuardedBy")
+  /**
+   * Returns the list of currently active tasks for the given datasource.
+   */
   public List<Task> getActiveTasksForDatasource(String datasource)
   {
     giant.lock();

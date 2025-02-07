@@ -4286,7 +4286,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    */
   private Map<String, Task> getActiveTaskMap()
   {
-    ImmutableMap.Builder activeTaskMap = ImmutableMap.builder();
+    final ImmutableMap.Builder<String, Task> activeTaskMap = ImmutableMap.builder();
     final Optional<TaskQueue> taskQueue = taskMaster.getTaskQueue();
     final List<Task> tasks;
     if (taskQueue.isPresent()) {
