@@ -65,36 +65,20 @@ jobs:
           merge-multiple: true
 
       - name: Calculate hash for artifact name
-        run: |
-          ./.github/scripts/make-hash-for-artifact-name.sh "${{ inputs.key }}"
+        run: echo "HASH=$(echo -n "${{ inputs.key }}" | sha256sum | cut -d' ' -f1 | cut -c1-8)" >> $GITHUB_ENV
 
       - name: 'Execute script: (${{ inputs.key }})'
-        run: |
-          ./${{ inputs.script }} 
+        run: ./${{ inputs.script }}
 
-      - name: Check for dumps on failure
-        if: ${{ failure() }}
-        id: check_for_dumps
-        run: |
-          DUMP_FILES=$(find "${GITHUB_WORKSPACE}" \( -name '*.hprof' -or -name 'hs_err_pid*' -or -name 'replay_pid*' -or -regex '.*/core\.[0-9]*' \))
-          
-          if [[ -n "$DUMP_FILES" ]]; then
-            tar -cvzf "${RUNNER_TEMP}/failure-dumps.tar.gz" ${DUMP_FILES}
-            echo "found_dumps=true" >> "$GITHUB_ENV"
-          fi
-
-      - name: Upload Dumps to GitHub
-        if: ${{ failure() && env.found_dumps == 'true' }}
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
-        with:
-          name: "Failure-${{ inputs.jdk }}-${{ env.HASH }}"
-          path: ${{ runner.temp }}/failure-dumps.tar.gz
-
-      - name: Upload reports
-        uses: actions/upload-artifact@v4
-        if: ${{ inputs.artifact_prefix != '' }}
+        if: ${{ failure() }} || ${{ inputs.artifact_prefix != '' }}
         with:
           name: "${{ inputs.artifact_prefix }}-${{ env.HASH }}"
           path: |
-           ./**/TEST-*.xml
-           ./**/target/jacoco*.exec
+            **/*.hprof
+            **/hs_err_pid*
+            **/replay_pid*
+            **/core.[0-9]*
+            ./**/TEST-*.xml
+            ./**/target/jacoco*.exec
