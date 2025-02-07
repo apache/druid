@@ -1692,15 +1692,15 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         // if suspended, ensure tasks have been requested to gracefully stop
         if (stateManager.getSupervisorState().getBasicState().equals(SupervisorStateManager.BasicState.STOPPING)) {
           // if we're already terminating, don't do anything here, the terminate already handles shutdown
-          log.debug("[%s] supervisor is already stopping.", dataSource);
+          log.debug("Supervisor for datasource[%s] is already stopping.", dataSource);
         } else if (stateManager.isIdle()) {
-          log.debug("[%s] supervisor is idle.", dataSource);
+          log.debug("Supervisor for datasource[%s] is idle.", dataSource);
         } else if (!spec.isSuspended()) {
-          log.debug("[%s] supervisor is running.", dataSource);
+          log.debug("Supervisor for datasource[%s] is running.", dataSource);
           stateManager.maybeSetState(SeekableStreamSupervisorStateManager.SeekableStreamState.CREATING_TASKS);
           createNewTasks();
         } else {
-          log.info("[%s] supervisor is suspended.", dataSource);
+          log.info("Supervisor for datasource[%s] is suspended.", dataSource);
           gracefulShutdownInternal();
         }
       }
