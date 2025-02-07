@@ -1024,6 +1024,7 @@ public class TaskQueue
     }
   }
 
+  @SuppressWarnings("GuardedBy")
   public List<Task> getActiveTasksForDatasource(String datasource)
   {
     giant.lock();
