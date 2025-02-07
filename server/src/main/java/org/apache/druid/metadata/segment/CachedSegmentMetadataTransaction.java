@@ -170,7 +170,7 @@ class CachedSegmentMetadataTransaction implements SegmentMetadataTransaction
   }
 
   @Override
-  public List<DataSegment> findUsedSegments(Set<String> segmentIds)
+  public List<DataSegment> findUsedSegments(Set<SegmentId> segmentIds)
   {
     return metadataCache.findUsedSegments(segmentIds);
   }
@@ -194,14 +194,14 @@ class CachedSegmentMetadataTransaction implements SegmentMetadataTransaction
   }
 
   @Override
-  public DataSegment findSegment(String segmentId)
+  public DataSegment findSegment(SegmentId segmentId)
   {
     // Read from metadata store since unused segment payloads are not cached
     return delegate.findSegment(segmentId);
   }
 
   @Override
-  public DataSegment findUsedSegment(String segmentId)
+  public DataSegment findUsedSegment(SegmentId segmentId)
   {
     return metadataCache.findUsedSegment(segmentId);
   }
@@ -265,7 +265,7 @@ class CachedSegmentMetadataTransaction implements SegmentMetadataTransaction
   }
 
   @Override
-  public int deleteSegments(Set<String> segmentsIdsToDelete)
+  public int deleteSegments(Set<SegmentId> segmentsIdsToDelete)
   {
     return performWriteAction(writer -> writer.deleteSegments(segmentsIdsToDelete));
   }

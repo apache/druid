@@ -20,12 +20,14 @@
 package org.apache.druid.metadata.segment.cache;
 
 import org.apache.druid.error.DruidException;
+import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.JodaUtils;
+import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.metadata.PendingSegmentRecord;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.server.http.DataSegmentPlus;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
-import org.apache.druid.timeline.SegmentTimeline;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -36,8 +38,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * In-memory cache for segments and pending segments of a single datasource.
@@ -45,22 +49,17 @@ import java.util.stream.Collectors;
 class HeapMemoryDatasourceSegmentCache extends ReadWriteCache
 {
   private final String dataSource;
-  private final Map<String, DataSegmentPlus> idToUsedSegment = new HashMap<>();
-  private final Map<SegmentId, DateTime> unusedSegmentIdToUpdatedTime = new HashMap<>();
 
   /**
-   * Not being used right now. Could allow lookup of visible segments for a given interval.
+   * Map from interval to all segments and pending segments that have that exact
+   * interval.
+   * <p>
+   * Keys are sorted by end time to allow easy pruning of all intervals that end
+   * strictly before a given search interval, thus benefiting all metadata
+   * operations performed on newer intervals.
    */
-  private final SegmentTimeline usedSegmentTimeline = SegmentTimeline.forSegments(Set.of());
-
-  /**
-   * Map from interval to segment ID to pending segment record.
-   */
-  private final Map<Interval, Map<String, PendingSegmentRecord>>
-      intervalToPendingSegments = new HashMap<>();
-
-  private final Map<Interval, Map<String, Integer>>
-      intervalVersionToHighestUnusedPartitionNumber = new HashMap<>();
+  private final TreeMap<Interval, SegmentsInInterval> intervalToSegments
+      = new TreeMap<>(Comparators.intervalsByEndThenStart());
 
   HeapMemoryDatasourceSegmentCache(String dataSource)
   {
@@ -72,11 +71,8 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache
   public void stop()
   {
     withWriteLock(() -> {
-      unusedSegmentIdToUpdatedTime.clear();
-      idToUsedSegment.values().forEach(s -> usedSegmentTimeline.remove(s.getDataSegment()));
-      idToUsedSegment.clear();
-      intervalVersionToHighestUnusedPartitionNumber.clear();
-      intervalToPendingSegments.clear();
+      intervalToSegments.values().forEach(SegmentsInInterval::clear);
+      intervalToSegments.clear();
       super.stop();
     });
   }
@@ -91,10 +87,11 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache
    *                            for segments persisted before the column
    *                            used_status_last_updated was added to the table.
    */
-  boolean shouldRefreshUsedSegment(String segmentId, @Nullable DateTime persistedUpdateTime)
+  boolean shouldRefreshUsedSegment(SegmentId segmentId, @Nullable DateTime persistedUpdateTime)
   {
     return withReadLock(() -> {
-      final DataSegmentPlus cachedState = idToUsedSegment.get(segmentId);
+      final DataSegmentPlus cachedState = readSegmentsFor(segmentId.getInterval())
+          .idToUsedSegment.get(segmentId);
       return cachedState == null
              || shouldUpdateCache(cachedState.getUsedStatusLastUpdatedDate(), persistedUpdateTime);
     });
@@ -107,8 +104,9 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache
   {
     final SegmentIdWithShardSpec segmentId = record.getId();
     return withReadLock(
-        () -> !intervalToPendingSegments.getOrDefault(segmentId.getInterval(), Map.of())
-                                        .containsKey(segmentId.toString())
+        () -> !readSegmentsFor(segmentId.getInterval())
+            .idToPendingSegment
+            .containsKey(segmentId.toString())
     );
   }
 
@@ -158,21 +156,16 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache
   private boolean addUsedSegment(DataSegmentPlus segmentPlus)
   {
     final DataSegment segment = segmentPlus.getDataSegment();
-    final String segmentId = getId(segment);
+    final SegmentId segmentId = segment.getId();
 
     return withWriteLock(() -> {
       if (!shouldRefreshUsedSegment(segmentId, segmentPlus.getUsedStatusLastUpdatedDate())) {
         return false;
       }
 
-      final DataSegmentPlus oldSegmentPlus = idToUsedSegment.put(segmentId, segmentPlus);
-      if (oldSegmentPlus != null) {
-        // Segment payload may have changed, remove old value from timeline
-        usedSegmentTimeline.remove(oldSegmentPlus.getDataSegment());
-      }
-
-      unusedSegmentIdToUpdatedTime.remove(segment.getId());
-      usedSegmentTimeline.add(segment);
+      final SegmentsInInterval segments = writeSegmentsFor(segmentId.getInterval());
+      segments.idToUsedSegment.put(segmentId, segmentPlus);
+      segments.unusedSegmentIdToUpdatedTime.remove(segment.getId());
       return true;
     });
   }
@@ -188,16 +181,13 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache
   boolean addUnusedSegmentId(SegmentId segmentId, @Nullable DateTime updatedTime)
   {
     return withWriteLock(() -> {
-      final DataSegmentPlus oldSegmentPlus = idToUsedSegment.remove(segmentId.toString());
-      if (oldSegmentPlus != null) {
-        // Segment has transitioned from used to unused
-        usedSegmentTimeline.remove(oldSegmentPlus.getDataSegment());
-      }
+      final SegmentsInInterval segmentsInInterval = writeSegmentsFor(segmentId.getInterval());
+      segmentsInInterval.idToUsedSegment.remove(segmentId);
 
-      if (!unusedSegmentIdToUpdatedTime.containsKey(segmentId)
-          || shouldUpdateCache(unusedSegmentIdToUpdatedTime.get(segmentId), updatedTime)) {
-        unusedSegmentIdToUpdatedTime.put(segmentId, updatedTime);
-        updatePartitionNumber(segmentId);
+      if (!segmentsInInterval.unusedSegmentIdToUpdatedTime.containsKey(segmentId)
+          || shouldUpdateCache(segmentsInInterval.unusedSegmentIdToUpdatedTime.get(segmentId), updatedTime)) {
+        segmentsInInterval.unusedSegmentIdToUpdatedTime.put(segmentId, updatedTime);
+        segmentsInInterval.updateMaxUnusedId(segmentId);
         return true;
       } else {
         return false;
@@ -229,19 +219,22 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache
    * @param syncStartTime       Start time of the current sync
    * @return Number of unpersisted segments removed from cache.
    */
-  int removeUnpersistedSegments(Set<String> persistedSegmentIds, DateTime syncStartTime)
+  int removeUnpersistedSegments(Set<SegmentId> persistedSegmentIds, DateTime syncStartTime)
   {
     return withWriteLock(() -> {
-      final Set<String> unpersistedSegmentIds = new HashSet<>();
-      unusedSegmentIdToUpdatedTime.entrySet().stream().filter(
-          entry -> !persistedSegmentIds.contains(entry.getKey().toString())
-                   && shouldUpdateCache(entry.getValue(), syncStartTime)
-      ).map(entry -> entry.getKey().toString()).forEach(unpersistedSegmentIds::add);
+      final Set<SegmentId> unpersistedSegmentIds = new HashSet<>();
 
-      idToUsedSegment.entrySet().stream().filter(
-          entry -> !persistedSegmentIds.contains(entry.getKey())
-                   && shouldUpdateCache(entry.getValue().getUsedStatusLastUpdatedDate(), syncStartTime)
-      ).map(Map.Entry::getKey).forEach(unpersistedSegmentIds::add);
+      for (SegmentsInInterval segments : intervalToSegments.values()) {
+        segments.unusedSegmentIdToUpdatedTime.entrySet().stream().filter(
+            entry -> !persistedSegmentIds.contains(entry.getKey())
+                     && shouldUpdateCache(entry.getValue(), syncStartTime)
+        ).map(Map.Entry::getKey).forEach(unpersistedSegmentIds::add);
+
+        segments.idToUsedSegment.entrySet().stream().filter(
+            entry -> !persistedSegmentIds.contains(entry.getKey())
+                     && shouldUpdateCache(entry.getValue().getUsedStatusLastUpdatedDate(), syncStartTime)
+        ).map(Map.Entry::getKey).forEach(unpersistedSegmentIds::add);
+      }
 
       return removeSegmentsForIds(unpersistedSegmentIds);
     });
@@ -252,19 +245,21 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache
    *
    * @return Number of used and unused segments removed
    */
-  int removeSegmentsForIds(Set<String> segmentIds)
+  int removeSegmentsForIds(Set<SegmentId> segmentIds)
   {
     return withWriteLock(() -> {
       int removedCount = 0;
-      for (String serializedId : segmentIds) {
-        final SegmentId segmentId = SegmentId.tryParse(dataSource, serializedId);
+      for (SegmentId segmentId : segmentIds) {
+        if (segmentId == null) {
+          continue;
+        }
 
-        final DataSegmentPlus segment = idToUsedSegment.remove(serializedId);
+        final SegmentsInInterval segmentsInInterval = writeSegmentsFor(segmentId.getInterval());
+        final DataSegmentPlus segment = segmentsInInterval.idToUsedSegment.remove(segmentId);
         if (segment != null) {
-          usedSegmentTimeline.remove(segment.getDataSegment());
           ++removedCount;
-        } else if (segmentId != null && unusedSegmentIdToUpdatedTime.containsKey(segmentId)) {
-          unusedSegmentIdToUpdatedTime.remove(segmentId);
+        } else if (segmentsInInterval.unusedSegmentIdToUpdatedTime.containsKey(segmentId)) {
+          segmentsInInterval.unusedSegmentIdToUpdatedTime.remove(segmentId);
           ++removedCount;
         }
       }
@@ -274,32 +269,41 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache
   }
 
   /**
-   * Recomputes the {@link #intervalVersionToHighestUnusedPartitionNumber}.
-   * This method must be called when all unused segments have been synced with
-   * the metadata store.
+   * Indicates to the cache that it has now been synced with the metadata store.
    */
-  void recomputeMaxUnusedIds()
+  void markCacheSynced()
   {
+    // Recompute the highest unused IDs for every interval / version
+    withWriteLock(
+        () -> intervalToSegments.values().forEach(segments -> {
+          segments.versionToHighestUnusedPartitionNumber.clear();
+          segments.unusedSegmentIdToUpdatedTime.keySet().forEach(segments::updateMaxUnusedId);
+        })
+    );
+
+    // Remove empty intervals
     withWriteLock(() -> {
-      intervalVersionToHighestUnusedPartitionNumber.clear();
-      unusedSegmentIdToUpdatedTime.keySet().forEach(this::updatePartitionNumber);
+      final Set<Interval> emptyIntervals =
+          intervalToSegments.entrySet()
+                            .stream()
+                            .filter(entry -> entry.getValue().isEmpty())
+                            .map(Map.Entry::getKey)
+                            .collect(Collectors.toSet());
+      emptyIntervals.forEach(intervalToSegments::remove);
     });
   }
 
-  /**
-   * Adds the partition number of this segment to the
-   * {@link #intervalVersionToHighestUnusedPartitionNumber}.
-   */
-  private void updatePartitionNumber(SegmentId segmentId)
+  private SegmentsInInterval readSegmentsFor(Interval interval)
   {
-    withWriteLock(
-        () -> intervalVersionToHighestUnusedPartitionNumber
-            .computeIfAbsent(segmentId.getInterval(), i -> new HashMap<>())
-            .merge(segmentId.getVersion(), segmentId.getPartitionNum(), Math::max)
-    );
+    return intervalToSegments.getOrDefault(interval, SegmentsInInterval.EMPTY);
   }
 
-  // READ METHODS
+  private SegmentsInInterval writeSegmentsFor(Interval interval)
+  {
+    return intervalToSegments.computeIfAbsent(interval, i -> new SegmentsInInterval());
+  }
+
+  // CACHE READ METHODS
 
   @Override
   public Set<String> findExistingSegmentIds(Set<DataSegment> segments)
@@ -307,7 +311,7 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache
     return withReadLock(
         () -> segments.stream()
                       .map(DataSegment::getId)
-                      .filter(this::isSegmentIdCached)
+                      .filter(id -> readSegmentsFor(id.getInterval()).isSegmentIdCached(id))
                       .map(SegmentId::toString)
                       .collect(Collectors.toSet())
     );
@@ -325,9 +329,10 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache
   @Override
   public SegmentId findHighestUnusedSegmentId(Interval interval, String version)
   {
-    final Integer highestPartitionNum = intervalVersionToHighestUnusedPartitionNumber
-        .getOrDefault(interval, Map.of())
-        .get(version);
+    final Integer highestPartitionNum =
+        readSegmentsFor(interval)
+            .versionToHighestUnusedPartitionNumber
+            .get(version);
 
     return highestPartitionNum == null
            ? null
@@ -344,11 +349,11 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache
   }
 
   @Override
-  public List<DataSegment> findUsedSegments(Set<String> segmentIds)
+  public List<DataSegment> findUsedSegments(Set<SegmentId> segmentIds)
   {
     return withReadLock(
         () -> segmentIds.stream()
-                        .map(idToUsedSegment::get)
+                        .map(id -> readSegmentsFor(id.getInterval()).idToUsedSegment.get(id))
                         .filter(Objects::nonNull)
                         .map(DataSegmentPlus::getDataSegment)
                         .collect(Collectors.toList())
@@ -358,25 +363,36 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache
   @Override
   public Set<DataSegmentPlus> findUsedSegmentsPlusOverlappingAnyOf(List<Interval> intervals)
   {
-    return withReadLock(
-        () -> idToUsedSegment.values()
-                             .stream()
-                             .filter(s -> anyIntervalOverlaps(intervals, s.getDataSegment().getInterval()))
-                             .collect(Collectors.toSet())
-    );
+    if (intervals.isEmpty()) {
+      return withReadLock(
+          () -> intervalToSegments.values()
+                                  .stream()
+                                  .flatMap(segments -> segments.idToUsedSegment.values().stream())
+                                  .collect(Collectors.toSet())
+      );
+    } else {
+      return withReadLock(
+          () -> intervals.stream()
+                         .flatMap(this::findOverlappingIntervals)
+                         .flatMap(segments -> segments.idToUsedSegment.values().stream())
+                         .collect(Collectors.toSet())
+      );
+    }
   }
 
   @Override
-  public DataSegment findSegment(String segmentId)
+  public DataSegment findSegment(SegmentId segmentId)
   {
     throw DruidException.defensive("Unsupported: Unused segments are not cached");
   }
 
   @Override
-  public DataSegment findUsedSegment(String segmentId)
+  @Nullable
+  public DataSegment findUsedSegment(SegmentId segmentId)
   {
     return withReadLock(() -> {
-      final DataSegmentPlus segmentPlus = idToUsedSegment.get(segmentId);
+      final DataSegmentPlus segmentPlus = readSegmentsFor(segmentId.getInterval())
+          .idToUsedSegment.get(segmentId);
       return segmentPlus == null ? null : segmentPlus.getDataSegment();
     });
   }
@@ -420,8 +436,8 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache
   public List<SegmentIdWithShardSpec> findPendingSegmentIdsWithExactInterval(String sequenceName, Interval interval)
   {
     return withReadLock(
-        () -> intervalToPendingSegments
-            .getOrDefault(interval, Map.of())
+        () -> readSegmentsFor(interval)
+            .idToPendingSegment
             .values()
             .stream()
             .filter(record -> record.getSequenceName().equals(sequenceName))
@@ -434,11 +450,9 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache
   public List<PendingSegmentRecord> findPendingSegmentsOverlapping(Interval interval)
   {
     return withReadLock(
-        () -> intervalToPendingSegments.entrySet()
-                                       .stream()
-                                       .filter(entry -> entry.getKey().overlaps(interval))
-                                       .flatMap(entry -> entry.getValue().values().stream())
-                                       .collect(Collectors.toList())
+        () -> findOverlappingIntervals(interval)
+            .flatMap(segments -> segments.idToPendingSegment.values().stream())
+            .collect(Collectors.toList())
     );
   }
 
@@ -446,9 +460,7 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache
   public List<PendingSegmentRecord> findPendingSegmentsWithExactInterval(Interval interval)
   {
     return withReadLock(
-        () -> List.copyOf(
-            intervalToPendingSegments.getOrDefault(interval, Map.of()).values()
-        )
+        () -> List.copyOf(readSegmentsFor(interval).idToPendingSegment.values())
     );
   }
 
@@ -496,7 +508,7 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache
   }
 
   @Override
-  public int deleteSegments(Set<String> segmentIdsToDelete)
+  public int deleteSegments(Set<SegmentId> segmentIdsToDelete)
   {
     return removeSegmentsForIds(segmentIdsToDelete);
   }
@@ -521,9 +533,8 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache
       int insertedCount = 0;
       for (PendingSegmentRecord record : pendingSegments) {
         final SegmentIdWithShardSpec segmentId = record.getId();
-        PendingSegmentRecord oldValue =
-            intervalToPendingSegments.computeIfAbsent(segmentId.getInterval(), interval -> new HashMap<>())
-                                     .putIfAbsent(segmentId.toString(), record);
+        PendingSegmentRecord oldValue = writeSegmentsFor(segmentId.getInterval())
+            .idToPendingSegment.putIfAbsent(segmentId.toString(), record);
         if (oldValue == null) {
           ++insertedCount;
         }
@@ -537,8 +548,11 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache
   public int deleteAllPendingSegments()
   {
     return withWriteLock(() -> {
-      int numPendingSegments = intervalToPendingSegments.values().stream().mapToInt(Map::size).sum();
-      intervalToPendingSegments.clear();
+      int numPendingSegments =
+          intervalToSegments.values().stream()
+                            .mapToInt(interval -> interval.idToPendingSegment.size())
+                            .sum();
+      intervalToSegments.values().forEach(interval -> interval.idToPendingSegment.clear());
       return numPendingSegments;
     });
   }
@@ -548,11 +562,11 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache
   {
     final Set<String> remainingIdsToDelete = new HashSet<>(segmentIdsToDelete);
 
-    withWriteLock(() -> intervalToPendingSegments.forEach(
-        (interval, pendingSegments) -> {
+    withWriteLock(() -> intervalToSegments.forEach(
+        (interval, segments) -> {
           final Set<String> deletedIds =
               remainingIdsToDelete.stream()
-                                  .map(pendingSegments::remove)
+                                  .map(segments.idToPendingSegment::remove)
                                   .filter(Objects::nonNull)
                                   .map(record -> record.getId().toString())
                                   .collect(Collectors.toSet());
@@ -589,33 +603,92 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache
   }
 
   /**
-   * Returns all the pending segments that match the given predicate.
+   * Iterates over all the pending segments to find ones that match the given predicate.
    */
   private List<PendingSegmentRecord> findPendingSegmentsMatching(Predicate<PendingSegmentRecord> predicate)
   {
     return withReadLock(
-        () -> intervalToPendingSegments.entrySet()
-                                       .stream()
-                                       .flatMap(entry -> entry.getValue().values().stream())
-                                       .filter(predicate)
-                                       .collect(Collectors.toList())
+        () -> intervalToSegments.values()
+                                .stream()
+                                .flatMap(interval -> interval.idToPendingSegment.values().stream())
+                                .filter(predicate)
+                                .collect(Collectors.toList())
     );
   }
 
-  private boolean isSegmentIdCached(SegmentId id)
+  private Stream<SegmentsInInterval> findOverlappingIntervals(Interval searchInterval)
   {
-    return idToUsedSegment.containsKey(id.toString())
-           || unusedSegmentIdToUpdatedTime.containsKey(id);
+    // If searchInterval is (-inf, +inf), everything overlaps with it
+    if (Intervals.isEternity(searchInterval)) {
+      return withReadLock(() -> intervalToSegments.values().stream());
+    }
+
+    // If searchInterval is (-inf, end), overlapStart = (-inf, -inf)
+    // If searchInterval is (start, +inf), overlapStart = (-inf, start)
+    // Filter out intervals which end strictly before the start of the searchInterval
+    final Interval overlapStart = Intervals.ETERNITY.withEnd(searchInterval.getStart());
+
+    return withReadLock(
+        () -> intervalToSegments.tailMap(overlapStart)
+                                .entrySet()
+                                .stream()
+                                .filter(entry -> entry.getKey().overlaps(searchInterval))
+                                .map(Map.Entry::getValue)
+    );
   }
 
-  private static boolean anyIntervalOverlaps(List<Interval> intervals, Interval testInterval)
+  /**
+   * Contains segments exactly aligned with an interval.
+   */
+  private static class SegmentsInInterval
   {
-    return intervals.isEmpty()
-           || intervals.stream().anyMatch(interval -> interval.overlaps(testInterval));
-  }
+    static final SegmentsInInterval EMPTY = new SegmentsInInterval();
 
-  private static String getId(DataSegment segment)
-  {
-    return segment.getId().toString();
+    /**
+     * Map from segment ID to used segment.
+     */
+    final Map<SegmentId, DataSegmentPlus> idToUsedSegment = new HashMap<>();
+
+    /**
+     * Map from segment ID to pending segment record.
+     */
+    final Map<String, PendingSegmentRecord> idToPendingSegment = new HashMap<>();
+
+    /**
+     * Map from version to the highest partition number of an unused segment with
+     * that version.
+     */
+    final Map<String, Integer> versionToHighestUnusedPartitionNumber = new HashMap<>();
+
+    /**
+     * Map from segment ID to updated time for unused segments only.
+     */
+    final Map<SegmentId, DateTime> unusedSegmentIdToUpdatedTime = new HashMap<>();
+
+    void clear()
+    {
+      idToPendingSegment.clear();
+      idToUsedSegment.clear();
+      versionToHighestUnusedPartitionNumber.clear();
+    }
+
+    boolean isEmpty()
+    {
+      return idToPendingSegment.isEmpty()
+             && idToUsedSegment.isEmpty()
+             && versionToHighestUnusedPartitionNumber.isEmpty();
+    }
+
+    private boolean isSegmentIdCached(SegmentId id)
+    {
+      return idToUsedSegment.containsKey(id)
+             || unusedSegmentIdToUpdatedTime.containsKey(id);
+    }
+
+    private void updateMaxUnusedId(SegmentId segmentId)
+    {
+      versionToHighestUnusedPartitionNumber
+          .merge(segmentId.getVersion(), segmentId.getPartitionNum(), Math::max);
+    }
   }
 }

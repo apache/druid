@@ -22,6 +22,7 @@ package org.apache.druid.metadata.segment;
 import org.apache.druid.metadata.PendingSegmentRecord;
 import org.apache.druid.server.http.DataSegmentPlus;
 import org.apache.druid.timeline.DataSegment;
+import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -60,7 +61,7 @@ public interface DatasourceSegmentMetadataWriter
    *
    * @return Number of segments deleted successfully
    */
-  int deleteSegments(Set<String> segmentsIdsToDelete);
+  int deleteSegments(Set<SegmentId> segmentsIdsToDelete);
 
   /**
    * Updates the payload of the given segment in the metadata store.

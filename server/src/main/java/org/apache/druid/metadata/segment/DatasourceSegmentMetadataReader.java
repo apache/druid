@@ -68,7 +68,7 @@ public interface DatasourceSegmentMetadataReader
   /**
    * Retrieves used segments for the given segment IDs.
    */
-  List<DataSegment> findUsedSegments(Set<String> segmentIds);
+  List<DataSegment> findUsedSegments(Set<SegmentId> segmentIds);
 
   /**
    * Retrieves used segments that overlap with any of the given intervals. If the
@@ -84,7 +84,7 @@ public interface DatasourceSegmentMetadataReader
    * @return null if no such segment exists in the metadata store.
    */
   @Nullable
-  DataSegment findSegment(String segmentId);
+  DataSegment findSegment(SegmentId segmentId);
 
   /**
    * Retrieves the used segment for the given segment ID.
@@ -92,7 +92,7 @@ public interface DatasourceSegmentMetadataReader
    * @return null if no such segment exists in the metadata store.
    */
   @Nullable
-  DataSegment findUsedSegment(String segmentId);
+  DataSegment findUsedSegment(SegmentId segmentId);
 
   /**
    * Retrieves segments for the given segment IDs.

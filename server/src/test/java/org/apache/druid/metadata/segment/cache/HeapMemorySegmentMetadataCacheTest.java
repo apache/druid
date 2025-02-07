@@ -269,7 +269,7 @@ public class HeapMemorySegmentMetadataCacheTest
 
     final DataSegmentPlus segment = CreateDataSegments.ofDatasource(TestDataSource.WIKI)
                                                       .markUsed().asPlus();
-    final String segmentId = segment.getDataSegment().getId().toString();
+    final SegmentId segmentId = segment.getDataSegment().getId();
 
     Assert.assertNull(wikiCache.findUsedSegment(segmentId));
 
@@ -298,7 +298,7 @@ public class HeapMemorySegmentMetadataCacheTest
 
     Assert.assertEquals(
         usedSegmentPlus.getDataSegment(),
-        wikiCache.findUsedSegment(usedSegmentPlus.getDataSegment().getId().toString())
+        wikiCache.findUsedSegment(usedSegmentPlus.getDataSegment().getId())
     );
   }
 
@@ -410,7 +410,7 @@ public class HeapMemorySegmentMetadataCacheTest
     final DataSegment unpersistedSegment = unpersistedSegmentPlus.getDataSegment();
     Assert.assertEquals(
         unpersistedSegment,
-        wikiCache.findUsedSegment(unpersistedSegment.getId().toString())
+        wikiCache.findUsedSegment(unpersistedSegment.getId())
     );
 
     syncCache();
@@ -418,7 +418,7 @@ public class HeapMemorySegmentMetadataCacheTest
     serviceEmitter.verifyValue(Metric.POLLED_SEGMENTS, 0L);
 
     Assert.assertNull(
-        wikiCache.findUsedSegment(unpersistedSegment.getId().toString())
+        wikiCache.findUsedSegment(unpersistedSegment.getId())
     );
   }
 

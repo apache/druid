@@ -1520,7 +1520,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   )
   {
     // Check if there is a conflict with an existing entry in the segments table
-    if (transaction.findSegment(allocatedId.asSegmentId().toString()) == null) {
+    if (transaction.findSegment(allocatedId.asSegmentId()) == null) {
       return allocatedId;
     }
 
@@ -1790,6 +1790,24 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     }
 
     return dataSource;
+  }
+
+  /**
+   * Tries to parse the given string as a {@link SegmentId}.
+   *
+   * @throws DruidException if the segment ID could not be parsed.
+   */
+  private SegmentId getValidSegmentId(String dataSource, String segmentId)
+  {
+    final SegmentId parsedSegmentId = SegmentId.tryParse(dataSource, segmentId);
+    if (parsedSegmentId == null) {
+      throw InvalidInput.exception(
+          "Could not parse segment ID[%s] for datasource[%s].",
+          segmentId, dataSource
+      );
+    } else {
+      return parsedSegmentId;
+    }
   }
 
   private static Set<DataSegment> findNonOvershadowedSegments(Set<DataSegment> segments)
@@ -2242,8 +2260,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     }
 
     final String dataSource = verifySegmentsToCommit(segments);
-    final Set<String> idsToDelete = segments.stream()
-                                            .map(s -> s.getId().toString())
+    final Set<SegmentId> idsToDelete = segments.stream()
+                                            .map(DataSegment::getId)
                                             .collect(Collectors.toSet());
     int numDeletedSegments = retryDatasourceTransaction(
         dataSource,
@@ -2331,17 +2349,17 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     }
 
     // Retrieve the segments for the ids stored in the map to get the numCorePartitions
-    final Set<String> segmentIdsToRetrieve = new HashSet<>();
+    final Set<SegmentId> segmentIdsToRetrieve = new HashSet<>();
     for (Map<Interval, SegmentId> itvlMap : versionIntervalToSmallestSegmentId.values()) {
-      segmentIdsToRetrieve.addAll(itvlMap.values().stream().map(SegmentId::toString).collect(Collectors.toList()));
+      segmentIdsToRetrieve.addAll(itvlMap.values());
     }
     final List<DataSegment> dataSegments = transaction.findUsedSegments(segmentIdsToRetrieve);
-    final Set<String> retrievedIds = new HashSet<>();
+    final Set<SegmentId> retrievedIds = new HashSet<>();
     final Map<String, Map<Interval, Integer>> versionIntervalToNumCorePartitions = new HashMap<>();
     for (DataSegment segment : dataSegments) {
       versionIntervalToNumCorePartitions.computeIfAbsent(segment.getVersion(), v -> new HashMap<>())
                                         .put(segment.getInterval(), segment.getShardSpec().getNumCorePartitions());
-      retrievedIds.add(segment.getId().toString());
+      retrievedIds.add(segment.getId());
     }
     if (!retrievedIds.equals(segmentIdsToRetrieve)) {
       throw DruidException.defensive(
@@ -2373,18 +2391,20 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   @Override
   public DataSegment retrieveSegmentForId(final String dataSource, final String segmentId)
   {
+    final SegmentId parsedSegmentId = getValidSegmentId(dataSource, segmentId);
     return retryDatasourceTransaction(
         dataSource,
-        transaction -> transaction.findSegment(segmentId)
+        transaction -> transaction.findSegment(parsedSegmentId)
     );
   }
 
   @Override
   public DataSegment retrieveUsedSegmentForId(String dataSource, String segmentId)
   {
+    final SegmentId parsedSegmentId = getValidSegmentId(dataSource, segmentId);
     return retryDatasourceTransaction(
         dataSource,
-        transaction -> transaction.findUsedSegment(segmentId)
+        transaction -> transaction.findUsedSegment(parsedSegmentId)
     );
   }
 

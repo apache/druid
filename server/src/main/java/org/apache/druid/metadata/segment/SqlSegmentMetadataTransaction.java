@@ -161,9 +161,10 @@ class SqlSegmentMetadataTransaction implements SegmentMetadataTransaction
   }
 
   @Override
-  public List<DataSegment> findUsedSegments(Set<String> segmentIds)
+  public List<DataSegment> findUsedSegments(Set<SegmentId> segmentIds)
   {
-    return query.retrieveSegmentsById(dataSource, segmentIds)
+    final Set<String> serializedIds = segmentIds.stream().map(SegmentId::toString).collect(Collectors.toSet());
+    return query.retrieveSegmentsById(dataSource, serializedIds)
                 .stream()
                 .map(DataSegmentPlus::getDataSegment)
                 .collect(Collectors.toList());
@@ -182,15 +183,15 @@ class SqlSegmentMetadataTransaction implements SegmentMetadataTransaction
   }
 
   @Override
-  public DataSegment findSegment(String segmentId)
+  public DataSegment findSegment(SegmentId segmentId)
   {
-    return query.retrieveSegmentForId(segmentId);
+    return query.retrieveSegmentForId(segmentId.toString());
   }
 
   @Override
-  public DataSegment findUsedSegment(String segmentId)
+  public DataSegment findUsedSegment(SegmentId segmentId)
   {
-    return query.retrieveUsedSegmentForId(segmentId);
+    return query.retrieveUsedSegmentForId(segmentId.toString());
   }
 
   @Override
@@ -272,13 +273,13 @@ class SqlSegmentMetadataTransaction implements SegmentMetadataTransaction
   }
 
   @Override
-  public int deleteSegments(Set<String> segmentsIdsToDelete)
+  public int deleteSegments(Set<SegmentId> segmentsIdsToDelete)
   {
     final String deleteSql = StringUtils.format("DELETE from %s WHERE id = :id", dbTables.getSegmentsTable());
 
     final PreparedBatch batch = handle.prepareBatch(deleteSql);
-    for (String id : segmentsIdsToDelete) {
-      batch.bind("id", id).add();
+    for (SegmentId id : segmentsIdsToDelete) {
+      batch.bind("id", id.toString()).add();
     }
 
     int[] deletedRows = batch.execute();

@@ -288,10 +288,6 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
           )
       );
 
-      datasourceToSegmentCache.values().forEach(
-          HeapMemoryDatasourceSegmentCache::recomputeMaxUnusedIds
-      );
-
       datasourceToSummary.forEach(this::retrieveAndRefreshUsedSegments);
 
       retrieveAndRefreshAllPendingSegments(datasourceToSummary);
@@ -301,6 +297,10 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
               datasourceToSummary.computeIfAbsent(dataSource, ds -> new DatasourceSegmentSummary()),
               pollStartTime
           )
+      );
+
+      datasourceToSegmentCache.values().forEach(
+          HeapMemoryDatasourceSegmentCache::markCacheSynced
       );
 
       datasourceToSummary.forEach(this::emitSummaryMetrics);
@@ -344,33 +344,30 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
       ) {
         while (iterator.hasNext()) {
           final SegmentRecord record = iterator.next();
+          final SegmentId segmentId = record.segmentId;
           final HeapMemoryDatasourceSegmentCache cache = getCacheForDatasource(record.dataSource);
           final DatasourceSegmentSummary summary = datasourceToSummary
               .computeIfAbsent(record.dataSource, ds -> new DatasourceSegmentSummary());
 
           // Refresh used segments if required
-          if (record.isUsed && cache.shouldRefreshUsedSegment(record.segmentId, record.lastUpdatedTime)) {
-            summary.usedSegmentIdsToRefresh.add(record.segmentId);
+          if (record.isUsed && cache.shouldRefreshUsedSegment(segmentId, record.lastUpdatedTime)) {
+            summary.usedSegmentIdsToRefresh.add(record.segmentId.toString());
           }
 
           // Track max partition number of unused segment if needed
           if (!record.isUsed) {
-            final SegmentId segmentId = SegmentId.tryParse(record.dataSource, record.segmentId);
-
-            if (segmentId != null) {
-              if (cache.addUnusedSegmentId(segmentId, record.lastUpdatedTime)) {
-                summary.numUnusedSegmentsRefreshed++;
-              }
-
-              final int partitionNum = segmentId.getPartitionNum();
-              summary
-                  .intervalVersionToMaxUnusedPartition
-                  .computeIfAbsent(segmentId.getInterval(), i -> new HashMap<>())
-                  .merge(segmentId.getVersion(), partitionNum, Math::max);
+            if (cache.addUnusedSegmentId(segmentId, record.lastUpdatedTime)) {
+              summary.numUnusedSegmentsRefreshed++;
             }
+
+            final int partitionNum = segmentId.getPartitionNum();
+            summary
+                .intervalVersionToMaxUnusedPartition
+                .computeIfAbsent(segmentId.getInterval(), i -> new HashMap<>())
+                .merge(segmentId.getVersion(), partitionNum, Math::max);
           }
 
-          summary.persistedSegmentIds.add(record.segmentId);
+          summary.persistedSegmentIds.add(segmentId);
         }
 
         return 0;
@@ -559,12 +556,12 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
    */
   private static class SegmentRecord
   {
-    private final String segmentId;
+    private final SegmentId segmentId;
     private final String dataSource;
     private final boolean isUsed;
     private final DateTime lastUpdatedTime;
 
-    SegmentRecord(String segmentId, String dataSource, boolean isUsed, DateTime lastUpdatedTime)
+    SegmentRecord(SegmentId segmentId, String dataSource, boolean isUsed, DateTime lastUpdatedTime)
     {
       this.segmentId = segmentId;
       this.dataSource = dataSource;
@@ -576,12 +573,17 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
     static SegmentRecord fromResultSet(ResultSet r)
     {
       try {
-        final String segmentId = r.getString("id");
+        final String serializedId = r.getString("id");
         final boolean isUsed = r.getBoolean("used");
         final String dataSource = r.getString("dataSource");
         final DateTime lastUpdatedTime = nullSafeDate(r.getString("used_status_last_updated"));
 
-        return new SegmentRecord(segmentId, dataSource, isUsed, lastUpdatedTime);
+        final SegmentId segmentId = SegmentId.tryParse(dataSource, serializedId);
+        if (segmentId == null) {
+          return null;
+        } else {
+          return new SegmentRecord(segmentId, dataSource, isUsed, lastUpdatedTime);
+        }
       }
       catch (SQLException e) {
         return null;
@@ -595,7 +597,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
    */
   private static class DatasourceSegmentSummary
   {
-    final Set<String> persistedSegmentIds = new HashSet<>();
+    final Set<SegmentId> persistedSegmentIds = new HashSet<>();
     final Set<String> persistedPendingSegmentIds = new HashSet<>();
 
     final Set<String> usedSegmentIdsToRefresh = new HashSet<>();
