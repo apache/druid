@@ -21,8 +21,10 @@ package org.apache.druid.sql.calcite.util;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
+import com.google.api.client.util.Preconditions;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.impl.LocalInputSource;
@@ -36,6 +38,7 @@ import org.apache.druid.sql.calcite.util.datasets.TestDataSet;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Map;
 
 /**
  * Utility class to create {@link TestDataSet} from fake indexing tasks.
@@ -45,6 +48,114 @@ import java.io.IOException;
 public class FakeIndexTaskUtil
 {
   public static TestDataSet makeDS(ObjectMapper objectMapper, File src)
+  {
+    try {
+      Map<String, Object> map = objectMapper.readValue(
+          src,
+          new TypeReference<>(){}
+      );
+      Map<String, Object> spec = objectMapper.convertValue(
+          Preconditions.checkNotNull(map.get("spec"),"spec not specified"),
+          new TypeReference<>(){}
+      );
+      DataSchema dataSchema = objectMapper.convertValue(
+          Preconditions.checkNotNull(spec.get("dataSchema"), "dataschema not specified"),
+          DataSchema.class
+      );
+      Map<String, Object> ioConfig = objectMapper.convertValue(
+          Preconditions.checkNotNull(spec.get("ioConfig"), "ioConfig not specified"),
+          new TypeReference<>(){}
+      );
+      InputSource inputSource0 = objectMapper.convertValue(
+          Preconditions.checkNotNull(ioConfig.get("inputSource"), "inputSource not specified"),
+          InputSource.class
+      );
+
+      InputFormat inputFormat = objectMapper.convertValue(
+          Preconditions.checkNotNull(ioConfig.get("inputFormat"), "inputFormat not specified"),
+          InputFormat.class
+      );
+      InputSource inputSource = relativizeLocalInputSource(
+          inputSource0, ProjectPathUtils.PROJECT_ROOT
+      );
+      TestDataSet dataset = new InputSourceBasedTestDataset(
+          dataSchema,
+          inputFormat,
+          inputSource
+      );
+      return dataset;
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  public static TestDataSet makeDS3(ObjectMapper objectMapper, File src)
+  {
+    try {
+      Map<String, Object> map = objectMapper.readValue(
+          src,
+          new TypeReference<>(){}
+      );
+      Map<String, Object> spec = objectMapper.convertValue(
+          Preconditions.checkNotNull(map.get("spec"),"spec not specified"),
+          new TypeReference<>(){}
+      );
+      DataSchema dataSchema = objectMapper.convertValue(
+          Preconditions.checkNotNull(spec.get("dataSchema"), "dataschema not specified"),
+          DataSchema.class
+      );
+      ObjectMapper om = objectMapper.copy();
+      om.registerSubtypes(new NamedType(MyIOConfigType.class, "index_parallel"));
+      MyIOConfigType ioConfig = om.convertValue(
+          Preconditions.checkNotNull(spec.get("ioConfig"), "ioConfig not specified"),
+          MyIOConfigType.class
+      );
+
+      InputSource inputSource = relativizeLocalInputSource(
+          ioConfig.inputSource, ProjectPathUtils.PROJECT_ROOT
+      );
+      TestDataSet dataset = new InputSourceBasedTestDataset(
+          dataSchema,
+          ioConfig.inputFormat,
+          inputSource
+      );
+      return dataset;
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  public static TestDataSet makeDS2(ObjectMapper objectMapper, File src)
+  {
+    try {
+      Map<String, Object> map = objectMapper.readValue(
+          src,
+          new TypeReference<>()
+          {
+          }
+      );
+      ObjectMapper om = objectMapper.copy();
+      om.registerSubtypes(new NamedType(MyIOConfigType.class, "index_parallel"));
+      FakeIngestionSpec spec = om
+          .convertValue(Preconditions.checkNotNull(map.get("spec"), "spec not specified"), FakeIngestionSpec.class);
+      InputSource inputSource = relativizeLocalInputSource(
+          spec.getIOConfig().inputSource, ProjectPathUtils.PROJECT_ROOT
+      );
+      TestDataSet dataset = new InputSourceBasedTestDataset(
+          spec.getDataSchema(),
+          spec.getIOConfig().inputFormat,
+          inputSource
+      );
+      return dataset;
+    }
+    catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  public static TestDataSet makeDS1(ObjectMapper objectMapper, File src)
   {
     try {
       ObjectMapper om = objectMapper.copy();
