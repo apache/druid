@@ -458,7 +458,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
             );
             return;
           }
-          if (SupervisorStateManager.BasicState.IDLE == getState()) {
+          if (stateManager.isIdle()) {
             log.info(
                 "Skipping DynamicAllocationTasksNotice execution because [%s] supervisor is idle",
                 dataSource
@@ -1204,12 +1204,12 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
   {
     synchronized (stateChangeLock) {
       if (started) {
-        log.warn("Supervisor was already started, skipping init");
+        log.warn("Supervisor[%s] was already started, skipping init", supervisorId);
         return;
       }
 
       if (stopped) {
-        log.warn("Supervisor was already stopped, skipping init.");
+        log.warn("Supervisor[%s] was already stopped, skipping init.", supervisorId);
         return;
       }
 
@@ -1683,7 +1683,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
 
       // If supervisor is already stopping, don't contend for stateChangeLock since the block can be skipped
       if (stateManager.getSupervisorState().getBasicState().equals(SupervisorStateManager.BasicState.STOPPING)) {
-        generateAndLogReport();
+        logDebugReport();
         return;
       }
 
@@ -1692,12 +1692,11 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         // if suspended, ensure tasks have been requested to gracefully stop
         if (stateManager.getSupervisorState().getBasicState().equals(SupervisorStateManager.BasicState.STOPPING)) {
           // if we're already terminating, don't do anything here, the terminate already handles shutdown
-          log.info("[%s] supervisor is already stopping.", dataSource);
+          log.debug("[%s] supervisor is already stopping.", dataSource);
         } else if (stateManager.isIdle()) {
-          log.info("[%s] supervisor is idle.", dataSource);
+          log.debug("[%s] supervisor is idle.", dataSource);
         } else if (!spec.isSuspended()) {
-          log.info("[%s] supervisor is running.", dataSource);
-
+          log.debug("[%s] supervisor is running.", dataSource);
           stateManager.maybeSetState(SeekableStreamSupervisorStateManager.SeekableStreamState.CREATING_TASKS);
           createNewTasks();
         } else {
@@ -1706,7 +1705,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
         }
       }
 
-      generateAndLogReport();
+      logDebugReport();
     }
     catch (Exception e) {
       stateManager.recordThrowableEvent(e);
@@ -1717,7 +1716,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
   }
 
-  private void generateAndLogReport()
+  private void logDebugReport()
   {
     if (log.isDebugEnabled()) {
       log.debug("%s", generateReport(true));
@@ -3718,7 +3717,15 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     if (!idle) {
       stateManager.maybeSetState(SupervisorStateManager.BasicState.RUNNING);
     } else if (!stateManager.isIdle() && idleTime > idleConfig.getInactiveAfterMillis()) {
+      log.info("Setting supervisor[%s] to state[%s]", supervisorId, SupervisorStateManager.BasicState.IDLE.name());
       stateManager.maybeSetState(SupervisorStateManager.BasicState.IDLE);
+      if (stateManager.isIdle()) {
+        log.info(
+            "Successfully set supervisor[%s] to state[%s]",
+            supervisorId,
+            SupervisorStateManager.BasicState.IDLE.name()
+        );
+      }
     }
   }
 
