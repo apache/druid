@@ -23,7 +23,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
-import com.google.inject.name.Named;
 import org.apache.druid.client.SegmentServerSelector;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -60,6 +59,7 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -76,31 +76,40 @@ import java.util.function.Function;
  */
 public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
 {
-  public static final String TIMELINES_KEY = "timelines";
-
   private final Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> timelines;
   private final QueryRunnerFactoryConglomerate conglomerate;
   @Nullable
   private final QueryScheduler scheduler;
-  private final GroupByQueryConfig groupByQueryConfig;
   private final EtagProvider etagProvider;
+
+  public static class TestSegmentsBroker
+  {
+    public final Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> timelines = new HashMap<>();
+  }
 
   @Inject
   TestClusterQuerySegmentWalker(
-      @Named(TIMELINES_KEY) Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> timelines,
+      TestSegmentsBroker testSegmentsBroker,
       QueryRunnerFactoryConglomerate conglomerate,
       @Nullable QueryScheduler scheduler,
       GroupByQueryConfig groupByQueryConfig,
-      EtagProvider etagProvider
-  )
+      EtagProvider etagProvider)
+  {
+    this(testSegmentsBroker.timelines, conglomerate, scheduler, groupByQueryConfig, etagProvider);
+  }
+
+  TestClusterQuerySegmentWalker(
+      Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> timelines,
+      QueryRunnerFactoryConglomerate conglomerate,
+      @Nullable QueryScheduler scheduler,
+      GroupByQueryConfig groupByQueryConfig,
+      EtagProvider etagProvider)
   {
     this.timelines = timelines;
     this.conglomerate = conglomerate;
     this.scheduler = scheduler;
-    this.groupByQueryConfig = groupByQueryConfig;
     this.etagProvider = etagProvider;
   }
-
 
   @Override
   public <T> QueryRunner<T> getQueryRunnerForIntervals(final Query<T> query, final Iterable<Interval> intervals)

@@ -73,7 +73,6 @@ import org.apache.druid.query.topn.TopNQueryConfig;
 import org.apache.druid.quidem.ProjectPathUtils;
 import org.apache.druid.quidem.TestSqlModule;
 import org.apache.druid.segment.DefaultColumnFormatConfig;
-import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.realtime.ChatHandlerProvider;
@@ -87,6 +86,7 @@ import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.server.SubqueryGuardrailHelper;
 import org.apache.druid.server.TestClusterQuerySegmentWalker;
+import org.apache.druid.server.TestClusterQuerySegmentWalker.TestSegmentsBroker;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.log.RequestLogger;
 import org.apache.druid.server.log.TestRequestLogger;
@@ -119,7 +119,6 @@ import org.apache.druid.sql.calcite.view.ViewManager;
 import org.apache.druid.sql.guice.SqlModule;
 import org.apache.druid.sql.hook.DruidHookDispatcher;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.utils.JvmUtils;
 
 import javax.inject.Named;
@@ -131,9 +130,7 @@ import java.net.URI;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 
@@ -1036,22 +1033,21 @@ public class SqlTestFramework
     }
 
     @Provides
-    @Named(TestClusterQuerySegmentWalker.TIMELINES_KEY)
     @LazySingleton
-    public Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> makeTimelines()
+    public TestSegmentsBroker makeTimelines()
     {
-      return new HashMap<>();
+      return new TestSegmentsBroker();
     }
 
     @Provides
     @Named("empty")
     @LazySingleton
     public SpecificSegmentsQuerySegmentWalker createEmptyWalker(
-        @Named(TestClusterQuerySegmentWalker.TIMELINES_KEY) Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> timelines,
+        TestSegmentsBroker testSegmentsBroker,
         ClientQuerySegmentWalker clientQuerySegmentWalker)
     {
       return new SpecificSegmentsQuerySegmentWalker(
-          timelines,
+          testSegmentsBroker.timelines,
           clientQuerySegmentWalker
       );
     }
