@@ -32,6 +32,7 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.segment.FrameBasedInlineSegmentWrangler;
