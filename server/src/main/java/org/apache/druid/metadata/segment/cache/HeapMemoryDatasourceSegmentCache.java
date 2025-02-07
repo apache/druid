@@ -21,7 +21,6 @@ package org.apache.druid.metadata.segment.cache;
 
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.Intervals;
-import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.metadata.PendingSegmentRecord;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
