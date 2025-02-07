@@ -56,6 +56,7 @@ jobs:
         with:
           distribution: 'zulu'
           java-version: ${{ inputs.jdk }}
+          cache: 'maven'
 
       - name: Download required artifacts
         if: ${{ inputs.artifacts_to_download != '' }}
