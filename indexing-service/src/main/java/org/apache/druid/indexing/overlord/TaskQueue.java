@@ -65,7 +65,6 @@ import org.apache.druid.metadata.PasswordProviderRedactionMixIn;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.utils.CollectionUtils;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -1012,12 +1011,29 @@ public class TaskQueue
     return Optional.fromNullable(task);
   }
 
-  @VisibleForTesting
-  List<Task> getTasks()
+  /**
+   * List of all active and completed tasks currently being managed by this
+   * TaskQueue.
+   */
+  public List<Task> getTasks()
   {
     giant.lock();
     try {
-      return new ArrayList<>(tasks.values());
+      return List.copyOf(tasks.values());
+    }
+    finally {
+      giant.unlock();
+    }
+  }
+
+  /**
+   * IDs of tasks that have recently completed and are being cleaned up.
+   */
+  private Set<String> getRecentlyCompletedTaskIds()
+  {
+    giant.lock();
+    try {
+      return Set.copyOf(recentlyCompletedTasks);
     }
     finally {
       giant.unlock();
@@ -1029,17 +1045,15 @@ public class TaskQueue
    */
   public List<Task> getActiveTasksForDatasource(String datasource)
   {
-    giant.lock();
-    try {
-      return tasks.values()
-                  .stream()
-                  .filter(task -> task.getDataSource().equals(datasource)
-                                  && !recentlyCompletedTasks.contains(task.getId()))
-                  .collect(Collectors.toList());
-    }
-    finally {
-      giant.unlock();
-    }
+    // This method is called very frequently by streaming supervisors.
+    // To reduce contention, perform filtration outside the lock
+    final List<Task> allTasks = getTasks();
+    final Set<String> completedTaskIds = getRecentlyCompletedTaskIds();
+
+    return allTasks.stream().filter(
+        task -> task.getDataSource().equals(datasource)
+                && !completedTaskIds.contains(task.getId())
+    ).collect(Collectors.toList());
   }
 
   private void validateTaskPayload(Task task)
