@@ -720,8 +720,7 @@ public class TestDataBuilder
         conglomerate,
         injector.getInstance(SegmentWrangler.class),
         joinableFactoryWrapper,
-        scheduler,
-        injector.getInstance(GroupByQueryConfig.class)
+        scheduler
     );
     return addDataSetsToWalker(tmpDir, walker);
   }

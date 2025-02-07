@@ -44,7 +44,6 @@ import org.apache.druid.query.ReferenceCountingSegmentQueryRunner;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.context.ResponseContext.Keys;
-import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTestHelper;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.spec.SpecificSegmentQueryRunner;
@@ -92,17 +91,15 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
       TestSegmentsBroker testSegmentsBroker,
       QueryRunnerFactoryConglomerate conglomerate,
       @Nullable QueryScheduler scheduler,
-      GroupByQueryConfig groupByQueryConfig,
       EtagProvider etagProvider)
   {
-    this(testSegmentsBroker.timelines, conglomerate, scheduler, groupByQueryConfig, etagProvider);
+    this(testSegmentsBroker.timelines, conglomerate, scheduler, etagProvider);
   }
 
   TestClusterQuerySegmentWalker(
       Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> timelines,
       QueryRunnerFactoryConglomerate conglomerate,
       @Nullable QueryScheduler scheduler,
-      GroupByQueryConfig groupByQueryConfig,
       EtagProvider etagProvider)
   {
     this.timelines = timelines;

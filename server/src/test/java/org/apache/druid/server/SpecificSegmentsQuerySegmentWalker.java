@@ -117,8 +117,7 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
       final QueryRunnerFactoryConglomerate conglomerate,
       final SegmentWrangler segmentWrangler,
       final JoinableFactoryWrapper joinableFactoryWrapper,
-      final QueryScheduler scheduler,
-      final GroupByQueryConfig groupByQueryConfig
+      final QueryScheduler scheduler
   )
   {
     Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> timelines = new HashMap<>();
@@ -133,7 +132,6 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
                 timelines,
                 conglomerate,
                 scheduler,
-                groupByQueryConfig,
                 injector
             ),
             QueryStackTests.createLocalQuerySegmentWalker(
@@ -174,8 +172,7 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
                         .build()
         ),
         new JoinableFactoryWrapper(QueryStackTests.makeJoinableFactoryForLookup(LOOKUP_EXTRACTOR_FACTORY_CONTAINER_PROVIDER)),
-        QueryStackTests.DEFAULT_NOOP_SCHEDULER,
-        new GroupByQueryConfig()
+        QueryStackTests.DEFAULT_NOOP_SCHEDULER
     );
   }
 
