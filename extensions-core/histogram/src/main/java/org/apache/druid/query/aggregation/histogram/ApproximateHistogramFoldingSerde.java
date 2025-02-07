@@ -82,7 +82,7 @@ public class ApproximateHistogramFoldingSerde extends ComplexMetricSerde
   @Override
   public ObjectStrategy<ApproximateHistogram> getObjectStrategy()
   {
-    return new ObjectStrategy<ApproximateHistogram>()
+    return new ObjectStrategy<>()
     {
       @Override
       public Class<ApproximateHistogram> getClazz()

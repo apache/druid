@@ -48,19 +48,19 @@ The following table describes array functions. To learn more about array aggrega
 
 |Function|Description|
 |--------|-----|
-|`ARRAY[expr1, expr2, ...]`|Constructs a SQL `ARRAY` literal from the expression arguments, using the type of the first argument as the output array type.|
-|`ARRAY_LENGTH(arr)`|Returns length of the array expression.|
-|`ARRAY_OFFSET(arr, long)`|Returns the array element at the 0-based index supplied, or null for an out of range index.|
-|`ARRAY_ORDINAL(arr, long)`|Returns the array element at the 1-based index supplied, or null for an out of range index.|
-|`ARRAY_CONTAINS(arr, expr)`|If `expr` is a scalar type, returns true if `arr` contains `expr`. If `expr` is an array, returns true if `arr` contains all elements of `expr`. Otherwise returns false.|
-|`ARRAY_OVERLAP(arr1, arr2)`|Returns true if `arr1` and `arr2` have any elements in common, else false.|
-|`SCALAR_IN_ARRAY(expr, arr)`|Returns true if the scalar `expr` is present in `arr`. Otherwise, returns false if the scalar `expr` is non-null or `UNKNOWN` if the scalar `expr` is `NULL`.|
-|`ARRAY_OFFSET_OF(arr, expr)`|Returns the 0-based index of the first occurrence of `expr` in the array. If no matching elements exist in the array, returns `null` or `-1` if `druid.generic.useDefaultValueForNull=true` (deprecated legacy mode).|
-|`ARRAY_ORDINAL_OF(arr, expr)`|Returns the 1-based index of the first occurrence of `expr` in the array. If no matching elements exist in the array, returns `null` or `-1` if `druid.generic.useDefaultValueForNull=true` (deprecated legacy mode).|
-|`ARRAY_PREPEND(expr, arr)`|Adds `expr` to the beginning of `arr`, the resulting array type determined by the type of `arr`.|
-|`ARRAY_APPEND(arr, expr)`|Appends `expr` to `arr`, the resulting array type determined by the type of `arr`.|
-|`ARRAY_CONCAT(arr1, arr2)`|Concatenates `arr2` to `arr1`. The resulting array type is determined by the type of `arr1`.|
-|`ARRAY_SLICE(arr, start, end)`|Returns the subarray of `arr` from the 0-based index `start` (inclusive) to `end` (exclusive). Returns `null`, if `start` is less than 0, greater than length of `arr`, or greater than `end`.|
-|`ARRAY_TO_STRING(arr, str)`|Joins all elements of `arr` by the delimiter specified by `str`.|
-|`STRING_TO_ARRAY(str1, str2)`|Splits `str1` into an array on the delimiter specified by `str2`, which is a regular expression.|
-|`ARRAY_TO_MV(arr)`|Converts an `ARRAY` of any type into a multi-value string `VARCHAR`.|
+|`ARRAY[expr1, expr2, ...]`|Constructs a SQL `ARRAY` literal from the provided expression arguments. All arguments must be of the same type.|
+|`ARRAY_APPEND(arr, expr)`|Appends the expression to the array. The source array type determines the resulting array type.|
+|`ARRAY_CONCAT(arr1, arr2)`|Concatenates two arrays. The type of `arr1` determines the resulting array type.|
+|`ARRAY_CONTAINS(arr, expr)`|Checks if the array contains the specified expression. If the specified expression is a scalar value, returns true if the source array contains the value. If the specified expression is an array, returns true if the source array contains all elements of the expression.|
+|`ARRAY_LENGTH(arr)`|Returns the length of the array.|
+|`ARRAY_OFFSET(arr, long)`|Returns the array element at the specified zero-based index. Returns null if the index is out of bounds.|
+|`ARRAY_OFFSET_OF(arr, expr)`|Returns the 0-based index of the first occurrence of `expr` in the array. If no matching elements exist in the array, returns `null`.|
+|`ARRAY_ORDINAL(arr, long)`|Returns the array element at the specified one-based index. Returns null if the index is out of bounds.|
+|`ARRAY_ORDINAL_OF(arr, expr)`|Returns the 1-based index of the first occurrence of `expr` in the array. If no matching elements exist in the array, returns `null`.|
+|`ARRAY_OVERLAP(arr1, arr2)`|Returns true if two arrays have any elements in common. Treats `NULL` values as known elements.|
+|`ARRAY_PREPEND(expr, arr)`|Prepends the expression to the array. The source array type determines the resulting array type.|
+|`ARRAY_SLICE(arr, start, end)`|Returns a subset of the array from the zero-based index `start` (inclusive) to `end` (exclusive). Returns null if `start` is less than 0, greater than the length of the array, or greater than `end`.|
+|`ARRAY_TO_MV(arr)`|Converts an array of any type into a [multi-value string](sql-data-types.md#multi-value-strings).|
+|`ARRAY_TO_STRING(arr, delimiter)`|Joins all elements of the array into a string using the specified delimiter.|
+|`SCALAR_IN_ARRAY(expr, arr)`|Checks if the scalar value is present in the array. Returns false if the value is non-null, or `UNKNOWN` if the value is `NULL`. Returns `UNKNOWN` if the array is `NULL`.|
+|`STRING_TO_ARRAY(string, delimiter)`|Splits the string into an array of substrings using the specified delimiter. The delimiter must be a valid regular expression.|

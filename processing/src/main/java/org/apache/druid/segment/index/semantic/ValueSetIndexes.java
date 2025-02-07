@@ -107,7 +107,7 @@ public interface ValueSetIndexes
       @Override
       public Iterable<ImmutableBitmap> getBitmapIterable()
       {
-        return () -> new Iterator<ImmutableBitmap>()
+        return () -> new Iterator<>()
         {
           final PeekingIterator<T> valuesIterator = Iterators.peekingIterator(values.iterator());
           final PeekingIterator<T> dictionaryIterator = Iterators.peekingIterator(dictionary.iterator());
@@ -196,7 +196,7 @@ public interface ValueSetIndexes
       @Override
       public Iterable<ImmutableBitmap> getBitmapIterable()
       {
-        return () -> new Iterator<ImmutableBitmap>()
+        return () -> new Iterator<>()
         {
           final int dictionarySize = dictionary.size();
           final Iterator<T> iterator = values.iterator();
@@ -277,7 +277,7 @@ public interface ValueSetIndexes
       @Override
       public Iterable<ImmutableBitmap> getBitmapIterable()
       {
-        return () -> new Iterator<ImmutableBitmap>()
+        return () -> new Iterator<>()
         {
           final Iterator<T> iterator = values.iterator();
           int next = -1;

@@ -97,7 +97,7 @@ public class MaxSizeSplitHintSpec implements SplitHintSpec
   @Override
   public <T> Iterator<List<T>> split(Iterator<T> inputIterator, Function<T, InputFileAttribute> inputAttributeExtractor)
   {
-    return new Iterator<List<T>>()
+    return new Iterator<>()
     {
       private final long maxSplitSizeBytes = maxSplitSize.getBytes();
       private T peeking;

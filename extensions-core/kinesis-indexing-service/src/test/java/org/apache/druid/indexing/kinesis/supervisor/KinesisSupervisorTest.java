@@ -94,6 +94,7 @@ import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
 import org.easymock.IAnswer;
 import org.joda.time.DateTime;
+import org.joda.time.Duration;
 import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Assert;
@@ -4317,7 +4318,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     // first task ran, its shard 0 has reached EOS
     EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(
         new KinesisDataSourceMetadata(
-            new SeekableStreamEndSequenceNumbers<String, String>(
+            new SeekableStreamEndSequenceNumbers<>(
                 STREAM,
                 ImmutableMap.of(SHARD_ID0, KinesisSequenceNumber.END_OF_SHARD_MARKER)
             )
@@ -4476,7 +4477,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     // second set of tasks ran, shard 0 has expired, but shard 1 and 2 have data
     EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(
         new KinesisDataSourceMetadata(
-            new SeekableStreamEndSequenceNumbers<String, String>(
+            new SeekableStreamEndSequenceNumbers<>(
                 STREAM,
                 ImmutableMap.of(
                     SHARD_ID0, KinesisSequenceNumber.END_OF_SHARD_MARKER,
@@ -4491,7 +4492,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         indexerMetadataStorageCoordinator.resetDataSourceMetadata(
             DATASOURCE,
             new KinesisDataSourceMetadata(
-                new SeekableStreamEndSequenceNumbers<String, String>(
+                new SeekableStreamEndSequenceNumbers<>(
                     STREAM,
                     ImmutableMap.of(
                         SHARD_ID0, KinesisSequenceNumber.EXPIRED_MARKER,
@@ -4780,7 +4781,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     // first tasks ran, both shard 0 and shard 1 have reached EOS, merged into shard 2
     EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(
         new KinesisDataSourceMetadata(
-            new SeekableStreamEndSequenceNumbers<String, String>(
+            new SeekableStreamEndSequenceNumbers<>(
                 STREAM,
                 ImmutableMap.of(
                     SHARD_ID0, KinesisSequenceNumber.END_OF_SHARD_MARKER,
@@ -4923,7 +4924,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     // second set of tasks ran, shard 0 has expired, but shard 1 and 2 have data
     EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(
         new KinesisDataSourceMetadata(
-            new SeekableStreamEndSequenceNumbers<String, String>(
+            new SeekableStreamEndSequenceNumbers<>(
                 STREAM,
                 ImmutableMap.of(
                     SHARD_ID0, KinesisSequenceNumber.END_OF_SHARD_MARKER,
@@ -4938,7 +4939,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
         indexerMetadataStorageCoordinator.resetDataSourceMetadata(
             DATASOURCE,
             new KinesisDataSourceMetadata(
-                new SeekableStreamEndSequenceNumbers<String, String>(
+                new SeekableStreamEndSequenceNumbers<>(
                     STREAM,
                     ImmutableMap.of(
                         SHARD_ID0, KinesisSequenceNumber.EXPIRED_MARKER,
@@ -5580,7 +5581,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
             "awsEndpoint",
             null,
             null,
-            null
+            null,
+            Duration.standardHours(2).getStandardMinutes()
         ),
         Collections.emptyMap(),
         false,

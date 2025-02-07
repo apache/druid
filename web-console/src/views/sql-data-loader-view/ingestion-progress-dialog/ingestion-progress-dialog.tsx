@@ -18,8 +18,8 @@
 
 import { Button, Classes, Dialog, Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { T } from '@druid-toolkit/query';
 import classNames from 'classnames';
+import { T } from 'druid-query-toolkit';
 import React, { useState } from 'react';
 
 import type { Execution, QueryWithContext } from '../../../druid-models';

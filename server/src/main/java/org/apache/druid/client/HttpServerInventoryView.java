@@ -86,7 +86,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class HttpServerInventoryView implements ServerInventoryView, FilteredServerInventoryView
 {
   public static final TypeReference<ChangeRequestsSnapshot<DataSegmentChangeRequest>> SEGMENT_LIST_RESP_TYPE_REF =
-      new TypeReference<ChangeRequestsSnapshot<DataSegmentChangeRequest>>() {};
+      new TypeReference<>() {};
 
   private final EmittingLogger log = new EmittingLogger(HttpServerInventoryView.class);
   private final DruidNodeDiscoveryProvider druidNodeDiscoveryProvider;
@@ -583,7 +583,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
 
     private ChangeRequestHttpSyncer.Listener<DataSegmentChangeRequest> createSyncListener()
     {
-      return new ChangeRequestHttpSyncer.Listener<DataSegmentChangeRequest>()
+      return new ChangeRequestHttpSyncer.Listener<>()
       {
         @Override
         public void fullSync(List<DataSegmentChangeRequest> changes)
@@ -641,7 +641,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
           DataSegment theSegment = DataSegmentInterner.intern(segment);
           druidServer.addDataSegment(theSegment);
           runSegmentCallbacks(
-              new Function<SegmentCallback, CallbackAction>()
+              new Function<>()
               {
                 @Override
                 public CallbackAction apply(SegmentCallback input)
@@ -665,7 +665,7 @@ public class HttpServerInventoryView implements ServerInventoryView, FilteredSer
     {
       if (druidServer.removeDataSegment(segment.getId()) != null) {
         runSegmentCallbacks(
-            new Function<SegmentCallback, CallbackAction>()
+            new Function<>()
             {
               @Override
               public CallbackAction apply(SegmentCallback input)

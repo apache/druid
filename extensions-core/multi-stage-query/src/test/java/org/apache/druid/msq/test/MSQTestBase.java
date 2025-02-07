@@ -40,7 +40,6 @@ import org.apache.calcite.avatica.remote.TypedValue;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.collections.ReferenceCountingResourceHolder;
 import org.apache.druid.collections.ResourceHolder;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
@@ -50,7 +49,6 @@ import org.apache.druid.frame.channel.FrameChannelSequence;
 import org.apache.druid.frame.processor.Bouncer;
 import org.apache.druid.frame.testutil.FrameTestUtil;
 import org.apache.druid.guice.BuiltInTypesModule;
-import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.guice.DruidSecondaryModule;
 import org.apache.druid.guice.ExpressionModule;
 import org.apache.druid.guice.GuiceInjectors;
@@ -184,6 +182,7 @@ import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.schema.NoopDruidSchemaManager;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.calcite.util.DruidModuleCollection;
 import org.apache.druid.sql.calcite.util.LookylooModule;
 import org.apache.druid.sql.calcite.util.QueryFrameworkUtils;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
@@ -273,6 +272,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
                   .put(MultiStageQueryContext.CTX_MAX_NUM_TASKS, 2)
                   .put(MSQWarnings.CTX_MAX_PARSE_EXCEPTIONS_ALLOWED, 0)
                   .put(MSQTaskQueryMaker.USER_KEY, "allowAll")
+                  .put(MultiStageQueryContext.WINDOW_FUNCTION_OPERATOR_TRANSFORMATION, true)
                   .build();
 
   public static final Map<String, Object> DURABLE_STORAGE_MSQ_CONTEXT =
@@ -317,8 +317,6 @@ public class MSQTestBase extends BaseCalciteQueryTest
   public static final String DEFAULT = "default";
   public static final String PARALLEL_MERGE = "parallel_merge";
 
-  public final boolean useDefault = NullHandling.replaceWithDefault();
-
   protected File localFileStorageDir;
   protected LocalFileStorageConnector localFileStorageConnector;
   private static final Logger log = new Logger(MSQTestBase.class);
@@ -349,37 +347,39 @@ public class MSQTestBase extends BaseCalciteQueryTest
     }
 
     @Override
-    public void configureGuice(DruidInjectorBuilder builder)
+    public DruidModule getCoreModule()
     {
-      super.configureGuice(builder);
+      return DruidModuleCollection.of(
+          super.getCoreModule(),
+          new HllSketchModule(),
+          new LocalMsqSqlModule()
+      );
+    }
 
-      builder
-          .addModule(new HllSketchModule())
-          .addModule(new DruidModule()
-          {
-            // Small subset of MsqSqlModule
-            @Override
-            public void configure(Binder binder)
-            {
-              // We want this module to bring InputSourceModule along for the ride.
-              binder.install(new InputSourceModule());
-              binder.install(new BuiltInTypesModule());
-              BuiltInTypesModule.registerHandlersAndSerde();
-              SqlBindings.addOperatorConversion(binder, ExternalOperatorConversion.class);
-              SqlBindings.addOperatorConversion(binder, HttpOperatorConversion.class);
-              SqlBindings.addOperatorConversion(binder, InlineOperatorConversion.class);
-              SqlBindings.addOperatorConversion(binder, LocalOperatorConversion.class);
-            }
+    private static final class LocalMsqSqlModule implements DruidModule
+    {
+      // Small subset of MsqSqlModule
+      @Override
+      public void configure(Binder binder)
+      {
+        // We want this module to bring InputSourceModule along for the ride.
+        binder.install(new InputSourceModule());
+        BuiltInTypesModule.registerHandlersAndSerde();
+        SqlBindings.addOperatorConversion(binder, ExternalOperatorConversion.class);
+        SqlBindings.addOperatorConversion(binder, HttpOperatorConversion.class);
+        SqlBindings.addOperatorConversion(binder, InlineOperatorConversion.class);
+        SqlBindings.addOperatorConversion(binder, LocalOperatorConversion.class);
+      }
 
-            @Override
-            public List<? extends com.fasterxml.jackson.databind.Module> getJacksonModules()
-            {
-              // We want this module to bring input sources along for the ride.
-              return new InputSourceModule().getJacksonModules();
-            }
-          });
+      @Override
+      public List<? extends com.fasterxml.jackson.databind.Module> getJacksonModules()
+      {
+        // We want this module to bring input sources along for the ride.
+        return new InputSourceModule().getJacksonModules();
+      }
     }
   }
+
 
   @AfterEach
   public void tearDown2()
@@ -510,7 +510,6 @@ public class MSQTestBase extends BaseCalciteQueryTest
         binder -> binder.bind(SegmentManager.class).toInstance(EasyMock.createMock(SegmentManager.class)),
         new JoinableFactoryModule(),
         new IndexingServiceTuningConfigModule(),
-        new MSQIndexingModule(),
         Modules.override(new MSQSqlModule()).with(
             binder -> {
               // Our Guice configuration currently requires bindings to exist even if they aren't ever used, the
@@ -539,6 +538,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
 
     objectMapper = setupObjectMapper(injector);
     objectMapper.registerModules(new StorageConnectorModule().getJacksonModules());
+    objectMapper.registerModules(new MSQIndexingModule().getJacksonModules());
     objectMapper.registerModules(sqlModule.getJacksonModules());
     objectMapper.registerModules(BuiltInTypesModule.getJacksonModulesList());
 
@@ -696,7 +696,6 @@ public class MSQTestBase extends BaseCalciteQueryTest
           break;
         default:
           throw new ISE("Cannot query segment %s in test runner", segmentId);
-
       }
       Segment segment = new Segment()
       {

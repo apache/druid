@@ -491,7 +491,7 @@ public class IndexGeneratorJobTest
     dataFile = temporaryFolder.newFile();
     tmpDir = temporaryFolder.newFolder();
 
-    HashMap<String, Object> inputSpec = new HashMap<String, Object>();
+    HashMap<String, Object> inputSpec = new HashMap<>();
     inputSpec.put("paths", dataFile.getCanonicalPath());
     inputSpec.put("type", "static");
     if (inputFormatName != null) {

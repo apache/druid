@@ -371,18 +371,14 @@ name: Guice
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 4.1.0
+version: 5.1.0
 libraries:
   - com.google.inject: guice
-  - com.google.inject.extensions: guice-multibindings
   - com.google.inject.extensions: guice-servlet
   - com.google.inject.extensions: guice-assistedinject
 notices:
   - guice: |
       Google Guice - Core Library
-      Copyright 2006-2016 Google, Inc.
-  - guice-multibindings: |
-      Google Guice - Extensions - MultiBindings
       Copyright 2006-2016 Google, Inc.
   - guice-servlet: |
       Google Guice - Extensions - Servlet
@@ -857,12 +853,33 @@ libraries:
 
 name: kubernetes fabric java client
 license_category: binary
-module: extensions-contrib/kubernetes-overlord-extensions
+module: extensions-core/kubernetes-overlord-extensions
 license_name: Apache License version 2.0
 version: 6.7.2
 libraries:
-  - io.fabric8: kubernetes-client
-
+  - io.fabric8: kubernetes-client-api
+  - io.fabric8: kubernetes-model-batch
+  - io.fabric8: kubernetes-model-core
+  - io.fabric8: kubernetes-model-admissionregistration
+  - io.fabric8: kubernetes-model-apiextensions
+  - io.fabric8: kubernetes-model-apps
+  - io.fabric8: kubernetes-model-autoscaling
+  - io.fabric8: kubernetes-model-certificates
+  - io.fabric8: kubernetes-model-common
+  - io.fabric8: kubernetes-model-coordination
+  - io.fabric8: kubernetes-model-discovery
+  - io.fabric8: kubernetes-model-events
+  - io.fabric8: kubernetes-model-extensions
+  - io.fabric8: kubernetes-model-flowcontrol
+  - io.fabric8: kubernetes-model-gatewayapi
+  - io.fabric8: kubernetes-model-metrics
+  - io.fabric8: kubernetes-model-networking
+  - io.fabric8: kubernetes-model-node
+  - io.fabric8: kubernetes-model-policy
+  - io.fabric8: kubernetes-model-rbac
+  - io.fabric8: kubernetes-model-resource
+  - io.fabric8: kubernetes-model-scheduling
+  - io.fabric8: kubernetes-model-storageclass
 ---
 
 name: kubernetes official java client
@@ -1027,6 +1044,26 @@ libraries:
   - io.prometheus: simpleclient_tracer_otel
   - io.prometheus: simpleclient_tracer_otel_agent
 
+
+---
+
+name: org.snakeyaml snakeyaml-engine
+license_category: binary
+module: extensions-core/druid-kubernetes-overlord-extensions
+license_name: Apache License version 2.0
+version: 2.6
+libraries:
+  - org.snakeyaml: snakeyaml-engine
+
+---
+
+name: org.yaml snakeyaml
+license_category: binary
+module: extensions-core/druid-kubernetes-overlord-extensions
+license_name: Apache License version 2.0
+version: 1.33
+libraries:
+  - org.yaml: snakeyaml
 
 ---
 
@@ -1249,7 +1286,7 @@ name: Netty
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 4.1.108.Final
+version: 4.1.116.Final
 libraries:
   - io.netty: netty-buffer
   - io.netty: netty-codec
@@ -2065,7 +2102,7 @@ name: Jetty
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 9.4.54.v20240208
+version: 9.4.56.v20240826
 libraries:
   - org.eclipse.jetty: jetty-client
   - org.eclipse.jetty: jetty-continuation
@@ -3165,7 +3202,7 @@ libraries:
 ---
 
 name: Apache Kafka
-version: 3.6.1
+version: 3.9.0
 license_category: binary
 module: extensions/druid-kafka-indexing-service
 license_name: Apache License version 2.0
@@ -3174,7 +3211,7 @@ libraries:
 notices:
   - kafka-clients: |
       Apache Kafka
-      Copyright 2023 The Apache Software Foundation.
+      Copyright 2024 The Apache Software Foundation.
 
       This product includes software developed at
       The Apache Software Foundation (https://www.apache.org/).
@@ -4415,7 +4452,7 @@ name: Netty
 license_category: binary
 module: extensions/druid-azure-extensions
 license_name: Apache License version 2.0
-version: 2.0.65.Final
+version: 2.0.69.Final
 libraries:
   - io.netty: netty-tcnative-boringssl-static
   - io.netty: netty-tcnative-classes
@@ -5076,7 +5113,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Palantir Technologies
-version: 5.1.2
+version: 5.1.4
 
 ---
 
@@ -5085,7 +5122,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Palantir Technologies
-version: 5.13.1
+version: 5.16.0
 
 ---
 
@@ -5094,7 +5131,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Palantir Technologies
-version: 2.3.11
+version: 2.3.17
 
 ---
 
@@ -5103,7 +5140,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Palantir Technologies
-version: 5.3.11
+version: 5.3.17
 
 ---
 
@@ -5112,7 +5149,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Palantir Technologies
-version: 5.13.0
+version: 5.15.0
 
 ---
 
@@ -5121,16 +5158,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Palantir Technologies
-version: 5.2.5
-
----
-
-name: "@druid-toolkit/query"
-license_category: binary
-module: web-console
-license_name: Apache License version 2.0
-copyright: Imply Data
-version: 0.22.23
+version: 5.3.5
 
 ---
 
@@ -5224,6 +5252,16 @@ license_file_path: licenses/bin/@emotion-weak-memoize.MIT
 
 ---
 
+name: "@flatten-js/interval-tree"
+license_category: binary
+module: web-console
+license_name: MIT License
+copyright: Alex Bol
+version: 1.1.3
+license_file_path: licenses/bin/@flatten-js-interval-tree.MIT
+
+---
+
 name: "@fontsource/open-sans"
 license_category: binary
 module: web-console
@@ -5234,6 +5272,15 @@ license_file_path: licenses/bin/@fontsource-open-sans.OFL
 
 ---
 
+name: "@internationalized/date"
+license_category: binary
+module: web-console
+license_name: Apache License version 2.0
+copyright: Adobe
+version: 3.5.6
+
+---
+
 name: "@popperjs/core"
 license_category: binary
 module: web-console
@@ -5241,6 +5288,15 @@ license_name: MIT License
 copyright: Federico Zivolo
 version: 2.11.8
 license_file_path: licenses/bin/@popperjs-core.MIT
+
+---
+
+name: "@swc/helpers"
+license_category: binary
+module: web-console
+license_name: Apache License version 2.0
+copyright: 강동윤
+version: 0.5.13
 
 ---
 
@@ -5409,7 +5465,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Vadim Ogievetsky
-version: 0.10.0
+version: 1.2.0
 
 ---
 
@@ -5583,13 +5639,13 @@ license_file_path: licenses/bin/d3-interpolate.ISC
 
 ---
 
-name: "d3-scale-chromatic"
+name: "d3-path"
 license_category: binary
 module: web-console
 license_name: ISC License
 copyright: Mike Bostock
 version: 3.1.0
-license_file_path: licenses/bin/d3-scale-chromatic.ISC
+license_file_path: licenses/bin/d3-path.ISC
 
 ---
 
@@ -5613,13 +5669,23 @@ license_file_path: licenses/bin/d3-selection.ISC
 
 ---
 
+name: "d3-shape"
+license_category: binary
+module: web-console
+license_name: ISC License
+copyright: Mike Bostock
+version: 3.2.0
+license_file_path: licenses/bin/d3-shape.ISC
+
+---
+
 name: "d3-time-format"
 license_category: binary
 module: web-console
-license_name: BSD-3-Clause License
+license_name: ISC License
 copyright: Mike Bostock
-version: 2.2.1
-license_file_path: licenses/bin/d3-time-format.BSD3
+version: 4.1.0
+license_file_path: licenses/bin/d3-time-format.ISC
 
 ---
 
@@ -5699,6 +5765,15 @@ license_name: MIT License
 copyright: Blake Embrey
 version: 3.0.4
 license_file_path: licenses/bin/dot-case.MIT
+
+---
+
+name: "druid-query-toolkit"
+license_category: binary
+module: web-console
+license_name: Apache License version 2.0
+copyright: Imply Data
+version: 1.0.2
 
 ---
 
@@ -5801,16 +5876,6 @@ license_file_path: licenses/bin/has-flag.MIT
 
 ---
 
-name: "has-own-prop"
-license_category: binary
-module: web-console
-license_name: MIT License
-copyright: Sindre Sorhus
-version: 2.0.0
-license_file_path: licenses/bin/has-own-prop.MIT
-
----
-
 name: "hasown"
 license_category: binary
 module: web-console
@@ -5868,15 +5933,6 @@ license_name: MIT License
 copyright: Alexander Shtuchkin
 version: 0.6.3
 license_file_path: licenses/bin/iconv-lite.MIT
-
----
-
-name: "immutable-class"
-license_category: binary
-module: web-console
-license_name: Apache License version 2.0
-copyright: Vadim Ogievetsky
-version: 0.11.2
 
 ---
 
@@ -6057,26 +6113,6 @@ license_name: MIT License
 copyright: Jonathan Ong <me@jongleberry.com>
 version: 2.1.35
 license_file_path: licenses/bin/mime-types.MIT
-
----
-
-name: "moment-timezone"
-license_category: binary
-module: web-console
-license_name: MIT License
-copyright: Tim Wood
-version: 0.5.43
-license_file_path: licenses/bin/moment-timezone.MIT
-
----
-
-name: "moment"
-license_category: binary
-module: web-console
-license_name: MIT License
-copyright: Iskren Ivov Chernev
-version: 2.29.4
-license_file_path: licenses/bin/moment.MIT
 
 ---
 

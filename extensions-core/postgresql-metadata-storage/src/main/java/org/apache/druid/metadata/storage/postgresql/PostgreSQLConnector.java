@@ -187,7 +187,7 @@ public class PostgreSQLConnector extends SQLMetadataConnector
   )
   {
     return getDBI().withHandle(
-        new HandleCallback<Void>()
+        new HandleCallback<>()
         {
           @Override
           public Void withHandle(Handle handle) throws Exception

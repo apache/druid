@@ -185,6 +185,11 @@ public interface Grouper<KeyType> extends Closeable
     List<String> getDictionary();
 
     /**
+     * Return the estimated size of the dictionary of this KeySerde.
+     */
+    Long getDictionarySize();
+
+    /**
      * Serialize a key. This will be called by the {@link #aggregate(Object)} method. The buffer will not
      * be retained after the aggregate method returns, so reusing buffers is OK.
      * <p>

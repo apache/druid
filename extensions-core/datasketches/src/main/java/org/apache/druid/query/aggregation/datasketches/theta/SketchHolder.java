@@ -52,7 +52,7 @@ public class SketchHolder
   );
 
   public static final Comparator<Object> COMPARATOR = Ordering.from(
-      new Comparator<Object>()
+      new Comparator<>()
       {
         @Override
         public int compare(Object o1, Object o2)
@@ -81,7 +81,7 @@ public class SketchHolder
       }
   ).nullsFirst();
 
-  private static final Comparator<Sketch> SKETCH_COMPARATOR = new Comparator<Sketch>()
+  private static final Comparator<Sketch> SKETCH_COMPARATOR = new Comparator<>()
   {
     @Override
     public int compare(Sketch o1, Sketch o2)
@@ -90,7 +90,7 @@ public class SketchHolder
     }
   };
 
-  private static final Comparator<Memory> MEMORY_COMPARATOR = new Comparator<Memory>()
+  private static final Comparator<Memory> MEMORY_COMPARATOR = new Comparator<>()
   {
     @SuppressWarnings("SubtractionInCompareTo")
     @Override

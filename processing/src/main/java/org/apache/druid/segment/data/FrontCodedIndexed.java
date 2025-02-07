@@ -346,7 +346,7 @@ public abstract class FrontCodedIndexed implements Indexed<ByteBuffer>
     copy.position(bucketsPosition);
     final ByteBuffer[] firstBucket = readBucket(copy, numBuckets > 1 ? bucketSize : lastBucketNumValues);
     // iterator decodes and buffers a bucket at a time, paging through buckets as the iterator is consumed
-    return new Iterator<ByteBuffer>()
+    return new Iterator<>()
     {
       private int currIndex = 0;
       private int currentBucketIndex = 0;

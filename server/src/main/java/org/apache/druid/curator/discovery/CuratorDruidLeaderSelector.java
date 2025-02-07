@@ -37,6 +37,7 @@ import org.apache.druid.utils.CloseableUtils;
 import javax.annotation.Nullable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -58,7 +59,7 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
   private final AtomicReference<LeaderLatch> leaderLatch = new AtomicReference<>();
 
   private volatile boolean leader = false;
-  private volatile int term = 0;
+  private final AtomicInteger term = new AtomicInteger(0);
 
   public CuratorDruidLeaderSelector(CuratorFramework curator, @Self DruidNode self, String latchPath)
   {
@@ -99,13 +100,13 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
               }
 
               leader = true;
-              term++;
+              term.incrementAndGet();
               listener.becomeLeader();
             }
             catch (Exception ex) {
               log.makeAlert(ex, "listener becomeLeader() failed. Unable to become leader").emit();
-
-              recreateLeaderLatch();
+              stopAndCreateNewLeaderLatch();
+              startLeaderLatch();
             }
           }
 
@@ -119,8 +120,10 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
               }
 
               leader = false;
+              // give others a chance to become leader.
+              stopAndCreateNewLeaderLatch();
               listener.stopBeingLeader();
-              recreateLeaderLatch();
+              startLeaderLatch();
             }
             catch (Exception ex) {
               log.makeAlert(ex, "listener.stopBeingLeader() failed. Unable to stopBeingLeader").emit();
@@ -161,7 +164,7 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
   @Override
   public int localTerm()
   {
-    return term;
+    return term.get();
   }
 
   @Override
@@ -205,15 +208,18 @@ public class CuratorDruidLeaderSelector implements DruidLeaderSelector
     listenerExecutor.shutdownNow();
   }
 
-  private void recreateLeaderLatch()
+  private void stopAndCreateNewLeaderLatch()
   {
-    // give others a chance to become leader.
     CloseableUtils.closeAndSuppressExceptions(
         createNewLeaderLatchWithListener(),
         e -> log.warn("Could not close old leader latch; continuing with new one anyway.")
     );
 
     leader = false;
+  }
+
+  private void startLeaderLatch()
+  {
     try {
       //Small delay before starting the latch so that others waiting are chosen to become leader.
       Thread.sleep(ThreadLocalRandom.current().nextInt(1000, 5000));

@@ -21,7 +21,6 @@ package org.apache.druid.compressedbigdecimal;
 
 import com.google.common.collect.Iterables;
 import com.google.common.io.Resources;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.query.Result;
@@ -50,10 +49,6 @@ import static org.junit.Assert.assertThat;
 public abstract class CompressedBigDecimalAggregatorTimeseriesTestBase extends InitializedNullHandlingTest
 {
   private final AggregationTestHelper helper;
-
-  static {
-    NullHandling.initializeForTests();
-  }
 
   @Rule
   public final TemporaryFolder tempFolder = new TemporaryFolder(new File("target"));

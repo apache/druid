@@ -83,7 +83,7 @@ public class FrameReaderUtils
       final ColumnValueSelector<?> memorySelector =
           columnSelectorFactory.makeColumnValueSelector(FrameColumnSelectorFactory.ROW_MEMORY_COLUMN);
 
-      return new Supplier<MemoryRange<Memory>>()
+      return new Supplier<>()
       {
         private RowSignature lastSignature = null;
         private boolean lastSignatureOk = false;

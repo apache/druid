@@ -69,9 +69,7 @@ public class SqlReader extends IntermediateRowParsingReader<Map<String, Object>>
     //The results are fetched into local storage as this avoids having to keep a persistent database connection for a long time
     final InputEntity.CleanableFile resultFile = closer.register(source.fetch(temporaryDirectory, null));
     FileInputStream inputStream = new FileInputStream(resultFile.file());
-    JsonIterator<Map<String, Object>> jsonIterator = new JsonIterator<>(new TypeReference<Map<String, Object>>()
-    {
-    }, inputStream, closer, objectMapper);
+    JsonIterator<Map<String, Object>> jsonIterator = new JsonIterator<>(new TypeReference<>() {}, inputStream, closer, objectMapper);
     return jsonIterator;
   }
 

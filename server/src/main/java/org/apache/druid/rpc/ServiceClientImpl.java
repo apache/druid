@@ -178,7 +178,7 @@ public class ServiceClientImpl implements ServiceClient
 
           Futures.addCallback(
               responseFuture,
-              new FutureCallback<Either<StringFullResponseHolder, FinalType>>()
+              new FutureCallback<>()
               {
                 @Override
                 public void onSuccess(@Nullable final Either<StringFullResponseHolder, FinalType> result)
@@ -396,7 +396,7 @@ public class ServiceClientImpl implements ServiceClient
   {
     Futures.addCallback(
         serviceLocator.locate(),
-        new FutureCallback<ServiceLocations>()
+        new FutureCallback<>()
         {
           @Override
           public void onSuccess(final ServiceLocations locations)

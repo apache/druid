@@ -109,7 +109,8 @@ public class StreamAppenderatorTester implements AutoCloseable
       final RowIngestionMeters rowIngestionMeters,
       final boolean skipBytesInMemoryOverheadCheck,
       final DataSegmentAnnouncer announcer,
-      final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
+      final CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig,
+      final ServiceEmitter serviceEmitter
   )
   {
     objectMapper = new DefaultObjectMapper();
@@ -145,18 +146,18 @@ public class StreamAppenderatorTester implements AutoCloseable
                        .withObjectMapper(objectMapper)
                        .build();
     tuningConfig = new TestAppenderatorConfig(
-      TuningConfig.DEFAULT_APPENDABLE_INDEX,
-      maxRowsInMemory,
-      maxSizeInBytes == 0L ? getDefaultMaxBytesInMemory() : maxSizeInBytes,
-      skipBytesInMemoryOverheadCheck,
-      IndexSpec.DEFAULT,
-      0,
-      false,
-      0L,
-      OffHeapMemorySegmentWriteOutMediumFactory.instance(),
-      IndexMerger.UNLIMITED_MAX_COLUMNS_TO_MERGE,
-      basePersistDirectory
-  );
+        TuningConfig.DEFAULT_APPENDABLE_INDEX,
+        maxRowsInMemory,
+        maxSizeInBytes == 0L ? getDefaultMaxBytesInMemory() : maxSizeInBytes,
+        skipBytesInMemoryOverheadCheck,
+        IndexSpec.DEFAULT,
+        0,
+        false,
+        0L,
+        OffHeapMemorySegmentWriteOutMediumFactory.instance(),
+        IndexMerger.UNLIMITED_MAX_COLUMNS_TO_MERGE,
+        basePersistDirectory
+    );
 
     metrics = new SegmentGenerationMetrics();
     queryExecutor = Execs.singleThreaded("queryExecutor(%d)");
@@ -174,11 +175,12 @@ public class StreamAppenderatorTester implements AutoCloseable
         OffHeapMemorySegmentWriteOutMediumFactory.instance()
     );
 
-    emitter = new ServiceEmitter(
+    emitter = serviceEmitter == null ? new ServiceEmitter(
         "test",
         "test",
         new NoopEmitter()
-    );
+    ) : serviceEmitter;
+
     emitter.start();
     EmittingLogger.registerEmitter(emitter);
     dataSegmentPusher = new DataSegmentPusher()
@@ -224,20 +226,18 @@ public class StreamAppenderatorTester implements AutoCloseable
           objectMapper,
           indexIO,
           indexMerger,
-          new DefaultQueryRunnerFactoryConglomerate(
-              ImmutableMap.of(
-                  TimeseriesQuery.class, new TimeseriesQueryRunnerFactory(
-                      new TimeseriesQueryQueryToolChest(),
-                      new TimeseriesQueryEngine(),
-                      QueryRunnerTestHelper.NOOP_QUERYWATCHER
-                  ),
-                  ScanQuery.class, new ScanQueryRunnerFactory(
-                      new ScanQueryQueryToolChest(DefaultGenericQueryMetricsFactory.instance()),
-                      new ScanQueryEngine(),
-                      new ScanQueryConfig()
-                  )
+          DefaultQueryRunnerFactoryConglomerate.buildFromQueryRunnerFactories(ImmutableMap.of(
+              TimeseriesQuery.class, new TimeseriesQueryRunnerFactory(
+                  new TimeseriesQueryQueryToolChest(),
+                  new TimeseriesQueryEngine(),
+                  QueryRunnerTestHelper.NOOP_QUERYWATCHER
+              ),
+              ScanQuery.class, new ScanQueryRunnerFactory(
+                  new ScanQueryQueryToolChest(DefaultGenericQueryMetricsFactory.instance()),
+                  new ScanQueryEngine(),
+                  new ScanQueryConfig()
               )
-          ),
+          )),
           announcer,
           emitter,
           new ForwardingQueryProcessingPool(queryExecutor),
@@ -268,20 +268,18 @@ public class StreamAppenderatorTester implements AutoCloseable
           objectMapper,
           indexIO,
           indexMerger,
-          new DefaultQueryRunnerFactoryConglomerate(
-              ImmutableMap.of(
-                  TimeseriesQuery.class, new TimeseriesQueryRunnerFactory(
-                      new TimeseriesQueryQueryToolChest(),
-                      new TimeseriesQueryEngine(),
-                      QueryRunnerTestHelper.NOOP_QUERYWATCHER
-                  ),
-                  ScanQuery.class, new ScanQueryRunnerFactory(
-                      new ScanQueryQueryToolChest(DefaultGenericQueryMetricsFactory.instance()),
-                      new ScanQueryEngine(),
-                      new ScanQueryConfig()
-                  )
+          DefaultQueryRunnerFactoryConglomerate.buildFromQueryRunnerFactories(ImmutableMap.of(
+              TimeseriesQuery.class, new TimeseriesQueryRunnerFactory(
+                  new TimeseriesQueryQueryToolChest(),
+                  new TimeseriesQueryEngine(),
+                  QueryRunnerTestHelper.NOOP_QUERYWATCHER
+              ),
+              ScanQuery.class, new ScanQueryRunnerFactory(
+                  new ScanQueryQueryToolChest(DefaultGenericQueryMetricsFactory.instance()),
+                  new ScanQueryEngine(),
+                  new ScanQueryConfig()
               )
-          ),
+          )),
           new NoopDataSegmentAnnouncer(),
           emitter,
           new ForwardingQueryProcessingPool(queryExecutor),
@@ -354,6 +352,7 @@ public class StreamAppenderatorTester implements AutoCloseable
     private RowIngestionMeters rowIngestionMeters;
     private boolean skipBytesInMemoryOverheadCheck;
     private int delayInMilli = 0;
+    private ServiceEmitter serviceEmitter;
 
     public Builder maxRowsInMemory(final int maxRowsInMemory)
     {
@@ -397,6 +396,12 @@ public class StreamAppenderatorTester implements AutoCloseable
       return this;
     }
 
+    public Builder withServiceEmitter(ServiceEmitter serviceEmitter)
+    {
+      this.serviceEmitter = serviceEmitter;
+      return this;
+    }
+
     public StreamAppenderatorTester build()
     {
       return new StreamAppenderatorTester(
@@ -408,7 +413,8 @@ public class StreamAppenderatorTester implements AutoCloseable
           rowIngestionMeters == null ? new SimpleRowIngestionMeters() : rowIngestionMeters,
           skipBytesInMemoryOverheadCheck,
           new NoopDataSegmentAnnouncer(),
-          CentralizedDatasourceSchemaConfig.create()
+          CentralizedDatasourceSchemaConfig.create(),
+          serviceEmitter
       );
     }
 
@@ -426,7 +432,8 @@ public class StreamAppenderatorTester implements AutoCloseable
           rowIngestionMeters == null ? new SimpleRowIngestionMeters() : rowIngestionMeters,
           skipBytesInMemoryOverheadCheck,
           dataSegmentAnnouncer,
-          config
+          config,
+          serviceEmitter
       );
     }
   }

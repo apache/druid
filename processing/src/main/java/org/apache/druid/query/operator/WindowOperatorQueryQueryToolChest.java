@@ -100,9 +100,7 @@ public class WindowOperatorQueryQueryToolChest extends QueryToolChest<RowsAndCol
   @Override
   public TypeReference<RowsAndColumns> getResultTypeReference()
   {
-    return new TypeReference<RowsAndColumns>()
-    {
-    };
+    return new TypeReference<>() {};
   }
 
   @Override

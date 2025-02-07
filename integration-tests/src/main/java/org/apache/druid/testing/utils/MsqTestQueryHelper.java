@@ -37,8 +37,8 @@ import org.apache.druid.msq.guice.MSQIndexingModule;
 import org.apache.druid.msq.indexing.report.MSQResultsReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReport;
 import org.apache.druid.msq.indexing.report.MSQTaskReportPayload;
+import org.apache.druid.query.http.SqlTaskStatus;
 import org.apache.druid.sql.http.SqlQuery;
-import org.apache.druid.sql.http.SqlTaskStatus;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.OverlordResourceTestClient;
 import org.apache.druid.testing.clients.SqlResourceTestClient;
@@ -269,9 +269,7 @@ public class MsqTestQueryHelper extends AbstractTestQueryHelper<MsqQueryWithResu
     List<MsqQueryWithResults> queries =
         jsonMapper.readValue(
             TestQueryHelper.class.getResourceAsStream(filePath),
-            new TypeReference<List<MsqQueryWithResults>>()
-            {
-            }
+            new TypeReference<>() {}
         );
     for (MsqQueryWithResults queryWithResults : queries) {
       String queryString = queryWithResults.getQuery();

@@ -140,7 +140,7 @@ public class RadiusBound extends RectangularBound
   {
     return Iterables.filter(
         points,
-        new Predicate<ImmutableFloatPoint>()
+        new Predicate<>()
         {
           @Override
           public boolean apply(ImmutableFloatPoint point)

@@ -35,12 +35,24 @@ public class V3CompressedVSizeColumnarMultiIntsSerializer extends ColumnarMultiI
 {
   private static final byte VERSION = V3CompressedVSizeColumnarMultiIntsSupplier.VERSION;
 
+  /**
+   * Creates a new serializer.
+   *
+   * @param columnName            name of the column to write
+   * @param segmentWriteOutMedium supplier of temporary files
+   * @param filenameBase          base filename to be used for secondary files, if multiple files are needed
+   * @param maxValue              maximum integer value that will be written to the column
+   * @param compression           compression strategy to apply
+   * @param fileSizeLimit         limit for files created by the writer. In production code, this should always be
+   *                              {@link GenericIndexedWriter#MAX_FILE_SIZE}. The parameter is exposed only for testing.
+   */
   public static V3CompressedVSizeColumnarMultiIntsSerializer create(
       final String columnName,
       final SegmentWriteOutMedium segmentWriteOutMedium,
       final String filenameBase,
       final int maxValue,
-      final CompressionStrategy compression
+      final CompressionStrategy compression,
+      final int fileSizeLimit
   )
   {
     return new V3CompressedVSizeColumnarMultiIntsSerializer(
@@ -48,20 +60,22 @@ public class V3CompressedVSizeColumnarMultiIntsSerializer extends ColumnarMultiI
         new CompressedColumnarIntsSerializer(
             columnName,
             segmentWriteOutMedium,
-            filenameBase,
+            filenameBase + ".offsets",
             CompressedColumnarIntsSupplier.MAX_INTS_IN_BUFFER,
             IndexIO.BYTE_ORDER,
             compression,
+            fileSizeLimit,
             segmentWriteOutMedium.getCloser()
         ),
         new CompressedVSizeColumnarIntsSerializer(
             columnName,
             segmentWriteOutMedium,
-            filenameBase,
+            filenameBase + ".values",
             maxValue,
             CompressedVSizeColumnarIntsSupplier.maxIntsInBufferForValue(maxValue),
             IndexIO.BYTE_ORDER,
             compression,
+            fileSizeLimit,
             segmentWriteOutMedium.getCloser()
         )
     );

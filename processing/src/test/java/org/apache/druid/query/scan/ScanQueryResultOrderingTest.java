@@ -323,7 +323,7 @@ public class ScanQueryResultOrderingTest extends InitializedNullHandlingTest
                      .map(
                          runners ->
                              queryRunnerFactory.getToolchest().mergeResults(
-                                 new QueryRunner<ScanResultValue>()
+                                 new QueryRunner<>()
                                  {
                                    @Override
                                    public Sequence<ScanResultValue> run(

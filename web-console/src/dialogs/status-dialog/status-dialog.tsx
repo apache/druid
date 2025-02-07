@@ -50,8 +50,7 @@ export const StatusDialog = React.memo(function StatusDialog(props: StatusDialog
   const [responseState] = useQueryManager<null, StatusResponse>({
     initQuery: null,
     processQuery: async (_, cancelToken) => {
-      const resp = await Api.instance.get(`/status`, { cancelToken });
-      return resp.data;
+      return (await Api.instance.get(`/status`, { cancelToken })).data;
     },
   });
 
@@ -83,7 +82,7 @@ export const StatusDialog = React.memo(function StatusDialog(props: StatusDialog
     return (
       <div className="main-container">
         <div className="version">
-          Version: <strong>{response.version}</strong>
+          Druid version: <strong>{response.version}</strong>
         </div>
         <ReactTable
           data={response.modules}

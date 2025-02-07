@@ -19,12 +19,9 @@
 
 package org.apache.druid.segment;
 
-import com.google.common.collect.ImmutableList;
 import org.apache.druid.query.filter.DimFilter;
-import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.filter.AndFilter;
 
 import javax.annotation.Nullable;
 
@@ -43,23 +40,10 @@ public class FilteredCursorFactory implements CursorFactory
   @Override
   public CursorHolder makeCursorHolder(CursorBuildSpec spec)
   {
-    final CursorBuildSpec.CursorBuildSpecBuilder buildSpecBuilder = CursorBuildSpec.builder(spec);
-    final Filter newFilter;
-    if (spec.getFilter() == null) {
-      if (filter != null) {
-        newFilter = filter.toFilter();
-      } else {
-        newFilter = null;
-      }
-    } else {
-      if (filter != null) {
-        newFilter = new AndFilter(ImmutableList.of(spec.getFilter(), filter.toFilter()));
-      } else {
-        newFilter = spec.getFilter();
-      }
+    if (filter == null) {
+      return delegate.makeCursorHolder(spec);
     }
-    buildSpecBuilder.setFilter(newFilter);
-    return delegate.makeCursorHolder(buildSpecBuilder.build());
+    return delegate.makeCursorHolder(CursorBuildSpec.builder(spec).andFilter(filter.toFilter()).build());
   }
 
   @Override

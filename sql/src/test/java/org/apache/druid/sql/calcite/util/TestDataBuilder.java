@@ -171,8 +171,8 @@ public class TestDataBuilder
                            "dim5",
                            "dim6"
                        )))
-                       .add(new DoubleDimensionSchema("d1"))
-                       .add(new DoubleDimensionSchema("d2"))
+                       .add(new DoubleDimensionSchema("dbl1"))
+                       .add(new DoubleDimensionSchema("dbl2"))
                        .add(new FloatDimensionSchema("f1"))
                        .add(new FloatDimensionSchema("f2"))
                        .add(new LongDimensionSchema("l1"))
@@ -390,7 +390,7 @@ public class TestDataBuilder
                   .put("t", "2000-01-01")
                   .put("m1", "1.0")
                   .put("m2", "1.0")
-                  .put("d1", 1.0)
+                  .put("dbl1", 1.0)
                   .put("f1", 1.0f)
                   .put("l1", 7L)
                   .put("dim1", "")
@@ -404,8 +404,8 @@ public class TestDataBuilder
                   .put("t", "2000-01-02")
                   .put("m1", "2.0")
                   .put("m2", "2.0")
-                  .put("d1", 1.7)
-                  .put("d2", 1.7)
+                  .put("dbl1", 1.7)
+                  .put("dbl2", 1.7)
                   .put("f1", 0.1f)
                   .put("f2", 0.1f)
                   .put("l1", 325323L)
@@ -421,8 +421,8 @@ public class TestDataBuilder
                   .put("t", "2000-01-03")
                   .put("m1", "3.0")
                   .put("m2", "3.0")
-                  .put("d1", 0.0)
-                  .put("d2", 0.0)
+                  .put("dbl1", 0.0)
+                  .put("dbl2", 0.0)
                   .put("f1", 0.0)
                   .put("f2", 0.0)
                   .put("l1", 0)
@@ -594,8 +594,8 @@ public class TestDataBuilder
           x.get("dim3"),
           x.get("dim4"),
           x.get("dim5"),
-          x.get("d1"),
-          x.get("d2"),
+          x.get("dbl1"),
+          x.get("dbl2"),
           x.get("f1"),
           x.get("f2"),
           x.get("l1"),
@@ -607,8 +607,8 @@ public class TestDataBuilder
                   .add("dim3", ColumnType.STRING)
                   .add("dim4", ColumnType.STRING)
                   .add("dim5", ColumnType.STRING)
-                  .add("d1", ColumnType.DOUBLE)
-                  .add("d2", ColumnType.DOUBLE)
+                  .add("dbl1", ColumnType.DOUBLE)
+                  .add("dbl2", ColumnType.DOUBLE)
                   .add("f1", ColumnType.FLOAT)
                   .add("f2", ColumnType.FLOAT)
                   .add("l1", ColumnType.LONG)
@@ -878,6 +878,15 @@ public class TestDataBuilder
                    .build(),
         index2
     ).add(
+       DataSegment.builder()
+                  .dataSource(CalciteTests.RESTRICTED_DATASOURCE)
+                  .interval(index1.getDataInterval())
+                  .version("1")
+                  .shardSpec(new LinearShardSpec(0))
+                  .size(0)
+                  .build(),
+       index1
+   ).add(
         DataSegment.builder()
                    .dataSource(CalciteTests.FORBIDDEN_DATASOURCE)
                    .interval(forbiddenIndex.getDataInterval())

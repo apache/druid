@@ -30,13 +30,13 @@ import com.google.common.collect.Ordering;
 import org.apache.druid.client.CachingClusteredClient;
 import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableDruidServer;
+import org.apache.druid.client.QueryableDruidServer;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.ForegroundCachePopulator;
 import org.apache.druid.client.cache.MapCache;
 import org.apache.druid.client.selector.HighestPriorityTierSelectorStrategy;
-import org.apache.druid.client.selector.QueryableDruidServer;
 import org.apache.druid.client.selector.RandomServerSelectorStrategy;
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.client.selector.TierSelectorStrategy;
@@ -44,7 +44,6 @@ import org.apache.druid.collections.BlockingPool;
 import org.apache.druid.collections.DefaultBlockingPool;
 import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.collections.StupidPool;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.http.DruidHttpClientConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -68,8 +67,6 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QueryRunnerTestHelper;
-import org.apache.druid.query.QueryToolChest;
-import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.context.ResponseContext;
@@ -81,6 +78,7 @@ import org.apache.druid.query.groupby.GroupByQueryQueryToolChest;
 import org.apache.druid.query.groupby.GroupByQueryRunnerFactory;
 import org.apache.druid.query.groupby.GroupByQueryRunnerTest;
 import org.apache.druid.query.groupby.GroupByResourcesReservationPool;
+import org.apache.druid.query.groupby.GroupByStatsProvider;
 import org.apache.druid.query.groupby.GroupingEngine;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.planning.DataSourceAnalysis;
@@ -151,10 +149,6 @@ public class CachingClusteredClientBenchmark
 
   public static final ObjectMapper JSON_MAPPER;
 
-  static {
-    NullHandling.initializeForTests();
-  }
-
   @Param({"8", "24"})
   private int numServers;
 
@@ -167,7 +161,6 @@ public class CachingClusteredClientBenchmark
   @Param({"all", "minute"})
   private String queryGranularity;
 
-  private QueryToolChestWarehouse toolChestWarehouse;
   private QueryRunnerFactoryConglomerate conglomerate;
   private CachingClusteredClient cachingClusteredClient;
   private ExecutorService processingPool;
@@ -258,48 +251,37 @@ public class CachingClusteredClientBenchmark
       }
     };
 
-    conglomerate = new DefaultQueryRunnerFactoryConglomerate(
-        ImmutableMap.<Class<? extends Query>, QueryRunnerFactory>builder()
-            .put(
-                TimeseriesQuery.class,
-                new TimeseriesQueryRunnerFactory(
-                    new TimeseriesQueryQueryToolChest(),
-                    new TimeseriesQueryEngine(),
-                    QueryRunnerTestHelper.NOOP_QUERYWATCHER
-                )
+    conglomerate = DefaultQueryRunnerFactoryConglomerate.buildFromQueryRunnerFactories(ImmutableMap.<Class<? extends Query>, QueryRunnerFactory>builder()
+        .put(
+            TimeseriesQuery.class,
+            new TimeseriesQueryRunnerFactory(
+                new TimeseriesQueryQueryToolChest(),
+                new TimeseriesQueryEngine(),
+                QueryRunnerTestHelper.NOOP_QUERYWATCHER
             )
-            .put(
-                TopNQuery.class,
-                new TopNQueryRunnerFactory(
-                    new StupidPool<>(
-                        "TopNQueryRunnerFactory-bufferPool",
-                        () -> ByteBuffer.allocate(PROCESSING_BUFFER_SIZE)
-                    ),
-                    new TopNQueryQueryToolChest(new TopNQueryConfig()),
-                    QueryRunnerTestHelper.NOOP_QUERYWATCHER
-                )
+        )
+        .put(
+            TopNQuery.class,
+            new TopNQueryRunnerFactory(
+                new StupidPool<>(
+                    "TopNQueryRunnerFactory-bufferPool",
+                    () -> ByteBuffer.allocate(PROCESSING_BUFFER_SIZE)
+                ),
+                new TopNQueryQueryToolChest(new TopNQueryConfig()),
+                QueryRunnerTestHelper.NOOP_QUERYWATCHER
             )
-            .put(
-                GroupByQuery.class,
-                makeGroupByQueryRunnerFactory(
-                    GroupByQueryRunnerTest.DEFAULT_MAPPER,
-                    new GroupByQueryConfig()
-                    {
-                    },
-                    processingConfig
-                )
+        )
+        .put(
+            GroupByQuery.class,
+            makeGroupByQueryRunnerFactory(
+                GroupByQueryRunnerTest.DEFAULT_MAPPER,
+                new GroupByQueryConfig()
+                {
+                },
+                processingConfig
             )
-            .build()
-    );
-
-    toolChestWarehouse = new QueryToolChestWarehouse()
-    {
-      @Override
-      public <T, QueryType extends Query<T>> QueryToolChest<T, QueryType> getToolChest(final QueryType query)
-      {
-        return conglomerate.findFactory(query).getToolchest();
-      }
-    };
+        )
+        .build());
 
     SimpleServerView serverView = new SimpleServerView();
     int serverSuffx = 1;
@@ -319,7 +301,7 @@ public class CachingClusteredClientBenchmark
         true
     );
     cachingClusteredClient = new CachingClusteredClient(
-        toolChestWarehouse,
+        conglomerate,
         serverView,
         MapCache.create(0),
         JSON_MAPPER,
@@ -357,6 +339,7 @@ public class CachingClusteredClientBenchmark
         bufferSupplier,
         processingConfig.getNumMergeBuffers()
     );
+    final GroupByStatsProvider groupByStatsProvider = new GroupByStatsProvider();
     final GroupByResourcesReservationPool groupByResourcesReservationPool =
         new GroupByResourcesReservationPool(mergeBufferPool, config);
     final GroupingEngine groupingEngine = new GroupingEngine(
@@ -365,7 +348,8 @@ public class CachingClusteredClientBenchmark
         groupByResourcesReservationPool,
         mapper,
         mapper,
-        QueryRunnerTestHelper.NOOP_QUERYWATCHER
+        QueryRunnerTestHelper.NOOP_QUERYWATCHER,
+        groupByStatsProvider
     );
     final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(groupingEngine, groupByResourcesReservationPool);
     return new GroupByQueryRunnerFactory(groupingEngine, toolChest, bufferPool);
@@ -468,7 +452,7 @@ public class CachingClusteredClientBenchmark
     QueryRunner<T> theRunner = FluentQueryRunner
         .create(
             cachingClusteredClient.getQueryRunnerForIntervals(query, query.getIntervals()),
-            toolChestWarehouse.getToolChest(query)
+            conglomerate.getToolChest(query)
         )
         .applyPreMergeDecoration()
         .mergeResults(true)
@@ -590,7 +574,7 @@ public class CachingClusteredClientBenchmark
     }
   }
 
-  private static class SingleSegmentDruidServer extends QueryableDruidServer<SimpleQueryRunner>
+  private static class SingleSegmentDruidServer extends QueryableDruidServer
   {
     SingleSegmentDruidServer(DruidServer server, SimpleQueryRunner runner)
     {

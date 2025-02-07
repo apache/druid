@@ -20,7 +20,6 @@
 package org.apache.druid.query.scan;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.frame.allocation.HeapMemoryAllocator;
 import org.apache.druid.frame.allocation.SingleMemoryAllocatorFactory;
 import org.apache.druid.java.util.common.ISE;
@@ -51,7 +50,6 @@ public class ScanQueryQueryToolChestTest
 {
 
   static {
-    NullHandling.initializeForTests();
     ComplexMetrics.registerSerde(NestedDataComplexTypeSerde.TYPE_NAME, NestedDataComplexTypeSerde.INSTANCE);
   }
 
@@ -71,9 +69,12 @@ public class ScanQueryQueryToolChestTest
       new Object[]{3.5, "str4"}
   );
 
-  private final ScanQueryQueryToolChest toolChest = new ScanQueryQueryToolChest(
-      DefaultGenericQueryMetricsFactory.instance()
-  );
+  private final ScanQueryQueryToolChest toolChest = makeTestScanQueryToolChest();
+
+  public static ScanQueryQueryToolChest makeTestScanQueryToolChest()
+  {
+    return new ScanQueryQueryToolChest(DefaultGenericQueryMetricsFactory.instance());
+  }
 
   @Test
   public void test_resultArraySignature_columnsNotSpecified()

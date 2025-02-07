@@ -376,7 +376,7 @@ public class KerberosAuthenticator implements Authenticator
   @Override
   public Map<String, String> getInitParameters()
   {
-    Map<String, String> params = new HashMap<String, String>();
+    Map<String, String> params = new HashMap<>();
     params.put("kerberos.principal", serverPrincipal);
     params.put("kerberos.keytab", serverKeytab);
     params.put(AuthenticationFilter.AUTH_TYPE, DruidKerberosAuthenticationHandler.class.getName());
@@ -447,7 +447,7 @@ public class KerberosAuthenticator implements Authenticator
     @Override
     public AppConfigurationEntry[] getAppConfigurationEntry(String name)
     {
-      Map<String, String> options = new HashMap<String, String>();
+      Map<String, String> options = new HashMap<>();
       if (System.getProperty("java.vendor").contains("IBM")) {
         options.put(
             "useKeytab",
@@ -508,9 +508,9 @@ public class KerberosAuthenticator implements Authenticator
         throw new ServletException("Keytab does not exist: " + keytab);
       }
 
-      Set<Principal> principals = new HashSet<Principal>();
+      Set<Principal> principals = new HashSet<>();
       principals.add(new KerberosPrincipal(serverPrincipal));
-      Subject subject = new Subject(false, principals, new HashSet<Object>(), new HashSet<Object>());
+      Subject subject = new Subject(false, principals, new HashSet<>(), new HashSet<>());
 
       DruidKerberosConfiguration kerberosConfiguration = new DruidKerberosConfiguration(keytab, serverPrincipal);
 

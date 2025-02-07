@@ -1,0 +1,75 @@
+# testUnnestWithGroupByHavingSelector case-crc:76a4f833
+# quidem testcase reason: IMPROVED_PLAN
+!set debug true
+!set defaultTimeout 300000
+!set maxScatterGatherBytes 9223372036854775807
+!set plannerStrategy DECOUPLED
+!set sqlCurrentTimestamp 2000-01-01T00:00:00Z
+!set sqlQueryId dummy
+!set sqlStringifyArrays false
+!set outputformat mysql
+!use druidtest:///
+SELECT d3, COUNT(*) FROM druid.numfoo, UNNEST(MV_TO_ARRAY(dim3)) AS unnested(d3) GROUP BY d3 HAVING d3='b';
++----+--------+
+| d3 | EXPR$1 |
++----+--------+
+| b  |      2 |
++----+--------+
+(1 row)
+
+!ok
+LogicalAggregate(group=[{1}], EXPR$1=[COUNT()])
+  LogicalUnnest(unnestExpr=[MV_TO_ARRAY($0)], filter=[=($0, 'b')])
+    LogicalProject(dim3=[$3])
+      LogicalTableScan(table=[[druid, numfoo]])
+
+!logicalPlan
+DruidAggregate(group=[{1}], EXPR$1=[COUNT()], druid=[logical])
+  DruidUnnest(unnestExpr=[MV_TO_ARRAY($0)], filter=[=($0, 'b')])
+    DruidProject(dim3=[$3], druid=[logical])
+      DruidTableScan(table=[[druid, numfoo]], druid=[logical])
+
+!druidPlan
+{
+  "queryType" : "groupBy",
+  "dataSource" : {
+    "type" : "unnest",
+    "base" : {
+      "type" : "table",
+      "name" : "numfoo"
+    },
+    "virtualColumn" : {
+      "type" : "expression",
+      "name" : "j0.unnest",
+      "expression" : "mv_to_array(\"dim3\")",
+      "outputType" : "ARRAY<STRING>"
+    },
+    "unnestFilter" : {
+      "type" : "equals",
+      "column" : "j0.unnest",
+      "matchValueType" : "STRING",
+      "matchValue" : "b"
+    }
+  },
+  "intervals" : {
+    "type" : "intervals",
+    "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+  },
+  "granularity" : {
+    "type" : "all"
+  },
+  "dimensions" : [ {
+    "type" : "default",
+    "dimension" : "j0.unnest",
+    "outputName" : "d0",
+    "outputType" : "STRING"
+  } ],
+  "aggregations" : [ {
+    "type" : "count",
+    "name" : "a0"
+  } ],
+  "limitSpec" : {
+    "type" : "NoopLimitSpec"
+  }
+}
+!nativePlan

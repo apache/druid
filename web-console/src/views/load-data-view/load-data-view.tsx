@@ -157,6 +157,7 @@ import {
   EMPTY_ARRAY,
   EMPTY_OBJECT,
   filterMap,
+  getApiArray,
   getDruidErrorMessage,
   localStorageGetJson,
   LocalStorageKeys,
@@ -1528,7 +1529,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           <div className="table-control">
             <ClearableInput
               value={columnFilter}
-              onChange={columnFilter => this.setState({ columnFilter })}
+              onValueChange={columnFilter => this.setState({ columnFilter })}
               placeholder="Search columns"
             />
             {canHaveNestedData && (
@@ -1843,7 +1844,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           <div className="table-control">
             <ClearableInput
               value={columnFilter}
-              onChange={columnFilter => this.setState({ columnFilter })}
+              onValueChange={columnFilter => this.setState({ columnFilter })}
               placeholder="Search columns"
             />
             <Switch
@@ -2026,7 +2027,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           <div className="table-control">
             <ClearableInput
               value={columnFilter}
-              onChange={columnFilter => this.setState({ columnFilter })}
+              onValueChange={columnFilter => this.setState({ columnFilter })}
               placeholder="Search columns"
             />
             <Switch
@@ -2230,7 +2231,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           <div className="table-control">
             <ClearableInput
               value={columnFilter}
-              onChange={columnFilter => this.setState({ columnFilter })}
+              onValueChange={columnFilter => this.setState({ columnFilter })}
               placeholder="Search columns"
             />
           </div>
@@ -2398,7 +2399,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
           <div className="table-control">
             <ClearableInput
               value={columnFilter}
-              onChange={columnFilter => this.setState({ columnFilter })}
+              onValueChange={columnFilter => this.setState({ columnFilter })}
               placeholder="Search columns"
             />
           </div>
@@ -3442,7 +3443,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
             }
           >
             <Switch
-              label="Use concurrent locks (experimental)"
+              label="Use concurrent locks"
               checked={Boolean(deepGet(spec, 'context.useConcurrentLocks'))}
               onChange={() => {
                 this.updateSpec(
@@ -3559,8 +3560,7 @@ export class LoadDataView extends React.PureComponent<LoadDataViewProps, LoadDat
 
     let existingDatasources: string[];
     try {
-      existingDatasources = (await Api.instance.get<string[]>('/druid/coordinator/v1/datasources'))
-        .data;
+      existingDatasources = await getApiArray<string>('/druid/coordinator/v1/datasources');
     } catch {
       return;
     }

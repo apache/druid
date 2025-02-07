@@ -21,7 +21,6 @@ package org.apache.druid.common.config;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 
 public class NullValueHandlingConfig
@@ -29,10 +28,6 @@ public class NullValueHandlingConfig
   private static final Logger LOG = new Logger(NullValueHandlingConfig.class);
   public static final String NULL_HANDLING_CONFIG_STRING = "druid.generic.useDefaultValueForNull";
   public static final String THREE_VALUE_LOGIC_CONFIG_STRING = "druid.generic.useThreeValueLogicForNativeFilters";
-
-  //added to preserve backward compatibility
-  //and not count nulls during cardinality aggrgation over strings
-
   public static final String NULL_HANDLING_DURING_STRING_CARDINALITY = "druid.generic.ignoreNullsForStringCardinality";
 
   @JsonProperty("useDefaultValueForNull")
@@ -75,38 +70,5 @@ public class NullValueHandlingConfig
         this.ignoreNullsForStringCardinality = false;
       }
     }
-    String version = NullValueHandlingConfig.class.getPackage().getImplementationVersion();
-    if (version == null || version.contains("SNAPSHOT")) {
-      version = "latest";
-    }
-    final String docsBaseFormat = "https://druid.apache.org/docs/%s/querying/sql-data-types#%s";
-
-    if (this.useDefaultValuesForNull) {
-      LOG.warn(
-          "druid.generic.useDefaultValueForNull set to 'true', we recommend using 'false' if using SQL to query Druid for the most SQL compliant behavior, see %s for details",
-          StringUtils.format(docsBaseFormat, version, "null-values")
-      );
-    }
-    if (!this.useThreeValueLogicForNativeFilters) {
-      LOG.warn(
-          "druid.generic.useThreeValueLogic set to 'false', we recommend using 'true' if using SQL to query Druid for the most SQL compliant behavior, see %s for details",
-          StringUtils.format(docsBaseFormat, version, "boolean-logic")
-      );
-    }
-  }
-
-  public boolean isIgnoreNullsForStringCardinality()
-  {
-    return ignoreNullsForStringCardinality;
-  }
-
-  public boolean isUseDefaultValuesForNull()
-  {
-    return useDefaultValuesForNull;
-  }
-
-  public boolean isUseThreeValueLogicForNativeFilters()
-  {
-    return useThreeValueLogicForNativeFilters;
   }
 }

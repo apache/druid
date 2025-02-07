@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
-import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.indexer.RunnerTaskState;
@@ -48,6 +47,7 @@ import org.apache.druid.msq.indexing.error.TooManyColumnsFault;
 import org.apache.druid.msq.indexing.error.TooManyWorkersFault;
 import org.apache.druid.msq.indexing.error.UnknownFault;
 import org.apache.druid.msq.indexing.error.WorkerRpcFailedFault;
+import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.utils.CollectionUtils;
 import org.junit.Assert;
@@ -137,7 +137,7 @@ public class MSQTasksTest
     final MSQErrorReport controllerReport = MSQTasks.makeErrorReport(
         WORKER_ID,
         WORKER_HOST,
-        MSQErrorReport.fromFault(WORKER_ID, WORKER_HOST, null, new WorkerRpcFailedFault(WORKER_ID)),
+        MSQErrorReport.fromFault(WORKER_ID, WORKER_HOST, null, new WorkerRpcFailedFault(WORKER_ID, null)),
         null
     );
 

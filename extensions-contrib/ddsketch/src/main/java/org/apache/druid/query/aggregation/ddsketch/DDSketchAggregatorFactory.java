@@ -264,7 +264,7 @@ public class DDSketchAggregatorFactory extends AggregatorFactory
   @Override
   public AggregateCombiner<DDSketch> makeAggregateCombiner()
   {
-    return new ObjectAggregateCombiner<DDSketch>()
+    return new ObjectAggregateCombiner<>()
     {
       private DDSketch combined = DDSketches.collapsingLowestDense(relativeError, numBins);
 

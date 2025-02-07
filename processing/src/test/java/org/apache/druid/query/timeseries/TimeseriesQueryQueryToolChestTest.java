@@ -22,7 +22,6 @@ package org.apache.druid.query.timeseries;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -45,25 +44,21 @@ import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 
 @RunWith(Parameterized.class)
-public class TimeseriesQueryQueryToolChestTest
+public class TimeseriesQueryQueryToolChestTest extends InitializedNullHandlingTest
 {
   private static final String TIMESTAMP_RESULT_FIELD_NAME = "d0";
   private static final TimeseriesQueryQueryToolChest TOOL_CHEST = new TimeseriesQueryQueryToolChest(null);
-
-  @BeforeClass
-  public static void setUpClass()
-  {
-    NullHandling.initializeForTests();
-  }
 
   @Parameterized.Parameters(name = "descending={0}")
   public static Iterable<Object[]> constructorFeeder()
@@ -455,6 +450,29 @@ public class TimeseriesQueryQueryToolChestTest
                 )
             )
         )
+    );
+  }
+
+  @Test
+  public void testGetEmptyTimeseriesResultValue()
+  {
+    final TimeseriesQuery query =
+        Druids.newTimeseriesQueryBuilder()
+              .intervals("2000/P1D")
+              .dataSource("foo")
+              .aggregators(new CountAggregatorFactory("a0"), new LongSumAggregatorFactory("a1", "nofield"))
+              .build();
+
+    final Map<String, Object> resultMap = new HashMap<>();
+    resultMap.put("a0", 0L);
+    resultMap.put("a1", null);
+
+    Assert.assertEquals(
+        new Result<>(
+            DateTimes.of("2000"),
+            new TimeseriesResultValue(resultMap)
+        ),
+        TOOL_CHEST.getEmptyTimeseriesResultValue(query)
     );
   }
 }

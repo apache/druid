@@ -107,6 +107,7 @@ import org.easymock.EasyMock;
 import org.easymock.EasyMockSupport;
 import org.easymock.IAnswer;
 import org.joda.time.DateTime;
+import org.joda.time.Duration;
 import org.joda.time.Period;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -496,7 +497,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
             null,
             null,
             INPUT_FORMAT,
-            null
+            null,
+            Duration.standardHours(2).getStandardMinutes()
         ),
         new KafkaIndexTaskTuningConfig(
             null,
@@ -2669,7 +2671,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
     EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(
         new KafkaDataSourceMetadata(
-            new SeekableStreamEndSequenceNumbers<KafkaTopicPartition, Long>(
+            new SeekableStreamEndSequenceNumbers<>(
                 topic,
                 singlePartitionMap(topic,
                                    0,
@@ -2727,7 +2729,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
     EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(
         new KafkaDataSourceMetadata(
-            new SeekableStreamEndSequenceNumbers<KafkaTopicPartition, Long>(
+            new SeekableStreamEndSequenceNumbers<>(
                 topic,
                 singlePartitionMap(topic,
                                    0,
@@ -2787,7 +2789,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
     EasyMock.expect(indexerMetadataStorageCoordinator.retrieveDataSourceMetadata(DATASOURCE)).andReturn(
         new KafkaDataSourceMetadata(
-            new SeekableStreamEndSequenceNumbers<KafkaTopicPartition, Long>(
+            new SeekableStreamEndSequenceNumbers<>(
                 topic,
                 singlePartitionMap(topic,
                                    0,
@@ -5658,7 +5660,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
             minimumMessageTime,
             maximumMessageTime,
             INPUT_FORMAT,
-            null
+            null,
+            Duration.standardHours(2).getStandardMinutes()
         ),
         Collections.emptyMap(),
         OBJECT_MAPPER

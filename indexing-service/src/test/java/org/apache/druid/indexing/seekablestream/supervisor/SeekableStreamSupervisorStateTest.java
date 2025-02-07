@@ -143,6 +143,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   private SeekableStreamSupervisorSpec spec;
   private SeekableStreamIndexTaskClient indexTaskClient;
   private RecordSupplier<String, String, ByteEntity> recordSupplier;
+  private SeekableStreamIndexTaskRunner<String, String, ByteEntity> streamingTaskRunner;
 
   private RowIngestionMetersFactory rowIngestionMetersFactory;
   private SupervisorStateManagerConfig supervisorConfig;
@@ -161,6 +162,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     spec = createMock(SeekableStreamSupervisorSpec.class);
     indexTaskClient = createMock(SeekableStreamIndexTaskClient.class);
     recordSupplier = createMock(RecordSupplier.class);
+    streamingTaskRunner = createMock(SeekableStreamIndexTaskRunner.class);
 
     rowIngestionMetersFactory = new TestUtils().getRowIngestionMetersFactory();
 
@@ -1001,6 +1003,28 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
   }
 
   @Test
+  public void testStopGracefully() throws Exception
+  {
+    EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
+    EasyMock.expect(recordSupplier.getPartitionIds(STREAM)).andReturn(ImmutableSet.of(SHARD_ID)).anyTimes();
+    EasyMock.expect(taskStorage.getActiveTasksByDatasource(DATASOURCE)).andReturn(ImmutableList.of()).anyTimes();
+    EasyMock.expect(taskQueue.add(EasyMock.anyObject())).andReturn(true).anyTimes();
+
+    taskRunner.unregisterListener("testSupervisorId");
+    indexTaskClient.close();
+    recordSupplier.close();
+
+    replayAll();
+    SeekableStreamSupervisor supervisor = new TestSeekableStreamSupervisor();
+
+    supervisor.start();
+    supervisor.runInternal();
+    ListenableFuture<Void> stopFuture = supervisor.stopAsync();
+    stopFuture.get();
+    verifyAll();
+  }
+
+  @Test
   public void testStoppingGracefully()
   {
     EasyMock.expect(spec.isSuspended()).andReturn(false).anyTimes();
@@ -1459,6 +1483,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     supervisor.start();
     supervisor.runInternal();
 
+    Assert.assertNull(id1.getCurrentRunnerStatus());
+
     supervisor.checkpoint(
         0,
         new TestSeekableStreamDataSourceMetadata(
@@ -1518,6 +1544,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     EasyMock.expect(spec.getContextValue("tags")).andReturn("").anyTimes();
     EasyMock.expect(recordSupplier.getPartitionIds(STREAM)).andReturn(ImmutableSet.of(SHARD_ID)).anyTimes();
     EasyMock.expect(taskQueue.add(EasyMock.anyObject())).andReturn(true).anyTimes();
+    EasyMock.expect(streamingTaskRunner.getStatus()).andReturn(null);
+    EasyMock.expect(streamingTaskRunner.getStatus()).andReturn(SeekableStreamIndexTaskRunner.Status.NOT_STARTED);
 
     SeekableStreamIndexTaskTuningConfig taskTuningConfig = getTuningConfig().convertToTaskTuningConfig();
 
@@ -1543,7 +1571,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
             ioConfig
         ),
         context,
-        "0"
+        "0",
+        streamingTaskRunner
     );
 
     final TaskLocation location1 = TaskLocation.create("testHost", 1234, -1);
@@ -1594,6 +1623,9 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     supervisor.start();
     supervisor.runInternal();
     supervisor.handoffTaskGroupsEarly(ImmutableList.of(0));
+
+    Assert.assertNull(id1.getCurrentRunnerStatus());
+    Assert.assertEquals("NOT_STARTED", id1.getCurrentRunnerStatus());
 
     while (supervisor.getNoticesQueueSize() > 0) {
       Thread.sleep(100);
@@ -2704,6 +2736,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
 
   private class TestSeekableStreamIndexTask extends SeekableStreamIndexTask<String, String, ByteEntity>
   {
+    private final SeekableStreamIndexTaskRunner<String, String, ByteEntity> streamingTaskRunner;
+
     public TestSeekableStreamIndexTask(
         String id,
         @Nullable TaskResource taskResource,
@@ -2712,6 +2746,29 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         SeekableStreamIndexTaskIOConfig<String, String> ioConfig,
         @Nullable Map<String, Object> context,
         @Nullable String groupId
+    )
+    {
+      this(
+          id,
+          taskResource,
+          dataSchema,
+          tuningConfig,
+          ioConfig,
+          context,
+          groupId,
+          null
+      );
+    }
+
+    public TestSeekableStreamIndexTask(
+        String id,
+        @Nullable TaskResource taskResource,
+        DataSchema dataSchema,
+        SeekableStreamIndexTaskTuningConfig tuningConfig,
+        SeekableStreamIndexTaskIOConfig<String, String> ioConfig,
+        @Nullable Map<String, Object> context,
+        @Nullable String groupId,
+        @Nullable SeekableStreamIndexTaskRunner<String, String, ByteEntity> streamingTaskRunner
     )
     {
       super(
@@ -2723,12 +2780,14 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
           context,
           groupId
       );
+      this.streamingTaskRunner = streamingTaskRunner;
     }
 
+    @Nullable
     @Override
     protected SeekableStreamIndexTaskRunner<String, String, ByteEntity> createTaskRunner()
     {
-      return null;
+      return streamingTaskRunner;
     }
 
     @Override
@@ -2799,7 +2858,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         SeekableStreamSupervisorIOConfig ioConfig
     )
     {
-      return new SeekableStreamIndexTaskIOConfig<String, String>(
+      return new SeekableStreamIndexTaskIOConfig<>(
           groupId,
           baseSequenceName,
           new SeekableStreamStartSequenceNumbers<>(STREAM, startPartitions, exclusiveStartSequenceNumberPartitions),
@@ -2807,7 +2866,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
           true,
           minimumMessageTime,
           maximumMessageTime,
-          ioConfig.getInputFormat()
+          ioConfig.getInputFormat(),
+          ioConfig.getTaskDuration().getStandardMinutes()
       )
       {
       };
@@ -2870,7 +2930,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
     @Override
     protected OrderedSequenceNumber<String> makeSequenceNumber(String seq, boolean isExclusive)
     {
-      return new OrderedSequenceNumber<String>(seq, isExclusive)
+      return new OrderedSequenceNumber<>(seq, isExclusive)
       {
         @Override
         public int compareTo(OrderedSequenceNumber<String> o)
@@ -2904,7 +2964,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
         boolean includeOffsets
     )
     {
-      return new SeekableStreamSupervisorReportPayload<String, String>(
+      return new SeekableStreamSupervisorReportPayload<>(
           DATASOURCE,
           STREAM,
           1,
@@ -3158,7 +3218,7 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
           SeekableStreamSupervisorIOConfig ioConfig
   )
   {
-    return new SeekableStreamIndexTaskIOConfig<String, String>(
+    return new SeekableStreamIndexTaskIOConfig<>(
             groupId,
             baseSequenceName,
             new SeekableStreamStartSequenceNumbers<>(STREAM, startPartitions, exclusiveStartSequenceNumberPartitions),
@@ -3166,7 +3226,8 @@ public class SeekableStreamSupervisorStateTest extends EasyMockSupport
             true,
             minimumMessageTime,
             maximumMessageTime,
-            ioConfig.getInputFormat()
+            ioConfig.getInputFormat(),
+            ioConfig.getTaskDuration().getStandardMinutes()
     )
     {
     };
