@@ -1834,6 +1834,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
               getTaskGroupIdForPartition(resetPartitionOffset.getKey())
           );
           final boolean isSameOffset = partitionTaskGroup != null
+                                       && partitionTaskGroup.startingSequences.containsKey(resetPartitionOffset.getKey())
                                        && partitionTaskGroup.startingSequences.get(resetPartitionOffset.getKey())
                                                                               .equals(resetPartitionOffset.getValue());
           if (partitionOffsetInMetadataStore != null || isSameOffset) {
@@ -4285,8 +4286,14 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
    */
   private Map<String, Task> getActiveTaskMap()
   {
-    ImmutableMap.Builder activeTaskMap = ImmutableMap.builder();
-    List<Task> tasks = taskStorage.getActiveTasksByDatasource(dataSource);
+    final ImmutableMap.Builder<String, Task> activeTaskMap = ImmutableMap.builder();
+    final Optional<TaskQueue> taskQueue = taskMaster.getTaskQueue();
+    final List<Task> tasks;
+    if (taskQueue.isPresent()) {
+      tasks = taskQueue.get().getActiveTasksForDatasource(dataSource);
+    } else {
+      tasks = taskStorage.getActiveTasksByDatasource(dataSource);
+    }
     for (Task task : tasks) {
       activeTaskMap.put(task.getId(), task);
     }
