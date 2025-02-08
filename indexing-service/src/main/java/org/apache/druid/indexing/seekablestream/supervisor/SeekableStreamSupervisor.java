@@ -1700,7 +1700,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           stateManager.maybeSetState(SeekableStreamSupervisorStateManager.SeekableStreamState.CREATING_TASKS);
           createNewTasks();
         } else {
-          log.info("Supervisor for datasource[%s] is suspended.", dataSource);
+          log.debug("Supervisor for datasource[%s] is suspended.", dataSource);
           gracefulShutdownInternal();
         }
       }
