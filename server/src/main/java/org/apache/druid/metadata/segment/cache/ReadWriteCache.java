@@ -20,7 +20,7 @@
 package org.apache.druid.metadata.segment.cache;
 
 import com.google.common.base.Supplier;
-import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InternalServerError;
 
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -109,7 +109,7 @@ public abstract class ReadWriteCache implements DatasourceSegmentCache
   private void verifyCacheIsNotStopped()
   {
     if (isStopped) {
-      throw DruidException.defensive("Cache is already stopped");
+      throw InternalServerError.exception("Cannot perform operation on cache as it is already stopped");
     }
   }
 

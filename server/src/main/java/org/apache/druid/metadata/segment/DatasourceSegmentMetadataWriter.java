@@ -52,6 +52,10 @@ public interface DatasourceSegmentMetadataWriter
   /**
    * Marks the segments fully contained in the given interval as unused.
    *
+   * @param interval   Only segments fully contained within this interval are
+   *                   eligible to be marked as unused.
+   * @param updateTime Updated segments will have their last updated timestamp
+   *                   set to this value.
    * @return Number of segments updated successfully
    */
   int markSegmentsWithinIntervalAsUnused(Interval interval, DateTime updateTime);

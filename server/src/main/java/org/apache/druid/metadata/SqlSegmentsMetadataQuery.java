@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.UnmodifiableIterator;
+import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.DateTimes;
@@ -38,6 +39,7 @@ import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.server.http.DataSegmentPlus;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
+import org.apache.druid.utils.CloseableUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.skife.jdbi.v2.Handle;
@@ -57,6 +59,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -187,10 +190,7 @@ public class SqlSegmentsMetadataQuery
     SegmentId unusedMaxId = null;
     int maxPartitionNum = -1;
     for (String id : unusedSegmentIds) {
-      final SegmentId segmentId = SegmentId.tryParse(datasource, id);
-      if (segmentId == null) {
-        continue;
-      }
+      final SegmentId segmentId = IdUtils.getValidSegmentId(datasource, id);
       int partitionNum = segmentId.getPartitionNum();
       if (maxPartitionNum < partitionNum) {
         maxPartitionNum = partitionNum;
@@ -378,13 +378,16 @@ public class SqlSegmentsMetadataQuery
 
   }
 
+  /**
+   * Retrieves segments for the given segment IDs from the metadata store.
+   */
   public List<DataSegmentPlus> retrieveSegmentsById(
       String datasource,
       Set<String> segmentIds
   )
   {
     try (CloseableIterator<DataSegmentPlus> iterator
-             = retrieveSegmentsByIdIterator(datasource, segmentIds)) {
+             = retrieveSegmentsByIdIterator(datasource, segmentIds, false)) {
       return ImmutableList.copyOf(iterator);
     }
     catch (IOException e) {
@@ -392,38 +395,83 @@ public class SqlSegmentsMetadataQuery
     }
   }
 
+  /**
+   * Retrieves segments for the specified IDs in batches of a small size.
+   *
+   * @param includeSchemaInfo If true, additional metadata info such as number
+   *                          of rows and schema fingerprint is also retrieved
+   * @return CloseableIterator over the retrieved segments which must be closed
+   * once the result has been handled. If the iterator is closed while reading
+   * a batch of segments, queries for subsequent batches are not fired.
+   */
   public CloseableIterator<DataSegmentPlus> retrieveSegmentsByIdIterator(
-      String datasource,
-      Set<String> segmentIds
+      final String datasource,
+      final Set<String> segmentIds,
+      final boolean includeSchemaInfo
   )
   {
-    final List<List<String>> partitionedSegmentIds
-        = Lists.partition(new ArrayList<>(segmentIds), 100);
+    final List<List<String>> partitionedSegmentIds = Lists.partition(List.copyOf(segmentIds), 100);
 
-    final List<CloseableIterator<DataSegmentPlus>> fetchedSegments
-        = new ArrayList<>(partitionedSegmentIds.size());
-    for (List<String> partition : partitionedSegmentIds) {
-      fetchedSegments.add(retrieveSegmentBatchById(datasource, partition, false));
-    }
-    return CloseableIterators.concat(fetchedSegments);
+    // CloseableIterator to query segments in batches
+    return new CloseableIterator<>()
+    {
+      // Start with a dummy empty batch. Only one result set is open at any point.
+      CloseableIterator<DataSegmentPlus> currentBatch
+          = CloseableIterators.withEmptyBaggage(Collections.emptyIterator());
+      int currentBatchIndex = -1;
+
+      @Override
+      public void close() throws IOException
+      {
+        currentBatch.close();
+      }
+
+      @Override
+      public boolean hasNext()
+      {
+        if (currentBatch.hasNext()) {
+          return true;
+        } else if (++currentBatchIndex < partitionedSegmentIds.size()) {
+          // Close the current result set as it has been exhausted
+          CloseableUtils.closeAndWrapExceptions(currentBatch);
+
+          // Create a new result set for the next batch of segments
+          currentBatch = retrieveSegmentBatchById(
+              datasource,
+              partitionedSegmentIds.get(currentBatchIndex),
+              includeSchemaInfo
+          );
+
+          // If the currentBatch is empty, check subsequent ones recursively
+          return hasNext();
+        } else {
+          return false;
+        }
+      }
+
+      @Override
+      public DataSegmentPlus next()
+      {
+        if (!hasNext()) {
+          throw new NoSuchElementException();
+        } else {
+          return currentBatch.next();
+        }
+      }
+    };
   }
 
+  /**
+   * Retrieves segments with additional metadata such as number of rows and
+   * schema fingerprint.
+   */
   public List<DataSegmentPlus> retrieveSegmentsWithSchemaById(
       String datasource,
       Set<String> segmentIds
   )
   {
-    final List<List<String>> partitionedSegmentIds
-        = Lists.partition(new ArrayList<>(segmentIds), 100);
-
-    final List<CloseableIterator<DataSegmentPlus>> fetchedSegments
-        = new ArrayList<>(partitionedSegmentIds.size());
-    for (List<String> partition : partitionedSegmentIds) {
-      fetchedSegments.add(retrieveSegmentBatchById(datasource, partition, true));
-    }
-
     try (CloseableIterator<DataSegmentPlus> iterator
-             = CloseableIterators.concat(fetchedSegments)) {
+             = retrieveSegmentsByIdIterator(datasource, segmentIds, true)) {
       return ImmutableList.copyOf(iterator);
     }
     catch (IOException e) {
@@ -546,8 +594,13 @@ public class SqlSegmentsMetadataQuery
   }
 
   /**
-   * Marks all used segments that are <b>fully contained by</b> a particular interval as unused.
+   * Marks all used segments that are <b>fully contained by</b> a particular interval
+   * filtered by an optional list of versions as unused.
    *
+   * @param interval   Only used segments fully contained within this interval
+   *                   are eligible to be marked as unused
+   * @param updateTime Updated segments will have their used_status_last_updated
+   *                   column set to this value
    * @return Number of segments updated.
    */
   public int markSegmentsUnused(final String dataSource, final Interval interval, final DateTime updateTime)
@@ -556,9 +609,15 @@ public class SqlSegmentsMetadataQuery
   }
 
   /**
-   * Marks all used segments that are <b>fully contained by</b> a particular interval filtered by an optional list of versions
-   * as unused.
+   * Marks all used segments that are <b>fully contained by</b> a particular interval
+   * filtered by an optional list of versions as unused.
    *
+   * @param interval   Only used segments fully contained within this interval
+   *                   are eligible to be marked as unused
+   * @param versions   List of eligible segment versions. If null, all versions
+   *                   are considered eligible to be marked as unused.
+   * @param updateTime Updated segments will have their used_status_last_updated
+   *                   column set to this value
    * @return Number of segments updated.
    */
   public int markSegmentsUnused(

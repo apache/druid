@@ -76,25 +76,29 @@ public class SqlSegmentMetadataTransactionFactory implements SegmentMetadataTran
       SegmentMetadataReadTransaction.Callback<T> callback
   )
   {
-    return connector.inReadOnlyTransaction((handle, status) -> {
-      final SegmentMetadataTransaction sqlTransaction
-          = createSqlTransaction(dataSource, handle, status);
+    return connector.retryReadOnlyTransaction(
+        (handle, status) -> {
+          final SegmentMetadataTransaction sqlTransaction
+              = createSqlTransaction(dataSource, handle, status);
 
-      if (segmentMetadataCache.isEnabled()) {
-        final DatasourceSegmentCache datasourceCache
-            = segmentMetadataCache.getDatasource(dataSource);
-        final SegmentMetadataReadTransaction cachedTransaction
-            = new CachedSegmentMetadataTransaction(sqlTransaction, datasourceCache, leaderSelector);
+          if (segmentMetadataCache.isEnabled()) {
+            final DatasourceSegmentCache datasourceCache
+                = segmentMetadataCache.getDatasource(dataSource);
+            final SegmentMetadataReadTransaction cachedTransaction
+                = new CachedSegmentMetadataTransaction(sqlTransaction, datasourceCache, leaderSelector);
 
-        return datasourceCache.read(() -> executeReadAndClose(cachedTransaction, callback));
-      } else {
-        return executeReadAndClose(createSqlTransaction(dataSource, handle, status), callback);
-      }
-    });
+            return datasourceCache.read(() -> executeReadAndClose(cachedTransaction, callback));
+          } else {
+            return executeReadAndClose(createSqlTransaction(dataSource, handle, status), callback);
+          }
+        },
+        QUIET_RETRIES,
+        getMaxRetries()
+    );
   }
 
   @Override
-  public <T> T retryDatasourceTransaction(
+  public <T> T inReadWriteDatasourceTransaction(
       String dataSource,
       SegmentMetadataTransaction.Callback<T> callback
   )
@@ -140,7 +144,7 @@ public class SqlSegmentMetadataTransactionFactory implements SegmentMetadataTran
     try {
       return callback.inTransaction(transaction);
     }
-    catch (Exception e) {
+    catch (Throwable e) {
       transaction.setRollbackOnly();
       throw e;
     }

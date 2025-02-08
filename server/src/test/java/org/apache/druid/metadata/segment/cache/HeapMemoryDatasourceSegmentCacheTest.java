@@ -19,7 +19,6 @@
 
 package org.apache.druid.metadata.segment.cache;
 
-import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -30,14 +29,12 @@ import org.apache.druid.server.http.DataSegmentPlus;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
-import org.hamcrest.MatcherAssert;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.function.ThrowingRunnable;
 
 import java.util.List;
 import java.util.Set;
@@ -68,36 +65,40 @@ public class HeapMemoryDatasourceSegmentCacheTest
   @Test
   public void testFindSegment_throwsUnsupported()
   {
-    verifyThrowsDefensiveException(
-        () -> cache.findSegment(SegmentId.dummy(WIKI)),
+    DruidExceptionMatcher.defensive().expectMessageIs(
         "Unsupported: Unused segments are not cached"
+    ).assertThrowsAndMatches(
+        () -> cache.findSegment(SegmentId.dummy(WIKI))
     );
   }
 
   @Test
   public void testFindUnusedSegments_throwsUnsupported()
   {
-    verifyThrowsDefensiveException(
-        () -> cache.findUnusedSegments(null, null, null, null),
+    DruidExceptionMatcher.defensive().expectMessageIs(
         "Unsupported: Unused segments are not cached"
+    ).assertThrowsAndMatches(
+        () -> cache.findUnusedSegments(null, null, null, null)
     );
   }
 
   @Test
   public void testFindSegments_throwsUnsupported()
   {
-    verifyThrowsDefensiveException(
-        () -> cache.findSegments(Set.of()),
+    DruidExceptionMatcher.defensive().expectMessageIs(
         "Unsupported: Unused segments are not cached"
+    ).assertThrowsAndMatches(
+        () -> cache.findSegments(Set.of())
     );
   }
 
   @Test
   public void testFindSegmentsWithSchema_throwsUnsupported()
   {
-    verifyThrowsDefensiveException(
-        () -> cache.findSegmentsWithSchema(Set.of()),
+    DruidExceptionMatcher.defensive().expectMessageIs(
         "Unsupported: Unused segments are not cached"
+    ).assertThrowsAndMatches(
+        () -> cache.findSegmentsWithSchema(Set.of())
     );
   }
 
@@ -821,21 +822,16 @@ public class HeapMemoryDatasourceSegmentCacheTest
   {
     cache.stop();
 
-    verifyThrowsDefensiveException(
-        () -> cache.deleteAllPendingSegments(),
-        "Cache is already stopped"
+    DruidExceptionMatcher.internalServerError().expectMessageIs(
+        "Cannot perform operation on cache as it is already stopped"
+    ).assertThrowsAndMatches(
+        () -> cache.deleteAllPendingSegments()
     );
-    verifyThrowsDefensiveException(
-        () -> cache.findPendingSegments("alloc1"),
-        "Cache is already stopped"
-    );
-  }
 
-  private static void verifyThrowsDefensiveException(ThrowingRunnable runnable, String message)
-  {
-    MatcherAssert.assertThat(
-        Assert.assertThrows(DruidException.class, runnable),
-        DruidExceptionMatcher.defensive().expectMessageIs(message)
+    DruidExceptionMatcher.internalServerError().expectMessageIs(
+        "Cannot perform operation on cache as it is already stopped"
+    ).assertThrowsAndMatches(
+        () -> cache.findPendingSegments("alloc1")
     );
   }
 

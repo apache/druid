@@ -31,6 +31,7 @@ import com.google.common.collect.Lists;
 import com.google.common.hash.Hashing;
 import com.google.common.io.BaseEncoding;
 import com.google.inject.Inject;
+import org.apache.druid.common.utils.IdUtils;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
@@ -174,7 +175,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       final Segments visibility
   )
   {
-    return retryDatasourceTransaction(
+    return inReadWriteDatasourceTransaction(
         dataSource,
         transaction -> {
           if (visibility == Segments.ONLY_VISIBLE) {
@@ -190,7 +191,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   @Override
   public List<Pair<DataSegment, String>> retrieveUsedSegmentsAndCreatedDates(String dataSource, List<Interval> intervals)
   {
-    return retryDatasourceTransaction(
+    return inReadWriteDatasourceTransaction(
         dataSource,
         transaction -> transaction.findUsedSegmentsPlusOverlappingAnyOf(intervals)
                                   .stream()
@@ -245,7 +246,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   @Override
   public int markSegmentsAsUnusedWithinInterval(String dataSource, Interval interval)
   {
-    final Integer numSegmentsMarkedUnused = retryDatasourceTransaction(
+    final Integer numSegmentsMarkedUnused = inReadWriteDatasourceTransaction(
         dataSource,
         transaction -> transaction.markSegmentsWithinIntervalAsUnused(interval, DateTimes.nowUtc())
     );
@@ -308,7 +309,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     final AtomicBoolean definitelyNotUpdated = new AtomicBoolean(false);
 
     try {
-      return retryDatasourceTransaction(
+      return inReadWriteDatasourceTransaction(
           dataSource,
           transaction -> {
             // Set definitelyNotUpdated back to false upon retrying.
@@ -365,7 +366,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     final String dataSource = verifySegmentsToCommit(replaceSegments);
 
     try {
-      return retryDatasourceTransaction(
+      return inReadWriteDatasourceTransaction(
           dataSource,
           transaction -> {
             final Set<DataSegment> segmentsToInsert = new HashSet<>(replaceSegments);
@@ -470,7 +471,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     final AtomicBoolean definitelyNotUpdated = new AtomicBoolean(false);
 
     try {
-      return retryDatasourceTransaction(
+      return inReadWriteDatasourceTransaction(
           dataSource,
           transaction -> {
             // Set definitelyNotUpdated back to false upon retrying.
@@ -522,7 +523,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     Preconditions.checkNotNull(allocateInterval, "interval");
 
     final Interval interval = allocateInterval.withChronology(ISOChronology.getInstanceUTC());
-    return retryDatasourceTransaction(
+    return inReadWriteDatasourceTransaction(
         dataSource,
         transaction -> allocatePendingSegments(
             transaction,
@@ -548,7 +549,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     Preconditions.checkNotNull(interval, "interval");
     final Interval allocateInterval = interval.withChronology(ISOChronology.getInstanceUTC());
 
-    return retryDatasourceTransaction(
+    return inReadWriteDatasourceTransaction(
         dataSource,
         transaction -> {
           // Get the time chunk and associated data segments for the given interval, if any
@@ -774,7 +775,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
       boolean reduceMetadataIO
   )
   {
-    return retryDatasourceTransaction(
+    return inReadWriteDatasourceTransaction(
         dataSource,
         transaction -> {
           if (reduceMetadataIO) {
@@ -1127,7 +1128,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
     final AtomicBoolean metadataNotUpdated = new AtomicBoolean(false);
     try {
-      return retryDatasourceTransaction(
+      return inReadWriteDatasourceTransaction(
           dataSource,
           transaction -> {
             metadataNotUpdated.set(false);
@@ -1552,7 +1553,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   @Override
   public int deletePendingSegmentsCreatedInInterval(String dataSource, Interval deleteInterval)
   {
-    return retryDatasourceTransaction(
+    return inReadWriteDatasourceTransaction(
         dataSource,
         transaction -> transaction.deletePendingSegmentsCreatedIn(deleteInterval)
     );
@@ -1561,7 +1562,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   @Override
   public int deletePendingSegments(String dataSource)
   {
-    return retryDatasourceTransaction(
+    return inReadWriteDatasourceTransaction(
         dataSource,
         DatasourceSegmentMetadataWriter::deleteAllPendingSegments
     );
@@ -1790,24 +1791,6 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     }
 
     return dataSource;
-  }
-
-  /**
-   * Tries to parse the given string as a {@link SegmentId}.
-   *
-   * @throws DruidException if the segment ID could not be parsed.
-   */
-  private SegmentId getValidSegmentId(String dataSource, String segmentId)
-  {
-    final SegmentId parsedSegmentId = SegmentId.tryParse(dataSource, segmentId);
-    if (parsedSegmentId == null) {
-      throw InvalidInput.exception(
-          "Could not parse segment ID[%s] for datasource[%s].",
-          segmentId, dataSource
-      );
-    } else {
-      return parsedSegmentId;
-    }
   }
 
   private static Set<DataSegment> findNonOvershadowedSegments(Set<DataSegment> segments)
@@ -2239,7 +2222,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   public void updateSegmentMetadata(final Set<DataSegment> segments)
   {
     final String dataSource = verifySegmentsToCommit(segments);
-    retryDatasourceTransaction(
+    inReadWriteDatasourceTransaction(
         dataSource,
         transaction -> {
           for (final DataSegment segment : segments) {
@@ -2263,7 +2246,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     final Set<SegmentId> idsToDelete = segments.stream()
                                             .map(DataSegment::getId)
                                             .collect(Collectors.toSet());
-    int numDeletedSegments = retryDatasourceTransaction(
+    int numDeletedSegments = inReadWriteDatasourceTransaction(
         dataSource,
         transaction -> transaction.deleteSegments(idsToDelete)
     );
@@ -2391,8 +2374,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   @Override
   public DataSegment retrieveSegmentForId(final String dataSource, final String segmentId)
   {
-    final SegmentId parsedSegmentId = getValidSegmentId(dataSource, segmentId);
-    return retryDatasourceTransaction(
+    final SegmentId parsedSegmentId = IdUtils.getValidSegmentId(dataSource, segmentId);
+    return inReadWriteDatasourceTransaction(
         dataSource,
         transaction -> transaction.findSegment(parsedSegmentId)
     );
@@ -2401,8 +2384,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   @Override
   public DataSegment retrieveUsedSegmentForId(String dataSource, String segmentId)
   {
-    final SegmentId parsedSegmentId = getValidSegmentId(dataSource, segmentId);
-    return retryDatasourceTransaction(
+    final SegmentId parsedSegmentId = IdUtils.getValidSegmentId(dataSource, segmentId);
+    return inReadWriteDatasourceTransaction(
         dataSource,
         transaction -> transaction.findUsedSegment(parsedSegmentId)
     );
@@ -2411,7 +2394,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   @Override
   public int deletePendingSegmentsForTaskAllocatorId(final String datasource, final String taskAllocatorId)
   {
-    return retryDatasourceTransaction(
+    return inReadWriteDatasourceTransaction(
         datasource,
         transaction -> transaction.deletePendingSegments(taskAllocatorId)
     );
@@ -2526,12 +2509,12 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     return upgradedToSegmentIds;
   }
 
-  private <T> T retryDatasourceTransaction(
+  private <T> T inReadWriteDatasourceTransaction(
       String dataSource,
       SegmentMetadataTransaction.Callback<T> callback
   )
   {
-    return transactionFactory.retryDatasourceTransaction(dataSource, callback);
+    return transactionFactory.inReadWriteDatasourceTransaction(dataSource, callback);
   }
 
   private <T> T inReadOnlyDatasourceTransaction(

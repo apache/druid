@@ -25,6 +25,7 @@ import com.google.errorprone.annotations.ThreadSafe;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Inject;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.error.InternalServerError;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Stopwatch;
 import org.apache.druid.java.util.common.StringUtils;
@@ -63,12 +64,19 @@ import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * In-memory implementation of {@link SegmentMetadataCache}.
+ *
+ * TODO: cancel the future of poll after becoming leader.
  */
 @ThreadSafe
 public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
 {
   private static final EmittingLogger log = new EmittingLogger(HeapMemorySegmentMetadataCache.class);
   private static final String METRIC_PREFIX = "segment/metadataCache/";
+
+  /**
+   * Maximum time to wait for cache to be ready.
+   */
+  private static final int READY_TIMEOUT_MILLIS = 5 * 60_000;
 
   private enum CacheState
   {
@@ -87,7 +95,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
   private final Object cacheStateLock = new Object();
 
   @GuardedBy("cacheStateLock")
-  private volatile CacheState currentCacheState = CacheState.STOPPED;
+  private CacheState currentCacheState = CacheState.STOPPED;
 
   private final ConcurrentHashMap<String, HeapMemoryDatasourceSegmentCache>
       datasourceToSegmentCache = new ConcurrentHashMap<>();
@@ -119,10 +127,8 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
   {
     synchronized (cacheStateLock) {
       if (isCacheEnabled && currentCacheState == CacheState.STOPPED) {
-        currentCacheState = CacheState.FOLLOWER;
+        updateCacheState(CacheState.FOLLOWER, "Starting sync with metadata store");
         pollExecutor.schedule(this::syncWithMetadataStore, pollDuration.getMillis(), TimeUnit.MILLISECONDS);
-
-        log.info("Starting sync with metadata store. Cache is now in state[%s].", currentCacheState);
       }
     }
   }
@@ -137,8 +143,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
         datasourceToSegmentCache.forEach((datasource, cache) -> cache.stop());
         datasourceToSegmentCache.clear();
 
-        currentCacheState = CacheState.STOPPED;
-        log.info("Stopped sync with metadata store. Cache is now in state[%s].", currentCacheState);
+        updateCacheState(CacheState.STOPPED, "Stopped sync with metadata store");
       }
     }
   }
@@ -150,10 +155,9 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
       if (isCacheEnabled) {
         if (currentCacheState == CacheState.STOPPED) {
           throw DruidException.defensive("Cache has not been started yet");
+        } else {
+          updateCacheState(CacheState.LEADER_FIRST_SYNC_PENDING, "We are now leader");
         }
-
-        currentCacheState = CacheState.LEADER_FIRST_SYNC_PENDING;
-        log.info("We are now leader. Waiting to sync latest updates from metadata store.");
       }
     }
   }
@@ -163,8 +167,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
   {
     synchronized (cacheStateLock) {
       if (isCacheEnabled) {
-        currentCacheState = CacheState.FOLLOWER;
-        log.info("Not leader anymore. Cache is now in state[%s].", currentCacheState);
+        updateCacheState(CacheState.FOLLOWER, "Not leader anymore");
       }
     }
   }
@@ -178,7 +181,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
   @Override
   public DatasourceSegmentCache getDatasource(String dataSource)
   {
-    verifyCacheIsReady();
+    verifyCacheIsUsableAndAwaitSync();
     return getCacheForDatasource(dataSource);
   }
 
@@ -188,11 +191,12 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
   }
 
   /**
-   * Verifies that the cache is ready to serve requests, waiting if necessary.
+   * Verifies that the cache is enabled, started and has become leader.
+   * Also waits for the cache to be synced with metadata store.
    *
    * @throws DruidException if the cache is disabled, stopped or not leader.
    */
-  private void verifyCacheIsReady()
+  private void verifyCacheIsUsableAndAwaitSync()
   {
     if (!isCacheEnabled) {
       throw DruidException.defensive("Segment metadata cache is not enabled.");
@@ -201,13 +205,13 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
     synchronized (cacheStateLock) {
       switch (currentCacheState) {
         case STOPPED:
-          throw DruidException.defensive("Segment metadata cache has not been started yet.");
+          throw InternalServerError.exception("Segment metadata cache has not been started yet.");
         case FOLLOWER:
-          throw DruidException.defensive("Not leader yet. Segment metadata cache is not usable.");
+          throw InternalServerError.exception("Not leader yet. Segment metadata cache is not usable.");
         case LEADER_FIRST_SYNC_PENDING:
         case LEADER_FIRST_SYNC_STARTED:
           waitForCacheToFinishSync();
-          verifyCacheIsReady();
+          verifyCacheIsUsableAndAwaitSync();
         case LEADER_READY:
           // Cache is now ready for use
       }
@@ -226,7 +230,10 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
       while (currentCacheState == CacheState.LEADER_FIRST_SYNC_PENDING
              || currentCacheState == CacheState.LEADER_FIRST_SYNC_STARTED) {
         try {
-          cacheStateLock.wait(5 * 60_000);
+          cacheStateLock.wait(READY_TIMEOUT_MILLIS);
+        }
+        catch (InterruptedException e) {
+          log.noStackTrace().info(e, "Interrupted while waiting for cache to be ready");
         }
         catch (Exception e) {
           log.noStackTrace().error(e, "Error while waiting for cache to be ready");
@@ -237,14 +244,14 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
     }
   }
 
-  private void markCacheAsReadyIfLeader()
+  private void updateCacheState(CacheState targetState, String message)
   {
     synchronized (cacheStateLock) {
-      if (currentCacheState == CacheState.LEADER_FIRST_SYNC_STARTED) {
-        currentCacheState = CacheState.LEADER_READY;
-        log.info("Sync has finished. Cache is now ready to serve requests.");
+      currentCacheState = targetState;
+      log.info("%s. Cache is now in state[%s].", message, currentCacheState);
 
-        // Notify waiting threads waiting for cache to be ready
+      // Notify threads waiting for cache to be ready
+      if (currentCacheState == CacheState.LEADER_READY) {
         cacheStateLock.notifyAll();
       }
     }
@@ -272,8 +279,10 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
     try {
       synchronized (cacheStateLock) {
         if (currentCacheState == CacheState.LEADER_FIRST_SYNC_PENDING) {
-          log.info("Started sync of latest updates from metadata store.");
-          currentCacheState = CacheState.LEADER_FIRST_SYNC_STARTED;
+          updateCacheState(
+              CacheState.LEADER_FIRST_SYNC_STARTED,
+              "Started sync of latest updates from metadata store"
+          );
         }
       }
 
@@ -309,11 +318,14 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
       emitMetric("sync/time", pollDurationMillis);
       syncFinishTime.set(DateTimes.nowUtc());
 
-      markCacheAsReadyIfLeader();
+      synchronized (cacheStateLock) {
+        if (currentCacheState == CacheState.LEADER_FIRST_SYNC_STARTED) {
+          updateCacheState(CacheState.LEADER_READY, "Cache is synced with metadata store");
+        }
+      }
     }
     catch (Throwable t) {
-      log.error(t, "Error occurred while polling metadata store");
-      log.makeAlert(t, "Error occurred while polling metadata store");
+      log.makeAlert(t, "Error occurred while polling metadata store").emit();
     }
     finally {
       // Schedule the next sync
@@ -436,7 +448,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
           CloseableIterator<DataSegmentPlus> iterator =
               SqlSegmentsMetadataQuery
                   .forHandle(handle, connector, tablesConfig, jsonMapper)
-                  .retrieveSegmentsByIdIterator(dataSource, summary.usedSegmentIdsToRefresh)
+                  .retrieveSegmentsByIdIterator(dataSource, summary.usedSegmentIdsToRefresh, false)
       ) {
         while (iterator.hasNext()) {
           if (cache.addSegment(iterator.next())) {

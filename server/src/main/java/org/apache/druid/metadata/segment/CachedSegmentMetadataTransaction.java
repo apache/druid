@@ -21,7 +21,6 @@ package org.apache.druid.metadata.segment;
 
 import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.error.InternalServerError;
 import org.apache.druid.metadata.PendingSegmentRecord;
 import org.apache.druid.metadata.segment.cache.DatasourceSegmentCache;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
@@ -36,7 +35,6 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -56,8 +54,8 @@ class CachedSegmentMetadataTransaction implements SegmentMetadataTransaction
 
   private final int startTerm;
 
-  private final AtomicBoolean isRollingBack = new AtomicBoolean(false);
-  private final AtomicBoolean isClosed = new AtomicBoolean(false);
+  private boolean isRollingBack = false;
+  private boolean isClosed = false;
 
   private final List<Consumer<DatasourceSegmentMetadataWriter>> pendingCacheWrites = new ArrayList<>();
 
@@ -74,14 +72,18 @@ class CachedSegmentMetadataTransaction implements SegmentMetadataTransaction
     if (leaderSelector.isLeader()) {
       this.startTerm = leaderSelector.localTerm();
     } else {
-      throw InternalServerError.exception("Not leader anymore. Cannot start transaction.");
+      throw DruidException.forPersona(DruidException.Persona.USER)
+                          .ofCategory(DruidException.Category.SERVICE_UNAVAILABLE)
+                          .build("Not leader anymore. Cannot start transaction.");
     }
   }
 
   private void verifyStillLeaderWithSameTerm()
   {
     if (!isLeaderWithSameTerm()) {
-      throw InternalServerError.exception("Not leader anymore. Failing transaction.");
+      throw DruidException.forPersona(DruidException.Persona.USER)
+                          .ofCategory(DruidException.Category.SERVICE_UNAVAILABLE)
+                          .build("Not leader anymore. Failing transaction.");
     }
   }
 
@@ -99,17 +101,17 @@ class CachedSegmentMetadataTransaction implements SegmentMetadataTransaction
   @Override
   public void setRollbackOnly()
   {
-    isRollingBack.set(true);
+    isRollingBack = true;
     delegate.setRollbackOnly();
   }
 
   @Override
   public void close()
   {
-    if (isClosed.get()) {
+    if (isClosed) {
       return;
-    } else if (isRollingBack.get()) {
-      isClosed.set(true);
+    } else if (isRollingBack) {
+      isClosed = true;
       return;
     }
 
@@ -125,7 +127,7 @@ class CachedSegmentMetadataTransaction implements SegmentMetadataTransaction
     }
     finally {
       delegate.close();
-      isClosed.set(true);
+      isClosed = true;
     }
   }
 
@@ -333,7 +335,7 @@ class CachedSegmentMetadataTransaction implements SegmentMetadataTransaction
 
   private <T> T performWriteAction(Function<DatasourceSegmentMetadataWriter, T> action)
   {
-    if (isClosed.get()) {
+    if (isClosed) {
       throw DruidException.defensive(
           "Transaction has already been committed. No more writes can be performed."
       );

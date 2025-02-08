@@ -3657,7 +3657,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     coordinator.commitSegments(ImmutableSet.of(usedSegmentForExactIntervalAndVersion), null);
 
 
-    SegmentId highestUnusedId = transactionFactory.retryDatasourceTransaction(
+    SegmentId highestUnusedId = transactionFactory.inReadWriteDatasourceTransaction(
         TestDataSource.WIKI,
         transaction -> transaction.findHighestUnusedSegmentId(Intervals.of("2024/2025"), "v1")
     );
@@ -3880,7 +3880,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
       }
     }
 
-    Set<SegmentIdWithShardSpec> observed = transactionFactory.retryDatasourceTransaction(
+    Set<SegmentIdWithShardSpec> observed = transactionFactory.inReadWriteDatasourceTransaction(
         datasource,
         transaction ->
             coordinator.retrieveUsedSegmentsForAllocation(transaction, datasource, month)
@@ -3923,7 +3923,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
       boolean skipLineageCheck
   )
   {
-    return transactionFactory.retryDatasourceTransaction(
+    return transactionFactory.inReadWriteDatasourceTransaction(
         dataSource,
         transaction -> transaction.insertPendingSegments(pendingSegments, skipLineageCheck)
     );

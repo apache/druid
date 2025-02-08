@@ -149,9 +149,9 @@ public class DruidOverlord
                 @Override
                 public void stop()
                 {
-                  segmentMetadataCache.stopBeingLeader();
                   taskMaster.stopBeingLeader();
                   segmentAllocationQueue.stopBeingLeader();
+                  segmentMetadataCache.stopBeingLeader();
                 }
               }
           );

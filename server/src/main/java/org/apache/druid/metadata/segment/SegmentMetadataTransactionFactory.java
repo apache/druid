@@ -26,6 +26,7 @@ public interface SegmentMetadataTransactionFactory
 {
   /**
    * Creates and executes a new read-only transaction for the given datasource.
+   * The implementation may retry the transaction until it succeeds.
    */
   <T> T inReadOnlyDatasourceTransaction(
       String dataSource,
@@ -36,7 +37,7 @@ public interface SegmentMetadataTransactionFactory
    * Creates and executes a new read-write transaction for the given datasource.
    * The implementation may retry the transaction until it succeeds.
    */
-  <T> T retryDatasourceTransaction(
+  <T> T inReadWriteDatasourceTransaction(
       String dataSource,
       SegmentMetadataTransaction.Callback<T> callback
   );

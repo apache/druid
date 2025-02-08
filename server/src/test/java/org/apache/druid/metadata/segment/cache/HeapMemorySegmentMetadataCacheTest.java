@@ -19,7 +19,6 @@
 
 package org.apache.druid.metadata.segment.cache;
 
-import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
@@ -41,14 +40,12 @@ import org.apache.druid.server.http.DataSegmentPlus;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NumberedShardSpec;
-import org.hamcrest.MatcherAssert;
 import org.joda.time.DateTime;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.function.ThrowingRunnable;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -179,10 +176,10 @@ public class HeapMemorySegmentMetadataCacheTest
   public void testBecomeLeader_throwsException_ifCacheIsStopped()
   {
     setupTargetWithCaching(true);
-
-    verifyThrowsException(
-        () -> cache.becomeLeader(),
+    DruidExceptionMatcher.defensive().expectMessageIs(
         "Cache has not been started yet"
+    ).assertThrowsAndMatches(
+        () -> cache.becomeLeader()
     );
   }
 
@@ -190,9 +187,10 @@ public class HeapMemorySegmentMetadataCacheTest
   public void testGetDataSource_throwsException_ifCacheIsDisabled()
   {
     setupTargetWithCaching(false);
-    verifyThrowsException(
-        () -> cache.getDatasource(TestDataSource.WIKI),
+    DruidExceptionMatcher.defensive().expectMessageIs(
         "Segment metadata cache is not enabled."
+    ).assertThrowsAndMatches(
+        () -> cache.getDatasource(TestDataSource.WIKI)
     );
   }
 
@@ -202,15 +200,17 @@ public class HeapMemorySegmentMetadataCacheTest
     setupTargetWithCaching(true);
     Assert.assertTrue(cache.isEnabled());
 
-    verifyThrowsException(
-        () -> cache.getDatasource(TestDataSource.WIKI),
+    DruidExceptionMatcher.internalServerError().expectMessageIs(
         "Segment metadata cache has not been started yet."
+    ).assertThrowsAndMatches(
+        () -> cache.getDatasource(TestDataSource.WIKI)
     );
 
     cache.start();
-    verifyThrowsException(
-        () -> cache.getDatasource(TestDataSource.WIKI),
+    DruidExceptionMatcher.internalServerError().expectMessageIs(
         "Not leader yet. Segment metadata cache is not usable."
+    ).assertThrowsAndMatches(
+        () -> cache.getDatasource(TestDataSource.WIKI)
     );
   }
 
@@ -550,14 +550,6 @@ public class HeapMemorySegmentMetadataCacheTest
     return new PendingSegmentRecord(
         segmentId,
         "sequence1", null, null, "allocator1", createdTime
-    );
-  }
-
-  private static void verifyThrowsException(ThrowingRunnable runnable, String expectedMessage)
-  {
-    MatcherAssert.assertThat(
-        Assert.assertThrows(DruidException.class, runnable),
-        DruidExceptionMatcher.defensive().expectMessageIs(expectedMessage)
     );
   }
 
