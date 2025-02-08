@@ -166,6 +166,18 @@ public class SupervisorManager
     }
   }
 
+  public boolean wasSupervisorSpecModified(SupervisorSpec spec)
+  {
+    Preconditions.checkState(started, "SupervisorManager not started");
+    Preconditions.checkNotNull(spec, "spec");
+    Preconditions.checkNotNull(spec.getId(), "spec.getId()");
+    Preconditions.checkNotNull(spec.getDataSources(), "spec.getDatasources()");
+    synchronized (lock) {
+      Preconditions.checkState(started, "SupervisorManager not started");
+      return metadataSupervisorManager.wasSupervisorSpecModified(spec);
+    }
+  }
+
   public boolean stopAndRemoveSupervisor(String id)
   {
     Preconditions.checkState(started, "SupervisorManager not started");

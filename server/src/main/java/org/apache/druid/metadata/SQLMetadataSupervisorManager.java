@@ -20,6 +20,7 @@
 package org.apache.druid.metadata;
 
 import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
@@ -49,6 +50,7 @@ import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -284,5 +286,33 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
   private String getSupervisorsTable()
   {
     return dbTables.get().getSupervisorTable();
+  }
+
+  @Override
+  public boolean wasSupervisorSpecModified(SupervisorSpec spec)
+  {
+    byte[] latestSpecAsBytes = dbi.withHandle(
+        handle -> handle.createQuery(
+                            StringUtils.format(
+                                "SELECT id, spec_id, created_date, payload FROM %1$s WHERE spec_id = :spec_id ORDER BY id DESC LIMIT 1",
+                                getSupervisorsTable()
+                            ))
+                        .bind("spec_id", spec.getId())
+                        .map((index, r, ctx) -> r.getBytes("payload"))
+                        .first()
+    );
+    if (latestSpecAsBytes != null) {
+      try {
+        byte[] specAsBytes = jsonMapper.writeValueAsBytes(spec);
+        if (Arrays.equals(specAsBytes, latestSpecAsBytes)) {
+          return false;
+        }
+      }
+      catch (JsonProcessingException ex) {
+        log.warn("Failed to write spec as bytes for spec_id[%s]", spec.getId());
+        return true;
+      }
+    }
+    return true;
   }
 }
