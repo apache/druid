@@ -158,7 +158,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     if (useSegmentCache) {
       segmentMetadataCache.start();
       segmentMetadataCache.becomeLeader();
-      cachePollExecutor.finishNextPendingTask();
+      cachePollExecutor.finishNextPendingTasks(4);
     }
 
     transactionFactory = new SqlSegmentMetadataTransactionFactory(
@@ -210,7 +210,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
   void refreshCache()
   {
     if (useSegmentCache) {
-      cachePollExecutor.finishNextPendingTask();
+      cachePollExecutor.finishNextPendingTasks(2);
     }
   }
 

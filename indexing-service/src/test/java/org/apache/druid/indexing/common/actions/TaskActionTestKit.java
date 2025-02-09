@@ -101,7 +101,7 @@ public class TaskActionTestKit extends ExternalResource
 
   public void syncSegmentMetadataCache()
   {
-    metadataCachePollExec.finishNextPendingTask();
+    metadataCachePollExec.finishNextPendingTasks(4);
   }
 
   @Override
