@@ -23,8 +23,10 @@ import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.ScheduledExecutorFactory;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.java.util.emitter.service.AlertEvent;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
 import org.apache.druid.metadata.IndexerSqlMetadataStorageCoordinatorTestBase;
 import org.apache.druid.metadata.PendingSegmentRecord;
@@ -112,12 +114,24 @@ public class HeapMemorySegmentMetadataCacheTest
     setupTargetWithCaching(true);
     cache.start();
     cache.becomeLeader();
+    syncCacheAfterBecomingLeader();
+  }
+
+  /**
+   * Completes the cancelled sync and the fresh sync after becoming leader.
+   */
+  private void syncCacheAfterBecomingLeader()
+  {
+    syncCache();
     syncCache();
   }
 
+  /**
+   * Executes a sync and its callback.
+   */
   private void syncCache()
   {
-    pollExecutor.finishNextPendingTask();
+    pollExecutor.finishNextPendingTasks(2);
   }
 
   @Test
@@ -230,11 +244,11 @@ public class HeapMemorySegmentMetadataCacheTest
     });
     getDatasourceThread.start();
 
-    // Invoke becomeLeader in Thread 2 after a wait period
+    // Invoke syncCache in Thread 2 after a wait period
     Thread.sleep(100);
     final Thread syncCompleteThread = new Thread(() -> {
       observedEventOrder.add("before first sync");
-      syncCache();
+      syncCacheAfterBecomingLeader();
     });
     syncCompleteThread.start();
 
@@ -329,9 +343,104 @@ public class HeapMemorySegmentMetadataCacheTest
   }
 
   @Test
-  public void testSync_doesNotUsedRefreshUnnecessarily()
+  public void testSync_emitsAlert_ifErrorOccurs()
   {
+    setupAndSyncCache();
+    serviceEmitter.verifyEmitted(Metric.SYNC_DURATION_MILLIS, 1);
 
+    // Tear down the connector to cause sync to fail
+    derbyConnector.tearDown();
+
+    syncCache();
+
+    final List<AlertEvent> alerts = serviceEmitter.getAlerts();
+    Assert.assertEquals(1, alerts.size());
+    Assert.assertEquals(
+        "Could not sync segment metadata cache with metadata store",
+        alerts.get(0).getDescription()
+    );
+
+    // Verify that sync duration is not emitted again
+    serviceEmitter.verifyEmitted(Metric.SYNC_DURATION_MILLIS, 1);
+  }
+
+  @Test
+  public void testSync_doesNotFail_ifSegmentRecordIsBad()
+  {
+    // Insert 2 segments into the metadata store
+    final DataSegmentPlus validSegment = CreateDataSegments.ofDatasource(TestDataSource.WIKI)
+                                                           .updatedNow().markUsed().asPlus();
+    final DataSegmentPlus invalidSegment = CreateDataSegments.ofDatasource(TestDataSource.WIKI)
+                                                             .updatedNow().markUsed().asPlus();
+    insertSegmentsInMetadataStore(Set.of(validSegment, invalidSegment));
+
+    // Update the second segment to have an invalid payload
+    derbyConnectorRule.segments().update(
+        "UPDATE %1$s SET id = 'invalid' WHERE id = ?",
+        invalidSegment.getDataSegment().getId().toString()
+    );
+
+    // Verify that sync completes successfully and updates the valid segment
+    setupAndSyncCache();
+    serviceEmitter.verifyEmitted(Metric.SYNC_DURATION_MILLIS, 1);
+    serviceEmitter.verifyValue(Metric.USED_SEGMENTS_UPDATED, 1L);
+    serviceEmitter.verifyValue(Metric.IGNORED_SEGMENTS, 1L);
+
+    final DatasourceSegmentCache wikiCache = cache.getDatasource(TestDataSource.WIKI);
+    Assert.assertNull(wikiCache.findUsedSegment(invalidSegment.getDataSegment().getId()));
+    Assert.assertEquals(
+        validSegment.getDataSegment(),
+        wikiCache.findUsedSegment(validSegment.getDataSegment().getId())
+    );
+  }
+
+  @Test
+  public void testSync_doesNotFail_ifPendingSegmentRecordIsBad()
+  {
+    // Insert an invalid pending segment record into the metadata store
+    derbyConnector.retryWithHandle(
+        handle -> handle
+            .createStatement(
+                StringUtils.format(
+                    "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, "
+                    + "sequence_name, sequence_prev_id, sequence_name_prev_id_sha1, payload) "
+                    + "VALUES (:id, :dataSource, :created_date, :start, :end, "
+                    + ":sequence_name, :sequence_prev_id, :sequence_name_prev_id_sha1, :payload)",
+                    derbyConnectorRule.metadataTablesConfigSupplier().get().getPendingSegmentsTable(),
+                    derbyConnector.getQuoteString()
+                )
+            )
+            .bind("id", "1")
+            .bind("dataSource", "wiki")
+            .bind("created_date", "1")
+            .bind("start", "-start-")
+            .bind("end", "-end-")
+            .bind("sequence_name", "s1")
+            .bind("sequence_prev_id", "")
+            .bind("sequence_name_prev_id_sha1", "abcdef")
+            .bind("payload", new byte[0])
+            .execute()
+    );
+
+    // Insert a valid segment record into the metadata store
+    final DataSegmentPlus segment = CreateDataSegments.ofDatasource(TestDataSource.WIKI)
+                                                      .updatedNow().markUsed().asPlus();
+    insertSegmentsInMetadataStore(Set.of(segment));
+
+    // Verify that sync has completed successfully and has updated the segment
+    setupAndSyncCache();
+    serviceEmitter.verifyEmitted(Metric.SYNC_DURATION_MILLIS, 1);
+    serviceEmitter.verifyValue(Metric.IGNORED_PENDING_SEGMENTS, 1L);
+    serviceEmitter.verifyValue(Metric.USED_SEGMENTS_UPDATED, 1L);
+    serviceEmitter.verifyValue(Metric.POLLED_SEGMENTS, 1L);
+    serviceEmitter.verifyValue(Metric.POLLED_PENDING_SEGMENTS, 0L);
+
+    final DatasourceSegmentCache wikiCache = cache.getDatasource(TestDataSource.WIKI);
+    Assert.assertEquals(segment.getDataSegment(), wikiCache.findUsedSegment(segment.getDataSegment().getId()));
+    Assert.assertTrue(
+        wikiCache.findPendingSegmentsOverlapping(Intervals.ETERNITY)
+                 .isEmpty()
+    );
   }
 
   @Test
@@ -551,23 +660,6 @@ public class HeapMemorySegmentMetadataCacheTest
         segmentId,
         "sequence1", null, null, "allocator1", createdTime
     );
-  }
-
-  private static class Metric
-  {
-    static final String SYNC_DURATION_MILLIS = "segment/metadataCache/sync/time";
-
-    static final String POLLED_SEGMENTS = "segment/metadataCache/polled/total";
-    static final String POLLED_PENDING_SEGMENTS = "segment/metadataCache/polled/pending";
-
-    static final String STALE_USED_SEGMENTS = "segment/metadataCache/stale/used";
-
-    static final String DELETED_SEGMENTS = "segment/metadataCache/deleted/total";
-    static final String DELETED_PENDING_SEGMENTS = "segment/metadataCache/deleted/pending";
-
-    static final String USED_SEGMENTS_UPDATED = "segment/metadataCache/updated/used";
-    static final String UNUSED_SEGMENTS_UPDATED = "segment/metadataCache/updated/unused";
-    static final String PENDING_SEGMENTS_UPDATED = "segment/metadataCache/updated/pending";
   }
 
 }
