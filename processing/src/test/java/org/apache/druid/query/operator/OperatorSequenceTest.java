@@ -54,7 +54,7 @@ public class OperatorSequenceTest
         ).intValue()
     );
 
-    Yielder<Integer> yielder = seq.toYielder(0, new YieldingAccumulator<Integer, RowsAndColumns>()
+    Yielder<Integer> yielder = seq.toYielder(0, new YieldingAccumulator<>()
     {
       @Override
       public Integer accumulate(Integer accumulated, RowsAndColumns in)
@@ -101,7 +101,7 @@ public class OperatorSequenceTest
     );
 
     // Never yield
-    Yielder<Integer> yielder = seq.toYielder(0, new YieldingAccumulator<Integer, RowsAndColumns>()
+    Yielder<Integer> yielder = seq.toYielder(0, new YieldingAccumulator<>()
     {
       @Override
       public Integer accumulate(Integer accumulated, RowsAndColumns in)
@@ -118,7 +118,7 @@ public class OperatorSequenceTest
     Assert.assertTrue(yielder.isDone());
 
     // Yield at the very end...
-    yielder = seq.toYielder(0, new YieldingAccumulator<Integer, RowsAndColumns>()
+    yielder = seq.toYielder(0, new YieldingAccumulator<>()
     {
       @Override
       public Integer accumulate(Integer accumulated, RowsAndColumns in)
@@ -141,7 +141,7 @@ public class OperatorSequenceTest
     Assert.assertTrue(yielder.isDone());
 
     // Aggregate each RAC and yield every other.
-    yielder = seq.toYielder(0, new YieldingAccumulator<Integer, RowsAndColumns>()
+    yielder = seq.toYielder(0, new YieldingAccumulator<>()
     {
       @Override
       public Integer accumulate(Integer accumulated, RowsAndColumns in)

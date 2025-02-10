@@ -20,7 +20,6 @@
 package org.apache.druid.benchmark.compression;
 
 import it.unimi.dsi.fastutil.ints.IntArrayList;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.segment.data.ColumnarInts;
 import org.apache.druid.segment.data.CompressedVSizeColumnarIntsSupplier;
@@ -50,10 +49,6 @@ import java.util.concurrent.TimeUnit;
 @State(Scope.Benchmark)
 public class CompressedColumnarIntsBenchmark
 {
-  static {
-    NullHandling.initializeForTests();
-  }
-
   private IndexedInts uncompressed;
   private IndexedInts compressed;
 
@@ -87,7 +82,8 @@ public class CompressedColumnarIntsBenchmark
     );
     this.compressed = CompressedVSizeColumnarIntsSupplier.fromByteBuffer(
         bufferCompressed,
-        ByteOrder.nativeOrder()
+        ByteOrder.nativeOrder(),
+        null
     ).get();
 
     final ByteBuffer bufferUncompressed = serialize(VSizeColumnarInts.fromArray(vals));

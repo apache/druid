@@ -170,7 +170,6 @@ describe('Execution', () => {
                 "waitUntilSegmentsLoad": true,
               },
               "sqlResultsContext": {
-                "serializeComplexValues": true,
                 "stringifyArrays": true,
                 "timeZone": "UTC",
               },

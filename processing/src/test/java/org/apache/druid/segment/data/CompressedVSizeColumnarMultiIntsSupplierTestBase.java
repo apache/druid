@@ -116,7 +116,7 @@ public abstract class CompressedVSizeColumnarMultiIntsSupplierTestBase
       Closer closer
   )
   {
-    return new WritableSupplier<T>()
+    return new WritableSupplier<>()
     {
       @Override
       public T get()

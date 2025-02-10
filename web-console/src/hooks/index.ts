@@ -23,6 +23,6 @@ export * from './use-hash-and-local-storage-hybrid-state';
 export * from './use-interval';
 export * from './use-last-defined';
 export * from './use-local-storage-state';
+export * from './use-memo-with-previous';
 export * from './use-permanent-callback';
 export * from './use-query-manager';
-export * from './use-resize-observer';

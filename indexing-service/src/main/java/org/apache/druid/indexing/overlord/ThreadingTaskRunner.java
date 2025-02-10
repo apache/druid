@@ -151,7 +151,8 @@ public class ThreadingTaskRunner
               new ThreadingTaskRunnerWorkItem(
                   task,
                   taskExecutor.submit(
-                      new Callable<TaskStatus>() {
+                      new Callable<>()
+                      {
                         @Override
                         public TaskStatus call()
                         {

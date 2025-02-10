@@ -24,7 +24,6 @@ import com.google.common.collect.ForwardingMap;
 import com.google.common.collect.Maps;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.query.extraction.MapLookupExtractor;
@@ -147,38 +146,22 @@ public final class ImmutableLookupMap extends ForwardingMap<String, String>
     @Override
     public String apply(@Nullable String key)
     {
-      String keyEquivalent = NullHandling.nullToEmptyIfNeeded(key);
-      if (keyEquivalent == null) {
-        // keyEquivalent is null only for SQL-compatible null mode
-        // Otherwise, null will be replaced with empty string in nullToEmptyIfNeeded above.
+      if (key == null) {
         return null;
       }
 
-      final int entryId = keyToEntry.getInt(keyEquivalent);
+      final int entryId = keyToEntry.getInt(key);
       if (entryId == NOT_FOUND) {
         return null;
       } else {
-        return NullHandling.emptyToNullIfNeeded(values.get(entryId));
+        return values.get(entryId);
       }
     }
 
     @Override
     protected List<String> unapply(@Nullable String value)
     {
-      final List<String> unapplied = unapplyInternal(value, !NullHandling.sqlCompatible());
-
-      if (NullHandling.replaceWithDefault() && value == null) {
-        // Also check empty string, if the value was null.
-        final List<String> emptyStringUnapplied = unapplyInternal("", true);
-        if (!emptyStringUnapplied.isEmpty()) {
-          final List<String> combined = new ArrayList<>(unapplied.size() + emptyStringUnapplied.size());
-          combined.addAll(unapplied);
-          combined.addAll(emptyStringUnapplied);
-          return combined;
-        }
-      }
-
-      return unapplied;
+      return unapplyInternal(value, false);
     }
 
     @Override

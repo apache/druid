@@ -20,7 +20,6 @@
 package org.apache.druid.data.input.impl;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.Rows;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.ParseException;
@@ -49,14 +48,10 @@ public class RowsTest extends InitializedNullHandlingTest
   public void setUp()
   {
     // Null
-    validCases.put(null, NullHandling.sqlCompatible() ? null : 0L);
+    validCases.put(null, null);
 
     // Empty string
-    if (NullHandling.sqlCompatible()) {
-      invalidCases.add("");
-    } else {
-      validCases.put("", 0L);
-    }
+    invalidCases.add("");
 
     // Strings that are valid longs
     validCases.put("0", 0L);
@@ -116,11 +111,7 @@ public class RowsTest extends InitializedNullHandlingTest
     }
 
     for (final Object o : invalidCases) {
-      Assert.assertEquals(
-          o + " (nothrow)",
-          NullHandling.defaultLongValue(),
-          Rows.objectToNumber(FIELD_NAME, o, null, false)
-      );
+      Assert.assertNull(o + " (nothrow)", Rows.objectToNumber(FIELD_NAME, o, null, false));
 
       final ParseException e = Assert.assertThrows(
           o + " (throw)",
@@ -151,11 +142,7 @@ public class RowsTest extends InitializedNullHandlingTest
     }
 
     for (final Object o : invalidCases) {
-      Assert.assertEquals(
-          o + " (nothrow)",
-          NullHandling.defaultLongValue(),
-          Rows.objectToNumber(FIELD_NAME, o, ValueType.LONG, false)
-      );
+      Assert.assertNull(o + " (nothrow)", Rows.objectToNumber(FIELD_NAME, o, ValueType.LONG, false));
 
       final ParseException e = Assert.assertThrows(
           o + " (throw)",
@@ -186,11 +173,7 @@ public class RowsTest extends InitializedNullHandlingTest
     }
 
     for (final Object o : invalidCases) {
-      Assert.assertEquals(
-          o + " (nothrow)",
-          NullHandling.defaultFloatValue(),
-          Rows.objectToNumber(FIELD_NAME, o, ValueType.FLOAT, false)
-      );
+      Assert.assertNull(o + " (nothrow)", Rows.objectToNumber(FIELD_NAME, o, ValueType.FLOAT, false));
 
       final ParseException e = Assert.assertThrows(
           o + " (throw)",
@@ -221,11 +204,7 @@ public class RowsTest extends InitializedNullHandlingTest
     }
 
     for (final Object o : invalidCases) {
-      Assert.assertEquals(
-          o + " (nothrow)",
-          NullHandling.defaultDoubleValue(),
-          Rows.objectToNumber(FIELD_NAME, o, ValueType.DOUBLE, false)
-      );
+      Assert.assertNull(o + " (nothrow)", Rows.objectToNumber(FIELD_NAME, o, ValueType.DOUBLE, false));
 
       final ParseException e = Assert.assertThrows(
           o + " (throw)",

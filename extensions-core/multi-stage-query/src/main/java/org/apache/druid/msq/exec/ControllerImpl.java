@@ -86,6 +86,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.counters.CounterSnapshots;
 import org.apache.druid.msq.counters.CounterSnapshotsTree;
 import org.apache.druid.msq.indexing.InputChannelFactory;
@@ -162,6 +163,7 @@ import org.apache.druid.msq.querykit.results.QueryResultFrameProcessorFactory;
 import org.apache.druid.msq.querykit.scan.ScanQueryKit;
 import org.apache.druid.msq.shuffle.input.DurableStorageInputChannelFactory;
 import org.apache.druid.msq.shuffle.input.WorkerInputChannelFactory;
+import org.apache.druid.msq.statistics.ClusterByStatisticsCollector;
 import org.apache.druid.msq.statistics.PartialKeyStatisticsInformation;
 import org.apache.druid.msq.util.IntervalUtils;
 import org.apache.druid.msq.util.MSQFutureUtils;
@@ -514,7 +516,7 @@ public class ControllerImpl implements Controller
       stagesReport = null;
     }
 
-    return new MSQTaskReportPayload(
+    final MSQTaskReportPayload msqTaskReportPayload = new MSQTaskReportPayload(
         makeStatusReport(
             taskStateForReport,
             errorForReport,
@@ -529,6 +531,44 @@ public class ControllerImpl implements Controller
         countersSnapshot,
         null
     );
+    // Emit summary metrics
+    emitSummaryMetrics(msqTaskReportPayload, querySpec);
+    return msqTaskReportPayload;
+  }
+
+  private void emitSummaryMetrics(final MSQTaskReportPayload msqTaskReportPayload, final MSQSpec querySpec)
+  {
+    final Set<Integer> stagesToInclude = new HashSet<>();
+    final MSQStagesReport stagesReport = msqTaskReportPayload.getStages();
+    if (stagesReport != null) {
+      for (MSQStagesReport.Stage stage : stagesReport.getStages()) {
+        boolean hasParentStage = stage.getStageDefinition().getInputSpecs().stream()
+            .anyMatch(stageInput -> stageInput instanceof StageInputSpec);
+        if (!hasParentStage) {
+          stagesToInclude.add(stage.getStageNumber());
+        }
+      }
+    }
+    long totalProcessedBytes = 0;
+
+    if (msqTaskReportPayload.getCounters() != null) {
+      totalProcessedBytes = msqTaskReportPayload.getCounters()
+          .copyMap()
+          .entrySet()
+          .stream()
+          .filter(entry -> stagesReport == null || stagesToInclude.contains(entry.getKey()))
+          .flatMap(counterSnapshotsMap -> counterSnapshotsMap.getValue().values().stream())
+          .flatMap(counterSnapshots -> counterSnapshots.getMap().entrySet().stream())
+          .filter(entry -> entry.getKey().startsWith("input"))
+          .mapToLong(entry -> {
+            ChannelCounters.Snapshot snapshot = (ChannelCounters.Snapshot) entry.getValue();
+            return snapshot.getBytes() == null ? 0L : Arrays.stream(snapshot.getBytes()).sum();
+          })
+          .sum();
+    }
+
+    log.debug("Processed bytes[%d] for query[%s].", totalProcessedBytes, querySpec.getQuery());
+    context.emitMetric("ingest/input/bytes", totalProcessedBytes);
   }
 
   /**
@@ -571,9 +611,9 @@ public class ControllerImpl implements Controller
 
     final QueryContext queryContext = querySpec.getQuery().context();
     final QueryDefinition queryDef = makeQueryDefinition(
-        context.makeQueryKitSpec(makeQueryControllerToolKit(), queryId, querySpec, queryKernelConfig),
+        context.makeQueryKitSpec(makeQueryControllerToolKit(queryContext), queryId, querySpec, queryKernelConfig),
         querySpec,
-        context.jsonMapper(),
+        context,
         resultsContext
     );
 
@@ -1211,13 +1251,19 @@ public class ControllerImpl implements Controller
   }
 
   @SuppressWarnings("rawtypes")
-  private QueryKit<Query<?>> makeQueryControllerToolKit()
+  private QueryKit<Query<?>> makeQueryControllerToolKit(QueryContext queryContext)
   {
     final Map<Class<? extends Query>, QueryKit> kitMap =
         ImmutableMap.<Class<? extends Query>, QueryKit>builder()
                     .put(ScanQuery.class, new ScanQueryKit(context.jsonMapper()))
                     .put(GroupByQuery.class, new GroupByQueryKit(context.jsonMapper()))
-                    .put(WindowOperatorQuery.class, new WindowOperatorQueryKit(context.jsonMapper()))
+                    .put(
+                        WindowOperatorQuery.class,
+                        new WindowOperatorQueryKit(
+                            context.jsonMapper(),
+                            MultiStageQueryContext.isWindowFunctionOperatorTransformationEnabled(queryContext)
+                        )
+                    )
                     .build();
 
     return new MultiQueryKit(kitMap);
@@ -1277,7 +1323,7 @@ public class ControllerImpl implements Controller
             workerNumber
         );
 
-        addToRetryQueue(queryKernel, workerNumber, new WorkerRpcFailedFault(workerId));
+        addToRetryQueue(queryKernel, workerNumber, new WorkerRpcFailedFault(workerId, workerResult.error().toString()));
       } else {
         // Nonretryable failure.
         throw new RuntimeException(workerResult.error());
@@ -1566,26 +1612,7 @@ public class ControllerImpl implements Controller
     } else if (MSQControllerTask.isExport(querySpec)) {
       // Write manifest file.
       ExportMSQDestination destination = (ExportMSQDestination) querySpec.getDestination();
-      ExportMetadataManager exportMetadataManager = new ExportMetadataManager(destination.getExportStorageProvider());
-
-      final StageId finalStageId = queryKernel.getStageId(queryDef.getFinalStageDefinition().getStageNumber());
-      //noinspection unchecked
-
-
-      Object resultObjectForStage = queryKernel.getResultObjectForStage(finalStageId);
-      if (!(resultObjectForStage instanceof List)) {
-        // This might occur if all workers are running on an older version. We are not able to write a manifest file in this case.
-        log.warn("Was unable to create manifest file due to ");
-        return;
-      }
-      @SuppressWarnings("unchecked")
-      List<String> exportedFiles = (List<String>) queryKernel.getResultObjectForStage(finalStageId);
-      log.info("Query [%s] exported %d files.", queryDef.getQueryId(), exportedFiles.size());
-      exportMetadataManager.writeMetadata(exportedFiles);
-    } else if (MSQControllerTask.isExport(querySpec)) {
-      // Write manifest file.
-      ExportMSQDestination destination = (ExportMSQDestination) querySpec.getDestination();
-      ExportMetadataManager exportMetadataManager = new ExportMetadataManager(destination.getExportStorageProvider());
+      ExportMetadataManager exportMetadataManager = new ExportMetadataManager(destination.getExportStorageProvider(), context.taskTempDir());
 
       final StageId finalStageId = queryKernel.getStageId(queryDef.getFinalStageDefinition().getStageNumber());
       //noinspection unchecked
@@ -1734,10 +1761,11 @@ public class ControllerImpl implements Controller
   private static QueryDefinition makeQueryDefinition(
       final QueryKitSpec queryKitSpec,
       final MSQSpec querySpec,
-      final ObjectMapper jsonMapper,
+      final ControllerContext controllerContext,
       final ResultsContext resultsContext
   )
   {
+    final ObjectMapper jsonMapper = controllerContext.jsonMapper();
     final MSQTuningConfig tuningConfig = querySpec.getTuningConfig();
     final ColumnMappings columnMappings = querySpec.getColumnMappings();
     final Query<?> queryToPlan;
@@ -1855,7 +1883,7 @@ public class ControllerImpl implements Controller
 
       try {
         // Check that the export destination is empty as a sanity check. We want to avoid modifying any other files with export.
-        Iterator<String> filesIterator = exportStorageProvider.get().listDir("");
+        Iterator<String> filesIterator = exportStorageProvider.createStorageConnector(controllerContext.taskTempDir()).listDir("");
         if (filesIterator.hasNext()) {
           throw DruidException.forPersona(DruidException.Persona.USER)
                               .ofCategory(DruidException.Category.RUNTIME_FAILURE)
@@ -2430,7 +2458,7 @@ public class ControllerImpl implements Controller
     }
 
     /**
-     * Enqueues the fetching {@link org.apache.druid.msq.statistics.ClusterByStatisticsCollector}
+     * Enqueues the fetching {@link ClusterByStatisticsCollector}
      * from each worker via {@link WorkerSketchFetcher}
      */
     private void fetchStatsFromWorkers()

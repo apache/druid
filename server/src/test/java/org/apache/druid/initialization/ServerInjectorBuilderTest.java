@@ -67,7 +67,7 @@ public class ServerInjectorBuilderTest
     Injector startupInjector = startupInjector();
     ExtensionsLoader extnLoader = ExtensionsLoader.instance(startupInjector);
 
-    Function<DruidModule, String> fnClassName = new Function<DruidModule, String>()
+    Function<DruidModule, String> fnClassName = new Function<>()
     {
       @Nullable
       @Override

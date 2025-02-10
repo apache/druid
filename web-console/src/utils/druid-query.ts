@@ -16,9 +16,9 @@
  * limitations under the License.
  */
 
-import { C } from '@druid-toolkit/query';
 import type { AxiosResponse, CancelToken } from 'axios';
 import axios from 'axios';
+import { C } from 'druid-query-toolkit';
 
 import { Api } from '../singletons';
 
@@ -319,10 +319,13 @@ export class DruidError extends Error {
   }
 }
 
-export async function queryDruidRune(runeQuery: Record<string, any>): Promise<any> {
+export async function queryDruidRune(
+  runeQuery: Record<string, any>,
+  cancelToken?: CancelToken,
+): Promise<any> {
   let runeResultResp: AxiosResponse;
   try {
-    runeResultResp = await Api.instance.post('/druid/v2', runeQuery);
+    runeResultResp = await Api.instance.post('/druid/v2', runeQuery, { cancelToken });
   } catch (e) {
     throw new Error(getDruidErrorMessage(e));
   }
@@ -353,6 +356,12 @@ export async function queryDruidSqlDart<T = any>(
     throw new Error(getDruidErrorMessage(e));
   }
   return sqlResultResp.data;
+}
+
+export async function getApiArray<T = any>(url: string, cancelToken?: CancelToken): Promise<T[]> {
+  const result = (await Api.instance.get(url, { cancelToken })).data;
+  if (!Array.isArray(result)) throw new Error('unexpected result');
+  return result;
 }
 
 export interface QueryExplanation {

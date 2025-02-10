@@ -86,17 +86,17 @@ public class GroupByResourcesReservationPool
   /**
    * Map of query's resource id -> group by resources reserved for the query to execute
    */
-  final ConcurrentHashMap<QueryResourceId, AtomicReference<GroupByQueryResources>> pool = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<QueryResourceId, AtomicReference<GroupByQueryResources>> pool = new ConcurrentHashMap<>();
 
   /**
    * Buffer pool from where the merge buffers are picked and reserved
    */
-  final BlockingPool<ByteBuffer> mergeBufferPool;
+  private final BlockingPool<ByteBuffer> mergeBufferPool;
 
   /**
    * Group by query config of the server
    */
-  final GroupByQueryConfig groupByQueryConfig;
+  private final GroupByQueryConfig groupByQueryConfig;
 
   @Inject
   public GroupByResourcesReservationPool(
@@ -112,8 +112,14 @@ public class GroupByResourcesReservationPool
    * Reserves appropriate resources, and maps it to the queryResourceId (usually the query's resource id) in the internal map.
    * This is a blocking call, and can block up to the given query's timeout
    */
-  public void reserve(QueryResourceId queryResourceId, GroupByQuery groupByQuery, boolean willMergeRunner)
+  public void reserve(
+      QueryResourceId queryResourceId,
+      GroupByQuery groupByQuery,
+      boolean willMergeRunner,
+      GroupByStatsProvider.PerQueryStats perQueryStats
+  )
   {
+    long startNs = System.nanoTime();
     if (queryResourceId == null) {
       throw DruidException.defensive("Query resource id must be populated");
     }
@@ -145,6 +151,8 @@ public class GroupByResourcesReservationPool
     // Resources have been allocated, spot has been reserved. The reference would ALWAYS refer to 'null'. Refer the
     // allocated resources from it
     reference.compareAndSet(null, resources);
+
+    perQueryStats.mergeBufferAcquisitionTime(System.nanoTime() - startNs);
   }
 
   /**

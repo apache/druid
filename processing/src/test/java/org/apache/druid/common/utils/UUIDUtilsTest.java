@@ -59,7 +59,7 @@ public class UUIDUtilsTest
     }
     return Collections2.transform(
         args,
-        new Function<String[], Object[]>()
+        new Function<>()
         {
           @Override
           public Object[] apply(String[] input)

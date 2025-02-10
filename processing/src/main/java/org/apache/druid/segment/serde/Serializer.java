@@ -36,8 +36,11 @@ public interface Serializer
   long getSerializedSize() throws IOException;
 
   /**
-   * Writes serialized form of this object to the given channel. If parallel data streams are needed, they could be
-   * created with the provided smoosher.
+   * Writes the serialized form of this object. The entire object may be written to the provided channel, or the object
+   * may be split over the provided channel and files added to the {@link FileSmoosher], where additional channels can
+   * be created via {@link FileSmoosher#addWithSmooshedWriter(String, long)}. The latter approach is useful when the
+   * serialized form of the object is too large for a single smoosh container. At the time this javadoc was written,
+   * the max smoosh container size is limit to the max {@link java.nio.ByteBuffer} size.
    */
   void writeTo(WritableByteChannel channel, FileSmoosher smoosher) throws IOException;
 }

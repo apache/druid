@@ -92,9 +92,7 @@ public abstract class QueryRunnerBasedOnClusteredClientTestBase
   private static final boolean USE_PARALLEL_MERGE_POOL_CONFIGURED = false;
 
   protected final ObjectMapper objectMapper = new DefaultObjectMapper();
-  protected final QueryToolChestWarehouse toolChestWarehouse;
-
-  private final QueryRunnerFactoryConglomerate conglomerate;
+  protected final QueryRunnerFactoryConglomerate conglomerate;
 
   protected TestHttpClient httpClient;
   protected SimpleServerView simpleServerView;
@@ -107,17 +105,8 @@ public abstract class QueryRunnerBasedOnClusteredClientTestBase
   {
     conglomerate = QueryStackTests.createQueryRunnerFactoryConglomerate(
         CLOSER,
-        () -> TopNQueryConfig.DEFAULT_MIN_TOPN_THRESHOLD
+        TopNQueryConfig.DEFAULT_MIN_TOPN_THRESHOLD
     );
-
-    toolChestWarehouse = new QueryToolChestWarehouse()
-    {
-      @Override
-      public <T, QueryType extends Query<T>> QueryToolChest<T, QueryType> getToolChest(final QueryType query)
-      {
-        return conglomerate.findFactory(query).getToolchest();
-      }
-    };
   }
 
   @AfterClass
@@ -131,9 +120,9 @@ public abstract class QueryRunnerBasedOnClusteredClientTestBase
   {
     segmentGenerator = new SegmentGenerator();
     httpClient = new TestHttpClient(objectMapper);
-    simpleServerView = new SimpleServerView(toolChestWarehouse, objectMapper, httpClient);
+    simpleServerView = new SimpleServerView(conglomerate, objectMapper, httpClient);
     cachingClusteredClient = new CachingClusteredClient(
-        toolChestWarehouse,
+        conglomerate,
         simpleServerView,
         MapCache.create(0),
         objectMapper,

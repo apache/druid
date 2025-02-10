@@ -74,7 +74,7 @@ public class WorkerInputChannelFactory implements InputChannelFactory
 
     Futures.addCallback(
         fetchFuture,
-        new FutureCallback<Boolean>()
+        new FutureCallback<>()
         {
           @Override
           public void onSuccess(final Boolean lastFetch)

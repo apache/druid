@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment.nested;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.segment.AutoTypeColumnMerger;
 import org.apache.druid.segment.column.StringEncodingStrategies;
 import org.apache.druid.segment.column.StringEncodingStrategy;
@@ -38,7 +37,6 @@ import org.junit.rules.TemporaryFolder;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteOrder;
-import java.nio.file.Path;
 
 public class DictionaryIdLookupTest extends InitializedNullHandlingTest
 {
@@ -92,12 +90,12 @@ public class DictionaryIdLookupTest extends InitializedNullHandlingTest
         4
     );
 
-    Path dictTempPath = temp.newFolder().toPath();
+    File dictTempDir = temp.newFolder();
 
     // make lookup with references to writers
     DictionaryIdLookup idLookup = new DictionaryIdLookup(
         "test",
-        dictTempPath,
+        dictTempDir,
         stringWriter,
         longWriter,
         doubleWriter,
@@ -110,7 +108,7 @@ public class DictionaryIdLookupTest extends InitializedNullHandlingTest
     doubleWriter.open();
     arrayWriter.open();
 
-    File tempDir = dictTempPath.toFile();
+    File tempDir = dictTempDir;
     Assert.assertEquals(0, tempDir.listFiles().length);
 
     for (String s : sortedValueDictionary.getSortedStrings()) {
@@ -145,30 +143,16 @@ public class DictionaryIdLookupTest extends InitializedNullHandlingTest
     }
     Assert.assertEquals(3, tempDir.listFiles().length);
 
-    if (NullHandling.sqlCompatible()) {
-      Assert.assertEquals(8, idLookup.lookupDouble(-1.234));
-      Assert.assertEquals(11, idLookup.lookupDouble(1.234));
+    Assert.assertEquals(8, idLookup.lookupDouble(-1.234));
+    Assert.assertEquals(11, idLookup.lookupDouble(1.234));
 
-      Assert.assertEquals(3, tempDir.listFiles().length);
+    Assert.assertEquals(3, tempDir.listFiles().length);
 
-      // looking up arrays pulls in array file
-      Assert.assertEquals(12, idLookup.lookupArray(new int[]{1, 2}));
-      Assert.assertEquals(13, idLookup.lookupArray(new int[]{4, 5, 6}));
-      Assert.assertEquals(14, idLookup.lookupArray(new int[]{10, 8, 9, 11}));
-      Assert.assertEquals(4, tempDir.listFiles().length);
-    } else {
-      // default value mode sticks zeros in dictionary even if not present in column because of .. reasons
-      Assert.assertEquals(9, idLookup.lookupDouble(-1.234));
-      Assert.assertEquals(13, idLookup.lookupDouble(1.234));
-
-      Assert.assertEquals(3, tempDir.listFiles().length);
-
-      // looking up arrays pulls in array file
-      Assert.assertEquals(14, idLookup.lookupArray(new int[]{1, 2}));
-      Assert.assertEquals(15, idLookup.lookupArray(new int[]{5, 6, 7}));
-      Assert.assertEquals(16, idLookup.lookupArray(new int[]{12, 9, 11, 13}));
-      Assert.assertEquals(4, tempDir.listFiles().length);
-    }
+    // looking up arrays pulls in array file
+    Assert.assertEquals(12, idLookup.lookupArray(new int[]{1, 2}));
+    Assert.assertEquals(13, idLookup.lookupArray(new int[]{4, 5, 6}));
+    Assert.assertEquals(14, idLookup.lookupArray(new int[]{10, 8, 9, 11}));
+    Assert.assertEquals(4, tempDir.listFiles().length);
 
     // close it removes all the temp files
     idLookup.close();

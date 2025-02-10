@@ -23,9 +23,8 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Injector;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.guice.DruidInjectorBuilder;
+import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringEncoding;
 import org.apache.druid.java.util.common.StringUtils;
@@ -82,6 +81,7 @@ import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CacheTestHelperModule.ResultCacheMode;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.calcite.util.DruidModuleCollection;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.sql.guice.SqlModule;
@@ -102,10 +102,6 @@ import java.util.stream.Collectors;
 @SqlTestFrameworkConfig.ComponentSupplier(HllSketchComponentSupplier.class)
 public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
 {
-  static {
-    NullHandling.initializeForTests();
-  }
-
   private static final boolean ROUND = true;
 
   // For testHllSketchPostAggsGroupBy, testHllSketchPostAggsTimeseries
@@ -260,10 +256,9 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
     }
 
     @Override
-    public void configureGuice(DruidInjectorBuilder builder)
+    public DruidModule getCoreModule()
     {
-      super.configureGuice(builder);
-      builder.addModule(new HllSketchModule());
+      return DruidModuleCollection.of(super.getCoreModule(), new HllSketchModule());
     }
 
     @SuppressWarnings("resource")
@@ -289,7 +284,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                       new HllSketchBuildAggregatorFactory("hllsketch_m1", "m1", null, null, null, false, ROUND),
                       new HllSketchBuildAggregatorFactory("hllsketch_f1", "f1", null, null, null, false, ROUND),
                       new HllSketchBuildAggregatorFactory("hllsketch_l1", "l1", null, null, null, false, ROUND),
-                      new HllSketchBuildAggregatorFactory("hllsketch_d1", "d1", null, null, null, false, ROUND)
+                      new HllSketchBuildAggregatorFactory("hllsketch_dbl1", "dbl1", null, null, null, false, ROUND)
                   )
                   .withRollup(false)
                   .build()
@@ -334,17 +329,9 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                        + "  APPROX_COUNT_DISTINCT_DS_HLL(hllsketch_dim1, CAST(21 AS BIGINT))\n" // also native column
                        + "FROM druid.foo";
 
-    final List<Object[]> expectedResults;
-
-    if (NullHandling.replaceWithDefault()) {
-      expectedResults = ImmutableList.of(
-          new Object[]{6L, 2L, 2L, 1L, 2L, 5L, 5L, 5L}
-      );
-    } else {
-      expectedResults = ImmutableList.of(
-          new Object[]{6L, 2L, 2L, 1L, 1L, 5L, 5L, 5L}
-      );
-    }
+    final List<Object[]> expectedResults = ImmutableList.of(
+        new Object[]{6L, 2L, 2L, 1L, 1L, 5L, 5L, 5L}
+    );
 
     testQuery(
         sql,
@@ -456,12 +443,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                         .setInterval(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
                         .setGranularity(Granularities.ALL)
                         .setAggregatorSpecs(
-                            NullHandling.replaceWithDefault()
-                            ? Arrays.asList(
-                                new DoubleSumAggregatorFactory("_a0:sum", "a0"),
-                                new CountAggregatorFactory("_a0:count")
-                            )
-                            : Arrays.asList(
+                            Arrays.asList(
                                 new DoubleSumAggregatorFactory("_a0:sum", "a0"),
                                 new FilteredAggregatorFactory(
                                     new CountAggregatorFactory("_a0:count"),
@@ -502,7 +484,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
             GroupByQuery.builder()
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setDataSource(CalciteTests.DATASOURCE1)
-                        .setDimensions(dimensions(new DefaultDimensionSpec("dim2", "_d0")))
+                        .setDimensions(dimensions(new DefaultDimensionSpec("dim2", "d0")))
                         .setGranularity(Granularities.ALL)
                         .setAggregatorSpecs(
                             aggregators(
@@ -513,12 +495,8 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        NullHandling.sqlCompatible()
-        ? ImmutableList.of(
+        ImmutableList.of(
             new Object[]{null, 2L},
-            new Object[]{"a", 2L}
-        )
-        : ImmutableList.of(
             new Object[]{"a", 2L}
         )
     );
@@ -574,7 +552,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                         .setInterval(new MultipleIntervalSegmentSpec(Collections.singletonList(Filtration.eternity())))
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(VirtualColumns.create(EXPECTED_PA_VIRTUAL_COLUMNS))
-                        .setDimensions(new DefaultDimensionSpec("cnt", "_d0", ColumnType.LONG))
+                        .setDimensions(new DefaultDimensionSpec("cnt", "d0", ColumnType.LONG))
                         .setAggregatorSpecs(EXPECTED_FILTERED_AGGREGATORS)
                         .setPostAggregatorSpecs(EXPECTED_FILTERED_POST_AGGREGATORS)
                         .setContext(QUERY_CONTEXT_DEFAULT)
@@ -669,7 +647,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                         .setInterval(new MultipleIntervalSegmentSpec(Collections.singletonList(Filtration.eternity())))
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(VirtualColumns.create(EXPECTED_PA_VIRTUAL_COLUMNS))
-                        .setDimensions(new DefaultDimensionSpec("cnt", "_d0", ColumnType.LONG))
+                        .setDimensions(new DefaultDimensionSpec("cnt", "d0", ColumnType.LONG))
                         .setAggregatorSpecs(EXPECTED_PA_AGGREGATORS)
                         .setPostAggregatorSpecs(EXPECTED_PA_POST_AGGREGATORS)
                         .setContext(QUERY_CONTEXT_DEFAULT)
@@ -904,7 +882,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
         ImmutableList.of(Druids.newTimeseriesQueryBuilder()
                                .dataSource(CalciteTests.DATASOURCE1)
                                .intervals(querySegmentSpec(Filtration.eternity()))
-                               .filters(numericEquality("dim2", 0L, ColumnType.LONG))
+                               .filters(equality("dim2", 0L, ColumnType.LONG))
                                .granularity(Granularities.ALL)
                                .aggregators(
                                    aggregators(
@@ -950,7 +928,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                         .setDimFilter(equality("dim2", "a", ColumnType.STRING))
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(expressionVirtualColumn("v0", "'a'", ColumnType.STRING))
-                        .setDimensions(new DefaultDimensionSpec("v0", "_d0", ColumnType.STRING))
+                        .setDimensions(new DefaultDimensionSpec("v0", "d0", ColumnType.STRING))
                         .setAggregatorSpecs(
                             aggregators(
                                 new FilteredAggregatorFactory(
@@ -1009,7 +987,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                         .setDimFilter(equality("dim2", "a", ColumnType.STRING))
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(expressionVirtualColumn("v0", "'a'", ColumnType.STRING))
-                        .setDimensions(new DefaultDimensionSpec("v0", "_d0", ColumnType.STRING))
+                        .setDimensions(new DefaultDimensionSpec("v0", "d0", ColumnType.STRING))
                         .setAggregatorSpecs(
                             aggregators(
                                 new FilteredAggregatorFactory(
@@ -1035,7 +1013,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
     testQuery(
         "SELECT"
         + " HLL_SKETCH_ESTIMATE(hllsketch_dim1),"
-        + " HLL_SKETCH_ESTIMATE(hllsketch_d1),"
+        + " HLL_SKETCH_ESTIMATE(hllsketch_dbl1),"
         + " HLL_SKETCH_ESTIMATE(hllsketch_l1),"
         + " HLL_SKETCH_ESTIMATE(hllsketch_f1)"
         + " FROM druid.foo",
@@ -1045,12 +1023,13 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .virtualColumns(
                     makeSketchEstimateExpression("v0", "hllsketch_dim1"),
-                    makeSketchEstimateExpression("v1", "hllsketch_d1"),
+                    makeSketchEstimateExpression("v1", "hllsketch_dbl1"),
                     makeSketchEstimateExpression("v2", "hllsketch_l1"),
                     makeSketchEstimateExpression("v3", "hllsketch_f1")
                 )
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .columns("v0", "v1", "v2", "v3")
+                .columnTypes(ColumnType.DOUBLE, ColumnType.DOUBLE, ColumnType.DOUBLE, ColumnType.DOUBLE)
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
         ),
@@ -1089,6 +1068,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                 ))
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .columns("v0", "v1")
+                .columnTypes(ColumnType.DOUBLE, ColumnType.DOUBLE)
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
         ),
@@ -1153,7 +1133,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                         .setGranularity(Granularities.ALL)
                         .setVirtualColumns(makeSketchEstimateExpression("v0", "hllsketch_dim1"))
                         .setDimensions(
-                            new DefaultDimensionSpec("v0", "_d0", ColumnType.DOUBLE))
+                            new DefaultDimensionSpec("v0", "d0", ColumnType.DOUBLE))
                         .setAggregatorSpecs(
                             aggregators(
                                 new CountAggregatorFactory("a0")
@@ -1195,7 +1175,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                 .dataSource(CalciteTests.DATASOURCE1)
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .granularity(Granularities.ALL)
-                .dimension(new DefaultDimensionSpec("v0", "_d0", ColumnType.DOUBLE))
+                .dimension(new DefaultDimensionSpec("v0", "d0", ColumnType.DOUBLE))
                 .virtualColumns(makeSketchEstimateExpression("v0", "hllsketch_dim1"))
                 .metric(new InvertedTopNMetricSpec(new NumericTopNMetricSpec("a0")))
                 .threshold(2)
@@ -1264,9 +1244,9 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
 
   /**
    * This is an extremely subtle test, so we explain with a comment.  The `m1` column in the input data looks like
-   * `["1.0", "2.0", "3.0", "4.0", "5.0", "6.0"]` while the `d1` column looks like
-   * `[1.0, 1.7, 0.0]`.  That is, "m1" is numbers-as-strings, while d1 is numbers-as-numbers.  If you take the
-   * uniques across both columns, you expect no overlap, so 9 entries.  However, if the `1.0` from `d1` gets
+   * `["1.0", "2.0", "3.0", "4.0", "5.0", "6.0"]` while the `dbl1` column looks like
+   * `[1.0, 1.7, 0.0]`.  That is, "m1" is numbers-as-strings, while dbl1 is numbers-as-numbers.  If you take the
+   * uniques across both columns, you expect no overlap, so 9 entries.  However, if the `1.0` from `dbl1` gets
    * converted into `"1.0"` or vice-versa, the result can become 8 because then the sketch will hash the same
    * value multiple times considering them duplicates.  This test validates that the aggregator properly builds
    * the sketches preserving the initial type of the data as it came in.  Specifically, the test was added when
@@ -1278,7 +1258,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
   {
     testQuery(
         "SELECT"
-        + " HLL_SKETCH_ESTIMATE(HLL_SKETCH_UNION(DS_HLL(hllsketch_d1), DS_HLL(hllsketch_m1)), true)"
+        + " HLL_SKETCH_ESTIMATE(HLL_SKETCH_UNION(DS_HLL(hllsketch_dbl1), DS_HLL(hllsketch_m1)), true)"
         + " FROM druid.foo",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
@@ -1286,7 +1266,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
                   .aggregators(
-                      new HllSketchMergeAggregatorFactory("a0", "hllsketch_d1", null, null, null, false, true),
+                      new HllSketchMergeAggregatorFactory("a0", "hllsketch_dbl1", null, null, null, false, true),
                       new HllSketchMergeAggregatorFactory("a1", "hllsketch_m1", null, null, null, false, true)
                   )
                   .postAggregators(
@@ -1318,7 +1298,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
    * This is a test in a similar vein to {@link #testEstimateStringAndDoubleAreDifferent()} except here we are
    * ensuring that float values and doubles values are considered equivalent.  The expected initial inputs were
    * <p>
-   * 1. d1 -> [1.0, 1.7, 0.0]
+   * 1. dbl1 -> [1.0, 1.7, 0.0]
    * 2. f1 -> [1.0f, 0.1f, 0.0f]
    * <p>
    * If we assume that doubles and floats are the same, that means that there are 4 unique values, not 6
@@ -1329,7 +1309,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
     // This is a test in a similar vein to testEstimateStringAndDoubleAreDifferent above
     testQuery(
         "SELECT"
-        + " HLL_SKETCH_ESTIMATE(HLL_SKETCH_UNION(DS_HLL(hllsketch_d1), DS_HLL(hllsketch_f1)), true)"
+        + " HLL_SKETCH_ESTIMATE(HLL_SKETCH_UNION(DS_HLL(hllsketch_dbl1), DS_HLL(hllsketch_f1)), true)"
         + " FROM druid.foo",
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
@@ -1337,7 +1317,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
                   .aggregators(
-                      new HllSketchMergeAggregatorFactory("a0", "hllsketch_d1", null, null, null, false, true),
+                      new HllSketchMergeAggregatorFactory("a0", "hllsketch_dbl1", null, null, null, false, true),
                       new HllSketchMergeAggregatorFactory("a1", "hllsketch_f1", null, null, null, false, true)
                   )
                   .postAggregators(
@@ -1370,8 +1350,8 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
     // this query was not planable: https://github.com/apache/druid/issues/15353
     testBuilder()
         .sql(
-            "SELECT d1,dim2,APPROX_COUNT_DISTINCT_DS_HLL(dim2, 18) as val"
-                + " FROM (select d1,dim1,dim2 from druid.foo group by d1,dim1,dim2 order by dim1 limit 3) t "
+            "SELECT dbl1,dim2,APPROX_COUNT_DISTINCT_DS_HLL(dim2, 18) as val"
+                + " FROM (select dbl1,dim1,dim2 from druid.foo group by dbl1,dim1,dim2 order by dim1 limit 3) t "
                 + " group by 1,2"
         )
         .expectedResults(

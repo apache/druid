@@ -35,7 +35,7 @@ import org.apache.druid.metadata.ReplaceTaskLock;
 import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
-import org.apache.druid.timeline.partition.PartialShardSpec;
+import org.apache.druid.timeline.SegmentTimeline;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -168,7 +168,8 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
       String dataSource,
       Interval interval,
       boolean skipSegmentLineageCheck,
-      List<SegmentCreateRequest> requests
+      List<SegmentCreateRequest> requests,
+      boolean isTimeChunk
   )
   {
     return Collections.emptyMap();
@@ -240,20 +241,16 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   @Override
   public SegmentIdWithShardSpec allocatePendingSegment(
       String dataSource,
-      String sequenceName,
-      String previousSegmentId,
       Interval interval,
-      PartialShardSpec partialShardSpec,
-      String maxVersion,
       boolean skipSegmentLineageCheck,
-      String taskAllocatorId
+      SegmentCreateRequest createRequest
   )
   {
     return new SegmentIdWithShardSpec(
         dataSource,
         interval,
-        maxVersion,
-        partialShardSpec.complete(objectMapper, 0, 0)
+        createRequest.getVersion(),
+        createRequest.getPartialShardSpec().complete(objectMapper, 0, 0)
     );
   }
 
@@ -330,6 +327,20 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   )
   {
     return Collections.emptyMap();
+  }
+
+  @Override
+  public SegmentTimeline getSegmentTimelineForAllocation(
+      String dataSource,
+      Interval interval,
+      boolean skipSegmentPayloadFetchForAllocation
+  )
+  {
+    return SegmentTimeline.forSegments(retrieveUsedSegmentsForIntervals(
+        dataSource,
+        Collections.singletonList(interval),
+        Segments.INCLUDING_OVERSHADOWED
+    ));
   }
 
   public Set<DataSegment> getPublished()

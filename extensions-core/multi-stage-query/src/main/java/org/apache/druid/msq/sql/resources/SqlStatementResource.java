@@ -74,9 +74,9 @@ import org.apache.druid.query.QueryException;
 import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.QueryResponse;
-import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthenticationResult;
+import org.apache.druid.server.security.AuthorizationResult;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
@@ -91,6 +91,7 @@ import org.apache.druid.sql.http.SqlQuery;
 import org.apache.druid.sql.http.SqlResource;
 import org.apache.druid.storage.NilStorageConnector;
 import org.apache.druid.storage.StorageConnector;
+import org.apache.druid.storage.StorageConnectorProvider;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import javax.servlet.http.HttpServletRequest;
@@ -134,14 +135,14 @@ public class SqlStatementResource
       final @MultiStageQuery SqlStatementFactory msqSqlStatementFactory,
       final ObjectMapper jsonMapper,
       final OverlordClient overlordClient,
-      final @MultiStageQuery StorageConnector storageConnector,
+      final @MultiStageQuery StorageConnectorProvider storageConnectorProvider,
       final AuthorizerMapper authorizerMapper
   )
   {
     this.msqSqlStatementFactory = msqSqlStatementFactory;
     this.jsonMapper = jsonMapper;
     this.overlordClient = overlordClient;
-    this.storageConnector = storageConnector;
+    this.storageConnector = storageConnectorProvider.createStorageConnector(null);
     this.authorizerMapper = authorizerMapper;
   }
 
@@ -483,7 +484,13 @@ public class SqlStatementResource
     }
     String taskId = String.valueOf(firstRow[0]);
 
-    Optional<SqlStatementResult> statementResult = getStatementStatus(taskId, authenticationResult, true, Action.READ, false);
+    Optional<SqlStatementResult> statementResult = getStatementStatus(
+        taskId,
+        authenticationResult,
+        true,
+        Action.READ,
+        false
+    );
 
     if (statementResult.isPresent()) {
       return Response.status(Response.Status.OK).entity(statementResult.get()).build();
@@ -584,7 +591,11 @@ public class SqlStatementResource
     }
 
     // since we need the controller payload for auth checks.
-    MSQControllerTask msqControllerTask = getMSQControllerTaskAndCheckPermission(queryId, authenticationResult, forAction);
+    MSQControllerTask msqControllerTask = getMSQControllerTaskAndCheckPermission(
+        queryId,
+        authenticationResult,
+        forAction
+    );
     SqlStatementState sqlStatementState = SqlStatementResourceHelper.getSqlStatementState(statusPlus);
 
     MSQTaskReportPayload taskReportPayload = null;
@@ -639,9 +650,9 @@ public class SqlStatementResource
    * necessary permissions. A user has the necessary permissions if one of the following criteria is satisfied:
    * 1. The user is the one who submitted the query
    * 2. The user belongs to a role containing the READ or WRITE permissions over the STATE resource. For endpoints like GET,
-   *   the user should have READ permission for the STATE resource, while for endpoints like DELETE, the user should
-   *   have WRITE permission for the STATE resource. (Note: POST API does not need to check the state permissions since
-   *   the currentUser always equal to the queryUser)
+   * the user should have READ permission for the STATE resource, while for endpoints like DELETE, the user should
+   * have WRITE permission for the STATE resource. (Note: POST API does not need to check the state permissions since
+   * the currentUser always equal to the queryUser)
    */
   private MSQControllerTask getMSQControllerTaskAndCheckPermission(
       String queryId,
@@ -664,21 +675,21 @@ public class SqlStatementResource
       return msqControllerTask;
     }
 
-    Access access = AuthorizationUtils.authorizeAllResourceActions(
+    AuthorizationResult authResult = AuthorizationUtils.authorizeAllResourceActions(
         authenticationResult,
         Collections.singletonList(new ResourceAction(Resource.STATE_RESOURCE, forAction)),
         authorizerMapper
     );
 
-    if (access.isAllowed()) {
-      return msqControllerTask;
+    if (!authResult.allowAccessWithNoRestriction()) {
+      throw new ForbiddenException(StringUtils.format(
+          "The current user[%s] cannot view query id[%s] since the query is owned by another user",
+          currentUser,
+          queryId
+      ));
     }
 
-    throw new ForbiddenException(StringUtils.format(
-        "The current user[%s] cannot view query id[%s] since the query is owned by another user",
-        currentUser,
-        queryId
-    ));
+    return msqControllerTask;
   }
 
   /**
@@ -989,7 +1000,11 @@ public class SqlStatementResource
 
   private static DruidException queryNotFoundException(String queryId)
   {
-    return NotFound.exception("Query [%s] was not found. The query details are no longer present or might not be of the type [%s]. Verify that the id is correct.", queryId, MSQControllerTask.TYPE);
+    return NotFound.exception(
+        "Query [%s] was not found. The query details are no longer present or might not be of the type [%s]. Verify that the id is correct.",
+        queryId,
+        MSQControllerTask.TYPE
+    );
   }
 
 }

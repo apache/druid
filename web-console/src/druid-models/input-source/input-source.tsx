@@ -17,7 +17,6 @@
  */
 
 import { Code } from '@blueprintjs/core';
-import React from 'react';
 
 import type { Field } from '../../components';
 import { ExternalLink } from '../../components';
@@ -508,7 +507,7 @@ export const INPUT_SOURCE_FIELDS: Field<InputSource>[] = [
         </p>
         <p>
           For more information, refer to the documentation for{' '}
-          <ExternalLink href="https://docs.oracle.com/javase/8/docs/api/java/nio/file/FileSystem#getPathMatcher-java.lang.String-">
+          <ExternalLink href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/nio/file/FileSystem.html#getPathMatcher(java.lang.String)">
             FileSystem#getPathMatcher
           </ExternalLink>
           .
@@ -641,11 +640,7 @@ export const INPUT_SOURCE_FIELDS: Field<InputSource>[] = [
     placeholder: '/path/to/deltaTable',
     defined: typeIsKnown(KNOWN_TYPES, 'delta'),
     required: true,
-    info: (
-      <>
-        <p>A full path to the Delta Lake table.</p>
-      </>
-    ),
+    info: <p>A full path to the Delta Lake table.</p>,
   },
   {
     name: 'filter',
@@ -667,7 +662,6 @@ export const INPUT_SOURCE_FIELDS: Field<InputSource>[] = [
     label: 'Delta snapshot version',
     type: 'number',
     placeholder: '(latest)',
-    zeroMeansUndefined: true,
     defined: typeIsKnown(KNOWN_TYPES, 'delta'),
     info: (
       <>

@@ -32,6 +32,7 @@ import org.apache.druid.segment.selector.settable.SettableColumnValueSelector;
 import org.apache.druid.segment.selector.settable.SettableDimensionValueSelector;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
+import java.io.File;
 import java.util.Collections;
 import java.util.Comparator;
 
@@ -169,6 +170,7 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
       SegmentWriteOutMedium segmentWriteOutMedium,
       ColumnCapabilities capabilities,
       ProgressIndicator progress,
+      File segmentBaseDir,
       Closer closer
   )
   {
@@ -188,6 +190,7 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
         segmentWriteOutMedium,
         capabilities,
         progress,
+        segmentBaseDir,
         closer
     );
   }

@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import type { SqlBase } from '@druid-toolkit/query';
+import type { SqlBase } from 'druid-query-toolkit';
 import {
   SqlColumn,
   SqlExpression,
@@ -24,7 +24,7 @@ import {
   SqlLiteral,
   SqlQuery,
   SqlStar,
-} from '@druid-toolkit/query';
+} from 'druid-query-toolkit';
 
 import type { RowColumn } from './general';
 import { offsetToRowColumn } from './general';
@@ -109,7 +109,7 @@ export function findSqlQueryPrefix(text: string): string | undefined {
 }
 
 export function cleanSqlQueryPrefix(text: string): string {
-  const matchReplace = text.match(/\sREPLACE$/i);
+  const matchReplace = /\sREPLACE$/i.exec(text);
   if (matchReplace) {
     // This query likely grabbed a "REPLACE" (which is not a reserved keyword) from the next query over, see if we can delete it
     const textWithoutReplace = text.slice(0, -matchReplace[0].length).trimEnd();

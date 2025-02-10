@@ -89,7 +89,7 @@ public class Projections
         if (name != null && !name.equals(spec.getSchema().getName())) {
           continue;
         }
-        ProjectionMatch match = spec.getSchema().matches(cursorBuildSpec, physicalChecker);
+        final ProjectionMatch match = spec.getSchema().matches(cursorBuildSpec, physicalChecker);
         if (match != null) {
           if (cursorBuildSpec.getQueryMetrics() != null) {
             cursorBuildSpec.getQueryMetrics().projection(spec.getSchema().getName());
@@ -157,12 +157,14 @@ public class Projections
 
   public static final class ProjectionMatchBuilder
   {
+    private final Set<String> referencedPhysicalColumns;
     private final Set<VirtualColumn> referencedVirtualColumns;
     private final Map<String, String> remapColumns;
     private final List<AggregatorFactory> combiningFactories;
 
     public ProjectionMatchBuilder()
     {
+      this.referencedPhysicalColumns = new HashSet<>();
       this.referencedVirtualColumns = new HashSet<>();
       this.remapColumns = new HashMap<>();
       this.combiningFactories = new ArrayList<>();
@@ -174,6 +176,16 @@ public class Projections
     public ProjectionMatchBuilder remapColumn(String queryColumn, String projectionColumn)
     {
       remapColumns.put(queryColumn, projectionColumn);
+      return this;
+    }
+
+    /**
+     * Add a projection physical column, which will later be added to {@link ProjectionMatch#getCursorBuildSpec()} if
+     * the projection matches
+     */
+    public ProjectionMatchBuilder addReferencedPhysicalColumn(String column)
+    {
+      referencedPhysicalColumns.add(column);
       return this;
     }
 
@@ -202,6 +214,7 @@ public class Projections
     {
       return new ProjectionMatch(
           CursorBuildSpec.builder(queryCursorBuildSpec)
+                         .setPhysicalColumns(referencedPhysicalColumns)
                          .setVirtualColumns(VirtualColumns.fromIterable(referencedVirtualColumns))
                          .setAggregators(combiningFactories)
                          .build(),

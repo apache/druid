@@ -289,7 +289,7 @@ public class KafkaInputReader implements InputEntityReader
     final Set<String> keySet = new HashSet<>(fallback.keySet());
     keySet.addAll(rowDimensions);
 
-    return new AbstractMap<String, Object>()
+    return new AbstractMap<>()
     {
       @Override
       public Object get(Object key)

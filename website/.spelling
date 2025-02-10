@@ -117,6 +117,7 @@ Guice
 HDFS
 HLL
 HashSet
+HashSets
 Homebrew
 html
 HyperLogLog
@@ -178,6 +179,7 @@ LRU
 LZ4
 LZO
 LimitSpec
+LISTAGG
 Long.MAX_VALUE
 Long.MAX_VALUE.
 Long.MIN_VALUE
@@ -412,6 +414,7 @@ maxNumSegments
 max_map_count
 memcached
 mergeable
+mergeability
 metadata
 metastores
 millis
@@ -561,6 +564,7 @@ timestamps
 to_json_string
 tradeoffs
 transformSpec
+transactionally
 try_parse_json
 tsv
 ulimit
@@ -2420,3 +2424,10 @@ quantilesFromDDSketch
 quantileFromDDSketch
 collapsingLowestDense
 snapshotVersion
+
+- ../docs/development/extensions-core/catalog.md
+ColumnSpec
+PropertyKeyName
+PropertyValueType
+tableSpec
+TableSpec

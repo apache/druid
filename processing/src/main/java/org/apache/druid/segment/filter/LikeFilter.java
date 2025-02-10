@@ -20,7 +20,6 @@
 package org.apache.druid.segment.filter;
 
 import com.google.common.collect.ImmutableSet;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.filter.ColumnIndexSelector;
@@ -82,16 +81,14 @@ public class LikeFilter implements Filter
     if (isSimpleEquals()) {
       StringValueSetIndexes valueIndexes = indexSupplier.as(StringValueSetIndexes.class);
       if (valueIndexes != null) {
-        return valueIndexes.forValue(
-            NullHandling.emptyToNullIfNeeded(likeMatcher.getPrefix())
-        );
+        return valueIndexes.forValue(likeMatcher.getPrefix());
       }
     }
     if (isSimplePrefix()) {
       final LexicographicalRangeIndexes rangeIndexes = indexSupplier.as(LexicographicalRangeIndexes.class);
       if (rangeIndexes != null) {
-        final String lower = NullHandling.nullToEmptyIfNeeded(likeMatcher.getPrefix());
-        final String upper = NullHandling.nullToEmptyIfNeeded(likeMatcher.getPrefix()) + Character.MAX_VALUE;
+        final String lower = likeMatcher.getPrefix();
+        final String upper = likeMatcher.getPrefix() + Character.MAX_VALUE;
 
         if (likeMatcher.getSuffixMatch() == LikeDimFilter.LikeMatcher.SuffixMatch.MATCH_ANY) {
           return rangeIndexes.forRange(lower, false, upper, false);

@@ -176,7 +176,7 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
     @Override
     public Iterator<AggInterval> iterator()
     {
-      return new Iterator<AggInterval>()
+      return new Iterator<>()
       {
         int currentGroupIndex = 0;
 
@@ -270,7 +270,7 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
     @Override
     public Iterator<Integer> iterator()
     {
-      return new Iterator<Integer>()
+      return new Iterator<>()
       {
         int current = a;
 

@@ -16,9 +16,8 @@
  * limitations under the License.
  */
 
-import { SqlQuery } from '@druid-toolkit/query';
 import { render } from '@testing-library/react';
-import React from 'react';
+import { SqlQuery } from 'druid-query-toolkit';
 
 import { NumberMenuItems } from './number-menu-items';
 

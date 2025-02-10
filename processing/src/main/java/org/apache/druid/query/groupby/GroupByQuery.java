@@ -91,6 +91,13 @@ public class GroupByQuery extends BaseQuery<ResultRow>
   public static final String CTX_TIMESTAMP_RESULT_FIELD = "timestampResultField";
   public static final String CTX_TIMESTAMP_RESULT_FIELD_GRANULARITY = "timestampResultFieldGranularity";
   public static final String CTX_TIMESTAMP_RESULT_FIELD_INDEX = "timestampResultFieldInOriginalDimensions";
+
+  /**
+   * Context key for whether this query has any "dropped" dimensions. This is set true for queries like
+   * "GROUP BY 'constant'", and enables {@link GroupingEngine#summaryRowPreconditions(GroupByQuery)} to correctly
+   * determine whether to include a summary row.
+   */
+  public static final String CTX_HAS_DROPPED_DIMENSIONS = "hasDroppedDimensions";
   private static final String CTX_KEY_FUDGE_TIMESTAMP = "fudgeTimestamp";
 
   private static final Comparator<ResultRow> NON_GRANULAR_TIME_COMP =
@@ -330,11 +337,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
     return subtotalsSpec;
   }
 
-  /**
-   * Equivalent to {@code getResultRowSignature(Finalization.UNKNOWN)}.
-   *
-   * @see ResultRow for documentation about the order that fields will be in
-   */
+  @Override
   public RowSignature getResultRowSignature()
   {
     return resultRowSignature;
@@ -350,6 +353,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
    *
    * @see ResultRow for documentation about the order that fields will be in
    */
+  @Override
   public RowSignature getResultRowSignature(final RowSignature.Finalization finalization)
   {
     if (finalization == RowSignature.Finalization.UNKNOWN) {
@@ -466,6 +470,14 @@ public class GroupByQuery extends BaseQuery<ResultRow>
   public boolean getApplyLimitPushDownFromContext()
   {
     return context().getBoolean(GroupByQueryConfig.CTX_KEY_APPLY_LIMIT_PUSH_DOWN, true);
+  }
+
+  /**
+   * See {@link #CTX_HAS_DROPPED_DIMENSIONS}.
+   */
+  public boolean hasDroppedDimensions()
+  {
+    return context().getBoolean(CTX_HAS_DROPPED_DIMENSIONS, false);
   }
 
   @Override

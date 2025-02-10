@@ -369,7 +369,7 @@ public class ClientInfoResourceTest
                                      .build();
     server.addDataSegment(segment);
     ServerSelector ss = new ServerSelector(segment, new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()));
-    timeline.add(Intervals.of(interval), version, new SingleElementPartitionChunk<ServerSelector>(ss));
+    timeline.add(Intervals.of(interval), version, new SingleElementPartitionChunk<>(ss));
   }
 
   private void addSegmentWithShardSpec(

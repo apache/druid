@@ -27,7 +27,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import org.apache.calcite.avatica.AvaticaSqlException;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.annotations.Client;
 import org.apache.druid.guice.annotations.ExtensionPoint;
 import org.apache.druid.java.util.common.StringUtils;
@@ -94,9 +93,7 @@ public abstract class AbstractAuthConfigurationTest
       "SELECT * FROM sys.tasks WHERE datasource IN ('auth_test')";
 
   protected static final TypeReference<List<Map<String, Object>>> SYS_SCHEMA_RESULTS_TYPE_REFERENCE =
-      new TypeReference<List<Map<String, Object>>>()
-      {
-      };
+      new TypeReference<>() {};
 
   /**
    * create a ResourceAction set of permissions that can only read a 'auth_test' datasource, for Authorizer
@@ -959,7 +956,6 @@ public abstract class AbstractAuthConfigurationTest
   {
     String json = StringUtils.replace(template, "%%HISTORICAL%%", config.getHistoricalInternalHost());
     json = StringUtils.replace(json, "%%BROKER%%", config.getBrokerInternalHost());
-    json = StringUtils.replace(json, "%%NON_LEADER%%", String.valueOf(NullHandling.defaultLongValue()));
     return json;
   }
 }

@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.client.indexing.SamplerResponse;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.impl.ByteEntity;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -73,10 +72,6 @@ public class SeekableStreamSamplerSpecTest extends EasyMockSupport
   private static final String SHARD_ID = "1";
 
   private final SeekableStreamSupervisorSpec supervisorSpec = mock(SeekableStreamSupervisorSpec.class);
-
-  static {
-    NullHandling.initializeForTests();
-  }
 
   private final RecordSupplier recordSupplier = mock(RecordSupplier.class);
 

@@ -93,7 +93,7 @@ public class Bounds
     return ImmutableList.copyOf(
         Lists.transform(
             bounds,
-            new Function<BoundDimFilter, Range<BoundValue>>()
+            new Function<>()
             {
               @Override
               public Range<BoundValue> apply(BoundDimFilter bound)

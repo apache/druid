@@ -227,7 +227,7 @@ public class DruidJsonValidator extends GuiceRunnable
       throws IOException
   {
     return source.readLines(
-        new LineProcessor<Void>()
+        new LineProcessor<>()
         {
           private final StringBuilder builder = new StringBuilder();
 

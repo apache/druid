@@ -164,6 +164,7 @@ public class NestedDataColumnSupplierV4 implements Supplier<ComplexColumn>
             ),
             rawBuffer,
             metadata.getByteOrder(),
+            metadata.getByteOrder(), // byte order doesn't matter since serde is byte blobs
             mapper
         );
         if (metadata.hasNulls()) {

@@ -27,7 +27,6 @@ import com.google.common.collect.Maps;
 import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
 import com.google.inject.Inject;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.io.ZeroCopyByteArrayOutputStream;
@@ -57,11 +56,8 @@ import org.apache.druid.segment.serde.ColumnPartSerde;
 import org.apache.druid.segment.serde.ComplexColumnPartSerde;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
 import org.apache.druid.segment.serde.ComplexMetrics;
-import org.apache.druid.segment.serde.DoubleNumericColumnPartSerde;
 import org.apache.druid.segment.serde.DoubleNumericColumnPartSerdeV2;
-import org.apache.druid.segment.serde.FloatNumericColumnPartSerde;
 import org.apache.druid.segment.serde.FloatNumericColumnPartSerdeV2;
-import org.apache.druid.segment.serde.LongNumericColumnPartSerde;
 import org.apache.druid.segment.serde.LongNumericColumnPartSerdeV2;
 import org.apache.druid.segment.serde.NullColumnPartSerde;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
@@ -227,10 +223,22 @@ public class IndexMergerV9 implements IndexMerger
             segmentWriteOutMedium,
             dimFormats.get(i).toColumnCapabilities(),
             progress,
+            outDir,
             closer
         );
         mergers.add(merger);
         mergersMap.put(mergedDimensions.get(i), merger);
+      }
+
+      if (segmentMetadata != null && segmentMetadata.getProjections() != null) {
+        for (AggregateProjectionMetadata projectionMetadata : segmentMetadata.getProjections()) {
+          for (String dimension : projectionMetadata.getSchema().getGroupingColumns()) {
+            DimensionMergerV9 merger = mergersMap.get(dimension);
+            if (merger != null) {
+              merger.markAsParent();
+            }
+          }
+        }
       }
 
       /************* Setup Dim Conversions **************/
@@ -302,6 +310,7 @@ public class IndexMergerV9 implements IndexMerger
             indexSpec,
             segmentWriteOutMedium,
             progress,
+            outDir,
             closer,
             mergersMap,
             segmentMetadata
@@ -356,6 +365,7 @@ public class IndexMergerV9 implements IndexMerger
       final IndexSpec indexSpec,
       final SegmentWriteOutMedium segmentWriteOutMedium,
       final ProgressIndicator progress,
+      final File segmentBaseDir,
       final Closer closer,
       final Map<String, DimensionMergerV9> parentMergers,
       final Metadata segmentMetadata
@@ -389,6 +399,7 @@ public class IndexMergerV9 implements IndexMerger
             segmentWriteOutMedium,
             dimensionFormat.toColumnCapabilities(),
             progress,
+            segmentBaseDir,
             closer
         );
         if (parentMergers.containsKey(dimension)) {
@@ -709,53 +720,29 @@ public class IndexMergerV9 implements IndexMerger
 
   static ColumnPartSerde createLongColumnPartSerde(GenericColumnSerializer serializer, IndexSpec indexSpec)
   {
-    // If using default values for null use LongNumericColumnPartSerde to allow rollback to previous versions.
-    if (NullHandling.replaceWithDefault()) {
-      return LongNumericColumnPartSerde.serializerBuilder()
+    return LongNumericColumnPartSerdeV2.serializerBuilder()
                                        .withByteOrder(IndexIO.BYTE_ORDER)
+                                       .withBitmapSerdeFactory(indexSpec.getBitmapSerdeFactory())
                                        .withDelegate(serializer)
                                        .build();
-    } else {
-      return LongNumericColumnPartSerdeV2.serializerBuilder()
-                                         .withByteOrder(IndexIO.BYTE_ORDER)
-                                         .withBitmapSerdeFactory(indexSpec.getBitmapSerdeFactory())
-                                         .withDelegate(serializer)
-                                         .build();
-    }
   }
 
   static ColumnPartSerde createDoubleColumnPartSerde(GenericColumnSerializer serializer, IndexSpec indexSpec)
   {
-    // If using default values for null use DoubleNumericColumnPartSerde to allow rollback to previous versions.
-    if (NullHandling.replaceWithDefault()) {
-      return DoubleNumericColumnPartSerde.serializerBuilder()
+    return DoubleNumericColumnPartSerdeV2.serializerBuilder()
                                          .withByteOrder(IndexIO.BYTE_ORDER)
+                                         .withBitmapSerdeFactory(indexSpec.getBitmapSerdeFactory())
                                          .withDelegate(serializer)
                                          .build();
-    } else {
-      return DoubleNumericColumnPartSerdeV2.serializerBuilder()
-                                           .withByteOrder(IndexIO.BYTE_ORDER)
-                                           .withBitmapSerdeFactory(indexSpec.getBitmapSerdeFactory())
-                                           .withDelegate(serializer)
-                                           .build();
-    }
   }
 
   static ColumnPartSerde createFloatColumnPartSerde(GenericColumnSerializer serializer, IndexSpec indexSpec)
   {
-    // If using default values for null use FloatNumericColumnPartSerde to allow rollback to previous versions.
-    if (NullHandling.replaceWithDefault()) {
-      return FloatNumericColumnPartSerde.serializerBuilder()
+    return FloatNumericColumnPartSerdeV2.serializerBuilder()
                                         .withByteOrder(IndexIO.BYTE_ORDER)
+                                        .withBitmapSerdeFactory(indexSpec.getBitmapSerdeFactory())
                                         .withDelegate(serializer)
                                         .build();
-    } else {
-      return FloatNumericColumnPartSerdeV2.serializerBuilder()
-                                          .withByteOrder(IndexIO.BYTE_ORDER)
-                                          .withBitmapSerdeFactory(indexSpec.getBitmapSerdeFactory())
-                                          .withDelegate(serializer)
-                                          .build();
-    }
   }
 
   private void makeTimeColumn(
@@ -980,25 +967,14 @@ public class IndexMergerV9 implements IndexMerger
       IndexSpec indexSpec
   )
   {
-    // If using default values for null use LongColumnSerializer to allow rollback to previous versions.
-    if (NullHandling.replaceWithDefault()) {
-      return LongColumnSerializer.create(
-          columnName,
-          segmentWriteOutMedium,
-          columnName,
-          indexSpec.getMetricCompression(),
-          indexSpec.getLongEncoding()
-      );
-    } else {
-      return LongColumnSerializerV2.create(
-          columnName,
-          segmentWriteOutMedium,
-          columnName,
-          indexSpec.getMetricCompression(),
-          indexSpec.getLongEncoding(),
-          indexSpec.getBitmapSerdeFactory()
-      );
-    }
+    return LongColumnSerializerV2.create(
+        columnName,
+        segmentWriteOutMedium,
+        columnName,
+        indexSpec.getMetricCompression(),
+        indexSpec.getLongEncoding(),
+        indexSpec.getBitmapSerdeFactory()
+    );
   }
 
   static GenericColumnSerializer createDoubleColumnSerializer(
@@ -1007,23 +983,13 @@ public class IndexMergerV9 implements IndexMerger
       IndexSpec indexSpec
   )
   {
-    // If using default values for null use DoubleColumnSerializer to allow rollback to previous versions.
-    if (NullHandling.replaceWithDefault()) {
-      return DoubleColumnSerializer.create(
-          columnName,
-          segmentWriteOutMedium,
-          columnName,
-          indexSpec.getMetricCompression()
-      );
-    } else {
-      return DoubleColumnSerializerV2.create(
-          columnName,
-          segmentWriteOutMedium,
-          columnName,
-          indexSpec.getMetricCompression(),
-          indexSpec.getBitmapSerdeFactory()
-      );
-    }
+    return DoubleColumnSerializerV2.create(
+        columnName,
+        segmentWriteOutMedium,
+        columnName,
+        indexSpec.getMetricCompression(),
+        indexSpec.getBitmapSerdeFactory()
+    );
   }
 
   static GenericColumnSerializer createFloatColumnSerializer(
@@ -1032,23 +998,13 @@ public class IndexMergerV9 implements IndexMerger
       IndexSpec indexSpec
   )
   {
-    // If using default values for null use FloatColumnSerializer to allow rollback to previous versions.
-    if (NullHandling.replaceWithDefault()) {
-      return FloatColumnSerializer.create(
-          columnName,
-          segmentWriteOutMedium,
-          columnName,
-          indexSpec.getMetricCompression()
-      );
-    } else {
-      return FloatColumnSerializerV2.create(
-          columnName,
-          segmentWriteOutMedium,
-          columnName,
-          indexSpec.getMetricCompression(),
-          indexSpec.getBitmapSerdeFactory()
-      );
-    }
+    return FloatColumnSerializerV2.create(
+        columnName,
+        segmentWriteOutMedium,
+        columnName,
+        indexSpec.getMetricCompression(),
+        indexSpec.getBitmapSerdeFactory()
+    );
   }
 
   private void writeDimValuesAndSetupDimConversion(

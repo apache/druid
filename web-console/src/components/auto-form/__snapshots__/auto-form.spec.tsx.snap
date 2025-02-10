@@ -170,7 +170,6 @@ exports[`AutoForm matches snapshot 1`] = `
   </Memo(FormGroupWithInfo)>
   <Blueprint5.FormGroup>
     <Blueprint5.Button
-      fill={true}
       minimal={true}
       onClick={[Function]}
       rightIcon="chevron-down"

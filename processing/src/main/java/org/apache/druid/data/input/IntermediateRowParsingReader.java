@@ -48,7 +48,7 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
   {
     final CloseableIteratorWithMetadata<T> intermediateRowIteratorWithMetadata = intermediateRowIteratorWithMetadata();
 
-    return new CloseableIterator<InputRow>()
+    return new CloseableIterator<>()
     {
       // since parseInputRows() returns a list, the below line always iterates over the list,
       // which means it calls Iterator.hasNext() and Iterator.next() at least once per row.
@@ -124,7 +124,7 @@ public abstract class IntermediateRowParsingReader<T> implements InputEntityRead
 
     final CloseableIteratorWithMetadata<T> delegate = intermediateRowIteratorWithMetadata();
 
-    return new CloseableIterator<InputRowListPlusRawValues>()
+    return new CloseableIterator<>()
     {
       @Override
       public void close() throws IOException

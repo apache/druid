@@ -49,6 +49,7 @@ import org.apache.druid.server.QueryLifecycle;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthenticationResult;
+import org.apache.druid.server.security.AuthorizationResult;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.DirectStatement;
 import org.apache.druid.sql.DirectStatement.ResultSet;
@@ -146,8 +147,8 @@ public class QueryDriver
     final String currThreadName = Thread.currentThread().getName();
     try {
       queryLifecycle.initialize(query);
-      Access authorizationResult = queryLifecycle.authorize(authResult);
-      if (!authorizationResult.isAllowed()) {
+      AuthorizationResult authorizationResult = queryLifecycle.authorize(authResult);
+      if (!authorizationResult.allowAccessWithNoRestriction()) {
         throw new ForbiddenException(Access.DEFAULT_ERROR_MESSAGE);
       }
       queryResponse = queryLifecycle.execute();

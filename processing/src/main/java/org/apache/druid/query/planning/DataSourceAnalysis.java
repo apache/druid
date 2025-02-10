@@ -32,6 +32,7 @@ import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.join.JoinPrefixUtils;
 
 import javax.annotation.Nullable;
+
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -181,7 +182,7 @@ public class DataSourceAnalysis
    */
   public DataSourceAnalysis maybeWithBaseQuery(Query<?> query)
   {
-    if (!getBaseQuery().isPresent()) {
+    if (!getBaseQuery().isPresent() && query instanceof BaseQuery) {
       return new DataSourceAnalysis(baseDataSource, query, joinBaseTableFilter, preJoinableClauses);
     }
     return this;
@@ -293,5 +294,18 @@ public class DataSourceAnalysis
            ", baseQuery=" + baseQuery +
            ", preJoinableClauses=" + preJoinableClauses +
            '}';
+  }
+
+  /**
+   * {@link DataSource#isGlobal()}.
+   */
+  public boolean isGlobal()
+  {
+    for (PreJoinableClause preJoinableClause : preJoinableClauses) {
+      if (!preJoinableClause.getDataSource().isGlobal()) {
+        return false;
+      }
+    }
+    return baseDataSource.isGlobal();
   }
 }

@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.UnmodifiableIterator;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.CloseableIterators;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
@@ -48,6 +49,7 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -240,6 +242,58 @@ public class SqlSegmentsMetadataQuery
         sortOrder,
         maxUsedStatusLastUpdatedTime
     );
+  }
+
+  public Set<SegmentId> retrieveUsedSegmentIds(
+      final String dataSource,
+      final Interval interval
+  )
+  {
+    final StringBuilder sb = new StringBuilder();
+    sb.append("SELECT id FROM %s WHERE used = :used AND dataSource = :dataSource");
+
+    // If the interval supports comparing as a string, bake it into the SQL
+    final boolean compareAsString = Intervals.canCompareEndpointsAsStrings(interval);
+    if (compareAsString) {
+      sb.append(
+          getConditionForIntervalsAndMatchMode(
+              Collections.singletonList(interval),
+              IntervalMode.OVERLAPS,
+              connector.getQuoteString()
+          )
+      );
+    }
+
+    return connector.inReadOnlyTransaction(
+        (handle, status) -> {
+          final Query<Map<String, Object>> sql = handle
+              .createQuery(StringUtils.format(sb.toString(), dbTables.getSegmentsTable()))
+              .setFetchSize(connector.getStreamingFetchSize())
+              .bind("used", true)
+              .bind("dataSource", dataSource);
+
+          if (compareAsString) {
+            bindIntervalsToQuery(sql, Collections.singletonList(interval));
+          }
+
+          final Set<SegmentId> segmentIds = new HashSet<>();
+          try (final ResultIterator<String> iterator = sql.map((index, r, ctx) -> r.getString(1)).iterator()) {
+            while (iterator.hasNext()) {
+              final String id = iterator.next();
+              final SegmentId segmentId = SegmentId.tryParse(dataSource, id);
+              if (segmentId == null) {
+                throw DruidException.defensive(
+                    "Failed to parse SegmentId for id[%s] and dataSource[%s].",
+                    id, dataSource
+                );
+              }
+              if (IntervalMode.OVERLAPS.apply(interval, segmentId.getInterval())) {
+                segmentIds.add(segmentId);
+              }
+            }
+          }
+          return segmentIds;
+        });
   }
 
   public List<DataSegmentPlus> retrieveSegmentsById(

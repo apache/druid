@@ -20,7 +20,7 @@ import type { ButtonProps } from '@blueprintjs/core';
 import { Button, Menu, MenuDivider, MenuItem, Popover, Position } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import type { JSX } from 'react';
-import React, { useState } from 'react';
+import { useState } from 'react';
 
 import { NumericInputDialog } from '../../../dialogs';
 import type { QueryContext } from '../../../druid-models';

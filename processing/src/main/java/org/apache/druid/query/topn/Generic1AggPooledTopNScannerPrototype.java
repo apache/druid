@@ -54,25 +54,27 @@ public final class Generic1AggPooledTopNScannerPrototype implements Generic1AggP
   {
     long processedRows = 0;
     int positionToAllocate = 0;
-    while (!cursor.isDoneOrInterrupted()) {
-      final IndexedInts dimValues = dimensionSelector.getRow();
-      final int dimSize = dimValues.size();
-      for (int i = 0; i < dimSize; i++) {
-        int dimIndex = dimValues.get(i);
-        int position = positions[dimIndex];
-        if (position >= 0) {
-          aggregator.aggregate(resultsBuffer, position);
-        } else if (position == TopNAlgorithm.INIT_POSITION_VALUE) {
-          positions[dimIndex] = positionToAllocate;
-          position = positionToAllocate;
-          aggregator.init(resultsBuffer, position);
-          aggregator.aggregate(resultsBuffer, position);
-          positionToAllocate += aggregatorSize;
+    if (granularizer.currentOffsetWithinBucket()) {
+      while (!cursor.isDoneOrInterrupted()) {
+        final IndexedInts dimValues = dimensionSelector.getRow();
+        final int dimSize = dimValues.size();
+        for (int i = 0; i < dimSize; i++) {
+          int dimIndex = dimValues.get(i);
+          int position = positions[dimIndex];
+          if (position >= 0) {
+            aggregator.aggregate(resultsBuffer, position);
+          } else if (position == TopNAlgorithm.INIT_POSITION_VALUE) {
+            positions[dimIndex] = positionToAllocate;
+            position = positionToAllocate;
+            aggregator.init(resultsBuffer, position);
+            aggregator.aggregate(resultsBuffer, position);
+            positionToAllocate += aggregatorSize;
+          }
         }
-      }
-      processedRows++;
-      if (!granularizer.advanceCursorWithinBucketUninterruptedly()) {
-        break;
+        processedRows++;
+        if (!granularizer.advanceCursorWithinBucketUninterruptedly()) {
+          break;
+        }
       }
     }
     return processedRows;
