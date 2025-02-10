@@ -528,6 +528,9 @@ public class StreamAppenderator implements Appenderator
       );
       bytesCurrentlyInMemory.addAndGet(calculateSinkMemoryInUsed(retVal));
 
+      // Add sink prior to announcing it, to ensure it is immediately queryable.
+      addSink(identifier, retVal);
+
       try {
         segmentAnnouncer.announceSegment(retVal.getSegment());
       }
@@ -536,8 +539,6 @@ public class StreamAppenderator implements Appenderator
            .addData("interval", retVal.getInterval())
            .emit();
       }
-
-      addSink(identifier, retVal);
     }
 
     return retVal;

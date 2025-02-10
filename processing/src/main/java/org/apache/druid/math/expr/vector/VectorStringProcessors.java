@@ -30,16 +30,15 @@ public class VectorStringProcessors
 {
   public static <T> ExprVectorProcessor<T> concat(Expr.VectorInputBindingInspector inspector, Expr left, Expr right)
   {
-    final ExprVectorProcessor processor = new ObjectOutObjectsInFunctionVectorProcessor(
+    final ExprVectorProcessor processor = new ObjectBivariateObjectsFunctionVectorProcessor(
         left.asVectorProcessor(inspector),
         right.asVectorProcessor(inspector),
-        inspector.getMaxVectorSize(),
         ExpressionType.STRING
     )
     {
       @Nullable
       @Override
-      protected String processValue(@Nullable Object leftVal, @Nullable Object rightVal)
+      protected Object processValue(@Nullable Object leftVal, @Nullable Object rightVal)
       {
         return leftVal + (String) rightVal;
       }
@@ -53,13 +52,11 @@ public class VectorStringProcessors
     for (int i = 0; i < inputs.size(); i++) {
       inputProcessors[i] = CastToTypeVectorProcessor.cast(
           inputs.get(i).asVectorProcessor(inspector),
-          ExpressionType.STRING,
-          inspector.getMaxVectorSize()
+          ExpressionType.STRING
       );
     }
-    final ExprVectorProcessor processor = new ObjectOutMultiObjectInVectorProcessor(
+    final ExprVectorProcessor processor = new ObjectMultivariateObjectsFunctionVectorProcessor(
         inputProcessors,
-        inspector.getMaxVectorSize(),
         ExpressionType.STRING
     )
     {

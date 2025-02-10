@@ -37,6 +37,19 @@ sidebar_label: "Aggregation functions"
 
 You can use aggregation functions in the SELECT clause of any [Druid SQL](./sql.md) query.
 
+In the aggregation functions supported by Druid, only `COUNT`, `ARRAY_AGG`, and `STRING_AGG` accept the DISTINCT keyword.
+
+:::info
+ The order of aggregation operations across segments is not deterministic. This means that non-commutative aggregation
+ functions can produce inconsistent results across the same query.
+
+ Functions that operate on an input type of "float" or "double" may also see these differences in aggregation
+ results across multiple query runs because of this. If precisely the same value is desired across multiple query runs,
+ consider using the `ROUND` function to smooth out the inconsistencies between queries.
+:::
+
+## Filter aggregations
+
 Filter any aggregator using the FILTER clause, for example:
 
 ```
@@ -56,16 +69,7 @@ When no rows are selected, aggregation functions return their initial value. Thi
 The initial value varies by aggregator. `COUNT` and the approximate count distinct sketch functions
 always return 0 as the initial value.
 
-In the aggregation functions supported by Druid, only `COUNT`, `ARRAY_AGG`, and `STRING_AGG` accept the DISTINCT keyword.
-
-:::info
- The order of aggregation operations across segments is not deterministic. This means that non-commutative aggregation
- functions can produce inconsistent results across the same query.
-
- Functions that operate on an input type of "float" or "double" may also see these differences in aggregation
- results across multiple query runs because of this. If precisely the same value is desired across multiple query runs,
- consider using the `ROUND` function to smooth out the inconsistencies between queries.
-:::
+## General aggregation functions
 
 |Function|Notes|Default|
 |--------|-----|-------|
@@ -92,10 +96,8 @@ In the aggregation functions supported by Druid, only `COUNT`, `ARRAY_AGG`, and 
 |`LATEST_BY(expr, timestampExpr, [maxBytesPerValue])`|Returns the latest value of `expr`.<br />The latest value of `expr` is taken from the row with the overall latest non-null value of `timestampExpr`.<br />If the overall latest non-null value of `timestampExpr` appears in multiple rows, the `expr` may be taken from any of those rows.<br /><br />If `expr` is a string or complex type `maxBytesPerValue` amount of space is allocated for the aggregation. Strings longer than this limit are truncated. The `maxBytesPerValue` parameter should be set as low as possible, since high values will lead to wasted memory.<br/>If `maxBytesPerValue`is omitted; it defaults to `1024`.<br /><br />Use `LATEST` instead of `LATEST_BY` on a table that has rollup enabled and was created with any variant of `EARLIEST`, `LATEST`, `EARLIEST_BY`, or `LATEST_BY`. In these cases, the intermediate type already stores the timestamp, and Druid ignores the value passed in `timestampExpr`. |`null`|
 |`ANY_VALUE(expr, [maxBytesPerValue, [aggregateMultipleValues]])`|Returns any value of `expr` including null. This aggregator can simplify and optimize the performance by returning the first encountered value (including `null`).<br /><br />If `expr` is a string or complex type `maxBytesPerValue` amount of space is allocated for the aggregation. Strings longer than this limit are truncated. The `maxBytesPerValue` parameter should be set as low as possible, since high values will lead to wasted memory.<br/>If `maxBytesPerValue` is omitted; it defaults to `1024`. `aggregateMultipleValues` is an optional boolean flag controls the behavior of aggregating a [multi-value dimension](./multi-value-dimensions.md). `aggregateMultipleValues` is set as true by default and returns the stringified array in case of a multi-value dimension. By setting it to false, function will return first value instead. |`null`|
 |`GROUPING(expr, expr...)`|Returns a number to indicate which groupBy dimension is included in a row, when using `GROUPING SETS`. Refer to [additional documentation](aggregations.md#grouping-aggregator) on how to infer this number.|N/A|
-|`ARRAY_AGG(expr, [size])`|Collects all values of `expr` into an ARRAY, including null values, with `size` in bytes limit on aggregation size (default of 1024 bytes). If the aggregated array grows larger than the maximum size in bytes, the query will fail. Use of `ORDER BY` within the `ARRAY_AGG` expression is not currently supported, and the ordering of results within the output array may vary depending on processing order.|`null`|
-|`ARRAY_AGG(DISTINCT expr, [size])`|Collects all distinct values of `expr` into an ARRAY, including null values, with `size` in bytes limit on aggregation size (default of 1024 bytes) per aggregate. If the aggregated array grows larger than the maximum size in bytes, the query will fail. Use of `ORDER BY` within the `ARRAY_AGG` expression is not currently supported, and the ordering of results will be based on the default for the element type.|`null`|
-|`ARRAY_CONCAT_AGG(expr, [size])`|Concatenates all array `expr` into a single ARRAY, with `size` in bytes limit on aggregation size (default of 1024 bytes).   Input `expr` _must_ be an array. Null `expr` will be ignored, but any null values within an `expr` _will_ be included in the resulting array. If the aggregated array grows larger than the maximum size in bytes, the query will fail. Use of `ORDER BY` within the `ARRAY_CONCAT_AGG` expression is not currently supported, and the ordering of results within the output array may vary depending on processing order.|`null`|
-|`ARRAY_CONCAT_AGG(DISTINCT expr, [size])`|Concatenates all distinct values of all array `expr` into a single ARRAY, with `size` in bytes limit on aggregation size (default of 1024 bytes) per aggregate. Input `expr` _must_ be an array. Null `expr` will be ignored, but any null values within an `expr` _will_ be included in the resulting array. If the aggregated array grows larger than the maximum size in bytes, the query will fail. Use of `ORDER BY` within the `ARRAY_CONCAT_AGG` expression is not currently supported, and the ordering of results will be based on the default for the element type.|`null`|
+|`ARRAY_AGG([DISTINCT] expr, [size])`|Collects all values of the specified expression into an array. To include only unique values, specify `DISTINCT`. `size` determines the maximum aggregation size in bytes and defaults to 1024 bytes. If the resulting array exceeds the size limit, the query fails. `ORDER BY` is not supported. The order of elements in the output array may vary depending on the processing order.|`null`|
+|`ARRAY_CONCAT_AGG([DISTINCT] expr, [size])`|Concatenates array inputs into a single array. To include only unique values, specify `DISTINCT`. `expr` must be an array. `size` determines the maximum aggregation size in bytes and defaults to 1024 bytes. If the resulting array exceeds the size limit, the query fails. Druid ignores null array expressions, but null values within arrays are included in the output. `ORDER BY` is not supported. The order of elements in the output array may vary depending on the processing order.|`null`|
 |`STRING_AGG([DISTINCT] expr, [separator, [size]])`|Collects all values (or all distinct values) of `expr` into a single STRING, ignoring null values. Each value is joined by an optional `separator`, which must be a literal STRING. If the `separator` is not provided, strings are concatenated without a separator.<br /><br />An optional `size` in bytes can be supplied to limit aggregation size (default of 1024 bytes). If the aggregated string grows larger than the maximum size in bytes, the query will fail. Use of `ORDER BY` within the `STRING_AGG` expression is not currently supported, and the ordering of results within the output string may vary depending on processing order.|`null`|
 |`LISTAGG([DISTINCT] expr, [separator, [size]])`|Synonym for `STRING_AGG`.|`null`|
 |`BIT_AND(expr)`|Performs a bitwise AND operation on all input values.|`null`|
@@ -106,7 +108,7 @@ In the aggregation functions supported by Druid, only `COUNT`, `ARRAY_AGG`, and 
 
 These functions create sketch objects that you can use to perform fast, approximate analyses.
 For advice on choosing approximate aggregation functions, check out our [approximate aggregations documentation](aggregations.md#approx).
-To operate on sketch objects, also see the [DataSketches post aggregator functions](sql-scalar.md#sketch-functions).
+To operate on sketch objects, see the scalar [DataSketches post aggregator functions](sql-scalar.md#sketch-functions).
 
 ### HLL sketch functions
 
@@ -144,9 +146,8 @@ Load the [DataSketches extension](../development/extensions-core/datasketches-ex
 
 |Function|Notes|Default|
 |--------|-----|-------|
-|`DS_TUPLE_DOUBLES(expr, [nominalEntries])`|Creates a [Tuple sketch](../development/extensions-core/datasketches-tuple.md) on the values of `expr` which is a column containing Tuple sketches which contain an array of double values as their Summary Objects. The `nominalEntries` override parameter is optional and described in the Tuple sketch documentation.
-|`DS_TUPLE_DOUBLES(dimensionColumnExpr, metricColumnExpr, ..., [nominalEntries])`|Creates a [Tuple sketch](../development/extensions-core/datasketches-tuple.md) which contains an array of double values as its Summary Object based on the dimension value of `dimensionColumnExpr` and the numeric metric values contained in one or more `metricColumnExpr` columns. If the last value of the array is a numeric literal, Druid assumes that the value is an override parameter for [nominal entries](../development/extensions-core/datasketches-tuple.md).
-
+|`DS_TUPLE_DOUBLES(expr[, nominalEntries])`|Creates a [Tuple sketch](../development/extensions-core/datasketches-tuple.md) on a precomputed sketch column `expr`, where the precomputed Tuple sketch contains an array of double values as its Summary Object. The `nominalEntries` override parameter is optional and described in the Tuple sketch documentation.
+|`DS_TUPLE_DOUBLES(dimensionColumnExpr, metricColumnExpr1[, metricColumnExpr2, ...], [nominalEntries])`|Creates a [Tuple sketch](../development/extensions-core/datasketches-tuple.md) on raw data. The Tuples sketch will contain an array of double values as its Summary Object based on the dimension value of `dimensionColumnExpr` and the numeric metric values contained in one or more `metricColumnExpr` columns. If the last value of the array is a numeric literal, Druid assumes that the value is an override parameter for [nominal entries](../development/extensions-core/datasketches-tuple.md).
 
 ### T-Digest sketch functions
 
