@@ -5048,6 +5048,17 @@ libraries:
 
 ---
 
+name: jakarta.el
+license_category: binary
+module: core
+license_name: Eclipse Public License 2.0
+version: 3.0.4
+license_file_path: licenses/bin/jakarta.el.EPL2
+libraries:
+  - org.glassfish: jakarta.el
+
+---
+
 # Web console modules start
 name: "@babel/code-frame"
 license_category: binary
