@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.aggregation.any;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.segment.BaseNullableColumnValueSelector;
 
@@ -28,7 +27,6 @@ import org.apache.druid.segment.BaseNullableColumnValueSelector;
  */
 public abstract class NumericAnyAggregator<TSelector extends BaseNullableColumnValueSelector> implements Aggregator
 {
-  private final boolean useDefault = NullHandling.replaceWithDefault();
   final TSelector valueSelector;
 
   boolean isNull;
@@ -37,7 +35,7 @@ public abstract class NumericAnyAggregator<TSelector extends BaseNullableColumnV
   public NumericAnyAggregator(TSelector valueSelector)
   {
     this.valueSelector = valueSelector;
-    this.isNull = !useDefault;
+    this.isNull = true;
     this.isFound = false;
   }
 
@@ -50,7 +48,7 @@ public abstract class NumericAnyAggregator<TSelector extends BaseNullableColumnV
   public void aggregate()
   {
     if (!isFound) {
-      if (useDefault || !valueSelector.isNull()) {
+      if (!valueSelector.isNull()) {
         setFoundValue();
         isNull = false;
       } else {

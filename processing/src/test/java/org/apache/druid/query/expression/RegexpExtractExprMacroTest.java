@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.expression;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.InputBindings;
@@ -113,9 +112,7 @@ public class RegexpExtractExprMacroTest extends MacroTestBase
   @Test
   public void testNullPattern()
   {
-    if (NullHandling.sqlCompatible()) {
-      expectException(IllegalArgumentException.class, "Function[regexp_extract] pattern must be a string literal");
-    }
+    expectException(IllegalArgumentException.class, "Function[regexp_extract] pattern must be a string literal");
 
     final ExprEval<?> result = eval(
         "regexp_extract(a, null)",
@@ -131,7 +128,7 @@ public class RegexpExtractExprMacroTest extends MacroTestBase
         "regexp_extract(a, '')",
         InputBindings.forInputSupplier("a", ExpressionType.STRING, () -> "foo")
     );
-    Assert.assertEquals(NullHandling.emptyToNullIfNeeded(""), result.value());
+    Assert.assertEquals("", result.value());
   }
 
   @Test
@@ -151,9 +148,7 @@ public class RegexpExtractExprMacroTest extends MacroTestBase
   @Test
   public void testNullPatternOnNull()
   {
-    if (NullHandling.sqlCompatible()) {
-      expectException(IllegalArgumentException.class, "Function[regexp_extract] pattern must be a string literal");
-    }
+    expectException(IllegalArgumentException.class, "Function[regexp_extract] pattern must be a string literal");
 
     final ExprEval<?> result = eval("regexp_extract(a, null)", InputBindings.nilBindings());
     Assert.assertNull(result.value());

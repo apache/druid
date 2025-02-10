@@ -22,7 +22,6 @@ package org.apache.druid.msq.exec;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -1250,15 +1249,6 @@ public class MSQWindowTest extends MSQTestBase
                                    .build())
         .setExpectedRowSignature(rowSignature)
         .setExpectedResultRows(
-            NullHandling.replaceWithDefault() ?
-            ImmutableList.of(
-                new Object[]{"", 11.0},
-                new Object[]{"", 11.0},
-                new Object[]{"", 11.0},
-                new Object[]{"a", 5.0},
-                new Object[]{"a", 5.0},
-                new Object[]{"abc", 5.0}
-            ) :
             ImmutableList.of(
                 new Object[]{null, 8.0},
                 new Object[]{null, 8.0},
@@ -1347,8 +1337,8 @@ public class MSQWindowTest extends MSQTestBase
             new Object[]{2.0f, 24.0, "c"},
             new Object[]{3.0f, 24.0, "d"},
             new Object[]{4.0f, 24.0, ""},
-            new Object[]{5.0f, 24.0, NullHandling.sqlCompatible() ? null : ""},
-            new Object[]{6.0f, 24.0, NullHandling.sqlCompatible() ? null : ""}
+            new Object[]{5.0f, 24.0, null},
+            new Object[]{6.0f, 24.0, null}
         ))
         .setQueryContext(DEFAULT_MSQ_CONTEXT)
         .verifyResults();
@@ -1431,8 +1421,8 @@ public class MSQWindowTest extends MSQTestBase
             new Object[]{2.0f, 4.0, "c"},
             new Object[]{3.0f, 3.0, "d"},
             new Object[]{4.0f, 4.0, ""},
-            new Object[]{5.0f, 5.0, NullHandling.sqlCompatible() ? null : ""},
-            new Object[]{6.0f, 6.0, NullHandling.sqlCompatible() ? null : ""}
+            new Object[]{5.0f, 5.0, null},
+            new Object[]{6.0f, 6.0, null}
         ))
         .setQueryContext(DEFAULT_MSQ_CONTEXT)
         .verifyResults();
@@ -1561,7 +1551,7 @@ public class MSQWindowTest extends MSQTestBase
                              new Object[]{946771200000L, 2.0f, 4.0, "b"},
                              new Object[]{946771200000L, 2.0f, 4.0, "c"},
                              new Object[]{946857600000L, 3.0f, 3.0, "d"},
-                             new Object[]{978307200000L, 4.0f, 4.0, NullHandling.sqlCompatible() ? "" : null},
+                             new Object[]{978307200000L, 4.0f, 4.0, ""},
                              new Object[]{978393600000L, 5.0f, 5.0, null},
                              new Object[]{978480000000L, 6.0f, 6.0, null}
                          )
@@ -2124,7 +2114,7 @@ public class MSQWindowTest extends MSQTestBase
                           + "group by countryName, cityName, channel "
                           + "order by countryName, cityName, channel";
 
-    final String nullValue = NullHandling.sqlCompatible() ? null : "";
+    final String nullValue = null;
 
     testSelectQuery()
         .setSql(sql)

@@ -89,6 +89,8 @@ public class EmitterModuleTest
 
   private Injector makeInjectorWithProperties(final Properties props)
   {
+    EmitterModule emitterModule = new EmitterModule();
+    emitterModule.setProps(props);
     return Guice.createInjector(
         ImmutableList.of(
             new DruidGuiceExtensions(),
@@ -105,7 +107,7 @@ public class EmitterModuleTest
                 binder.bind(Properties.class).toInstance(props);
               }
             },
-            new EmitterModule(props)
+            emitterModule
         )
     );
   }

@@ -18,6 +18,7 @@
 
 import {
   Button,
+  Icon,
   InputGroup,
   Intent,
   Menu,
@@ -27,6 +28,7 @@ import {
   Tag,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
+import classNames from 'classnames';
 import type { Column, SqlExpression } from 'druid-query-toolkit';
 import { SqlColumn } from 'druid-query-toolkit';
 import type { JSX } from 'react';
@@ -40,13 +42,7 @@ import {
 import { AppToaster } from '../../../../singletons';
 import { filterMap } from '../../../../utils';
 import type { OptionValue, ParameterDefinition, QuerySource } from '../../models';
-import {
-  effectiveParameterDefault,
-  evaluateFunctor,
-  ExpressionMeta,
-  getModuleOptionLabel,
-  Measure,
-} from '../../models';
+import { evaluateFunctor, ExpressionMeta, getModuleOptionLabel, Measure } from '../../models';
 import { changeOrAdd } from '../../utils';
 import { DroppableContainer } from '../droppable-container/droppable-container';
 
@@ -59,9 +55,11 @@ import './control-pane.scss';
 
 export interface ControlPaneProps {
   querySource: QuerySource | undefined;
+  where: SqlExpression;
   onUpdateParameterValues(params: Record<string, unknown>): void;
   parameters: Record<string, ParameterDefinition>;
   parameterValues: Record<string, unknown>;
+  compact?: boolean;
   onAddToSourceQueryAsColumn?(expression: SqlExpression): void;
   onAddToSourceQueryAsMeasure?(measure: Measure): void;
 }
@@ -69,9 +67,11 @@ export interface ControlPaneProps {
 export const ControlPane = function ControlPane(props: ControlPaneProps) {
   const {
     querySource,
+    where,
     onUpdateParameterValues,
     parameters,
     parameterValues,
+    compact,
     onAddToSourceQueryAsColumn,
     onAddToSourceQueryAsMeasure,
   } = props;
@@ -87,14 +87,13 @@ export const ControlPane = function ControlPane(props: ControlPaneProps) {
     onDropColumn?: (column: Column) => void;
     onDropMeasure?: (measure: Measure) => void;
   } {
-    const effectiveValue = value ?? effectiveParameterDefault(parameter, querySource);
-    const required = evaluateFunctor(parameter.required, parameterValues);
+    const required = evaluateFunctor(parameter.required, parameterValues, querySource, where);
     switch (parameter.type) {
       case 'boolean': {
         return {
           element: (
             <SegmentedControl
-              value={String(effectiveValue)}
+              value={String(value)}
               onValueChange={v => {
                 onValueChange(v === 'true');
               }}
@@ -112,7 +111,7 @@ export const ControlPane = function ControlPane(props: ControlPaneProps) {
         return {
           element: (
             <FancyNumericInput
-              value={effectiveValue}
+              value={value}
               onValueChange={onValueChange}
               placeholder={parameter.placeholder}
               fill
@@ -126,7 +125,7 @@ export const ControlPane = function ControlPane(props: ControlPaneProps) {
         return {
           element: (
             <InputGroup
-              value={(effectiveValue as string) || ''}
+              value={(value as string) || ''}
               onChange={e => onValueChange(e.target.value)}
               placeholder={parameter.placeholder}
               fill
@@ -135,10 +134,9 @@ export const ControlPane = function ControlPane(props: ControlPaneProps) {
         };
 
       case 'option': {
-        const controlOptions = parameter.options || [];
-        const selectedOption: OptionValue | undefined = controlOptions.find(
-          o => o === effectiveValue,
-        );
+        const controlOptions =
+          evaluateFunctor(parameter.options, parameterValues, querySource, where) || [];
+        const selectedOption: OptionValue | undefined = controlOptions.find(o => o === value);
         return {
           element: (
             <Popover
@@ -151,6 +149,9 @@ export const ControlPane = function ControlPane(props: ControlPaneProps) {
                     <MenuItem
                       key={i}
                       text={getModuleOptionLabel(o, parameter)}
+                      labelElement={
+                        o === selectedOption ? <Icon icon={IconNames.TICK} /> : undefined
+                      }
                       onClick={() => onValueChange(o)}
                     />
                   ))}
@@ -160,7 +161,7 @@ export const ControlPane = function ControlPane(props: ControlPaneProps) {
               <InputGroup
                 value={
                   typeof selectedOption === 'undefined'
-                    ? String(effectiveValue)
+                    ? `Unknown option: ${value}`
                     : getModuleOptionLabel(selectedOption, parameter)
                 }
                 readOnly
@@ -173,11 +174,13 @@ export const ControlPane = function ControlPane(props: ControlPaneProps) {
       }
 
       case 'options': {
+        const controlOptions =
+          evaluateFunctor(parameter.options, parameterValues, querySource, where) || [];
         return {
           element: (
             <OptionsInput
-              options={parameter.options || []}
-              value={(effectiveValue as OptionValue[]) || []}
+              options={controlOptions}
+              value={(value as OptionValue[]) || []}
               onValueChange={onValueChange}
               optionLabel={o => getModuleOptionLabel(o, parameter)}
               allowDuplicates={parameter.allowDuplicates}
@@ -195,7 +198,7 @@ export const ControlPane = function ControlPane(props: ControlPaneProps) {
           element: (
             <NamedExpressionsInput<ExpressionMeta>
               allowReordering
-              values={effectiveValue ? [effectiveValue] : []}
+              values={value ? [value] : []}
               onValuesChange={vs => onValueChange(vs[0])}
               singleton
               nonEmpty={required}
@@ -217,7 +220,7 @@ export const ControlPane = function ControlPane(props: ControlPaneProps) {
       case 'expressions': {
         const disabledColumnNames = parameter.allowDuplicates
           ? []
-          : filterMap(effectiveValue as ExpressionMeta[], ({ expression }) =>
+          : filterMap(value as ExpressionMeta[], ({ expression }) =>
               expression instanceof SqlColumn ? expression.getName() : undefined,
             );
 
@@ -225,16 +228,14 @@ export const ControlPane = function ControlPane(props: ControlPaneProps) {
           element: (
             <NamedExpressionsInput<ExpressionMeta>
               allowReordering
-              values={effectiveValue as ExpressionMeta[]}
+              values={value as ExpressionMeta[]}
               onValuesChange={onValueChange}
               nonEmpty={parameter.nonEmpty}
               itemMenu={(initExpression, onClose) => (
                 <ExpressionMenu
                   columns={columns}
                   initExpression={initExpression}
-                  onSelectExpression={c =>
-                    onValueChange(changeOrAdd(effectiveValue, initExpression, c))
-                  }
+                  onSelectExpression={c => onValueChange(changeOrAdd(value, initExpression, c))}
                   disabledColumnNames={disabledColumnNames}
                   onClose={onClose}
                   onAddToSourceQueryAsColumn={onAddToSourceQueryAsColumn}
@@ -246,7 +247,7 @@ export const ControlPane = function ControlPane(props: ControlPaneProps) {
             const columnName = column.name;
             if (
               !parameter.allowDuplicates &&
-              effectiveValue.find((v: ExpressionMeta) => v.name === columnName)
+              value.find((v: ExpressionMeta) => v.name === columnName)
             ) {
               AppToaster.show({
                 intent: Intent.WARNING,
@@ -258,7 +259,7 @@ export const ControlPane = function ControlPane(props: ControlPaneProps) {
               });
               return;
             }
-            onValueChange(effectiveValue.concat(ExpressionMeta.fromColumn(column)));
+            onValueChange(value.concat(ExpressionMeta.fromColumn(column)));
           },
         };
       }
@@ -267,7 +268,7 @@ export const ControlPane = function ControlPane(props: ControlPaneProps) {
         return {
           element: (
             <NamedExpressionsInput<Measure>
-              values={effectiveValue ? [effectiveValue] : []}
+              values={value ? [value] : []}
               onValuesChange={vs => onValueChange(vs[0])}
               singleton
               nonEmpty={required}
@@ -285,7 +286,7 @@ export const ControlPane = function ControlPane(props: ControlPaneProps) {
           ),
           onDropColumn: column => {
             const candidateMeasures = Measure.getPossibleMeasuresForColumn(column).filter(
-              p => !effectiveValue || effectiveValue.name !== p.name,
+              p => !value || value.name !== p.name,
             );
             if (!candidateMeasures.length) return;
             onValueChange(candidateMeasures[0]);
@@ -297,12 +298,12 @@ export const ControlPane = function ControlPane(props: ControlPaneProps) {
       case 'measures': {
         const disabledMeasureNames = parameter.allowDuplicates
           ? []
-          : filterMap(effectiveValue as Measure[], measure => measure.getAggregateMeasureName());
+          : filterMap(value as Measure[], measure => measure.getAggregateMeasureName());
 
         return {
           element: (
             <NamedExpressionsInput<Measure>
-              values={effectiveValue}
+              values={value}
               onValuesChange={onValueChange}
               allowReordering
               nonEmpty={parameter.nonEmpty}
@@ -312,7 +313,7 @@ export const ControlPane = function ControlPane(props: ControlPaneProps) {
                   measures={measures}
                   initMeasure={initMeasure}
                   disabledMeasureNames={disabledMeasureNames}
-                  onSelectMeasure={m => onValueChange(changeOrAdd(effectiveValue, initMeasure, m))}
+                  onSelectMeasure={m => onValueChange(changeOrAdd(value, initMeasure, m))}
                   onClose={onClose}
                   onAddToSourceQueryAsMeasure={onAddToSourceQueryAsMeasure}
                 />
@@ -321,13 +322,13 @@ export const ControlPane = function ControlPane(props: ControlPaneProps) {
           ),
           onDropColumn: column => {
             const candidateMeasures = Measure.getPossibleMeasuresForColumn(column).filter(
-              p => !effectiveValue.some((v: Measure) => v.name === p.name),
+              p => !value.some((v: Measure) => v.name === p.name),
             );
             if (!candidateMeasures.length) return;
-            onValueChange(effectiveValue.concat(candidateMeasures[0]));
+            onValueChange(value.concat(candidateMeasures[0]));
           },
           onDropMeasure: measure => {
-            onValueChange(effectiveValue.concat(measure));
+            onValueChange(value.concat(measure));
           },
         };
       }
@@ -349,10 +350,12 @@ export const ControlPane = function ControlPane(props: ControlPaneProps) {
   const namedParameters = Object.entries(parameters ?? {});
 
   return (
-    <div className="control-pane">
+    <div className={classNames('control-pane', { compact })}>
       {namedParameters.map(([name, parameter], i) => {
-        const visible = evaluateFunctor(parameter.visible, parameterValues);
-        if (visible === false) return;
+        const visible = evaluateFunctor(parameter.visible, parameterValues, querySource, where);
+        const defined = evaluateFunctor(parameter.defined, parameterValues, querySource, where);
+        if (visible === false || defined === false) return;
+        if (compact && !parameter.important) return;
 
         const value = parameterValues[name];
 
@@ -366,13 +369,17 @@ export const ControlPane = function ControlPane(props: ControlPaneProps) {
           onValueChange,
         );
 
-        const description = evaluateFunctor(parameter.description, parameterValues);
+        const label =
+          evaluateFunctor(parameter.label, parameterValues, querySource, where) ||
+          AutoForm.makeLabelName(name);
+        const description = compact
+          ? undefined
+          : evaluateFunctor(parameter.description, parameterValues, querySource, where);
         const formGroup = (
           <FormGroupWithInfo
             key={i}
-            label={
-              evaluateFunctor(parameter.label, parameterValues) || AutoForm.makeLabelName(name)
-            }
+            label={label}
+            inline={compact}
             info={description && <PopoverText>{description}</PopoverText>}
           >
             {element}

@@ -39,7 +39,6 @@ import it.unimi.dsi.fastutil.longs.LongSet;
 import org.apache.druid.annotations.SuppressFBWarnings;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
@@ -512,9 +511,9 @@ public class NestedFieldColumnIndexSupplier<TStringDictionary extends Indexed<By
     )
     {
       return makeRangeIndex(
-          StringUtils.toUtf8ByteBuffer(NullHandling.emptyToNullIfNeeded(startValue)),
+          StringUtils.toUtf8ByteBuffer(startValue),
           startStrict,
-          StringUtils.toUtf8ByteBuffer(NullHandling.emptyToNullIfNeeded(endValue)),
+          StringUtils.toUtf8ByteBuffer(endValue),
           endStrict,
           localDictionarySupplier.get(),
           globalStringDictionarySupplier.get(),

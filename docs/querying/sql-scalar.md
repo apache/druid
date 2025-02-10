@@ -82,7 +82,7 @@ to FLOAT. At runtime, Druid will widen 32-bit floats to 64-bit for most expressi
 |`HUMAN_READABLE_BINARY_BYTE_FORMAT(value[, precision])`| Formats a number in human-readable [IEC](https://en.wikipedia.org/wiki/Binary_prefix) format. For example, `HUMAN_READABLE_BINARY_BYTE_FORMAT(1048576)` returns `1.00 MiB`. `precision` must be in the range of `[0, 3]`. If not specified,  `precision` defaults to 2. |
 |`HUMAN_READABLE_DECIMAL_BYTE_FORMAT(value[, precision])`| Formats a number in human-readable [SI](https://en.wikipedia.org/wiki/Binary_prefix) format. For example, `HUMAN_READABLE_DECIMAL_BYTE_FORMAT(1048576)` returns `1.04 MB`. `precision` must be in the range of `[0, 3]`. If not specified, `precision` defaults to 2. |
 |`HUMAN_READABLE_DECIMAL_FORMAT(value[, precision])`| Formats a number in human-readable [SI](https://en.wikipedia.org/wiki/Binary_prefix) format. For example, `HUMAN_READABLE_DECIMAL_FORMAT(1048576)` returns `1.04 M`. `precision` must be in the range of `[0, 3]`. If not specified, `precision` defaults to 2. |
-|`SAFE_DIVIDE(x, y)`|Returns the division of x by y guarded on division by 0. In case y is 0 it returns 0, or `null` if `druid.generic.useDefaultValueForNull=false` |
+|`SAFE_DIVIDE(x, y)`|Returns the division of x by y guarded on division by 0. In case y is 0 it returns `null`|
 
 
 ## String functions
@@ -109,7 +109,7 @@ String functions accept strings and return a type appropriate to the function.
 |`RPAD(expr, length[, chars])`|Returns a string of `length` from `expr`. If `expr` is shorter than `length`, right pads `expr` with `chars`, which defaults to space characters. If `expr` exceeds `length`, truncates `expr` to equal `length`.  If `chars` is an empty string, no padding is added. Returns `null` if either `expr` or `chars` is null.|
 |`PARSE_LONG(string[, radix])`|Parses a string into a long (BIGINT) with the given radix, or 10 (decimal) if a radix is not provided.|
 |`POSITION(substring IN expr [FROM startingIndex])`|Returns the index of `substring` within `expr` with indexes starting from 1. The search begins at `startingIndex`. If `startingIndex` is not specified, the default is 1. If `substring` is not found, returns 0.|
-|`REGEXP_EXTRACT(expr, pattern[, index])`|Apply regular expression `pattern` to `expr` and extract a capture group or `NULL` if there is no match. If `index` is unspecified or zero, returns the first substring that matches the pattern. The pattern may match anywhere inside `expr`. To match the entire string, use the `^` and `$` markers at the start and end of your pattern. When `druid.generic.useDefaultValueForNull = true`, it is not possible to differentiate an empty-string match from a non-match (both return `NULL`).|
+|`REGEXP_EXTRACT(expr, pattern[, index])`|Apply regular expression `pattern` to `expr` and extract a capture group or `NULL` if there is no match. If `index` is unspecified or zero, returns the first substring that matches the pattern. The pattern may match anywhere inside `expr`. To match the entire string, use the `^` and `$` markers at the start and end of your pattern.|
 |`REGEXP_LIKE(expr, pattern)`|Returns whether `expr` matches regular expression `pattern`. The pattern may match anywhere inside `expr`; if you want to match the entire string instead, use the `^` and `$` markers at the start and end of your pattern. Similar to [`LIKE`](sql-operators.md#logical-operators), but uses regexps instead of LIKE patterns. Especially useful in WHERE clauses.|
 |`REGEXP_REPLACE(expr, pattern, replacement)`|Replaces all occurrences of regular expression `pattern` within `expr` with `replacement`. The replacement string may refer to capture groups using `$1`, `$2`, etc. The pattern may match anywhere inside `expr`; if you want to match the entire string instead, use the `^` and `$` markers at the start and end of your pattern.|
 |`REPLACE(expr, substring, replacement)`|Replaces instances of `substring` in `expr` with `replacement` and returns the result.|
@@ -223,8 +223,8 @@ The [DataSketches extension](../development/extensions-core/datasketches-extensi
 
 |Function|Notes|
 |--------|-----|
-|`HLL_SKETCH_ESTIMATE(expr[, round])`|Returns the distinct count estimate from an HLL sketch. `expr` must return an HLL sketch. The optional `round` boolean parameter will round the estimate if set to `true`, with a default of `false`.|
-|`HLL_SKETCH_ESTIMATE_WITH_ERROR_BOUNDS(expr[, numStdDev])`|Returns the distinct count estimate and error bounds from an HLL sketch. `expr` must return an HLL sketch. An optional `numStdDev` argument can be provided.|
+|`HLL_SKETCH_ESTIMATE(expr[, round])`|Returns a distinct count estimate from a HLL sketch. `expr` must be a HLL sketch. To round the estimate, set `round` to true. Otherwise, `round` defaults to false.|
+|`HLL_SKETCH_ESTIMATE_WITH_ERROR_BOUNDS(expr[, numStdDev])`|Returns a distinct count estimate and error bounds from a HLL sketch. `expr` must be a HLL sketch. `numStdDev` argument specifies the number of standard deviations of the bounds. `numStdDev` must be `1`, `2`, or `3`. |
 |`HLL_SKETCH_UNION([lgK, tgtHllType], expr0, expr1, ...)`|Returns a union of HLL sketches, where each input expression must return an HLL sketch. The `lgK` and `tgtHllType` can be optionally specified as the first parameter; if provided, both optional parameters must be specified.|
 |`HLL_SKETCH_TO_STRING(expr)`|Returns a human-readable string representation of an HLL sketch for debugging. `expr` must return an HLL sketch.|
 
@@ -276,7 +276,7 @@ The [DataSketches extension](../development/extensions-core/datasketches-extensi
 |`CASE expr WHEN value1 THEN result1 \[ WHEN value2 THEN result2 ... \] \[ ELSE resultN \] END`|Simple CASE.|
 |`CASE WHEN boolean_expr1 THEN result1 \[ WHEN boolean_expr2 THEN result2 ... \] \[ ELSE resultN \] END`|Searched CASE.|
 |`CAST(value AS TYPE)`|Cast value to another type. See [Data types](sql-data-types.md) for details about how Druid SQL handles CAST.|
-|`COALESCE(value1, value2, ...)`|Returns the first value that is neither NULL nor empty string.|
+|`COALESCE(value1, value2, ...)`|Returns the first non-null value.|
 |`DECODE_BASE64_COMPLEX(dataType, expr)`| Decodes a Base64-encoded string into a complex data type, where `dataType` is the complex data type and `expr` is the Base64-encoded string to decode. The `hyperUnique` and `serializablePairLongString` data types are supported by default. You can enable support for the following complex data types by loading their extensions:<br/><ul><li>`druid-bloom-filter`: `bloom`</li><li>`druid-datasketches`: `arrayOfDoublesSketch`, `HLLSketch`, `KllDoublesSketch`, `KllFloatsSketch`, `quantilesDoublesSketch`, `thetaSketch`</li><li>`druid-histogram`: `approximateHistogram`, `fixedBucketsHistogram`</li><li>`druid-stats`: `variance`</li><li>`druid-compressed-bigdecimal`: `compressedBigDecimal`</li><li>`druid-momentsketch`: `momentSketch`</li><li>`druid-tdigestsketch`: `tDigestSketch`</li></ul>|
 |`NULLIF(value1, value2)`|Returns NULL if `value1` and `value2` match, else returns `value1`.|
 |`NVL(value1, value2)`|Returns `value1` if `value1` is not null, otherwise `value2`.|

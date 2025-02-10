@@ -19,7 +19,6 @@
 
 package org.apache.druid.sql.calcite.rel;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -46,11 +45,6 @@ import java.util.Collections;
 
 public class DruidQueryTest
 {
-
-  static {
-    NullHandling.initializeForTests();
-  }
-
   private final DimFilter selectorFilter = new SelectorDimFilter("column", "value", null);
   private final DimFilter otherFilter = new SelectorDimFilter("column_2", "value_2", null);
   private final DimFilter filterWithInterval = new AndDimFilter(

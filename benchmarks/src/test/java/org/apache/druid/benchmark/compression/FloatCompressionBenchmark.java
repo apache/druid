@@ -20,7 +20,6 @@
 package org.apache.druid.benchmark.compression;
 
 import com.google.common.base.Supplier;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.MappedByteBufferHandler;
 import org.apache.druid.segment.data.ColumnarFloats;
@@ -56,10 +55,6 @@ import java.util.concurrent.TimeUnit;
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
 public class FloatCompressionBenchmark
 {
-  static {
-    NullHandling.initializeForTests();
-  }
-
   @Param("floatCompress/")
   private static String dirPath;
 
@@ -80,7 +75,7 @@ public class FloatCompressionBenchmark
     File compFile = new File(dir, file + "-" + strategy);
     bufferHandler = FileUtils.map(compFile);
     ByteBuffer buffer = bufferHandler.get();
-    supplier = CompressedColumnarFloatsSupplier.fromByteBuffer(buffer, ByteOrder.nativeOrder());
+    supplier = CompressedColumnarFloatsSupplier.fromByteBuffer(buffer, ByteOrder.nativeOrder(), null);
   }
 
   @TearDown

@@ -20,7 +20,6 @@
 package org.apache.druid.math.expr;
 
 import com.google.common.collect.ImmutableSet;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
@@ -115,6 +114,7 @@ abstract class UnaryExpr implements Expr
 @SuppressWarnings("ClassName")
 class UnaryMinusExpr extends UnaryExpr
 {
+
   UnaryMinusExpr(String op, Expr expr)
   {
     super(op, expr);
@@ -134,7 +134,7 @@ class UnaryMinusExpr extends UnaryExpr
       return ExprEval.of(((BigInteger) expr.getLiteralValue()).multiply(BigInteger.valueOf(-1)).longValueExact());
     }
     ExprEval ret = expr.eval(bindings);
-    if (NullHandling.sqlCompatible() && (ret.value() == null)) {
+    if (ret.value() == null) {
       return ExprEval.of(null);
     }
     if (ret.type().is(ExprType.LONG)) {
@@ -155,7 +155,7 @@ class UnaryMinusExpr extends UnaryExpr
   @Override
   public <T> ExprVectorProcessor<T> asVectorProcessor(VectorInputBindingInspector inspector)
   {
-    return VectorMathProcessors.negate(inspector, expr);
+    return VectorMathProcessors.negate().asProcessor(inspector, expr);
   }
 }
 
@@ -177,7 +177,7 @@ class UnaryNotExpr extends UnaryExpr
   public ExprEval eval(ObjectBinding bindings)
   {
     ExprEval ret = expr.eval(bindings);
-    if (NullHandling.sqlCompatible() && (ret.value() == null)) {
+    if (ret.value() == null) {
       return ExprEval.of(null);
     }
     return ExprEval.ofLongBoolean(!ret.asBoolean());

@@ -24,7 +24,7 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import com.sun.jersey.spi.container.ContainerRequest;
-import org.apache.druid.server.security.Access;
+import org.apache.druid.server.security.AuthorizationResult;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
@@ -38,8 +38,8 @@ import javax.ws.rs.core.PathSegment;
 /**
  * Use this ResourceFilter when the datasource information is present after "rules" segment in the request Path
  * Here are some example paths where this filter is used -
- *  - druid/coordinator/v1/rules/
- * */
+ * - druid/coordinator/v1/rules/
+ */
 
 public class RulesResourceFilter extends AbstractResourceFilter
 {
@@ -75,14 +75,14 @@ public class RulesResourceFilter extends AbstractResourceFilter
         getAction(request)
     );
 
-    final Access authResult = AuthorizationUtils.authorizeResourceAction(
+    final AuthorizationResult authResult = AuthorizationUtils.authorizeResourceAction(
         getReq(),
         resourceAction,
         getAuthorizerMapper()
     );
 
-    if (!authResult.isAllowed()) {
-      throw new ForbiddenException(authResult.toString());
+    if (!authResult.allowAccessWithNoRestriction()) {
+      throw new ForbiddenException(authResult.getErrorMessage());
     }
 
     return request;

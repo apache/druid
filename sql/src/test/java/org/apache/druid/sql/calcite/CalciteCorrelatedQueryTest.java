@@ -46,6 +46,7 @@ import org.apache.druid.sql.calcite.DecoupledTestConfig.IgnoreQueriesReason;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
@@ -126,9 +127,7 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
                                                 .setDimensions(new DefaultDimensionSpec("d1", "_d0"))
                                                 .setAggregatorSpecs(
                                                     new DoubleSumAggregatorFactory("_a0:sum", "a0"),
-                                                    useDefault
-                                                    ? new CountAggregatorFactory("_a0:count")
-                                                    : new FilteredAggregatorFactory(
+                                                    new FilteredAggregatorFactory(
                                                         new CountAggregatorFactory("_a0:count"),
                                                         notNull("a0")
                                                     )

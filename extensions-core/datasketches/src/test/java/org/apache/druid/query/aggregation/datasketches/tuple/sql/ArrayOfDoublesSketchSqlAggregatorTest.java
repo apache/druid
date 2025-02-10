@@ -23,7 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Injector;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.guice.DruidInjectorBuilder;
+import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Druids;
@@ -52,6 +52,7 @@ import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
 import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.calcite.util.DruidModuleCollection;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.timeline.DataSegment;
@@ -111,10 +112,9 @@ public class ArrayOfDoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
     }
 
     @Override
-    public void configureGuice(DruidInjectorBuilder builder)
+    public DruidModule getCoreModule()
     {
-      super.configureGuice(builder);
-      builder.addModule(new ArrayOfDoublesSketchModule());
+      return DruidModuleCollection.of(super.getCoreModule(), new ArrayOfDoublesSketchModule());
     }
 
     @Override
@@ -399,7 +399,7 @@ public class ArrayOfDoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                       ImmutableList.of(
                           new ArrayOfDoublesSketchToMetricsSumEstimatePostAggregator(
                               "p1",
-                              expressionPostAgg("p0", "null", null)
+                              expressionPostAgg("p0", "null", ColumnType.STRING)
                           ),
                           new ArrayOfDoublesSketchSetOpPostAggregator(
                               "p4",
@@ -407,8 +407,8 @@ public class ArrayOfDoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                               null,
                               null,
                               ImmutableList.of(
-                                  expressionPostAgg("p2", "null", null),
-                                  expressionPostAgg("p3", "null", null)
+                                  expressionPostAgg("p2", "null", ColumnType.STRING),
+                                  expressionPostAgg("p3", "null", ColumnType.STRING)
                               )
                           ),
                           new ArrayOfDoublesSketchSetOpPostAggregator(
@@ -417,7 +417,7 @@ public class ArrayOfDoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                               null,
                               null,
                               ImmutableList.of(
-                                  expressionPostAgg("p5", "null", null),
+                                  expressionPostAgg("p5", "null", ColumnType.STRING),
                                   new FieldAccessPostAggregator("p6", "a1")
                               )
                           ),
@@ -428,7 +428,7 @@ public class ArrayOfDoublesSketchSqlAggregatorTest extends BaseCalciteQueryTest
                               null,
                               ImmutableList.of(
                                   new FieldAccessPostAggregator("p8", "a1"),
-                                  expressionPostAgg("p9", "null", null)
+                                  expressionPostAgg("p9", "null", ColumnType.STRING)
                               )
                           )
                       )

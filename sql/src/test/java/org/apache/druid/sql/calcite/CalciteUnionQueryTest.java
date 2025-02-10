@@ -20,7 +20,6 @@
 package org.apache.druid.sql.calcite;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.TableDataSource;
@@ -290,9 +289,8 @@ public class CalciteUnionQueryTest extends BaseCalciteQueryTest
               ResultMatchMode.RELAX_NULLS,
               ImmutableList.of(
                   new Object[] {null, "10.1", 2.0F},
-                  // these 2 results invert order because in compatible mode `null` becomes "" and thus they change order
-                  NullHandling.sqlCompatible() ? new Object[] {null, "abc", 6.0F} : new Object[] {"", "2", 3.0F},
-                  NullHandling.sqlCompatible() ? new Object[] {"", "2", 3.0F} : new Object[] {null, "abc", 6.0F},
+                  new Object[] {null, "abc", 6.0F},
+                  new Object[] {"", "2", 3.0F},
                   new Object[] {"a", "", 1.0F},
                   new Object[] {"a", "1", 4.0F},
                   new Object[] {"abc", "def", 5.0F},

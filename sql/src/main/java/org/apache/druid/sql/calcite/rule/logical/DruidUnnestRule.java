@@ -46,6 +46,7 @@ public class DruidUnnestRule extends ConverterRule
   {
     LogicalUnnest unnest = (LogicalUnnest) rel;
     RelTraitSet newTrait = unnest.getTraitSet().replace(DruidLogicalConvention.instance());
+
     return new DruidUnnest(
         rel.getCluster(),
         newTrait,
@@ -54,7 +55,7 @@ public class DruidUnnestRule extends ConverterRule
             DruidLogicalConvention.instance()
         ),
         unnest.getUnnestExpr(),
-        unnest.getRowType(),
+        unnest.unnestFieldType,
         unnest.filter
     );
   }

@@ -33,7 +33,6 @@ import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.fun.SqlTrimFunction;
 import org.apache.calcite.sql.parser.SqlParserPos;
 import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.StringUtils;
@@ -373,7 +372,7 @@ public class ExpressionsTest extends CalciteTestBase
             SimpleExtraction.of("s", new RegexDimExtractionFn("", 0, true, null)),
             "regexp_extract(\"s\",'')"
         ),
-        NullHandling.emptyToNullIfNeeded("")
+        ""
     );
 
     testHelper.testExpressionString(
@@ -386,7 +385,7 @@ public class ExpressionsTest extends CalciteTestBase
             SimpleExtraction.of("s", new RegexDimExtractionFn("", 0, true, null)),
             "regexp_extract(\"s\",'')"
         ),
-        NullHandling.emptyToNullIfNeeded("")
+        ""
     );
 
     testHelper.testExpressionString(
@@ -598,7 +597,7 @@ public class ExpressionsTest extends CalciteTestBase
             testHelper.makeLiteral("(.)")
         ),
         makeExpression("regexp_like(null,'(.)')"),
-        NullHandling.sqlCompatible() ? null : 0L
+        null
     );
 
     testHelper.testExpressionString(
@@ -608,9 +607,7 @@ public class ExpressionsTest extends CalciteTestBase
             testHelper.makeLiteral("")
         ),
         makeExpression("regexp_like(null,'')"),
-
-        // In SQL-compatible mode, nulls don't match anything. Otherwise, they match like empty strings.
-        NullHandling.sqlCompatible() ? null : 1L
+        null
     );
 
     testHelper.testExpressionString(
@@ -620,7 +617,7 @@ public class ExpressionsTest extends CalciteTestBase
             testHelper.makeLiteral("null")
         ),
         makeExpression("regexp_like(null,'null')"),
-        NullHandling.sqlCompatible() ? null : 0L
+        null
     );
   }
 
@@ -806,7 +803,7 @@ public class ExpressionsTest extends CalciteTestBase
             testHelper.makeLiteral("ax")
         ),
         makeExpression("(strpos(null,'ax') + 1)"),
-        NullHandling.replaceWithDefault() ? 0L : null
+        null
     );
   }
 
@@ -1276,35 +1273,6 @@ public class ExpressionsTest extends CalciteTestBase
         ),
         -2.0
     );
-  }
-
-  @Test
-  public void testRoundWithInvalidArgument()
-  {
-
-    final SqlOperator roundFunction = getOperatorConversion(SqlStdOperatorTable.ROUND).calciteOperator();
-
-    if (!NullHandling.sqlCompatible()) {
-      Throwable t = Assert.assertThrows(
-          DruidException.class,
-          () -> testHelper.testExpression(
-              roundFunction,
-              testHelper.makeInputRef("s"),
-              DruidExpression.ofExpression(
-                  ColumnType.STRING,
-                  DruidExpression.functionCall("round"),
-                  ImmutableList.of(
-                      DruidExpression.ofColumn(ColumnType.STRING, "s")
-                  )
-              ),
-              NullHandling.sqlCompatible() ? null : "IAE Exception"
-          )
-      );
-      Assert.assertEquals(
-          "Function[round] first argument should be a LONG or DOUBLE but got STRING instead",
-          t.getMessage()
-      );
-    }
   }
 
   @Test
@@ -2832,7 +2800,7 @@ public class ExpressionsTest extends CalciteTestBase
     );
 
     assertDruidLiteral(
-        new DruidLiteral(null, null),
+        new DruidLiteral(ExpressionType.STRING, null),
         Expressions.calciteLiteralToDruidLiteral(
             plannerContext,
             rexBuilder.makeNullLiteral(rexBuilder.getTypeFactory().createSqlType(SqlTypeName.NULL))

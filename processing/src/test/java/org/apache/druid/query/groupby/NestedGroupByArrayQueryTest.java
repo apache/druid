@@ -21,7 +21,6 @@ package org.apache.druid.query.groupby;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -291,7 +290,7 @@ public class NestedGroupByArrayQueryTest
     runResults(
         groupQuery,
         ImmutableList.of(
-            new Object[]{NullHandling.defaultDoubleValue(), 28L}
+            new Object[]{null, 28L}
         )
     );
   }
@@ -320,7 +319,7 @@ public class NestedGroupByArrayQueryTest
     runResults(
         groupQuery,
         ImmutableList.of(
-            new Object[]{NullHandling.defaultLongValue(), 28L}
+            new Object[]{null, 28L}
         )
     );
   }
@@ -349,7 +348,7 @@ public class NestedGroupByArrayQueryTest
     runResults(
         groupQuery,
         ImmutableList.of(
-            new Object[]{NullHandling.defaultFloatValue(), 28L}
+            new Object[]{null, 28L}
         )
     );
   }
@@ -378,7 +377,7 @@ public class NestedGroupByArrayQueryTest
     runResults(
         groupQuery,
         ImmutableList.of(
-            new Object[]{NullHandling.defaultLongValue(), 16L},
+            new Object[]{null, 16L},
             new Object[]{3L, 12L}
         )
     );
@@ -408,7 +407,7 @@ public class NestedGroupByArrayQueryTest
     runResults(
         groupQuery,
         ImmutableList.of(
-            new Object[]{NullHandling.defaultDoubleValue(), 16L},
+            new Object[]{null, 16L},
             new Object[]{3.0, 12L}
         )
     );
@@ -438,7 +437,7 @@ public class NestedGroupByArrayQueryTest
     runResults(
         groupQuery,
         ImmutableList.of(
-            new Object[]{NullHandling.defaultFloatValue(), 16L},
+            new Object[]{null, 16L},
             new Object[]{3.0f, 12L}
         )
     );

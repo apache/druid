@@ -20,7 +20,6 @@
 package org.apache.druid.msq.statistics;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.ClusterByPartition;
 import org.apache.druid.frame.key.ClusterByPartitions;
@@ -46,10 +45,6 @@ public class QuantilesSketchKeyCollectorTest
   private final RowSignature signature = RowSignature.builder().add("x", ColumnType.LONG).build();
   private final Comparator<RowKey> comparator = clusterBy.keyComparator(signature);
   private final int numKeys = 500_000;
-
-  static {
-    NullHandling.initializeForTests();
-  }
 
   @Test
   public void test_empty()

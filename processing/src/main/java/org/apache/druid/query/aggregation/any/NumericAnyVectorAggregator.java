@@ -36,7 +36,6 @@ public abstract class NumericAnyVectorAggregator implements VectorAggregator
   private static final byte BYTE_FLAG_NULL_MASK = 0x01;
   private static final int FOUND_VALUE_OFFSET = Byte.BYTES;
 
-  private final boolean replaceWithDefault = NullHandling.replaceWithDefault();
   protected final VectorValueSelector vectorValueSelector;
 
   public NumericAnyVectorAggregator(VectorValueSelector vectorValueSelector)
@@ -65,7 +64,7 @@ public abstract class NumericAnyVectorAggregator implements VectorAggregator
   @Override
   public void init(ByteBuffer buf, int position)
   {
-    buf.put(position, replaceWithDefault ? NullHandling.IS_NOT_NULL_BYTE : NullHandling.IS_NULL_BYTE);
+    buf.put(position, NullHandling.IS_NULL_BYTE);
     initValue(buf, position + FOUND_VALUE_OFFSET);
   }
 
@@ -129,11 +128,6 @@ public abstract class NumericAnyVectorAggregator implements VectorAggregator
 
   private void putNull(ByteBuffer buf, int position)
   {
-    if (!replaceWithDefault) {
-      buf.put(position, (byte) (BYTE_FLAG_FOUND_MASK | NullHandling.IS_NULL_BYTE));
-    } else {
-      initValue(buf, position + FOUND_VALUE_OFFSET);
-      buf.put(position, (byte) (BYTE_FLAG_FOUND_MASK | NullHandling.IS_NOT_NULL_BYTE));
-    }
+    buf.put(position, (byte) (BYTE_FLAG_FOUND_MASK | NullHandling.IS_NULL_BYTE));
   }
 }

@@ -39,6 +39,7 @@ export interface PortalBubbleOpenOn {
 export interface PortalBubbleProps {
   className?: string;
   openOn: PortalBubbleOpenOn | undefined;
+  offsetElement?: Element;
   direction?: 'up' | 'down';
   onClose?(): void;
   mute?: boolean;
@@ -46,14 +47,22 @@ export interface PortalBubbleProps {
 }
 
 export const PortalBubble = function PortalBubble(props: PortalBubbleProps) {
-  const { className, openOn, direction = 'up', onClose, mute, minimal } = props;
+  const { className, openOn, offsetElement, direction = 'up', onClose, mute, minimal } = props;
   const [myWidth, setMyWidth] = useState(200);
   if (!openOn) return null;
 
   const halfMyWidth = myWidth / 2;
 
-  const x = clamp(openOn.x, halfMyWidth, window.innerWidth - halfMyWidth);
-  const offset = clamp(x - openOn.x, -halfMyWidth, halfMyWidth);
+  let openOnX = openOn.x;
+  let openOnY = openOn.y;
+  if (offsetElement) {
+    const rect = offsetElement.getBoundingClientRect();
+    openOnX += rect.left;
+    openOnY += rect.top;
+  }
+
+  const x = clamp(openOnX, halfMyWidth, window.innerWidth - halfMyWidth);
+  const offset = clamp(x - openOnX, -halfMyWidth, halfMyWidth);
 
   return createPortal(
     <div
@@ -66,7 +75,7 @@ export const PortalBubble = function PortalBubble(props: PortalBubbleProps) {
       }}
       style={{
         left: x,
-        top: openOn.y + (minimal ? 0 : direction === 'up' ? -SHPITZ_SIZE : SHPITZ_SIZE),
+        top: openOnY + (minimal ? 0 : direction === 'up' ? -SHPITZ_SIZE : SHPITZ_SIZE),
       }}
     >
       {(openOn.title || onClose) && (

@@ -29,7 +29,7 @@
 
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>32.0.0-SNAPSHOT</version>
+    <version>33.0.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>Druid</name>
@@ -105,7 +105,7 @@
         <mysql.version>8.2.0</mysql.version>
         <mariadb.version>2.7.3</mariadb.version>
         <netty3.version>3.10.6.Final</netty3.version>
-        <netty4.version>4.1.108.Final</netty4.version>
+        <netty4.version>4.1.116.Final</netty4.version>
         <postgresql.version>42.7.2</postgresql.version>
         <protobuf.version>3.25.5</protobuf.version>
         <resilience4j.version>1.3.1</resilience4j.version>
@@ -194,6 +194,7 @@
         <module>cloud/gcp-common</module>
         <!-- Core extensions -->
         <module>extensions-core/kubernetes-extensions</module>
+        <module>extensions-core/kubernetes-overlord-extensions</module>
         <module>extensions-core/avro-extensions</module>
         <module>extensions-core/azure-extensions</module>
         <module>extensions-core/datasketches</module>
@@ -220,7 +221,6 @@
         <module>extensions-core/simple-client-sslcontext</module>
         <module>extensions-core/druid-basic-security</module>
         <module>extensions-core/google-extensions</module>
-        <module>extensions-core/druid-ranger-security</module>
         <module>extensions-core/druid-catalog</module>
         <module>extensions-core/testing-tools</module>
         <!-- Community extensions -->
@@ -251,12 +251,12 @@
         <module>extensions-contrib/aliyun-oss-extensions</module>
         <module>extensions-contrib/prometheus-emitter</module>
         <module>extensions-contrib/opentelemetry-emitter</module>
-        <module>extensions-contrib/kubernetes-overlord-extensions</module>
         <module>extensions-contrib/grpc-query</module>
         <module>extensions-contrib/druid-iceberg-extensions</module>
         <module>extensions-contrib/druid-deltalake-extensions</module>
         <module>extensions-contrib/spectator-histogram</module>
         <module>extensions-contrib/rabbit-stream-indexing-service</module>
+        <module>extensions-contrib/druid-ranger-security</module>
         <!-- distribution packaging -->
         <module>distribution</module>
         <!-- Revised integration tests -->
@@ -1492,6 +1492,15 @@
                         <exclude>org/apache/druid/common/aws/AWSCredentials*</exclude>
                         <exclude>com/fasterxml/jackson/databind/*</exclude>
                     </excludes>
+                    <!-- fileSets specify the target locations which will be scanned by jacoco:merge -->
+                    <fileSets>
+                        <fileSet>
+                            <directory>${project.basedir}</directory>
+                            <includes>
+                                <include>**/target/jacoco*.exec</include>
+                            </includes>
+                        </fileSet>
+                    </fileSets>
                 </configuration>
                 <executions>
                     <execution>
@@ -1647,12 +1656,7 @@
                             <goal>check</goal>
                         </goals>
                         <configuration>
-                            <signature>
-                                <groupId>org.codehaus.mojo.signature
-                                </groupId>
-                                <artifactId>java18</artifactId>
-                                <version>1.0</version>
-                            </signature>
+                            <!-- checks for ${java.version}, TODO: replace this plugin with release flag with javac, see https://openjdk.org/jeps/247  -->
                             <ignores>
                                 <!-- Some of our code uses sun.* classes directly, which are not part of
                                      the JDK signature (although they are there anyway). -->

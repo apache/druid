@@ -16,11 +16,21 @@
  * limitations under the License.
  */
 
-import type { Column, FilterPattern } from 'druid-query-toolkit';
+import type { Timezone } from 'chronoshift';
+import { Duration } from 'chronoshift';
+import { isDate } from 'date-fns';
+import type { Column, FilterPattern, SqlExpression } from 'druid-query-toolkit';
+import {
+  filterPatternsToExpression,
+  filterPatternToExpression,
+  fitFilterPattern,
+  fitFilterPatterns,
+  SqlComparison,
+  SqlMulti,
+  SqlQuery,
+} from 'druid-query-toolkit';
 
-import { Duration } from '../../../utils';
-
-import { DATE_FORMAT } from './date-format';
+import { formatIsoDateRange, prettyFormatIsoDateWithMsIfNeeded } from '../../../utils';
 
 const TIME_RELATIVE_TYPES: Record<string, string> = {
   'maxDataTime/': 'latest',
@@ -64,11 +74,15 @@ export function initPatternForColumn(column: Column): FilterPattern {
   }
 }
 
-export function formatPatternWithoutNegation(pattern: FilterPattern): string {
+export function formatPatternWithoutNegation(pattern: FilterPattern, timezone: Timezone): string {
   switch (pattern.type) {
     case 'values':
       return `${pattern.column}: ${pattern.values
-        .map(v => (v === '' ? 'empty' : String(v)))
+        .map(v => {
+          if (v === '') return 'empty';
+          if (isDate(v)) return prettyFormatIsoDateWithMsIfNeeded(v as Date);
+          return String(v);
+        })
         .join(', ')}`;
 
     case 'contains':
@@ -78,7 +92,7 @@ export function formatPatternWithoutNegation(pattern: FilterPattern): string {
       return `${pattern.column} ~ /${pattern.regexp}/`;
 
     case 'timeInterval': {
-      return DATE_FORMAT.formatRange(pattern.start, pattern.end);
+      return formatIsoDateRange(pattern.start, pattern.end, timezone);
     }
 
     case 'timeRelative': {
@@ -99,4 +113,68 @@ export function formatPatternWithoutNegation(pattern: FilterPattern): string {
     case 'custom':
       return String(pattern.expression);
   }
+}
+
+export function patternToBoundsQuery(
+  source: SqlQuery,
+  filterPattern: FilterPattern,
+): SqlQuery | undefined {
+  if (filterPattern.type !== 'timeRelative') return;
+  const ex = filterPatternToExpression(filterPattern);
+  if (!(ex instanceof SqlMulti)) return;
+  if (ex.numArgs() !== 2) return;
+  const [startEx, endEx] = ex.getArgArray();
+  if (!(startEx instanceof SqlComparison)) return;
+  if (!(endEx instanceof SqlComparison)) return;
+  return SqlQuery.from(source)
+    .changeSelectExpressions([startEx.lhs.as('start'), (endEx.rhs as SqlExpression).as('end')])
+    .changeLimitValue(1); // Todo: make this better
+}
+
+export function addOrUpdatePattern(
+  patterns: readonly FilterPattern[],
+  oldPattern: FilterPattern | undefined,
+  newPattern: FilterPattern,
+): FilterPattern[] {
+  let added = false;
+  const newPatterns = patterns.map(pattern => {
+    if (pattern === oldPattern) {
+      added = true;
+      return newPattern;
+    } else {
+      return pattern;
+    }
+  });
+  if (!added) {
+    newPatterns.push(newPattern);
+  }
+  return newPatterns;
+}
+
+export function updateFilterPattern(
+  patterns: readonly FilterPattern[],
+  newPattern: FilterPattern,
+): FilterPattern[] {
+  let found = false;
+  const newPatterns = patterns.map(pattern => {
+    if (!('column' in pattern) || !('column' in newPattern)) return pattern;
+    if (pattern.column === newPattern.column) {
+      found = true;
+      return newPattern;
+    } else {
+      return pattern;
+    }
+  });
+
+  if (found) {
+    return newPatterns;
+  } else {
+    return [...newPatterns, newPattern];
+  }
+}
+
+export function updateFilterClause(filter: SqlExpression, clause: SqlExpression) {
+  return filterPatternsToExpression(
+    updateFilterPattern(fitFilterPatterns(filter), fitFilterPattern(clause)),
+  );
 }

@@ -19,10 +19,8 @@
 
 package org.apache.druid.segment.data;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.segment.writeout.OnHeapMemorySegmentWriteOutMedium;
-import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -35,12 +33,6 @@ public class GenericIndexedWriterTest
 {
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
-
-  @BeforeClass
-  public static void staticSetUp()
-  {
-    NullHandling.initializeForTests();
-  }
 
   @Test
   public void writeLargeValueIntoLargeColumn() throws IOException

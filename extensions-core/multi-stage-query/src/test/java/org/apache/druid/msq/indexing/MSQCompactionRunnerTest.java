@@ -27,7 +27,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskTransformSpec;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
@@ -76,7 +75,6 @@ import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.joda.time.Interval;
 import org.junit.Assert;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
@@ -104,7 +102,7 @@ public class MSQCompactionRunnerTest
   private static final StringDimensionSchema STRING_DIMENSION = new StringDimensionSchema("string_dim", null, false);
   private static final StringDimensionSchema MV_STRING_DIMENSION = new StringDimensionSchema("mv_string_dim", null, null);
   private static final LongDimensionSchema LONG_DIMENSION = new LongDimensionSchema("long_dim");
-  private static final NestedDataColumnSchema NESTED_DIMENSION = new NestedDataColumnSchema("nested_dim", 4);
+  private static final NestedDataColumnSchema NESTED_DIMENSION = new NestedDataColumnSchema("nested_dim", 5);
   private static final AutoTypeColumnSchema AUTO_DIMENSION = new AutoTypeColumnSchema("auto_dim", null);
   private static final List<DimensionSchema> DIMENSIONS = ImmutableList.of(
       STRING_DIMENSION,
@@ -131,13 +129,6 @@ public class MSQCompactionRunnerTest
   private static final List<AggregatorFactory> AGGREGATORS = ImmutableList.of(AGG1, AGG2);
   private static final MSQCompactionRunner MSQ_COMPACTION_RUNNER = new MSQCompactionRunner(JSON_MAPPER, TestExprMacroTable.INSTANCE, null);
   private static final List<String> PARTITION_DIMENSIONS = Collections.singletonList(STRING_DIMENSION.getName());
-
-
-  @BeforeClass
-  public static void setupClass()
-  {
-    NullHandling.initializeForTests();
-  }
 
   @Test
   public void testMultipleDisjointCompactionIntervalsAreInvalid()
