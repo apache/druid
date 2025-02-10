@@ -63,11 +63,4 @@ public interface MetadataSupervisorManager
    * @return number of supervisor removed
    */
   int removeTerminatedSupervisorsOlderThan(long timestamp);
-  /**
-   * Checks whether the submitted spec is different from the spec in the metastore
-   *
-   * @param SupervisorSpec spec being submitted
-   * @return whether the spec was modified
-   */
-  boolean wasSupervisorSpecModified(SupervisorSpec spec);
 }

@@ -123,7 +123,8 @@ public class SupervisorResource
   public Response specPost(
       final SupervisorSpec spec,
       @Context final HttpServletRequest req,
-      @QueryParam("restartIfUnmodified") @DefaultValue("true") boolean restartIfUnmodified)
+      @QueryParam("restartIfUnmodified") @DefaultValue("true") boolean restartIfUnmodified
+  )
   {
     return asLeaderWithSupervisorManager(
         manager -> {
@@ -155,7 +156,7 @@ public class SupervisorResource
           if (!authResult.allowAccessWithNoRestriction()) {
             throw new ForbiddenException(authResult.getErrorMessage());
           }
-          if (!restartIfUnmodified && !manager.wasSupervisorSpecModified(spec)) {
+          if (!restartIfUnmodified && !manager.shouldUpdateSupervisor(spec)) {
             return Response.ok(ImmutableMap.of("id", spec.getId())).build();
           }
 

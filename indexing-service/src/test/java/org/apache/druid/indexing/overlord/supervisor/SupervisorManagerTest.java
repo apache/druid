@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.overlord.supervisor;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -33,6 +34,7 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbe
 import org.apache.druid.indexing.seekablestream.TestSeekableStreamDataSourceMetadata;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisor;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorSpec;
+import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.metadata.MetadataSupervisorManager;
@@ -60,6 +62,7 @@ import java.util.Map;
 @RunWith(EasyMockRunner.class)
 public class SupervisorManagerTest extends EasyMockSupport
 {
+  private static final ObjectMapper MAPPER = new DefaultObjectMapper();
   @Mock
   private MetadataSupervisorManager metadataSupervisorManager;
 
@@ -80,7 +83,7 @@ public class SupervisorManagerTest extends EasyMockSupport
   @Before
   public void setUp()
   {
-    manager = new SupervisorManager(metadataSupervisorManager);
+    manager = new SupervisorManager(MAPPER, metadataSupervisorManager);
   }
 
   @Test

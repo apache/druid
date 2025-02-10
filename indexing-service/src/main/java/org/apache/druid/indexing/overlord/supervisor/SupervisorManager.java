@@ -19,12 +19,15 @@
 
 package org.apache.druid.indexing.overlord.supervisor;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
@@ -42,6 +45,7 @@ import org.apache.druid.segment.incremental.ParseExceptionReport;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -62,10 +66,12 @@ public class SupervisorManager
   private final Object lock = new Object();
 
   private volatile boolean started = false;
+  private final ObjectMapper jsonMapper;
 
   @Inject
-  public SupervisorManager(MetadataSupervisorManager metadataSupervisorManager)
+  public SupervisorManager(@Json ObjectMapper jsonMapper, MetadataSupervisorManager metadataSupervisorManager)
   {
+    this.jsonMapper = jsonMapper;
     this.metadataSupervisorManager = metadataSupervisorManager;
   }
 
@@ -166,7 +172,7 @@ public class SupervisorManager
     }
   }
 
-  public boolean wasSupervisorSpecModified(SupervisorSpec spec)
+  public boolean shouldUpdateSupervisor(SupervisorSpec spec)
   {
     Preconditions.checkState(started, "SupervisorManager not started");
     Preconditions.checkNotNull(spec, "spec");
@@ -174,8 +180,20 @@ public class SupervisorManager
     Preconditions.checkNotNull(spec.getDataSources(), "spec.getDatasources()");
     synchronized (lock) {
       Preconditions.checkState(started, "SupervisorManager not started");
-      return metadataSupervisorManager.wasSupervisorSpecModified(spec);
+      try {
+        byte[] specAsBytes = jsonMapper.writeValueAsBytes(spec);
+        Pair<Supervisor, SupervisorSpec> currentSupervisor = supervisors.get(spec.getId());
+        if (currentSupervisor != null &&
+            Arrays.equals(specAsBytes, jsonMapper.writeValueAsBytes(currentSupervisor.rhs))
+        ) {
+          return false;
+        }
+      }
+      catch (JsonProcessingException ex) {
+        log.warn("Failed to write spec as bytes for spec_id[%s]", spec.getId());
+      }
     }
+    return true;
   }
 
   public boolean stopAndRemoveSupervisor(String id)
@@ -375,8 +393,12 @@ public class SupervisorManager
       return true;
     }
     catch (Exception e) {
-      log.error(e, "Failed to upgrade pending segment[%s] to new pending segment[%s] on Supervisor[%s].",
-                upgradedPendingSegment.getUpgradedFromSegmentId(), upgradedPendingSegment.getId().getVersion(), supervisorId);
+      log.error(e,
+                "Failed to upgrade pending segment[%s] to new pending segment[%s] on Supervisor[%s].",
+                upgradedPendingSegment.getUpgradedFromSegmentId(),
+                upgradedPendingSegment.getId().getVersion(),
+                supervisorId
+      );
     }
     return false;
   }
