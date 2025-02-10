@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import org.apache.druid.common.config.Configs;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
@@ -54,6 +53,7 @@ import org.skife.jdbi.v2.PreparedBatch;
 import org.skife.jdbi.v2.ResultIterator;
 import org.skife.jdbi.v2.util.StringMapper;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -607,14 +607,14 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
             preparedBatch.add()
                          .bind("id", id)
                          .bind("dataSource", segment.getDataSource())
-                         .bind("created_date", toNonNullString(segmentPlus.getCreatedDate()))
+                         .bind("created_date", nullSafeString(segmentPlus.getCreatedDate()))
                          .bind("start", segment.getInterval().getStart().toString())
                          .bind("end", segment.getInterval().getEnd().toString())
                          .bind("partitioned", !(segment.getShardSpec() instanceof NoneShardSpec))
                          .bind("version", segment.getVersion())
                          .bind("used", Boolean.TRUE.equals(segmentPlus.getUsed()))
                          .bind("payload", jsonMapper.writeValueAsBytes(segment))
-                         .bind("used_status_last_updated", toNonNullString(segmentPlus.getUsedStatusLastUpdatedDate()))
+                         .bind("used_status_last_updated", nullSafeString(segmentPlus.getUsedStatusLastUpdatedDate()))
                          .bind("upgraded_from_segment_id", segmentPlus.getUpgradedFromSegmentId());
           }
 
@@ -628,8 +628,9 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
     );
   }
 
-  private static String toNonNullString(DateTime date)
+  @Nullable
+  private static String nullSafeString(DateTime date)
   {
-    return Configs.valueOrDefault(date, DateTimes.nowUtc()).toString();
+    return date == null ? null : date.toString();
   }
 }

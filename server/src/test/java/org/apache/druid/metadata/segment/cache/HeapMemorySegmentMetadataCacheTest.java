@@ -492,7 +492,7 @@ public class HeapMemorySegmentMetadataCacheTest
     final DatasourceSegmentCache wikiCache = cache.getDatasource(TestDataSource.WIKI);
 
     final DataSegmentPlus unusedSegment =
-        CreateDataSegments.ofDatasource(TestDataSource.WIKI).markUnused().asPlus();
+        CreateDataSegments.ofDatasource(TestDataSource.WIKI).updatedNow().markUnused().asPlus();
     insertSegmentsInMetadataStore(Set.of(unusedSegment));
 
     syncCache();

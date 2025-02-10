@@ -43,8 +43,13 @@ import java.util.function.Function;
  * writes to the metadata store. If the transaction succeeds, all the writes
  * made to the metadata store are also committed to the cache in {@link #close()}.
  * The cache is not updated right away in case the transaction needs to be
- * rolled back. This is okay since we assume that a transaction does not read
- * what it writes.
+ * rolled back.
+ * <p>
+ * This implies that a transaction CANNOT read back what it has written until it
+ * has been committed. e.g. If a transaction inserts a segment and then tries to
+ * read back that same segment, it would get a null result since the segment has
+ * not been added to the cache yet. This restriction has been imposed to simplify
+ * rolling back of a failed transaction.
  */
 class CachedSegmentMetadataTransaction implements SegmentMetadataTransaction
 {
@@ -121,7 +126,8 @@ class CachedSegmentMetadataTransaction implements SegmentMetadataTransaction
         if (isLeaderWithSameTerm()) {
           action.accept(metadataCache);
         } else {
-          // Leadership has been lost, cache would have been stopped and invalidated
+          // Leadership has been lost, do not update cache but allow changes
+          // to be committed to metadata store to retain existing code behaviour
         }
       });
     }

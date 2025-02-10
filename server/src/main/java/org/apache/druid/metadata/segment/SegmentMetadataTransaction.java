@@ -25,6 +25,9 @@ import org.skife.jdbi.v2.Handle;
  * Represents a single transaction involving read/write of segment metadata into
  * the metadata store. A transaction is associated with a single instance of a
  * {@link Handle} and is meant to be short-lived.
+ * <p>
+ * A transaction CANNOT read back records it has written due to rollback
+ * restrictions in {@link CachedSegmentMetadataTransaction}.
  */
 public interface SegmentMetadataTransaction
     extends SegmentMetadataReadTransaction, DatasourceSegmentMetadataWriter

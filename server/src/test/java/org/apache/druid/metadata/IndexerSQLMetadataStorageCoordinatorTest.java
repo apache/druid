@@ -47,6 +47,7 @@ import org.apache.druid.segment.metadata.FingerprintGenerator;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.segment.metadata.SegmentSchemaTestUtils;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
+import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.coordinator.simulate.BlockingExecutorService;
 import org.apache.druid.server.coordinator.simulate.TestDruidLeaderSelector;
 import org.apache.druid.server.coordinator.simulate.WrappingScheduledExecutorService;
@@ -3890,6 +3891,32 @@ public class IndexerSQLMetadataStorageCoordinatorTest extends IndexerSqlMetadata
     );
 
     Assert.assertEquals(expected, observed);
+  }
+
+  @Test
+  public void testCachedTransaction_cannotReadWhatItWrites()
+  {
+    Assume.assumeTrue(useSegmentCache);
+
+    transactionFactory.inReadWriteDatasourceTransaction(
+        TestDataSource.WIKI,
+        transaction -> {
+          final DataSegmentPlus wikiSegment =
+              CreateDataSegments.ofDatasource(TestDataSource.WIKI).updatedNow().markUsed().asPlus();
+          Assert.assertEquals(1, transaction.insertSegments(Set.of(wikiSegment)));
+
+          // Verify that segment is not present in cache
+          Assert.assertNull(transaction.findUsedSegment(wikiSegment.getDataSegment().getId()));
+
+          // Verify that segment is present in metadata store
+          Assert.assertEquals(
+              wikiSegment.getDataSegment(),
+              transaction.findSegment(wikiSegment.getDataSegment().getId())
+          );
+
+          return 0;
+        }
+    );
   }
 
   private SegmentIdWithShardSpec allocatePendingSegment(

@@ -288,15 +288,21 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
           new FutureCallback<>()
           {
             @Override
-            public void onSuccess(Long previousPollDurationMillis)
+            public void onSuccess(Long previousSyncDurationMillis)
             {
               synchronized (cacheStateLock) {
                 if (currentCacheState == CacheState.LEADER_FIRST_SYNC_STARTED) {
-                  updateCacheState(CacheState.LEADER_READY, "Finished sync with metadata store");
+                  updateCacheState(
+                      CacheState.LEADER_READY,
+                      StringUtils.format(
+                          "Finished sync with metadata store in [%d] millis",
+                          previousSyncDurationMillis
+                      )
+                  );
                 }
               }
 
-              emitMetric(Metric.SYNC_DURATION_MILLIS, previousPollDurationMillis);
+              emitMetric(Metric.SYNC_DURATION_MILLIS, previousSyncDurationMillis);
               syncFinishTime.set(DateTimes.nowUtc());
 
               // Schedule the next sync
@@ -306,7 +312,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
                 if (currentCacheState == CacheState.LEADER_FIRST_SYNC_PENDING) {
                   nextSyncDelay = 0;
                 } else {
-                  nextSyncDelay = Math.max(pollDuration.getMillis() - previousPollDurationMillis, 0);
+                  nextSyncDelay = Math.max(pollDuration.getMillis() - previousSyncDurationMillis, 0);
                 }
               }
               scheduleSyncWithMetadataStore(nextSyncDelay);
@@ -400,8 +406,6 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
     );
 
     datasourceToSummary.forEach(this::emitSummaryMetrics);
-    log.info("Sync done in [%d] millis", sincePollStart.millisElapsed());
-
     return sincePollStart.millisElapsed();
   }
 

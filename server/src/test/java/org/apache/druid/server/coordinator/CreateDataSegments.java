@@ -38,7 +38,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.stream.Collectors;
 
 /**
  * Test utility to create {@link DataSegment}s for a given datasource.
@@ -133,39 +132,12 @@ public class CreateDataSegments
     return lastUpdatedOn(DateTimes.nowUtc());
   }
 
-  public CreateDataSegments upgradedFromSegmentId(String segmentId)
-  {
-    this.upgradedFromSegmentId = segmentId;
-    return this;
-  }
-
-  public CreateDataSegments sizeInMb(long sizeInMb)
-  {
-    this.sizeInBytes = sizeInMb * 1_000_000;
-    return this;
-  }
-
-  public CreateDataSegments size(long sizeInBytes)
-  {
-    this.sizeInBytes = sizeInBytes;
-    return this;
-  }
-
   /**
    * Creates a single {@link DataSegmentPlus} object with the specified parameters.
    */
   public DataSegmentPlus asPlus()
   {
     return plus(eachOfSize(sizeInBytes).get(0));
-  }
-
-  /**
-   * Creates a list of {@link DataSegmentPlus} objects with the specified
-   * parameters.
-   */
-  public List<DataSegmentPlus> asPlusList()
-  {
-    return eachOfSize(sizeInBytes).stream().map(this::plus).collect(Collectors.toList());
   }
 
   public List<DataSegment> eachOfSizeInMb(long sizeMb)
@@ -211,7 +183,7 @@ public class CreateDataSegments
   {
     return new DataSegmentPlus(
         segment,
-        null,
+        DateTimes.nowUtc(),
         lastUpdatedTime,
         used,
         null,
