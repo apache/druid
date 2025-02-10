@@ -63,7 +63,6 @@ import org.apache.druid.query.aggregation.firstlast.last.FloatLastAggregatorFact
 import org.apache.druid.query.aggregation.firstlast.last.LongLastAggregatorFactory;
 import org.apache.druid.query.aggregation.firstlast.last.StringLastAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
-import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.IndexBuilder;
