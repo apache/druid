@@ -65,12 +65,12 @@ public class ScheduledBatchSupervisor implements Supervisor
   }
 
   @Override
-  public SupervisorReport<ScheduledBatchSupervisorSnapshot> getStatus()
+  public SupervisorReport<ScheduledBatchSupervisorStatus> getStatus()
   {
     return new SupervisorReport<>(
         supervisorSpec.getId(),
         DateTimes.nowUtc(),
-        batchTaskManager.getSchedulerSnapshot(supervisorSpec.getId())
+        batchTaskManager.getTaskManagerStatus(supervisorSpec.getId())
     );
   }
 

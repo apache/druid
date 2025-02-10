@@ -90,7 +90,7 @@ public class DruidOverlord
       @IndexingService final DruidLeaderSelector overlordLeaderSelector,
       final SegmentAllocationQueue segmentAllocationQueue,
       final CompactionScheduler compactionScheduler,
-      final ScheduledBatchTaskManager scheduledBatchScheduler,
+      final ScheduledBatchTaskManager scheduledBatchTaskManager,
       final ObjectMapper mapper,
       final TaskContextEnricher taskContextEnricher
   )
@@ -163,7 +163,7 @@ public class DruidOverlord
                 {
                   taskMaster.becomeFullLeader();
                   compactionScheduler.start();
-                  scheduledBatchScheduler.start();
+                  scheduledBatchTaskManager.start();
 
                   // Announce the node only after all the services have been initialized
                   initialized = true;
@@ -174,7 +174,7 @@ public class DruidOverlord
                 public void stop()
                 {
                   serviceAnnouncer.unannounce(node);
-                  scheduledBatchScheduler.stop();
+                  scheduledBatchTaskManager.stop();
                   compactionScheduler.stop();
                   taskMaster.downgradeToHalfLeader();
                 }

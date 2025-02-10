@@ -35,6 +35,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.query.http.SqlTaskStatus;
 import org.joda.time.DateTime;
@@ -47,7 +48,20 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Responsible for task management for the scheduled batch supervisor.
+ * Manages the task execution and tracking for the scheduled batch supervisor.
+ * <p>
+ * It submits MSQ tasks to the Broker and tracks their execution status. It listens for task state changes and updates
+ * the {@link ScheduledBatchStatusTracker} accordingly.
+ * </p>
+ * <p>
+ * The manager maintains a mapping of scheduled batch supervisors and their associated task scheduler,
+ * so each supervisor can schedule its tasks based on the {@link CronSchedulerConfig}.
+ * It uses a shared single-threaded {@link ScheduledExecutorService} to schedule tasks across all batch supervisors.
+ * </p>
+ * <p>
+ * Note that all task state tracking by the batch supervisor is currently maintained in memory
+ * and is not persisted in the metadata store.
+ * </p>
  */
 public class ScheduledBatchTaskManager
 {
@@ -59,13 +73,9 @@ public class ScheduledBatchTaskManager
   private final BrokerClient brokerClient;
   private final ServiceEmitter emitter;
 
-  /**
-   * Single-threaded executor to schedule jobs that is shared across scheduled batch supervisors.
-   */
-  private final ScheduledExecutorService jobsExecutor;
+  private final ScheduledExecutorService tasksExecutor;
 
-  private final ConcurrentHashMap<String, SchedulerManager> supervisorToManager
-      = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<String, ScheduledBatchTask> supervisorToTaskScheduler = new ConcurrentHashMap<>();
 
   @Inject
   public ScheduledBatchTaskManager(
@@ -81,14 +91,14 @@ public class ScheduledBatchTaskManager
     this.emitter = emitter;
     this.statusTracker = statusTracker;
 
-    this.jobsExecutor = executorFactory.create(1, "ScheduledBatchJobsExecutor-%s");
+    this.tasksExecutor = executorFactory.create(1, "ScheduledBatchTasksExecutor-%s");
 
     this.taskRunnerListener = new TaskRunnerListener()
     {
       @Override
       public String getListenerId()
       {
-        return "ScheduledBatchScheduler";
+        return "ScheduledBatchTaskManager";
       }
 
       @Override
@@ -119,12 +129,12 @@ public class ScheduledBatchTaskManager
   )
   {
     log.info(
-        "Starting scheduled batch ingestion for supervisorId[%s] with datasource[%s], cronSchedule[%s] and spec[%s].",
+        "Starting scheduled batch ingestion into datasource[%s] with supervisorId[%s], cronSchedule[%s] and spec[%s].",
         supervisorId, dataSource, cronSchedulerConfig, spec
     );
-    final SchedulerManager manager = new SchedulerManager(supervisorId, dataSource, cronSchedulerConfig, spec);
-    manager.startScheduling();
-    supervisorToManager.put(supervisorId, manager);
+    final ScheduledBatchTask taskScheduler = new ScheduledBatchTask(supervisorId, dataSource, cronSchedulerConfig, spec);
+    taskScheduler.startScheduling();
+    supervisorToTaskScheduler.put(supervisorId, taskScheduler);
   }
 
   /**
@@ -134,72 +144,101 @@ public class ScheduledBatchTaskManager
   public void stopScheduledIngestion(final String supervisorId)
   {
     log.info("Stopping scheduled batch ingestion for supervisorId[%s].", supervisorId);
-    final SchedulerManager manager = supervisorToManager.get(supervisorId);
-    if (manager != null) {
+    final ScheduledBatchTask taskScheduler = supervisorToTaskScheduler.get(supervisorId);
+    if (taskScheduler != null) {
       // Don't remove the supervisorId from supervisorToManager. We want to be able to track the status
       // for suspended supervisors to track any in-flight tasks. stop() will clean up all state completely.
-      manager.stopScheduling();
+      taskScheduler.stopScheduling();
     }
   }
 
+  /**
+   * Starts the scheduled batch task manager by registering the {@link TaskRunnerListener}.
+   * This allows tracking of any tasks submitted by the batch supervisor.
+   * <p>
+   * Should be invoked when the Overlord service starts or during leadership transitions.
+   * </p>
+   */
   public void start()
   {
-    log.info("Starting scheduled batch scheduler.");
+    log.info("Starting scheduled batch task manager.");
     final Optional<TaskRunner> taskRunnerOptional = taskMaster.getTaskRunner();
     if (taskRunnerOptional.isPresent()) {
       taskRunnerOptional.get().registerListener(taskRunnerListener, Execs.directExecutor());
     } else {
-      log.warn("Task runner not registered for scheduled batch scheduler.");
+      log.warn("Task runner not registered for scheduled batch task manager.");
     }
   }
 
+  /**
+   * Stops the scheduled batch task manager by unregistering the previously registered {@link TaskRunnerListener}.
+   * <p>
+   * Should be invoked when the Overlord service stops or during leadership transitions.
+   * </p>
+   */
   public void stop()
   {
-    log.info("Stopping scheduled batch scheduler.");
+    log.info("Stopping scheduled batch task manager.");
     final Optional<TaskRunner> taskRunnerOptional = taskMaster.getTaskRunner();
     if (taskRunnerOptional.isPresent()) {
       taskRunnerOptional.get().unregisterListener(taskRunnerListener.getListenerId());
     }
 
-    supervisorToManager.clear();
+    supervisorToTaskScheduler.clear();
   }
 
   @Nullable
-  public ScheduledBatchSupervisorSnapshot getSchedulerSnapshot(final String supervisorId)
+  public ScheduledBatchSupervisorStatus getTaskManagerStatus(final String supervisorId)
   {
-    final SchedulerManager manager = supervisorToManager.get(supervisorId);
+    final ScheduledBatchTask manager = supervisorToTaskScheduler.get(supervisorId);
     if (manager == null) {
       return null;
     }
 
-    final ScheduledBatchStatusTracker.BatchSupervisorTaskStatus tasks = statusTracker.getSupervisorTasks(supervisorId);
-    return new ScheduledBatchSupervisorSnapshot(
+    final BatchSupervisorTaskReport taskStatus = statusTracker.getSupervisorTaskStatus(supervisorId);
+    return new ScheduledBatchSupervisorStatus(
         supervisorId,
-        manager.getSchedulerStatus(),
+        manager.getSchedulerState(),
         manager.getLastTaskSubmittedTime(),
         manager.getNextTaskSubmissionTime(),
         manager.getTimeUntilNextTaskSubmission(),
-        tasks.getSubmittedTasks(),
-        tasks.getCompletedTasks()
+        taskStatus.getTotalSubmittedTasks(),
+        taskStatus.getTotalSuccessfulTasks(),
+        taskStatus.getTotalFailedTasks(),
+        taskStatus.getRecentActiveTasks(),
+        taskStatus.getRecentSuccessfulTasks(),
+        taskStatus.getRecentFailedTasks()
     );
   }
 
   private void submitSqlTask(final String supervisorId, final ClientSqlQuery spec)
       throws ExecutionException, InterruptedException
   {
-    log.debug("Submitting a new task with spec[%s] for supervisor[%s].", spec, supervisorId);
     final SqlTaskStatus taskStatus = FutureUtils.get(brokerClient.submitSqlTask(spec), true);
     statusTracker.onTaskSubmitted(supervisorId, taskStatus);
+    log.info("Submitted a new task[%s] with spec[%s] for supervisor[%s].", taskStatus.getTaskId(), spec, supervisorId);
   }
 
-  private class SchedulerManager
+  /**
+   * Handles the task scheduling for a specific batch supervisor.
+   * <p>
+   * This is responsible for periodically submitting MSQ tasks based on the schedule
+   * defined in {@link CronSchedulerConfig}. It ensures that tasks are rescheduled upon completion
+   * and maintains the last submission timestamp for tracking purposes.
+   * </p>
+   * <p>
+   * The scheduler for a batch supervisor can be started and stopped dynamically by invoking
+   * {@link #startScheduling()} and {@link #stopScheduling()} respectively.
+   * </p>
+   **/
+  private class ScheduledBatchTask
   {
     private final String supervisorId;
     private final String dataSource;
     private final ClientSqlQuery spec;
     private final CronSchedulerConfig cronSchedulerConfig;
 
-    private ScheduledBatchSupervisorSnapshot.BatchSupervisorStatus status;
+    private ScheduledBatchSupervisor.State state;
 
     /**
      * TODO: Note that the last task submitted per supervisor should eventually be persisted in the metadata store,
@@ -208,7 +247,7 @@ public class ScheduledBatchTaskManager
      */
     private volatile DateTime lastTaskSubmittedTime;
 
-    private SchedulerManager(
+    private ScheduledBatchTask(
         final String supervisorId,
         final String dataSource,
         final CronSchedulerConfig cronSchedulerConfig,
@@ -223,31 +262,35 @@ public class ScheduledBatchTaskManager
 
     private synchronized void startScheduling()
     {
-      if (jobsExecutor.isTerminated() || jobsExecutor.isShutdown()
-          || status == ScheduledBatchSupervisorSnapshot.BatchSupervisorStatus.SCHEDULER_SHUTDOWN) {
+      if (tasksExecutor.isTerminated() || tasksExecutor.isShutdown()
+          || state == ScheduledBatchSupervisor.State.SUSPENDED) {
         return;
       }
 
-      status = ScheduledBatchSupervisorSnapshot.BatchSupervisorStatus.SCHEDULER_RUNNING;
+      statusTracker.cleanupStaleTaskStatuses();
+
+      state = ScheduledBatchSupervisor.State.RUNNING;
       final Duration timeUntilNextSubmission = getTimeUntilNextTaskSubmission();
       if (timeUntilNextSubmission == null) {
         log.info("No more tasks will be submitted for supervisor[%s].", supervisorId);
         return;
+      } else {
+        log.info("Next task for supervisor[%s] will be scheduled after duration[%s].", supervisorId, timeUntilNextSubmission);
       }
 
-      jobsExecutor.schedule(
+      tasksExecutor.schedule(
           () -> {
             try {
               // Check status inside the runnable again before submitting any tasks
-              if (status == ScheduledBatchSupervisorSnapshot.BatchSupervisorStatus.SCHEDULER_SHUTDOWN) {
+              if (state == ScheduledBatchSupervisor.State.SUSPENDED) {
                 return;
               }
-              lastTaskSubmittedTime = DateTimes.nowUtc();
               submitSqlTask(supervisorId, spec);
-              emitMetric("batchSupervisor/tasks/submit/success", 1);
+              lastTaskSubmittedTime = DateTimes.nowUtc();
+              emitMetric("task/scheduledBatch/submit/success", 1);
             }
             catch (Exception e) {
-              emitMetric("batchSupervisor/tasks/submit/failed", 1);
+              emitMetric("task/scheduledBatch/submit/failed", 1);
               log.error(e, "Error submitting task for supervisor[%s]. Continuing schedule.", supervisorId);
             }
             startScheduling(); // Schedule the next task
@@ -259,15 +302,16 @@ public class ScheduledBatchTaskManager
 
     private synchronized void stopScheduling()
     {
-      status = ScheduledBatchSupervisorSnapshot.BatchSupervisorStatus.SCHEDULER_SHUTDOWN;
+      state = ScheduledBatchSupervisor.State.SUSPENDED;
+      statusTracker.cleanupStaleTaskStatuses();
     }
 
     private void emitMetric(final String metricName, final int value)
     {
       emitter.emit(
           ServiceMetricEvent.builder()
-                            .setDimension("supervisorId", supervisorId)
-                            .setDimension("dataSource", dataSource)
+                            .setDimension(DruidMetrics.ID, supervisorId)
+                            .setDimension(DruidMetrics.DATASOURCE, dataSource)
                             .setMetric(metricName, value)
       );
     }
@@ -290,9 +334,9 @@ public class ScheduledBatchTaskManager
       return cronSchedulerConfig.getDurationUntilNextTaskStartTimeAfter(DateTimes.nowUtc());
     }
 
-    private ScheduledBatchSupervisorSnapshot.BatchSupervisorStatus getSchedulerStatus()
+    private ScheduledBatchSupervisor.State getSchedulerState()
     {
-      return status;
+      return state;
     }
   }
 }

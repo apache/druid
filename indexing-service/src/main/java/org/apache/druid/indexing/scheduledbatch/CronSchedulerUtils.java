@@ -32,6 +32,13 @@ import java.util.Optional;
 
 public class CronSchedulerUtils
 {
+  /**
+   * Computes the next task submission time after the specified {@code referenceTime}.
+   * <p>
+   * Returns {@code null} if no future execution time exists based on the given {@code executionTime},
+   * which can occur if the schedule does not define any future occurrences.
+   * </p>
+   */
   @Nullable
   static DateTime getNextTaskStartTimeAfter(final ExecutionTime executionTime, final DateTime referenceTime)
   {
@@ -45,6 +52,13 @@ public class CronSchedulerUtils
     }
   }
 
+  /**
+   * Computes the duration until the next task submission time after the specified {@code referenceTime}.
+   * <p>
+   * Returns {@code null} if no future execution time exists based on the given {@code executionTime},
+   * which can occur if the schedule does not define any future occurrences.
+   * </p>
+   */
   @Nullable
   static Duration getDurationUntilNextTaskStartTimeAfter(final ExecutionTime executionTime, final DateTime referenceTime)
   {

@@ -32,6 +32,9 @@ import org.joda.time.Duration;
 import javax.annotation.Nullable;
 import java.util.Objects;
 
+/**
+ * Parses a Unix cron expression and computes the next execution time based on a given reference time.
+ */
 public class UnixCronSchedulerConfig implements CronSchedulerConfig
 {
   public static final String TYPE = "unix";

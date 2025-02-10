@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.scheduledbatch;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.Futures;
 import org.apache.druid.client.broker.BrokerClient;
@@ -29,6 +30,7 @@ import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.java.util.http.client.response.StringFullResponseHolder;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
+import org.apache.druid.query.DruidMetrics;
 import org.apache.druid.query.http.ClientSqlQuery;
 import org.apache.druid.query.http.SqlTaskStatus;
 import org.apache.druid.rpc.HttpResponseException;
@@ -44,6 +46,7 @@ import org.junit.Test;
 import org.mockito.Mockito;
 
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -125,29 +128,31 @@ public class ScheduledBatchTaskManagerTest
 
     scheduler.start();
     scheduler.startScheduledIngestion(SUPERVISOR_ID_FOO, DATASOURCE, IMMEDIATE_SCHEDULER_CONFIG, query1);
-    verifySchedulerSnapshot(SUPERVISOR_ID_FOO, ScheduledBatchSupervisorSnapshot.BatchSupervisorStatus.SCHEDULER_RUNNING);
+    verifySchedulerState(SUPERVISOR_ID_FOO, ScheduledBatchSupervisor.State.RUNNING);
 
     executor.finishNextPendingTasks(1);
-    verifySchedulerSnapshotWithTasks(
+    verifySchedulerStateWithTasks(
         SUPERVISOR_ID_FOO,
-        ScheduledBatchSupervisorSnapshot.BatchSupervisorStatus.SCHEDULER_RUNNING,
-        ImmutableMap.of(),
-        ImmutableMap.of(expectedTaskStatus.getTaskId(), TaskStatus.success(expectedTaskStatus.getTaskId()))
+        ScheduledBatchSupervisor.State.RUNNING,
+        ImmutableList.of(),
+        ImmutableList.of(TaskStatus.success(expectedTaskStatus.getTaskId())),
+        ImmutableList.of()
     );
 
     scheduler.stopScheduledIngestion(SUPERVISOR_ID_FOO);
-    verifySchedulerSnapshotWithTasks(
+    verifySchedulerStateWithTasks(
         SUPERVISOR_ID_FOO,
-        ScheduledBatchSupervisorSnapshot.BatchSupervisorStatus.SCHEDULER_SHUTDOWN,
-        ImmutableMap.of(),
-        ImmutableMap.of(expectedTaskStatus.getTaskId(), TaskStatus.success(expectedTaskStatus.getTaskId()))
+        ScheduledBatchSupervisor.State.SUSPENDED,
+        ImmutableList.of(),
+        ImmutableList.of(TaskStatus.success(expectedTaskStatus.getTaskId())),
+        ImmutableList.of()
     );
 
     scheduler.stop();
-    assertNull(scheduler.getSchedulerSnapshot(SUPERVISOR_ID_FOO));
+    assertNull(scheduler.getTaskManagerStatus(SUPERVISOR_ID_FOO));
     serviceEmitter.verifyEmitted(
-        "batchSupervisor/tasks/submit/success",
-        ImmutableMap.of("supervisorId", SUPERVISOR_ID_FOO),
+        "task/scheduledBatch/submit/success",
+        ImmutableMap.of(DruidMetrics.ID, SUPERVISOR_ID_FOO),
         1
     );
   }
@@ -168,20 +173,20 @@ public class ScheduledBatchTaskManagerTest
 
     scheduler.start();
     scheduler.startScheduledIngestion(SUPERVISOR_ID_FOO, DATASOURCE, IMMEDIATE_SCHEDULER_CONFIG, query1);
-    verifySchedulerSnapshot(SUPERVISOR_ID_FOO, ScheduledBatchSupervisorSnapshot.BatchSupervisorStatus.SCHEDULER_RUNNING);
+    verifySchedulerState(SUPERVISOR_ID_FOO, ScheduledBatchSupervisor.State.RUNNING);
 
     executor.finishNextPendingTasks(1);
     scheduler.stopScheduledIngestion(SUPERVISOR_ID_FOO);
-    verifySchedulerSnapshot(
+    verifySchedulerState(
         SUPERVISOR_ID_FOO,
-        ScheduledBatchSupervisorSnapshot.BatchSupervisorStatus.SCHEDULER_SHUTDOWN
+        ScheduledBatchSupervisor.State.SUSPENDED
     );
 
     scheduler.stop();
-    assertNull(scheduler.getSchedulerSnapshot(SUPERVISOR_ID_FOO));
+    assertNull(scheduler.getTaskManagerStatus(SUPERVISOR_ID_FOO));
     serviceEmitter.verifyEmitted(
-        "batchSupervisor/tasks/submit/failed",
-        ImmutableMap.of("supervisorId", SUPERVISOR_ID_FOO),
+        "task/scheduledBatch/submit/failed",
+        ImmutableMap.of(DruidMetrics.ID, SUPERVISOR_ID_FOO),
         1
     );
   }
@@ -195,31 +200,33 @@ public class ScheduledBatchTaskManagerTest
 
     scheduler.start();
     scheduler.startScheduledIngestion(SUPERVISOR_ID_FOO, DATASOURCE, IMMEDIATE_SCHEDULER_CONFIG, query1);
-    verifySchedulerSnapshot(SUPERVISOR_ID_FOO, ScheduledBatchSupervisorSnapshot.BatchSupervisorStatus.SCHEDULER_RUNNING);
+    verifySchedulerState(SUPERVISOR_ID_FOO, ScheduledBatchSupervisor.State.RUNNING);
 
     executor.finishNextPendingTasks(1);
-    verifySchedulerSnapshotWithTasks(
+    verifySchedulerStateWithTasks(
         SUPERVISOR_ID_FOO,
-        ScheduledBatchSupervisorSnapshot.BatchSupervisorStatus.SCHEDULER_RUNNING,
-        ImmutableMap.of(),
-        ImmutableMap.of(expectedTaskStatus.getTaskId(), TaskStatus.success(expectedTaskStatus.getTaskId()))
+        ScheduledBatchSupervisor.State.RUNNING,
+        ImmutableList.of(),
+        ImmutableList.of(TaskStatus.success(expectedTaskStatus.getTaskId())),
+        ImmutableList.of()
     );
 
     scheduler.stopScheduledIngestion(SUPERVISOR_ID_FOO);
     executor.finishNextPendingTask();
-    verifySchedulerSnapshotWithTasks(
+    verifySchedulerStateWithTasks(
         SUPERVISOR_ID_FOO,
-        ScheduledBatchSupervisorSnapshot.BatchSupervisorStatus.SCHEDULER_SHUTDOWN,
-        ImmutableMap.of(),
-        ImmutableMap.of(expectedTaskStatus.getTaskId(), TaskStatus.success(expectedTaskStatus.getTaskId()))
+        ScheduledBatchSupervisor.State.SUSPENDED,
+        ImmutableList.of(),
+        ImmutableList.of(TaskStatus.success(expectedTaskStatus.getTaskId())),
+        ImmutableList.of()
     );
     assertFalse(executor.hasPendingTasks());
 
     scheduler.stop();
-    assertNull(scheduler.getSchedulerSnapshot(SUPERVISOR_ID_FOO));
+    assertNull(scheduler.getTaskManagerStatus(SUPERVISOR_ID_FOO));
     serviceEmitter.verifyEmitted(
-        "batchSupervisor/tasks/submit/success",
-        ImmutableMap.of("supervisorId", SUPERVISOR_ID_FOO),
+        "task/scheduledBatch/submit/success",
+        ImmutableMap.of(DruidMetrics.ID, SUPERVISOR_ID_FOO),
         1
     );
   }
@@ -240,76 +247,96 @@ public class ScheduledBatchTaskManagerTest
            .thenReturn(Futures.immediateFuture(expectedBarTask1))
            .thenReturn(Futures.immediateFuture(expectedBarTask2));
 
+    assertFalse(executor.hasPendingTasks());
+
     scheduler.start();
     scheduler.startScheduledIngestion(SUPERVISOR_ID_FOO, DATASOURCE, IMMEDIATE_SCHEDULER_CONFIG, query1);
     scheduler.startScheduledIngestion(SUPERVISOR_ID_BAR, DATASOURCE, IMMEDIATE_SCHEDULER_CONFIG, query2);
 
-    verifySchedulerSnapshot(SUPERVISOR_ID_FOO, ScheduledBatchSupervisorSnapshot.BatchSupervisorStatus.SCHEDULER_RUNNING);
-    verifySchedulerSnapshot(SUPERVISOR_ID_BAR, ScheduledBatchSupervisorSnapshot.BatchSupervisorStatus.SCHEDULER_RUNNING);
+    verifySchedulerState(SUPERVISOR_ID_FOO, ScheduledBatchSupervisor.State.RUNNING);
+    verifySchedulerState(SUPERVISOR_ID_BAR, ScheduledBatchSupervisor.State.RUNNING);
 
     executor.finishNextPendingTasks(2);
 
-    verifySchedulerSnapshotWithTasks(
+    verifySchedulerStateWithTasks(
         SUPERVISOR_ID_FOO,
-        ScheduledBatchSupervisorSnapshot.BatchSupervisorStatus.SCHEDULER_RUNNING,
-        ImmutableMap.of(),
-        ImmutableMap.of(expectedFooTask1.getTaskId(), TaskStatus.success(expectedFooTask1.getTaskId()))
+        ScheduledBatchSupervisor.State.RUNNING,
+        ImmutableList.of(),
+        ImmutableList.of(TaskStatus.success(TASK_ID_FOO1)),
+        ImmutableList.of()
     );
 
-    executor.finishNextPendingTasks(4);
+    executor.finishNextPendingTasks(2);
     scheduler.stopScheduledIngestion(SUPERVISOR_ID_FOO);
-    verifySchedulerSnapshotWithTasks(
+    verifySchedulerStateWithTasks(
         SUPERVISOR_ID_FOO,
-        ScheduledBatchSupervisorSnapshot.BatchSupervisorStatus.SCHEDULER_SHUTDOWN,
-        ImmutableMap.of(expectedFooTask2.getTaskId(), TaskStatus.running(expectedFooTask2.getTaskId())),
-        ImmutableMap.of(expectedFooTask1.getTaskId(), TaskStatus.success(expectedFooTask1.getTaskId()))
+        ScheduledBatchSupervisor.State.SUSPENDED,
+        ImmutableList.of(TaskStatus.running(TASK_ID_FOO2)),
+        ImmutableList.of(TaskStatus.success(TASK_ID_FOO1)),
+        ImmutableList.of()
     );
 
-    verifySchedulerSnapshotWithTasks(
+    verifySchedulerStateWithTasks(
         SUPERVISOR_ID_BAR,
-        ScheduledBatchSupervisorSnapshot.BatchSupervisorStatus.SCHEDULER_RUNNING,
-        ImmutableMap.of(),
-        ImmutableMap.of(
-            TASK_ID_BAR2, TaskStatus.success(TASK_ID_BAR2),
-            TASK_ID_BAR1, TaskStatus.failure(TASK_ID_BAR1, null)
-        )
+        ScheduledBatchSupervisor.State.RUNNING,
+        ImmutableList.of(),
+        ImmutableList.of(TaskStatus.success(TASK_ID_BAR2)),
+        ImmutableList.of(TaskStatus.failure(TASK_ID_BAR1, null))
     );
 
     scheduler.stop();
-    assertNull(scheduler.getSchedulerSnapshot(SUPERVISOR_ID_FOO));
-    assertNull(scheduler.getSchedulerSnapshot(SUPERVISOR_ID_BAR));
+    assertNull(scheduler.getTaskManagerStatus(SUPERVISOR_ID_FOO));
+    assertNull(scheduler.getTaskManagerStatus(SUPERVISOR_ID_BAR));
     serviceEmitter.verifyEmitted(
-        "batchSupervisor/tasks/submit/success",
-        ImmutableMap.of("supervisorId", SUPERVISOR_ID_FOO),
-        3
+        "task/scheduledBatch/submit/success",
+        ImmutableMap.of(DruidMetrics.ID, SUPERVISOR_ID_FOO),
+        2
     );
+
     serviceEmitter.verifyEmitted(
-        "batchSupervisor/tasks/submit/success",
-        ImmutableMap.of("supervisorId", SUPERVISOR_ID_BAR),
-        3
+        "task/scheduledBatch/submit/success",
+        ImmutableMap.of(DruidMetrics.ID, SUPERVISOR_ID_BAR),
+        2
     );
   }
 
-  private void verifySchedulerSnapshot(
+  private void verifySchedulerState(
       final String supervisorId,
-      final ScheduledBatchSupervisorSnapshot.BatchSupervisorStatus expectedSupervisorStatus
+      final ScheduledBatchSupervisor.State expectedSupervisorState
   )
   {
-    verifySchedulerSnapshotWithTasks(supervisorId, expectedSupervisorStatus, ImmutableMap.of(), ImmutableMap.of());
+    verifySchedulerStateWithTasks(
+        supervisorId,
+        expectedSupervisorState,
+        ImmutableList.of(),
+        ImmutableList.of(),
+        ImmutableList.of()
+    );
   }
 
-  private void verifySchedulerSnapshotWithTasks(
+  private void verifySchedulerStateWithTasks(
       final String supervisorId,
-      final ScheduledBatchSupervisorSnapshot.BatchSupervisorStatus expectedSupervisorStatus,
-      final ImmutableMap<String, TaskStatus> expectedActiveTasks,
-      final ImmutableMap<String, TaskStatus> expectedCompletedTasks
+      final ScheduledBatchSupervisor.State expectedSupervisorState,
+      final List<TaskStatus> expectedActiveTasks,
+      final List<TaskStatus> expectedSuccessfulTasks,
+      final List<TaskStatus> expectedFailedTasks
   )
   {
-    final ScheduledBatchSupervisorSnapshot snapshot = scheduler.getSchedulerSnapshot(supervisorId);
-    assertNotNull(snapshot);
-    assertEquals(supervisorId, snapshot.getSupervisorId());
-    assertEquals(expectedActiveTasks, snapshot.getActiveTasks());
-    assertEquals(expectedCompletedTasks, snapshot.getCompletedTasks());
-    assertEquals(expectedSupervisorStatus, snapshot.getStatus());
+    final ScheduledBatchSupervisorStatus taskStatus = scheduler.getTaskManagerStatus(supervisorId);
+    assertNotNull(taskStatus);
+    assertEquals(supervisorId, taskStatus.getSupervisorId());
+    assertEquals(expectedSupervisorState, taskStatus.getState());
+
+    verifyTaskStatuses(taskStatus.getRecentActiveTasks(), expectedActiveTasks);
+    verifyTaskStatuses(taskStatus.getRecentSuccessfulTasks(), expectedSuccessfulTasks);
+    verifyTaskStatuses(taskStatus.getRecentFailedTasks(), expectedFailedTasks);
+  }
+
+  private void verifyTaskStatuses(List<BatchSupervisorTaskStatus> actualStatuses, List<TaskStatus> expectedStatuses)
+  {
+    assertEquals(expectedStatuses.size(), actualStatuses.size());
+    for (int i = 0; i < expectedStatuses.size(); i++) {
+      assertEquals(expectedStatuses.get(i), actualStatuses.get(i).getStatus());
+    }
   }
 }

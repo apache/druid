@@ -20,89 +20,130 @@
 package org.apache.druid.indexing.scheduledbatch;
 
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.query.http.SqlTaskStatus;
+import org.joda.time.DateTime;
+import org.joda.time.Duration;
 
+import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 
+/**
+ * Tracks task statuses upon submission and completion for scheduled batch supervisors.
+ * <p>
+ * This class maintains per-supervisor mappings of submitted tasks and their statuses.
+ * It also keeps track of total task counts (active, successful, failed) and ensures that
+ * recently tracked task statuses are retained for a limited duration ({@link #MAX_STATUS_RETAIN_DURATION}).
+ * </p>
+ */
 public class ScheduledBatchStatusTracker
 {
+  private static final Duration MAX_STATUS_RETAIN_DURATION = Duration.standardDays(2);
+
   /**
    * Track supervisor ID -> task IDs.
    */
   private final ConcurrentHashMap<String, List<String>> supervisorToTaskIds = new ConcurrentHashMap<>();
 
   /**
-   * Track task ID -> task status
+   * Track the task ID -> supervisor ID for reverse lookup to update the total counts.
    */
-  private final ConcurrentHashMap<String, TaskStatus> taskStatusMap = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<String, String> taskIdToSupervisorId = new ConcurrentHashMap<>();
+
+  /**
+   * Tracks the recent set of task ID -> task status for all tasks younger than {@link #MAX_STATUS_RETAIN_DURATION}.
+   */
+  private final ConcurrentHashMap<String, BatchSupervisorTaskStatus> recentTaskStatusMap = new ConcurrentHashMap<>();
+
+
+  private final ConcurrentHashMap<String, AtomicInteger> supervisorTotalSubmittedTasks = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<String, AtomicInteger> supervisorTotalSuccessfulTasks = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<String, AtomicInteger> supervisorTotalFailedTasks = new ConcurrentHashMap<>();
+
 
   public void onTaskSubmitted(final String supervisorId, final SqlTaskStatus sqlTaskStatus)
   {
     final String taskId = sqlTaskStatus.getTaskId();
-    final TaskStatus taskStatus = TaskStatus.fromCode(sqlTaskStatus.getTaskId(), sqlTaskStatus.getState());
 
     supervisorToTaskIds.computeIfAbsent(supervisorId, k -> new CopyOnWriteArrayList<>()).add(taskId);
+    taskIdToSupervisorId.put(taskId, supervisorId);
+    recentTaskStatusMap.put(taskId, new BatchSupervisorTaskStatus(
+        TaskStatus.fromCode(sqlTaskStatus.getTaskId(), sqlTaskStatus.getState()),
+        DateTimes.nowUtc()
+    ));
+    supervisorTotalSubmittedTasks.computeIfAbsent(supervisorId, k -> new AtomicInteger(0)).incrementAndGet();
 
-    taskStatusMap.put(taskId, taskStatus);
   }
 
   public void onTaskCompleted(final String taskId, final TaskStatus taskStatus)
   {
-    if (!taskStatusMap.containsKey(taskId)) {
+    if (!recentTaskStatusMap.containsKey(taskId)) {
       return;  // Task was not submitted by us
     }
 
-    taskStatusMap.put(taskId, taskStatus);
+    final String supervisorId = taskIdToSupervisorId.get(taskId);
+    if (taskStatus.isSuccess()) {
+      supervisorTotalSuccessfulTasks.computeIfAbsent(supervisorId, k -> new AtomicInteger(0)).incrementAndGet();
+    } else {
+      supervisorTotalFailedTasks.computeIfAbsent(supervisorId, k -> new AtomicInteger(0)).incrementAndGet();
+    }
+
+    recentTaskStatusMap.put(taskId, new BatchSupervisorTaskStatus(taskStatus, DateTimes.nowUtc()));
   }
 
-  public BatchSupervisorTaskStatus getSupervisorTasks(final String supervisorId)
+  public BatchSupervisorTaskReport getSupervisorTaskStatus(final String supervisorId)
   {
     final List<String> taskIds = supervisorToTaskIds.getOrDefault(supervisorId, Collections.emptyList());
 
-    final Map<String, TaskStatus> submittedTasks = new HashMap<>();
-    final Map<String, TaskStatus> completedTasks = new HashMap<>();
+    final List<BatchSupervisorTaskStatus> recentActiveTasks = new ArrayList<>();
+    final List<BatchSupervisorTaskStatus> recentSuccessfulTasks = new ArrayList<>();
+    final List<BatchSupervisorTaskStatus> recentFailedTasks = new ArrayList<>();
 
     for (String taskId : taskIds) {
-      TaskStatus taskStatus = taskStatusMap.get(taskId);
+      BatchSupervisorTaskStatus taskStatus = recentTaskStatusMap.get(taskId);
       if (taskStatus != null) {
-        if (taskStatus.isComplete()) {
-          completedTasks.put(taskId, taskStatus);
+        TaskStatus status = taskStatus.getStatus();
+        if (status.isComplete()) {
+          if (status.isSuccess()) {
+            recentSuccessfulTasks.add(taskStatus);
+          } else {
+            recentFailedTasks.add(taskStatus);
+          }
         } else {
-          submittedTasks.put(taskId, taskStatus);
+          recentActiveTasks.add(taskStatus);
         }
       }
     }
 
-    return new BatchSupervisorTaskStatus(submittedTasks, completedTasks);
+    return new BatchSupervisorTaskReport(
+        supervisorTotalSubmittedTasks.getOrDefault(supervisorId, new AtomicInteger(0)).get(),
+        supervisorTotalSuccessfulTasks.getOrDefault(supervisorId, new AtomicInteger(0)).get(),
+        supervisorTotalFailedTasks.getOrDefault(supervisorId, new AtomicInteger(0)).get(),
+        recentActiveTasks,
+        recentSuccessfulTasks,
+        recentFailedTasks
+    );
   }
 
-  public static class BatchSupervisorTaskStatus
+  public void cleanupStaleTaskStatuses()
   {
-    private final Map<String, TaskStatus> submittedTasks;
-    private final Map<String, TaskStatus> completedTasks;
+    final DateTime expiryThreshold = DateTimes.nowUtc().minus(MAX_STATUS_RETAIN_DURATION);
 
-    public BatchSupervisorTaskStatus(
-        final Map<String, TaskStatus> submittedTasks,
-        final Map<String, TaskStatus> completedTasks
-    )
-    {
-      this.submittedTasks = new HashMap<>(submittedTasks);
-      this.completedTasks = new HashMap<>(completedTasks);
-    }
+    final Set<String> staleTaskIds = new HashSet<>();
 
-    public Map<String, TaskStatus> getSubmittedTasks()
-    {
-      return submittedTasks;
-    }
+    // Remove expired tasks from taskStatusMap
+    recentTaskStatusMap.forEach((taskId, status) -> {
+      if (status.getUpdatedTime().isBefore(expiryThreshold)) {
+        staleTaskIds.add(taskId);
+      }
+    });
 
-    public Map<String, TaskStatus> getCompletedTasks()
-    {
-      return completedTasks;
-    }
+    staleTaskIds.forEach(recentTaskStatusMap::remove);
   }
 }

@@ -32,6 +32,9 @@ import org.joda.time.Duration;
 import javax.annotation.Nullable;
 import java.util.Objects;
 
+/**
+ * Parses a Quartz cron expression and computes the next execution time based on a given reference time.
+ */
 public class QuartzCronSchedulerConfig implements CronSchedulerConfig
 {
   public static final String TYPE = "quartz";
