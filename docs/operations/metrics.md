@@ -315,7 +315,7 @@ If the JVM does not support CPU time measurement for the current thread, `ingest
 
 ### Segment metadata cache
 
-The following metrics are emitted only when the segment metadata caching is enabled on the Overlord.
+The following metrics are emitted only when [segment metadata caching](../configuration/index.md#segment-metadata-cache-experimental) is enabled on the Overlord.
 
 |Metric|Description|Dimensions|
 |------|-----------|----------|
