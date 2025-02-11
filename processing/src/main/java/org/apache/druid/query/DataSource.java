@@ -110,7 +110,7 @@ public interface DataSource
    */
   boolean isConcrete();
 
-  public static class SegmentMapConfig
+  static class SegmentMapConfig
   {
     private Query query;
     private VirtualColumns virtualColumns;
@@ -249,8 +249,4 @@ public interface DataSource
    * @return The {@link DataSourceAnalysis} object for the callee data source
    */
   DataSourceAnalysis getAnalysis();
-
-  default boolean isTableBased() {
-    return false;
-  }
 }

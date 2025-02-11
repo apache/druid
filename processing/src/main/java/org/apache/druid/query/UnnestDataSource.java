@@ -193,12 +193,6 @@ public class UnnestDataSource implements DataSource
   {
     return Objects.hash(base, virtualColumn, unnestFilter);
   }
-
-  @Override
-  public boolean isTableBased()
-  {
-    return base.isTableBased();
-  }
 }
 
 

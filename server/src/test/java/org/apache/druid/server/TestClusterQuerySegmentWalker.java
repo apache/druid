@@ -62,7 +62,6 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 
@@ -105,14 +104,13 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
     // Strange, but true. Required to get authentic behavior with UnionDataSources. (Although, it would be great if
     // this wasn't required.)
     return (queryPlus, responseContext) -> {
-      Optional<RootDataSource> rootDS = RootDataSource.of(queryPlus.getQuery());
       final DataSourceAnalysis analysis = queryPlus.getQuery().getDataSource().getAnalysis();
 
       if (!analysis.isConcreteAndTableBased()) {
         throw new ISE("Cannot handle datasource: %s", queryPlus.getQuery().getDataSource());
       }
 
-      final String dataSourceName = rootDS.get().getTableName();
+      final String dataSourceName = ((TableDataSource) analysis.getBaseDataSource()).getName();
 
       FunctionalIterable<SegmentDescriptor> segmentDescriptors = FunctionalIterable
           .create(intervals)

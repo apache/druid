@@ -217,16 +217,15 @@ public class DataSourceAnalysis
    */
   public boolean isTableBased()
   {
-    return baseDataSource.isTableBased();
-//    return (baseDataSource instanceof TableDataSource
-//            || (baseDataSource instanceof UnionDataSource &&
-//                baseDataSource.getChildren()
-//                              .stream()
-//                              .allMatch(ds -> ds instanceof TableDataSource))
-//            || (baseDataSource instanceof UnnestDataSource &&
-//                baseDataSource.getChildren()
-//                              .stream()
-//                              .allMatch(ds -> ds instanceof TableDataSource)));
+    return (baseDataSource instanceof TableDataSource
+            || (baseDataSource instanceof UnionDataSource &&
+                baseDataSource.getChildren()
+                              .stream()
+                              .allMatch(ds -> ds instanceof TableDataSource))
+            || (baseDataSource instanceof UnnestDataSource &&
+                baseDataSource.getChildren()
+                              .stream()
+                              .allMatch(ds -> ds instanceof TableDataSource)));
   }
 
   /**

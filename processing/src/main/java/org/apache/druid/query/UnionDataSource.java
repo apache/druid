@@ -199,10 +199,4 @@ public class UnionDataSource implements DataSource
   {
     return (dataSource instanceof TableDataSource || dataSource instanceof InlineDataSource);
   }
-
-  @Override
-  public boolean isTableBased()
-  {
-    return getChildren().stream().allMatch(ds -> ds.isTableBased());
-  }
 }

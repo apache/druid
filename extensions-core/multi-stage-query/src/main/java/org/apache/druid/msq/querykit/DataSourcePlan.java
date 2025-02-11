@@ -25,7 +25,6 @@ import com.google.common.collect.Iterables;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import it.unimi.dsi.fastutil.ints.IntSets;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.frame.key.ClusterBy;
 import org.apache.druid.frame.key.KeyColumn;
 import org.apache.druid.java.util.common.IAE;
@@ -592,11 +591,7 @@ public class DataSourcePlan
     final IntSet broadcastInputs = new IntOpenHashSet(basePlan.getBroadcastInputs());
     basePlan.getSubQueryDefBuilder().ifPresent(subQueryDefBuilder::addAll);
 
-    if(true) {
-      throw DruidException.defensive("analysis.getPreJoinableClauses()");
-    }
-    List<PreJoinableClause> preJoinableClauses = null;//analysis.getPreJoinableClauses();
-    for (int i = 0; i < preJoinableClauses.size(); i++) {
+    for (int i = 0; i < analysis.getPreJoinableClauses().size(); i++) {
       final PreJoinableClause clause = analysis.getPreJoinableClauses().get(i);
       final DataSourcePlan clausePlan = forDataSource(
           queryKitSpec,
