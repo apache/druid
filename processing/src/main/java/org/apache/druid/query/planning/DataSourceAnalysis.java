@@ -29,6 +29,8 @@ import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.UnnestDataSource;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.spec.QuerySegmentSpec;
+import org.apache.druid.segment.join.JoinPrefixUtils;
+
 import javax.annotation.Nullable;
 
 import java.util.List;
@@ -78,13 +80,13 @@ public class DataSourceAnalysis
   private final Query<?> baseQuery;
   @Nullable
   private final DimFilter joinBaseTableFilter;
-  private final List<DataSourceProcessingClause> preJoinableClauses;
+  private final List<PreJoinableClause> preJoinableClauses;
 
   public DataSourceAnalysis(
       DataSource baseDataSource,
       @Nullable Query<?> baseQuery,
       @Nullable DimFilter joinBaseTableFilter,
-      List<DataSourceProcessingClause> preJoinableClauses
+      List<PreJoinableClause> preJoinableClauses
   )
   {
     if (baseDataSource instanceof JoinDataSource) {
@@ -189,7 +191,7 @@ public class DataSourceAnalysis
   /**
    * Returns join clauses corresponding to joinable leaf datasources (every leaf except the bottom-leftmost).
    */
-  public List<DataSourceProcessingClause> getPreJoinableClauses()
+  public List<PreJoinableClause> getPreJoinableClauses()
   {
     return preJoinableClauses;
   }
@@ -256,9 +258,8 @@ public class DataSourceAnalysis
       return false;
     }
 
-    // FIXME: looks dodgy; need to investigate
-    for (final DataSourceProcessingClause clause : preJoinableClauses) {
-      if(clause.hasColumn(column)) {
+    for (final PreJoinableClause clause : preJoinableClauses) {
+      if (JoinPrefixUtils.isPrefixedBy(column, clause.getPrefix())) {
         return false;
       }
     }
@@ -300,7 +301,7 @@ public class DataSourceAnalysis
    */
   public boolean isGlobal()
   {
-    for (DataSourceProcessingClause preJoinableClause : preJoinableClauses) {
+    for (PreJoinableClause preJoinableClause : preJoinableClauses) {
       if (!preJoinableClause.getDataSource().isGlobal()) {
         return false;
       }

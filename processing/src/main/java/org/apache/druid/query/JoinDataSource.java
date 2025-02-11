@@ -29,7 +29,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
@@ -42,7 +41,6 @@ import org.apache.druid.query.filter.DimFilters;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.TrueDimFilter;
 import org.apache.druid.query.planning.DataSourceAnalysis;
-import org.apache.druid.query.planning.DataSourceProcessingClause;
 import org.apache.druid.query.planning.PreJoinableClause;
 import org.apache.druid.query.planning.PreJoinableClause.UnCacheableDataSourceException;
 import org.apache.druid.segment.SegmentReference;
@@ -320,7 +318,7 @@ public class JoinDataSource implements DataSource
     DataSource current = newSource;
     DimFilter joinBaseFilter = analysis.getJoinBaseTableFilter().orElse(null);
 
-    for (final DataSourceProcessingClause clause : analysis.getPreJoinableClauses()) {
+    for (final PreJoinableClause clause : analysis.getPreJoinableClauses()) {
       current = clause.withUpdatedDataSource(current, joinBaseFilter, this.joinableFactoryWrapper);
       joinBaseFilter = null;
     }
@@ -330,7 +328,7 @@ public class JoinDataSource implements DataSource
   @Override
   public byte[] getCacheKey()
   {
-    final List<DataSourceProcessingClause> clauses = analysis.getPreJoinableClauses();
+    final List<PreJoinableClause> clauses = analysis.getPreJoinableClauses();
     if (clauses.isEmpty()) {
       throw new IAE("No join clauses to build the cache key for data source [%s]", this);
     }
@@ -341,7 +339,7 @@ public class JoinDataSource implements DataSource
       keyBuilder.appendCacheable(analysis.getJoinBaseTableFilter().get());
     }
     try {
-      for (DataSourceProcessingClause clause : clauses) {
+      for (PreJoinableClause clause : clauses) {
         clause.appendCacheKey(keyBuilder, joinableFactoryWrapper);
       }
     }
@@ -412,7 +410,7 @@ public class JoinDataSource implements DataSource
 
   private DataSourceAnalysis getAnalysisForDataSource()
   {
-    final Triple<DataSource, DimFilter, List<DataSourceProcessingClause>> flattened = flattenJoin(this);
+    final Triple<DataSource, DimFilter, List<PreJoinableClause>> flattened = flattenJoin(this);
     return new DataSourceAnalysis(flattened.first, null, flattened.second, flattened.third);
   }
 
@@ -429,7 +427,7 @@ public class JoinDataSource implements DataSource
    */
   private Function<SegmentReference, SegmentReference> createSegmentMapFunctionInternal(
       @Nullable final Filter baseFilter,
-      final List<DataSourceProcessingClause> clauses1,
+      final List<PreJoinableClause> clauses1,
       SegmentMapConfig cfg
   )
   {
@@ -443,14 +441,9 @@ public class JoinDataSource implements DataSource
             // simple fix is to limit this method to only process one level at a time.
 //            PreJoinableClause lastClause = Iterables.getLast(clauses1, null);
 
-            List<DataSourceProcessingClause> clauses2 =
+            List<PreJoinableClause> clauses =
 
             clauses1.size() > 0 ? clauses1.subList(clauses1.size()-1, clauses1.size()) : Collections.emptyList();
-
-            if (!(clauses2.get(0) instanceof JoinableClause)) {
-              throw DruidException.defensive("Expected a JoinableClause");
-            }
-            List<PreJoinableClause> clauses = Collections.singletonList((PreJoinableClause) clauses2.get(0));
 
 
             final JoinableClauses joinableClauses = JoinableClauses.createClauses(
@@ -533,11 +526,11 @@ public class JoinDataSource implements DataSource
    *
    * @throws IllegalArgumentException if dataSource cannot be fully flattened.
    */
-  private static Triple<DataSource, DimFilter, List<DataSourceProcessingClause>> flattenJoin(final JoinDataSource dataSource)
+  private static Triple<DataSource, DimFilter, List<PreJoinableClause>> flattenJoin(final JoinDataSource dataSource)
   {
     DataSource current = dataSource;
     DimFilter currentDimFilter = TrueDimFilter.instance();
-    final List<DataSourceProcessingClause> preJoinableClauses = new ArrayList<>();
+    final List<PreJoinableClause> preJoinableClauses = new ArrayList<>();
 
     // There can be queries like
     // Join of Unnest of Join of Unnest of Filter
@@ -559,21 +552,25 @@ public class JoinDataSource implements DataSource
       if (current instanceof JoinDataSource) {
         final JoinDataSource joinDataSource = (JoinDataSource) current;
         currentDimFilter = DimFilters.conjunction(currentDimFilter, joinDataSource.getLeftFilter());
-        preJoinableClauses.add(DataSourceProcessingClause.of(joinDataSource));
+        PreJoinableClause e = new PreJoinableClause(
+            joinDataSource.getRightPrefix(),
+            joinDataSource.getRight(),
+            joinDataSource.getJoinType(),
+            joinDataSource.getConditionAnalysis(),
+            joinDataSource.getJoinAlgorithm()
+        );
+        preJoinableClauses.add(
+            e
+        );
         current = joinDataSource.getLeft();
       } else if (current instanceof UnnestDataSource) {
         final UnnestDataSource unnestDataSource = (UnnestDataSource) current;
-        preJoinableClauses.add(DataSourceProcessingClause.of(unnestDataSource));
         current = unnestDataSource.getBase();
       } else if (current instanceof RestrictedDataSource) {
         final RestrictedDataSource restrictedDataSource = (RestrictedDataSource) current;
-        // FIXME
-//        preJoinableClauses.add(DataSourceProcessingClause.of(restrictedDataSource));
         current = restrictedDataSource.getBase();
       } else {
         final FilteredDataSource filteredDataSource = (FilteredDataSource) current;
-        // FIXME
-//        preJoinableClauses.add(DataSourceProcessingClause.of(filteredDataSource));
         current = filteredDataSource.getBase();
       }
     }
