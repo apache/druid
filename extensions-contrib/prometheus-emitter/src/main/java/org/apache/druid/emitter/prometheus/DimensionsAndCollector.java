@@ -26,12 +26,14 @@ public class DimensionsAndCollector
   private final String[] dimensions;
   private final SimpleCollector collector;
   private final double conversionFactor;
+  private final double[] histogramBuckets;
 
-  DimensionsAndCollector(String[] dimensions, SimpleCollector collector, double conversionFactor)
+  DimensionsAndCollector(String[] dimensions, SimpleCollector collector, double conversionFactor, double[] histogramBuckets)
   {
     this.dimensions = dimensions;
     this.collector = collector;
     this.conversionFactor = conversionFactor;
+    this.histogramBuckets = histogramBuckets;
   }
 
   public String[] getDimensions()
@@ -47,5 +49,10 @@ public class DimensionsAndCollector
   public double getConversionFactor()
   {
     return conversionFactor;
+  }
+
+  public double[] getHistogramBuckets()
+  {
+    return histogramBuckets;
   }
 }

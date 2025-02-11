@@ -1985,8 +1985,7 @@ public class CompactionTaskTest
                 new ListIndexed<>(segment.getDimensions()),
                 null,
                 columnMap,
-                null,
-                false
+                null
             )
             {
               @Override
@@ -2024,8 +2023,7 @@ public class CompactionTaskTest
                 index.getAvailableDimensions(),
                 index.getBitmapFactoryForDimensions(),
                 index.getColumns(),
-                index.getFileMapper(),
-                false
+                index.getFileMapper()
             )
             {
               @Override

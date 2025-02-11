@@ -1282,21 +1282,68 @@ Returns the following:
 
 ## BLOOM_FILTER
 
-Computes a Bloom filter from values produced by the specified expression.
+Computes a [Bloom filter](../development/extensions-core/bloom-filter.md) from values provided in an expression.
 
-* **Syntax**: `BLOOM_FILTER(expr, <NUMERIC>)`
+
+* **Syntax:** `BLOOM_FILTER(expr, numEntries)`  
+  `numEntries` specifies the maximum number of distinct values before the false positive rate increases.
 * **Function type:** Aggregation
+
+<details><summary>Example</summary>
+
+The following example returns a Base64-encoded Bloom filter representing the set of devices ,`agent_category`, used in Albania:
+
+```sql
+SELECT "country",
+  BLOOM_FILTER(agent_category, 10) as albanian_bloom
+FROM "kttm"
+WHERE "country" = 'Albania'
+GROUP BY "country"
+```
+
+Returns the following:
+
+|`country`| `albanian_bloom`|
+|---| --- | 
+|`Albania`|`BAAAAAgAAACAAEAAAAAAAAAAAEIAAAAAAAAAAAAAAAAAAAAAAAIIAAAAAAAAAAAAAAAAAAIAAAAAAQAAAAAAAAAAAAAA`|
+
+</details>
 
 [Learn more](sql-aggregations.md)
 
 ## BLOOM_FILTER_TEST
 
-Returns true if the expression is contained in a Base64-serialized Bloom filter.
+Returns true if an expression is contained in a Base64-encoded [Bloom filter](../development/extensions-core/bloom-filter.md) string.
 
-* **Syntax**: `BLOOM_FILTER_TEST(expr, <STRING>)`
+* **Syntax:** `BLOOM_FILTER_TEST(expr, <STRING>)`
 * **Function type:** Scalar, other
 
+<details><summary>Example</summary>
+
+The following example returns `true` when a device type, `agent_category`, exists in the Bloom filter representing the set of devices used in Albania:
+
+```sql
+SELECT agent_category,
+BLOOM_FILTER_TEST("agent_category", 'BAAAAAgAAACAAEAAAAAAAAAAAEIAAAAAAAAAAAAAAAAAAAAAAAIIAAAAAAAAAAAAAAAAAAIAAAAAAQAAAAAAAAAAAAAA') AS bloom_test
+FROM "kttm"
+GROUP BY 1
+```
+
+Returns the following:
+
+| `agent_category` | `bloom_test` |
+| --- | --- |
+| `empty` | `false` |
+| `Game console` | `false` |
+| `Personal computer` | `true` |
+| `Smart TV` | `false` |
+| `Smartphone` | `true` |
+| `Tablet` | `false` |
+
+</details>
+
 [Learn more](sql-scalar.md#other-scalar-functions)
+
 
 ## BTRIM
 
@@ -1787,39 +1834,63 @@ Returns the following:
 
 ## DECODE_BASE64_COMPLEX
 
-Decodes a Base64-encoded string into a complex data type, where `dataType` is the complex data type and `expr` is the Base64-encoded string to decode.
+Decodes a Base64-encoded expression into a complex data type.
 
-* **Syntax**: `DECODE_BASE64_COMPLEX(dataType, expr)`
+You can use the function to ingest data when a column contains an encoded data sketch such as Theta or HLL.
+
+The function supports `hyperUnique` and `serializablePairLongString` data types by default.
+To enable support for a complex data type, load the [corresponding extension](../configuration/extensions.md):
+
+- `druid-bloom-filter`: `bloom`
+- `druid-datasketches`: `arrayOfDoublesSketch`, `HLLSketch`, `KllDoublesSketch`, `KllFloatsSketch`, `quantilesDoublesSketch`, `thetaSketch`
+- `druid-histogram`: `approximateHistogram`, `fixedBucketsHistogram`
+- `druid-stats`: `variance`
+- `druid-compressed-bigdecimal`: `compressedBigDecimal`
+- `druid-momentsketch`: `momentSketch`
+- `druid-tdigestsketch`: `tDigestSketch`
+
+* **Syntax:** `DECODE_BASE64_COMPLEX(dataType, expr)`
 * **Function type:** Scalar, other
 
-[Learn more](sql-scalar.md#other-scalar-functions)
+<details><summary>Example</summary>
+
+The following example returns a Theta sketch complex type from a Base64-encoded string representation of the sketch:
+
+```sql
+SELECT DECODE_BASE64_COMPLEX('thetaSketch','AgMDAAAazJNBAAAAAACAP+k/tkWGkSoFYWMAG0y+3gVabvKcIUNrBv0jAkGsw7sK5szX1k0ScwtMfCQmFP/rDhFK6yU7PPkObZ/Ugw5fcBQZ+GaO+Nt6FP+Whz6TmxkWyRJ+gaQLFhcts1+c0Q/vF9FLFfaVlOkb3/XpXaZ3JhyZ2dG8Di2/HO10sMs9C0AdM4FdHuye6SB+GYinIhTOITOHzB5SAfIiph3de9qIGSM89V+s/TkdI/WZVzK9wF0npfi4ZrmgBSnVjphCtQA5K2fp0x59UCwvMopZarsSkzEo81OIxjznNNXLr1BbQBo1Ei3OxJOoNzVs0x9xzsm4NfgAZSvZQvI1c2TmPsZvlzpW7tmIlizOOsr6pGWoh0U99/tV8RFwhz0SJoWyU1Z2P0hZ5d7KRnZBjlWC+e/FLEKrWsu14rlFRXhsOuxRId9FboEuH9PqMUixI2lB8MhLS803hJDoZ7tMy7Egl+YNU04QM11stXX4Tu96NHHcGiZRuCyciGiTGVQflMLmNt6lW6zIwJy0baNdbwjMCTjtUF7oZOtugWLYYJE9sJU3HuVijc0J10l6SmPslbfY6Fw0Za9w/Zdhn/5nIuKc1WMrYWnAJQJKXY73bHYWq7gI6dRvYdC2fLJyv3F8qwQcOJgFc0GaGXw8KRF3w3IVCwxsMntWhdTkaJ88e++5NFyM1Hd/D79wg0b9vH8=') AS "theta_sketch"
+```
+
+You can perform Theta sketch operations on the resulting `COMPLEX<thetaSketch>` value which resembles the input string. 
+
+</details>
+
+[Learn more](./sql-scalar.md#other-scalar-functions)
 
 ## DECODE_BASE64_UTF8
 
-Decodes a Base64-encoded string into a UTF-8 encoded string.
+Decodes a Base64-encoded expression into a UTF-8 encoded string.
 
 * **Syntax:** `DECODE_BASE64_UTF8(expr)`
 * **Function type:** Scalar, string
 
 <details><summary>Example</summary>
 
-The following example converts the base64 encoded string `SGVsbG8gV29ybGQhCg==` into an UTF-8 encoded string.
+The following example decodes the Base64-encoded representation of "Hello, World!":
 
 ```sql
 SELECT
-  'SGVsbG8gV29ybGQhCg==' AS "base64_encoding",
-  DECODE_BASE64_UTF8('SGVsbG8gV29ybGQhCg==') AS "convert_to_UTF8_encoding"
+  DECODE_BASE64_UTF8('SGVsbG8sIFdvcmxkIQ==') as decoded
 ```
 
 Returns the following:
 
-| `base64_encoding` | `convert_to_UTF8_encoding` |
-| -- | -- |
-| `SGVsbG8gV29ybGQhCg==` | `Hello World!` |
+| `decoded` |
+| -- |
+| `Hello, World!` |
 
 </details>
 
-[Learn more](sql-scalar.md#string-functions)
+[Learn more](./sql-scalar.md#string-functions)
 
 ## DEGREES
 
@@ -5217,24 +5288,6 @@ Returns the following:
 </details>
 
 [Learn more](sql-scalar.md#numeric-functions)
-
-## TDIGEST_GENERATE_SKETCH
-
-Generates a T-digest sketch from values of the specified expression.
-
-* **Syntax**: `TDIGEST_GENERATE_SKETCH(expr, [compression])`
-* **Function type:** Aggregation
-
-[Learn more](sql-aggregations.md)
-
-## TDIGEST_QUANTILE
-
-Returns the quantile for the specified fraction from a T-Digest sketch constructed from values of the expression.
-
-* **Syntax**: `TDIGEST_QUANTILE(expr, quantileFraction, [compression])`
-* **Function type:** Aggregation
-
-[Learn more](sql-aggregations.md)
 
 ## TEXTCAT
 

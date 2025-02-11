@@ -7331,7 +7331,13 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
             newScanQueryBuilder()
                 .dataSource(CalciteTests.ARRAYS_DATASOURCE)
                 .intervals(querySegmentSpec(Filtration.eternity()))
-                .virtualColumns(expressionVirtualColumn("v0", "(\"arrayLongNulls\" == array(null,null))", ColumnType.LONG))
+                .virtualColumns(
+                    expressionVirtualColumn(
+                        "v0",
+                        "(\"arrayLongNulls\" == CAST(array(null,null), 'ARRAY<LONG>'))",
+                        ColumnType.LONG
+                    )
+                )
                 .columns("v0")
                 .columnTypes(ColumnType.LONG)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)

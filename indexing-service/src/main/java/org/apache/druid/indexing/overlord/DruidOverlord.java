@@ -35,6 +35,7 @@ import org.apache.druid.indexing.overlord.config.TaskLockConfig;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
 import org.apache.druid.indexing.overlord.duty.OverlordDutyExecutor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
+import org.apache.druid.indexing.scheduledbatch.ScheduledBatchTaskManager;
 import org.apache.druid.java.util.common.lifecycle.Lifecycle;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
@@ -91,6 +92,7 @@ public class DruidOverlord
       final SegmentAllocationQueue segmentAllocationQueue,
       final SegmentMetadataCache segmentMetadataCache,
       final CompactionScheduler compactionScheduler,
+      final ScheduledBatchTaskManager scheduledBatchTaskManager,
       final ObjectMapper mapper,
       final TaskContextEnricher taskContextEnricher
   )
@@ -165,6 +167,7 @@ public class DruidOverlord
                 {
                   taskMaster.becomeFullLeader();
                   compactionScheduler.start();
+                  scheduledBatchTaskManager.start();
 
                   // Announce the node only after all the services have been initialized
                   initialized = true;
@@ -175,6 +178,7 @@ public class DruidOverlord
                 public void stop()
                 {
                   serviceAnnouncer.unannounce(node);
+                  scheduledBatchTaskManager.stop();
                   compactionScheduler.stop();
                   taskMaster.downgradeToHalfLeader();
                 }

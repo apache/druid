@@ -26,6 +26,7 @@ import org.apache.druid.io.Channels;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
+import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 
 import java.io.IOException;
@@ -78,18 +79,24 @@ public class CompressedVSizeColumnarMultiIntsSupplier implements WritableSupplie
     valueSupplier.writeTo(channel, smoosher);
   }
 
-  public static CompressedVSizeColumnarMultiIntsSupplier fromByteBuffer(ByteBuffer buffer, ByteOrder order)
+  public static CompressedVSizeColumnarMultiIntsSupplier fromByteBuffer(
+      ByteBuffer buffer,
+      ByteOrder order,
+      SmooshedFileMapper smooshMapper
+  )
   {
     byte versionFromBuffer = buffer.get();
 
     if (versionFromBuffer == VERSION) {
       CompressedVSizeColumnarIntsSupplier offsetSupplier = CompressedVSizeColumnarIntsSupplier.fromByteBuffer(
           buffer,
-          order
+          order,
+          smooshMapper
       );
       CompressedVSizeColumnarIntsSupplier valueSupplier = CompressedVSizeColumnarIntsSupplier.fromByteBuffer(
           buffer,
-          order
+          order,
+          smooshMapper
       );
       return new CompressedVSizeColumnarMultiIntsSupplier(offsetSupplier, valueSupplier);
     }

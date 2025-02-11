@@ -190,7 +190,7 @@ public class WorkerSketchFetcher implements AutoCloseable
           try {
             kernelActions.accept((kernel) -> {
               try {
-                retryOperation.accept(kernel, worker, new WorkerRpcFailedFault(taskId));
+                retryOperation.accept(kernel, worker, new WorkerRpcFailedFault(taskId, t.toString()));
                 kernelActionFuture.set(false);
 
               }
