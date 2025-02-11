@@ -179,6 +179,21 @@ public class SupervisorManagerTest extends EasyMockSupport
   }
 
   @Test
+  public void testShouldUpdateSupervisor()
+  {
+    SupervisorSpec spec = new TestSupervisorSpec("id1", supervisor1);
+    SupervisorSpec spec2 = new TestSupervisorSpec("id2", supervisor2);
+    Map<String, SupervisorSpec> existingSpecs = ImmutableMap.of(
+        "id1", spec
+    );
+    EasyMock.expect(metadataSupervisorManager.getLatest()).andReturn(existingSpecs);
+    supervisor1.start();
+    replayAll();
+    manager.start();
+    Assert.assertFalse(manager.shouldUpdateSupervisor(spec));
+    Assert.assertTrue(manager.shouldUpdateSupervisor(spec2));
+  }
+  @Test
   public void testStopAndRemoveSupervisorNotStarted()
   {
     exception.expect(IllegalStateException.class);
