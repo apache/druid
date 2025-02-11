@@ -32,7 +32,7 @@ Replace {{MILESTONE}} with the correct milestone number. For example: https://gi
 
 See the [complete set of changes](https://github.com/apache/druid/issues?q=is%3Aclosed+milestone%3A32.0.0+sort%3Aupdated-desc+) for additional details, including bug fixes.
 
-Review the [upgrade notes](#upgrade-notes) and [incompatible changes](#incompatible-changes) before you upgrade to Druid {{DRUIDVERSION}}.
+Review the [incompatible changes](#incompatible-changes) before you upgrade to Druid {{DRUIDVERSION}}.
 If you are upgrading across multiple versions, see the [Upgrade notes](upgrade-notes.md) page, which lists upgrade notes for the most recent Druid versions.
 
 <!-- 
@@ -364,21 +364,6 @@ The docs now include examples for all supported Apache Druid SQL functions. You 
 Check out the examples at [All Druid SQL functions](../querying/sql-functions.md).
 
 ## Upgrade notes and incompatible changes
-
-### Upgrade notes
-
-#### Front-coded dictionaries
-
-<!--Carry this forward until 32. Then move it to incompatible changes -->
-
-In Druid 32.0.0, you can specify that Druid uses front-coded dictionaries feature during segment creation. Front-coded dictionaries reduce storage and improve performance by optimizing for strings where the front part looks similar.
-
-Once this feature is on, you cannot easily downgrade to an earlier version that does not support the feature. 
-
-For more information, see [Migration guide: front-coded dictionaries](./migr-front-coded-dict.md).
-
-If you're already using this feature, you don't need to take any action. 
-
 
 ### Incompatible changes
 
