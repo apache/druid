@@ -66,6 +66,12 @@ npm i && npm run jest -- -u
 ```
 to ensure that any web console tests that include documentation links are updated correctly to ensure that CI will pass on the release branch.
 
+Note:
+If there are any test failures here, it may be indicating that the webconsole needs to be rebuilt. Run the following command first:
+```
+npm run compile
+```
+
 
 The sample [`docker-compose.yml`](https://github.com/apache/druid/blob/master/distribution/docker/docker-compose.yml) used in the Docker quickstart documentation should match the release version:
 
@@ -421,7 +427,9 @@ To make the staged repo publicly accessible, "Close" the staging repo.
 
 Release votes are held on the dev mailing list, dev@druid.apache.org. Druid PMC votes are binding.
 
-You can use the following template for the release vote thread, replacing values as necessary.
+You can use the following template for the release vote thread, replacing values as necessary. Any linebreaks should
+be copied as is to allow them to be run directly, even if it appears to fit in one line, since the Apache mailing list
+provider inserts linebreaks beyond a certain length.
 
 ##### Subject
 
@@ -594,7 +602,7 @@ Tag the rc that passed vote as the release tag and push to github.
 ```bash
 $ git checkout druid-0.17.0-rc3
 $ git tag druid-0.17.0
-$ git push origin/druid-0.17.0
+$ git push origin tag druid-0.17.0
 ```
 
 ### Publish release artifacts to SVN
