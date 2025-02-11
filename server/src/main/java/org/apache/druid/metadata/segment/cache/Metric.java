@@ -29,22 +29,66 @@ public class Metric
     // no instantiation
   }
 
+  /**
+   * Total number of segments currently present in the metadata store.
+   */
+  public static final String PERSISTED_USED_SEGMENTS = "segment/used/count";
+
+  /**
+   * Total number of segments currently present in the metadata store.
+   */
+  public static final String PERSISTED_UNUSED_SEGMENTS = "segment/unused/count";
+
+  /**
+   * Total number of pending segments currently present in the metadata store.
+   */
+  public static final String PERSISTED_PENDING_SEGMENTS = "segment/pending/count";
+
+  // CACHE METRICS
   private static final String METRIC_NAME_PREFIX = "segment/metadataCache/";
 
+  /**
+   * Time taken in milliseconds for the latest sync with metadata store.
+   */
   public static final String SYNC_DURATION_MILLIS = METRIC_NAME_PREFIX + "sync/time";
 
-  public static final String POLLED_SEGMENTS = METRIC_NAME_PREFIX + "polled/total";
-  public static final String POLLED_PENDING_SEGMENTS = METRIC_NAME_PREFIX + "polled/pending";
+  /**
+   * Number of segments which are now stale in the cache and need to be refreshed.
+   */
+  public static final String STALE_USED_SEGMENTS = METRIC_NAME_PREFIX + "used/stale";
 
-  public static final String STALE_USED_SEGMENTS = METRIC_NAME_PREFIX + "stale/used";
+  /**
+   * Total number of segments deleted from the cache in the latest sync.
+   */
+  public static final String DELETED_SEGMENTS = METRIC_NAME_PREFIX + "deleted";
 
-  public static final String DELETED_SEGMENTS = METRIC_NAME_PREFIX + "deleted/total";
-  public static final String DELETED_PENDING_SEGMENTS = METRIC_NAME_PREFIX + "deleted/pending";
+  /**
+   * Total number of pending segments deleted from the cache in the latest sync.
+   */
+  public static final String DELETED_PENDING_SEGMENTS = METRIC_NAME_PREFIX + "pending/deleted";
 
-  public static final String USED_SEGMENTS_UPDATED = METRIC_NAME_PREFIX + "updated/used";
-  public static final String UNUSED_SEGMENTS_UPDATED = METRIC_NAME_PREFIX + "updated/unused";
-  public static final String PENDING_SEGMENTS_UPDATED = METRIC_NAME_PREFIX + "updated/pending";
+  /**
+   * Number of used segments updated in the cache from the metadata store in the latest sync.
+   */
+  public static final String UPDATED_USED_SEGMENTS = METRIC_NAME_PREFIX + "used/updated";
 
-  public static final String IGNORED_SEGMENTS = METRIC_NAME_PREFIX + "ignored/total";
-  public static final String IGNORED_PENDING_SEGMENTS = METRIC_NAME_PREFIX + "ignored/pending";
+  /**
+   * Number of unused segments updated in the cache from the metadata store in the latest sync.
+   */
+  public static final String UPDATED_UNUSED_SEGMENTS = METRIC_NAME_PREFIX + "unused/updated";
+
+  /**
+   * Number of pending segments updated in the cache from the metadata store in the latest sync.
+   */
+  public static final String UPDATED_PENDING_SEGMENTS = METRIC_NAME_PREFIX + "pending/updated";
+
+  /**
+   * Number of unparseable segment records skipped while refreshing the cache.
+   */
+  public static final String SKIPPED_SEGMENTS = METRIC_NAME_PREFIX + "skipped";
+
+  /**
+   * Number of unparseable pending segment records skipped while refreshing the cache.
+   */
+  public static final String SKIPPED_PENDING_SEGMENTS = METRIC_NAME_PREFIX + "pending/skipped";
 }

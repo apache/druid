@@ -422,7 +422,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
         tablesConfig.getSegmentsTable()
     );
 
-    final AtomicInteger numIgnoredRecords = new AtomicInteger(0);
+    final AtomicInteger numSkippedRecords = new AtomicInteger(0);
     inReadOnlyTransaction((handle, status) -> {
       try (
           ResultIterator<SegmentRecord> iterator =
@@ -433,7 +433,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
         while (iterator.hasNext()) {
           final SegmentRecord record = iterator.next();
           if (record == null) {
-            numIgnoredRecords.incrementAndGet();
+            numSkippedRecords.incrementAndGet();
             continue;
           }
 
@@ -442,22 +442,24 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
           final DatasourceSegmentSummary summary = datasourceToSummary
               .computeIfAbsent(record.dataSource, ds -> new DatasourceSegmentSummary());
 
-          // Refresh used segments if required
-          if (record.isUsed && cache.shouldRefreshUsedSegment(segmentId, record.lastUpdatedTime)) {
-            summary.usedSegmentIdsToRefresh.add(record.segmentId.toString());
-          }
+          if (record.isUsed) {
+            summary.numPersistedUsedSegments++;
 
-          // Track max partition number of unused segment if needed
-          if (!record.isUsed) {
+            // Check if the used segment needs to be refreshed
+            if (cache.shouldRefreshUsedSegment(segmentId, record.lastUpdatedTime)) {
+              summary.usedSegmentIdsToRefresh.add(record.segmentId.toString());
+            }
+          } else {
+            summary.numPersistedUnusedSegments++;
             if (cache.addUnusedSegmentId(segmentId, record.lastUpdatedTime)) {
-              summary.numUnusedSegmentsRefreshed++;
+              summary.numUnusedSegmentsUpdated++;
             }
 
-            final int partitionNum = segmentId.getPartitionNum();
+            // Track max partition number of unused segment if needed
             summary
                 .intervalVersionToMaxUnusedPartition
                 .computeIfAbsent(segmentId.getInterval(), i -> new HashMap<>())
-                .merge(segmentId.getVersion(), partitionNum, Math::max);
+                .merge(segmentId.getVersion(), segmentId.getPartitionNum(), Math::max);
           }
 
           summary.persistedSegmentIds.add(segmentId);
@@ -467,8 +469,8 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
       }
     });
 
-    if (numIgnoredRecords.get() > 0) {
-      emitMetric(Metric.IGNORED_SEGMENTS, numIgnoredRecords.get());
+    if (numSkippedRecords.get() > 0) {
+      emitMetric(Metric.SKIPPED_SEGMENTS, numSkippedRecords.get());
     }
   }
 
@@ -477,29 +479,38 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
     return connector.retryReadOnlyTransaction(callback, SQL_QUIET_RETRIES, SQL_MAX_RETRIES);
   }
 
+  /**
+   * Emits metrics for a datasource after the sync has finished.
+   * If there are no persisted or cached segments for the datasource, no metrics
+   * are emitted.
+   */
   private void emitSummaryMetrics(String dataSource, DatasourceSegmentSummary summary)
   {
-    emitMetric(dataSource, Metric.POLLED_SEGMENTS, summary.persistedSegmentIds.size());
-    emitMetric(dataSource, Metric.POLLED_PENDING_SEGMENTS, summary.persistedPendingSegmentIds.size());
+    final HeapMemoryDatasourceSegmentCache cache = getCacheForDatasource(dataSource);
+    if (cache.isEmpty() && summary.isEmpty() && !summary.isCacheUpdated()) {
+      // This is non-existent datasource and has a dangling entry in the datasourceToSegmentCache map
+      return;
+    }
+
+    emitMetric(dataSource, Metric.PERSISTED_USED_SEGMENTS, summary.numPersistedUsedSegments);
+    emitMetric(dataSource, Metric.PERSISTED_UNUSED_SEGMENTS, summary.numPersistedUnusedSegments);
+    emitMetric(dataSource, Metric.PERSISTED_PENDING_SEGMENTS, summary.persistedPendingSegmentIds.size());
     emitMetric(dataSource, Metric.STALE_USED_SEGMENTS, summary.usedSegmentIdsToRefresh.size());
 
-    emitMetric(dataSource, Metric.DELETED_SEGMENTS, summary.numSegmentsRemoved);
-    emitMetric(dataSource, Metric.DELETED_PENDING_SEGMENTS, summary.numPendingSegmentsRemoved);
+    emitNonZeroMetric(dataSource, Metric.DELETED_SEGMENTS, summary.numSegmentsRemoved);
+    emitNonZeroMetric(dataSource, Metric.DELETED_PENDING_SEGMENTS, summary.numPendingSegmentsRemoved);
+    emitNonZeroMetric(dataSource, Metric.UPDATED_USED_SEGMENTS, summary.numUsedSegmentsRefreshed);
+    emitNonZeroMetric(dataSource, Metric.UPDATED_UNUSED_SEGMENTS, summary.numUnusedSegmentsUpdated);
+    emitNonZeroMetric(dataSource, Metric.UPDATED_PENDING_SEGMENTS, summary.numPendingSegmentsUpdated);
 
-    emitMetric(dataSource, Metric.USED_SEGMENTS_UPDATED, summary.numUsedSegmentsRefreshed);
-    emitMetric(dataSource, Metric.UNUSED_SEGMENTS_UPDATED, summary.numUnusedSegmentsRefreshed);
-    emitMetric(dataSource, Metric.PENDING_SEGMENTS_UPDATED, summary.numPendingSegmentsUpdated);
-
-    final boolean updated =
-        summary.numSegmentsRemoved > 0
-        || summary.numPendingSegmentsRemoved > 0
-        || summary.numUsedSegmentsRefreshed > 0
-        || summary.numUnusedSegmentsRefreshed > 0
-        || summary.numPendingSegmentsUpdated > 0;
-    if (updated) {
+    if (summary.isCacheUpdated()) {
       log.info(
-          "Refreshed segments for datasource[%s] in cache with [%s].",
-          dataSource, summary.summaryString()
+          "Updated metadata cache for datasource[%s]."
+          + " Added [%d] used, [%d] unused, [%d] pending segments."
+          + " Deleted [%d] segments, [%d] pending segments.",
+          dataSource, summary.numUsedSegmentsRefreshed,
+          summary.numUnusedSegmentsUpdated, summary.numPendingSegmentsUpdated,
+          summary.numSegmentsRemoved, summary.numPendingSegmentsRemoved
       );
     }
   }
@@ -555,7 +566,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
         tablesConfig.getPendingSegmentsTable()
     );
 
-    final AtomicInteger numIgnoredRecords = new AtomicInteger();
+    final AtomicInteger numSkippedRecords = new AtomicInteger();
     inReadOnlyTransaction(
         (handle, status) -> handle
             .createQuery(sql)
@@ -587,15 +598,15 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
                     "Error occurred while reading Pending Segment ID[%s] of datasource[%s].",
                     segmentId, dataSource
                 );
-                numIgnoredRecords.incrementAndGet();
+                numSkippedRecords.incrementAndGet();
               }
 
               return 0;
             }).list()
     );
 
-    if (numIgnoredRecords.get() > 0) {
-      emitMetric(Metric.IGNORED_PENDING_SEGMENTS, numIgnoredRecords.get());
+    if (numSkippedRecords.get() > 0) {
+      emitMetric(Metric.SKIPPED_PENDING_SEGMENTS, numSkippedRecords.get());
     }
   }
 
@@ -634,6 +645,14 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
     emitter.emit(
         ServiceMetricEvent.builder().setMetric(metric, value)
     );
+  }
+
+  private void emitNonZeroMetric(String datasource, String metric, long value)
+  {
+    if (value == 0) {
+      return;
+    }
+    emitMetric(datasource, metric, value);
   }
 
   private void emitMetric(String datasource, String metric, long value)
@@ -720,24 +739,30 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
     final Set<String> usedSegmentIdsToRefresh = new HashSet<>();
     final Map<Interval, Map<String, Integer>> intervalVersionToMaxUnusedPartition = new HashMap<>();
 
+    int numPersistedUsedSegments = 0;
+    int numPersistedUnusedSegments = 0;
     int numUsedSegmentsRefreshed = 0;
-    int numUnusedSegmentsRefreshed = 0;
+    int numUnusedSegmentsUpdated = 0;
     int numSegmentsRemoved = 0;
     int numPendingSegmentsRemoved = 0;
     int numPendingSegmentsUpdated = 0;
 
-    private String summaryString()
+    private boolean isEmpty()
     {
-      return "{" +
-             "persistedSegmentIds=" + persistedSegmentIds.size() +
-             ", persistedPendingSegmentIds=" + persistedPendingSegmentIds.size() +
-             ", usedSegmentIdsToRefresh=" + usedSegmentIdsToRefresh.size() +
-             ", numUsedSegmentsRefreshed=" + numUsedSegmentsRefreshed +
-             ", numUnusedSegmentsRefreshed=" + numUnusedSegmentsRefreshed +
-             ", numSegmentsRemoved=" + numSegmentsRemoved +
-             ", numPendingSegmentsRemoved=" + numPendingSegmentsRemoved +
-             ", numPendingSegmentsUpdated=" + numPendingSegmentsUpdated +
-             '}';
+      return persistedPendingSegmentIds.isEmpty() && persistedSegmentIds.isEmpty();
+    }
+
+    /**
+     * @return true if any of the segments for this datasource have been updated
+     * in the cache in the current sync.
+     */
+    private boolean isCacheUpdated()
+    {
+      return numSegmentsRemoved > 0
+             || numUsedSegmentsRefreshed > 0
+             || numUnusedSegmentsUpdated > 0
+             || numPendingSegmentsRemoved > 0
+             || numPendingSegmentsUpdated > 0;
     }
   }
 

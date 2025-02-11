@@ -77,6 +77,14 @@ class HeapMemoryDatasourceSegmentCache extends ReadWriteCache
   }
 
   /**
+   * @return If the cache has no entries
+   */
+  boolean isEmpty()
+  {
+    return withReadLock(intervalToSegments::isEmpty);
+  }
+
+  /**
    * Checks if a segment needs to be refreshed. A refresh is required if the
    * cache has no entry for the given segment or if the metadata store has a
    * more recently updated copy of the segment.

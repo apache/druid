@@ -313,6 +313,25 @@ If the JVM does not support CPU time measurement for the current thread, `ingest
 |`worker/task/success/count`|Number of tasks that succeeded on an indexer during the emission period. This metric is only available if the `WorkerTaskCountStatsMonitor` module is included.|`dataSource`|Varies|
 |`worker/task/running/count`|Number of tasks running on an indexer per emission period. This metric is only available if the `WorkerTaskCountStatsMonitor` module is included.|`dataSource`|Varies|
 
+### Segment metadata cache
+
+The following metrics are emitted only when the segment metadata caching is enabled on the Overlord.
+
+|Metric|Description|Dimensions|
+|------|-----------|----------|
+|`segment/used/count`|Number of used segments currently present in the metadata store.|`dataSource`|
+|`segment/unused/count`|Number of unused segments currently present in the metadata store.|`dataSource`|
+|`segment/pending/count`|Number of pending segments currently present in the metadata store.|`dataSource`|
+|`segment/metadataCache/sync/time`|Number of milliseconds taken for the cache to sync with the metadata store.||
+|`segment/metadataCache/deleted`|Total number of segments deleted from the cache during the latest sync.||
+|`segment/metadataCache/skipped`|Total number of unparseable segment records that were skipped in the latest sync.||
+|`segment/metadataCache/used/stale`|Number of used segments in the cache which are out-of-date and need to be refreshed.|`dataSource`|
+|`segment/metadataCache/used/updated`|Number of used segments updated in the cache during the latest sync.|`dataSource`|
+|`segment/metadataCache/unused/updated`|Number of unused segments updated in the cache during the latest sync.|`dataSource`|
+|`segment/metadataCache/pending/deleted`|Number of pending segments deleted from the cache during the latest sync.|`dataSource`|
+|`segment/metadataCache/pending/updated`|Number of pending segments updated in the cache during the latest sync.|`dataSource`|
+|`segment/metadataCache/pending/skipped`|Number of unparseable pending segment records that were skipped in the latest sync.|`dataSource`|
+
 ## Shuffle metrics (Native parallel task)
 
 The shuffle metrics can be enabled by adding `org.apache.druid.indexing.worker.shuffle.ShuffleMonitor` in `druid.monitoring.monitors`.
