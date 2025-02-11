@@ -1731,7 +1731,7 @@ See [cache configuration](#cache-configuration) for how to configure cache setti
 
 This section contains the configuration options for the services that reside on Query servers (Brokers) in the suggested [three-server configuration](../design/architecture.md#druid-servers).
 
-Configuration options for the experimental [Router process](../design/router.md) are also provided here.
+Configuration options for the [Router process](../design/router.md) are also provided here.
 
 ### Broker
 
