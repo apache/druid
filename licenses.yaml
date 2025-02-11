@@ -5037,6 +5037,28 @@ libraries:
   - jakarta.xml.bind: jakarta.xml.bind-api
 ---
 
+name: cron-utils
+license_category: binary
+module: core
+license_name: Apache License version 2.0
+version: 9.2.0
+license_file_path: licenses/bin/cron-utils.APACHE2
+libraries:
+  - com.cronutils: cron-utils
+
+---
+
+name: jakarta.el
+license_category: binary
+module: core
+license_name: Eclipse Public License 2.0
+version: 3.0.4
+license_file_path: licenses/bin/jakarta.el.EPL2
+libraries:
+  - org.glassfish: jakarta.el
+
+---
+
 # Web console modules start
 name: "@babel/code-frame"
 license_category: binary
