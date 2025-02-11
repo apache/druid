@@ -42,6 +42,7 @@ import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.TrueDimFilter;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.planning.PreJoinableClause;
+import org.apache.druid.query.planning.PreJoinableClause.UnCacheableDataSourceException;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.join.HashJoinSegment;
@@ -62,7 +63,6 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -319,16 +319,7 @@ public class JoinDataSource implements DataSource
     DimFilter joinBaseFilter = analysis.getJoinBaseTableFilter().orElse(null);
 
     for (final PreJoinableClause clause : analysis.getPreJoinableClauses()) {
-      current = JoinDataSource.create(
-          current,
-          clause.getDataSource(),
-          clause.getPrefix(),
-          clause.getCondition(),
-          clause.getJoinType(),
-          joinBaseFilter,
-          this.joinableFactoryWrapper,
-          clause.getJoinAlgorithm()
-      );
+      current = clause.withUpdatedDataSource(current, joinBaseFilter, this.joinableFactoryWrapper);
       joinBaseFilter = null;
     }
     return current;
@@ -347,19 +338,15 @@ public class JoinDataSource implements DataSource
     if (analysis.getJoinBaseTableFilter().isPresent()) {
       keyBuilder.appendCacheable(analysis.getJoinBaseTableFilter().get());
     }
-    for (PreJoinableClause clause : clauses) {
-      final Optional<byte[]> bytes =
-          joinableFactoryWrapper.getJoinableFactory()
-                                .computeJoinCacheKey(clause.getDataSource(), clause.getCondition());
-      if (!bytes.isPresent()) {
-        // Encountered a data source which didn't support cache yet
-        log.debug("skipping caching for join since [%s] does not support caching", clause.getDataSource());
-        return new byte[]{};
+    try {
+      for (PreJoinableClause clause : clauses) {
+        clause.appendCacheKey(keyBuilder, joinableFactoryWrapper);
       }
-      keyBuilder.appendByteArray(bytes.get());
-      keyBuilder.appendString(clause.getCondition().getOriginalExpression());
-      keyBuilder.appendString(clause.getPrefix());
-      keyBuilder.appendString(clause.getJoinType().name());
+    }
+    catch (UnCacheableDataSourceException e) {
+      // Encountered a data source which didn't support cache yet
+      log.debug("skipping caching for join since [%s] does not support caching", e.dataSource);
+      return new byte[] {}; // FIXME why return ?!??
     }
     return keyBuilder.build();
   }

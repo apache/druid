@@ -22,12 +22,17 @@ package org.apache.druid.query.planning;
 import com.google.common.base.Preconditions;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.JoinAlgorithm;
+import org.apache.druid.query.JoinDataSource;
+import org.apache.druid.query.cache.CacheKeyBuilder;
+import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.segment.join.JoinConditionAnalysis;
 import org.apache.druid.segment.join.JoinPrefixUtils;
 import org.apache.druid.segment.join.JoinType;
+import org.apache.druid.segment.join.JoinableFactoryWrapper;
 
 import javax.annotation.Nullable;
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * Like {@link org.apache.druid.segment.join.JoinableClause}, but contains a {@link DataSource} instead of a
@@ -117,4 +122,46 @@ public class PreJoinableClause
            ", joinAlgorithm=" + joinAlgorithm +
            '}';
   }
+
+  public JoinDataSource withUpdatedDataSource(DataSource newSource, DimFilter joinBaseFilter, JoinableFactoryWrapper joinableFactoryWrapper)
+  {
+    PreJoinableClause clause = this;
+    return JoinDataSource.create(
+        newSource,
+        clause.getDataSource(),
+        clause.getPrefix(),
+        clause.getCondition(),
+        clause.getJoinType(),
+        joinBaseFilter,
+        joinableFactoryWrapper,
+        clause.getJoinAlgorithm()
+    );
+  }
+
+  public static class UnCacheableDataSourceException extends RuntimeException {
+
+    public final DataSource dataSource;
+
+    public UnCacheableDataSourceException(DataSource dataSource)
+    {
+      this.dataSource = dataSource;
+    }
+
+  }
+
+  public void appendCacheKey(CacheKeyBuilder keyBuilder, JoinableFactoryWrapper joinableFactoryWrapper)
+  {
+    PreJoinableClause clause  =this;
+    final Optional<byte[]> bytes =
+        joinableFactoryWrapper.getJoinableFactory()
+                              .computeJoinCacheKey(clause.getDataSource(), clause.getCondition());
+    if (!bytes.isPresent()) {
+      throw new UnCacheableDataSourceException(clause.getDataSource());
+    }
+    keyBuilder.appendByteArray(bytes.get());
+    keyBuilder.appendString(clause.getCondition().getOriginalExpression());
+    keyBuilder.appendString(clause.getPrefix());
+    keyBuilder.appendString(clause.getJoinType().name());
+  }
+
 }
