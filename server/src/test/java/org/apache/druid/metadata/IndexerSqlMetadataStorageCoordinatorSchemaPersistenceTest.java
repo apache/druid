@@ -28,6 +28,9 @@ import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.metadata.segment.SegmentMetadataTransaction;
+import org.apache.druid.metadata.segment.SqlSegmentMetadataTransactionFactory;
+import org.apache.druid.metadata.segment.cache.NoopSegmentMetadataCache;
 import org.apache.druid.segment.SchemaPayload;
 import org.apache.druid.segment.SchemaPayloadPlus;
 import org.apache.druid.segment.SegmentSchemaMapping;
@@ -37,6 +40,7 @@ import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.FingerprintGenerator;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.segment.metadata.SegmentSchemaTestUtils;
+import org.apache.druid.server.coordinator.simulate.TestDruidLeaderSelector;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.LinearShardSpec;
@@ -45,7 +49,6 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.skife.jdbi.v2.Handle;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -88,7 +91,15 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
     CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig = new CentralizedDatasourceSchemaConfig();
     centralizedDatasourceSchemaConfig.setEnabled(true);
 
+    SqlSegmentMetadataTransactionFactory transactionFactory = new SqlSegmentMetadataTransactionFactory(
+        mapper,
+        derbyConnectorRule.metadataTablesConfigSupplier().get(),
+        derbyConnector,
+        new TestDruidLeaderSelector(),
+        new NoopSegmentMetadataCache()
+    );
     coordinator = new IndexerSQLMetadataStorageCoordinator(
+        transactionFactory,
         mapper,
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         derbyConnector,
@@ -98,7 +109,7 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
     {
       @Override
       protected DataStoreMetadataUpdateResult updateDataSourceMetadataWithHandle(
-          Handle handle,
+          SegmentMetadataTransaction transaction,
           String dataSource,
           DataSourceMetadata startMetadata,
           DataSourceMetadata endMetadata
@@ -106,13 +117,7 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
       {
         // Count number of times this method is called.
         metadataUpdateCounter.getAndIncrement();
-        return super.updateDataSourceMetadataWithHandle(handle, dataSource, startMetadata, endMetadata);
-      }
-
-      @Override
-      public int getSqlMetadataMaxRetry()
-      {
-        return MAX_SQL_MEATADATA_RETRY_FOR_TEST;
+        return super.updateDataSourceMetadataWithHandle(transaction, dataSource, startMetadata, endMetadata);
       }
     };
   }

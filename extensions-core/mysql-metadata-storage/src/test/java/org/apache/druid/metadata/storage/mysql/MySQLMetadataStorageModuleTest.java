@@ -26,6 +26,8 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provides;
+import org.apache.druid.client.indexing.IndexingService;
+import org.apache.druid.discovery.DruidLeaderSelector;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.JsonConfigurator;
@@ -128,6 +130,14 @@ public class MySQLMetadataStorageModuleTest
               public ServiceEmitter getEmitter()
               {
                 return new ServiceEmitter("test", "localhost", new NoopEmitter());
+              }
+
+              @Provides
+              @IndexingService
+              public DruidLeaderSelector getLeaderSelector()
+              {
+                // A provider for DruidLeaderSelector is needed by SqlSegmentMetadataTransactionFactory
+                return null;
               }
             }
         )

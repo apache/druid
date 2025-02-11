@@ -41,6 +41,7 @@ import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStop;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.metadata.segment.cache.SegmentMetadataCache;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordinator.CoordinatorOverlordServiceConfig;
 
@@ -89,6 +90,7 @@ public class DruidOverlord
       final OverlordDutyExecutor overlordDutyExecutor,
       @IndexingService final DruidLeaderSelector overlordLeaderSelector,
       final SegmentAllocationQueue segmentAllocationQueue,
+      final SegmentMetadataCache segmentMetadataCache,
       final CompactionScheduler compactionScheduler,
       final ScheduledBatchTaskManager scheduledBatchTaskManager,
       final ObjectMapper mapper,
@@ -141,6 +143,7 @@ public class DruidOverlord
                 @Override
                 public void start()
                 {
+                  segmentMetadataCache.becomeLeader();
                   segmentAllocationQueue.becomeLeader();
                   taskMaster.becomeHalfLeader(taskRunner, taskQueue);
                 }
@@ -150,6 +153,7 @@ public class DruidOverlord
                 {
                   taskMaster.stopBeingLeader();
                   segmentAllocationQueue.stopBeingLeader();
+                  segmentMetadataCache.stopBeingLeader();
                 }
               }
           );
