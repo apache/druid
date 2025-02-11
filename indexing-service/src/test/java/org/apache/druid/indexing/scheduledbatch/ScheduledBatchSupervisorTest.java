@@ -142,6 +142,6 @@ public class ScheduledBatchSupervisorTest
     final ScheduledBatchSupervisor supervisor = activeSpec.createSupervisor();
     final SupervisorReport<ScheduledBatchSupervisorStatus> observedStatus = supervisor.getStatus();
     assertEquals(activeSpec.getId(), observedStatus.getId());
-    Mockito.verify(scheduler, Mockito.times(1)).getTaskManagerStatus(activeSpec.getId());
+    Mockito.verify(scheduler, Mockito.times(1)).getSupervisorStatus(activeSpec.getId());
   }
 }

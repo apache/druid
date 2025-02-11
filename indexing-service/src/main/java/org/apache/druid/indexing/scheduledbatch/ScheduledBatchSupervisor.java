@@ -70,7 +70,7 @@ public class ScheduledBatchSupervisor implements Supervisor
     return new SupervisorReport<>(
         supervisorSpec.getId(),
         DateTimes.nowUtc(),
-        batchTaskManager.getTaskManagerStatus(supervisorSpec.getId())
+        batchTaskManager.getSupervisorStatus(supervisorSpec.getId())
     );
   }
 

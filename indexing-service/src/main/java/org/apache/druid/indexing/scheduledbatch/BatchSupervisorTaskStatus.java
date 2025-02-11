@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexing.scheduledbatch;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.indexer.TaskStatus;
 import org.joda.time.DateTime;
@@ -28,20 +29,33 @@ import org.joda.time.DateTime;
  */
 public class BatchSupervisorTaskStatus
 {
+  private final String supervisorId;
   private final TaskStatus taskStatus;
   private final DateTime updatedTime;
 
   public BatchSupervisorTaskStatus(
+      String supervisorId, // This field is used only for internal tracking, so not Jackson serializable
       @JsonProperty("taskStatus") TaskStatus taskStatus,
       @JsonProperty("updatedTime") DateTime updatedTime
   )
   {
+    this.supervisorId = supervisorId;
     this.taskStatus = taskStatus;
     this.updatedTime = updatedTime;
   }
 
-  @JsonProperty("taskStatus")
-  public TaskStatus getStatus()
+  /**
+   * Used for internal tracking. So this field is *not* Jackson serialized to avoid
+   * redundant information in the user-facing objects.
+   */
+  @JsonIgnore
+  public String getSupervisorId()
+  {
+    return supervisorId;
+  }
+
+  @JsonProperty
+  public TaskStatus getTaskStatus()
   {
     return taskStatus;
   }
@@ -55,8 +69,9 @@ public class BatchSupervisorTaskStatus
   @Override
   public String toString()
   {
-    return "BatchSupervisorTaskStatusV2{" +
-           "status=" + taskStatus +
+    return "BatchSupervisorTaskStatus{" +
+           "supervisorId='" + supervisorId + '\'' +
+           ", taskStatus=" + taskStatus +
            ", updatedTime=" + updatedTime +
            '}';
   }

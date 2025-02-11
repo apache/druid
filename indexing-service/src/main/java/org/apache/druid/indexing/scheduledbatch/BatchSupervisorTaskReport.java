@@ -19,65 +19,55 @@
 
 package org.apache.druid.indexing.scheduledbatch;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.util.List;
 
 /**
  * Represents a summary report of task execution for a batch supervisor, including total counts
- * of submitted, successful, and failed tasks, along with a recent subset of each category.
+ * of submitted, successful, and failed tasks, along with a recent set of tasks.
  */
 public class BatchSupervisorTaskReport
 {
   private final int totalSubmittedTasks;
   private final int totalSuccessfulTasks;
   private final int totalFailedTasks;
-  private final List<BatchSupervisorTaskStatus> recentActiveTasks;
-  private final List<BatchSupervisorTaskStatus> recentSuccessfulTasks;
-  private final List<BatchSupervisorTaskStatus> recentFailedTasks;
+  private final List<BatchSupervisorTaskStatus> recentTasks;
 
   public BatchSupervisorTaskReport(
-      final int totalSubmittedTasks,
-      final int totalSuccessfulTasks,
-      final int totalFailedTasks,
-      final List<BatchSupervisorTaskStatus> recentActiveTasks,
-      final List<BatchSupervisorTaskStatus> recentSuccessfulTasks,
-      final List<BatchSupervisorTaskStatus> recentFailedTasks
+      @JsonProperty("totalSubmittedTasks") final int totalSubmittedTasks,
+      @JsonProperty("totalSuccessfulTasks") final int totalSuccessfulTasks,
+      @JsonProperty("totalFailedTasks") final int totalFailedTasks,
+      @JsonProperty("recentTasks") final List<BatchSupervisorTaskStatus> recentTasks
   )
   {
     this.totalSubmittedTasks = totalSubmittedTasks;
     this.totalSuccessfulTasks = totalSuccessfulTasks;
     this.totalFailedTasks = totalFailedTasks;
-    this.recentActiveTasks = recentActiveTasks;
-    this.recentSuccessfulTasks = recentSuccessfulTasks;
-    this.recentFailedTasks = recentFailedTasks;
+    this.recentTasks = recentTasks;
   }
 
+  @JsonProperty
   public int getTotalSubmittedTasks()
   {
     return totalSubmittedTasks;
   }
 
+  @JsonProperty
   public int getTotalSuccessfulTasks()
   {
     return totalSuccessfulTasks;
   }
 
+  @JsonProperty
   public int getTotalFailedTasks()
   {
     return totalFailedTasks;
   }
 
-  public List<BatchSupervisorTaskStatus> getRecentActiveTasks()
+  @JsonProperty
+  public List<BatchSupervisorTaskStatus> getRecentTasks()
   {
-    return recentActiveTasks;
-  }
-
-  public List<BatchSupervisorTaskStatus> getRecentSuccessfulTasks()
-  {
-    return recentSuccessfulTasks;
-  }
-
-  public List<BatchSupervisorTaskStatus> getRecentFailedTasks()
-  {
-    return recentFailedTasks;
+    return recentTasks;
   }
 }

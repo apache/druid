@@ -53,13 +53,11 @@ public class ScheduledBatchStatusTrackerTest
   public void testGetSupervisorTasksWithNoTasks()
   {
     final BatchSupervisorTaskReport report =
-        statusTracker.getSupervisorTaskStatus(SUPERVISOR_ID_1);
+        statusTracker.getSupervisorTaskReport(SUPERVISOR_ID_1);
 
     assertNotNull(report);
 
-    assertTrue(report.getRecentActiveTasks().isEmpty());
-    assertTrue(report.getRecentSuccessfulTasks().isEmpty());
-    assertTrue(report.getRecentFailedTasks().isEmpty());
+    assertTrue(report.getRecentTasks().isEmpty());
 
     assertEquals(0, report.getTotalSubmittedTasks());
     assertEquals(0, report.getTotalSuccessfulTasks());
@@ -73,12 +71,10 @@ public class ScheduledBatchStatusTrackerTest
 
     statusTracker.onTaskSubmitted(SUPERVISOR_ID_1, sqlTaskStatus);
 
-    final BatchSupervisorTaskReport report = statusTracker.getSupervisorTaskStatus(SUPERVISOR_ID_1);
+    final BatchSupervisorTaskReport report = statusTracker.getSupervisorTaskReport(SUPERVISOR_ID_1);
     assertNotNull(report);
 
-    verifyTaskStatus(report.getRecentActiveTasks(), ImmutableList.of(TaskStatus.running(TASK_ID_1)));
-    assertTrue(report.getRecentSuccessfulTasks().isEmpty());
-    assertTrue(report.getRecentFailedTasks().isEmpty());
+    verifyTaskStatus(report.getRecentTasks(), ImmutableList.of(TaskStatus.running(TASK_ID_1)));
 
     assertEquals(1, report.getTotalSubmittedTasks());
     assertEquals(0, report.getTotalSuccessfulTasks());
@@ -93,12 +89,10 @@ public class ScheduledBatchStatusTrackerTest
 
     statusTracker.onTaskCompleted(TASK_ID_1, TaskStatus.success(TASK_ID_1));
 
-    final BatchSupervisorTaskReport report = statusTracker.getSupervisorTaskStatus(SUPERVISOR_ID_1);
+    final BatchSupervisorTaskReport report = statusTracker.getSupervisorTaskReport(SUPERVISOR_ID_1);
     assertNotNull(report);
 
-    verifyTaskStatus(report.getRecentSuccessfulTasks(), ImmutableList.of(TaskStatus.success(TASK_ID_1)));
-    assertTrue(report.getRecentActiveTasks().isEmpty());
-    assertTrue(report.getRecentFailedTasks().isEmpty());
+    verifyTaskStatus(report.getRecentTasks(), ImmutableList.of(TaskStatus.success(TASK_ID_1)));
 
     assertEquals(1, report.getTotalSubmittedTasks());
     assertEquals(1, report.getTotalSuccessfulTasks());
@@ -116,20 +110,16 @@ public class ScheduledBatchStatusTrackerTest
 
     statusTracker.onTaskCompleted(TASK_ID_1, TaskStatus.success(TASK_ID_1));
 
-    BatchSupervisorTaskReport report = statusTracker.getSupervisorTaskStatus(SUPERVISOR_ID_1);
+    BatchSupervisorTaskReport report = statusTracker.getSupervisorTaskReport(SUPERVISOR_ID_1);
     assertNotNull(report);
 
-    verifyTaskStatus(report.getRecentActiveTasks(), ImmutableList.of(TaskStatus.running(TASK_ID_2)));
-    verifyTaskStatus(report.getRecentSuccessfulTasks(), ImmutableList.of(TaskStatus.success(TASK_ID_1)));
-    assertTrue(report.getRecentFailedTasks().isEmpty());
+    verifyTaskStatus(report.getRecentTasks(), ImmutableList.of(TaskStatus.success(TASK_ID_1), TaskStatus.running(TASK_ID_2)));
 
     statusTracker.onTaskCompleted(TASK_ID_2, TaskStatus.failure(TASK_ID_2, "some error message."));
 
-    report = statusTracker.getSupervisorTaskStatus(SUPERVISOR_ID_1);
+    report = statusTracker.getSupervisorTaskReport(SUPERVISOR_ID_1);
 
-    assertTrue(report.getRecentActiveTasks().isEmpty());
-    verifyTaskStatus(report.getRecentSuccessfulTasks(), ImmutableList.of(TaskStatus.success(TASK_ID_1)));
-    verifyTaskStatus(report.getRecentFailedTasks(), ImmutableList.of(TaskStatus.failure(TASK_ID_2, "some error message.")));
+    verifyTaskStatus(report.getRecentTasks(), ImmutableList.of(TaskStatus.success(TASK_ID_1), TaskStatus.failure(TASK_ID_2, "some error message.")));
 
     assertEquals(2, report.getTotalSubmittedTasks());
     assertEquals(1, report.getTotalSuccessfulTasks());
@@ -151,20 +141,16 @@ public class ScheduledBatchStatusTrackerTest
     statusTracker.onTaskCompleted(TASK_ID_3, TaskStatus.success(TASK_ID_3));
 
     // Verify the state of supervisor 1
-    BatchSupervisorTaskReport report1 = statusTracker.getSupervisorTaskStatus(SUPERVISOR_ID_1);
+    BatchSupervisorTaskReport report1 = statusTracker.getSupervisorTaskReport(SUPERVISOR_ID_1);
     assertNotNull(report1);
 
-    verifyTaskStatus(report1.getRecentActiveTasks(), ImmutableList.of(TaskStatus.running(TASK_ID_1), TaskStatus.running(TASK_ID_2)));
-    assertTrue(report1.getRecentSuccessfulTasks().isEmpty());
-    assertTrue(report1.getRecentFailedTasks().isEmpty());
+    verifyTaskStatus(report1.getRecentTasks(), ImmutableList.of(TaskStatus.running(TASK_ID_1), TaskStatus.running(TASK_ID_2)));
 
     // Verify the state of supervisor 2
-    BatchSupervisorTaskReport report2 = statusTracker.getSupervisorTaskStatus(SUPERVISOR_ID_2);
+    BatchSupervisorTaskReport report2 = statusTracker.getSupervisorTaskReport(SUPERVISOR_ID_2);
     assertNotNull(report2);
 
-    verifyTaskStatus(report2.getRecentSuccessfulTasks(), ImmutableList.of(TaskStatus.success(TASK_ID_3)));
-    assertTrue(report2.getRecentActiveTasks().isEmpty());
-    assertTrue(report2.getRecentFailedTasks().isEmpty());
+    verifyTaskStatus(report2.getRecentTasks(), ImmutableList.of(TaskStatus.success(TASK_ID_3)));
 
 
     // Complete tasks for supervisor 1
@@ -172,12 +158,10 @@ public class ScheduledBatchStatusTrackerTest
     statusTracker.onTaskCompleted(TASK_ID_2, TaskStatus.failure(TASK_ID_2, "Task failed"));
 
     // Verify final state of supervisor 1
-    report1 = statusTracker.getSupervisorTaskStatus(SUPERVISOR_ID_1);
+    report1 = statusTracker.getSupervisorTaskReport(SUPERVISOR_ID_1);
     assertNotNull(report1);
 
-    assertTrue(report1.getRecentActiveTasks().isEmpty());
-    verifyTaskStatus(report1.getRecentSuccessfulTasks(), ImmutableList.of(TaskStatus.success(TASK_ID_1)));
-    verifyTaskStatus(report1.getRecentFailedTasks(), ImmutableList.of(TaskStatus.failure(TASK_ID_2, "Task failed")));
+    verifyTaskStatus(report1.getRecentTasks(), ImmutableList.of(TaskStatus.success(TASK_ID_1), TaskStatus.failure(TASK_ID_2, "Task failed")));
 
     // Verify total counts for both supervisors
     assertEquals(2, report1.getTotalSubmittedTasks());
@@ -217,21 +201,16 @@ public class ScheduledBatchStatusTrackerTest
     thread2.join();
     thread3.join();
 
-    final BatchSupervisorTaskReport report1 = statusTracker.getSupervisorTaskStatus(SUPERVISOR_ID_1);
+    final BatchSupervisorTaskReport report1 = statusTracker.getSupervisorTaskReport(SUPERVISOR_ID_1);
     assertNotNull(report1);
 
-    verifyTaskStatus(report1.getRecentSuccessfulTasks(), ImmutableList.of(TaskStatus.success(TASK_ID_1)));
-    verifyTaskStatus(report1.getRecentFailedTasks(), ImmutableList.of(TaskStatus.failure(TASK_ID_2, "Task failed")));
-    assertTrue(report1.getRecentActiveTasks().isEmpty());
-
+    verifyTaskStatus(report1.getRecentTasks(), ImmutableList.of(TaskStatus.success(TASK_ID_1), TaskStatus.failure(TASK_ID_2, "Task failed")));
 
     // Verify that tasks were correctly tracked for supervisor 2
-    final BatchSupervisorTaskReport report2 = statusTracker.getSupervisorTaskStatus(SUPERVISOR_ID_2);
+    final BatchSupervisorTaskReport report2 = statusTracker.getSupervisorTaskReport(SUPERVISOR_ID_2);
     assertNotNull(report2);
 
-    verifyTaskStatus(report2.getRecentSuccessfulTasks(), ImmutableList.of(TaskStatus.success(TASK_ID_3)));
-    assertTrue(report2.getRecentActiveTasks().isEmpty());
-    assertTrue(report2.getRecentFailedTasks().isEmpty());
+    verifyTaskStatus(report2.getRecentTasks(), ImmutableList.of(TaskStatus.success(TASK_ID_3)));
 
     // Verify total counts for both supervisors
     assertEquals(2, report1.getTotalSubmittedTasks());
@@ -248,7 +227,7 @@ public class ScheduledBatchStatusTrackerTest
   {
     assertEquals(expectedStatuses.size(), actualStatues.size());
     for (int i = 0; i < expectedStatuses.size(); i++) {
-      assertEquals(expectedStatuses.get(i), actualStatues.get(i).getStatus());
+      assertEquals(expectedStatuses.get(i), actualStatues.get(i).getTaskStatus());
     }
   }
 }

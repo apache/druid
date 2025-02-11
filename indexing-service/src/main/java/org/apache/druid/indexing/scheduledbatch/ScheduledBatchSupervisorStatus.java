@@ -22,14 +22,11 @@ package org.apache.druid.indexing.scheduledbatch;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.joda.time.DateTime;
-import org.joda.time.Duration;
 
 import javax.annotation.Nullable;
-import java.util.List;
 
 /**
- * Represents the status of a scheduled batch supervisor, including its state,
- * scheduler details, task execution aggregate counts, and recent task activity.
+ * Represents the status of a scheduled batch supervisor, including its state, scheduler details and task report.
  */
 public class ScheduledBatchSupervisorStatus
 {
@@ -43,47 +40,22 @@ public class ScheduledBatchSupervisorStatus
   @Nullable
   private final DateTime nextTaskSubmissionTime;
 
-  @Nullable
-  private final Duration timeUntilNextTaskSubmission;
-
-  private final Integer totalSubmittedTasks;
-
-  private final Integer totalSuccessfulTasks;
-
-  private final Integer totalFailedTasks;
-
-  private final List<BatchSupervisorTaskStatus> recentActiveTasks;
-
-  private final List<BatchSupervisorTaskStatus> recentSuccessfulTasks;
-
-  private final List<BatchSupervisorTaskStatus> recentFailedTasks;
+  private final BatchSupervisorTaskReport taskReport;
 
   @JsonCreator
   public ScheduledBatchSupervisorStatus(
       @JsonProperty("supervisorId") String supervisorId,
-      @JsonProperty("status") ScheduledBatchSupervisor.State state,
+      @JsonProperty("state") ScheduledBatchSupervisor.State state,
       @JsonProperty("lastTaskSubmittedTime") @Nullable DateTime lastTaskSubmittedTime,
       @JsonProperty("nextTaskSubmissionTime") @Nullable DateTime nextTaskSubmissionTime,
-      @JsonProperty("timeUntilNextTaskSubmission") @Nullable Duration timeUntilNextTaskSubmission,
-      @JsonProperty("totalSubmittedTasks") Integer totalSubmittedTasks,
-      @JsonProperty("totalSuccessfulTasks") Integer totalSuccessfulTasks,
-      @JsonProperty("totalFailedTasks") Integer totalFailedTasks,
-      @JsonProperty("recentActiveTasks") List<BatchSupervisorTaskStatus> recentActiveTasks,
-      @JsonProperty("recentSuccessfulTasks") List<BatchSupervisorTaskStatus> recentSuccessfulTasks,
-      @JsonProperty("recentFailedTasks") List<BatchSupervisorTaskStatus> recentFailedTasks
+      @JsonProperty("taskReport") BatchSupervisorTaskReport taskReport
   )
   {
     this.supervisorId = supervisorId;
     this.state = state;
     this.lastTaskSubmittedTime = lastTaskSubmittedTime;
     this.nextTaskSubmissionTime = nextTaskSubmissionTime;
-    this.timeUntilNextTaskSubmission = timeUntilNextTaskSubmission;
-    this.totalSubmittedTasks = totalSubmittedTasks;
-    this.totalSuccessfulTasks = totalSuccessfulTasks;
-    this.totalFailedTasks = totalFailedTasks;
-    this.recentActiveTasks = recentActiveTasks;
-    this.recentSuccessfulTasks = recentSuccessfulTasks;
-    this.recentFailedTasks = recentFailedTasks;
+    this.taskReport = taskReport;
   }
 
   @JsonProperty
@@ -112,46 +84,9 @@ public class ScheduledBatchSupervisorStatus
     return nextTaskSubmissionTime;
   }
 
-  @Nullable
   @JsonProperty
-  public Duration getTimeUntilNextTaskSubmission()
+  public BatchSupervisorTaskReport getTaskReport()
   {
-    return timeUntilNextTaskSubmission;
-  }
-
-  @JsonProperty
-  public Integer getTotalSubmittedTasks()
-  {
-    return totalSubmittedTasks;
-  }
-
-  @JsonProperty
-  public Integer getTotalSuccessfulTasks()
-  {
-    return totalSuccessfulTasks;
-  }
-
-  @JsonProperty
-  public Integer getTotalFailedTasks()
-  {
-    return totalFailedTasks;
-  }
-
-  @JsonProperty
-  public List<BatchSupervisorTaskStatus> getRecentActiveTasks()
-  {
-    return recentActiveTasks;
-  }
-
-  @JsonProperty
-  public List<BatchSupervisorTaskStatus> getRecentSuccessfulTasks()
-  {
-    return recentSuccessfulTasks;
-  }
-
-  @JsonProperty
-  public List<BatchSupervisorTaskStatus> getRecentFailedTasks()
-  {
-    return recentFailedTasks;
+    return taskReport;
   }
 }
