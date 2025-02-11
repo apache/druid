@@ -39,7 +39,7 @@ import java.util.Optional;
  * {@link org.apache.druid.segment.join.Joinable}. This is useful because when analyzing joins, we don't want to
  * actually create Joinables, since that can be an expensive operation.
  */
-public class PreJoinableClause
+public class PreJoinableClause implements DataSourceProcessingClause
 {
   private final String prefix;
   private final DataSource dataSource;
@@ -164,4 +164,9 @@ public class PreJoinableClause
     keyBuilder.appendString(clause.getJoinType().name());
   }
 
+  @Override
+  public boolean hasColumn(String column)
+  {
+    return JoinPrefixUtils.isPrefixedBy(column, getPrefix());
+  }
 }
