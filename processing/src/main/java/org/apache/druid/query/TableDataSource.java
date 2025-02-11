@@ -158,4 +158,10 @@ public class TableDataSource implements DataSource
   {
     return Objects.hash(name);
   }
+
+  @Override
+  public boolean isTableBased()
+  {
+    return true;
+  }
 }

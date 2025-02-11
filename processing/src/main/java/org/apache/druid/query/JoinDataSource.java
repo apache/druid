@@ -337,16 +337,13 @@ public class JoinDataSource implements DataSource
   @Override
   public byte[] getCacheKey()
   {
-    final List<PreJoinableClause> clauses = analysis.getPreJoinableClauses();
-    if (clauses.isEmpty()) {
-      throw new IAE("No join clauses to build the cache key for data source [%s]", this);
-    }
 
     final CacheKeyBuilder keyBuilder;
     keyBuilder = new CacheKeyBuilder(JoinableFactoryWrapper.JOIN_OPERATION);
     if (analysis.getJoinBaseTableFilter().isPresent()) {
       keyBuilder.appendCacheable(analysis.getJoinBaseTableFilter().get());
     }
+
     for (PreJoinableClause clause : clauses) {
       final Optional<byte[]> bytes =
           joinableFactoryWrapper.getJoinableFactory()
@@ -457,6 +454,7 @@ public class JoinDataSource implements DataSource
             List<PreJoinableClause> clauses =
 
             clauses1.size() > 0 ? clauses1.subList(clauses1.size()-1, clauses1.size()) : Collections.emptyList();
+            clauses=clauses1;
 
 
             final JoinableClauses joinableClauses = JoinableClauses.createClauses(
@@ -545,47 +543,20 @@ public class JoinDataSource implements DataSource
     DimFilter currentDimFilter = TrueDimFilter.instance();
     final List<PreJoinableClause> preJoinableClauses = new ArrayList<>();
 
-    // There can be queries like
-    // Join of Unnest of Join of Unnest of Filter
-    // so these checks are needed to be ORed
-    // to get the base
-    // This method is called to get the analysis for the join data source
-    // Since the analysis of an UnnestDS or FilteredDS always delegates to its base
-    // To obtain the base data source underneath a Join
-    // we also iterate through the base of the  FilterDS and UnnestDS in its path
-    // the base of which can be a concrete data source
-    // This also means that an addition of a new datasource
-    // Will need an instanceof check here
-    // A future work should look into if the flattenJoin
-    // can be refactored to omit these instanceof checks
-    while (current instanceof JoinDataSource
-           || current instanceof UnnestDataSource
-           || current instanceof FilteredDataSource
-           || current instanceof RestrictedDataSource) {
-      if (current instanceof JoinDataSource) {
-        final JoinDataSource joinDataSource = (JoinDataSource) current;
-        currentDimFilter = DimFilters.conjunction(currentDimFilter, joinDataSource.getLeftFilter());
-        PreJoinableClause e = new PreJoinableClause(
-            joinDataSource.getRightPrefix(),
-            joinDataSource.getRight(),
-            joinDataSource.getJoinType(),
-            joinDataSource.getConditionAnalysis(),
-            joinDataSource.getJoinAlgorithm()
-        );
-        preJoinableClauses.add(
-            e
-        );
-        current = joinDataSource.getLeft();
-      } else if (current instanceof UnnestDataSource) {
-        final UnnestDataSource unnestDataSource = (UnnestDataSource) current;
-        current = unnestDataSource.getBase();
-      } else if (current instanceof RestrictedDataSource) {
-        final RestrictedDataSource restrictedDataSource = (RestrictedDataSource) current;
-        current = restrictedDataSource.getBase();
-      } else {
-        final FilteredDataSource filteredDataSource = (FilteredDataSource) current;
-        current = filteredDataSource.getBase();
-      }
+    while (current instanceof JoinDataSource) {
+      final JoinDataSource joinDataSource = (JoinDataSource) current;
+      currentDimFilter = DimFilters.conjunction(currentDimFilter, joinDataSource.getLeftFilter());
+      PreJoinableClause e = new PreJoinableClause(
+          joinDataSource.getRightPrefix(),
+          joinDataSource.getRight(),
+          joinDataSource.getJoinType(),
+          joinDataSource.getConditionAnalysis(),
+          joinDataSource.getJoinAlgorithm()
+      );
+      preJoinableClauses.add(
+          e
+      );
+      current = joinDataSource.getLeft();
     }
 
     if (currentDimFilter == TrueDimFilter.instance()) {

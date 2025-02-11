@@ -185,4 +185,10 @@ public class FilteredDataSource implements DataSource
   {
     return Objects.hash(base, filter);
   }
+
+  @Override
+  public boolean isTableBased()
+  {
+    return base.isTableBased();
+  }
 }
