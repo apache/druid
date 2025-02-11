@@ -108,6 +108,8 @@ public class SQLMetadataStorageDruidModule implements Module
             .to(SQLMetadataRuleManagerProvider.class)
             .in(LazySingleton.class);
 
+    // SegmentMetadataCache is used only by the Overlord
+    // Bind to noop implementation here to fulfill dependencies
     binder.bind(SegmentMetadataCache.class)
           .to(NoopSegmentMetadataCache.class)
           .in(LazySingleton.class);

@@ -79,7 +79,7 @@ class CachedSegmentMetadataTransaction implements SegmentMetadataTransaction
     } else {
       throw DruidException.forPersona(DruidException.Persona.USER)
                           .ofCategory(DruidException.Category.SERVICE_UNAVAILABLE)
-                          .build("Not leader anymore. Cannot start transaction.");
+                          .build("This API is currently not available. Please try again after some time.");
     }
   }
 
@@ -88,7 +88,7 @@ class CachedSegmentMetadataTransaction implements SegmentMetadataTransaction
     if (!isLeaderWithSameTerm()) {
       throw DruidException.forPersona(DruidException.Persona.USER)
                           .ofCategory(DruidException.Category.SERVICE_UNAVAILABLE)
-                          .build("Not leader anymore. Failing transaction.");
+                          .build("This API is currently not available. Please try again after some time.");
     }
   }
 

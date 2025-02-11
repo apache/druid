@@ -230,6 +230,7 @@ public class CliOverlord extends ServerRunnable
             JsonConfigProvider.bind(binder, "druid.indexer.task.default", DefaultTaskConfig.class);
             binder.bind(RetryPolicyFactory.class).in(LazySingleton.class);
 
+            // Override the default binding of SegmentMetadataCache done in SQLMetadataStorageDruidModule
             binder.bind(SegmentMetadataCache.class)
                   .to(HeapMemorySegmentMetadataCache.class)
                   .in(ManageLifecycle.class);
