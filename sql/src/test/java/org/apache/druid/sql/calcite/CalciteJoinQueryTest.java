@@ -6141,12 +6141,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
             new Object[]{"[\"a\",\"b\"]", "a", "a"},
             new Object[]{"[\"a\",\"b\"]", "a", "a"},
             new Object[]{"[\"a\",\"b\"]", "a", "a"},
-            new Object[]{"[\"a\",\"b\"]", "a", "a"},
-            new Object[]{"[\"a\",\"b\"]", "a", "a"},
-            new Object[]{"[\"a\",\"b\"]", "a", "a"},
-            new Object[]{"[\"a\",\"b\"]", "a", "a"},
-            new Object[]{"", "", ""},
-            new Object[]{"", "", ""},
             new Object[]{"", "", ""},
             new Object[]{"", "", ""}
         )
@@ -6284,10 +6278,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                 .build()
         ),
         ImmutableList.of(
-            new Object[]{"[\"a\",\"b\"]", "a", "a", 1.0f},
-            new Object[]{"[\"a\",\"b\"]", "a", "a", 1.0f},
-            new Object[]{"[\"a\",\"b\"]", "a", "a", 1.0f},
-            new Object[]{"[\"a\",\"b\"]", "a", "a", 1.0f},
             new Object[]{"[\"a\",\"b\"]", "a", "a", 1.0f},
             new Object[]{"[\"a\",\"b\"]", "a", "a", 1.0f},
             new Object[]{"[\"a\",\"b\"]", "a", "a", 1.0f},
