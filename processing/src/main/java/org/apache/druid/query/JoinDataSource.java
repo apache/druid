@@ -458,6 +458,7 @@ public class JoinDataSource implements DataSource
 
             clauses1.size() > 0 ? clauses1.subList(clauses1.size()-1, clauses1.size()) : Collections.emptyList();
 
+
             final JoinableClauses joinableClauses = JoinableClauses.createClauses(
                 clauses,
                 joinableFactoryWrapper.getJoinableFactory()
@@ -470,7 +471,7 @@ public class JoinDataSource implements DataSource
             final List<JoinableClause> clausesToUse;
             SegmentMapConfig subCfg = cfg;
 
-            if (false && requiredColumns != null && filterRewriteConfig.isEnableRewriteJoinToFilter()) {
+            if (requiredColumns != null && filterRewriteConfig.isEnableRewriteJoinToFilter()) {
               final Pair<List<Filter>, List<JoinableClause>> conversionResult = JoinableFactoryWrapper.convertJoinsToFilters(
                   joinableClauses.getJoinableClauses(),
                   requiredColumns,
