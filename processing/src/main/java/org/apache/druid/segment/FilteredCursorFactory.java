@@ -29,24 +29,19 @@ import org.apache.druid.segment.filter.Filters;
 import javax.annotation.Nullable;
 
 import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Set;
 
 public class FilteredCursorFactory implements CursorFactory
 {
   private final CursorFactory delegate;
   @Nullable
   private final DimFilter filter;
-  private final VirtualColumns virtualColumns;
 
   public FilteredCursorFactory(
       CursorFactory delegate,
-      @Nullable DimFilter filter,
-      @Nullable VirtualColumns virtualColumns)
+      @Nullable DimFilter filter)
   {
     this.delegate = delegate;
     this.filter = filter;
-    this.virtualColumns = virtualColumns == null ? VirtualColumns.EMPTY : virtualColumns;
   }
 
   @Override
@@ -58,12 +53,11 @@ public class FilteredCursorFactory implements CursorFactory
     buildSpecBuilder.setVirtualColumns(
         VirtualColumns.fromIterable(
             Iterables.concat(
-                Arrays.asList(spec.getVirtualColumns().getVirtualColumns()),
-                Arrays.asList(virtualColumns.getVirtualColumns())
+                Arrays.asList(spec.getVirtualColumns().getVirtualColumns())
             )
         )
     );
-    buildSpecBuilder.setPhysicalColumns(getPhysicalColumns(spec));
+    buildSpecBuilder.setPhysicalColumns(spec.getPhysicalColumns());
 
     return delegate.makeCursorHolder(buildSpecBuilder.build());
   }
@@ -75,28 +69,6 @@ public class FilteredCursorFactory implements CursorFactory
     }
     return filter.toFilter();
   }
-
-  // XXX: this is not right?!
-  private Set<String> getPhysicalColumns(CursorBuildSpec spec)
-  {
-    Set<String> physicalColumns = spec.getPhysicalColumns();
-    if (physicalColumns != null) {
-      physicalColumns = new HashSet<>(physicalColumns);
-      for (VirtualColumn vc : virtualColumns.getVirtualColumns()) {
-        physicalColumns.addAll(vc.requiredColumns());
-      }
-      if (filter != null) {
-        for (String column : filter.getRequiredColumns()) {
-          if (!spec.getVirtualColumns().exists(column) && !virtualColumns.exists(column)) {
-            physicalColumns.add(column);
-          }
-        }
-      }
-      return physicalColumns;
-    }
-    return null;
-  }
-
 
   @Override
   public RowSignature getRowSignature()

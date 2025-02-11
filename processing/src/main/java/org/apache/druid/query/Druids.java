@@ -1068,6 +1068,6 @@ public class Druids
 
   public static FilteredDataSource filteredDataSource(DataSource base, DimFilter filter)
   {
-    return FilteredDataSource.create(base, filter, null);
+    return FilteredDataSource.create(base, filter);
   }
 }

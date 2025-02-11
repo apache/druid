@@ -540,7 +540,7 @@ public class DruidQueryGenerator
       return sd.dataSource;
     }
     DimFilter newFilter = makeOptimizedFilter(sd, filter);
-    return FilteredDataSource.create(sd.dataSource, newFilter, virtualColumns);
+    return FilteredDataSource.create(sd.dataSource, newFilter);
   }
 
   private static DimFilter makeOptimizedFilter(SourceDesc sd, DimFilter filter)

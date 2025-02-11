@@ -1,5 +1,5 @@
-# testUnnestWithFiltersWithExpressionInInnerQuery case-crc:cce042a3
-# quidem testcase reason: USES_SCAN_DATASOURCE
+# testUnnestWithFiltersWithExpressionInInnerQuery case-crc:fa9be8db
+# quidem testcase reason: UNNEST_EXTRA_SCAN
 !set debug true
 !set defaultTimeout 300000
 !set maxScatterGatherBytes 9223372036854775807
@@ -39,25 +39,6 @@ DruidProject(t=[$0], d3=[$2], druid=[logical])
   "dataSource" : {
     "type" : "unnest",
     "base" : {
-<<<<<<< HEAD
-      "type" : "filter",
-      "base" : {
-        "type" : "table",
-        "name" : "numfoo"
-      },
-      "filter" : {
-        "type" : "equals",
-        "column" : "dim2",
-        "matchValueType" : "STRING",
-        "matchValue" : "a"
-      },
-      "virtualColumns" : [ {
-        "type" : "expression",
-        "name" : "v0",
-        "expression" : "timestamp_floor(\"__time\",'PT1H',null,'UTC')",
-        "outputType" : "LONG"
-      } ]
-=======
       "type" : "query",
       "query" : {
         "queryType" : "scan",
@@ -89,7 +70,6 @@ DruidProject(t=[$0], d3=[$2], druid=[logical])
         },
         "legacy" : false
       }
->>>>>>> 3c25ddc8f464251cdd5a6f3cf32c269c9de1841e
     },
     "virtualColumn" : {
       "type" : "expression",

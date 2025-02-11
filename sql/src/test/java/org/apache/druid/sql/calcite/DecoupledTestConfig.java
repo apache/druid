@@ -77,9 +77,6 @@ public @interface DecoupledTestConfig
      * An extra ScanQuery to service a Project and/or Filter was added.
      */
     UNNEST_EXTRA_SCANQUERY,
-<<<<<<< HEAD
-    XL;
-=======
     /**
      * Occurs in tandem with {@link NotYetSupported.Modes#PREDICATE_NOT_SUPPORTED}.
      */
@@ -88,7 +85,6 @@ public @interface DecoupledTestConfig
      * Not really different plan.
      */
     EQUIV_PLAN;
->>>>>>> 3c25ddc8f464251cdd5a6f3cf32c269c9de1841e
 
     public boolean isPresent()
     {
@@ -200,12 +196,7 @@ public @interface DecoupledTestConfig
     /**
      * This is due to substring('',1') is null.
      */
-    UNNEST_SUBSTRING_EMPTY,
-    USES_SCAN_DATASOURCE,
-    /**
-     * Intervals filtered as filter
-     */
-    USES_SCAN_DATASOURCE_INTERVALS;
+    UNNEST_SUBSTRING_EMPTY;
 
     public boolean isPresent()
     {

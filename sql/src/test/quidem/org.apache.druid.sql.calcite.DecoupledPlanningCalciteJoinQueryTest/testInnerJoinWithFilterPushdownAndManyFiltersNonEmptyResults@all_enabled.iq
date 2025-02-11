@@ -1,5 +1,5 @@
-# testInnerJoinWithFilterPushdownAndManyFiltersNonEmptyResults@all_enabled case-crc:446e909c
-# quidem testcase reason: USES_SCAN_DATASOURCE
+# testInnerJoinWithFilterPushdownAndManyFiltersNonEmptyResults@all_enabled case-crc:ad692955
+# quidem testcase reason: SLIGHTLY_WORSE_FILTER_PUSHED_TO_JOIN_OPERAND
 !set debug true
 !set defaultTimeout 300000
 !set enableJoinFilterRewrite true
@@ -45,211 +45,216 @@ DruidJoin(condition=[=($0, $1)], joinType=[inner])
   "dataSource" : {
     "type" : "join",
     "left" : {
-      "type" : "filter",
-      "base" : {
-        "type" : "table",
-        "name" : "foo"
-      },
-      "filter" : {
-        "type" : "or",
-        "fields" : [ {
-          "type" : "and",
+      "type" : "query",
+      "query" : {
+        "queryType" : "scan",
+        "dataSource" : {
+          "type" : "table",
+          "name" : "foo"
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "resultFormat" : "compactedList",
+        "filter" : {
+          "type" : "or",
           "fields" : [ {
-            "type" : "equals",
-            "column" : "dim2",
-            "matchValueType" : "STRING",
-            "matchValue" : "D"
+            "type" : "and",
+            "fields" : [ {
+              "type" : "equals",
+              "column" : "dim2",
+              "matchValueType" : "STRING",
+              "matchValue" : "D"
+            }, {
+              "type" : "inType",
+              "column" : "dim1",
+              "matchValueType" : "STRING",
+              "sortedValues" : [ "A", "C" ]
+            } ]
           }, {
-            "type" : "inType",
-            "column" : "dim1",
-            "matchValueType" : "STRING",
-            "sortedValues" : [ "A", "C" ]
-          } ]
-<<<<<<< HEAD
-        }, {
-          "type" : "and",
-          "fields" : [ {
-            "type" : "equals",
-            "column" : "dim2",
-            "matchValueType" : "STRING",
-            "matchValue" : "C"
+            "type" : "and",
+            "fields" : [ {
+              "type" : "equals",
+              "column" : "dim2",
+              "matchValueType" : "STRING",
+              "matchValue" : "C"
+            }, {
+              "type" : "inType",
+              "column" : "dim1",
+              "matchValueType" : "STRING",
+              "sortedValues" : [ "A", "B" ]
+            } ]
           }, {
-            "type" : "inType",
-            "column" : "dim1",
-            "matchValueType" : "STRING",
-            "sortedValues" : [ "A", "B" ]
-          } ]
-        }, {
-          "type" : "and",
-          "fields" : [ {
-            "type" : "equals",
-            "column" : "dim2",
-            "matchValueType" : "STRING",
-            "matchValue" : "E"
+            "type" : "and",
+            "fields" : [ {
+              "type" : "equals",
+              "column" : "dim2",
+              "matchValueType" : "STRING",
+              "matchValue" : "E"
+            }, {
+              "type" : "inType",
+              "column" : "dim1",
+              "matchValueType" : "STRING",
+              "sortedValues" : [ "C", "H" ]
+            } ]
           }, {
-            "type" : "inType",
-            "column" : "dim1",
-            "matchValueType" : "STRING",
-            "sortedValues" : [ "C", "H" ]
-          } ]
-        }, {
-          "type" : "and",
-          "fields" : [ {
-            "type" : "equals",
-            "column" : "dim2",
-            "matchValueType" : "STRING",
-            "matchValue" : "Q"
+            "type" : "and",
+            "fields" : [ {
+              "type" : "equals",
+              "column" : "dim2",
+              "matchValueType" : "STRING",
+              "matchValue" : "Q"
+            }, {
+              "type" : "inType",
+              "column" : "dim1",
+              "matchValueType" : "STRING",
+              "sortedValues" : [ "P", "S" ]
+            } ]
           }, {
-            "type" : "inType",
-            "column" : "dim1",
-            "matchValueType" : "STRING",
-            "sortedValues" : [ "P", "S" ]
-          } ]
-        }, {
-          "type" : "and",
-          "fields" : [ {
-            "type" : "equals",
-            "column" : "dim1",
-            "matchValueType" : "STRING",
-            "matchValue" : "1"
+            "type" : "and",
+            "fields" : [ {
+              "type" : "equals",
+              "column" : "dim1",
+              "matchValueType" : "STRING",
+              "matchValue" : "1"
+            }, {
+              "type" : "equals",
+              "column" : "dim2",
+              "matchValueType" : "STRING",
+              "matchValue" : "a"
+            } ]
           }, {
-            "type" : "equals",
-            "column" : "dim2",
-            "matchValueType" : "STRING",
-            "matchValue" : "a"
-          } ]
-        }, {
-          "type" : "and",
-          "fields" : [ {
-            "type" : "equals",
-            "column" : "dim1",
-            "matchValueType" : "STRING",
-            "matchValue" : "D"
+            "type" : "and",
+            "fields" : [ {
+              "type" : "equals",
+              "column" : "dim1",
+              "matchValueType" : "STRING",
+              "matchValue" : "D"
+            }, {
+              "type" : "equals",
+              "column" : "dim2",
+              "matchValueType" : "STRING",
+              "matchValue" : "H"
+            } ]
           }, {
-            "type" : "equals",
-            "column" : "dim2",
-            "matchValueType" : "STRING",
-            "matchValue" : "H"
-          } ]
-        }, {
-          "type" : "and",
-          "fields" : [ {
-            "type" : "equals",
-            "column" : "dim1",
-            "matchValueType" : "STRING",
-            "matchValue" : "I"
+            "type" : "and",
+            "fields" : [ {
+              "type" : "equals",
+              "column" : "dim1",
+              "matchValueType" : "STRING",
+              "matchValue" : "I"
+            }, {
+              "type" : "equals",
+              "column" : "dim2",
+              "matchValueType" : "STRING",
+              "matchValue" : "J"
+            } ]
           }, {
-            "type" : "equals",
-            "column" : "dim2",
-            "matchValueType" : "STRING",
-            "matchValue" : "J"
-          } ]
-        }, {
-          "type" : "and",
-          "fields" : [ {
-            "type" : "equals",
-            "column" : "dim1",
-            "matchValueType" : "STRING",
-            "matchValue" : "I"
+            "type" : "and",
+            "fields" : [ {
+              "type" : "equals",
+              "column" : "dim1",
+              "matchValueType" : "STRING",
+              "matchValue" : "I"
+            }, {
+              "type" : "equals",
+              "column" : "dim2",
+              "matchValueType" : "STRING",
+              "matchValue" : "K"
+            } ]
           }, {
-            "type" : "equals",
-            "column" : "dim2",
-            "matchValueType" : "STRING",
-            "matchValue" : "K"
-          } ]
-        }, {
-          "type" : "and",
-          "fields" : [ {
-            "type" : "equals",
-            "column" : "dim1",
-            "matchValueType" : "STRING",
-            "matchValue" : "J"
+            "type" : "and",
+            "fields" : [ {
+              "type" : "equals",
+              "column" : "dim1",
+              "matchValueType" : "STRING",
+              "matchValue" : "J"
+            }, {
+              "type" : "equals",
+              "column" : "dim2",
+              "matchValueType" : "STRING",
+              "matchValue" : "I"
+            } ]
           }, {
-            "type" : "equals",
-            "column" : "dim2",
-            "matchValueType" : "STRING",
-            "matchValue" : "I"
-          } ]
-        }, {
-          "type" : "and",
-          "fields" : [ {
-            "type" : "equals",
-            "column" : "dim1",
-            "matchValueType" : "STRING",
-            "matchValue" : "Q"
+            "type" : "and",
+            "fields" : [ {
+              "type" : "equals",
+              "column" : "dim1",
+              "matchValueType" : "STRING",
+              "matchValue" : "Q"
+            }, {
+              "type" : "equals",
+              "column" : "dim2",
+              "matchValueType" : "STRING",
+              "matchValue" : "R"
+            } ]
           }, {
-            "type" : "equals",
-            "column" : "dim2",
-            "matchValueType" : "STRING",
-            "matchValue" : "R"
-          } ]
-        }, {
-          "type" : "and",
-          "fields" : [ {
-            "type" : "equals",
-            "column" : "dim1",
-            "matchValueType" : "STRING",
-            "matchValue" : "Q"
+            "type" : "and",
+            "fields" : [ {
+              "type" : "equals",
+              "column" : "dim1",
+              "matchValueType" : "STRING",
+              "matchValue" : "Q"
+            }, {
+              "type" : "equals",
+              "column" : "dim2",
+              "matchValueType" : "STRING",
+              "matchValue" : "S"
+            } ]
           }, {
-            "type" : "equals",
-            "column" : "dim2",
-            "matchValueType" : "STRING",
-            "matchValue" : "S"
-          } ]
-        }, {
-          "type" : "and",
-          "fields" : [ {
-            "type" : "equals",
-            "column" : "dim1",
-            "matchValueType" : "STRING",
-            "matchValue" : "X"
+            "type" : "and",
+            "fields" : [ {
+              "type" : "equals",
+              "column" : "dim1",
+              "matchValueType" : "STRING",
+              "matchValue" : "X"
+            }, {
+              "type" : "equals",
+              "column" : "dim2",
+              "matchValueType" : "STRING",
+              "matchValue" : "Y"
+            } ]
           }, {
-            "type" : "equals",
-            "column" : "dim2",
-            "matchValueType" : "STRING",
-            "matchValue" : "Y"
-          } ]
-        }, {
-          "type" : "and",
-          "fields" : [ {
-            "type" : "equals",
-            "column" : "dim1",
-            "matchValueType" : "STRING",
-            "matchValue" : "Z"
+            "type" : "and",
+            "fields" : [ {
+              "type" : "equals",
+              "column" : "dim1",
+              "matchValueType" : "STRING",
+              "matchValue" : "Z"
+            }, {
+              "type" : "equals",
+              "column" : "dim2",
+              "matchValueType" : "STRING",
+              "matchValue" : "U"
+            } ]
           }, {
-            "type" : "equals",
-            "column" : "dim2",
-            "matchValueType" : "STRING",
-            "matchValue" : "U"
-          } ]
-        }, {
-          "type" : "and",
-          "fields" : [ {
-            "type" : "equals",
-            "column" : "dim1",
-            "matchValueType" : "STRING",
-            "matchValue" : "U"
+            "type" : "and",
+            "fields" : [ {
+              "type" : "equals",
+              "column" : "dim1",
+              "matchValueType" : "STRING",
+              "matchValue" : "U"
+            }, {
+              "type" : "equals",
+              "column" : "dim2",
+              "matchValueType" : "STRING",
+              "matchValue" : "Z"
+            } ]
           }, {
-            "type" : "equals",
-            "column" : "dim2",
-            "matchValueType" : "STRING",
-            "matchValue" : "Z"
+            "type" : "and",
+            "fields" : [ {
+              "type" : "equals",
+              "column" : "dim1",
+              "matchValueType" : "STRING",
+              "matchValue" : "X"
+            }, {
+              "type" : "equals",
+              "column" : "dim2",
+              "matchValueType" : "STRING",
+              "matchValue" : "A"
+            } ]
           } ]
-        }, {
-          "type" : "and",
-          "fields" : [ {
-            "type" : "equals",
-            "column" : "dim1",
-            "matchValueType" : "STRING",
-            "matchValue" : "X"
-          }, {
-            "type" : "equals",
-            "column" : "dim2",
-            "matchValueType" : "STRING",
-            "matchValue" : "A"
-          } ]
-        } ]
-=======
         },
         "columns" : [ "m1" ],
         "columnTypes" : [ "FLOAT" ],
@@ -257,7 +262,6 @@ DruidJoin(condition=[=($0, $1)], joinType=[inner])
           "type" : "all"
         },
         "legacy" : false
->>>>>>> 3c25ddc8f464251cdd5a6f3cf32c269c9de1841e
       }
     },
     "right" : {

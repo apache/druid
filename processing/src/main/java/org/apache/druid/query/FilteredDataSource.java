@@ -29,7 +29,6 @@ import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.FilteredSegment;
 import org.apache.druid.segment.SegmentReference;
-import org.apache.druid.segment.VirtualColumns;
 import javax.annotation.Nullable;
 
 import java.util.List;
@@ -55,7 +54,6 @@ public class FilteredDataSource implements DataSource
 {
   private final DataSource base;
   private final DimFilter filter;
-  private final VirtualColumns virtualColumns;
 
   @JsonProperty("base")
   public DataSource getBase()
@@ -69,41 +67,25 @@ public class FilteredDataSource implements DataSource
     return filter;
   }
 
-  @JsonProperty("virtualColumns")
-  public VirtualColumns getVirtualColumns()
-  {
-    return virtualColumns;
-  }
-
   // To provide defaults for Jackson
   private FilteredDataSource()
   {
-    this(null, null, null);
+    this(null, null);
   }
 
-  private FilteredDataSource(DataSource base, @Nullable DimFilter filter, VirtualColumns virtualColumns)
+  private FilteredDataSource(DataSource base, @Nullable DimFilter filter)
   {
     this.base = base;
     this.filter = filter;
-    this.virtualColumns = virtualColumns == null ? VirtualColumns.EMPTY : virtualColumns;
   }
 
   @JsonCreator
   public static FilteredDataSource create(
       @JsonProperty("base") DataSource base,
-      @JsonProperty("filter") @Nullable DimFilter filter,
-      @JsonProperty("virtualColumns") @Nullable VirtualColumns virtualColumns
+      @JsonProperty("filter") @Nullable DimFilter filter
   )
   {
-    return new FilteredDataSource(base, filter, virtualColumns);
-  }
-
-  public static FilteredDataSource create(
-      DataSource base,
-      @Nullable DimFilter filter
-  )
-  {
-    return Druids.filteredDataSource(base, filter);
+    return new FilteredDataSource(base, filter);
   }
 
   @Override
@@ -125,7 +107,7 @@ public class FilteredDataSource implements DataSource
       throw new IAE("Expected [1] child, got [%d]", children.size());
     }
 
-    return new FilteredDataSource(children.get(0), filter, virtualColumns);
+    return new FilteredDataSource(children.get(0), filter);
   }
 
   @Override
@@ -149,19 +131,18 @@ public class FilteredDataSource implements DataSource
   @Override
   public Function<SegmentReference, SegmentReference> createSegmentMapFunction(SegmentMapConfig cfg)
   {
-    SegmentMapConfig newCfg = cfg
-        .withVirtualColumns(virtualColumns);
+    SegmentMapConfig newCfg = cfg;
 
     final Function<SegmentReference, SegmentReference> segmentMapFn = base.createSegmentMapFunction(
         newCfg
     );
-    return baseSegment -> new FilteredSegment(segmentMapFn.apply(baseSegment), filter, virtualColumns);
+    return baseSegment -> new FilteredSegment(segmentMapFn.apply(baseSegment), filter);
   }
 
   @Override
   public DataSource withUpdatedDataSource(DataSource newSource)
   {
-    return new FilteredDataSource(newSource, filter, virtualColumns);
+    return new FilteredDataSource(newSource, filter);
   }
 
   @Override
@@ -170,7 +151,6 @@ public class FilteredDataSource implements DataSource
     return "FilteredDataSource{" +
         "base=" + base +
         ", filter='" + filter + "'" +
-        ", virtualColumns=" + virtualColumns +
         '}';
   }
 
@@ -197,14 +177,12 @@ public class FilteredDataSource implements DataSource
       return false;
     }
     FilteredDataSource that = (FilteredDataSource) o;
-    return Objects.equals(base, that.base) &&
-        Objects.equals(filter, that.filter) &&
-        Objects.equals(virtualColumns, that.virtualColumns);
+    return Objects.equals(base, that.base) && Objects.equals(filter, that.filter);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(base, filter, virtualColumns);
+    return Objects.hash(base, filter);
   }
 }

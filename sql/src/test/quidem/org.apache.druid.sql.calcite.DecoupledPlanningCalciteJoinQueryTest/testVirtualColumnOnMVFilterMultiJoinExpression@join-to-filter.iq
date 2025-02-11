@@ -1,5 +1,5 @@
-# testVirtualColumnOnMVFilterMultiJoinExpression@join-to-filter case-crc:757fa00a
-# quidem testcase reason: USES_SCAN_DATASOURCE
+# testVirtualColumnOnMVFilterMultiJoinExpression@join-to-filter case-crc:2ad04401
+# quidem testcase reason: DEFINETLY_WORSE_PLAN
 !set debug true
 !set defaultTimeout 300000
 !set enableJoinFilterRewrite false
@@ -50,23 +50,37 @@ DruidProject(dim3=[$0], dim30=[$2], druid=[logical])
   "dataSource" : {
     "type" : "join",
     "left" : {
-      "type" : "filter",
-      "base" : {
-        "type" : "table",
-        "name" : "numfoo"
-      },
-      "virtualColumns" : [ {
-        "type" : "mv-filtered",
-        "name" : "v0",
-        "delegate" : {
-          "type" : "default",
-          "dimension" : "dim3",
-          "outputName" : "dim3",
-          "outputType" : "STRING"
+      "type" : "query",
+      "query" : {
+        "queryType" : "scan",
+        "dataSource" : {
+          "type" : "table",
+          "name" : "numfoo"
         },
-        "values" : [ "a" ],
-        "isAllowList" : true
-      } ]
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "virtualColumns" : [ {
+          "type" : "mv-filtered",
+          "name" : "v0",
+          "delegate" : {
+            "type" : "default",
+            "dimension" : "dim3",
+            "outputName" : "dim3",
+            "outputType" : "STRING"
+          },
+          "values" : [ "a" ],
+          "isAllowList" : true
+        } ],
+        "resultFormat" : "compactedList",
+        "columns" : [ "dim3", "v0" ],
+        "columnTypes" : [ "STRING", "STRING" ],
+        "granularity" : {
+          "type" : "all"
+        },
+        "legacy" : false
+      }
     },
     "right" : {
       "type" : "query",
@@ -75,23 +89,37 @@ DruidProject(dim3=[$0], dim30=[$2], druid=[logical])
         "dataSource" : {
           "type" : "join",
           "left" : {
-            "type" : "filter",
-            "base" : {
-              "type" : "table",
-              "name" : "numfoo"
-            },
-            "virtualColumns" : [ {
-              "type" : "mv-filtered",
-              "name" : "v0",
-              "delegate" : {
-                "type" : "default",
-                "dimension" : "dim3",
-                "outputName" : "dim3",
-                "outputType" : "STRING"
+            "type" : "query",
+            "query" : {
+              "queryType" : "scan",
+              "dataSource" : {
+                "type" : "table",
+                "name" : "numfoo"
               },
-              "values" : [ "a" ],
-              "isAllowList" : true
-            } ]
+              "intervals" : {
+                "type" : "intervals",
+                "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+              },
+              "virtualColumns" : [ {
+                "type" : "mv-filtered",
+                "name" : "v0",
+                "delegate" : {
+                  "type" : "default",
+                  "dimension" : "dim3",
+                  "outputName" : "dim3",
+                  "outputType" : "STRING"
+                },
+                "values" : [ "a" ],
+                "isAllowList" : true
+              } ],
+              "resultFormat" : "compactedList",
+              "columns" : [ "dim3", "v0" ],
+              "columnTypes" : [ "STRING", "STRING" ],
+              "granularity" : {
+                "type" : "all"
+              },
+              "legacy" : false
+            }
           },
           "right" : {
             "type" : "query",

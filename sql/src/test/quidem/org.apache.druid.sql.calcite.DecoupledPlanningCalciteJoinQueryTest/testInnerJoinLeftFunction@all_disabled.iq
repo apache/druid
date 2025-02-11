@@ -1,5 +1,5 @@
-# testInnerJoinLeftFunction@all_disabled case-crc:7b00c419
-# quidem testcase reason: USES_SCAN_DATASOURCE
+# testInnerJoinLeftFunction@all_disabled case-crc:a8494934
+# quidem testcase reason: JOIN_FILTER_LOCATIONS
 !set debug true
 !set defaultTimeout 300000
 !set enableJoinFilterRewrite false
@@ -44,17 +44,31 @@ DruidProject(dim1=[$0], dim2=[$1], k=[$3], v=[$4], druid=[logical])
   "dataSource" : {
     "type" : "join",
     "left" : {
-      "type" : "filter",
-      "base" : {
-        "type" : "table",
-        "name" : "foo"
-      },
-      "virtualColumns" : [ {
-        "type" : "expression",
-        "name" : "v0",
-        "expression" : "substring(\"dim2\", 0, 1)",
-        "outputType" : "STRING"
-      } ]
+      "type" : "query",
+      "query" : {
+        "queryType" : "scan",
+        "dataSource" : {
+          "type" : "table",
+          "name" : "foo"
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "virtualColumns" : [ {
+          "type" : "expression",
+          "name" : "v0",
+          "expression" : "substring(\"dim2\", 0, 1)",
+          "outputType" : "STRING"
+        } ],
+        "resultFormat" : "compactedList",
+        "columns" : [ "dim1", "dim2", "v0" ],
+        "columnTypes" : [ "STRING", "STRING", "STRING" ],
+        "granularity" : {
+          "type" : "all"
+        },
+        "legacy" : false
+      }
     },
     "right" : {
       "type" : "lookup",

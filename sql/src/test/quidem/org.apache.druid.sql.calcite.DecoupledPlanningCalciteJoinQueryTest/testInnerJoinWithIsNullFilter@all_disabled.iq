@@ -1,5 +1,5 @@
-# testInnerJoinWithIsNullFilter@all_disabled case-crc:bc0ad946
-# quidem testcase reason: USES_SCAN_DATASOURCE
+# testInnerJoinWithIsNullFilter@all_disabled case-crc:d168560a
+# quidem testcase reason: EQUIV_PLAN
 !set debug true
 !set defaultTimeout 300000
 !set enableJoinFilterRewrite false
@@ -41,16 +41,6 @@ DruidProject(dim1=[$0], v=[$2], druid=[logical])
   "dataSource" : {
     "type" : "join",
     "left" : {
-<<<<<<< HEAD
-      "type" : "filter",
-      "base" : {
-        "type" : "table",
-        "name" : "foo"
-      },
-      "filter" : {
-        "type" : "null",
-        "column" : "dim2"
-=======
       "type" : "query",
       "query" : {
         "queryType" : "scan",
@@ -73,7 +63,6 @@ DruidProject(dim1=[$0], v=[$2], druid=[logical])
           "type" : "all"
         },
         "legacy" : false
->>>>>>> 3c25ddc8f464251cdd5a6f3cf32c269c9de1841e
       }
     },
     "right" : {

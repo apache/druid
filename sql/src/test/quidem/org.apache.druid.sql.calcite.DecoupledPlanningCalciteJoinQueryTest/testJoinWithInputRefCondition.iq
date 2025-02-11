@@ -1,5 +1,5 @@
-# testJoinWithInputRefCondition case-crc:b9eeef1b
-# quidem testcase reason: USES_SCAN_DATASOURCE
+# testJoinWithInputRefCondition case-crc:9a6c217b
+# quidem testcase reason: JOIN_FILTER_LOCATIONS
 !set debug true
 !set defaultTimeout 300000
 !set maxScatterGatherBytes 9223372036854775807
@@ -46,22 +46,8 @@ DruidAggregate(group=[{}], EXPR$0=[COUNT() FILTER $0], druid=[logical])
     "left" : {
       "type" : "join",
       "left" : {
-<<<<<<< HEAD
-        "type" : "filter",
-        "base" : {
-          "type" : "table",
-          "name" : "foo"
-        },
-        "virtualColumns" : [ {
-          "type" : "expression",
-          "name" : "v0",
-          "expression" : "0",
-          "outputType" : "LONG"
-        } ]
-=======
         "type" : "table",
         "name" : "foo"
->>>>>>> 3c25ddc8f464251cdd5a6f3cf32c269c9de1841e
       },
       "right" : {
         "type" : "query",

@@ -1,5 +1,5 @@
-# testFilterAndGroupByLookupUsingJoinOperatorBackwards@join-to-filter case-crc:21b2132b
-# quidem testcase reason: USES_SCAN_DATASOURCE
+# testFilterAndGroupByLookupUsingJoinOperatorBackwards@join-to-filter case-crc:5a34c7c1
+# quidem testcase reason: SLIGHTLY_WORSE_FILTER_PUSHED_TO_JOIN_OPERAND
 !set debug true
 !set defaultTimeout 300000
 !set enableJoinFilterRewrite false
@@ -44,19 +44,33 @@ DruidAggregate(group=[{1}], EXPR$1=[COUNT()], druid=[logical])
   "dataSource" : {
     "type" : "join",
     "left" : {
-      "type" : "filter",
-      "base" : {
-        "type" : "lookup",
-        "lookup" : "lookyloo"
-      },
-      "filter" : {
-        "type" : "not",
-        "field" : {
-          "type" : "equals",
-          "column" : "v",
-          "matchValueType" : "STRING",
-          "matchValue" : "xa"
-        }
+      "type" : "query",
+      "query" : {
+        "queryType" : "scan",
+        "dataSource" : {
+          "type" : "lookup",
+          "lookup" : "lookyloo"
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "resultFormat" : "compactedList",
+        "filter" : {
+          "type" : "not",
+          "field" : {
+            "type" : "equals",
+            "column" : "v",
+            "matchValueType" : "STRING",
+            "matchValue" : "xa"
+          }
+        },
+        "columns" : [ "k", "v" ],
+        "columnTypes" : [ "STRING", "STRING" ],
+        "granularity" : {
+          "type" : "all"
+        },
+        "legacy" : false
       }
     },
     "right" : {
