@@ -96,6 +96,7 @@ RUN if [ ! -x "$(command -v useradd)" ]; then \
 COPY --chown=druid:druid --from=builder /opt /opt
 COPY distribution/docker/druid.sh /druid.sh
 COPY distribution/docker/peon.sh /peon.sh
+COPY --chown=druid:druid distribution/docker/extra_jars/ /opt/druid/lib/
 
 # create necessary directories which could be mounted as volume
 #   /opt/druid/var is used to keep individual files(e.g. log) of each Druid service
@@ -125,5 +126,10 @@ RUN if [ -x "$(command -v apt)" ]; then \
 USER druid
 VOLUME /opt/druid/var
 WORKDIR /opt/druid
+
+# org.apache.derby:derby is impacted by https://github.com/advisories/GHSA-rcjc-c4pj-xxrp.
+# Fixing it requires upgrading to Java 21 and Derby to 10.17.1.0.
+# However, since Derby is not used in production, we can safely exclude it from the Druid image.
+RUN rm /opt/druid/lib/derby-10.14.2.0.jar /opt/druid/lib/derbyclient-10.14.2.0.jar /opt/druid/lib/derbynet-10.14.2.0.jar
 
 ENTRYPOINT ["/druid.sh"]
