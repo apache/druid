@@ -1866,7 +1866,9 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   @VisibleForTesting
   public Response pause() throws InterruptedException
   {
+    log.debug("Pausing the task with state: [%s]", status);
     if (!(status == Status.PAUSED || status == Status.READING)) {
+      log.debug("Returning 409 conflict for task with state: [%s]", status);
       return Response.status(Response.Status.CONFLICT)
                      .type(MediaType.TEXT_PLAIN)
                      .entity(StringUtils.format("Can't pause, task is not in a pausable state (state: [%s])", status))
