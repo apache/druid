@@ -1168,9 +1168,9 @@ If autoscaling is enabled, you can set these additional configs:
 
 The `druid.supervisor.idleConfig.*` specification in the Overlord runtime properties defines the default behavior for the entire cluster. See [Idle Configuration in Kafka Supervisor IOConfig](../ingestion/kinesis-ingestion.md#io-configuration) to override it for an individual supervisor.
 
-##### Segment metadata cache
+##### Segment metadata cache (EXPERIMENTAL)
 
-The following properties may be set to enable segment metadata caching on the Overlord to speed up segment allocation and other metadata operations.
+The following properties pertain to segment metadata caching on the Overlord that may be used to speed up segment allocation and other metadata operations.
 
 |Property|Description|Default|
 |--------|-----------|-------|
