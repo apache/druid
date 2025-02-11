@@ -134,6 +134,8 @@ To check the CI status on a release branch, you can go to the commits page e.g. 
 a green &#10004; in the commit description. If the commit has a failed build, please click on red &#10005; icon in the commit description to go to travis build job and investigate. 
 You can restart a failed build via travis if it is flaky. 
 
+The release manager should also keep an eye-out for `Cron Job Unit Tests` failures: https://github.com/apache/druid/actions/workflows/cron-job-unit-tests.yml. If there are failures, we need to fix them before creating an RC.
+
 Once all issues and PRs that are still tagged with the release milestone have been merged, closed, or removed from the milestone and CI on branch is green, the next step is to put together a release candidate.
 
 ## Initial setup to create a release candidate
