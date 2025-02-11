@@ -5168,10 +5168,7 @@ public class CalciteArraysQueryTest extends BaseCalciteQueryTest
     );
   }
 
-<<<<<<< HEAD
   @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.USES_SCAN_DATASOURCE)
-=======
->>>>>>> 3c25ddc8f464251cdd5a6f3cf32c269c9de1841e
   @Test
   public void testUnnestWithFilters()
   {
