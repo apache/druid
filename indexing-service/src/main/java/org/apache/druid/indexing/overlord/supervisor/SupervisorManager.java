@@ -172,6 +172,12 @@ public class SupervisorManager
     }
   }
 
+  /**
+   * Checks whether the submitted SupervisorSpec differs from the current spec in SupervisorManager's supervisor list.
+   * This is used in SupervisorResource specPost to determine whether the Supervisor needs to be restarted
+   * @param spec The spec submitted
+   * @return boolean - false if the spec is unchanged, else true
+   */
   public boolean shouldUpdateSupervisor(SupervisorSpec spec)
   {
     Preconditions.checkState(started, "SupervisorManager not started");
