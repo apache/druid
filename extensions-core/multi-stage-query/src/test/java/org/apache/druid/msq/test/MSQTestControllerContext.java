@@ -90,7 +90,7 @@ public class MSQTestControllerContext implements ControllerContext
   private final TaskActionClient taskActionClient;
   private final Map<String, Worker> inMemoryWorkers = new HashMap<>();
   private final ConcurrentMap<String, TaskStatus> statusMap = new ConcurrentHashMap<>();
-  private final ListeningExecutorService executor = MoreExecutors.listeningDecorator(Execs.multiThreaded(
+  private static final ListeningExecutorService executor = MoreExecutors.listeningDecorator(Execs.multiThreaded(
       NUM_WORKERS,
       "MultiStageQuery-test-controller-client"
   ));

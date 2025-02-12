@@ -140,6 +140,9 @@ public class MSQTestOverlordServiceClient extends NoopOverlordClient
       if (controller != null && queryListener != null) {
         reports.put(controller.queryId(), queryListener.getReportMap());
       }
+      if (controller != null) {
+        controller.stop();
+      }
     }
   }
 
