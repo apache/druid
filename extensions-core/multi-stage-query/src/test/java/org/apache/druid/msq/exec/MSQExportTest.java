@@ -59,7 +59,7 @@ public class MSQExportTest extends MSQTestBase
 
   @MethodSource("data")
   @ParameterizedTest(name = "{index}:with context {0}")
-  public void testExport(String contextName, Map<String, Object> context) throws IOException
+  public void testExport(String unusedContextName, Map<String, Object> context) throws IOException
   {
     RowSignature rowSignature = RowSignature.builder()
                                             .add("__time", ColumnType.LONG)
@@ -92,7 +92,7 @@ public class MSQExportTest extends MSQTestBase
 
   @MethodSource("data")
   @ParameterizedTest(name = "{index}:with context {0}")
-  public void testExport2(String contextName, Map<String, Object> context) throws IOException
+  public void testExport2(String unusedContextName, Map<String, Object> context) throws IOException
   {
     RowSignature rowSignature = RowSignature.builder()
                                             .add("dim1", ColumnType.STRING)
@@ -127,7 +127,7 @@ public class MSQExportTest extends MSQTestBase
 
   @MethodSource("data")
   @ParameterizedTest(name = "{index}:with context {0}")
-  public void testExportRestricted(String contextName, Map<String, Object> context) throws IOException
+  public void testExportRestricted(String unusedContextName, Map<String, Object> context) throws IOException
   {
     // Set expected results based on query's end user
     boolean isSuperUser = context.get(MSQTaskQueryMaker.USER_KEY).equals(CalciteTests.TEST_SUPERUSER_NAME);
@@ -166,7 +166,7 @@ public class MSQExportTest extends MSQTestBase
 
   @MethodSource("data")
   @ParameterizedTest(name = "{index}:with context {0}")
-  public void testNumberOfRowsPerFile(String contextName, Map<String, Object> context) throws IOException
+  public void testNumberOfRowsPerFile(String unusedContextName, Map<String, Object> context) throws IOException
   {
     RowSignature rowSignature = RowSignature.builder()
                                             .add("__time", ColumnType.LONG)
@@ -196,7 +196,7 @@ public class MSQExportTest extends MSQTestBase
 
   @MethodSource("data")
   @ParameterizedTest(name = "{index}:with context {0}")
-  public void testExportComplexColumns(String contextName, Map<String, Object> context) throws IOException
+  public void testExportComplexColumns(String unusedContextName, Map<String, Object> context) throws IOException
   {
     final RowSignature rowSignature = RowSignature.builder()
                                                   .add("__time", ColumnType.LONG)
@@ -247,7 +247,7 @@ public class MSQExportTest extends MSQTestBase
 
   @MethodSource("data")
   @ParameterizedTest(name = "{index}:with context {0}")
-  public void testExportSketchColumns(String contextName, Map<String, Object> context) throws IOException
+  public void testExportSketchColumns(String unusedContextName, Map<String, Object> context) throws IOException
   {
     final RowSignature rowSignature = RowSignature.builder()
                                                   .add("__time", ColumnType.LONG)
@@ -300,7 +300,7 @@ public class MSQExportTest extends MSQTestBase
 
   @MethodSource("data")
   @ParameterizedTest(name = "{index}:with context {0}")
-  public void testEmptyExport(String contextName, Map<String, Object> context) throws IOException
+  public void testEmptyExport(String unusedContextName, Map<String, Object> context) throws IOException
   {
     RowSignature rowSignature = RowSignature.builder()
                                             .add("__time", ColumnType.LONG)
@@ -380,7 +380,7 @@ public class MSQExportTest extends MSQTestBase
 
   @MethodSource("data")
   @ParameterizedTest(name = "{index}:with context {0}")
-  public void testExportWithLimit(String contextName, Map<String, Object> context) throws IOException
+  public void testExportWithLimit(String unusedContextName, Map<String, Object> context) throws IOException
   {
     RowSignature rowSignature = RowSignature.builder()
                                             .add("__time", ColumnType.LONG)
