@@ -318,4 +318,16 @@ public class DataSourceAnalysis
     List<PreJoinableClause> li = preJoinableClauses.subList(st, preJoinableClauses.size());
     return li;
   }
+
+  public List<PreJoinableClause> getSafeDataSourceAnalysis()
+  {
+
+
+    int st = preJoinableClauses.size() - 1;
+    for (; st > 0 && preJoinableClauses.get(st).isOriginalLeftIsJoin(); st--) {
+      ;
+    }
+    List<PreJoinableClause> li = preJoinableClauses.subList(st, preJoinableClauses.size());
+    return li;
+  }
 }

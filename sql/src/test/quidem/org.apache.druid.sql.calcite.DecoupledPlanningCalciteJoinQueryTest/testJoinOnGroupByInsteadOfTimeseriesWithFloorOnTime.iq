@@ -15,11 +15,13 @@ SELECT CAST(__time AS BIGINT), m1, ANY_VALUE(dim3, 100) FROM foo WHERE (CAST(TIM
     )
 GROUP BY 1, 2
 ;
-+--------+----+--------+
-| EXPR$0 | m1 | EXPR$2 |
-+--------+----+--------+
-+--------+----+--------+
-(0 rows)
++--------------+-----+--------+
+| EXPR$0       | m1  | EXPR$2 |
++--------------+-----+--------+
+| 946684800000 | 1.0 | [a, b] |
+| 946771200000 | 2.0 | [b, c] |
++--------------+-----+--------+
+(2 rows)
 
 !ok
 LogicalAggregate(group=[{0, 1}], EXPR$2=[ANY_VALUE($2, $3)])
@@ -49,10 +51,30 @@ DruidAggregate(group=[{0, 1}], EXPR$2=[ANY_VALUE($2, $3)], druid=[logical])
   "dataSource" : {
     "type" : "join",
     "left" : {
-      "type" : "filter",
-      "base" : {
-        "type" : "table",
-        "name" : "foo"
+      "type" : "query",
+      "query" : {
+        "queryType" : "scan",
+        "dataSource" : {
+          "type" : "table",
+          "name" : "foo"
+        },
+        "intervals" : {
+          "type" : "intervals",
+          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
+        },
+        "virtualColumns" : [ {
+          "type" : "expression",
+          "name" : "v0",
+          "expression" : "(timestamp_floor(\"__time\",'PT1H',null,'UTC') + 1)",
+          "outputType" : "LONG"
+        } ],
+        "resultFormat" : "compactedList",
+        "columns" : [ "__time", "dim3", "m1", "v0" ],
+        "columnTypes" : [ "LONG", "STRING", "FLOAT", "LONG" ],
+        "granularity" : {
+          "type" : "all"
+        },
+        "legacy" : false
       }
     },
     "right" : {
