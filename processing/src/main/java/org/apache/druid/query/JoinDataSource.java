@@ -401,19 +401,19 @@ public class JoinDataSource implements DataSource
   @Override
   public Function<SegmentReference, SegmentReference> createSegmentMapFunction(SegmentMapConfig cfg)
   {
+    DataSourceAnalysis safeAnalysis = getSafeAnalysisForDataSource();
     // FIXME
-    if (analysis.getBaseQuery().isPresent()) {
+    if (safeAnalysis.getBaseQuery().isPresent()) {
       throw new RuntimeException("need to analyze this further");
     }
 
-    List<PreJoinableClause> clauses1 = analysis.getSafePreJoinableClauses();
-    Filter baseFilter = analysis.getJoinBaseTableFilter().map(Filters::toFilter).orElse(null);
+    List<PreJoinableClause> clauses1 = safeAnalysis.getPreJoinableClauses();//safeAnalysis.getSafePreJoinableClauses();
+    Filter baseFilter = safeAnalysis.getJoinBaseTableFilter().map(Filters::toFilter).orElse(null);
 
     if (clauses1.isEmpty()) {
-      return Function.identity();
+      return safeAnalysis.getBaseDataSource().createSegmentMapFunction(cfg);
+//      return Function.identity();
     } else {
-
-
       List<PreJoinableClause> clauses =
           clauses1.size() > 0 ? clauses1.subList(clauses1.size() - 1, clauses1.size()) : Collections.emptyList();
         clauses=clauses1;
@@ -467,9 +467,7 @@ public class JoinDataSource implements DataSource
           )
       );
       // FIXME
-      DataSource left3 = clauses1.get(0).getJoinDataSource().getLeft();
-      DataSource left2 = left;
-      final Function<SegmentReference, SegmentReference> baseMapFn = left3.createSegmentMapFunction(subCfg);
+      final Function<SegmentReference, SegmentReference> baseMapFn = safeAnalysis.getBaseDataSource().createSegmentMapFunction(subCfg);
       return baseSegment -> newHashJoinSegment(
           baseMapFn.apply(baseSegment),
           baseFilterToUse,
@@ -494,58 +492,52 @@ public class JoinDataSource implements DataSource
 
   private DataSourceAnalysis getAnalysisForDataSource()
   {
-    return flattenJoin(this);
+    return flattenJoin(this, true);
+  }
+
+  public DataSourceAnalysis getSafeAnalysisForDataSource()
+  {
+    return flattenJoin(this, false);
   }
 
   /**
    * Flatten a datasource into two parts: the left-hand side datasource (the 'base' datasource), and a list of join
    * clauses, if any.
+   * @param b
    *
    * @throws IllegalArgumentException if dataSource cannot be fully flattened.
    */
-  private static DataSourceAnalysis flattenJoin(final JoinDataSource dataSource)
+  private static DataSourceAnalysis flattenJoin(final JoinDataSource dataSource, boolean vertexBoundary)
   {
     DataSource current = dataSource;
     DimFilter currentDimFilter = TrueDimFilter.instance();
     final List<PreJoinableClause> preJoinableClauses = new ArrayList<>();
 
-    // There can be queries like
-    // Join of Unnest of Join of Unnest of Filter
-    // so these checks are needed to be ORed
-    // to get the base
-    // This method is called to get the analysis for the join data source
-    // Since the analysis of an UnnestDS or FilteredDS always delegates to its base
-    // To obtain the base data source underneath a Join
-    // we also iterate through the base of the  FilterDS and UnnestDS in its path
-    // the base of which can be a concrete data source
-    // This also means that an addition of a new datasource
-    // Will need an instanceof check here
-    // A future work should look into if the flattenJoin
-    // can be refactored to omit these instanceof checks
-    while (current instanceof JoinDataSource
-           || current instanceof UnnestDataSource
-           || current instanceof FilteredDataSource
-           || current instanceof RestrictedDataSource) {
+    do {
       if (current instanceof JoinDataSource) {
         final JoinDataSource joinDataSource = (JoinDataSource) current;
         currentDimFilter = DimFilters.conjunction(currentDimFilter, joinDataSource.getLeftFilter());
         PreJoinableClause e = new PreJoinableClause(joinDataSource);
-        preJoinableClauses.add(
-            e
-        );
-
+        preJoinableClauses.add(e);
         current = joinDataSource.getLeft();
-      } else if (current instanceof UnnestDataSource) {
-        final UnnestDataSource unnestDataSource = (UnnestDataSource) current;
-        current = unnestDataSource.getBase();
-      } else if (current instanceof RestrictedDataSource) {
-        final RestrictedDataSource restrictedDataSource = (RestrictedDataSource) current;
-        current = restrictedDataSource.getBase();
-      } else {
-        final FilteredDataSource filteredDataSource = (FilteredDataSource) current;
-        current = filteredDataSource.getBase();
+        continue;
+      } if (vertexBoundary ) {
+        if (current instanceof UnnestDataSource) {
+          final UnnestDataSource unnestDataSource = (UnnestDataSource) current;
+          current = unnestDataSource.getBase();
+          continue;
+        } else if (current instanceof RestrictedDataSource) {
+          final RestrictedDataSource restrictedDataSource = (RestrictedDataSource) current;
+          current = restrictedDataSource.getBase();
+          continue;
+        } else if (current instanceof FilteredDataSource) {
+          final FilteredDataSource filteredDataSource = (FilteredDataSource) current;
+          current = filteredDataSource.getBase();
+          continue;
+        }
       }
-    }
+      break;
+    } while (true);
 
     if (currentDimFilter == TrueDimFilter.instance()) {
       currentDimFilter = null;
