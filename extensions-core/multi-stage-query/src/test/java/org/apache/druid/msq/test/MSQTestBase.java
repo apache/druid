@@ -277,6 +277,12 @@ public class MSQTestBase extends BaseCalciteQueryTest
                   .put(MultiStageQueryContext.WINDOW_FUNCTION_OPERATOR_TRANSFORMATION, true)
                   .build();
 
+  public static final Map<String, Object> SUPERUSER_MSQ_CONTEXT =
+      ImmutableMap.<String, Object>builder()
+                  .putAll(DEFAULT_MSQ_CONTEXT)
+                  .put(MSQTaskQueryMaker.USER_KEY, CalciteTests.SUPER_USER_AUTH_RESULT.getIdentity())
+                  .buildKeepingLast();
+
   public static final Map<String, Object> DURABLE_STORAGE_MSQ_CONTEXT =
       ImmutableMap.<String, Object>builder()
                   .putAll(DEFAULT_MSQ_CONTEXT)
@@ -318,6 +324,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
   public static final String DURABLE_STORAGE = "durable_storage";
   public static final String DEFAULT = "default";
   public static final String PARALLEL_MERGE = "parallel_merge";
+  public static final String SUPERUSER = "superuser";
 
   protected File localFileStorageDir;
   protected LocalFileStorageConnector localFileStorageConnector;
@@ -977,7 +984,6 @@ public class MSQTestBase extends BaseCalciteQueryTest
 
     public Builder setExpectedTombstoneIntervals(Set<Interval> tombstoneIntervals)
     {
-      Preconditions.checkArgument(!tombstoneIntervals.isEmpty(), "Segments cannot be empty");
       this.expectedTombstoneIntervals = tombstoneIntervals;
       return asBuilder();
     }

@@ -46,6 +46,7 @@ import org.apache.druid.msq.indexing.destination.MSQTerminalStageSpecFactory;
 import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
 import org.apache.druid.msq.util.MSQTaskQueryMakerUtils;
 import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -114,11 +115,14 @@ public class MSQTaskQueryMaker implements QueryMaker
   }
 
   @Override
-  public QueryResponse<Object[]> runQuery(DruidQuery druidQuery)
+  public QueryResponse<Object[]> runQuery(final DruidQuery druidQuery)
   {
-    druidQuery = druidQuery.withPolicies(plannerContext.getAuthorizationResult().getPolicyMap());
-    Hook.QUERY_PLAN.run(druidQuery.getQuery());
-    plannerContext.dispatchHook(DruidHook.NATIVE_PLAN, druidQuery.getQuery());
+    Query<?> originalQuery = druidQuery.getQuery();
+    Query<?> modifiedQuery = originalQuery.withDataSource(originalQuery.getDataSource()
+                                                                       .withPolicies(plannerContext.getAuthorizationResult()
+                                                                                                   .getPolicyMap()));
+    Hook.QUERY_PLAN.run(modifiedQuery);
+    plannerContext.dispatchHook(DruidHook.NATIVE_PLAN, modifiedQuery);
 
     String taskId = MSQTasks.controllerTaskId(plannerContext.getSqlQueryId());
 
@@ -132,7 +136,14 @@ public class MSQTaskQueryMaker implements QueryMaker
 
     final MSQControllerTask controllerTask = new MSQControllerTask(
         taskId,
-        makeQuerySpec(targetDataSource, druidQuery, fieldMapping, plannerContext, terminalStageSpecFactory),
+        makeQuerySpec(
+            targetDataSource,
+            modifiedQuery,
+            druidQuery,
+            fieldMapping,
+            plannerContext,
+            terminalStageSpecFactory
+        ),
         MSQTaskQueryMakerUtils.maskSensitiveJsonKeys(plannerContext.getSql()),
         plannerContext.queryContextMap(),
         SqlResults.Context.fromPlannerContext(plannerContext),
@@ -147,6 +158,7 @@ public class MSQTaskQueryMaker implements QueryMaker
 
   public static MSQSpec makeQuerySpec(
       @Nullable final IngestDestination targetDataSource,
+      final Query<?> modifiedQuery,
       final DruidQuery druidQuery,
       final List<Entry<Integer, String>> fieldMapping,
       final PlannerContext plannerContext,
@@ -295,7 +307,7 @@ public class MSQTaskQueryMaker implements QueryMaker
 
     final MSQSpec querySpec =
         MSQSpec.builder()
-               .query(druidQuery.getQuery().withOverriddenContext(nativeQueryContextOverrides))
+               .query(modifiedQuery.withOverriddenContext(nativeQueryContextOverrides))
                .columnMappings(new ColumnMappings(QueryUtils.buildColumnMappings(fieldMapping, druidQuery)))
                .destination(destination)
                .assignmentStrategy(MultiStageQueryContext.getAssignmentStrategy(sqlQueryContext))

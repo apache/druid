@@ -77,7 +77,6 @@ import org.apache.druid.query.operator.ScanOperatorFactory;
 import org.apache.druid.query.operator.WindowOperatorQuery;
 import org.apache.druid.query.ordering.StringComparator;
 import org.apache.druid.query.planning.DataSourceAnalysis;
-import org.apache.druid.query.policy.Policy;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.spec.LegacySegmentSpec;
 import org.apache.druid.query.timeboundary.TimeBoundaryQuery;
@@ -122,13 +121,14 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * A fully formed Druid query.
+ * A fully formed Druid query, built from a {@link PartialDruidQuery}. The work to develop this query is done
+ * during construction, which may throw {@link CannotBuildQueryException}.
  */
 public class DruidQuery
 {
   /**
    * Native query context key that is set when {@link EngineFeature#SCAN_NEEDS_SIGNATURE}.
-   * <p>
+   *
    * {@link Deprecated} Instead of the context value {@link ScanQuery#getRowSignature()} can be used.
    */
   @Deprecated
@@ -174,10 +174,8 @@ public class DruidQuery
       @Nullable final Sorting sorting,
       @Nullable final Windowing windowing,
       final RowSignature sourceRowSignature,
-      final RowSignature outputRowSignature,
       final RelDataType outputRowType,
-      final VirtualColumnRegistry virtualColumnRegistry,
-      @Nullable Query<?> query
+      final VirtualColumnRegistry virtualColumnRegistry
   )
   {
     this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
@@ -187,40 +185,20 @@ public class DruidQuery
     this.grouping = grouping;
     this.sorting = sorting;
     this.windowing = windowing;
+    this.sourceRowSignature = sourceRowSignature;
 
-    this.sourceRowSignature = Preconditions.checkNotNull(sourceRowSignature, "sourceRowSignature");
-    this.outputRowSignature = Preconditions.checkNotNull(outputRowSignature, "outputRowSignature");
-    this.outputRowType = Preconditions.checkNotNull(outputRowType, "outputRowType");
-    this.virtualColumnRegistry = Preconditions.checkNotNull(virtualColumnRegistry, "virtualColumnRegistry");
-    this.query = query == null ? computeQuery() : query;
-  }
-
-  /**
-   * Returns an updated {@link DruidQuery} based on the policy restrictions on tables.
-   */
-  public DruidQuery withPolicies(Map<String, Optional<Policy>> policyMap)
-  {
-    return new DruidQuery(
-        dataSource,
-        plannerContext,
-        filter,
+    this.outputRowSignature = computeOutputRowSignature(
+        sourceRowSignature,
         selectProjection,
         grouping,
         sorting,
-        windowing,
-        sourceRowSignature,
-        outputRowSignature,
-        outputRowType,
-        virtualColumnRegistry,
-        query.withDataSource(query.getDataSource().withPolicies(policyMap))
+        windowing
     );
+    this.outputRowType = Preconditions.checkNotNull(outputRowType, "outputRowType");
+    this.virtualColumnRegistry = Preconditions.checkNotNull(virtualColumnRegistry, "virtualColumnRegistry");
+    this.query = computeQuery();
   }
 
-  /**
-   * Builds a {@link DruidQuery} from a {@link PartialDruidQuery}.
-   *
-   * @throws CannotBuildQueryException if failed to build query
-   */
   public static DruidQuery fromPartialQuery(
       final PartialDruidQuery partialQuery,
       final DataSource dataSource,
@@ -332,10 +310,8 @@ public class DruidQuery
         sorting,
         windowing,
         sourceRowSignature,
-        computeOutputRowSignature(sourceRowSignature, selectProjection, grouping, sorting, windowing),
         outputRowType,
-        virtualColumnRegistry,
-        null
+        virtualColumnRegistry
     );
   }
 
@@ -1005,18 +981,10 @@ public class DruidQuery
   }
 
   /**
-   * Computes a native druid query, must be called from the constructor. The returned query will be one of following:
-   * <ul>
-   *   <li> {@link GroupByQuery}
-   *   <li> {@link WindowOperatorQuery}
-   *   <li> {@link TimeBoundaryQuery}
-   *   <li> {@link TimeseriesQuery}
-   *   <li> {@link TopNQuery}
-   *   <li> {@link ScanQuery}
-   * </ul>
+   * Return this query as some kind of Druid query. The returned query will either be {@link TopNQuery},
+   * {@link TimeseriesQuery}, {@link GroupByQuery}, {@link ScanQuery}
    *
-   * @return Native druid query
-   * @throws CannotBuildQueryException if failed to build query
+   * @return Druid query
    */
   private Query<?> computeQuery()
   {
