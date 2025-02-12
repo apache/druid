@@ -20,9 +20,9 @@
 package org.apache.druid.msq.test;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Binder;
@@ -192,39 +192,36 @@ public class CalciteMSQTestsHelper
 
     @Provides
     @LazySingleton
-    public DataSegmentProvider provideDataSegmentProvider(LocalDataSegmentProvider l)
+    public DataSegmentProvider provideDataSegmentProvider(LocalDataSegmentProvider localDataSegmentProvider)
     {
-      return l;
+      return localDataSegmentProvider;
     }
 
-    static class LocalDataSegmentProvider implements DataSegmentProvider
+    @LazySingleton
+    static class LocalDataSegmentProvider extends CacheLoader<SegmentId, CompleteSegment> implements DataSegmentProvider
     {
       private TempDirProducer tempDirProducer;
-      private Cache<SegmentId, ReferenceCountingResourceHolder<?>> cache;
+      private LoadingCache<SegmentId, CompleteSegment> cache;
 
       @Inject
       public LocalDataSegmentProvider(TempDirProducer tempDirProducer)
       {
         this.tempDirProducer = tempDirProducer;
-        this.cache = CacheBuilder.newBuilder()
-            .build(new CacheLoader<SegmentId, ReferenceCountingResourceHolder<?>>() {
-
-              @Override
-              public ReferenceCountingResourceHolder<?> load(SegmentId segmentId) throws Exception
-              {
-                getSupplierForSegment(tempDirProducer::newTempFolder, segmentId);
-                return null;
-              }
-
-            });
+        this.cache = CacheBuilder.newBuilder().build(this);
       }
 
+      @Override
+      public CompleteSegment load(SegmentId segmentId) throws Exception
+      {
+        return getSupplierForSegment(tempDirProducer::newTempFolder, segmentId);
+      }
 
       @Override
       public Supplier<ResourceHolder<CompleteSegment>> fetchSegment(SegmentId segmentId,
           ChannelCounters channelCounters, boolean isReindex)
       {
-        return getSupplierForSegment(tempDirProducer::newTempFolder, segmentId);
+        CompleteSegment a = cache.getUnchecked(segmentId);
+        return () -> new ReferenceCountingResourceHolder<>(a, Closer.create());
       }
 
     }
@@ -276,7 +273,7 @@ public class CalciteMSQTestsHelper
     return mockFactory;
   }
 
-  protected static Supplier<ResourceHolder<CompleteSegment>> getSupplierForSegment(
+  protected static CompleteSegment getSupplierForSegment(
       Function<String, File> tempFolderProducer,
       SegmentId segmentId
   )
@@ -533,6 +530,6 @@ public class CalciteMSQTestsHelper
                                          .shardSpec(new LinearShardSpec(0))
                                          .size(0)
                                          .build();
-    return () -> new ReferenceCountingResourceHolder<>(new CompleteSegment(dataSegment, segment), Closer.create());
+    return new CompleteSegment(dataSegment, segment);
   }
 }
