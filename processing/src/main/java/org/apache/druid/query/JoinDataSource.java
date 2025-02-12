@@ -402,21 +402,17 @@ public class JoinDataSource implements DataSource
   public Function<SegmentReference, SegmentReference> createSegmentMapFunction(SegmentMapConfig cfg)
   {
     DataSourceAnalysis safeAnalysis = getSafeAnalysisForDataSource();
-    // FIXME
+    List<PreJoinableClause> clauses = safeAnalysis.getPreJoinableClauses();//safeAnalysis.getSafePreJoinableClauses();
+    Filter baseFilter = safeAnalysis.getJoinBaseTableFilter().map(Filters::toFilter).orElse(null);
+
     if (safeAnalysis.getBaseQuery().isPresent()) {
+      // FIXME
       throw new RuntimeException("need to analyze this further");
     }
 
-    List<PreJoinableClause> clauses1 = safeAnalysis.getPreJoinableClauses();//safeAnalysis.getSafePreJoinableClauses();
-    Filter baseFilter = safeAnalysis.getJoinBaseTableFilter().map(Filters::toFilter).orElse(null);
-
-    if (clauses1.isEmpty()) {
+    if (clauses.isEmpty()) {
       return safeAnalysis.getBaseDataSource().createSegmentMapFunction(cfg);
-//      return Function.identity();
     } else {
-      List<PreJoinableClause> clauses =
-          clauses1.size() > 0 ? clauses1.subList(clauses1.size() - 1, clauses1.size()) : Collections.emptyList();
-        clauses=clauses1;
       final JoinableClauses joinableClauses = JoinableClauses.createClauses(
           clauses,
           joinableFactoryWrapper.getJoinableFactory()
@@ -466,7 +462,6 @@ public class JoinDataSource implements DataSource
                   .orElse(null)
           )
       );
-      // FIXME
       final Function<SegmentReference, SegmentReference> baseMapFn = safeAnalysis.getBaseDataSource().createSegmentMapFunction(subCfg);
       return baseSegment -> newHashJoinSegment(
           baseMapFn.apply(baseSegment),
