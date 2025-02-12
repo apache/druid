@@ -25,7 +25,7 @@ import org.junit.Test;
 
 import static org.junit.Assert.assertArrayEquals;
 
-public class CacheTestBase<T extends Cache>
+public abstract class CacheTestBase<T extends Cache>
 {
   T cache;
 

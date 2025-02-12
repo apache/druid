@@ -1323,7 +1323,7 @@ public class ControllerImpl implements Controller
             workerNumber
         );
 
-        addToRetryQueue(queryKernel, workerNumber, new WorkerRpcFailedFault(workerId));
+        addToRetryQueue(queryKernel, workerNumber, new WorkerRpcFailedFault(workerId, workerResult.error().toString()));
       } else {
         // Nonretryable failure.
         throw new RuntimeException(workerResult.error());
