@@ -79,6 +79,7 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery, 
 {
   public static final String TYPE = "query_controller";
   public static final String DUMMY_DATASOURCE_FOR_SELECT = "__query_select";
+  public static final String DUMMY_DATASOURCE_FOR_EXPORT = "__query_export";
   private static final Logger log = new Logger(MSQControllerTask.class);
 
   private final MSQSpec querySpec;
@@ -332,6 +333,8 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery, 
 
     if (destination instanceof DataSourceMSQDestination) {
       return ((DataSourceMSQDestination) destination).getDataSource();
+    } else if (destination instanceof ExportMSQDestination) {
+      return DUMMY_DATASOURCE_FOR_EXPORT;
     } else {
       return DUMMY_DATASOURCE_FOR_SELECT;
     }

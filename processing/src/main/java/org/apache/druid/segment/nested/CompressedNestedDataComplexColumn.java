@@ -968,18 +968,20 @@ public abstract class CompressedNestedDataComplexColumn<TStringDictionary extend
       int pos = dataBuffer.position();
       final Supplier<ColumnarLongs> longs = longsLength > 0 ? CompressedColumnarLongsSupplier.fromByteBuffer(
           dataBuffer,
-          byteOrder
+          byteOrder,
+          columnBuilder.getFileMapper()
       ) : () -> null;
       dataBuffer.position(pos + longsLength);
       pos = dataBuffer.position();
       final Supplier<ColumnarDoubles> doubles = doublesLength > 0 ? CompressedColumnarDoublesSuppliers.fromByteBuffer(
           dataBuffer,
-          byteOrder
+          byteOrder,
+          columnBuilder.getFileMapper()
       ) : () -> null;
       dataBuffer.position(pos + doublesLength);
       final WritableSupplier<ColumnarInts> ints;
       if (version == DictionaryEncodedColumnPartSerde.VERSION.COMPRESSED) {
-        ints = CompressedVSizeColumnarIntsSupplier.fromByteBuffer(dataBuffer, byteOrder);
+        ints = CompressedVSizeColumnarIntsSupplier.fromByteBuffer(dataBuffer, byteOrder, columnBuilder.getFileMapper());
       } else {
         ints = VSizeColumnarInts.readFromByteBuffer(dataBuffer);
       }

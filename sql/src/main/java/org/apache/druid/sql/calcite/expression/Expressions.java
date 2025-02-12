@@ -717,6 +717,11 @@ public class Expressions
 
         // Numeric lhs needs a numeric comparison.
         final StringComparator comparator = Calcites.getStringComparatorForRelDataType(lhs.getType());
+        if (comparator == null) {
+          // Type is not comparable.
+          return null;
+        }
+
         final BoundRefKey boundRefKey = new BoundRefKey(column, extractionFn, comparator);
         final DimFilter filter;
 

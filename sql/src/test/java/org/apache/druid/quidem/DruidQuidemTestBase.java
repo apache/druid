@@ -100,13 +100,13 @@ public abstract class DruidQuidemTestBase
       }
       filter = new WildcardFileFilter(filterStr);
     }
-    druidQuidemRunner = new DruidQuidemRunner();
+    druidQuidemRunner = new DruidQuidemRunner(createCommandHandler());
   }
 
   /** Creates a command handler. */
   protected CommandHandler createCommandHandler()
   {
-    return Quidem.EMPTY_COMMAND_HANDLER;
+    return new DruidQuidemCommandHandler();
   }
 
   @ParameterizedTest
@@ -121,8 +121,11 @@ public abstract class DruidQuidemTestBase
 
   public static class DruidQuidemRunner
   {
-    public DruidQuidemRunner()
+    private CommandHandler commandHandler;
+
+    public DruidQuidemRunner(CommandHandler commandHandler)
     {
+      this.commandHandler = commandHandler;
     }
 
     public void run(File inFile) throws Exception
@@ -142,7 +145,7 @@ public abstract class DruidQuidemTestBase
         ConfigBuilder configBuilder = Quidem.configBuilder()
             .withConnectionFactory(connectionFactory)
             .withPropertyHandler(connectionFactory)
-            .withCommandHandler(new DruidQuidemCommandHandler());
+            .withCommandHandler(commandHandler);
 
         Config config = configBuilder
             .withReader(reader)

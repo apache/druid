@@ -22,7 +22,6 @@ package org.apache.druid.query.aggregation.datasketches.hll.sql;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.inject.Injector;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.Intervals;
@@ -34,7 +33,6 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryDataSource;
-import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
@@ -71,7 +69,6 @@ import org.apache.druid.segment.VirtualColumn;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
@@ -261,13 +258,8 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
       return DruidModuleCollection.of(super.getCoreModule(), new HllSketchModule());
     }
 
-    @SuppressWarnings("resource")
     @Override
-    public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
-        final QueryRunnerFactoryConglomerate conglomerate,
-        final JoinableFactoryWrapper joinableFactory,
-        final Injector injector
-    )
+    public SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(SpecificSegmentsQuerySegmentWalker walker)
     {
       HllSketchModule.registerSerde();
       final QueryableIndex index = IndexBuilder
@@ -292,7 +284,7 @@ public class HllSketchSqlAggregatorTest extends BaseCalciteQueryTest
           .rows(TestDataBuilder.ROWS1_WITH_NUMERIC_DIMS)
           .buildMMappedIndex();
 
-      return SpecificSegmentsQuerySegmentWalker.createWalker(injector, conglomerate).add(
+      return walker.add(
           DataSegment.builder()
                      .dataSource(CalciteTests.DATASOURCE1)
                      .interval(index.getDataInterval())

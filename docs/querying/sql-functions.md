@@ -172,7 +172,7 @@ Returns any value of the specified expression.
 
 <details><summary>Example</summary>
 
-The following example returns the state abbrevation, state name, and average flight time grouped by each state in `flight-carriers`:
+The following example returns the state abbreviation, state name, and average flight time grouped by each state in `flight-carriers`:
 
 ```sql
 SELECT
@@ -1282,21 +1282,68 @@ Returns the following:
 
 ## BLOOM_FILTER
 
-Computes a Bloom filter from values produced by the specified expression.
+Computes a [Bloom filter](../development/extensions-core/bloom-filter.md) from values provided in an expression.
 
-* **Syntax**: `BLOOM_FILTER(expr, <NUMERIC>)`
+
+* **Syntax:** `BLOOM_FILTER(expr, numEntries)`  
+  `numEntries` specifies the maximum number of distinct values before the false positive rate increases.
 * **Function type:** Aggregation
+
+<details><summary>Example</summary>
+
+The following example returns a Base64-encoded Bloom filter representing the set of devices ,`agent_category`, used in Albania:
+
+```sql
+SELECT "country",
+  BLOOM_FILTER(agent_category, 10) as albanian_bloom
+FROM "kttm"
+WHERE "country" = 'Albania'
+GROUP BY "country"
+```
+
+Returns the following:
+
+|`country`| `albanian_bloom`|
+|---| --- | 
+|`Albania`|`BAAAAAgAAACAAEAAAAAAAAAAAEIAAAAAAAAAAAAAAAAAAAAAAAIIAAAAAAAAAAAAAAAAAAIAAAAAAQAAAAAAAAAAAAAA`|
+
+</details>
 
 [Learn more](sql-aggregations.md)
 
 ## BLOOM_FILTER_TEST
 
-Returns true if the expression is contained in a Base64-serialized Bloom filter.
+Returns true if an expression is contained in a Base64-encoded [Bloom filter](../development/extensions-core/bloom-filter.md) string.
 
-* **Syntax**: `BLOOM_FILTER_TEST(expr, <STRING>)`
+* **Syntax:** `BLOOM_FILTER_TEST(expr, <STRING>)`
 * **Function type:** Scalar, other
 
+<details><summary>Example</summary>
+
+The following example returns `true` when a device type, `agent_category`, exists in the Bloom filter representing the set of devices used in Albania:
+
+```sql
+SELECT agent_category,
+BLOOM_FILTER_TEST("agent_category", 'BAAAAAgAAACAAEAAAAAAAAAAAEIAAAAAAAAAAAAAAAAAAAAAAAIIAAAAAAAAAAAAAAAAAAIAAAAAAQAAAAAAAAAAAAAA') AS bloom_test
+FROM "kttm"
+GROUP BY 1
+```
+
+Returns the following:
+
+| `agent_category` | `bloom_test` |
+| --- | --- |
+| `empty` | `false` |
+| `Game console` | `false` |
+| `Personal computer` | `true` |
+| `Smart TV` | `false` |
+| `Smartphone` | `true` |
+| `Tablet` | `false` |
+
+</details>
+
 [Learn more](sql-scalar.md#other-scalar-functions)
+
 
 ## BTRIM
 
@@ -1671,6 +1718,37 @@ Returns the cumulative distribution of the current row within the window calcula
 * **Syntax**: `CUME_DIST()`
 * **Function type:** Window
 
+<details><summary>Example</summary>
+
+The following example returns the cumulative distribution of number of flights by airline from two airports on a single day.
+
+```sql
+SELECT FLOOR("__time" TO DAY)  AS "flight_day",
+    "Origin" AS "airport",
+    "Reporting_Airline" as "airline",
+    COUNT("Flight_Number_Reporting_Airline") as "num_flights",
+    CUME_DIST() OVER (PARTITION BY "Origin" ORDER BY COUNT("Flight_Number_Reporting_Airline") DESC) AS "cume_dist"
+FROM "flight-carriers"
+WHERE FLOOR("__time" TO DAY) = '2005-11-01'
+   AND "Origin" IN ('KOA', 'LIH')
+GROUP BY 1, 2, 3
+```
+
+Returns the following:
+
+| `flight_day` | `airport` | `airline` | `num_flights` | `cume_dist` |
+| --- | --- | --- | --- | ---|
+| `2005-11-01T00:00:00.000Z` | `KOA` | `HA` | `11` | `0.25` |
+| `2005-11-01T00:00:00.000Z` | `KOA` | `UA` | `4` |  `0.5` |
+| `2005-11-01T00:00:00.000Z` | `KOA` | `AA` | `1` |  `1` |
+| `2005-11-01T00:00:00.000Z` | `KOA` | `NW` | `1` | `1` |
+| `2005-11-01T00:00:00.000Z` | `LIH` | `HA` | `15` |  `0.3333333333333333` |
+| `2005-11-01T00:00:00.000Z` | `LIH` | `AA` | `2` | `1`|
+| `2005-11-01T00:00:00.000Z` | `LIH` | `UA` | `2` | `1` |
+ 
+</details>
+
+
 [Learn more](sql-window-functions.md#window-function-reference)
 
 ## CURRENT_DATE
@@ -1756,39 +1834,63 @@ Returns the following:
 
 ## DECODE_BASE64_COMPLEX
 
-Decodes a Base64-encoded string into a complex data type, where `dataType` is the complex data type and `expr` is the Base64-encoded string to decode.
+Decodes a Base64-encoded expression into a complex data type.
 
-* **Syntax**: `DECODE_BASE64_COMPLEX(dataType, expr)`
+You can use the function to ingest data when a column contains an encoded data sketch such as Theta or HLL.
+
+The function supports `hyperUnique` and `serializablePairLongString` data types by default.
+To enable support for a complex data type, load the [corresponding extension](../configuration/extensions.md):
+
+- `druid-bloom-filter`: `bloom`
+- `druid-datasketches`: `arrayOfDoublesSketch`, `HLLSketch`, `KllDoublesSketch`, `KllFloatsSketch`, `quantilesDoublesSketch`, `thetaSketch`
+- `druid-histogram`: `approximateHistogram`, `fixedBucketsHistogram`
+- `druid-stats`: `variance`
+- `druid-compressed-bigdecimal`: `compressedBigDecimal`
+- `druid-momentsketch`: `momentSketch`
+- `druid-tdigestsketch`: `tDigestSketch`
+
+* **Syntax:** `DECODE_BASE64_COMPLEX(dataType, expr)`
 * **Function type:** Scalar, other
 
-[Learn more](sql-scalar.md#other-scalar-functions)
+<details><summary>Example</summary>
+
+The following example returns a Theta sketch complex type from a Base64-encoded string representation of the sketch:
+
+```sql
+SELECT DECODE_BASE64_COMPLEX('thetaSketch','AgMDAAAazJNBAAAAAACAP+k/tkWGkSoFYWMAG0y+3gVabvKcIUNrBv0jAkGsw7sK5szX1k0ScwtMfCQmFP/rDhFK6yU7PPkObZ/Ugw5fcBQZ+GaO+Nt6FP+Whz6TmxkWyRJ+gaQLFhcts1+c0Q/vF9FLFfaVlOkb3/XpXaZ3JhyZ2dG8Di2/HO10sMs9C0AdM4FdHuye6SB+GYinIhTOITOHzB5SAfIiph3de9qIGSM89V+s/TkdI/WZVzK9wF0npfi4ZrmgBSnVjphCtQA5K2fp0x59UCwvMopZarsSkzEo81OIxjznNNXLr1BbQBo1Ei3OxJOoNzVs0x9xzsm4NfgAZSvZQvI1c2TmPsZvlzpW7tmIlizOOsr6pGWoh0U99/tV8RFwhz0SJoWyU1Z2P0hZ5d7KRnZBjlWC+e/FLEKrWsu14rlFRXhsOuxRId9FboEuH9PqMUixI2lB8MhLS803hJDoZ7tMy7Egl+YNU04QM11stXX4Tu96NHHcGiZRuCyciGiTGVQflMLmNt6lW6zIwJy0baNdbwjMCTjtUF7oZOtugWLYYJE9sJU3HuVijc0J10l6SmPslbfY6Fw0Za9w/Zdhn/5nIuKc1WMrYWnAJQJKXY73bHYWq7gI6dRvYdC2fLJyv3F8qwQcOJgFc0GaGXw8KRF3w3IVCwxsMntWhdTkaJ88e++5NFyM1Hd/D79wg0b9vH8=') AS "theta_sketch"
+```
+
+You can perform Theta sketch operations on the resulting `COMPLEX<thetaSketch>` value which resembles the input string. 
+
+</details>
+
+[Learn more](./sql-scalar.md#other-scalar-functions)
 
 ## DECODE_BASE64_UTF8
 
-Decodes a Base64-encoded string into a UTF-8 encoded string.
+Decodes a Base64-encoded expression into a UTF-8 encoded string.
 
 * **Syntax:** `DECODE_BASE64_UTF8(expr)`
 * **Function type:** Scalar, string
 
 <details><summary>Example</summary>
 
-The following example converts the base64 encoded string `SGVsbG8gV29ybGQhCg==` into an UTF-8 encoded string.
+The following example decodes the Base64-encoded representation of "Hello, World!":
 
 ```sql
 SELECT
-  'SGVsbG8gV29ybGQhCg==' AS "base64_encoding",
-  DECODE_BASE64_UTF8('SGVsbG8gV29ybGQhCg==') AS "convert_to_UTF8_encoding"
+  DECODE_BASE64_UTF8('SGVsbG8sIFdvcmxkIQ==') as decoded
 ```
 
 Returns the following:
 
-| `base64_encoding` | `convert_to_UTF8_encoding` |
-| -- | -- |
-| `SGVsbG8gV29ybGQhCg==` | `Hello World!` |
+| `decoded` |
+| -- |
+| `Hello, World!` |
 
 </details>
 
-[Learn more](sql-scalar.md#string-functions)
+[Learn more](./sql-scalar.md#string-functions)
 
 ## DEGREES
 
@@ -1819,6 +1921,36 @@ Returns the rank for a row within a window without gaps. For example, if two row
 
 * **Syntax**: `DENSE_RANK()`
 * **Function type:** Window
+
+<details><summary>Example</summary>
+
+The following example returns the dense rank by airline for flights from two airports on a single day.
+
+```sql
+SELECT FLOOR("__time" TO DAY)  AS "flight_day",
+    "Origin" AS "airport",
+    "Reporting_Airline" as "airline",
+    COUNT("Flight_Number_Reporting_Airline") as "num_flights",
+    DENSE_RANK() OVER (PARTITION BY "Origin" ORDER BY COUNT("Flight_Number_Reporting_Airline") DESC) AS "dense_rank"
+FROM "flight-carriers"
+WHERE FLOOR("__time" TO DAY) = '2005-11-01'
+    AND "Origin" IN ('KOA', 'LIH')
+GROUP BY 1, 2, 3
+```
+
+Returns the following:
+
+| `flight_day` | `airport` | `airline` | `num_flights` | `dense_rank` |
+| --- | --- | --- | --- | ---|
+| `2005-11-01T00:00:00.000Z` | `KOA` | `HA` | `11` | `1` |
+| `2005-11-01T00:00:00.000Z` | `KOA` | `UA` | `4` | `2` |
+| `2005-11-01T00:00:00.000Z` | `KOA` | `AA` | `1` | `3` |
+| `2005-11-01T00:00:00.000Z` | `KOA` | `NW` | `1` | `3` |
+| `2005-11-01T00:00:00.000Z` | `LIH` | `HA` | `15` | `1` |
+| `2005-11-01T00:00:00.000Z` | `LIH` | `AA` | `2` | `2`|
+| `2005-11-01T00:00:00.000Z` | `LIH` | `UA` | `2` | `2` |
+ 
+</details>
 
 [Learn more](sql-window-functions.md#window-function-reference)
 
@@ -2129,11 +2261,33 @@ Returns the following:
 
 ## DS_TUPLE_DOUBLES
 
-Creates a Tuple sketch which contains an array of double values as the Summary Object. If the last value of the array is a numeric literal, Druid assumes that the value is an override parameter for [nominal entries](../development/extensions-core/datasketches-tuple.md).
+Creates a Tuple sketch on raw data or a precomputed sketch column. See [DataSketches Tuple Sketch module](../development/extensions-core/datasketches-tuple.md) for a description of parameters.
 
-* **Syntax**: `DS_TUPLE_DOUBLES(expr, [nominalEntries])`  
-              `DS_TUPLE_DOUBLES(dimensionColumnExpr, metricColumnExpr, ..., [nominalEntries])`
+* **Syntax**: `DS_TUPLE_DOUBLES(expr[, nominalEntries])`  
+              `DS_TUPLE_DOUBLES(dimensionColumnExpr, metricColumnExpr1[, metricColumnExpr2, ...], [nominalEntries])`
 * **Function type:** Aggregation
+
+<details><summary>Example</summary>
+
+The following example creates a Tuples sketch column that stores the arrival and departure delay minutes for each airline in `flight-carriers`:
+
+```sql
+SELECT
+  "Reporting_Airline",
+  DS_TUPLE_DOUBLES("Reporting_Airline", "ArrDelayMinutes", "DepDelayMinutes") AS tuples_delay
+FROM "flight-carriers"
+GROUP BY 1
+LIMIT 2
+```
+
+Returns the following:
+
+|`Reporting_Airline`|`tuples_delay`|
+|-------------------|--------------|
+|`AA`|`1.0`|
+|`AS`|`1.0`|
+
+</details>
 
 [Learn more](sql-aggregations.md)
 
@@ -2144,6 +2298,37 @@ Returns an intersection of Tuple sketches which each contain an array of double 
 * **Syntax**: `DS_TUPLE_DOUBLES_INTERSECT(expr, ..., [nominalEntries])`
 * **Function type:** Scalar, sketch
 
+<details><summary>Example</summary>
+
+The following example calculates the total minutes of arrival delay for airlines flying out of `SFO` or `LAX`.
+An airline that doesn't fly out of both airports returns a value of 0.
+
+```sql
+SELECT
+  "Reporting_Airline",
+  DS_TUPLE_DOUBLES_METRICS_SUM_ESTIMATE(
+    DS_TUPLE_DOUBLES_INTERSECT(
+      DS_TUPLE_DOUBLES("Reporting_Airline", "ArrDelayMinutes") FILTER(WHERE "Origin" = 'SFO'),
+      DS_TUPLE_DOUBLES("Reporting_Airline", "ArrDelayMinutes") FILTER(WHERE "Origin" = 'LAX')
+    )
+  ) AS arrival_delay_sfo_lax
+FROM "flight-carriers"
+GROUP BY 1
+LIMIT 5
+```
+
+Returns the following:
+
+|`Reporting_Airline`|`arrival_delay_sfo_lax`|
+|----|---------|
+|`AA`|`[33296]`|
+|`AS`|`[13694]`|
+|`B6`|`[0]`|
+|`CO`|`[13582]`|
+|`DH`|`[0]`|
+
+</details>
+
 [Learn more](sql-scalar.md#tuple-sketch-functions)
 
 ## DS_TUPLE_DOUBLES_METRICS_SUM_ESTIMATE
@@ -2152,6 +2337,47 @@ Computes approximate sums of the values contained within a Tuple sketch which co
 
 * **Syntax**: `DS_TUPLE_DOUBLES_METRICS_SUM_ESTIMATE(expr)`
 * **Function type:** Scalar, sketch
+
+<details><summary>Example</summary>
+
+The following example calculates the sum of arrival and departure delay minutes for each airline in `flight-carriers`:
+
+```sql
+SELECT
+  "Reporting_Airline",
+  DS_TUPLE_DOUBLES_METRICS_SUM_ESTIMATE(DS_TUPLE_DOUBLES("Reporting_Airline", "ArrDelayMinutes", "DepDelayMinutes")) AS sum_delays
+FROM "flight-carriers"
+GROUP BY 1
+LIMIT 2
+```
+
+Returns the following:
+
+|`Reporting_Airline`|`sum_delays`|
+|----|-----------------|
+|`AA`|`[612831,474309]`|
+|`AS`|`[157340,141462]`|
+
+Compare this example with an analogous SQL statement that doesn't use approximations:
+
+```sql
+SELECT
+  "Reporting_Airline",
+  SUM("ArrDelayMinutes") AS sum_arrival_delay,
+  SUM("DepDelayMinutes") AS sum_departure_delay
+FROM "flight-carriers"
+GROUP BY 1
+LIMIT 2
+```
+
+Returns the following:
+
+|`Reporting_Airline`|`sum_arrival_delay`|`sum_departure_delay`|
+|----|--------|--------|
+|`AA`|`612831`|`475735`|
+|`AS`|`157340`|`143620`|
+
+</details>
 
 [Learn more](sql-scalar.md#tuple-sketch-functions)
 
@@ -2162,6 +2388,36 @@ Returns a set difference of Tuple sketches which each contain an array of double
 * **Syntax**: `DS_TUPLE_DOUBLES_NOT(expr, ..., [nominalEntries])`
 * **Function type:** Scalar, sketch
 
+<details><summary>Example</summary>
+
+The following example calculates the total minutes of arrival delay for airlines that fly out of `SFO` but not `LAX`.
+
+```sql
+SELECT
+  "Reporting_Airline",
+  DS_TUPLE_DOUBLES_METRICS_SUM_ESTIMATE(
+    DS_TUPLE_DOUBLES_NOT(
+      DS_TUPLE_DOUBLES("Reporting_Airline", "ArrDelayMinutes") FILTER(WHERE "Origin" = 'SFO'),
+      DS_TUPLE_DOUBLES("Reporting_Airline", "ArrDelayMinutes") FILTER(WHERE "Origin" = 'LAX')
+    )
+  ) AS arrival_delay_sfo_lax
+FROM "flight-carriers"
+GROUP BY 1
+LIMIT 5
+```
+
+Returns the following:
+
+|`Reporting_Airline`|`arrival_delay_sfo_lax`|
+|----|---------|
+|`AA`|`[0]`|
+|`AS`|`[0]`|
+|`B6`|`[0]`|
+|`CO`|`[0]`|
+|`DH`|`[93]`|
+
+</details>
+
 [Learn more](sql-scalar.md#tuple-sketch-functions)
 
 ## DS_TUPLE_DOUBLES_UNION
@@ -2170,6 +2426,36 @@ Returns a union of Tuple sketches which each contain an array of double values a
 
 * **Syntax**: `DS_TUPLE_DOUBLES_UNION(expr, ..., [nominalEntries])`
 * **Function type:** Scalar, sketch
+
+<details><summary>Example</summary>
+
+The following example calculates the total minutes of arrival delay for airlines flying out of either `SFO` or `LAX`.
+
+```sql
+SELECT
+  "Reporting_Airline",
+  DS_TUPLE_DOUBLES_METRICS_SUM_ESTIMATE(
+    DS_TUPLE_DOUBLES_UNION(
+      DS_TUPLE_DOUBLES("Reporting_Airline", "ArrDelayMinutes") FILTER(WHERE "Origin" = 'SFO'),
+      DS_TUPLE_DOUBLES("Reporting_Airline", "ArrDelayMinutes") FILTER(WHERE "Origin" = 'LAX')
+    )
+  ) AS arrival_delay_sfo_lax
+FROM "flight-carriers"
+GROUP BY 1
+LIMIT 5
+```
+
+Returns the following:
+
+|`Reporting_Airline`|`arrival_delay_sfo_lax`|
+|----|---------|
+|`AA`|`[33296]`|
+|`AS`|`[13694]`|
+|`B6`|`[0]`|
+|`CO`|`[13582]`|
+|`DH`|`[93]`|
+
+</details>
 
 [Learn more](sql-scalar.md#tuple-sketch-functions)
 
@@ -2295,6 +2581,36 @@ Returns the value evaluated for the expression for the first row within the wind
 
 * **Syntax**: `FIRST_VALUE(expr)`
 * **Function type:** Window
+
+<details><summary>Example</summary>
+
+The following example returns the name of the first airline in the window of flights by airline for two airports on a single day.
+
+```sql
+SELECT FLOOR("__time" TO DAY)  AS "flight_day",
+    "Origin" AS "airport",
+    "Reporting_Airline" as "airline",
+    COUNT("Flight_Number_Reporting_Airline") as "num_flights",
+    FIRST_VALUE("Reporting_Airline") OVER (PARTITION BY "Origin" ORDER BY COUNT("Flight_Number_Reporting_Airline") DESC) AS "first_val"
+FROM "flight-carriers"
+WHERE FLOOR("__time" TO DAY) = '2005-11-01'
+    AND "Origin" IN ('KOA', 'LIH')
+GROUP BY 1, 2, 3
+```
+
+Returns the following:
+
+| `flight_day` | `airport` | `airline` | `num_flights` | `first_val` |
+| --- | --- | --- | --- | ---|
+| `2005-11-01T00:00:00.000Z` | `KOA` | `HA` | `11` | `HA` |
+| `2005-11-01T00:00:00.000Z` | `KOA` | `UA` | `4` | `HA` |
+| `2005-11-01T00:00:00.000Z` | `KOA` | `AA` | `1` | `HA` |
+| `2005-11-01T00:00:00.000Z` | `KOA` | `NW` | `1` | `HA` |
+| `2005-11-01T00:00:00.000Z` | `LIH` | `HA` | `15` | `HA` |
+| `2005-11-01T00:00:00.000Z` | `LIH` | `AA` | `2` | `HA` |
+| `2005-11-01T00:00:00.000Z` | `LIH` | `UA` | `2` | `HA` |
+ 
+</details>
 
 [Learn more](sql-window-functions.md#window-function-reference)
 
@@ -2787,69 +3103,221 @@ Returns the following:
 
 ## JSON_KEYS
 
-Returns an array of field names from `expr` at the specified `path`.
+Returns an array of field names from an expression, at a specified path.
 
-* **Syntax**: `JSON_KEYS(expr, path)`
+* **Syntax:** `JSON_KEYS(expr, path)`
 * **Function type:** JSON
+
+<details><summary>Example</summary>
+
+The following example returns an array of field names from the nested column `agent`:
+
+```sql
+SELECT
+  JSON_KEYS(agent, '$.') AS agent_keys
+FROM "kttm_nested"
+LIMIT 1
+```
+
+Returns the following:
+
+| `agent_keys` |
+| -- |
+| `[type, category, browser, browser_version, os, platform]` |
+
+</details>
 
 [Learn more](sql-json-functions.md)
 
-
 ## JSON_MERGE
 
-Merges two or more JSON `STRING` or `COMPLEX<json>` into one. Preserves the rightmost value when there are key overlaps. Returning always a `COMPLEX<json>` type.
+Merges two or more JSON `STRING` or `COMPLEX<json>` expressions into one, preserving the rightmost value when there are key overlaps.
+The function always returns a `COMPLEX<json>` object.
 
 * **Syntax:** `JSON_MERGE(expr1, expr2[, expr3 ...])`
 * **Function type:** JSON
 
-[Learn more](sql-json-functions.md)
+<details><summary>Example</summary>
 
+The following example merges the `event` object with a static string `example_string`:
+
+```sql
+SELECT 
+  event,
+  JSON_MERGE(event, '{"example_string": 123}') as event_with_string
+FROM "kttm_nested"
+LIMIT 1
+```
+
+Returns the following:
+
+| `event` | `event_with_string` |
+| -- | -- |
+| `{"type":"PercentClear","percentage":55}` | `{"type":"PercentClear","percentage":55,"example_string":123}` |
+
+</details>
+
+[Learn more](sql-json-functions.md)
 
 ## JSON_OBJECT
 
-Constructs a new `COMPLEX<json>` object. The `KEY` expressions must evaluate to string types. The `VALUE` expressions can be composed of any input type, including other `COMPLEX<json>` values. `JSON_OBJECT` can accept colon-separated key-value pairs. The following syntax is equivalent: `JSON_OBJECT(expr1:expr2[, expr3:expr4, ...])`.
+Constructs a new `COMPLEX<json>` object from one or more expressions. 
+The `KEY` expressions must evaluate to string types.
+The `VALUE` expressions can be composed of any input type, including other `COMPLEX<json>` objects.
+The function can accept colon-separated key-value pairs.
 
-* **Syntax**: `JSON_OBJECT(KEY expr1 VALUE expr2[, KEY expr3 VALUE expr4, ...])`
+* **Syntax:** `JSON_OBJECT(KEY expr1 VALUE expr2[, KEY expr3 VALUE expr4, ...])`  
+  or  
+  `JSON_OBJECT(expr1:expr2[, expr3:expr4, ...])`
 * **Function type:** JSON
 
-[Learn more](sql-json-functions.md)
+<details><summary>Example</summary>
 
+The following example creates a new object `combinedJSON` from `continent` in `geo_ip` and `type` in `event`:
+
+```sql
+SELECT
+  JSON_OBJECT(
+     KEY 'geo_ip' VALUE JSON_QUERY(geo_ip, '$.continent'),
+     KEY 'event' VALUE JSON_QUERY(event, '$.type')
+     )
+  as combined_JSON
+FROM "kttm_nested"
+LIMIT 1
+```
+
+Returns the following:
+
+| `combined_JSON` |
+| -- |
+| `{"geo_ip": {"continent": "South America"},"event": {"type": "PercentClear"}}` |
+
+</details>
+
+[Learn more](sql-json-functions.md)
 
 ## JSON_PATHS
 
-Returns an array of all paths which refer to literal values in `expr` in JSONPath format.
+Returns an array of all paths which refer to literal values in an expression, in JSONPath format.
 
-* **Syntax**: `JSON_PATHS(expr)`
+* **Syntax:** `JSON_PATHS(expr)`  
 * **Function type:** JSON
 
-[Learn more](sql-json-functions.md)
+<details><summary>Example</summary>
 
+The following example returns an array of distinct paths in the `geo_ip` nested column:
+
+```sql
+SELECT
+  ARRAY_CONCAT_AGG(DISTINCT JSON_PATHS(geo_ip)) AS geo_ip_paths
+from "kttm_nested"
+```
+
+Returns the following:
+
+| `geo_ip_paths` |
+| -- |
+| `[$.city, $.continent, $.country, $.region]` |
+
+</details>
+
+[Learn more](sql-json-functions.md)
 
 ## JSON_QUERY
 
-Extracts a `COMPLEX<json>` value from `expr`, at the specified `path`.
+Extracts a `COMPLEX<json>` value from an expression at a specified path.
 
-* **Syntax**: `JSON_QUERY(expr, path)`
+* **Syntax:** `JSON_QUERY(expr, path)`  
 * **Function type:** JSON
+
+<details><summary>Example</summary>
+
+The following example returns the values of `percentage` in the `event` nested column:
+
+```sql
+SELECT
+   "event",
+   JSON_QUERY("event", '$.percentage')
+FROM "kttm_nested"
+LIMIT 2
+```
+
+Returns the following:
+
+| `event` | `percentage` |
+| -- | -- |
+| `{"type":"PercentClear","percentage":55}` | `55` |
+| `{"type":"PercentClear","percentage":80}` | `80` |
+
+</details>
 
 [Learn more](sql-json-functions.md)
 
-
 ## JSON_QUERY_ARRAY
 
-Extracts an `ARRAY<COMPLEX<json>>` value from `expr` at the specified `path`. If value is not an `ARRAY`, it gets translated into a single element `ARRAY` containing the value at `path`. The primary use of this function is to extract arrays of objects to use as inputs to other [array functions](./sql-array-functions.md).
+Extracts an `ARRAY<COMPLEX<json>>` value from an expression at a specified path.
 
-* **Syntax**: `JSON_QUERY_ARRAY(expr, path)`
+If the value isn't an array, the function translates it into a single element `ARRAY` containing the value at `path`.
+This function is mainly used to extract arrays of objects to use as inputs to other [array functions](./sql-array-functions.md).
+
+* **Syntax:** `JSON_QUERY_ARRAY(expr, path)`
 * **Function type:** JSON
+
+<details><summary>Example</summary>
+
+The following example returns an array of `percentage` values in the `event` nested column:
+
+```sql
+SELECT
+   "event",
+   JSON_QUERY_ARRAY("event", '$.percentage')
+FROM "kttm_nested"
+LIMIT 2
+```
+
+Returns the following:
+
+| `event` | `percentage` |
+| -- | -- |
+| `{"type":"PercentClear","percentage":55}` | `[55]` |
+| `{"type":"PercentClear","percentage":80}` | `[80]` |
+
+</details>
 
 [Learn more](sql-json-functions.md)
 
 ## JSON_VALUE
 
-Extracts a literal value from `expr` at the specified `path`. If you specify `RETURNING` and an SQL type name (such as `VARCHAR`, `BIGINT`, `DOUBLE`, etc) the function plans the query using the suggested type. Otherwise, it attempts to infer the type based on the context. If it can't infer the type, it defaults to `VARCHAR`.
+Extracts a literal value from an expression at a specified path.
 
-* **Syntax**: `JSON_VALUE(expr, path [RETURNING sqlType])`
+If you include `RETURNING` and specify a SQL type (such as `VARCHAR`, `BIGINT`, `DOUBLE`) the function plans the query using the suggested type.
+If `RETURNING` isn't included, the function attempts to infer the type based on the context.
+If the function can't infer the type, it defaults to `VARCHAR`.
+
+* **Syntax:** `JSON_VALUE(expr, path [RETURNING sqlType])`
 * **Function type:** JSON
+
+<details><summary>Example</summary>
+
+The following example returns the value of `city` in the `geo_ip` nested column:
+
+```sql
+SELECT
+  geo_ip,
+  JSON_VALUE(geo_ip, '$.city' RETURNING VARCHAR) as city
+FROM "kttm_nested"
+WHERE JSON_VALUE(geo_ip, '$.continent') = 'Asia'
+LIMIT 2
+```
+
+Returns the following:
+
+| `geo_ip` | `city` |
+| -- | -- |
+| `{"continent":"Asia","country":"Taiwan","region":"Taipei City","city":"Taipei"}` | `Taipei` |
+| `{"continent":"Asia","country":"Thailand","region":"Bangkok","city":"Bangkok"}` | `Bangkok` |
+
+</details>
 
 [Learn more](sql-json-functions.md)
 
@@ -2860,6 +3328,36 @@ If you do not supply an `offset`, returns the value evaluated at the row precedi
 * **Syntax**: `LAG(expr[, offset])`
 * **Function type:** Window
 
+<details><summary>Example</summary>
+
+The following example returns the preceding airline in the window for flights by airline from two airports on a single day.
+
+```sql
+SELECT FLOOR("__time" TO DAY)  AS "flight_day",
+    "Origin" AS "airport",
+    "Reporting_Airline" as "airline",
+    COUNT("Flight_Number_Reporting_Airline") as "num_flights",
+    LAG("Reporting_Airline") OVER (PARTITION BY "Origin" ORDER BY COUNT("Flight_Number_Reporting_Airline") DESC) AS "lag"
+FROM "flight-carriers"
+WHERE FLOOR("__time" TO DAY) = '2005-11-01'
+    AND "Origin" IN ('KOA', 'LIH')
+GROUP BY 1, 2, 3
+```
+
+Returns the following:
+
+| `flight_day` | `airport` | `airline` | `num_flights` | `lag` |
+| --- | --- | --- | --- | ---|
+| `2005-11-01T00:00:00.000Z` | `KOA` | `HA` | `11` | `null` |
+| `2005-11-01T00:00:00.000Z` | `KOA` | `UA` | `4` | `HA` |
+| `2005-11-01T00:00:00.000Z` | `KOA` | `AA` | `1` | `UA` |
+| `2005-11-01T00:00:00.000Z` | `KOA` | `NW` | `1` | `AA` |
+| `2005-11-01T00:00:00.000Z` | `LIH` | `HA` | `15` | `null` |
+| `2005-11-01T00:00:00.000Z` | `LIH` | `AA` | `2` | `HA` |
+| `2005-11-01T00:00:00.000Z` | `LIH` | `UA` | `2` | `AA` |
+ 
+</details>
+
 [Learn more](sql-window-functions.md#window-function-reference)
 
 ## LAST_VALUE
@@ -2868,6 +3366,38 @@ Returns the value evaluated for the expression for the last row within the windo
 
 * **Syntax**: `LAST_VALUE(expr)`
 * **Function type:** Window
+
+<details><summary>Example</summary>
+
+The following example returns the last airline name in the window for flights for two airports on a single day.
+Note that the RANGE BETWEEN clause defines the window frame between the current row and the final row in the window instead of the default of RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW when using ORDER BY.
+
+```sql
+SELECT FLOOR("__time" TO DAY)  AS "flight_day",
+    "Origin" AS "airport",
+    "Reporting_Airline" as "airline",
+    COUNT("Flight_Number_Reporting_Airline") as "num_flights",
+    LAST_VALUE("Reporting_Airline") OVER (PARTITION BY "Origin" ORDER BY COUNT("Flight_Number_Reporting_Airline") DESC
+      RANGE BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) AS "last_value"
+FROM "flight-carriers"
+WHERE FLOOR("__time" TO DAY) = '2005-11-01'
+    AND "Origin" IN ('KOA', 'LIH')
+GROUP BY 1, 2, 3
+```
+
+Returns the following:
+
+| `flight_day` | `airport` | `airline` | `num_flights` | `last_value` |
+| --- | --- | --- | --- | ---|
+| `2005-11-01T00:00:00.000Z` | `KOA` | `HA` | `11` | `NW` |
+| `2005-11-01T00:00:00.000Z` | `KOA` | `UA` | `4` | `NW` |
+| `2005-11-01T00:00:00.000Z` | `KOA` | `AA` | `1` | `NW` |
+| `2005-11-01T00:00:00.000Z` | `KOA` | `NW` | `1` | `NW` |
+| `2005-11-01T00:00:00.000Z` | `LIH` | `HA` | `15` | `UA` |
+| `2005-11-01T00:00:00.000Z` | `LIH` | `AA` | `2` | `UA` |
+| `2005-11-01T00:00:00.000Z` | `LIH` | `UA` | `2` | `UA` |
+ 
+</details>
 
 [Learn more](sql-window-functions.md#window-function-reference)
 
@@ -2941,6 +3471,36 @@ If you do not supply an `offset`, returns the value evaluated at the row followi
 
 * **Syntax**: `LEAD(expr[, offset])`
 * **Function type:** Window
+
+<details><summary>Example</summary>
+
+The following example returns the subsequent value for an airline in the window for flights from two airports on a single day.
+
+```sql
+SELECT FLOOR("__time" TO DAY)  AS "flight_day",
+    "Origin" AS "airport",
+    "Reporting_Airline" as "airline",
+    COUNT("Flight_Number_Reporting_Airline") as "num_flights",
+    LEAD("Reporting_Airline") OVER (PARTITION BY "Origin" ORDER BY COUNT("Flight_Number_Reporting_Airline") DESC) AS "lead"
+FROM "flight-carriers"
+WHERE FLOOR("__time" TO DAY) = '2005-11-01'
+    AND "Origin" IN ('KOA', 'LIH')
+GROUP BY 1, 2, 3
+```
+
+Returns the following:
+
+| `flight_day` | `airport` | `airline` | `num_flights ` | `lead` |
+| --- | --- | --- | --- | ---|
+| `2005-11-01T00:00:00.000Z` | `KOA` | `HA` | `11` |`UA` |
+| `2005-11-01T00:00:00.000Z` | `KOA` | `UA` | `4` | `AA` |
+| `2005-11-01T00:00:00.000Z` | `KOA` | `AA` | `1` | `NW` |
+| `2005-11-01T00:00:00.000Z` | `KOA` | `NW` | `1` | `null` |
+| `2005-11-01T00:00:00.000Z` | `LIH` | `HA` | `15` | `AA` |
+| `2005-11-01T00:00:00.000Z` | `LIH` | `AA` | `2` | `UA` |
+| `2005-11-01T00:00:00.000Z` | `LIH` | `UA` | `2` | `null` |
+ 
+</details>
 
 [Learn more](sql-window-functions.md#window-function-reference)
 
@@ -3754,6 +4314,36 @@ Divides the rows within a window as evenly as possible into the number of tiles,
 * **Syntax**: `NTILE(tiles)`
 * **Function type:** Window
 
+<details><summary>Example</summary>
+
+The following example returns the results for flights by airline from two airports on a single day divided into 3 tiles.
+
+```sql
+SELECT FLOOR("__time" TO DAY)  AS "flight_day",
+    "Origin" AS "airport",
+    "Reporting_Airline" as "airline",
+    COUNT("Flight_Number_Reporting_Airline") as "num_flights",
+    NTILE(3) OVER (PARTITION BY "Origin" ORDER BY COUNT("Flight_Number_Reporting_Airline") DESC) AS "ntile"
+FROM "flight-carriers"
+WHERE FLOOR("__time" TO DAY) = '2005-11-01'
+    AND "Origin" IN ('KOA', 'LIH')
+GROUP BY 1, 2, 3
+```
+
+Returns the following:
+
+| `flight_day` | `airport` | `airline` | `lead` | `ntile` |
+| --- | --- | --- | --- | ---|
+| `2005-11-01T00:00:00.000Z` | `KOA` | `HA` | `11` | `1` |
+| `2005-11-01T00:00:00.000Z` | `KOA` | `UA` | `4` | `1` |
+| `2005-11-01T00:00:00.000Z` | `KOA` | `AA` | `1` | `2` |
+| `2005-11-01T00:00:00.000Z` | `KOA` | `NW` | `1` | `3` |
+| `2005-11-01T00:00:00.000Z` | `LIH` | `HA` | `15` | `1` |
+| `2005-11-01T00:00:00.000Z` | `LIH` | `AA` | `2` | `2` |
+| `2005-11-01T00:00:00.000Z` | `LIH` | `UA` | `2` | `3` |
+ 
+</details>
+
 [Learn more](sql-window-functions.md#window-function-reference)
 
 ## NULLIF
@@ -3817,13 +4407,32 @@ Returns the following:
 
 ## PARSE_JSON
 
-Parses `expr` into a `COMPLEX<json>` object. This operator deserializes JSON values when processing them, translating stringified JSON into a nested structure. If the input is not a `VARCHAR` or it is invalid JSON, this function will result in an error.
+Parses an expression into a `COMPLEX<json>` object. 
 
-* **Syntax**: `PARSE_JSON(expr)`
+The function deserializes JSON values when processing them, translating stringified JSON into a nested structure.
+If the input is invalid JSON or not a `VARCHAR`, it returns an error.
+
+* **Syntax:** `PARSE_JSON(expr)`
 * **Function type:** JSON
 
-[Learn more](sql-json-functions.md)
+<details><summary>Example</summary>
 
+The following example creates a `COMPLEX<json>` object `gus` from a string of fields:
+
+```sql
+SELECT
+  PARSE_JSON('{"name":"Gus","email":"gus_cat@example.com","type":"Pet"}') as gus
+```
+
+Returns the following:
+
+| `gus` |
+| -- |
+| `{"name":"Gus","email":"gus_cat@example.com","type":"Pet"}` |
+
+</details>
+
+[Learn more](sql-json-functions.md)
 ## PARSE_LONG
 
 Converts a string into a long(BIGINT) with the given radix, or into DECIMAL(base 10) if a radix is not provided.
@@ -3858,6 +4467,37 @@ Returns the relative rank of the row calculated as a percentage according to the
 
 * **Syntax**: `PERCENT_RANK()`
 * **Function type:** Window
+
+<details><summary>Example</summary>
+
+The following example returns the percent rank within the window for flights by airline from two airports on a single day.
+
+```sql
+SELECT FLOOR("__time" TO DAY)  AS "flight_day",
+    "Origin" AS "airport",
+    "Reporting_Airline" as "airline",
+    COUNT("Flight_Number_Reporting_Airline") as "num_flights",
+    PERCENT_RANK() OVER (PARTITION BY "Origin" ORDER BY COUNT("Flight_Number_Reporting_Airline") DESC) AS "pct_rank"
+FROM "flight-carriers"
+WHERE FLOOR("__time" TO DAY) = '2005-11-01'
+    AND "Origin" IN ('KOA', 'LIH')
+GROUP BY 1, 2, 3
+```
+
+Returns the following:
+
+| `flight_day` | `airport` | `airline` | `num_flights` | `pct_rank` |
+| --- | --- | --- | --- | ---|
+| `2005-11-01T00:00:00.000Z` | `KOA` | `HA` | `11` | `0` |
+| `2005-11-01T00:00:00.000Z` | `KOA` | `UA` | `4` | `0.3333333333333333` |
+| `2005-11-01T00:00:00.000Z` | `KOA` | `AA` | `1` | `0.6666666666666666` |
+| `2005-11-01T00:00:00.000Z` | `KOA` | `NW` | `1` | `0.6666666666666666` |
+| `2005-11-01T00:00:00.000Z` | `LIH` | `HA` | `15` | `0` |
+| `2005-11-01T00:00:00.000Z` | `LIH` | `AA` | `2` | `0.5` |
+| `2005-11-01T00:00:00.000Z` | `LIH` | `UA` | `2` | `0.5` |
+ 
+</details>
+
 
 [Learn more](sql-window-functions.md#window-function-reference)
 
@@ -3943,6 +4583,36 @@ Returns the rank with gaps for a row within a window. For example, if two rows t
 
 * **Syntax**: `RANK()`
 * **Function type:** Window
+
+<details><summary>Example</summary>
+
+The following example returns the rank within the window for flights by airline from two airports on a single day.
+
+```sql
+SELECT FLOOR("__time" TO DAY)  AS "flight_day",
+    "Origin" AS "airport",
+    "Reporting_Airline" as "airline",
+    COUNT("Flight_Number_Reporting_Airline") as "num_flights",
+    RANK() OVER (PARTITION BY "Origin" ORDER BY COUNT("Flight_Number_Reporting_Airline") DESC) AS "rank"
+FROM "flight-carriers"
+WHERE FLOOR("__time" TO DAY) = '2005-11-01'
+    AND "Origin" IN ('KOA', 'LIH')
+GROUP BY 1, 2, 3
+```
+
+Returns the following:
+
+| `flight_day` | `airport` | `airline` | `num_flights` | `rank` |
+| --- | --- | --- | --- | ---|
+| `2005-11-01T00:00:00.000Z` | `KOA` | `HA` | `11` | `1` |
+| `2005-11-01T00:00:00.000Z` | `KOA` | `UA` | `4` | `2` |
+| `2005-11-01T00:00:00.000Z` | `KOA` | `AA` | `1` | `3` |
+| `2005-11-01T00:00:00.000Z` | `KOA` | `NW` | `1` | `3` |
+| `2005-11-01T00:00:00.000Z` | `LIH` | `HA` | `15` | `1` |
+| `2005-11-01T00:00:00.000Z` | `LIH` | `AA` | `2` | `2` |
+| `2005-11-01T00:00:00.000Z` | `LIH` | `UA` | `2` | `3` |
+ 
+</details>
 
 [Learn more](sql-window-functions.md#window-function-reference)
 
@@ -4175,6 +4845,36 @@ Returns the number of the row within the window starting from 1.
 
 * **Syntax**: `ROW_NUMBER()`
 * **Function type:** Window
+
+<details><summary>Example</summary>
+
+The following example returns the row number within the window for flights by airline from two airports on a single day.
+
+```sql
+SELECT FLOOR("__time" TO DAY)  AS "flight_day",
+    "Origin" AS "airport",
+    "Reporting_Airline" as "airline",
+    COUNT("Flight_Number_Reporting_Airline") as "num_flights",
+    ROW_NUMBER() OVER (PARTITION BY "Origin" ORDER BY COUNT("Flight_Number_Reporting_Airline") DESC) AS "row_num"
+FROM "flight-carriers"
+WHERE FLOOR("__time" TO DAY) = '2005-11-01'
+    AND "Origin" IN ('KOA', 'LIH')
+GROUP BY 1, 2, 3
+```
+
+Returns the following:
+
+| `flight_day` | `airport` | `airline` | `num_flights` | `row_num` |
+| --- | --- | --- | --- | ---|
+| `2005-11-01T00:00:00.000Z` | `KOA` | `HA` | `11` | `1` |
+| `2005-11-01T00:00:00.000Z` | `KOA` | `UA` | `4` | `2` |
+| `2005-11-01T00:00:00.000Z` | `KOA` | `AA` | `1` | `3` |
+| `2005-11-01T00:00:00.000Z` | `KOA` | `NW` | `1` | `4` |
+| `2005-11-01T00:00:00.000Z` | `LIH` | `HA` | `15` | `1` |
+| `2005-11-01T00:00:00.000Z` | `LIH` | `AA` | `2` | `2` |
+| `2005-11-01T00:00:00.000Z` | `LIH` | `UA` | `2` | `3` |
+ 
+</details>
 
 [Learn more](sql-window-functions.md#window-function-reference)
 
@@ -4588,24 +5288,6 @@ Returns the following:
 </details>
 
 [Learn more](sql-scalar.md#numeric-functions)
-
-## TDIGEST_GENERATE_SKETCH
-
-Generates a T-digest sketch from values of the specified expression.
-
-* **Syntax**: `TDIGEST_GENERATE_SKETCH(expr, [compression])`
-* **Function type:** Aggregation
-
-[Learn more](sql-aggregations.md)
-
-## TDIGEST_QUANTILE
-
-Returns the quantile for the specified fraction from a T-Digest sketch constructed from values of the expression.
-
-* **Syntax**: `TDIGEST_QUANTILE(expr, quantileFraction, [compression])`
-* **Function type:** Aggregation
-
-[Learn more](sql-aggregations.md)
 
 ## TEXTCAT
 
@@ -5082,10 +5764,28 @@ Returns the following:
 
 ## TO_JSON_STRING
 
-Serializes `expr` into a JSON string.
+Serializes an expression into a JSON string.
 
-* **Syntax**: `TO_JSON_STRING(expr)`
+* **Syntax:** `TO_JSON_STRING(expr)`
 * **Function type:** JSON
+
+<details><summary>Example</summary>
+
+The following example writes the distinct column names in the `events` nested column to a JSON string:
+
+```sql
+SELECT
+  TO_JSON_STRING(ARRAY_CONCAT_AGG(DISTINCT JSON_KEYS(event, '$.'))) as json_string
+FROM "kttm_nested"
+```
+
+Returns the following:
+
+| `json_string` |
+| -- |
+| `["error","layer","percentage","saveNumber","type","url","userAgent"]` |
+
+</details>
 
 [Learn more](sql-json-functions.md)
 
@@ -5158,10 +5858,46 @@ Returns the following:
 
 ## TRY_PARSE_JSON
 
-Parses `expr` into a `COMPLEX<json>` object. This operator deserializes JSON values when processing them, translating stringified JSON into a nested structure. If the input is not a `VARCHAR` or it is invalid JSON, this function will result in a `NULL` value.
+Parses an expression into a `COMPLEX<json>` object.
 
-* **Syntax**: `TRY_PARSE_JSON(expr)`
+This function deserializes JSON values when processing them, translating stringified JSON into a nested structure.
+If the input is invalid JSON or not a `VARCHAR`, it returns a `NULL` value.
+
+You can use this function instead of [PARSE_JSON](#parse_json) to insert a null value when processing invalid data, instead of producing an error.
+
+* **Syntax:** `TRY_PARSE_JSON(expr)`
 * **Function type:** JSON
+
+<details><summary>Example</summary>
+
+The following example creates a `COMPLEX<json>` object `gus` from a string of fields:
+
+```sql
+SELECT
+  TRY_PARSE_JSON('{"name":"Gus","email":"gus_cat@example.com","type":"Pet"}') as gus
+```
+
+Returns the following:
+
+| `gus` |
+| -- |
+| `{"name":"Gus","email":"gus_cat@example.com","type":"Pet"}` |
+
+
+The following example contains invalid data `x:x`:
+
+```sql
+SELECT
+  TRY_PARSE_JSON('{"name":"Gus","email":"gus_cat@example.com","type":"Pet",x:x}') as gus
+```
+
+Returns the following:
+
+| `gus` |
+| -- |
+| `null` |
+
+</details>
 
 [Learn more](sql-json-functions.md)
 
@@ -5260,4 +5996,3 @@ Requires the [`druid-stats` extension](../development/extensions-core/stats.md).
 * **Function type:** Aggregation
 
 [Learn more](sql-aggregations.md)
-

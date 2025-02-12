@@ -99,7 +99,8 @@ public class LongNumericColumnPartSerde implements ColumnPartSerde
     return (buffer, builder, columnConfig, parent) -> {
       final CompressedColumnarLongsSupplier column = CompressedColumnarLongsSupplier.fromByteBuffer(
           buffer,
-          byteOrder
+          byteOrder,
+          builder.getFileMapper()
       );
       LongNumericColumnSupplier columnSupplier = new LongNumericColumnSupplier(
           column,
