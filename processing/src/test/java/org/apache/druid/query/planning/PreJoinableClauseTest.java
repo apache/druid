@@ -31,21 +31,11 @@ import org.junit.Test;
 
 public class PreJoinableClauseTest
 {
-//  private final PreJoinableClause clause = new PreJoinableClause(
-//      "j.",
-//      new TableDataSource("foo"),
-//      JoinType.LEFT,
-//      JoinConditionAnalysis.forExpression("x == \"j.x\"", "j.", ExprMacroTable.nil()),
-//      null
-//  );
-
   private final PreJoinableClause clause = makePreJoinableClause();
 
   private PreJoinableClause makePreJoinableClause()
   {
-//    JoinConditionAnalysis.forExpression("x == \"j.x\"", "j.", ExprMacroTable.nil()),
-    JoinDataSource join=
-    JoinDataSource.create(
+    JoinDataSource join = JoinDataSource.create(
         new TableDataSource("bar"),
         new TableDataSource("foo"),
         "j.",
