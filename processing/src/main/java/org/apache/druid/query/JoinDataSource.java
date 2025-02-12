@@ -467,7 +467,7 @@ public class JoinDataSource implements DataSource
           )
       );
       // FIXME
-      DataSource left3 = clauses1.get(0).getDataSource();
+      DataSource left3 = clauses1.get(0).getJoinDataSource().getLeft();
       DataSource left2 = left;
       final Function<SegmentReference, SegmentReference> baseMapFn = left3.createSegmentMapFunction(subCfg);
       return baseSegment -> newHashJoinSegment(

@@ -10,12 +10,11 @@
 !use druidtest:///
 SELECT foo1.dim3, foo2.dim3 FROM druid.numfoo as foo1 INNER JOIN (SELECT foo3.dim3 FROM druid.numfoo as foo3 INNER JOIN druid.numfoo as foo4    ON MV_FILTER_ONLY(foo3.dim3, ARRAY['a']) = MV_FILTER_ONLY(foo4.dim3, ARRAY['a'])) as foo2 ON MV_FILTER_ONLY(foo1.dim3, ARRAY['a']) = MV_FILTER_ONLY(foo2.dim3, ARRAY['a'])
 ;
-+-----------+-----------+
-| dim3      | dim3      |
-+-----------+-----------+
-| ["a","b"] | ["a","b"] |
-+-----------+-----------+
-(1 row)
++------+------+
+| dim3 | dim3 |
++------+------+
++------+------+
+(0 rows)
 
 !ok
 LogicalProject(dim3=[$0], dim30=[$2])
@@ -47,36 +46,10 @@ DruidProject(dim3=[$0], dim30=[$2], druid=[logical])
   "dataSource" : {
     "type" : "join",
     "left" : {
-      "type" : "query",
-      "query" : {
-        "queryType" : "scan",
-        "dataSource" : {
-          "type" : "table",
-          "name" : "numfoo"
-        },
-        "intervals" : {
-          "type" : "intervals",
-          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
-        },
-        "virtualColumns" : [ {
-          "type" : "mv-filtered",
-          "name" : "v0",
-          "delegate" : {
-            "type" : "default",
-            "dimension" : "dim3",
-            "outputName" : "dim3",
-            "outputType" : "STRING"
-          },
-          "values" : [ "a" ],
-          "isAllowList" : true
-        } ],
-        "resultFormat" : "compactedList",
-        "columns" : [ "dim3", "v0" ],
-        "columnTypes" : [ "STRING", "STRING" ],
-        "granularity" : {
-          "type" : "all"
-        },
-        "legacy" : false
+      "type" : "filter",
+      "base" : {
+        "type" : "table",
+        "name" : "numfoo"
       }
     },
     "right" : {
@@ -86,36 +59,10 @@ DruidProject(dim3=[$0], dim30=[$2], druid=[logical])
         "dataSource" : {
           "type" : "join",
           "left" : {
-            "type" : "query",
-            "query" : {
-              "queryType" : "scan",
-              "dataSource" : {
-                "type" : "table",
-                "name" : "numfoo"
-              },
-              "intervals" : {
-                "type" : "intervals",
-                "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
-              },
-              "virtualColumns" : [ {
-                "type" : "mv-filtered",
-                "name" : "v0",
-                "delegate" : {
-                  "type" : "default",
-                  "dimension" : "dim3",
-                  "outputName" : "dim3",
-                  "outputType" : "STRING"
-                },
-                "values" : [ "a" ],
-                "isAllowList" : true
-              } ],
-              "resultFormat" : "compactedList",
-              "columns" : [ "dim3", "v0" ],
-              "columnTypes" : [ "STRING", "STRING" ],
-              "granularity" : {
-                "type" : "all"
-              },
-              "legacy" : false
+            "type" : "filter",
+            "base" : {
+              "type" : "table",
+              "name" : "numfoo"
             }
           },
           "right" : {

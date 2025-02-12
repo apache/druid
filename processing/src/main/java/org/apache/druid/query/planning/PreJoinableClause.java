@@ -164,4 +164,9 @@ public class PreJoinableClause
     return joinDataSource.getLeft() instanceof JoinDataSource;
   }
 
+  public JoinDataSource getJoinDataSource()
+  {
+    return joinDataSource;
+  }
+
 }

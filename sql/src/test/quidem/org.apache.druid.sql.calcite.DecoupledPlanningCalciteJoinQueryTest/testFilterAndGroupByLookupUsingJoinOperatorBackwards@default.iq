@@ -15,9 +15,10 @@ GROUP BY lookyloo.v;
 +------+--------+
 | v    | EXPR$1 |
 +------+--------+
+| xa   |      2 |
 | xabc |      1 |
 +------+--------+
-(1 row)
+(2 rows)
 
 !ok
 LogicalAggregate(group=[{1}], EXPR$1=[COUNT()])
@@ -41,33 +42,19 @@ DruidAggregate(group=[{1}], EXPR$1=[COUNT()], druid=[logical])
   "dataSource" : {
     "type" : "join",
     "left" : {
-      "type" : "query",
-      "query" : {
-        "queryType" : "scan",
-        "dataSource" : {
-          "type" : "lookup",
-          "lookup" : "lookyloo"
-        },
-        "intervals" : {
-          "type" : "intervals",
-          "intervals" : [ "-146136543-09-08T08:23:32.096Z/146140482-04-24T15:36:27.903Z" ]
-        },
-        "resultFormat" : "compactedList",
-        "filter" : {
-          "type" : "not",
-          "field" : {
-            "type" : "equals",
-            "column" : "v",
-            "matchValueType" : "STRING",
-            "matchValue" : "xa"
-          }
-        },
-        "columns" : [ "k", "v" ],
-        "columnTypes" : [ "STRING", "STRING" ],
-        "granularity" : {
-          "type" : "all"
-        },
-        "legacy" : false
+      "type" : "filter",
+      "base" : {
+        "type" : "lookup",
+        "lookup" : "lookyloo"
+      },
+      "filter" : {
+        "type" : "not",
+        "field" : {
+          "type" : "equals",
+          "column" : "v",
+          "matchValueType" : "STRING",
+          "matchValue" : "xa"
+        }
       }
     },
     "right" : {
