@@ -72,7 +72,7 @@ import java.util.stream.Collectors;
 public class MSQWorkerTaskLauncher implements RetryCapableWorkerManager
 {
   private static final Logger log = new Logger(MSQWorkerTaskLauncher.class);
-  private static final long HIGH_FREQUENCY_CHECK_MILLIS = 10;
+  private static final long HIGH_FREQUENCY_CHECK_MILLIS = 100;
   private static final long LOW_FREQUENCY_CHECK_MILLIS = 2000;
   private static final long SWITCH_TO_LOW_FREQUENCY_CHECK_AFTER_MILLIS = 10000;
   private static final long SHUTDOWN_TIMEOUT_MILLIS = Duration.ofMinutes(1).toMillis();
@@ -376,8 +376,7 @@ public class MSQWorkerTaskLauncher implements RetryCapableWorkerManager
         }
 
         // Sleep for a bit, maybe.
-        long computeSleepTime = computeSleepTime(System.currentTimeMillis() - loopStartTime);
-        sleep(computeSleepTime, false);
+        sleep(computeSleepTime(System.currentTimeMillis() - loopStartTime), false);
       }
 
       // Only valid transition out of STARTED.

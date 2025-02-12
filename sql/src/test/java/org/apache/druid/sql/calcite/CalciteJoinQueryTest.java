@@ -1039,49 +1039,47 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @ParameterizedTest(name = "{0}")
   public void testLeftJoinTwoLookupsUsingJoinOperator(Map<String, Object> queryContext)
   {
-    for(int i=0;i<20;i++) {
-      testQuery(
-          "SELECT dim1, dim2, l1.v, l2.v\n"
-          + "FROM foo\n"
-          + "LEFT JOIN lookup.lookyloo l1 ON foo.dim1 = l1.k\n"
-          + "LEFT JOIN lookup.lookyloo l2 ON foo.dim2 = l2.k\n",
-          queryContext,
-          ImmutableList.of(
-              newScanQueryBuilder()
-                  .dataSource(
-                      join(
-                          join(
-                              new TableDataSource(CalciteTests.DATASOURCE1),
-                              new LookupDataSource("lookyloo"),
-                              "j0.",
-                              equalsCondition(makeColumnExpression("dim1"), makeColumnExpression("j0.k")),
-                              JoinType.LEFT
-                          ),
-                          new LookupDataSource("lookyloo"),
-                          "_j0.",
-                          equalsCondition(makeColumnExpression("dim2"), makeColumnExpression("_j0.k")),
-                          JoinType.LEFT
-                      )
-                  )
-                  .intervals(querySegmentSpec(Filtration.eternity()))
-                  .columns("dim1", "dim2", "j0.v", "_j0.v")
-                  .columnTypes(ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING)
-                  .context(queryContext)
-                  .build()
-          ),
-          sortIfSortBased(
-              ImmutableList.of(
-                  new Object[]{"", "a", null, "xa"},
-                  new Object[]{"10.1", null, null, null},
-                  new Object[]{"2", "", null, null},
-                  new Object[]{"1", "a", null, "xa"},
-                  new Object[]{"def", "abc", null, "xabc"},
-                  new Object[]{"abc", null, "xabc", null}
-              ),
-              1
-          )
-      );
-    }
+    testQuery(
+        "SELECT dim1, dim2, l1.v, l2.v\n"
+        + "FROM foo\n"
+        + "LEFT JOIN lookup.lookyloo l1 ON foo.dim1 = l1.k\n"
+        + "LEFT JOIN lookup.lookyloo l2 ON foo.dim2 = l2.k\n",
+        queryContext,
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(
+                    join(
+                        join(
+                            new TableDataSource(CalciteTests.DATASOURCE1),
+                            new LookupDataSource("lookyloo"),
+                            "j0.",
+                            equalsCondition(makeColumnExpression("dim1"), makeColumnExpression("j0.k")),
+                            JoinType.LEFT
+                        ),
+                        new LookupDataSource("lookyloo"),
+                        "_j0.",
+                        equalsCondition(makeColumnExpression("dim2"), makeColumnExpression("_j0.k")),
+                        JoinType.LEFT
+                    )
+                )
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .columns("dim1", "dim2", "j0.v", "_j0.v")
+                .columnTypes(ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING)
+                .context(queryContext)
+                .build()
+        ),
+        sortIfSortBased(
+            ImmutableList.of(
+                new Object[]{"", "a", null, "xa"},
+                new Object[]{"10.1", null, null, null},
+                new Object[]{"2", "", null, null},
+                new Object[]{"1", "a", null, "xa"},
+                new Object[]{"def", "abc", null, "xabc"},
+                new Object[]{"abc", null, "xabc", null}
+            ),
+            1
+        )
+    );
   }
 
   @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.SLIGHTLY_WORSE_FILTER_PUSHED_TO_JOIN_OPERAND)
