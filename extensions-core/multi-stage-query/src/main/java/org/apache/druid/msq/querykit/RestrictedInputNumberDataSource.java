@@ -30,13 +30,11 @@ import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.policy.Policy;
 import org.apache.druid.segment.RestrictedSegment;
 import org.apache.druid.segment.SegmentReference;
-import org.apache.druid.utils.JvmUtils;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
 /**
@@ -118,12 +116,9 @@ public class RestrictedInputNumberDataSource implements DataSource
   }
 
   @Override
-  public Function<SegmentReference, SegmentReference> createSegmentMapFunction(Query query, AtomicLong cpuTimeAcc)
+  public Function<SegmentReference, SegmentReference> createSegmentMapFunction(Query query)
   {
-    return JvmUtils.safeAccumulateThreadCpuTime(
-        cpuTimeAcc,
-        () -> ((segment) -> (new RestrictedSegment(segment, policy)))
-    );
+    return baseSegment -> new RestrictedSegment(baseSegment, policy);
   }
 
   @Override
