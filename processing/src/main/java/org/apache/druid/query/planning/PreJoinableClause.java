@@ -46,20 +46,16 @@ public class PreJoinableClause
   private final JoinType joinType;
   private final JoinConditionAnalysis condition;
   private final JoinAlgorithm joinAlgorithm;
+  private final JoinDataSource joinDataSource;
 
-  public PreJoinableClause(
-      final String prefix,
-      final DataSource dataSource,
-      final JoinType joinType,
-      final JoinConditionAnalysis condition,
-      @Nullable final JoinAlgorithm joinAlgorithm
-  )
+  public PreJoinableClause(final JoinDataSource joinDataSource)
   {
-    this.prefix = JoinPrefixUtils.validatePrefix(prefix);
-    this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
-    this.joinType = Preconditions.checkNotNull(joinType, "joinType");
-    this.condition = Preconditions.checkNotNull(condition, "condition");
-    this.joinAlgorithm = joinAlgorithm;
+    this.joinDataSource = joinDataSource;
+    this.prefix = JoinPrefixUtils.validatePrefix(joinDataSource.getRightPrefix());
+    this.dataSource = Preconditions.checkNotNull(joinDataSource.getRight(), "dataSource");
+    this.joinType = Preconditions.checkNotNull(joinDataSource.getJoinType(), "joinType");
+    this.condition = Preconditions.checkNotNull(joinDataSource.getConditionAnalysis(), "condition");
+    this.joinAlgorithm = joinDataSource.getJoinAlgorithm();
   }
 
   public String getPrefix()
@@ -146,7 +142,6 @@ public class PreJoinableClause
     {
       this.dataSource = dataSource;
     }
-
   }
 
   public void appendCacheKey(CacheKeyBuilder keyBuilder, JoinableFactoryWrapper joinableFactoryWrapper)
@@ -162,6 +157,11 @@ public class PreJoinableClause
     keyBuilder.appendString(clause.getCondition().getOriginalExpression());
     keyBuilder.appendString(clause.getPrefix());
     keyBuilder.appendString(clause.getJoinType().name());
+  }
+
+  public boolean isOriginalLeftIsJoin()
+  {
+    return joinDataSource.getLeft() instanceof JoinDataSource;
   }
 
 }

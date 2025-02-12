@@ -87,7 +87,7 @@ public class DimFilters
 
   public static DimFilter conjunction(DimFilter... filters)
   {
-    List<DimFilter> list = Arrays.stream(filters).filter(v -> v != null).collect(Collectors.toList());
+    List<DimFilter> list = Arrays.stream(filters).filter(v -> v != null && !TrueDimFilter.instance().equals(v)).collect(Collectors.toList());
     return conjunction(list);
   }
 }

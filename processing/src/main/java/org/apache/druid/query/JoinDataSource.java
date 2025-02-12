@@ -404,17 +404,17 @@ public class JoinDataSource implements DataSource
       throw new RuntimeException("need to analyze this further");
     }
 
-    List<PreJoinableClause> clauses1 = analysis.getPreJoinableClauses();
+    List<PreJoinableClause> clauses1 = analysis.getSafePreJoinableClauses();
     Filter baseFilter = analysis.getJoinBaseTableFilter().map(Filters::toFilter).orElse(null);
 
     if (clauses1.isEmpty()) {
       return Function.identity();
     } else {
-      int leftJoinCount = countLeftJoinDatasources(this);
+
 
       List<PreJoinableClause> clauses =
-          clauses1.size() > 0 ? clauses1.subList(clauses1.size() - leftJoinCount, clauses1.size()) : Collections.emptyList();
-
+          clauses1.size() > 0 ? clauses1.subList(clauses1.size() - 1, clauses1.size()) : Collections.emptyList();
+        clauses=clauses1;
       final JoinableClauses joinableClauses = JoinableClauses.createClauses(
           clauses,
           joinableFactoryWrapper.getJoinableFactory()
@@ -468,23 +468,13 @@ public class JoinDataSource implements DataSource
       // FIXME
       DataSource left3 = clauses1.get(0).getDataSource();
       DataSource left2 = left;
-      final Function<SegmentReference, SegmentReference> baseMapFn = left2.createSegmentMapFunction(subCfg);
+      final Function<SegmentReference, SegmentReference> baseMapFn = left3.createSegmentMapFunction(subCfg);
       return baseSegment -> newHashJoinSegment(
           baseMapFn.apply(baseSegment),
           baseFilterToUse,
           clausesToUse,
           joinFilterPreAnalysis
       );
-    }
-  }
-
-  private int countLeftJoinDatasources(DataSource ds)
-  {
-    if (ds instanceof JoinDataSource) {
-      JoinDataSource joinDS = (JoinDataSource) ds;
-      return 1 + countLeftJoinDatasources(joinDS.getLeft());
-    } else {
-      return 0;
     }
   }
 
@@ -538,13 +528,7 @@ public class JoinDataSource implements DataSource
       if (current instanceof JoinDataSource) {
         final JoinDataSource joinDataSource = (JoinDataSource) current;
         currentDimFilter = DimFilters.conjunction(currentDimFilter, joinDataSource.getLeftFilter());
-        PreJoinableClause e = new PreJoinableClause(
-            joinDataSource.getRightPrefix(),
-            joinDataSource.getRight(),
-            joinDataSource.getJoinType(),
-            joinDataSource.getConditionAnalysis(),
-            joinDataSource.getJoinAlgorithm()
-        );
+        PreJoinableClause e = new PreJoinableClause(joinDataSource);
         preJoinableClauses.add(
             e
         );

@@ -246,9 +246,9 @@ public class DataSourceAnalysisTest
     Assert.assertEquals(Optional.empty(), analysis.getBaseQuerySegmentSpec());
     Assert.assertEquals(
         ImmutableList.of(
-            new PreJoinableClause("1.", LOOKUP_LOOKYLOO, JoinType.INNER, joinClause("1."), JoinAlgorithm.BROADCAST),
-            new PreJoinableClause("2.", INLINE, JoinType.LEFT, joinClause("2."), JoinAlgorithm.BROADCAST),
-            new PreJoinableClause("3.", subquery(LOOKUP_LOOKYLOO), JoinType.FULL, joinClause("3."), JoinAlgorithm.BROADCAST)
+            new PreJoinableClause((JoinDataSource) ((JoinDataSource) joinDataSource.getLeft()).getLeft()),
+            new PreJoinableClause((JoinDataSource) joinDataSource.getLeft()),
+            new PreJoinableClause(joinDataSource)
         ),
         analysis.getPreJoinableClauses()
     );
@@ -290,16 +290,16 @@ public class DataSourceAnalysisTest
     Assert.assertTrue(analysis.isConcreteAndTableBased());
     Assert.assertEquals(TABLE_FOO, analysis.getBaseDataSource());
     Assert.assertEquals(Optional.of(TABLE_FOO), analysis.getBaseTableDataSource());
-    Assert.assertEquals(TrueDimFilter.instance(), analysis.getJoinBaseTableFilter().orElse(null));
+    Assert.assertEquals(null, analysis.getJoinBaseTableFilter().orElse(null));
     Assert.assertEquals(Optional.empty(), analysis.getBaseUnionDataSource());
     Assert.assertEquals(Optional.empty(), analysis.getBaseUnionDataSource());
     Assert.assertEquals(Optional.empty(), analysis.getBaseQuery());
     Assert.assertEquals(Optional.empty(), analysis.getBaseQuerySegmentSpec());
     Assert.assertEquals(
         ImmutableList.of(
-            new PreJoinableClause("1.", LOOKUP_LOOKYLOO, JoinType.INNER, joinClause("1."), JoinAlgorithm.BROADCAST),
-            new PreJoinableClause("2.", INLINE, JoinType.LEFT, joinClause("2."), JoinAlgorithm.BROADCAST),
-            new PreJoinableClause("3.", subquery(LOOKUP_LOOKYLOO), JoinType.FULL, joinClause("3."), JoinAlgorithm.BROADCAST)
+            new PreJoinableClause((JoinDataSource) ((JoinDataSource) joinDataSource.getLeft()).getLeft()),
+            new PreJoinableClause((JoinDataSource) joinDataSource.getLeft()),
+            new PreJoinableClause(joinDataSource)
         ),
         analysis.getPreJoinableClauses()
     );
@@ -354,7 +354,7 @@ public class DataSourceAnalysisTest
     Assert.assertEquals(Optional.empty(), analysis.getBaseQuerySegmentSpec());
     Assert.assertEquals(
         ImmutableList.of(
-            new PreJoinableClause("3.", rightLeaningJoinStack, JoinType.RIGHT, joinClause("3."), JoinAlgorithm.BROADCAST)
+            new PreJoinableClause(joinDataSource)
         ),
         analysis.getPreJoinableClauses()
     );
@@ -398,13 +398,13 @@ public class DataSourceAnalysisTest
     Assert.assertTrue(analysis.isConcreteAndTableBased());
     Assert.assertEquals(TABLE_FOO, analysis.getBaseDataSource());
     Assert.assertEquals(Optional.of(TABLE_FOO), analysis.getBaseTableDataSource());
-    Assert.assertEquals(TrueDimFilter.instance(), analysis.getJoinBaseTableFilter().orElse(null));
+    Assert.assertEquals(null, analysis.getJoinBaseTableFilter().orElse(null));
     Assert.assertEquals(Optional.empty(), analysis.getBaseUnionDataSource());
     Assert.assertEquals(Optional.empty(), analysis.getBaseQuery());
     Assert.assertEquals(Optional.empty(), analysis.getBaseQuerySegmentSpec());
     Assert.assertEquals(
         ImmutableList.of(
-            new PreJoinableClause("3.", rightLeaningJoinStack, JoinType.RIGHT, joinClause("3."), JoinAlgorithm.BROADCAST)
+            new PreJoinableClause(joinDataSource)
         ),
         analysis.getPreJoinableClauses()
     );
@@ -433,12 +433,12 @@ public class DataSourceAnalysisTest
     Assert.assertTrue(analysis.isTableBased());
     Assert.assertFalse(analysis.isConcreteAndTableBased());
     Assert.assertEquals(TABLE_FOO, analysis.getBaseDataSource());
-    Assert.assertEquals(TrueDimFilter.instance(), analysis.getJoinBaseTableFilter().orElse(null));
+    Assert.assertEquals(null, analysis.getJoinBaseTableFilter().orElse(null));
     Assert.assertEquals(Optional.of(TABLE_FOO), analysis.getBaseTableDataSource());
     Assert.assertEquals(Optional.empty(), analysis.getBaseUnionDataSource());
     Assert.assertEquals(
         ImmutableList.of(
-            new PreJoinableClause("1.", subquery(TABLE_FOO), JoinType.INNER, joinClause("1."), JoinAlgorithm.BROADCAST)
+            new PreJoinableClause(joinDataSource)
         ),
         analysis.getPreJoinableClauses()
     );
@@ -472,7 +472,7 @@ public class DataSourceAnalysisTest
     Assert.assertEquals(Optional.empty(), analysis.getBaseQuerySegmentSpec());
     Assert.assertEquals(
         ImmutableList.of(
-            new PreJoinableClause("1.", LOOKUP_LOOKYLOO, JoinType.INNER, joinClause("1."), JoinAlgorithm.BROADCAST)
+            new PreJoinableClause(joinDataSource)
         ),
         analysis.getPreJoinableClauses()
     );
@@ -485,10 +485,11 @@ public class DataSourceAnalysisTest
   @Test
   public void testJoinUnderTopLevelSubqueries()
   {
+    final JoinDataSource joinDataSource;
     final QueryDataSource queryDataSource =
         subquery(
             subquery(
-                join(
+                joinDataSource = join(
                     TABLE_FOO,
                     LOOKUP_LOOKYLOO,
                     "1.",
@@ -504,7 +505,7 @@ public class DataSourceAnalysisTest
     Assert.assertTrue(analysis.isTableBased());
     Assert.assertTrue(analysis.isConcreteAndTableBased());
     Assert.assertEquals(TABLE_FOO, analysis.getBaseDataSource());
-    Assert.assertEquals(TrueDimFilter.instance(), analysis.getJoinBaseTableFilter().orElse(null));
+    Assert.assertEquals(null, analysis.getJoinBaseTableFilter().orElse(null));
     Assert.assertEquals(Optional.of(TABLE_FOO), analysis.getBaseTableDataSource());
     Assert.assertEquals(Optional.empty(), analysis.getBaseUnionDataSource());
     Assert.assertEquals(
@@ -527,7 +528,7 @@ public class DataSourceAnalysisTest
     );
     Assert.assertEquals(
         ImmutableList.of(
-            new PreJoinableClause("1.", LOOKUP_LOOKYLOO, JoinType.INNER, joinClause("1."), JoinAlgorithm.BROADCAST)
+            new PreJoinableClause(joinDataSource)
         ),
         analysis.getPreJoinableClauses()
     );
@@ -560,7 +561,7 @@ public class DataSourceAnalysisTest
     Assert.assertEquals(Optional.empty(), analysis.getJoinBaseTableFilter());
     Assert.assertEquals(
         ImmutableList.of(
-            new PreJoinableClause("1.", LOOKUP_LOOKYLOO, JoinType.INNER, joinClause("1."), JoinAlgorithm.BROADCAST)
+            new PreJoinableClause(joinDataSource)
         ),
         analysis.getPreJoinableClauses()
     );
@@ -593,7 +594,7 @@ public class DataSourceAnalysisTest
     Assert.assertEquals(Optional.empty(), analysis.getJoinBaseTableFilter());
     Assert.assertEquals(
         ImmutableList.of(
-            new PreJoinableClause("1.", TABLE_FOO, JoinType.INNER, joinClause("1."), JoinAlgorithm.BROADCAST)
+            new PreJoinableClause(joinDataSource)
         ),
         analysis.getPreJoinableClauses()
     );

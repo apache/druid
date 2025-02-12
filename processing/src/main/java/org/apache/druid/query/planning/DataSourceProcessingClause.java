@@ -30,13 +30,7 @@ public interface DataSourceProcessingClause
 {
   static PreJoinableClause of(JoinDataSource joinDataSource)
   {
-    return new PreJoinableClause(
-        joinDataSource.getRightPrefix(),
-        joinDataSource.getRight(),
-        joinDataSource.getJoinType(),
-        joinDataSource.getConditionAnalysis(),
-        joinDataSource.getJoinAlgorithm()
-    );
+    return new PreJoinableClause(joinDataSource);
   }
 
   static DataSourceProcessingClause of(UnnestDataSource unnestDataSource)
