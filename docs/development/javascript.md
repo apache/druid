@@ -73,3 +73,7 @@ we recommend developing a native Druid extension.
 
 In addition, native Druid extensions are more flexible than JavaScript functions. There are some kinds of extensions
 (like sketches) that must be written as native Druid extensions due to their need for custom data formats.
+
+## Known issues
+
+- Javascript tiered broker selector strategy and Javascript filters currently do not work on Java 17.
