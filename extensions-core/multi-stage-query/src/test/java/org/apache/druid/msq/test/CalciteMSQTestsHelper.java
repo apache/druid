@@ -20,9 +20,13 @@
 package org.apache.druid.msq.test;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Binder;
+import com.google.inject.Inject;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.TypeLiteral;
@@ -44,6 +48,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.msq.counters.ChannelCounters;
 import org.apache.druid.msq.exec.DataServerQueryHandler;
 import org.apache.druid.msq.exec.DataServerQueryHandlerFactory;
 import org.apache.druid.msq.guice.MSQExternalDataSourceModule;
@@ -186,10 +191,42 @@ public class CalciteMSQTestsHelper
     }
 
     @Provides
-    public DataSegmentProvider provideDataSegmentProvider(TempDirProducer tempDirProducer)
+    @LazySingleton
+    public DataSegmentProvider provideDataSegmentProvider(LocalDataSegmentProvider l)
     {
-      return (segmentId, channelCounters,
-          isReindex) -> getSupplierForSegment(tempDirProducer::newTempFolder, segmentId);
+      return l;
+    }
+
+    static class LocalDataSegmentProvider implements DataSegmentProvider
+    {
+      private TempDirProducer tempDirProducer;
+      private Cache<SegmentId, ReferenceCountingResourceHolder<?>> cache;
+
+      @Inject
+      public LocalDataSegmentProvider(TempDirProducer tempDirProducer)
+      {
+        this.tempDirProducer = tempDirProducer;
+        this.cache = CacheBuilder.newBuilder()
+            .build(new CacheLoader<SegmentId, ReferenceCountingResourceHolder<?>>() {
+
+              @Override
+              public ReferenceCountingResourceHolder<?> load(SegmentId segmentId) throws Exception
+              {
+                getSupplierForSegment(tempDirProducer::newTempFolder, segmentId);
+                return null;
+              }
+
+            });
+      }
+
+
+      @Override
+      public Supplier<ResourceHolder<CompleteSegment>> fetchSegment(SegmentId segmentId,
+          ChannelCounters channelCounters, boolean isReindex)
+      {
+        return getSupplierForSegment(tempDirProducer::newTempFolder, segmentId);
+      }
+
     }
 
     @Provides
