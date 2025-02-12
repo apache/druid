@@ -44,12 +44,12 @@ import java.util.function.Function;
  */
 public class RestrictedDataSource implements DataSource
 {
-  private final DataSource base;
+  private final TableDataSource base;
 
   private final Policy policy;
 
   @JsonProperty("base")
-  public DataSource getBase()
+  public TableDataSource getBase()
   {
     return base;
   }
@@ -73,8 +73,7 @@ public class RestrictedDataSource implements DataSource
   )
   {
     if (!(base instanceof TableDataSource)) {
-      // FIXME InputNumberDataSource
-//      throw new IAE("Expected a TableDataSource, got data source type [%s]", base.getClass());
+      throw new IAE("Expected a TableDataSource, got data source type [%s]", base.getClass());
     }
     if (Objects.isNull(policy)) {
       throw new IAE("Policy can't be null for RestrictedDataSource");

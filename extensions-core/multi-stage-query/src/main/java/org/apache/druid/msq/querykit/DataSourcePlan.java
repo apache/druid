@@ -52,7 +52,6 @@ import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryDataSource;
-import org.apache.druid.query.RestrictedDataSource;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.UnnestDataSource;
@@ -179,15 +178,6 @@ public class DataSourcePlan
           queryKitSpec,
           queryContext,
           (FilteredDataSource) dataSource,
-          querySegmentSpec,
-          minStageNumber,
-          broadcast
-      );
-    } else if (dataSource instanceof RestrictedDataSource) {
-      return forRestrictedDataSource(
-          queryKitSpec,
-          queryContext,
-          (RestrictedDataSource) dataSource,
           querySegmentSpec,
           minStageNumber,
           broadcast
@@ -470,39 +460,6 @@ public class DataSourcePlan
 
     final List<InputSpec> inputSpecs = new ArrayList<>(basePlan.getInputSpecs());
     newDataSource = FilteredDataSource.create(newDataSource, dataSource.getFilter());
-    return new DataSourcePlan(
-        newDataSource,
-        inputSpecs,
-        basePlan.getBroadcastInputs(),
-        basePlan.getSubQueryDefBuilder().orElse(null)
-    );
-
-  }
-
-  private static DataSourcePlan forRestrictedDataSource(
-      final QueryKitSpec queryKitSpec,
-      final QueryContext queryContext,
-      final RestrictedDataSource dataSource,
-      final QuerySegmentSpec querySegmentSpec,
-      final int minStageNumber,
-      final boolean broadcast
-  )
-  {
-    final DataSourcePlan basePlan = forDataSource(
-        queryKitSpec,
-        queryContext,
-        dataSource.getBase(),
-        querySegmentSpec,
-        null,
-        null,
-        minStageNumber,
-        broadcast
-    );
-
-    DataSource newDataSource = basePlan.getNewDataSource();
-
-    final List<InputSpec> inputSpecs = new ArrayList<>(basePlan.getInputSpecs());
-    newDataSource = RestrictedDataSource.create(newDataSource, dataSource.getPolicy());
     return new DataSourcePlan(
         newDataSource,
         inputSpecs,

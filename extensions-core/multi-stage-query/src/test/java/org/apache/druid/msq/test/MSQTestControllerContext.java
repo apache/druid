@@ -59,7 +59,6 @@ import org.apache.druid.msq.indexing.IndexerTableInputSpecSlicer;
 import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQWorkerTask;
 import org.apache.druid.msq.indexing.MSQWorkerTaskLauncher;
-import org.apache.druid.msq.indexing.MSQWorkerTaskLauncher.MSQWorkerTaskLauncherConfig;
 import org.apache.druid.msq.input.InputSpecSlicer;
 import org.apache.druid.msq.kernel.controller.ControllerQueryKernelConfig;
 import org.apache.druid.msq.querykit.QueryKit;
@@ -91,7 +90,7 @@ public class MSQTestControllerContext implements ControllerContext
   private final TaskActionClient taskActionClient;
   private final Map<String, Worker> inMemoryWorkers = new HashMap<>();
   private final ConcurrentMap<String, TaskStatus> statusMap = new ConcurrentHashMap<>();
-  private static final ListeningExecutorService EXECUTOR = MoreExecutors.listeningDecorator(Execs.multiThreaded(
+  private final ListeningExecutorService executor = MoreExecutors.listeningDecorator(Execs.multiThreaded(
       NUM_WORKERS,
       "MultiStageQuery-test-controller-client"
   ));
@@ -178,7 +177,7 @@ public class MSQTestControllerContext implements ControllerContext
       inMemoryWorkers.put(task.getId(), worker);
       statusMap.put(task.getId(), TaskStatus.running(task.getId()));
 
-      ListenableFuture<?> future = EXECUTOR.submit(() -> {
+      ListenableFuture<?> future = executor.submit(() -> {
         try {
           worker.run();
         }
@@ -354,19 +353,13 @@ public class MSQTestControllerContext implements ControllerContext
       WorkerFailureListener workerFailureListener
   )
   {
-    MSQWorkerTaskLauncherConfig taskLauncherConfig = new MSQWorkerTaskLauncherConfig();
-    taskLauncherConfig.highFrequenceCheckMillis = 0;
-    taskLauncherConfig.switchToLowFrequencyCheckAfterMillis = 25;
-    taskLauncherConfig.lowFrequenceCheckMillis = 2;
-
     return new MSQWorkerTaskLauncher(
         controller.queryId(),
         "test-datasource",
         overlordClient,
         workerFailureListener,
         IndexerControllerContext.makeTaskContext(querySpec, queryKernelConfig, ImmutableMap.of()),
-        0,
-        taskLauncherConfig
+        0
     );
   }
 

@@ -647,7 +647,6 @@ public class MSQTestBase extends BaseCalciteQueryTest
       final QueryableIndex index;
       switch (segmentId.getDataSource()) {
         case DATASOURCE1:
-        case CalciteTests.RESTRICTED_DATASOURCE:
           IncrementalIndexSchema foo1Schema = new IncrementalIndexSchema.Builder()
               .withMetrics(
                   new CountAggregatorFactory("cnt"),
