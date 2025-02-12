@@ -442,29 +442,27 @@ public class QueryTestRunner
           expectedQueries.size(),
           recordedQueries.size()
       );
-      if(false) {
-        for (int i = 0; i < expectedQueries.size(); i++) {
-          Query<?> expectedQuery = expectedQueries.get(i);
-          Query<?> actualQuery = recordedQueries.get(i);
-          Assert.assertEquals(
-              StringUtils.format("query #%d: %s", i + 1, builder.sql),
-              expectedQuery,
-              actualQuery
-          );
+      for (int i = 0; i < expectedQueries.size(); i++) {
+        Query<?> expectedQuery = expectedQueries.get(i);
+        Query<?> actualQuery = recordedQueries.get(i);
+        Assert.assertEquals(
+            StringUtils.format("query #%d: %s", i + 1, builder.sql),
+            expectedQuery,
+            actualQuery
+        );
 
-          try {
-            // go through some JSON serde and back, round tripping both queries and comparing them to each other, because
-            // Assert.assertEquals(recordedQueries.get(i), stringAndBack) is a failure due to a sorted map being present
-            // in the recorded queries, but it is a regular map after deserialization
-            final String recordedString = queryJsonMapper.writeValueAsString(actualQuery);
-            final Query<?> stringAndBack = queryJsonMapper.readValue(recordedString, Query.class);
-            final String expectedString = queryJsonMapper.writeValueAsString(expectedQuery);
-            final Query<?> expectedStringAndBack = queryJsonMapper.readValue(expectedString, Query.class);
-            Assert.assertEquals(expectedStringAndBack, stringAndBack);
-          }
-          catch (JsonProcessingException e) {
-            Assert.fail(e.getMessage());
-          }
+        try {
+          // go through some JSON serde and back, round tripping both queries and comparing them to each other, because
+          // Assert.assertEquals(recordedQueries.get(i), stringAndBack) is a failure due to a sorted map being present
+          // in the recorded queries, but it is a regular map after deserialization
+          final String recordedString = queryJsonMapper.writeValueAsString(actualQuery);
+          final Query<?> stringAndBack = queryJsonMapper.readValue(recordedString, Query.class);
+          final String expectedString = queryJsonMapper.writeValueAsString(expectedQuery);
+          final Query<?> expectedStringAndBack = queryJsonMapper.readValue(expectedString, Query.class);
+          Assert.assertEquals(expectedStringAndBack, stringAndBack);
+        }
+        catch (JsonProcessingException e) {
+          Assert.fail(e.getMessage());
         }
       }
     }
