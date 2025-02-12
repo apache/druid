@@ -190,50 +190,48 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   {
     Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     context.put(PlannerConfig.CTX_KEY_USE_APPROXIMATE_TOPN, false);
-    for(int i=0;i<100;i++) {
-      testQuery(
-          "select f1.\"dim4\", sum(\"m1\") from numfoo f1 inner join (\n"
-          + "  select \"dim4\" from numfoo where dim4 <> 'a' group by 1\n"
-          + ") f2 on f1.\"dim4\" = f2.\"dim4\" group by 1 limit 1",
-          context, // turn on exact topN
-          ImmutableList.of(
-              new TopNQueryBuilder()
-                  .intervals(querySegmentSpec(Filtration.eternity()))
-                  .granularity(Granularities.ALL)
-                  .dimension(new DefaultDimensionSpec("dim4", "d0"))
-                  .aggregators(new DoubleSumAggregatorFactory("a0", "m1"))
-                  .metric(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC))
-                  .threshold(1)
-                  .dataSource(
-                      JoinDataSource.create(
-                          new TableDataSource("numfoo"),
-                          new QueryDataSource(
-                              GroupByQuery.builder()
-                                          .setInterval(querySegmentSpec(Filtration.eternity()))
-                                          .setGranularity(Granularities.ALL)
-                                          .setDimFilter(not(equality("dim4", "a", ColumnType.STRING)))
-                                          .setDataSource(new TableDataSource("numfoo"))
-                                          .setDimensions(new DefaultDimensionSpec("dim4", "d0"))
-                                          .setContext(context)
-                                          .build()
-                          ),
-                          "j0.",
-                          "(\"dim4\" == \"j0.d0\")",
-                          JoinType.INNER,
-                          null,
-                          ExprMacroTable.nil(),
-                          CalciteTests.createJoinableFactoryWrapper(),
-                          JoinAlgorithm.BROADCAST
-                      )
-                  )
-                  .context(context)
-                  .build()
-          ),
-          ImmutableList.of(
-              new Object[]{"b", 15.0}
-          )
-      );
-    }
+    testQuery(
+        "select f1.\"dim4\", sum(\"m1\") from numfoo f1 inner join (\n"
+        + "  select \"dim4\" from numfoo where dim4 <> 'a' group by 1\n"
+        + ") f2 on f1.\"dim4\" = f2.\"dim4\" group by 1 limit 1",
+        context, // turn on exact topN
+        ImmutableList.of(
+            new TopNQueryBuilder()
+                .intervals(querySegmentSpec(Filtration.eternity()))
+                .granularity(Granularities.ALL)
+                .dimension(new DefaultDimensionSpec("dim4", "d0"))
+                .aggregators(new DoubleSumAggregatorFactory("a0", "m1"))
+                .metric(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC))
+                .threshold(1)
+                .dataSource(
+                    JoinDataSource.create(
+                        new TableDataSource("numfoo"),
+                        new QueryDataSource(
+                            GroupByQuery.builder()
+                                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                                        .setGranularity(Granularities.ALL)
+                                        .setDimFilter(not(equality("dim4", "a", ColumnType.STRING)))
+                                        .setDataSource(new TableDataSource("numfoo"))
+                                        .setDimensions(new DefaultDimensionSpec("dim4", "d0"))
+                                        .setContext(context)
+                                        .build()
+                        ),
+                        "j0.",
+                        "(\"dim4\" == \"j0.d0\")",
+                        JoinType.INNER,
+                        null,
+                        ExprMacroTable.nil(),
+                        CalciteTests.createJoinableFactoryWrapper(),
+                        JoinAlgorithm.BROADCAST
+                    )
+                )
+                .context(context)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"b", 15.0}
+        )
+    );
   }
 
   @DecoupledTestConfig(quidemReason = QuidemTestCaseReason.EQUIV_PLAN_EXTRA_COLUMNS)
