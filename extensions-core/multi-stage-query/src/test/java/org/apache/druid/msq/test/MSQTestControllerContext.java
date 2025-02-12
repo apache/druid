@@ -91,7 +91,7 @@ public class MSQTestControllerContext implements ControllerContext
   private final TaskActionClient taskActionClient;
   private final Map<String, Worker> inMemoryWorkers = new HashMap<>();
   private final ConcurrentMap<String, TaskStatus> statusMap = new ConcurrentHashMap<>();
-  private static final ListeningExecutorService executor = MoreExecutors.listeningDecorator(Execs.multiThreaded(
+  private static final ListeningExecutorService EXECUTOR = MoreExecutors.listeningDecorator(Execs.multiThreaded(
       NUM_WORKERS,
       "MultiStageQuery-test-controller-client"
   ));
@@ -178,7 +178,7 @@ public class MSQTestControllerContext implements ControllerContext
       inMemoryWorkers.put(task.getId(), worker);
       statusMap.put(task.getId(), TaskStatus.running(task.getId()));
 
-      ListenableFuture<?> future = executor.submit(() -> {
+      ListenableFuture<?> future = EXECUTOR.submit(() -> {
         try {
           worker.run();
         }
@@ -354,7 +354,7 @@ public class MSQTestControllerContext implements ControllerContext
       WorkerFailureListener workerFailureListener
   )
   {
-    MSQWorkerTaskLauncherConfig taskLauncherConfig=new MSQWorkerTaskLauncherConfig();
+    MSQWorkerTaskLauncherConfig taskLauncherConfig = new MSQWorkerTaskLauncherConfig();
     taskLauncherConfig.highFrequenceCheckMillis = 0;
     taskLauncherConfig.switchToLowFrequencyCheckAfterMillis = 25;
     taskLauncherConfig.lowFrequenceCheckMillis = 2;
