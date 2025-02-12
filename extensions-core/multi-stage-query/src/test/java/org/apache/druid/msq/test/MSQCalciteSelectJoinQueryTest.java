@@ -32,7 +32,7 @@ import java.util.Map;
 /**
  * Runs {@link CalciteJoinQueryTest} but with MSQ engine.
  */
-public class CalciteSelectJoinQueryMSQTest
+public class MSQCalciteSelectJoinQueryTest
 {
   /**
    * Run all tests with {@link JoinAlgorithm#BROADCAST}.

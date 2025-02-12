@@ -3857,7 +3857,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupingWithNullPlusNonNullInFilter()
   {
-    msqIncompatible();
     testQuery(
         "SELECT COUNT(*) FROM foo WHERE dim1 IN (NULL, 'abc')",
         ImmutableList.of(
@@ -3877,7 +3876,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupingWithNotNullPlusNonNullInFilter()
   {
-    msqIncompatible();
     testQuery(
         "SELECT COUNT(*) FROM foo WHERE dim1 NOT IN (NULL, 'abc')",
         ImmutableList.of(
@@ -3902,7 +3900,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByNothingWithLiterallyFalseFilter()
   {
-    msqIncompatible();
+    // Result of MAX(cnt) when nothing matches the filter.
     testQuery(
         "SELECT COUNT(*), MAX(cnt) FROM druid.foo WHERE 1 = 0",
         ImmutableList.of(
@@ -3928,7 +3926,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testGroupByNothingWithImpossibleTimeFilter()
   {
-    msqIncompatible();
     // Regression test for https://github.com/apache/druid/issues/7671
 
     testQuery(
@@ -4331,7 +4328,6 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testCountStarWithLongColumnFiltersOnFloatLiterals()
   {
-    msqIncompatible();
     testQuery(
         "SELECT COUNT(*) FROM druid.foo WHERE cnt > 1.1 and cnt < 100000001.0",
         ImmutableList.of(
@@ -9762,8 +9758,7 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testTimeseriesEmptyResultsAggregatorDefaultValues()
   {
-    msqIncompatible();
-    // timeseries with all granularity have a single group, so should return default results for given aggregators
+    // timeseries with all granularity has a single group, so should return default results for given aggregators.
     testQuery(
         "SELECT\n"
         + " count(*),\n"
@@ -9848,13 +9843,149 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   }
 
   @Test
+  public void testEmptyResultsAggregatorWithHavingTrue()
+  {
+    // GROUP BY () that matches nothing should return an empty result row with default aggregator values.
+    // Adding a HAVING retains the row, if the HAVING matches the default aggregators.
+    testQuery(
+        "SELECT\n"
+        + " COUNT(*)\n"
+        + "FROM druid.numfoo\n"
+        + "WHERE __time >= TIMESTAMP '4000-01-01 00:00:00' AND __time < TIMESTAMP '4001-01-01 00:00:00'\n"
+        + "HAVING COUNT(*) = 0",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE3)
+                        .setInterval(querySegmentSpec(Intervals.of("4000/P1Y")))
+                        .setGranularity(Granularities.ALL)
+                        .setAggregatorSpecs(new CountAggregatorFactory("a0"))
+                        .setHavingSpec(having(equality("a0", 0L, ColumnType.LONG)))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{0L}
+        )
+    );
+  }
+
+  @Test
+  public void testEmptyResultsAggregatorWithHavingFalse()
+  {
+    // GROUP BY () that matches nothing should return an empty result row with default aggregator values.
+    // Adding a HAVING omits the row, if the HAVING does not match the default aggregators.
+    testQuery(
+        "SELECT\n"
+        + " COUNT(*)\n"
+        + "FROM druid.numfoo\n"
+        + "WHERE __time >= TIMESTAMP '4000-01-01 00:00:00' AND __time < TIMESTAMP '4001-01-01 00:00:00'\n"
+        + "HAVING COUNT(*) = 1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE3)
+                        .setInterval(querySegmentSpec(Intervals.of("4000/P1Y")))
+                        .setGranularity(Granularities.ALL)
+                        .setAggregatorSpecs(new CountAggregatorFactory("a0"))
+                        .setHavingSpec(having(equality("a0", 1L, ColumnType.LONG)))
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of()
+    );
+  }
+
+  @Test
+  public void testTimeseriesEmptyResultsAggregatorDefaultValuesTimeFilterMatchesNothing()
+  {
+    // timeseries with all granularity has a single group, so should return default results for given aggregators.
+    testQuery(
+        "SELECT\n"
+        + " count(*),\n"
+        + " COUNT(DISTINCT dim1),\n"
+        + " APPROX_COUNT_DISTINCT(distinct dim1),\n"
+        + " sum(dbl1),\n"
+        + " max(dbl1),\n"
+        + " min(dbl1),\n"
+        + " sum(l1),\n"
+        + " max(l1),\n"
+        + " min(l1),\n"
+        + " avg(l1),\n"
+        + " avg(dbl1)\n"
+        + "FROM druid.numfoo\n"
+        + "WHERE __time >= TIMESTAMP '4000-01-01 00:00:00' AND __time < TIMESTAMP '4001-01-01 00:00:00'",
+        ImmutableList.of(
+            Druids.newTimeseriesQueryBuilder()
+                  .dataSource(CalciteTests.DATASOURCE3)
+                  .intervals(querySegmentSpec(Intervals.of("4000/P1Y")))
+                  .granularity(Granularities.ALL)
+                  .aggregators(
+                      aggregators(
+                          new CountAggregatorFactory("a0"),
+                          new CardinalityAggregatorFactory(
+                              "a1",
+                              null,
+                              ImmutableList.of(DefaultDimensionSpec.of("dim1")),
+                              false,
+                              true
+                          ),
+                          new CardinalityAggregatorFactory(
+                              "a2",
+                              null,
+                              ImmutableList.of(DefaultDimensionSpec.of("dim1")),
+                              false,
+                              true
+                          ),
+                          new DoubleSumAggregatorFactory("a3", "dbl1"),
+                          new DoubleMaxAggregatorFactory("a4", "dbl1"),
+                          new DoubleMinAggregatorFactory("a5", "dbl1"),
+                          new LongSumAggregatorFactory("a6", "l1"),
+                          new LongMaxAggregatorFactory("a7", "l1"),
+                          new LongMinAggregatorFactory("a8", "l1"),
+                          new DoubleSumAggregatorFactory("a9:sum", "l1"),
+                          new FilteredAggregatorFactory(
+                              new CountAggregatorFactory("a9:count"),
+                              notNull("l1")
+                          ),
+                          new DoubleSumAggregatorFactory("a10:sum", "dbl1"),
+                          new FilteredAggregatorFactory(
+                              new CountAggregatorFactory("a10:count"),
+                              notNull("dbl1")
+                          )
+                      )
+                  )
+                  .postAggregators(
+                      new ArithmeticPostAggregator(
+                          "a9",
+                          "quotient",
+                          ImmutableList.of(
+                              new FieldAccessPostAggregator(null, "a9:sum"),
+                              new FieldAccessPostAggregator(null, "a9:count")
+                          )
+                      ),
+                      new ArithmeticPostAggregator(
+                          "a10",
+                          "quotient",
+                          ImmutableList.of(
+                              new FieldAccessPostAggregator(null, "a10:sum"),
+                              new FieldAccessPostAggregator(null, "a10:count")
+                          )
+                      )
+                  )
+                  .context(QUERY_CONTEXT_DEFAULT)
+                  .build()
+        ),
+        ImmutableList.of(new Object[]{0L, 0L, 0L, null, null, null, null, null, null, null, null})
+    );
+  }
+
+  @Test
   public void testTimeseriesEmptyResultsAggregatorDefaultValuesNonVectorized()
   {
-    // Empty-dataset aggregation queries in MSQ return an empty row, rather than a single row as SQL requires.
-    msqIncompatible();
-
+    // This test is like testTimeseriesEmptyResultsAggregatorDefaultValues, but includes some non-vectorizable
+    // aggregators.
     cannotVectorize();
-    // timeseries with all granularity have a single group, so should return default results for given aggregators
+
+    // timeseries with all granularity has a single group, so should return default results for given aggregators.
     testQuery(
         "SELECT\n"
         + " ANY_VALUE(dim1, 1024),\n"
