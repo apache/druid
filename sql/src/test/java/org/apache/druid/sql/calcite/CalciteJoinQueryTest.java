@@ -175,7 +175,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
             new Object[]{946771200000L},
             new Object[]{946857600000L},
             new Object[]{978307200000L},
-            new Object[]{97839360000L},
+            new Object[]{978393600000L},
             new Object[]{978480000000L}
         )
     );
@@ -229,7 +229,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                 .build()
         ),
         ImmutableList.of(
-            new Object[]{"b", 1.0}
+            new Object[]{"b", 15.0}
         )
     );
   }
@@ -307,7 +307,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
             new Object[]{null, 4.0},
             new Object[]{"", 3.0},
             new Object[]{"a", 2.5},
-            new Object[]{"abc", 1.0}
+            new Object[]{"abc", 5.0}
         )
     );
   }
@@ -381,7 +381,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
             new Object[]{null, 4.0},
             new Object[]{"", 3.0},
             new Object[]{"a", 2.5},
-            new Object[]{"abc", 2.0}
+            new Object[]{"abc", 5.0}
         )
     );
   }
