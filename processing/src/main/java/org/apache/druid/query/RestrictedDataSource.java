@@ -122,17 +122,10 @@ public class RestrictedDataSource implements DataSource
   }
 
   @Override
-<<<<<<< HEAD
   public Function<SegmentReference, SegmentReference> createSegmentMapFunction(SegmentMapConfig cfg)
   {
-    Function<SegmentReference, SegmentReference> inputSegment = base.createSegmentMapFunction(cfg);
-    return segment -> new RestrictedSegment(inputSegment.apply(segment), policy);
-=======
-  public Function<SegmentReference, SegmentReference> createSegmentMapFunction(Query query)
-  {
-    final Function<SegmentReference, SegmentReference> segmentMapFn = base.createSegmentMapFunction(query);
+    final Function<SegmentReference, SegmentReference> segmentMapFn = base.createSegmentMapFunction(cfg);
     return baseSegment -> new RestrictedSegment(segmentMapFn.apply(baseSegment), policy);
->>>>>>> remove-createsmfn-cputime
   }
 
   @Override

@@ -401,7 +401,6 @@ public class JoinDataSource implements DataSource
   @Override
   public Function<SegmentReference, SegmentReference> createSegmentMapFunction(SegmentMapConfig cfg)
   {
-<<<<<<< HEAD
     // FIXME
     if (analysis.getBaseQuery().isPresent()) {
       throw new RuntimeException("need to analyze this further");
@@ -452,56 +451,16 @@ public class JoinDataSource implements DataSource
               .collect(Collectors.toSet());
           subCfg = subCfg.withColumns(a);
         }
-=======
-    // compute column correlations here and RHS correlated values
-    if (clauses.isEmpty()) {
-      return Function.identity();
-    } else {
-      final JoinableClauses joinableClauses = JoinableClauses.createClauses(
-          clauses,
-          joinableFactoryWrapper.getJoinableFactory()
-      );
-      final JoinFilterRewriteConfig filterRewriteConfig = JoinFilterRewriteConfig.forQuery(query);
-
-      // Pick off any join clauses that can be converted into filters.
-      final Set<String> requiredColumns = query.getRequiredColumns();
-      final Filter baseFilterToUse;
-      final List<JoinableClause> clausesToUse;
-
-      if (requiredColumns != null && filterRewriteConfig.isEnableRewriteJoinToFilter()) {
-        final Pair<List<Filter>, List<JoinableClause>> conversionResult = JoinableFactoryWrapper.convertJoinsToFilters(
-            joinableClauses.getJoinableClauses(),
-            requiredColumns,
-            Ints.checkedCast(Math.min(filterRewriteConfig.getFilterRewriteMaxSize(), Integer.MAX_VALUE))
-        );
-
-        baseFilterToUse =
-            Filters.maybeAnd(
-                Lists.newArrayList(
-                    Iterables.concat(
-                        Collections.singleton(baseFilter),
-                        conversionResult.lhs
-                    )
-                )
-            ).orElse(null);
-        clausesToUse = conversionResult.rhs;
->>>>>>> remove-createsmfn-cputime
       } else {
         baseFilterToUse = baseFilter;
         clausesToUse = joinableClauses.getJoinableClauses();
       }
 
-<<<<<<< HEAD
-      // Analyze remaining join clauses to see if filters on them can be pushed
-      // down.
-=======
       // Analyze remaining join clauses to see if filters on them can be pushed down.
->>>>>>> remove-createsmfn-cputime
       final JoinFilterPreAnalysis joinFilterPreAnalysis = JoinFilterAnalyzer.computeJoinFilterPreAnalysis(
           new JoinFilterPreAnalysisKey(
               filterRewriteConfig,
               clausesToUse,
-<<<<<<< HEAD
               cfg.getVirtualColumns(),
               Filters.maybeAnd(Arrays.asList(baseFilterToUse, Filters.toFilter(cfg.getFilter())))
                   .orElse(null)
@@ -536,36 +495,6 @@ public class JoinDataSource implements DataSource
   private DataSourceAnalysis getAnalysisForDataSource()
   {
     return flattenJoin(this);
-=======
-              query.getVirtualColumns(),
-              Filters.maybeAnd(Arrays.asList(baseFilterToUse, Filters.toFilter(query.getFilter())))
-                     .orElse(null)
-          )
-      );
-      final Function<SegmentReference, SegmentReference> baseMapFn;
-      // A join data source is not concrete
-      // And isConcrete() of an unnest datasource delegates to its base
-      // Hence, in the case of a Join -> Unnest -> Join
-      // if we just use isConcrete on the left
-      // the segment map function for the unnest would never get called
-      // This calls us to delegate to the segmentMapFunction of the left
-      // only when it is not a JoinDataSource
-      if (left instanceof JoinDataSource) {
-        baseMapFn = Function.identity();
-      } else {
-        baseMapFn = left.createSegmentMapFunction(
-            query
-        );
-      }
-      return baseSegment ->
-          new HashJoinSegment(
-              baseMapFn.apply(baseSegment),
-              baseFilterToUse,
-              GuavaUtils.firstNonNull(clausesToUse, ImmutableList.of()),
-              joinFilterPreAnalysis
-          );
-    }
->>>>>>> remove-createsmfn-cputime
   }
 
   /**
