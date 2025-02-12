@@ -32,7 +32,6 @@ Replace {{MILESTONE}} with the correct milestone number. For example: https://gi
 
 See the [complete set of changes](https://github.com/apache/druid/issues?q=is%3Aclosed+milestone%3A32.0.0+sort%3Aupdated-desc+) for additional details, including bug fixes.
 
-Review the [incompatible changes](#incompatible-changes) before you upgrade to Druid {{DRUIDVERSION}}.
 If you are upgrading across multiple versions, see the [Upgrade notes](upgrade-notes.md) page, which lists upgrade notes for the most recent Druid versions.
 
 <!-- 
@@ -362,10 +361,6 @@ The Iceberg extension now supports the AWS Glue Iceberg catalog.
 The docs now include examples for all supported Apache Druid SQL functions. You can easily learn how to use each function by following along with the examples. These examples leverage datasets included with Druid, making it simple to get started quickly.
 
 Check out the examples at [All Druid SQL functions](../querying/sql-functions.md).
-
-## Upgrade notes and incompatible changes
-
-### Incompatible changes
 
 ### Developer notes
 
