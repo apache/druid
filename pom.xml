@@ -88,6 +88,7 @@
           -->
         <calcite.version>1.37.0</calcite.version>
         <confluent.version>6.2.12</confluent.version>
+        <cronutils.version>9.2.0</cronutils.version>
         <datasketches.version>4.2.0</datasketches.version>
         <datasketches.memory.version>2.2.0</datasketches.memory.version>
         <derby.version>10.14.2.0</derby.version>

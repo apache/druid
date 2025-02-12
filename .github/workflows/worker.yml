@@ -73,7 +73,7 @@ jobs:
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
-        if: ${{ failure() }} || ${{ inputs.artifact_prefix != '' }}
+        if: ${{ failure() || inputs.artifact_prefix != '' }}
         with:
           name: "${{ inputs.artifact_prefix }}-${{ env.HASH }}"
           path: |

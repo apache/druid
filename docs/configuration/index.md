@@ -1168,6 +1168,15 @@ If autoscaling is enabled, you can set these additional configs:
 
 The `druid.supervisor.idleConfig.*` specification in the Overlord runtime properties defines the default behavior for the entire cluster. See [Idle Configuration in Kafka Supervisor IOConfig](../ingestion/kinesis-ingestion.md#io-configuration) to override it for an individual supervisor.
 
+##### Segment metadata cache (EXPERIMENTAL)
+
+The following properties pertain to segment metadata caching on the Overlord that may be used to speed up segment allocation and other metadata operations.
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.manager.segments.useCache`|If `true`, segment metadata is cached on the Overlord to speed up metadata operations.|false|
+|`druid.manager.segments.pollDuration`|Duration (in ISO 8601 format) between successive syncs of the cache with the metadata store. This property is used only when `druid.manager.segments.useCache` is `true`.|`PT1M` (1 minute)|
+
 #### Overlord dynamic configuration
 
 The Overlord has dynamic configurations to tune how Druid assigns tasks to workers.
@@ -1731,7 +1740,7 @@ See [cache configuration](#cache-configuration) for how to configure cache setti
 
 This section contains the configuration options for the services that reside on Query servers (Brokers) in the suggested [three-server configuration](../design/architecture.md#druid-servers).
 
-Configuration options for the experimental [Router process](../design/router.md) are also provided here.
+Configuration options for the [Router process](../design/router.md) are also provided here.
 
 ### Broker
 
