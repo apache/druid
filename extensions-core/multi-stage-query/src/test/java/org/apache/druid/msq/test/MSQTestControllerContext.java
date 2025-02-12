@@ -355,8 +355,9 @@ public class MSQTestControllerContext implements ControllerContext
   )
   {
     MSQWorkerTaskLauncherConfig taskLauncherConfig=new MSQWorkerTaskLauncherConfig();
-    taskLauncherConfig.highFrequenceCheckMillis = 10;
-    taskLauncherConfig.lowFrequenceCheckMillis = 100;
+    taskLauncherConfig.highFrequenceCheckMillis = 0;
+    taskLauncherConfig.switchToLowFrequencyCheckAfterMillis = 25;
+    taskLauncherConfig.lowFrequenceCheckMillis = 2;
 
     return new MSQWorkerTaskLauncher(
         controller.queryId(),
