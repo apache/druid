@@ -20,6 +20,7 @@
 package org.apache.druid.segment;
 
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Sets;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -47,6 +48,7 @@ public class FilteredCursorFactory implements CursorFactory
   @Override
   public CursorHolder makeCursorHolder(CursorBuildSpec spec)
   {
+    if(false) {
     final CursorBuildSpec.CursorBuildSpecBuilder buildSpecBuilder = CursorBuildSpec.builder(spec);
 
     buildSpecBuilder.setFilter(Filters.conjunction(spec.getFilter(), getFilter()));
@@ -57,9 +59,13 @@ public class FilteredCursorFactory implements CursorFactory
             )
         )
     );
-    buildSpecBuilder.setPhysicalColumns(spec.getPhysicalColumns());
+    buildSpecBuilder.setPhysicalColumns(Sets.union(spec.getPhysicalColumns(), filter.getRequiredColumns()));
 
     return delegate.makeCursorHolder(buildSpecBuilder.build());
+    } else {
+      return delegate.makeCursorHolder(CursorBuildSpec.builder(spec).andFilter(filter.toFilter()).build());
+    }
+
   }
 
   private Filter getFilter()

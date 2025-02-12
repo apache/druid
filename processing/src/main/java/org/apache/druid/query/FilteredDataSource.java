@@ -131,7 +131,7 @@ public class FilteredDataSource implements DataSource
   @Override
   public Function<SegmentReference, SegmentReference> createSegmentMapFunction(SegmentMapConfig cfg)
   {
-    SegmentMapConfig newCfg = cfg;
+    SegmentMapConfig newCfg = cfg.withFilter(filter);
 
     final Function<SegmentReference, SegmentReference> segmentMapFn = base.createSegmentMapFunction(
         newCfg

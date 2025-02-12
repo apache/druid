@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.collect.Sets;
 import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.filter.DimFilters;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.planning.PreJoinableClause;
 import org.apache.druid.query.policy.Policy;
@@ -186,6 +187,16 @@ public interface DataSource
           unionColumnNames(this.neededColumns, virtualColumns.getRequiredColumns()),
           filter
       );
+    }
+
+    public SegmentMapConfig withFilter(DimFilter filter2)
+    {
+     return  new SegmentMapConfig(
+         query,
+         virtualColumns,
+         unionColumnNames(this.neededColumns, filter2.getRequiredColumns()),
+         DimFilters.conjunction(filter,filter2)
+         );
     }
 
 //    public SegmentMapConfig withFilters(@Nullable DimFilter ...filters)
