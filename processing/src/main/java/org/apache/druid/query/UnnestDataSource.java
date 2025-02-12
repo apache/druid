@@ -28,7 +28,9 @@ import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.UnnestSegment;
 import org.apache.druid.segment.VirtualColumn;
+
 import javax.annotation.Nullable;
+
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;

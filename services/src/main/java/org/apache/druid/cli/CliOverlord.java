@@ -102,6 +102,7 @@ import org.apache.druid.indexing.overlord.sampler.SamplerModule;
 import org.apache.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorResource;
+import org.apache.druid.indexing.scheduledbatch.ScheduledBatchTaskManager;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.indexing.worker.shuffle.DeepStorageIntermediaryDataManager;
 import org.apache.druid.indexing.worker.shuffle.IntermediaryDataManager;
@@ -110,6 +111,8 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.SegmentsMetadataManager;
 import org.apache.druid.metadata.SegmentsMetadataManagerProvider;
 import org.apache.druid.metadata.input.InputSourceModule;
+import org.apache.druid.metadata.segment.cache.HeapMemorySegmentMetadataCache;
+import org.apache.druid.metadata.segment.cache.SegmentMetadataCache;
 import org.apache.druid.query.lookup.LookupSerdeModule;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
@@ -228,6 +231,11 @@ public class CliOverlord extends ServerRunnable
             JsonConfigProvider.bind(binder, "druid.indexer.task.default", DefaultTaskConfig.class);
             binder.bind(RetryPolicyFactory.class).in(LazySingleton.class);
 
+            // Override the default binding of SegmentMetadataCache done in SQLMetadataStorageDruidModule
+            binder.bind(SegmentMetadataCache.class)
+                  .to(HeapMemorySegmentMetadataCache.class)
+                  .in(ManageLifecycle.class);
+
             binder.bind(DruidOverlord.class).in(ManageLifecycle.class);
             binder.bind(TaskMaster.class).in(ManageLifecycle.class);
             binder.bind(TaskCountStatsProvider.class).to(TaskMaster.class);
@@ -251,6 +259,7 @@ public class CliOverlord extends ServerRunnable
             binder.bind(TaskQueryTool.class).in(LazySingleton.class);
             binder.bind(IndexerMetadataStorageAdapter.class).in(LazySingleton.class);
             binder.bind(CompactionScheduler.class).to(OverlordCompactionScheduler.class).in(LazySingleton.class);
+            binder.bind(ScheduledBatchTaskManager.class).in(LazySingleton.class);
             binder.bind(SupervisorManager.class).in(LazySingleton.class);
 
             binder.bind(ParallelIndexSupervisorTaskClientProvider.class).toProvider(Providers.of(null));

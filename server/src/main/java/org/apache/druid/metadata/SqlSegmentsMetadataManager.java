@@ -831,7 +831,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
       return connector.getDBI().withHandle(
           handle ->
               SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables.get(), jsonMapper)
-                                      .markSegmentsUnused(dataSource, Intervals.ETERNITY)
+                                      .markSegmentsUnused(dataSource, Intervals.ETERNITY, DateTimes.nowUtc())
       );
     }
     catch (RuntimeException e) {
@@ -884,7 +884,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
       return connector.getDBI().withHandle(
           handle ->
               SqlSegmentsMetadataQuery.forHandle(handle, connector, dbTables.get(), jsonMapper)
-                                      .markSegmentsUnused(dataSource, interval, versions)
+                                      .markSegmentsUnused(dataSource, interval, versions, DateTimes.nowUtc())
       );
     }
     catch (Exception e) {

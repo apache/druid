@@ -655,7 +655,7 @@ public class SupervisorManagerTest extends EasyMockSupport
 
     replayAll();
 
-    final PendingSegmentRecord pendingSegment = new PendingSegmentRecord(
+    final PendingSegmentRecord pendingSegment = PendingSegmentRecord.create(
         new SegmentIdWithShardSpec(
             "DS",
             Intervals.ETERNITY,

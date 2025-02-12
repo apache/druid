@@ -61,50 +61,53 @@ public class QueryableIndexCursorFactory implements CursorFactory
   public CursorHolder makeCursorHolder(CursorBuildSpec spec)
   {
     QueryableProjection<QueryableIndex> projection = index.getProjection(spec);
-    if (projection != null) {
-      return new QueryableIndexCursorHolder(
-          projection.getRowSelector(),
-          projection.getCursorBuildSpec(),
-          timeBoundaryInspector
+    if (projection == null) {
+      // no projections, create regular cursor holder
+      return new QueryableIndexCursorHolder(index, spec, timeBoundaryInspector);
+    }
+
+    // create projection cursor holder
+    return new QueryableIndexCursorHolder(
+        projection.getRowSelector(),
+        projection.getCursorBuildSpec(),
+        QueryableIndexTimeBoundaryInspector.create(projection.getRowSelector())
+    )
+    {
+      @Override
+      protected ColumnSelectorFactory makeColumnSelectorFactoryForOffset(
+          ColumnCache columnCache,
+          Offset baseOffset
       )
       {
-        @Override
-        protected ColumnSelectorFactory makeColumnSelectorFactoryForOffset(
-            ColumnCache columnCache,
-            Offset baseOffset
-        )
-        {
-          return projection.wrapColumnSelectorFactory(
-              super.makeColumnSelectorFactoryForOffset(columnCache, baseOffset)
-          );
-        }
+        return projection.wrapColumnSelectorFactory(
+            super.makeColumnSelectorFactoryForOffset(columnCache, baseOffset)
+        );
+      }
 
-        @Override
-        protected VectorColumnSelectorFactory makeVectorColumnSelectorFactoryForOffset(
-            ColumnCache columnCache,
-            VectorOffset baseOffset
-        )
-        {
-          return projection.wrapVectorColumnSelectorFactory(
-              super.makeVectorColumnSelectorFactoryForOffset(columnCache, baseOffset)
-          );
-        }
+      @Override
+      protected VectorColumnSelectorFactory makeVectorColumnSelectorFactoryForOffset(
+          ColumnCache columnCache,
+          VectorOffset baseOffset
+      )
+      {
+        return projection.wrapVectorColumnSelectorFactory(
+            super.makeVectorColumnSelectorFactoryForOffset(columnCache, baseOffset)
+        );
+      }
 
-        @Override
-        public boolean isPreAggregated()
-        {
-          return true;
-        }
+      @Override
+      public boolean isPreAggregated()
+      {
+        return true;
+      }
 
-        @Nullable
-        @Override
-        public List<AggregatorFactory> getAggregatorsForPreAggregated()
-        {
-          return projection.getCursorBuildSpec().getAggregators();
-        }
-      };
-    }
-    return new QueryableIndexCursorHolder(index, CursorBuildSpec.builder(spec).build(), timeBoundaryInspector);
+      @Nullable
+      @Override
+      public List<AggregatorFactory> getAggregatorsForPreAggregated()
+      {
+        return projection.getCursorBuildSpec().getAggregators();
+      }
+    };
   }
 
   @Override

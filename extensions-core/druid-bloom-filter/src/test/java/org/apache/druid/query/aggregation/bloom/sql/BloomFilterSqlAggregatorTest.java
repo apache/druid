@@ -21,13 +21,11 @@ package org.apache.druid.query.aggregation.bloom.sql;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import com.google.inject.Injector;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.guice.BloomFilterExtensionModule;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.query.Druids;
-import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
@@ -44,7 +42,6 @@ import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
@@ -83,11 +80,7 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
     }
 
     @Override
-    public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
-        final QueryRunnerFactoryConglomerate conglomerate,
-        final JoinableFactoryWrapper joinableFactory,
-        final Injector injector
-    )
+    public SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(SpecificSegmentsQuerySegmentWalker walker)
     {
       final QueryableIndex index =
           IndexBuilder.create()
@@ -106,7 +99,7 @@ public class BloomFilterSqlAggregatorTest extends BaseCalciteQueryTest
                       .rows(TestDataBuilder.ROWS1_WITH_NUMERIC_DIMS)
                       .buildMMappedIndex();
 
-      return SpecificSegmentsQuerySegmentWalker.createWalker(injector, conglomerate).add(
+      return walker.add(
           DataSegment.builder()
                      .dataSource(DATA_SOURCE)
                      .interval(index.getDataInterval())

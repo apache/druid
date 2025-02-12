@@ -516,8 +516,7 @@ public class IndexIO
           index.getAvailableDimensions(),
           new ConciseBitmapFactory(),
           columns,
-          index.getFileMapper(),
-          lazy
+          index.getFileMapper()
       )
       {
         @Override
@@ -674,7 +673,6 @@ public class IndexIO
           segmentBitmapSerdeFactory.getBitmapFactory(),
           columns,
           smooshedFiles,
-          lazy,
           metadata,
           projectionsColumns
       )
