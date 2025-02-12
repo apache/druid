@@ -425,7 +425,13 @@ public class MetadataResource
       }
     }
     // fallback to db
-    DataSegment segment = metadataStorageCoordinator.retrieveSegmentForId(segmentId, Boolean.TRUE.equals(includeUnused));
+    final DataSegment segment;
+    if (Boolean.TRUE.equals(includeUnused)) {
+      segment = metadataStorageCoordinator.retrieveSegmentForId(dataSourceName, segmentId);
+    } else {
+      segment = metadataStorageCoordinator.retrieveUsedSegmentForId(dataSourceName, segmentId);
+    }
+
     if (segment != null) {
       return Response.status(Response.Status.OK).entity(segment).build();
     }

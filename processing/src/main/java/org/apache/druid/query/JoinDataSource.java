@@ -54,9 +54,9 @@ import org.apache.druid.segment.join.filter.JoinFilterPreAnalysis;
 import org.apache.druid.segment.join.filter.JoinFilterPreAnalysisKey;
 import org.apache.druid.segment.join.filter.JoinableClauses;
 import org.apache.druid.segment.join.filter.rewrite.JoinFilterRewriteConfig;
-import org.apache.druid.utils.JvmUtils;
 
 import javax.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -65,7 +65,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -301,14 +300,12 @@ public class JoinDataSource implements DataSource
 
   @Override
   public Function<SegmentReference, SegmentReference> createSegmentMapFunction(
-      Query query,
-      AtomicLong cpuTimeAccumulator
+      Query query
   )
   {
     return createSegmentMapFunctionInternal(
         analysis.getJoinBaseTableFilter().map(Filters::toFilter).orElse(null),
         analysis.getPreJoinableClauses(),
-        cpuTimeAccumulator,
         analysis.getBaseQuery().orElse(query)
     );
   }
@@ -444,86 +441,79 @@ public class JoinDataSource implements DataSource
   private Function<SegmentReference, SegmentReference> createSegmentMapFunctionInternal(
       @Nullable final Filter baseFilter,
       final List<PreJoinableClause> clauses,
-      final AtomicLong cpuTimeAccumulator,
       final Query<?> query
   )
   {
     // compute column correlations here and RHS correlated values
-    return JvmUtils.safeAccumulateThreadCpuTime(
-        cpuTimeAccumulator,
-        () -> {
-          if (clauses.isEmpty()) {
-            return Function.identity();
-          } else {
-            final JoinableClauses joinableClauses = JoinableClauses.createClauses(
-                clauses,
-                joinableFactoryWrapper.getJoinableFactory()
-            );
-            final JoinFilterRewriteConfig filterRewriteConfig = JoinFilterRewriteConfig.forQuery(query);
+    if (clauses.isEmpty()) {
+      return Function.identity();
+    } else {
+      final JoinableClauses joinableClauses = JoinableClauses.createClauses(
+          clauses,
+          joinableFactoryWrapper.getJoinableFactory()
+      );
+      final JoinFilterRewriteConfig filterRewriteConfig = JoinFilterRewriteConfig.forQuery(query);
 
-            // Pick off any join clauses that can be converted into filters.
-            final Set<String> requiredColumns = query.getRequiredColumns();
-            final Filter baseFilterToUse;
-            final List<JoinableClause> clausesToUse;
+      // Pick off any join clauses that can be converted into filters.
+      final Set<String> requiredColumns = query.getRequiredColumns();
+      final Filter baseFilterToUse;
+      final List<JoinableClause> clausesToUse;
 
-            if (requiredColumns != null && filterRewriteConfig.isEnableRewriteJoinToFilter()) {
-              final Pair<List<Filter>, List<JoinableClause>> conversionResult = JoinableFactoryWrapper.convertJoinsToFilters(
-                  joinableClauses.getJoinableClauses(),
-                  requiredColumns,
-                  Ints.checkedCast(Math.min(filterRewriteConfig.getFilterRewriteMaxSize(), Integer.MAX_VALUE))
-              );
+      if (requiredColumns != null && filterRewriteConfig.isEnableRewriteJoinToFilter()) {
+        final Pair<List<Filter>, List<JoinableClause>> conversionResult = JoinableFactoryWrapper.convertJoinsToFilters(
+            joinableClauses.getJoinableClauses(),
+            requiredColumns,
+            Ints.checkedCast(Math.min(filterRewriteConfig.getFilterRewriteMaxSize(), Integer.MAX_VALUE))
+        );
 
-              baseFilterToUse =
-                  Filters.maybeAnd(
-                      Lists.newArrayList(
-                          Iterables.concat(
-                              Collections.singleton(baseFilter),
-                              conversionResult.lhs
-                          )
-                      )
-                  ).orElse(null);
-              clausesToUse = conversionResult.rhs;
-            } else {
-              baseFilterToUse = baseFilter;
-              clausesToUse = joinableClauses.getJoinableClauses();
-            }
-
-            // Analyze remaining join clauses to see if filters on them can be pushed down.
-            final JoinFilterPreAnalysis joinFilterPreAnalysis = JoinFilterAnalyzer.computeJoinFilterPreAnalysis(
-                new JoinFilterPreAnalysisKey(
-                    filterRewriteConfig,
-                    clausesToUse,
-                    query.getVirtualColumns(),
-                    Filters.maybeAnd(Arrays.asList(baseFilterToUse, Filters.toFilter(query.getFilter())))
-                           .orElse(null)
+        baseFilterToUse =
+            Filters.maybeAnd(
+                Lists.newArrayList(
+                    Iterables.concat(
+                        Collections.singleton(baseFilter),
+                        conversionResult.lhs
+                    )
                 )
-            );
-            final Function<SegmentReference, SegmentReference> baseMapFn;
-            // A join data source is not concrete
-            // And isConcrete() of an unnest datasource delegates to its base
-            // Hence, in the case of a Join -> Unnest -> Join
-            // if we just use isConcrete on the left
-            // the segment map function for the unnest would never get called
-            // This calls us to delegate to the segmentMapFunction of the left
-            // only when it is not a JoinDataSource
-            if (left instanceof JoinDataSource) {
-              baseMapFn = Function.identity();
-            } else {
-              baseMapFn = left.createSegmentMapFunction(
-                  query,
-                  cpuTimeAccumulator
-              );
-            }
-            return baseSegment ->
-                new HashJoinSegment(
-                    baseMapFn.apply(baseSegment),
-                    baseFilterToUse,
-                    GuavaUtils.firstNonNull(clausesToUse, ImmutableList.of()),
-                    joinFilterPreAnalysis
-                );
-          }
-        }
-    );
+            ).orElse(null);
+        clausesToUse = conversionResult.rhs;
+      } else {
+        baseFilterToUse = baseFilter;
+        clausesToUse = joinableClauses.getJoinableClauses();
+      }
+
+      // Analyze remaining join clauses to see if filters on them can be pushed down.
+      final JoinFilterPreAnalysis joinFilterPreAnalysis = JoinFilterAnalyzer.computeJoinFilterPreAnalysis(
+          new JoinFilterPreAnalysisKey(
+              filterRewriteConfig,
+              clausesToUse,
+              query.getVirtualColumns(),
+              Filters.maybeAnd(Arrays.asList(baseFilterToUse, Filters.toFilter(query.getFilter())))
+                     .orElse(null)
+          )
+      );
+      final Function<SegmentReference, SegmentReference> baseMapFn;
+      // A join data source is not concrete
+      // And isConcrete() of an unnest datasource delegates to its base
+      // Hence, in the case of a Join -> Unnest -> Join
+      // if we just use isConcrete on the left
+      // the segment map function for the unnest would never get called
+      // This calls us to delegate to the segmentMapFunction of the left
+      // only when it is not a JoinDataSource
+      if (left instanceof JoinDataSource) {
+        baseMapFn = Function.identity();
+      } else {
+        baseMapFn = left.createSegmentMapFunction(
+            query
+        );
+      }
+      return baseSegment ->
+          new HashJoinSegment(
+              baseMapFn.apply(baseSegment),
+              baseFilterToUse,
+              GuavaUtils.firstNonNull(clausesToUse, ImmutableList.of()),
+              joinFilterPreAnalysis
+          );
+    }
   }
 
   /**

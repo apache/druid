@@ -187,6 +187,11 @@
             <artifactId>commons-collections4</artifactId>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>com.cronutils</groupId>
+            <artifactId>cron-utils</artifactId>
+            <version>${cronutils.version}</version>
+        </dependency>
         <!-- Tests -->
         <dependency>
             <groupId>junit</groupId>
