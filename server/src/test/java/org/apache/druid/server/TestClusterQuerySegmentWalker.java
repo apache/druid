@@ -63,7 +63,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
 /**
@@ -158,8 +157,7 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
     }
 
     final Function<SegmentReference, SegmentReference> segmentMapFn = dataSourceFromQuery.createSegmentMapFunction(
-        query,
-        new AtomicLong()
+        query
     );
 
     final QueryRunner<T> baseRunner = new FinalizeResultsQueryRunner<>(
