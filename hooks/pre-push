@@ -19,4 +19,5 @@
 # under the License.
 #
 
-.git/hooks/run-all-in-dir.py .git/hooks/pre-pushes $1 $2
+GIT_COMMON_DIR=$(eval "git rev-parse --path-format=absolute --git-common-dir")
+$GIT_COMMON_DIR/hooks/run-all-in-dir.py $GIT_COMMON_DIR/hooks/pre-pushes $1 $2
