@@ -19,6 +19,7 @@
 
 package org.apache.druid.msq.indexing;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
@@ -72,11 +73,23 @@ import java.util.stream.Collectors;
 public class MSQWorkerTaskLauncher implements RetryCapableWorkerManager
 {
   private static final Logger log = new Logger(MSQWorkerTaskLauncher.class);
-  private static final long HIGH_FREQUENCY_CHECK_MILLIS = 100;
-  private static final long LOW_FREQUENCY_CHECK_MILLIS = 2000;
-  private static final long SWITCH_TO_LOW_FREQUENCY_CHECK_AFTER_MILLIS = 10000;
-  private static final long SHUTDOWN_TIMEOUT_MILLIS = Duration.ofMinutes(1).toMillis();
+
   private int currentRelaunchCount = 0;
+
+  public static class MSQWorkerTaskLauncherConfig
+  {
+    @JsonProperty
+    public long highFrequenceCheckMillis = 100;
+
+    @JsonProperty
+    public long lowFrequenceCheckMillis = 2000;
+
+    @JsonProperty
+    public long switchToLowFrequencyCheckAfterMillis = 10000;
+
+    @JsonProperty
+    public long shutdownTimeoutMillis = Duration.ofMinutes(1).toMillis();
+  }
 
   // States for "state" variable.
   private enum State
@@ -91,6 +104,7 @@ public class MSQWorkerTaskLauncher implements RetryCapableWorkerManager
   private final OverlordClient overlordClient;
   private final ExecutorService exec;
   private final long maxTaskStartDelayMillis;
+  private final MSQWorkerTaskLauncherConfig config;
 
   // Mutable state meant to be accessible by threads outside the main loop.
   private final SettableFuture<?> stopFuture = SettableFuture.create();
@@ -150,7 +164,8 @@ public class MSQWorkerTaskLauncher implements RetryCapableWorkerManager
       final OverlordClient overlordClient,
       final WorkerFailureListener workerFailureListener,
       final Map<String, Object> taskContextOverrides,
-      final long maxTaskStartDelayMillis
+      long maxTaskStartDelayMillis,
+      MSQWorkerTaskLauncherConfig config
   )
   {
     this.controllerTaskId = controllerTaskId;
@@ -162,6 +177,7 @@ public class MSQWorkerTaskLauncher implements RetryCapableWorkerManager
     );
     this.workerFailureListener = workerFailureListener;
     this.maxTaskStartDelayMillis = maxTaskStartDelayMillis;
+    this.config = config;
   }
 
   @Override
@@ -396,11 +412,11 @@ public class MSQWorkerTaskLauncher implements RetryCapableWorkerManager
         // Sleep for a bit, maybe.
         final long now = System.currentTimeMillis();
 
-        if (now > stopStartTime + SHUTDOWN_TIMEOUT_MILLIS) {
+        if (now > stopStartTime + config.shutdownTimeoutMillis) {
           if (caught != null) {
             throw caught;
           } else {
-            throw new ISE("Task shutdown timed out (limit = %,dms)", SHUTDOWN_TIMEOUT_MILLIS);
+            throw new ISE("Task shutdown timed out (limit = %,dms)", config.shutdownTimeoutMillis);
           }
         }
 
@@ -754,10 +770,10 @@ public class MSQWorkerTaskLauncher implements RetryCapableWorkerManager
         taskTrackers.values().stream().mapToLong(tracker -> tracker.startTimeMillis).max();
 
     if (maxTaskStartTime.isPresent() &&
-        System.currentTimeMillis() - maxTaskStartTime.getAsLong() < SWITCH_TO_LOW_FREQUENCY_CHECK_AFTER_MILLIS) {
-      return HIGH_FREQUENCY_CHECK_MILLIS - loopDurationMillis;
+        System.currentTimeMillis() - maxTaskStartTime.getAsLong() < config.switchToLowFrequencyCheckAfterMillis) {
+      return config.highFrequenceCheckMillis - loopDurationMillis;
     } else {
-      return LOW_FREQUENCY_CHECK_MILLIS - loopDurationMillis;
+      return config.lowFrequenceCheckMillis - loopDurationMillis;
     }
   }
 
