@@ -56,7 +56,9 @@ public abstract class DruidRel<T extends DruidRel<?>> extends AbstractRelNode
     // is the outermost query, and it will actually get run as a native query. Druid's native query layer will
     // finalize aggregations for the outermost query even if we don't explicitly ask it to.
 
-    return getPlannerContext().getQueryMaker().runQuery(toDruidQuery(false));
+    DruidQuery druidQuery = toDruidQuery(false);
+    druidQuery = druidQuery.withPolicies(plannerContext.getAuthorizationResult().getPolicyMap());
+    return getPlannerContext().getQueryMaker().runQuery(druidQuery);
   }
 
   public abstract T withPartialQuery(PartialDruidQuery newQueryBuilder);

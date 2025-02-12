@@ -1763,9 +1763,4 @@ public class DruidQuery
   {
     return filter;
   }
-
-  public VirtualColumns getVirtualColumns()
-  {
-    return virtualColumnRegistry.build(Collections.emptySet());
-  }
 }
