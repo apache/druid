@@ -19,7 +19,6 @@
 
 package org.apache.druid.msq.indexing;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
@@ -78,16 +77,9 @@ public class MSQWorkerTaskLauncher implements RetryCapableWorkerManager
 
   public static class MSQWorkerTaskLauncherConfig
   {
-    @JsonProperty
     public long highFrequenceCheckMillis = 100;
-
-    @JsonProperty
     public long lowFrequenceCheckMillis = 2000;
-
-    @JsonProperty
     public long switchToLowFrequencyCheckAfterMillis = 10000;
-
-    @JsonProperty
     public long shutdownTimeoutMillis = Duration.ofMinutes(1).toMillis();
   }
 

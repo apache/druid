@@ -354,6 +354,10 @@ public class MSQTestControllerContext implements ControllerContext
       WorkerFailureListener workerFailureListener
   )
   {
+    MSQWorkerTaskLauncherConfig taskLauncherConfig=new MSQWorkerTaskLauncherConfig();
+    taskLauncherConfig.highFrequenceCheckMillis = 10;
+    taskLauncherConfig.lowFrequenceCheckMillis = 100;
+
     return new MSQWorkerTaskLauncher(
         controller.queryId(),
         "test-datasource",
@@ -361,7 +365,7 @@ public class MSQTestControllerContext implements ControllerContext
         workerFailureListener,
         IndexerControllerContext.makeTaskContext(querySpec, queryKernelConfig, ImmutableMap.of()),
         0,
-        new MSQWorkerTaskLauncherConfig()
+        taskLauncherConfig
     );
   }
 
