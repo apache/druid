@@ -74,10 +74,10 @@ public class FilteredDataSource implements DataSource
   @JsonCreator
   public static FilteredDataSource create(
       @JsonProperty("base") DataSource base,
-      @JsonProperty("filter") @Nullable DimFilter filter
+      @JsonProperty("filter") @Nullable DimFilter f
   )
   {
-    return new FilteredDataSource(base, filter);
+    return new FilteredDataSource(base, f);
   }
 
   @Override
@@ -137,9 +137,9 @@ public class FilteredDataSource implements DataSource
   public String toString()
   {
     return "FilteredDataSource{" +
-        "base=" + base +
-        ", filter='" + filter + "'" +
-        '}';
+           "base=" + base +
+           ", filter='" + filter + '\'' +
+           '}';
   }
 
   @Override
