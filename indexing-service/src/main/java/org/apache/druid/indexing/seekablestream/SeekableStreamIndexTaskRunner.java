@@ -1887,10 +1887,12 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   @VisibleForTesting
   public Response pause() throws InterruptedException
   {
-    if (!(status == Status.PAUSED || status == Status.READING)) {
+    Status currentStatus = status;
+    if (!(currentStatus == Status.PAUSED || currentStatus == Status.READING)) {
+      log.debug("Returning 409 conflict for task [%s] with currentState: [%s], volatileState: [%s]", task.getId(), currentStatus, status);
       return Response.status(Response.Status.CONFLICT)
                      .type(MediaType.TEXT_PLAIN)
-                     .entity(StringUtils.format("Can't pause, task is not in a pausable state (state: [%s])", status))
+                     .entity(StringUtils.format("Can't pause, task is not in a pausable state (currentState: [%s], volatileState: [%s])", currentStatus, status))
                      .build();
     }
 
