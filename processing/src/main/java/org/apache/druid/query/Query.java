@@ -294,7 +294,14 @@ public interface Query<T>
 
   default DataSourceAnalysis getDataSourceAnalysis()
   {
+    if (couldCollapesSubQuery()) {
+      return ((QueryDataSource) getDataSource()).getQuery().getDataSourceAnalysis();
+    }
     return getDataSource().getAnalysis();
+  }
+
+  default boolean couldCollapesSubQuery() {
+    return false;
   }
 
   default RowSignature getResultRowSignature()

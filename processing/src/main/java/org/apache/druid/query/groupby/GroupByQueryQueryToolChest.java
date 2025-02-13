@@ -739,6 +739,10 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<ResultRow, GroupB
   @Override
   public boolean canPerformSubquery(Query<?> subquery)
   {
+    if(true) {
+//      return false;
+    }
+
     Query<?> current = subquery;
 
     while (current != null) {

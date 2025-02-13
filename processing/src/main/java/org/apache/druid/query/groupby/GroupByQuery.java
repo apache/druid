@@ -1321,4 +1321,14 @@ public class GroupByQuery extends BaseQuery<ResultRow>
         subtotalsSpec
     );
   }
+
+  @Override
+  public boolean couldCollapesSubQuery()
+  {
+    if (getDataSource() instanceof QueryDataSource) {
+      QueryDataSource queryDataSource = (QueryDataSource) getDataSource();
+      return queryDataSource.getQuery() instanceof GroupByQuery;
+    }
+    return false;
+  }
 }
