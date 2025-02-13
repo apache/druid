@@ -348,6 +348,7 @@ filterColumn
 filterValue
 firefox
 firehose
+FirehoseFactory
 firehoses
 FireHydrant
 fromPigAvroStorage
