@@ -71,6 +71,10 @@ We recommend that you upgrade to Java 17.
 
 [#17466](https://github.com/apache/druid/pull/17466)
 
+### Javascript support
+
+- Javascript tiered broker selector strategy and Javascript filters currently do not work on Java 17.
+
 ### Deprecations
 
 ### Hadoop-based ingestion
