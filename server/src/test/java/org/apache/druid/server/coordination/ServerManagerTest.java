@@ -553,7 +553,7 @@ public class ServerManagerTest
     final Interval interval = Intervals.of("P1d/2011-04-01");
     final SearchQuery query = searchQuery("test", interval, Granularities.ALL);
     final Optional<VersionedIntervalTimeline<String, ReferenceCountingSegment>> maybeTimeline = segmentManager
-        .getTimeline(query.getDataSource().getAnalysis());
+        .getTimeline(query.getDataSourceAnalysis().getBaseTableDataSource().get());
     Assert.assertTrue(maybeTimeline.isPresent());
     final List<TimelineObjectHolder<String, ReferenceCountingSegment>> holders = maybeTimeline.get().lookup(interval);
     final List<SegmentDescriptor> closedSegments = new ArrayList<>();
