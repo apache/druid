@@ -20,7 +20,6 @@
 package org.apache.druid.segment;
 
 import org.apache.druid.query.filter.DimFilter;
-import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.RowSignature;
 
@@ -32,9 +31,7 @@ public class FilteredCursorFactory implements CursorFactory
   @Nullable
   private final DimFilter filter;
 
-  public FilteredCursorFactory(
-      CursorFactory delegate,
-      @Nullable DimFilter filter)
+  public FilteredCursorFactory(CursorFactory delegate, @Nullable DimFilter filter)
   {
     this.delegate = delegate;
     this.filter = filter;
@@ -43,15 +40,10 @@ public class FilteredCursorFactory implements CursorFactory
   @Override
   public CursorHolder makeCursorHolder(CursorBuildSpec spec)
   {
-    return delegate.makeCursorHolder(CursorBuildSpec.builder(spec).andFilter(filter.toFilter()).build());
-  }
-
-  private Filter getFilter()
-  {
     if (filter == null) {
-      return null;
+      return delegate.makeCursorHolder(spec);
     }
-    return filter.toFilter();
+    return delegate.makeCursorHolder(CursorBuildSpec.builder(spec).andFilter(filter.toFilter()).build());
   }
 
   @Override
