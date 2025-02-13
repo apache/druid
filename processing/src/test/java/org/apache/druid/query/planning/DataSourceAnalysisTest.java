@@ -529,6 +529,55 @@ public class DataSourceAnalysisTest
   }
 
   @Test
+  public void testJoinUnderTopLevelSubqueries2()
+  {
+    final JoinDataSource joinDataSource;
+    GroupByQuery query = GroupByQuery.builder()
+        .setDataSource(
+            subquery(
+                joinDataSource = join(
+                    TABLE_FOO,
+                    LOOKUP_LOOKYLOO,
+                    "1.",
+                    JoinType.INNER,
+                    TrueDimFilter.instance()
+                )
+            )
+        )
+        .setInterval(new MultipleIntervalSegmentSpec(MILLENIUM_INTERVALS))
+        .setGranularity(Granularities.ALL)
+        .build();
+
+    final DataSourceAnalysis analysis = query.getDataSourceAnalysis();
+
+    Assert.assertTrue(analysis.isConcreteBased());
+    Assert.assertTrue(analysis.isTableBased());
+    Assert.assertTrue(analysis.isConcreteAndTableBased());
+    Assert.assertEquals(TABLE_FOO, analysis.getBaseDataSource());
+    Assert.assertEquals(null, analysis.getJoinBaseTableFilter().orElse(null));
+    Assert.assertEquals(Optional.of(TABLE_FOO), analysis.getBaseTableDataSource());
+    Assert.assertEquals(Optional.empty(), analysis.getBaseUnionDataSource());
+    Assert.assertEquals(
+        Optional.empty(),
+        analysis.getBaseQuery()
+    );
+    Assert.assertEquals(
+        Optional.empty(),
+        analysis.getBaseQuerySegmentSpec()
+    );
+    Assert.assertEquals(
+        ImmutableList.of(
+            new PreJoinableClause(joinDataSource)
+        ),
+        analysis.getPreJoinableClauses()
+    );
+    Assert.assertFalse(analysis.isGlobal());
+    Assert.assertTrue(analysis.isJoin());
+    Assert.assertTrue(analysis.isBaseColumn("foo"));
+    Assert.assertFalse(analysis.isBaseColumn("1.foo"));
+  }
+
+  @Test
   public void testSubQuery3()
   {
     final QueryDataSource queryDataSource =
