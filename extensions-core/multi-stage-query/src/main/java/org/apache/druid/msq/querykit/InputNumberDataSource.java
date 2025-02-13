@@ -95,17 +95,16 @@ public class InputNumberDataSource implements DataSource
     return true;
   }
 
+  @Override
+  public Function<SegmentReference, SegmentReference> createSegmentMapFunction(Query query)
+  {
+    return Function.identity();
+  }
 
   @Override
   public DataSource withUpdatedDataSource(DataSource newSource)
   {
     return newSource;
-  }
-
-  @Override
-  public Function<SegmentReference, SegmentReference> createSegmentMapFunction(Query query)
-  {
-    return Function.identity();
   }
 
   @Override

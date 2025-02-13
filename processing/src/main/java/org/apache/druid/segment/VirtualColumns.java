@@ -51,7 +51,6 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -572,22 +571,5 @@ public class VirtualColumns implements Cacheable
       return obj instanceof VirtualColumns &&
              ((VirtualColumns) obj).virtualColumns.isEmpty();
     }
-  }
-
-  public Set<String> getRequiredColumns()
-  {
-    Set<String> requiredColumns = new LinkedHashSet<String>();
-    for (VirtualColumn vc : virtualColumns) {
-      requiredColumns.addAll(vc.requiredColumns());
-    }
-    return requiredColumns;
-  }
-
-  public static VirtualColumns union(VirtualColumns v1, VirtualColumns v2)
-  {
-    List<VirtualColumn> li =new ArrayList<VirtualColumn>();
-    li.addAll(v1.virtualColumns);
-    li.addAll(v2.virtualColumns);
-    return VirtualColumns.create(li);
   }
 }
