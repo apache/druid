@@ -237,9 +237,9 @@ public class DartTableInputSpecSlicerTest extends InitializedNullHandlingTest
     }
 
     Mockito.when(serverView.getDruidServerMetadatas()).thenReturn(SERVERS);
-    Mockito.when(serverView.getTimeline(new TableDataSource(DATASOURCE).getAnalysis()))
+    Mockito.when(serverView.getTimeline(new TableDataSource(DATASOURCE)))
            .thenReturn(Optional.of(timeline));
-    Mockito.when(serverView.getTimeline(new TableDataSource(DATASOURCE_NONEXISTENT).getAnalysis()))
+    Mockito.when(serverView.getTimeline(new TableDataSource(DATASOURCE_NONEXISTENT)))
            .thenReturn(Optional.empty());
   }
 
