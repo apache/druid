@@ -132,7 +132,7 @@ public class QueryDataSource implements DataSource
   public DataSourceAnalysis getAnalysis()
   {
     final Query<?> subQuery = this.getQuery();
-    return subQuery.getDataSourceAnalysis();
+    return subQuery.getDataSourceAnalysis().maybeWithBaseQuery(subQuery);
   }
 
   @Override

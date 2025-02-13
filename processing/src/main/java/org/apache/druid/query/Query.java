@@ -294,7 +294,7 @@ public interface Query<T>
 
   default DataSourceAnalysis getDataSourceAnalysis()
   {
-    return getDataSource().getAnalysis().maybeWithBaseQuery(this);
+    return getDataSource().getAnalysis();
   }
 
   default RowSignature getResultRowSignature()

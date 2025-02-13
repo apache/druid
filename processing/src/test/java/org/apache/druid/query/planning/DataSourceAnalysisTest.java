@@ -610,7 +610,6 @@ public class DataSourceAnalysisTest
     EqualsVerifier.forClass(DataSourceAnalysis.class)
                   .usingGetClass()
                   .withNonnullFields("baseDataSource")
-
                   // These fields are not necessary, because they're wholly determined by "dataSource"
                   .withIgnoredFields("baseQuery", "preJoinableClauses", "joinBaseTableFilter")
                   .verify();
