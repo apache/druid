@@ -503,7 +503,7 @@ public class QueriesTest
                                         "j1.",
                                         "\"foo.x\" == \"bar.x\"",
                                         JoinType.INNER,
-                                        TrueDimFilter.instance(),
+                                        null,
                                         ExprMacroTable.nil(),
                                         null,
                                         JoinAlgorithm.BROADCAST

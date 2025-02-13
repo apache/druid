@@ -159,25 +159,26 @@ public class Queries
     if (query.getDataSource() instanceof QueryDataSource) {
       final Query<?> subQuery = ((QueryDataSource) query.getDataSource()).getQuery();
       retVal = query.withDataSource(new QueryDataSource(withSpecificSegments(subQuery, descriptors)));
+      if (retVal.getDataSourceAnalysis().getBaseTableDataSource().isPresent()) {
+        throw new ISE("Analysis shouldn't see thru subQueries (unless it could collapse the subquery) [%s]", query);
+      }
     } else {
       retVal = query.withQuerySegmentSpec(new MultipleSpecificSegmentSpec(descriptors));
+
+      // Verify preconditions and invariants, just in case.
+      final DataSourceAnalysis analysis = retVal.getDataSourceAnalysis();
+
+      // Sanity check: query must be based on a single table.
+      if (!analysis.getBaseTableDataSource().isPresent()) {
+        throw new ISE("Unable to apply specific segments to non-table-based dataSource[%s]", query.getDataSource());
+      }
+
+      if (analysis.getBaseQuerySegmentSpec().isPresent()
+          && !analysis.getBaseQuerySegmentSpec().get().equals(new MultipleSpecificSegmentSpec(descriptors))) {
+        // If you see the error message below, it's a bug in either this function or in DataSourceAnalysis.
+        throw new ISE("Unable to apply specific segments to query with dataSource[%s]", query.getDataSource());
+      }
     }
-
-    // Verify preconditions and invariants, just in case.
-    final DataSource retDataSource = retVal.getDataSource();
-    final DataSourceAnalysis analysis = retDataSource.getAnalysis();
-
-    // Sanity check: query must be based on a single table.
-    if (!analysis.getBaseTableDataSource().isPresent()) {
-      throw new ISE("Unable to apply specific segments to non-table-based dataSource[%s]", query.getDataSource());
-    }
-
-    if (analysis.getBaseQuerySegmentSpec().isPresent()
-        && !analysis.getBaseQuerySegmentSpec().get().equals(new MultipleSpecificSegmentSpec(descriptors))) {
-      // If you see the error message below, it's a bug in either this function or in DataSourceAnalysis.
-      throw new ISE("Unable to apply specific segments to query with dataSource[%s]", query.getDataSource());
-    }
-
     return retVal;
   }
 
