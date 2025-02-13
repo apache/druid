@@ -168,7 +168,11 @@ public class DataSourceAnalysis
    */
   public Optional<QuerySegmentSpec> getBaseQuerySegmentSpec()
   {
-    return getBaseQuery().map(query -> ((BaseQuery<?>) query).getQuerySegmentSpec());
+    if (baseQuery == null && baseQuery instanceof BaseQuery) {
+      BaseQuery<?> baseQuery2 = (BaseQuery<?>) baseQuery;
+      return Optional.of(baseQuery2.getQuerySegmentSpec());
+    }
+    return Optional.empty();
   }
 
   /**
