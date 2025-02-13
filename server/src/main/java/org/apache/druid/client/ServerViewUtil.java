@@ -58,7 +58,7 @@ public class ServerViewUtil
   )
   {
     final DataSourceAnalysis analysis = datasource.getAnalysis();
-    final Optional<? extends TimelineLookup<String, ServerSelector>> maybeTimeline = serverView.getTimeline(analysis);
+    final Optional<? extends TimelineLookup<String, ServerSelector>> maybeTimeline = serverView.getTimeline(analysis.getBaseTableDataSource().get());
     if (!maybeTimeline.isPresent()) {
       return Collections.emptyList();
     }
