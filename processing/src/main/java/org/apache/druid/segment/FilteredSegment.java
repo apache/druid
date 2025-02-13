@@ -20,10 +20,10 @@
 package org.apache.druid.segment;
 
 import org.apache.druid.query.filter.DimFilter;
+
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-// FIXME
 public class FilteredSegment extends WrappedSegmentReference
 {
   @Nullable

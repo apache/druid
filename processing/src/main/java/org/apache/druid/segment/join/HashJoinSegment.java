@@ -175,15 +175,4 @@ public class HashJoinSegment implements SegmentReference
       return Optional.empty();
     }
   }
-
-  public static Object build(SegmentReference apply, Filter baseFilterToUse, List<? extends Object> firstNonNull,
-      JoinFilterPreAnalysis joinFilterPreAnalysis2)
-  {
-    if(true)
-    {
-      throw new RuntimeException("FIXME: Unimplemented!");
-    }
-    return null;
-    
-  }
 }
