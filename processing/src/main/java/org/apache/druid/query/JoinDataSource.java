@@ -439,7 +439,7 @@ public class JoinDataSource implements DataSource
                 )
             )
         ).orElse(null);
-        // FIXME  add baseFilterToUse to cfg instead
+        // FIXME  add baseFilterToUse to cfg instea
 
         clausesToUse = conversionResult.rhs;
 
