@@ -172,23 +172,6 @@ public class DataSourceAnalysis
   }
 
   /**
-   * Returns the data source analysis with or without the updated query.
-   * If the DataSourceAnalysis already has a non-null baseQuery, no update is required
-   * Else this method creates a new analysis object with the base query provided in the input
-   *
-   * @param query the query to add to the analysis if the baseQuery is null
-   *
-   * @return the existing analysis if it has non-null basequery, else a new one with the updated base query
-   */
-  public DataSourceAnalysis maybeWithBaseQuery(Query<?> query)
-  {
-    if (!getBaseQuery().isPresent() && query instanceof BaseQuery) {
-      return new DataSourceAnalysis(baseDataSource, query, joinBaseTableFilter, preJoinableClauses);
-    }
-    return this;
-  }
-
-  /**
    * Returns join clauses corresponding to joinable leaf datasources (every leaf except the bottom-leftmost).
    */
   public List<PreJoinableClause> getPreJoinableClauses()

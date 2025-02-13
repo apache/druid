@@ -289,7 +289,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
   @VisibleForTesting
   <T> DatasourceBundle getBundle(final Query<T> query)
   {
-    final DataSourceAnalysis analysis = query.getDataSource().getAnalysis();
+    final DataSourceAnalysis analysis = query.getDataSourceAnalysis();
 
     final TableDataSource table =
         analysis.getBaseTableDataSource()
