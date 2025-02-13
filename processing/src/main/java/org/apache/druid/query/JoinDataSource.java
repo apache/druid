@@ -439,13 +439,10 @@ public class JoinDataSource implements DataSource
                 )
             )
         ).orElse(null);
+        // FIXME  add baseFilterToUse to cfg instead
+
         clausesToUse = conversionResult.rhs;
-        if (true) {
-          // FIXME doesn't seem like this is needed
-          Set<String> a = conversionResult.lhs.stream().flatMap(f -> f.getRequiredColumns().stream())
-              .collect(Collectors.toSet());
-          subCfg = subCfg.withColumns(a);
-        }
+
       } else {
         baseFilterToUse = baseFilter;
         clausesToUse = joinableClauses.getJoinableClauses();
