@@ -77,8 +77,8 @@ public class MSQWorkerTaskLauncher implements RetryCapableWorkerManager
 
   public static class MSQWorkerTaskLauncherConfig
   {
-    public long highFrequenceCheckMillis = 100;
-    public long lowFrequenceCheckMillis = 2000;
+    public long highFrequencyCheckMillis = 100;
+    public long lowFrequencyCheckMillis = 2000;
     public long switchToLowFrequencyCheckAfterMillis = 10000;
     public long shutdownTimeoutMillis = Duration.ofMinutes(1).toMillis();
   }
@@ -156,8 +156,8 @@ public class MSQWorkerTaskLauncher implements RetryCapableWorkerManager
       final OverlordClient overlordClient,
       final WorkerFailureListener workerFailureListener,
       final Map<String, Object> taskContextOverrides,
-      long maxTaskStartDelayMillis,
-      MSQWorkerTaskLauncherConfig config
+      final long maxTaskStartDelayMillis,
+      final MSQWorkerTaskLauncherConfig config
   )
   {
     this.controllerTaskId = controllerTaskId;
@@ -763,9 +763,9 @@ public class MSQWorkerTaskLauncher implements RetryCapableWorkerManager
 
     if (maxTaskStartTime.isPresent() &&
         System.currentTimeMillis() - maxTaskStartTime.getAsLong() < config.switchToLowFrequencyCheckAfterMillis) {
-      return config.highFrequenceCheckMillis - loopDurationMillis;
+      return config.highFrequencyCheckMillis - loopDurationMillis;
     } else {
-      return config.lowFrequenceCheckMillis - loopDurationMillis;
+      return config.lowFrequencyCheckMillis - loopDurationMillis;
     }
   }
 
