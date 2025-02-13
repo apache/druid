@@ -332,7 +332,7 @@ public class CachingClusteredClient implements QuerySegmentWalker
     )
     {
       final Optional<? extends TimelineLookup<String, ServerSelector>> maybeTimeline = serverView.getTimeline(
-          dataSourceAnalysis.getBaseTableDataSource().get()
+          dataSourceAnalysis.getBaseTableDataSource()
       );
       if (!maybeTimeline.isPresent()) {
         return new ClusterQueryResult<>(Sequences.empty(), 0);

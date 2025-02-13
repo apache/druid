@@ -168,7 +168,7 @@ public class Queries
     final DataSourceAnalysis analysis = retDataSource.getAnalysis();
 
     // Sanity check: query must be based on a single table.
-    if (!analysis.getBaseTableDataSource().isPresent()) {
+    if (!(analysis.getBaseDataSource() instanceof TableDataSource)) {
       throw new ISE("Unable to apply specific segments to non-table-based dataSource[%s]", query.getDataSource());
     }
 

@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.planning;
 
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
@@ -30,6 +31,7 @@ import org.apache.druid.query.UnnestDataSource;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.join.JoinPrefixUtils;
+import org.postgresql.ds.common.BaseDataSource;
 
 import javax.annotation.Nullable;
 
@@ -110,17 +112,19 @@ public class DataSourceAnalysis
   }
 
   /**
-   * If {@link #getBaseDataSource()} is a {@link TableDataSource}, returns it. Otherwise, returns an empty Optional.
+   * Unwraps the {@link #getBaseDataSource()} if its a {@link TableDataSource}.
    *
-   * Note that this can return empty even if {@link #isConcreteAndTableBased()} is true. This happens if the base
+   * @throws An error of type {@link DruidException.Category#DEFENSIVE} if the {@link BaseDataSource} is not a table.
+   *
+   * note that this may not be true even {@link #isConcreteAndTableBased()} is true - in cases when the base
    * datasource is a {@link UnionDataSource} of {@link TableDataSource}.
    */
-  public Optional<TableDataSource> getBaseTableDataSource()
+  public TableDataSource getBaseTableDataSource()
   {
     if (baseDataSource instanceof TableDataSource) {
-      return Optional.of((TableDataSource) baseDataSource);
+      return (TableDataSource) baseDataSource;
     } else {
-      return Optional.empty();
+      throw DruidException.defensive("Base dataSource was not a table!");
     }
   }
 
