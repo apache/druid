@@ -133,7 +133,6 @@ public class DartQueryMaker implements QueryMaker
     }
     final MSQSpec querySpec = MSQTaskQueryMaker.makeQuerySpec(
         null,
-        druidQuery.getQuery(),
         druidQuery,
         fieldMapping,
         plannerContext,
