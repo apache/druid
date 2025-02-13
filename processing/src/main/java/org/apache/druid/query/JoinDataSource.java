@@ -41,7 +41,6 @@ import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.TrueDimFilter;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.planning.PreJoinableClause;
-import org.apache.druid.query.planning.PreJoinableClause.UnCacheableDataSourceException;
 import org.apache.druid.segment.SegmentReference;
 import org.apache.druid.segment.filter.Filters;
 import org.apache.druid.segment.join.HashJoinSegment;
@@ -64,6 +63,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -305,7 +305,7 @@ public class JoinDataSource implements DataSource
     DimFilter joinBaseFilter = analysis.getJoinBaseTableFilter().orElse(null);
 
     for (final PreJoinableClause clause : analysis.getPreJoinableClauses()) {
-      current = clause.withUpdatedDataSource(current, joinBaseFilter, this.joinableFactoryWrapper);
+      current = clause.makeUpdatedJoinDataSource(current, joinBaseFilter, this.joinableFactoryWrapper);
       joinBaseFilter = null;
     }
     return current;
@@ -324,15 +324,19 @@ public class JoinDataSource implements DataSource
     if (analysis.getJoinBaseTableFilter().isPresent()) {
       keyBuilder.appendCacheable(analysis.getJoinBaseTableFilter().get());
     }
-    try {
-      for (PreJoinableClause clause : clauses) {
-        clause.appendCacheKey(keyBuilder, joinableFactoryWrapper);
+    for (PreJoinableClause clause : clauses) {
+      final Optional<byte[]> bytes =
+          joinableFactoryWrapper.getJoinableFactory()
+                                .computeJoinCacheKey(clause.getDataSource(), clause.getCondition());
+      if (!bytes.isPresent()) {
+        // Encountered a data source which didn't support cache yet
+        log.debug("skipping caching for join since [%s] does not support caching", clause.getDataSource());
+        return new byte[]{};
       }
-    }
-    catch (UnCacheableDataSourceException e) {
-      // Encountered a data source which didn't support cache yet
-      log.debug("skipping caching for join since [%s] does not support caching", e.dataSource);
-      return new byte[] {}; // FIXME why return ?!??
+      keyBuilder.appendByteArray(bytes.get());
+      keyBuilder.appendString(clause.getCondition().getOriginalExpression());
+      keyBuilder.appendString(clause.getPrefix());
+      keyBuilder.appendString(clause.getJoinType().name());
     }
     return keyBuilder.build();
   }
@@ -402,13 +406,8 @@ public class JoinDataSource implements DataSource
   public Function<SegmentReference, SegmentReference> createSegmentMapFunction(SegmentMapConfig cfg)
   {
     DataSourceAnalysis safeAnalysis = getSafeAnalysisForDataSource();
-    List<PreJoinableClause> clauses = safeAnalysis.getPreJoinableClauses();//safeAnalysis.getSafePreJoinableClauses();
+    List<PreJoinableClause> clauses = safeAnalysis.getPreJoinableClauses();
     Filter baseFilter = safeAnalysis.getJoinBaseTableFilter().map(Filters::toFilter).orElse(null);
-
-    if (safeAnalysis.getBaseQuery().isPresent()) {
-      // FIXME
-      throw new RuntimeException("need to analyze this further");
-    }
 
     if (clauses.isEmpty()) {
       return safeAnalysis.getBaseDataSource().createSegmentMapFunction(cfg);
