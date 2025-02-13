@@ -31,7 +31,6 @@ import org.apache.druid.query.UnnestDataSource;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.join.JoinPrefixUtils;
-import org.postgresql.ds.common.BaseDataSource;
 
 import javax.annotation.Nullable;
 
