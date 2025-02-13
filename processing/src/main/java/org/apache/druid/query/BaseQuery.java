@@ -110,8 +110,7 @@ public abstract class BaseQuery<T> implements Query<T>
   @VisibleForTesting
   public static QuerySegmentSpec getQuerySegmentSpecForLookUp(BaseQuery<?> query)
   {
-    DataSource queryDataSource = query.getDataSource();
-    return queryDataSource.getAnalysis()
+    return query.getDataSourceAnalysis()
                              .getBaseQuerySegmentSpec()
                              .orElseGet(query::getQuerySegmentSpec);
   }
