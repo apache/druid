@@ -20,8 +20,6 @@
 package org.apache.druid.sql.calcite;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Maps;
-import org.apache.druid.sql.calcite.DecoupledTestConfig.QuidemTestCaseReason;
 import org.apache.druid.sql.calcite.NotYetSupported.Modes;
 import org.junit.Test;
 import org.reflections.Reflections;
@@ -36,7 +34,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
@@ -55,6 +52,12 @@ public class NotYetSupportedUsageTest
     }
 
     assertEquals("There are unused modes which should be removed", Collections.emptySet(), modes);
+  }
+
+  private Set<Method> getAnnotatedMethods()
+  {
+    return new Reflections("org.apache.druid.sql", new MethodAnnotationsScanner())
+        .getMethodsAnnotatedWith(NotYetSupported.class);
   }
 
   static class ReportEntry
@@ -78,9 +81,9 @@ public class NotYetSupportedUsageTest
 
     public String className;
     private List<String> methodNames;
-    private Enum<?> mode;
+    private Modes mode;
 
-    public ReportEntry(String className, String methodName, Enum<?> mode)
+    public ReportEntry(String className, String methodName, Modes mode)
     {
       this.className = className;
       this.mode = mode;
@@ -101,65 +104,21 @@ public class NotYetSupportedUsageTest
     @Override
     public String toString()
     {
-      return " | " + className + " | " + methodNames.size() + " | " + mode.name() + " | " + mode + " | ";
+      return " | " + className + " | " + methodNames.size() + " | " + mode + " | " + mode.regex + " | ";
     }
   }
 
-  private Set<Method> getAnnotatedMethods()
-  {
-    return new Reflections("org.apache.druid.sql", new MethodAnnotationsScanner())
-        .getMethodsAnnotatedWith(NotYetSupported.class);
-  }
-
   @Test
-  public void createModesReport()
+  public void createReport()
   {
     Set<Method> methodsAnnotatedWith = getAnnotatedMethods();
-    Map<Method, Modes> map = Maps.asMap(methodsAnnotatedWith, this::getModesAnnotation);
-    createReport(map);
-  }
 
-  private Set<Method> getDecoupledTestConfigAnnotatedMethods()
-  {
-    return new Reflections("org.apache.druid.sql", new MethodAnnotationsScanner())
-        .getMethodsAnnotatedWith(DecoupledTestConfig.class);
-  }
-
-  @Test
-  public void createQuidemReasonReport()
-  {
-    Set<Method> methodsAnnotatedWith = getDecoupledTestConfigAnnotatedMethods();
-    Map<Method, QuidemTestCaseReason> map = Maps.asMap(methodsAnnotatedWith, this::getQuidemReasonAnnotations);
-    createReport(map);
-  }
-
-  private Modes getModesAnnotation(Method method)
-  {
-    NotYetSupported annotation = method.getAnnotation(NotYetSupported.class);
-    if (annotation == null) {
-      return null;
-    }
-    return annotation.value();
-  }
-
-  private QuidemTestCaseReason getQuidemReasonAnnotations(Method method)
-  {
-    DecoupledTestConfig annotation = method.getAnnotation(DecoupledTestConfig.class);
-    if (annotation == null) {
-      return null;
-    }
-    return annotation.quidemReason();
-  }
-
-  private <E extends Enum<?>> void createReport(Map<Method, E> methodsAnnotatedWith)
-  {
     Map<List<Object>, ReportEntry> mentryMap = new HashMap<>();
-    for (Entry<Method, E> e : methodsAnnotatedWith.entrySet()) {
-      Method method = e.getKey();
+    for (Method method : methodsAnnotatedWith) {
       ReportEntry entry = new ReportEntry(
           method.getDeclaringClass().getSimpleName(),
           method.getName(),
-          e.getValue()
+          getAnnotation(method)
       );
       ReportEntry existing = mentryMap.get(entry.getKey());
       if (existing != null) {
@@ -168,11 +127,21 @@ public class NotYetSupportedUsageTest
         mentryMap.put(entry.getKey(), entry);
       }
     }
+
     ArrayList<ReportEntry> results = new ArrayList<>(mentryMap.values());
     results.sort(ReportEntry.CLASS_NCASES_MODE_COMPARATOR);
     for (ReportEntry reportEntry : results) {
       System.out.println(reportEntry);
     }
+
   }
 
+  private Modes getAnnotation(Method method)
+  {
+    NotYetSupported annotation = method.getAnnotation(NotYetSupported.class);
+    if (annotation == null) {
+      return null;
+    }
+    return annotation.value();
+  }
 }
