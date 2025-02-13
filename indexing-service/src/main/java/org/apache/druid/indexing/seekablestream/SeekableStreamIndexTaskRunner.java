@@ -369,6 +369,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   private TaskStatus runInternal(TaskToolbox toolbox) throws Exception
   {
     startTime = DateTimes.nowUtc();
+    log.debug("runInternal: For task [%s] Changing State from: [%s] to [%s]", task.getId(), status, Status.STARTING);
     status = Status.STARTING;
 
     setToolbox(toolbox);
@@ -587,6 +588,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
       // Main loop.
       // Could eventually support leader/follower mode (for keeping replicas more in sync)
       boolean stillReading = !assignment.isEmpty();
+      log.debug("runInternal: For task [%s] Changing State from: [%s] to [%s]", task.getId(), status, Status.READING);
       status = Status.READING;
       Throwable caughtExceptionInner = null;
 
@@ -608,6 +610,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
 
           // if stop is requested or task's end sequence is set by call to setEndOffsets method with finish set to true
           if (stopRequested.get() || sequences.size() == 0 || getLastSequenceMetadata().isCheckpointed()) {
+            log.debug("runInterval: For task [%s] Changing State from: [%s] to [%s]", task.getId(), status, Status.PUBLISHING);
             status = Status.PUBLISHING;
           }
 
@@ -808,7 +811,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
         if (stopRequested.get() && !publishOnStop.get()) {
           throw new InterruptedException("Stopping without publishing");
         }
-
+        log.debug("runInterval: For task [%s] Changing State from: [%s] to [%s] inside synchronized block", task.getId(), status, Status.PUBLISHING);
         status = Status.PUBLISHING;
       }
 
@@ -1353,6 +1356,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     pauseLock.lockInterruptibly();
     try {
       if (pauseRequested) {
+        log.debug("possiblyPause: For task [%s] Changing State from: [%s] to [%s]", task.getId(), status, Status.PAUSED);
         status = Status.PAUSED;
         hasPaused.signalAll();
 
@@ -1362,6 +1366,7 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
           shouldResume.await();
         }
 
+        log.debug("possiblyPause: For task [%s] Changing State from: [%s] to [%s]", task.getId(), status, Status.READING);
         status = Status.READING;
         shouldResume.signalAll();
         log.info("Received resume command, resuming ingestion.");
@@ -1866,12 +1871,13 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   @VisibleForTesting
   public Response pause() throws InterruptedException
   {
-    log.debug("Pausing the task with state: [%s]", status);
-    if (!(status == Status.PAUSED || status == Status.READING)) {
-      log.debug("Returning 409 conflict for task with state: [%s]", status);
+    Status currentStatus = status;
+    log.debug("Pausing the task [%s] with currentState: [%s], volatileState: [%s]", task.getId(), currentStatus, status);
+    if (!(currentStatus == Status.PAUSED || currentStatus == Status.READING)) {
+      log.debug("Returning 409 conflict for task [%s] with currentState: [%s], volatileState: [%s]", task.getId(), currentStatus, status);
       return Response.status(Response.Status.CONFLICT)
                      .type(MediaType.TEXT_PLAIN)
-                     .entity(StringUtils.format("Can't pause, task is not in a pausable state (state: [%s])", status))
+                     .entity(StringUtils.format("Can't pause, task is not in a pausable state (state: [%s])", currentStatus))
                      .build();
     }
 
