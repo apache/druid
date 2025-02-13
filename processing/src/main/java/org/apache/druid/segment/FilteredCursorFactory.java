@@ -23,6 +23,7 @@ import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.RowSignature;
+
 import javax.annotation.Nullable;
 
 public class FilteredCursorFactory implements CursorFactory

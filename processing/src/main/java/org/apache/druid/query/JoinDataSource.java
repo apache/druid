@@ -472,7 +472,7 @@ public class JoinDataSource implements DataSource
       List<JoinableClause> clausesToUse,
       JoinFilterPreAnalysis joinFilterPreAnalysis)
   {
-    if(clausesToUse.isEmpty() && baseFilterToUse == null ) {
+    if (clausesToUse.isEmpty() && baseFilterToUse == null) {
       return sourceSegment;
     }
     return new HashJoinSegment(sourceSegment, baseFilterToUse, clausesToUse, joinFilterPreAnalysis);
@@ -510,7 +510,8 @@ public class JoinDataSource implements DataSource
         preJoinableClauses.add(e);
         current = joinDataSource.getLeft();
         continue;
-      } if (vertexBoundary ) {
+      }
+      if (vertexBoundary) {
         if (current instanceof UnnestDataSource) {
           final UnnestDataSource unnestDataSource = (UnnestDataSource) current;
           current = unnestDataSource.getBase();

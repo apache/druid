@@ -294,13 +294,21 @@ public interface Query<T>
 
   default DataSourceAnalysis getDataSourceAnalysis()
   {
-    if (couldCollapesSubQuery()) {
+    if (mayCollapseDataSource()) {
       return ((QueryDataSource) getDataSource()).getQuery().getDataSourceAnalysis();
     }
     return getDataSource().getAnalysis();
   }
 
-  default boolean couldCollapesSubQuery() {
+  /**
+   * Signals that the execution of this query could also transparently handle
+   * the input datasource as well.
+   *
+   * This is a not-so-nice way to support that {@link GroupByQuery} could
+   * collapse other {@link GroupByQuery}-ies in {@link QueryDataSource}-es.
+   */
+  default boolean mayCollapseDataSource()
+  {
     return false;
   }
 

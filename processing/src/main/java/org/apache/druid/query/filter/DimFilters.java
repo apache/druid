@@ -74,8 +74,7 @@ public class DimFilters
 
   public static DimFilter conjunction(List<DimFilter> filters)
   {
-    switch (filters.size())
-    {
+    switch (filters.size()) {
       case 0:
         return TrueDimFilter.instance();
       case 1:
