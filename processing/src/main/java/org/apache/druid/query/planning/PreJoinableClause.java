@@ -46,11 +46,9 @@ public class PreJoinableClause
   private final JoinType joinType;
   private final JoinConditionAnalysis condition;
   private final JoinAlgorithm joinAlgorithm;
-  private final JoinDataSource joinDataSource;
 
   public PreJoinableClause(final JoinDataSource joinDataSource)
   {
-    this.joinDataSource = joinDataSource;
     this.prefix = JoinPrefixUtils.validatePrefix(joinDataSource.getRightPrefix());
     this.dataSource = Preconditions.checkNotNull(joinDataSource.getRight(), "dataSource");
     this.joinType = Preconditions.checkNotNull(joinDataSource.getJoinType(), "joinType");
@@ -158,15 +156,4 @@ public class PreJoinableClause
     keyBuilder.appendString(clause.getPrefix());
     keyBuilder.appendString(clause.getJoinType().name());
   }
-
-  public boolean isOriginalLeftIsJoin()
-  {
-    return joinDataSource.getLeft() instanceof JoinDataSource;
-  }
-
-  public JoinDataSource getJoinDataSource()
-  {
-    return joinDataSource;
-  }
-
 }
