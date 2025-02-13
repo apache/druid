@@ -29,6 +29,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
@@ -401,71 +402,68 @@ public class JoinDataSource implements DataSource
   /**
    * Creates a Function that maps base segments to {@link HashJoinSegment} if needed (i.e. if the number of join
    * clauses is > 0). If mapping is not needed, this method will return {@link Function#identity()}.
+   * @param query
    */
   @Override
-  public Function<SegmentReference, SegmentReference> createSegmentMapFunction(SegmentMapConfig cfg)
+  public Function<SegmentReference, SegmentReference> createSegmentMapFunction(Query query)
   {
     DataSourceAnalysis safeAnalysis = getSafeAnalysisForDataSource();
     List<PreJoinableClause> clauses = safeAnalysis.getPreJoinableClauses();
     Filter baseFilter = safeAnalysis.getJoinBaseTableFilter().map(Filters::toFilter).orElse(null);
 
     if (clauses.isEmpty()) {
-      return safeAnalysis.getBaseDataSource().createSegmentMapFunction(cfg);
-    } else {
-      final JoinableClauses joinableClauses = JoinableClauses.createClauses(
-          clauses,
-          joinableFactoryWrapper.getJoinableFactory()
-      );
-      final JoinFilterRewriteConfig filterRewriteConfig = cfg.getJoinFilterRewriteConfig();
-
-      // Pick off any join clauses that can be converted into filters.
-      final Set<String> requiredColumns = cfg.getRequiredColumns();
-      final Filter baseFilterToUse;
-      final List<JoinableClause> clausesToUse;
-      SegmentMapConfig subCfg = cfg;
-
-      if (requiredColumns != null && filterRewriteConfig.isEnableRewriteJoinToFilter()) {
-        final Pair<List<Filter>, List<JoinableClause>> conversionResult = JoinableFactoryWrapper.convertJoinsToFilters(
-            joinableClauses.getJoinableClauses(),
-            requiredColumns,
-            Ints.checkedCast(Math.min(filterRewriteConfig.getFilterRewriteMaxSize(), Integer.MAX_VALUE))
-        );
-
-        baseFilterToUse = Filters.maybeAnd(
-            Lists.newArrayList(
-                Iterables.concat(
-                    Collections.singleton(baseFilter),
-                    conversionResult.lhs
-                )
-            )
-        ).orElse(null);
-        // FIXME  add baseFilterToUse to cfg instea
-
-        clausesToUse = conversionResult.rhs;
-
-      } else {
-        baseFilterToUse = baseFilter;
-        clausesToUse = joinableClauses.getJoinableClauses();
-      }
-
-      // Analyze remaining join clauses to see if filters on them can be pushed down.
-      final JoinFilterPreAnalysis joinFilterPreAnalysis = JoinFilterAnalyzer.computeJoinFilterPreAnalysis(
-          new JoinFilterPreAnalysisKey(
-              filterRewriteConfig,
-              clausesToUse,
-              cfg.getVirtualColumns(),
-              Filters.maybeAnd(Arrays.asList(baseFilterToUse, Filters.toFilter(cfg.getFilter())))
-                  .orElse(null)
-          )
-      );
-      final Function<SegmentReference, SegmentReference> baseMapFn = safeAnalysis.getBaseDataSource().createSegmentMapFunction(subCfg);
-      return baseSegment -> newHashJoinSegment(
-          baseMapFn.apply(baseSegment),
-          baseFilterToUse,
-          clausesToUse,
-          joinFilterPreAnalysis
-      );
+      throw DruidException.defensive("A JoinDataSource with no join clauses should not be mapped.");
     }
+    final JoinableClauses joinableClauses = JoinableClauses.createClauses(
+        clauses,
+        joinableFactoryWrapper.getJoinableFactory()
+    );
+    final JoinFilterRewriteConfig filterRewriteConfig = JoinFilterRewriteConfig.forQuery(query);
+
+    // Pick off any join clauses that can be converted into filters.
+    final Set<String> requiredColumns = query.getRequiredColumns();
+    final Filter baseFilterToUse;
+    final List<JoinableClause> clausesToUse;
+
+    if (requiredColumns != null && filterRewriteConfig.isEnableRewriteJoinToFilter()) {
+      final Pair<List<Filter>, List<JoinableClause>> conversionResult = JoinableFactoryWrapper.convertJoinsToFilters(
+          joinableClauses.getJoinableClauses(),
+          requiredColumns,
+          Ints.checkedCast(Math.min(filterRewriteConfig.getFilterRewriteMaxSize(), Integer.MAX_VALUE))
+      );
+
+      baseFilterToUse = Filters.maybeAnd(
+          Lists.newArrayList(
+              Iterables.concat(
+                  Collections.singleton(baseFilter),
+                  conversionResult.lhs
+              )
+          )
+      ).orElse(null);
+      clausesToUse = conversionResult.rhs;
+
+    } else {
+      baseFilterToUse = baseFilter;
+      clausesToUse = joinableClauses.getJoinableClauses();
+    }
+
+    // Analyze remaining join clauses to see if filters on them can be pushed down.
+    final JoinFilterPreAnalysis joinFilterPreAnalysis = JoinFilterAnalyzer.computeJoinFilterPreAnalysis(
+        new JoinFilterPreAnalysisKey(
+            filterRewriteConfig,
+            clausesToUse,
+            query.getVirtualColumns(),
+            Filters.maybeAnd(Arrays.asList(baseFilterToUse, Filters.toFilter(query.getFilter())))
+                .orElse(null)
+        )
+    );
+    final Function<SegmentReference, SegmentReference> baseMapFn = safeAnalysis.getBaseDataSource().createSegmentMapFunction(query);
+    return baseSegment -> newHashJoinSegment(
+        baseMapFn.apply(baseSegment),
+        baseFilterToUse,
+        clausesToUse,
+        joinFilterPreAnalysis
+    );
   }
 
   private SegmentReference newHashJoinSegment(

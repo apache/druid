@@ -20,6 +20,7 @@
 package org.apache.druid.segment.join;
 
 import org.apache.druid.query.DataSource;
+import org.apache.druid.query.Query;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.SegmentReference;
 
@@ -70,7 +71,7 @@ public class NoopDataSource implements DataSource
   }
 
   @Override
-  public Function<SegmentReference, SegmentReference> createSegmentMapFunction(SegmentMapConfig cfg)
+  public Function<SegmentReference, SegmentReference> createSegmentMapFunction(Query query)
   {
     return Function.identity();
   }

@@ -108,12 +108,9 @@ public class QueryDataSource implements DataSource
   }
 
   @Override
-  public Function<SegmentReference, SegmentReference> createSegmentMapFunction(SegmentMapConfig cfg)
+  public Function<SegmentReference, SegmentReference> createSegmentMapFunction(Query query)
   {
-    // FIXME: not sure about this
-    final Query subQuery = this.getQuery();
-    SegmentMapConfig newCfg = SegmentMapConfig.of(subQuery);
-    return subQuery.getDataSource().createSegmentMapFunction(newCfg);
+    return Function.identity();
   }
 
   @Override

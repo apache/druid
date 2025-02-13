@@ -20,8 +20,6 @@
 package org.apache.druid.query;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import org.apache.druid.java.util.common.IAE;
@@ -29,6 +27,7 @@ import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.FilteredSegment;
 import org.apache.druid.segment.SegmentReference;
+
 import javax.annotation.Nullable;
 
 import java.util.List;
@@ -49,7 +48,6 @@ import java.util.function.Function;
  * putting more work to be done at the broker level. This pushes the operations down to the
  * segments and is more performant.
  */
-@JsonInclude(Include.NON_DEFAULT)
 public class FilteredDataSource implements DataSource
 {
   private final DataSource base;
@@ -65,12 +63,6 @@ public class FilteredDataSource implements DataSource
   public DimFilter getFilter()
   {
     return filter;
-  }
-
-  // To provide defaults for Jackson
-  private FilteredDataSource()
-  {
-    this(null, null);
   }
 
   private FilteredDataSource(DataSource base, @Nullable DimFilter filter)
@@ -129,13 +121,9 @@ public class FilteredDataSource implements DataSource
   }
 
   @Override
-  public Function<SegmentReference, SegmentReference> createSegmentMapFunction(SegmentMapConfig cfg)
+  public Function<SegmentReference, SegmentReference> createSegmentMapFunction(Query query)
   {
-    SegmentMapConfig newCfg = cfg.withFilter(filter);
-
-    final Function<SegmentReference, SegmentReference> segmentMapFn = base.createSegmentMapFunction(
-        newCfg
-    );
+    final Function<SegmentReference, SegmentReference> segmentMapFn = base.createSegmentMapFunction(query);
     return baseSegment -> new FilteredSegment(segmentMapFn.apply(baseSegment), filter);
   }
 

@@ -33,7 +33,6 @@ import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.SegmentDescriptor;
-import org.apache.druid.query.DataSource.SegmentMapConfig;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.SegmentReference;
@@ -97,7 +96,7 @@ public class LocalQuerySegmentWalker implements QuerySegmentWalker
     final AtomicLong cpuAccumulator = new AtomicLong(0L);
 
     final Function<SegmentReference, SegmentReference> segmentMapFn = dataSourceFromQuery
-        .createSegmentMapFunction(SegmentMapConfig.of(query));
+        .createSegmentMapFunction(query);
 
     final QueryRunnerFactory<T, Query<T>> queryRunnerFactory = conglomerate.findFactory(query);
     final QueryRunner<T> baseRunner = queryRunnerFactory.mergeRunners(

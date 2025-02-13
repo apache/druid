@@ -21,17 +21,10 @@ package org.apache.druid.query;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.google.common.collect.Sets;
-import org.apache.druid.query.filter.DimFilter;
-import org.apache.druid.query.filter.DimFilters;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.planning.PreJoinableClause;
 import org.apache.druid.query.policy.Policy;
 import org.apache.druid.segment.SegmentReference;
-import org.apache.druid.segment.VirtualColumns;
-import org.apache.druid.segment.join.filter.rewrite.JoinFilterRewriteConfig;
-
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -111,98 +104,10 @@ public interface DataSource
    */
   boolean isConcrete();
 
-  static class SegmentMapConfig
-  {
-    private Query query;
-    private VirtualColumns virtualColumns;
-    private Optional<Set> neededColumns;
-    private DimFilter filter;
-
-    public SegmentMapConfig(Query query)
-    {
-      this(query, query.getVirtualColumns(), Optional.ofNullable(query.getRequiredColumns()), query.getFilter());
-    }
-
-    public SegmentMapConfig(
-        Query query,
-        VirtualColumns virtualColumns,
-        Optional<Set> requiredColumns,
-        DimFilter dimFilter)
-    {
-      this.query = query;
-      this.virtualColumns = virtualColumns;
-      this.neededColumns = requiredColumns;
-      this.filter = dimFilter;
-    }
-
-    public static SegmentMapConfig of(Query query)
-    {
-      return new SegmentMapConfig(query);
-    }
-
-    public JoinFilterRewriteConfig getJoinFilterRewriteConfig()
-    {
-      return JoinFilterRewriteConfig.forQuery(query);
-    }
-
-    public Set<String> getRequiredColumns()
-    {
-      if (neededColumns.isEmpty()) {
-        return null;
-      }
-      Set<String> re = new HashSet<>(neededColumns.get());
-      re.removeAll(virtualColumns.getColumnNames());
-      return re;
-    }
-
-    public VirtualColumns getVirtualColumns()
-    {
-      return virtualColumns;
-    }
-
-    public DimFilter getFilter()
-    {
-      return filter;
-    }
-
-    public SegmentMapConfig withColumns(Set<String> requiredColumns)
-    {
-      return new SegmentMapConfig(query, virtualColumns, unionColumnNames(this.neededColumns, requiredColumns), filter);
-    }
-
-    private Optional<Set> unionColumnNames(Optional<Set> s1, Set<String> s2)
-    {
-      if (s1.isEmpty()) {
-        return s1;
-      }
-      return Optional.of(Sets.union(s1.get(), s2));
-    }
-
-    public SegmentMapConfig withVirtualColumns(VirtualColumns virtualColumns)
-    {
-      return new SegmentMapConfig(
-          query,
-          VirtualColumns.union(this.virtualColumns, virtualColumns),
-          unionColumnNames(this.neededColumns, virtualColumns.getRequiredColumns()),
-          filter
-      );
-    }
-
-    public SegmentMapConfig withFilter(DimFilter filter2)
-    {
-      return new SegmentMapConfig(
-          query,
-          virtualColumns,
-          unionColumnNames(this.neededColumns, filter2.getRequiredColumns()),
-          DimFilters.conjunction(filter, filter2)
-      );
-    }
-  }
-
   /**
    * Returns a segment function on to how to segment should be modified.
    */
-  Function<SegmentReference, SegmentReference> createSegmentMapFunction(SegmentMapConfig query);
+  Function<SegmentReference, SegmentReference> createSegmentMapFunction(Query query);
 
   /**
    * Returns an updated datasource based on the specified new source.
