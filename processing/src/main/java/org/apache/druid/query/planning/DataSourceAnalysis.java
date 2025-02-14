@@ -168,7 +168,7 @@ public class DataSourceAnalysis
    */
   public Optional<QuerySegmentSpec> getBaseQuerySegmentSpec()
   {
-    if (baseQuery == null && baseQuery instanceof BaseQuery) {
+    if (baseQuery != null && baseQuery instanceof BaseQuery) {
       BaseQuery<?> baseQuery2 = (BaseQuery<?>) baseQuery;
       return Optional.of(baseQuery2.getQuerySegmentSpec());
     }
