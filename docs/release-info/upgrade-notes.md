@@ -38,6 +38,108 @@ For more information, see [Migration guide: front-coded dictionaries](./migr-fro
 
 If you're already using this feature, you don't need to take any action. 
 
+## 32.0.0
+
+### Incompatible changes
+
+### ANSI-SQL compatibility and query results
+
+Support for the configs that let you maintain older behavior that wasn't ANSI-SQL compliant have been removed:
+
+- `druid.generic.useDefaultValueForNull=true`
+- `druid.expressions.useStrictBooleans=false`
+- `druid.generic.useThreeValueLogicForNativeFilters=false` 
+
+They no longer affect your query results. Only SQL-compliant non-legacy behavior is supported now. 
+
+If the configs are set to the legacy behavior, Druid services will fail to start. 
+
+If you want to continue to get the same results without these settings, you must update your queries or your results will be incorrect after you upgrade.
+
+For more information about how to update your queries, see the [migration guide](https://druid.apache.org/docs/latest/release-info/migr-ansi-sql-null).
+
+[#17568](https://github.com/apache/druid/pull/17568) [#17609](https://github.com/apache/druid/pull/17609)
+
+### Java support
+
+Java support in Druid has been updated:
+
+- Java 8 support has been removed
+- Java 11 support is deprecated
+
+We recommend that you upgrade to Java 17.
+
+[#17466](https://github.com/apache/druid/pull/17466)
+
+### Javascript support
+
+- Javascript tiered broker selector strategy and Javascript filters currently do not work on Java 17.
+
+### Deprecations
+
+### Hadoop-based ingestion
+
+Hadoop-based ingestion is now deprecated. We recommend that you migrate to SQL-based ingestion. 
+
+## 31.0.0
+
+### Upgrade notes
+
+#### Array ingest mode now defaults to array
+
+The SQL-based ingestion query context flag `arrayIngestMode` now defaults to `array` instead of `mvd`. This means that SQL `VARCHAR ARRAY` types is no longer implicitly translated and stored in `VARCHAR` columns, but is instead stored as `VARCHAR ARRAY`. This change permits other array types such as `BIGINT ARRAY` and `DOUBLE ARRAY` to be inserted with MSQ task engine into their respective array column types instead of failing as they do in `mvd` mode.
+
+To continue to store multi-value strings, modify any insert/replace queries to wrap the array types with the `ARRAY_TO_MV` operator.
+
+Validation is in place to prevent mixing `VARCHAR` and `VARCHAR ARRAY` columns in the same table, so any ingestions affected by this change will fail and provide a descriptive error message instead of exhibiting unexpected behavior.
+
+The `arrayIngestMode` option of `none` has been removed. It was introduced prior to the table validation logic as a means for cluster operators to force query writers to explicitly set `array` or `mvd` on their query contexts, but provides little utility in Druid 31.
+
+See the following topics for more information:
+* [Ingest multi-value dimensions](https://druid.apache.org/docs/latest/querying/multi-value-dimensions.md#sql-based-ingestion) for how to ingest multi-value strings.
+* [Ingest arrays](https://druid.apache.org/docs/latest/querying/arrays.md#sql-based-ingestion) for ingesting arrays.
+
+[#16789](https://github.com/apache/druid/pull/16789)
+
+#### Removed task action audit logging
+
+The deprecated task action audit logging has been removed. This change includes the following updates:
+
+- The endpoint `/indexer/v1/task/{taskId}/segments` is no longer supported.
+- Druid doesn't write to or read from the metadata table `druid_taskLog`.
+- Druid ignores the property `druid.indexer.auditlog.enabled`.
+- Druid doesn't emit the metric `task/action/log/time`.
+
+These changes are backward compatible with all existing metadata storage extensions.
+
+[#16309](https://github.com/apache/druid/pull/16309)
+
+#### Removed Firehose and FirehoseFactory
+
+Removed Firehose and FirehoseFactory and remaining implementations.
+Apache deprecated support for Druid firehoses in version 0.17. Support for firehose ingestion was removed in version 26.0.
+
+[#16758](https://github.com/apache/druid/pull/16758)
+
+### Incompatible changes
+
+#### Removed the scan query legacy mode
+
+The native scan query legacy mode has been removed. It was introduced in Druid 0.11 to maintain compatibility during an upgrade from older versions of Druid where the scan query was part of a `contrib` extension.
+
+[#16659](https://github.com/apache/druid/pull/16659)
+
+Hard-coded `"legacy":false` following removal of the legacy mode to prevent error during rolling upgrades or downgrades.
+
+[#16793](https://github.com/apache/druid/pull/16793)
+
+#### ZK-based segment loading
+
+ZK-based segment loading is now disabled. ZK `servedSegmentsPath` was deprecated in Druid 0.7.1. This legacy path has been replaced by `liveSegmentsPath`.
+
+Segment-serving processes such as Peons, Historicals and Indexers no longer create ZK `loadQueuePath` entries. The `druid.zk.paths.loadQueuePath` and `druid.zk.paths.servedSegmentsPath` properties are no longer used.
+
+Move to HTTP-based segment loading first and then perform the version upgrade.
 ## 30.0.0
 
 ### Upgrade notes
