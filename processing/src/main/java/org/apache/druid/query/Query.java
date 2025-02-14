@@ -294,10 +294,7 @@ public interface Query<T>
 
   default DataSourceAnalysis getDataSourceAnalysis()
   {
-    if (mayCollapseDataSource()) {
-      return ((QueryDataSource) getDataSource()).getQuery().getDataSourceAnalysis();
-    }
-    return getDataSource().getAnalysis();
+    throw DruidException.defensive("Usage of this method is not supported on this query type!");
   }
 
   /**

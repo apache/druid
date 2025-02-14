@@ -316,4 +316,14 @@ public class DataSourceAnalysis
     }
     return baseDataSource.isGlobal();
   }
+
+  public DataSourceAnalysis maybeWithQuerySegmentSpec(QuerySegmentSpec newQuerySegmentSpec)
+  {
+    if (querySegmentSpec == null) {
+      return new DataSourceAnalysis(
+          baseDataSource, baseQuery, joinBaseTableFilter, preJoinableClauses, newQuerySegmentSpec
+      );
+    }
+    return this;
+  }
 }
