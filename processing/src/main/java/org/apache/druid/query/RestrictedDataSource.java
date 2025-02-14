@@ -29,6 +29,7 @@ import org.apache.druid.query.policy.NoRestrictionPolicy;
 import org.apache.druid.query.policy.Policy;
 import org.apache.druid.segment.RestrictedSegment;
 import org.apache.druid.segment.SegmentReference;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -149,9 +150,13 @@ public class RestrictedDataSource implements DataSource
           policy
       );
     }
-    if (!(newPolicy.get() instanceof NoRestrictionPolicy)) {
+    if (newPolicy.get() instanceof NoRestrictionPolicy) {
+      // druid-internal calls with NoRestrictionPolicy: allow
+    } else if (newPolicy.get().equals(policy)) {
+      // same policy: allow
+    } else {
       throw new ISE(
-          "Multiple restrictions on table [%s]: policy [%s] and policy [%s]",
+          "Different restrictions on table [%s]: previous policy [%s] and new policy [%s]",
           base.getName(),
           policy,
           newPolicy.get()
