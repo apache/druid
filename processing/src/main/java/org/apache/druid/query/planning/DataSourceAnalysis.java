@@ -19,6 +19,7 @@
 
 package org.apache.druid.query.planning;
 
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
@@ -81,12 +82,16 @@ public class DataSourceAnalysis
   @Nullable
   private final DimFilter joinBaseTableFilter;
   private final List<PreJoinableClause> preJoinableClauses;
+  @Nullable
+  private final QuerySegmentSpec querySegmentSpec;
 
   public DataSourceAnalysis(
       DataSource baseDataSource,
       @Nullable Query<?> baseQuery,
       @Nullable DimFilter joinBaseTableFilter,
-      List<PreJoinableClause> preJoinableClauses
+      List<PreJoinableClause> preJoinableClauses,
+      @Nullable
+      QuerySegmentSpec querySegmentSpec
   )
   {
     if (baseDataSource instanceof JoinDataSource) {
@@ -99,6 +104,7 @@ public class DataSourceAnalysis
     this.baseQuery = baseQuery;
     this.joinBaseTableFilter = joinBaseTableFilter;
     this.preJoinableClauses = preJoinableClauses;
+    this.querySegmentSpec = querySegmentSpec;
   }
 
   /**
@@ -173,6 +179,21 @@ public class DataSourceAnalysis
       return Optional.of(baseQuery2.getQuerySegmentSpec());
     }
     return Optional.empty();
+  }
+
+
+  /**
+   * The applicable {@link QuerySegmentSpec} for this vertex.
+   *
+   * There might be more queries inside a single vertex; so the outer one is not necessary correct.
+   */
+  public QuerySegmentSpec getEffectiveQuerySegmentSpec()
+  {
+    if (querySegmentSpec == null) {
+      throw DruidException
+          .defensive("Can't answer this question. Please obtain a datasource analysis from the Query object!");
+    }
+    return querySegmentSpec;
   }
 
   /**

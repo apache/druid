@@ -537,7 +537,7 @@ public class JoinDataSource implements DataSource
     // going-up order. So reverse them.
     Collections.reverse(preJoinableClauses);
 
-    return new DataSourceAnalysis(current, null, currentDimFilter, preJoinableClauses);
+    return new DataSourceAnalysis(current, null, currentDimFilter, preJoinableClauses, null);
   }
 
 

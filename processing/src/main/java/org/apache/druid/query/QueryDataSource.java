@@ -129,7 +129,7 @@ public class QueryDataSource implements DataSource
   public DataSourceAnalysis getAnalysis()
   {
     final Query<?> subQuery = this.getQuery();
-    return new DataSourceAnalysis(this, subQuery, null, Collections.emptyList());
+    return new DataSourceAnalysis(this, subQuery, null, Collections.emptyList(), null);
   }
 
   @Override
