@@ -382,7 +382,6 @@ public class DataSourcePlan
       final boolean broadcast
   )
   {
-    // TODO: TableInputSpec should take row filter in policy into consideration.
     return new DataSourcePlan(
         (broadcast && dataSource.isGlobal())
         ? dataSource
