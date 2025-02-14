@@ -26,6 +26,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import org.apache.druid.data.input.RetryingInputEntity;
 import org.apache.druid.data.input.impl.CloudObjectLocation;
+import org.apache.druid.java.util.common.IOE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.storage.s3.S3StorageDruidModule;
 import org.apache.druid.storage.s3.S3Utils;
@@ -40,6 +41,8 @@ public class S3Entity extends RetryingInputEntity
   private final ServerSideEncryptingAmazonS3 s3Client;
   private final CloudObjectLocation object;
   private final int maxRetries;
+
+  private long size = -1;
 
   S3Entity(ServerSideEncryptingAmazonS3 s3Client, CloudObjectLocation coords, int maxRetries)
   {
@@ -93,6 +96,27 @@ public class S3Entity extends RetryingInputEntity
   public Predicate<Throwable> getRetryCondition()
   {
     return S3Utils.S3RETRY;
+  }
+
+  @Override
+  public long getSize() throws IOException
+  {
+    try {
+      if (size < 0) {
+        size = S3Utils.retryS3Operation(() -> s3Client.getObjectMetadata(object.getBucket(), object.getPath())
+                                                      .getInstanceLength());
+      }
+      return size;
+    }
+    catch (Exception e) {
+      throw new IOE(e, "Failed to get the size for bucket [%] and path [%s]", object.getBucket(), object.getPath());
+    }
+  }
+
+  @Override
+  public boolean isSeekable()
+  {
+    return true;
   }
 
   CloudObjectLocation getObject()
