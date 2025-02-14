@@ -56,6 +56,15 @@ public class QueryDataSource implements DataSource
     return names;
   }
 
+  public Set<String> getTableNames2()
+  {
+    Set<String> names = new HashSet<>();
+    for (DataSource ds : getQueryDataSources()) {
+      names.addAll(ds.getTableNames());
+    }
+    return names;
+  }
+
   @JsonProperty
   public Query getQuery()
   {
