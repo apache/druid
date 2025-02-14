@@ -138,8 +138,13 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
   @LifecycleStart
   public void start()
   {
+    if (!isCacheEnabled) {
+      log.info("Segment metadata cache is not enabled.");
+      return;
+    }
+
     synchronized (cacheStateLock) {
-      if (isCacheEnabled && currentCacheState == CacheState.STOPPED) {
+      if (currentCacheState == CacheState.STOPPED) {
         updateCacheState(CacheState.FOLLOWER, "Scheduling sync with metadata store");
         scheduleSyncWithMetadataStore(pollDuration.getMillis());
       }
@@ -200,6 +205,7 @@ public class HeapMemorySegmentMetadataCache implements SegmentMetadataCache
   public DatasourceSegmentCache getDatasource(String dataSource)
   {
     verifyCacheIsUsableAndAwaitSync();
+    emitMetric(dataSource, Metric.TRANSACTION_COUNT, 1);
     return getCacheForDatasource(dataSource);
   }
 
