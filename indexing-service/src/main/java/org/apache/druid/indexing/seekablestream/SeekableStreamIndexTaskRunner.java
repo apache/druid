@@ -1887,17 +1887,17 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   @VisibleForTesting
   public Response pause() throws InterruptedException
   {
+    Status currentStatus = status;
+    if (!(currentStatus == Status.PAUSED || currentStatus == Status.READING)) {
+      log.debug("Returning 409 conflict for task [%s] with currentState: [%s], volatileState: [%s]", task.getId(), currentStatus, status);
+      return Response.status(Response.Status.CONFLICT)
+                     .type(MediaType.TEXT_PLAIN)
+                     .entity(StringUtils.format("Can't pause, task is not in a pausable state (currentState: [%s], volatileState: [%s])", currentStatus, status))
+                     .build();
+    }
+
     pauseLock.lockInterruptibly();
     try {
-      log.debug("Pausing the task [%s] with state: [%s]", task.getId(), status);
-      if (!(status == Status.PAUSED || status == Status.READING)) {
-        log.debug("Returning 409 conflict for task [%s] with state: [%s]", task.getId(), status);
-        return Response.status(Response.Status.CONFLICT)
-                .type(MediaType.TEXT_PLAIN)
-                .entity(StringUtils.format("Can't pause, task is not in a pausable state (state: [%s])", status))
-                .build();
-      }
-
       pauseRequested = true;
 
       pollRetryLock.lockInterruptibly();
