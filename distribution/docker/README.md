@@ -19,23 +19,18 @@
 
 ## Build
 
-From the root of the repo, run following command:
+From the root of the repo, run the following command:
 
 ```bash
 DOCKER_BUILDKIT=1 docker build -t apache/druid:tag -f distribution/docker/Dockerfile .
 ```
 
-### Building images on Apple M1/M2
-To build images on Apple M1/M2, you need to follow the instructions in this section.
+There re two extra build arguments that can be passed to the build command by using `--build-arg` flag.
 
-1. build Druid distribution from the root of the repo
-   ```bash
-   mvn clean package -DskipTests -Pdist
-   ```
-2. build target image
-   ```
-   DOCKER_BUILDKIT=1 docker build -t apache/druid:tag -f distribution/docker/Dockerfile --build-arg BUILD_FROM_SOURCE=false .
-   ```
+| Building argument | Description                                                                                                                                                                       | Default value |
+|-------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------|
+| JDK_VERSION       | The version of JDK to use. By default JDK 17 is used. Use 17 and above.                                                                                                           | 17            |
+| BUILD_FROM_SOURCE | Whether to build Druid from source inside docker.<br/> If you already build the distribution outside the docker, you can manully set this argument to false to speed up building. | true          |
 
 ## Run
 
