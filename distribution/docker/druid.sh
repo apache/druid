@@ -141,7 +141,13 @@ fi
 DRUID_SET_HOST_IP=${DRUID_SET_HOST_IP:-0}
 if [ "${DRUID_SET_HOST_IP}" = "1" ]
 then
-    setKey $SERVICE druid.host $(ip r get 1 | awk '{print $7;exit}')
+    # Get local ip from the 'ip' tool
+    IP=$(ip r get 1 | awk '{print $7;exit}')
+    if [ -z "$IP" ]; then
+      echo "ERROR: IP address not found."
+      exit 1
+    fi
+    setKey $SERVICE druid.host $IP
 fi
 
 env | grep ^druid_ | while read evar;

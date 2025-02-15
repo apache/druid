@@ -19,68 +19,73 @@
 
 ARG JDK_VERSION=17
 
+# By default we build the entire distribution from source in docker
+# This can be unset if the tarball was already built outside of Docker
+ARG BUILD_FROM_SOURCE="true"
+
 # The platform is explicitly specified as x64 to build the Druid distribution.
 # This is because it's not able to build the distribution on arm64 due to dependency problem of web-console. See: https://github.com/apache/druid/issues/13012
 # Since only java jars are shipped in the final image, it's OK to build the distribution on x64.
 # Once the web-console dependency problem is resolved, we can remove the --platform directive.
-FROM --platform=linux/amd64 maven:3.9 as builder
+FROM openjdk:${JDK_VERSION}-jdk-slim as web-console-builder
+RUN apt-get -qq update \
+    && apt-get -qq -y install --no-install-recommends maven
 
-# Rebuild from source in this stage
-# This can be unset if the tarball was already built outside of Docker
-ARG BUILD_FROM_SOURCE="true"
+COPY . /src
 
-RUN export DEBIAN_FRONTEND=noninteractive \
-    && apt-get -qq update \
-    && apt-get -qq -y install --no-install-recommends python3 python3-yaml
+# Re-declare the ARG to make it available in this stage
+ARG BUILD_FROM_SOURCE
+
+# Build web-console
+RUN --mount=type=cache,target=/root/.m2 if [ "$BUILD_FROM_SOURCE" = "true" ]; then \
+    cd /src/web-console && mvn -B -ff -DskipUTs clean package\
+; fi
+
+#
+# Declare a builder stage to build the Druid distribution
+#
+FROM openjdk:${JDK_VERSION}-jdk-slim as builder
+
+RUN apt-get -qq update \
+    && apt-get -qq -y install --no-install-recommends python3 python3-yaml maven
 
 COPY . /src
 WORKDIR /src
+
+# Copy the web-console jar from the web-console-builder to include it in the distribution
+COPY --from=web-console-builder /src/web-console/target/web-console*.jar /src/web-console/target/
+
+# Re-declare the ARG to make it available in this stage
+ARG BUILD_FROM_SOURCE
+
+# Note: 'clean' is necessary to make sure distrubution/target is cleared
+# because later we will use 'tar -zxf' to extract tar files under this directory
 RUN --mount=type=cache,target=/root/.m2 if [ "$BUILD_FROM_SOURCE" = "true" ]; then \
-      mvn -B -ff -q \
-      install \
+      mvn -B -ff \
+      clean install \
       -Pdist,bundle-contrib-exts \
       -Pskip-static-checks,skip-tests \
-      -Dmaven.javadoc.skip=true -T1C \
+      -pl '!org.apache.druid:web-console, !org.apache.druid:druid-benchmarks, !org.apache.druid:druid-integration-tests, !org.apache.druid.integration-tests:druid-it-tools, !org.apache.druid.integration-tests:druid-it-image, !org.apache.druid.integration-tests:druid-it-cases, !org.apache.druid:druid-quidem-ut' \
+    -T1C \
       ; fi
 
-RUN --mount=type=cache,target=/root/.m2 VERSION=$(mvn -B -q org.apache.maven.plugins:maven-help-plugin:3.2.0:evaluate \
-      -Dexpression=project.version -DforceStdout=true \
-    ) \
- && tar -zxf ./distribution/target/apache-druid-${VERSION}-bin.tar.gz -C /opt \
- && mv /opt/apache-druid-${VERSION} /opt/druid
+RUN DISTRIBUTION=$(ls ./distribution/target/apache-druid-*-bin.tar.gz) \
+ && tar -zxf ${DISTRIBUTION} -C /opt \
+ && mv /opt/apache-druid-* /opt/druid
 
-FROM alpine:3 as bash-static
-ARG TARGETARCH
-#
-# Download bash-static binary to execute scripts that require bash.
-# Although bash-static supports multiple platforms, but there's no need for us to support all those platform, amd64 and arm64 are enough.
-#
-ARG BASH_URL_BASE="https://github.com/robxu9/bash-static/releases/download/5.1.016-1.2.3"
-RUN if [ "$TARGETARCH" = "arm64" ]; then \
-      BASH_URL="${BASH_URL_BASE}/bash-linux-aarch64" ; \
-    elif [ "$TARGETARCH" = "amd64" ]; then \
-      BASH_URL="${BASH_URL_BASE}/bash-linux-x86_64" ; \
-    else \
-      echo "Unsupported architecture ($TARGETARCH)" && exit 1; \
-    fi; \
-    echo "Downloading bash-static from ${BASH_URL}" \
-    && wget ${BASH_URL} -O /bin/bash
 
-FROM busybox:1.35.0-glibc as busybox
-
-FROM gcr.io/distroless/java$JDK_VERSION-debian12
+FROM alpine:latest
 LABEL maintainer="Apache Druid Developers <dev@druid.apache.org>"
 
-COPY --from=busybox /bin/busybox /busybox/busybox
-RUN ["/busybox/busybox", "--install", "/bin"]
+# Re-daclare the ARG to make it available in this stage
+ARG JDK_VERSION
 
-
-RUN addgroup -S -g 1000 druid \
+# Install necessary packages to easier debugging
+RUN apk add --no-cache openjdk${JDK_VERSION}-jre bash curl net-tools strace lsof \
+ && addgroup -S -g 1000 druid \
  && adduser -S -u 1000 -D -H -h /opt/druid -s /bin/sh -g '' -G druid druid
 
-
-COPY --from=bash-static /bin/bash /bin/bash
-RUN chmod 755 /bin/bash
+ENV JAVA_HOME=/usr/lib/jvm/java-${JDK_VERSION}-openjdk
 
 COPY distribution/docker/druid.sh /druid.sh
 COPY distribution/docker/peon.sh /peon.sh
