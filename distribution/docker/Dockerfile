@@ -27,9 +27,7 @@ ARG BUILD_FROM_SOURCE="true"
 # This is because it's not able to build the distribution on arm64 due to dependency problem of web-console. See: https://github.com/apache/druid/issues/13012
 # Since only java jars are shipped in the final image, it's OK to build the distribution on x64.
 # Once the web-console dependency problem is resolved, we can remove the --platform directive.
-FROM openjdk:${JDK_VERSION}-jdk-slim as web-console-builder
-RUN apt-get -qq update \
-    && apt-get -qq -y install --no-install-recommends maven
+FROM --platform=linux/amd64 maven:3.9.9-eclipse-temurin-${JDK_VERSION} as web-console-builder
 
 COPY . /src
 
@@ -38,16 +36,15 @@ ARG BUILD_FROM_SOURCE
 
 # Build web-console
 RUN --mount=type=cache,target=/root/.m2 if [ "$BUILD_FROM_SOURCE" = "true" ]; then \
-    cd /src/web-console && mvn -B -ff -DskipUTs clean package\
+    cd /src/web-console && mvn -B -ff -Dpmd.skip=true -DskipUTs=true clean package\
 ; fi
 
 #
 # Declare a builder stage to build the Druid distribution
 #
-FROM openjdk:${JDK_VERSION}-jdk-slim as builder
-
+FROM maven:3.9.9-eclipse-temurin-${JDK_VERSION} as builder
 RUN apt-get -qq update \
-    && apt-get -qq -y install --no-install-recommends python3 python3-yaml maven
+    && apt-get -qq -y install --no-install-recommends python3 python3-yaml
 
 COPY . /src
 WORKDIR /src
@@ -61,19 +58,20 @@ ARG BUILD_FROM_SOURCE
 # Note: 'clean' is necessary to make sure distrubution/target is cleared
 # because later we will use 'tar -zxf' to extract tar files under this directory
 RUN --mount=type=cache,target=/root/.m2 if [ "$BUILD_FROM_SOURCE" = "true" ]; then \
-      mvn -B -ff \
+      mvn -B -ff -ntp \
       clean install \
       -Pdist,bundle-contrib-exts \
       -Pskip-static-checks,skip-tests \
       -pl '!org.apache.druid:web-console, !org.apache.druid:druid-benchmarks, !org.apache.druid:druid-integration-tests, !org.apache.druid.integration-tests:druid-it-tools, !org.apache.druid.integration-tests:druid-it-image, !org.apache.druid.integration-tests:druid-it-cases, !org.apache.druid:druid-quidem-ut' \
-    -T1C \
-      ; fi
+      -T1C \
+; fi
 
 RUN DISTRIBUTION=$(ls ./distribution/target/apache-druid-*-bin.tar.gz) \
  && tar -zxf ${DISTRIBUTION} -C /opt \
  && mv /opt/apache-druid-* /opt/druid
 
-
+# The bulding stagings use images based on eclipse-temurin,
+# however here we directly use alpine because eclipse-temurin-alpine for JRE17 does not ship a image with ARM64 architecture.
 FROM alpine:latest
 LABEL maintainer="Apache Druid Developers <dev@druid.apache.org>"
 
