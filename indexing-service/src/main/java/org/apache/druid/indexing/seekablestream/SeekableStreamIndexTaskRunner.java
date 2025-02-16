@@ -1890,10 +1890,10 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     // Read the volatile status into a variable so that its value does not change while the condition is evaluated
     final Status currentStatus = status;
     if (!(currentStatus == Status.PAUSED || currentStatus == Status.READING)) {
-      log.error("Cannot pause task: [%s] as it is currently in state: [%s]", task.getId(), currentStatus);
+      log.error("Cannot pause task[%s] as it is currently in state[%s]", task.getId(), currentStatus);
       return Response.status(Response.Status.CONFLICT)
                      .type(MediaType.TEXT_PLAIN)
-                     .entity(StringUtils.format("Cannot pause task as it is currently in state: [%s]", currentStatus))
+                     .entity(StringUtils.format("Cannot pause task as it is currently in state[%s]. Pausable states are [READING, PAUSED].", currentStatus))
                      .build();
     }
 
