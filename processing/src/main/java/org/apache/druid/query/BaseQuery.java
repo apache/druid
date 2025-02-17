@@ -109,10 +109,11 @@ public abstract class BaseQuery<T> implements Query<T>
     return getQuerySegmentSpecForLookUp(this).lookup(this, walker);
   }
 
+  @Override
   public DataSourceAnalysis getDataSourceAnalysis()
   {
     DataSourceAnalysis ret;
-    if (mayCollapseDataSource()) {
+    if (mayCollapseQueryDataSource()) {
       ret = ((QueryDataSource) getDataSource()).getQuery().getDataSourceAnalysis();
     } else {
       ret = getDataSource().getAnalysis();

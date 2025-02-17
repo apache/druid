@@ -1323,7 +1323,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
   }
 
   @Override
-  public boolean mayCollapseDataSource()
+  public boolean mayCollapseQueryDataSource()
   {
     if (getDataSource() instanceof QueryDataSource) {
       QueryDataSource queryDataSource = (QueryDataSource) getDataSource();

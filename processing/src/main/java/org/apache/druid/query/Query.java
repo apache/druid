@@ -299,12 +299,12 @@ public interface Query<T>
 
   /**
    * Signals that the execution of this query could also transparently handle
-   * the input datasource as well.
+   * the input {@link QueryDataSource} as well.
    *
    * This is a not-so-nice way to support that {@link GroupByQuery} could
    * collapse other {@link GroupByQuery}-ies in {@link QueryDataSource}-es.
    */
-  default boolean mayCollapseDataSource()
+  default boolean mayCollapseQueryDataSource()
   {
     return false;
   }

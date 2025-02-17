@@ -267,13 +267,13 @@ public class DataSourceAnalysis
       return false;
     }
     DataSourceAnalysis that = (DataSourceAnalysis) o;
-    return Objects.equals(baseDataSource, that.baseDataSource);
+    return Objects.equals(baseDataSource, that.baseDataSource) && Objects.equals(querySegmentSpec, that.querySegmentSpec);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(baseDataSource);
+    return Objects.hash(baseDataSource, querySegmentSpec);
   }
 
   @Override

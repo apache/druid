@@ -492,7 +492,7 @@ public class JoinDataSource implements DataSource
   /**
    * Flatten a datasource into two parts: the left-hand side datasource (the 'base' datasource), and a list of join
    * clauses, if any.
-   * @param b
+   * @param vertexBoundary if the returned analysis should cover the vertexboundary.
    *
    * @throws IllegalArgumentException if dataSource cannot be fully flattened.
    */
