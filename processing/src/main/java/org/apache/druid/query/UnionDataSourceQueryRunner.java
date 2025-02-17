@@ -50,7 +50,7 @@ public class UnionDataSourceQueryRunner<T> implements QueryRunner<T>
   {
     Query<T> query = queryPlus.getQuery();
 
-    final DataSourceAnalysis analysis = query.getDataSource().getAnalysis();
+    final DataSourceAnalysis analysis = query.getDataSourceAnalysis();
 
     if (analysis.isConcreteAndTableBased() && analysis.getBaseUnionDataSource().isPresent()) {
       // Union of tables.

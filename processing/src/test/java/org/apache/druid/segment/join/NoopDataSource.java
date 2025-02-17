@@ -91,6 +91,6 @@ public class NoopDataSource implements DataSource
   @Override
   public DataSourceAnalysis getAnalysis()
   {
-    return new DataSourceAnalysis(this, null, null, Collections.emptyList());
+    return new DataSourceAnalysis(this, null, null, Collections.emptyList(), null);
   }
 }

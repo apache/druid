@@ -121,7 +121,7 @@ public class ServerManager implements QuerySegmentWalker
   @Override
   public <T> QueryRunner<T> getQueryRunnerForIntervals(Query<T> query, Iterable<Interval> intervals)
   {
-    final DataSourceAnalysis analysis = query.getDataSource().getAnalysis();
+    final DataSourceAnalysis analysis = query.getDataSourceAnalysis();
     final VersionedIntervalTimeline<String, ReferenceCountingSegment> timeline;
     final Optional<VersionedIntervalTimeline<String, ReferenceCountingSegment>> maybeTimeline =
         segmentManager.getTimeline(analysis);
