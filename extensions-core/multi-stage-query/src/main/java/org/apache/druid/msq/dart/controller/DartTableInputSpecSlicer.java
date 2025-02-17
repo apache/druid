@@ -102,7 +102,7 @@ public class DartTableInputSpecSlicer implements InputSpecSlicer
   {
     final TableInputSpec tableInputSpec = (TableInputSpec) inputSpec;
     final TimelineLookup<String, ServerSelector> timeline =
-        serverView.getTimeline(new TableDataSource(tableInputSpec.getDataSource()).getAnalysis()).orElse(null);
+        serverView.getTimeline(new TableDataSource(tableInputSpec.getDataSource())).orElse(null);
 
     if (timeline == null) {
       return Collections.emptyList();

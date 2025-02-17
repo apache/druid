@@ -227,7 +227,7 @@ public class BrokerSegmentMetadataCacheConcurrencyTest extends BrokerSegmentMeta
 
     for (int i = 0; i < 1000; i++) {
       boolean hasTimeline = exec.submit(
-          () -> serverView.getTimeline((new TableDataSource(DATASOURCE)).getAnalysis())
+          () -> serverView.getTimeline((new TableDataSource(DATASOURCE)))
                           .isPresent()
       ).get(100, TimeUnit.MILLISECONDS);
       Assert.assertTrue(hasTimeline);
