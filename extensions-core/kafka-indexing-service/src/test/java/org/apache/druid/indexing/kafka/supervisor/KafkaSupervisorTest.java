@@ -423,8 +423,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
     Assert.assertEquals("myCustomValue", taskConfig.getConsumerProperties().get("myCustomKey"));
     Assert.assertEquals("sequenceName-0", taskConfig.getBaseSequenceName());
     Assert.assertTrue("isUseTransaction", taskConfig.isUseTransaction());
-    Assert.assertFalse("minimumMessageTime", taskConfig.getMinimumMessageTime().isPresent());
-    Assert.assertFalse("maximumMessageTime", taskConfig.getMaximumMessageTime().isPresent());
+    Assert.assertNull("minimumMessageTime", taskConfig.getMinimumMessageTime());
+    Assert.assertNull("maximumMessageTime", taskConfig.getMaximumMessageTime());
 
     Assert.assertEquals(topic, taskConfig.getStartSequenceNumbers().getStream());
     Assert.assertEquals(
@@ -563,8 +563,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
     Assert.assertEquals("myCustomValue", taskConfig.getConsumerProperties().get("myCustomKey"));
     Assert.assertEquals("sequenceName-0", taskConfig.getBaseSequenceName());
     Assert.assertTrue("isUseTransaction", taskConfig.isUseTransaction());
-    Assert.assertFalse("minimumMessageTime", taskConfig.getMinimumMessageTime().isPresent());
-    Assert.assertFalse("maximumMessageTime", taskConfig.getMaximumMessageTime().isPresent());
+    Assert.assertNull("minimumMessageTime", taskConfig.getMinimumMessageTime());
+    Assert.assertNull("maximumMessageTime", taskConfig.getMaximumMessageTime());
 
     Assert.assertEquals(topic, taskConfig.getStartSequenceNumbers().getStream());
     Assert.assertEquals(
@@ -816,15 +816,15 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     Assert.assertTrue(
         "minimumMessageTime",
-        task1.getIOConfig().getMinimumMessageTime().get().plusMinutes(59).isBeforeNow()
+        task1.getIOConfig().getMinimumMessageTime().plusMinutes(59).isBeforeNow()
     );
     Assert.assertTrue(
         "minimumMessageTime",
-        task1.getIOConfig().getMinimumMessageTime().get().plusMinutes(61).isAfterNow()
+        task1.getIOConfig().getMinimumMessageTime().plusMinutes(61).isAfterNow()
     );
     Assert.assertEquals(
-        task1.getIOConfig().getMinimumMessageTime().get(),
-        task2.getIOConfig().getMinimumMessageTime().get()
+        task1.getIOConfig().getMinimumMessageTime(),
+        task2.getIOConfig().getMinimumMessageTime()
     );
   }
 
@@ -855,15 +855,15 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     Assert.assertTrue(
         "maximumMessageTime",
-        task1.getIOConfig().getMaximumMessageTime().get().minusMinutes(59 + 60).isAfterNow()
+        task1.getIOConfig().getMaximumMessageTime().minusMinutes(59 + 60).isAfterNow()
     );
     Assert.assertTrue(
         "maximumMessageTime",
-        task1.getIOConfig().getMaximumMessageTime().get().minusMinutes(61 + 60).isBeforeNow()
+        task1.getIOConfig().getMaximumMessageTime().minusMinutes(61 + 60).isBeforeNow()
     );
     Assert.assertEquals(
-        task1.getIOConfig().getMaximumMessageTime().get(),
-        task2.getIOConfig().getMaximumMessageTime().get()
+        task1.getIOConfig().getMaximumMessageTime(),
+        task2.getIOConfig().getMaximumMessageTime()
     );
   }
 
@@ -1682,7 +1682,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
     verifyAll();
 
     // check that replica tasks are created with the same minimumMessageTime as tasks inherited from another supervisor
-    Assert.assertEquals(now, ((KafkaIndexTask) captured.getValue()).getIOConfig().getMinimumMessageTime().get());
+    Assert.assertEquals(now, ((KafkaIndexTask) captured.getValue()).getIOConfig().getMinimumMessageTime());
 
     // test that a task failing causes a new task to be re-queued with the same parameters
     String runningTaskId = captured.getValue().getId();
@@ -1728,10 +1728,10 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     // check that failed tasks are recreated with the same minimumMessageTime as the task it replaced, even if that
     // task came from another supervisor
-    Assert.assertEquals(now, ((KafkaIndexTask) aNewTaskCapture.getValue()).getIOConfig().getMinimumMessageTime().get());
+    Assert.assertEquals(now, ((KafkaIndexTask) aNewTaskCapture.getValue()).getIOConfig().getMinimumMessageTime());
     Assert.assertEquals(
         maxi,
-        ((KafkaIndexTask) aNewTaskCapture.getValue()).getIOConfig().getMaximumMessageTime().get()
+        ((KafkaIndexTask) aNewTaskCapture.getValue()).getIOConfig().getMaximumMessageTime()
     );
   }
 
@@ -2427,16 +2427,16 @@ public class KafkaSupervisorTest extends EasyMockSupport
     supervisor.addTaskGroupToActivelyReadingTaskGroup(
         0,
         singlePartitionMap(topic, 0, 0L, 2, 0L),
-        Optional.absent(),
-        Optional.absent(),
+        null,
+        null,
         ImmutableSet.of("id1"),
         ImmutableSet.of()
     );
     supervisor.addTaskGroupToActivelyReadingTaskGroup(
         1,
         singlePartitionMap(topic, 1, 0L),
-        Optional.absent(),
-        Optional.absent(),
+        null,
+        null,
         ImmutableSet.of("id2"),
         ImmutableSet.of()
     );
@@ -2581,16 +2581,16 @@ public class KafkaSupervisorTest extends EasyMockSupport
     supervisor.addTaskGroupToActivelyReadingTaskGroup(
         0,
         singlePartitionMap(topic, 0, 0L, 2, 0L),
-        Optional.absent(),
-        Optional.absent(),
+        null,
+        null,
         ImmutableSet.of("id1"),
         ImmutableSet.of()
     );
     supervisor.addTaskGroupToActivelyReadingTaskGroup(
         1,
         singlePartitionMap(topic, 1, 0L),
-        Optional.absent(),
-        Optional.absent(),
+        null,
+        null,
         ImmutableSet.of("id2"),
         ImmutableSet.of()
     );
@@ -2917,16 +2917,16 @@ public class KafkaSupervisorTest extends EasyMockSupport
     supervisor.addTaskGroupToActivelyReadingTaskGroup(
         0,
         singlePartitionMap(topic, 0, 0L, 2, 0L),
-        Optional.absent(),
-        Optional.absent(),
+        null,
+        null,
         ImmutableSet.of("id1"),
         ImmutableSet.of()
     );
     supervisor.addTaskGroupToActivelyReadingTaskGroup(
         1,
         singlePartitionMap(topic, 1, 0L),
-        Optional.absent(),
-        Optional.absent(),
+        null,
+        null,
         ImmutableSet.of("id2"),
         ImmutableSet.of()
     );
@@ -4310,8 +4310,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
     Assert.assertEquals("myCustomValue", taskConfig.getConsumerProperties().get("myCustomKey"));
     Assert.assertEquals("sequenceName-0", taskConfig.getBaseSequenceName());
     Assert.assertTrue("isUseTransaction", taskConfig.isUseTransaction());
-    Assert.assertFalse("minimumMessageTime", taskConfig.getMinimumMessageTime().isPresent());
-    Assert.assertFalse("maximumMessageTime", taskConfig.getMaximumMessageTime().isPresent());
+    Assert.assertNull("minimumMessageTime", taskConfig.getMinimumMessageTime());
+    Assert.assertNull("maximumMessageTime", taskConfig.getMaximumMessageTime());
 
     Assert.assertEquals(topic, taskConfig.getStartSequenceNumbers().getStream());
     Assert.assertEquals(
@@ -4367,8 +4367,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
     supervisor.addTaskGroupToActivelyReadingTaskGroup(
         supervisor.getTaskGroupIdForPartition(new KafkaTopicPartition(false, topic, 0)),
         singlePartitionMap(topic, 0, 0L),
-        Optional.absent(),
-        Optional.absent(),
+        null,
+        null,
         ImmutableSet.of("task1"),
         ImmutableSet.of()
     );
@@ -4376,8 +4376,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
     supervisor.addTaskGroupToPendingCompletionTaskGroup(
         supervisor.getTaskGroupIdForPartition(new KafkaTopicPartition(false, topic, 1)),
         singlePartitionMap(topic, 0, 0L),
-        Optional.absent(),
-        Optional.absent(),
+        null,
+        null,
         ImmutableSet.of("task2"),
         ImmutableSet.of()
     );
@@ -4409,8 +4409,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
     supervisor.addTaskGroupToActivelyReadingTaskGroup(
         supervisor.getTaskGroupIdForPartition(new KafkaTopicPartition(false, topic, 0)),
         singlePartitionMap(topic, 0, 0L),
-        Optional.absent(),
-        Optional.absent(),
+        null,
+        null,
         ImmutableSet.of("task1"),
         ImmutableSet.of()
     );
@@ -4418,8 +4418,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
     supervisor.addTaskGroupToPendingCompletionTaskGroup(
         supervisor.getTaskGroupIdForPartition(new KafkaTopicPartition(false, topic, 1)),
         singlePartitionMap(topic, 0, 0L),
-        Optional.absent(),
-        Optional.absent(),
+        null,
+        null,
         ImmutableSet.of("task2"),
         ImmutableSet.of()
     );
@@ -4657,8 +4657,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
     supervisor.addTaskGroupToActivelyReadingTaskGroup(
         42,
         singlePartitionMap(topic, 0, 0L, 2, 0L),
-        Optional.of(minMessageTime),
-        Optional.of(maxMessageTime),
+        minMessageTime,
+        maxMessageTime,
         ImmutableSet.of("id1", "id2", "id3", "id4"),
         ImmutableSet.of()
     );
@@ -4873,8 +4873,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         0,
         task1.getIOConfig().getStartSequenceNumbers(),
         task1.getIOConfig().getEndSequenceNumbers(),
-        task1.getIOConfig().getMinimumMessageTime().get(),
-        task1.getIOConfig().getMaximumMessageTime().get(),
+        task1.getIOConfig().getMinimumMessageTime(),
+        task1.getIOConfig().getMaximumMessageTime(),
         dataSchema,
         supervisor.getTuningConfig()
     );
