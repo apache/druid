@@ -20,9 +20,14 @@
 **/*.jar
 **/*.class
 dist
+
 **/target
-# Keep the target of distribution since we support to build the docker directly by the distribution file built on host machine
-#!distribution/target
+
+# To support building the docker image from the distribution file built on host machine,
+# we need to keep binary files under targett directory of distribution module.
+# This rule MUST be after above '**/target' rule
+!distribution/target/*-bin.tar.gz
+
 *.iml
 *.ipr
 *.iws

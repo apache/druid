@@ -31,7 +31,7 @@
     "sasslint-fix-changed-only": "npm run sasslint-changed-only -- --fix",
     "prettify": "prettier --write '{src,e2e-tests}/**/*.{ts,tsx,scss}' './*.js'",
     "prettify-check": "prettier --check '{src,e2e-tests}/**/*.{ts,tsx,scss}' './*.js'",
-    "generate-licenses-file": "license-checker --production --json --out licenses.json",
+    "generate-licenses-file": "license-checker --production --json --out target/licenses.json",
     "check-licenses": "license-checker --production --onlyAllow 'Apache-1.1;Apache-2.0;BSD-2-Clause;BSD-3-Clause;0BSD;MIT;ISC;CC0-1.0;OFL-1.1' --summary",
     "start": "webpack serve"
   },
