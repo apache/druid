@@ -56,9 +56,10 @@ import org.mockito.stubbing.Answer;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
+
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -177,7 +178,7 @@ public class MetadataResourceTest
 
     Mockito.doReturn(null).when(coordinator).getReplicationFactor(realTimeSegments[0].getId());
     Mockito.doReturn(null).when(coordinator).getReplicationFactor(realTimeSegments[1].getId());
-    Map<SegmentId, AvailableSegmentMetadata> availableSegments = new HashMap<>();
+    Map<SegmentId, AvailableSegmentMetadata> availableSegments = new LinkedHashMap<>();
     availableSegments.put(
         segments[0].getId(),
         AvailableSegmentMetadata.builder(
@@ -420,7 +421,7 @@ public class MetadataResourceTest
   public void testGetDataSourceInformation()
   {
     CoordinatorSegmentMetadataCache coordinatorSegmentMetadataCache = Mockito.mock(CoordinatorSegmentMetadataCache.class);
-    Map<String, DataSourceInformation> dataSourceInformationMap = new HashMap<>();
+    Map<String, DataSourceInformation> dataSourceInformationMap = new LinkedHashMap<>();
 
     dataSourceInformationMap.put(
         DATASOURCE1,

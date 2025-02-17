@@ -169,6 +169,11 @@ public class Queries
 
     // Sanity check: query must be based on a single table.
     analysis.getBaseTableDataSource();
+//    if(false) {
+//      if (!(analysis.getBaseDataSource() instanceof TableDataSource)) {
+////      throw new ISE("Unable to apply specific segments to non-table-based dataSource[%s]", query.getDataSource());
+//      }
+//    }
 
     if (analysis.getBaseQuerySegmentSpec().isPresent()
         && !analysis.getBaseQuerySegmentSpec().get().equals(new MultipleSpecificSegmentSpec(descriptors))) {
