@@ -25,7 +25,7 @@ From the root of the repo, run the following command:
 DOCKER_BUILDKIT=1 docker build -t apache/druid:tag -f distribution/docker/Dockerfile .
 ```
 
-There re two extra build arguments that can be passed to the build command by using `--build-arg` flag.
+There are two extra build arguments that can be passed to the build command by using `--build-arg` flag.
 
 | Building argument | Description                                                                                                                                                                       | Default value |
 |-------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------|

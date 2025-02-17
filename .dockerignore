@@ -24,7 +24,7 @@ dist
 **/target
 
 # To support building the docker image from the distribution file built on host machine,
-# we need to keep binary files under targett directory of distribution module.
+# we need to keep binary files under the target directory of distribution module.
 # This rule MUST be after above '**/target' rule
 !distribution/target/*-bin.tar.gz
 
