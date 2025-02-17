@@ -306,7 +306,11 @@ public class DataSourceAnalysis
     }
     if (querySegmentSpec == null) {
       return new DataSourceAnalysis(
-          baseDataSource, baseQuery, joinBaseTableFilter, preJoinableClauses, newQuerySegmentSpec
+          baseDataSource,
+          baseQuery,
+          joinBaseTableFilter,
+          preJoinableClauses,
+          newQuerySegmentSpec
       );
     }
     return this;
