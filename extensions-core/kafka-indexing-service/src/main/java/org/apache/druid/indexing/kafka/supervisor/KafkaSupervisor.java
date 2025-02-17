@@ -178,6 +178,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
         ioConfig.getTaskDuration().getMillis() / 1000,
         includeOffsets ? latestSequenceFromStream : null,
         includeOffsets ? partitionLag : null,
+        includeOffsets ? getPartitionTimeLag() : null,
         includeOffsets ? partitionLag.values().stream().mapToLong(x -> Math.max(x, 0)).sum() : null,
         includeOffsets ? sequenceLastUpdated : null,
         spec.isSuspended(),
@@ -280,8 +281,43 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
   @Override
   protected Map<KafkaTopicPartition, Long> getPartitionTimeLag()
   {
-    // time lag not currently support with kafka
-    return null;
+    return latestSequenceFromStream == null ? null : getTimeLagPerPartitionInLatestSequences(getHighestCurrentOffsets());
+  }
+
+  protected Map<KafkaTopicPartition, Long> getTimeLagPerPartitionInLatestSequences(Map<KafkaTopicPartition, Long> currentOffsets)
+  {
+    getRecordSupplierLock().lock();
+    Map<KafkaTopicPartition, Long> timeAtCurrOffsets = new HashMap<>();
+    try {
+      for (Map.Entry<KafkaTopicPartition, Long> entry : currentOffsets.entrySet()) {
+        timeAtCurrOffsets.put(entry.getKey(), entry.getValue() == null ? 0L : recordSupplier.getTimeAtOffset(
+                              new StreamPartition<>(getIoConfig().getStream(), entry.getKey()),
+                              KafkaSequenceNumber.of(entry.getValue()),
+                              getIoConfig().getPollTimeout()
+                          ));
+      }
+
+      return latestSequenceFromStream
+          .entrySet()
+          .stream()
+          .collect(
+            Collectors.toMap(
+              Entry::getKey,
+              e -> {
+                long latestTime = e.getValue() == null ? 0L : recordSupplier.getTimeAtOffset(
+                    new StreamPartition<>(getIoConfig().getStream(), e.getKey()),
+                    // Since latestSequqnceFromStream consits of next offset that should be read.
+                    KafkaSequenceNumber.of(e.getValue() - 1),
+                    getIoConfig().getPollTimeout()
+                  );
+                return latestTime > 0L ? latestTime - timeAtCurrOffsets.getOrDefault(e.getKey(), 0L) : latestTime;
+              }
+            )
+          );
+    }
+    finally {
+      getRecordSupplierLock().unlock();
+    }
   }
 
   // suppress use of CollectionUtils.mapValues() since the valueMapper function is dependent on map key here

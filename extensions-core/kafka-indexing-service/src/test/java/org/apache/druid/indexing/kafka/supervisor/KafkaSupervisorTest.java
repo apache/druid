@@ -2319,6 +2319,10 @@ public class KafkaSupervisorTest extends EasyMockSupport
     Assert.assertEquals(1, payload.getPublishingTasks().size());
     Assert.assertEquals(SupervisorStateManager.BasicState.RUNNING, payload.getDetailedState());
     Assert.assertEquals(0, payload.getRecentErrors().size());
+    Assert.assertEquals(
+        singlePartitionMap(topic, 0, 0, 1, 0, 2, 0),
+        payload.getMinimumLagMillis()
+    );
 
     TaskReportData activeReport = payload.getActiveTasks().get(0);
     TaskReportData publishingReport = payload.getPublishingTasks().get(0);

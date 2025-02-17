@@ -239,6 +239,12 @@ public class RecordSupplierInputSourceTest extends InitializedNullHandlingTest
       closed = true;
     }
 
+    @Override
+    public long getTimeAtOffset(StreamPartition<Integer> partition, OrderedSequenceNumber<Integer> offset, long timeout)
+    {
+      throw new UnsupportedOperationException();
+    }
+
     boolean isClosed()
     {
       return closed;

@@ -43,7 +43,6 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.metadata.DynamicConfigProvider;
 
 import javax.annotation.Nonnull;
-
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
@@ -477,5 +476,11 @@ public class RabbitStreamRecordSupplier implements RecordSupplier<String, Long, 
     }
     this.stopBackgroundFetch();
     closed = true;
+  }
+
+  @Override
+  public long getTimeAtOffset(StreamPartition<String> partition, OrderedSequenceNumber<Long> offset, long timeout)
+  {
+    throw new UnsupportedOperationException();
   }
 }

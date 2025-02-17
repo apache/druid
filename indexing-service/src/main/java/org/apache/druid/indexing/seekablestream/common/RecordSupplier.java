@@ -137,4 +137,13 @@ public interface RecordSupplier<PartitionIdType, SequenceOffsetType, RecordType 
    */
   @Override
   void close();
+
+  /**
+   *  Gets the timestamp for record at a particular offset.
+   *
+   * @param partition target partition
+   * @param offset target offset
+   * @param timeout poll timeout
+   */
+  long getTimeAtOffset(StreamPartition<PartitionIdType> partition, OrderedSequenceNumber<SequenceOffsetType> offset, long timeout);
 }

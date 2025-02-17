@@ -41,6 +41,7 @@ import org.apache.druid.metadata.PasswordProvider;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.PartitionInfo;
+import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import org.apache.kafka.common.serialization.Deserializer;
 
@@ -204,6 +205,26 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
   public Long getPosition(StreamPartition<KafkaTopicPartition> partition)
   {
     return wrapExceptions(() -> consumer.position(partition.getPartitionId().asTopicPartition(partition.getStream())));
+  }
+
+  @Override
+  public long getTimeAtOffset(StreamPartition<KafkaTopicPartition> partition, OrderedSequenceNumber<Long> offset, long timeout)
+  {
+    Long currPos = getPosition(partition);
+    seek(partition, offset.get());
+
+    try {
+      for (ConsumerRecord<byte[], byte[]> record :
+          consumer.poll(Duration.ofMillis(timeout))
+                .records(new TopicPartition(partition.getStream(), partition.getPartitionId().partition()))) {
+        return record.timestamp();
+      }
+
+      return 0L;
+    }
+    finally {
+      seek(partition, currPos);
+    }
   }
 
   @Override
