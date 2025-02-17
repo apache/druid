@@ -92,7 +92,7 @@ public class KinesisIOConfigTest
         config.getEndSequenceNumbers().getPartitionSequenceNumberMap()
     );
     Assert.assertTrue(config.isUseTransaction());
-    Assert.assertFalse("minimumMessageTime", config.getMinimumMessageTime().isPresent());
+    Assert.assertNull("minimumMessageTime", config.getMinimumMessageTime());
     Assert.assertEquals(config.getEndpoint(), "kinesis.us-east-1.amazonaws.com");
     Assert.assertEquals(config.getFetchDelayMillis(), 0);
     Assert.assertEquals(Collections.emptySet(), config.getStartSequenceNumbers().getExclusivePartitions());
@@ -140,10 +140,8 @@ public class KinesisIOConfigTest
         config.getEndSequenceNumbers().getPartitionSequenceNumberMap()
     );
     Assert.assertFalse(config.isUseTransaction());
-    Assert.assertTrue("maximumMessageTime", config.getMaximumMessageTime().isPresent());
-    Assert.assertTrue("minimumMessageTime", config.getMinimumMessageTime().isPresent());
-    Assert.assertEquals(DateTimes.of("2016-05-31T12:00Z"), config.getMinimumMessageTime().get());
-    Assert.assertEquals(DateTimes.of("2016-05-31T14:00Z"), config.getMaximumMessageTime().get());
+    Assert.assertEquals(DateTimes.of("2016-05-31T12:00Z"), config.getMinimumMessageTime());
+    Assert.assertEquals(DateTimes.of("2016-05-31T14:00Z"), config.getMaximumMessageTime());
     Assert.assertEquals(config.getEndpoint(), "kinesis.us-east-2.amazonaws.com");
     Assert.assertEquals(config.getStartSequenceNumbers().getExclusivePartitions(), ImmutableSet.of("0"));
     Assert.assertEquals(1000, config.getFetchDelayMillis());
