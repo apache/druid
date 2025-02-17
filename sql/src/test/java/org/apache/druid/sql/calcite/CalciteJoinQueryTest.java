@@ -107,8 +107,8 @@ import java.util.List;
 import java.util.Map;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assume.assumeFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 public class CalciteJoinQueryTest extends BaseCalciteQueryTest
 {
@@ -742,7 +742,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   {
     // Like "testFilterAndGroupByLookupUsingJoinOperator", but with the table and lookup reversed.
 
-    assumeFalse("MSQ refuses to do RIGHT join with broadcast.", isRunningMSQ() && isSortBasedJoin() == false);
+    assumeFalse(isRunningMSQ() && isSortBasedJoin() == false, "MSQ refuses to do RIGHT join with broadcast.");
 
     // Cannot vectorize JOIN operator.
     cannotVectorize();
