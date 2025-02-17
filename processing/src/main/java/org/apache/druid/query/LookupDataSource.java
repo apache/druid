@@ -124,6 +124,12 @@ public class LookupDataSource implements DataSource
   }
 
   @Override
+  public boolean hasTimeFilter()
+  {
+    return true;
+  }
+
+  @Override
   public boolean equals(Object o)
   {
     if (this == o) {

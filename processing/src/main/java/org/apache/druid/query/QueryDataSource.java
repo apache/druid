@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.union.UnionQuery;
 import org.apache.druid.segment.SegmentReference;
+import org.apache.druid.utils.DatasourceUtils;
 
 import java.util.Collections;
 import java.util.HashSet;
@@ -133,6 +134,12 @@ public class QueryDataSource implements DataSource
   {
     final Query<?> subQuery = this.getQuery();
     return subQuery.getDataSourceAnalysis();
+  }
+
+  @Override
+  public boolean hasTimeFilter()
+  {
+    return query.getDataSource().hasTimeFilter() || DatasourceUtils.queryHasTimeFilter(query);
   }
 
   @Override
