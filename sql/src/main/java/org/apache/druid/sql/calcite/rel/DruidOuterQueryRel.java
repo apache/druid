@@ -119,7 +119,8 @@ public class DruidOuterQueryRel extends DruidRel<DruidOuterQueryRel>
         sourceRowSignature,
         getPlannerContext(),
         getCluster().getRexBuilder(),
-        finalizeAggregations
+        finalizeAggregations,
+        false
     );
   }
 
@@ -134,7 +135,8 @@ public class DruidOuterQueryRel extends DruidRel<DruidOuterQueryRel>
         ),
         getPlannerContext(),
         getCluster().getRexBuilder(),
-        false
+        false,
+        true
     );
   }
 

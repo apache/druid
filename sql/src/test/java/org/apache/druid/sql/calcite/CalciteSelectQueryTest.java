@@ -33,6 +33,8 @@ import org.apache.druid.query.InlineDataSource;
 import org.apache.druid.query.LookupDataSource;
 import org.apache.druid.query.Order;
 import org.apache.druid.query.QueryDataSource;
+import org.apache.druid.query.RestrictedDataSource;
+import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
@@ -1165,7 +1167,10 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
         CalciteTests.SUPER_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
-                  .dataSource(CalciteTests.RESTRICTED_DATASOURCE)
+                  .dataSource(RestrictedDataSource.create(
+                      TableDataSource.create(CalciteTests.RESTRICTED_DATASOURCE),
+                      CalciteTests.POLICY_NO_RESTRICTION_SUPERUSER
+                  ))
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
@@ -1183,7 +1188,10 @@ public class CalciteSelectQueryTest extends BaseCalciteQueryTest
         CalciteTests.REGULAR_USER_AUTH_RESULT,
         ImmutableList.of(
             Druids.newTimeseriesQueryBuilder()
-                  .dataSource(CalciteTests.RESTRICTED_DATASOURCE)
+                  .dataSource(RestrictedDataSource.create(
+                      TableDataSource.create(CalciteTests.RESTRICTED_DATASOURCE),
+                      CalciteTests.POLICY_RESTRICTION
+                  ))
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))

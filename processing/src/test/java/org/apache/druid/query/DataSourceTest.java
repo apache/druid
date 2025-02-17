@@ -179,6 +179,21 @@ public class DataSourceTest
   }
 
   @Test
+  public void testMapWithRestriction_onRestrictedDataSource_samePolicy()
+  {
+    RestrictedDataSource restrictedDataSource = RestrictedDataSource.create(
+        TableDataSource.create("table1"),
+        RowFilterPolicy.from(new NullFilter("some-column", null))
+    );
+    ImmutableMap<String, Optional<Policy>> policyMap = ImmutableMap.of(
+        "table1",
+        Optional.of(RowFilterPolicy.from(new NullFilter("some-column", null)))
+    );
+
+    Assert.assertEquals(restrictedDataSource, restrictedDataSource.withPolicies(policyMap));
+  }
+
+  @Test
   public void testMapWithRestriction_onRestrictedDataSource_alwaysThrows()
   {
     RestrictedDataSource restrictedDataSource = RestrictedDataSource.create(
@@ -194,7 +209,7 @@ public class DataSourceTest
 
     ISE e = Assert.assertThrows(ISE.class, () -> restrictedDataSource.withPolicies(anotherRestrictions));
     Assert.assertEquals(
-        "Multiple restrictions on table [table1]: policy [RowFilterPolicy{rowFilter=random-column IS NULL}] and policy [RowFilterPolicy{rowFilter=some-column IS NULL}]",
+        "Different restrictions on table [table1]: previous policy [RowFilterPolicy{rowFilter=random-column IS NULL}] and new policy [RowFilterPolicy{rowFilter=some-column IS NULL}]",
         e.getMessage()
     );
 

@@ -17,12 +17,13 @@
  * under the License.
  */
 
-package org.apache.druid.query;
+package org.apache.druid.msq.querykit;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import nl.jqno.equalsverifier.EqualsVerifier;
-import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.query.DataSource;
+import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.filter.TrueDimFilter;
 import org.apache.druid.query.policy.NoRestrictionPolicy;
 import org.apache.druid.query.policy.RowFilterPolicy;
@@ -30,40 +31,36 @@ import org.apache.druid.segment.TestHelper;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.Collections;
-
-public class RestrictedDataSourceTest
+public class RestrictedInputNumberDataSourceTest
 {
-  private final TableDataSource fooDataSource = new TableDataSource("foo");
-  private final TableDataSource barDataSource = new TableDataSource("bar");
-  private final RestrictedDataSource restrictedFooDataSource = RestrictedDataSource.create(
-      fooDataSource,
+  private final RestrictedInputNumberDataSource restrictedFooDataSource = new RestrictedInputNumberDataSource(
+      0,
       RowFilterPolicy.from(TrueDimFilter.instance())
   );
-  private final RestrictedDataSource restrictedBarDataSource = RestrictedDataSource.create(
-      barDataSource,
+  private final RestrictedInputNumberDataSource restrictedBarDataSource = new RestrictedInputNumberDataSource(
+      1,
       NoRestrictionPolicy.instance()
   );
 
   @Test
   public void test_creation_failWithNullPolicy()
   {
-    IAE e = Assert.assertThrows(IAE.class, () -> RestrictedDataSource.create(fooDataSource, null));
-    Assert.assertEquals(e.getMessage(), "Policy can't be null for RestrictedDataSource");
+    Exception e = Assert.assertThrows(Exception.class, () -> new RestrictedInputNumberDataSource(1, null));
+    Assert.assertEquals(e.getMessage(), "Policy can't be null");
   }
 
   @Test
   public void test_getTableNames()
   {
-    Assert.assertEquals(Collections.singleton("foo"), restrictedFooDataSource.getTableNames());
-    Assert.assertEquals(Collections.singleton("bar"), restrictedBarDataSource.getTableNames());
+    Assert.assertTrue(restrictedFooDataSource.getTableNames().isEmpty());
+    Assert.assertTrue(restrictedBarDataSource.getTableNames().isEmpty());
   }
 
   @Test
   public void test_getChildren()
   {
-    Assert.assertEquals(Collections.singletonList(fooDataSource), restrictedFooDataSource.getChildren());
-    Assert.assertEquals(Collections.singletonList(barDataSource), restrictedBarDataSource.getChildren());
+    Assert.assertTrue(restrictedFooDataSource.getChildren().isEmpty());
+    Assert.assertTrue(restrictedBarDataSource.getChildren().isEmpty());
   }
 
   @Test
@@ -89,42 +86,38 @@ public class RestrictedDataSourceTest
   {
     IllegalArgumentException exception = Assert.assertThrows(
         IllegalArgumentException.class,
-        () -> restrictedFooDataSource.withChildren(Collections.emptyList())
+        () -> restrictedFooDataSource.withChildren(ImmutableList.of(new TableDataSource("foo")))
     );
-    Assert.assertEquals(exception.getMessage(), "Expected [1] child, got [0]");
+    Assert.assertEquals(exception.getMessage(), "Cannot accept children");
 
-    IllegalArgumentException exception2 = Assert.assertThrows(
-        IllegalArgumentException.class,
-        () -> restrictedFooDataSource.withChildren(ImmutableList.of(fooDataSource, barDataSource))
-    );
-    Assert.assertEquals(exception2.getMessage(), "Expected [1] child, got [2]");
-
-    RestrictedDataSource newRestrictedDataSource = (RestrictedDataSource) restrictedFooDataSource.withChildren(
-        ImmutableList.of(barDataSource));
-    Assert.assertEquals(newRestrictedDataSource.getBase(), barDataSource);
+    RestrictedInputNumberDataSource newRestrictedDataSource = (RestrictedInputNumberDataSource) restrictedFooDataSource.withChildren(
+        ImmutableList.of());
+    Assert.assertTrue(newRestrictedDataSource.getChildren().isEmpty());
   }
 
   @Test
   public void test_withUpdatedDataSource()
   {
-    RestrictedDataSource newRestrictedDataSource = (RestrictedDataSource) restrictedFooDataSource.withUpdatedDataSource(
-        new TableDataSource("bar"));
-    Assert.assertEquals(newRestrictedDataSource.getBase(), barDataSource);
+    DataSource newRestrictedDataSource = restrictedFooDataSource.withUpdatedDataSource(restrictedBarDataSource);
+    Assert.assertEquals(newRestrictedDataSource, restrictedBarDataSource);
   }
 
   @Test
   public void test_equals()
   {
-    EqualsVerifier.forClass(RestrictedDataSource.class).usingGetClass().withNonnullFields("base", "policy").verify();
+    EqualsVerifier.forClass(RestrictedInputNumberDataSource.class)
+                  .usingGetClass()
+                  .withNonnullFields("inputNumber", "policy")
+                  .verify();
   }
 
   @Test
   public void test_serde_roundTrip() throws Exception
   {
     final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
-    final RestrictedDataSource deserialized = (RestrictedDataSource) jsonMapper.readValue(
+    final RestrictedInputNumberDataSource deserialized = jsonMapper.readValue(
         jsonMapper.writeValueAsString(restrictedFooDataSource),
-        DataSource.class
+        RestrictedInputNumberDataSource.class
     );
 
     Assert.assertEquals(restrictedFooDataSource, deserialized);
@@ -134,17 +127,16 @@ public class RestrictedDataSourceTest
   public void test_deserialize_fromObject() throws Exception
   {
     final ObjectMapper jsonMapper = TestHelper.makeJsonMapper();
-    final RestrictedDataSource deserializedRestrictedDataSource = jsonMapper.readValue(
-        "{\"type\":\"restrict\",\"base\":{\"type\":\"table\",\"name\":\"foo\"},\"policy\":{\"type\":\"noRestriction\"}}",
-        RestrictedDataSource.class
+    final RestrictedInputNumberDataSource deserializedRestrictedDataSource = jsonMapper.readValue(
+        "{\"type\":\"restrictedInputNumber\",\"inputNumber\":1,\"policy\":{\"type\":\"noRestriction\"}}\n",
+        RestrictedInputNumberDataSource.class
     );
 
     Assert.assertEquals(
         deserializedRestrictedDataSource,
-        RestrictedDataSource.create(fooDataSource, NoRestrictionPolicy.instance())
+        restrictedBarDataSource
     );
   }
-
 
   @Test
   public void test_serialize() throws Exception
@@ -153,7 +145,7 @@ public class RestrictedDataSourceTest
     final String s = jsonMapper.writeValueAsString(restrictedFooDataSource);
 
     Assert.assertEquals(
-        "{\"type\":\"restrict\",\"base\":{\"type\":\"table\",\"name\":\"foo\"},\"policy\":{\"type\":\"row\",\"rowFilter\":{\"type\":\"true\"}}}",
+        "{\"type\":\"restrictedInputNumber\",\"inputNumber\":0,\"policy\":{\"type\":\"row\",\"rowFilter\":{\"type\":\"true\"}}}",
         s
     );
   }

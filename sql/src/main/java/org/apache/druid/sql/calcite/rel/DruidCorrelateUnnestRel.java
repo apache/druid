@@ -317,7 +317,8 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
         getPlannerContext(),
         getCluster().getRexBuilder(),
         finalizeAggregations,
-        null
+        null,
+        false
     );
   }
 
@@ -338,7 +339,8 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
         ),
         getPlannerContext(),
         getCluster().getRexBuilder(),
-        false
+        false,
+        true
     );
   }
 

@@ -165,7 +165,8 @@ public class DruidUnionDataSourceRel extends DruidRel<DruidUnionDataSourceRel>
         signature,
         getPlannerContext(),
         getCluster().getRexBuilder(),
-        finalizeAggregations
+        finalizeAggregations,
+        false
     );
   }
 
@@ -180,7 +181,8 @@ public class DruidUnionDataSourceRel extends DruidRel<DruidUnionDataSourceRel>
         ),
         getPlannerContext(),
         getCluster().getRexBuilder(),
-        false
+        false,
+        true
     );
   }
 

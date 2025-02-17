@@ -312,7 +312,8 @@ public class DruidQueryGenerator
             source.rowSignature,
             plannerContext,
             rexBuilder,
-            !(topLevel) && tweaks.finalizeSubQuery()
+            !(topLevel) && tweaks.finalizeSubQuery(),
+            false
         );
       }
 

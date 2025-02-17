@@ -519,7 +519,8 @@ public class PartialDruidQuery
       final RowSignature sourceRowSignature,
       final PlannerContext plannerContext,
       final RexBuilder rexBuilder,
-      final boolean finalizeAggregations
+      final boolean finalizeAggregations,
+      final boolean applyPolicies
   )
   {
     return DruidQuery.fromPartialQuery(
@@ -529,7 +530,8 @@ public class PartialDruidQuery
         plannerContext,
         rexBuilder,
         finalizeAggregations,
-        null
+        null,
+        applyPolicies
     );
   }
 
@@ -539,7 +541,8 @@ public class PartialDruidQuery
       final PlannerContext plannerContext,
       final RexBuilder rexBuilder,
       final boolean finalizeAggregations,
-      @Nullable VirtualColumnRegistry virtualColumnRegistry
+      @Nullable VirtualColumnRegistry virtualColumnRegistry,
+      final boolean applyPolicies
   )
   {
     return DruidQuery.fromPartialQuery(
@@ -549,7 +552,8 @@ public class PartialDruidQuery
         plannerContext,
         rexBuilder,
         finalizeAggregations,
-        virtualColumnRegistry
+        virtualColumnRegistry,
+        applyPolicies
     );
   }
 
