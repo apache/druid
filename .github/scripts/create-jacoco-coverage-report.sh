@@ -32,7 +32,7 @@ mvn jacoco:merge
 
 mvn jacoco:report
 
-changed_files="$(git diff --name-only origin/${GITHUB_BASE_REF}...HEAD | grep "\.java$" || [[ $? == 1 ]])"
+changed_files="$(git diff --name-only origin/${GITHUB_BASE_REF}...HEAD '**/*.java' || [[ $? == 1 ]])"
 
 echo "Changed files:"
 for f in ${changed_files}
@@ -48,6 +48,7 @@ export FORCE_COLOR=2
 
 if [ -n "${changed_files}" ]
 then
+  find . -name jacoco.xml | grep . >/dev/null || { echo 'No jacoco.xml found; something must be broken!'; exit 1; }
   git diff origin/${GITHUB_BASE_REF}...HEAD -- ${changed_files} |
   node_modules/.bin/diff-test-coverage \
   --coverage "**/target/site/jacoco/jacoco.xml" \

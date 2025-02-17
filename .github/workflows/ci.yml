@@ -64,6 +64,7 @@ jobs:
     name: "report-jacoco-coverage-failures"
     needs: run-unit-tests
     uses: ./.github/workflows/worker.yml
+    if: ${{ !contains( github.event.pull_request.labels.*.name, 'jacoco:skip') }}
     with:
       script: .github/scripts/create-jacoco-coverage-report.sh
       artifacts_to_download: "unit-test-reports-*"

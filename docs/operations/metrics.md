@@ -322,6 +322,7 @@ The following metrics are emitted only when [segment metadata caching](../config
 |`segment/used/count`|Number of used segments currently present in the metadata store.|`dataSource`|
 |`segment/unused/count`|Number of unused segments currently present in the metadata store.|`dataSource`|
 |`segment/pending/count`|Number of pending segments currently present in the metadata store.|`dataSource`|
+|`segment/metadataCache/transactions`|Number of read or write transactions performed on the cache for a single datasource.|`dataSource`|
 |`segment/metadataCache/sync/time`|Number of milliseconds taken for the cache to sync with the metadata store.||
 |`segment/metadataCache/deleted`|Total number of segments deleted from the cache during the latest sync.||
 |`segment/metadataCache/skipped`|Total number of unparseable segment records that were skipped in the latest sync.||
