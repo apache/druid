@@ -21,7 +21,6 @@ package org.apache.druid.indexing.seekablestream;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -90,8 +89,8 @@ public class SeekableStreamIndexTaskRunnerTest
     DateTime now = DateTimes.nowUtc();
 
     Mockito.when(ioConfig.getRefreshRejectionPeriodsInMinutes()).thenReturn(120L);
-    Mockito.when(ioConfig.getMaximumMessageTime()).thenReturn(Optional.of(DateTimes.nowUtc().plusHours(2)));
-    Mockito.when(ioConfig.getMinimumMessageTime()).thenReturn(Optional.of(DateTimes.nowUtc().minusHours(2)));
+    Mockito.when(ioConfig.getMaximumMessageTime()).thenReturn(DateTimes.nowUtc().plusHours(2));
+    Mockito.when(ioConfig.getMinimumMessageTime()).thenReturn(DateTimes.nowUtc().minusHours(2));
     Mockito.when(ioConfig.getInputFormat()).thenReturn(new JsonInputFormat(null, null, null, null, null));
     Mockito.when(ioConfig.getStartSequenceNumbers()).thenReturn(sequenceNumbers);
     Mockito.when(ioConfig.getEndSequenceNumbers()).thenReturn(endSequenceNumbers);
@@ -143,8 +142,8 @@ public class SeekableStreamIndexTaskRunnerTest
 
     Mockito.when(ioConfig.getRefreshRejectionPeriodsInMinutes()).thenReturn(null);
     // min max time not populated.
-    Mockito.when(ioConfig.getMaximumMessageTime()).thenReturn(Optional.absent());
-    Mockito.when(ioConfig.getMinimumMessageTime()).thenReturn(Optional.absent());
+    Mockito.when(ioConfig.getMaximumMessageTime()).thenReturn(null);
+    Mockito.when(ioConfig.getMinimumMessageTime()).thenReturn(null);
     Mockito.when(ioConfig.getInputFormat()).thenReturn(new JsonInputFormat(null, null, null, null, null));
     Mockito.when(ioConfig.getStartSequenceNumbers()).thenReturn(sequenceNumbers);
     Mockito.when(ioConfig.getEndSequenceNumbers()).thenReturn(endSequenceNumbers);
