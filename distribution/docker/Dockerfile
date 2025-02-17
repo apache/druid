@@ -30,7 +30,7 @@ ARG BUILD_FROM_SOURCE="true"
 # This is because it's not able to build the distribution on arm64 due to dependency problem of web-console. See: https://github.com/apache/druid/issues/13012
 # Since only java jars are shipped in the final image, it's OK to build the distribution on x64.
 # Once the web-console dependency problem is resolved, we can remove the --platform directive.
-FROM --platform=linux/amd64 node:20.9.0-slim as web-console-builder
+FROM --platform=linux/amd64 node:20.9.0-slim AS web-console-builder
 
 RUN npm install -g npm@10.9.0
 
@@ -61,7 +61,7 @@ RUN if [ "$BUILD_FROM_SOURCE" = "true" ]; then \
 #===============================================================
 # Declare a builder stage to build the Druid distribution
 #===============================================================
-FROM maven:3.9.9-eclipse-temurin-${JDK_VERSION} as builder
+FROM maven:3.9.9-eclipse-temurin-${JDK_VERSION} AS builder
 RUN apt-get -qq update \
     && apt-get -qq -y install --no-install-recommends python3 python3-yaml
 
