@@ -159,9 +159,6 @@ public class Queries
     if (query.getDataSource() instanceof QueryDataSource) {
       final Query<?> subQuery = ((QueryDataSource) query.getDataSource()).getQuery();
       retVal = query.withDataSource(new QueryDataSource(withSpecificSegments(subQuery, descriptors)));
-      if (retVal.getDataSourceAnalysis().getBaseTableDataSource().isPresent()) {
-        throw new ISE("Analysis shouldn't see thru subQueries (unless it could collapse the subquery) [%s]", query);
-      }
     } else {
       retVal = query.withQuerySegmentSpec(new MultipleSpecificSegmentSpec(descriptors));
 
