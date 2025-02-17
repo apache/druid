@@ -79,7 +79,6 @@ RUN --mount=type=cache,target=/root/.m2 if [ "$BUILD_FROM_SOURCE" = "true" ]; th
       rm -fr distribution/target/ && \
       mvn -B -ff -ntp \
       install \
-      -s settings.xml \
       -Pdist,bundle-contrib-exts \
       -Pskip-static-checks,skip-tests \
       -Dweb.console.skip=true \
