@@ -1527,8 +1527,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
             .times(1);
 
     taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
-    taskQueue.shutdown("id4", "Task [%s] failed to stop in a timely manner, killing task", "id4");
-    taskQueue.shutdown("id5", "Task [%s] failed to stop in a timely manner, killing task", "id5");
+    taskQueue.shutdown("id4", "Failed to stop in a timely manner", "id4");
+    taskQueue.shutdown("id5", "Failed to stop in a timely manner", "id5");
     replayAll();
 
     supervisor.start();
@@ -5075,7 +5075,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
 
     taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
 
-    // Only the active i.e non-publishing tasks are resumed
+    // Only the active i.e. non-publishing tasks are resumed
     EasyMock.expect(taskClient.getStartTimeAsync(readingTask.getId())).andReturn(Futures.immediateFuture(startTime));
     EasyMock.expect(taskClient.resumeAsync(readingTask.getId())).andReturn(Futures.immediateFuture(true));
 
@@ -5804,8 +5804,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
     @Override
     public String generateSequenceName(
         Map<KafkaTopicPartition, Long> startPartitions,
-        Optional<DateTime> minimumMessageTime,
-        Optional<DateTime> maximumMessageTime,
+        DateTime minimumMessageTime,
+        DateTime maximumMessageTime,
         DataSchema dataSchema,
         SeekableStreamIndexTaskTuningConfig tuningConfig
     )
