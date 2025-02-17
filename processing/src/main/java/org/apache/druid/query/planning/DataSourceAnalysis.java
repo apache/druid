@@ -21,7 +21,7 @@ package org.apache.druid.query.planning;
 
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.query.BaseQuery;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.Query;
@@ -29,6 +29,7 @@ import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.UnnestDataSource;
 import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.join.JoinPrefixUtils;
 
@@ -162,25 +163,6 @@ public class DataSourceAnalysis
   {
     return Optional.ofNullable(joinBaseTableFilter);
   }
-
-  /**
-   * Returns the {@link QuerySegmentSpec} that is associated with the base datasource, if any. This only happens
-   * when there is an outer query datasource. In this case, the base querySegmentSpec is the one associated with the
-   * innermost subquery.
-   * <p>
-   * This {@link QuerySegmentSpec} is taken from the query returned by {@link #getBaseQuery()}.
-   *
-   * @return the query segment spec associated with the base datasource if  is true, else empty
-   */
-  public Optional<QuerySegmentSpec> getBaseQuerySegmentSpec()
-  {
-    if (baseQuery != null && baseQuery instanceof BaseQuery) {
-      BaseQuery<?> baseQuery2 = (BaseQuery<?>) baseQuery;
-      return Optional.of(baseQuery2.getQuerySegmentSpec());
-    }
-    return Optional.empty();
-  }
-
 
   /**
    * The applicable {@link QuerySegmentSpec} for this vertex.
@@ -319,6 +301,9 @@ public class DataSourceAnalysis
 
   public DataSourceAnalysis maybeWithQuerySegmentSpec(QuerySegmentSpec newQuerySegmentSpec)
   {
+    if (newQuerySegmentSpec == null) {
+      newQuerySegmentSpec = new MultipleIntervalSegmentSpec(Intervals.ONLY_ETERNITY);
+    }
     if (querySegmentSpec == null) {
       return new DataSourceAnalysis(
           baseDataSource, baseQuery, joinBaseTableFilter, preJoinableClauses, newQuerySegmentSpec
