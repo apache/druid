@@ -173,8 +173,7 @@ public class Queries
         throw new ISE("Unable to apply specific segments to non-table-based dataSource[%s]", query.getDataSource());
       }
 
-      if (analysis.getEffectiveQuerySegmentSpec().isPresent()
-          && !analysis.getEffectiveQuerySegmentSpec().get().equals(new MultipleSpecificSegmentSpec(descriptors))) {
+      if (!analysis.getEffectiveQuerySegmentSpec().equals(new MultipleSpecificSegmentSpec(descriptors))) {
         // If you see the error message below, it's a bug in either this function or in DataSourceAnalysis.
         throw new ISE("Unable to apply specific segments to query with dataSource[%s]", query.getDataSource());
       }
