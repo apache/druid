@@ -20,6 +20,7 @@
 package org.apache.druid.k8s.overlord.execution;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -41,14 +42,14 @@ import java.util.Set;
 
 public class SelectorBasedPodTemplateSelectStrategyTest
 {
-  private Map<String, PodTemplate> templates;
+  private Map<String, Supplier<PodTemplate>> templates;
 
   @Before
   public void setup()
   {
     templates = ImmutableMap.of(
         "mock",
-        new PodTemplate(null, null, new ObjectMeta()
+        () -> new PodTemplate(null, null, new ObjectMeta()
         {
           @Override
           public String getName()
@@ -57,7 +58,7 @@ public class SelectorBasedPodTemplateSelectStrategyTest
           }
         }, null),
         "no_match",
-        new PodTemplate(null, null, new ObjectMeta()
+        () -> new PodTemplate(null, null, new ObjectMeta()
         {
           @Override
           public String getName()
@@ -66,7 +67,7 @@ public class SelectorBasedPodTemplateSelectStrategyTest
           }
         }, null),
         "match",
-        new PodTemplate(null, null, new ObjectMeta()
+        () -> new PodTemplate(null, null, new ObjectMeta()
         {
           @Override
           public String getName()
@@ -75,7 +76,7 @@ public class SelectorBasedPodTemplateSelectStrategyTest
           }
         }, null),
         "base",
-        new PodTemplate(null, "base", new ObjectMeta()
+        () -> new PodTemplate(null, "base", new ObjectMeta()
         {
           @Override
           public String getName()

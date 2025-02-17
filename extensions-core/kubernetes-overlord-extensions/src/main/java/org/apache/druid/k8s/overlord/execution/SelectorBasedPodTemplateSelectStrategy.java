@@ -22,6 +22,7 @@ package org.apache.druid.k8s.overlord.execution;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Supplier;
 import io.fabric8.kubernetes.api.model.PodTemplate;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.k8s.overlord.common.DruidK8sConstants;
@@ -55,7 +56,7 @@ public class SelectorBasedPodTemplateSelectStrategy implements PodTemplateSelect
    * @return the template if a selector matches, otherwise fallback to base template
    */
   @Override
-  public PodTemplateWithName getPodTemplateForTask(Task task, Map<String, PodTemplate> templates)
+  public PodTemplateWithName getPodTemplateForTask(Task task, Map<String, Supplier<PodTemplate>> templates)
   {
     String templateKey = selectors.stream()
                                   .filter(selector -> selector.evaluate(task))
@@ -66,7 +67,8 @@ public class SelectorBasedPodTemplateSelectStrategy implements PodTemplateSelect
     if (!templates.containsKey(templateKey)) {
       templateKey = DruidK8sConstants.BASE_TEMPLATE_NAME;
     }
-    return new PodTemplateWithName(templateKey, templates.get(templateKey));
+    Supplier<PodTemplate> podTemplateSupplier = templates.get(templateKey);
+    return new PodTemplateWithName(templateKey, podTemplateSupplier.get());
   }
 
   @JsonProperty
