@@ -19,6 +19,7 @@
 
 package org.apache.druid.indexer;
 
+import org.apache.druid.indexer.path.SegmentMetadataPublisher;
 import org.apache.druid.timeline.DataSegment;
 
 import java.util.List;
@@ -29,11 +30,11 @@ import java.util.stream.Collectors;
 public class MetadataStorageUpdaterJob implements Jobby
 {
   private final HadoopDruidIndexerConfig config;
-  private final MetadataStorageUpdaterJobHandler handler;
+  private final SegmentMetadataPublisher handler;
 
   public MetadataStorageUpdaterJob(
       HadoopDruidIndexerConfig config,
-      MetadataStorageUpdaterJobHandler handler
+      SegmentMetadataPublisher handler
   )
   {
     this.config = config;
@@ -43,10 +44,12 @@ public class MetadataStorageUpdaterJob implements Jobby
   @Override
   public boolean run()
   {
-    final List<DataSegmentAndIndexZipFilePath> segmentAndIndexZipFilePaths = IndexGeneratorJob.getPublishedSegmentAndIndexZipFilePaths(config);
-    final List<DataSegment> segments = segmentAndIndexZipFilePaths.stream().map(s -> s.getSegment()).collect(Collectors.toList());
-    final String segmentTable = config.getSchema().getIOConfig().getMetadataUpdateSpec().getSegmentTable();
-    handler.publishSegments(segmentTable, segments, HadoopDruidIndexerConfig.JSON_MAPPER);
+    final List<DataSegmentAndIndexZipFilePath> segmentAndIndexZipFilePaths
+        = IndexGeneratorJob.getPublishedSegmentAndIndexZipFilePaths(config);
+    final List<DataSegment> segments = segmentAndIndexZipFilePaths.stream()
+                                                                  .map(DataSegmentAndIndexZipFilePath::getSegment)
+                                                                  .collect(Collectors.toList());
+    handler.publishSegments(segments);
 
     return true;
   }

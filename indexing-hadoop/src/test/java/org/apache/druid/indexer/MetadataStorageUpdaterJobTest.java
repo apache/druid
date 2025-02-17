@@ -20,6 +20,7 @@
 package org.apache.druid.indexer;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.indexer.path.SegmentMetadataPublisher;
 import org.apache.druid.indexer.updater.MetadataStorageUpdaterJobSpec;
 import org.junit.Test;
 import org.mockito.MockedStatic;
@@ -43,7 +44,7 @@ public class MetadataStorageUpdaterJobTest
   private HadoopIOConfig ioConfig;
   private MetadataStorageUpdaterJobSpec metadataUpdateSpec;
   private HadoopDruidIndexerConfig config;
-  private MetadataStorageUpdaterJobHandler handler;
+  private SegmentMetadataPublisher handler;
   private MetadataStorageUpdaterJob target;
 
   @Test
@@ -53,7 +54,7 @@ public class MetadataStorageUpdaterJobTest
     ioConfig = mock(HadoopIOConfig.class);
     spec = mock(HadoopIngestionSpec.class);
     config = mock(HadoopDruidIndexerConfig.class);
-    handler = mock(MetadataStorageUpdaterJobHandler.class);
+    handler = mock(SegmentMetadataPublisher.class);
 
     try (MockedStatic<IndexGeneratorJob> mockedStatic = Mockito.mockStatic(IndexGeneratorJob.class)) {
       mockedStatic.when(() -> IndexGeneratorJob.getPublishedSegmentAndIndexZipFilePaths(config))
@@ -71,9 +72,8 @@ public class MetadataStorageUpdaterJobTest
       target.run();
 
       verify(handler).publishSegments(
-          SEGMENT_TABLE,
-          DATA_SEGMENT_AND_INDEX_ZIP_FILE_PATHS.stream().map(s -> s.getSegment()).collect(
-              Collectors.toList()), HadoopDruidIndexerConfig.JSON_MAPPER
+          DATA_SEGMENT_AND_INDEX_ZIP_FILE_PATHS.stream().map(DataSegmentAndIndexZipFilePath::getSegment).collect(
+              Collectors.toList())
       );
 
       verify(metadataUpdateSpec).getSegmentTable();
