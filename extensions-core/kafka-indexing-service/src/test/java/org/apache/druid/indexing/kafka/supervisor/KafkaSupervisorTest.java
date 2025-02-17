@@ -1527,8 +1527,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
             .times(1);
 
     taskRunner.registerListener(EasyMock.anyObject(TaskRunnerListener.class), EasyMock.anyObject(Executor.class));
-    taskQueue.shutdown("id4", "Failed to stop in a timely manner", "id4");
-    taskQueue.shutdown("id5", "Failed to stop in a timely manner", "id5");
+    taskQueue.shutdown("id4", "Failed to stop in a timely manner");
+    taskQueue.shutdown("id5", "Failed to stop in a timely manner");
     replayAll();
 
     supervisor.start();

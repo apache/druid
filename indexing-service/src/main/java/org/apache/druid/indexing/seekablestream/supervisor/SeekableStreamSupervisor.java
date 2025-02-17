@@ -2617,7 +2617,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
           {
             if (result == null || !result) {
               log.info("Killing task[%s] as it failed to stop in a timely manner.", id);
-              killTask(id, "Failed to stop in a timely manner", id);
+              killTask(id, "Failed to stop in a timely manner");
             }
             return null;
           }
