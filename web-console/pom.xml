@@ -154,7 +154,6 @@
         <artifactId>maven-resources-plugin</artifactId>
         <configuration>
           <outputDirectory>${project.build.outputDirectory}/org/apache/druid/console</outputDirectory>
-          <skip>${web.console.skip}</skip>
         </configuration>
       </plugin>
     </plugins>

@@ -1,5 +1,5 @@
 #
-# Licensed to the Apache Software Foundation (ASF) under one
+#i Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
 # regarding copyright ownership.  The ASF licenses this file
@@ -20,7 +20,9 @@
 **/*.jar
 **/*.class
 dist
-target
+**/target
+# Keep the target of distribution since we support to build the docker directly by the distribution file built on host machine
+#!distribution/target
 *.iml
 *.ipr
 *.iws
@@ -35,3 +37,4 @@ target
 *.DS_Store
 _site
 dependency-reduced-pom.xml
+**/node_modules

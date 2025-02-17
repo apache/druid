@@ -27,16 +27,28 @@ ARG BUILD_FROM_SOURCE="true"
 # This is because it's not able to build the distribution on arm64 due to dependency problem of web-console. See: https://github.com/apache/druid/issues/13012
 # Since only java jars are shipped in the final image, it's OK to build the distribution on x64.
 # Once the web-console dependency problem is resolved, we can remove the --platform directive.
-FROM --platform=linux/amd64 maven:3.9.9-eclipse-temurin-${JDK_VERSION} as web-console-builder
+FROM --platform=linux/amd64 node:20.9.0-slim as web-console-builder
 
-COPY . /src
+RUN npm install -g npm@10.9.0
+
+# Only copy necessary files to web-console to build to try the best to use docker cache
+COPY ./web-console /src/web-console
+COPY ./docs /src/docs
+WORKDIR /src/web-console
 
 # Re-declare the ARG to make it available in this stage
-ARG BUILD_FROM_SOURCE
+ARG BUILD_FROM_SOURCE="true"
 
-# Build web-console
-RUN --mount=type=cache,target=/root/.m2 if [ "$BUILD_FROM_SOURCE" = "true" ]; then \
-    cd /src/web-console && mvn -B -ff -Dpmd.skip=true -DskipUTs=true clean package\
+ENV NODE_OPTIONS=--openssl-legacy-provider
+
+# The ls command below is just for debug helping us know which files are updated that docker cache are invalidated
+RUN if [ "$BUILD_FROM_SOURCE" = "true" ]; then \
+  ls -l && \
+  npm ci \
+; fi
+RUN if [ "$BUILD_FROM_SOURCE" = "true" ]; then \
+   ./script/build \
+   && ./script/cp-to ./target/resources \
 ; fi
 
 #
@@ -49,20 +61,22 @@ RUN apt-get -qq update \
 COPY . /src
 WORKDIR /src
 
-# Copy the web-console jar from the web-console-builder to include it in the distribution
-COPY --from=web-console-builder /src/web-console/target/web-console*.jar /src/web-console/target/
+# Copy the web-console resources from the web-console-builder to include it in this stage to package
+COPY --from=web-console-builder /src/web-console/target/resources /src/web-console/target/resources
 
 # Re-declare the ARG to make it available in this stage
 ARG BUILD_FROM_SOURCE
 
-# Note: 'clean' is necessary to make sure distrubution/target is cleared
-# because later we will use 'tar -zxf' to extract tar files under this directory
+# Note: use web.console.skip to exclude building of web-console but include the package of web-console
 RUN --mount=type=cache,target=/root/.m2 if [ "$BUILD_FROM_SOURCE" = "true" ]; then \
+      rm -fr distribution/target/ && \
       mvn -B -ff -ntp \
-      clean install \
+      install \
+      -s settings.xml \
       -Pdist,bundle-contrib-exts \
       -Pskip-static-checks,skip-tests \
-      -pl '!org.apache.druid:web-console, !org.apache.druid:druid-benchmarks, !org.apache.druid:druid-integration-tests, !org.apache.druid.integration-tests:druid-it-tools, !org.apache.druid.integration-tests:druid-it-image, !org.apache.druid.integration-tests:druid-it-cases, !org.apache.druid:druid-quidem-ut' \
+      -Dweb.console.skip=true \
+      -pl '!org.apache.druid:druid-benchmarks, !org.apache.druid:druid-integration-tests, !org.apache.druid.integration-tests:druid-it-tools, !org.apache.druid.integration-tests:druid-it-image, !org.apache.druid.integration-tests:druid-it-cases' \
       -T1C \
 ; fi
 
