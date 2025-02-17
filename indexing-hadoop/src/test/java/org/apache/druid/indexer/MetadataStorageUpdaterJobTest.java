@@ -72,8 +72,9 @@ public class MetadataStorageUpdaterJobTest
       target.run();
 
       verify(handler).publishSegments(
-          DATA_SEGMENT_AND_INDEX_ZIP_FILE_PATHS.stream().map(DataSegmentAndIndexZipFilePath::getSegment).collect(
-              Collectors.toList())
+          DATA_SEGMENT_AND_INDEX_ZIP_FILE_PATHS.stream()
+                                               .map(DataSegmentAndIndexZipFilePath::getSegment)
+                                               .collect(Collectors.toSet())
       );
 
       verify(metadataUpdateSpec).getSegmentTable();

@@ -23,6 +23,7 @@ import org.apache.druid.indexer.path.SegmentMetadataPublisher;
 import org.apache.druid.timeline.DataSegment;
 
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -46,9 +47,9 @@ public class MetadataStorageUpdaterJob implements Jobby
   {
     final List<DataSegmentAndIndexZipFilePath> segmentAndIndexZipFilePaths
         = IndexGeneratorJob.getPublishedSegmentAndIndexZipFilePaths(config);
-    final List<DataSegment> segments = segmentAndIndexZipFilePaths.stream()
-                                                                  .map(DataSegmentAndIndexZipFilePath::getSegment)
-                                                                  .collect(Collectors.toList());
+    final Set<DataSegment> segments = segmentAndIndexZipFilePaths.stream()
+                                                                 .map(DataSegmentAndIndexZipFilePath::getSegment)
+                                                                 .collect(Collectors.toSet());
     handler.publishSegments(segments);
 
     return true;

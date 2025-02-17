@@ -22,7 +22,6 @@ package org.apache.druid.indexer.path;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.timeline.DataSegment;
 
-import java.util.List;
 import java.util.Set;
 
 /**
@@ -38,8 +37,8 @@ public class SegmentMetadataPublisher
     this.storageCoordinator = storageCoordinator;
   }
 
-  public void publishSegments(List<DataSegment> segments)
+  public void publishSegments(Set<DataSegment> segments)
   {
-    storageCoordinator.commitSegments(Set.copyOf(segments), null);
+    storageCoordinator.commitSegments(segments, null);
   }
 }
