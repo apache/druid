@@ -123,7 +123,7 @@ public class DataSourceAnalysis
     if (baseDataSource instanceof TableDataSource) {
       return (TableDataSource) baseDataSource;
     } else {
-      throw DruidException.defensive("Base dataSource was not a table!");
+      throw DruidException.defensive("Base dataSource is not a table! [%s]", baseDataSource);
     }
   }
 
