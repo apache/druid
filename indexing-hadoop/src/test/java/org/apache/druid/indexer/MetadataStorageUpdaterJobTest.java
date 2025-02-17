@@ -19,9 +19,7 @@
 
 package org.apache.druid.indexer;
 
-import com.google.common.collect.ImmutableList;
 import org.apache.druid.indexer.path.SegmentMetadataPublisher;
-import org.apache.druid.indexer.updater.MetadataStorageUpdaterJobSpec;
 import org.junit.Test;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
@@ -32,17 +30,12 @@ import java.util.stream.Collectors;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
-import static org.mockito.Mockito.when;
 
 public class MetadataStorageUpdaterJobTest
 {
-  private static final List<DataSegmentAndIndexZipFilePath> DATA_SEGMENT_AND_INDEX_ZIP_FILE_PATHS = ImmutableList.of(
+  private static final List<DataSegmentAndIndexZipFilePath> DATA_SEGMENT_AND_INDEX_ZIP_FILE_PATHS = List.of(
       new DataSegmentAndIndexZipFilePath(null, null, null)
   );
-  private static final String SEGMENT_TABLE = "segments";
-  private HadoopIngestionSpec spec;
-  private HadoopIOConfig ioConfig;
-  private MetadataStorageUpdaterJobSpec metadataUpdateSpec;
   private HadoopDruidIndexerConfig config;
   private SegmentMetadataPublisher handler;
   private MetadataStorageUpdaterJob target;
@@ -50,21 +43,12 @@ public class MetadataStorageUpdaterJobTest
   @Test
   public void test_run()
   {
-    metadataUpdateSpec = mock(MetadataStorageUpdaterJobSpec.class);
-    ioConfig = mock(HadoopIOConfig.class);
-    spec = mock(HadoopIngestionSpec.class);
     config = mock(HadoopDruidIndexerConfig.class);
     handler = mock(SegmentMetadataPublisher.class);
 
     try (MockedStatic<IndexGeneratorJob> mockedStatic = Mockito.mockStatic(IndexGeneratorJob.class)) {
       mockedStatic.when(() -> IndexGeneratorJob.getPublishedSegmentAndIndexZipFilePaths(config))
                   .thenReturn(DATA_SEGMENT_AND_INDEX_ZIP_FILE_PATHS);
-
-
-      when(metadataUpdateSpec.getSegmentTable()).thenReturn(SEGMENT_TABLE);
-      when(ioConfig.getMetadataUpdateSpec()).thenReturn(metadataUpdateSpec);
-      when(spec.getIOConfig()).thenReturn(ioConfig);
-      when(config.getSchema()).thenReturn(spec);
 
 
       target = new MetadataStorageUpdaterJob(config, handler);
@@ -77,12 +61,8 @@ public class MetadataStorageUpdaterJobTest
                                                .collect(Collectors.toSet())
       );
 
-      verify(metadataUpdateSpec).getSegmentTable();
-      verify(ioConfig).getMetadataUpdateSpec();
-      verify(spec).getIOConfig();
-      verify(config).getSchema();
       mockedStatic.verify(() -> IndexGeneratorJob.getPublishedSegmentAndIndexZipFilePaths(config));
-      verifyNoMoreInteractions(handler, metadataUpdateSpec, ioConfig, spec, config);
+      verifyNoMoreInteractions(handler, config);
     }
   }
 }
