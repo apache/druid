@@ -36,8 +36,8 @@ import org.apache.druid.indexer.HadoopDruidIndexerJob;
 import org.apache.druid.indexer.HadoopIngestionSpec;
 import org.apache.druid.indexer.JobHelper;
 import org.apache.druid.indexer.Jobby;
-import org.apache.druid.indexer.MetadataStorageUpdaterJobHandler;
 import org.apache.druid.indexer.path.MetadataStoreBasedUsedSegmentsRetriever;
+import org.apache.druid.indexer.path.SegmentMetadataPublisher;
 import org.apache.druid.indexer.updater.MetadataStorageUpdaterJobSpec;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -110,16 +110,19 @@ public class CliInternalHadoopIndexer extends GuiceRunnable
       Preconditions.checkNotNull(metadataSpec.getType(), "type in metadataUpdateSpec must not be null");
       injector.getInstance(Properties.class).setProperty("druid.metadata.storage.type", metadataSpec.getType());
 
+      final IndexerMetadataStorageCoordinator storageCoordinator
+          = injector.getInstance(IndexerMetadataStorageCoordinator.class);
       HadoopIngestionSpec.updateSegmentListIfDatasourcePathSpecIsUsed(
           config.getSchema(),
           HadoopDruidIndexerConfig.JSON_MAPPER,
-          new MetadataStoreBasedUsedSegmentsRetriever(
-              injector.getInstance(IndexerMetadataStorageCoordinator.class)
-          )
+          new MetadataStoreBasedUsedSegmentsRetriever(storageCoordinator)
       );
 
       List<Jobby> jobs = new ArrayList<>();
-      HadoopDruidIndexerJob indexerJob = new HadoopDruidIndexerJob(config, injector.getInstance(MetadataStorageUpdaterJobHandler.class));
+      HadoopDruidIndexerJob indexerJob = new HadoopDruidIndexerJob(
+          config,
+          new SegmentMetadataPublisher(storageCoordinator)
+      );
       jobs.add(new HadoopDruidDetermineConfigurationJob(config));
       jobs.add(indexerJob);
       boolean jobsSucceeded = JobHelper.runJobs(jobs);

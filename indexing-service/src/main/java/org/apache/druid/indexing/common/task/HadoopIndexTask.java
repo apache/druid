@@ -39,10 +39,10 @@ import org.apache.druid.indexer.HadoopDruidIndexerJob;
 import org.apache.druid.indexer.HadoopIngestionSpec;
 import org.apache.druid.indexer.IngestionState;
 import org.apache.druid.indexer.JobHelper;
-import org.apache.druid.indexer.MetadataStorageUpdaterJobHandler;
 import org.apache.druid.indexer.TaskMetricsGetter;
 import org.apache.druid.indexer.TaskMetricsUtils;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.path.SegmentMetadataPublisher;
 import org.apache.druid.indexer.report.TaskReport;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
@@ -52,6 +52,7 @@ import org.apache.druid.indexing.common.actions.TimeChunkLockAcquireAction;
 import org.apache.druid.indexing.common.actions.TimeChunkLockTryAcquireAction;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.hadoop.OverlordActionBasedUsedSegmentsRetriever;
+import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
@@ -832,12 +833,12 @@ public class HadoopIndexTask extends HadoopTask implements ChatHandler
               .withTuningConfig(theSchema.getTuningConfig().withVersion(version))
       );
 
-      // MetadataStorageUpdaterJobHandler is only needed when running standalone without indexing service
-      // In that case the whatever runs the Hadoop Index Task must ensure MetadataStorageUpdaterJobHandler
+      // SegmentMetadataPublisher is only needed when running standalone without indexing service
+      // In that case the whatever runs the Hadoop Index Task must ensure IndexerMetadataStorageCoordinator
       // can be injected based on the configuration given in config.getSchema().getIOConfig().getMetadataUpdateSpec()
-      final MetadataStorageUpdaterJobHandler maybeHandler;
+      final SegmentMetadataPublisher maybeHandler;
       if (config.isUpdaterJobSpecSet()) {
-        maybeHandler = INJECTOR.getInstance(MetadataStorageUpdaterJobHandler.class);
+        maybeHandler = new SegmentMetadataPublisher(INJECTOR.getInstance(IndexerMetadataStorageCoordinator.class));
       } else {
         maybeHandler = null;
       }
