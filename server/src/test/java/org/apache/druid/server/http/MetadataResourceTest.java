@@ -61,6 +61,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class MetadataResourceTest
@@ -251,13 +252,14 @@ public class MetadataResourceTest
 
     final List<SegmentStatusInCluster> resultList = extractResponseList(response);
     Assert.assertEquals(resultList.size(), 6);
-    Assert.assertEquals(new SegmentStatusInCluster(segments[0], false, 2, 20L, false), resultList.get(0));
-    Assert.assertEquals(new SegmentStatusInCluster(segments[1], false, null, 30L, false), resultList.get(1));
-    Assert.assertEquals(new SegmentStatusInCluster(segments[2], false, 1, null, false), resultList.get(2));
+    Map<SegmentId, SegmentStatusInCluster> resultMap = resultList.stream().collect(Collectors.toMap(segmentStatus -> segmentStatus.getDataSegment().getId(), Function.identity()));
+    Assert.assertEquals(new SegmentStatusInCluster(segments[0], false, 2, 20L, false), resultMap.get(segments[0].getId()));
+    Assert.assertEquals(new SegmentStatusInCluster(segments[1], false, null, 30L, false), resultMap.get(segments[1].getId()));
+    Assert.assertEquals(new SegmentStatusInCluster(segments[2], false, 1, null, false), resultMap.get(segments[2].getId()));
     // Replication factor should be 0 as the segment is overshadowed
-    Assert.assertEquals(new SegmentStatusInCluster(segments[3], true, 0, null, false), resultList.get(3));
-    Assert.assertEquals(new SegmentStatusInCluster(realTimeSegments[0], false, null, 10L, true), resultList.get(4));
-    Assert.assertEquals(new SegmentStatusInCluster(realTimeSegments[1], false, null, 40L, true), resultList.get(5));
+    Assert.assertEquals(new SegmentStatusInCluster(segments[3], true, 0, null, false), resultMap.get(segments[3].getId()));
+    Assert.assertEquals(new SegmentStatusInCluster(realTimeSegments[0], false, null, 10L, true), resultMap.get(realTimeSegments[0].getId()));
+    Assert.assertEquals(new SegmentStatusInCluster(realTimeSegments[1], false, null, 40L, true), resultMap.get(realTimeSegments[1].getId()));
   }
 
 
