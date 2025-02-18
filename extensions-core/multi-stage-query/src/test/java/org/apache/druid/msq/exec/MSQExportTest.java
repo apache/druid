@@ -166,7 +166,7 @@ public class MSQExportTest extends MSQTestBase
 
   @MethodSource("data")
   @ParameterizedTest(name = "{index}:with context {0}")
-  public void testNumberOfRowsPerFile(String unusedContextName, Map<String, Object> context) throws IOException
+  public void testNumberOfRowsPerFile(String unusedContextName, Map<String, Object> context)
   {
     RowSignature rowSignature = RowSignature.builder()
                                             .add("__time", ColumnType.LONG)
