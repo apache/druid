@@ -329,7 +329,7 @@ public class QueriesTest
         DruidException.class,
         () -> Queries.withSpecificSegments(query, descriptors)
     );
-    Assert.assertEquals("Base dataSource is not a table! [LookupDataSource{lookupName='lookyloo'}]", e.getMessage());
+    Assert.assertEquals("Base dataSource[LookupDataSource{lookupName='lookyloo'}] is not a table!", e.getMessage());
   }
 
   @Test
