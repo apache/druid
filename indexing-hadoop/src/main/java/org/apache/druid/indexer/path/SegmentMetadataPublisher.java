@@ -17,14 +17,28 @@
  * under the License.
  */
 
-package org.apache.druid.indexer;
+package org.apache.druid.indexer.path;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.timeline.DataSegment;
 
-import java.util.List;
+import java.util.Set;
 
-public interface MetadataStorageUpdaterJobHandler
+/**
+ * Publishes segments to the metadata store. Used by stand-alone hadoop indexer
+ * tasks to publish segments to the metadata store without going through the Overlord.
+ */
+public class SegmentMetadataPublisher
 {
-  void publishSegments(String tableName, List<DataSegment> segments, ObjectMapper mapper);
+  private final IndexerMetadataStorageCoordinator storageCoordinator;
+
+  public SegmentMetadataPublisher(IndexerMetadataStorageCoordinator storageCoordinator)
+  {
+    this.storageCoordinator = storageCoordinator;
+  }
+
+  public void publishSegments(Set<DataSegment> segments)
+  {
+    storageCoordinator.commitSegments(segments, null);
+  }
 }

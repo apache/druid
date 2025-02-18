@@ -23,8 +23,6 @@ import com.google.inject.Binder;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import org.apache.druid.audit.AuditManager;
-import org.apache.druid.indexer.MetadataStorageUpdaterJobHandler;
-import org.apache.druid.indexer.SQLMetadataStorageUpdaterJobHandler;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.metadata.MetadataRuleManager;
@@ -79,7 +77,6 @@ public class SQLMetadataStorageDruidModule implements Module
     PolyBind.createChoiceWithDefault(binder, prop, Key.get(SegmentMetadataTransactionFactory.class), defaultValue);
     PolyBind.createChoiceWithDefault(binder, prop, Key.get(IndexerMetadataStorageCoordinator.class), defaultValue);
     PolyBind.createChoiceWithDefault(binder, prop, Key.get(MetadataStorageActionHandlerFactory.class), defaultValue);
-    PolyBind.createChoiceWithDefault(binder, prop, Key.get(MetadataStorageUpdaterJobHandler.class), defaultValue);
     PolyBind.createChoiceWithDefault(binder, prop, Key.get(MetadataSupervisorManager.class), defaultValue);
 
     configureAuditManager(binder);
@@ -123,11 +120,6 @@ public class SQLMetadataStorageDruidModule implements Module
             .addBinding(type)
             .to(IndexerSQLMetadataStorageCoordinator.class)
             .in(ManageLifecycle.class);
-
-    PolyBind.optionBinder(binder, Key.get(MetadataStorageUpdaterJobHandler.class))
-            .addBinding(type)
-            .to(SQLMetadataStorageUpdaterJobHandler.class)
-            .in(LazySingleton.class);
 
     PolyBind.optionBinder(binder, Key.get(MetadataSupervisorManager.class))
             .addBinding(type)

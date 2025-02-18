@@ -19,7 +19,7 @@ set -e
 set -x
 
 OPTS+="-pl !integration-tests,!:druid-it-tools,!:druid-it-image,!:druid-it-cases"
-OPTS+=" -Dsurefire.failIfNoSpecifiedTests=false -P skip-static-checks -Dweb.console.skip=true -Dmaven.javadoc.skip=true"
-OPTS+=" -Djacoco.destFile=\"target/jacoco-${HASH}.exec\""
+OPTS+=" -Dsurefire.failIfNoSpecifiedTests=false -P skip-static-checks -Dweb.console.skip=true"
+OPTS+=" -Djacoco.destFile=target/jacoco-${HASH}.exec"
 
 mvn -B $OPTS test "$@"
