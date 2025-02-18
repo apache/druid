@@ -265,8 +265,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
     KinesisIndexTaskIOConfig taskConfig = task.getIOConfig();
     Assert.assertEquals("sequenceName-0", taskConfig.getBaseSequenceName());
     Assert.assertTrue("isUseTransaction", taskConfig.isUseTransaction());
-    Assert.assertFalse("minimumMessageTime", taskConfig.getMinimumMessageTime().isPresent());
-    Assert.assertFalse("maximumMessageTime", taskConfig.getMaximumMessageTime().isPresent());
+    Assert.assertNull("minimumMessageTime", taskConfig.getMinimumMessageTime());
+    Assert.assertNull("maximumMessageTime", taskConfig.getMaximumMessageTime());
 
     Assert.assertEquals(STREAM, taskConfig.getStartSequenceNumbers().getStream());
     Assert.assertEquals(
@@ -741,15 +741,15 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
     Assert.assertTrue(
         "minimumMessageTime",
-        task1.getIOConfig().getMinimumMessageTime().get().plusMinutes(59).isBeforeNow()
+        task1.getIOConfig().getMinimumMessageTime().plusMinutes(59).isBeforeNow()
     );
     Assert.assertTrue(
         "minimumMessageTime",
-        task1.getIOConfig().getMinimumMessageTime().get().plusMinutes(61).isAfterNow()
+        task1.getIOConfig().getMinimumMessageTime().plusMinutes(61).isAfterNow()
     );
     Assert.assertEquals(
-        task1.getIOConfig().getMinimumMessageTime().get(),
-        task2.getIOConfig().getMinimumMessageTime().get()
+        task1.getIOConfig().getMinimumMessageTime(),
+        task2.getIOConfig().getMinimumMessageTime()
     );
   }
 
@@ -793,15 +793,15 @@ public class KinesisSupervisorTest extends EasyMockSupport
 
     Assert.assertTrue(
         "maximumMessageTime",
-        task1.getIOConfig().getMaximumMessageTime().get().minusMinutes(59 + 60).isAfterNow()
+        task1.getIOConfig().getMaximumMessageTime().minusMinutes(59 + 60).isAfterNow()
     );
     Assert.assertTrue(
         "maximumMessageTime",
-        task1.getIOConfig().getMaximumMessageTime().get().minusMinutes(61 + 60).isBeforeNow()
+        task1.getIOConfig().getMaximumMessageTime().minusMinutes(61 + 60).isBeforeNow()
     );
     Assert.assertEquals(
-        task1.getIOConfig().getMaximumMessageTime().get(),
-        task2.getIOConfig().getMaximumMessageTime().get()
+        task1.getIOConfig().getMaximumMessageTime(),
+        task2.getIOConfig().getMaximumMessageTime()
     );
   }
 
@@ -1292,7 +1292,7 @@ public class KinesisSupervisorTest extends EasyMockSupport
     verifyAll();
 
     // check that replica tasks are created with the same minimumMessageTime as tasks inherited from another supervisor
-    Assert.assertEquals(now, ((KinesisIndexTask) captured.getValue()).getIOConfig().getMinimumMessageTime().get());
+    Assert.assertEquals(now, ((KinesisIndexTask) captured.getValue()).getIOConfig().getMinimumMessageTime());
 
     // test that a task failing causes a new task to be re-queued with the same parameters
     String runningTaskId = captured.getValue().getId();
@@ -1340,11 +1340,11 @@ public class KinesisSupervisorTest extends EasyMockSupport
     // task came from another supervisor
     Assert.assertEquals(
         now,
-        ((KinesisIndexTask) aNewTaskCapture.getValue()).getIOConfig().getMinimumMessageTime().get()
+        ((KinesisIndexTask) aNewTaskCapture.getValue()).getIOConfig().getMinimumMessageTime()
     );
     Assert.assertEquals(
         maxi,
-        ((KinesisIndexTask) aNewTaskCapture.getValue()).getIOConfig().getMaximumMessageTime().get()
+        ((KinesisIndexTask) aNewTaskCapture.getValue()).getIOConfig().getMaximumMessageTime()
     );
   }
 
@@ -3708,8 +3708,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
     supervisor.addTaskGroupToActivelyReadingTaskGroup(
         supervisor.getTaskGroupIdForPartition(SHARD_ID0),
         ImmutableMap.of("0", "0"),
-        Optional.absent(),
-        Optional.absent(),
+        null,
+        null,
         ImmutableSet.of("task1"),
         ImmutableSet.of()
     );
@@ -3717,8 +3717,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
     supervisor.addTaskGroupToPendingCompletionTaskGroup(
         supervisor.getTaskGroupIdForPartition(SHARD_ID1),
         ImmutableMap.of("0", "0"),
-        Optional.absent(),
-        Optional.absent(),
+        null,
+        null,
         ImmutableSet.of("task2"),
         ImmutableSet.of()
     );
@@ -3947,8 +3947,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
     supervisor.addTaskGroupToActivelyReadingTaskGroup(
         42,
         ImmutableMap.of(SHARD_ID1, "3"),
-        Optional.of(minMessageTime),
-        Optional.of(maxMessageTime),
+        minMessageTime,
+        maxMessageTime,
         ImmutableSet.of("id1", "id2", "id3", "id4"),
         ImmutableSet.of()
     );
@@ -4116,8 +4116,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
         0,
         task1.getIOConfig().getStartSequenceNumbers(),
         task1.getIOConfig().getEndSequenceNumbers(),
-        task1.getIOConfig().getMinimumMessageTime().get(),
-        task1.getIOConfig().getMaximumMessageTime().get(),
+        task1.getIOConfig().getMinimumMessageTime(),
+        task1.getIOConfig().getMaximumMessageTime(),
         dataSchema
     );
 
@@ -5659,8 +5659,8 @@ public class KinesisSupervisorTest extends EasyMockSupport
     @Override
     public String generateSequenceName(
         Map<String, String> startPartitions,
-        Optional<DateTime> minimumMessageTime,
-        Optional<DateTime> maximumMessageTime,
+        DateTime minimumMessageTime,
+        DateTime maximumMessageTime,
         DataSchema dataSchema,
         SeekableStreamIndexTaskTuningConfig tuningConfig
     )
