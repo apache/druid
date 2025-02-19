@@ -119,7 +119,7 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
         throw new ISE("Cannot handle datasource: %s", queryPlus.getQuery().getDataSource());
       }
 
-      final String dataSourceName = analysis.getBaseTableDataSource().get().getName();
+      final String dataSourceName = analysis.getBaseTableDataSource().getName();
 
       FunctionalIterable<SegmentDescriptor> segmentDescriptors = FunctionalIterable
           .create(intervals)
@@ -145,7 +145,7 @@ public class TestClusterQuerySegmentWalker implements QuerySegmentWalker
       throw new ISE("Cannot handle datasource: %s", dataSourceFromQuery);
     }
 
-    final String dataSourceName = analysis.getBaseTableDataSource().get().getName();
+    final String dataSourceName = analysis.getBaseTableDataSource().getName();
 
     final QueryToolChest<T, Query<T>> toolChest = factory.getToolchest();
 

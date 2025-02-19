@@ -112,34 +112,17 @@ public class DataSourceAnalysis
   }
 
   /**
-<<<<<<< HEAD
    * Unwraps the {@link #getBaseDataSource()} if its a {@link TableDataSource}.
    *
    * @throws An error of type {@link DruidException.Category#DEFENSIVE} if the {@link BaseDataSource} is not a table.
    *
    * note that this may not be true even {@link #isConcreteAndTableBased()} is true - in cases when the base
    * datasource is a {@link UnionDataSource} of {@link TableDataSource}.
-=======
-   * Returns the concrete base table.
-   * <ul>
-   *   <li>If {@link #baseDataSource} is a {@link TableDataSource}, returns itself.
-   *   <li>If {@link #baseDataSource} is a {@link RestrictedDataSource}, returns {@link RestrictedDataSource#getBase()}.
-   *   <li>Otherwise, returns an empty Optional.
-   *</ul>
-   * Note that this can return empty even if {@link #isConcreteAndTableBased()} is true. This happens if the base
-   * datasource is a {@link UnionDataSource} or {@link UnnestDataSource}.
->>>>>>> apache/master
    */
   public TableDataSource getBaseTableDataSource()
   {
     if (baseDataSource instanceof TableDataSource) {
-<<<<<<< HEAD
       return (TableDataSource) baseDataSource;
-=======
-      return Optional.of((TableDataSource) baseDataSource);
-    } else if (baseDataSource instanceof RestrictedDataSource) {
-      return Optional.of(((RestrictedDataSource) baseDataSource).getBase());
->>>>>>> apache/master
     } else {
       throw DruidException.defensive("Base dataSource[%s] is not a table!", baseDataSource);
     }
