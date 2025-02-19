@@ -106,12 +106,6 @@ public interface DataSource
 
   /**
    * Returns a segment function on to how to segment should be modified.
-<<<<<<< HEAD
-=======
-   *
-   * @param query      the input query
-   * @return the segment function
->>>>>>> apache/master
    */
   Function<SegmentReference, SegmentReference> createSegmentMapFunction(Query query);
 

@@ -289,14 +289,7 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
   <T> DatasourceBundle getBundle(final Query<T> query)
   {
     final DataSourceAnalysis analysis = query.getDataSourceAnalysis();
-<<<<<<< HEAD
-
-    final TableDataSource table =
-        analysis.getBaseTableDataSource()
-                .orElseThrow(() -> new ISE("Cannot handle datasource: %s", query.getDataSource()));
-=======
     final TableDataSource table = analysis.getBaseTableDataSource();
->>>>>>> apache/master
 
     final DatasourceBundle bundle;
 

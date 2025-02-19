@@ -166,32 +166,13 @@ public class Queries
       final DataSourceAnalysis analysis = retVal.getDataSourceAnalysis();
 
       // Sanity check: query must be based on a single table.
-      if (!analysis.getBaseTableDataSource().isPresent()) {
-        throw new ISE("Unable to apply specific segments to non-table-based dataSource[%s]", query.getDataSource());
-      }
+    analysis.getBaseTableDataSource();
 
       if (!analysis.getEffectiveQuerySegmentSpec().equals(new MultipleSpecificSegmentSpec(descriptors))) {
         // If you see the error message below, it's a bug in either this function or in DataSourceAnalysis.
         throw new ISE("Unable to apply specific segments to query with dataSource[%s]", query.getDataSource());
       }
     }
-<<<<<<< HEAD
-=======
-
-    // Verify preconditions and invariants, just in case.
-    final DataSource retDataSource = retVal.getDataSource();
-    final DataSourceAnalysis analysis = retDataSource.getAnalysis();
-
-    // Sanity check: query must be based on a single table.
-    analysis.getBaseTableDataSource();
-
-    if (analysis.getBaseQuerySegmentSpec().isPresent()
-        && !analysis.getBaseQuerySegmentSpec().get().equals(new MultipleSpecificSegmentSpec(descriptors))) {
-      // If you see the error message below, it's a bug in either this function or in DataSourceAnalysis.
-      throw new ISE("Unable to apply specific segments to query with dataSource[%s]", query.getDataSource());
-    }
-
->>>>>>> apache/master
     return retVal;
   }
 
