@@ -516,10 +516,6 @@ public class JoinDataSource implements DataSource
           final UnnestDataSource unnestDataSource = (UnnestDataSource) current;
           current = unnestDataSource.getBase();
           continue;
-        } else if (current instanceof RestrictedDataSource) {
-          final RestrictedDataSource restrictedDataSource = (RestrictedDataSource) current;
-          current = restrictedDataSource.getBase();
-          continue;
         } else if (current instanceof FilteredDataSource) {
           final FilteredDataSource filteredDataSource = (FilteredDataSource) current;
           current = filteredDataSource.getBase();
