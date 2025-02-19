@@ -28,9 +28,9 @@ import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.ForegroundCachePopulator;
 import org.apache.druid.client.cache.LocalCacheProvider;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.MapUtils;
 import org.apache.druid.java.util.common.Pair;
@@ -116,6 +116,8 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class ServerManagerTest
 {
@@ -470,7 +472,7 @@ public class ServerManagerTest
     Assert.assertSame(NoopQueryRunner.class, queryRunner.getClass());
   }
 
-  @Test(expected = ISE.class)
+  @Test
   public void testGetQueryRunnerForSegmentsWhenTimelineIsMissingReportingMissingSegmentsOnQueryDataSource()
   {
     final Interval interval = Intervals.of("0000-01-01/P1D");
@@ -478,15 +480,11 @@ public class ServerManagerTest
     final List<SegmentDescriptor> unknownSegments = Collections.singletonList(
         new SegmentDescriptor(interval, "unknown_version", 0)
     );
-    final QueryRunner<Result<SearchResultValue>> queryRunner = serverManager.getQueryRunnerForSegments(
-        query,
-        unknownSegments
+    DruidException e = assertThrows(
+        DruidException.class,
+        () -> serverManager.getQueryRunnerForSegments(query, unknownSegments)
     );
-    final ResponseContext responseContext = DefaultResponseContext.createEmpty();
-    final List<Result<SearchResultValue>> results = queryRunner.run(QueryPlus.wrap(query), responseContext).toList();
-    Assert.assertTrue(results.isEmpty());
-    Assert.assertNotNull(responseContext.getMissingSegments());
-    Assert.assertEquals(unknownSegments, responseContext.getMissingSegments());
+    Assert.assertEquals("Unknown segments", e.getMessage());
   }
 
   @Test
