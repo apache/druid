@@ -97,7 +97,7 @@ public class KubernetesPeonLifecycle
   @MonotonicNonNull
   private LogWatch logWatch;
 
-  private TaskLocation taskLocation;
+  private final AtomicReference<TaskLocation> taskLocationRef = new AtomicReference<>();
 
   protected KubernetesPeonLifecycle(
       Task task,
@@ -135,7 +135,7 @@ public class KubernetesPeonLifecycle
       }
 
       // In case something bad happens and run is called twice on this KubernetesPeonLifecycle, reset taskLocation.
-      taskLocation = null;
+      taskLocationRef.set(null);
       kubernetesClient.launchPeonJobAndWaitForStart(
           job,
           task,
@@ -222,7 +222,10 @@ public class KubernetesPeonLifecycle
    */
   protected void shutdown()
   {
-    if (State.PENDING.equals(state.get()) || State.RUNNING.equals(state.get()) || State.STOPPED.equals(state.get())) {
+    State currentState = state.get();
+    if (State.PENDING.equals(currentState)
+        || State.RUNNING.equals(currentState)
+        || State.STOPPED.equals(currentState)) {
       kubernetesClient.deletePeonJob(taskId);
     }
   }
@@ -257,7 +260,8 @@ public class KubernetesPeonLifecycle
    */
   protected TaskLocation getTaskLocation()
   {
-    if (State.PENDING.equals(state.get()) || State.NOT_STARTED.equals(state.get())) {
+    State currentState = state.get();
+    if (State.PENDING.equals(currentState) || State.NOT_STARTED.equals(currentState)) {
       /* This should not actually ever happen because KubernetesTaskRunner.start() should not return until all running tasks
       have already gone into State.RUNNING, so getTaskLocation should not be called.
        */
@@ -269,7 +273,7 @@ public class KubernetesPeonLifecycle
     since Druid doesn't support retrying tasks from a external system (K8s). We can explore adding a fabric8 watcher
     if we decide we need to change this later.
     **/
-    if (taskLocation == null) {
+    if (taskLocationRef.get() == null) {
       Optional<Pod> maybePod = kubernetesClient.getPeonPod(taskId.getK8sJobName());
       if (!maybePod.isPresent()) {
         /* Arguably we should throw a exception here but leaving it as a warn log to prevent unexpected errors.
@@ -286,16 +290,16 @@ public class KubernetesPeonLifecycle
         log.warn("Could not get task location from k8s for task [%s].", taskId);
         return TaskLocation.unknown();
       }
-      taskLocation = TaskLocation.create(
+      taskLocationRef.set(TaskLocation.create(
           podStatus.getPodIP(),
           DruidK8sConstants.PORT,
           DruidK8sConstants.TLS_PORT,
           Boolean.parseBoolean(pod.getMetadata().getAnnotations().getOrDefault(DruidK8sConstants.TLS_ENABLED, "false")),
           pod.getMetadata() != null ? pod.getMetadata().getName() : ""
-      );
+      ));
     }
 
-    return taskLocation;
+    return taskLocationRef.get();
   }
 
   private TaskStatus getTaskStatus(long duration)
