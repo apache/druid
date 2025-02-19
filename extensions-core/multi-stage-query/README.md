@@ -131,7 +131,7 @@ Package `org.apache.druid.msq.sql` contains code related to integration with Dru
 
 Main classes:
 
-- [SqlTaskResource](src/main/java/org/apache/druid/msq/counters/CounterTracker.java) offers the endpoint
+- [SqlTaskResource](src/main/java/org/apache/druid/msq/sql/resources/SqlTaskResource.java) offers the endpoint
   `/druid/v2/sql/task`, where SQL queries are executed as multi-stage query tasks.
 - [MSQTaskSqlEngine](src/main/java/org/apache/druid/msq/sql/MSQTaskSqlEngine.java) is a SqlEngine implementation that
   executes SQL queries as multi-stage query tasks. It is injected into the SqlTaskResource.

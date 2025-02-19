@@ -46,6 +46,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.msq.indexing.error.TooManySegmentsInTimeChunkFault;
 import org.apache.druid.msq.indexing.report.MSQSegmentReport;
+import org.apache.druid.msq.sql.MSQTaskQueryMaker;
 import org.apache.druid.msq.test.CounterSnapshotMatcher;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.test.MSQTestTaskActionClient;
@@ -56,6 +57,7 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
+import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
@@ -100,7 +102,8 @@ public class MSQReplaceTest extends MSQTestBase
         {DURABLE_STORAGE, DURABLE_STORAGE_MSQ_CONTEXT},
         {FAULT_TOLERANCE, FAULT_TOLERANCE_MSQ_CONTEXT},
         {PARALLEL_MERGE, PARALLEL_MERGE_MSQ_CONTEXT},
-        {WITH_REPLACE_LOCK_AND_COMPACTION_STATE, QUERY_CONTEXT_WITH_REPLACE_LOCK_AND_COMPACTION_STATE},
+        {SUPERUSER, SUPERUSER_MSQ_CONTEXT},
+        {WITH_REPLACE_LOCK_AND_COMPACTION_STATE, QUERY_CONTEXT_WITH_REPLACE_LOCK_AND_COMPACTION_STATE}
         };
     return Arrays.asList(data);
   }
@@ -699,6 +702,81 @@ public class MSQReplaceTest extends MSQTestBase
                              Collections.singletonList(new FloatDimensionSchema("m1")),
                              GranularityType.DAY,
                              Intervals.of("2000-01-02T/P1D")
+                         )
+                     )
+                     .verifyResults();
+  }
+
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testReplaceOnRestricted(String contextName, Map<String, Object> context)
+  {
+    // Set expected results based on query's end user
+    boolean isSuperUser = context.get(MSQTaskQueryMaker.USER_KEY).equals(CalciteTests.TEST_SUPERUSER_NAME);
+    ImmutableSet<Interval> expectedTombstoneIntervals = isSuperUser
+                                                        ? ImmutableSet.of()
+                                                        : ImmutableSet.of(
+                                                            Intervals.of("2001-01-01T/P1D"),
+                                                            Intervals.of("2001-01-02T/P1D")
+                                                        );
+    ImmutableSet<SegmentId> expectedSegments = isSuperUser ? ImmutableSet.of(
+        SegmentId.of("restrictedDatasource_m1_is_6", Intervals.of("2001-01-01T/P1D"), "test", 0),
+        SegmentId.of("restrictedDatasource_m1_is_6", Intervals.of("2001-01-02T/P1D"), "test", 0),
+        SegmentId.of("restrictedDatasource_m1_is_6", Intervals.of("2001-01-03T/P1D"), "test", 0)
+    ) : ImmutableSet.of(SegmentId.of("restrictedDatasource_m1_is_6", Intervals.of("2001-01-03T/P1D"), "test", 0));
+    ImmutableList<Object[]> expectedResultRows = isSuperUser ? ImmutableList.of(
+        new Object[]{978307200000L, 4.0f},
+        new Object[]{978393600000L, 5.0f},
+        new Object[]{978480000000L, 6.0f}
+    ) : ImmutableList.of(new Object[]{978480000000L, 6.0f});
+    // Set common expected results (not relevant to query's end user)
+    CounterSnapshotMatcher shuffleCounterSnapshotMatcher = isSuperUser
+                                                           ? CounterSnapshotMatcher.with()
+                                                                                   .rows(1, 1, 1)
+                                                                                   .frames(1, 1, 1)
+                                                           : CounterSnapshotMatcher.with().rows(1).frames(1);
+    CounterSnapshotMatcher inputCounterSnapshotMatcher = isSuperUser
+                                                         ? CounterSnapshotMatcher.with()
+                                                                                 .rows(1, 1, 1)
+                                                                                 .frames(1, 1, 1)
+                                                         : CounterSnapshotMatcher.with().rows(1).frames(1);
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .add("m1", ColumnType.FLOAT)
+                                            .build();
+
+    testIngestQuery().setSql(
+                         " REPLACE INTO restrictedDatasource_m1_is_6 OVERWRITE WHERE __time >= TIMESTAMP '2001-01-01' AND __time < TIMESTAMP '2001-01-04' "
+                         + "SELECT __time, m1 "
+                         + "FROM restrictedDatasource_m1_is_6 "
+                         + "WHERE __time >= TIMESTAMP '2001-01-01' AND __time < TIMESTAMP '2001-01-04' "
+                         + "PARTITIONED by DAY ")
+                     .setExpectedDataSource("restrictedDatasource_m1_is_6")
+                     .setExpectedDestinationIntervals(ImmutableList.of(Intervals.of("2001-01-01T/P3D")))
+                     .setExpectedTombstoneIntervals(expectedTombstoneIntervals)
+                     .setExpectedRowSignature(rowSignature)
+                     .setQueryContext(context)
+                     .setExpectedSegments(expectedSegments)
+                     .setExpectedResultRows(expectedResultRows)
+                     .setExpectedCountersForStageWorkerChannel(
+                         CounterSnapshotMatcher
+                             .with().totalFiles(1),
+                         0, 0, "input0"
+                     )
+                     .setExpectedCountersForStageWorkerChannel(shuffleCounterSnapshotMatcher, 0, 0, "shuffle")
+                     .setExpectedCountersForStageWorkerChannel(inputCounterSnapshotMatcher, 1, 0, "input0")
+                     .setExpectedSegmentGenerationProgressCountersForStageWorker(
+                         CounterSnapshotMatcher
+                             .with().segmentRowsProcessed(expectedSegments.size()),
+                         1, 0
+                     )
+                     .setExpectedLastCompactionState(
+                         expectedCompactionState(
+                             context,
+                             Collections.emptyList(),
+                             Collections.singletonList(new FloatDimensionSchema("m1")),
+                             GranularityType.DAY,
+                             Intervals.of("2001-01-01T/P3D")
                          )
                      )
                      .verifyResults();

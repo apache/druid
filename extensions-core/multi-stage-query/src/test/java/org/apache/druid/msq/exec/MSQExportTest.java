@@ -22,12 +22,15 @@ package org.apache.druid.msq.exec;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.msq.sql.MSQTaskQueryMaker;
 import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
+import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.junit.Assert;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -35,6 +38,8 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -42,8 +47,19 @@ import java.util.Objects;
 
 public class MSQExportTest extends MSQTestBase
 {
-  @Test
-  public void testExport() throws IOException
+
+  public static Collection<Object[]> data()
+  {
+    Object[][] data = new Object[][]{
+        {DEFAULT, DEFAULT_MSQ_CONTEXT},
+        {SUPERUSER, SUPERUSER_MSQ_CONTEXT}
+    };
+    return Arrays.asList(data);
+  }
+
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testExport(String unusedContextName, Map<String, Object> context) throws IOException
   {
     RowSignature rowSignature = RowSignature.builder()
                                             .add("__time", ColumnType.LONG)
@@ -55,7 +71,7 @@ public class MSQExportTest extends MSQTestBase
 
     testIngestQuery().setSql(sql)
                      .setExpectedDataSource("foo1")
-                     .setQueryContext(DEFAULT_MSQ_CONTEXT)
+                     .setQueryContext(context)
                      .setExpectedRowSignature(rowSignature)
                      .setExpectedSegments(ImmutableSet.of())
                      .setExpectedResultRows(ImmutableList.of())
@@ -74,8 +90,9 @@ public class MSQExportTest extends MSQTestBase
     );
   }
 
-  @Test
-  public void testExport2() throws IOException
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testExport2(String unusedContextName, Map<String, Object> context) throws IOException
   {
     RowSignature rowSignature = RowSignature.builder()
                                             .add("dim1", ColumnType.STRING)
@@ -86,7 +103,7 @@ public class MSQExportTest extends MSQTestBase
 
     testIngestQuery().setSql(sql)
                      .setExpectedDataSource("foo1")
-                     .setQueryContext(DEFAULT_MSQ_CONTEXT)
+                     .setQueryContext(context)
                      .setExpectedRowSignature(rowSignature)
                      .setExpectedSegments(ImmutableSet.of())
                      .setExpectedResultRows(ImmutableList.of())
@@ -108,8 +125,48 @@ public class MSQExportTest extends MSQTestBase
     verifyManifestFile(exportDir, ImmutableList.of(resultFile));
   }
 
-  @Test
-  public void testNumberOfRowsPerFile()
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testExportRestricted(String unusedContextName, Map<String, Object> context) throws IOException
+  {
+    // Set expected results based on query's end user
+    boolean isSuperUser = context.get(MSQTaskQueryMaker.USER_KEY).equals(CalciteTests.TEST_SUPERUSER_NAME);
+    List<String> expectedResultRows = isSuperUser
+                                      ? Arrays.asList("m1", "1.0", "2.0", "3.0", "4.0", "5.0", "6.0")
+                                      : Arrays.asList("m1", "6.0");
+    // Set common expected results (not relevant to query's end user)
+    RowSignature rowSignature = RowSignature.builder()
+                                            .add("__time", ColumnType.LONG)
+                                            .add("m1", ColumnType.FLOAT)
+                                            .build();
+
+    File exportDir = newTempFolder("export");
+    final String sql = StringUtils.format(
+        "insert into extern(local(exportPath=>'%s')) as csv select m1 from restrictedDatasource_m1_is_6",
+        exportDir.getAbsolutePath()
+    );
+
+    testIngestQuery().setSql(sql)
+                     .setExpectedDataSource("restrictedDatasource_m1_is_6")
+                     .setQueryContext(context)
+                     .setExpectedRowSignature(rowSignature)
+                     .setExpectedSegments(ImmutableSet.of())
+                     .setExpectedResultRows(ImmutableList.of())
+                     .verifyResults();
+
+    Assert.assertEquals(
+        2, // result file and manifest file
+        Objects.requireNonNull(exportDir.listFiles()).length
+    );
+
+    File resultFile = new File(exportDir, "query-test-query-worker0-partition0.csv");
+    List<String> results = readResultsFromFile(resultFile);
+    Assert.assertEquals(expectedResultRows, results);
+  }
+
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testNumberOfRowsPerFile(String unusedContextName, Map<String, Object> context)
   {
     RowSignature rowSignature = RowSignature.builder()
                                             .add("__time", ColumnType.LONG)
@@ -118,7 +175,7 @@ public class MSQExportTest extends MSQTestBase
 
     File exportDir = newTempFolder("export");
 
-    Map<String, Object> queryContext = new HashMap<>(DEFAULT_MSQ_CONTEXT);
+    Map<String, Object> queryContext = new HashMap<>(context);
     queryContext.put(MultiStageQueryContext.CTX_ROWS_PER_PAGE, 1);
 
     final String sql = StringUtils.format("insert into extern(local(exportPath=>'%s')) as csv select cnt, dim1 from foo", exportDir.getAbsolutePath());
@@ -137,8 +194,9 @@ public class MSQExportTest extends MSQTestBase
     );
   }
 
-  @Test
-  void testExportComplexColumns() throws IOException
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testExportComplexColumns(String unusedContextName, Map<String, Object> context) throws IOException
   {
     final RowSignature rowSignature = RowSignature.builder()
                                                   .add("__time", ColumnType.LONG)
@@ -166,7 +224,7 @@ public class MSQExportTest extends MSQTestBase
 
     testIngestQuery().setSql(sql)
                      .setExpectedDataSource("foo1")
-                     .setQueryContext(DEFAULT_MSQ_CONTEXT)
+                     .setQueryContext(context)
                      .setExpectedRowSignature(rowSignature)
                      .setExpectedSegments(ImmutableSet.of())
                      .setExpectedResultRows(ImmutableList.of())
@@ -187,8 +245,9 @@ public class MSQExportTest extends MSQTestBase
     );
   }
 
-  @Test
-  void testExportSketchColumns() throws IOException
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testExportSketchColumns(String unusedContextName, Map<String, Object> context) throws IOException
   {
     final RowSignature rowSignature = RowSignature.builder()
                                                   .add("__time", ColumnType.LONG)
@@ -217,7 +276,7 @@ public class MSQExportTest extends MSQTestBase
 
     testIngestQuery().setSql(sql)
                      .setExpectedDataSource("foo1")
-                     .setQueryContext(DEFAULT_MSQ_CONTEXT)
+                     .setQueryContext(context)
                      .setExpectedRowSignature(rowSignature)
                      .setExpectedSegments(ImmutableSet.of())
                      .setExpectedResultRows(ImmutableList.of())
@@ -238,8 +297,10 @@ public class MSQExportTest extends MSQTestBase
     );
   }
 
-  @Test
-  void testEmptyExport() throws IOException
+
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testEmptyExport(String unusedContextName, Map<String, Object> context) throws IOException
   {
     RowSignature rowSignature = RowSignature.builder()
                                             .add("__time", ColumnType.LONG)
@@ -256,7 +317,7 @@ public class MSQExportTest extends MSQTestBase
 
     testIngestQuery().setSql(sql)
                      .setExpectedDataSource("foo1")
-                     .setQueryContext(DEFAULT_MSQ_CONTEXT)
+                     .setQueryContext(context)
                      .setExpectedRowSignature(rowSignature)
                      .setExpectedSegments(ImmutableSet.of())
                      .setExpectedResultRows(ImmutableList.of())
@@ -316,8 +377,10 @@ public class MSQExportTest extends MSQTestBase
     }
   }
 
-  @Test
-  public void testExportWithLimit() throws IOException
+
+  @MethodSource("data")
+  @ParameterizedTest(name = "{index}:with context {0}")
+  public void testExportWithLimit(String unusedContextName, Map<String, Object> context) throws IOException
   {
     RowSignature rowSignature = RowSignature.builder()
                                             .add("__time", ColumnType.LONG)
@@ -326,7 +389,7 @@ public class MSQExportTest extends MSQTestBase
 
     File exportDir = newTempFolder("export");
 
-    Map<String, Object> queryContext = new HashMap<>(DEFAULT_MSQ_CONTEXT);
+    Map<String, Object> queryContext = new HashMap<>(context);
     queryContext.put(MultiStageQueryContext.CTX_ROWS_PER_PAGE, 1);
 
     final String sql = StringUtils.format("insert into extern(local(exportPath=>'%s')) as csv select cnt, dim1 from foo limit 3", exportDir.getAbsolutePath());
