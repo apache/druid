@@ -79,7 +79,7 @@ public class DataSourceAnalysisTest
     Assert.assertEquals(TABLE_FOO, analysis.getBaseTableDataSource());
     Assert.assertEquals(Optional.empty(), analysis.getBaseUnionDataSource());
     Assert.assertEquals(Optional.empty(), analysis.getBaseQuery());
-    Assert.assertEquals(Optional.empty(), analysis.getBaseQuerySegmentSpec());
+    Assert.assertEquals(Optional.empty(), analysis.getEffectiveQuerySegmentSpec());
     Assert.assertEquals(Collections.emptyList(), analysis.getPreJoinableClauses());
     Assert.assertFalse(analysis.isGlobal());
     Assert.assertFalse(analysis.isJoin());
@@ -129,7 +129,7 @@ public class DataSourceAnalysisTest
     Assert.assertThrows(DruidException.class, () -> analysis.getBaseTableDataSource());
     Assert.assertEquals(Optional.empty(), analysis.getBaseUnionDataSource());
     Assert.assertEquals(Optional.empty(), analysis.getBaseQuery());
-    Assert.assertEquals(Optional.empty(), analysis.getBaseQuerySegmentSpec());
+    Assert.assertEquals(Optional.empty(), analysis.getEffectiveQuerySegmentSpec());
     Assert.assertFalse(analysis.isGlobal());
     Assert.assertTrue(analysis.isJoin());
     Assert.assertTrue(analysis.isBaseColumn("foo"));

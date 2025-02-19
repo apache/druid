@@ -502,52 +502,14 @@ public class JoinDataSource implements DataSource
     DimFilter currentDimFilter = TrueDimFilter.instance();
     final List<PreJoinableClause> preJoinableClauses = new ArrayList<>();
 
-<<<<<<< HEAD
     do {
-=======
-    // There can be queries like
-    // Join of Unnest of Join of Unnest of Filter
-    // so these checks are needed to be ORed
-    // to get the base
-    // This method is called to get the analysis for the join data source
-    // Since the analysis of an UnnestDS or FilteredDS always delegates to its base
-    // To obtain the base data source underneath a Join
-    // we also iterate through the base of the  FilterDS and UnnestDS in its path
-    // the base of which can be a concrete data source
-    // This also means that an addition of a new datasource
-    // Will need an instanceof check here
-    // A future work should look into if the flattenJoin
-    // can be refactored to omit these instanceof checks
-    while (current instanceof JoinDataSource
-           || current instanceof UnnestDataSource
-           || current instanceof FilteredDataSource) {
->>>>>>> apache/master
       if (current instanceof JoinDataSource) {
         final JoinDataSource joinDataSource = (JoinDataSource) current;
         currentDimFilter = DimFilters.conjunction(currentDimFilter, joinDataSource.getLeftFilter());
         PreJoinableClause e = new PreJoinableClause(joinDataSource);
         preJoinableClauses.add(e);
         current = joinDataSource.getLeft();
-<<<<<<< HEAD
         continue;
-=======
-        currentDimFilter = validateLeftFilter(current, joinDataSource.getLeftFilter());
-        preJoinableClauses.add(
-            new PreJoinableClause(
-                joinDataSource.getRightPrefix(),
-                joinDataSource.getRight(),
-                joinDataSource.getJoinType(),
-                joinDataSource.getConditionAnalysis(),
-                joinDataSource.getJoinAlgorithm()
-            )
-        );
-      } else if (current instanceof UnnestDataSource) {
-        final UnnestDataSource unnestDataSource = (UnnestDataSource) current;
-        current = unnestDataSource.getBase();
-      } else {
-        final FilteredDataSource filteredDataSource = (FilteredDataSource) current;
-        current = filteredDataSource.getBase();
->>>>>>> apache/master
       }
       if (vertexBoundary) {
         if (current instanceof UnnestDataSource) {
