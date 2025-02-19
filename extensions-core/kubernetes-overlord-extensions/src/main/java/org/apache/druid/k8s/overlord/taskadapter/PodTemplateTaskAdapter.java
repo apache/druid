@@ -120,7 +120,7 @@ public class PodTemplateTaskAdapter implements TaskAdapter
           task.getId()
       );
     }
-    PodTemplateWithName podTemplateWithName = podTemplateSelector.getPodTemplateForTask(task).get();
+    PodTemplateWithName podTemplateWithName = selectedPodTemplate.get();
 
     return new JobBuilder()
         .withNewMetadata()
