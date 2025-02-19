@@ -271,6 +271,7 @@ batch ingestion emit the following metrics. These metrics are deltas for each em
 |`ingest/pause/time`|Milliseconds spent by a task in a paused state without ingesting.|`dataSource`, `taskId`, `tags`| < 10 seconds|
 |`ingest/handoff/time`|Total number of milliseconds taken to handoff a set of segments.|`dataSource`, `taskId`, `taskType`, `groupId`, `tags`|Depends on the coordinator cycle time.|
 |`task/autoScaler/requiredCount`|Count of required tasks based on the calculations of `lagBased` auto scaler.|`dataSource`, `stream`, `scalingSkipReason`|Depends on auto scaler config.|
+|`ingest/updateOffsets/time`|Time (in milliseconds) taken to update the offsets.|`dataSource`, `taskId`, `taskType`, `groupId`, `tags`|Generally a few seconds at most.|
 
 If the JVM does not support CPU time measurement for the current thread, `ingest/merge/cpu` and `ingest/persists/cpu` will be 0.
 

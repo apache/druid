@@ -51,6 +51,7 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
   private final KafkaConfigOverrides configOverrides;
   private final String topic;
   private final String topicPattern;
+  private final boolean publishTimeLag;
 
   @JsonCreator
   public KafkaSupervisorIOConfig(
@@ -72,7 +73,8 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
       @JsonProperty("lateMessageRejectionStartDateTime") DateTime lateMessageRejectionStartDateTime,
       @JsonProperty("configOverrides") KafkaConfigOverrides configOverrides,
       @JsonProperty("idleConfig") IdleConfig idleConfig,
-      @JsonProperty("stopTaskCount") Integer stopTaskCount
+      @JsonProperty("stopTaskCount") Integer stopTaskCount,
+      @JsonProperty("publishTimeLag") Boolean publishTimeLag
   )
   {
     super(
@@ -102,6 +104,7 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
     this.configOverrides = configOverrides;
     this.topic = topic;
     this.topicPattern = topicPattern;
+    this.publishTimeLag = publishTimeLag != null && publishTimeLag;
   }
 
   /**
@@ -149,6 +152,11 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
   public boolean isMultiTopic()
   {
     return topicPattern != null;
+  }
+
+  public boolean isPublishTimeLag()
+  {
+    return publishTimeLag;
   }
 
   @Override

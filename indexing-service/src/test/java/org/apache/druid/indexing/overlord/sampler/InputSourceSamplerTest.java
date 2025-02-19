@@ -1706,5 +1706,11 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
     public void close()
     {
     }
+
+    @Override
+    public long getTimeAtOffset(StreamPartition<Integer> partition, OrderedSequenceNumber<Long> offset, long timeout)
+    {
+      throw new UnsupportedOperationException();
+    }
   }
 }
