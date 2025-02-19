@@ -34,7 +34,6 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -290,10 +289,14 @@ public class UnifiedIndexerAppenderatorsManager implements AppenderatorsManager
   <T> DatasourceBundle getBundle(final Query<T> query)
   {
     final DataSourceAnalysis analysis = query.getDataSourceAnalysis();
+<<<<<<< HEAD
 
     final TableDataSource table =
         analysis.getBaseTableDataSource()
                 .orElseThrow(() -> new ISE("Cannot handle datasource: %s", query.getDataSource()));
+=======
+    final TableDataSource table = analysis.getBaseTableDataSource();
+>>>>>>> apache/master
 
     final DatasourceBundle bundle;
 

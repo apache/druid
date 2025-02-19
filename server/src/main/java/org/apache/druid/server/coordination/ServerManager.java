@@ -124,7 +124,7 @@ public class ServerManager implements QuerySegmentWalker
     final DataSourceAnalysis analysis = query.getDataSourceAnalysis();
     final VersionedIntervalTimeline<String, ReferenceCountingSegment> timeline;
     final Optional<VersionedIntervalTimeline<String, ReferenceCountingSegment>> maybeTimeline =
-        segmentManager.getTimeline(analysis);
+        segmentManager.getTimeline(analysis.getBaseTableDataSource());
 
     if (maybeTimeline.isPresent()) {
       timeline = maybeTimeline.get();
@@ -182,7 +182,7 @@ public class ServerManager implements QuerySegmentWalker
 
     final VersionedIntervalTimeline<String, ReferenceCountingSegment> timeline;
     final Optional<VersionedIntervalTimeline<String, ReferenceCountingSegment>> maybeTimeline =
-        segmentManager.getTimeline(analysis);
+        segmentManager.getTimeline(analysis.getBaseTableDataSource());
 
     // Make sure this query type can handle the subquery, if present.
     if ((dataSourceFromQuery instanceof QueryDataSource)

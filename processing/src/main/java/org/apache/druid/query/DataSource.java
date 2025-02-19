@@ -106,6 +106,12 @@ public interface DataSource
 
   /**
    * Returns a segment function on to how to segment should be modified.
+<<<<<<< HEAD
+=======
+   *
+   * @param query      the input query
+   * @return the segment function
+>>>>>>> apache/master
    */
   Function<SegmentReference, SegmentReference> createSegmentMapFunction(Query query);
 
@@ -118,7 +124,7 @@ public interface DataSource
   DataSource withUpdatedDataSource(DataSource newSource);
 
   /**
-   * Returns the query with an updated datasource based on the policy restrictions on tables.
+   * Returns an updated datasource based on the policy restrictions on tables.
    * <p>
    * If this datasource contains no table, no changes should occur.
    *

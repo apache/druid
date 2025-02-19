@@ -20,6 +20,7 @@
 package org.apache.druid.query;
 
 import com.google.common.collect.ImmutableList;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -33,25 +34,21 @@ import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.filter.TrueDimFilter;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
-import org.apache.druid.query.timeseries.TimeseriesResultValue;
 import org.apache.druid.segment.join.JoinType;
 import org.junit.Assert;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  *
  */
 public class QueriesTest
 {
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
-
   @Test
   public void testVerifyAggregations()
   {
@@ -328,10 +325,11 @@ public class QueriesTest
               .granularity(Granularities.ALL)
               .build();
 
-    expectedException.expect(IllegalStateException.class);
-    expectedException.expectMessage("Unable to apply specific segments to non-table-based dataSource");
-
-    final Query<Result<TimeseriesResultValue>> ignored = Queries.withSpecificSegments(query, descriptors);
+    DruidException e = assertThrows(
+        DruidException.class,
+        () -> Queries.withSpecificSegments(query, descriptors)
+    );
+    Assert.assertEquals("Base dataSource[LookupDataSource{lookupName='lookyloo'}] is not a table!", e.getMessage());
   }
 
   @Test

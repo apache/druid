@@ -48,6 +48,11 @@ public class Metric
   private static final String METRIC_NAME_PREFIX = "segment/metadataCache/";
 
   /**
+   * Number of transactions performed on the cache for a datasource.
+   */
+  public static final String TRANSACTION_COUNT = "transactions";
+
+  /**
    * Time taken in milliseconds for the latest sync with metadata store.
    */
   public static final String SYNC_DURATION_MILLIS = METRIC_NAME_PREFIX + "sync/time";

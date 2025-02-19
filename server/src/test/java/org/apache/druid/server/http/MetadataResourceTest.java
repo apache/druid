@@ -56,11 +56,13 @@ import org.mockito.stubbing.Answer;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
+
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class MetadataResourceTest
@@ -177,7 +179,7 @@ public class MetadataResourceTest
 
     Mockito.doReturn(null).when(coordinator).getReplicationFactor(realTimeSegments[0].getId());
     Mockito.doReturn(null).when(coordinator).getReplicationFactor(realTimeSegments[1].getId());
-    Map<SegmentId, AvailableSegmentMetadata> availableSegments = new HashMap<>();
+    Map<SegmentId, AvailableSegmentMetadata> availableSegments = new LinkedHashMap<>();
     availableSegments.put(
         segments[0].getId(),
         AvailableSegmentMetadata.builder(
@@ -251,13 +253,14 @@ public class MetadataResourceTest
 
     final List<SegmentStatusInCluster> resultList = extractResponseList(response);
     Assert.assertEquals(resultList.size(), 6);
-    Assert.assertEquals(new SegmentStatusInCluster(segments[0], false, 2, 20L, false), resultList.get(0));
-    Assert.assertEquals(new SegmentStatusInCluster(segments[1], false, null, 30L, false), resultList.get(1));
-    Assert.assertEquals(new SegmentStatusInCluster(segments[2], false, 1, null, false), resultList.get(2));
+    Map<SegmentId, SegmentStatusInCluster> resultMap = resultList.stream().collect(Collectors.toMap(segmentStatus -> segmentStatus.getDataSegment().getId(), Function.identity()));
+    Assert.assertEquals(new SegmentStatusInCluster(segments[0], false, 2, 20L, false), resultMap.get(segments[0].getId()));
+    Assert.assertEquals(new SegmentStatusInCluster(segments[1], false, null, 30L, false), resultMap.get(segments[1].getId()));
+    Assert.assertEquals(new SegmentStatusInCluster(segments[2], false, 1, null, false), resultMap.get(segments[2].getId()));
     // Replication factor should be 0 as the segment is overshadowed
-    Assert.assertEquals(new SegmentStatusInCluster(segments[3], true, 0, null, false), resultList.get(3));
-    Assert.assertEquals(new SegmentStatusInCluster(realTimeSegments[0], false, null, 10L, true), resultList.get(4));
-    Assert.assertEquals(new SegmentStatusInCluster(realTimeSegments[1], false, null, 40L, true), resultList.get(5));
+    Assert.assertEquals(new SegmentStatusInCluster(segments[3], true, 0, null, false), resultMap.get(segments[3].getId()));
+    Assert.assertEquals(new SegmentStatusInCluster(realTimeSegments[0], false, null, 10L, true), resultMap.get(realTimeSegments[0].getId()));
+    Assert.assertEquals(new SegmentStatusInCluster(realTimeSegments[1], false, null, 40L, true), resultMap.get(realTimeSegments[1].getId()));
   }
 
 
@@ -420,7 +423,7 @@ public class MetadataResourceTest
   public void testGetDataSourceInformation()
   {
     CoordinatorSegmentMetadataCache coordinatorSegmentMetadataCache = Mockito.mock(CoordinatorSegmentMetadataCache.class);
-    Map<String, DataSourceInformation> dataSourceInformationMap = new HashMap<>();
+    Map<String, DataSourceInformation> dataSourceInformationMap = new LinkedHashMap<>();
 
     dataSourceInformationMap.put(
         DATASOURCE1,
