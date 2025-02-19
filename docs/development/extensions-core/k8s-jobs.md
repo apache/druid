@@ -593,7 +593,7 @@ data:
 
 #### Lazy Loading of Pod Templates
 
-Whenever the Overlord wants to spin up a Kubernetes task pod, it will first read the relevant pod template files, and then create a task pod according to the specifications of the pod template file. This is helpful when you want to make configuration changes to the task pods (e.g. increase/decrease CPU limit or resources). You can edit the pod template files directly, and the next task pod spun up by the Overlord will reflect these changes in its configurations.
+Whenever the Overlord wants to spin up a Kubernetes task pod, it will first read the relevant pod template file, and then create a task pod according to the specifications of the pod template file. This is helpful when you want to make configuration changes to the task pods (e.g. increase/decrease CPU limit or resources). You can edit the pod template files directly, and the next task pod spun up by the Overlord will reflect these changes in its configurations.
 
 #### Pod template selection
 
