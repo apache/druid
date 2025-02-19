@@ -157,7 +157,7 @@
         <jdk.security.manager.allow.argLine><!-- empty placeholder --></jdk.security.manager.allow.argLine>
         <repoOrgId>maven.org</repoOrgId>
         <repoOrgName>Maven Central Repository</repoOrgName>
-        <repoOrgUrl>https://repo1.maven.org/maven2/</repoOrgUrl>
+        <repoOrgUrl>https://repo.maven.apache.org/maven2/</repoOrgUrl>
 
         <!-- Allow the handful of flaky tests with transient failures to pass. -->
         <surefire.rerunFailingTestsCount>3</surefire.rerunFailingTestsCount>
