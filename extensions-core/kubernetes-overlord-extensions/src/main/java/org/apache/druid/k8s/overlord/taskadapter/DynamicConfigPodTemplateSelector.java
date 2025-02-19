@@ -44,6 +44,7 @@ public class DynamicConfigPodTemplateSelector implements PodTemplateSelector
 
   private final Properties properties;
   private final Supplier<KubernetesTaskRunnerDynamicConfig> dynamicConfigRef;
+  // Supplier allows Overlord to read the most recent pod template file without calling initializeTemplatesFromFileSystem() again.
   private HashMap<String, Supplier<PodTemplate>> podTemplates;
 
   public DynamicConfigPodTemplateSelector(
