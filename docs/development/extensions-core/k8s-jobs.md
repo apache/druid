@@ -374,7 +374,7 @@ druid.indexer.runner.type=k8s
 druid.indexer.task.encapsulatedTask=true
 ```
 
-#### Example 1: Using a PodTemplate that retrieves values from a ConfigMap 
+#### Example 1: Using a Pod Template that retrieves values from a ConfigMap 
 
 <details>
 <summary>Example Pod Template that uses the regular druid docker image</summary>
@@ -496,9 +496,9 @@ data:
 ```
 </details>
 
-#### Example 2: Using a ConfigMap to upload the PodTemplate file
+#### Example 2: Using a ConfigMap to upload the Pod Template file
 
-Alternatively, we can mount the ConfigMap onto the Overlord services, and use the ConfigMap to generate the PodTemplate files we want.
+Alternatively, we can mount the ConfigMap onto the Overlord services, and use the ConfigMap to generate the pod template files we want.
 
 <details>
 <summary>Mounting to Overlord deployment</summary>
