@@ -505,11 +505,12 @@ public class JoinDataSourceTest
   @Test
   public void testGetAnalysisWithRestrictedDS()
   {
+    RestrictedDataSource left = RestrictedDataSource.create(
+        new TableDataSource("table1"),
+        NoRestrictionPolicy.instance()
+    );
     JoinDataSource dataSource = JoinDataSource.create(
-        RestrictedDataSource.create(
-            new TableDataSource("table1"),
-            NoRestrictionPolicy.instance()
-        ),
+        left,
         new TableDataSource("table2"),
         "j.",
         "x == \"j.x\"",
@@ -520,6 +521,7 @@ public class JoinDataSourceTest
         JoinAlgorithm.BROADCAST
     );
     DataSourceAnalysis analysis = dataSource.getAnalysis();
+    Assert.assertEquals(left, analysis.getBaseDataSource());
     Assert.assertEquals("table1", analysis.getBaseDataSource().getTableNames().iterator().next());
   }
 
