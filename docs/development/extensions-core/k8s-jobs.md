@@ -33,12 +33,31 @@ The K8s extension builds a pod spec for each task using the specified pod adapte
 
 ## Configuration
 
-To use this extension please make sure to  [include](../../configuration/extensions.md#loading-extensions)`druid-kubernetes-overlord-extensions` in the extensions load list for your overlord process.
+To use this extension please make sure to [include](../../configuration/extensions.md#loading-extensions) `druid-kubernetes-overlord-extensions` in the extensions load list for your overlord process.
 
 The extension uses `druid.indexer.runner.capacity` to limit the number of k8s jobs in flight. A good initial value for this would be the sum of the total task slots of all the middle managers you were running before switching to K8s based ingestion. The K8s task runner uses one thread per Job that is created, so setting this number too large can cause memory issues on the overlord. Additionally set the variable `druid.indexer.runner.namespace` to the namespace in which you are running druid.
 
 Other configurations required are:
 `druid.indexer.runner.type: k8s` and `druid.indexer.task.encapsulatedTask: true`
+
+### Running Task Pods in Another Namespace
+
+It is possible to run task pods in a different namespace from the rest of your Druid cluster.
+
+If you are running multiple Druid clusters and would like to have a dedicated namespace for all your task pods, you can make the following changes to the runtime properties for your Overlord deployment:
+
+- `druid.indexer.runner.namespace`: The namespace where the task pods will run.
+- `druid.indexer.runner.overlordNamespace`: The namespace where the Overlord resides.
+
+Druid will tag Kubernetes jobs with a `druid.overlord.namespace` label. This label helps Druid filter out Kubernetes jobs belonging to other namespaces. When `druid.indexer.runner.overlordNamespace` is not provided, Druid will assume that the entire cluster operates within a single namespace and will default to `druid.indexer.runner.namespace`.
+
+#### Dealing with ZooKeeper Problems
+
+Ensure that when you are running task pods in another namespace, your task pods are able to communicate with ZooKeeper from the overlord namespace. If you are using custom pod templates as described below, you can configure `druid.zk.service.host` to your ZooKeeper service.
+
+#### Dealing with Permissions
+
+Should you require the needed permissions for interacting across Kubernetes namespaces, you can specify a kubeconfig file, and provided the necessary permissions. You can then use the KUBECONFIG environment variable to allow your Overlord deployment to find your kubeconfig file. Refer to the [Kubernetes documentation](https://kubernetes.io/docs/concepts/configuration/organize-cluster-access-kubeconfig/) for more information.
 
 ### Dynamic config
 
@@ -664,7 +683,7 @@ In all the above cases, Druid will match the selector to any value of task type.
 
 ### Gotchas
 
-- All Druid Pods belonging to one Druid cluster must be inside the same Kubernetes namespace.
+- With the exception of task pods, all Druid Pods belonging to one Druid cluster must be inside the same Kubernetes namespace.
 
 - You must have a role binding for the overlord's service account that provides the needed permissions for interacting with Kubernetes. An example spec could be:
 
