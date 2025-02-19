@@ -536,7 +536,7 @@ data:
       spec:
         containers:
         - name: main
-          image: apache/druid:32.0.0
+          image: apache/druid:{{DRUIDVERSION}}
           command:
             - sh
             - -c
