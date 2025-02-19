@@ -32,6 +32,7 @@ import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.k8s.overlord.KubernetesTaskRunnerConfig;
 
 import java.io.InputStream;
 import java.sql.Timestamp;
@@ -46,8 +47,23 @@ public class KubernetesPeonClient
 
   private final KubernetesClientApi clientApi;
   private final String namespace;
+  private final String overlordNamespace;
   private final boolean debugJobs;
   private final ServiceEmitter emitter;
+
+  public KubernetesPeonClient(
+      KubernetesClientApi clientApi,
+      String namespace,
+      String overlordNamespace,
+      boolean debugJobs,
+      ServiceEmitter emitter
+  ) {
+    this.clientApi = clientApi;
+    this.namespace = namespace;
+    this.overlordNamespace = overlordNamespace;
+    this.debugJobs = debugJobs;
+    this.emitter = emitter;
+  }
 
   public KubernetesPeonClient(
       KubernetesClientApi clientApi,
@@ -56,10 +72,7 @@ public class KubernetesPeonClient
       ServiceEmitter emitter
   )
   {
-    this.clientApi = clientApi;
-    this.namespace = namespace;
-    this.debugJobs = debugJobs;
-    this.emitter = emitter;
+    this(clientApi, namespace, namespace, debugJobs, emitter);
   }
 
   public Pod launchPeonJobAndWaitForStart(Job job, Task task, long howLong, TimeUnit timeUnit) throws IllegalStateException
@@ -187,6 +200,7 @@ public class KubernetesPeonClient
                                                     .jobs()
                                                     .inNamespace(namespace)
                                                     .withLabel(DruidK8sConstants.LABEL_KEY)
+                                                    .withLabel(DruidK8sConstants.ORIGINAL_NAMESPACE_KEY, overlordNamespace)
                                                     .list()
                                                     .getItems());
   }

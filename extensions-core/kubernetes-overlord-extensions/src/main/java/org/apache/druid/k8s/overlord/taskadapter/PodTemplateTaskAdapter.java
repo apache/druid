@@ -264,6 +264,7 @@ public class PodTemplateTaskAdapter implements TaskAdapter
     return ImmutableMap.<String, String>builder()
         .putAll(config.getLabels())
         .put(DruidK8sConstants.LABEL_KEY, "true")
+        .put(DruidK8sConstants.ORIGINAL_NAMESPACE_KEY, config.getOverlordNamespace())
         .put(getDruidLabel(DruidK8sConstants.TASK_ID), KubernetesOverlordUtils.convertTaskIdToK8sLabel(task.getId()))
         .put(getDruidLabel(DruidK8sConstants.TASK_TYPE), KubernetesOverlordUtils.convertStringToK8sLabel(task.getType()))
         .put(getDruidLabel(DruidK8sConstants.TASK_GROUP_ID), KubernetesOverlordUtils.convertTaskIdToK8sLabel(task.getGroupId()))

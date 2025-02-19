@@ -41,6 +41,7 @@ public class DruidK8sConstants
   public static final String LOAD_BROADCAST_SEGMENTS_ENV = "LOAD_BROADCAST_SEGMENTS";
   public static final String JAVA_OPTS = "JAVA_OPTS";
   public static final String DRUID_HOST_ENV = "druid_host";
+  public static final String ORIGINAL_NAMESPACE_KEY = "overlord.namespace";
   public static final String DRUID_HOSTNAME_ENV = "HOSTNAME";
   public static final String LABEL_KEY = "druid.k8s.peons";
   public static final String DRUID_LABEL_PREFIX = "druid.";

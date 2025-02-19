@@ -70,6 +70,7 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
     KubernetesPeonClient peonClient = new KubernetesPeonClient(
         druidKubernetesClient,
         kubernetesTaskRunnerConfig.getNamespace(),
+        kubernetesTaskRunnerConfig.getOverlordNamespace(),
         kubernetesTaskRunnerConfig.isDebugJobs(),
         emitter
     );
