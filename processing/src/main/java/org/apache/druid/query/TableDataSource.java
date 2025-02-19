@@ -135,6 +135,12 @@ public class TableDataSource implements DataSource
   }
 
   @Override
+  public boolean hasTimeFilter()
+  {
+    return false;
+  }
+
+  @Override
   public String toString()
   {
     return name;
