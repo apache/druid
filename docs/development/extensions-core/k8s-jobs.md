@@ -498,7 +498,7 @@ data:
 
 #### Example 2: Using a ConfigMap to upload the Pod Template file
 
-Alternatively, we can mount the ConfigMap onto the Overlord services, and use the ConfigMap to generate the pod template files we want.
+Alternatively, we can mount the ConfigMap onto Overlord services, and use the ConfigMap to generate the pod template files we want.
 
 <details>
 <summary>Mounting to Overlord deployment</summary>
