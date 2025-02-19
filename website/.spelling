@@ -2410,6 +2410,7 @@ ddSketch
 DDSketch
 druid-ddsketch
 numBins
+restartIfUnmodified
 
 - ../docs/development/extensions-contrib/spectator-histogram.md
 SpectatorHistogram
