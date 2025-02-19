@@ -26,6 +26,7 @@ import org.apache.commons.lang3.ObjectUtils;
 import org.joda.time.Period;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
@@ -42,6 +43,7 @@ public class KubernetesTaskRunnerConfig
   // For cases where we want task pods to run on different namespace from the overlord, we need to specify the namespace of the overlord here.
   // Else, we can simply leave this field alone.
   @JsonProperty
+  @Nullable
   private String overlordNamespace;
 
   @JsonProperty

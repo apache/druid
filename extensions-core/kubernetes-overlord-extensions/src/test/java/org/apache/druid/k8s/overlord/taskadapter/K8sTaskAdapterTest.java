@@ -140,6 +140,7 @@ class K8sTaskAdapterTest
 
     KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder()
         .withNamespace("test")
+        .withOverlordNamespace("test_different")
         .withAnnotations(ImmutableMap.of("annotation_key", "annotation_value"))
         .withLabels(ImmutableMap.of("label_key", "label_value"))
         .build();
@@ -159,8 +160,11 @@ class K8sTaskAdapterTest
     assertTrue(jobFromSpec.getMetadata().getAnnotations().containsKey("annotation_key"));
     assertTrue(jobFromSpec.getMetadata().getAnnotations().containsKey(DruidK8sConstants.TASK_ID));
     assertFalse(jobFromSpec.getMetadata().getAnnotations().containsKey("label_key"));
+    assertFalse(jobFromSpec.getMetadata().getAnnotations().containsKey(DruidK8sConstants.ORIGINAL_NAMESPACE_KEY));
+
     assertTrue(jobFromSpec.getMetadata().getLabels().containsKey("label_key"));
     assertTrue(jobFromSpec.getMetadata().getLabels().containsKey(DruidK8sConstants.LABEL_KEY));
+    assertTrue(jobFromSpec.getMetadata().getLabels().containsKey(DruidK8sConstants.ORIGINAL_NAMESPACE_KEY));
     assertFalse(jobFromSpec.getMetadata().getLabels().containsKey("annotation_key"));
   }
 
@@ -572,7 +576,7 @@ class K8sTaskAdapterTest
   }
 
   @Test
-  void testCPUResourceIsEspected() throws IOException
+  void testCPUResourceIsRespected() throws IOException
   {
     TestKubernetesClient testClient = new TestKubernetesClient(client);
     Pod pod = K8sTestUtils.fileToResource("ephemeralPodSpec.yaml", Pod.class);
@@ -672,5 +676,4 @@ class K8sTaskAdapterTest
     );
     assertEquals(1, additionalProperties.getAdditionalProperties().size());
   }
-
 }
