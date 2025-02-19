@@ -106,6 +106,36 @@ public class DataSourceAnalysisTest
   }
 
   @Test
+  public void testRestrictedInJoin()
+  {
+    JoinDataSource ds = join(
+        RESTRICTED_FOO,
+        LOOKUP_LOOKYLOO,
+        "1.",
+        JoinType.INNER
+    );
+
+    final DataSourceAnalysis analysis = ds.getAnalysis();
+
+    Assert.assertTrue(analysis.isConcreteBased());
+    Assert.assertTrue(analysis.isTableBased());
+    Assert.assertTrue(analysis.isConcreteAndTableBased());
+    /**
+     * The right expectation would be TABLE_FOO.
+     * However right now MSQ wierdly depends on join identifying RestrictedDataSource as a non-vertex boundary.
+     * That should be fixed when this test will be fixed.
+     */
+    Assert.assertEquals(RESTRICTED_FOO, analysis.getBaseDataSource());
+    Assert.assertThrows(DruidException.class, () -> analysis.getBaseTableDataSource());
+    Assert.assertEquals(Optional.empty(), analysis.getBaseUnionDataSource());
+    Assert.assertEquals(Optional.empty(), analysis.getBaseQuery());
+    Assert.assertEquals(Optional.empty(), analysis.getBaseQuerySegmentSpec());
+    Assert.assertFalse(analysis.isGlobal());
+    Assert.assertTrue(analysis.isJoin());
+    Assert.assertTrue(analysis.isBaseColumn("foo"));
+  }
+
+  @Test
   public void testUnion()
   {
     final UnionDataSource unionDataSource = new UnionDataSource(ImmutableList.of(TABLE_FOO, TABLE_BAR));
