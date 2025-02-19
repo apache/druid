@@ -166,7 +166,7 @@ public class Queries
       final DataSourceAnalysis analysis = retVal.getDataSourceAnalysis();
 
       // Sanity check: query must be based on a single table.
-    analysis.getBaseTableDataSource();
+      analysis.getBaseTableDataSource();
 
       if (!analysis.getEffectiveQuerySegmentSpec().equals(new MultipleSpecificSegmentSpec(descriptors))) {
         // If you see the error message below, it's a bug in either this function or in DataSourceAnalysis.
