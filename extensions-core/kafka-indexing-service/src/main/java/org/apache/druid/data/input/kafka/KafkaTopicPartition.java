@@ -47,7 +47,7 @@ import java.util.Optional;
     KafkaTopicPartition.KafkaTopicPartitionKeySerializer.class)
 @JsonDeserialize(using = KafkaTopicPartition.KafkaTopicPartitionDeserializer.class, keyUsing =
     KafkaTopicPartition.KafkaTopicPartitionKeyDeserializer.class)
-public class KafkaTopicPartition
+public class KafkaTopicPartition implements Comparable<KafkaTopicPartition>
 {
   private final int partition;
   @Nullable
@@ -131,6 +131,12 @@ public class KafkaTopicPartition
            ", topic='" + topic + '\'' +
            ", multiTopicPartition=" + multiTopicPartition +
            '}';
+  }
+
+  @Override
+  public int compareTo(KafkaTopicPartition o)
+  {
+    return Integer.compare(partition, o.partition);
   }
 
   public static class KafkaTopicPartitionDeserializer extends JsonDeserializer<KafkaTopicPartition>

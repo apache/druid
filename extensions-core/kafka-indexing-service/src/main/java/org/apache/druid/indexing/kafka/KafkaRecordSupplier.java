@@ -167,7 +167,8 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
           record.topic(),
           new KafkaTopicPartition(multiTopic, record.topic(), record.partition()),
           record.offset(),
-          record.value() == null ? null : ImmutableList.of(new KafkaRecordEntity(record))
+          record.value() == null ? null : ImmutableList.of(new KafkaRecordEntity(record)),
+          record.timestamp()
       ));
     }
     return polledRecords;

@@ -4089,6 +4089,7 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     // healthy go ahead and try anyway to try if possible to provide insight into how much time is left to fix the
     // issue for cluster operators since this feeds the lag metrics
     if (stateManager.isIdle() || stateManager.isSteadyState() || !stateManager.isHealthy()) {
+      final Stopwatch runTime = Stopwatch.createStarted();
       try {
         updateCurrentOffsets();
         updatePartitionLagFromStream();
@@ -4096,6 +4097,9 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
       }
       catch (Exception e) {
         log.warn(e, "Exception while getting current/latest sequences");
+      }
+      finally {
+        emitUpdateOffsetsTime(runTime.millisElapsed());
       }
     }
   }
@@ -4487,6 +4491,21 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
     catch (Exception e) {
       log.warn(e, "Unable to emit notices process time");
+    }
+  }
+
+  protected void emitUpdateOffsetsTime(long timeInMillis)
+  {
+    try {
+      emitter.emit(
+          ServiceMetricEvent.builder()
+                            .setDimension("dataSource", dataSource)
+                            .setDimensionIfNotNull(DruidMetrics.TAGS, spec.getContextValue(DruidMetrics.TAGS))
+                            .setMetric("ingest/updateOffsets/time", timeInMillis)
+      );
+    }
+    catch (Exception e) {
+      log.warn(e, "Unable to emit updateOffsets time");
     }
   }
 
