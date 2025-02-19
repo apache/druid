@@ -531,7 +531,7 @@ class K8sTaskAdapterTest
     TestKubernetesClient testClient = new TestKubernetesClient(client);
     Pod pod = K8sTestUtils.fileToResource("ephemeralPodSpec.yaml", Pod.class);
     KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder()
-        .withNamespace("test")
+        .withNamespace("namespace")
         .build();
 
     SingleContainerTaskAdapter adapter = new SingleContainerTaskAdapter(
@@ -584,7 +584,7 @@ class K8sTaskAdapterTest
     List<String> javaOpts = new ArrayList<>();
     javaOpts.add("-Xms1G -Xmx2G -XX:MaxDirectMemorySize=3G");
     KubernetesTaskRunnerConfig config = KubernetesTaskRunnerConfig.builder()
-                                                                  .withNamespace("test")
+                                                                  .withNamespace("namespace")
                                                                   .withJavaOptsArray(javaOpts)
                                                                   .withCpuCore(2000)
                                                                   .build();
