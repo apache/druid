@@ -547,6 +547,8 @@ data:
               value: 8100
             - name: druid_plaintextPort
               value: 8100
+            - name: druid_tlsPort
+              value: 8091
             - name: druid_peon_mode
               value: remote
             - name: druid_service
