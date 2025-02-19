@@ -28,7 +28,7 @@ Consider this an [EXPERIMENTAL](../experimental.md) feature mostly because it ha
 
 ## How it works
 
-The K8s extension builds a pod spec for each task using the specified pod adapter. All jobs are natively restorable, they are decoupled from the Druid deployment, thus restarting pods or doing upgrades has no affect on tasks in flight.  They will continue to run and when the overlord comes back up it will start tracking them again.  
+The K8s extension builds a pod spec for each task using the specified pod adapter. All jobs are natively restorable, they are decoupled from the Druid deployment, thus restarting pods or doing upgrades has no effect on tasks in flight.  They will continue to run and when the overlord comes back up it will start tracking them again.  
 
 
 ## Configuration
@@ -363,6 +363,19 @@ The custom template pod adapter allows you to specify a pod template file per ta
 
 The base pod template must be specified as the runtime property `druid.indexer.runner.k8s.podTemplate.base: /path/to/basePodSpec.yaml`
 
+The below runtime properties need to be passed to the Job's peon process.
+
+```
+druid.port=8100 (what port the peon should run on)
+druid.peon.mode=remote
+druid.service=druid/peon (for metrics reporting)
+druid.indexer.task.baseTaskDir=/druid/data (this should match the argument to the ./peon.sh run command in the PodTemplate)
+druid.indexer.runner.type=k8s
+druid.indexer.task.encapsulatedTask=true
+```
+
+#### Example 1: Using a PodTemplate that retrieves values from a ConfigMap 
+
 <details>
 <summary>Example Pod Template that uses the regular druid docker image</summary>
 
@@ -372,7 +385,7 @@ kind: "PodTemplate"
 template:
   metadata:
     annotations:
-      sidecar.istio.io/proxyCPU: "512m" # to handle a injected istio sidecar
+      sidecar.istio.io/proxyCPU: "512m" # to handle an injected istio sidecar
     labels:
       app.kubernetes.io/name: "druid-realtime-backend"
   spec:
@@ -436,28 +449,17 @@ template:
 ```
 </details>
 
-The below runtime properties need to be passed to the Job's peon process.
-
-```
-druid.port=8100 (what port the peon should run on)
-druid.peon.mode=remote
-druid.service=druid/peon (for metrics reporting)
-druid.indexer.task.baseTaskDir=/druid/data (this should match the argument to the ./peon.sh run command in the PodTemplate)
-druid.indexer.runner.type=k8s
-druid.indexer.task.encapsulatedTask=true
-```
-
-Any runtime property or JVM config used by the peon process can also be passed. E.G. below is a example of a ConfigMap that can be used to generate the `nodetype-config-volume` mount in the above template.
+Any runtime property or JVM config used by the peon process can also be passed. E.G. below is an example of a ConfigMap that can be used to generate the `nodetype-config-volume` mount in the above template.
 
 <details>
 <summary>Example ConfigMap</summary>
 
-```
+```yaml
+apiVersion: v1
 kind: ConfigMap
 metadata:
     name: druid-tiny-cluster-peons-config
     namespace: default
-apiVersion: v1
 data:
     jvm.config: |-
         -server
@@ -494,8 +496,105 @@ data:
 ```
 </details>
 
+#### Example 2: Using a ConfigMap to upload the PodTemplate file
+
+Alternatively, we can mount the ConfigMap onto the Overlord services, and use the ConfigMap to generate the PodTemplate files we want.
+
+<details>
+<summary>Mounting to Overlord deployment</summary>
+
+```yaml
+  volumeMounts:
+    - name: druid-pod-templates
+      mountPath: /path/to/podTemplate/directory
+
+  volumes:
+    - name: druid-pod-templates
+      configMap:
+        name: druid-pod-templates
+```
+</details>
+
+<details>
+<summary>Example ConfigMap that generates the Base Pod Template</summary>
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: druid-pod-templates
+data:
+  basePodSpec.yaml: |-
+    apiVersion: "v1"
+    kind: "PodTemplate"
+    template:
+      metadata:
+        labels:
+          app.kubernetes.io/name: "druid-realtime-backend"
+        annotations:
+          sidecar.istio.io/proxyCPU: "512m"
+      spec:
+        containers:
+        - name: main
+          image: apache/druid:32.0.0
+          command:
+            - sh
+            - -c
+            - |
+              /peon.sh /druid/data 1
+          env:
+            - name: druid_port
+              value: 8100
+            - name: druid_plaintextPort
+              value: 8100
+            - name: druid_peon_mode
+              value: remote
+            - name: druid_service
+              value: "druid/peon"
+            - name: druid_indexer_task_baseTaskDir
+              value: /druid/data
+            - name: druid_indexer_runner_type
+              value: k8s
+            - name: druid_indexer_task_encapsulatedTask
+              value: true
+          ports:
+            - containerPort: 8091
+              name: druid-tls-port
+              protocol: TCP
+            - containerPort: 8100
+              name: druid-port
+              protocol: TCP
+          resources:
+            limits:
+              cpu: "1"
+              memory: 2400M
+            requests:
+              cpu: "1"
+              memory: 2400M
+          restartPolicy: "Never"
+          securityContext:
+            fsGroup: 1000
+            runAsGroup: 1000
+            runAsUser: 1000
+          tolerations:
+            - effect: NoExecute
+              key: node.kubernetes.io/not-ready
+              operator: Exists
+              tolerationSeconds: 300
+            - effect: NoExecute
+              key: node.kubernetes.io/unreachable
+              operator: Exists
+              tolerationSeconds: 300
+
+```
+</details>
+
+#### Lazy Loading of Pod Templates
+
+Whenever the Overlord wants to spin up a Kubernetes task pod, it will first read the relevant pod template files, and then create a task pod according to the specifications of the pod template file. This is helpful when you want to make configuration changes to the task pods (e.g. increase/decrease CPU limit or resources). You can edit the pod template files directly, and the next task pod spun up by the Overlord will reflect these changes in its configurations.
+
 #### Pod template selection
- 
+
 The pod template adapter can select which pod template should be used for a task using the [task runner execution config](#dynamic-config)
 
 ##### Select based on task type
@@ -512,7 +611,7 @@ Task specific pod templates can be specified as the runtime property
 `druid.indexer.runner.k8s.podTemplate.{taskType}: /path/to/taskSpecificPodSpec.yaml` where {taskType} is the name of the
 task type. For example, `index_parallel`.
 
-If you are trying to use the default image's environment variable parsing feature to set runtime properties, you need to add a extra escape underscore when specifying pod templates.
+If you are trying to use the default image's environment variable parsing feature to set runtime properties, you need to add an extra escape underscore when specifying pod templates.
 For example, set the environment variable `druid_indexer_runner_k8s_podTemplate_index__kafka` when you set the runtime property `druid.indexer.runner.k8s.podTemplate.index_kafka`
 
 
