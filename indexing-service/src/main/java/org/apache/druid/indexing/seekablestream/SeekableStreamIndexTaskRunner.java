@@ -37,6 +37,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
+import org.apache.druid.common.config.Configs;
 import org.apache.druid.data.input.Committer;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.InputRow;
@@ -274,8 +275,8 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
     this.ingestionState = IngestionState.NOT_STARTED;
     this.lockGranularityToUse = lockGranularityToUse;
 
-    minMessageTime = ioConfig.getMinimumMessageTime().or(DateTimes.MIN);
-    maxMessageTime = ioConfig.getMaximumMessageTime().or(DateTimes.MAX);
+    minMessageTime = Configs.valueOrDefault(ioConfig.getMinimumMessageTime(), DateTimes.MIN);
+    maxMessageTime = Configs.valueOrDefault(ioConfig.getMaximumMessageTime(), DateTimes.MAX);
     rejectionPeriodUpdaterExec = Execs.scheduledSingleThreaded("RejectionPeriodUpdater-Exec--%d");
 
     if (ioConfig.getRefreshRejectionPeriodsInMinutes() != null) {
@@ -1887,10 +1888,13 @@ public abstract class SeekableStreamIndexTaskRunner<PartitionIdType, SequenceOff
   @VisibleForTesting
   public Response pause() throws InterruptedException
   {
-    if (!(status == Status.PAUSED || status == Status.READING)) {
+    // Read the volatile status into a variable so that its value does not change while the condition is evaluated
+    final Status currentStatus = status;
+    if (!(currentStatus == Status.PAUSED || currentStatus == Status.READING)) {
+      log.error("Cannot pause task[%s] as it is currently in state[%s]", task.getId(), currentStatus);
       return Response.status(Response.Status.CONFLICT)
                      .type(MediaType.TEXT_PLAIN)
-                     .entity(StringUtils.format("Can't pause, task is not in a pausable state (state: [%s])", status))
+                     .entity(StringUtils.format("Cannot pause task as it is currently in state[%s]. Pausable states are [READING, PAUSED].", currentStatus))
                      .build();
     }
 

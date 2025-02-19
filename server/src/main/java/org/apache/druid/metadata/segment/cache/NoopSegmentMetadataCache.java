@@ -17,14 +17,43 @@
  * under the License.
  */
 
-package org.apache.druid.indexer;
+package org.apache.druid.metadata.segment.cache;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.timeline.DataSegment;
-
-import java.util.List;
-
-public interface MetadataStorageUpdaterJobHandler
+public class NoopSegmentMetadataCache implements SegmentMetadataCache
 {
-  void publishSegments(String tableName, List<DataSegment> segments, ObjectMapper mapper);
+  @Override
+  public void start()
+  {
+
+  }
+
+  @Override
+  public void stop()
+  {
+
+  }
+
+  @Override
+  public void becomeLeader()
+  {
+
+  }
+
+  @Override
+  public void stopBeingLeader()
+  {
+
+  }
+
+  @Override
+  public boolean isEnabled()
+  {
+    return false;
+  }
+
+  @Override
+  public DatasourceSegmentCache getDatasource(String dataSource)
+  {
+    throw new UnsupportedOperationException();
+  }
 }

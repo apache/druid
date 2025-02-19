@@ -66,14 +66,14 @@ jobs:
           merge-multiple: true
 
       - name: Calculate hash for artifact name
-        run: echo "HASH=$(echo -n "${{ inputs.key }}" | sha256sum | cut -d' ' -f1 | cut -c1-8)" >> $GITHUB_ENV
+        run: echo "HASH=$(echo -n "${{ inputs.key }}" | sha256sum | cut -c-8)" >> $GITHUB_ENV
 
-      - name: 'Execute script: (${{ inputs.key }})'
-        run: ./${{ inputs.script }}
+      - name: 'Execute: ${{ inputs.script }}'
+        run: ${{ inputs.script }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
-        if: ${{ failure() }} || ${{ inputs.artifact_prefix != '' }}
+        if: ${{ failure() || inputs.artifact_prefix != '' }}
         with:
           name: "${{ inputs.artifact_prefix }}-${{ env.HASH }}"
           path: |
@@ -81,5 +81,5 @@ jobs:
             **/hs_err_pid*
             **/replay_pid*
             **/core.[0-9]*
-            ./**/TEST-*.xml
-            ./**/target/jacoco*.exec
+            **/TEST-*.xml
+            **/target/jacoco*.exec

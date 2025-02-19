@@ -213,6 +213,16 @@ public class AbstractParallelIndexSupervisorTaskTest extends IngestionTestBase
       double transientApiCallFailureRate
   )
   {
+    this(transientTaskFailureRate, transientApiCallFailureRate, false);
+  }
+
+  protected AbstractParallelIndexSupervisorTaskTest(
+      double transientTaskFailureRate,
+      double transientApiCallFailureRate,
+      boolean useSegmentMetadataCache
+  )
+  {
+    super(useSegmentMetadataCache);
     this.transientTaskFailureRate = transientTaskFailureRate;
     this.transientApiCallFailureRate = transientApiCallFailureRate;
   }

@@ -166,8 +166,7 @@ public class IndexMergerLongestSharedDimOrderTest
             new ListIndexed<>(dimensions),
             mockBitmapFactory,
             ImmutableMap.of(ColumnHolder.TIME_COLUMN_NAME, mockSupplier),
-            mockSmooshedFileMapper,
-            true
+            mockSmooshedFileMapper
         )
         {
           @Override

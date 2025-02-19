@@ -29,14 +29,11 @@ import org.apache.druid.query.policy.NoRestrictionPolicy;
 import org.apache.druid.query.policy.Policy;
 import org.apache.druid.segment.RestrictedSegment;
 import org.apache.druid.segment.SegmentReference;
-import org.apache.druid.utils.JvmUtils;
-
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
 /**
@@ -125,18 +122,10 @@ public class RestrictedDataSource implements DataSource
   }
 
   @Override
-  public Function<SegmentReference, SegmentReference> createSegmentMapFunction(
-      Query query,
-      AtomicLong cpuTimeAccumulator
-  )
+  public Function<SegmentReference, SegmentReference> createSegmentMapFunction(Query query)
   {
-    return JvmUtils.safeAccumulateThreadCpuTime(
-        cpuTimeAccumulator,
-        () -> base.createSegmentMapFunction(
-            query,
-            cpuTimeAccumulator
-        ).andThen((segment) -> (new RestrictedSegment(segment, policy)))
-    );
+    final Function<SegmentReference, SegmentReference> segmentMapFn = base.createSegmentMapFunction(query);
+    return baseSegment -> new RestrictedSegment(segmentMapFn.apply(baseSegment), policy);
   }
 
   @Override

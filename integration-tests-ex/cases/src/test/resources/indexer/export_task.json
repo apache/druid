@@ -214,7 +214,7 @@
     "forceTimeChunkLock": true
   },
   "groupId": "%%QUERY_ID%%",
-  "dataSource": "__query_select",
+  "dataSource": "__query_export",
   "resource": {
     "availabilityGroup": "%%QUERY_ID%%",
     "requiredCapacity": 1
