@@ -28,9 +28,9 @@ import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.ForegroundCachePopulator;
 import org.apache.druid.client.cache.LocalCacheProvider;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.MapUtils;
 import org.apache.druid.java.util.common.Pair;
@@ -94,6 +94,8 @@ import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.druid.timeline.partition.PartitionChunk;
 import org.apache.druid.timeline.partition.TombstoneShardSpec;
+import org.hamcrest.CoreMatchers;
+import org.hamcrest.MatcherAssert;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
@@ -480,11 +482,12 @@ public class ServerManagerTest
     final List<SegmentDescriptor> unknownSegments = Collections.singletonList(
         new SegmentDescriptor(interval, "unknown_version", 0)
     );
-    DruidException e = assertThrows(
-        DruidException.class,
+    ISE e = assertThrows(
+        ISE.class,
         () -> serverManager.getQueryRunnerForSegments(query, unknownSegments)
     );
-    Assert.assertEquals("Unknown segments", e.getMessage());
+    System.out.println(e.getMessage());
+    MatcherAssert.assertThat(e.getMessage(), CoreMatchers.startsWith("Cannot handle subquery"));
   }
 
   @Test
