@@ -50,7 +50,7 @@ public class KubernetesOverlordUtils
   {
     return (alias == null || alias.isEmpty())
       ? convertTaskIdToJobName(taskId)
-      : StringUtils.left(RegExUtils.replaceAll(taskId, K8S_TASK_ID_PATTERN, "")
+      : StringUtils.left(RegExUtils.replaceAll(alias, K8S_TASK_ID_PATTERN, "")
                .toLowerCase(Locale.ENGLISH), 30) + "-" + hashString(taskId);
   }
 
