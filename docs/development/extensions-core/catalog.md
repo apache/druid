@@ -52,8 +52,8 @@ A tableSpec defines a table
 | Property     | Type                            | Description                                                               | Required | Default |
 |--------------|---------------------------------|---------------------------------------------------------------------------|----------|---------|
 | `type`       | String                          | the type of table. The only value supported at this time is `datasource`  | yes      | null    |
-| `properties` | Map\<String, Object\>             | the table's defined properties. see [table properties](#table-properties) | no       | null    |
-| `columns`    | List\<[ColumnSpec](#columnspec)\> | the table's defined columns                                               | no       | null    |
+| `properties` | Map&lt;String, Object>             | the table's defined properties. see [table properties](#table-properties) | no       | null    |
+| `columns`    | List&lt;[ColumnSpec](#columnspec)> | the table's defined columns                                               | no       | null    |
 
 #### Table Properties
 
@@ -68,7 +68,7 @@ A tableSpec defines a table
 |--------------|---------------------|------------------------------------------------------------------------------------------------------------------------|----------|---------|
 | `name`       | String              | The name of the column                                                                                                 | yes      | null    |
 | `dataType`   | String              | The type of the column. Can be any column data type that is available to Druid. Depends on what extensions are loaded. | no       | null    |
-| `properties` | Map\<String, Object\> | the column's defined properties. Non properties defined at this time.                                                  | no       | null    |
+| `properties` | Map&lt;String, Object\> | the column's defined properties. Non properties defined at this time.                                                  | no       | null    |
 
 ### APIs
 
