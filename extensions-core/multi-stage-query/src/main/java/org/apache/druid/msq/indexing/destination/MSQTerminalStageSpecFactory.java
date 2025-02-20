@@ -20,12 +20,12 @@
 package org.apache.druid.msq.indexing.destination;
 
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.rel.DruidQuery;
+import org.apache.druid.sql.calcite.rel.DruidQuery2;
 
 public interface MSQTerminalStageSpecFactory
 {
   /**
    * Creates a {@link TerminalStageSpec} which determines the final of a query.
    */
-  TerminalStageSpec createTerminalStageSpec(DruidQuery druidQuery, PlannerContext plannerContext);
+  TerminalStageSpec createTerminalStageSpec(DruidQuery2 druidQuery, PlannerContext plannerContext);
 }

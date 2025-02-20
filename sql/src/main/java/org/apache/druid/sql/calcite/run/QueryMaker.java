@@ -35,7 +35,10 @@ public interface QueryMaker
    * created for. The returned arrays match the row type given by {@link SqlEngine#resultTypeForSelect} or
    * {@link SqlEngine#resultTypeForInsert}, depending on the nature of the statement.
    */
-  QueryResponse<Object[]> runQuery(DruidQuery druidQuery);
+  default QueryResponse<Object[]> runQuery(DruidQuery druidQuery)
+  {
+    throw DruidException.defensive("fds");
+  }
 
   default QueryResponse<Object[]> runQuery(DruidQuery2 druidQuery) {
     throw DruidException.defensive("fds");
