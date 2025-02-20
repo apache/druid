@@ -23,6 +23,7 @@ import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexing.common.task.NoopTask;
 import org.apache.druid.indexing.common.task.Task;
+import org.apache.druid.k8s.overlord.common.K8sTaskId;
 import org.easymock.EasyMock;
 import org.easymock.EasyMockRunner;
 import org.easymock.EasyMockSupport;
@@ -126,6 +127,7 @@ public class KubernetesWorkItemTest extends EasyMockSupport
         null,
         null,
         null,
+        null,
         null
     );
     workItem = new KubernetesWorkItem(task, null, peonLifecycle);
@@ -138,6 +140,7 @@ public class KubernetesWorkItemTest extends EasyMockSupport
   {
     KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(
         task,
+        null,
         null,
         null,
         null,
@@ -163,6 +166,7 @@ public class KubernetesWorkItemTest extends EasyMockSupport
         null,
         null,
         null,
+        null,
         null
     ) {
       @Override
@@ -182,6 +186,7 @@ public class KubernetesWorkItemTest extends EasyMockSupport
   {
     KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(
         task,
+        null,
         null,
         null,
         null,
@@ -207,6 +212,7 @@ public class KubernetesWorkItemTest extends EasyMockSupport
         null,
         null,
         null,
+        null,
         null
     );
     workItem = new KubernetesWorkItem(task, null, peonLifecycle);
@@ -218,6 +224,7 @@ public class KubernetesWorkItemTest extends EasyMockSupport
   {
     KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(
         task,
+        null,
         null,
         null,
         null,

@@ -29,15 +29,15 @@ public class K8sTaskId
   private final String k8sJobName;
   private final String originalTaskId;
 
-  public K8sTaskId(Task task)
+  public K8sTaskId(String alias, Task task)
   {
-    this(task.getId());
+    this(alias, task.getId());
   }
 
-  public K8sTaskId(String taskId)
+  public K8sTaskId(String alias, String taskId)
   {
     this.originalTaskId = taskId;
-    this.k8sJobName = KubernetesOverlordUtils.convertTaskIdToJobName(taskId);
+    this.k8sJobName = KubernetesOverlordUtils.convertTaskIdToJobName(alias, taskId);
   }
 
   public String getK8sJobName()
