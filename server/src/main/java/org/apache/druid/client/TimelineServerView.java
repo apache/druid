@@ -21,7 +21,7 @@ package org.apache.druid.client;
 
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.query.QueryRunner;
-import org.apache.druid.query.planning.DataSourceAnalysis;
+import org.apache.druid.query.TableDataSource;
 import org.apache.druid.segment.realtime.appenderator.SegmentSchemas;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.timeline.DataSegment;
@@ -37,16 +37,13 @@ import java.util.concurrent.Executor;
 public interface TimelineServerView extends ServerView
 {
   /**
-   * Returns the timeline for a datasource, if it exists. The analysis object passed in must represent a scan-based
-   * datasource of a single table.
+   * Returns the timeline for a table, if it exists.
    *
-   * @param analysis data source analysis information
+   * @param dataSource the table
    *
    * @return timeline, if it exists
-   *
-   * @throws IllegalStateException if 'analysis' does not represent a scan-based datasource of a single table
    */
-  <T extends TimelineLookup<String, ServerSelector>> Optional<T> getTimeline(DataSourceAnalysis analysis);
+  <T extends TimelineLookup<String, ServerSelector>> Optional<T> getTimeline(TableDataSource dataSource);
 
   /**
    * Returns a snapshot of the current set of server metadata.

@@ -184,7 +184,7 @@ public class RestrictedDataSource implements DataSource
   @Override
   public DataSourceAnalysis getAnalysis()
   {
-    return new DataSourceAnalysis(this, null, null, ImmutableList.of());
+    return base.getAnalysis();
   }
 
   @Override
