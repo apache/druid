@@ -96,6 +96,20 @@ public class HdfsTaskLogsTest
   }
 
   @Test
+  public void test_taskPayload() throws Exception
+  {
+    final File tmpDir = tempFolder.newFolder();
+    final File logDir = new File(tmpDir, "logs");
+    final File payload = new File(tmpDir, "payload.json");
+    final TaskLogs taskLogs = new HdfsTaskLogs(new HdfsTaskLogsConfig(logDir.toString()), new Configuration());
+
+    Files.write("{}", payload, StandardCharsets.UTF_8);
+    taskLogs.pushTaskLog("id", payload);
+    Assert.assertEquals("{}",
+                        StringUtils.fromUtf8(ByteStreams.toByteArray(taskLogs.streamTaskPayload("id").get())));
+  }
+
+  @Test
   public void testKill() throws Exception
   {
     final File tmpDir = tempFolder.newFolder();
