@@ -665,7 +665,6 @@ public class SqlStatementResource
 
     MSQControllerTask msqControllerTask = (MSQControllerTask) taskPayloadResponse.getPayload();
     String queryUser = String.valueOf(msqControllerTask.getQuerySpec()
-                                                       .getQuery()
                                                        .getContext()
                                                        .get(MSQTaskQueryMaker.USER_KEY));
 
@@ -721,7 +720,7 @@ public class SqlStatementResource
     if (resultFormatParam == null) {
       return QueryContexts.getAsEnum(
           RESULT_FORMAT,
-          msqSpec.getQuery().context().get(RESULT_FORMAT),
+          msqSpec.getContext2().get(RESULT_FORMAT),
           ResultFormat.class,
           ResultFormat.DEFAULT_RESULT_FORMAT
       );

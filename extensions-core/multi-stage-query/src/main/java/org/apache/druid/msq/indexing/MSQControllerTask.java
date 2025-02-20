@@ -117,6 +117,7 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery, 
 
   private volatile Controller controller;
 
+  // FIXME: duplicate this class
   @JsonCreator
   public MSQControllerTask(
       @JsonProperty("id") @Nullable String id,
@@ -316,7 +317,7 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery, 
               // Use the task context and override with the query context
               QueryContexts.override(
                   getContext(),
-                  querySpec.getQuery().getContext()
+                  querySpec.getContext()
               )
           ),
           ((DataSourceMSQDestination) querySpec.getDestination()).isReplaceTimeChunks()

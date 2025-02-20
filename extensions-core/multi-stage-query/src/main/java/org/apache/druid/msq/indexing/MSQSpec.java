@@ -26,6 +26,7 @@ import org.apache.druid.msq.indexing.destination.MSQDestination;
 import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
 import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 
 import java.util.Map;
@@ -67,8 +68,13 @@ public class MSQSpec
     return query;
   }
 
+  public Object getQueryIrrelevant()
+  {
+    return query;
+  }
 
-  public Map<String, Object> getContextMap()
+
+  public Map<String, Object> getContext()
   {
     return query.getContext();
   }
@@ -192,4 +198,10 @@ public class MSQSpec
 
     }
   }
+
+  public QueryContext getContext2()
+  {
+    return QueryContext.of(getContext());
+  }
+
 }

@@ -567,7 +567,7 @@ public class ControllerImpl implements Controller
           .sum();
     }
 
-    log.debug("Processed bytes[%d] for query[%s].", totalProcessedBytes, querySpec.getQuery());
+    log.debug("Processed bytes[%d] for query[%s].", totalProcessedBytes, querySpec.getQueryIrrelevant());
     context.emitMetric("ingest/input/bytes", totalProcessedBytes);
   }
 
@@ -609,7 +609,7 @@ public class ControllerImpl implements Controller
     this.netClient = closer.register(new ExceptionWrappingWorkerClient(context.newWorkerClient()));
     this.queryKernelConfig = context.queryKernelConfig(queryId, querySpec);
 
-    final QueryContext queryContext = querySpec.getQuery().context();
+    final QueryContext queryContext = querySpec.getContext2();
     final QueryDefinition queryDef = makeQueryDefinition(
         context.makeQueryKitSpec(makeQueryControllerToolKit(queryContext), queryId, querySpec, queryKernelConfig),
         querySpec,
@@ -677,7 +677,7 @@ public class ControllerImpl implements Controller
         netClient,
         workerManager,
         queryKernelConfig.isFaultTolerant(),
-        MultiStageQueryContext.getSketchEncoding(querySpec.getQuery().context())
+        MultiStageQueryContext.getSketchEncoding(querySpec.getContext2())
     );
     closer.register(workerSketchFetcher::close);
 
@@ -1576,7 +1576,7 @@ public class ControllerImpl implements Controller
       @SuppressWarnings("unchecked")
       Set<DataSegment> segments = (Set<DataSegment>) queryKernel.getResultObjectForStage(finalStageId);
 
-      boolean storeCompactionState = QueryContext.of(querySpec.getQuery().getContext())
+      boolean storeCompactionState = QueryContext.of(querySpec.getContext())
                                                  .getBoolean(
                                                      Tasks.STORE_COMPACTION_STATE_KEY,
                                                      Tasks.DEFAULT_STORE_COMPACTION_STATE
@@ -1687,7 +1687,7 @@ public class ControllerImpl implements Controller
 
     GranularitySpec granularitySpec = new UniformGranularitySpec(
         segmentGranularity,
-        QueryContext.of(querySpec.getQuery().getContext())
+        QueryContext.of(querySpec.getContext())
                     .getGranularity(DruidSqlInsert.SQL_INSERT_QUERY_GRANULARITY, jsonMapper),
         dataSchema.getGranularitySpec().isRollup(),
         // Not using dataSchema.getGranularitySpec().inputIntervals() as that always has ETERNITY
