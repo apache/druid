@@ -224,7 +224,7 @@ public class KubernetesWorkItemTest extends EasyMockSupport
   {
     KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(
         task,
-        null,
+        new K8sTaskId(null, task),
         null,
         null,
         null,
