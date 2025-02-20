@@ -2159,7 +2159,10 @@ public class CompactSegmentsTest
         compactionPartitionsSpec = clientCompactionTaskQuery.getTuningConfig().getPartitionsSpec();
       }
 
-      List<AggregatorFactory> metricsSpec = Arrays.asList(clientCompactionTaskQuery.getMetricsSpec());
+      List<AggregatorFactory> metricsSpec = null;
+      if (clientCompactionTaskQuery.getMetricsSpec() != null) {
+        metricsSpec = Arrays.asList(clientCompactionTaskQuery.getMetricsSpec());
+      }
 
       for (int i = 0; i < 2; i++) {
         DataSegment compactSegment = new DataSegment(

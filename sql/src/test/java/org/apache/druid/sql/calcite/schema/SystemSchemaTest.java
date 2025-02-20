@@ -135,6 +135,8 @@ import java.util.Set;
 
 public class SystemSchemaTest extends CalciteTestBase
 {
+  private static final ObjectMapper MAPPER = TestHelper.makeJsonMapper();
+
   private static final BrokerSegmentMetadataCacheConfig SEGMENT_CACHE_CONFIG_DEFAULT = BrokerSegmentMetadataCacheConfig.create();
 
   private static final List<InputRow> ROWS1 = ImmutableList.of(
@@ -160,7 +162,6 @@ public class SystemSchemaTest extends CalciteTestBase
   private DruidLeaderClient coordinatorClient;
   private OverlordClient overlordClient;
   private TimelineServerView serverView;
-  private ObjectMapper mapper;
   private StringFullResponseHolder responseHolder;
   private BytesAccumulatingResponseHandler responseHandler;
   private Request request;
@@ -192,7 +193,6 @@ public class SystemSchemaTest extends CalciteTestBase
     client = EasyMock.createMock(DruidLeaderClient.class);
     coordinatorClient = EasyMock.createMock(DruidLeaderClient.class);
     overlordClient = EasyMock.createMock(OverlordClient.class);
-    mapper = TestHelper.makeJsonMapper();
     responseHolder = EasyMock.createMock(StringFullResponseHolder.class);
     responseHandler = EasyMock.createMockBuilder(BytesAccumulatingResponseHandler.class)
                               .withConstructor()
@@ -279,7 +279,7 @@ public class SystemSchemaTest extends CalciteTestBase
         client,
         overlordClient,
         druidNodeDiscoveryProvider,
-        mapper
+        MAPPER
     );
   }
 
@@ -288,8 +288,8 @@ public class SystemSchemaTest extends CalciteTestBase
       null,
       null,
       null,
-      mapper.convertValue(Collections.singletonMap("test", "map"), IndexSpec.class),
-      mapper.convertValue(Collections.singletonMap("test2", "map2"), GranularitySpec.class)
+      MAPPER.convertValue(Collections.singletonMap("test", "map"), IndexSpec.class),
+      MAPPER.convertValue(Collections.singletonMap("test2", "map2"), GranularitySpec.class)
   );
 
   private final DataSegment publishedCompactedSegment1 = new DataSegment(
@@ -768,10 +768,10 @@ public class SystemSchemaTest extends CalciteTestBase
     Assert.assertNull(null, rows.get(4)[0]);
     Assert.assertEquals("test5_2015-01-01T00:00:00.000Z_2016-01-01T00:00:00.000Z_version5", rows.get(4)[1]);
 
-    Assert.assertEquals(mapper.writeValueAsString(expectedCompactionState), rows.get(5)[0]);
+    Assert.assertEquals(MAPPER.writeValueAsString(expectedCompactionState), rows.get(5)[0]);
     Assert.assertEquals("wikipedia1_2007-01-01T00:00:00.000Z_2008-01-01T00:00:00.000Z_version1", rows.get(5)[1]);
 
-    Assert.assertEquals(mapper.writeValueAsString(expectedCompactionState), rows.get(6)[0]);
+    Assert.assertEquals(MAPPER.writeValueAsString(expectedCompactionState), rows.get(6)[0]);
     Assert.assertEquals("wikipedia2_2008-01-01T00:00:00.000Z_2009-01-01T00:00:00.000Z_version2", rows.get(6)[1]);
 
     Assert.assertNull(null, rows.get(7)[0]);
@@ -820,7 +820,7 @@ public class SystemSchemaTest extends CalciteTestBase
     if (compactionState == null) {
       Assert.assertNull(row[17]);
     } else {
-      Assert.assertEquals(mapper.writeValueAsString(compactionState), row[17]);
+      Assert.assertEquals(MAPPER.writeValueAsString(compactionState), row[17]);
     }
     Assert.assertEquals(replicationFactor, row[18]);
   }
@@ -1268,7 +1268,7 @@ public class SystemSchemaTest extends CalciteTestBase
     EasyMock.expect(overlordClient.taskStatuses(null, null, null)).andReturn(
         Futures.immediateFuture(
             CloseableIterators.withEmptyBaggage(
-                mapper.readValue(json, new TypeReference<List<TaskStatusPlus>>() {}).iterator()
+                MAPPER.readValue(json, new TypeReference<List<TaskStatusPlus>>() {}).iterator()
             )
         )
     );
@@ -1355,7 +1355,7 @@ public class SystemSchemaTest extends CalciteTestBase
     EasyMock.expect(overlordClient.taskStatuses(null, null, null)).andAnswer(
         () -> Futures.immediateFuture(
             CloseableIterators.withEmptyBaggage(
-                mapper.readValue(json, new TypeReference<List<TaskStatusPlus>>() {}).iterator()
+                MAPPER.readValue(json, new TypeReference<List<TaskStatusPlus>>() {}).iterator()
             )
         )
     ).anyTimes();
@@ -1405,7 +1405,7 @@ public class SystemSchemaTest extends CalciteTestBase
     EasyMock.expect(overlordClient.supervisorStatuses()).andReturn(
         Futures.immediateFuture(
             CloseableIterators.withEmptyBaggage(
-                mapper.readValue(json, new TypeReference<List<SupervisorStatus>>() {}).iterator()
+                MAPPER.readValue(json, new TypeReference<List<SupervisorStatus>>() {}).iterator()
             )
         )
     );
@@ -1452,7 +1452,7 @@ public class SystemSchemaTest extends CalciteTestBase
     EasyMock.expect(overlordClient.supervisorStatuses()).andAnswer(
         () -> Futures.immediateFuture(
             CloseableIterators.withEmptyBaggage(
-                mapper.readValue(json, new TypeReference<List<SupervisorStatus>>() {}).iterator()
+                MAPPER.readValue(json, new TypeReference<List<SupervisorStatus>>() {}).iterator()
             )
         )
     ).anyTimes();

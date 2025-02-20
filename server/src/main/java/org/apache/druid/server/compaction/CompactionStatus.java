@@ -446,7 +446,7 @@ public class CompactionStatus
       final List<AggregatorFactory> metricSpecList = lastCompactionState.getMetricsSpec();
       final AggregatorFactory[] existingMetricsSpec
           = CollectionUtils.isNullOrEmpty(metricSpecList)
-            ? null : objectMapper.convertValue(metricSpecList, AggregatorFactory[].class);
+            ? null : metricSpecList.toArray(new AggregatorFactory[0]);
 
       if (existingMetricsSpec == null || !Arrays.deepEquals(configuredMetricsSpec, existingMetricsSpec)) {
         return CompactionStatus.configChanged(
