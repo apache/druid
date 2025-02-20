@@ -23,8 +23,8 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.annotations.PublicApi;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.filter.DimFilter;
@@ -35,6 +35,7 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
 
 import javax.annotation.Nullable;
+
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -170,7 +171,8 @@ public class Queries
 
       if (!analysis.getEffectiveQuerySegmentSpec().equals(new MultipleSpecificSegmentSpec(descriptors))) {
         // If you see the error message below, it's a bug in either this function or in DataSourceAnalysis.
-        throw new ISE("Unable to apply specific segments to query with dataSource[%s]", query.getDataSource());
+        throw DruidException
+            .defensive("Unable to apply specific segments to query with dataSource[%s]", query.getDataSource());
       }
     }
     return retVal;
