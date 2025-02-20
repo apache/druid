@@ -227,7 +227,7 @@ Retrieve a table
 
 ##### Sample request
 
-The following example shows how to retrieve a table named 'test_table' in schema 'druid'
+The following example shows how to retrieve a table named `test_table` in schema `druid`:
 
 ```shell
 curl "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/catalog/schemas/druid/tables/test_table"
