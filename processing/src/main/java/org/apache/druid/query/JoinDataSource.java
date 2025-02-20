@@ -407,9 +407,9 @@ public class JoinDataSource implements DataSource
   @Override
   public Function<SegmentReference, SegmentReference> createSegmentMapFunction(Query query)
   {
-    DataSourceAnalysis safeAnalysis = getSafeAnalysisForDataSource();
-    List<PreJoinableClause> clauses = safeAnalysis.getPreJoinableClauses();
-    Filter baseFilter = safeAnalysis.getJoinBaseTableFilter().map(Filters::toFilter).orElse(null);
+    DataSourceAnalysis joinAnalysis = getJoinAnalysisForDataSource();
+    List<PreJoinableClause> clauses = joinAnalysis.getPreJoinableClauses();
+    Filter baseFilter = joinAnalysis.getJoinBaseTableFilter().map(Filters::toFilter).orElse(null);
 
     if (clauses.isEmpty()) {
       throw DruidException.defensive("A JoinDataSource with no join clauses should not be mapped.");
@@ -457,7 +457,7 @@ public class JoinDataSource implements DataSource
                 .orElse(null)
         )
     );
-    final Function<SegmentReference, SegmentReference> baseMapFn = safeAnalysis.getBaseDataSource().createSegmentMapFunction(query);
+    final Function<SegmentReference, SegmentReference> baseMapFn = joinAnalysis.getBaseDataSource().createSegmentMapFunction(query);
     return baseSegment -> newHashJoinSegment(
         baseMapFn.apply(baseSegment),
         baseFilterToUse,
@@ -481,22 +481,27 @@ public class JoinDataSource implements DataSource
 
   private DataSourceAnalysis getAnalysisForDataSource()
   {
-    return flattenJoin(this, true);
-  }
-
-  public DataSourceAnalysis getSafeAnalysisForDataSource()
-  {
-    return flattenJoin(this, false);
+    return constructAnalysis(this, true);
   }
 
   /**
-   * Flatten a datasource into two parts: the left-hand side datasource (the 'base' datasource), and a list of join
-   * clauses, if any.
-   * @param vertexBoundary if the returned analysis should cover the vertexboundary.
+   * Computes the DataSourceAnalysis with join boundaries.
+   *
+   * It will only process what the join datasource could handle in one go - and not more.
+   */
+  public DataSourceAnalysis getJoinAnalysisForDataSource()
+  {
+    return constructAnalysis(this, false);
+  }
+
+  /**
+   * Builds the DataSourceAnalysis for this join.
+   *
+   * @param vertexBoundary if the returned analysis should go up to the vertex boundary.
    *
    * @throws IllegalArgumentException if dataSource cannot be fully flattened.
    */
-  private static DataSourceAnalysis flattenJoin(final JoinDataSource dataSource, boolean vertexBoundary)
+  private static DataSourceAnalysis constructAnalysis(final JoinDataSource dataSource, boolean vertexBoundary)
   {
     DataSource current = dataSource;
     DimFilter currentDimFilter = TrueDimFilter.instance();

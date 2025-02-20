@@ -184,6 +184,16 @@ public class Queries
    */
   public static <T> Query<T> withBaseDataSource(final Query<T> query, final DataSource newBaseDataSource)
   {
+    if(query instanceof BaseQuery) {
+      BaseQuery baseQuery = (BaseQuery) query;
+      Query<T> q1 = baseQuery.rewrite( );
+
+    }
+
+
+    DataSourceAnalysis analysis = query.getDataSourceAnalysis();
+
+
     return query.withDataSource(query.getDataSource().withUpdatedDataSource(newBaseDataSource));
   }
 

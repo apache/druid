@@ -600,7 +600,7 @@ public class DataSourcePlan
   )
   {
     final QueryDefinitionBuilder subQueryDefBuilder = QueryDefinition.builder(queryKitSpec.getQueryId());
-    final DataSourceAnalysis analysis = dataSource.getSafeAnalysisForDataSource();
+    final DataSourceAnalysis analysis = dataSource.getJoinAnalysisForDataSource();
 
     final DataSourcePlan basePlan = forDataSource(
         queryKitSpec,
