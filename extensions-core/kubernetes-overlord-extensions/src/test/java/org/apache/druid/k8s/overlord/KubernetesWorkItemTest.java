@@ -38,6 +38,7 @@ public class KubernetesWorkItemTest extends EasyMockSupport
 {
   private KubernetesWorkItem workItem;
   private Task task;
+  private K8sTaskId taskId;
 
   @Mock
   KubernetesPeonLifecycle kubernetesPeonLifecycle;
@@ -46,6 +47,7 @@ public class KubernetesWorkItemTest extends EasyMockSupport
   public void setup()
   {
     task = NoopTask.create();
+    taskId = new K8sTaskId(null, task);
   }
 
   @Test
@@ -124,7 +126,7 @@ public class KubernetesWorkItemTest extends EasyMockSupport
   {
     KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(
         task,
-        null,
+        taskId,
         null,
         null,
         null,
@@ -140,7 +142,7 @@ public class KubernetesWorkItemTest extends EasyMockSupport
   {
     KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(
         task,
-        null,
+        taskId,
         null,
         null,
         null,
@@ -163,7 +165,7 @@ public class KubernetesWorkItemTest extends EasyMockSupport
   {
     KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(
         task,
-        null,
+        taskId,
         null,
         null,
         null,
@@ -186,7 +188,7 @@ public class KubernetesWorkItemTest extends EasyMockSupport
   {
     KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(
         task,
-        null,
+        taskId,
         null,
         null,
         null,
@@ -209,7 +211,7 @@ public class KubernetesWorkItemTest extends EasyMockSupport
   {
     KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(
         task,
-        null,
+        taskId,
         null,
         null,
         null,
@@ -224,7 +226,7 @@ public class KubernetesWorkItemTest extends EasyMockSupport
   {
     KubernetesPeonLifecycle peonLifecycle = new KubernetesPeonLifecycle(
         task,
-        new K8sTaskId(null, task),
+        taskId,
         null,
         null,
         null,
