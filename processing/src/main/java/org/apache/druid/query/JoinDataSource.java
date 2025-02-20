@@ -458,7 +458,7 @@ public class JoinDataSource implements DataSource
         )
     );
     final Function<SegmentReference, SegmentReference> baseMapFn = joinAnalysis.getBaseDataSource().createSegmentMapFunction(query);
-    return baseSegment -> newHashJoinSegment(
+    return baseSegment -> createHashJoinSegment(
         baseMapFn.apply(baseSegment),
         baseFilterToUse,
         clausesToUse,
@@ -466,7 +466,7 @@ public class JoinDataSource implements DataSource
     );
   }
 
-  private SegmentReference newHashJoinSegment(
+  private SegmentReference createHashJoinSegment(
       SegmentReference sourceSegment,
       Filter baseFilterToUse,
       List<JoinableClause> clausesToUse,
@@ -477,7 +477,6 @@ public class JoinDataSource implements DataSource
     }
     return new HashJoinSegment(sourceSegment, baseFilterToUse, clausesToUse, joinFilterPreAnalysis);
   }
-
 
   private DataSourceAnalysis getAnalysisForDataSource()
   {
