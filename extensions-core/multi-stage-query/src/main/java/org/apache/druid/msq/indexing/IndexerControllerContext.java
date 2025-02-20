@@ -92,29 +92,6 @@ public class IndexerControllerContext implements ControllerContext
 
 
 
-  static IndexerControllerContext x(
-      final MSQControllerTask task,
-      final TaskToolbox toolbox,
-      final Injector injector,
-      final ServiceClientFactory clientFactory,
-      final OverlordClient overlordClient
-  )
-  {
-    Builder metricBuilder = new ServiceMetricEvent.Builder();
-    IndexTaskUtils.setTaskDimensions(metricBuilder, task);
-    return new IndexerControllerContext(
-        task.getTaskLockType(),
-        task.getDataSource(),
-        task.getQuerySpec().getContext2(),
-        task.getContext(),
-        metricBuilder,
-        toolbox,
-        injector,
-        clientFactory,
-        overlordClient
-    );
-  }
-
   public IndexerControllerContext(
       final TaskLockType taskLockType,
       final String taskDataSource,
