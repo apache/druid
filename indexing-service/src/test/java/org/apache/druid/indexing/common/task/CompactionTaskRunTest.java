@@ -19,7 +19,6 @@
 
 package org.apache.druid.indexing.common.task;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.collect.ImmutableList;
@@ -217,7 +216,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
       Granularity segmentGranularity,
       Granularity queryGranularity,
       List<Interval> intervals
-  ) throws JsonProcessingException
+  )
   {
     AggregatorFactory expectedLongSumMetric = new LongSumAggregatorFactory("val", "val");
     return getDefaultCompactionState(
