@@ -40,7 +40,6 @@ import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
-import org.apache.druid.client.indexing.ClientCompactionTaskTransformSpec;
 import org.apache.druid.common.guava.SettableSupplier;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.impl.DimensionSchema;
@@ -55,6 +54,7 @@ import org.apache.druid.guice.GuiceInjectableValues;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.IndexingServiceTuningConfigModule;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexing.common.LockGranularity;
@@ -120,7 +120,6 @@ import org.apache.druid.segment.indexing.BatchIOConfig;
 import org.apache.druid.segment.indexing.CombinedDataSchema;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.TuningConfig;
-import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.NoopSegmentCacheManager;
 import org.apache.druid.segment.loading.SegmentCacheManager;
@@ -129,6 +128,7 @@ import org.apache.druid.segment.realtime.ChatHandlerProvider;
 import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
 import org.apache.druid.segment.selector.settable.SettableColumnValueSelector;
+import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
 import org.apache.druid.server.lookup.cache.LookupLoadingSpec;
@@ -419,8 +419,8 @@ public class CompactionTaskTest
   @Test
   public void testCreateCompactionTaskWithTransformSpec()
   {
-    ClientCompactionTaskTransformSpec transformSpec =
-        new ClientCompactionTaskTransformSpec(new SelectorDimFilter("dim1", "foo", null));
+    CompactionTransformSpec transformSpec =
+        new CompactionTransformSpec(new SelectorDimFilter("dim1", "foo", null));
     final Builder builder = new Builder(
         DATA_SOURCE,
         segmentCacheManagerFactory
@@ -1686,7 +1686,7 @@ public class CompactionTaskTest
     );
     final CompactionTask task = builder
         .interval(Intervals.of("2000-01-01/2000-01-02"))
-        .transformSpec(new ClientCompactionTaskTransformSpec(new SelectorDimFilter("dim1", "foo", null)))
+        .transformSpec(new CompactionTransformSpec(new SelectorDimFilter("dim1", "foo", null)))
         .build();
     Assert.assertEquals(LookupLoadingSpec.ALL, task.getLookupLoadingSpec());
   }

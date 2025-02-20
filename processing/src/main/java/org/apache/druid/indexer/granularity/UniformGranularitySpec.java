@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.segment.indexing.granularity;
+package org.apache.druid.indexer.granularity;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
