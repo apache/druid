@@ -21,7 +21,6 @@ package org.apache.druid.query;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import org.apache.druid.query.BaseQuery.IX;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.planning.PreJoinableClause;
 import org.apache.druid.query.policy.Policy;
@@ -160,8 +159,4 @@ public interface DataSource
    * @return The {@link DataSourceAnalysis} object for the callee data source
    */
   DataSourceAnalysis getAnalysis();
-
-  default DataSource accept(IX a) {
-
-  }
 }

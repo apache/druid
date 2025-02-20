@@ -267,17 +267,4 @@ public abstract class BaseQuery<T> implements Query<T>
     // Must use getDuration() instead of "duration" because duration is lazily computed.
     return Objects.hash(dataSource, context, querySegmentSpec, getDuration(), granularity);
   }
-
-  public BaseQuery<T> rewrite(IX a) {
-
-    DataSource newDataSource = getDataSource().accept(a);
-    a.visitDataSource(getDataSource());
-
-    return null;
-  }
-
-  static interface IX {
-
-    public void visitDataSource(DataSource dataSource);
-  }
 }
