@@ -74,13 +74,13 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
-@JsonTypeName(MSQControllerTask.TYPE)
-public class MSQControllerTask extends AbstractTask implements ClientTaskQuery, PendingSegmentAllocatingTask
+@JsonTypeName(MSQControllerTask2.TYPE)
+public class MSQControllerTask2 extends AbstractTask implements ClientTaskQuery, PendingSegmentAllocatingTask
 {
   public static final String TYPE = "query_controller";
   public static final String DUMMY_DATASOURCE_FOR_SELECT = "__query_select";
   public static final String DUMMY_DATASOURCE_FOR_EXPORT = "__query_export";
-  private static final Logger log = new Logger(MSQControllerTask.class);
+  private static final Logger log = new Logger(MSQControllerTask2.class);
 
   private final MSQSpec querySpec;
 
@@ -119,7 +119,7 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery, 
 
   // FIXME: duplicate this classa
   @JsonCreator
-  public MSQControllerTask(
+  public MSQControllerTask2(
       @JsonProperty("id") @Nullable String id,
       @JsonProperty("spec") MSQSpec querySpec,
       @JsonProperty("sqlQuery") @Nullable String sqlQuery,
@@ -148,7 +148,7 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery, 
     addToContext(Tasks.FORCE_TIME_CHUNK_LOCK_KEY, true);
   }
 
-  public MSQControllerTask(
+  public MSQControllerTask2(
       @Nullable String id,
       MSQSpec querySpec,
       @Nullable String sqlQuery,
@@ -268,7 +268,7 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery, 
     final OverlordClient overlordClient = injector.getInstance(OverlordClient.class)
                                                   .withRetryPolicy(StandardRetryPolicy.unlimited());
     final ControllerContext context = IndexerControllerContext.x(
-        this,
+        null,
         toolbox,
         injector,
         clientFactory,

@@ -32,6 +32,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent.Builder;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerContext;
 import org.apache.druid.msq.exec.ControllerMemoryParameters;
@@ -78,7 +79,10 @@ public class IndexerControllerContext implements ControllerContext
 
   private static final Logger log = new Logger(IndexerControllerContext.class);
 
-  private final MSQControllerTask task;
+  private final TaskLockType taskLockType;
+  private final String taskDataSource;
+  private final QueryContext taskQuerySpecContext2;
+  private final Map<String, Object> taskContext;
   private final TaskToolbox toolbox;
   private final Injector injector;
   private final ServiceClientFactory clientFactory;
@@ -86,7 +90,9 @@ public class IndexerControllerContext implements ControllerContext
   private final ServiceMetricEvent.Builder metricBuilder;
   private final MemoryIntrospector memoryIntrospector;
 
-  public IndexerControllerContext(
+
+
+  static IndexerControllerContext x(
       final MSQControllerTask task,
       final TaskToolbox toolbox,
       final Injector injector,
@@ -94,13 +100,42 @@ public class IndexerControllerContext implements ControllerContext
       final OverlordClient overlordClient
   )
   {
-    this.task = task;
+    Builder metricBuilder = new ServiceMetricEvent.Builder();
+    IndexTaskUtils.setTaskDimensions(metricBuilder, task);
+    return new IndexerControllerContext(
+        task.getTaskLockType(),
+        task.getDataSource(),
+        task.getQuerySpec().getContext2(),
+        task.getContext(),
+        metricBuilder,
+        toolbox,
+        injector,
+        clientFactory,
+        overlordClient
+    );
+  }
+
+  public IndexerControllerContext(
+      final TaskLockType taskLockType,
+      final String taskDataSource,
+      final QueryContext taskQuerySpecContext2,
+      final Map<String, Object> taskContext,
+      final ServiceMetricEvent.Builder metricBuilder,
+      final TaskToolbox toolbox,
+      final Injector injector,
+      final ServiceClientFactory clientFactory,
+      final OverlordClient overlordClient
+  )
+  {
+    this.taskLockType=taskLockType;
+    this.taskDataSource=taskDataSource;
+    this.taskQuerySpecContext2=taskQuerySpecContext2;
+    this.taskContext=taskContext;
     this.toolbox = toolbox;
     this.clientFactory = clientFactory;
     this.overlordClient = overlordClient;
-    this.metricBuilder = new ServiceMetricEvent.Builder();
+    this.metricBuilder = metricBuilder;
     this.memoryIntrospector = injector.getInstance(MemoryIntrospector.class);
-    IndexTaskUtils.setTaskDimensions(metricBuilder, task);
     final StorageConnectorProvider storageConnectorProvider = injector.getInstance(Key.get(StorageConnectorProvider.class, MultiStageQuery.class));
     final StorageConnector storageConnector = storageConnectorProvider.createStorageConnector(toolbox.getIndexingTmpDir());
     this.injector = injector.createChildInjector(
@@ -164,7 +199,7 @@ public class IndexerControllerContext implements ControllerContext
   public InputSpecSlicer newTableInputSpecSlicer(final WorkerManager workerManager)
   {
     final SegmentSource includeSegmentSource =
-        MultiStageQueryContext.getSegmentSources(task.getQuerySpec().getContext2());
+        MultiStageQueryContext.getSegmentSources(taskQuerySpecContext2);
     return new IndexerTableInputSpecSlicer(
         toolbox.getCoordinatorClient(),
         toolbox.getTaskActionClient(),
@@ -181,7 +216,7 @@ public class IndexerControllerContext implements ControllerContext
   @Override
   public TaskLockType taskLockType()
   {
-    return task.getTaskLockType();
+    return taskLockType;
   }
 
   @Override
@@ -195,7 +230,7 @@ public class IndexerControllerContext implements ControllerContext
   {
     ChatHandler chatHandler = new ControllerChatHandler(
         controller,
-        task.getDataSource(),
+        taskDataSource,
         toolbox.getAuthorizerMapper()
     );
     toolbox.getChatHandlerProvider().register(controller.queryId(), chatHandler, false);
@@ -212,10 +247,10 @@ public class IndexerControllerContext implements ControllerContext
   {
     return new MSQWorkerTaskLauncher(
         queryId,
-        task.getDataSource(),
+        taskDataSource,
         overlordClient,
         workerFailureListener,
-        makeTaskContext(querySpec, queryKernelConfig, task.getContext()),
+        makeTaskContext(querySpec, queryKernelConfig, taskContext),
         // 10 minutes +- 2 minutes jitter
         TimeUnit.SECONDS.toMillis(600 + ThreadLocalRandom.current().nextInt(-4, 5) * 30L),
         new MSQWorkerTaskLauncherConfig()
