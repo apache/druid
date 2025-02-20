@@ -35,7 +35,6 @@ public class DruidQuery2
   public DruidQuery2(DruidQuery druidQuery)
   {
     this.druidQuery = druidQuery;
-
   }
 
   public Query<?> getQuery()
@@ -46,14 +45,15 @@ public class DruidQuery2
   public RowSignature getOutputRowSignature()
   {
     return druidQuery.getOutputRowSignature();
-
   }
 
+  @Deprecated
   public RelDataType getOutputRowType()
   {
     return druidQuery.getOutputRowType();
   }
 
+  @Deprecated
   public Grouping getGrouping()
   {
     return druidQuery.getGrouping();

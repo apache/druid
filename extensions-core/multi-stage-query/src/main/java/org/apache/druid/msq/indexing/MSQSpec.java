@@ -63,7 +63,14 @@ public class MSQSpec
   @JsonProperty
   public Query<?> getQuery()
   {
+    //?????????????????????????????????????WTF
     return query;
+  }
+
+
+  public Map<String, Object> getContextMap()
+  {
+    return query.getContext();
   }
 
   @JsonProperty("columnMappings")
@@ -173,6 +180,16 @@ public class MSQSpec
       }
 
       return new MSQSpec(query, columnMappings, destination, assignmentStrategy, tuningConfig);
+    }
+
+    public Builder context(Map<String, Object> context)
+    {
+      if(true)
+      {
+        throw new RuntimeException("FIXME: Unimplemented!");
+      }
+      return null;
+
     }
   }
 }

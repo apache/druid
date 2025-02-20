@@ -60,7 +60,6 @@ import org.apache.druid.sql.calcite.parser.DruidSqlReplace;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.QueryUtils;
-import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.rel.DruidQuery2;
 import org.apache.druid.sql.calcite.rel.Grouping;
 import org.apache.druid.sql.calcite.run.QueryMaker;
@@ -296,6 +295,7 @@ public class MSQTaskQueryMaker implements QueryMaker
     final MSQSpec querySpec =
         MSQSpec.builder()
                .query(druidQuery.getQuery().withOverriddenContext(nativeQueryContextOverrides))
+//               .context(druidQuery.getQuery().withOverriddenContext(nativeQueryContextOverrides).getContext())
                .columnMappings(new ColumnMappings(QueryUtils.buildColumnMappingsX(fieldMapping, druidQuery)))
                .destination(destination)
                .assignmentStrategy(MultiStageQueryContext.getAssignmentStrategy(sqlQueryContext))
