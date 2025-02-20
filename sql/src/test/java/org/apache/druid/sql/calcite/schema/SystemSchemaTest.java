@@ -52,6 +52,7 @@ import org.apache.druid.discovery.DruidNodeDiscovery;
 import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.discovery.NodeRole;
 import org.apache.druid.indexer.TaskStatusPlus;
+import org.apache.druid.indexer.granularity.GranularitySpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorStatus;
 import org.apache.druid.java.util.common.CloseableIterators;
@@ -72,6 +73,7 @@ import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.IndexBuilder;
+import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
@@ -286,8 +288,8 @@ public class SystemSchemaTest extends CalciteTestBase
       null,
       null,
       null,
-      Collections.singletonMap("test", "map"),
-      Collections.singletonMap("test2", "map2")
+      mapper.convertValue(Collections.singletonMap("test", "map"), IndexSpec.class),
+      mapper.convertValue(Collections.singletonMap("test2", "map2"), GranularitySpec.class)
   );
 
   private final DataSegment publishedCompactedSegment1 = new DataSegment(

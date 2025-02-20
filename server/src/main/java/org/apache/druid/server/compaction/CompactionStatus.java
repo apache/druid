@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
-import org.apache.druid.client.indexing.ClientCompactionTaskTransformSpec;
 import org.apache.druid.common.config.Configs;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
@@ -35,6 +34,7 @@ import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.granularity.GranularityType;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.IndexSpec;
+import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
 import org.apache.druid.timeline.CompactionState;
@@ -443,7 +443,7 @@ public class CompactionStatus
         return COMPLETE;
       }
 
-      final List<Object> metricSpecList = lastCompactionState.getMetricsSpec();
+      final List<AggregatorFactory> metricSpecList = lastCompactionState.getMetricsSpec();
       final AggregatorFactory[] existingMetricsSpec
           = CollectionUtils.isNullOrEmpty(metricSpecList)
             ? null : objectMapper.convertValue(metricSpecList, AggregatorFactory[].class);
@@ -466,9 +466,9 @@ public class CompactionStatus
         return COMPLETE;
       }
 
-      ClientCompactionTaskTransformSpec existingTransformSpec = convertIfNotNull(
+      CompactionTransformSpec existingTransformSpec = convertIfNotNull(
           lastCompactionState.getTransformSpec(),
-          ClientCompactionTaskTransformSpec.class
+          CompactionTransformSpec.class
       );
       return CompactionStatus.completeIfEqual(
           "transformSpec filter",

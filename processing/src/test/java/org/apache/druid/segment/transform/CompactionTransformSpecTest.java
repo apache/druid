@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator;
+package org.apache.druid.segment.transform;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import nl.jqno.equalsverifier.EqualsVerifier;
@@ -28,12 +28,12 @@ import org.junit.Test;
 
 import java.io.IOException;
 
-public class UserCompactionTaskTransformConfigTest
+public class CompactionTransformSpecTest
 {
   @Test
   public void testEquals()
   {
-    EqualsVerifier.forClass(UserCompactionTaskTransformConfig.class)
+    EqualsVerifier.forClass(CompactionTransformSpec.class)
                   .withNonnullFields("filter")
                   .usingGetClass()
                   .verify();
@@ -42,14 +42,14 @@ public class UserCompactionTaskTransformConfigTest
   @Test
   public void testSerde() throws IOException
   {
-    final UserCompactionTaskTransformConfig expected = new UserCompactionTaskTransformConfig(
+    final CompactionTransformSpec expected = new CompactionTransformSpec(
         new SelectorDimFilter("dim1", "foo", null)
     );
     final ObjectMapper mapper = new DefaultObjectMapper();
     final byte[] json = mapper.writeValueAsBytes(expected);
-    final UserCompactionTaskTransformConfig fromJson = (UserCompactionTaskTransformConfig) mapper.readValue(
+    final CompactionTransformSpec fromJson = (CompactionTransformSpec) mapper.readValue(
         json,
-        UserCompactionTaskTransformConfig.class
+        CompactionTransformSpec.class
     );
     Assert.assertEquals(expected, fromJson);
   }

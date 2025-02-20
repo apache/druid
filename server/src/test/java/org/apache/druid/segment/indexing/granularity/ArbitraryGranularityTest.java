@@ -23,6 +23,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import org.apache.druid.indexer.granularity.ArbitraryGranularitySpec;
+import org.apache.druid.indexer.granularity.GranularitySpec;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
@@ -32,7 +34,6 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.List;
-import java.util.Map;
 
 public class ArbitraryGranularityTest
 {
@@ -216,32 +217,6 @@ public class ArbitraryGranularityTest
     catch (Exception e) {
       throw new RuntimeException(e);
     }
-  }
-
-  @Test
-  public void testAsMap()
-  {
-    final GranularitySpec spec = new ArbitraryGranularitySpec(Granularities.NONE, Lists.newArrayList(
-        Intervals.of("2012-01-08T00Z/2012-01-11T00Z"),
-        Intervals.of("2012-02-01T00Z/2012-03-01T00Z"),
-        Intervals.of("2012-01-07T00Z/2012-01-08T00Z"),
-        Intervals.of("2012-01-03T00Z/2012-01-04T00Z"),
-        Intervals.of("2012-01-01T00Z/2012-01-03T00Z")
-    ));
-
-    Map<String, Object> map = spec.asMap(JSON_MAPPER);
-    final GranularitySpec rtSpec = JSON_MAPPER.convertValue(map, GranularitySpec.class);
-    Assert.assertEquals(
-        "Round-trip",
-        ImmutableList.copyOf(spec.sortedBucketIntervals()),
-        ImmutableList.copyOf(rtSpec.sortedBucketIntervals())
-    );
-    Assert.assertEquals(
-        "Round-trip",
-        ImmutableList.copyOf(spec.inputIntervals()),
-        ImmutableList.copyOf(rtSpec.inputIntervals())
-    );
-    Assert.assertEquals(spec, rtSpec);
   }
 
   @Test
