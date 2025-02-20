@@ -87,9 +87,8 @@ public class DartControllerContextTest
     mockCloser = MockitoAnnotations.openMocks(this);
     memoryIntrospector = new MemoryIntrospectorImpl(100_000_000, 0.75, 1, 1, null);
     Mockito.when(serverView.getDruidServerMetadatas()).thenReturn(SERVERS);
-    Mockito.when(querySpec.getQuery()).thenReturn(query);
     Mockito.when(querySpec.getDestination()).thenReturn(TaskReportMSQDestination.instance());
-    Mockito.when(query.context()).thenReturn(queryContext);
+    Mockito.when(querySpec.getContext2()).thenReturn(queryContext);
   }
 
   @AfterEach

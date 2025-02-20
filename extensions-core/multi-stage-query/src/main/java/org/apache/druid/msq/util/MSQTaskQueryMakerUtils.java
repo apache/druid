@@ -98,7 +98,7 @@ public class MSQTaskQueryMakerUtils
    */
   public static void validateRealtimeReindex(final MSQSpec querySpec)
   {
-    final SegmentSource segmentSources = MultiStageQueryContext.getSegmentSources(querySpec.getQuery().context());
+    final SegmentSource segmentSources = MultiStageQueryContext.getSegmentSources(querySpec.getContext2());
     if (MSQControllerTask.isReplaceInputDataSourceTask(querySpec) && SegmentSource.REALTIME.equals(segmentSources)) {
       throw DruidException.forPersona(DruidException.Persona.USER)
                           .ofCategory(DruidException.Category.INVALID_INPUT)

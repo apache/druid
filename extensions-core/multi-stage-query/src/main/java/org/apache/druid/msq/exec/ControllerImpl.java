@@ -461,7 +461,7 @@ public class ControllerImpl implements Controller
       }
     }
 
-    boolean shouldWaitForSegmentLoad = MultiStageQueryContext.shouldWaitForSegmentLoad(querySpec.getQuery().context());
+    boolean shouldWaitForSegmentLoad = MultiStageQueryContext.shouldWaitForSegmentLoad(querySpec.getContext2());
 
     try {
       if (MSQControllerTask.isIngestion(querySpec)) {
@@ -1429,7 +1429,7 @@ public class ControllerImpl implements Controller
                  .submit(new MarkSegmentsAsUnusedAction(destination.getDataSource(), interval));
         }
       } else {
-        if (MultiStageQueryContext.shouldWaitForSegmentLoad(querySpec.getQuery().context())) {
+        if (MultiStageQueryContext.shouldWaitForSegmentLoad(querySpec.getContext2())) {
           segmentLoadWaiter = new SegmentLoadStatusFetcher(
               context.injector().getInstance(BrokerClient.class),
               context.jsonMapper(),
@@ -1445,7 +1445,7 @@ public class ControllerImpl implements Controller
         );
       }
     } else if (!segments.isEmpty()) {
-      if (MultiStageQueryContext.shouldWaitForSegmentLoad(querySpec.getQuery().context())) {
+      if (MultiStageQueryContext.shouldWaitForSegmentLoad(querySpec.getContext2())) {
         segmentLoadWaiter = new SegmentLoadStatusFetcher(
             context.injector().getInstance(BrokerClient.class),
             context.jsonMapper(),
@@ -2524,7 +2524,7 @@ public class ControllerImpl implements Controller
     private void startStages() throws IOException, InterruptedException
     {
       final long maxInputBytesPerWorker =
-          MultiStageQueryContext.getMaxInputBytesPerWorker(querySpec.getQuery().context());
+          MultiStageQueryContext.getMaxInputBytesPerWorker(querySpec.getContext2());
 
       logKernelStatus(queryDef.getQueryId(), queryKernel);
 
@@ -2584,7 +2584,7 @@ public class ControllerImpl implements Controller
       final StageId shuffleStageId = new StageId(queryDef.getQueryId(), shuffleStageNumber);
 
       final boolean isFailOnEmptyInsertEnabled =
-          MultiStageQueryContext.isFailOnEmptyInsertEnabled(querySpec.getQuery().context());
+          MultiStageQueryContext.isFailOnEmptyInsertEnabled(querySpec.getContext2());
       final Boolean isShuffleStageOutputEmpty = queryKernel.isStageOutputEmpty(shuffleStageId);
       if (isFailOnEmptyInsertEnabled && Boolean.TRUE.equals(isShuffleStageOutputEmpty)) {
         throw new MSQException(new InsertCannotBeEmptyFault(getDataSourceForIngestion(querySpec)));
@@ -2776,7 +2776,7 @@ public class ControllerImpl implements Controller
             resultReaderExec,
             RESULT_READER_CANCELLATION_ID,
             null,
-            MultiStageQueryContext.removeNullBytes(querySpec.getQuery().context())
+            MultiStageQueryContext.removeNullBytes(querySpec.getContext2())
         );
 
         resultsChannel = ReadableConcatFrameChannel.open(

@@ -117,7 +117,7 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery, 
 
   private volatile Controller controller;
 
-  // FIXME: duplicate this class
+  // FIXME: duplicate this classa
   @JsonCreator
   public MSQControllerTask(
       @JsonProperty("id") @Nullable String id,
