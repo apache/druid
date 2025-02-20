@@ -47,9 +47,9 @@ It is possible to run task pods in a different namespace from the rest of your D
 If you are running multiple Druid clusters and would like to have a dedicated namespace for all your task pods, you can make the following changes to the runtime properties for your Overlord deployment:
 
 - `druid.indexer.runner.namespace`: The namespace where the task pods will run. It can be the same as the namespace where your Druid cluster is deployed, or different from it. In the latter case, you need to define the following `overlordNamespace`.
-- `druid.indexer.runner.overlordNamespace`: The namespace where the Overlord resides. This must be defined when tasks are scheduled in different namespace.
+- `druid.indexer.runner.overlordNamespace`: The namespace where the Overlord resides. This must be defined when tasks are scheduled in different namespace. When `druid.indexer.runner.overlordNamespace` is not provided, Druid will assume that the entire cluster operates within a single namespace and will default to `druid.indexer.runner.namespace`.
 
-Druid will tag Kubernetes jobs with a `druid.overlord.namespace` label. This label helps Druid filter out Kubernetes jobs belonging to other namespaces. When `druid.indexer.runner.overlordNamespace` is not provided, Druid will assume that the entire cluster operates within a single namespace and will default to `druid.indexer.runner.namespace`.
+Druid will tag Kubernetes jobs with a `druid.overlord.namespace` label. This label helps Druid filter out Kubernetes jobs belonging to other namespaces.
 
 #### Dealing with ZooKeeper Problems
 
