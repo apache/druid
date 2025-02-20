@@ -32,7 +32,6 @@ import org.apache.druid.java.util.common.RetryUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
-import org.apache.druid.k8s.overlord.KubernetesTaskRunnerConfig;
 
 import java.io.InputStream;
 import java.sql.Timestamp;
@@ -200,7 +199,7 @@ public class KubernetesPeonClient
                                                     .jobs()
                                                     .inNamespace(namespace)
                                                     .withLabel(DruidK8sConstants.LABEL_KEY)
-                                                    .withLabel(DruidK8sConstants.ORIGINAL_NAMESPACE_KEY, overlordNamespace)
+                                                    .withLabel(DruidK8sConstants.OVERLORD_NAMESPACE_KEY, overlordNamespace)
                                                     .list()
                                                     .getItems());
   }

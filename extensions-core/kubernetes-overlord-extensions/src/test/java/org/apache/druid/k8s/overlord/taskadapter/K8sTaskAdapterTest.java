@@ -160,11 +160,11 @@ class K8sTaskAdapterTest
     assertTrue(jobFromSpec.getMetadata().getAnnotations().containsKey("annotation_key"));
     assertTrue(jobFromSpec.getMetadata().getAnnotations().containsKey(DruidK8sConstants.TASK_ID));
     assertFalse(jobFromSpec.getMetadata().getAnnotations().containsKey("label_key"));
-    assertFalse(jobFromSpec.getMetadata().getAnnotations().containsKey(DruidK8sConstants.ORIGINAL_NAMESPACE_KEY));
+    assertFalse(jobFromSpec.getMetadata().getAnnotations().containsKey(DruidK8sConstants.OVERLORD_NAMESPACE_KEY));
 
     assertTrue(jobFromSpec.getMetadata().getLabels().containsKey("label_key"));
     assertTrue(jobFromSpec.getMetadata().getLabels().containsKey(DruidK8sConstants.LABEL_KEY));
-    assertTrue(jobFromSpec.getMetadata().getLabels().containsKey(DruidK8sConstants.ORIGINAL_NAMESPACE_KEY));
+    assertTrue(jobFromSpec.getMetadata().getLabels().containsKey(DruidK8sConstants.OVERLORD_NAMESPACE_KEY));
     assertFalse(jobFromSpec.getMetadata().getLabels().containsKey("annotation_key"));
   }
 
