@@ -25,7 +25,6 @@ import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.planning.PreJoinableClause;
 import org.apache.druid.query.policy.Policy;
 import org.apache.druid.segment.SegmentReference;
-
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -107,9 +106,6 @@ public interface DataSource
 
   /**
    * Returns a segment function on to how to segment should be modified.
-   *
-   * @param query      the input query
-   * @return the segment function
    */
   Function<SegmentReference, SegmentReference> createSegmentMapFunction(Query query);
 

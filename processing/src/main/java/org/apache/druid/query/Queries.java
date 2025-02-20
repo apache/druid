@@ -23,8 +23,8 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.annotations.PublicApi;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
 import org.apache.druid.query.filter.DimFilter;
@@ -35,6 +35,7 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnHolder;
 
 import javax.annotation.Nullable;
+
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -161,21 +162,19 @@ public class Queries
       retVal = query.withDataSource(new QueryDataSource(withSpecificSegments(subQuery, descriptors)));
     } else {
       retVal = query.withQuerySegmentSpec(new MultipleSpecificSegmentSpec(descriptors));
+
+      // Verify preconditions and invariants, just in case.
+      final DataSourceAnalysis analysis = retVal.getDataSourceAnalysis();
+
+      // Sanity check: query must be based on a single table.
+      analysis.getBaseTableDataSource();
+
+      if (!analysis.getEffectiveQuerySegmentSpec().equals(new MultipleSpecificSegmentSpec(descriptors))) {
+        // If you see the error message below, it's a bug in either this function or in DataSourceAnalysis.
+        throw DruidException
+            .defensive("Unable to apply specific segments to query with dataSource[%s]", query.getDataSource());
+      }
     }
-
-    // Verify preconditions and invariants, just in case.
-    final DataSource retDataSource = retVal.getDataSource();
-    final DataSourceAnalysis analysis = retDataSource.getAnalysis();
-
-    // Sanity check: query must be based on a single table.
-    analysis.getBaseTableDataSource();
-
-    if (analysis.getBaseQuerySegmentSpec().isPresent()
-        && !analysis.getBaseQuerySegmentSpec().get().equals(new MultipleSpecificSegmentSpec(descriptors))) {
-      // If you see the error message below, it's a bug in either this function or in DataSourceAnalysis.
-      throw new ISE("Unable to apply specific segments to query with dataSource[%s]", query.getDataSource());
-    }
-
     return retVal;
   }
 

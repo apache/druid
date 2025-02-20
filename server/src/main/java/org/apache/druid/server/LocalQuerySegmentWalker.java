@@ -81,7 +81,7 @@ public class LocalQuerySegmentWalker implements QuerySegmentWalker
   public <T> QueryRunner<T> getQueryRunnerForIntervals(final Query<T> query, final Iterable<Interval> intervals)
   {
     final DataSource dataSourceFromQuery = query.getDataSource();
-    final DataSourceAnalysis analysis = dataSourceFromQuery.getAnalysis();
+    final DataSourceAnalysis analysis = query.getDataSourceAnalysis();
 
     if (!analysis.isConcreteBased() || !dataSourceFromQuery.isGlobal()) {
       throw new IAE("Cannot query dataSource locally: %s", dataSourceFromQuery);

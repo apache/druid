@@ -202,7 +202,7 @@ public class CachingClusteredClientPerfTest
     )
     {
       TestQuery query = (TestQuery) queryPlus.getQuery();
-      return TestSequence.create(((MultipleSpecificSegmentSpec) query.getSpec()).getDescriptors());
+      return TestSequence.create(((MultipleSpecificSegmentSpec) query.getQuerySegmentSpec()).getDescriptors());
     }
   }
 
@@ -256,7 +256,8 @@ public class CachingClusteredClientPerfTest
       return this;
     }
 
-    public QuerySegmentSpec getSpec()
+    @Override
+    public QuerySegmentSpec getQuerySegmentSpec()
     {
       return spec;
     }
