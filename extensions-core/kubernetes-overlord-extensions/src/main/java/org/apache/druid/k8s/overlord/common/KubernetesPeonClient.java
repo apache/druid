@@ -56,7 +56,8 @@ public class KubernetesPeonClient
       String overlordNamespace,
       boolean debugJobs,
       ServiceEmitter emitter
-  ) {
+  )
+  {
     this.clientApi = clientApi;
     this.namespace = namespace;
     this.overlordNamespace = overlordNamespace;
