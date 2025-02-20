@@ -19,8 +19,10 @@
 
 package org.apache.druid.sql.calcite.run;
 
+import org.apache.druid.error.DruidException;
 import org.apache.druid.server.QueryResponse;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
+import org.apache.druid.sql.calcite.rel.DruidQuery2;
 
 /**
  * Interface for executing Druid queries. Each one is created by a {@link SqlEngine} and is tied to a
@@ -34,4 +36,8 @@ public interface QueryMaker
    * {@link SqlEngine#resultTypeForInsert}, depending on the nature of the statement.
    */
   QueryResponse<Object[]> runQuery(DruidQuery druidQuery);
+
+  default QueryResponse<Object[]> runQuery(DruidQuery2 druidQuery) {
+    throw DruidException.defensive("fds");
+  }
 }
