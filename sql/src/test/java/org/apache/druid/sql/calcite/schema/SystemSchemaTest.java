@@ -75,7 +75,6 @@ import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
@@ -135,7 +134,7 @@ import java.util.Set;
 
 public class SystemSchemaTest extends CalciteTestBase
 {
-  private static final ObjectMapper MAPPER = TestHelper.makeJsonMapper();
+  private static final ObjectMapper MAPPER = CalciteTests.getJsonMapper();
 
   private static final BrokerSegmentMetadataCacheConfig SEGMENT_CACHE_CONFIG_DEFAULT = BrokerSegmentMetadataCacheConfig.create();
 
@@ -568,7 +567,7 @@ public class SystemSchemaTest extends CalciteTestBase
   @Test
   public void testSegmentsTable() throws Exception
   {
-    final SegmentsTable segmentsTable = new SegmentsTable(druidSchema, metadataView, new ObjectMapper(), authMapper);
+    final SegmentsTable segmentsTable = new SegmentsTable(druidSchema, metadataView, MAPPER, authMapper);
     final Set<SegmentStatusInCluster> publishedSegments = new HashSet<>(Arrays.asList(
         new SegmentStatusInCluster(publishedCompactedSegment1, true, 2, null, false),
         new SegmentStatusInCluster(publishedCompactedSegment2, false, 0, null, false),
@@ -722,7 +721,7 @@ public class SystemSchemaTest extends CalciteTestBase
   @Test
   public void testSegmentsTableWithProjection() throws JsonProcessingException
   {
-    final SegmentsTable segmentsTable = new SegmentsTable(druidSchema, metadataView, new ObjectMapper(), authMapper);
+    final SegmentsTable segmentsTable = new SegmentsTable(druidSchema, metadataView, MAPPER, authMapper);
     final Set<SegmentStatusInCluster> publishedSegments = new HashSet<>(Arrays.asList(
         new SegmentStatusInCluster(publishedCompactedSegment1, true, 2, null, false),
         new SegmentStatusInCluster(publishedCompactedSegment2, false, 0, null, false),
