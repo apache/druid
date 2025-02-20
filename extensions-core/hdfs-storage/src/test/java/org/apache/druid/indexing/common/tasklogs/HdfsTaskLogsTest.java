@@ -104,9 +104,8 @@ public class HdfsTaskLogsTest
     final TaskLogs taskLogs = new HdfsTaskLogs(new HdfsTaskLogsConfig(logDir.toString()), new Configuration());
 
     Files.write("{}", payload, StandardCharsets.UTF_8);
-    taskLogs.pushTaskLog("id", payload);
-    Assert.assertEquals("{}",
-                        StringUtils.fromUtf8(ByteStreams.toByteArray(taskLogs.streamTaskPayload("id").get())));
+    taskLogs.pushTaskPayload("id", payload);
+    Assert.assertEquals("{}", StringUtils.fromUtf8(ByteStreams.toByteArray(taskLogs.streamTaskPayload("id").get())));
   }
 
   @Test
