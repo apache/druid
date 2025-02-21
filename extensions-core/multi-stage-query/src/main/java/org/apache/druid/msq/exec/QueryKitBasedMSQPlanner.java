@@ -57,8 +57,6 @@ import java.util.Iterator;
 
 public class QueryKitBasedMSQPlanner
 {
-
-
   private ControllerContext context;
   private MSQSpec querySpec;
   private ResultsContext resultsContext;
@@ -75,8 +73,9 @@ public class QueryKitBasedMSQPlanner
     this.resultsContext = resultsContext;
     this.queryKernelConfig = queryKernelConfig;
     this.queryId = queryId;
-    query6Kit=context.makeQueryKitSpec(
-        ControllerImpl.makeQueryControllerToolKit(querySpec.getContext2(), context), queryId, querySpec, queryKernelConfig
+    query6Kit = context.makeQueryKitSpec(
+        ControllerImpl.makeQueryControllerToolKit(querySpec.getContext2(), context), queryId, querySpec,
+        queryKernelConfig
     );
 
   }
@@ -86,19 +85,16 @@ public class QueryKitBasedMSQPlanner
       ControllerQueryKernelConfig queryKernelConfig2, String queryId2)
   {
     QueryKitBasedMSQPlanner q = new QueryKitBasedMSQPlanner(context2, querySpec2, resultsContext2, queryKernelConfig2, queryId2);
-    return q.makeQueryDefinition(querySpec2, context2, resultsContext2);
+    return q.makeQueryDefinition();
   }
 
 
   @SuppressWarnings("unchecked")
   QueryDefinition makeQueryDefinition(
-      final MSQSpec querySpec,
-      final ControllerContext controllerContext,
-      final ResultsContext resultsContext
   )
   {
     QueryKitSpec queryKitSpec = query6Kit;
-    final ObjectMapper jsonMapper = controllerContext.jsonMapper();
+    final ObjectMapper jsonMapper = context.jsonMapper();
     final MSQTuningConfig tuningConfig = querySpec.getTuningConfig();
     final ColumnMappings columnMappings = querySpec.getColumnMappings();
     MSQDestination destination = querySpec.getDestination();
@@ -223,7 +219,7 @@ public class QueryKitBasedMSQPlanner
 
       try {
         // Check that the export destination is empty as a sanity check. We want to avoid modifying any other files with export.
-        Iterator<String> filesIterator = exportStorageProvider.createStorageConnector(controllerContext.taskTempDir())
+        Iterator<String> filesIterator = exportStorageProvider.createStorageConnector(context.taskTempDir())
                                                               .listDir("");
         if (filesIterator.hasNext()) {
           throw DruidException.forPersona(DruidException.Persona.USER)
