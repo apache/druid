@@ -600,13 +600,7 @@ public class ControllerImpl implements Controller
     this.netClient = closer.register(new ExceptionWrappingWorkerClient(context.newWorkerClient()));
     this.queryKernelConfig = context.queryKernelConfig(queryId, querySpec);
 
-    final QueryContext queryContext = querySpec.getContext2();
-    final QueryDefinition queryDef = MSQSpecBuilder.makeQueryDefinition(
-        context.makeQueryKitSpec(makeQueryControllerToolKit(queryContext), queryId, querySpec, queryKernelConfig),
-        querySpec,
-        context,
-        resultsContext
-    );
+    final QueryDefinition queryDef = QueryKitBasedMSQPlanner.extracted(context, querySpec, resultsContext, queryKernelConfig, queryId);
 
     if (log.isDebugEnabled()) {
       try {
@@ -648,7 +642,7 @@ public class ControllerImpl implements Controller
       );
     }
 
-    final long maxParseExceptions = MultiStageQueryContext.getMaxParseExceptions(queryContext);
+    final long maxParseExceptions = MultiStageQueryContext.getMaxParseExceptions(querySpec.getContext2());
     this.faultsExceededChecker = new FaultsExceededChecker(
         ImmutableMap.of(CannotParseExternalDataFault.CODE, maxParseExceptions)
     );
@@ -660,7 +654,7 @@ public class ControllerImpl implements Controller
                 stageDefinition.getId().getStageNumber(),
                 finalizeClusterStatisticsMergeMode(
                     stageDefinition,
-                    MultiStageQueryContext.getClusterStatisticsMergeMode(queryContext)
+                    MultiStageQueryContext.getClusterStatisticsMergeMode(querySpec.getContext2())
                 )
             )
     );
@@ -1250,16 +1244,16 @@ public class ControllerImpl implements Controller
   }
 
   @SuppressWarnings("rawtypes")
-  private QueryKit<Query<?>> makeQueryControllerToolKit(QueryContext queryContext)
+  static QueryKit<Query<?>> makeQueryControllerToolKit(QueryContext queryContext, ControllerContext ctrlContext)
   {
     final Map<Class<? extends Query>, QueryKit> kitMap =
         ImmutableMap.<Class<? extends Query>, QueryKit>builder()
-                    .put(ScanQuery.class, new ScanQueryKit(context.jsonMapper()))
-                    .put(GroupByQuery.class, new GroupByQueryKit(context.jsonMapper()))
+                    .put(ScanQuery.class, new ScanQueryKit(ctrlContext.jsonMapper()))
+                    .put(GroupByQuery.class, new GroupByQueryKit(ctrlContext.jsonMapper()))
                     .put(
                         WindowOperatorQuery.class,
                         new WindowOperatorQueryKit(
-                            context.jsonMapper(),
+                            ctrlContext.jsonMapper(),
                             MultiStageQueryContext.isWindowFunctionOperatorTransformationEnabled(queryContext)
                         )
                     )

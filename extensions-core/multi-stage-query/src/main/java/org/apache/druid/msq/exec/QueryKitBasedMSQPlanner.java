@@ -37,6 +37,7 @@ import org.apache.druid.msq.input.stage.StageInputSpec;
 import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.QueryDefinitionBuilder;
 import org.apache.druid.msq.kernel.StageDefinition;
+import org.apache.druid.msq.kernel.controller.ControllerQueryKernelConfig;
 import org.apache.druid.msq.querykit.QueryKitSpec;
 import org.apache.druid.msq.querykit.QueryKitUtils;
 import org.apache.druid.msq.querykit.ShuffleSpecFactory;
@@ -54,8 +55,23 @@ import org.apache.druid.storage.ExportStorageProvider;
 import java.io.IOException;
 import java.util.Iterator;
 
-public class MSQSpecBuilder
+public class QueryKitBasedMSQPlanner
 {
+
+
+  public static QueryDefinition extracted(ControllerContext context2, MSQSpec querySpec2, ResultsContext resultsContext2,
+      ControllerQueryKernelConfig queryKernelConfig2, String queryId2)
+  {
+    return makeQueryDefinition(
+        context2.makeQueryKitSpec(
+            ControllerImpl.makeQueryControllerToolKit(querySpec2.getContext2(), context2), queryId2, querySpec2, queryKernelConfig2
+        ),
+        querySpec2,
+        context2,
+        resultsContext2
+    );
+  }
+
 
   @SuppressWarnings("unchecked")
   static QueryDefinition makeQueryDefinition(
@@ -79,7 +95,7 @@ public class MSQSpecBuilder
     Query<?> query = query2;
     if (ingestion) {
       resultShuffleSpecFactory = destination
-                                          .getShuffleSpecFactory(tuningConfig.getRowsPerSegment());
+          .getShuffleSpecFactory(tuningConfig.getRowsPerSegment());
 
       if (!columnMappings.hasUniqueOutputColumnNames()) {
         // We do not expect to hit this case in production, because the SQL validator checks that column names
@@ -229,5 +245,4 @@ public class MSQSpecBuilder
       throw new ISE("Unsupported destination [%s]", destination);
     }
   }
-
 }
