@@ -69,7 +69,7 @@ public class QueryKitBasedMSQPlanner
   private ControllerContext context;
   private MSQSpec querySpec;
   private ResultsContext resultsContext;
-  private QueryKitSpec queryKit;
+  private QueryKitSpec queryKitSpec;
 
 
   public QueryKitBasedMSQPlanner(ControllerContext context, MSQSpec querySpec, ResultsContext resultsContext,
@@ -78,7 +78,7 @@ public class QueryKitBasedMSQPlanner
     this.context = context;
     this.querySpec = querySpec;
     this.resultsContext = resultsContext;
-    this.queryKit = context.makeQueryKitSpec(
+    this.queryKitSpec = context.makeQueryKitSpec(
         makeQueryControllerToolKit(querySpec.getContext(), context.jsonMapper()), queryId, querySpec,
         queryKernelConfig
     );
@@ -103,30 +103,20 @@ public class QueryKitBasedMSQPlanner
     return new MultiQueryKit(kitMap);
   }
 
-  public static QueryDefinition extracted(ControllerContext context2, MSQSpec querySpec2, ResultsContext resultsContext2,
-      ControllerQueryKernelConfig queryKernelConfig2, String queryId2)
-  {
-    QueryKitBasedMSQPlanner q = new QueryKitBasedMSQPlanner(context2, querySpec2, resultsContext2, queryKernelConfig2, queryId2);
-    return q.makeQueryDefinition();
-  }
-
   @SuppressWarnings("unchecked")
-  QueryDefinition makeQueryDefinition(
-  )
+  QueryDefinition makeQueryDefinition()
   {
-    QueryKitSpec queryKitSpec = queryKit;
     final ObjectMapper jsonMapper = context.jsonMapper();
     final MSQTuningConfig tuningConfig = querySpec.getTuningConfig();
     final ColumnMappings columnMappings = querySpec.getColumnMappings();
     MSQDestination destination = querySpec.getDestination();
-    Query<?> query2 = querySpec.getQuery();
-    QueryContext context2 = querySpec.getContext();
+    QueryContext queryContext = querySpec.getContext();
+    Query<?> query = querySpec.getQuery();;
 
     boolean ingestion = MSQControllerTask.isIngestion(destination);
     final Query<?> queryToPlan;
     final ShuffleSpecFactory resultShuffleSpecFactory;
 
-    Query<?> query = query2;
     if (ingestion) {
       resultShuffleSpecFactory = destination
           .getShuffleSpecFactory(tuningConfig.getRowsPerSegment());
@@ -138,7 +128,7 @@ public class QueryKitBasedMSQPlanner
         throw new ISE("Column names are not unique: [%s]", columnMappings.getOutputColumnNames());
       }
 
-      MSQTaskQueryMakerUtils.validateRealtimeReindex(context2, destination, query2);
+      MSQTaskQueryMakerUtils.validateRealtimeReindex(queryContext, destination, query);
 
       if (columnMappings.hasOutputColumn(ColumnHolder.TIME_COLUMN_NAME)) {
         // We know there's a single time column, because we've checked columnMappings.hasUniqueOutputColumnNames().

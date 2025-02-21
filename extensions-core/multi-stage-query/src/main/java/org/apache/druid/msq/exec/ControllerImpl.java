@@ -593,8 +593,9 @@ public class ControllerImpl implements Controller
     this.queryKernelConfig = context.queryKernelConfig(queryId, querySpec);
 
     final QueryContext queryContext = querySpec.getContext();
+    QueryKitBasedMSQPlanner qkPlanner = new QueryKitBasedMSQPlanner(context, querySpec, resultsContext, queryKernelConfig, queryId);
 
-    final QueryDefinition queryDef = QueryKitBasedMSQPlanner.extracted(context, querySpec, resultsContext, queryKernelConfig, queryId);
+    final QueryDefinition queryDef = qkPlanner.makeQueryDefinition();
 
     if (log.isDebugEnabled()) {
       try {
