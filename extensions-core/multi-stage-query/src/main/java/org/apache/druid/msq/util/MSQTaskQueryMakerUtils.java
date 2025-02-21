@@ -27,7 +27,6 @@ import org.apache.druid.msq.exec.SegmentSource;
 import org.apache.druid.msq.indexing.MSQControllerTask;
 import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
-
 import java.util.List;
 import java.util.Set;
 import java.util.regex.Matcher;
@@ -95,6 +94,7 @@ public class MSQTaskQueryMakerUtils
   /**
    * Validates that a query does not read from a datasource that it is ingesting data into, if realtime segments are
    * being queried.
+   * @param query
    */
   public static void validateRealtimeReindex(final MSQSpec querySpec)
   {

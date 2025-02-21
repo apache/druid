@@ -57,6 +57,7 @@ import org.apache.druid.msq.indexing.destination.ExportMSQDestination;
 import org.apache.druid.msq.indexing.destination.MSQDestination;
 import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
 import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.rpc.ServiceClientFactory;
@@ -361,7 +362,15 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery, 
    */
   public static boolean isIngestion(final MSQSpec querySpec)
   {
-    return querySpec.getDestination() instanceof DataSourceMSQDestination;
+    return isIngestion(querySpec.getDestination());
+  }
+
+  /**
+   * Checks whether the task is an ingestion into a Druid datasource.
+   */
+  public static boolean isIngestion(MSQDestination destination)
+  {
+    return destination instanceof DataSourceMSQDestination;
   }
 
   /**
@@ -394,9 +403,18 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery, 
    */
   public static boolean isReplaceInputDataSourceTask(MSQSpec querySpec)
   {
-    if (isIngestion(querySpec)) {
-      final String targetDataSource = ((DataSourceMSQDestination) querySpec.getDestination()).getDataSource();
-      final Set<String> sourceTableNames = querySpec.getQueryHacky().getDataSource().getTableNames();
+    return isReplaceInputDataSourceTask(querySpec.getQuery(), querySpec.getDestination());
+  }
+
+  /**
+   * Returns true if the task reads from the same table as the destination. In this case, we would prefer to fail
+   * instead of reading any unused segments to ensure that old data is not read.
+   */
+  private static boolean isReplaceInputDataSourceTask(Query<?> query, MSQDestination destination)
+  {
+    if (isIngestion(destination)) {
+      final String targetDataSource = ((DataSourceMSQDestination) destination).getDataSource();
+      final Set<String> sourceTableNames = query.getDataSource().getTableNames();
       return sourceTableNames.contains(targetDataSource);
     } else {
       return false;
