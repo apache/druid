@@ -19,7 +19,6 @@
 
 package org.apache.druid.server.compaction;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
@@ -49,7 +48,6 @@ import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.segment.data.ConciseBitmapSerdeFactory;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
-import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskDimensionsConfig;
@@ -1415,17 +1413,7 @@ public class NewestSegmentFirstPolicyTest
                     partitionsSpec,
                     null,
                     null,
-                    mapper.readValue(
-                        mapper.writeValueAsString(new TransformSpec(
-                            new SelectorDimFilter(
-                                "dim1",
-                                "foo",
-                                null
-                            ), null
-                        )), new TypeReference<>()
-                        {
-                        }
-                    ),
+                    new CompactionTransformSpec(new SelectorDimFilter("dim1", "foo", null)),
                     indexSpec,
                     null
                 )
@@ -1438,17 +1426,7 @@ public class NewestSegmentFirstPolicyTest
                     partitionsSpec,
                     null,
                     null,
-                    mapper.readValue(
-                        mapper.writeValueAsString(new TransformSpec(
-                            new SelectorDimFilter(
-                                "dim1",
-                                "bar",
-                                null
-                            ), null
-                        )), new TypeReference<>()
-                        {
-                        }
-                    ),
+                    new CompactionTransformSpec(new SelectorDimFilter("dim1", "bar", null)),
                     indexSpec,
                     null
                 )
@@ -1461,11 +1439,7 @@ public class NewestSegmentFirstPolicyTest
                     partitionsSpec,
                     null,
                     null,
-                    mapper.readValue(
-                        mapper.writeValueAsString(new TransformSpec(null, null)), new TypeReference<>()
-                        {
-                        }
-                    ),
+                    new CompactionTransformSpec(null),
                     indexSpec,
                     null
                 )
@@ -1557,12 +1531,7 @@ public class NewestSegmentFirstPolicyTest
                 new CompactionState(
                     partitionsSpec,
                     null,
-                    mapper.convertValue(
-                        new AggregatorFactory[]{new CountAggregatorFactory("cnt")},
-                        new TypeReference<>()
-                        {
-                        }
-                    ),
+                    List.of(new CountAggregatorFactory("cnt")),
                     null,
                     indexSpec,
                     null
@@ -1575,13 +1544,9 @@ public class NewestSegmentFirstPolicyTest
                 new CompactionState(
                     partitionsSpec,
                     null,
-                    mapper.convertValue(
-                        new AggregatorFactory[]{
-                            new CountAggregatorFactory("cnt"),
-                            new LongSumAggregatorFactory("val", "val")
-                        }, new TypeReference<>()
-                        {
-                        }
+                    List.of(
+                        new CountAggregatorFactory("cnt"),
+                        new LongSumAggregatorFactory("val", "val")
                     ),
                     null,
                     indexSpec,
@@ -1595,11 +1560,7 @@ public class NewestSegmentFirstPolicyTest
                 new CompactionState(
                     partitionsSpec,
                     null,
-                    mapper.convertValue(
-                        new AggregatorFactory[]{}, new TypeReference<>()
-                        {
-                        }
-                    ),
+                    List.of(),
                     null,
                     indexSpec,
                     null

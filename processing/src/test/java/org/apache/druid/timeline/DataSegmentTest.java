@@ -51,7 +51,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -353,8 +352,8 @@ public class DataSegmentTest
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("bar", "foo"))),
         ImmutableList.of(new CountAggregatorFactory("count")),
         new CompactionTransformSpec(new SelectorDimFilter("dim1", "foo", null)),
-        MAPPER.convertValue(Collections.singletonMap("test", "map"), IndexSpec.class),
-        MAPPER.convertValue(Collections.singletonMap("test2", "map2"), GranularitySpec.class)
+        MAPPER.convertValue(Map.of("test", "map"), IndexSpec.class),
+        MAPPER.convertValue(Map.of("test2", "map2"), GranularitySpec.class)
     );
     final DataSegment segment1 = DataSegment.builder()
                                             .dataSource("foo")
@@ -386,8 +385,8 @@ public class DataSegmentTest
     CompactionTransformSpec transformSpec = new CompactionTransformSpec(
         new SelectorDimFilter("dim1", "foo", null)
     );
-    IndexSpec indexSpec = MAPPER.convertValue(Collections.singletonMap("test", "map"), IndexSpec.class);
-    GranularitySpec granularitySpec = MAPPER.convertValue(Collections.singletonMap("test2", "map"), GranularitySpec.class);
+    IndexSpec indexSpec = MAPPER.convertValue(Map.of("test", "map"), IndexSpec.class);
+    GranularitySpec granularitySpec = MAPPER.convertValue(Map.of("test2", "map"), GranularitySpec.class);
 
     final CompactionState compactionState = new CompactionState(
         dynamicPartitionsSpec,
@@ -435,7 +434,7 @@ public class DataSegmentTest
                                             .interval(Intervals.of("2012-01-01/2012-01-02"))
                                             .version(DateTimes.of("2012-01-01T11:22:33.444Z").toString())
                                             .shardSpec(new TombstoneShardSpec())
-                                            .loadSpec(Collections.singletonMap(
+                                            .loadSpec(Map.of(
                                                 "type",
                                                 DataSegment.TOMBSTONE_LOADSPEC_TYPE
                                             ))
@@ -449,7 +448,7 @@ public class DataSegmentTest
                                             .interval(Intervals.of("2012-01-01/2012-01-02"))
                                             .version(DateTimes.of("2012-01-01T11:22:33.444Z").toString())
                                             .shardSpec(getShardSpec(7))
-                                            .loadSpec(Collections.singletonMap(
+                                            .loadSpec(Map.of(
                                                 "type",
                                                 "foo"
                                             ))
