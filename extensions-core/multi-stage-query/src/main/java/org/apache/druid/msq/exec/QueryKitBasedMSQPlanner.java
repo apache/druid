@@ -59,28 +59,45 @@ public class QueryKitBasedMSQPlanner
 {
 
 
+  private ControllerContext context;
+  private MSQSpec querySpec;
+  private ResultsContext resultsContext;
+  private ControllerQueryKernelConfig queryKernelConfig;
+  private String queryId;
+  private QueryKitSpec query6Kit;
+
+
+  public QueryKitBasedMSQPlanner(ControllerContext context, MSQSpec querySpec, ResultsContext resultsContext,
+      ControllerQueryKernelConfig queryKernelConfig, String queryId)
+  {
+    this.context = context;
+    this.querySpec = querySpec;
+    this.resultsContext = resultsContext;
+    this.queryKernelConfig = queryKernelConfig;
+    this.queryId = queryId;
+    query6Kit=context.makeQueryKitSpec(
+        ControllerImpl.makeQueryControllerToolKit(querySpec.getContext2(), context), queryId, querySpec, queryKernelConfig
+    );
+
+  }
+
+
   public static QueryDefinition extracted(ControllerContext context2, MSQSpec querySpec2, ResultsContext resultsContext2,
       ControllerQueryKernelConfig queryKernelConfig2, String queryId2)
   {
-    return makeQueryDefinition(
-        context2.makeQueryKitSpec(
-            ControllerImpl.makeQueryControllerToolKit(querySpec2.getContext2(), context2), queryId2, querySpec2, queryKernelConfig2
-        ),
-        querySpec2,
-        context2,
-        resultsContext2
-    );
+    QueryKitBasedMSQPlanner q = new QueryKitBasedMSQPlanner(context2, querySpec2, resultsContext2, queryKernelConfig2, queryId2);
+    return q.makeQueryDefinition(querySpec2, context2, resultsContext2);
   }
 
 
   @SuppressWarnings("unchecked")
-  static QueryDefinition makeQueryDefinition(
-      final QueryKitSpec queryKitSpec,
+  QueryDefinition makeQueryDefinition(
       final MSQSpec querySpec,
       final ControllerContext controllerContext,
       final ResultsContext resultsContext
   )
   {
+    QueryKitSpec queryKitSpec = query6Kit;
     final ObjectMapper jsonMapper = controllerContext.jsonMapper();
     final MSQTuningConfig tuningConfig = querySpec.getTuningConfig();
     final ColumnMappings columnMappings = querySpec.getColumnMappings();
