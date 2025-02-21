@@ -334,7 +334,7 @@ public class IndexerControllerContext implements ControllerContext
     builder
         .put(MultiStageQueryContext.CTX_DURABLE_SHUFFLE_STORAGE, durableStorageEnabled)
         .put(MSQWarnings.CTX_MAX_PARSE_EXCEPTIONS_ALLOWED, maxParseExceptions)
-        .put(MultiStageQueryContext.CTX_IS_REINDEX, MSQControllerTask.isReplaceInputDataSourceTask(querySpec))
+        .put(MultiStageQueryContext.CTX_IS_REINDEX, MSQControllerTask.isReplaceInputDataSourceTask(querySpec.getQuery(), querySpec.getDestination()))
         .put(MultiStageQueryContext.CTX_MAX_CONCURRENT_STAGES, maxConcurrentStages)
         .put(MultiStageQueryContext.CTX_REMOVE_NULL_BYTES, removeNullBytes)
         .put(MultiStageQueryContext.CTX_INCLUDE_ALL_COUNTERS, includeAllCounters);

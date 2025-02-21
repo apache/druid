@@ -401,16 +401,7 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery, 
    * Returns true if the task reads from the same table as the destination. In this case, we would prefer to fail
    * instead of reading any unused segments to ensure that old data is not read.
    */
-  public static boolean isReplaceInputDataSourceTask(MSQSpec querySpec)
-  {
-    return isReplaceInputDataSourceTask(querySpec.getQuery(), querySpec.getDestination());
-  }
-
-  /**
-   * Returns true if the task reads from the same table as the destination. In this case, we would prefer to fail
-   * instead of reading any unused segments to ensure that old data is not read.
-   */
-  private static boolean isReplaceInputDataSourceTask(Query<?> query, MSQDestination destination)
+  public static boolean isReplaceInputDataSourceTask(Query<?> query, MSQDestination destination)
   {
     if (isIngestion(destination)) {
       final String targetDataSource = ((DataSourceMSQDestination) destination).getDataSource();
