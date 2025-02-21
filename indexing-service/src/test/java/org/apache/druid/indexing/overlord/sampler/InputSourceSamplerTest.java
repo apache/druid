@@ -1703,14 +1703,14 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
     }
 
     @Override
-    public void close()
+    public Map<Integer, Long> getEndOffsets(Set<StreamPartition<Integer>> streamPartitions)
     {
+      throw new UnsupportedOperationException();
     }
 
     @Override
-    public long getTimeAtOffset(StreamPartition<Integer> partition, OrderedSequenceNumber<Long> offset, long timeout)
+    public void close()
     {
-      throw new UnsupportedOperationException();
     }
   }
 }

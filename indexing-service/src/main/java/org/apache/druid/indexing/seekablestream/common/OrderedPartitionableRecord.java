@@ -76,6 +76,10 @@ public class OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType, Rec
     return stream;
   }
 
+  /**
+   *
+   * @return timestamp when the event was ingested by a stream
+   */
   public long getTimestamp()
   {
     return timestamp;

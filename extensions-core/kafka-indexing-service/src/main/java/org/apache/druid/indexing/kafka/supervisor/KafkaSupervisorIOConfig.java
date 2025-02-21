@@ -22,6 +22,7 @@ package org.apache.druid.indexing.kafka.supervisor;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import org.apache.druid.common.config.Configs;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexing.seekablestream.extension.KafkaConfigOverrides;
@@ -74,7 +75,7 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
       @JsonProperty("configOverrides") KafkaConfigOverrides configOverrides,
       @JsonProperty("idleConfig") IdleConfig idleConfig,
       @JsonProperty("stopTaskCount") Integer stopTaskCount,
-      @JsonProperty("publishTimeLag") Boolean publishTimeLag
+      @Nullable @JsonProperty("publishTimeLag") Boolean publishTimeLag
   )
   {
     super(
@@ -104,7 +105,7 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
     this.configOverrides = configOverrides;
     this.topic = topic;
     this.topicPattern = topicPattern;
-    this.publishTimeLag = publishTimeLag != null && publishTimeLag;
+    this.publishTimeLag = Configs.valueOrDefault(publishTimeLag, false);
   }
 
   /**
@@ -154,6 +155,10 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
     return topicPattern != null;
   }
 
+  /**
+   * @return true if supervisor needs to publish the time lag.
+   */
+  @JsonProperty
   public boolean isPublishTimeLag()
   {
     return publishTimeLag;

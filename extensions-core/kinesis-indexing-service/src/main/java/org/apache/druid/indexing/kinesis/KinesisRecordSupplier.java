@@ -550,12 +550,6 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Kin
   }
 
   @Override
-  public long getTimeAtOffset(StreamPartition<String> partition, OrderedSequenceNumber<String> offset, long timeout)
-  {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
   public void assign(Set<StreamPartition<String>> collection)
   {
     checkIfClosed();
@@ -796,6 +790,12 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Kin
       }
       return partitionIds;
     });
+  }
+
+  @Override
+  public Map<String, String> getEndOffsets(Set<StreamPartition<String>> streamPartitions)
+  {
+    throw new UnsupportedOperationException();
   }
 
   /**

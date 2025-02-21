@@ -38,10 +38,10 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.metrics.Monitor;
 import org.apache.druid.metadata.DynamicConfigProvider;
 import org.apache.druid.metadata.PasswordProvider;
+import org.apache.druid.utils.CollectionUtils;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.PartitionInfo;
-import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import org.apache.kafka.common.serialization.Deserializer;
 
@@ -209,23 +209,18 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
   }
 
   @Override
-  public long getTimeAtOffset(StreamPartition<KafkaTopicPartition> partition, OrderedSequenceNumber<Long> offset, long timeout)
+  public Map<KafkaTopicPartition, Long> getEndOffsets(Set<StreamPartition<KafkaTopicPartition>> partitions)
   {
-    Long currPos = getPosition(partition);
-    seek(partition, offset.get());
-
-    try {
-      for (ConsumerRecord<byte[], byte[]> record :
-          consumer.poll(Duration.ofMillis(timeout))
-                .records(new TopicPartition(partition.getStream(), partition.getPartitionId().partition()))) {
-        return record.timestamp();
-      }
-
-      return 0L;
-    }
-    finally {
-      seek(partition, currPos);
-    }
+    return wrapExceptions(() -> CollectionUtils.mapKeys(
+      consumer.endOffsets(
+        partitions
+            .stream()
+            .map(e -> e.getPartitionId().asTopicPartition(e.getStream()))
+            .collect(Collectors.toList()
+        )
+      ),
+      p -> new KafkaTopicPartition(multiTopic, p.topic(), p.partition())
+    ));
   }
 
   @Override

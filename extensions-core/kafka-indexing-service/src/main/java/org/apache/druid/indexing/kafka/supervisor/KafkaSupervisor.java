@@ -57,7 +57,6 @@ import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervi
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
-import org.apache.druid.utils.CollectionUtils;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
@@ -93,7 +92,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
 
   private final Pattern pattern;
   private volatile Map<KafkaTopicPartition, Long> latestSequenceFromStream;
-  private volatile Map<KafkaTopicPartition, Long> lastestTimestampsFromStream;
+  private volatile Map<KafkaTopicPartition, Long> partitionToTimeLag;
 
   private final KafkaSupervisorSpec spec;
 
@@ -277,7 +276,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
   @Override
   protected Map<KafkaTopicPartition, Long> getPartitionTimeLag()
   {
-    return lastestTimestampsFromStream;
+    return partitionToTimeLag;
   }
 
   // suppress use of CollectionUtils.mapValues() since the valueMapper function is dependent on map key here
@@ -403,44 +402,48 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
         throw new StreamException(e);
       }
 
-      for (Map.Entry<KafkaTopicPartition, Long> entry : highestCurrentOffsets.entrySet()) {
-        if (partitionIds.contains(entry.getKey()) && highestCurrentOffsets.get(entry.getKey()) != null) {
-          // since we need to consider the last arrived record at that sequence do a `-1`
-          recordSupplier.seek(new StreamPartition<>(getIoConfig().getStream(), entry.getKey()), entry.getValue() - 1);
-        }
-      }
-
-      final Map<KafkaTopicPartition, Long> lastIngestedTimestamps =
-          CollectionUtils.mapValues(getRecordPerPartitionAtCurrentOffset(partitionIds),
-                                    OrderedPartitionableRecord::getTimestamp
-          );
-
-      Set<StreamPartition<KafkaTopicPartition>> partitions = partitionIds
+      final Set<StreamPartition<KafkaTopicPartition>> partitions = partitionIds
           .stream()
           .map(e -> new StreamPartition<>(getIoConfig().getStream(), e))
           .collect(Collectors.toSet());
 
-      recordSupplier.seekToLatest(partitions);
+      final Set<KafkaTopicPartition> emptyPartitions = new HashSet<>();
+      for (Map.Entry<KafkaTopicPartition, Long> entry : highestCurrentOffsets.entrySet()) {
+        if (partitionIds.contains(entry.getKey())) {
+          if (highestCurrentOffsets.get(entry.getKey()) == null || highestCurrentOffsets.get(entry.getKey()) == 0) {
+            emptyPartitions.add(entry.getKey());
+            continue;
+          }
 
+          recordSupplier.seek(new StreamPartition<>(getIoConfig().getStream(), entry.getKey()), entry.getValue() - 1);
+        }
+      }
+
+      final Map<KafkaTopicPartition, Long> lastIngestedTimestamps = getTimestampPerPartitionAtCurrentOffset(partitions);
+
+      recordSupplier.seekToLatest(partitions);
       // this method isn't actually computing the lag, just fetching the latests offsets from the stream. This is
       // because we currently only have record lag for kafka, which can be lazily computed by subtracting the highest
       // task offsets from the latest offsets from the stream when it is needed
-      latestSequenceFromStream =
-          partitions.stream().collect(Collectors.toMap(StreamPartition::getPartitionId, p -> recordSupplier.getPosition(p)));
+      latestSequenceFromStream = recordSupplier.getEndOffsets(partitions);
 
-      // .position() gives next value to read, and we need seek by -2 to get the current record in next poll()
       for (Map.Entry<KafkaTopicPartition, Long> entry : latestSequenceFromStream.entrySet()) {
-        recordSupplier.seek(new StreamPartition<>(getIoConfig().getStream(), entry.getKey()), entry.getValue() - 2);
+        // if there are no messages .getEndOffset would return 0, but if there are n msgs it would return n+1
+        // and hence we need to seek to n - 2 to get the nth msg in the next poll.
+        if (entry.getValue() != 0) {
+          recordSupplier.seek(new StreamPartition<>(getIoConfig().getStream(), entry.getKey()), entry.getValue() - 2);
+        }
       }
 
-      lastestTimestampsFromStream = getRecordPerPartitionAtCurrentOffset(partitionIds)
+      partitionToTimeLag = getTimestampPerPartitionAtCurrentOffset(partitions)
           .entrySet().stream().filter(e -> lastIngestedTimestamps.containsKey(e.getKey()))
           .collect(
               Collectors.toMap(
                   Entry::getKey,
-                  e -> e.getValue().getTimestamp() - lastIngestedTimestamps.get(e.getKey())
+                  e -> e.getValue() - lastIngestedTimestamps.get(e.getKey())
               )
           );
+      emptyPartitions.forEach(p -> partitionToTimeLag.put(p, 0L));
     }
     catch (InterruptedException e) {
       throw new StreamException(e);
@@ -450,22 +453,28 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
     }
   }
 
-  private Map<KafkaTopicPartition, OrderedPartitionableRecord<KafkaTopicPartition, Long, KafkaRecordEntity>> getRecordPerPartitionAtCurrentOffset(Set<KafkaTopicPartition> partitions)
+  private Map<KafkaTopicPartition, Long> getTimestampPerPartitionAtCurrentOffset(Set<StreamPartition<KafkaTopicPartition>> allPartitions)
   {
-    Map<KafkaTopicPartition, OrderedPartitionableRecord<KafkaTopicPartition, Long, KafkaRecordEntity>> result = new HashMap<>();
-    int maxPolls = 10;
-    while (maxPolls-- > 0) {
-      for (OrderedPartitionableRecord<KafkaTopicPartition, Long, KafkaRecordEntity> record : recordSupplier.poll(getIoConfig().getPollTimeout())) {
-        if (!result.containsKey(record.getPartitionId())) {
-          result.put(record.getPartitionId(), record);
-          if (partitions.size() == result.size()) {
-            break;
+    Map<KafkaTopicPartition, Long> result = new HashMap<>();
+    Set<StreamPartition<KafkaTopicPartition>> remainingPartitions = new HashSet<>(allPartitions);
+
+    try {
+      int maxPolls = 5;
+      while (!remainingPartitions.isEmpty() || maxPolls-- > 0) {
+        for (OrderedPartitionableRecord<KafkaTopicPartition, Long, KafkaRecordEntity> record : recordSupplier.poll(getIoConfig().getPollTimeout())) {
+          if (!result.containsKey(record.getPartitionId())) {
+            result.put(record.getPartitionId(), record.getTimestamp());
+            remainingPartitions.remove(new StreamPartition<>(getIoConfig().getStream(), record.getPartitionId()));
+            if (remainingPartitions.isEmpty()) {
+              break;
+            }
           }
+          recordSupplier.assign(remainingPartitions);
         }
       }
-      if (partitions.size() == result.size()) {
-        break;
-      }
+    }
+    finally {
+      recordSupplier.assign(allPartitions);
     }
 
     return result;

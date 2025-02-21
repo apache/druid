@@ -234,15 +234,15 @@ public class RecordSupplierInputSourceTest extends InitializedNullHandlingTest
     }
 
     @Override
-    public void close()
+    public Map<Integer, Integer> getEndOffsets(Set<StreamPartition<Integer>> streamPartitions)
     {
-      closed = true;
+      throw new UnsupportedOperationException();
     }
 
     @Override
-    public long getTimeAtOffset(StreamPartition<Integer> partition, OrderedSequenceNumber<Integer> offset, long timeout)
+    public void close()
     {
-      throw new UnsupportedOperationException();
+      closed = true;
     }
 
     boolean isClosed()

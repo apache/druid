@@ -477,10 +477,4 @@ public class RabbitStreamRecordSupplier implements RecordSupplier<String, Long, 
     this.stopBackgroundFetch();
     closed = true;
   }
-
-  @Override
-  public long getTimeAtOffset(StreamPartition<String> partition, OrderedSequenceNumber<Long> offset, long timeout)
-  {
-    throw new UnsupportedOperationException();
-  }
 }

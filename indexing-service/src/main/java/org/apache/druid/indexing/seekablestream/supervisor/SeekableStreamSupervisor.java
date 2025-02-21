@@ -4510,14 +4510,14 @@ public abstract class SeekableStreamSupervisor<PartitionIdType, SequenceOffsetTy
     }
   }
 
-  protected void emitUpdateOffsetsTime(long timeInMillis)
+  private void emitUpdateOffsetsTime(long timeInMillis)
   {
     try {
       emitter.emit(
           ServiceMetricEvent.builder()
-                            .setDimension("dataSource", dataSource)
+                            .setDimension(DruidMetrics.DATASOURCE, dataSource)
                             .setDimensionIfNotNull(DruidMetrics.TAGS, spec.getContextValue(DruidMetrics.TAGS))
-                            .setMetric("ingest/updateOffsets/time", timeInMillis)
+                            .setMetric(StringUtils.format("ingest/%s/fetchOffsets/time", spec.getType()), timeInMillis)
       );
     }
     catch (Exception e) {
