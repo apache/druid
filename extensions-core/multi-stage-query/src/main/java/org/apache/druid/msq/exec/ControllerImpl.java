@@ -600,6 +600,8 @@ public class ControllerImpl implements Controller
     this.netClient = closer.register(new ExceptionWrappingWorkerClient(context.newWorkerClient()));
     this.queryKernelConfig = context.queryKernelConfig(queryId, querySpec);
 
+    final QueryContext queryContext = querySpec.getContext();
+
     final QueryDefinition queryDef = QueryKitBasedMSQPlanner.extracted(context, querySpec, resultsContext, queryKernelConfig, queryId);
 
     if (log.isDebugEnabled()) {
@@ -642,7 +644,7 @@ public class ControllerImpl implements Controller
       );
     }
 
-    final long maxParseExceptions = MultiStageQueryContext.getMaxParseExceptions(querySpec.getContext());
+    final long maxParseExceptions = MultiStageQueryContext.getMaxParseExceptions(queryContext);
     this.faultsExceededChecker = new FaultsExceededChecker(
         ImmutableMap.of(CannotParseExternalDataFault.CODE, maxParseExceptions)
     );
@@ -654,7 +656,7 @@ public class ControllerImpl implements Controller
                 stageDefinition.getId().getStageNumber(),
                 finalizeClusterStatisticsMergeMode(
                     stageDefinition,
-                    MultiStageQueryContext.getClusterStatisticsMergeMode(querySpec.getContext())
+                    MultiStageQueryContext.getClusterStatisticsMergeMode(queryContext)
                 )
             )
     );
@@ -662,7 +664,7 @@ public class ControllerImpl implements Controller
         netClient,
         workerManager,
         queryKernelConfig.isFaultTolerant(),
-        MultiStageQueryContext.getSketchEncoding(querySpec.getContext())
+        MultiStageQueryContext.getSketchEncoding(queryContext)
     );
     closer.register(workerSketchFetcher::close);
 
