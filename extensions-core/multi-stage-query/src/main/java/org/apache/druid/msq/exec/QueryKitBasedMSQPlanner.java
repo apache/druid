@@ -66,10 +66,16 @@ import java.util.Map;
 
 public class QueryKitBasedMSQPlanner
 {
-  private ControllerContext context;
-  private MSQSpec querySpec;
-  private ResultsContext resultsContext;
-  private QueryKitSpec queryKitSpec;
+  private final ControllerContext context;
+  private final MSQSpec querySpec;
+  private final ResultsContext resultsContext;
+  private final QueryKitSpec queryKitSpec;
+  private final ObjectMapper jsonMapper;
+  private final MSQTuningConfig tuningConfig;
+  private final ColumnMappings columnMappings;
+  private final MSQDestination destination;
+  private final QueryContext queryContext;
+  private final Query<?> query;
 
 
   public QueryKitBasedMSQPlanner(ControllerContext context, MSQSpec querySpec, ResultsContext resultsContext,
@@ -77,6 +83,12 @@ public class QueryKitBasedMSQPlanner
   {
     this.context = context;
     this.querySpec = querySpec;
+    this.jsonMapper = context.jsonMapper();
+    this.tuningConfig = querySpec.getTuningConfig();
+    this.columnMappings = querySpec.getColumnMappings();
+    this.destination = querySpec.getDestination();
+    this.queryContext = querySpec.getContext();
+    this.query = querySpec.getQuery();
     this.resultsContext = resultsContext;
     this.queryKitSpec = context.makeQueryKitSpec(
         makeQueryControllerToolKit(querySpec.getContext(), context.jsonMapper()), queryId, querySpec,
@@ -106,13 +118,6 @@ public class QueryKitBasedMSQPlanner
   @SuppressWarnings("unchecked")
   QueryDefinition makeQueryDefinition()
   {
-    final ObjectMapper jsonMapper = context.jsonMapper();
-    final MSQTuningConfig tuningConfig = querySpec.getTuningConfig();
-    final ColumnMappings columnMappings = querySpec.getColumnMappings();
-    MSQDestination destination = querySpec.getDestination();
-    QueryContext queryContext = querySpec.getContext();
-    Query<?> query = querySpec.getQuery();;
-
     boolean ingestion = MSQControllerTask.isIngestion(destination);
     final Query<?> queryToPlan;
     final ShuffleSpecFactory resultShuffleSpecFactory;
