@@ -266,6 +266,9 @@ public class MSQControllerTask2 extends AbstractTask implements ClientTaskQuery,
   @Override
   public TaskStatus runTask(final TaskToolbox toolbox) throws Exception
   {
+    if(true) {
+      throw new RuntimeException();
+    }
     final ServiceClientFactory clientFactory =
         injector.getInstance(Key.get(ServiceClientFactory.class, EscalatedGlobal.class));
     final OverlordClient overlordClient = injector.getInstance(OverlordClient.class)
