@@ -23,9 +23,9 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>org.apache.druid.extensions.contrib</groupId>
-    <artifactId>druid-opentelemetry-extensions</artifactId>
-    <name>druid-opentelemetry-extensions</name>
-    <description>druid-opentelemetry-extensions</description>
+    <artifactId>druid-opentelemetry-metrics-extensions</artifactId>
+    <name>druid-opentelemetry-metrics-extensions</name>
+    <description>druid-opentelemetry-metrics-extensions</description>
 
     <parent>
         <artifactId>druid</artifactId>

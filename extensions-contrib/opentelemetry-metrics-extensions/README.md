@@ -25,12 +25,12 @@ The [OpenTelemetry](https://opentelemetry.io/) extensions provides the ability t
 
 ### How to enable and use the extension
 
-To enable the OpenTelemetry extensions, add the extension and enable the emitter in `common.runtime.properties`.
+To enable the OpenTelemetry Metrics extensions, add the extension and enable the extension in `common.runtime.properties`.
 
 Load the plugin:
 
 ```properties
-druid.extensions.loadList=[..., "druid-opentelemetry-extensions"]
+druid.extensions.loadList=[..., "druid-opentelemetry-metrics-extensions"]
 ```
 
 Now Sumbit the Supervisor Config with [source input format](https://druid.apache.org/docs/latest/ingestion/data-formats/) as:
