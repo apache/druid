@@ -73,9 +73,7 @@ public class QueryKitBasedMSQPlanner
         ControllerImpl.makeQueryControllerToolKit(querySpec.getContext2(), context), queryId, querySpec,
         queryKernelConfig
     );
-
   }
-
 
   public static QueryDefinition extracted(ControllerContext context2, MSQSpec querySpec2, ResultsContext resultsContext2,
       ControllerQueryKernelConfig queryKernelConfig2, String queryId2)
@@ -83,7 +81,6 @@ public class QueryKitBasedMSQPlanner
     QueryKitBasedMSQPlanner q = new QueryKitBasedMSQPlanner(context2, querySpec2, resultsContext2, queryKernelConfig2, queryId2);
     return q.makeQueryDefinition();
   }
-
 
   @SuppressWarnings("unchecked")
   QueryDefinition makeQueryDefinition(
