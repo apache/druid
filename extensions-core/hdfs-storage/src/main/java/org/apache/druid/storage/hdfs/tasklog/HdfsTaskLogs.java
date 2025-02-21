@@ -208,33 +208,22 @@ public class HdfsTaskLogs implements TaskLogs
     }
   }
 
-  /**
-   * Save payload into HDFS, so it can be retrieved later.
-   *
-   * @throws IOException When Druid fails to push the task payload.
-   */
   @Override
   public void pushTaskPayload(String taskId, File taskPayloadFile) throws IOException
   {
-    final Path path = getTaskPayloadFromId(taskId);
-    log.info("Pushing task payload [%s] to location [%s]", taskPayloadFile, path);
+    final Path path = getTaskPayloadFileFromId(taskId);
+    log.info("Pushing payload for task[%s] to location[%s]", taskId, path);
     pushTaskFile(path, taskPayloadFile);
   }
 
-  /**
-   * Stream payload from HDFS for a task.
-   *
-   * @return InputStream for this taskPayload, if available.
-   * @throws IOException When Druid fails to read the task payload.
-   */
   @Override
   public Optional<InputStream> streamTaskPayload(String taskId) throws IOException
   {
-    final Path path = getTaskPayloadFromId(taskId);
+    final Path path = getTaskPayloadFileFromId(taskId);
     return streamTaskFile(path, 0);
   }
 
-  private Path getTaskPayloadFromId(String taskId)
+  private Path getTaskPayloadFileFromId(String taskId)
   {
     return new Path(mergePaths(config.getDirectory(), taskId.replace(':', '_') + ".payload.json"));
   }
