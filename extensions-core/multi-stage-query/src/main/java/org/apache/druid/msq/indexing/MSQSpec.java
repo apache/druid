@@ -180,16 +180,5 @@ public class MSQSpec
 
       return new MSQSpec(query, columnMappings, destination, assignmentStrategy, tuningConfig);
     }
-
-    public Builder context(Map<String, Object> context)
-    {
-      if(true)
-      {
-        throw new RuntimeException("FIXME: Unimplemented!");
-      }
-      return null;
-
-    }
   }
-
 }

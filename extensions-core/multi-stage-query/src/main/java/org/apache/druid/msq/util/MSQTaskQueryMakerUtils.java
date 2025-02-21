@@ -97,7 +97,6 @@ public class MSQTaskQueryMakerUtils
   /**
    * Validates that a query does not read from a datasource that it is ingesting data into, if realtime segments are
    * being queried.
-   * @param query
    */
   public static void validateRealtimeReindex(QueryContext context, MSQDestination destination, Query<?> query)
   {

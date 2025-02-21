@@ -295,7 +295,6 @@ public class MSQTaskQueryMaker implements QueryMaker
     final MSQSpec querySpec =
         MSQSpec.builder()
                .query(druidQuery.getQuery().withOverriddenContext(nativeQueryContextOverrides))
-//               .context(druidQuery.getQuery().withOverriddenContext(nativeQueryContextOverrides).getContext())
                .columnMappings(new ColumnMappings(QueryUtils.buildColumnMappings(fieldMapping, druidQuery)))
                .destination(destination)
                .assignmentStrategy(MultiStageQueryContext.getAssignmentStrategy(sqlQueryContext))
