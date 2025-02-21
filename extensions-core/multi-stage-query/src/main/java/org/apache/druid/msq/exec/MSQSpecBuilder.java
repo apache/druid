@@ -164,9 +164,9 @@ public class MSQSpecBuilder
                                    )
                     )
                     .build();
-    } else if (MSQControllerTask.writeFinalResultsToTaskReport(querySpec)) {
+    } else if (MSQControllerTask.writeFinalResultsToTaskReport(destination)) {
       return queryDef;
-    } else if (MSQControllerTask.writeFinalStageResultsToDurableStorage(querySpec)) {
+    } else if (MSQControllerTask.writeFinalStageResultsToDurableStorage(destination)) {
 
       // attaching new query results stage if the final stage does sort during shuffle so that results are ordered.
       StageDefinition finalShuffleStageDef = queryDef.getFinalStageDefinition();

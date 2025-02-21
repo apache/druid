@@ -2590,12 +2590,12 @@ public class ControllerImpl implements Controller
 
       final InputChannelFactory inputChannelFactory;
 
-      if (queryKernelConfig.isDurableStorage() || MSQControllerTask.writeFinalStageResultsToDurableStorage(querySpec)) {
+      if (queryKernelConfig.isDurableStorage() || MSQControllerTask.writeFinalStageResultsToDurableStorage(querySpec.getDestination())) {
         inputChannelFactory = DurableStorageInputChannelFactory.createStandardImplementation(
             queryId(),
             MSQTasks.makeStorageConnector(context.injector()),
             closer,
-            MSQControllerTask.writeFinalStageResultsToDurableStorage(querySpec)
+            MSQControllerTask.writeFinalStageResultsToDurableStorage(querySpec.getDestination())
         );
       } else {
         inputChannelFactory = new WorkerInputChannelFactory(netClient, () -> taskIds);
