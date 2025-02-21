@@ -45,6 +45,7 @@ import org.apache.druid.msq.querykit.results.QueryResultFrameProcessorFactory;
 import org.apache.druid.msq.util.MSQTaskQueryMakerUtils;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.http.ResultFormat;
@@ -67,13 +68,15 @@ public class MSQSpecBuilder
     final ObjectMapper jsonMapper = controllerContext.jsonMapper();
     final MSQTuningConfig tuningConfig = querySpec.getTuningConfig();
     final ColumnMappings columnMappings = querySpec.getColumnMappings();
-    boolean ingestion = MSQControllerTask.isIngestion(querySpec);
+    MSQDestination destination = querySpec.getDestination();
+    Query<?> query2 = querySpec.getQuery();
+    QueryContext context2 = querySpec.getContext2();
 
+    boolean ingestion = MSQControllerTask.isIngestion(destination);
     final Query<?> queryToPlan;
     final ShuffleSpecFactory resultShuffleSpecFactory;
 
-    MSQDestination destination = querySpec.getDestination();
-    Query<?> query = querySpec.getQuery();
+    Query<?> query = query2;
     if (ingestion) {
       resultShuffleSpecFactory = destination
                                           .getShuffleSpecFactory(tuningConfig.getRowsPerSegment());
@@ -85,7 +88,7 @@ public class MSQSpecBuilder
         throw new ISE("Column names are not unique: [%s]", columnMappings.getOutputColumnNames());
       }
 
-      MSQTaskQueryMakerUtils.validateRealtimeReindex(querySpec.getContext2(), querySpec.getDestination(), querySpec.getQuery());
+      MSQTaskQueryMakerUtils.validateRealtimeReindex(context2, destination, query2);
 
       if (columnMappings.hasOutputColumn(ColumnHolder.TIME_COLUMN_NAME)) {
         // We know there's a single time column, because we've checked columnMappings.hasUniqueOutputColumnNames().
@@ -181,7 +184,7 @@ public class MSQSpecBuilder
       } else {
         return queryDef;
       }
-    } else if (MSQControllerTask.isExport(querySpec)) {
+    } else if (MSQControllerTask.isExport(destination)) {
       final ExportMSQDestination exportMSQDestination = (ExportMSQDestination) destination;
       final ExportStorageProvider exportStorageProvider = exportMSQDestination.getExportStorageProvider();
 

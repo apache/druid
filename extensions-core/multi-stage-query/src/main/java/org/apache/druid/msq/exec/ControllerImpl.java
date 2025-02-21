@@ -1608,7 +1608,7 @@ public class ControllerImpl implements Controller
       }
       log.info("Query [%s] publishing %d segments.", queryDef.getQueryId(), segments.size());
       publishAllSegments(segments, compactionStateAnnotateFunction);
-    } else if (MSQControllerTask.isExport(querySpec)) {
+    } else if (MSQControllerTask.isExport(querySpec.getDestination())) {
       // Write manifest file.
       ExportMSQDestination destination = (ExportMSQDestination) querySpec.getDestination();
       ExportMetadataManager exportMetadataManager = new ExportMetadataManager(

@@ -376,9 +376,9 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery, 
   /**
    * Checks whether the task is an export into external files.
    */
-  public static boolean isExport(final MSQSpec querySpec)
+  public static boolean isExport(MSQDestination destination)
   {
-    return querySpec.getDestination() instanceof ExportMSQDestination;
+    return destination instanceof ExportMSQDestination;
   }
 
   /**
