@@ -27,12 +27,10 @@ import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
-import org.apache.druid.indexing.common.task.IndexTaskUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
-import org.apache.druid.java.util.emitter.service.ServiceMetricEvent.Builder;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerContext;
 import org.apache.druid.msq.exec.ControllerMemoryParameters;
@@ -81,7 +79,7 @@ public class IndexerControllerContext implements ControllerContext
 
   private final TaskLockType taskLockType;
   private final String taskDataSource;
-  private final QueryContext taskQuerySpecContext2;
+  private final QueryContext taskQuerySpecContext;
   private final Map<String, Object> taskContext;
   private final TaskToolbox toolbox;
   private final Injector injector;
@@ -95,7 +93,7 @@ public class IndexerControllerContext implements ControllerContext
   public IndexerControllerContext(
       final TaskLockType taskLockType,
       final String taskDataSource,
-      final QueryContext taskQuerySpecContext2,
+      final QueryContext taskQuerySpecContext,
       final Map<String, Object> taskContext,
       final ServiceMetricEvent.Builder metricBuilder,
       final TaskToolbox toolbox,
@@ -104,10 +102,10 @@ public class IndexerControllerContext implements ControllerContext
       final OverlordClient overlordClient
   )
   {
-    this.taskLockType=taskLockType;
-    this.taskDataSource=taskDataSource;
-    this.taskQuerySpecContext2=taskQuerySpecContext2;
-    this.taskContext=taskContext;
+    this.taskLockType = taskLockType;
+    this.taskDataSource = taskDataSource;
+    this.taskQuerySpecContext = taskQuerySpecContext;
+    this.taskContext = taskContext;
     this.toolbox = toolbox;
     this.clientFactory = clientFactory;
     this.overlordClient = overlordClient;
@@ -176,7 +174,7 @@ public class IndexerControllerContext implements ControllerContext
   public InputSpecSlicer newTableInputSpecSlicer(final WorkerManager workerManager)
   {
     final SegmentSource includeSegmentSource =
-        MultiStageQueryContext.getSegmentSources(taskQuerySpecContext2);
+        MultiStageQueryContext.getSegmentSources(taskQuerySpecContext);
     return new IndexerTableInputSpecSlicer(
         toolbox.getCoordinatorClient(),
         toolbox.getTaskActionClient(),
