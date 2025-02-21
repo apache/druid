@@ -34,7 +34,6 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntArraySet;
 import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.ints.IntSet;
-import org.apache.druid.client.indexing.ClientCompactionTaskTransformSpec;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -54,6 +53,8 @@ import org.apache.druid.frame.util.DurableStorageUtils;
 import org.apache.druid.frame.write.InvalidFieldException;
 import org.apache.druid.frame.write.InvalidNullByteException;
 import org.apache.druid.indexer.TaskState;
+import org.apache.druid.indexer.granularity.GranularitySpec;
+import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
@@ -180,9 +181,8 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.indexing.granularity.GranularitySpec;
-import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
+import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
@@ -542,8 +542,10 @@ public class ControllerImpl implements Controller
     final MSQStagesReport stagesReport = msqTaskReportPayload.getStages();
     if (stagesReport != null) {
       for (MSQStagesReport.Stage stage : stagesReport.getStages()) {
-        boolean hasParentStage = stage.getStageDefinition().getInputSpecs().stream()
-            .anyMatch(stageInput -> stageInput instanceof StageInputSpec);
+        boolean hasParentStage = stage.getStageDefinition()
+                                      .getInputSpecs()
+                                      .stream()
+                                      .anyMatch(stageInput -> stageInput instanceof StageInputSpec);
         if (!hasParentStage) {
           stagesToInclude.add(stage.getStageNumber());
         }
@@ -552,19 +554,20 @@ public class ControllerImpl implements Controller
     long totalProcessedBytes = 0;
 
     if (msqTaskReportPayload.getCounters() != null) {
-      totalProcessedBytes = msqTaskReportPayload.getCounters()
-          .copyMap()
-          .entrySet()
-          .stream()
-          .filter(entry -> stagesReport == null || stagesToInclude.contains(entry.getKey()))
-          .flatMap(counterSnapshotsMap -> counterSnapshotsMap.getValue().values().stream())
-          .flatMap(counterSnapshots -> counterSnapshots.getMap().entrySet().stream())
-          .filter(entry -> entry.getKey().startsWith("input"))
-          .mapToLong(entry -> {
-            ChannelCounters.Snapshot snapshot = (ChannelCounters.Snapshot) entry.getValue();
-            return snapshot.getBytes() == null ? 0L : Arrays.stream(snapshot.getBytes()).sum();
-          })
-          .sum();
+      totalProcessedBytes =
+          msqTaskReportPayload.getCounters()
+                              .copyMap()
+                              .entrySet()
+                              .stream()
+                              .filter(entry -> stagesReport == null || stagesToInclude.contains(entry.getKey()))
+                              .flatMap(counterSnapshotsMap -> counterSnapshotsMap.getValue().values().stream())
+                              .flatMap(counterSnapshots -> counterSnapshots.getMap().entrySet().stream())
+                              .filter(entry -> entry.getKey().startsWith("input"))
+                              .mapToLong(entry -> {
+                                ChannelCounters.Snapshot snapshot = (ChannelCounters.Snapshot) entry.getValue();
+                                return snapshot.getBytes() == null ? 0L : Arrays.stream(snapshot.getBytes()).sum();
+                              })
+                              .sum();
     }
 
     log.debug("Processed bytes[%d] for query[%s].", totalProcessedBytes, querySpec.getQueryIrrelevant());
@@ -700,14 +703,17 @@ public class ControllerImpl implements Controller
     if (!retriableWorkOrders.isEmpty()) {
       log.info("Submitting worker[%s] for relaunch because of fault[%s]", worker, fault);
       retryCapableWorkerManager.submitForRelaunch(worker);
-      workOrdersToRetry.compute(worker, (workerNumber, workOrders) -> {
-        if (workOrders == null) {
-          return new HashSet<>(retriableWorkOrders);
-        } else {
-          workOrders.addAll(retriableWorkOrders);
-          return workOrders;
-        }
-      });
+      workOrdersToRetry.compute(
+          worker,
+          (workerNumber, workOrders) -> {
+            if (workOrders == null) {
+              return new HashSet<>(retriableWorkOrders);
+            } else {
+              workOrders.addAll(retriableWorkOrders);
+              return workOrders;
+            }
+          }
+      );
     } else {
       log.debug(
           "Worker[%d] has no active workOrders that need relaunch therefore not relaunching",
@@ -939,11 +945,9 @@ public class ControllerImpl implements Controller
   /**
    * @param isStageOutputEmpty {@code true} if the stage output is empty, {@code false} if the stage output is non-empty,
    *                           {@code null} for stages where cluster key statistics are not gathered or is incomplete.
-   *
    * @return the segments that will be generated by this job. Delegates to
    * {@link #generateSegmentIdsWithShardSpecsForAppend} or {@link #generateSegmentIdsWithShardSpecsForReplace} as
    * appropriate. This is a potentially expensive call, since it requires calling Overlord APIs.
-   *
    * @throws MSQException with {@link InsertCannotAllocateSegmentFault} if an allocation cannot be made
    */
   private List<SegmentIdWithShardSpec> generateSegmentIdsWithShardSpecs(
@@ -1105,7 +1109,14 @@ public class ControllerImpl implements Controller
     for (final Map.Entry<DateTime, List<Pair<Integer, ClusterByPartition>>> bucketEntry : partitionsByBucket.entrySet()) {
       final int numSegmentsInTimeChunk = bucketEntry.getValue().size();
       if (numSegmentsInTimeChunk > maxNumSegments) {
-        throw new MSQException(new TooManySegmentsInTimeChunkFault(bucketEntry.getKey(), numSegmentsInTimeChunk, maxNumSegments, segmentGranularity));
+        throw new MSQException(
+            new TooManySegmentsInTimeChunkFault(
+                bucketEntry.getKey(),
+                numSegmentsInTimeChunk,
+                maxNumSegments,
+                segmentGranularity
+            )
+        );
       }
     }
   }
@@ -1612,7 +1623,10 @@ public class ControllerImpl implements Controller
     } else if (MSQControllerTask.isExport(querySpec)) {
       // Write manifest file.
       ExportMSQDestination destination = (ExportMSQDestination) querySpec.getDestination();
-      ExportMetadataManager exportMetadataManager = new ExportMetadataManager(destination.getExportStorageProvider(), context.taskTempDir());
+      ExportMetadataManager exportMetadataManager = new ExportMetadataManager(
+          destination.getExportStorageProvider(),
+          context.taskTempDir()
+      );
 
       final StageId finalStageId = queryKernel.getStageId(queryDef.getFinalStageDefinition().getStageNumber());
       //noinspection unchecked
@@ -1621,7 +1635,10 @@ public class ControllerImpl implements Controller
       Object resultObjectForStage = queryKernel.getResultObjectForStage(finalStageId);
       if (!(resultObjectForStage instanceof List)) {
         // This might occur if all workers are running on an older version. We are not able to write a manifest file in this case.
-        log.warn("Unable to create export manifest file. Received result[%s] from worker instead of a list of file names.", resultObjectForStage);
+        log.warn(
+            "Unable to create export manifest file. Received result[%s] from worker instead of a list of file names.",
+            resultObjectForStage
+        );
         return;
       }
       @SuppressWarnings("unchecked")
@@ -1695,12 +1712,10 @@ public class ControllerImpl implements Controller
     );
 
     DimensionsSpec dimensionsSpec = dataSchema.getDimensionsSpec();
-    Map<String, Object> transformSpec = TransformSpec.NONE.equals(dataSchema.getTransformSpec())
-                                        ? null
-                                        : new ClientCompactionTaskTransformSpec(
-                                            dataSchema.getTransformSpec().getFilter()
-                                        ).asMap(jsonMapper);
-    List<Object> metricsSpec = Collections.emptyList();
+    CompactionTransformSpec transformSpec = TransformSpec.NONE.equals(dataSchema.getTransformSpec())
+                                            ? null
+                                            : CompactionTransformSpec.of(dataSchema.getTransformSpec());
+    List<AggregatorFactory> metricsSpec = Collections.emptyList();
 
     if (querySpec.getQuery() instanceof GroupByQuery) {
       // For group-by queries, the aggregators are transformed to their combining factories in the dataschema, resulting
@@ -1710,15 +1725,12 @@ public class ControllerImpl implements Controller
       // Collect all aggregators that are part of the current dataSchema, since a non-rollup query (isRollup() is false)
       // moves metrics columns to dimensions in the final schema.
       Set<String> aggregatorsInDataSchema = Arrays.stream(dataSchema.getAggregators())
-                                           .map(AggregatorFactory::getName)
-                                           .collect(
-                                               Collectors.toSet());
-      metricsSpec = new ArrayList<>(
-          groupByQuery.getAggregatorSpecs()
-                      .stream()
-                      .filter(aggregatorFactory -> aggregatorsInDataSchema.contains(aggregatorFactory.getName()))
-                      .collect(Collectors.toList())
-      );
+                                                  .map(AggregatorFactory::getName)
+                                                  .collect(Collectors.toSet());
+      metricsSpec = groupByQuery.getAggregatorSpecs()
+                                .stream()
+                                .filter(aggregatorFactory -> aggregatorsInDataSchema.contains(aggregatorFactory.getName()))
+                                .collect(Collectors.toList());
     }
 
     IndexSpec indexSpec = tuningConfig.getIndexSpec();
@@ -1730,8 +1742,8 @@ public class ControllerImpl implements Controller
         dimensionsSpec,
         metricsSpec,
         transformSpec,
-        indexSpec.asMap(jsonMapper),
-        granularitySpec.asMap(jsonMapper)
+        indexSpec,
+        granularitySpec
     );
   }
 
@@ -1850,11 +1862,12 @@ public class ControllerImpl implements Controller
 
       final DataSourceMSQDestination destination = (DataSourceMSQDestination) querySpec.getDestination();
       return builder.add(
-          destination.getTerminalStageSpec()
-                     .constructFinalStage(
-                         queryDef,
-                         querySpec,
-                         jsonMapper)
+                        destination.getTerminalStageSpec()
+                                   .constructFinalStage(
+                                       queryDef,
+                                       querySpec,
+                                       jsonMapper
+                                   )
                     )
                     .build();
     } else if (MSQControllerTask.writeFinalResultsToTaskReport(querySpec)) {
@@ -1883,7 +1896,8 @@ public class ControllerImpl implements Controller
 
       try {
         // Check that the export destination is empty as a sanity check. We want to avoid modifying any other files with export.
-        Iterator<String> filesIterator = exportStorageProvider.createStorageConnector(controllerContext.taskTempDir()).listDir("");
+        Iterator<String> filesIterator = exportStorageProvider.createStorageConnector(controllerContext.taskTempDir())
+                                                              .listDir("");
         if (filesIterator.hasNext()) {
           throw DruidException.forPersona(DruidException.Persona.USER)
                               .ofCategory(DruidException.Category.RUNTIME_FAILURE)
@@ -2400,17 +2414,20 @@ public class ControllerImpl implements Controller
               queryKernel.workOrdersSentForWorker(stageWorkOrders.getKey(), workerNumber);
 
               // remove successfully contacted workOrders from workOrdersToRetry
-              workOrdersToRetry.compute(workerNumber, (task, workOrderSet) -> {
-                if (workOrderSet == null
-                    || workOrderSet.size() == 0
-                    || !workOrderSet.remove(stageWorkOrders.getValue().get(workerNumber))) {
-                  throw new ISE("Worker[%s] with number[%d] orders not found", workerId, workerNumber);
-                }
-                if (workOrderSet.size() == 0) {
-                  return null;
-                }
-                return workOrderSet;
-              });
+              workOrdersToRetry.compute(
+                  workerNumber,
+                  (task, workOrderSet) -> {
+                    if (workOrderSet == null
+                        || workOrderSet.size() == 0
+                        || !workOrderSet.remove(stageWorkOrders.getValue().get(workerNumber))) {
+                      throw new ISE("Worker[%s] with number[%d] orders not found", workerId, workerNumber);
+                    }
+                    if (workOrderSet.size() == 0) {
+                      return null;
+                    }
+                    return workOrderSet;
+                  }
+              );
             },
             queryKernelConfig.isFaultTolerant()
         );
@@ -2492,9 +2509,10 @@ public class ControllerImpl implements Controller
           stageId,
           tasks.stream().map(workerManager::getWorkerNumber).collect(Collectors.toSet())
       );
-      workerSketchFetcher.inMemoryFullSketchMerging(ControllerImpl.this::addToKernelManipulationQueue,
-                                                    stageId, tasks,
-                                                    ControllerImpl.this::addToRetryQueue
+      workerSketchFetcher.inMemoryFullSketchMerging(
+          ControllerImpl.this::addToKernelManipulationQueue,
+          stageId, tasks,
+          ControllerImpl.this::addToRetryQueue
       );
     }
 
@@ -2736,7 +2754,7 @@ public class ControllerImpl implements Controller
 
     /**
      * Start a {@link ControllerQueryResultsReader} that pushes results to our {@link QueryListener}.
-     *
+     * <p>
      * The reader runs in a single-threaded executor that is created by this method, and shut down when results
      * are done being read.
      */

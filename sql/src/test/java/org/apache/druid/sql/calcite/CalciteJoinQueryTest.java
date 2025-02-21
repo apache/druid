@@ -108,6 +108,7 @@ import java.util.Map;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 public class CalciteJoinQueryTest extends BaseCalciteQueryTest
 {
@@ -741,8 +742,7 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   {
     // Like "testFilterAndGroupByLookupUsingJoinOperator", but with the table and lookup reversed.
 
-    // MSQ refuses to do RIGHT join with broadcast.
-    msqIncompatible();
+    assumeFalse(isRunningMSQ() && isSortBasedJoin() == false, "MSQ refuses to do RIGHT join with broadcast.");
 
     // Cannot vectorize JOIN operator.
     cannotVectorize();
@@ -5971,10 +5971,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @Test
   public void testJoinsWithUnnestOnLeft()
   {
-    // Segment map function of MSQ needs some work
-    // To handle these nested cases
-    // Remove this when that's handled
-    msqIncompatible();
     Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     testQuery(
         "with t1 as (\n"
@@ -6012,10 +6008,13 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                 .context(context)
                 .build()
         ),
-        ImmutableList.of(
-            new Object[]{"[\"a\",\"b\"]", "a", "a"},
-            new Object[]{"[\"a\",\"b\"]", "a", "a"},
-            new Object[]{"", "", ""}
+        sortIfSortBased(
+            ImmutableList.of(
+                new Object[] {"[\"a\",\"b\"]", "a", "a"},
+                new Object[] {"[\"a\",\"b\"]", "a", "a"},
+                new Object[] {"", "", ""}
+            ),
+            0
         )
     );
   }
@@ -6024,10 +6023,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @Test
   public void testJoinsWithUnnestOverFilteredDSOnLeft()
   {
-    // Segment map function of MSQ needs some work
-    // To handle these nested cases
-    // Remove this when that's handled
-    msqIncompatible();
     Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     testQuery(
         "with t1 as (\n"
@@ -6068,10 +6063,12 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                 .context(context)
                 .build()
         ),
-        ImmutableList.of(
-            new Object[]{"[\"a\",\"b\"]", "a", "a"},
-            new Object[]{"[\"a\",\"b\"]", "a", "a"},
-            new Object[]{"", "", ""}
+        sortIfSortBased(
+            ImmutableList.of(
+                new Object[] {"[\"a\",\"b\"]", "a", "a"},
+                new Object[] {"[\"a\",\"b\"]", "a", "a"},
+                new Object[] {"", "", ""}
+            ), 0
         )
     );
   }
@@ -6079,10 +6076,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @Test
   public void testJoinsWithUnnestOverJoin()
   {
-    // Segment map function of MSQ needs some work
-    // To handle these nested cases
-    // Remove this when that's handled
-    msqIncompatible();
     Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     testQuery(
         "with t1 as (\n"
@@ -6136,19 +6129,15 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                 .context(context)
                 .build()
         ),
-        ImmutableList.of(
-            new Object[]{"[\"a\",\"b\"]", "a", "a"},
-            new Object[]{"[\"a\",\"b\"]", "a", "a"},
-            new Object[]{"[\"a\",\"b\"]", "a", "a"},
-            new Object[]{"[\"a\",\"b\"]", "a", "a"},
-            new Object[]{"[\"a\",\"b\"]", "a", "a"},
-            new Object[]{"[\"a\",\"b\"]", "a", "a"},
-            new Object[]{"[\"a\",\"b\"]", "a", "a"},
-            new Object[]{"[\"a\",\"b\"]", "a", "a"},
-            new Object[]{"", "", ""},
-            new Object[]{"", "", ""},
-            new Object[]{"", "", ""},
-            new Object[]{"", "", ""}
+        sortIfSortBased(
+            ImmutableList.of(
+                new Object[] {"[\"a\",\"b\"]", "a", "a"},
+                new Object[] {"[\"a\",\"b\"]", "a", "a"},
+                new Object[] {"[\"a\",\"b\"]", "a", "a"},
+                new Object[] {"[\"a\",\"b\"]", "a", "a"},
+                new Object[] {"", "", ""},
+                new Object[] {"", "", ""}
+            ), 0
         )
     );
   }
@@ -6156,10 +6145,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @Test
   public void testSelfJoinsWithUnnestOnLeftAndRight()
   {
-    // Segment map function of MSQ needs some work
-    // To handle these nested cases
-    // Remove this when that's handled
-    msqIncompatible();
     Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     testQuery(
         "with t1 as (\n"
@@ -6201,15 +6186,17 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                 .context(context)
                 .build()
         ),
-        ImmutableList.of(
-            new Object[]{"[\"a\",\"b\"]", "a", "a"},
-            new Object[]{"[\"a\",\"b\"]", "b", "a"},
-            new Object[]{"[\"a\",\"b\"]", "b", null},
-            new Object[]{"[\"b\",\"c\"]", "b", "a"},
-            new Object[]{"[\"b\",\"c\"]", "b", null},
-            new Object[]{"[\"b\",\"c\"]", "c", null},
-            new Object[]{"d", "d", ""},
-            new Object[]{"", "", "a"}
+        sortIfSortBased(
+            ImmutableList.of(
+                new Object[] {"[\"a\",\"b\"]", "a", "a"},
+                new Object[] {"[\"a\",\"b\"]", "b", "a"},
+                new Object[] {"[\"a\",\"b\"]", "b", null},
+                new Object[] {"[\"b\",\"c\"]", "b", "a"},
+                new Object[] {"[\"b\",\"c\"]", "b", null},
+                new Object[] {"[\"b\",\"c\"]", "c", null},
+                new Object[] {"d", "d", ""},
+                new Object[] {"", "", "a"}
+            ), 0
         )
     );
   }
@@ -6218,10 +6205,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
   @Test
   public void testJoinsOverUnnestOverFilterDSOverJoin()
   {
-    // Segment map function of MSQ needs some work
-    // To handle these nested cases
-    // Remove this when that's handled
-    msqIncompatible();
     Map<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     testQuery(
         "with t1 as (\n"
@@ -6284,10 +6267,6 @@ public class CalciteJoinQueryTest extends BaseCalciteQueryTest
                 .build()
         ),
         ImmutableList.of(
-            new Object[]{"[\"a\",\"b\"]", "a", "a", 1.0f},
-            new Object[]{"[\"a\",\"b\"]", "a", "a", 1.0f},
-            new Object[]{"[\"a\",\"b\"]", "a", "a", 1.0f},
-            new Object[]{"[\"a\",\"b\"]", "a", "a", 1.0f},
             new Object[]{"[\"a\",\"b\"]", "a", "a", 1.0f},
             new Object[]{"[\"a\",\"b\"]", "a", "a", 1.0f},
             new Object[]{"[\"a\",\"b\"]", "a", "a", 1.0f},

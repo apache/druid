@@ -32,6 +32,8 @@ import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
+import org.apache.druid.indexer.granularity.GranularitySpec;
+import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
@@ -52,11 +54,10 @@ import org.apache.druid.msq.test.MSQTestBase;
 import org.apache.druid.msq.test.MSQTestTaskActionClient;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
-import org.apache.druid.segment.indexing.granularity.GranularitySpec;
-import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
@@ -2780,15 +2781,15 @@ public class MSQReplaceTest extends MSQTestBase
         false,
         Collections.singletonList(interval)
     );
-    List<Object> metricsSpec = Collections.emptyList();
+    List<AggregatorFactory> metricsSpec = Collections.emptyList();
 
     return new CompactionState(
         partitionsSpec,
         dimensionsSpec,
         metricsSpec,
         null,
-        indexSpec.asMap(objectMapper),
-        granularitySpec.asMap(objectMapper)
+        indexSpec,
+        granularitySpec
     );
 
   }

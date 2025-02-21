@@ -294,7 +294,19 @@ public interface Query<T>
 
   default DataSourceAnalysis getDataSourceAnalysis()
   {
-    return getDataSource().getAnalysis().maybeWithBaseQuery(this);
+    throw DruidException.defensive("Usage of this method is not supported on this query type!");
+  }
+
+  /**
+   * Signals that the execution of this query could also transparently handle
+   * the input {@link QueryDataSource} as well.
+   *
+   * This is a not-so-nice way to support that {@link GroupByQuery} could
+   * collapse other {@link GroupByQuery}-ies in {@link QueryDataSource}-es.
+   */
+  default boolean mayCollapseQueryDataSource()
+  {
+    return false;
   }
 
   default RowSignature getResultRowSignature()
