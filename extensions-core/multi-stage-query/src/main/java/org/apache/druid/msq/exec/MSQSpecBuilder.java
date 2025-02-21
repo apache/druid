@@ -85,7 +85,7 @@ public class MSQSpecBuilder
         throw new ISE("Column names are not unique: [%s]", columnMappings.getOutputColumnNames());
       }
 
-      MSQTaskQueryMakerUtils.validateRealtimeReindex(querySpec);
+      MSQTaskQueryMakerUtils.validateRealtimeReindex(querySpec.getContext2(), querySpec.getDestination(), querySpec.getQuery());
 
       if (columnMappings.hasOutputColumn(ColumnHolder.TIME_COLUMN_NAME)) {
         // We know there's a single time column, because we've checked columnMappings.hasUniqueOutputColumnNames().

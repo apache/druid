@@ -25,9 +25,9 @@ import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.msq.exec.SegmentSource;
 import org.apache.druid.msq.indexing.MSQControllerTask;
-import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
 import org.apache.druid.msq.indexing.destination.MSQDestination;
+import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
 
 import java.util.List;
@@ -99,12 +99,10 @@ public class MSQTaskQueryMakerUtils
    * being queried.
    * @param query
    */
-  public static void validateRealtimeReindex(final MSQSpec querySpec)
+  public static void validateRealtimeReindex(QueryContext context, MSQDestination destination, Query<?> query)
   {
-    QueryContext context2 = querySpec.getContext2();
-    MSQDestination destination = querySpec.getDestination();
-    final SegmentSource segmentSources = MultiStageQueryContext.getSegmentSources(context2);
-    if (MSQControllerTask.isReplaceInputDataSourceTask(querySpec.getQuery(), querySpec.getDestination()) && SegmentSource.REALTIME.equals(segmentSources)) {
+    final SegmentSource segmentSources = MultiStageQueryContext.getSegmentSources(context);
+    if (MSQControllerTask.isReplaceInputDataSourceTask(query, destination) && SegmentSource.REALTIME.equals(segmentSources)) {
       throw DruidException.forPersona(DruidException.Persona.USER)
                           .ofCategory(DruidException.Category.INVALID_INPUT)
                           .build("Cannot ingest into datasource[%s] since it is also being queried from, with "
