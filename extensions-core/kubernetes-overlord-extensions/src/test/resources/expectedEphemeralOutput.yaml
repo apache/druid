@@ -6,7 +6,6 @@ metadata:
     tls.enabled: "false"
   labels:
     druid.k8s.peons: "true"
-    druid.overlord.namespace: "namespace"
   name: "id-3e70afe5cd823dfc7dd308eea616426b"
 spec:
   activeDeadlineSeconds: 14400
@@ -18,7 +17,6 @@ spec:
         tls.enabled: "false"
       labels:
         druid.k8s.peons: "true"
-        druid.overlord.namespace: "namespace"
     spec:
       containers:
         - args:

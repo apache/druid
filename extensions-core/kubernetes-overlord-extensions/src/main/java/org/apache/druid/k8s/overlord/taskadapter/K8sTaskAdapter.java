@@ -342,7 +342,6 @@ public abstract class K8sTaskAdapter implements TaskAdapter
     return ImmutableMap.<String, String>builder()
         .putAll(taskRunnerConfig.getLabels())
         .put(DruidK8sConstants.LABEL_KEY, "true")
-        .put(DruidK8sConstants.OVERLORD_NAMESPACE_KEY, taskRunnerConfig.getOverlordNamespace())
         .build();
   }
 

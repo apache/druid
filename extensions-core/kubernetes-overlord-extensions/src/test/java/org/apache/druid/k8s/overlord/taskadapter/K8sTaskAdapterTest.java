@@ -152,8 +152,8 @@ class K8sTaskAdapterTest
         node,
         jsonMapper,
         taskLogs
-
     );
+
     Task task = K8sTestUtils.getTask();
     Job jobFromSpec = adapter.fromTask(task);
 
@@ -164,7 +164,9 @@ class K8sTaskAdapterTest
 
     assertTrue(jobFromSpec.getMetadata().getLabels().containsKey("label_key"));
     assertTrue(jobFromSpec.getMetadata().getLabels().containsKey(DruidK8sConstants.LABEL_KEY));
-    assertTrue(jobFromSpec.getMetadata().getLabels().containsKey(DruidK8sConstants.OVERLORD_NAMESPACE_KEY));
+
+    // SingleContainerTaskAdapter will not store OVERLORD_NAMESPACE_KEY.
+    assertFalse(jobFromSpec.getMetadata().getLabels().containsKey(DruidK8sConstants.OVERLORD_NAMESPACE_KEY));
     assertFalse(jobFromSpec.getMetadata().getLabels().containsKey("annotation_key"));
   }
 

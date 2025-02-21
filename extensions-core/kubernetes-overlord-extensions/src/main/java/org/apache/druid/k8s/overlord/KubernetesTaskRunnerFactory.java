@@ -28,8 +28,12 @@ import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.k8s.overlord.common.DruidKubernetesClient;
 import org.apache.druid.k8s.overlord.common.KubernetesPeonClient;
+import org.apache.druid.k8s.overlord.taskadapter.PodTemplateTaskAdapter;
+import org.apache.druid.k8s.overlord.taskadapter.SingleContainerTaskAdapter;
 import org.apache.druid.k8s.overlord.taskadapter.TaskAdapter;
 import org.apache.druid.tasklogs.TaskLogs;
+
+import java.util.Set;
 
 public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<KubernetesTaskRunner>
 {
@@ -42,6 +46,7 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
   private final ServiceEmitter emitter;
   private KubernetesTaskRunner runner;
   private final TaskAdapter taskAdapter;
+  private final Set<String> adapterTypeAllowingTasksInDifferentNamespaces = Set.of(PodTemplateTaskAdapter.TYPE);
 
   @Inject
   public KubernetesTaskRunnerFactory(
@@ -66,14 +71,23 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
   @Override
   public KubernetesTaskRunner build()
   {
-
-    KubernetesPeonClient peonClient = new KubernetesPeonClient(
-        druidKubernetesClient,
-        kubernetesTaskRunnerConfig.getNamespace(),
-        kubernetesTaskRunnerConfig.getOverlordNamespace(),
-        kubernetesTaskRunnerConfig.isDebugJobs(),
-        emitter
-    );
+    KubernetesPeonClient peonClient;
+    if (adapterTypeAllowingTasksInDifferentNamespaces.contains(taskAdapter.getAdapterType())) {
+      peonClient = new KubernetesPeonClient(
+          druidKubernetesClient,
+          kubernetesTaskRunnerConfig.getNamespace(),
+          kubernetesTaskRunnerConfig.getOverlordNamespace(),
+          kubernetesTaskRunnerConfig.isDebugJobs(),
+          emitter
+      );
+    } else {
+      peonClient = new KubernetesPeonClient(
+          druidKubernetesClient,
+          kubernetesTaskRunnerConfig.getNamespace(),
+          kubernetesTaskRunnerConfig.isDebugJobs(),
+          emitter
+      );
+    }
 
     runner = new KubernetesTaskRunner(
         taskAdapter,
@@ -91,5 +105,4 @@ public class KubernetesTaskRunnerFactory implements TaskRunnerFactory<Kubernetes
   {
     return runner;
   }
-
 }

@@ -21,6 +21,7 @@ package org.apache.druid.k8s.overlord.taskadapter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import io.fabric8.kubernetes.api.model.EnvVar;
@@ -69,7 +70,6 @@ import java.util.Map;
 public class PodTemplateTaskAdapter implements TaskAdapter
 {
   public static final String TYPE = "customTemplateAdapter";
-
   private static final Logger log = new Logger(PodTemplateTaskAdapter.class);
 
   private final KubernetesTaskRunnerConfig taskRunnerConfig;
@@ -94,6 +94,12 @@ public class PodTemplateTaskAdapter implements TaskAdapter
     this.mapper = mapper;
     this.taskLogs = taskLogs;
     this.podTemplateSelector = podTemplateSelector;
+  }
+
+  @Override
+  public String getAdapterType()
+  {
+    return TYPE;
   }
 
   /**
@@ -261,6 +267,9 @@ public class PodTemplateTaskAdapter implements TaskAdapter
   
   private Map<String, String> getJobLabels(KubernetesTaskRunnerConfig config, Task task)
   {
+    // Namespace is required, or else getOverlordNamespace() will return null, and this will not work correctly.
+    Preconditions.checkNotNull(config.getNamespace(), "When using Custom Pod Templates, druid.indexer.runner.namespace cannot be null.");
+
     return ImmutableMap.<String, String>builder()
         .putAll(config.getLabels())
         .put(DruidK8sConstants.LABEL_KEY, "true")
