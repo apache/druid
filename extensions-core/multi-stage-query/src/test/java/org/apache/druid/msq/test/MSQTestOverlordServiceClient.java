@@ -42,7 +42,6 @@ import org.apache.druid.msq.exec.QueryListener;
 import org.apache.druid.msq.exec.ResultsContext;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.indexing.MSQControllerTask;
-import org.apache.druid.msq.indexing.MSQControllerTask2;
 import org.apache.druid.msq.indexing.destination.MSQDestination;
 import org.apache.druid.msq.indexing.report.MSQResultsReport;
 import org.apache.druid.msq.indexing.report.MSQStatusReport;
@@ -66,7 +65,7 @@ public class MSQTestOverlordServiceClient extends NoopOverlordClient
   private final List<ImmutableSegmentLoadInfo> loadedSegmentMetadata;
   private final Map<String, Controller> inMemoryControllers = new HashMap<>();
   private final Map<String, TaskReport.ReportMap> reports = new HashMap<>();
-  private final Map<String, Object> inMemoryControllerTask = new HashMap<>();
+  private final Map<String, MSQControllerTask> inMemoryControllerTask = new HashMap<>();
   private final Map<String, TaskStatus> inMemoryTaskStatus = new HashMap<>();
 
   public static final DateTime CREATED_TIME = DateTimes.of("2023-05-31T12:00Z");
@@ -96,9 +95,7 @@ public class MSQTestOverlordServiceClient extends NoopOverlordClient
     ControllerImpl controller = null;
     MSQTestControllerContext msqTestControllerContext;
     try {
-//      MSQControllerTask cTask = objectMapper.convertValue(taskObject, MSQControllerTask.class);
-      // FIXME ^ whats this? ^
-      MSQControllerTask2  cTask=(MSQControllerTask2) taskObject;
+      MSQControllerTask cTask = objectMapper.convertValue(taskObject, MSQControllerTask.class);
 
       msqTestControllerContext = new MSQTestControllerContext(
           objectMapper,
@@ -107,7 +104,7 @@ public class MSQTestOverlordServiceClient extends NoopOverlordClient
           workerMemoryParameters,
           loadedSegmentMetadata,
           cTask.getTaskLockType(),
-          cTask.getQuerySpec().getContext()
+          cTask.getQuerySpec().getQuery().context()
       );
 
       inMemoryControllerTask.put(cTask.getId(), cTask);
@@ -197,9 +194,9 @@ public class MSQTestOverlordServiceClient extends NoopOverlordClient
   }
 
   @Nullable
-  MSQControllerTask2 getMSQControllerTask(String id)
+  MSQControllerTask getMSQControllerTask(String id)
   {
-    return (MSQControllerTask2) inMemoryControllerTask.get(id);
+    return inMemoryControllerTask.get(id);
   }
 
   /**

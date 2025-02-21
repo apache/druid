@@ -94,7 +94,6 @@ import org.apache.druid.msq.guice.MSQSqlModule;
 import org.apache.druid.msq.guice.MultiStageQuery;
 import org.apache.druid.msq.indexing.InputChannelFactory;
 import org.apache.druid.msq.indexing.MSQControllerTask;
-import org.apache.druid.msq.indexing.MSQControllerTask2;
 import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
@@ -1270,7 +1269,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
         verifyWorkerCount(reportPayload.getCounters());
         verifyCounters(reportPayload.getCounters());
 
-        MSQControllerTask2 msqControllerTask = indexingServiceClient.getMSQControllerTask(controllerId);
+        MSQControllerTask msqControllerTask = indexingServiceClient.getMSQControllerTask(controllerId);
         MSQSpec foundSpec = msqControllerTask.getQuerySpec();
         verifyLookupLoadingInfoInTaskContext(msqControllerTask.getContext());
         log.info(
@@ -1526,7 +1525,7 @@ public class MSQTestBase extends BaseCalciteQueryTest
         if (payload.getStatus().getErrorReport() != null) {
           throw new ISE("Query %s failed due to %s", sql, payload.getStatus().getErrorReport().toString());
         } else {
-          MSQControllerTask2 msqControllerTask = indexingServiceClient.getMSQControllerTask(controllerId);
+          MSQControllerTask msqControllerTask = indexingServiceClient.getMSQControllerTask(controllerId);
           verifyLookupLoadingInfoInTaskContext(msqControllerTask.getContext());
 
           final MSQSpec spec = msqControllerTask.getQuerySpec();

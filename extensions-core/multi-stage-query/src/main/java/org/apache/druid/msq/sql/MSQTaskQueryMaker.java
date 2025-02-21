@@ -34,7 +34,7 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.msq.exec.MSQTasks;
-import org.apache.druid.msq.indexing.MSQControllerTask2;
+import org.apache.druid.msq.indexing.MSQControllerTask;
 import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQTuningConfig;
 import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
@@ -129,7 +129,7 @@ public class MSQTaskQueryMaker implements QueryMaker
 
     final List<Pair<SqlTypeName, ColumnType>> typeList = getTypes(druidQuery, fieldMapping, plannerContext);
 
-    final MSQControllerTask2 controllerTask = new MSQControllerTask2(
+    final MSQControllerTask controllerTask = new MSQControllerTask(
         taskId,
         makeQuerySpec(targetDataSource, druidQuery, fieldMapping, plannerContext, terminalStageSpecFactory),
         MSQTaskQueryMakerUtils.maskSensitiveJsonKeys(plannerContext.getSql()),
