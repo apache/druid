@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.segment.indexing.granularity;
+package org.apache.druid.indexer.granularity;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
@@ -39,7 +39,6 @@ import org.junit.Test;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
 public class UniformGranularityTest
 {
@@ -178,34 +177,6 @@ public class UniformGranularityTest
     catch (Exception e) {
       throw new RuntimeException(e);
     }
-  }
-
-  @Test
-  public void testAsMap()
-  {
-    final GranularitySpec spec = new UniformGranularitySpec(
-        Granularities.DAY,
-        null,
-        Lists.newArrayList(
-            Intervals.of("2012-01-08T00Z/2012-01-11T00Z"),
-            Intervals.of("2012-01-07T00Z/2012-01-08T00Z"),
-            Intervals.of("2012-01-03T00Z/2012-01-04T00Z"),
-            Intervals.of("2012-01-01T00Z/2012-01-03T00Z")
-        )
-    );
-    Map<String, Object> map = spec.asMap(JSON_MAPPER);
-    final GranularitySpec rtSpec = JSON_MAPPER.convertValue(map, GranularitySpec.class);
-    Assert.assertEquals(
-        "Round-trip sortedBucketIntervals",
-        ImmutableList.copyOf(spec.sortedBucketIntervals()),
-        ImmutableList.copyOf(rtSpec.sortedBucketIntervals().iterator())
-    );
-    Assert.assertEquals(
-        "Round-trip granularity",
-        spec.getSegmentGranularity(),
-        rtSpec.getSegmentGranularity()
-    );
-    Assert.assertEquals(spec, rtSpec);
   }
 
   @Test

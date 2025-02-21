@@ -34,7 +34,6 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntArraySet;
 import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.ints.IntSet;
-import org.apache.druid.client.indexing.ClientCompactionTaskTransformSpec;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -54,6 +53,8 @@ import org.apache.druid.frame.util.DurableStorageUtils;
 import org.apache.druid.frame.write.InvalidFieldException;
 import org.apache.druid.frame.write.InvalidNullByteException;
 import org.apache.druid.indexer.TaskState;
+import org.apache.druid.indexer.granularity.GranularitySpec;
+import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
@@ -180,9 +181,8 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.indexing.granularity.GranularitySpec;
-import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
+import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
@@ -1695,12 +1695,10 @@ public class ControllerImpl implements Controller
     );
 
     DimensionsSpec dimensionsSpec = dataSchema.getDimensionsSpec();
-    Map<String, Object> transformSpec = TransformSpec.NONE.equals(dataSchema.getTransformSpec())
-                                        ? null
-                                        : new ClientCompactionTaskTransformSpec(
-                                            dataSchema.getTransformSpec().getFilter()
-                                        ).asMap(jsonMapper);
-    List<Object> metricsSpec = Collections.emptyList();
+    CompactionTransformSpec transformSpec = TransformSpec.NONE.equals(dataSchema.getTransformSpec())
+                                            ? null
+                                            : CompactionTransformSpec.of(dataSchema.getTransformSpec());
+    List<AggregatorFactory> metricsSpec = Collections.emptyList();
 
     if (querySpec.getQuery() instanceof GroupByQuery) {
       // For group-by queries, the aggregators are transformed to their combining factories in the dataschema, resulting
@@ -1730,8 +1728,8 @@ public class ControllerImpl implements Controller
         dimensionsSpec,
         metricsSpec,
         transformSpec,
-        indexSpec.asMap(jsonMapper),
-        granularitySpec.asMap(jsonMapper)
+        indexSpec,
+        granularitySpec
     );
   }
 
