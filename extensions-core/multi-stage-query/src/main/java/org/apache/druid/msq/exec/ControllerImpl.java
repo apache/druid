@@ -149,12 +149,7 @@ import org.apache.druid.msq.kernel.controller.ControllerQueryKernel;
 import org.apache.druid.msq.kernel.controller.ControllerQueryKernelConfig;
 import org.apache.druid.msq.kernel.controller.ControllerStagePhase;
 import org.apache.druid.msq.kernel.controller.WorkerInputs;
-import org.apache.druid.msq.querykit.MultiQueryKit;
-import org.apache.druid.msq.querykit.QueryKit;
 import org.apache.druid.msq.querykit.QueryKitUtils;
-import org.apache.druid.msq.querykit.WindowOperatorQueryKit;
-import org.apache.druid.msq.querykit.groupby.GroupByQueryKit;
-import org.apache.druid.msq.querykit.scan.ScanQueryKit;
 import org.apache.druid.msq.shuffle.input.DurableStorageInputChannelFactory;
 import org.apache.druid.msq.shuffle.input.WorkerInputChannelFactory;
 import org.apache.druid.msq.statistics.ClusterByStatisticsCollector;
@@ -162,12 +157,9 @@ import org.apache.druid.msq.statistics.PartialKeyStatisticsInformation;
 import org.apache.druid.msq.util.IntervalUtils;
 import org.apache.druid.msq.util.MSQFutureUtils;
 import org.apache.druid.msq.util.MultiStageQueryContext;
-import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.groupby.GroupByQuery;
-import org.apache.druid.query.operator.WindowOperatorQuery;
-import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -1243,25 +1235,6 @@ public class ControllerImpl implements Controller
       }
     }
     return null;
-  }
-
-  @SuppressWarnings("rawtypes")
-  static QueryKit<Query<?>> makeQueryControllerToolKit(QueryContext queryContext, ControllerContext ctrlContext)
-  {
-    final Map<Class<? extends Query>, QueryKit> kitMap =
-        ImmutableMap.<Class<? extends Query>, QueryKit>builder()
-                    .put(ScanQuery.class, new ScanQueryKit(ctrlContext.jsonMapper()))
-                    .put(GroupByQuery.class, new GroupByQueryKit(ctrlContext.jsonMapper()))
-                    .put(
-                        WindowOperatorQuery.class,
-                        new WindowOperatorQueryKit(
-                            ctrlContext.jsonMapper(),
-                            MultiStageQueryContext.isWindowFunctionOperatorTransformationEnabled(queryContext)
-                        )
-                    )
-                    .build();
-
-    return new MultiQueryKit(kitMap);
   }
 
   /**

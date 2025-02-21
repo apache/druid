@@ -38,15 +38,23 @@ import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.QueryDefinitionBuilder;
 import org.apache.druid.msq.kernel.StageDefinition;
 import org.apache.druid.msq.kernel.controller.ControllerQueryKernelConfig;
+import org.apache.druid.msq.querykit.MultiQueryKit;
+import org.apache.druid.msq.querykit.QueryKit;
 import org.apache.druid.msq.querykit.QueryKitSpec;
 import org.apache.druid.msq.querykit.QueryKitUtils;
 import org.apache.druid.msq.querykit.ShuffleSpecFactory;
+import org.apache.druid.msq.querykit.WindowOperatorQueryKit;
+import org.apache.druid.msq.querykit.groupby.GroupByQueryKit;
 import org.apache.druid.msq.querykit.results.ExportResultsFrameProcessorFactory;
 import org.apache.druid.msq.querykit.results.QueryResultFrameProcessorFactory;
+import org.apache.druid.msq.querykit.scan.ScanQueryKit;
 import org.apache.druid.msq.util.MSQTaskQueryMakerUtils;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.groupby.GroupByQuery;
+import org.apache.druid.query.operator.WindowOperatorQuery;
+import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.http.ResultFormat;
@@ -54,6 +62,7 @@ import org.apache.druid.storage.ExportStorageProvider;
 
 import java.io.IOException;
 import java.util.Iterator;
+import java.util.Map;
 
 public class QueryKitBasedMSQPlanner
 {
@@ -70,9 +79,28 @@ public class QueryKitBasedMSQPlanner
     this.querySpec = querySpec;
     this.resultsContext = resultsContext;
     this.queryKit = context.makeQueryKitSpec(
-        ControllerImpl.makeQueryControllerToolKit(querySpec.getContext(), context), queryId, querySpec,
+        makeQueryControllerToolKit(querySpec.getContext(), context.jsonMapper()), queryId, querySpec,
         queryKernelConfig
     );
+  }
+
+  @SuppressWarnings("rawtypes")
+  static QueryKit<Query<?>> makeQueryControllerToolKit(QueryContext queryContext, ObjectMapper jsonMapper)
+  {
+    final Map<Class<? extends Query>, QueryKit> kitMap =
+        ImmutableMap.<Class<? extends Query>, QueryKit>builder()
+                    .put(ScanQuery.class, new ScanQueryKit(jsonMapper))
+                    .put(GroupByQuery.class, new GroupByQueryKit(jsonMapper))
+                    .put(
+                        WindowOperatorQuery.class,
+                        new WindowOperatorQueryKit(
+                            jsonMapper,
+                            MultiStageQueryContext.isWindowFunctionOperatorTransformationEnabled(queryContext)
+                        )
+                    )
+                    .build();
+
+    return new MultiQueryKit(kitMap);
   }
 
   public static QueryDefinition extracted(ControllerContext context2, MSQSpec querySpec2, ResultsContext resultsContext2,

@@ -23,6 +23,7 @@ import org.apache.calcite.rel.core.Join;
 import org.apache.calcite.rel.hint.RelHint;
 import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map.Entry;
