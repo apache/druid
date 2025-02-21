@@ -63,7 +63,6 @@ import java.util.Map;
 
 public class QueryKitBasedMSQPlanner
 {
-  private final ControllerContext context;
   private final MSQSpec querySpec;
   private final ResultsContext resultsContext;
   private final QueryKitSpec queryKitSpec;
@@ -78,7 +77,6 @@ public class QueryKitBasedMSQPlanner
   public QueryKitBasedMSQPlanner(ControllerContext context, MSQSpec querySpec, ResultsContext resultsContext,
       ControllerQueryKernelConfig queryKernelConfig, String queryId)
   {
-    this.context = context;
     this.querySpec = querySpec;
     this.jsonMapper = context.jsonMapper();
     this.tuningConfig = querySpec.getTuningConfig();
