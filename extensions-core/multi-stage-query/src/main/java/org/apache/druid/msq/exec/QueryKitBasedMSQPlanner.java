@@ -60,9 +60,7 @@ public class QueryKitBasedMSQPlanner
   private ControllerContext context;
   private MSQSpec querySpec;
   private ResultsContext resultsContext;
-  private ControllerQueryKernelConfig queryKernelConfig;
-  private String queryId;
-  private QueryKitSpec query6Kit;
+  private QueryKitSpec queryKit;
 
 
   public QueryKitBasedMSQPlanner(ControllerContext context, MSQSpec querySpec, ResultsContext resultsContext,
@@ -71,9 +69,7 @@ public class QueryKitBasedMSQPlanner
     this.context = context;
     this.querySpec = querySpec;
     this.resultsContext = resultsContext;
-    this.queryKernelConfig = queryKernelConfig;
-    this.queryId = queryId;
-    query6Kit = context.makeQueryKitSpec(
+    this.queryKit = context.makeQueryKitSpec(
         ControllerImpl.makeQueryControllerToolKit(querySpec.getContext2(), context), queryId, querySpec,
         queryKernelConfig
     );
@@ -93,7 +89,7 @@ public class QueryKitBasedMSQPlanner
   QueryDefinition makeQueryDefinition(
   )
   {
-    QueryKitSpec queryKitSpec = query6Kit;
+    QueryKitSpec queryKitSpec = queryKit;
     final ObjectMapper jsonMapper = context.jsonMapper();
     final MSQTuningConfig tuningConfig = querySpec.getTuningConfig();
     final ColumnMappings columnMappings = querySpec.getColumnMappings();
