@@ -1717,11 +1717,11 @@ public class ControllerImpl implements Controller
                                             : CompactionTransformSpec.of(dataSchema.getTransformSpec());
     List<AggregatorFactory> metricsSpec = Collections.emptyList();
 
-    if (querySpec.getQuery() instanceof GroupByQuery) {
+    if (querySpec.getQueryHacky() instanceof GroupByQuery) {
       // For group-by queries, the aggregators are transformed to their combining factories in the dataschema, resulting
       // in a mismatch between schema in compaction spec and the one in compaction state. Sourcing the original
       // AggregatorFactory definition for aggregators in the dataSchema, therefore, directly from the querySpec.
-      GroupByQuery groupByQuery = (GroupByQuery) querySpec.getQuery();
+      GroupByQuery groupByQuery = (GroupByQuery) querySpec.getQueryHacky();
       // Collect all aggregators that are part of the current dataSchema, since a non-rollup query (isRollup() is false)
       // moves metrics columns to dimensions in the final schema.
       Set<String> aggregatorsInDataSchema = Arrays.stream(dataSchema.getAggregators())

@@ -396,7 +396,7 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery, 
   {
     if (isIngestion(querySpec)) {
       final String targetDataSource = ((DataSourceMSQDestination) querySpec.getDestination()).getDataSource();
-      final Set<String> sourceTableNames = querySpec.getQuery().getDataSource().getTableNames();
+      final Set<String> sourceTableNames = querySpec.getQueryHacky().getDataSource().getTableNames();
       return sourceTableNames.contains(targetDataSource);
     } else {
       return false;

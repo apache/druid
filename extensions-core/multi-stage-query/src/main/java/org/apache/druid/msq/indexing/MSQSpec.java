@@ -67,7 +67,12 @@ public class MSQSpec
     return query;
   }
 
-  public Object getQueryIrrelevant()
+  public Query<?> getQueryHacky()
+  {
+    return query;
+  }
+
+  public Query<?> getQueryIrrelevant()
   {
     return query;
   }
