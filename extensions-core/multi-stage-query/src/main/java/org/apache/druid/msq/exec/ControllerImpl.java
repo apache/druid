@@ -449,7 +449,7 @@ public class ControllerImpl implements Controller
       }
     }
 
-    boolean shouldWaitForSegmentLoad = MultiStageQueryContext.shouldWaitForSegmentLoad(querySpec.getContext2());
+    boolean shouldWaitForSegmentLoad = MultiStageQueryContext.shouldWaitForSegmentLoad(querySpec.getContext());
 
     try {
       if (MSQControllerTask.isIngestion(querySpec)) {
@@ -558,7 +558,7 @@ public class ControllerImpl implements Controller
                               .sum();
     }
 
-    log.debug("Processed bytes[%d] for query[%s].", totalProcessedBytes, querySpec.getQueryIrrelevant());
+    log.debug("Processed bytes[%d] for query[%s].", totalProcessedBytes, querySpec.getQuery());
     context.emitMetric("ingest/input/bytes", totalProcessedBytes);
   }
 
@@ -642,7 +642,7 @@ public class ControllerImpl implements Controller
       );
     }
 
-    final long maxParseExceptions = MultiStageQueryContext.getMaxParseExceptions(querySpec.getContext2());
+    final long maxParseExceptions = MultiStageQueryContext.getMaxParseExceptions(querySpec.getContext());
     this.faultsExceededChecker = new FaultsExceededChecker(
         ImmutableMap.of(CannotParseExternalDataFault.CODE, maxParseExceptions)
     );
@@ -654,7 +654,7 @@ public class ControllerImpl implements Controller
                 stageDefinition.getId().getStageNumber(),
                 finalizeClusterStatisticsMergeMode(
                     stageDefinition,
-                    MultiStageQueryContext.getClusterStatisticsMergeMode(querySpec.getContext2())
+                    MultiStageQueryContext.getClusterStatisticsMergeMode(querySpec.getContext())
                 )
             )
     );
@@ -662,7 +662,7 @@ public class ControllerImpl implements Controller
         netClient,
         workerManager,
         queryKernelConfig.isFaultTolerant(),
-        MultiStageQueryContext.getSketchEncoding(querySpec.getContext2())
+        MultiStageQueryContext.getSketchEncoding(querySpec.getContext())
     );
     closer.register(workerSketchFetcher::close);
 
@@ -1422,7 +1422,7 @@ public class ControllerImpl implements Controller
                  .submit(new MarkSegmentsAsUnusedAction(destination.getDataSource(), interval));
         }
       } else {
-        if (MultiStageQueryContext.shouldWaitForSegmentLoad(querySpec.getContext2())) {
+        if (MultiStageQueryContext.shouldWaitForSegmentLoad(querySpec.getContext())) {
           segmentLoadWaiter = new SegmentLoadStatusFetcher(
               context.injector().getInstance(BrokerClient.class),
               context.jsonMapper(),
@@ -1438,7 +1438,7 @@ public class ControllerImpl implements Controller
         );
       }
     } else if (!segments.isEmpty()) {
-      if (MultiStageQueryContext.shouldWaitForSegmentLoad(querySpec.getContext2())) {
+      if (MultiStageQueryContext.shouldWaitForSegmentLoad(querySpec.getContext())) {
         segmentLoadWaiter = new SegmentLoadStatusFetcher(
             context.injector().getInstance(BrokerClient.class),
             context.jsonMapper(),
@@ -1569,11 +1569,11 @@ public class ControllerImpl implements Controller
       @SuppressWarnings("unchecked")
       Set<DataSegment> segments = (Set<DataSegment>) queryKernel.getResultObjectForStage(finalStageId);
 
-      boolean storeCompactionState = QueryContext.of(querySpec.getContext())
-                                                 .getBoolean(
-                                                     Tasks.STORE_COMPACTION_STATE_KEY,
-                                                     Tasks.DEFAULT_STORE_COMPACTION_STATE
-                                                 );
+      boolean storeCompactionState = querySpec.getContext()
+          .getBoolean(
+              Tasks.STORE_COMPACTION_STATE_KEY,
+              Tasks.DEFAULT_STORE_COMPACTION_STATE
+          );
 
       if (storeCompactionState) {
         DataSourceMSQDestination destination = (DataSourceMSQDestination) querySpec.getDestination();
@@ -1686,7 +1686,7 @@ public class ControllerImpl implements Controller
 
     GranularitySpec granularitySpec = new UniformGranularitySpec(
         segmentGranularity,
-        QueryContext.of(querySpec.getContext())
+        querySpec.getContext()
                     .getGranularity(DruidSqlInsert.SQL_INSERT_QUERY_GRANULARITY, jsonMapper),
         dataSchema.getGranularitySpec().isRollup(),
         // Not using dataSchema.getGranularitySpec().inputIntervals() as that always has ETERNITY
@@ -1699,11 +1699,11 @@ public class ControllerImpl implements Controller
                                             : CompactionTransformSpec.of(dataSchema.getTransformSpec());
     List<AggregatorFactory> metricsSpec = Collections.emptyList();
 
-    if (querySpec.getQueryHacky() instanceof GroupByQuery) {
+    if (querySpec.getQuery() instanceof GroupByQuery) {
       // For group-by queries, the aggregators are transformed to their combining factories in the dataschema, resulting
       // in a mismatch between schema in compaction spec and the one in compaction state. Sourcing the original
       // AggregatorFactory definition for aggregators in the dataSchema, therefore, directly from the querySpec.
-      GroupByQuery groupByQuery = (GroupByQuery) querySpec.getQueryHacky();
+      GroupByQuery groupByQuery = (GroupByQuery) querySpec.getQuery();
       // Collect all aggregators that are part of the current dataSchema, since a non-rollup query (isRollup() is false)
       // moves metrics columns to dimensions in the final schema.
       Set<String> aggregatorsInDataSchema = Arrays.stream(dataSchema.getAggregators())
@@ -2357,7 +2357,7 @@ public class ControllerImpl implements Controller
     private void startStages() throws IOException, InterruptedException
     {
       final long maxInputBytesPerWorker =
-          MultiStageQueryContext.getMaxInputBytesPerWorker(querySpec.getContext2());
+          MultiStageQueryContext.getMaxInputBytesPerWorker(querySpec.getContext());
 
       logKernelStatus(queryDef.getQueryId(), queryKernel);
 
@@ -2417,7 +2417,7 @@ public class ControllerImpl implements Controller
       final StageId shuffleStageId = new StageId(queryDef.getQueryId(), shuffleStageNumber);
 
       final boolean isFailOnEmptyInsertEnabled =
-          MultiStageQueryContext.isFailOnEmptyInsertEnabled(querySpec.getContext2());
+          MultiStageQueryContext.isFailOnEmptyInsertEnabled(querySpec.getContext());
       final Boolean isShuffleStageOutputEmpty = queryKernel.isStageOutputEmpty(shuffleStageId);
       if (isFailOnEmptyInsertEnabled && Boolean.TRUE.equals(isShuffleStageOutputEmpty)) {
         throw new MSQException(new InsertCannotBeEmptyFault(getDataSourceForIngestion(querySpec)));
@@ -2609,7 +2609,7 @@ public class ControllerImpl implements Controller
             resultReaderExec,
             RESULT_READER_CANCELLATION_ID,
             null,
-            MultiStageQueryContext.removeNullBytes(querySpec.getContext2())
+            MultiStageQueryContext.removeNullBytes(querySpec.getContext())
         );
 
         resultsChannel = ReadableConcatFrameChannel.open(

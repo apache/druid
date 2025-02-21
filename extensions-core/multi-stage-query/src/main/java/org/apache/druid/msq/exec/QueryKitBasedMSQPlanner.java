@@ -70,7 +70,7 @@ public class QueryKitBasedMSQPlanner
     this.querySpec = querySpec;
     this.resultsContext = resultsContext;
     this.queryKit = context.makeQueryKitSpec(
-        ControllerImpl.makeQueryControllerToolKit(querySpec.getContext2(), context), queryId, querySpec,
+        ControllerImpl.makeQueryControllerToolKit(querySpec.getContext(), context), queryId, querySpec,
         queryKernelConfig
     );
   }
@@ -92,7 +92,7 @@ public class QueryKitBasedMSQPlanner
     final ColumnMappings columnMappings = querySpec.getColumnMappings();
     MSQDestination destination = querySpec.getDestination();
     Query<?> query2 = querySpec.getQuery();
-    QueryContext context2 = querySpec.getContext2();
+    QueryContext context2 = querySpec.getContext();
 
     boolean ingestion = MSQControllerTask.isIngestion(destination);
     final Query<?> queryToPlan;

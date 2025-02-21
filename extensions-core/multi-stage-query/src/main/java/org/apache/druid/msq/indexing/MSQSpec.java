@@ -67,19 +67,9 @@ public class MSQSpec
     return query;
   }
 
-  public Query<?> getQueryHacky()
+  public QueryContext getContext()
   {
-    return query;
-  }
-
-  public Query<?> getQueryIrrelevant()
-  {
-    return query;
-  }
-
-  public Map<String, Object> getContext()
-  {
-    return query.getContext();
+    return query.context();
   }
 
   @JsonProperty("columnMappings")
@@ -200,11 +190,6 @@ public class MSQSpec
       return null;
 
     }
-  }
-
-  public QueryContext getContext2()
-  {
-    return QueryContext.of(getContext());
   }
 
 }

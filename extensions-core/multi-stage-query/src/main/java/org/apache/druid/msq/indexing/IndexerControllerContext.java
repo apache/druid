@@ -257,7 +257,7 @@ public class IndexerControllerContext implements ControllerContext
         // Assume tasks are symmetric: workers have the same number of processors available as a controller.
         // Create one partition per processor per task, for maximum parallelism.
         MultiStageQueryContext.getTargetPartitionsPerWorkerWithDefault(
-            querySpec.getContext2(),
+            querySpec.getContext(),
             memoryIntrospector.numProcessingThreads()
         )
     );
@@ -271,7 +271,7 @@ public class IndexerControllerContext implements ControllerContext
       final ControllerMemoryParameters memoryParameters
   )
   {
-    final QueryContext queryContext = querySpec.getContext2();
+    final QueryContext queryContext = querySpec.getContext();
     final int maxConcurrentStages =
         MultiStageQueryContext.getMaxConcurrentStagesWithDefault(queryContext, DEFAULT_MAX_CONCURRENT_STAGES);
     final boolean isFaultToleranceEnabled = MultiStageQueryContext.isFaultToleranceEnabled(queryContext);
@@ -325,7 +325,7 @@ public class IndexerControllerContext implements ControllerContext
       final int maxConcurrentStages
   )
   {
-    final QueryContext queryContext = querySpec.getContext2();
+    final QueryContext queryContext = querySpec.getContext();
     final long maxParseExceptions = MultiStageQueryContext.getMaxParseExceptions(queryContext);
     final boolean removeNullBytes = MultiStageQueryContext.removeNullBytes(queryContext);
     final boolean includeAllCounters = MultiStageQueryContext.getIncludeAllCounters(queryContext);

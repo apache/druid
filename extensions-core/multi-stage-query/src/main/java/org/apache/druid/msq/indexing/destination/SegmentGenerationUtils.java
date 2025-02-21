@@ -78,7 +78,7 @@ public final class SegmentGenerationUtils
   )
   {
     final DataSourceMSQDestination destination = (DataSourceMSQDestination) querySpec.getDestination();
-    final boolean isRollupQuery = isRollupQuery(querySpec.getQueryIrrelevant());
+    final boolean isRollupQuery = isRollupQuery(querySpec.getQuery());
     final boolean forceSegmentSortByTime =
         MultiStageQueryContext.isForceSegmentSortByTime(querySpec.getQuery().context());
 

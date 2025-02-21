@@ -276,7 +276,7 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery, 
     final ControllerContext context = new IndexerControllerContext(
         this.getTaskLockType(),
         this.getDataSource(),
-        this.getQuerySpec().getContext2(),
+        this.getQuerySpec().getContext(),
         this.getContext(),
         metricBuilder,
         toolbox,
@@ -327,7 +327,7 @@ public class MSQControllerTask extends AbstractTask implements ClientTaskQuery, 
               // Use the task context and override with the query context
               QueryContexts.override(
                   getContext(),
-                  querySpec.getContext()
+                  querySpec.getContext().asMap()
               )
           ),
           ((DataSourceMSQDestination) querySpec.getDestination()).isReplaceTimeChunks()
