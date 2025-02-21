@@ -32,9 +32,9 @@ if [ $# != 1 ]
 fi
 
 DRUID_ROOT=$1
-
-cp_if_not_exist ${DRUID_ROOT}/hooks/run-all-in-dir.py ${DRUID_ROOT}/.git/hooks/run-all-in-dir.py
-cp_if_not_exist ${DRUID_ROOT}/hooks/pre-commit ${DRUID_ROOT}/.git/hooks/pre-commit
-cp_if_not_exist ${DRUID_ROOT}/hooks/pre-push ${DRUID_ROOT}/.git/hooks/pre-push
-cp_if_not_exist ${DRUID_ROOT}/hooks/pre-commits ${DRUID_ROOT}/.git/hooks/pre-commits
-cp_if_not_exist ${DRUID_ROOT}/hooks/pre-pushes ${DRUID_ROOT}/.git/hooks/pre-pushes
+GIT_COMMON_DIR=$(eval "git -C $DRUID_ROOT rev-parse --path-format=absolute --git-common-dir")
+cp_if_not_exist ${DRUID_ROOT}/hooks/run-all-in-dir.py ${GIT_COMMON_DIR}/hooks/run-all-in-dir.py
+cp_if_not_exist ${DRUID_ROOT}/hooks/pre-commit ${GIT_COMMON_DIR}/hooks/pre-commit
+cp_if_not_exist ${DRUID_ROOT}/hooks/pre-push ${GIT_COMMON_DIR}/hooks/pre-push
+cp_if_not_exist ${DRUID_ROOT}/hooks/pre-commits ${GIT_COMMON_DIR}/hooks/pre-commits
+cp_if_not_exist ${DRUID_ROOT}/hooks/pre-pushes ${GIT_COMMON_DIR}/hooks/pre-pushes
