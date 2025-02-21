@@ -460,7 +460,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
 
     try {
       int maxPolls = 5;
-      while (!remainingPartitions.isEmpty() || maxPolls-- > 0) {
+      while (!remainingPartitions.isEmpty() && maxPolls-- > 0) {
         for (OrderedPartitionableRecord<KafkaTopicPartition, Long, KafkaRecordEntity> record : recordSupplier.poll(getIoConfig().getPollTimeout())) {
           if (!result.containsKey(record.getPartitionId())) {
             result.put(record.getPartitionId(), record.getTimestamp());
