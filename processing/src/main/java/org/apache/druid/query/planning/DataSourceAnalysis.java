@@ -21,7 +21,7 @@ package org.apache.druid.query.planning;
 
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.query.BaseQuery;
+import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.Query;
@@ -30,6 +30,7 @@ import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnionDataSource;
 import org.apache.druid.query.UnnestDataSource;
 import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.spec.QuerySegmentSpec;
 import org.apache.druid.segment.join.JoinPrefixUtils;
 
@@ -83,12 +84,16 @@ public class DataSourceAnalysis
   @Nullable
   private final DimFilter joinBaseTableFilter;
   private final List<PreJoinableClause> preJoinableClauses;
+  @Nullable
+  private final QuerySegmentSpec querySegmentSpec;
 
   public DataSourceAnalysis(
       DataSource baseDataSource,
       @Nullable Query<?> baseQuery,
       @Nullable DimFilter joinBaseTableFilter,
-      List<PreJoinableClause> preJoinableClauses
+      List<PreJoinableClause> preJoinableClauses,
+      @Nullable
+      QuerySegmentSpec querySegmentSpec
   )
   {
     if (baseDataSource instanceof JoinDataSource) {
@@ -101,6 +106,7 @@ public class DataSourceAnalysis
     this.baseQuery = baseQuery;
     this.joinBaseTableFilter = joinBaseTableFilter;
     this.preJoinableClauses = preJoinableClauses;
+    this.querySegmentSpec = querySegmentSpec;
   }
 
   /**
@@ -162,34 +168,17 @@ public class DataSourceAnalysis
   }
 
   /**
-   * Returns the {@link QuerySegmentSpec} that is associated with the base datasource, if any. This only happens
-   * when there is an outer query datasource. In this case, the base querySegmentSpec is the one associated with the
-   * innermost subquery.
-   * <p>
-   * This {@link QuerySegmentSpec} is taken from the query returned by {@link #getBaseQuery()}.
+   * The applicable {@link QuerySegmentSpec} for this vertex.
    *
-   * @return the query segment spec associated with the base datasource if  is true, else empty
+   * There might be more queries inside a single vertex; so the outer one is not necessary correct.
    */
-  public Optional<QuerySegmentSpec> getBaseQuerySegmentSpec()
+  public QuerySegmentSpec getEffectiveQuerySegmentSpec()
   {
-    return getBaseQuery().map(query -> ((BaseQuery<?>) query).getQuerySegmentSpec());
-  }
-
-  /**
-   * Returns the data source analysis with or without the updated query.
-   * If the DataSourceAnalysis already has a non-null baseQuery, no update is required
-   * Else this method creates a new analysis object with the base query provided in the input
-   *
-   * @param query the query to add to the analysis if the baseQuery is null
-   *
-   * @return the existing analysis if it has non-null basequery, else a new one with the updated base query
-   */
-  public DataSourceAnalysis maybeWithBaseQuery(Query<?> query)
-  {
-    if (!getBaseQuery().isPresent() && query instanceof BaseQuery) {
-      return new DataSourceAnalysis(baseDataSource, query, joinBaseTableFilter, preJoinableClauses);
+    if (querySegmentSpec == null) {
+      throw DruidException
+          .defensive("Can't answer this question. Please obtain a datasource analysis from the Query object!");
     }
-    return this;
+    return querySegmentSpec;
   }
 
   /**
@@ -282,13 +271,13 @@ public class DataSourceAnalysis
       return false;
     }
     DataSourceAnalysis that = (DataSourceAnalysis) o;
-    return Objects.equals(baseDataSource, that.baseDataSource);
+    return Objects.equals(baseDataSource, that.baseDataSource) && Objects.equals(querySegmentSpec, that.querySegmentSpec);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(baseDataSource);
+    return Objects.hash(baseDataSource, querySegmentSpec);
   }
 
   @Override
@@ -312,5 +301,22 @@ public class DataSourceAnalysis
       }
     }
     return baseDataSource.isGlobal();
+  }
+
+  public DataSourceAnalysis maybeWithQuerySegmentSpec(QuerySegmentSpec newQuerySegmentSpec)
+  {
+    if (newQuerySegmentSpec == null) {
+      newQuerySegmentSpec = new MultipleIntervalSegmentSpec(Intervals.ONLY_ETERNITY);
+    }
+    if (querySegmentSpec == null) {
+      return new DataSourceAnalysis(
+          baseDataSource,
+          baseQuery,
+          joinBaseTableFilter,
+          preJoinableClauses,
+          newQuerySegmentSpec
+      );
+    }
+    return this;
   }
 }

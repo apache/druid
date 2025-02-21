@@ -124,9 +124,7 @@ public class ExternalDataSource implements DataSource
   }
 
   @Override
-  public Function<SegmentReference, SegmentReference> createSegmentMapFunction(
-      Query query
-  )
+  public Function<SegmentReference, SegmentReference> createSegmentMapFunction(Query query)
   {
     return Function.identity();
   }
@@ -146,7 +144,7 @@ public class ExternalDataSource implements DataSource
   @Override
   public DataSourceAnalysis getAnalysis()
   {
-    return new DataSourceAnalysis(this, null, null, Collections.emptyList());
+    return new DataSourceAnalysis(this, null, null, Collections.emptyList(), null);
   }
 
   @Override
