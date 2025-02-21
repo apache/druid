@@ -60,7 +60,7 @@ import org.apache.druid.sql.calcite.parser.DruidSqlReplace;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.planner.QueryUtils;
-import org.apache.druid.sql.calcite.rel.DruidQuery2;
+import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.calcite.rel.Grouping;
 import org.apache.druid.sql.calcite.run.QueryMaker;
 import org.apache.druid.sql.calcite.run.SqlResults;
@@ -114,7 +114,7 @@ public class MSQTaskQueryMaker implements QueryMaker
   }
 
   @Override
-  public QueryResponse<Object[]> runQuery(final DruidQuery2 druidQuery)
+  public QueryResponse<Object[]> runQuery(final DruidQuery druidQuery)
   {
     Hook.QUERY_PLAN.run(druidQuery.getQuery());
     plannerContext.dispatchHook(DruidHook.NATIVE_PLAN, druidQuery.getQuery());
@@ -146,7 +146,7 @@ public class MSQTaskQueryMaker implements QueryMaker
 
   public static MSQSpec makeQuerySpec(
       @Nullable final IngestDestination targetDataSource,
-      final DruidQuery2 druidQuery,
+      final DruidQuery druidQuery,
       final List<Entry<Integer, String>> fieldMapping,
       final PlannerContext plannerContext,
       final MSQTerminalStageSpecFactory terminalStageSpecFactory
@@ -296,7 +296,7 @@ public class MSQTaskQueryMaker implements QueryMaker
         MSQSpec.builder()
                .query(druidQuery.getQuery().withOverriddenContext(nativeQueryContextOverrides))
 //               .context(druidQuery.getQuery().withOverriddenContext(nativeQueryContextOverrides).getContext())
-               .columnMappings(new ColumnMappings(QueryUtils.buildColumnMappingsX(fieldMapping, druidQuery)))
+               .columnMappings(new ColumnMappings(QueryUtils.buildColumnMappings(fieldMapping, druidQuery)))
                .destination(destination)
                .assignmentStrategy(MultiStageQueryContext.getAssignmentStrategy(sqlQueryContext))
                .tuningConfig(new MSQTuningConfig(maxNumWorkers, maxRowsInMemory, rowsPerSegment, maxNumSegments, indexSpec))
@@ -308,7 +308,7 @@ public class MSQTaskQueryMaker implements QueryMaker
   }
 
   public static List<Pair<SqlTypeName, ColumnType>> getTypes(
-      final DruidQuery2 druidQuery,
+      final DruidQuery druidQuery,
       final List<Entry<Integer, String>> fieldMapping,
       final PlannerContext plannerContext
   )
@@ -342,7 +342,7 @@ public class MSQTaskQueryMaker implements QueryMaker
     return retVal;
   }
 
-  private static Map<String, ColumnType> buildAggregationIntermediateTypeMap(final DruidQuery2 druidQuery)
+  private static Map<String, ColumnType> buildAggregationIntermediateTypeMap(final DruidQuery druidQuery)
   {
     final Grouping grouping = druidQuery.getGrouping();
 

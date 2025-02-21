@@ -20,7 +20,7 @@
 package org.apache.druid.msq.indexing.destination;
 
 import org.apache.druid.sql.calcite.planner.PlannerContext;
-import org.apache.druid.sql.calcite.rel.DruidQuery2;
+import org.apache.druid.sql.calcite.rel.DruidQuery;
 
 /**
  * Configures ingestion queries to create new segments with the results in all cases.
@@ -28,7 +28,7 @@ import org.apache.druid.sql.calcite.rel.DruidQuery2;
 public class SegmentGenerationTerminalStageSpecFactory implements MSQTerminalStageSpecFactory
 {
   @Override
-  public TerminalStageSpec createTerminalStageSpec(DruidQuery2 druidQuery, PlannerContext plannerContext)
+  public TerminalStageSpec createTerminalStageSpec(DruidQuery druidQuery, PlannerContext plannerContext)
   {
     return SegmentGenerationStageSpec.instance();
   }

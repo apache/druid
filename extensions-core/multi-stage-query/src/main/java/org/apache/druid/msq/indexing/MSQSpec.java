@@ -77,7 +77,6 @@ public class MSQSpec
     return query;
   }
 
-
   public Map<String, Object> getContext()
   {
     return query.getContext();

@@ -23,8 +23,6 @@ import org.apache.calcite.rel.core.Join;
 import org.apache.calcite.rel.hint.RelHint;
 import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
-import org.apache.druid.sql.calcite.rel.DruidQuery2;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map.Entry;
@@ -48,29 +46,6 @@ public class QueryUtils
   public static List<ColumnMapping> buildColumnMappings(
       final List<Entry<Integer, String>> fieldMapping,
       final DruidQuery druidQuery
-  )
-  {
-    final List<ColumnMapping> columnMappings = new ArrayList<>();
-    for (final Entry<Integer, String> entry : fieldMapping) {
-      final String queryColumn = druidQuery.getOutputRowSignature().getColumnName(entry.getKey());
-      final String outputColumn = entry.getValue();
-      columnMappings.add(new ColumnMapping(queryColumn, outputColumn));
-    }
-
-    return columnMappings;
-  }
-
-
-  /**
-   * Builds the mappings for queryColumn to outputColumn
-   * @param fieldMapping The field mappings
-   * @param druidQuery The Druid query
-   * @return Mappings for queryColumn to outputColumn
-   */
-  @Deprecated
-  public static List<ColumnMapping> buildColumnMappingsX(
-      final List<Entry<Integer, String>> fieldMapping,
-      final DruidQuery2 druidQuery
   )
   {
     final List<ColumnMapping> columnMappings = new ArrayList<>();

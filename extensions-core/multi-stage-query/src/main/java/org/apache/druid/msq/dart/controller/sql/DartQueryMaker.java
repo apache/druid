@@ -55,7 +55,6 @@ import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
-import org.apache.druid.sql.calcite.rel.DruidQuery2;
 import org.apache.druid.sql.calcite.run.QueryMaker;
 import org.apache.druid.sql.calcite.run.SqlResults;
 
@@ -127,7 +126,7 @@ public class DartQueryMaker implements QueryMaker
   }
 
   @Override
-  public QueryResponse<Object[]> runQuery(DruidQuery2 druidQuery)
+  public QueryResponse<Object[]> runQuery(DruidQuery druidQuery)
   {
     if (!plannerContext.getAuthorizationResult().allowAccessWithNoRestriction()) {
       throw new ForbiddenException(plannerContext.getAuthorizationResult().getErrorMessage());
