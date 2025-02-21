@@ -22,6 +22,7 @@ package org.apache.druid.msq.exec;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.msq.indexing.MSQControllerTask;
 import org.apache.druid.msq.indexing.MSQSpec;
@@ -59,10 +60,13 @@ import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.http.ResultFormat;
 import org.apache.druid.storage.ExportStorageProvider;
 
+import java.io.IOException;
+import java.util.Iterator;
 import java.util.Map;
 
 public class QueryKitBasedMSQPlanner
 {
+  private final ControllerContext context;
   private final MSQSpec querySpec;
   private final ResultsContext resultsContext;
   private final QueryKitSpec queryKitSpec;
@@ -77,6 +81,7 @@ public class QueryKitBasedMSQPlanner
   public QueryKitBasedMSQPlanner(ControllerContext context, MSQSpec querySpec, ResultsContext resultsContext,
       ControllerQueryKernelConfig queryKernelConfig, String queryId)
   {
+    this.context = context;
     this.querySpec = querySpec;
     this.jsonMapper = context.jsonMapper();
     this.tuningConfig = querySpec.getTuningConfig();
@@ -228,6 +233,8 @@ public class QueryKitBasedMSQPlanner
       final ExportMSQDestination exportMSQDestination = (ExportMSQDestination) destination;
       final ExportStorageProvider exportStorageProvider = exportMSQDestination.getExportStorageProvider();
 
+      ensureExportLocationEmpty(context, destination);
+
       final ResultFormat resultFormat = exportMSQDestination.getResultFormat();
       final QueryDefinitionBuilder builder = QueryDefinition.builder(queryKitSpec.getQueryId());
       builder.addAll(queryDef);
@@ -250,4 +257,32 @@ public class QueryKitBasedMSQPlanner
     }
   }
 
+  public static void ensureExportLocationEmpty(final ControllerContext context, final MSQDestination destination)
+  {
+    if (MSQControllerTask.isExport(destination)) {
+      final ExportMSQDestination exportMSQDestination = (ExportMSQDestination) destination;
+      final ExportStorageProvider exportStorageProvider = exportMSQDestination.getExportStorageProvider();
+
+      try {
+        // Check that the export destination is empty as a sanity check. We want
+        // to avoid modifying any other files with export.
+        Iterator<String> filesIterator = exportStorageProvider.createStorageConnector(context.taskTempDir())
+            .listDir("");
+        if (filesIterator.hasNext()) {
+          throw DruidException.forPersona(DruidException.Persona.USER)
+              .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+              .build(
+                  "Found files at provided export destination[%s]. Export is only allowed to "
+                      + "an empty path. Please provide an empty path/subdirectory or move the existing files.",
+                  exportStorageProvider.getBasePath()
+              );
+        }
+      }
+      catch (IOException e) {
+        throw DruidException.forPersona(DruidException.Persona.USER)
+            .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+            .build(e, "Exception occurred while connecting to export destination.");
+      }
+    }
+  }
 }

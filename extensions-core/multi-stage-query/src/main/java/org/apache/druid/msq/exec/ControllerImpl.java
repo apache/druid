@@ -99,7 +99,6 @@ import org.apache.druid.msq.indexing.WorkerCount;
 import org.apache.druid.msq.indexing.client.ControllerChatHandler;
 import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
 import org.apache.druid.msq.indexing.destination.ExportMSQDestination;
-import org.apache.druid.msq.indexing.destination.MSQDestination;
 import org.apache.druid.msq.indexing.destination.SegmentGenerationStageSpec;
 import org.apache.druid.msq.indexing.destination.TerminalStageSpec;
 import org.apache.druid.msq.indexing.error.CanceledFault;
@@ -171,7 +170,6 @@ import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
-import org.apache.druid.storage.ExportStorageProvider;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.DimensionRangeShardSpec;
@@ -190,7 +188,6 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -589,35 +586,6 @@ public class ControllerImpl implements Controller
     }
   }
 
-  public static void ensureExportLocationEmpty(final ControllerContext context, final MSQDestination destination)
-  {
-    if (MSQControllerTask.isExport(destination)) {
-      final ExportMSQDestination exportMSQDestination = (ExportMSQDestination) destination;
-      final ExportStorageProvider exportStorageProvider = exportMSQDestination.getExportStorageProvider();
-
-      try {
-        // Check that the export destination is empty as a sanity check. We want
-        // to avoid modifying any other files with export.
-        Iterator<String> filesIterator = exportStorageProvider.createStorageConnector(context.taskTempDir())
-            .listDir("");
-        if (filesIterator.hasNext()) {
-          throw DruidException.forPersona(DruidException.Persona.USER)
-              .ofCategory(DruidException.Category.RUNTIME_FAILURE)
-              .build(
-                  "Found files at provided export destination[%s]. Export is only allowed to "
-                      + "an empty path. Please provide an empty path/subdirectory or move the existing files.",
-                  exportStorageProvider.getBasePath()
-              );
-        }
-      }
-      catch (IOException e) {
-        throw DruidException.forPersona(DruidException.Persona.USER)
-            .ofCategory(DruidException.Category.RUNTIME_FAILURE)
-            .build(e, "Exception occurred while connecting to export destination.");
-      }
-    }
-  }
-
   private QueryDefinition initializeQueryDefAndState(final Closer closer)
   {
     this.selfDruidNode = context.selfNode();
@@ -628,7 +596,6 @@ public class ControllerImpl implements Controller
     QueryKitBasedMSQPlanner qkPlanner = new QueryKitBasedMSQPlanner(context, querySpec, resultsContext, queryKernelConfig, queryId);
 
     final QueryDefinition queryDef = qkPlanner.makeQueryDefinition();
-    ensureExportLocationEmpty(context, querySpec.getDestination());
 
     if (log.isDebugEnabled()) {
       try {
