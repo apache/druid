@@ -52,8 +52,8 @@ A tableSpec defines a table
 | Property     | Type                            | Description                                                               | Required | Default |
 |--------------|---------------------------------|---------------------------------------------------------------------------|----------|---------|
 | `type`       | String                          | the type of table. The only value supported at this time is `datasource`  | yes      | null    |
-| `properties` | Map<String, Object>             | the table's defined properties. see [table properties](#table-properties) | no       | null    |
-| `columns`    | List<[ColumnSpec](#columnspec)> | the table's defined columns                                               | no       | null    |
+| `properties` | Map&lt;String, Object>             | the table's defined properties. see [table properties](#table-properties) | no       | null    |
+| `columns`    | List&lt;[ColumnSpec](#columnspec)> | the table's defined columns                                               | no       | null    |
 
 #### Table Properties
 
@@ -68,7 +68,7 @@ A tableSpec defines a table
 |--------------|---------------------|------------------------------------------------------------------------------------------------------------------------|----------|---------|
 | `name`       | String              | The name of the column                                                                                                 | yes      | null    |
 | `dataType`   | String              | The type of the column. Can be any column data type that is available to Druid. Depends on what extensions are loaded. | no       | null    |
-| `properties` | Map<String, Object> | the column's defined properties. Non properties defined at this time.                                                  | no       | null    |
+| `properties` | Map&lt;String, Object\> | the column's defined properties. Non properties defined at this time.                                                  | no       | null    |
 
 ### APIs
 
@@ -189,7 +189,7 @@ Retrieve a table
 
 ##### URL
 
-`GET` `/druid/coordinator/v1/catalog/schemas/{schema}/tables/{name}
+`GET` `/druid/coordinator/v1/catalog/schemas/{schema}/tables/{name}`
 
 ##### Responses
 
@@ -227,7 +227,7 @@ Retrieve a table
 
 ##### Sample request
 
-The following example shows how to retrieve a table named 'test_table' in schema 'druid'
+The following example shows how to retrieve a table named `test_table` in schema `druid`:
 
 ```shell
 curl "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/catalog/schemas/druid/tables/test_table"
@@ -286,7 +286,7 @@ Delete a table
 
 ##### URL
 
-`DELETE` `/druid/coordinator/v1/catalog/schemas/{schema}/tables/{name}
+`DELETE` `/druid/coordinator/v1/catalog/schemas/{schema}/tables/{name}`
 
 ##### Responses
 
@@ -340,7 +340,7 @@ retrieve list of schema names
 
 ##### URL
 
-`GET` `/druid/coordinator/v1/catalog/schemas
+`GET` `/druid/coordinator/v1/catalog/schemas`
 
 ##### Responses
 
@@ -403,7 +403,7 @@ Retrieve a list of table names in the schema.
 
 ##### URL
 
-`GET` `/druid/coordinator/v1/catalog/schemas/{schema}/table
+`GET` `/druid/coordinator/v1/catalog/schemas/{schema}/table`
 
 ##### Responses
 

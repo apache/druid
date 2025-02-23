@@ -34,7 +34,7 @@ Druid docs contributors:
 Druid docs contributors can open an issue about documentation, or contribute a change with a pull request (PR).
 
 The open source Druid docs are located here:
-<https://druid.apache.org/docs/latest/design/index.html>
+https://druid.apache.org/docs/latest/design/index.html
 
 If you need to update a Druid doc, locate and update the doc in the Druid repo following the instructions below.
 
