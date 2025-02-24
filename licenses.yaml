@@ -1286,7 +1286,7 @@ name: Netty
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 4.1.116.Final
+version: 4.1.118.Final
 libraries:
   - io.netty: netty-buffer
   - io.netty: netty-codec
