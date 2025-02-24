@@ -28,7 +28,7 @@ import java.util.function.Function;
 
 /**
  * An {@link OutputStream} that limits how many bytes can be written. Throws {@link IOException} if the limit
- * is exceeded.
+ * is exceeded. *Not* thread-safe.
  */
 public class LimitedOutputStream extends OutputStream
 {
@@ -86,6 +86,11 @@ public class LimitedOutputStream extends OutputStream
   public void close() throws IOException
   {
     out.close();
+  }
+
+  public OutputStream get()
+  {
+    return out;
   }
 
   private void plus(final int n) throws IOException
