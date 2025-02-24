@@ -152,6 +152,7 @@ public abstract class AbstractStatement implements Closeable
     // here. The planner ensures that this step is done before planning.
     authResult = planner.authorize(authorizer, contextResources);
     if (!authResult.authorizationResult.allowBasicAccess()) {
+      log.info("Query[%s] forbidden due to reason[%s]", sqlQueryId(), authResult.authorizationResult.getErrorMessage());
       throw new ForbiddenException(authResult.authorizationResult.getErrorMessage());
     }
   }
