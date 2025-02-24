@@ -215,6 +215,7 @@ public class QueryResource implements QueryCountStatsProvider
       }
 
       if (!authResult.allowBasicAccess()) {
+        log.info("Query[%s] forbidden due to reason[%s]", query.getId(), authResult.getErrorMessage());
         throw new ForbiddenException(authResult.getErrorMessage());
       }
 
