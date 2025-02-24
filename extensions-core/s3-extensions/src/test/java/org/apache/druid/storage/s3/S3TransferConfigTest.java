@@ -28,7 +28,7 @@ public class S3TransferConfigTest
   public void testDefaultValues()
   {
     S3TransferConfig config = new S3TransferConfig();
-    Assert.assertFalse(config.isUseTransferManager());
+    Assert.assertTrue(config.isUseTransferManager());
     Assert.assertEquals(5 * 1024 * 1024L, config.getMinimumUploadPartSize());
     Assert.assertEquals(5 * 1024 * 1024L, config.getMultipartUploadThreshold());
   }

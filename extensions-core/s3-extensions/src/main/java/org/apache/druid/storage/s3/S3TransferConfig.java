@@ -28,7 +28,7 @@ import javax.validation.constraints.Min;
 public class S3TransferConfig
 {
   @JsonProperty
-  private boolean useTransferManager = false;
+  private boolean useTransferManager = true;
 
   @JsonProperty
   @Min(1)
