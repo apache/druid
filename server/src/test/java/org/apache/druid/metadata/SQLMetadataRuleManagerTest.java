@@ -116,7 +116,8 @@ public class SQLMetadataRuleManagerTest
   }
 
   @Test
-  public void testAuditEntryNotCreatedWhenRetentionRulesUnchanged() {
+  public void testAuditEntryNotCreatedWhenRetentionRulesUnchanged()
+  {
     List<Rule> rules = Collections.singletonList(
         new IntervalLoadRule(
             Intervals.of("2015-01-01/2015-02-01"),
@@ -131,7 +132,8 @@ public class SQLMetadataRuleManagerTest
   }
 
   @Test
-  public void testAuditEntryCreatedWhenRetentionRulesChanged() {
+  public void testAuditEntryCreatedWhenRetentionRulesChanged()
+  {
     List<Rule> rules = Collections.singletonList(
         new IntervalLoadRule(
             Intervals.of("2015-01-01/2015-02-01"),
