@@ -1703,6 +1703,12 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
     }
 
     @Override
+    public Map<Integer, Long> getEndOffsets(Set<StreamPartition<Integer>> streamPartitions)
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
     public void close()
     {
     }
