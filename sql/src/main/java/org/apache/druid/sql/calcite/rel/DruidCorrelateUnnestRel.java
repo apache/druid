@@ -78,7 +78,7 @@ import java.util.stream.Collectors;
  */
 public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
 {
-  private static final TableDataSource DUMMY_DATA_SOURCE = new TableDataSource("__correlate_unnest__")
+  static final TableDataSource DUMMY_DATA_SOURCE = new TableDataSource("__correlate_unnest__")
   {
     @Override
     public boolean isConcrete()
@@ -317,8 +317,7 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
         getPlannerContext(),
         getCluster().getRexBuilder(),
         finalizeAggregations,
-        null,
-        false
+        true
     );
   }
 
@@ -340,7 +339,7 @@ public class DruidCorrelateUnnestRel extends DruidRel<DruidCorrelateUnnestRel>
         getPlannerContext(),
         getCluster().getRexBuilder(),
         false,
-        true
+        false
     );
   }
 

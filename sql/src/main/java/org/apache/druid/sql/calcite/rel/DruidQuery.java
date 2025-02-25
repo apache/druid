@@ -206,8 +206,8 @@ public class DruidQuery
       final PlannerContext plannerContext,
       final RexBuilder rexBuilder,
       final boolean finalizeAggregations,
-      @Nullable VirtualColumnRegistry virtualColumnRegistry,
-      final boolean applyPolicies
+      final boolean applyPolicies,
+      @Nullable VirtualColumnRegistry virtualColumnRegistry
   )
   {
     final RelDataType outputRowType = partialQuery.leafRel().getRowType();
@@ -303,7 +303,7 @@ public class DruidQuery
     }
 
     return new DruidQuery(
-        applyPolicies ? dataSource : dataSource.withPolicies(plannerContext.getAuthorizationResult().getPolicyMap()),
+        applyPolicies ? dataSource.withPolicies(plannerContext.getAuthorizationResult().getPolicyMap()) : dataSource,
         plannerContext,
         filter,
         selectProjection,

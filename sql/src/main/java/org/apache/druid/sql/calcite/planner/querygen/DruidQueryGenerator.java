@@ -313,7 +313,7 @@ public class DruidQueryGenerator
             plannerContext,
             rexBuilder,
             !(topLevel) && tweaks.finalizeSubQuery(),
-            false
+            true
         );
       }
 
