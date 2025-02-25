@@ -32,11 +32,11 @@ public class S3TransferConfig
 
   @JsonProperty
   @Min(1)
-  private long minimumUploadPartSize = 5 * 1024 * 1024L;
+  private long minimumUploadPartSize = 20 * 1024 * 1024L;
 
   @JsonProperty
   @Min(1)
-  private long multipartUploadThreshold = 5 * 1024 * 1024L;
+  private long multipartUploadThreshold = 20 * 1024 * 1024L;
 
   public void setUseTransferManager(boolean useTransferManager)
   {
