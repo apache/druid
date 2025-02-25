@@ -39,4 +39,4 @@ One typical setup seen in production is to process data in Spark, and load the p
 
 For more information about using Druid and Spark together, including benchmarks of the two systems, please see:
 
-<https://www.linkedin.com/pulse/combining-druid-spark-interactive-flexible-analytics-scale-butani>
+https://www.linkedin.com/pulse/combining-druid-spark-interactive-flexible-analytics-scale-butani

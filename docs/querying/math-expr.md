@@ -43,7 +43,7 @@ This expression language supports the following operators (listed in decreasing 
 |^|Binary power op|
 |*, /, %|Binary multiplicative|
 |+, -|Binary additive|
-|<, <=, >, >=, ==, !=|Binary Comparison|
+|&lt;, &le;, &gt;, &ge;, ==, &ne;|Binary Comparison|
 |&&, &#124;&#124;|Binary Logical AND, OR|
 
 Long, double, and string data types are supported. If a number contains a dot, it is interpreted as a double, otherwise it is interpreted as a long. That means, always add a '.' to your number if you want it interpreted as a double value. String literals should be quoted by single quotation marks.
@@ -65,7 +65,7 @@ The following built-in functions are available.
 
 |name|description|
 |----|-----------|
-|cast|cast(expr,LONG or DOUBLE or STRING or ARRAY<LONG\>, or ARRAY<DOUBLE\> or ARRAY<STRING\>) returns expr with specified type. exception can be thrown. Scalar types may be cast to array types and will take the form of a single element list (null will still be null). |
+|cast|cast(expr,LONG or DOUBLE or STRING or ARRAY\<LONG\>, or ARRAY\<DOUBLE\> or Array\<String\>) returns expr with specified type. exception can be thrown. Scalar types may be cast to array types and will take the form of a single element list (null will still be null). |
 |coalesce|coalesce(exprs) returns the first non-null expression, or null if all expressions are null. |
 |if|if(predicate,then,else) returns 'then' if 'predicate' evaluates to a positive number, otherwise it returns 'else' |
 |nvl|nvl(expr,expr-for-null) returns 'expr-for-null' if 'expr' is null. |
@@ -134,8 +134,8 @@ See javadoc of java.lang.Math for detailed explanation for each function.
 |bitwiseConvertDoubleToLongBits|bitwiseConvertDoubleToLongBits(x) converts the bits of an IEEE 754 floating-point double value to a long. If the input is not a double, it is implicitly cast to a double prior to conversion|
 |bitwiseConvertLongBitsToDouble|bitwiseConvertLongBitsToDouble(x) converts a long to the IEEE 754 floating-point double specified by the bits stored in the long. If the input is not a long, it is implicitly cast to a long prior to conversion|
 |bitwiseOr|bitwiseOr(x,y) returns the result of x [PIPE] y. Double values will be implicitly cast to longs, use `bitwiseConvertDoubleToLongBits` to perform bitwise operations directly with doubles|
-|bitwiseShiftLeft|bitwiseShiftLeft(x,y) returns the result of x << y. Double values will be implicitly cast to longs, use `bitwiseConvertDoubleToLongBits` to perform bitwise operations directly with doubles|
-|bitwiseShiftRight|bitwiseShiftRight(x,y) returns the result of x >> y. Double values will be implicitly cast to longs, use `bitwiseConvertDoubleToLongBits` to perform bitwise operations directly with doubles|
+|bitwiseShiftLeft|bitwiseShiftLeft(x,y) returns the result of x `<<` y. Double values will be implicitly cast to longs, use `bitwiseConvertDoubleToLongBits` to perform bitwise operations directly with doubles|
+|bitwiseShiftRight|bitwiseShiftRight(x,y) returns the result of x `>>` y. Double values will be implicitly cast to longs, use `bitwiseConvertDoubleToLongBits` to perform bitwise operations directly with doubles|
 |bitwiseXor|bitwiseXor(x,y) returns the result of x ^ y. Double values will be implicitly cast to longs, use `bitwiseConvertDoubleToLongBits` to perform bitwise operations directly with doubles|
 |atan2|atan2(y, x) returns the angle theta from the conversion of rectangular coordinates (x, y) to polar * coordinates (r, theta)|
 |cbrt|cbrt(x) returns the cube root of x|

@@ -39,7 +39,8 @@ Use the **Load data** wizard or the following SQL query to ingest the `wikipedia
 
 Partitioning by hour provides more segment granularity, so you can selectively load segments onto Historicals or keep them in deep storage.
 
-<details><summary>Show the query</summary>
+<details>
+<summary>Show the query</summary>
 
 ```sql
 REPLACE INTO "wikipedia" OVERWRITE ALL
@@ -152,7 +153,8 @@ This query looks for records with timestamps that precede `00:10:00`. Based on t
 
 When you submit the query from deep storage through the API, you get the following response:
 
-<details><summary>Show the response</summary>
+<details>
+<summary>Show the response</summary>
 
 ```json
 {
@@ -209,7 +211,8 @@ A successful query also returns a `pages` object that includes the page numbers 
 
 Note that `sampleRecords` has been truncated for brevity.
 
-<details><summary>Show the response</summary>
+<details>
+<summary>Show the response</summary>
 
 ```json
 {
@@ -265,7 +268,8 @@ curl --location 'http://ROUTER:PORT/druid/v2/sql/statements/:queryId'
 
 Note that the response has been truncated for brevity.
 
-<details><summary>Show the response</summary>
+<details>
+<summary>Show the response</summary>
 
 ```json
 [
