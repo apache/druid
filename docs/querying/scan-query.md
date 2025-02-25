@@ -45,7 +45,7 @@ An example Scan query object is shown below:
    "resultFormat": "list",
    "columns":[],
    "intervals": [
-     "2013-01-01/2013-01-02"
+     "2016-01-01/2017-01-02"
    ],
    "batchSize":20480,
    "limit":3
@@ -73,86 +73,241 @@ The following are the main parameters for Scan queries:
 The format of the result when resultFormat equals `list`:
 
 ```json
- [{
-    "segmentId" : "wikipedia_editstream_2012-12-29T00:00:00.000Z_2013-01-10T08:00:00.000Z_2013-01-10T08:13:47.830Z_v9",
-    "columns" : [
-      "timestamp",
-      "robot",
-      "namespace",
-      "anonymous",
-      "unpatrolled",
-      "page",
-      "language",
-      "newpage",
-      "user",
-      "count",
-      "added",
-      "delta",
-      "variation",
-      "deleted"
-    ],
-    "events" : [ {
-        "timestamp" : "2013-01-01T00:00:00.000Z",
-        "robot" : "1",
-        "namespace" : "article",
-        "anonymous" : "0",
-        "unpatrolled" : "0",
-        "page" : "11._korpus_(NOVJ)",
-        "language" : "sl",
-        "newpage" : "0",
-        "user" : "EmausBot",
-        "count" : 1.0,
-        "added" : 39.0,
-        "delta" : 39.0,
-        "variation" : 39.0,
-        "deleted" : 0.0
-    }, {
-        "timestamp" : "2013-01-01T00:00:00.000Z",
-        "robot" : "0",
-        "namespace" : "article",
-        "anonymous" : "0",
-        "unpatrolled" : "0",
-        "page" : "112_U.S._580",
-        "language" : "en",
-        "newpage" : "1",
-        "user" : "MZMcBride",
-        "count" : 1.0,
-        "added" : 70.0,
-        "delta" : 70.0,
-        "variation" : 70.0,
-        "deleted" : 0.0
-    }, {
-        "timestamp" : "2013-01-01T00:00:00.000Z",
-        "robot" : "0",
-        "namespace" : "article",
-        "anonymous" : "0",
-        "unpatrolled" : "0",
-        "page" : "113_U.S._243",
-        "language" : "en",
-        "newpage" : "1",
-        "user" : "MZMcBride",
-        "count" : 1.0,
-        "added" : 77.0,
-        "delta" : 77.0,
-        "variation" : 77.0,
-        "deleted" : 0.0
-    } ]
+ [ {
+  "segmentId" : "wikipedia_2016-06-27T00:00:00.000Z_2016-06-28T00:00:00.000Z_2024-12-17T13:08:03.142Z",
+  "columns" : [ "__time", "isRobot", "channel", "flags", "isUnpatrolled", "page", "diffUrl", "added", "comment", "commentLength", "isNew", "isMinor", "delta", "isAnonymous", "user", "deltaBucket", "deleted", "namespace", "cityName", "countryName", "regionIsoCode", "metroCode", "countryIsoCode", "regionName" ],
+  "events" : [ {
+    "__time" : 1466985611080,
+    "isRobot" : "true",
+    "channel" : "#sv.wikipedia",
+    "flags" : "NB",
+    "isUnpatrolled" : "false",
+    "page" : "Salo Toraut",
+    "diffUrl" : "https://sv.wikipedia.org/w/index.php?oldid=36099284&rcid=89369918",
+    "added" : 31,
+    "comment" : "Botskapande Indonesien omdirigering",
+    "commentLength" : 35,
+    "isNew" : "true",
+    "isMinor" : "false",
+    "delta" : 31,
+    "isAnonymous" : "false",
+    "user" : "Lsjbot",
+    "deltaBucket" : 0,
+    "deleted" : 0,
+    "namespace" : "Main",
+    "cityName" : null,
+    "countryName" : null,
+    "regionIsoCode" : null,
+    "metroCode" : null,
+    "countryIsoCode" : null,
+    "regionName" : null
+  }, {
+    "__time" : 1466985617457,
+    "isRobot" : "false",
+    "channel" : "#ja.wikipedia",
+    "flags" : "",
+    "isUnpatrolled" : "false",
+    "page" : "利用者:ワーナー成増/放送ウーマン賞",
+    "diffUrl" : "https://ja.wikipedia.org/w/index.php?diff=60239890&oldid=60239620",
+    "added" : 125,
+    "comment" : "70年代",
+    "commentLength" : 4,
+    "isNew" : "false",
+    "isMinor" : "false",
+    "delta" : 125,
+    "isAnonymous" : "false",
+    "user" : "ワーナー成増",
+    "deltaBucket" : 100,
+    "deleted" : 0,
+    "namespace" : "利用者",
+    "cityName" : null,
+    "countryName" : null,
+    "regionIsoCode" : null,
+    "metroCode" : null,
+    "countryIsoCode" : null,
+    "regionName" : null
+  }, {
+    "__time" : 1466985634959,
+    "isRobot" : "false",
+    "channel" : "#en.wikipedia",
+    "flags" : "",
+    "isUnpatrolled" : "false",
+    "page" : "Bailando 2015",
+    "diffUrl" : "https://en.wikipedia.org/w/index.php?diff=727144213&oldid=727144184",
+    "added" : 2,
+    "comment" : "/* Scores */",
+    "commentLength" : 12,
+    "isNew" : "false",
+    "isMinor" : "false",
+    "delta" : 2,
+    "isAnonymous" : "true",
+    "user" : "181.230.118.178",
+    "deltaBucket" : 0,
+    "deleted" : 0,
+    "namespace" : "Main",
+    "cityName" : "Buenos Aires",
+    "countryName" : "Argentina",
+    "regionIsoCode" : "C",
+    "metroCode" : null,
+    "countryIsoCode" : "AR",
+    "regionName" : "Buenos Aires F.D."
+  } ],
+  "rowSignature" : [ {
+    "name" : "__time",
+    "type" : "LONG"
+  }, {
+    "name" : "isRobot",
+    "type" : "STRING"
+  }, {
+    "name" : "channel",
+    "type" : "STRING"
+  }, {
+    "name" : "flags",
+    "type" : "STRING"
+  }, {
+    "name" : "isUnpatrolled",
+    "type" : "STRING"
+  }, {
+    "name" : "page",
+    "type" : "STRING"
+  }, {
+    "name" : "diffUrl",
+    "type" : "STRING"
+  }, {
+    "name" : "added",
+    "type" : "LONG"
+  }, {
+    "name" : "comment",
+    "type" : "STRING"
+  }, {
+    "name" : "commentLength",
+    "type" : "LONG"
+  }, {
+    "name" : "isNew",
+    "type" : "STRING"
+  }, {
+    "name" : "isMinor",
+    "type" : "STRING"
+  }, {
+    "name" : "delta",
+    "type" : "LONG"
+  }, {
+    "name" : "isAnonymous",
+    "type" : "STRING"
+  }, {
+    "name" : "user",
+    "type" : "STRING"
+  }, {
+    "name" : "deltaBucket",
+    "type" : "LONG"
+  }, {
+    "name" : "deleted",
+    "type" : "LONG"
+  }, {
+    "name" : "namespace",
+    "type" : "STRING"
+  }, {
+    "name" : "cityName",
+    "type" : "STRING"
+  }, {
+    "name" : "countryName",
+    "type" : "STRING"
+  }, {
+    "name" : "regionIsoCode",
+    "type" : "STRING"
+  }, {
+    "name" : "metroCode",
+    "type" : "LONG"
+  }, {
+    "name" : "countryIsoCode",
+    "type" : "STRING"
+  }, {
+    "name" : "regionName",
+    "type" : "STRING"
+  } ]
 } ]
 ```
 
 The format of the result when resultFormat equals `compactedList`:
 
 ```json
- [{
-    "segmentId" : "wikipedia_editstream_2012-12-29T00:00:00.000Z_2013-01-10T08:00:00.000Z_2013-01-10T08:13:47.830Z_v9",
-    "columns" : [
-      "timestamp", "robot", "namespace", "anonymous", "unpatrolled", "page", "language", "newpage", "user", "count", "added", "delta", "variation", "deleted"
-    ],
-    "events" : [
-     ["2013-01-01T00:00:00.000Z", "1", "article", "0", "0", "11._korpus_(NOVJ)", "sl", "0", "EmausBot", 1.0, 39.0, 39.0, 39.0, 0.0],
-     ["2013-01-01T00:00:00.000Z", "0", "article", "0", "0", "112_U.S._580", "en", "1", "MZMcBride", 1.0, 70.0, 70.0, 70.0, 0.0],
-     ["2013-01-01T00:00:00.000Z", "0", "article", "0", "0", "113_U.S._243", "en", "1", "MZMcBride", 1.0, 77.0, 77.0, 77.0, 0.0]
-    ]
+ [ {
+  "segmentId" : "wikipedia_2016-06-27T00:00:00.000Z_2016-06-28T00:00:00.000Z_2024-12-17T13:08:03.142Z",
+  "columns" : [ "__time", "isRobot", "channel", "flags", "isUnpatrolled", "page", "diffUrl", "added", "comment", "commentLength", "isNew", "isMinor", "delta", "isAnonymous", "user", "deltaBucket", "deleted", "namespace", "cityName", "countryName", "regionIsoCode", "metroCode", "countryIsoCode", "regionName" ],
+  "events" : [ [ 1466985611080, "true", "#sv.wikipedia", "NB", "false", "Salo Toraut", "https://sv.wikipedia.org/w/index.php?oldid=36099284&rcid=89369918", 31, "Botskapande Indonesien omdirigering", 35, "true", "false", 31, "false", "Lsjbot", 0, 0, "Main", null, null, null, null, null, null ], [ 1466985617457, "false", "#ja.wikipedia", "", "false", "利用者:ワーナー成増/放送ウーマン賞", "https://ja.wikipedia.org/w/index.php?diff=60239890&oldid=60239620", 125, "70年代", 4, "false", "false", 125, "false", "ワーナー成増", 100, 0, "利用者", null, null, null, null, null, null ], [ 1466985634959, "false", "#en.wikipedia", "", "false", "Bailando 2015", "https://en.wikipedia.org/w/index.php?diff=727144213&oldid=727144184", 2, "/* Scores */", 12, "false", "false", 2, "true", "181.230.118.178", 0, 0, "Main", "Buenos Aires", "Argentina", "C", null, "AR", "Buenos Aires F.D." ] ],
+  "rowSignature" : [ {
+    "name" : "__time",
+    "type" : "LONG"
+  }, {
+    "name" : "isRobot",
+    "type" : "STRING"
+  }, {
+    "name" : "channel",
+    "type" : "STRING"
+  }, {
+    "name" : "flags",
+    "type" : "STRING"
+  }, {
+    "name" : "isUnpatrolled",
+    "type" : "STRING"
+  }, {
+    "name" : "page",
+    "type" : "STRING"
+  }, {
+    "name" : "diffUrl",
+    "type" : "STRING"
+  }, {
+    "name" : "added",
+    "type" : "LONG"
+  }, {
+    "name" : "comment",
+    "type" : "STRING"
+  }, {
+    "name" : "commentLength",
+    "type" : "LONG"
+  }, {
+    "name" : "isNew",
+    "type" : "STRING"
+  }, {
+    "name" : "isMinor",
+    "type" : "STRING"
+  }, {
+    "name" : "delta",
+    "type" : "LONG"
+  }, {
+    "name" : "isAnonymous",
+    "type" : "STRING"
+  }, {
+    "name" : "user",
+    "type" : "STRING"
+  }, {
+    "name" : "deltaBucket",
+    "type" : "LONG"
+  }, {
+    "name" : "deleted",
+    "type" : "LONG"
+  }, {
+    "name" : "namespace",
+    "type" : "STRING"
+  }, {
+    "name" : "cityName",
+    "type" : "STRING"
+  }, {
+    "name" : "countryName",
+    "type" : "STRING"
+  }, {
+    "name" : "regionIsoCode",
+    "type" : "STRING"
+  }, {
+    "name" : "metroCode",
+    "type" : "LONG"
+  }, {
+    "name" : "countryIsoCode",
+    "type" : "STRING"
+  }, {
+    "name" : "regionName",
+    "type" : "STRING"
+  } ]
 } ]
 ```
 
