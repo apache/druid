@@ -875,19 +875,25 @@ export class SupervisorsView extends React.PureComponent<
 
               const c = getTotalSupervisorStats(value, statsKey, activeTaskIds);
               const seconds = getRowStatsKeySeconds(statsKey);
+              const issues =
+                (c.processedWithError || 0) + (c.thrownAway || 0) + (c.unparseable || 0);
               const totalLabel = `Total (past ${statsKey}): `;
-              const bytes = c.processedBytes ? ` (${formatByteRate(c.processedBytes)})` : '';
-              return (
+              return issues ? (
                 <div>
                   <div
-                    data-tooltip={`${totalLabel}${formatInteger(
-                      c.processed * seconds,
-                    )} (${formatBytes(c.processedBytes * seconds)})`}
-                  >{`Processed: ${formatRate(c.processed)}${bytes}`}</div>
+                    data-tooltip={`${totalLabel}${formatBytes(c.processedBytes * seconds)}`}
+                  >{`Input: ${formatByteRate(c.processedBytes)}`}</div>
+                  {Boolean(c.processed) && (
+                    <div
+                      data-tooltip={`${totalLabel}${formatInteger(c.processed * seconds)} events`}
+                    >{`Processed: ${formatRate(c.processed)}`}</div>
+                  )}
                   {Boolean(c.processedWithError) && (
                     <div
                       className="warning-line"
-                      data-tooltip={`${totalLabel}${formatInteger(c.processedWithError * seconds)}`}
+                      data-tooltip={`${totalLabel}${formatInteger(
+                        c.processedWithError * seconds,
+                      )} events`}
                     >
                       Processed with error: {formatRate(c.processedWithError)}
                     </div>
@@ -895,7 +901,7 @@ export class SupervisorsView extends React.PureComponent<
                   {Boolean(c.thrownAway) && (
                     <div
                       className="warning-line"
-                      data-tooltip={`${totalLabel}${formatInteger(c.thrownAway * seconds)}`}
+                      data-tooltip={`${totalLabel}${formatInteger(c.thrownAway * seconds)} events`}
                     >
                       Thrown away: {formatRate(c.thrownAway)}
                     </div>
@@ -903,12 +909,22 @@ export class SupervisorsView extends React.PureComponent<
                   {Boolean(c.unparseable) && (
                     <div
                       className="warning-line"
-                      data-tooltip={`${totalLabel}${formatInteger(c.unparseable * seconds)}`}
+                      data-tooltip={`${totalLabel}${formatInteger(c.unparseable * seconds)} events`}
                     >
                       Unparseable: {formatRate(c.unparseable)}
                     </div>
                   )}
                 </div>
+              ) : c.processedBytes ? (
+                <div
+                  data-tooltip={`${totalLabel}${formatInteger(
+                    c.processed * seconds,
+                  )} events, ${formatBytes(c.processedBytes * seconds)}`}
+                >{`Processed: ${formatRate(c.processed)} (${formatByteRate(
+                  c.processedBytes,
+                )})`}</div>
+              ) : (
+                <div>No activity</div>
               );
             },
             show: visibleColumns.shown('Stats'),
