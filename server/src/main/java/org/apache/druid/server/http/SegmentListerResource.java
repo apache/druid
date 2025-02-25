@@ -182,7 +182,7 @@ public class SegmentListerResource
             try {
               HttpServletResponse response = (HttpServletResponse) asyncContext.getResponse();
               response.setStatus(HttpServletResponse.SC_OK);
-              context.inputMapper.writerWithType(HttpServerInventoryView.SEGMENT_LIST_RESP_TYPE_REF)
+              context.inputMapper.writerFor(HttpServerInventoryView.SEGMENT_LIST_RESP_TYPE_REF)
                                  .writeValue(asyncContext.getResponse().getOutputStream(), result);
               asyncContext.complete();
             }
@@ -295,7 +295,7 @@ public class SegmentListerResource
             try {
               HttpServletResponse response = (HttpServletResponse) asyncContext.getResponse();
               response.setStatus(HttpServletResponse.SC_OK);
-              context.inputMapper.writerWithType(HttpLoadQueuePeon.RESPONSE_ENTITY_TYPE_REF)
+              context.inputMapper.writerFor(HttpLoadQueuePeon.RESPONSE_ENTITY_TYPE_REF)
                                  .writeValue(asyncContext.getResponse().getOutputStream(), result);
               asyncContext.complete();
             }

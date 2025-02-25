@@ -920,7 +920,7 @@ public class DeterminePartitionsJob implements Jobby
 
       try {
         HadoopDruidIndexerConfig.JSON_MAPPER
-            .writerWithType(
+            .writerFor(
                 new TypeReference<List<ShardSpec>>()
                 {
                 }
