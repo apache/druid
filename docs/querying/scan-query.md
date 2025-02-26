@@ -43,7 +43,7 @@ An example Scan query object is shown below:
    "queryType": "scan",
    "dataSource": "wikipedia",
    "resultFormat": "list",
-   "columns":[],
+   "columns":[ "__time", "isRobot", "page","added", "isAnonymous", "user", "deleted" ],
    "intervals": [
      "2016-01-01/2017-01-02"
    ],
@@ -75,31 +75,23 @@ The format of the result when resultFormat equals `list`:
 ```json
  [ {
   "segmentId" : "wikipedia_2016-06-27T00:00:00.000Z_2016-06-28T00:00:00.000Z_2024-12-17T13:08:03.142Z",
-  "columns" : [ "__time", "isRobot", "isUnpatrolled", "page","added", "isNew", "delta", "isAnonymous", "user", "deleted", "namespace" ],
+  "columns" : [ "__time", "isRobot", "page","added", "isAnonymous", "user", "deleted" ],
   "events" : [ {
     "__time" : 1466985611080,
     "isRobot" : "true",
-    "isUnpatrolled" : "false",
     "page" : "Salo Toraut",
     "added" : 31,
-    "isNew" : "true",
-    "delta" : 31,
     "isAnonymous" : "false",
     "user" : "Lsjbot",
-    "deleted" : 0,
-    "namespace" : "Main"
+    "deleted" : 0
   }, {
     "__time" : 1466985634959,
     "isRobot" : "false",
-    "isUnpatrolled" : "false",
     "page" : "Bailando 2015",
     "added" : 2,
-    "isNew" : "false",
-    "delta" : 2,
     "isAnonymous" : "true",
     "user" : "181.230.118.178",
-    "deleted" : 0,
-    "namespace" : "Main",
+    "deleted" : 0
   } ],
   "rowSignature" : [ {
     "name" : "__time",
@@ -108,19 +100,10 @@ The format of the result when resultFormat equals `list`:
     "name" : "isRobot",
     "type" : "STRING"
   }, {
-    "name" : "isUnpatrolled",
-    "type" : "STRING"
-  }, {
     "name" : "page",
     "type" : "STRING"
   }, {
     "name" : "added",
-    "type" : "LONG"
-  }, {
-    "name" : "isNew",
-    "type" : "STRING"
-  }, {
-    "name" : "delta",
     "type" : "LONG"
   }, {
     "name" : "isAnonymous",
@@ -131,9 +114,6 @@ The format of the result when resultFormat equals `list`:
   }, {
     "name" : "deleted",
     "type" : "LONG"
-  }, {
-    "name" : "namespace",
-    "type" : "STRING"
   } ]
 } ]
 ```
@@ -145,8 +125,8 @@ The format of the result when resultFormat equals `compactedList`:
   "segmentId" : "wikipedia_2016-06-27T00:00:00.000Z_2016-06-28T00:00:00.000Z_2024-12-17T13:08:03.142Z",
   "columns" : [ "__time", "isRobot", "isUnpatrolled", "page","added", "isNew", "delta", "isAnonymous", "user", "deleted", "namespace" ],
   "events" : [
-    [ 1466985611080, "true", "false", "Salo Toraut", 31, "true", 31, "false", "Lsjbot", 0, "Main" ],
-    [ 1466985634959, "false", "false", "Bailando 2015", 2, "false", 2, "true", "181.230.118.178", 0, "Main" ]
+    [ 1466985611080, "true", "Salo Toraut", 31, "false", "Lsjbot", 0 ],
+    [ 1466985634959, "false", "Bailando 2015", 2, "true", "181.230.118.178", 0]
   ],
   "rowSignature" : [ {
     "name" : "__time",
@@ -155,19 +135,10 @@ The format of the result when resultFormat equals `compactedList`:
     "name" : "isRobot",
     "type" : "STRING"
   }, {
-    "name" : "isUnpatrolled",
-    "type" : "STRING"
-  }, {
     "name" : "page",
     "type" : "STRING"
   }, {
     "name" : "added",
-    "type" : "LONG"
-  }, {
-    "name" : "isNew",
-    "type" : "STRING"
-  }, {
-    "name" : "delta",
     "type" : "LONG"
   }, {
     "name" : "isAnonymous",
@@ -178,9 +149,6 @@ The format of the result when resultFormat equals `compactedList`:
   }, {
     "name" : "deleted",
     "type" : "LONG"
-  }, {
-    "name" : "namespace",
-    "type" : "STRING"
   } ]
 } ]
 ```
