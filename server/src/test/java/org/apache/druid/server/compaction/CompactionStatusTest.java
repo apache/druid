@@ -21,6 +21,8 @@ package org.apache.druid.server.compaction;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
+import org.apache.druid.indexer.granularity.GranularitySpec;
+import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
@@ -31,8 +33,6 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.segment.data.CompressionStrategy;
-import org.apache.druid.segment.indexing.granularity.GranularitySpec;
-import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
@@ -237,7 +237,7 @@ public class CompactionStatusTest
         null,
         null,
         null,
-        currentIndexSpec.asMap(OBJECT_MAPPER),
+        currentIndexSpec,
         null
     );
     final DataSourceCompactionConfig compactionConfig = DataSourceCompactionConfig
@@ -275,8 +275,8 @@ public class CompactionStatusTest
         null,
         null,
         null,
-        currentIndexSpec.asMap(OBJECT_MAPPER),
-        currentGranularitySpec.asMap(OBJECT_MAPPER)
+        currentIndexSpec,
+        currentGranularitySpec
     );
     final DataSourceCompactionConfig compactionConfig = DataSourceCompactionConfig
         .builder()
@@ -305,8 +305,8 @@ public class CompactionStatusTest
         null,
         null,
         null,
-        currentIndexSpec.asMap(OBJECT_MAPPER),
-        currentGranularitySpec.asMap(OBJECT_MAPPER)
+        currentIndexSpec,
+        currentGranularitySpec
     );
     final DataSourceCompactionConfig compactionConfig = DataSourceCompactionConfig
         .builder()

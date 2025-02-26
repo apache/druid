@@ -42,7 +42,6 @@ import org.apache.druid.k8s.overlord.common.KubernetesPeonClient;
 import org.apache.druid.tasklogs.TaskLogs;
 import org.checkerframework.checker.nullness.qual.MonotonicNonNull;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.Charset;
@@ -352,20 +351,23 @@ public class KubernetesPeonLifecycle
   protected void saveLogs()
   {
     try {
-      final Path file = Files.createTempFile(taskId.getOriginalTaskId(), "log");
+      Path file = Files.createTempFile(taskId.getOriginalTaskId(), "log");
       try {
-        final InputStream logStream;
+        startWatchingLogs();
         if (logWatch != null) {
-          logStream = logWatch.getOutput();
+          FileUtils.copyInputStreamToFile(logWatch.getOutput(), file.toFile());
         } else {
-          logStream = kubernetesClient.getPeonLogs(taskId).or(
-              new ByteArrayInputStream(StringUtils.format(
+          log.debug("Log stream not found for %s", taskId.getOriginalTaskId());
+          FileUtils.writeStringToFile(
+              file.toFile(),
+              StringUtils.format(
                   "Peon for task [%s] did not report any logs. Check k8s metrics and events for the pod to see what happened.",
                   taskId
-              ).getBytes(StandardCharsets.UTF_8))
+              ),
+              Charset.defaultCharset()
           );
+
         }
-        FileUtils.copyInputStreamToFile(logStream, file.toFile());
         taskLogs.pushTaskLog(taskId.getOriginalTaskId(), file.toFile());
       }
       catch (IOException e) {

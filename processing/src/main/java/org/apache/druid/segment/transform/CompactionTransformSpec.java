@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordinator;
+package org.apache.druid.segment.transform;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -29,16 +29,30 @@ import java.util.Objects;
 /**
  * Spec containing transform configs for Compaction Task.
  * This class mimics JSON field names for fields supported in compaction task with
- * the corresponding fields in {@link org.apache.druid.segment.transform.TransformSpec}.
+ * the corresponding fields in {@link TransformSpec}, but omits actual transforms since compaction may only apply
+ * filtering transforms.
  * This is done for end-user ease of use. Basically, end-user will use the same syntax / JSON structure to set
  * transform configs for Compaction task as they would for any other ingestion task.
  */
-public class UserCompactionTaskTransformConfig
+public class CompactionTransformSpec
 {
+  @Nullable
+  public static CompactionTransformSpec of(@Nullable TransformSpec transformSpec)
+  {
+    if (transformSpec == null) {
+      return null;
+    }
+    if (TransformSpec.NONE.equals(transformSpec)) {
+      return null;
+    }
+
+    return new CompactionTransformSpec(transformSpec.getFilter());
+  }
+
   @Nullable private final DimFilter filter;
 
   @JsonCreator
-  public UserCompactionTaskTransformConfig(
+  public CompactionTransformSpec(
       @JsonProperty("filter") final DimFilter filter
   )
   {
@@ -61,7 +75,7 @@ public class UserCompactionTaskTransformConfig
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    UserCompactionTaskTransformConfig that = (UserCompactionTaskTransformConfig) o;
+    CompactionTransformSpec that = (CompactionTransformSpec) o;
     return Objects.equals(filter, that.filter);
   }
 
@@ -74,7 +88,7 @@ public class UserCompactionTaskTransformConfig
   @Override
   public String toString()
   {
-    return "UserCompactionTaskTransformConfig{" +
+    return "CompactionTransformSpec{" +
            "filter=" + filter +
            '}';
   }
