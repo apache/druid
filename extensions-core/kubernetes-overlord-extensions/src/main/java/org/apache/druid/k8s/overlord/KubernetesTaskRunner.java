@@ -155,7 +155,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
           exec.submit(() -> runTask(task)),
           peonLifecycleFactory.build(
               task,
-              new K8sTaskId(config.getAlias(), task),
+              new K8sTaskId(config.getK8sTaskNamePrefix(), task),
               this::emitTaskStateMetrics
           )
       )).getResult();
@@ -170,7 +170,7 @@ public class KubernetesTaskRunner implements TaskLogStreamer, TaskRunner
           exec.submit(() -> joinTask(task)),
           peonLifecycleFactory.build(
               task,
-              new K8sTaskId(config.getAlias(), task),
+              new K8sTaskId(config.getK8sTaskNamePrefix(), task),
               this::emitTaskStateMetrics
           )
       ));

@@ -39,7 +39,7 @@ public class KubernetesTaskRunnerConfig
   private String namespace;
 
   @JsonProperty
-  private String alias = "";
+  private String k8sTaskNamePrefix = "";
 
   @JsonProperty
   private boolean debugJobs = false;
@@ -134,7 +134,7 @@ public class KubernetesTaskRunnerConfig
 
   private KubernetesTaskRunnerConfig(
       @Nonnull String namespace,
-      String alias,
+      String k8sTaskNamePrefix,
       boolean debugJobs,
       boolean sidecarSupport,
       String primaryContainerName,
@@ -155,7 +155,7 @@ public class KubernetesTaskRunnerConfig
   )
   {
     this.namespace = namespace;
-    this.alias = alias;
+    this.k8sTaskNamePrefix = k8sTaskNamePrefix;
     this.debugJobs = ObjectUtils.defaultIfNull(
         debugJobs,
         this.debugJobs
@@ -228,9 +228,9 @@ public class KubernetesTaskRunnerConfig
     return namespace;
   }
 
-  public String getAlias()
+  public String getK8sTaskNamePrefix()
   {
-    return alias;
+    return k8sTaskNamePrefix;
   }
 
   public boolean isDebugJobs()
@@ -327,7 +327,7 @@ public class KubernetesTaskRunnerConfig
   public static class Builder
   {
     private String namespace;
-    private String alias;
+    private String k8sTaskNamePrefix;
     private boolean debugJob;
     private boolean sidecarSupport;
     private String primaryContainerName;
@@ -356,9 +356,9 @@ public class KubernetesTaskRunnerConfig
       return this;
     }
 
-    public Builder withAlias(String alias)
+    public Builder withK8sTaskNamePrefix(String k8sTaskNamePrefix)
     {
-      this.alias = alias;
+      this.k8sTaskNamePrefix = k8sTaskNamePrefix;
       return this;
     }
 
@@ -469,7 +469,7 @@ public class KubernetesTaskRunnerConfig
     {
       return new KubernetesTaskRunnerConfig(
           this.namespace,
-          this.alias,
+          this.k8sTaskNamePrefix,
           this.debugJob,
           this.sidecarSupport,
           this.primaryContainerName,

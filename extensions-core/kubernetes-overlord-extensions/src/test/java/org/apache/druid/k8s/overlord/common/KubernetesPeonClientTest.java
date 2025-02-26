@@ -47,7 +47,7 @@ import java.util.concurrent.TimeUnit;
 public class KubernetesPeonClientTest
 {
   private static final String ID = "id";
-  private static final String ALIAS = "";
+  private static final String TASK_NAME_PREFIX = "";
   private static final String JOB_NAME = ID;
   private static final String KUBERNETES_JOB_NAME = KubernetesOverlordUtils.convertTaskIdToJobName(JOB_NAME);
   private static final String POD_NAME = "name";
@@ -164,7 +164,7 @@ public class KubernetesPeonClientTest
     client.batch().v1().jobs().inNamespace(NAMESPACE).resource(job).create();
 
     JobResponse jobResponse = instance.waitForPeonJobCompletion(
-        new K8sTaskId(ALIAS, ID),
+        new K8sTaskId(TASK_NAME_PREFIX, ID),
         1,
         TimeUnit.SECONDS
     );
@@ -189,7 +189,7 @@ public class KubernetesPeonClientTest
     client.batch().v1().jobs().inNamespace(NAMESPACE).resource(job).create();
 
     JobResponse jobResponse = instance.waitForPeonJobCompletion(
-        new K8sTaskId(ALIAS, ID),
+        new K8sTaskId(TASK_NAME_PREFIX, ID),
         1,
         TimeUnit.SECONDS
     );
@@ -202,7 +202,7 @@ public class KubernetesPeonClientTest
   void test_waitforPeonJobCompletion_withoutRunningJob_returnsJobResponseWithEmptyJobAndFailedPeonPhase()
   {
     JobResponse jobResponse = instance.waitForPeonJobCompletion(
-        new K8sTaskId(ALIAS, ID),
+        new K8sTaskId(TASK_NAME_PREFIX, ID),
         1,
         TimeUnit.SECONDS
     );
@@ -222,13 +222,13 @@ public class KubernetesPeonClientTest
 
     client.batch().v1().jobs().inNamespace(NAMESPACE).resource(job).create();
 
-    Assertions.assertTrue(instance.deletePeonJob(new K8sTaskId(ALIAS, ID)));
+    Assertions.assertTrue(instance.deletePeonJob(new K8sTaskId(TASK_NAME_PREFIX, ID)));
   }
 
   @Test
   void test_deletePeonJob_withoutJob_returnsFalse()
   {
-    Assertions.assertFalse(instance.deletePeonJob(new K8sTaskId(ALIAS, ID)));
+    Assertions.assertFalse(instance.deletePeonJob(new K8sTaskId(TASK_NAME_PREFIX, ID)));
   }
 
   @Test
@@ -249,7 +249,7 @@ public class KubernetesPeonClientTest
 
     client.batch().v1().jobs().inNamespace(NAMESPACE).resource(job).create();
 
-    Assertions.assertTrue(instance.deletePeonJob(new K8sTaskId(ALIAS, ID)));
+    Assertions.assertTrue(instance.deletePeonJob(new K8sTaskId(TASK_NAME_PREFIX, ID)));
 
     Assertions.assertNotNull(
         client.batch().v1().jobs().inNamespace(NAMESPACE).withName(KUBERNETES_JOB_NAME).get()
@@ -266,7 +266,7 @@ public class KubernetesPeonClientTest
         serviceEmitter
     );
 
-    Assertions.assertTrue(instance.deletePeonJob(new K8sTaskId(ALIAS, ID)));
+    Assertions.assertTrue(instance.deletePeonJob(new K8sTaskId(TASK_NAME_PREFIX, ID)));
   }
 
   @Test
@@ -316,7 +316,7 @@ public class KubernetesPeonClientTest
         .andReturn(HttpURLConnection.HTTP_OK, "data")
         .once();
 
-    Optional<InputStream> maybeInputStream = instance.getPeonLogs(new K8sTaskId(ALIAS, ID));
+    Optional<InputStream> maybeInputStream = instance.getPeonLogs(new K8sTaskId(TASK_NAME_PREFIX, ID));
     Assertions.assertTrue(maybeInputStream.isPresent());
   }
 
@@ -331,14 +331,14 @@ public class KubernetesPeonClientTest
 
     client.batch().v1().jobs().inNamespace(NAMESPACE).resource(job).create();
 
-    Optional<InputStream> maybeInputStream = instance.getPeonLogs(new K8sTaskId(ALIAS, ID));
+    Optional<InputStream> maybeInputStream = instance.getPeonLogs(new K8sTaskId(TASK_NAME_PREFIX, ID));
     Assertions.assertFalse(maybeInputStream.isPresent());
   }
 
   @Test
   void test_getPeonLogs_withoutJob_returnsEmptyOptional()
   {
-    Optional<InputStream> stream = instance.getPeonLogs(new K8sTaskId(ALIAS, ID));
+    Optional<InputStream> stream = instance.getPeonLogs(new K8sTaskId(TASK_NAME_PREFIX, ID));
     Assertions.assertFalse(stream.isPresent());
   }
 
@@ -517,7 +517,7 @@ public class KubernetesPeonClientTest
             .build()
         ).once();
 
-    Pod pod = instance.getPeonPodWithRetries(new K8sTaskId(ALIAS, ID).getK8sJobName());
+    Pod pod = instance.getPeonPodWithRetries(new K8sTaskId(TASK_NAME_PREFIX, ID).getK8sJobName());
 
     Assertions.assertNotNull(pod);
   }
@@ -527,7 +527,7 @@ public class KubernetesPeonClientTest
   {
     Assertions.assertThrows(
         KubernetesResourceNotFoundException.class,
-        () -> instance.getPeonPodWithRetries(clientApi.getClient(), new K8sTaskId(ALIAS, ID).getK8sJobName(), 1, 1),
+        () -> instance.getPeonPodWithRetries(clientApi.getClient(), new K8sTaskId(TASK_NAME_PREFIX, ID).getK8sJobName(), 1, 1),
         StringUtils.format("K8s pod with label: job-name=%s not found", ID)
     );
   }
@@ -579,7 +579,7 @@ public class KubernetesPeonClientTest
         .andReturn(HttpURLConnection.HTTP_OK, "data")
         .once();
 
-    Optional<LogWatch> maybeLogWatch = instance.getPeonLogWatcher(new K8sTaskId(ALIAS, ID));
+    Optional<LogWatch> maybeLogWatch = instance.getPeonLogWatcher(new K8sTaskId(TASK_NAME_PREFIX, ID));
     Assertions.assertTrue(maybeLogWatch.isPresent());
   }
 
@@ -587,7 +587,7 @@ public class KubernetesPeonClientTest
   @Test
   void test_getPeonLogsWatcher_withoutJob_returnsEmptyOptional()
   {
-    Optional<LogWatch> maybeLogWatch = instance.getPeonLogWatcher(new K8sTaskId(ALIAS, ID));
+    Optional<LogWatch> maybeLogWatch = instance.getPeonLogWatcher(new K8sTaskId(TASK_NAME_PREFIX, ID));
     Assertions.assertFalse(maybeLogWatch.isPresent());
   }
 
@@ -602,7 +602,7 @@ public class KubernetesPeonClientTest
 
     client.batch().v1().jobs().inNamespace(NAMESPACE).resource(job).create();
 
-    Optional<LogWatch> maybeLogWatch = instance.getPeonLogWatcher(new K8sTaskId(ALIAS, ID));
+    Optional<LogWatch> maybeLogWatch = instance.getPeonLogWatcher(new K8sTaskId(TASK_NAME_PREFIX, ID));
     Assertions.assertFalse(maybeLogWatch.isPresent());
   }
 }

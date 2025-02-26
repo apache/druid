@@ -46,11 +46,11 @@ public class KubernetesOverlordUtils
         .toLowerCase(Locale.ENGLISH), 63);
   }
 
-  public static String convertTaskIdToJobName(String alias, String taskId)
+  public static String convertTaskIdToJobName(String k8sTaskNamePrefix, String taskId)
   {
-    return (alias == null || alias.isEmpty())
+    return (k8sTaskNamePrefix == null || k8sTaskNamePrefix.isEmpty())
       ? convertTaskIdToJobName(taskId)
-      : StringUtils.left(RegExUtils.replaceAll(alias, K8S_TASK_ID_PATTERN, "")
+      : StringUtils.left(RegExUtils.replaceAll(k8sTaskNamePrefix, K8S_TASK_ID_PATTERN, "")
                .toLowerCase(Locale.ENGLISH), 30) + "-" + hashString(taskId);
   }
 

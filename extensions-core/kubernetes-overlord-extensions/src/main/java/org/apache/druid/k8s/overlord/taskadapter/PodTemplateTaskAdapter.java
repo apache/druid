@@ -124,7 +124,7 @@ public class PodTemplateTaskAdapter implements TaskAdapter
 
     return new JobBuilder()
         .withNewMetadata()
-        .withName(new K8sTaskId(taskRunnerConfig.getAlias(), task).getK8sJobName())
+        .withName(new K8sTaskId(taskRunnerConfig.getK8sTaskNamePrefix(), task).getK8sJobName())
         .addToLabels(getJobLabels(taskRunnerConfig, task))
         .addToAnnotations(getJobAnnotations(taskRunnerConfig, task))
         .addToAnnotations(DruidK8sConstants.TASK_JOB_TEMPLATE, podTemplateWithName.getName())
@@ -203,7 +203,7 @@ public class PodTemplateTaskAdapter implements TaskAdapter
     if (taskId == null) {
       throw DruidException.defensive().build("No task_id annotation found on pod spec for job [%s]", from.getMetadata().getName());
     }
-    return new K8sTaskId(taskRunnerConfig.getAlias(), taskId);
+    return new K8sTaskId(taskRunnerConfig.getK8sTaskNamePrefix(), taskId);
   }
 
   private Collection<EnvVar> getEnv(Task task) throws IOException
