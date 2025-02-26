@@ -161,7 +161,7 @@ public class SupervisorResourceTest extends EasyMockSupport
 
     replayAll();
 
-    Response response = supervisorResource.specPost(spec, request, true);
+    Response response = supervisorResource.specPost(spec, request, false);
     verifyAll();
 
     Assert.assertEquals(200, response.getStatus());
@@ -171,14 +171,14 @@ public class SupervisorResourceTest extends EasyMockSupport
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.absent());
     replayAll();
 
-    response = supervisorResource.specPost(spec, request, true);
+    response = supervisorResource.specPost(spec, request, false);
     verifyAll();
 
     Assert.assertEquals(503, response.getStatus());
   }
 
   @Test
-  public void testSpecPostrestartIfUnmodifiedFalse()
+  public void testSpecPostskipRestartIfUnmodifiedTrue()
   {
     SupervisorSpec spec = new TestSupervisorSpec("my-id", null, null)
     {
@@ -198,7 +198,7 @@ public class SupervisorResourceTest extends EasyMockSupport
     EasyMock.expect(authConfig.isEnableInputSourceSecurity()).andReturn(true);
     replayAll();
 
-    Response response = supervisorResource.specPost(spec, request, false);
+    Response response = supervisorResource.specPost(spec, request, true);
     verifyAll();
 
     Assert.assertEquals(200, response.getStatus());
@@ -219,7 +219,7 @@ public class SupervisorResourceTest extends EasyMockSupport
 
     replayAll();
 
-    response = supervisorResource.specPost(spec, request, false);
+    response = supervisorResource.specPost(spec, request, true);
     verifyAll();
 
     Assert.assertEquals(200, response.getStatus());
@@ -250,7 +250,7 @@ public class SupervisorResourceTest extends EasyMockSupport
     EasyMock.expect(authConfig.isEnableInputSourceSecurity()).andReturn(true);
     replayAll();
 
-    Response response = supervisorResource.specPost(spec, request, true);
+    Response response = supervisorResource.specPost(spec, request, false);
     verifyAll();
 
     Assert.assertEquals(200, response.getStatus());
@@ -260,7 +260,7 @@ public class SupervisorResourceTest extends EasyMockSupport
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.absent());
     replayAll();
 
-    response = supervisorResource.specPost(spec, request, true);
+    response = supervisorResource.specPost(spec, request, false);
     verifyAll();
 
     Assert.assertEquals(503, response.getStatus());
@@ -290,7 +290,7 @@ public class SupervisorResourceTest extends EasyMockSupport
     EasyMock.expect(authConfig.isEnableInputSourceSecurity()).andReturn(true);
     replayAll();
 
-    Assert.assertThrows(ForbiddenException.class, () -> supervisorResource.specPost(spec, request, true));
+    Assert.assertThrows(ForbiddenException.class, () -> supervisorResource.specPost(spec, request, false));
     verifyAll();
   }
 

@@ -56,7 +56,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
-import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -123,7 +122,7 @@ public class SupervisorResource
   public Response specPost(
       final SupervisorSpec spec,
       @Context final HttpServletRequest req,
-      @QueryParam("restartIfUnmodified") @DefaultValue("true") boolean restartIfUnmodified
+      @QueryParam("skipRestartIfUnmodified") boolean skipRestartIfUnmodified
   )
   {
     return asLeaderWithSupervisorManager(
@@ -156,7 +155,7 @@ public class SupervisorResource
           if (!authResult.allowAccessWithNoRestriction()) {
             throw new ForbiddenException(authResult.getErrorMessage());
           }
-          if (!restartIfUnmodified && !manager.shouldUpdateSupervisor(spec)) {
+          if (skipRestartIfUnmodified && !manager.shouldUpdateSupervisor(spec)) {
             return Response.ok(ImmutableMap.of("id", spec.getId())).build();
           }
 

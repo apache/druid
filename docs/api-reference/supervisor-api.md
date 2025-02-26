@@ -2353,10 +2353,10 @@ Content-Length: 1359
 </TabItem>
 </Tabs>
 
-#### Sample request with restartIfUnmodified
-The following example sets the restartIfUnmodified flag to false. With this flag set to false, the Supervisor will only restart if there has been a modification to the SupervisorSpec. 
+#### Sample request with skipRestartIfUnmodified
+The following example sets the skipRestartIfUnmodified flag to true. With this flag set to false, the Supervisor will only restart if there has been a modification to the SupervisorSpec. 
 ```shell
-curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor?restartIfUnmodified=false" \
+curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor?skipRestartIfUnmodified=true" \
 --header 'Content-Type: application/json' \
 --data '{
     "type": "kafka",
