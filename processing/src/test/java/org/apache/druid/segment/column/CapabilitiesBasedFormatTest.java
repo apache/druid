@@ -45,12 +45,14 @@ public class CapabilitiesBasedFormatTest
     ColumnCapabilities mergedCapabilities = format.merge(new CapabilitiesBasedFormat(capabilities2))
                                                   .toColumnCapabilities();
     Assertions.assertTrue(mergedCapabilities.is(ValueType.STRING));
-    // this one is false if either is false
+    // false if either is false
     Assertions.assertFalse(mergedCapabilities.hasBitmapIndexes());
+    // also false if either is false, but these don't have any known implications for segment creation since they are
+    // computed when the segment is loaded and only used at query time
+    Assertions.assertFalse(mergedCapabilities.areDictionaryValuesSorted().isTrue());
+    Assertions.assertFalse(mergedCapabilities.areDictionaryValuesUnique().isTrue());
     // rest are true if either is true
     Assertions.assertTrue(mergedCapabilities.isDictionaryEncoded().isTrue());
-    Assertions.assertTrue(mergedCapabilities.areDictionaryValuesSorted().isTrue());
-    Assertions.assertTrue(mergedCapabilities.areDictionaryValuesUnique().isTrue());
     Assertions.assertTrue(mergedCapabilities.hasMultipleValues().isTrue());
     Assertions.assertTrue(mergedCapabilities.hasNulls().isTrue());
   }
