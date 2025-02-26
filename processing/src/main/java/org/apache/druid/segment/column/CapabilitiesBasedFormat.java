@@ -98,11 +98,10 @@ public class CapabilitiesBasedFormat implements ColumnFormat
 
     ColumnCapabilitiesImpl merged = ColumnCapabilitiesImpl.copyOf(this.toColumnCapabilities());
     ColumnCapabilitiesImpl otherSnapshot = ColumnCapabilitiesImpl.copyOf(otherFormat.toColumnCapabilities());
-
+    final String mergedType = merged.getType() == null ? null : merged.asTypeString();
+    final String otherType = otherSnapshot.getType() == null ? null : otherSnapshot.asTypeString();
     if (!Objects.equals(merged.getType(), otherSnapshot.getType())
         || !Objects.equals(merged.getElementType(), otherSnapshot.getElementType())) {
-      final String mergedType = merged.getType() == null ? null : merged.asTypeString();
-      final String otherType = otherSnapshot.getType() == null ? null : otherSnapshot.asTypeString();
       throw new ISE(
           "Cannot merge columns of type[%s] and [%s]",
           mergedType,
@@ -111,18 +110,18 @@ public class CapabilitiesBasedFormat implements ColumnFormat
     } else if (!Objects.equals(merged.getComplexTypeName(), otherSnapshot.getComplexTypeName())) {
       throw new ISE(
           "Cannot merge columns of type[%s] and [%s]",
-          merged.getComplexTypeName(),
-          otherSnapshot.getComplexTypeName()
+          mergedType,
+          otherType
       );
     }
 
     merged.setDictionaryEncoded(merged.isDictionaryEncoded().or(otherSnapshot.isDictionaryEncoded()).isTrue());
     merged.setHasMultipleValues(merged.hasMultipleValues().or(otherSnapshot.hasMultipleValues()).isTrue());
     merged.setDictionaryValuesSorted(
-        merged.areDictionaryValuesSorted().and(otherSnapshot.areDictionaryValuesSorted()).isTrue()
+        merged.areDictionaryValuesSorted().or(otherSnapshot.areDictionaryValuesSorted()).isTrue()
     );
     merged.setDictionaryValuesUnique(
-        merged.areDictionaryValuesUnique().and(otherSnapshot.areDictionaryValuesUnique()).isTrue()
+        merged.areDictionaryValuesUnique().or(otherSnapshot.areDictionaryValuesUnique()).isTrue()
     );
     merged.setHasNulls(merged.hasNulls().or(otherSnapshot.hasNulls()).isTrue());
     // when merging persisted queryableIndexes in the same ingestion job, all queryableIndexes should have the exact
