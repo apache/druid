@@ -38,7 +38,6 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.utils.CloseableUtils;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
-import org.apache.zookeeper.data.Stat;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -76,8 +75,8 @@ public class Announcer
   private final List<Announceable> toAnnounce = new ArrayList<>();
   @GuardedBy("toAnnounce")
   private final List<Announceable> toUpdate = new ArrayList<>();
-  private final ConcurrentMap<String, PathChildrenCache> listeners = new ConcurrentHashMap<>();
-  private final ConcurrentMap<String, ConcurrentMap<String, byte[]>> announcements = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<String, PathChildrenCache> listeners = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<String, ConcurrentHashMap<String, byte[]>> announcements = new ConcurrentHashMap<>();
   private final List<String> parentsIBuilt = new CopyOnWriteArrayList<>();
 
   // Used for testing
@@ -118,7 +117,7 @@ public class Announcer
     log.debug("Starting Announcer.");
     synchronized (toAnnounce) {
       if (started) {
-        log.debug("Cannot start Announcer that has already started.");
+        log.debug("Announcer has already been started by another thread, ignoring start request.");
         return;
       }
 
@@ -142,7 +141,7 @@ public class Announcer
     log.debug("Stopping Announcer.");
     synchronized (toAnnounce) {
       if (!started) {
-        log.debug("Cannot stop Announcer that has not started.");
+        log.debug("Announcer has already been stopped by another thread, ignoring stop request.");
         return;
       }
 
@@ -158,7 +157,7 @@ public class Announcer
         pathChildrenCacheExecutor.shutdown();
       }
 
-      for (Map.Entry<String, ConcurrentMap<String, byte[]>> entry : announcements.entrySet()) {
+      for (Map.Entry<String, ConcurrentHashMap<String, byte[]>> entry : announcements.entrySet()) {
         String basePath = entry.getKey();
 
         for (String announcementPath : entry.getValue().keySet()) {
@@ -237,11 +236,8 @@ public class Announcer
         log.warn(e, "Failed to check existence of parent path. Proceeding without creating parent path.");
       }
 
-      // I don't have a watcher on this path yet, create a Map and start watching.
-      announcements.putIfAbsent(parentPath, new ConcurrentHashMap<>());
-
-      // Guaranteed to be non-null, but might be a map put in here by another thread.
-      final ConcurrentMap<String, byte[]> finalSubPaths = announcements.get(parentPath);
+      final ConcurrentHashMap<String, byte[]> finalSubPaths = announcements.computeIfAbsent(parentPath,
+              key -> new ConcurrentHashMap<>());
 
       // Synchronize to make sure that I only create a listener once.
       synchronized (finalSubPaths) {
@@ -387,14 +383,14 @@ public class Announcer
     }
   }
 
-  private String createAnnouncement(final String path, byte[] value) throws Exception
+  private void createAnnouncement(final String path, byte[] value) throws Exception
   {
-    return curator.create().compressed().withMode(CreateMode.EPHEMERAL).inBackground().forPath(path, value);
+    curator.create().compressed().withMode(CreateMode.EPHEMERAL).inBackground().forPath(path, value);
   }
 
-  private Stat updateAnnouncement(final String path, final byte[] value) throws Exception
+  private void updateAnnouncement(final String path, final byte[] value) throws Exception
   {
-    return curator.setData().compressed().inBackground().forPath(path, value);
+    curator.setData().compressed().inBackground().forPath(path, value);
   }
 
   /**

@@ -42,7 +42,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 
@@ -65,7 +64,7 @@ public class NodeAnnouncer
   private final CuratorFramework curator;
   private final ExecutorService nodeCacheExecutor;
 
-  private final ConcurrentMap<String, NodeCache> listeners = new ConcurrentHashMap<>();
+  private final ConcurrentHashMap<String, NodeCache> listeners = new ConcurrentHashMap<>();
   private final ConcurrentHashMap<String, byte[]> announcedPaths = new ConcurrentHashMap<>();
 
   @GuardedBy("toAnnounce")
@@ -113,7 +112,7 @@ public class NodeAnnouncer
     log.debug("Starting NodeAnnouncer");
     synchronized (toAnnounce) {
       if (started) {
-        log.debug("Cannot start NodeAnnouncer that has already started.");
+        log.debug("NodeAnnouncer has already been started by another thread, ignoring start request.");
         return;
       }
 
@@ -137,7 +136,7 @@ public class NodeAnnouncer
     log.debug("Stopping NodeAnnouncer");
     synchronized (toAnnounce) {
       if (!started) {
-        log.debug("Cannot stop NodeAnnouncer that has not started.");
+        log.debug("NodeAnnouncer has already been stopped by another thread, ignoring stop request.");
         return;
       }
 
@@ -232,6 +231,7 @@ public class NodeAnnouncer
 
       // Synchronize to make sure that I only create a listener once.
       synchronized (toAnnounce) {
+
         if (!listeners.containsKey(path)) {
           final NodeCache cache = setupNodeCache(path);
 
@@ -269,17 +269,18 @@ public class NodeAnnouncer
           if (currentData == null) {
             // If currentData is null, and we know we have already announced the data,
             // this means that the ephemeral node was unexpectedly removed.
+
             // We will recreate the node again using the previous data.
-            final byte[] previouslyAnnouncedData = announcedPaths.get(path);
-            if (previouslyAnnouncedData != null) {
-              log.info("Node[%s] dropped, reinstating.", path);
+            announcedPaths.computeIfPresent(path, (key, data) -> {
+              log.info("Node[%s] dropped, reinstating.", key);
               try {
-                createAnnouncement(path, previouslyAnnouncedData);
+                createAnnouncement(key, data);
               }
               catch (Exception e) {
                 throw new RuntimeException(e);
               }
-            }
+              return data;
+            });
           }
         })
     );
