@@ -110,13 +110,13 @@ public class QueryDataSourceTest
   @Test
   public void test_isConcrete_table()
   {
-    Assert.assertFalse(queryOnTableDataSource.isConcrete());
+    Assert.assertFalse(queryOnTableDataSource.isProcessable());
   }
 
   @Test
   public void test_isConcrete_lookup()
   {
-    Assert.assertFalse(queryOnLookupDataSource.isConcrete());
+    Assert.assertFalse(queryOnLookupDataSource.isProcessable());
   }
 
   @Test
