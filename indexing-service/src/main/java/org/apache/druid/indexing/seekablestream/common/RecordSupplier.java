@@ -27,6 +27,7 @@ import javax.validation.constraints.NotNull;
 import java.io.Closeable;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -131,6 +132,13 @@ public interface RecordSupplier<PartitionIdType, SequenceOffsetType, RecordType 
    * @return set of partitions
    */
   Set<PartitionIdType> getPartitionIds(String stream);
+
+  /**
+   * returns the end offsets for all the assigned partitions.
+   *
+   * @return set of partitions with their end offsets
+   */
+  Map<PartitionIdType, SequenceOffsetType> getEndOffsets(Set<StreamPartition<PartitionIdType>> partitions);
 
   /**
    * close the RecordSupplier
