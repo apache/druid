@@ -96,6 +96,7 @@ import org.apache.druid.segment.loading.StorageLocation;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.segment.loading.TombstoneLoadSpec;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
+import org.apache.druid.segment.nested.NestedCommonFormatColumnFormatSpec;
 import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
 import org.apache.druid.segment.realtime.WindowedCursorFactory;
 import org.apache.druid.segment.transform.CompactionTransformSpec;
@@ -154,6 +155,9 @@ public class CompactionTaskRunTest extends IngestionTestBase
       false,
       0
   );
+
+  private static final NestedCommonFormatColumnFormatSpec DEFAULT_NESTED_SPEC =
+      NestedCommonFormatColumnFormatSpec.getEffectiveFormatSpec(null, IndexSpec.DEFAULT);
 
   private static final List<String> TEST_ROWS = ImmutableList.of(
       "2014-01-01T00:00:10Z,a,1\n",
@@ -1791,10 +1795,10 @@ public class CompactionTaskRunTest extends IngestionTestBase
               DimensionsSpec.builder()
                             .setDimensions(Arrays.asList(
                                 // check explicitly specified types are preserved
-                                new AutoTypeColumnSchema("ts", ColumnType.STRING, null),
-                                AutoTypeColumnSchema.of("dim"),
-                                new AutoTypeColumnSchema("x", ColumnType.LONG, null),
-                                new AutoTypeColumnSchema("y", ColumnType.LONG, null)
+                                new AutoTypeColumnSchema("ts", ColumnType.STRING, DEFAULT_NESTED_SPEC),
+                                new AutoTypeColumnSchema("dim", null, DEFAULT_NESTED_SPEC),
+                                new AutoTypeColumnSchema("x", ColumnType.LONG, DEFAULT_NESTED_SPEC),
+                                new AutoTypeColumnSchema("y", ColumnType.LONG, DEFAULT_NESTED_SPEC)
                             ))
                             .build(),
               expectedLongSumMetric
@@ -1921,11 +1925,11 @@ public class CompactionTaskRunTest extends IngestionTestBase
             DimensionsSpec.builder()
                           .setDimensions(Arrays.asList(
                               // check explicitly that time ordering is preserved
-                              new AutoTypeColumnSchema("x", ColumnType.LONG, null),
+                              new AutoTypeColumnSchema("x", ColumnType.LONG, DEFAULT_NESTED_SPEC),
                               new LongDimensionSchema("__time"),
-                              new AutoTypeColumnSchema("ts", ColumnType.STRING, null),
-                              AutoTypeColumnSchema.of("dim"),
-                              new AutoTypeColumnSchema("y", ColumnType.LONG, null)
+                              new AutoTypeColumnSchema("ts", ColumnType.STRING, DEFAULT_NESTED_SPEC),
+                              new AutoTypeColumnSchema("dim", null, DEFAULT_NESTED_SPEC),
+                              new AutoTypeColumnSchema("y", ColumnType.LONG, DEFAULT_NESTED_SPEC)
                           ))
                           .setForceSegmentSortByTime(false)
                           .build(),
