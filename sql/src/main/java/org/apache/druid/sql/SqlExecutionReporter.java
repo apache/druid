@@ -101,14 +101,18 @@ public class SqlExecutionReporter
         // Note: the dimension is "dataSource" (sic), so we log only the SQL resource
         // actions. Even here, for external tables, those actions are not always
         // datasources.
-        metricBuilder.setDimension(
-            "dataSource",
-            stmt.authResult.sqlResourceActions
-                            .stream()
-                            .map(action -> action.getResource().getName())
-                            .collect(Collectors.toList())
-                            .toString()
-        );
+        String dataSourcesResourceNames = stmt.authResult.sqlResourceActions
+                .stream()
+                .map(action -> action.getResource().getName())
+                .collect(Collectors.toList())
+                .toString();
+
+        // Remove enclosing square brackets from String representation of the list,
+        // so that the emitters do not decorate the dataSource dimension with square brackets
+        if (dataSourcesResourceNames != null && !dataSourcesResourceNames.isBlank()) {
+          dataSourcesResourceNames = dataSourcesResourceNames.substring(1, dataSourcesResourceNames.length() - 1);
+        }
+        metricBuilder.setDimension("dataSource", dataSourcesResourceNames);
       }
       metricBuilder.setDimension("remoteAddress", StringUtils.nullToEmptyNonDruidDataString(remoteAddress));
       metricBuilder.setDimension("success", String.valueOf(success));
