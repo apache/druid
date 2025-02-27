@@ -97,6 +97,7 @@ public class QueryDataSource implements DataSource
   @Override
   public boolean isGlobal()
   {
+    // FIXME: this feels like dodgy to me - but this is how it was before
     return query.getDataSource().isGlobal();
   }
 
