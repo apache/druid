@@ -236,8 +236,7 @@ public class Announcer
         log.warn(e, "Failed to check existence of parent path. Proceeding without creating parent path.");
       }
 
-      final ConcurrentHashMap<String, byte[]> finalSubPaths = announcements.computeIfAbsent(parentPath,
-              key -> new ConcurrentHashMap<>());
+      final ConcurrentHashMap<String, byte[]> finalSubPaths = announcements.computeIfAbsent(parentPath, key -> new ConcurrentHashMap<>());
 
       // Synchronize to make sure that I only create a listener once.
       synchronized (finalSubPaths) {
