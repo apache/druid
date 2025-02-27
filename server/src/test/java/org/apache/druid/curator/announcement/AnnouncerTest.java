@@ -30,7 +30,6 @@ import org.apache.druid.curator.CuratorTestBase;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.server.ZKPathsUtils;
 import org.apache.zookeeper.KeeperException.Code;
 import org.apache.zookeeper.data.Stat;
 import org.junit.After;
@@ -184,7 +183,7 @@ public class AnnouncerTest extends CuratorTestBase
 
     final byte[] billy = StringUtils.toUtf8("billy");
     final String testPath = "/somewhere/test2";
-    final String parent = ZKPathsUtils.getParentPath(testPath);
+    final String parent = ZKPaths.getPathAndNode(testPath).getPath();
 
     announcer.start();
     try {
@@ -208,7 +207,7 @@ public class AnnouncerTest extends CuratorTestBase
 
     final byte[] billy = StringUtils.toUtf8("billy");
     final String testPath = "/somewhere/test";
-    final String parent = ZKPathsUtils.getParentPath(testPath);
+    final String parent = ZKPaths.getPathAndNode(testPath).getPath();
 
     curator.create().forPath(parent);
     final Stat initialStat = curator.checkExists().forPath(parent);
@@ -235,7 +234,7 @@ public class AnnouncerTest extends CuratorTestBase
 
     final byte[] billy = StringUtils.toUtf8("billy");
     final String testPath = "/somewhere/test";
-    final String parent = ZKPathsUtils.getParentPath(testPath);
+    final String parent = ZKPaths.getPathAndNode(testPath).getPath();
 
     announcer.start();
     try {
