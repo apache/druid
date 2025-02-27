@@ -38,7 +38,11 @@ import {
 import { AsyncActionDialog } from '../../dialogs';
 import type { QueryWithContext } from '../../druid-models';
 import type { Capabilities, CapabilitiesMode } from '../../helpers';
-import { STANDARD_TABLE_PAGE_SIZE, STANDARD_TABLE_PAGE_SIZE_OPTIONS } from '../../react-table';
+import {
+  STANDARD_TABLE_PAGE_SIZE,
+  STANDARD_TABLE_PAGE_SIZE_OPTIONS,
+  suggestibleFilterInput,
+} from '../../react-table';
 import { Api, AppToaster } from '../../singletons';
 import type { AuxiliaryQueryFn, NumberLike } from '../../utils';
 import {
@@ -417,6 +421,16 @@ ORDER BY
           {
             Header: 'Type',
             show: visibleColumns.shown('Type'),
+            Filter: suggestibleFilterInput([
+              'coordinator',
+              'overlord',
+              'router',
+              'broker',
+              'historical',
+              'indexer',
+              'middle_manager',
+              'peon',
+            ]),
             accessor: 'service_type',
             width: 150,
             Cell: this.renderFilterableCell('service_type'),
