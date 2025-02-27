@@ -32,6 +32,7 @@ import org.apache.druid.segment.DimensionHandler;
 import org.apache.druid.segment.DimensionHandlerProvider;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.NestedCommonFormatColumnHandler;
+import org.apache.druid.segment.nested.NestedCommonFormatColumnFormatSpec;
 import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
 import org.apache.druid.segment.nested.StructuredData;
 import org.apache.druid.segment.nested.StructuredDataJsonSerializer;
@@ -50,6 +51,8 @@ public class BuiltInTypesModule implements DruidModule
    * {@link #initDimensionHandlerAndMvHandlingMode(DefaultColumnFormatConfig)}.
    */
   private static DimensionSchema.MultiValueHandling STRING_MV_MODE = DimensionSchema.MultiValueHandling.SORTED_ARRAY;
+  @Nullable
+  private static NestedCommonFormatColumnFormatSpec DEFAULT_NESTED_COMMON_FORMAT_SPEC = null;
 
   @Override
   public List<? extends Module> getJacksonModules()
@@ -71,14 +74,9 @@ public class BuiltInTypesModule implements DruidModule
   @LazySingleton
   public SideEffectRegisterer initDimensionHandlerAndMvHandlingMode(DefaultColumnFormatConfig formatsConfig)
   {
-    if (formatsConfig.getNestedColumnFormatVersion() == null || formatsConfig.getNestedColumnFormatVersion() == 5) {
-      DimensionHandlerUtils.registerDimensionHandlerProvider(
-          NestedDataComplexTypeSerde.TYPE_NAME,
-          new NestedCommonFormatHandlerProvider()
-      );
-    }
-
     setStringMultiValueHandlingModeIfConfigured(formatsConfig.getStringMultiValueHandlingMode());
+    setNestedColumnDefaults(formatsConfig);
+
     return new SideEffectRegisterer();
   }
 
@@ -89,6 +87,17 @@ public class BuiltInTypesModule implements DruidModule
     }
   }
 
+  private static void setNestedColumnDefaults(DefaultColumnFormatConfig formatsConfig)
+  {
+    if (formatsConfig.getNestedColumnFormatVersion() == null || formatsConfig.getNestedColumnFormatVersion() == 5) {
+      DimensionHandlerUtils.registerDimensionHandlerProvider(
+          NestedDataComplexTypeSerde.TYPE_NAME,
+          new NestedCommonFormatHandlerProvider()
+      );
+    }
+    DEFAULT_NESTED_COMMON_FORMAT_SPEC = formatsConfig.getNestedColumnFormatSpec();
+  }
+
   /**
    * @return the configured string multi value handling mode from the system config if set; otherwise, returns
    * the default.
@@ -96,6 +105,11 @@ public class BuiltInTypesModule implements DruidModule
   public static DimensionSchema.MultiValueHandling getStringMultiValueHandlingMode()
   {
     return STRING_MV_MODE;
+  }
+
+  public static NestedCommonFormatColumnFormatSpec getDefaultNestedCommonFormatSpec()
+  {
+    return DEFAULT_NESTED_COMMON_FORMAT_SPEC;
   }
 
   public static List<SimpleModule> getJacksonModulesList()
@@ -134,7 +148,7 @@ public class BuiltInTypesModule implements DruidModule
     @Override
     public DimensionHandler<StructuredData, StructuredData, StructuredData> get(String dimensionName)
     {
-      return new NestedCommonFormatColumnHandler(dimensionName, null);
+      return new NestedCommonFormatColumnHandler(dimensionName, null, DEFAULT_NESTED_COMMON_FORMAT_SPEC);
     }
   }
 
