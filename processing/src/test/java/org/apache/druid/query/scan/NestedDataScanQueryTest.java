@@ -551,9 +551,9 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
     DimensionsSpec spec = DimensionsSpec.builder()
                                         .setDimensions(
                                             ImmutableList.of(
-                                                new AutoTypeColumnSchema("str", ColumnType.STRING),
-                                                new AutoTypeColumnSchema("long", ColumnType.LONG),
-                                                new AutoTypeColumnSchema("double", ColumnType.FLOAT)
+                                                new AutoTypeColumnSchema("str", ColumnType.STRING, null),
+                                                new AutoTypeColumnSchema("long", ColumnType.LONG, null),
+                                                new AutoTypeColumnSchema("double", ColumnType.FLOAT, null)
                                             )
                                         )
                                         .build();

@@ -535,7 +535,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
 
       List<DimensionSchema> dimensionSchemas = ImmutableList.of(
           new StringDimensionSchema("language", DimensionSchema.MultiValueHandling.SORTED_ARRAY, false),
-          new AutoTypeColumnSchema("deleted", ColumnType.DOUBLE)
+          new AutoTypeColumnSchema("deleted", ColumnType.DOUBLE, null)
       );
 
       submitCompactionConfig(

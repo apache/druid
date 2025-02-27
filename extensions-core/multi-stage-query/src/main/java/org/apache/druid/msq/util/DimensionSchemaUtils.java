@@ -87,9 +87,9 @@ public class DimensionSchemaUtils
       }
 
       if (queryType != null && (queryType.isPrimitive() || queryType.isPrimitiveArray())) {
-        return new AutoTypeColumnSchema(column, queryType);
+        return new AutoTypeColumnSchema(column, queryType, null);
       }
-      return new AutoTypeColumnSchema(column, null);
+      return AutoTypeColumnSchema.of(column);
     } else {
       // dimensionType may not be identical to queryType, depending on arrayIngestMode.
       final ColumnType dimensionType = getDimensionType(column, queryType, arrayIngestMode);
@@ -109,7 +109,7 @@ public class DimensionSchemaUtils
       } else if (dimensionType.getType() == ValueType.DOUBLE) {
         return new DoubleDimensionSchema(column);
       } else if (dimensionType.getType() == ValueType.ARRAY) {
-        return new AutoTypeColumnSchema(column, dimensionType);
+        return new AutoTypeColumnSchema(column, dimensionType, null);
       } else {
         final ColumnCapabilities capabilities = ColumnCapabilitiesImpl.createDefault().setType(dimensionType);
         return DimensionHandlerUtils.getHandlerFromCapabilities(column, capabilities, null)

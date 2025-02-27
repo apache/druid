@@ -25,7 +25,6 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionType;
-import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.ColumnarDoublesSerializer;
 import org.apache.druid.segment.data.CompressionFactory;
@@ -47,12 +46,12 @@ public class ScalarDoubleColumnSerializer extends ScalarNestedCommonFormatColumn
 
   public ScalarDoubleColumnSerializer(
       String name,
-      IndexSpec indexSpec,
+      NestedCommonFormatColumnFormatSpec columnFormatSpec,
       SegmentWriteOutMedium segmentWriteOutMedium,
       Closer closer
   )
   {
-    super(name, indexSpec, segmentWriteOutMedium, closer);
+    super(name, columnFormatSpec, segmentWriteOutMedium, closer);
   }
 
   @Override
@@ -96,7 +95,7 @@ public class ScalarDoubleColumnSerializer extends ScalarNestedCommonFormatColumn
         segmentWriteOutMedium,
         StringUtils.format("%s.double_column", name),
         ByteOrder.nativeOrder(),
-        indexSpec.getDimensionCompression(),
+        columnFormatSpec.getDoubleColumnCompression(),
         segmentWriteOutMedium.getCloser()
     );
     doublesSerializer.open();

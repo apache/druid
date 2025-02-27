@@ -765,7 +765,7 @@ public class SqlTestFramework
     {
       binder.bind(DruidOperatorTable.class).in(LazySingleton.class);
       binder.bind(DataSegment.PruneSpecsHolder.class).toInstance(DataSegment.PruneSpecsHolder.DEFAULT);
-      binder.bind(DefaultColumnFormatConfig.class).toInstance(new DefaultColumnFormatConfig(null, null));
+      binder.bind(DefaultColumnFormatConfig.class).toInstance(new DefaultColumnFormatConfig(null, null, null));
 
       binder.bind(new TypeLiteral<NonBlockingPool<ByteBuffer>>(){})
             .annotatedWith(Global.class)

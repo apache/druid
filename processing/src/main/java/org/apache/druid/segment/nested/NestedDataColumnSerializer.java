@@ -30,14 +30,12 @@ import org.apache.druid.java.util.common.io.smoosh.SmooshedWriter;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.segment.ColumnValueSelector;
-import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.StringEncodingStrategies;
 import org.apache.druid.segment.column.Types;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.ByteBufferWriter;
 import org.apache.druid.segment.data.CompressedVariableSizedBlobColumnSerializer;
-import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.data.DictionaryWriter;
 import org.apache.druid.segment.data.FixedIndexedWriter;
 import org.apache.druid.segment.data.FrontCodedIntArrayIndexedWriter;
@@ -81,8 +79,7 @@ public class NestedDataColumnSerializer extends NestedCommonFormatColumnSerializ
 
   private final String name;
   private final SegmentWriteOutMedium segmentWriteOutMedium;
-  private final IndexSpec indexSpec;
-  @SuppressWarnings("unused")
+  private final NestedCommonFormatColumnFormatSpec columnFormatSpec;
   private final Closer closer;
 
   private final StructuredDataProcessor fieldProcessor = new StructuredDataProcessor()
@@ -141,7 +138,7 @@ public class NestedDataColumnSerializer extends NestedCommonFormatColumnSerializ
 
   private DictionaryIdLookup globalDictionaryIdLookup;
   private SortedMap<String, FieldTypeInfo.MutableTypeSet> fields;
-  private GenericIndexedWriter<String> fieldsWriter;
+  private DictionaryWriter<String> fieldsWriter;
   private FieldTypeInfo.Writer fieldsInfoWriter;
   private DictionaryWriter<String> dictionaryWriter;
   private FixedIndexedWriter<Long> longDictionaryWriter;
@@ -160,14 +157,14 @@ public class NestedDataColumnSerializer extends NestedCommonFormatColumnSerializ
 
   public NestedDataColumnSerializer(
       String name,
-      IndexSpec indexSpec,
+      NestedCommonFormatColumnFormatSpec columnFormatSpec,
       SegmentWriteOutMedium segmentWriteOutMedium,
       Closer closer
   )
   {
     this.name = name;
     this.segmentWriteOutMedium = segmentWriteOutMedium;
-    this.indexSpec = indexSpec;
+    this.columnFormatSpec = columnFormatSpec;
     this.closer = closer;
   }
 
@@ -207,7 +204,7 @@ public class NestedDataColumnSerializer extends NestedCommonFormatColumnSerializ
     fieldsInfoWriter.open();
 
     dictionaryWriter = StringEncodingStrategies.getStringDictionaryWriter(
-        indexSpec.getStringDictionaryEncoding(),
+        columnFormatSpec.getStringDictionaryEncoding(),
         segmentWriteOutMedium,
         name
     );
@@ -255,17 +252,17 @@ public class NestedDataColumnSerializer extends NestedCommonFormatColumnSerializ
     rawWriter = new CompressedVariableSizedBlobColumnSerializer(
         ColumnSerializerUtils.getInternalFileName(name, RAW_FILE_NAME),
         segmentWriteOutMedium,
-        indexSpec.getJsonCompression() != null ? indexSpec.getJsonCompression() : CompressionStrategy.LZ4
+        columnFormatSpec.getObjectStorageCompression()
     );
     rawWriter.open();
 
     nullBitmapWriter = new ByteBufferWriter<>(
         segmentWriteOutMedium,
-        indexSpec.getBitmapSerdeFactory().getObjectStrategy()
+        columnFormatSpec.getBitmapEncoding().getObjectStrategy()
     );
     nullBitmapWriter.open();
 
-    nullRowsBitmap = indexSpec.getBitmapSerdeFactory().getBitmapFactory().makeEmptyMutableBitmap();
+    nullRowsBitmap = columnFormatSpec.getBitmapEncoding().getBitmapFactory().makeEmptyMutableBitmap();
   }
 
   @Override
@@ -287,7 +284,7 @@ public class NestedDataColumnSerializer extends NestedCommonFormatColumnSerializ
               name,
               fieldFileName,
               segmentWriteOutMedium,
-              indexSpec,
+              columnFormatSpec,
               globalDictionaryIdLookup
           );
         } else if (Types.is(type, ValueType.LONG)) {
@@ -295,7 +292,7 @@ public class NestedDataColumnSerializer extends NestedCommonFormatColumnSerializ
               name,
               fieldFileName,
               segmentWriteOutMedium,
-              indexSpec,
+              columnFormatSpec,
               globalDictionaryIdLookup
           );
         } else if (Types.is(type, ValueType.DOUBLE)) {
@@ -303,7 +300,7 @@ public class NestedDataColumnSerializer extends NestedCommonFormatColumnSerializ
               name,
               fieldFileName,
               segmentWriteOutMedium,
-              indexSpec,
+              columnFormatSpec,
               globalDictionaryIdLookup
           );
         } else if (Types.is(type, ValueType.ARRAY)) {
@@ -311,7 +308,7 @@ public class NestedDataColumnSerializer extends NestedCommonFormatColumnSerializ
               name,
               fieldFileName,
               segmentWriteOutMedium,
-              indexSpec,
+              columnFormatSpec,
               globalDictionaryIdLookup
           );
         } else {
@@ -322,7 +319,7 @@ public class NestedDataColumnSerializer extends NestedCommonFormatColumnSerializ
             name,
             fieldFileName,
             segmentWriteOutMedium,
-            indexSpec,
+            columnFormatSpec,
             globalDictionaryIdLookup
         );
       }

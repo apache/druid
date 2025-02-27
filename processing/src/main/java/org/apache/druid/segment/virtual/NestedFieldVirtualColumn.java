@@ -1167,7 +1167,7 @@ public class NestedFieldVirtualColumn implements VirtualColumn
     }
     BaseColumn theColumn = holder.getColumn();
     if (theColumn instanceof CompressedNestedDataComplexColumn) {
-      final CompressedNestedDataComplexColumn<?> nestedColumn = (CompressedNestedDataComplexColumn<?>) theColumn;
+      final CompressedNestedDataComplexColumn<?, ?> nestedColumn = (CompressedNestedDataComplexColumn<?, ?>) theColumn;
       final ColumnIndexSupplier nestedColumnPathIndexSupplier = nestedColumn.getColumnIndexSupplier(fieldSpec.parts);
       if (nestedColumnPathIndexSupplier == null && fieldSpec.processFromRaw) {
         // if processing from raw, a non-exstent path from parts doesn't mean the path doesn't really exist

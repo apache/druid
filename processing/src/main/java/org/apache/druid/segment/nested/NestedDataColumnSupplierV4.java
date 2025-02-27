@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.java.util.common.RE;
+import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.segment.IndexMerger;
 import org.apache.druid.segment.column.ColumnBuilder;
@@ -80,7 +81,7 @@ public class NestedDataColumnSupplierV4 implements Supplier<ComplexColumn>
       try {
         final SmooshedFileMapper mapper = columnBuilder.getFileMapper();
         final ComplexColumnMetadata metadata;
-        final GenericIndexed<String> fields;
+        final GenericIndexed<ByteBuffer> fields;
         final FieldTypeInfo fieldInfo;
         final CompressedVariableSizedBlobColumnSupplier compressedRawColumnSupplier;
         final ImmutableBitmap nullValues;
@@ -95,7 +96,7 @@ public class NestedDataColumnSupplierV4 implements Supplier<ComplexColumn>
             IndexMerger.SERIALIZER_UTILS.readString(bb),
             ComplexColumnMetadata.class
         );
-        fields = GenericIndexed.read(bb, GenericIndexed.STRING_STRATEGY, mapper);
+        fields = GenericIndexed.read(bb, GenericIndexed.UTF8_STRATEGY, mapper);
         fieldInfo = FieldTypeInfo.read(bb, fields.size());
 
         if (fields.size() == 0) {
@@ -103,8 +104,8 @@ public class NestedDataColumnSupplierV4 implements Supplier<ComplexColumn>
           // it is the most permissive (besides json)
           simpleType = ColumnType.STRING;
         } else if (fields.size() == 1 &&
-                   ((version == 0x03 && NestedPathFinder.JQ_PATH_ROOT.equals(fields.get(0))) ||
-                    ((version == 0x04 || version == 0x05) && NestedPathFinder.JSON_PATH_ROOT.equals(fields.get(0))))
+                   ((version == 0x03 && NestedPathFinder.JQ_PATH_ROOT.equals(StringUtils.fromUtf8(fields.get(0)))) ||
+                    ((version == 0x04 || version == 0x05) && NestedPathFinder.JSON_PATH_ROOT.equals(StringUtils.fromUtf8(fields.get(0)))))
         ) {
           simpleType = fieldInfo.getTypes(0).getSingleType();
         } else {
@@ -208,7 +209,7 @@ public class NestedDataColumnSupplierV4 implements Supplier<ComplexColumn>
   private final byte version;
   private final String columnName;
   private final ColumnConfig columnConfig;
-  private final GenericIndexed<String> fields;
+  private final GenericIndexed<ByteBuffer> fields;
   private final FieldTypeInfo fieldInfo;
   private final CompressedVariableSizedBlobColumnSupplier compressedRawColumnSupplier;
   private final ImmutableBitmap nullValues;
@@ -228,7 +229,7 @@ public class NestedDataColumnSupplierV4 implements Supplier<ComplexColumn>
       byte version,
       String columnName,
       ColumnConfig columnConfig,
-      GenericIndexed<String> fields,
+      GenericIndexed<ByteBuffer> fields,
       FieldTypeInfo fieldInfo,
       CompressedVariableSizedBlobColumnSupplier compressedRawColumnSupplier,
       ImmutableBitmap nullValues,
@@ -324,7 +325,7 @@ public class NestedDataColumnSupplierV4 implements Supplier<ComplexColumn>
         columnConfig,
         compressedRawColumnSupplier,
         nullValues,
-        fields,
+        fields::singleThreaded,
         fieldInfo,
         stringDictionarySupplier,
         longDictionarySupplier,

@@ -1016,7 +1016,7 @@ public class TestDataBuilder
     List<DimensionSchema> columnSchemas = schemaInfo.getDimensionsSpec()
                                                     .getDimensions()
                                                     .stream()
-                                                    .map(x -> new AutoTypeColumnSchema(x.getName(), null))
+                                                    .map(x -> AutoTypeColumnSchema.of(x.getName()))
                                                     .collect(Collectors.toList());
     QUERYABLE_INDEX_FOR_BENCHMARK_DATASOURCE = segmentGenerator.generate(
         dataSegment,

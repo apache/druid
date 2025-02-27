@@ -70,7 +70,7 @@ public abstract class DimensionSchema
         return new DoubleDimensionSchema(name);
       default:
         // the auto column indexer can handle any type
-        return new AutoTypeColumnSchema(name, null);
+        return AutoTypeColumnSchema.of(name);
     }
   }
 

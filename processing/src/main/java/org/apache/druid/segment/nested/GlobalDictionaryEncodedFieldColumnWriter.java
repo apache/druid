@@ -33,7 +33,6 @@ import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedWriter;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.data.CompressedVSizeColumnarIntsSerializer;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.data.FixedIndexedIntWriter;
@@ -77,7 +76,7 @@ public abstract class GlobalDictionaryEncodedFieldColumnWriter<T>
   protected final SegmentWriteOutMedium segmentWriteOutMedium;
   protected final String columnName;
   protected final String fieldName;
-  protected final IndexSpec indexSpec;
+  protected final NestedCommonFormatColumnFormatSpec columnFormatSpec;
   protected final DictionaryIdLookup globalDictionaryIdLookup;
   protected final LocalDimensionDictionary localDictionary = new LocalDimensionDictionary();
 
@@ -97,14 +96,14 @@ public abstract class GlobalDictionaryEncodedFieldColumnWriter<T>
       String columnName,
       String fieldName,
       SegmentWriteOutMedium segmentWriteOutMedium,
-      IndexSpec indexSpec,
+      NestedCommonFormatColumnFormatSpec columnFormatSpec,
       DictionaryIdLookup globalDictionaryIdLookup
   )
   {
     this.columnName = columnName;
     this.fieldName = fieldName;
+    this.columnFormatSpec = columnFormatSpec;
     this.segmentWriteOutMedium = segmentWriteOutMedium;
-    this.indexSpec = indexSpec;
     this.globalDictionaryIdLookup = globalDictionaryIdLookup;
   }
 
@@ -205,14 +204,14 @@ public abstract class GlobalDictionaryEncodedFieldColumnWriter<T>
     GenericIndexedWriter<ImmutableBitmap> bitmapIndexWriter = new GenericIndexedWriter<>(
         tmpWriteoutMedium,
         columnName,
-        indexSpec.getBitmapSerdeFactory().getObjectStrategy()
+        columnFormatSpec.getBitmapEncoding().getObjectStrategy()
     );
     bitmapIndexWriter.open();
     bitmapIndexWriter.setObjectsNotSorted();
     GenericIndexedWriter<ImmutableBitmap> arrayElementIndexWriter = new GenericIndexedWriter<>(
         tmpWriteoutMedium,
         columnName,
-        indexSpec.getBitmapSerdeFactory().getObjectStrategy()
+        columnFormatSpec.getBitmapEncoding().getObjectStrategy()
     );
     arrayElementIndexWriter.open();
     arrayElementIndexWriter.setObjectsNotSorted();
@@ -233,13 +232,13 @@ public abstract class GlobalDictionaryEncodedFieldColumnWriter<T>
       sortedDictionaryWriter.write(globalId);
       final int unsortedId = globalToUnsorted.get(globalId);
       unsortedToSorted[unsortedId] = index;
-      bitmaps[index] = indexSpec.getBitmapSerdeFactory().getBitmapFactory().makeEmptyMutableBitmap();
+      bitmaps[index] = columnFormatSpec.getBitmapEncoding().getBitmapFactory().makeEmptyMutableBitmap();
     }
 
     for (Int2ObjectMap.Entry<MutableBitmap> arrayElement : arrayElements.int2ObjectEntrySet()) {
       arrayElementDictionaryWriter.write(arrayElement.getIntKey());
       arrayElementIndexWriter.write(
-          indexSpec.getBitmapSerdeFactory().getBitmapFactory().makeImmutableBitmap(arrayElement.getValue())
+          columnFormatSpec.getBitmapEncoding().getBitmapFactory().makeImmutableBitmap(arrayElement.getValue())
       );
     }
 
@@ -257,7 +256,7 @@ public abstract class GlobalDictionaryEncodedFieldColumnWriter<T>
     for (int i = 0; i < bitmaps.length; i++) {
       final MutableBitmap bitmap = bitmaps[i];
       bitmapIndexWriter.write(
-          indexSpec.getBitmapSerdeFactory().getBitmapFactory().makeImmutableBitmap(bitmap)
+          columnFormatSpec.getBitmapEncoding().getBitmapFactory().makeImmutableBitmap(bitmap)
       );
       bitmaps[i] = null; // Reclaim memory
     }
@@ -308,14 +307,14 @@ public abstract class GlobalDictionaryEncodedFieldColumnWriter<T>
 
   public void openColumnSerializer(SegmentWriteOutMedium medium, int maxId) throws IOException
   {
-    if (indexSpec.getDimensionCompression() != CompressionStrategy.UNCOMPRESSED) {
+    if (columnFormatSpec.getDictionaryEncodedColumnCompression() != CompressionStrategy.UNCOMPRESSED) {
       this.version = DictionaryEncodedColumnPartSerde.VERSION.COMPRESSED;
       encodedValueSerializer = CompressedVSizeColumnarIntsSerializer.create(
           fieldName,
           medium,
           columnName,
           maxId,
-          indexSpec.getDimensionCompression(),
+          columnFormatSpec.getDictionaryEncodedColumnCompression(),
           fieldResourceCloser
       );
     } else {

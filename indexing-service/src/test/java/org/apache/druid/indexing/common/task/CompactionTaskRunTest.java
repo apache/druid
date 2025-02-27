@@ -1745,10 +1745,10 @@ public class CompactionTaskRunTest extends IngestionTestBase
         new TimestampSpec("ts", "auto", null),
         DimensionsSpec.builder()
                       .setDimensions(Arrays.asList(
-                          new AutoTypeColumnSchema("ts", ColumnType.STRING),
-                          new AutoTypeColumnSchema("dim", null),
-                          new AutoTypeColumnSchema("x", ColumnType.LONG),
-                          new AutoTypeColumnSchema("y", ColumnType.LONG)
+                          new AutoTypeColumnSchema("ts", ColumnType.STRING, null),
+                          AutoTypeColumnSchema.of("dim"),
+                          new AutoTypeColumnSchema("x", ColumnType.LONG, null),
+                          new AutoTypeColumnSchema("y", ColumnType.LONG, null)
                       ))
                       .build(),
         "|",
@@ -1791,10 +1791,10 @@ public class CompactionTaskRunTest extends IngestionTestBase
               DimensionsSpec.builder()
                             .setDimensions(Arrays.asList(
                                 // check explicitly specified types are preserved
-                                new AutoTypeColumnSchema("ts", ColumnType.STRING),
-                                new AutoTypeColumnSchema("dim", null),
-                                new AutoTypeColumnSchema("x", ColumnType.LONG),
-                                new AutoTypeColumnSchema("y", ColumnType.LONG)
+                                new AutoTypeColumnSchema("ts", ColumnType.STRING, null),
+                                AutoTypeColumnSchema.of("dim"),
+                                new AutoTypeColumnSchema("x", ColumnType.LONG, null),
+                                new AutoTypeColumnSchema("y", ColumnType.LONG, null)
                             ))
                             .build(),
               expectedLongSumMetric
@@ -1873,11 +1873,11 @@ public class CompactionTaskRunTest extends IngestionTestBase
         new TimestampSpec("ts", "auto", null),
         DimensionsSpec.builder()
                       .setDimensions(Arrays.asList(
-                          new AutoTypeColumnSchema("x", ColumnType.LONG),
+                          new AutoTypeColumnSchema("x", ColumnType.LONG, null),
                           new LongDimensionSchema("__time"),
-                          new AutoTypeColumnSchema("ts", ColumnType.STRING),
-                          new AutoTypeColumnSchema("dim", null),
-                          new AutoTypeColumnSchema("y", ColumnType.LONG)
+                          new AutoTypeColumnSchema("ts", ColumnType.STRING, null),
+                          AutoTypeColumnSchema.of("dim"),
+                          new AutoTypeColumnSchema("y", ColumnType.LONG, null)
                       ))
                       .setForceSegmentSortByTime(false)
                       .build(),
@@ -1921,11 +1921,11 @@ public class CompactionTaskRunTest extends IngestionTestBase
             DimensionsSpec.builder()
                           .setDimensions(Arrays.asList(
                               // check explicitly that time ordering is preserved
-                              new AutoTypeColumnSchema("x", ColumnType.LONG),
+                              new AutoTypeColumnSchema("x", ColumnType.LONG, null),
                               new LongDimensionSchema("__time"),
-                              new AutoTypeColumnSchema("ts", ColumnType.STRING),
-                              new AutoTypeColumnSchema("dim", null),
-                              new AutoTypeColumnSchema("y", ColumnType.LONG)
+                              new AutoTypeColumnSchema("ts", ColumnType.STRING, null),
+                              AutoTypeColumnSchema.of("dim"),
+                              new AutoTypeColumnSchema("y", ColumnType.LONG, null)
                           ))
                           .setForceSegmentSortByTime(false)
                           .build(),

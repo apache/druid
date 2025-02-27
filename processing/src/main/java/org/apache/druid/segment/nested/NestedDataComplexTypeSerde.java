@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import it.unimi.dsi.fastutil.Hash;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.java.util.common.guava.Comparators;
 import org.apache.druid.segment.DimensionHandler;
 import org.apache.druid.segment.NestedCommonFormatColumnHandler;
@@ -234,7 +235,7 @@ public class NestedDataComplexTypeSerde extends ComplexMetricSerde
     @Override
     public DimensionHandler getColumnHandler(String columnName)
     {
-      return new NestedCommonFormatColumnHandler(columnName, null);
+      return new NestedCommonFormatColumnHandler(columnName, null, BuiltInTypesModule.getDefaultNestedCommonFormatSpec());
     }
 
     @Override
