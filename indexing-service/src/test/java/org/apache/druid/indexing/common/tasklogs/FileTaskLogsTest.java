@@ -58,7 +58,7 @@ public class FileTaskLogsTest
     try {
       final File logDir = new File(tmpDir, "druid/logs");
       final File logFile = new File(tmpDir, "log");
-      Files.write("blah", logFile, StandardCharsets.UTF_8);
+      Files.asCharSink(logFile, StandardCharsets.UTF_8).write("blah");
       final TaskLogs taskLogs = new FileTaskLogs(new FileTaskLogsConfig(logDir));
       taskLogs.pushTaskLog("foo", logFile);
 
@@ -85,7 +85,7 @@ public class FileTaskLogsTest
     final String taskId = "myTask";
     final TestTaskReport testReport = new TestTaskReport(taskId);
     final String testReportString = mapper.writeValueAsString(TaskReport.buildTaskReports(testReport));
-    Files.write(testReportString, reportFile, StandardCharsets.UTF_8);
+    Files.asCharSink(reportFile, StandardCharsets.UTF_8).write(testReportString);
 
     final TaskLogs taskLogs = new FileTaskLogs(new FileTaskLogsConfig(logDir));
     taskLogs.pushTaskReports("foo", reportFile);
@@ -107,7 +107,7 @@ public class FileTaskLogsTest
     final String taskId = "myTask";
     final TaskStatus taskStatus = TaskStatus.success(taskId);
     final String taskStatusString = mapper.writeValueAsString(taskStatus);
-    Files.write(taskStatusString, statusFile, StandardCharsets.UTF_8);
+    Files.asCharSink(statusFile, StandardCharsets.UTF_8).write(taskStatusString);
 
     final TaskLogs taskLogs = new FileTaskLogs(new FileTaskLogsConfig(logDir));
     taskLogs.pushTaskStatus(taskId, statusFile);
@@ -124,7 +124,7 @@ public class FileTaskLogsTest
     final File tmpDir = temporaryFolder.newFolder();
     final File logDir = new File(tmpDir, "druid/logs");
     final File logFile = new File(tmpDir, "log");
-    Files.write("blah", logFile, StandardCharsets.UTF_8);
+    Files.asCharSink(logFile, StandardCharsets.UTF_8).write("blah");
 
     if (!tmpDir.setWritable(false)) {
       throw new RuntimeException("failed to make tmp dir read-only");
@@ -145,7 +145,7 @@ public class FileTaskLogsTest
     final File logFile = new File(tmpDir, "log");
     final TaskLogs taskLogs = new FileTaskLogs(new FileTaskLogsConfig(logDir));
 
-    Files.write("log1content", logFile, StandardCharsets.UTF_8);
+    Files.asCharSink(logFile, StandardCharsets.UTF_8).write("log1content");
     taskLogs.pushTaskLog("log1", logFile);
     Assert.assertEquals("log1content", readLog(taskLogs, "log1", 0));
 
@@ -156,7 +156,7 @@ public class FileTaskLogsTest
     long time = (System.currentTimeMillis() / 1000) * 1000;
     Assert.assertTrue(new File(logDir, "log1.log").lastModified() < time);
 
-    Files.write("log2content", logFile, StandardCharsets.UTF_8);
+    Files.asCharSink(logFile, StandardCharsets.UTF_8).write("log2content");
     taskLogs.pushTaskLog("log2", logFile);
     Assert.assertEquals("log2content", readLog(taskLogs, "log2", 0));
     Assert.assertTrue(new File(logDir, "log2.log").lastModified() >= time);
