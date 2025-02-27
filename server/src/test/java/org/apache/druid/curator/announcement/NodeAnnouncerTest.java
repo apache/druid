@@ -26,6 +26,7 @@ import org.apache.curator.framework.api.CuratorListener;
 import org.apache.curator.framework.api.transaction.CuratorOp;
 import org.apache.curator.framework.api.transaction.CuratorTransactionResult;
 import org.apache.curator.test.KillSession;
+import org.apache.curator.utils.ZKPaths;
 import org.apache.druid.curator.CuratorTestBase;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
@@ -73,7 +74,7 @@ public class NodeAnnouncerTest extends CuratorTestBase
     NodeAnnouncer announcer = new NodeAnnouncer(curator, exec);
     final byte[] billy = StringUtils.toUtf8("billy");
     final String testPath = "/newParent/testPath";
-    final String parent = ZKPaths.getPathAndNode(testPath).getPath();
+    final String parentPath = ZKPaths.getPathAndNode(testPath).getPath();
 
     announcer.start();
     Assert.assertNull("Parent path should not exist before announcement", curator.checkExists().forPath(parentPath));
@@ -340,7 +341,7 @@ public class NodeAnnouncerTest extends CuratorTestBase
 
     final byte[] billy = StringUtils.toUtf8("billy");
     final String testPath = "/somewhere/test2";
-    final String parent = ZKPathsUtils.getParentPath(testPath);
+    final String parent = ZKPaths.getPathAndNode(testPath).getPath();
 
     announcer.start();
     try {
