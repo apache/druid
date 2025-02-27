@@ -267,7 +267,7 @@ public class KubernetesPeonClient
       );
     }
     catch (Exception e) {
-      throw DruidException.defensive(e, "Error when looking for K8s pod with label: job-name=%s", jobName);
+      throw DruidException.defensive(e, "Error when looking for K8s pod with label[job-name=%s]", jobName);
     }
   }
 
