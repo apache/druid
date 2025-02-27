@@ -76,7 +76,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
   static final TableDataSource DUMMY_DATA_SOURCE = new TableDataSource("__join__")
   {
     @Override
-    public boolean isConcrete()
+    public boolean isProcessable()
     {
       return false;
     }

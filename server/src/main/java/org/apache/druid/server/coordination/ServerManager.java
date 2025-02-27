@@ -53,7 +53,7 @@ import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.query.ReferenceCountingSegmentQueryRunner;
 import org.apache.druid.query.ReportTimelineMissingSegmentQueryRunner;
 import org.apache.druid.query.SegmentDescriptor;
-import org.apache.druid.query.planning.DataSourceAnalysis;
+import org.apache.druid.query.planning.ExecutionVertex;
 import org.apache.druid.query.spec.SpecificSegmentQueryRunner;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
 import org.apache.druid.segment.ReferenceCountingSegment;
@@ -121,10 +121,9 @@ public class ServerManager implements QuerySegmentWalker
   @Override
   public <T> QueryRunner<T> getQueryRunnerForIntervals(Query<T> query, Iterable<Interval> intervals)
   {
-    final DataSourceAnalysis analysis = query.getDataSourceAnalysis();
     final VersionedIntervalTimeline<String, ReferenceCountingSegment> timeline;
     final Optional<VersionedIntervalTimeline<String, ReferenceCountingSegment>> maybeTimeline =
-        segmentManager.getTimeline(analysis.getBaseTableDataSource());
+        segmentManager.getTimeline(ExecutionVertex.of(query).getBaseTableDataSource());
 
     if (maybeTimeline.isPresent()) {
       timeline = maybeTimeline.get();
@@ -177,12 +176,11 @@ public class ServerManager implements QuerySegmentWalker
     }
 
     final QueryToolChest<T, Query<T>> toolChest = factory.getToolchest();
-    final DataSourceAnalysis analysis = newQuery.getDataSourceAnalysis();
     final AtomicLong cpuTimeAccumulator = new AtomicLong(0L);
 
     final VersionedIntervalTimeline<String, ReferenceCountingSegment> timeline;
     final Optional<VersionedIntervalTimeline<String, ReferenceCountingSegment>> maybeTimeline =
-        segmentManager.getTimeline(analysis.getBaseTableDataSource());
+        segmentManager.getTimeline(ExecutionVertex.of(newQuery).getBaseTableDataSource());
 
     // Make sure this query type can handle the subquery, if present.
     if ((dataSourceFromQuery instanceof QueryDataSource)

@@ -25,7 +25,6 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Query;
-import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.SegmentReference;
 
 import java.util.Collections;
@@ -90,7 +89,7 @@ public class InputNumberDataSource implements DataSource
   }
 
   @Override
-  public boolean isConcrete()
+  public boolean isProcessable()
   {
     // InputNumberDataSource represents InputSpecs, which are scannable via Segment adapters.
     return true;
@@ -103,22 +102,11 @@ public class InputNumberDataSource implements DataSource
   }
 
   @Override
-  public DataSource withUpdatedDataSource(DataSource newSource)
-  {
-    return newSource;
-  }
-
-  @Override
   public byte[] getCacheKey()
   {
     return null;
   }
 
-  @Override
-  public DataSourceAnalysis getAnalysis()
-  {
-    return new DataSourceAnalysis(this, null, null, Collections.emptyList(), null);
-  }
 
   @JsonProperty
   public int getInputNumber()
