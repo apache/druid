@@ -46,7 +46,6 @@ import org.apache.druid.query.FrameBasedInlineDataSource;
 import org.apache.druid.query.FrameSignaturePair;
 import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.InlineDataSource;
-import org.apache.druid.query.PostProcessingOperator;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
@@ -513,7 +512,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
       } else {
         // Cannot inline subquery. Attempt to inline one level deeper, and then try again.
 
-        List<DataSource> newDataSources = new ArrayList<DataSource>();
+        List<DataSource> newDataSources = new ArrayList<>();
         for (DataSource ds : dataSource.getChildren()) {
           newDataSources.add(
               inlineIfNecessary(
@@ -595,9 +594,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         .postProcess(
             objectMapper.convertValue(
                 query.context().getString("postProcessing"),
-                new TypeReference<PostProcessingOperator<T>>()
-                {
-                }
+                new TypeReference<>() {}
             )
         )
         .map(

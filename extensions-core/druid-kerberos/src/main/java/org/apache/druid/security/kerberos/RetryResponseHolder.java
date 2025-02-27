@@ -32,7 +32,7 @@ public class RetryResponseHolder<T>
 
   public static <T> RetryResponseHolder<T> retry()
   {
-    return new RetryResponseHolder<T>(true, null);
+    return new RetryResponseHolder<>(true, null);
   }
 
   public boolean shouldRetry()

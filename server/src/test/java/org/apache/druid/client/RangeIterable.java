@@ -58,7 +58,7 @@ public class RangeIterable implements Iterable<Integer>
   @Override
   public Iterator<Integer> iterator()
   {
-    return new Iterator<Integer>()
+    return new Iterator<>()
     {
       private int curr = start;
 

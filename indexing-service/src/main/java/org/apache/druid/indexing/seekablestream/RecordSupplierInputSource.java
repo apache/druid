@@ -137,7 +137,7 @@ public class RecordSupplierInputSource<PartitionIdType, SequenceOffsetType, Reco
    */
   CloseableIterator<InputEntity> createEntityIterator()
   {
-    return new CloseableIterator<InputEntity>()
+    return new CloseableIterator<>()
     {
       private Iterator<OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType, RecordType>> recordIterator;
       private Iterator<? extends ByteEntity> bytesIterator;

@@ -184,7 +184,7 @@ public class GroupByQueryResources implements Closeable
       throw DruidException.defensive("Insufficient free merge buffers present.");
     }
     final ByteBuffer buffer = acquiredBufferPool.pop();
-    return new ResourceHolder<ByteBuffer>()
+    return new ResourceHolder<>()
     {
       @Override
       public ByteBuffer get()

@@ -50,7 +50,7 @@ public interface CloseableIteratorWithMetadata<T> extends CloseableIterator<T>
    */
   static <T> CloseableIteratorWithMetadata<T> withEmptyMetadata(CloseableIterator<T> delegate)
   {
-    return new CloseableIteratorWithMetadata<T>()
+    return new CloseableIteratorWithMetadata<>()
     {
 
       @Override

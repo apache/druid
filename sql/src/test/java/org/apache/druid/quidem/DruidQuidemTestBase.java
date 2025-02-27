@@ -29,14 +29,12 @@ import org.apache.calcite.util.Closer;
 import org.apache.calcite.util.Util;
 import org.apache.commons.io.filefilter.TrueFileFilter;
 import org.apache.commons.io.filefilter.WildcardFileFilter;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.TestInstance;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -78,13 +76,8 @@ import static org.junit.jupiter.api.Assertions.fail;
  *
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-@ExtendWith(EnabledOnlyInSqlCompatibleMode.class)
 public abstract class DruidQuidemTestBase
 {
-  static {
-    NullHandling.initializeForTests();
-  }
-
   public static final String IQ_SUFFIX = ".iq";
   /**
    * System property name for "overwrite mode"; note: empty value is treated as
@@ -107,13 +100,13 @@ public abstract class DruidQuidemTestBase
       }
       filter = new WildcardFileFilter(filterStr);
     }
-    druidQuidemRunner = new DruidQuidemRunner();
+    druidQuidemRunner = new DruidQuidemRunner(createCommandHandler());
   }
 
   /** Creates a command handler. */
   protected CommandHandler createCommandHandler()
   {
-    return Quidem.EMPTY_COMMAND_HANDLER;
+    return new DruidQuidemCommandHandler();
   }
 
   @ParameterizedTest
@@ -128,8 +121,11 @@ public abstract class DruidQuidemTestBase
 
   public static class DruidQuidemRunner
   {
-    public DruidQuidemRunner()
+    private CommandHandler commandHandler;
+
+    public DruidQuidemRunner(CommandHandler commandHandler)
     {
+      this.commandHandler = commandHandler;
     }
 
     public void run(File inFile) throws Exception
@@ -149,7 +145,7 @@ public abstract class DruidQuidemTestBase
         ConfigBuilder configBuilder = Quidem.configBuilder()
             .withConnectionFactory(connectionFactory)
             .withPropertyHandler(connectionFactory)
-            .withCommandHandler(new DruidQuidemCommandHandler());
+            .withCommandHandler(commandHandler);
 
         Config config = configBuilder
             .withReader(reader)
@@ -181,7 +177,7 @@ public abstract class DruidQuidemTestBase
 
   protected final List<String> getFileNames() throws IOException
   {
-    List<String> ret = new ArrayList<String>();
+    List<String> ret = new ArrayList<>();
 
     File testRoot = getTestRoot();
     if (!testRoot.exists()) {

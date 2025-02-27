@@ -64,7 +64,7 @@ public class SimpleSegmentMapFnProcessor implements FrameProcessor<Function<Segm
   @Override
   public ReturnOrAwait<Function<SegmentReference, SegmentReference>> runIncrementally(final IntSet readableInputs)
   {
-    return ReturnOrAwait.returnObject(query.getDataSource().createSegmentMapFunction(query, new AtomicLong()));
+    return ReturnOrAwait.returnObject(query.getDataSource().createSegmentMapFunction(query));
   }
 
   @Override

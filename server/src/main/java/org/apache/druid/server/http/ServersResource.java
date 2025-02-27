@@ -85,12 +85,12 @@ public class ServersResource
    */
   private static Map<SegmentId, DataSegment> createLazySegmentsMap(DruidServer server)
   {
-    return new AbstractMap<SegmentId, DataSegment>()
+    return new AbstractMap<>()
     {
       @Override
       public Set<Entry<SegmentId, DataSegment>> entrySet()
       {
-        return new AbstractSet<Entry<SegmentId, DataSegment>>()
+        return new AbstractSet<>()
         {
           @Override
           public Iterator<Entry<SegmentId, DataSegment>> iterator()

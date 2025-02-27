@@ -28,10 +28,9 @@ import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.ForegroundCachePopulator;
 import org.apache.druid.client.cache.LocalCacheProvider;
-import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.MapUtils;
 import org.apache.druid.java.util.common.Pair;
@@ -95,6 +94,8 @@ import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.apache.druid.timeline.partition.PartitionChunk;
 import org.apache.druid.timeline.partition.TombstoneShardSpec;
+import org.hamcrest.MatcherAssert;
+import org.hamcrest.text.StringContainsInOrder;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
@@ -117,6 +118,8 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class ServerManagerTest
 {
@@ -182,7 +185,6 @@ public class ServerManagerTest
     segmentManager = new SegmentManager(localCacheManager);
 
     EmittingLogger.registerEmitter(new NoopServiceEmitter());
-    NullHandling.initializeForTests();
     queryWaitLatch = new CountDownLatch(1);
     queryWaitYieldLatch = new CountDownLatch(1);
     queryNotifyLatch = new CountDownLatch(1);
@@ -472,7 +474,7 @@ public class ServerManagerTest
     Assert.assertSame(NoopQueryRunner.class, queryRunner.getClass());
   }
 
-  @Test(expected = ISE.class)
+  @Test
   public void testGetQueryRunnerForSegmentsWhenTimelineIsMissingReportingMissingSegmentsOnQueryDataSource()
   {
     final Interval interval = Intervals.of("0000-01-01/P1D");
@@ -480,15 +482,14 @@ public class ServerManagerTest
     final List<SegmentDescriptor> unknownSegments = Collections.singletonList(
         new SegmentDescriptor(interval, "unknown_version", 0)
     );
-    final QueryRunner<Result<SearchResultValue>> queryRunner = serverManager.getQueryRunnerForSegments(
-        query,
-        unknownSegments
+    DruidException e = assertThrows(
+        DruidException.class,
+        () -> serverManager.getQueryRunnerForSegments(query, unknownSegments)
     );
-    final ResponseContext responseContext = DefaultResponseContext.createEmpty();
-    final List<Result<SearchResultValue>> results = queryRunner.run(QueryPlus.wrap(query), responseContext).toList();
-    Assert.assertTrue(results.isEmpty());
-    Assert.assertNotNull(responseContext.getMissingSegments());
-    Assert.assertEquals(unknownSegments, responseContext.getMissingSegments());
+    MatcherAssert.assertThat(
+        e.getMessage(),
+        StringContainsInOrder.stringContainsInOrder(Arrays.asList("Base dataSource", "is not a table!"))
+    );
   }
 
   @Test
@@ -555,7 +556,7 @@ public class ServerManagerTest
     final Interval interval = Intervals.of("P1d/2011-04-01");
     final SearchQuery query = searchQuery("test", interval, Granularities.ALL);
     final Optional<VersionedIntervalTimeline<String, ReferenceCountingSegment>> maybeTimeline = segmentManager
-        .getTimeline(query.getDataSource().getAnalysis());
+        .getTimeline(query.getDataSourceAnalysis().getBaseTableDataSource());
     Assert.assertTrue(maybeTimeline.isPresent());
     final List<TimelineObjectHolder<String, ReferenceCountingSegment>> holders = maybeTimeline.get().lookup(interval);
     final List<SegmentDescriptor> closedSegments = new ArrayList<>();
@@ -588,7 +589,7 @@ public class ServerManagerTest
     expectedException.expect(QueryUnsupportedException.class);
     expectedException.expectMessage("Unknown query type");
     serverManager.getQueryRunnerForSegments(
-        new BaseQuery<Object>(
+        new BaseQuery<>(
             new TableDataSource("test"),
             new MultipleSpecificSegmentSpec(descriptors),
             new HashMap<>()
@@ -864,9 +865,7 @@ public class ServerManagerTest
     @Override
     public TypeReference<T> getResultTypeReference()
     {
-      return new TypeReference<T>()
-      {
-      };
+      return new TypeReference<>() {};
     }
   }
 
@@ -934,7 +933,7 @@ public class ServerManagerTest
       }
 
       final Yielder<OutType> baseYielder = baseSequence.toYielder(initValue, accumulator);
-      return new Yielder<OutType>()
+      return new Yielder<>()
       {
         @Override
         public OutType get()

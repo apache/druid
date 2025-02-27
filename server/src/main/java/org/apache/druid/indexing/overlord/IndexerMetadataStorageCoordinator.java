@@ -26,7 +26,6 @@ import org.apache.druid.segment.SegmentSchemaMapping;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentTimeline;
-import org.apache.druid.timeline.partition.PartialShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -215,34 +214,23 @@ public interface IndexerMetadataStorageCoordinator
    * Note that a segment sequence may include segments with a variety of different intervals and versions.
    *
    * @param dataSource              dataSource for which to allocate a segment
-   * @param sequenceName            name of the group of ingestion tasks producing a segment series
-   * @param previousSegmentId       previous segment in the series; may be null or empty, meaning this is the first
-   *                                segment
    * @param interval                interval for which to allocate a segment
-   * @param partialShardSpec        partialShardSpec containing all necessary information to create a shardSpec for the
-   *                                new segmentId
-   * @param maxVersion              use this version if we have no better version to use. The returned segment
-   *                                identifier may have a version lower than this one, but will not have one higher.
    * @param skipSegmentLineageCheck if true, perform lineage validation using previousSegmentId for this sequence.
    *                                Should be set to false if replica tasks would index events in same order
-   * @param taskAllocatorId         The task allocator id with which the pending segment is associated
    * @return the pending segment identifier, or null if it was impossible to allocate a new segment
    */
+  @Nullable
   SegmentIdWithShardSpec allocatePendingSegment(
       String dataSource,
-      String sequenceName,
-      @Nullable String previousSegmentId,
       Interval interval,
-      PartialShardSpec partialShardSpec,
-      String maxVersion,
       boolean skipSegmentLineageCheck,
-      String taskAllocatorId
+      SegmentCreateRequest createRequest
   );
 
   /**
    * Delete pending segments created in the given interval belonging to the given data source from the pending segments
    * table. The {@code created_date} field of the pending segments table is checked to find segments to be deleted.
-   *
+   * <p>
    * Note that the semantic of the interval (for `created_date`s) is different from the semantic of the interval
    * parameters in some other methods in this class, such as {@link #retrieveUsedSegmentsForInterval} (where the
    * interval is about the time column value in rows belonging to the segment).
@@ -269,7 +257,7 @@ public interface IndexerMetadataStorageCoordinator
    * <p/>
    * If startMetadata and endMetadata are set, this insertion will be atomic with a compare-and-swap on dataSource
    * commit metadata.
-   *
+   * <p>
    * If segmentsToDrop is not null and not empty, this insertion will be atomic with a insert-and-drop on inserting
    * {@param segments} and dropping {@param segmentsToDrop}.
    *
@@ -363,23 +351,6 @@ public interface IndexerMetadataStorageCoordinator
   );
 
   /**
-   * Creates and inserts new IDs for the pending segments hat overlap with the given
-   * replace segments being committed. The newly created pending segment IDs:
-   * <ul>
-   * <li>Have the same interval and version as that of an overlapping segment
-   * committed by the REPLACE task.</li>
-   * <li>Cannot be committed but are only used to serve realtime queries against
-   * those versions.</li>
-   * </ul>
-   *
-   * @param replaceSegments Segments being committed by a REPLACE task
-   * @return List of inserted pending segment records
-   */
-  List<PendingSegmentRecord> upgradePendingSegmentsOverlappingWith(
-      Set<DataSegment> replaceSegments
-  );
-
-  /**
    * Retrieves data source's metadata from the metadata store. Returns null if there is no metadata.
    */
   @Nullable DataSourceMetadata retrieveDataSourceMetadata(String dataSource);
@@ -426,7 +397,7 @@ public interface IndexerMetadataStorageCoordinator
    * Similar to {@link #commitSegments}, but meant for streaming ingestion tasks for handling
    * the case where the task ingested no records and created no segments, but still needs to update the metadata
    * with the progress that the task made.
-   *
+   * <p>
    * The metadata should undergo the same validation checks as performed by {@link #commitSegments}.
    *
    *
@@ -456,16 +427,14 @@ public interface IndexerMetadataStorageCoordinator
   /**
    * Retrieve the segment for a given id from the metadata store. Return null if no such segment exists
    * <br>
-   * If {@code includeUnused} is set, the segment {@code id} retrieval should also consider the set of unused segments
-   * in the metadata store. Unused segments could be deleted by a kill task at any time and might lead to unexpected behaviour.
+   * The retrieval also considers the set of unused segments in the metadata store.
+   * Unused segments could be deleted by a kill task at any time and might lead to unexpected behaviour.
    * This option exists mainly to provide a consistent view of the metadata, for example, in calls from MSQ controller
    * and worker and would generally not be required.
-   *
-   * @param id The segment id to retrieve
-   *
-   * @return DataSegment used segment corresponding to given id
    */
-  DataSegment retrieveSegmentForId(String id, boolean includeUnused);
+  DataSegment retrieveSegmentForId(String dataSource, String segmentId);
+
+  DataSegment retrieveUsedSegmentForId(String dataSource, String segmentId);
 
   /**
    * Delete entries from the upgrade segments table after the corresponding replace task has ended

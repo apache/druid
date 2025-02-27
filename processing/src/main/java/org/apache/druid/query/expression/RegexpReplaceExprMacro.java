@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.expression;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -94,11 +93,11 @@ public class RegexpReplaceExprMacro implements ExprMacroTable.ExprMacro
         throw validationFailed("replacement must be a string literal");
       }
 
-      final String patternString = NullHandling.nullToEmptyIfNeeded((String) patternExpr.getLiteralValue());
+      final String patternString = (String) patternExpr.getLiteralValue();
 
       this.arg = args.get(0);
       this.pattern = patternString != null ? Pattern.compile(patternString) : null;
-      this.replacement = NullHandling.nullToEmptyIfNeeded((String) replacementExpr.getLiteralValue());
+      this.replacement = (String) replacementExpr.getLiteralValue();
     }
 
     @Nonnull
@@ -109,7 +108,7 @@ public class RegexpReplaceExprMacro implements ExprMacroTable.ExprMacro
         return ExprEval.of(null);
       }
 
-      final String s = NullHandling.nullToEmptyIfNeeded(arg.eval(bindings).asString());
+      final String s = arg.eval(bindings).asString();
 
       if (s == null) {
         return ExprEval.of(null);
@@ -135,9 +134,9 @@ public class RegexpReplaceExprMacro implements ExprMacroTable.ExprMacro
     @Override
     public ExprEval<?> eval(final ObjectBinding bindings)
     {
-      final String s = NullHandling.nullToEmptyIfNeeded(args.get(0).eval(bindings).asString());
-      final String pattern = NullHandling.nullToEmptyIfNeeded(args.get(1).eval(bindings).asString());
-      final String replacement = NullHandling.nullToEmptyIfNeeded(args.get(2).eval(bindings).asString());
+      final String s = args.get(0).eval(bindings).asString();
+      final String pattern = args.get(1).eval(bindings).asString();
+      final String replacement = args.get(2).eval(bindings).asString();
 
       if (s == null || pattern == null || replacement == null) {
         return ExprEval.of(null);

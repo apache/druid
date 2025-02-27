@@ -21,7 +21,6 @@ package org.apache.druid.segment;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.DimensionSchema;
@@ -385,6 +384,6 @@ public class QueryableIndexColumnCapabilitiesTest extends InitializedNullHandlin
     Assert.assertFalse(caps.hasMultipleValues().isMaybeTrue());
     Assert.assertFalse(caps.hasSpatialIndexes());
     // check isMaybeTrue because incremental index uses Unknown
-    Assert.assertEquals(NullHandling.sqlCompatible(), caps.hasNulls().isMaybeTrue());
+    Assert.assertTrue(caps.hasNulls().isMaybeTrue());
   }
 }

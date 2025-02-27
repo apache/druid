@@ -44,7 +44,6 @@ import org.apache.druid.client.cache.CachePopulatorStats;
 import org.apache.druid.client.cache.ForegroundCachePopulator;
 import org.apache.druid.client.cache.MapCache;
 import org.apache.druid.client.selector.HighestPriorityTierSelectorStrategy;
-import org.apache.druid.client.selector.QueryableDruidServer;
 import org.apache.druid.client.selector.RandomServerSelectorStrategy;
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.guice.http.DruidHttpClientConfig;
@@ -75,6 +74,7 @@ import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
@@ -93,7 +93,6 @@ import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.ordering.StringComparators;
-import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.search.SearchHit;
 import org.apache.druid.query.search.SearchQuery;
 import org.apache.druid.query.search.SearchQueryConfig;
@@ -273,7 +272,7 @@ public class CachingClusteredClientTest
   {
     return Lists.transform(
         Lists.newArrayList(new RangeIterable(RANDOMNESS)),
-        new Function<Integer, Object[]>()
+        new Function<>()
         {
           @Override
           public Object[] apply(Integer input)
@@ -1900,7 +1899,7 @@ public class CachingClusteredClientTest
             results.add(expectation.getResults());
           }
           EasyMock.expect(queryable.run(EasyMock.capture(capture), EasyMock.capture(context)))
-                  .andAnswer(new IAnswer<Sequence>()
+                  .andAnswer(new IAnswer<>()
                   {
                     @Override
                     public Sequence answer()
@@ -2259,7 +2258,7 @@ public class CachingClusteredClientTest
               .trinaryTransform(
                   intervals,
                   results,
-                  new TrinaryFn<SegmentId, Interval, Iterable<Result<TimeseriesResultValue>>, Result<TimeseriesResultValue>>()
+                  new TrinaryFn<>()
                   {
                     @Override
                     @SuppressWarnings("unchecked")
@@ -2298,7 +2297,7 @@ public class CachingClusteredClientTest
             .trinaryTransform(
                 intervals,
                 results,
-                new TrinaryFn<SegmentId, Interval, Iterable<Result<TopNResultValue>>, Result<TopNResultValue>>()
+                new TrinaryFn<>()
                 {
                   @Override
                   @SuppressWarnings("unchecked")
@@ -2334,7 +2333,7 @@ public class CachingClusteredClientTest
             .trinaryTransform(
                 intervals,
                 results,
-                new TrinaryFn<SegmentId, Interval, Iterable<Result<SearchResultValue>>, Result<SearchResultValue>>()
+                new TrinaryFn<>()
                 {
                   @Override
                   @SuppressWarnings("unchecked")
@@ -2371,7 +2370,7 @@ public class CachingClusteredClientTest
             .trinaryTransform(
                 intervals,
                 results,
-                new TrinaryFn<SegmentId, Interval, Iterable<ResultRow>, Result>()
+                new TrinaryFn<>()
                 {
                   @Override
                   @SuppressWarnings("unchecked")
@@ -2415,7 +2414,7 @@ public class CachingClusteredClientTest
             .trinaryTransform(
                 intervals,
                 results,
-                new TrinaryFn<SegmentId, Interval, Iterable<Result<TimeBoundaryResultValue>>, Result<TimeBoundaryResultValue>>()
+                new TrinaryFn<>()
                 {
                   @Override
                   @SuppressWarnings("unchecked")
@@ -2568,33 +2567,11 @@ public class CachingClusteredClientTest
 
       List<SearchHit> values = new ArrayList<>();
       while (index < objects.length && !(objects[index] instanceof DateTime)) {
-        values.add(new SearchHit(dim, objects[index++].toString(), (Integer) objects[index++]));
+        values.add(new SearchHit(dim, objects[index].toString(), (Integer) objects[index + 1]));
+        index += 2;
       }
 
       retVal.add(new Result<>(timestamp, new SearchResultValue(values)));
-    }
-    return retVal;
-  }
-
-  private Iterable<ResultRow> makeGroupByResults(GroupByQuery query, Object... objects)
-  {
-    List<ResultRow> retVal = new ArrayList<>();
-    int index = 0;
-    while (index < objects.length) {
-      final DateTime timestamp = (DateTime) objects[index++];
-      final Map<String, Object> rowMap = (Map<String, Object>) objects[index++];
-      final ResultRow row = ResultRow.create(query.getResultRowSizeWithoutPostAggregators());
-
-      if (query.getResultRowHasTimestamp()) {
-        row.set(0, timestamp.getMillis());
-      }
-
-      for (Map.Entry<String, Object> entry : rowMap.entrySet()) {
-        final int position = query.getResultRowSignature().indexOf(entry.getKey());
-        row.set(position, entry.getValue());
-      }
-
-      retVal.add(row);
     }
     return retVal;
   }
@@ -2637,7 +2614,7 @@ public class CachingClusteredClientTest
           }
 
           @Override
-          public Optional<VersionedIntervalTimeline<String, ServerSelector>> getTimeline(DataSourceAnalysis analysis)
+          public Optional<VersionedIntervalTimeline<String, ServerSelector>> getTimeline(TableDataSource analysis)
           {
             return Optional.of(timeline);
           }

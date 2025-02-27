@@ -39,7 +39,7 @@ public class ThriftDeserialization
   private static final Logger log = LoggerFactory.getLogger(ThriftDeserialization.class);
 
 
-  private static final ThreadLocal<TDeserializer> DESERIALIZER_COMPACT = new ThreadLocal<TDeserializer>()
+  private static final ThreadLocal<TDeserializer> DESERIALIZER_COMPACT = new ThreadLocal<>()
   {
     @Override
     protected TDeserializer initialValue()
@@ -48,7 +48,7 @@ public class ThriftDeserialization
     }
   };
 
-  private static final ThreadLocal<TDeserializer> DESERIALIZER_BINARY = new ThreadLocal<TDeserializer>()
+  private static final ThreadLocal<TDeserializer> DESERIALIZER_BINARY = new ThreadLocal<>()
   {
     @Override
     protected TDeserializer initialValue()
@@ -57,7 +57,7 @@ public class ThriftDeserialization
     }
   };
 
-  private static final ThreadLocal<TDeserializer> DESERIALIZER_JSON = new ThreadLocal<TDeserializer>()
+  private static final ThreadLocal<TDeserializer> DESERIALIZER_JSON = new ThreadLocal<>()
   {
     @Override
     protected TDeserializer initialValue()
@@ -66,7 +66,7 @@ public class ThriftDeserialization
     }
   };
 
-  public static final ThreadLocal<TSerializer> SERIALIZER_SIMPLE_JSON = new ThreadLocal<TSerializer>()
+  public static final ThreadLocal<TSerializer> SERIALIZER_SIMPLE_JSON = new ThreadLocal<>()
   {
     @Override
     protected TSerializer initialValue()

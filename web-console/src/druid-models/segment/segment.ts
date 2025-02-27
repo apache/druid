@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import { Duration } from '../../utils';
+import { Duration, Timezone } from 'chronoshift';
 
 export const START_OF_TIME_DATE = '-146136543-09-08T08:23:32.096Z';
 export const END_OF_TIME_DATE = '146140482-04-24T15:36:27.903Z';
@@ -36,7 +36,7 @@ export function computeSegmentTimeSpan(start: string, end: string): string {
     return 'Invalid end';
   }
 
-  return Duration.fromRange(startDate, endDate, 'Etc/UTC').getDescription(true);
+  return Duration.fromRange(startDate, endDate, Timezone.UTC).getDescription(true);
 }
 
 export interface ShardSpec {

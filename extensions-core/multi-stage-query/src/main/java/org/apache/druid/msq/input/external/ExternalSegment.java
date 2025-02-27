@@ -76,7 +76,7 @@ public class ExternalSegment extends RowBasedSegment<InputRow>
               {
                 try {
                   CloseableIterator<InputRow> baseIterator = reader.read(inputStats);
-                  return new CloseableIterator<InputRow>()
+                  return new CloseableIterator<>()
                   {
                     private InputRow next = null;
 

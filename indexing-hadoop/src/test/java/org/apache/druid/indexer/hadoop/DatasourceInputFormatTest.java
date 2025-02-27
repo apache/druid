@@ -213,7 +213,7 @@ public class DatasourceInputFormatTest
     return conf;
   }
 
-  private Supplier<InputFormat> testFormatter = new Supplier<InputFormat>()
+  private Supplier<InputFormat> testFormatter = new Supplier<>()
   {
     @Override
     public InputFormat get()

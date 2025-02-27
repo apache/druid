@@ -87,9 +87,7 @@ public class AvroOCFInputFormatTest
                        + "  ]\n"
                        + "}";
 
-    TypeReference<Map<String, Object>> typeRef = new TypeReference<Map<String, Object>>()
-    {
-    };
+    TypeReference<Map<String, Object>> typeRef = new TypeReference<>() {};
     final Map<String, Object> readerSchema = jsonMapper.readValue(schemaStr, typeRef);
     AvroOCFInputFormat inputFormat = new AvroOCFInputFormat(
         jsonMapper,

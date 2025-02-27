@@ -33,6 +33,7 @@ import org.apache.druid.query.topn.TopNQueryConfig;
 import org.apache.druid.quidem.DruidAvaticaTestDriver;
 import org.apache.druid.server.QueryStackTests;
 import org.apache.druid.sql.calcite.util.CacheTestHelperModule.ResultCacheMode;
+import org.apache.druid.sql.calcite.util.FakeIndexTaskUtil;
 import org.apache.druid.sql.calcite.util.SqlTestFramework;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.QueryComponentSupplier;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
@@ -50,6 +51,7 @@ import org.reflections.util.ConfigurationBuilder;
 import org.reflections.util.FilterBuilder;
 
 import javax.annotation.Nonnull;
+
 import java.io.Closeable;
 import java.lang.annotation.Annotation;
 import java.lang.annotation.ElementType;
@@ -98,7 +100,7 @@ public class SqlTestFrameworkConfig
   @NumMergeBuffers(QueryStackTests.DEFAULT_NUM_MERGE_BUFFERS)
   public @interface NumMergeBuffers
   {
-    ConfigOptionProcessor<Integer> PROCESSOR = new ConfigOptionProcessor<Integer>(NumMergeBuffers.class)
+    ConfigOptionProcessor<Integer> PROCESSOR = new ConfigOptionProcessor<>(NumMergeBuffers.class)
     {
       @Override
       public Integer fromString(String str) throws NumberFormatException
@@ -115,7 +117,7 @@ public class SqlTestFrameworkConfig
   @MinTopNThreshold(TopNQueryConfig.DEFAULT_MIN_TOPN_THRESHOLD)
   public @interface MinTopNThreshold
   {
-    ConfigOptionProcessor<Integer> PROCESSOR = new ConfigOptionProcessor<Integer>(MinTopNThreshold.class)
+    ConfigOptionProcessor<Integer> PROCESSOR = new ConfigOptionProcessor<>(MinTopNThreshold.class)
     {
       @Override
       public Integer fromString(String str) throws NumberFormatException
@@ -132,7 +134,7 @@ public class SqlTestFrameworkConfig
   @ResultCache(ResultCacheMode.DISABLED)
   public @interface ResultCache
   {
-    ConfigOptionProcessor<ResultCacheMode> PROCESSOR = new ConfigOptionProcessor<ResultCacheMode>(ResultCache.class)
+    ConfigOptionProcessor<ResultCacheMode> PROCESSOR = new ConfigOptionProcessor<>(ResultCache.class)
     {
       @Override
       public ResultCacheMode fromString(String str)
@@ -152,7 +154,7 @@ public class SqlTestFrameworkConfig
   @ComponentSupplier(StandardComponentSupplier.class)
   public @interface ComponentSupplier
   {
-    ConfigOptionProcessor<Class<? extends QueryComponentSupplier>> PROCESSOR = new ConfigOptionProcessor<Class<? extends QueryComponentSupplier>>(
+    ConfigOptionProcessor<Class<? extends QueryComponentSupplier>> PROCESSOR = new ConfigOptionProcessor<>(
         ComponentSupplier.class
     )
     {
@@ -166,17 +168,44 @@ public class SqlTestFrameworkConfig
     Class<? extends QueryComponentSupplier> value();
   }
 
+  /**
+   * Declares which tables to ingest into this {@link QueryComponentSupplier}.
+   *
+   * May point to a directory containing json ingestion files.
+   * All files will be made available thru via {@link FakeIndexTaskUtil}.
+   * It may not support all ingestion feature.
+   */
+  @Retention(RetentionPolicy.RUNTIME)
+  @Target({ElementType.METHOD, ElementType.TYPE})
+  @Datasets("")
+  public @interface Datasets
+  {
+    ConfigOptionProcessor<String> PROCESSOR = new ConfigOptionProcessor<>(Datasets.class)
+    {
+      @Override
+      public String fromString(String name)
+      {
+        return name;
+      }
+    };
+
+    String value();
+  }
+
   private static final Set<String> KNOWN_CONFIG_KEYS = ImmutableSet.<String>builder()
       .add(NumMergeBuffers.PROCESSOR.getConfigName())
       .add(MinTopNThreshold.PROCESSOR.getConfigName())
       .add(ResultCache.PROCESSOR.getConfigName())
       .add(ComponentSupplier.PROCESSOR.getConfigName())
+      .add(Datasets.PROCESSOR.getConfigName())
       .build();
 
   public final int numMergeBuffers;
   public final int minTopNThreshold;
   public final ResultCacheMode resultCache;
   public final Class<? extends QueryComponentSupplier> componentSupplier;
+  public final String datasets;
+
 
   public SqlTestFrameworkConfig(List<Annotation> annotations)
   {
@@ -185,6 +214,7 @@ public class SqlTestFrameworkConfig
       minTopNThreshold = MinTopNThreshold.PROCESSOR.fromAnnotations(annotations);
       resultCache = ResultCache.PROCESSOR.fromAnnotations(annotations);
       componentSupplier = ComponentSupplier.PROCESSOR.fromAnnotations(annotations);
+      datasets = Datasets.PROCESSOR.fromAnnotations(annotations);
     }
     catch (Exception e) {
       throw new RuntimeException(e);
@@ -199,6 +229,7 @@ public class SqlTestFrameworkConfig
       minTopNThreshold = MinTopNThreshold.PROCESSOR.fromMap(queryParams);
       resultCache = ResultCache.PROCESSOR.fromMap(queryParams);
       componentSupplier = ComponentSupplier.PROCESSOR.fromMap(queryParams);
+      datasets = Datasets.PROCESSOR.fromMap(queryParams);
     }
     catch (Exception e) {
       throw new RuntimeException(e);
@@ -217,7 +248,7 @@ public class SqlTestFrameworkConfig
   @Override
   public int hashCode()
   {
-    return Objects.hash(minTopNThreshold, numMergeBuffers, resultCache, componentSupplier);
+    return Objects.hash(minTopNThreshold, numMergeBuffers, resultCache, componentSupplier, datasets);
   }
 
   @Override
@@ -230,7 +261,8 @@ public class SqlTestFrameworkConfig
     return minTopNThreshold == other.minTopNThreshold
         && numMergeBuffers == other.numMergeBuffers
         && resultCache == other.resultCache
-        && componentSupplier == other.componentSupplier;
+        && componentSupplier == other.componentSupplier
+        && Objects.equals(datasets, other.datasets);
   }
 
   public static class SqlTestFrameworkConfigStore implements Closeable
@@ -323,7 +355,7 @@ public class SqlTestFrameworkConfig
      */
     public String buildTestCaseName(ExtensionContext context)
     {
-      List<String> names = new ArrayList<String>();
+      List<String> names = new ArrayList<>();
       Pattern pattern = Pattern.compile("\\([^)]*\\)");
       // this will add all name pieces - except the "last" which would be the
       // Class level name
@@ -509,7 +541,7 @@ public class SqlTestFrameworkConfig
 
   static LoadingCache<String, Set<Class<? extends QueryComponentSupplier>>> componentSupplierClassCache = CacheBuilder
       .newBuilder()
-      .build(new CacheLoader<String, Set<Class<? extends QueryComponentSupplier>>>()
+      .build(new CacheLoader<>()
       {
         @Override
         public Set<Class<? extends QueryComponentSupplier>> load(String pkg)

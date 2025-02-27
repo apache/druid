@@ -35,7 +35,7 @@ public class DurationCoercible implements Coercible<Duration>
       return null;
     }
 
-    return new Coercer<Duration>()
+    return new Coercer<>()
     {
       @Override
       public Duration coerce(String value)

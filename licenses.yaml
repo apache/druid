@@ -371,18 +371,14 @@ name: Guice
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 4.2.2
+version: 5.1.0
 libraries:
   - com.google.inject: guice
-  - com.google.inject.extensions: guice-multibindings
   - com.google.inject.extensions: guice-servlet
   - com.google.inject.extensions: guice-assistedinject
 notices:
   - guice: |
       Google Guice - Core Library
-      Copyright 2006-2016 Google, Inc.
-  - guice-multibindings: |
-      Google Guice - Extensions - MultiBindings
       Copyright 2006-2016 Google, Inc.
   - guice-servlet: |
       Google Guice - Extensions - Servlet
@@ -857,12 +853,33 @@ libraries:
 
 name: kubernetes fabric java client
 license_category: binary
-module: extensions-contrib/kubernetes-overlord-extensions
+module: extensions-core/kubernetes-overlord-extensions
 license_name: Apache License version 2.0
 version: 6.7.2
 libraries:
-  - io.fabric8: kubernetes-client
-
+  - io.fabric8: kubernetes-client-api
+  - io.fabric8: kubernetes-model-batch
+  - io.fabric8: kubernetes-model-core
+  - io.fabric8: kubernetes-model-admissionregistration
+  - io.fabric8: kubernetes-model-apiextensions
+  - io.fabric8: kubernetes-model-apps
+  - io.fabric8: kubernetes-model-autoscaling
+  - io.fabric8: kubernetes-model-certificates
+  - io.fabric8: kubernetes-model-common
+  - io.fabric8: kubernetes-model-coordination
+  - io.fabric8: kubernetes-model-discovery
+  - io.fabric8: kubernetes-model-events
+  - io.fabric8: kubernetes-model-extensions
+  - io.fabric8: kubernetes-model-flowcontrol
+  - io.fabric8: kubernetes-model-gatewayapi
+  - io.fabric8: kubernetes-model-metrics
+  - io.fabric8: kubernetes-model-networking
+  - io.fabric8: kubernetes-model-node
+  - io.fabric8: kubernetes-model-policy
+  - io.fabric8: kubernetes-model-rbac
+  - io.fabric8: kubernetes-model-resource
+  - io.fabric8: kubernetes-model-scheduling
+  - io.fabric8: kubernetes-model-storageclass
 ---
 
 name: kubernetes official java client
@@ -1027,6 +1044,26 @@ libraries:
   - io.prometheus: simpleclient_tracer_otel
   - io.prometheus: simpleclient_tracer_otel_agent
 
+
+---
+
+name: org.snakeyaml snakeyaml-engine
+license_category: binary
+module: extensions-core/druid-kubernetes-overlord-extensions
+license_name: Apache License version 2.0
+version: 2.6
+libraries:
+  - org.snakeyaml: snakeyaml-engine
+
+---
+
+name: org.yaml snakeyaml
+license_category: binary
+module: extensions-core/druid-kubernetes-overlord-extensions
+license_name: Apache License version 2.0
+version: 1.33
+libraries:
+  - org.yaml: snakeyaml
 
 ---
 
@@ -1249,7 +1286,7 @@ name: Netty
 license_category: binary
 module: java-core
 license_name: Apache License version 2.0
-version: 4.1.108.Final
+version: 4.1.118.Final
 libraries:
   - io.netty: netty-buffer
   - io.netty: netty-codec
@@ -4415,7 +4452,7 @@ name: Netty
 license_category: binary
 module: extensions/druid-azure-extensions
 license_name: Apache License version 2.0
-version: 2.0.65.Final
+version: 2.0.70.Final
 libraries:
   - io.netty: netty-tcnative-boringssl-static
   - io.netty: netty-tcnative-classes
@@ -5000,6 +5037,28 @@ libraries:
   - jakarta.xml.bind: jakarta.xml.bind-api
 ---
 
+name: cron-utils
+license_category: binary
+module: core
+license_name: Apache License version 2.0
+version: 9.2.0
+license_file_path: licenses/bin/cron-utils.APACHE2
+libraries:
+  - com.cronutils: cron-utils
+
+---
+
+name: jakarta.el
+license_category: binary
+module: core
+license_name: Eclipse Public License 2.0
+version: 3.0.4
+license_file_path: licenses/bin/jakarta.el.EPL2
+libraries:
+  - org.glassfish: jakarta.el
+
+---
+
 # Web console modules start
 name: "@babel/code-frame"
 license_category: binary
@@ -5076,7 +5135,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Palantir Technologies
-version: 5.1.2
+version: 5.1.4
 
 ---
 
@@ -5085,7 +5144,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Palantir Technologies
-version: 5.13.1
+version: 5.16.0
 
 ---
 
@@ -5094,7 +5153,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Palantir Technologies
-version: 2.3.11
+version: 2.3.17
 
 ---
 
@@ -5103,7 +5162,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Palantir Technologies
-version: 5.3.11
+version: 5.3.17
 
 ---
 
@@ -5112,7 +5171,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Palantir Technologies
-version: 5.13.0
+version: 5.15.0
 
 ---
 
@@ -5121,7 +5180,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Palantir Technologies
-version: 5.2.5
+version: 5.3.5
 
 ---
 
@@ -5423,6 +5482,15 @@ license_file_path: licenses/bin/change-case.MIT
 
 ---
 
+name: "chronoshift"
+license_category: binary
+module: web-console
+license_name: Apache License version 2.0
+copyright: Vadim Ogievetsky
+version: 1.2.0
+
+---
+
 name: "classnames"
 license_category: binary
 module: web-console
@@ -5593,13 +5661,13 @@ license_file_path: licenses/bin/d3-interpolate.ISC
 
 ---
 
-name: "d3-scale-chromatic"
+name: "d3-path"
 license_category: binary
 module: web-console
 license_name: ISC License
 copyright: Mike Bostock
 version: 3.1.0
-license_file_path: licenses/bin/d3-scale-chromatic.ISC
+license_file_path: licenses/bin/d3-path.ISC
 
 ---
 
@@ -5623,13 +5691,23 @@ license_file_path: licenses/bin/d3-selection.ISC
 
 ---
 
+name: "d3-shape"
+license_category: binary
+module: web-console
+license_name: ISC License
+copyright: Mike Bostock
+version: 3.2.0
+license_file_path: licenses/bin/d3-shape.ISC
+
+---
+
 name: "d3-time-format"
 license_category: binary
 module: web-console
-license_name: BSD-3-Clause License
+license_name: ISC License
 copyright: Mike Bostock
-version: 2.2.1
-license_file_path: licenses/bin/d3-time-format.BSD3
+version: 4.1.0
+license_file_path: licenses/bin/d3-time-format.ISC
 
 ---
 
@@ -5717,7 +5795,7 @@ license_category: binary
 module: web-console
 license_name: Apache License version 2.0
 copyright: Imply Data
-version: 1.0.0
+version: 1.0.2
 
 ---
 

@@ -613,7 +613,7 @@ public class NestedFieldDictionaryEncodedColumn<TStringDictionary extends Indexe
       }
     }
     if (singleType == null || singleType.isArray()) {
-      return new ColumnValueSelector<Object>()
+      return new ColumnValueSelector<>()
       {
 
         private PeekableIntIterator nullIterator = nullBitmap.peekableIterator();

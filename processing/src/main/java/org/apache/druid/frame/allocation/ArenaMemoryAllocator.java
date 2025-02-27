@@ -74,7 +74,7 @@ public class ArenaMemoryAllocator implements MemoryAllocator
       lastAllocation = memory;
 
       return Optional.of(
-          new ResourceHolder<WritableMemory>()
+          new ResourceHolder<>()
           {
             boolean closed;
 

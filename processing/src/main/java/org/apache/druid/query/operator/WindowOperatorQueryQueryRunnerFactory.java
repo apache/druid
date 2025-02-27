@@ -91,7 +91,7 @@ public class WindowOperatorQueryQueryRunnerFactory implements QueryRunnerFactory
               {
                 return Sequences.map(
                     input.run(queryPlus, responseContext),
-                    new Function<RowsAndColumns, RowsAndColumns>()
+                    new Function<>()
                     {
                       @Nullable
                       @Override

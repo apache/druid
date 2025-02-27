@@ -179,6 +179,7 @@ LRU
 LZ4
 LZO
 LimitSpec
+LISTAGG
 Long.MAX_VALUE
 Long.MAX_VALUE.
 Long.MIN_VALUE
@@ -346,6 +347,7 @@ filterColumn
 filterValue
 firefox
 firehose
+FirehoseFactory
 firehoses
 fromPigAvroStorage
 frontends
@@ -552,6 +554,8 @@ subtasks
 supervisorTaskId
 SVG
 symlink
+sync
+syncs
 syntaxes
 systemFields
 tablePath
@@ -2185,9 +2189,7 @@ regionName
 json
 metastore
 UserGroupInformation
-CVE-2019-17571
-CVE-2019-12399
-CVE-2018-17196
+CVE-2024-45384
 bin.tar.gz
 0s
 1T

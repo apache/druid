@@ -85,7 +85,7 @@ public class SysMonitor extends FeedDefiningMonitor
 
     sigar.enableLogging(true);
 
-    this.statsList = new ArrayList<Stats>();
+    this.statsList = new ArrayList<>();
     this.statsList.addAll(
         Arrays.asList(
             new MemStats(),

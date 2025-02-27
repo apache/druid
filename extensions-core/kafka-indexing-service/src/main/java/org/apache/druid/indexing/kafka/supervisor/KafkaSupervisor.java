@@ -55,8 +55,6 @@ import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervi
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorReportPayload;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
-import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.apache.druid.java.util.metrics.DruidMonitorSchedulerConfig;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.joda.time.DateTime;
 
@@ -85,19 +83,14 @@ import java.util.stream.Collectors;
 public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartition, Long, KafkaRecordEntity>
 {
   public static final TypeReference<TreeMap<Integer, Map<KafkaTopicPartition, Long>>> CHECKPOINTS_TYPE_REF =
-      new TypeReference<TreeMap<Integer, Map<KafkaTopicPartition, Long>>>()
-      {
-      };
+      new TypeReference<>() {};
 
   private static final EmittingLogger log = new EmittingLogger(KafkaSupervisor.class);
   private static final Long NOT_SET = -1L;
   private static final Long END_OF_PARTITION = Long.MAX_VALUE;
 
-  private final ServiceEmitter emitter;
-  private final DruidMonitorSchedulerConfig monitorSchedulerConfig;
   private final Pattern pattern;
   private volatile Map<KafkaTopicPartition, Long> latestSequenceFromStream;
-
 
   private final KafkaSupervisorSpec spec;
 
@@ -124,8 +117,6 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
     );
 
     this.spec = spec;
-    this.emitter = spec.getEmitter();
-    this.monitorSchedulerConfig = spec.getMonitorSchedulerConfig();
     this.pattern = getIoConfig().isMultiTopic() ? Pattern.compile(getIoConfig().getStream()) : null;
   }
 
@@ -269,7 +260,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
 
     if (!latestSequenceFromStream.keySet().equals(highestCurrentOffsets.keySet())) {
       log.warn(
-          "Lag metric: Kafka partitions %s do not match task partitions %s",
+          "Kafka partitions[%s] do not match task partitions[%s]",
           latestSequenceFromStream.keySet(),
           highestCurrentOffsets.keySet()
       );
@@ -309,9 +300,6 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
   }
 
   @Override
-  // suppress use of CollectionUtils.mapValues() since the valueMapper function is dependent on map key here
-  @SuppressWarnings("SSBasedInspection")
-  // Used while generating Supervisor lag reports per task
   protected Map<KafkaTopicPartition, Long> getRecordLagPerPartition(Map<KafkaTopicPartition, Long> currentOffsets)
   {
     if (latestSequenceFromStream == null || currentOffsets == null) {
@@ -335,6 +323,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
   @Override
   protected Map<KafkaTopicPartition, Long> getTimeLagPerPartition(Map<KafkaTopicPartition, Long> currentOffsets)
   {
+    // Currently not supported
     return null;
   }
 
@@ -391,6 +380,11 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
     return computeLags(partitionRecordLag);
   }
 
+  /**
+   * Fetches the latest offsets from the Kafka stream and updates the map
+   * {@link #latestSequenceFromStream}. The actual lag is computed lazily in
+   * {@link #getPartitionRecordLag}.
+   */
   @Override
   protected void updatePartitionLagFromStream()
   {
@@ -412,9 +406,6 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
 
       recordSupplier.seekToLatest(partitions);
 
-      // this method isn't actually computing the lag, just fetching the latests offsets from the stream. This is
-      // because we currently only have record lag for kafka, which can be lazily computed by subtracting the highest
-      // task offsets from the latest offsets from the stream when it is needed
       latestSequenceFromStream =
           partitions.stream().collect(Collectors.toMap(StreamPartition::getPartitionId, recordSupplier::getPosition));
     }

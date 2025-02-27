@@ -21,7 +21,9 @@ package org.apache.druid.indexing.overlord.supervisor;
 
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
+import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.task.Tasks;
@@ -39,10 +41,12 @@ import org.apache.druid.query.QueryContexts;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Future;
 
 /**
  * Manages the creation and lifetime of {@link Supervisor}.
@@ -212,11 +216,12 @@ public class SupervisorManager
   public void stop()
   {
     Preconditions.checkState(started, "SupervisorManager not started");
-
+    List<ListenableFuture<Void>> stopFutures = new ArrayList<>();
     synchronized (lock) {
+      log.info("Stopping [%d] supervisors", supervisors.keySet().size());
       for (String id : supervisors.keySet()) {
         try {
-          supervisors.get(id).lhs.stop(false);
+          stopFutures.add(supervisors.get(id).lhs.stopAsync());
           SupervisorTaskAutoScaler autoscaler = autoscalers.get(id);
           if (autoscaler != null) {
             autoscaler.stop();
@@ -225,6 +230,18 @@ public class SupervisorManager
         catch (Exception e) {
           log.warn(e, "Caught exception while stopping supervisor [%s]", id);
         }
+      }
+      log.info("Waiting for [%d] supervisors to shutdown", stopFutures.size());
+      try {
+        FutureUtils.coalesce(stopFutures).get();
+      }
+      catch (Exception e) {
+        log.warn(
+            e,
+            "Stopped [%d] out of [%d] supervisors. Remaining supervisors will be killed.",
+            stopFutures.stream().filter(Future::isDone).count(),
+            stopFutures.size()
+        );
       }
       supervisors.clear();
       autoscalers.clear();

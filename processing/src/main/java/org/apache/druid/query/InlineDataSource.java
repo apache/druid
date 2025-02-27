@@ -39,7 +39,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -243,10 +242,7 @@ public class InlineDataSource implements DataSource
   }
 
   @Override
-  public Function<SegmentReference, SegmentReference> createSegmentMapFunction(
-      Query query,
-      AtomicLong cpuTimeAcc
-  )
+  public Function<SegmentReference, SegmentReference> createSegmentMapFunction(Query query)
   {
     return Function.identity();
   }
@@ -266,7 +262,7 @@ public class InlineDataSource implements DataSource
   @Override
   public DataSourceAnalysis getAnalysis()
   {
-    return new DataSourceAnalysis(this, null, null, Collections.emptyList());
+    return new DataSourceAnalysis(this, null, null, Collections.emptyList(), null);
   }
 
   /**

@@ -24,6 +24,7 @@ import React, { useState } from 'react';
 import type { Execution } from '../../../druid-models';
 import type { Format } from '../../../utils';
 import {
+  copyAndAlert,
   copyQueryResultsToClipboard,
   downloadQueryResults,
   formatDurationHybrid,
@@ -98,8 +99,16 @@ export const ExecutionSummaryPanel = React.memo(function ExecutionSummaryPanel(
           if (!execution) return;
           if (oneOf(execution.engine, 'sql-msq-task', 'sql-msq-dart')) {
             onExecutionDetail();
+          } else {
+            copyAndAlert(execution.id, `Query ID (${execution.id}) copied to clipboard`);
           }
         }}
+        data-tooltip={
+          execution &&
+          (oneOf(execution.engine, 'sql-msq-task', 'sql-msq-dart')
+            ? `Open details for\n${execution.id}`
+            : `Query ID\n${execution.id}\n(click to copy)`)
+        }
       />,
       execution?.destination?.type === 'durableStorage' && execution.destinationPages ? (
         <Button
