@@ -26,6 +26,7 @@ import org.apache.curator.framework.api.transaction.CuratorMultiTransaction;
 import org.apache.curator.framework.api.transaction.CuratorOp;
 import org.apache.curator.framework.recipes.cache.ChildData;
 import org.apache.curator.framework.recipes.cache.NodeCache;
+import org.apache.curator.utils.ZKPaths;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.lifecycle.LifecycleStart;
@@ -215,7 +216,7 @@ public class NodeAnnouncer
       }
     }
 
-    final String parentPath = ZKPathsUtils.getParentPath(path);
+    final String parentPath = ZKPaths.getPathAndNode(path).getPath();
     byte[] announcedPayload = announcedPaths.get(path);
 
     // If announcedPayload is null, this means that we have yet to announce this path.
