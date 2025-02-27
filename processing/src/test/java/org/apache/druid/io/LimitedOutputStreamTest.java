@@ -27,6 +27,7 @@ import org.junit.Test;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
 
 import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 
@@ -62,6 +63,26 @@ public class LimitedOutputStreamTest
       );
 
       MatcherAssert.assertThat(e, ThrowableMessageMatcher.hasMessage(CoreMatchers.equalTo("Limit[3] exceeded")));
+    }
+  }
+
+  @Test
+  public void test_toByteArray() throws IOException
+  {
+    try (final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+         final LimitedOutputStream stream =
+             new LimitedOutputStream(baos, 3, LimitedOutputStreamTest::makeErrorMessage)) {
+      stream.write('a');
+      stream.write(new byte[]{'b'});
+      stream.write(new byte[]{'c'}, 0, 1);
+
+      MatcherAssert.assertThat(stream.toByteArray(), CoreMatchers.equalTo(new byte[]{'a', 'b', 'c'}));
+    }
+
+    try (final DataOutputStream dos = new DataOutputStream(new ByteArrayOutputStream());
+         final LimitedOutputStream stream =
+             new LimitedOutputStream(dos, 3, LimitedOutputStreamTest::makeErrorMessage)) {
+      Assert.assertThrows(UnsupportedOperationException.class, stream::toByteArray);
     }
   }
 
