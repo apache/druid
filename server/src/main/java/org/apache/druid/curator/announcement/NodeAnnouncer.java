@@ -1,4 +1,5 @@
-/*
+/Users/SP13272/code/druid/server/src/main/java/org/apache/druid/curator/announcement/NodeAnnouncer.java
+    /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -231,7 +232,6 @@ public class NodeAnnouncer
 
       // Synchronize to make sure that I only create a listener once.
       synchronized (toAnnounce) {
-
         if (!listeners.containsKey(path)) {
           final NodeCache cache = setupNodeCache(path);
 
@@ -269,18 +269,17 @@ public class NodeAnnouncer
           if (currentData == null) {
             // If currentData is null, and we know we have already announced the data,
             // this means that the ephemeral node was unexpectedly removed.
-
             // We will recreate the node again using the previous data.
-            announcedPaths.computeIfPresent(path, (key, data) -> {
-              log.info("Node[%s] dropped, reinstating.", key);
+            final byte[] previouslyAnnouncedData = announcedPaths.get(path);
+            if (previouslyAnnouncedData != null) {
+              log.info("Node[%s] dropped, reinstating.", path);
               try {
-                createAnnouncement(key, data);
+                createAnnouncement(path, previouslyAnnouncedData);
               }
               catch (Exception e) {
                 throw new RuntimeException(e);
               }
-              return data;
-            });
+            }
           }
         })
     );
