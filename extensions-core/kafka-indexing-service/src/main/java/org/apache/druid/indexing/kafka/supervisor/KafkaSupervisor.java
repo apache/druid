@@ -387,7 +387,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
    * but also determines time lag. Once this method has been
    * tested, we can remove the older one.
    */
-  protected void updatePartitionTimeAndRecordLagFromStream()
+  private void updatePartitionTimeAndRecordLagFromStream()
   {
     final Map<KafkaTopicPartition, Long> highestCurrentOffsets = getHighestCurrentOffsets();
 

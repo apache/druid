@@ -225,6 +225,7 @@ These metrics apply to the [Kafka indexing service](../ingestion/kafka-ingestion
 |`ingest/kafka/lag/time`|Total lag time in milliseconds between the current message sequence number consumed by the Kafka indexing tasks and latest sequence number in Kafka across all shards. Minimum emission period for this metric is a minute. Enabled only when `pusblishLagTime` is set to true on supervisor config.|`dataSource`, `stream`, `tags`|Greater than 0, up to max kafka retention period in milliseconds. |
 |`ingest/kafka/maxLag/time`|Max lag time in milliseconds between the current message sequence number consumed by the Kafka indexing tasks and latest sequence number in Kafka across all shards. Minimum emission period for this metric is a minute. Enabled only when `pusblishLagTime` is set to true on supervisor config.|`dataSource`, `stream`, `tags`|Greater than 0, up to max kafka retention period in milliseconds. |
 |`ingest/kafka/avgLag/time`|Average lag time in milliseconds between the current message sequence number consumed by the Kafka indexing tasks and latest sequence number in Kafka across all shards. Minimum emission period for this metric is a minute. Enabled only when `pusblishLagTime` is set to true on supervisor config.|`dataSource`, `stream`, `tags`|Greater than 0, up to max kafka retention period in milliseconds. |
+
 ### Ingestion metrics for Kinesis
 
 These metrics apply to the [Kinesis indexing service](../ingestion/kinesis-ingestion.md).
