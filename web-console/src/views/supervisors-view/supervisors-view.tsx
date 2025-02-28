@@ -58,6 +58,7 @@ import {
   SMALL_TABLE_PAGE_SIZE,
   SMALL_TABLE_PAGE_SIZE_OPTIONS,
   sqlQueryCustomTableFilters,
+  suggestibleFilterInput,
 } from '../../react-table';
 import { Api, AppToaster } from '../../singletons';
 import type { AuxiliaryQueryFn, TableState } from '../../utils';
@@ -741,6 +742,20 @@ export class SupervisorsView extends React.PureComponent<
             Header: 'Status',
             id: 'detailed_state',
             width: 150,
+            Filter: suggestibleFilterInput([
+              'CONNECTING_TO_STREAM',
+              'CREATING_TASKS',
+              'DISCOVERING_INITIAL_TASKS',
+              'IDLE',
+              'LOST_CONTACT_WITH_STREAM',
+              'PENDING',
+              'RUNNING',
+              'STOPPING',
+              'SUSPENDED',
+              'UNABLE_TO_CONNECT_TO_STREAM',
+              'UNHEALTHY_SUPERVISOR',
+              'UNHEALTHY_TASKS',
+            ]),
             accessor: 'detailed_state',
             Cell: ({ value }) => (
               <TableFilterableCell

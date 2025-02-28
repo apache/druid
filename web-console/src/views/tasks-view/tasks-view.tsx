@@ -38,7 +38,11 @@ import { AlertDialog, AsyncActionDialog, SpecDialog, TaskTableActionDialog } fro
 import type { QueryWithContext } from '../../druid-models';
 import { TASK_CANCELED_ERROR_MESSAGES, TASK_CANCELED_PREDICATE } from '../../druid-models';
 import type { Capabilities } from '../../helpers';
-import { SMALL_TABLE_PAGE_SIZE, SMALL_TABLE_PAGE_SIZE_OPTIONS } from '../../react-table';
+import {
+  SMALL_TABLE_PAGE_SIZE,
+  SMALL_TABLE_PAGE_SIZE_OPTIONS,
+  suggestibleFilterInput,
+} from '../../react-table';
 import { Api, AppToaster } from '../../singletons';
 import {
   formatDuration,
@@ -408,6 +412,14 @@ ORDER BY
             Header: 'Status',
             id: 'status',
             width: 110,
+            Filter: suggestibleFilterInput([
+              'CANCELED',
+              'FAILED',
+              'PENDING',
+              'RUNNING',
+              'SUCCESS',
+              'WAITING',
+            ]),
             accessor: row => ({
               status: row.status,
               created_time: row.created_time,

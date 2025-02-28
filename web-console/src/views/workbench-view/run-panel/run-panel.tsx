@@ -34,7 +34,7 @@ import type { JSX } from 'react';
 import React, { useCallback, useMemo, useState } from 'react';
 
 import {
-  ENABLE_DISABLE_OPTIONS_TEXT,
+  ENABLED_DISABLED_OPTIONS_TEXT,
   MenuBoolean,
   MenuCheckbox,
   TimezoneMenuItems,
@@ -414,7 +414,7 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                         useApproximateCountDistinct,
                       })
                     }
-                    optionsText={ENABLE_DISABLE_OPTIONS_TEXT}
+                    optionsText={ENABLED_DISABLED_OPTIONS_TEXT}
                   />
                 )}
                 {show('approximate-top-n') && (
@@ -428,7 +428,7 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                         useApproximateTopN,
                       })
                     }
-                    optionsText={ENABLE_DISABLE_OPTIONS_TEXT}
+                    optionsText={ENABLED_DISABLED_OPTIONS_TEXT}
                   />
                 )}
                 {show('join-algorithm') && (
@@ -465,7 +465,7 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                       onValueChange={failOnEmptyInsert =>
                         changeQueryContext({ ...queryContext, failOnEmptyInsert })
                       }
-                      optionsText={ENABLE_DISABLE_OPTIONS_TEXT}
+                      optionsText={ENABLED_DISABLED_OPTIONS_TEXT}
                     />
                     <MenuBoolean
                       text="Wait until segments have loaded"
@@ -475,7 +475,7 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                       onValueChange={waitUntilSegmentsLoad =>
                         changeQueryContext({ ...queryContext, waitUntilSegmentsLoad })
                       }
-                      optionsText={ENABLE_DISABLE_OPTIONS_TEXT}
+                      optionsText={ENABLED_DISABLED_OPTIONS_TEXT}
                     />
                     <MenuItem text="Max parse exceptions" label={String(maxParseExceptions)}>
                       {[0, 1, 5, 10, 1000, 10000, -1].map(v => (
@@ -511,7 +511,7 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                     onValueChange={finalizeAggregations =>
                       changeQueryContext({ ...queryContext, finalizeAggregations })
                     }
-                    optionsText={ENABLE_DISABLE_OPTIONS_TEXT}
+                    optionsText={ENABLED_DISABLED_OPTIONS_TEXT}
                   />
                 )}
                 {show('group-by-enable-multi-value-unnesting') && (
@@ -524,7 +524,7 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                     onValueChange={groupByEnableMultiValueUnnesting =>
                       changeQueryContext({ ...queryContext, groupByEnableMultiValueUnnesting })
                     }
-                    optionsText={ENABLE_DISABLE_OPTIONS_TEXT}
+                    optionsText={ENABLED_DISABLED_OPTIONS_TEXT}
                   />
                 )}
 
@@ -540,7 +540,7 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                         populateCache: useCache,
                       })
                     }
-                    optionsText={ENABLE_DISABLE_OPTIONS_TEXT}
+                    optionsText={ENABLED_DISABLED_OPTIONS_TEXT}
                   />
                 )}
                 {show('limit-inline-results') && (
@@ -568,7 +568,7 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                         durableShuffleStorage,
                       })
                     }
-                    optionsText={ENABLE_DISABLE_OPTIONS_TEXT}
+                    optionsText={ENABLED_DISABLED_OPTIONS_TEXT}
                   />
                 )}
                 {show('select-destination') && (

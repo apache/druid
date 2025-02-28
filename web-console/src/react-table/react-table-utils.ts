@@ -81,6 +81,7 @@ export function filterModeToTitle(mode: FilterMode): string {
 interface FilterModeAndNeedle {
   mode: FilterMode;
   needle: string;
+  needleParts: string[];
 }
 
 export function addFilter(
@@ -100,13 +101,16 @@ export function parseFilterModeAndNeedle(
   if (!m) return;
   if (!loose && !m[2]) return;
   const mode = (m[1] as FilterMode) || '~';
+  const needle = m[2] || '';
   return {
     mode,
-    needle: m[2] || '',
+    needle,
+    needleParts: needle.split('|'),
   };
 }
 
-export function combineModeAndNeedle(mode: FilterMode, needle: string): string {
+export function combineModeAndNeedle(mode: FilterMode, needle: string, cleanup = false): string {
+  if (cleanup && needle === '') return '';
   return `${mode}${needle}`;
 }
 
@@ -116,60 +120,64 @@ export function addOrUpdateFilter(filters: readonly Filter[], filter: Filter): F
 
 export function booleanCustomTableFilter(filter: Filter, value: unknown): boolean {
   if (value == null) return false;
-  const modeAndNeedle = parseFilterModeAndNeedle(filter);
-  if (!modeAndNeedle) return true;
-  const { mode, needle } = modeAndNeedle;
+  const modeAndNeedles = parseFilterModeAndNeedle(filter);
+  if (!modeAndNeedles) return true;
+  const { mode, needleParts } = modeAndNeedles;
   const strValue = String(value);
   switch (mode) {
     case '=':
-      return strValue === needle;
+      return needleParts.some(needle => strValue === needle);
 
     case '!=':
-      return strValue !== needle;
+      return needleParts.every(needle => strValue !== needle);
 
     case '<':
-      return strValue < needle;
+      return needleParts.some(needle => strValue < needle);
 
     case '<=':
-      return strValue <= needle;
+      return needleParts.some(needle => strValue <= needle);
 
     case '>':
-      return strValue > needle;
+      return needleParts.some(needle => strValue > needle);
 
     case '>=':
-      return strValue >= needle;
+      return needleParts.some(needle => strValue >= needle);
 
     default:
-      return caseInsensitiveContains(strValue, needle);
+      return needleParts.some(needle => caseInsensitiveContains(strValue, needle));
   }
 }
 
 export function sqlQueryCustomTableFilter(filter: Filter): SqlExpression | undefined {
-  const modeAndNeedle = parseFilterModeAndNeedle(filter);
-  if (!modeAndNeedle) return;
-  const { mode, needle } = modeAndNeedle;
+  const modeAndNeedles = parseFilterModeAndNeedle(filter);
+  if (!modeAndNeedles) return;
+  const { mode, needleParts } = modeAndNeedles;
   const column = C(filter.id);
   switch (mode) {
-    case '=':
-      return column.equal(needle);
+    case '=': {
+      return SqlExpression.or(...needleParts.map(needle => column.equal(needle)));
+    }
 
-    case '!=':
-      return column.unequal(needle);
+    case '!=': {
+      return SqlExpression.and(...needleParts.map(needle => column.unequal(needle)));
+    }
 
     case '<':
-      return column.lessThan(needle);
+      return SqlExpression.or(...needleParts.map(needle => column.lessThan(needle)));
 
     case '<=':
-      return column.lessThanOrEqual(needle);
+      return SqlExpression.or(...needleParts.map(needle => column.lessThanOrEqual(needle)));
 
     case '>':
-      return column.greaterThan(needle);
+      return SqlExpression.or(...needleParts.map(needle => column.greaterThan(needle)));
 
     case '>=':
-      return column.greaterThanOrEqual(needle);
+      return SqlExpression.or(...needleParts.map(needle => column.greaterThanOrEqual(needle)));
 
     default:
-      return F('LOWER', column).like(`%${needle.toLowerCase()}%`);
+      return SqlExpression.or(
+        ...needleParts.map(needle => F('LOWER', column).like(`%${needle.toLowerCase()}%`)),
+      );
   }
 }
 
