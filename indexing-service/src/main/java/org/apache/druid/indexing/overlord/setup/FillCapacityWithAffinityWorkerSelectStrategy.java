@@ -29,9 +29,10 @@ public class FillCapacityWithAffinityWorkerSelectStrategy extends FillCapacityWo
 {
   @JsonCreator
   public FillCapacityWithAffinityWorkerSelectStrategy(
-      @JsonProperty("affinityConfig") AffinityConfig affinityConfig
+      @JsonProperty("affinityConfig") AffinityConfig affinityConfig,
+      @JsonProperty("taskLimits") TaskLimits taskLimits
   )
   {
-    super(affinityConfig);
+    super(affinityConfig, taskLimits);
   }
 }
