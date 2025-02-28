@@ -26,8 +26,13 @@ import com.google.inject.Injector;
 import com.google.inject.Provides;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.msq.dart.controller.sql.DartSqlEngine;
+import org.apache.druid.msq.dart.guice.DartControllerModule;
+import org.apache.druid.msq.dart.guice.DartWorkerModule;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
+import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.sql.calcite.TempDirProducer;
+import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.util.DruidModuleCollection;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 
@@ -46,6 +51,25 @@ public class DartComponentSupplier extends AbstractMSQComponentSupplierDelegate
         );
   }
 
+  @Override
+  public DruidModule getCoreModule()
+  {
+    return DruidModuleCollection.of(super.getCoreModule(),
+          new DartControllerModule(),
+          new DartWorkerModule()
+        );
+  }
+
+  @Override
+  public SqlEngine createEngine(
+      QueryLifecycleFactory qlf,
+      ObjectMapper queryJsonMapper,
+      Injector injector)
+  {
+    return injector.getInstance(DartSqlEngine.class);
+  }
+
+
   static class LocalDartModule implements DruidModule{
 
     @Override
@@ -53,14 +77,38 @@ public class DartComponentSupplier extends AbstractMSQComponentSupplierDelegate
     {
     }
 
+//    @Provides
+//    @LazySingleton
+//    public MSQTaskSqlEngine createEngine(
+//        ObjectMapper queryJsonMapper,
+//        MSQTestOverlordServiceClient2 indexingServiceClient)
+//    {
+//      return new DartSqlEngine(indexingServiceClient, queryJsonMapper, new SegmentGenerationTerminalStageSpecFactory());
+//    }
+//
+//    @Provides
+//    @LazySingleton
+//    public DartSqlEngine makeSqlEngine(
+//        DartControllerContextFactory controllerContextFactory,
+//        DartControllerRegistry controllerRegistry,
+//        DartControllerConfig controllerConfig
+//    )
+//    {
+//      return new DartSqlEngine(
+//          controllerContextFactory,
+//          controllerRegistry,
+//          controllerConfig,
+//          Execs.multiThreaded(controllerConfig.getConcurrentQueries(), "dart-controller-%s")
+//      );
+//    }
     @Provides
     @LazySingleton
-    private MSQTestOverlordServiceClient makeOverlordServiceClient(
+    private MSQTestOverlordServiceClient2 makeOverlordServiceClient(
         ObjectMapper queryJsonMapper,
         Injector injector,
         WorkerMemoryParameters workerMemoryParameters)
     {
-      final MSQTestOverlordServiceClient indexingServiceClient = new MSQTestOverlordServiceClient(
+      final MSQTestOverlordServiceClient2 indexingServiceClient = new MSQTestOverlordServiceClient2(
           queryJsonMapper,
           injector,
           new MSQTestTaskActionClient(queryJsonMapper, injector),

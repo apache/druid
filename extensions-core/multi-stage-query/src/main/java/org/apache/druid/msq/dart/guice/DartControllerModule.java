@@ -65,7 +65,8 @@ public class DartControllerModule implements DruidModule
   @Override
   public void configure(Binder binder)
   {
-    if (DartModules.isDartEnabled(properties)) {
+    // FIXME
+    if (true || DartModules.isDartEnabled(properties)) {
       binder.install(new ActualModule());
     }
   }
