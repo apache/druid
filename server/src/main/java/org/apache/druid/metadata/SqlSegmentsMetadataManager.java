@@ -20,6 +20,7 @@
 package org.apache.druid.metadata;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectReader;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
@@ -162,6 +163,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   private final Object pollLock = new Object();
 
   private final ObjectMapper jsonMapper;
+  private final ObjectReader segmentReader;
   private final Duration periodicPollDelay;
   private final Supplier<MetadataStorageTablesConfig> dbTables;
   private final SQLMetadataConnector connector;
@@ -259,6 +261,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
   )
   {
     this.jsonMapper = jsonMapper;
+    this.segmentReader = jsonMapper.readerFor(DataSegment.class);
     this.periodicPollDelay = config.get().getPollDuration().toStandardDuration();
     this.dbTables = dbTables;
     this.connector = connector;
@@ -1048,7 +1051,7 @@ public class SqlSegmentsMetadataManager implements SegmentsMetadataManager
             .setFetchSize(connector.getStreamingFetchSize())
             .map((index, r, ctx) -> {
               try {
-                DataSegment segment = jsonMapper.readValue(r.getBytes("payload"), DataSegment.class);
+                DataSegment segment = segmentReader.readValue(r.getBytes("payload"));
                 return replaceWithExistingSegmentIfPresent(segment);
               }
               catch (IOException e) {

@@ -221,7 +221,7 @@ public class UnionQuery implements Query<Object>
   public DataSourceAnalysis getDataSourceAnalysis()
   {
     OpaqueDataSourceCover ds = new OpaqueDataSourceCover(new UnionDataSource(getDataSources()));
-    return new DataSourceAnalysis(ds, null, null, Collections.emptyList());
+    return new DataSourceAnalysis(ds, null, null, Collections.emptyList(), null);
   }
 
   private static class OpaqueDataSourceCover implements DataSource

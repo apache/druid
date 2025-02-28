@@ -30,6 +30,7 @@ import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.indexer.CompactionEngine;
 import org.apache.druid.indexer.TaskState;
+import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
@@ -56,7 +57,7 @@ import org.apache.druid.query.aggregation.datasketches.theta.SketchMergeAggregat
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
+import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.server.coordinator.AutoCompactionSnapshot;
 import org.apache.druid.server.coordinator.DataSourceCompactionConfig;
 import org.apache.druid.server.coordinator.DruidCompactionConfig;
@@ -64,7 +65,6 @@ import org.apache.druid.server.coordinator.UserCompactionTaskDimensionsConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskGranularityConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskIOConfig;
 import org.apache.druid.server.coordinator.UserCompactionTaskQueryTuningConfig;
-import org.apache.druid.server.coordinator.UserCompactionTaskTransformConfig;
 import org.apache.druid.testing.IntegrationTestingConfig;
 import org.apache.druid.testing.clients.CompactionResourceTestClient;
 import org.apache.druid.testing.clients.TaskResponseObject;
@@ -1610,7 +1610,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
           NO_SKIP_OFFSET,
           null,
           null,
-          new UserCompactionTaskTransformConfig(new SelectorDimFilter("page", "Striker Eureka", null)),
+          new CompactionTransformSpec(new SelectorDimFilter("page", "Striker Eureka", null)),
           null,
           false,
           CompactionEngine.NATIVE
@@ -1868,7 +1868,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       Period skipOffsetFromLatest,
       UserCompactionTaskGranularityConfig granularitySpec,
       UserCompactionTaskDimensionsConfig dimensionsSpec,
-      UserCompactionTaskTransformConfig transformSpec,
+      CompactionTransformSpec transformSpec,
       AggregatorFactory[] metricsSpec,
       boolean dropExisting,
       CompactionEngine engine
@@ -1893,7 +1893,7 @@ public class ITAutoCompactionTest extends AbstractIndexerTest
       int maxNumConcurrentSubTasks,
       UserCompactionTaskGranularityConfig granularitySpec,
       UserCompactionTaskDimensionsConfig dimensionsSpec,
-      UserCompactionTaskTransformConfig transformSpec,
+      CompactionTransformSpec transformSpec,
       AggregatorFactory[] metricsSpec,
       boolean dropExisting,
       CompactionEngine engine

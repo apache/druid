@@ -132,14 +132,21 @@ public class DruidQueryRel extends DruidRel<DruidQueryRel>
         getPlannerContext(),
         getCluster().getRexBuilder(),
         finalizeAggregations,
-        false
+        true
     );
   }
 
   @Override
   public DruidQuery toDruidQueryForExplaining()
   {
-    return toDruidQuery(false);
+    return partialQuery.build(
+        druidTable.getDataSource(),
+        druidTable.getRowSignature(),
+        getPlannerContext(),
+        getCluster().getRexBuilder(),
+        false,
+        false
+    );
   }
 
   @Override
