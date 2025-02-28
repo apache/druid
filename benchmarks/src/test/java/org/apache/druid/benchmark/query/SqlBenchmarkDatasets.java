@@ -117,7 +117,7 @@ public class SqlBenchmarkDatasets
                 ImmutableList.copyOf(
                     Iterables.concat(
                         expressionsSchema.getDimensionsSpecExcludeAggs().getDimensions(),
-                        Collections.singletonList(new AutoTypeColumnSchema("nested", null))
+                        Collections.singletonList(AutoTypeColumnSchema.of("nested"))
                     )
                 )
             ).build(),
@@ -402,7 +402,7 @@ public class SqlBenchmarkDatasets
           dimensionsSpec.withDimensions(
                     dimensionsSpec.getDimensions()
                                   .stream()
-                                  .map(dim -> new AutoTypeColumnSchema(dim.getName(), null))
+                                  .map(dim -> AutoTypeColumnSchema.of(dim.getName()))
                                   .collect(Collectors.toList())
           ),
           aggregators,
@@ -412,7 +412,7 @@ public class SqlBenchmarkDatasets
                          projection.getVirtualColumns(),
                          projection.getGroupingColumns()
                                    .stream()
-                                   .map(dim -> new AutoTypeColumnSchema(dim.getName(), null))
+                                   .map(dim -> AutoTypeColumnSchema.of(dim.getName()))
                                    .collect(Collectors.toList()),
                          projection.getAggregators()
                      )).collect(Collectors.toList()),
