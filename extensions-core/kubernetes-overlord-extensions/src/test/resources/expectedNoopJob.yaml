@@ -8,7 +8,7 @@ metadata:
     druid.task.type: "noop"
     druid.task.group.id: "id"
     druid.task.datasource: "datasource"
-
+    druid.overlord.namespace: "namespace"
   annotations:
     task.id: "id"
     task.type: "noop"
@@ -27,6 +27,7 @@ spec:
         druid.task.type: "noop"
         druid.task.group.id: "id"
         druid.task.datasource: "datasource"
+        druid.overlord.namespace: "namespace"
       annotations:
         task: "H4sIAAAAAAAAAD2MvQ4CIRCE32VqijsTG1qLi7W+wArEbHICrmC8EN7dJf40k/lmJtNQthxgEVPKMGCvXsXgKqnm4x89FTqlKm6MBzw+YCA1nvmm8W4/TQYuxRJeBbZ17cJ3ZhvoSbzShVcu2zLOf9cS7pUl+ANlclrCzr2/AQUK0FqZAAAA"
         tls.enabled: "false"
