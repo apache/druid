@@ -20,7 +20,6 @@
 package org.apache.druid.server;
 
 import com.google.inject.Inject;
-import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.guava.FunctionalIterable;
@@ -98,8 +97,9 @@ public class LocalQuerySegmentWalker implements QuerySegmentWalker
     final AtomicLong cpuAccumulator = new AtomicLong(0L);
 
     if (dataSourceFromQuery instanceof QueryDataSource) {
-      // possible bug?  dataSourceFromQuery is QueryDataSource ; query is GBY with canPerformSubquery
-      throw DruidException.defensive("This might not work correctly");
+      // is this a possible bug?  dataSourceFromQuery is QueryDataSource ; query is GBY with canPerformSubquery
+      // FIXME: let's not fix this
+      // throw DruidException.defensive("This might not work correctly");
     }
 
     // segmentMapFn will ignore all DS maps ass QDS will return identity

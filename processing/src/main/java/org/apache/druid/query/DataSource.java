@@ -100,6 +100,8 @@ public interface DataSource extends Cacheable
    * </p>
    * Processing boundaries are identified {@link ExecutionVertex}.
    */
+  //FIXME: maybe this should renamed to "canBeReadDirectly"
+  // the need seems to be to have a flag which communicates that it could be read directly.
   boolean isProcessable();
 
   /**
