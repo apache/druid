@@ -38,6 +38,7 @@ public class PlannerConfig
   public static final String CTX_KEY_USE_NATIVE_QUERY_EXPLAIN = "useNativeQueryExplain";
   public static final String CTX_KEY_FORCE_EXPRESSION_VIRTUAL_COLUMNS = "forceExpressionVirtualColumns";
   public static final String CTX_MAX_NUMERIC_IN_FILTERS = "maxNumericInFilters";
+  public static final String CTX_REQUIRE_TIME_CONDITION = "requireTimeCondition";
   public static final int NUM_FILTER_NOT_USED = -1;
   @JsonProperty
   private int maxTopNLimit = 100_000;
@@ -364,6 +365,11 @@ public class PlannerConfig
           QueryContexts.CTX_NATIVE_QUERY_SQL_PLANNING_MODE,
           nativeQuerySqlPlanningMode
       );
+      requireTimeCondition = QueryContexts.parseBoolean(
+          queryContext,
+          CTX_REQUIRE_TIME_CONDITION,
+          requireTimeCondition
+      );
       return this;
     }
 
@@ -427,6 +433,12 @@ public class PlannerConfig
       overrides.put(
           CTX_KEY_USE_GROUPING_SET_FOR_EXACT_DISTINCT,
           String.valueOf(useGroupingSetForExactDistinct)
+      );
+    }
+    if (def.requireTimeCondition != requireTimeCondition) {
+      overrides.put(
+          CTX_REQUIRE_TIME_CONDITION,
+          String.valueOf(requireTimeCondition)
       );
     }
 

@@ -39,6 +39,7 @@ import org.apache.druid.query.filter.BoundDimFilter;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.OrDimFilter;
 import org.apache.druid.query.ordering.StringComparators;
+import org.apache.druid.query.planning.ExecutionVertex;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.server.QueryLifecycle;
@@ -51,8 +52,6 @@ import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.CannotBuildQueryException;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.hook.DruidHook;
-import org.joda.time.Interval;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map.Entry;
@@ -86,7 +85,8 @@ public class NativeQueryMaker implements QueryMaker
 
     if (plannerContext.getPlannerConfig().isRequireTimeCondition()
         && !(druidQuery.getDataSource() instanceof InlineDataSource)) {
-      if (Intervals.ONLY_ETERNITY.equals(findBaseDataSourceIntervals(query))) {
+      ExecutionVertex ev = ExecutionVertex.of(query);
+      if (Intervals.ONLY_ETERNITY.equals(ev.getEffectiveQuerySegmentSpec().getIntervals())) {
         throw new CannotBuildQueryException(
             "requireTimeCondition is enabled, all queries must include a filter condition on the __time column"
         );
@@ -153,13 +153,6 @@ public class NativeQueryMaker implements QueryMaker
         mapColumnList(rowOrder, fieldMapping),
         mapColumnList(columnTypes, fieldMapping)
     );
-  }
-
-  private List<Interval> findBaseDataSourceIntervals(Query<?> query)
-  {
-    return query.getDataSourceAnalysis()
-        .getEffectiveQuerySegmentSpec()
-        .getIntervals();
   }
 
   @SuppressWarnings("unchecked")
