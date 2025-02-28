@@ -20,6 +20,7 @@
 package org.apache.druid.server.coordinator;
 
 import org.joda.time.Duration;
+import org.joda.time.Period;
 import org.skife.config.Config;
 import org.skife.config.Default;
 
@@ -58,6 +59,10 @@ public abstract class DruidCoordinatorConfig
   @Config("druid.coordinator.kill.maxSegments")
   @Default("100")
   public abstract int getCoordinatorKillMaxSegments();
+
+  @Config("druid.coordinator.kill.maxInterval")
+  @Default("P30D")
+  public abstract Period getCoordinatorKillMaxInterval();
 
   @Config("druid.coordinator.kill.supervisor.period")
   @Default("P1D")
