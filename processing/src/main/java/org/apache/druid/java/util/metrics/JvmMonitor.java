@@ -22,11 +22,16 @@ package org.apache.druid.java.util.metrics;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.java.util.common.Pair;
+import com.sun.management.GarbageCollectionNotificationInfo;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
+import org.apache.druid.java.util.metrics.jvm.gc.GcEvent;
 
 import javax.annotation.Nullable;
+import javax.management.Notification;
+import javax.management.NotificationEmitter;
+import javax.management.NotificationListener;
+import javax.management.openmbean.CompositeData;
 import java.lang.management.BufferPoolMXBean;
 import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
@@ -42,30 +47,37 @@ public class JvmMonitor extends FeedDefiningMonitor
 
   private static final String JVM_VERSION = "jvmVersion";
   private static final String JAVA_VERSION = System.getProperty("java.version");
+  private final JvmMonitorConfig config;
+
   @VisibleForTesting
   @Nullable
   final GcCollectors gcCollectors;
   private final Map<String, String[]> dimensions;
   @Nullable
   private final AllocationMetricCollector collector;
+  @Nullable
+  final GcGranularEventCollector gcEventCollector;
 
-  public JvmMonitor()
+  public JvmMonitor(JvmMonitorConfig config)
   {
-    this(ImmutableMap.of());
+    this(ImmutableMap.of(), config);
   }
 
-  public JvmMonitor(Map<String, String[]> dimensions)
+  public JvmMonitor(Map<String, String[]> dimensions, JvmMonitorConfig config)
   {
-    this(dimensions, DEFAULT_METRICS_FEED);
+    this(dimensions, DEFAULT_METRICS_FEED, config);
   }
 
-  public JvmMonitor(Map<String, String[]> dimensions, String feed)
+  public JvmMonitor(Map<String, String[]> dimensions, String feed, JvmMonitorConfig config)
   {
     super(feed);
     Preconditions.checkNotNull(dimensions);
+    this.config = config;
     this.dimensions = ImmutableMap.copyOf(dimensions);
     this.collector = AllocationMetricCollectors.getAllocationMetricCollector();
     this.gcCollectors = new GcCollectors();
+
+    this.gcEventCollector = config.recordDuration() ? new GcGranularEventCollector() : null;
   }
 
   @Override
@@ -150,6 +162,9 @@ public class JvmMonitor extends FeedDefiningMonitor
   private void emitGcMetrics(ServiceEmitter emitter)
   {
     gcCollectors.emit(emitter, dimensions);
+    if (gcEventCollector != null) {
+      gcEventCollector.emit(emitter, dimensions);
+    }
   }
 
   private class GcCollectors
@@ -188,69 +203,15 @@ public class JvmMonitor extends FeedDefiningMonitor
 
   private class GcGenerationCollector
   {
-    private static final String GC_YOUNG_GENERATION_NAME = "young";
-    private static final String GC_OLD_GENERATION_NAME = "old";
-    private static final String GC_ZGC_GENERATION_NAME = "zgc";
-    private static final String CMS_COLLECTOR_NAME = "cms";
-    private static final String G1_COLLECTOR_NAME = "g1";
-    private static final String PARALLEL_COLLECTOR_NAME = "parallel";
-    private static final String SERIAL_COLLECTOR_NAME = "serial";
-    private static final String ZGC_COLLECTOR_NAME = "zgc";
-    private static final String SHENANDOAN_COLLECTOR_NAME = "shenandoah";
-    private final String generation;
-    private final String collectorName;
+    private final GcEvent event;
     private final GarbageCollectorMXBean gcBean;
     private long lastInvocations = 0;
     private long lastCpuMillis = 0;
 
     GcGenerationCollector(GarbageCollectorMXBean gcBean)
     {
-      Pair<String, String> gcNamePair = getReadableName(gcBean.getName());
-      this.generation = gcNamePair.lhs;
-      this.collectorName = gcNamePair.rhs;
+      this.event = new GcEvent(gcBean.getName());
       this.gcBean = gcBean;
-    }
-
-    private Pair<String, String> getReadableName(String name)
-    {
-      switch (name) {
-        //CMS
-        case "ParNew":
-          return new Pair<>(GC_YOUNG_GENERATION_NAME, CMS_COLLECTOR_NAME);
-        case "ConcurrentMarkSweep":
-          return new Pair<>(GC_OLD_GENERATION_NAME, CMS_COLLECTOR_NAME);
-
-        // G1
-        case "G1 Young Generation":
-          return new Pair<>(GC_YOUNG_GENERATION_NAME, G1_COLLECTOR_NAME);
-        case "G1 Old Generation":
-          return new Pair<>(GC_OLD_GENERATION_NAME, G1_COLLECTOR_NAME);
-
-        // Parallel
-        case "PS Scavenge":
-          return new Pair<>(GC_YOUNG_GENERATION_NAME, PARALLEL_COLLECTOR_NAME);
-        case "PS MarkSweep":
-          return new Pair<>(GC_OLD_GENERATION_NAME, PARALLEL_COLLECTOR_NAME);
-
-        // Serial
-        case "Copy":
-          return new Pair<>(GC_YOUNG_GENERATION_NAME, SERIAL_COLLECTOR_NAME);
-        case "MarkSweepCompact":
-          return new Pair<>(GC_OLD_GENERATION_NAME, SERIAL_COLLECTOR_NAME);
-
-        //zgc
-        case "ZGC":
-          return new Pair<>(GC_ZGC_GENERATION_NAME, ZGC_COLLECTOR_NAME);
-
-        //Shenandoah
-        case "Shenandoah Cycles":
-          return new Pair<>(GC_YOUNG_GENERATION_NAME, SHENANDOAN_COLLECTOR_NAME);
-        case "Shenandoah Pauses":
-          return new Pair<>(GC_OLD_GENERATION_NAME, SHENANDOAN_COLLECTOR_NAME);
-
-        default:
-          return new Pair<>(name, name);
-      }
     }
 
     void emit(ServiceEmitter emitter, Map<String, String[]> dimensions)
@@ -258,9 +219,9 @@ public class JvmMonitor extends FeedDefiningMonitor
       ImmutableMap.Builder<String, String[]> dimensionsCopyBuilder = ImmutableMap
           .<String, String[]>builder()
           .putAll(dimensions)
-          .put("gcGen", new String[]{generation});
+          .put("gcGen", new String[]{event.druidGenerationName});
 
-      dimensionsCopyBuilder.put("gcName", new String[]{collectorName});
+      dimensionsCopyBuilder.put("gcName", new String[]{event.druidCollectorName});
 
       Map<String, String[]> dimensionsCopy = dimensionsCopyBuilder.build();
 
@@ -321,6 +282,65 @@ public class JvmMonitor extends FeedDefiningMonitor
       emitter.emit(builder.setMetric("jvm/gc/mem/capacity", memoryUsage.getCommitted()));
       emitter.emit(builder.setMetric("jvm/gc/mem/used", memoryUsage.getUsed()));
       emitter.emit(builder.setMetric("jvm/gc/mem/init", memoryUsage.getInit()));
+    }
+  }
+
+  private class GcGranularEventCollector
+  {
+    // From: https://github.com/Netflix/spectator/blob/main/spectator-ext-gc/src/main/java/com/netflix/spectator/gc/GcLogger.java#L56
+    private static final int BUFFER_SIZE = 256;
+    private final EventBuffer<ServiceMetricEvent.Builder> buffer;
+    private final GcNotificationListener listener;
+
+    public GcGranularEventCollector()
+    {
+      this.buffer = new EventBuffer<>(ServiceMetricEvent.Builder.class, BUFFER_SIZE);
+      this.listener = new GcNotificationListener();
+
+      for (GarbageCollectorMXBean mbean : ManagementFactory.getGarbageCollectorMXBeans()) {
+        if (mbean instanceof NotificationEmitter) {
+          final NotificationEmitter emitter = (NotificationEmitter) mbean;
+          emitter.addNotificationListener(this.listener, null, null);
+        }
+      }
+    }
+
+    void emit(ServiceEmitter emitter, Map<String, String[]> dimensions)
+    {
+      final ServiceMetricEvent.Builder[] events = buffer.extract();
+      for (ServiceMetricEvent.Builder builder : events) {
+        MonitorUtils.addDimensionsToBuilder(builder, dimensions);
+        emitter.emit(builder);
+      }
+    }
+
+    private void processGcEvent(GarbageCollectionNotificationInfo info)
+    {
+      final ServiceMetricEvent.Builder builder = builder();
+
+      final GcEvent event = new GcEvent(info.getGcName(), info.getGcCause());
+      builder.setDimension("gcName", new String[]{event.druidCollectorName});
+      builder.setDimension("gcGen", new String[]{event.druidGenerationName});
+      builder.setDimension(JVM_VERSION, JAVA_VERSION);
+
+      // record pause time or concurrent time
+      final String durationMetricName = event.isConcurrent() ? "jvm/gc/concurrentTime" : "jvm/gc/pause";
+      builder.setMetric(durationMetricName, info.getGcInfo().getDuration());
+      buffer.push(builder);
+    }
+
+    private class GcNotificationListener implements NotificationListener
+    {
+      @Override
+      public void handleNotification(Notification notification, Object ref)
+      {
+        final String type = notification.getType();
+        if (GarbageCollectionNotificationInfo.GARBAGE_COLLECTION_NOTIFICATION.equals(type)) {
+          CompositeData cd = (CompositeData) notification.getUserData();
+          GarbageCollectionNotificationInfo info = GarbageCollectionNotificationInfo.from(cd);
+          processGcEvent(info);
+        }
+      }
     }
   }
 }
