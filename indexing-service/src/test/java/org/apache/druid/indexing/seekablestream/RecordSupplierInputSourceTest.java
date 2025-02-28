@@ -234,12 +234,6 @@ public class RecordSupplierInputSourceTest extends InitializedNullHandlingTest
     }
 
     @Override
-    public Map<Integer, Integer> getEndOffsets(Set<StreamPartition<Integer>> streamPartitions)
-    {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
     public void close()
     {
       closed = true;

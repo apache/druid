@@ -134,11 +134,14 @@ public interface RecordSupplier<PartitionIdType, SequenceOffsetType, RecordType 
   Set<PartitionIdType> getPartitionIds(String stream);
 
   /**
-   * returns the end offsets for all the assigned partitions.
+   * Returns the end offsets for all the assigned partitions.
    *
-   * @return set of partitions with their end offsets
+   * @return Map from Partition ID to the corresponding end offset
    */
-  Map<PartitionIdType, SequenceOffsetType> getEndOffsets(Set<StreamPartition<PartitionIdType>> partitions);
+  default Map<PartitionIdType, SequenceOffsetType> getLatestSequenceNumbers(Set<StreamPartition<PartitionIdType>> partitions)
+  {
+    throw new UnsupportedOperationException();
+  }
 
   /**
    * close the RecordSupplier

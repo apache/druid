@@ -792,12 +792,6 @@ public class KinesisRecordSupplier implements RecordSupplier<String, String, Kin
     });
   }
 
-  @Override
-  public Map<String, String> getEndOffsets(Set<StreamPartition<String>> streamPartitions)
-  {
-    throw new UnsupportedOperationException();
-  }
-
   /**
    * Fetch the partition lag, given a stream and set of current partition offsets. This operates independently from
    * the {@link PartitionResource} which have been assigned to this record supplier.

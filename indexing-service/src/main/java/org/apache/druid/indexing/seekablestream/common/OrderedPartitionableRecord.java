@@ -78,7 +78,7 @@ public class OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType, Rec
 
   /**
    *
-   * @return timestamp when the event was ingested by a stream
+   * @return Timestamp in millis when the record was published to the stream, -1 if not known
    */
   public long getTimestamp()
   {

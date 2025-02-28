@@ -407,11 +407,11 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
           .map(e -> new StreamPartition<>(getIoConfig().getStream(), e))
           .collect(Collectors.toSet());
 
-      final Set<KafkaTopicPartition> emptyPartitions = new HashSet<>();
+      final Set<KafkaTopicPartition> yetToReadPartitions = new HashSet<>();
       for (Map.Entry<KafkaTopicPartition, Long> entry : highestCurrentOffsets.entrySet()) {
         if (partitionIds.contains(entry.getKey())) {
           if (highestCurrentOffsets.get(entry.getKey()) == null || highestCurrentOffsets.get(entry.getKey()) == 0) {
-            emptyPartitions.add(entry.getKey());
+            yetToReadPartitions.add(entry.getKey());
             continue;
           }
 
@@ -420,12 +420,14 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
       }
 
       final Map<KafkaTopicPartition, Long> lastIngestedTimestamps = getTimestampPerPartitionAtCurrentOffset(partitions);
+      // TODO: this might give wierd values for lag when the tasks are yet to start processing
+      yetToReadPartitions.forEach(p -> lastIngestedTimestamps.put(p, 0L));
 
       recordSupplier.seekToLatest(partitions);
       // this method isn't actually computing the lag, just fetching the latests offsets from the stream. This is
       // because we currently only have record lag for kafka, which can be lazily computed by subtracting the highest
       // task offsets from the latest offsets from the stream when it is needed
-      latestSequenceFromStream = recordSupplier.getEndOffsets(partitions);
+      latestSequenceFromStream = recordSupplier.getLatestSequenceNumbers(partitions);
 
       for (Map.Entry<KafkaTopicPartition, Long> entry : latestSequenceFromStream.entrySet()) {
         // if there are no messages .getEndOffset would return 0, but if there are n msgs it would return n+1
@@ -443,7 +445,6 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
                   e -> e.getValue() - lastIngestedTimestamps.get(e.getKey())
               )
           );
-      emptyPartitions.forEach(p -> partitionToTimeLag.put(p, 0L));
     }
     catch (InterruptedException e) {
       throw new StreamException(e);
@@ -477,6 +478,9 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
       recordSupplier.assign(allPartitions);
     }
 
+    if (!remainingPartitions.isEmpty()) {
+      log.info("Couldn't fetch the latest timestamp for the following partitions: [%s]", remainingPartitions);
+    }
     return result;
   }
 

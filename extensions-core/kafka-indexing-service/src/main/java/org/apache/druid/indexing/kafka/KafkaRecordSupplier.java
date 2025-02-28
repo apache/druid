@@ -209,7 +209,7 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
   }
 
   @Override
-  public Map<KafkaTopicPartition, Long> getEndOffsets(Set<StreamPartition<KafkaTopicPartition>> partitions)
+  public Map<KafkaTopicPartition, Long> getLatestSequenceNumbers(Set<StreamPartition<KafkaTopicPartition>> partitions)
   {
     return wrapExceptions(() -> CollectionUtils.mapKeys(
       consumer.endOffsets(

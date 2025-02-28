@@ -469,12 +469,6 @@ public class RabbitStreamRecordSupplier implements RecordSupplier<String, Long, 
   }
 
   @Override
-  public Map<String, Long> getEndOffsets(Set<StreamPartition<String>> streamPartitions)
-  {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
   public void close()
   {
     if (closed) {
