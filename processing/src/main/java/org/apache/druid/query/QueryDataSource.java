@@ -100,7 +100,7 @@ public class QueryDataSource implements DataSource
     // FIXME: this was query.getDataSource().isGlobal()
     // but it feeled dodgy to me
     // in general: I think isProcessable should be a precondition to isGblobal
-    return false;
+    return query.getDataSource().isGlobal();
   }
 
   @Override
