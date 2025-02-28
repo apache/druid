@@ -464,6 +464,10 @@ public class SqlResourceTest extends CalciteTestBase
     stubServiceEmitter.verifyEmitted("sqlQuery/time", 1);
     stubServiceEmitter.verifyValue("sqlQuery/bytes", 27L);
     stubServiceEmitter.verifyEmitted("sqlQuery/planningTimeMs", 1);
+    stubServiceEmitter.getEvents().forEach(event -> {
+      Assert.assertEquals("foo", event.toMap().get("dataSource"));
+      Assert.assertEquals("metrics", event.toMap().get("feed"));
+    });
   }
 
 
