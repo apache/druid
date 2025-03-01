@@ -78,6 +78,7 @@ public class KillUnusedSegmentsTest
   private static final DateTime NOW = DateTimes.nowUtc();
   private static final Interval YEAR_OLD = new Interval(Period.days(1), NOW.minusDays(365));
   private static final Interval MONTH_OLD = new Interval(Period.days(1), NOW.minusDays(30));
+  private static final Interval FIFTEEN_DAY_OLD = new Interval(Period.days(1), NOW.minusDays(15));
   private static final Interval DAY_OLD = new Interval(Period.days(1), NOW.minusDays(1));
   private static final Interval HOUR_OLD = new Interval(Period.days(1), NOW.minusHours(1));
   private static final Interval NEXT_DAY = new Interval(Period.days(1), NOW.plusDays(1));
@@ -86,6 +87,9 @@ public class KillUnusedSegmentsTest
   private static final String DS1 = "DS1";
   private static final String DS2 = "DS2";
   private static final String DS3 = "DS3";
+
+  private static final Period RETAIN_DURATION = Period.hours(6);
+  private static final Period MAX_KILL_INTERVAL = Period.days(20);
 
   private static final RowKey DS1_STAT_KEY = RowKey.of(Dimension.DATASOURCE, DS1);
   private static final RowKey DS2_STAT_KEY = RowKey.of(Dimension.DATASOURCE, DS2);
@@ -603,6 +607,29 @@ public class KillUnusedSegmentsTest
 
     validateLastKillStateAndReset(DS1, YEAR_OLD);
   }
+
+  @Test
+  public void testRestrictKillQueryToMaxInterval()
+  {
+    configBuilder.withDurationToRetain(RETAIN_DURATION.toStandardDuration())
+            .withMaxIntervalToKill(MAX_KILL_INTERVAL);
+
+    initDuty();
+
+    createAndAddUnusedSegment(DS1, MONTH_OLD, VERSION, NOW.minusDays(29));
+    CoordinatorRunStats newDatasourceStats = runDutyAndGetStats();
+
+    Assert.assertEquals(1, newDatasourceStats.get(Stats.Kill.ELIGIBLE_UNUSED_SEGMENTS, DS1_STAT_KEY));
+    validateLastKillStateAndReset(DS1, MONTH_OLD);
+
+    createAndAddUnusedSegment(DS1, FIFTEEN_DAY_OLD, VERSION, NOW.minusDays(14));
+    createAndAddUnusedSegment(DS1, DAY_OLD, VERSION, NOW.minusHours(2));
+    CoordinatorRunStats oldDatasourceStats = runDutyAndGetStats();
+
+    Assert.assertEquals(2, oldDatasourceStats.get(Stats.Kill.ELIGIBLE_UNUSED_SEGMENTS, DS1_STAT_KEY));
+    validateLastKillStateAndReset(DS1, FIFTEEN_DAY_OLD);
+  }
+
 
   @Test
   public void testHigherMaxIntervalToKill()
