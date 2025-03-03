@@ -39,6 +39,7 @@ import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.server.SegmentManager;
+import org.apache.druid.server.http.SegmentLoadingMode;
 import org.apache.druid.server.metrics.DataSourceTaskIdHolder;
 import org.apache.druid.timeline.DataSegment;
 
@@ -207,11 +208,11 @@ public class SegmentBootstrapper
                 try {
                   segmentManager.loadSegmentOnBootstrap(
                       segment,
-                      () -> loadDropHandler.removeSegment(segment, DataSegmentChangeCallback.NOOP, false)
+                      () -> loadDropHandler.removeSegment(segment, DataSegmentChangeCallback.NOOP, false, SegmentLoadingMode.NORMAL)
                   );
                 }
                 catch (Exception e) {
-                  loadDropHandler.removeSegment(segment, DataSegmentChangeCallback.NOOP, false);
+                  loadDropHandler.removeSegment(segment, DataSegmentChangeCallback.NOOP, false, SegmentLoadingMode.NORMAL);
                   throw new SegmentLoadingException(e, "Exception loading segment[%s]", segment.getId());
                 }
                 try {

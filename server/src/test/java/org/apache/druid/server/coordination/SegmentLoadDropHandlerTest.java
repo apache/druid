@@ -421,7 +421,8 @@ public class SegmentLoadDropHandlerTest
         config,
         segmentAnnouncer,
         segmentManager,
-        scheduledExecutorFactory.create(5, "SegmentLoadDropHandlerTest-[%d]")
+        scheduledExecutorFactory.create(5, "SegmentLoadDropHandlerTest-[%d]"),
+        scheduledExecutorFactory.create(5, "TurboSegmentLoadDropHandlerTest-[%d]")
     );
   }
 }

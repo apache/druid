@@ -65,6 +65,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
   private final DataSegmentAnnouncer announcer;
   private final SegmentManager segmentManager;
   private final ScheduledExecutorService exec;
+  private final ScheduledExecutorService turboExec;
 
   private final ConcurrentSkipListSet<DataSegment> segmentsToDelete;
 
@@ -92,6 +93,10 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
         Executors.newScheduledThreadPool(
             config.getNumLoadingThreads(),
             Execs.makeThreadFactory("SimpleDataSegmentChangeHandler-%s")
+        ),
+        Executors.newScheduledThreadPool(
+            config.getNumBootstrapThreads(),
+            Execs.makeThreadFactory("TurboDataSegmentChangeHandler-%s")
         )
     );
   }
@@ -101,13 +106,15 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
       SegmentLoaderConfig config,
       DataSegmentAnnouncer announcer,
       SegmentManager segmentManager,
-      ScheduledExecutorService exec
+      ScheduledExecutorService exec,
+      ScheduledExecutorService turboExec
   )
   {
     this.config = config;
     this.announcer = announcer;
     this.segmentManager = segmentManager;
     this.exec = exec;
+    this.turboExec = turboExec;
 
     this.segmentsToDelete = new ConcurrentSkipListSet<>();
     requestStatuses = CacheBuilder.newBuilder().maximumSize(config.getStatusQueueMaxSize()).initialCapacity(8).build();
@@ -126,6 +133,10 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
   @Override
   public void addSegment(DataSegment segment, @Nullable DataSegmentChangeCallback callback)
   {
+    addSegment(segment, callback, SegmentLoadingMode.NORMAL);
+  }
+
+  public void addSegment(DataSegment segment, @Nullable DataSegmentChangeCallback callback, SegmentLoadingMode loadingMode) {
     SegmentChangeStatus result = null;
     try {
       log.info("Loading segment[%s]", segment.getId());
@@ -150,7 +161,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
         segmentManager.loadSegment(segment);
       }
       catch (Exception e) {
-        removeSegment(segment, DataSegmentChangeCallback.NOOP, false);
+        removeSegment(segment, DataSegmentChangeCallback.NOOP, false, loadingMode);
         throw new SegmentLoadingException(e, "Exception loading segment[%s]", segment.getId());
       }
       try {
@@ -180,14 +191,15 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
   @Override
   public void removeSegment(DataSegment segment, @Nullable DataSegmentChangeCallback callback)
   {
-    removeSegment(segment, callback, true);
+    removeSegment(segment, callback, true, SegmentLoadingMode.NORMAL);
   }
 
   @VisibleForTesting
   void removeSegment(
       final DataSegment segment,
       @Nullable final DataSegmentChangeCallback callback,
-      final boolean scheduleDrop
+      final boolean scheduleDrop,
+      final SegmentLoadingMode segmentLoadingMode
   )
   {
     SegmentChangeStatus result = null;
@@ -215,11 +227,20 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
             "Completely removing segment[%s] in [%,d]ms.",
             segment.getId(), config.getDropSegmentDelayMillis()
         );
-        exec.schedule(
-            runnable,
-            config.getDropSegmentDelayMillis(),
-            TimeUnit.MILLISECONDS
-        );
+        if (SegmentLoadingMode.TURBO.equals(segmentLoadingMode)) {
+          turboExec.schedule(
+              runnable,
+              config.getDropSegmentDelayMillis(),
+              TimeUnit.MILLISECONDS
+          );
+        } else {
+          exec.schedule(
+              runnable,
+              config.getDropSegmentDelayMillis(),
+              TimeUnit.MILLISECONDS
+          );
+
+        }
       } else {
         runnable.run();
       }
@@ -283,25 +304,43 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
             new DataSegmentChangeHandler()
             {
               @Override
-              public void addSegment(DataSegment segment, @Nullable DataSegmentChangeCallback callback)
+              public void addSegment(
+                  DataSegment segment,
+                  @Nullable DataSegmentChangeCallback callback
+              )
               {
                 requestStatuses.put(changeRequest, new AtomicReference<>(SegmentChangeStatus.PENDING));
-                exec.submit(
-                    () -> SegmentLoadDropHandler.this.addSegment(
-                        ((SegmentChangeRequestLoad) changeRequest).getSegment(),
-                        () -> resolveWaitingFutures()
-                    )
-                );
+                if (SegmentLoadingMode.TURBO.equals(segmentLoadingMode)) {
+                  turboExec.submit(
+                      () -> SegmentLoadDropHandler.this.addSegment(
+                          ((SegmentChangeRequestLoad) changeRequest).getSegment(),
+                          () -> resolveWaitingFutures(),
+                          segmentLoadingMode
+                      )
+                  );
+                } else {
+                  exec.submit(
+                      () -> SegmentLoadDropHandler.this.addSegment(
+                          ((SegmentChangeRequestLoad) changeRequest).getSegment(),
+                          () -> resolveWaitingFutures(),
+                          segmentLoadingMode
+                      )
+                  );
+                }
               }
 
               @Override
-              public void removeSegment(DataSegment segment, @Nullable DataSegmentChangeCallback callback)
+              public void removeSegment(
+                  DataSegment segment,
+                  @Nullable DataSegmentChangeCallback callback
+              )
               {
                 requestStatuses.put(changeRequest, new AtomicReference<>(SegmentChangeStatus.PENDING));
                 SegmentLoadDropHandler.this.removeSegment(
                     ((SegmentChangeRequestDrop) changeRequest).getSegment(),
                     () -> resolveWaitingFutures(),
-                    true
+                    true,
+                    segmentLoadingMode
                 );
               }
             },
