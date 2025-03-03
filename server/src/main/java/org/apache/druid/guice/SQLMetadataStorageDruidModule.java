@@ -41,7 +41,7 @@ import org.apache.druid.metadata.SqlSegmentsMetadataManager;
 import org.apache.druid.metadata.SqlSegmentsMetadataManagerProvider;
 import org.apache.druid.metadata.segment.SegmentMetadataTransactionFactory;
 import org.apache.druid.metadata.segment.SqlSegmentMetadataTransactionFactory;
-import org.apache.druid.metadata.segment.cache.NoopSegmentMetadataCache;
+import org.apache.druid.metadata.segment.cache.HeapMemorySegmentMetadataCache;
 import org.apache.druid.metadata.segment.cache.SegmentMetadataCache;
 import org.apache.druid.server.audit.AuditManagerConfig;
 import org.apache.druid.server.audit.AuditSerdeHelper;
@@ -108,7 +108,7 @@ public class SQLMetadataStorageDruidModule implements Module
     // SegmentMetadataCache is used only by the Overlord
     // Bind to noop implementation here to fulfill dependencies
     binder.bind(SegmentMetadataCache.class)
-          .to(NoopSegmentMetadataCache.class)
+          .to(HeapMemorySegmentMetadataCache.class)
           .in(LazySingleton.class);
 
     PolyBind.optionBinder(binder, Key.get(SegmentMetadataTransactionFactory.class))
