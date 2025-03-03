@@ -159,19 +159,19 @@ public class SupervisorResource
             return Response.ok(ImmutableMap.of("id", spec.getId())).build();
           }
 
-          if (manager.createOrUpdateAndStartSupervisor(spec)) {
-            final String auditPayload
-                = StringUtils.format("Update supervisor[%s] for datasource[%s]", spec.getId(), spec.getDataSources());
-            auditManager.doAudit(
-                AuditEntry.builder()
-                          .key(spec.getId())
-                          .type("supervisor")
-                          .auditInfo(AuthorizationUtils.buildAuditInfo(req))
-                          .request(AuthorizationUtils.buildRequestInfo("overlord", req))
-                          .payload(auditPayload)
-                          .build()
-            );
-          }
+          manager.createOrUpdateAndStartSupervisor(spec);
+
+          final String auditPayload
+              = StringUtils.format("Update supervisor[%s] for datasource[%s]", spec.getId(), spec.getDataSources());
+          auditManager.doAudit(
+              AuditEntry.builder()
+                        .key(spec.getId())
+                        .type("supervisor")
+                        .auditInfo(AuthorizationUtils.buildAuditInfo(req))
+                        .request(AuthorizationUtils.buildRequestInfo("overlord", req))
+                        .payload(auditPayload)
+                        .build()
+          );
 
           return Response.ok(ImmutableMap.of("id", spec.getId())).build();
         }

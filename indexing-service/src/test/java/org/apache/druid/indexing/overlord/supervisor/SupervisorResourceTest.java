@@ -227,33 +227,6 @@ public class SupervisorResourceTest extends EasyMockSupport
   }
 
   @Test
-  public void testAuditEntryNotCreatedWhenSpecUnmodified()
-  {
-    SupervisorSpec spec = new TestSupervisorSpec("my-id", null, null)
-    {
-
-      @Override
-      public List<String> getDataSources()
-      {
-        return Collections.singletonList("datasource1");
-      }
-    };
-    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager));
-    EasyMock.expect(supervisorManager.createOrUpdateAndStartSupervisor(spec)).andReturn(false);
-
-    setupMockRequest();
-
-    EasyMock.expect(authConfig.isEnableInputSourceSecurity()).andReturn(true);
-
-    replayAll();
-
-    Response response = supervisorResource.specPost(spec, false, request);
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(ImmutableMap.of("id", "my-id"), response.getEntity());
-    verifyAll();
-  }
-
-  @Test
   public void testSpecPostWithInputSourceSecurityEnabledAuthorized()
   {
     SupervisorSpec spec = new TestSupervisorSpec("my-id", null, null)

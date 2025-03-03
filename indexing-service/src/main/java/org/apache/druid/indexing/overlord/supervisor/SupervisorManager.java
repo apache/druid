@@ -175,7 +175,7 @@ public class SupervisorManager
       Preconditions.checkState(started, "SupervisorManager not started");
       final boolean shouldUpdateSpec = shouldUpdateSupervisor(spec);
       possiblyStopAndRemoveSupervisorInternal(spec.getId(), false);
-      createAndStartSupervisorInternal(spec, true);
+      createAndStartSupervisorInternal(spec, shouldUpdateSpec);
       return shouldUpdateSpec;
     }
   }
