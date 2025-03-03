@@ -28,6 +28,7 @@ import org.apache.druid.math.expr.Exprs;
 import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.math.expr.Parser;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -252,6 +253,6 @@ public class JoinConditionAnalysis implements Cacheable
   @Override
   public byte[] getCacheKey()
   {
-    return originalExpression.getBytes();
+    return originalExpression.getBytes(StandardCharsets.UTF_8);
   }
 }

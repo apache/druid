@@ -187,7 +187,7 @@ public class Queries
   public static Query withBaseDataSource(final Query query, final DataSource newBaseDataSource)
   {
     ExecutionVertex ev = ExecutionVertex.of(query);
-    if(!ev.isProcessable()) {
+    if (!ev.isProcessable()) {
       throw DruidException.defensive("Its unsafe to replace the BaseDataSource of a non-processable query [%s]", query);
     }
     return ev.buildQueryWithBaseDataSource(newBaseDataSource);

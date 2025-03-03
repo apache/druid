@@ -22,7 +22,6 @@ package org.apache.druid.query;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Ordering;
@@ -106,27 +105,8 @@ public abstract class BaseQuery<T> implements Query<T>
   @Override
   public QueryRunner<T> getRunner(QuerySegmentWalker walker)
   {
-    return getQuerySegmentSpecForLookUp(this).lookup(this, walker);
-  }
-
-  public ExecutionVertex getDataSourceAnalysis2()
-  {
-    return ExecutionVertex.of(this);
-//    DataSourceAnalysis ret;
-//    if (mayCollapseQueryDataSource()) {
-//      ret = ((QueryDataSource) getDataSource()).getQuery().getDataSourceAnalysis();
-//    } else {
-//      ret = getDataSource().getAnalysis();
-//    }
-//    return ret.maybeWithQuerySegmentSpec(getQuerySegmentSpec());
-  }
-
-
-  @VisibleForTesting
-  public static QuerySegmentSpec getQuerySegmentSpecForLookUp(BaseQuery<?> query)
-  {
-    return query.getDataSourceAnalysis2()
-        .getEffectiveQuerySegmentSpec();
+    ExecutionVertex ev = ExecutionVertex.of(this);
+    return ev.getEffectiveQuerySegmentSpec().lookup(this, walker);
   }
 
   @Override

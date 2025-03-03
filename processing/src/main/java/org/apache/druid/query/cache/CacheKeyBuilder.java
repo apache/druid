@@ -268,7 +268,7 @@ public class CacheKeyBuilder
   {
     byte[] cacheableToByteArray = cacheableToByteArray(input);
     if (cacheableToByteArray == null) {
-      invalidKey  = true;
+      invalidKey = true;
       return this;
     }
     appendItem(CACHEABLE_KEY, cacheableToByteArray);
@@ -312,7 +312,7 @@ public class CacheKeyBuilder
 
   public byte[] build()
   {
-    if(invalidKey) {
+    if (invalidKey) {
       return null;
     }
     final ByteBuffer buffer = ByteBuffer.allocate(size);

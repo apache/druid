@@ -154,7 +154,7 @@ public class ExecutionVertexTest
   {
     final UnionDataSource unionDataSource = new UnionDataSource(ImmutableList.of(TABLE_FOO, TABLE_BAR));
     final QueryDataSource queryDataSource = makeQueryDS(unionDataSource);
-    final ExecutionVertex ev = ExecutionVertex.of(makeScanQuery(queryDataSource));//queryDataSource.getAnalysis();
+    final ExecutionVertex ev = ExecutionVertex.of(makeScanQuery(queryDataSource));
 
     Assert.assertFalse(ev.isProcessable());
     Assert.assertFalse(ev.isTableBased());
@@ -248,7 +248,6 @@ public class ExecutionVertexTest
         ),
         analysis.getPreJoinableClauses()
     );
-//    Assert.assertEquals(joinDataSource.isGlobal(), ev.isGlobal());
     Assert.assertTrue(ev.isJoin());
     Assert.assertTrue(ev.isBaseColumn("foo"));
     Assert.assertFalse(ev.isBaseColumn("1.foo"));
@@ -517,7 +516,7 @@ public class ExecutionVertexTest
     Assert.assertTrue(ev.isProcessable());
     Assert.assertEquals(TABLE_FOO, ev.getBaseDataSource());
     Assert.assertEquals(TABLE_FOO, ev.getBaseTableDataSource());
-Assert.assertEquals(null, analysis.getJoinBaseTableFilter().orElse(null));
+    Assert.assertEquals(null, analysis.getJoinBaseTableFilter().orElse(null));
     Assert.assertEquals(new MultipleIntervalSegmentSpec(MILLENIUM_INTERVALS), ev.getEffectiveQuerySegmentSpec());
     Assert.assertEquals(
         ImmutableList.of(

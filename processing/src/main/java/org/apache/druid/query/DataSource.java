@@ -95,7 +95,7 @@ public interface DataSource extends Cacheable
   /**
    * Communicates that this {@link DataSource} can be directly used to run a {@link Query}.
    * <p>
-   * Processable examples are Tables / Inline datasources.
+   * Processable examples are: Tables / Inline datasources.
    * Non-processable ones are those which need further pre-processing before running them.
    * </p>
    * Processing boundaries are identified {@link ExecutionVertex}.

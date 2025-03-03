@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.query.policy.Policy;
 import org.apache.druid.segment.SegmentReference;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -118,7 +119,7 @@ public class TableDataSource implements DataSource
   @Override
   public byte[] getCacheKey()
   {
-    return getName().getBytes();
+    return getName().getBytes(StandardCharsets.UTF_8);
   }
 
   @Override
