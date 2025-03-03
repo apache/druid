@@ -72,7 +72,7 @@ public class BalanceSegmentsTest
   @Before
   public void setUp()
   {
-    loadQueueManager = new SegmentLoadQueueManager(null, null, null);
+    loadQueueManager = new SegmentLoadQueueManager(null, null);
 
     // Create test segments for multiple datasources
     final DateTime start1 = DateTimes.of("2012-01-01");

@@ -23,7 +23,6 @@ import org.apache.druid.client.DruidServer;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.server.coordination.ServerType;
-import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.coordinator.DruidCluster;
 import org.apache.druid.server.coordinator.DruidCoordinatorRuntimeParams;
@@ -33,7 +32,6 @@ import org.apache.druid.server.coordinator.loading.SegmentAction;
 import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.loading.StrategicSegmentAssigner;
 import org.apache.druid.server.coordinator.loading.TestLoadQueuePeon;
-import org.apache.druid.server.coordinator.simulate.CoordinatorSimulationBaseTest;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.server.coordinator.stats.RowKey;
@@ -234,13 +232,12 @@ public class BroadcastDistributionRuleTest
       DataSegment... usedSegments
   )
   {
-    CoordinatorConfigManager coordinatorConfigManager = CoordinatorSimulationBaseTest.createEmptyCoordinatorConfigManager();
     return DruidCoordinatorRuntimeParams
         .builder()
         .withDruidCluster(druidCluster)
         .withUsedSegments(usedSegments)
         .withBalancerStrategy(new RandomBalancerStrategy())
-        .withSegmentAssignerUsing(new SegmentLoadQueueManager(null, null, coordinatorConfigManager))
+        .withSegmentAssignerUsing(new SegmentLoadQueueManager(null, null))
         .build();
   }
 

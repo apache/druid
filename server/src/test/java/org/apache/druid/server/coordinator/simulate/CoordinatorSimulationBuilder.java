@@ -472,22 +472,22 @@ public class CoordinatorSimulationBuilder
           coordinatorConfigManager
       );
 
+      this.loadQueueManager =
+          new SegmentLoadQueueManager(coordinatorInventoryView, loadQueueTaskMaster);
+
       this.lookupCoordinatorManager = EasyMock.createNiceMock(LookupCoordinatorManager.class);
       mocks.add(jacksonConfigManager);
       mocks.add(lookupCoordinatorManager);
 
       this.metadataManager = new MetadataManager(
           null,
-          coordinatorConfigManager,
+          new CoordinatorConfigManager(jacksonConfigManager, null, null),
           segmentManager,
           null,
           ruleManager,
           null,
           null
       );
-
-      this.loadQueueManager =
-          new SegmentLoadQueueManager(coordinatorInventoryView, loadQueueTaskMaster, coordinatorConfigManager);
     }
 
     private void setUp() throws Exception

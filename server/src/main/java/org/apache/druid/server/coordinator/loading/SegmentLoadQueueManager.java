@@ -22,7 +22,6 @@ package org.apache.druid.server.coordinator.loading;
 import com.google.inject.Inject;
 import org.apache.druid.client.ServerInventoryView;
 import org.apache.druid.java.util.common.logger.Logger;
-import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.ServerHolder;
 import org.apache.druid.timeline.DataSegment;
 
@@ -35,19 +34,16 @@ public class SegmentLoadQueueManager
   private static final Logger log = new Logger(SegmentLoadQueueManager.class);
 
   private final LoadQueueTaskMaster taskMaster;
-  private final CoordinatorConfigManager coordinatorConfigManager;
   private final ServerInventoryView serverInventoryView;
 
   @Inject
   public SegmentLoadQueueManager(
       ServerInventoryView serverInventoryView,
-      LoadQueueTaskMaster taskMaster,
-      CoordinatorConfigManager coordinatorConfigManager
+      LoadQueueTaskMaster taskMaster
   )
   {
     this.serverInventoryView = serverInventoryView;
     this.taskMaster = taskMaster;
-    this.coordinatorConfigManager = coordinatorConfigManager;
   }
 
   /**
