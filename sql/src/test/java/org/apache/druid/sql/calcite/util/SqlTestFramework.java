@@ -29,6 +29,13 @@ import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.TypeLiteral;
+import org.apache.druid.client.BrokerServerView;
+import org.apache.druid.client.DirectDruidClientFactory;
+import org.apache.druid.client.FilteredServerInventoryView;
+import org.apache.druid.client.FilteredServerInventoryViewProvider;
+import org.apache.druid.client.QueryableDruidServer;
+import org.apache.druid.client.ServerInventoryView;
+import org.apache.druid.client.ServerInventoryViewProvider;
 import org.apache.druid.client.SimpleServerView;
 import org.apache.druid.client.TestHttpClient;
 import org.apache.druid.client.TimelineServerView;
@@ -41,6 +48,7 @@ import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.guice.ExpressionModule;
 import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.LifecycleModule;
+import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.guice.QueryRunnerFactoryModule;
 import org.apache.druid.guice.QueryableModule;
 import org.apache.druid.guice.SegmentWranglerModule;
@@ -127,7 +135,6 @@ import org.apache.druid.sql.guice.SqlModule;
 import org.apache.druid.sql.hook.DruidHookDispatcher;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.utils.JvmUtils;
-
 import javax.inject.Named;
 
 import java.io.Closeable;
@@ -1054,14 +1061,26 @@ public class SqlTestFramework
       return new TestSegmentsBroker();
     }
 
-    @Provides
     @LazySingleton
     public TimelineServerView makeTimelines1(ObjectMapper objectMapper, QueryRunnerFactoryConglomerate conglomerate,
         HttpClient httpClient)
     {
       //FIXME connect TSB with this
-      return new SimpleServerView(conglomerate, objectMapper, httpClient);
+///.      return new SimpleServerView(conglomerate, objectMapper, httpClient);
+
+      SimpleServerView simpleServerView = new SimpleServerView(conglomerate, objectMapper, httpClient);
+      return simpleServerView;
     }
+    @Provides
+    @LazySingleton
+    public TimelineServerView makeTimelines2(SpecificSegmentsQuerySegmentWalker  walker, QueryRunnerFactoryConglomerate conglomerate,
+        HttpClient httpClient)
+    {
+      List<DataSegment> realtimeSegments = Collections.emptyList();
+      return new TestTimelineServerView(walker.getSegments(), realtimeSegments);
+    }
+
+
 
     @Provides
     @LazySingleton
@@ -1122,6 +1141,21 @@ public class SqlTestFramework
     @Override
     public void configure(Binder binder)
     {
+      if(true) {
+        if(false) {
+          binder.bind(TimelineServerView.class).to(SimpleServerView.class).in(LazySingleton.class);
+        }
+
+      } else {
+        binder.bind(TimelineServerView.class).to(BrokerServerView.class).in(LazySingleton.class);
+        binder.bind(QueryableDruidServer.Maker.class).to(DirectDruidClientFactory.class).in(LazySingleton.class);
+        binder.bind(ServerInventoryView.class).toProvider(ServerInventoryViewProvider.class).in(ManageLifecycle.class);
+        binder.bind(FilteredServerInventoryView.class)
+            .toProvider(FilteredServerInventoryViewProvider.class)
+            .in(ManageLifecycle.class);
+
+        // return new SimpleServerView(conglomerate, objectMapper, httpClient);
+      }
     }
   }
 

@@ -474,6 +474,7 @@ public class CalciteTests
             new BrokerSegmentWatcherConfig(),
             BrokerSegmentMetadataCacheConfig.create()
         ),
+        //FIXME use the same
         new TestTimelineServerView(walker.getSegments()),
         new FakeServerInventoryView(),
         authorizerMapper,

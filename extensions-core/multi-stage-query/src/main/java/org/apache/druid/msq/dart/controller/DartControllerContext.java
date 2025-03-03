@@ -121,6 +121,9 @@ public class DartControllerContext implements ControllerContext
     // allowed to float. If a segment moves to a new server that isn't part of our list after the WorkerManager is
     // created, we won't be able to find a valid server for certain segments. This isn't expected to be a problem,
     // since the serverView is referenced shortly after the worker list is created.
+    if(true) {
+//      throw DruidException.defensive("asf|");
+    }
     final List<String> workerIds = new ArrayList<>(servers.size());
     for (final DruidServerMetadata server : servers) {
       if (server.getType() == ServerType.HISTORICAL) {

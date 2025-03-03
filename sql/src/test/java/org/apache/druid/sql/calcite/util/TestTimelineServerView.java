@@ -47,7 +47,7 @@ public class TestTimelineServerView implements TimelineServerView
 {
   private static final DruidServerMetadata DUMMY_SERVER = new DruidServerMetadata(
       "dummy",
-      "dummy",
+      "dummy:15723",
       null,
       0,
       ServerType.HISTORICAL,
@@ -56,7 +56,7 @@ public class TestTimelineServerView implements TimelineServerView
   );
   private static final DruidServerMetadata DUMMY_SERVER_REALTIME = new DruidServerMetadata(
       "dummy2",
-      "dummy2",
+      "dummy2:15723",
       null,
       0,
       ServerType.REALTIME,
@@ -65,7 +65,7 @@ public class TestTimelineServerView implements TimelineServerView
   );
   private static final DruidServerMetadata DUMMY_BROKER = new DruidServerMetadata(
       "dummy3",
-      "dummy3",
+      "dummy3:15723",
       null,
       0,
       ServerType.BROKER,
@@ -93,7 +93,8 @@ public class TestTimelineServerView implements TimelineServerView
   @Override
   public Optional<? extends TimelineLookup<String, ServerSelector>> getTimeline(TableDataSource table)
   {
-    throw new UnsupportedOperationException();
+  return Optional.empty();
+//    throw new UnsupportedOperationException();
   }
 
   @Override

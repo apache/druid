@@ -226,6 +226,7 @@ public class QueryFrameworkUtils
   {
     final BrokerSegmentMetadataCache cache = new BrokerSegmentMetadataCache(
         createMockQueryLifecycleFactory(walker, conglomerate),
+        //FIXME use the same
         new TestTimelineServerView(walker.getSegments()),
         BrokerSegmentMetadataCacheConfig.create(),
         CalciteTests.TEST_AUTHENTICATOR_ESCALATOR,

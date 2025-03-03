@@ -368,6 +368,7 @@ public class ControllerImpl implements Controller
       handleQueryResults(queryDef, queryKernel);
     }
     catch (Throwable e) {
+      log.info(e, "Execution failed");
       exceptionEncountered = e;
     }
 
