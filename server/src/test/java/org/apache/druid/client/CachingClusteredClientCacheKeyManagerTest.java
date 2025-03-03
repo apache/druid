@@ -28,7 +28,6 @@ import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
 import org.apache.druid.query.QueryContexts;
-import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.join.NoopDataSource;
 import org.apache.druid.timeline.DataSegment;
@@ -58,8 +57,6 @@ public class CachingClusteredClientCacheKeyManagerTest extends EasyMockSupport
   private Query<Object> query;
   @Mock
   private JoinableFactoryWrapper joinableFactoryWrapper;
-  @Mock
-  private DataSourceAnalysis dataSourceAnalysis;
   @Mock
   private DataSource dataSource;
 
@@ -178,7 +175,6 @@ public class CachingClusteredClientCacheKeyManagerTest extends EasyMockSupport
   @Test
   public void testComputeEtag_noEffectifBySegment()
   {
-    expect(dataSourceAnalysis.isJoin()).andReturn(false);
     reset(query);
 
     expect(query.getDataSource()).andReturn(new NoopDataSource());
@@ -197,7 +193,6 @@ public class CachingClusteredClientCacheKeyManagerTest extends EasyMockSupport
   @Test
   public void testComputeEtag_noEffectIfUseAndPopulateFalse()
   {
-    expect(dataSourceAnalysis.isJoin()).andReturn(false);
     expect(query.getDataSource()).andReturn(new NoopDataSource());
     replayAll();
     CachingClusteredClient.CacheKeyManager<Object> keyManager = new CachingClusteredClient.CacheKeyManager<>(

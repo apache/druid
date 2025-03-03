@@ -154,7 +154,7 @@ public class InlineDataSourceTest
   @Test
   public void test_isConcrete()
   {
-    Assert.assertTrue(listDataSource.isConcrete());
+    Assert.assertTrue(listDataSource.isProcessable());
   }
 
   @Test

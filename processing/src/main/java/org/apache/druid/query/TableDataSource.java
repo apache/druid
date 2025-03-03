@@ -24,10 +24,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.IAE;
-import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.policy.Policy;
 import org.apache.druid.segment.SegmentReference;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -94,7 +94,7 @@ public class TableDataSource implements DataSource
   }
 
   @Override
-  public boolean isConcrete()
+  public boolean isProcessable()
   {
     return true;
   }
@@ -103,12 +103,6 @@ public class TableDataSource implements DataSource
   public Function<SegmentReference, SegmentReference> createSegmentMapFunction(Query query)
   {
     return Function.identity();
-  }
-
-  @Override
-  public DataSource withUpdatedDataSource(DataSource newSource)
-  {
-    return newSource;
   }
 
   @Override
@@ -125,13 +119,7 @@ public class TableDataSource implements DataSource
   @Override
   public byte[] getCacheKey()
   {
-    return new byte[0];
-  }
-
-  @Override
-  public DataSourceAnalysis getAnalysis()
-  {
-    return new DataSourceAnalysis(this, null, null, Collections.emptyList(), null);
+    return getName().getBytes(StandardCharsets.UTF_8);
   }
 
   @Override
