@@ -472,7 +472,7 @@ public class MarkEternityTombstonesAsUnusedTest
             CoordinatorDynamicConfig.builder().withMarkSegmentAsUnusedDelayMillis(0).build()
         )
         .withBalancerStrategy(new RandomBalancerStrategy())
-        .withSegmentAssignerUsing(new SegmentLoadQueueManager(null, null))
+        .withSegmentAssignerUsing(new SegmentLoadQueueManager(null, null, null))
         .build();
 
     return params;

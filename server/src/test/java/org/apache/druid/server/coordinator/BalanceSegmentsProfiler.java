@@ -35,6 +35,7 @@ import org.apache.druid.server.coordinator.loading.SegmentLoadQueueManager;
 import org.apache.druid.server.coordinator.loading.TestLoadQueuePeon;
 import org.apache.druid.server.coordinator.rules.PeriodLoadRule;
 import org.apache.druid.server.coordinator.rules.Rule;
+import org.apache.druid.server.coordinator.simulate.CoordinatorSimulationBaseTest;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.NoneShardSpec;
 import org.easymock.EasyMock;
@@ -66,7 +67,9 @@ public class BalanceSegmentsProfiler
   @Before
   public void setUp()
   {
-    loadQueueManager = new SegmentLoadQueueManager(null, null);
+    CoordinatorConfigManager coordinatorConfigManager = CoordinatorSimulationBaseTest.createEmptyCoordinatorConfigManager();
+
+    loadQueueManager = new SegmentLoadQueueManager(null, null, coordinatorConfigManager);
     druidServer1 = EasyMock.createMock(ImmutableDruidServer.class);
     druidServer2 = EasyMock.createMock(ImmutableDruidServer.class);
     emitter = EasyMock.createMock(ServiceEmitter.class);

@@ -461,8 +461,6 @@ public class CoordinatorSimulationBuilder
           coordinatorConfig.getHttpLoadQueuePeonConfig(),
           httpClient
       );
-      this.loadQueueManager =
-          new SegmentLoadQueueManager(coordinatorInventoryView, loadQueueTaskMaster);
 
       JacksonConfigManager jacksonConfigManager = mockConfigManager();
       setDynamicConfig(dynamicConfig);
@@ -471,15 +469,24 @@ public class CoordinatorSimulationBuilder
       mocks.add(jacksonConfigManager);
       mocks.add(lookupCoordinatorManager);
 
+      CoordinatorConfigManager coordinatorConfigManager = new CoordinatorConfigManager(
+          jacksonConfigManager,
+          null,
+          null
+      );
+
       this.metadataManager = new MetadataManager(
           null,
-          new CoordinatorConfigManager(jacksonConfigManager, null, null),
+          coordinatorConfigManager,
           segmentManager,
           null,
           ruleManager,
           null,
           null
       );
+
+      this.loadQueueManager =
+          new SegmentLoadQueueManager(coordinatorInventoryView, loadQueueTaskMaster, coordinatorConfigManager);
     }
 
     private void setUp() throws Exception
