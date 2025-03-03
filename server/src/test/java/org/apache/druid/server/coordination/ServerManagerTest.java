@@ -453,7 +453,14 @@ public class ServerManagerTest
     ), interval, Granularities.ALL);
 
     Future<?> future = assertQuery(query, interval, ImmutableList.of(new Pair<>("1", interval)));
-    Future<?> future2 = assertQuery(queryOnRestricted, interval, ImmutableList.of(new Pair<>("1", interval)));
+    // sleep for 1s to make sure the first query hits/finishes factory.createRunner first, since we can't test adapter
+    // and segmentReference for RestrictedSegment unless there's already a ReferenceCountingSegment.
+    Thread.sleep(1000L);
+    Future<?> futureOnRestricted = assertQuery(
+        queryOnRestricted,
+        interval,
+        ImmutableList.of(new Pair<>("1", interval))
+    );
 
     Assert.assertTrue(factory.notifyLatch.await(1000, TimeUnit.MILLISECONDS));
     Assert.assertEquals(1, factory.getSegmentReferences().size());
@@ -463,7 +470,7 @@ public class ServerManagerTest
     factory.waitYieldLatch.countDown();
     factory.waitLatch.countDown();
     future.get();
-    future2.get();
+    futureOnRestricted.get();
     Assert.assertEquals(1, factory.getSegmentReferences().size());
     // no references since both query are finished
     Assert.assertEquals(0, factory.getSegmentReferences().get(0).getNumReferences());
