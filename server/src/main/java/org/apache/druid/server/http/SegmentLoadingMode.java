@@ -19,7 +19,7 @@
 
 package org.apache.druid.server.http;
 
-public enum SegmentLoadingMode // TODO: change name?
+public enum SegmentLoadingMode
 {
   NORMAL,
   TURBO

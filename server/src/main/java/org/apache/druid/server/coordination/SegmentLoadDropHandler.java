@@ -136,7 +136,8 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     addSegment(segment, callback, SegmentLoadingMode.NORMAL);
   }
 
-  public void addSegment(DataSegment segment, @Nullable DataSegmentChangeCallback callback, SegmentLoadingMode loadingMode) {
+  public void addSegment(DataSegment segment, @Nullable DataSegmentChangeCallback callback, SegmentLoadingMode loadingMode)
+  {
     SegmentChangeStatus result = null;
     try {
       log.info("Loading segment[%s]", segment.getId());

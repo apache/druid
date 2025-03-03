@@ -218,7 +218,7 @@ public class SegmentListerResource
   /**
    * Deprecated.
    *
-   * @see SegmentListerResource#applyDataSegmentChangeRequests(long, SegmentChangeRequestPacket, HttpServletRequest)
+   * @see SegmentListerResource#applyDataSegmentChangeRequests(long, HistoricalSegmentChangeRequest, HttpServletRequest)
    */
   @Deprecated
   @POST
@@ -291,7 +291,7 @@ public class SegmentListerResource
             try {
               HttpServletResponse response = (HttpServletResponse) asyncContext.getResponse();
               response.setStatus(HttpServletResponse.SC_OK);
-              context.inputMapper.writerWithType(HttpLoadQueuePeon.RESPONSE_ENTITY_TYPE_REF)
+              context.inputMapper.writerFor(HttpLoadQueuePeon.RESPONSE_ENTITY_TYPE_REF)
                                  .writeValue(asyncContext.getResponse().getOutputStream(), result);
               asyncContext.complete();
             }
@@ -339,7 +339,7 @@ public class SegmentListerResource
   @Consumes({MediaType.APPLICATION_JSON, SmileMediaTypes.APPLICATION_JACKSON_SMILE})
   public void applyDataSegmentChangeRequests(
       @QueryParam("timeout") long timeout,
-      SegmentChangeRequestPacket segmentChangeRequestPacket,
+      HistoricalSegmentChangeRequest historicalSegmentChangeRequest,
       @Context final HttpServletRequest req
   ) throws IOException
   {
@@ -352,7 +352,7 @@ public class SegmentListerResource
       sendErrorResponse(req, HttpServletResponse.SC_BAD_REQUEST, "timeout must be positive.");
       return;
     }
-    List<DataSegmentChangeRequest> changeRequestList = segmentChangeRequestPacket.getChangeRequestList();
+    List<DataSegmentChangeRequest> changeRequestList = historicalSegmentChangeRequest.getChangeRequestList();
 
     if (changeRequestList == null || changeRequestList.isEmpty()) {
       sendErrorResponse(req, HttpServletResponse.SC_BAD_REQUEST, "No change requests provided.");
@@ -361,7 +361,7 @@ public class SegmentListerResource
 
     final ResponseContext context = createContext(req.getHeader("Accept"));
     final ListenableFuture<List<DataSegmentChangeResponse>> future =
-        loadDropRequestHandler.processBatch(changeRequestList, segmentChangeRequestPacket.getSegmentLoadingMode());
+        loadDropRequestHandler.processBatch(changeRequestList, historicalSegmentChangeRequest.getSegmentLoadingMode());
 
     final AsyncContext asyncContext = req.startAsync();
 

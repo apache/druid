@@ -46,7 +46,7 @@ import org.apache.druid.server.coordinator.stats.CoordinatorStat;
 import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
-import org.apache.druid.server.http.SegmentChangeRequestPacket;
+import org.apache.druid.server.http.HistoricalSegmentChangeRequest;
 import org.apache.druid.server.http.SegmentLoadingMode;
 import org.apache.druid.timeline.DataSegment;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
@@ -78,7 +78,7 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public class HttpLoadQueuePeon implements LoadQueuePeon
 {
-  public static final TypeReference<SegmentChangeRequestPacket> REQUEST_ENTITY_TYPE_REF =
+  public static final TypeReference<HistoricalSegmentChangeRequest> REQUEST_ENTITY_TYPE_REF =
       new TypeReference<>() {};
 
   public static final TypeReference<List<DataSegmentChangeResponse>> RESPONSE_ENTITY_TYPE_REF =
@@ -214,7 +214,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
                                      SegmentLoadingMode.TURBO :
                                      SegmentLoadingMode.NORMAL;
 
-    SegmentChangeRequestPacket segmentChangeRequestPacket = new SegmentChangeRequestPacket(newRequests, loadingMode);
+    HistoricalSegmentChangeRequest request = new HistoricalSegmentChangeRequest(newRequests, loadingMode);
 
     try {
       log.trace("Sending [%d] load/drop requests to Server[%s] in loadingMode [%s].", newRequests.size(), serverId, loadingMode);
@@ -228,7 +228,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
           new Request(HttpMethod.POST, changeRequestURL)
               .addHeader(HttpHeaders.Names.ACCEPT, MediaType.APPLICATION_JSON)
               .addHeader(HttpHeaders.Names.CONTENT_TYPE, MediaType.APPLICATION_JSON)
-              .setContent(requestBodyWriter.writeValueAsBytes(segmentChangeRequestPacket)),
+              .setContent(requestBodyWriter.writeValueAsBytes(request)),
           responseHandler,
           new Duration(config.getHostTimeout().getMillis() + 5000)
       );

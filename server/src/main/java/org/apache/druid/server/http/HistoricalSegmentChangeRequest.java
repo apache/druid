@@ -25,14 +25,14 @@ import org.apache.druid.server.coordination.DataSegmentChangeRequest;
 
 import java.util.List;
 
-public class SegmentChangeRequestPacket // TODO: change name?
+public class HistoricalSegmentChangeRequest
 {
   private final List<DataSegmentChangeRequest> changeRequestList;
 
   private final SegmentLoadingMode segmentLoadingMode;
 
   @JsonCreator
-  public SegmentChangeRequestPacket(
+  public HistoricalSegmentChangeRequest(
       @JsonProperty("changeRequestList") List<DataSegmentChangeRequest> changeRequestList,
       @JsonProperty("segmentLoadingMode") SegmentLoadingMode segmentLoadingMode
   )
