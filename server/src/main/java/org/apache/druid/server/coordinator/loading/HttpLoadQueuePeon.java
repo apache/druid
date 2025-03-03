@@ -38,6 +38,7 @@ import org.apache.druid.server.coordination.DataSegmentChangeRequest;
 import org.apache.druid.server.coordination.DataSegmentChangeResponse;
 import org.apache.druid.server.coordination.SegmentChangeRequestLoad;
 import org.apache.druid.server.coordination.SegmentChangeStatus;
+import org.apache.druid.server.coordination.SegmentLoadDropHandler;
 import org.apache.druid.server.coordinator.BytesAccumulatingResponseHandler;
 import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.config.HttpLoadQueuePeonConfig;
@@ -47,7 +48,6 @@ import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.server.http.HistoricalSegmentChangeRequest;
-import org.apache.druid.server.http.SegmentLoadingMode;
 import org.apache.druid.timeline.DataSegment;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -152,7 +152,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
       this.changeRequestURL = new URL(
           new URL(baseUrl),
           StringUtils.nonStrictFormat(
-              "druid-internal/v1/segments/changeRequestsV2?timeout=%d",
+              "druid-internal/v1/segments/segmentChangeRequests?timeout=%d",
               config.getHostTimeout().getMillis()
           )
       );
@@ -209,10 +209,8 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
       return;
     }
 
-    Set<String> turboLoadHistoricals = coordinatorConfigManager.getCurrentDynamicConfig().getTurboLoadHistoricals();
-    SegmentLoadingMode loadingMode = turboLoadHistoricals.contains(serverName) ?
-                                     SegmentLoadingMode.TURBO :
-                                     SegmentLoadingMode.NORMAL;
+    SegmentLoadDropHandler.SegmentLoadingMode loadingMode =
+        SegmentLoadDropHandler.getLoadingMode(coordinatorConfigManager.getCurrentDynamicConfig(), serverName);
 
     HistoricalSegmentChangeRequest request = new HistoricalSegmentChangeRequest(newRequests, loadingMode);
 

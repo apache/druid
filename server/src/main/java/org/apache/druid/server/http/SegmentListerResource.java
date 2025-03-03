@@ -248,7 +248,7 @@ public class SegmentListerResource
 
     final ResponseContext context = createContext(req.getHeader("Accept"));
     final ListenableFuture<List<DataSegmentChangeResponse>> future =
-        loadDropRequestHandler.processBatch(changeRequestList, SegmentLoadingMode.NORMAL);
+        loadDropRequestHandler.processBatch(changeRequestList, SegmentLoadDropHandler.SegmentLoadingMode.NORMAL);
 
     final AsyncContext asyncContext = req.startAsync();
 
@@ -334,7 +334,7 @@ public class SegmentListerResource
    * It returns a map of "load/drop request -> SUCCESS/FAILED/PENDING status" for each request in the batch.
    */
   @POST
-  @Path("/changeRequestsV2")
+  @Path("/segmentChangeRequests")
   @Produces({MediaType.APPLICATION_JSON, SmileMediaTypes.APPLICATION_JACKSON_SMILE})
   @Consumes({MediaType.APPLICATION_JSON, SmileMediaTypes.APPLICATION_JACKSON_SMILE})
   public void applyDataSegmentChangeRequests(

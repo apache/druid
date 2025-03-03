@@ -19,8 +19,6 @@
 
 package org.apache.druid.server.http;
 
-public enum SegmentLoadingMode
-{
-  NORMAL,
-  TURBO
-}
+/**
+ *
+ */

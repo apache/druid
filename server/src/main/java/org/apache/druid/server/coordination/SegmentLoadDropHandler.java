@@ -27,13 +27,14 @@ import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.AbstractFuture;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.guice.ManageLifecycle;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.server.SegmentManager;
-import org.apache.druid.server.http.SegmentLoadingMode;
+import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.metrics.SegmentRowCountDistribution;
 import org.apache.druid.timeline.DataSegment;
 
@@ -44,6 +45,7 @@ import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -196,6 +198,12 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
   }
 
   @VisibleForTesting
+  void removeSegment(DataSegment segment, @Nullable DataSegmentChangeCallback callback, boolean scheduleDrop)
+  {
+    removeSegment(segment, callback, scheduleDrop, SegmentLoadingMode.NORMAL);
+  }
+
+  @VisibleForTesting
   void removeSegment(
       final DataSegment segment,
       @Nullable final DataSegmentChangeCallback callback,
@@ -228,20 +236,11 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
             "Completely removing segment[%s] in [%,d]ms.",
             segment.getId(), config.getDropSegmentDelayMillis()
         );
-        if (SegmentLoadingMode.TURBO.equals(segmentLoadingMode)) {
-          turboExec.schedule(
-              runnable,
-              config.getDropSegmentDelayMillis(),
-              TimeUnit.MILLISECONDS
-          );
-        } else {
-          exec.schedule(
-              runnable,
-              config.getDropSegmentDelayMillis(),
-              TimeUnit.MILLISECONDS
-          );
-
-        }
+        getExecutorService(segmentLoadingMode).schedule(
+            runnable,
+            config.getDropSegmentDelayMillis(),
+            TimeUnit.MILLISECONDS
+        );
       } else {
         runnable.run();
       }
@@ -311,23 +310,13 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
               )
               {
                 requestStatuses.put(changeRequest, new AtomicReference<>(SegmentChangeStatus.PENDING));
-                if (SegmentLoadingMode.TURBO.equals(segmentLoadingMode)) {
-                  turboExec.submit(
-                      () -> SegmentLoadDropHandler.this.addSegment(
-                          ((SegmentChangeRequestLoad) changeRequest).getSegment(),
-                          () -> resolveWaitingFutures(),
-                          segmentLoadingMode
-                      )
-                  );
-                } else {
-                  exec.submit(
-                      () -> SegmentLoadDropHandler.this.addSegment(
-                          ((SegmentChangeRequestLoad) changeRequest).getSegment(),
-                          () -> resolveWaitingFutures(),
-                          segmentLoadingMode
-                      )
-                  );
-                }
+                getExecutorService(segmentLoadingMode).submit(
+                    () -> SegmentLoadDropHandler.this.addSegment(
+                        ((SegmentChangeRequestLoad) changeRequest).getSegment(),
+                        () -> resolveWaitingFutures(),
+                        segmentLoadingMode
+                    )
+                );
               }
 
               @Override
@@ -426,6 +415,32 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
       }
       return true;
     }
+  }
+
+  public ScheduledExecutorService getExecutorService(SegmentLoadingMode loadingMode)
+  {
+    switch (loadingMode) {
+      case TURBO:
+        return turboExec;
+      case NORMAL:
+        return exec;
+      default:
+        throw DruidException.defensive("Unknown execution mode [%s]", loadingMode);
+    }
+  }
+
+  public static SegmentLoadingMode getLoadingMode(CoordinatorDynamicConfig coordinatorDynamicConfig, String serverName)
+  {
+    final Set<String> turboLoadHistoricals = coordinatorDynamicConfig.getTurboLoadHistoricals();
+    return turboLoadHistoricals.contains(serverName) ?
+           SegmentLoadingMode.TURBO :
+           SegmentLoadingMode.NORMAL;
+  }
+
+  public enum SegmentLoadingMode
+  {
+    NORMAL,
+    TURBO
   }
 }
 
