@@ -2353,7 +2353,7 @@ Content-Length: 1359
 </TabItem>
 </Tabs>
 
-#### Sample request with skipRestartIfUnmodified
+#### Sample request with `skipRestartIfUnmodified`
 The following example sets the `skipRestartIfUnmodified` flag to true. With this flag set to true, the Supervisor will only restart if there has been a modification to the SupervisorSpec. 
 ```shell
 curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor?skipRestartIfUnmodified=true" \
