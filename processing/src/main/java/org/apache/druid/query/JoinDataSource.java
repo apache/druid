@@ -277,8 +277,8 @@ public class JoinDataSource implements DataSource
   public boolean isProcessable()
   {
     // FIXME: shouldn't this be?
-    //    return left.isProcessable() && right.isGlobal();
-    return false;
+    return left.isProcessable() && right.isGlobal();
+    // return false;
   }
 
   /**

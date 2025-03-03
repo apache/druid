@@ -106,7 +106,7 @@ public class QueryDataSource implements DataSource
   @Override
   public boolean isProcessable()
   {
-    return false;
+    return isGlobal();
   }
 
   @Override
