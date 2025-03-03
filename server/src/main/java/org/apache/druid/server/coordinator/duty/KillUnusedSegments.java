@@ -93,7 +93,7 @@ public class KillUnusedSegments implements CoordinatorDuty
    * Used to keep track of the last interval end time that was killed for each
    * datasource.
    */
-  final Map<String, DateTime> datasourceToLastKillIntervalEnd;
+  private final Map<String, DateTime> datasourceToLastKillIntervalEnd;
 
   private DateTime lastKillTime;
 
