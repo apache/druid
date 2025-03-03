@@ -33,6 +33,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.server.SegmentManager;
+import org.apache.druid.server.http.SegmentLoadingMode;
 import org.apache.druid.server.metrics.SegmentRowCountDistribution;
 import org.apache.druid.timeline.DataSegment;
 
@@ -244,14 +245,14 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     return ImmutableList.copyOf(segmentsToDelete);
   }
 
-  public ListenableFuture<List<DataSegmentChangeResponse>> processBatch(List<DataSegmentChangeRequest> changeRequests)
+  public ListenableFuture<List<DataSegmentChangeResponse>> processBatch(List<DataSegmentChangeRequest> changeRequests, SegmentLoadingMode segmentLoadingMode)
   {
     boolean isAnyRequestDone = false;
 
     Map<DataSegmentChangeRequest, AtomicReference<SegmentChangeStatus>> statuses = Maps.newHashMapWithExpectedSize(changeRequests.size());
 
     for (DataSegmentChangeRequest cr : changeRequests) {
-      AtomicReference<SegmentChangeStatus> status = processRequest(cr);
+      AtomicReference<SegmentChangeStatus> status = processRequest(cr, segmentLoadingMode);
       if (status.get().getState() != SegmentChangeStatus.State.PENDING) {
         isAnyRequestDone = true;
       }
@@ -271,7 +272,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     return future;
   }
 
-  private AtomicReference<SegmentChangeStatus> processRequest(DataSegmentChangeRequest changeRequest)
+  private AtomicReference<SegmentChangeStatus> processRequest(DataSegmentChangeRequest changeRequest, SegmentLoadingMode segmentLoadingMode)
   {
     synchronized (requestStatusesLock) {
       AtomicReference<SegmentChangeStatus> status = requestStatuses.getIfPresent(changeRequest);

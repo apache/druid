@@ -216,15 +216,11 @@ public class SegmentListerResource
   }
 
   /**
-   * This endpoint is used by HttpLoadQueuePeon to assign segment load/drop requests batch. This endpoint makes the
-   * client wait till one of the following events occur. Note that this is implemented using async IO so no jetty
-   * threads are held while in wait.
+   * Deprecated.
    *
-   * (1) Given timeout elapses.
-   * (2) Some load/drop request completed.
-   *
-   * It returns a map of "load/drop request -> SUCCESS/FAILED/PENDING status" for each request in the batch.
+   * @see SegmentListerResource#applyDataSegmentChangeRequests(long, SegmentChangeRequestPacket, HttpServletRequest)
    */
+  @Deprecated
   @POST
   @Path("/changeRequests")
   @Produces({MediaType.APPLICATION_JSON, SmileMediaTypes.APPLICATION_JACKSON_SMILE})
@@ -252,7 +248,120 @@ public class SegmentListerResource
 
     final ResponseContext context = createContext(req.getHeader("Accept"));
     final ListenableFuture<List<DataSegmentChangeResponse>> future =
-        loadDropRequestHandler.processBatch(changeRequestList);
+        loadDropRequestHandler.processBatch(changeRequestList, SegmentLoadingMode.NORMAL);
+
+    final AsyncContext asyncContext = req.startAsync();
+
+    asyncContext.addListener(
+        new AsyncListener()
+        {
+          @Override
+          public void onComplete(AsyncEvent event)
+          {
+          }
+
+          @Override
+          public void onTimeout(AsyncEvent event)
+          {
+
+            // HTTP 204 NO_CONTENT is sent to the client.
+            future.cancel(true);
+            event.getAsyncContext().complete();
+          }
+
+          @Override
+          public void onError(AsyncEvent event)
+          {
+          }
+
+          @Override
+          public void onStartAsync(AsyncEvent event)
+          {
+          }
+        }
+    );
+
+    Futures.addCallback(
+        future,
+        new FutureCallback<>()
+        {
+          @Override
+          public void onSuccess(List<DataSegmentChangeResponse> result)
+          {
+            try {
+              HttpServletResponse response = (HttpServletResponse) asyncContext.getResponse();
+              response.setStatus(HttpServletResponse.SC_OK);
+              context.inputMapper.writerWithType(HttpLoadQueuePeon.RESPONSE_ENTITY_TYPE_REF)
+                                 .writeValue(asyncContext.getResponse().getOutputStream(), result);
+              asyncContext.complete();
+            }
+            catch (Exception ex) {
+              log.debug(ex, "Request timed out or closed already.");
+            }
+          }
+
+          @Override
+          public void onFailure(Throwable th)
+          {
+            try {
+              HttpServletResponse response = (HttpServletResponse) asyncContext.getResponse();
+              if (th instanceof IllegalArgumentException) {
+                response.sendError(HttpServletResponse.SC_BAD_REQUEST, th.getMessage());
+              } else {
+                response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, th.getMessage());
+              }
+              asyncContext.complete();
+            }
+            catch (Exception ex) {
+              log.debug(ex, "Request timed out or closed already.");
+            }
+          }
+        },
+        MoreExecutors.directExecutor()
+    );
+
+    asyncContext.setTimeout(timeout);
+  }
+
+  /**
+   * This endpoint is used by HttpLoadQueuePeon to assign segment load/drop requests batch. This endpoint makes the
+   * client wait till one of the following events occur. Note that this is implemented using async IO so no jetty
+   * threads are held while in wait.
+   * <br>
+   * (1) Given timeout elapses.
+   * (2) Some load/drop request completed.
+   * <br>
+   * It returns a map of "load/drop request -> SUCCESS/FAILED/PENDING status" for each request in the batch.
+   */
+  @POST
+  @Path("/changeRequestsV2")
+  @Produces({MediaType.APPLICATION_JSON, SmileMediaTypes.APPLICATION_JACKSON_SMILE})
+  @Consumes({MediaType.APPLICATION_JSON, SmileMediaTypes.APPLICATION_JACKSON_SMILE})
+  public void applyDataSegmentChangeRequests(
+      @QueryParam("timeout") long timeout,
+      SegmentChangeRequestPacket segmentChangeRequestPacket,
+      @Context final HttpServletRequest req
+  ) throws IOException
+  {
+    if (loadDropRequestHandler == null) {
+      sendErrorResponse(req, HttpServletResponse.SC_NOT_FOUND, "load/drop handler is not available.");
+      return;
+    }
+
+    if (timeout <= 0) {
+      sendErrorResponse(req, HttpServletResponse.SC_BAD_REQUEST, "timeout must be positive.");
+      return;
+    }
+    List<DataSegmentChangeRequest> changeRequestList = segmentChangeRequestPacket.getChangeRequestList();
+
+    if (changeRequestList == null || changeRequestList.isEmpty()) {
+      sendErrorResponse(req, HttpServletResponse.SC_BAD_REQUEST, "No change requests provided.");
+      return;
+    }
+
+    final ResponseContext context = createContext(req.getHeader("Accept"));
+    final ListenableFuture<List<DataSegmentChangeResponse>> future =
+        loadDropRequestHandler.processBatch(changeRequestList, segmentChangeRequestPacket.getSegmentLoadingMode());
 
     final AsyncContext asyncContext = req.startAsync();
 

@@ -22,6 +22,7 @@ package org.apache.druid.server.coordinator.loading;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.http.client.HttpClient;
@@ -33,11 +34,15 @@ import org.apache.druid.server.coordination.DataSegmentChangeHandler;
 import org.apache.druid.server.coordination.DataSegmentChangeRequest;
 import org.apache.druid.server.coordination.DataSegmentChangeResponse;
 import org.apache.druid.server.coordination.SegmentChangeStatus;
+import org.apache.druid.server.coordinator.CoordinatorConfigManager;
+import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.coordinator.config.HttpLoadQueuePeonConfig;
 import org.apache.druid.server.coordinator.simulate.BlockingExecutorService;
 import org.apache.druid.server.coordinator.simulate.WrappingScheduledExecutorService;
+import org.apache.druid.server.http.SegmentChangeRequestPacket;
 import org.apache.druid.timeline.DataSegment;
+import org.easymock.EasyMock;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.handler.codec.http.DefaultHttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponse;
@@ -56,6 +61,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -76,8 +82,18 @@ public class HttpLoadQueuePeonTest
   public void setUp()
   {
     httpClient = new TestHttpClient();
+    JacksonConfigManager configManager = EasyMock.createNiceMock(JacksonConfigManager.class);
+    EasyMock.expect(
+        configManager.watch(
+            EasyMock.eq(CoordinatorDynamicConfig.CONFIG_KEY),
+            EasyMock.anyObject(Class.class),
+            EasyMock.anyObject()
+        )
+    ).andReturn(new AtomicReference<>(CoordinatorDynamicConfig.builder().build())).anyTimes();
+    EasyMock.replay(configManager);
     httpLoadQueuePeon = new HttpLoadQueuePeon(
         "http://dummy:4000",
+        "dummy:4000",
         MAPPER,
         httpClient,
         new HttpLoadQueuePeonConfig(null, null, 10),
@@ -86,7 +102,8 @@ public class HttpLoadQueuePeonTest
             httpClient.processingExecutor,
             true
         ),
-        httpClient.callbackExecutor
+        httpClient.callbackExecutor,
+        new CoordinatorConfigManager(configManager, null, null)
     );
     httpLoadQueuePeon.start();
   }
@@ -348,10 +365,12 @@ public class HttpLoadQueuePeonTest
       httpResponse.setContent(ChannelBuffers.buffer(0));
       httpResponseHandler.handleResponse(httpResponse, null);
       try {
-        List<DataSegmentChangeRequest> changeRequests = MAPPER.readValue(
+        SegmentChangeRequestPacket packet = MAPPER.readValue(
             request.getContent().array(),
             HttpLoadQueuePeon.REQUEST_ENTITY_TYPE_REF
         );
+
+        List<DataSegmentChangeRequest> changeRequests = packet.getChangeRequestList();
 
         List<DataSegmentChangeResponse> statuses = new ArrayList<>(changeRequests.size());
         for (DataSegmentChangeRequest cr : changeRequests) {

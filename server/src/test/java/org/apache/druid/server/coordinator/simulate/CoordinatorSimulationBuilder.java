@@ -454,26 +454,27 @@ public class CoordinatorSimulationBuilder
           createBalancerStrategy(balancerStrategy),
           new HttpLoadQueuePeonConfig(null, null, null)
       );
-      this.loadQueueTaskMaster = new LoadQueueTaskMaster(
-          OBJECT_MAPPER,
-          executorFactory.create(1, ExecutorFactory.LOAD_QUEUE_EXECUTOR),
-          executorFactory.create(1, ExecutorFactory.LOAD_CALLBACK_EXECUTOR),
-          coordinatorConfig.getHttpLoadQueuePeonConfig(),
-          httpClient
-      );
 
       JacksonConfigManager jacksonConfigManager = mockConfigManager();
       setDynamicConfig(dynamicConfig);
-
-      this.lookupCoordinatorManager = EasyMock.createNiceMock(LookupCoordinatorManager.class);
-      mocks.add(jacksonConfigManager);
-      mocks.add(lookupCoordinatorManager);
-
       CoordinatorConfigManager coordinatorConfigManager = new CoordinatorConfigManager(
           jacksonConfigManager,
           null,
           null
       );
+
+      this.loadQueueTaskMaster = new LoadQueueTaskMaster(
+          OBJECT_MAPPER,
+          executorFactory.create(1, ExecutorFactory.LOAD_QUEUE_EXECUTOR),
+          executorFactory.create(1, ExecutorFactory.LOAD_CALLBACK_EXECUTOR),
+          coordinatorConfig.getHttpLoadQueuePeonConfig(),
+          httpClient,
+          coordinatorConfigManager
+      );
+
+      this.lookupCoordinatorManager = EasyMock.createNiceMock(LookupCoordinatorManager.class);
+      mocks.add(jacksonConfigManager);
+      mocks.add(lookupCoordinatorManager);
 
       this.metadataManager = new MetadataManager(
           null,

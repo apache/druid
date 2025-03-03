@@ -39,12 +39,15 @@ import org.apache.druid.server.coordination.DataSegmentChangeResponse;
 import org.apache.druid.server.coordination.SegmentChangeRequestLoad;
 import org.apache.druid.server.coordination.SegmentChangeStatus;
 import org.apache.druid.server.coordinator.BytesAccumulatingResponseHandler;
+import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.config.HttpLoadQueuePeonConfig;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.CoordinatorStat;
 import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
+import org.apache.druid.server.http.SegmentChangeRequestPacket;
+import org.apache.druid.server.http.SegmentLoadingMode;
 import org.apache.druid.timeline.DataSegment;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -75,7 +78,7 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public class HttpLoadQueuePeon implements LoadQueuePeon
 {
-  public static final TypeReference<List<DataSegmentChangeRequest>> REQUEST_ENTITY_TYPE_REF =
+  public static final TypeReference<SegmentChangeRequestPacket> REQUEST_ENTITY_TYPE_REF =
       new TypeReference<>() {};
 
   public static final TypeReference<List<DataSegmentChangeResponse>> RESPONSE_ENTITY_TYPE_REF =
@@ -112,6 +115,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
 
   private final HttpLoadQueuePeonConfig config;
 
+  private final String serverName;
   private final ObjectMapper jsonMapper;
   private final HttpClient httpClient;
   private final URL changeRequestURL;
@@ -119,16 +123,19 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
 
   private final AtomicBoolean mainLoopInProgress = new AtomicBoolean(false);
   private final ExecutorService callBackExecutor;
+  private final CoordinatorConfigManager coordinatorConfigManager;
 
   private final ObjectWriter requestBodyWriter;
 
   public HttpLoadQueuePeon(
       String baseUrl,
+      String serverName,
       ObjectMapper jsonMapper,
       HttpClient httpClient,
       HttpLoadQueuePeonConfig config,
       ScheduledExecutorService processingExecutor,
-      ExecutorService callBackExecutor
+      ExecutorService callBackExecutor,
+      CoordinatorConfigManager coordinatorConfigManager
   )
   {
     this.jsonMapper = jsonMapper;
@@ -137,13 +144,15 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
     this.config = config;
     this.processingExecutor = processingExecutor;
     this.callBackExecutor = callBackExecutor;
+    this.coordinatorConfigManager = coordinatorConfigManager;
 
     this.serverId = baseUrl;
+    this.serverName = serverName;
     try {
       this.changeRequestURL = new URL(
           new URL(baseUrl),
           StringUtils.nonStrictFormat(
-              "druid-internal/v1/segments/changeRequests?timeout=%d",
+              "druid-internal/v1/segments/changeRequestsV2?timeout=%d",
               config.getHostTimeout().getMillis()
           )
       );
@@ -200,8 +209,15 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
       return;
     }
 
+    Set<String> turboLoadHistoricals = coordinatorConfigManager.getCurrentDynamicConfig().getTurboLoadHistoricals();
+    SegmentLoadingMode loadingMode = turboLoadHistoricals.contains(serverName) ?
+                                     SegmentLoadingMode.TURBO :
+                                     SegmentLoadingMode.NORMAL;
+
+    SegmentChangeRequestPacket segmentChangeRequestPacket = new SegmentChangeRequestPacket(newRequests, loadingMode);
+
     try {
-      log.trace("Sending [%d] load/drop requests to Server[%s].", newRequests.size(), serverId);
+      log.trace("Sending [%d] load/drop requests to Server[%s] in loadingMode [%s].", newRequests.size(), serverId, loadingMode);
       final boolean hasLoadRequests = newRequests.stream().anyMatch(r -> r instanceof SegmentChangeRequestLoad);
       if (hasLoadRequests && !loadingRateTracker.isLoadingBatch()) {
         loadingRateTracker.markBatchLoadingStarted();
@@ -212,7 +228,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
           new Request(HttpMethod.POST, changeRequestURL)
               .addHeader(HttpHeaders.Names.ACCEPT, MediaType.APPLICATION_JSON)
               .addHeader(HttpHeaders.Names.CONTENT_TYPE, MediaType.APPLICATION_JSON)
-              .setContent(requestBodyWriter.writeValueAsBytes(newRequests)),
+              .setContent(requestBodyWriter.writeValueAsBytes(segmentChangeRequestPacket)),
           responseHandler,
           new Duration(config.getHostTimeout().getMillis() + 5000)
       );
