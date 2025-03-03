@@ -53,6 +53,7 @@ import org.apache.druid.query.QueryUnsupportedException;
 import org.apache.druid.query.ReferenceCountingSegmentQueryRunner;
 import org.apache.druid.query.ReportTimelineMissingSegmentQueryRunner;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.spec.SpecificSegmentQueryRunner;
 import org.apache.druid.query.spec.SpecificSegmentSpec;
@@ -194,7 +195,8 @@ public class ServerManager implements QuerySegmentWalker
       throw new ISE("Cannot handle subquery: %s", dataSourceFromQuery);
     }
 
-    if (!dataSourceFromQuery.validate(authConfig.getTableSecurityPolicyConfig())) {
+    if (!(theQuery instanceof SegmentMetadataQuery)
+        && !dataSourceFromQuery.validate(authConfig.getTableSecurityPolicyConfig())) {
       throw new ISE("Failed security validation with dataSource [%s]", dataSourceFromQuery);
     }
 

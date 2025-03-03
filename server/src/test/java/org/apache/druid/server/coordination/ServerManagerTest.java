@@ -77,13 +77,13 @@ import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.MetricManipulationFn;
 import org.apache.druid.query.context.DefaultResponseContext;
 import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.query.policy.NoRestrictionPolicy;
 import org.apache.druid.query.policy.PolicyConfig;
 import org.apache.druid.query.search.SearchQuery;
 import org.apache.druid.query.search.SearchResultValue;
 import org.apache.druid.query.spec.MultipleSpecificSegmentSpec;
 import org.apache.druid.segment.ReferenceCountingSegment;
-import org.apache.druid.segment.RestrictedSegment;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.server.SegmentManager;
@@ -177,7 +177,6 @@ public class ServerManagerTest
       loadQueryable(segment.getDataSource(), segment.getVersion(), segment.getInterval());
     }
 
-    // By default, we don't want any count-down latch. It's only useful in testing ReferenceCounting.
     factory = new MyQueryRunnerFactory(new CountDownLatch(1), new CountDownLatch(1), new CountDownLatch(1));
     // Only SearchQuery is supported in this test.
     conglomerate = DefaultQueryRunnerFactoryConglomerate.buildFromQueryRunnerFactories(ImmutableMap.of(
@@ -438,6 +437,13 @@ public class ServerManagerTest
   @Test
   public void testReferenceCounting_restrictedSegment() throws Exception
   {
+    factory = new MyQueryRunnerFactory(new CountDownLatch(1), new CountDownLatch(1), new CountDownLatch(2));
+    conglomerate = DefaultQueryRunnerFactoryConglomerate.buildFromQueryRunnerFactories(ImmutableMap.of(
+        SearchQuery.class,
+        factory
+    ));
+    serverManager = Guice.createInjector(BoundFieldModule.of(this)).getInstance(ServerManager.class);
+
     Interval interval = Intervals.of("P1d/2011-04-01");
     loadQueryable("test", "1", interval);
     SearchQuery query = searchQuery("test", interval, Granularities.ALL);
@@ -536,12 +542,10 @@ public class ServerManagerTest
     final List<SegmentDescriptor> unknownSegments = Collections.singletonList(
         new SegmentDescriptor(interval, "1", unknownPartitionId)
     );
-    final QueryRunner<Result<SearchResultValue>> queryRunner = serverManager.getQueryRunnerForSegments(
-        query,
-        unknownSegments
-    );
     final ResponseContext responseContext = DefaultResponseContext.createEmpty();
-    final List<Result<SearchResultValue>> results = queryRunner.run(QueryPlus.wrap(query), responseContext).toList();
+    final List<Result<SearchResultValue>> results = serverManager.getQueryRunnerForSegments(query, unknownSegments)
+                                                                 .run(QueryPlus.wrap(query), responseContext)
+                                                                 .toList();
     Assert.assertTrue(results.isEmpty());
     Assert.assertNotNull(responseContext.getMissingSegments());
     Assert.assertEquals(unknownSegments, responseContext.getMissingSegments());
@@ -598,6 +602,12 @@ public class ServerManagerTest
   @Test
   public void testGetQueryRunnerForSegments_restricted() throws Exception
   {
+    conglomerate = DefaultQueryRunnerFactoryConglomerate.buildFromQueryRunnerFactories(ImmutableMap.of(
+        SearchQuery.class,
+        factory,
+        SegmentMetadataQuery.class,
+        factory
+    ));
     authConfig = AuthConfig.newBuilder()
                            .setTableSecurityPolicyConfig(new PolicyConfig(
                                PolicyConfig.TablePolicySecurityLevel.POLICY_CHECKED_ON_ALL_TABLES_POLICY_MUST_EXIST,
@@ -611,6 +621,10 @@ public class ServerManagerTest
         TableDataSource.create("test"),
         NoRestrictionPolicy.instance()
     ), interval, Granularities.ALL);
+    SegmentMetadataQuery segmentMetadataQuery = Druids.newSegmentMetadataQueryBuilder()
+                                                      .dataSource("test")
+                                                      .intervals(interval.toString())
+                                                      .build();
 
     ISE e = Assert.assertThrows(
         ISE.class,
@@ -618,6 +632,7 @@ public class ServerManagerTest
     );
     Assert.assertEquals("Failed security validation with dataSource [test]", e.getMessage());
     Assert.assertNotNull(serverManager.getQueryRunnerForIntervals(queryOnRestricted, ImmutableList.of(interval)));
+    Assert.assertNotNull(serverManager.getQueryRunnerForIntervals(segmentMetadataQuery, ImmutableList.of(interval)));
   }
 
   private void waitForTestVerificationAndCleanup(Future future)
@@ -666,6 +681,17 @@ public class ServerManagerTest
                  .build();
   }
 
+  private Future<?> assertQueryable(
+      Granularity granularity,
+      String dataSource,
+      Interval interval,
+      List<Pair<String, Interval>> expected
+  )
+  {
+    final SearchQuery query = searchQuery(dataSource, interval, granularity);
+    return assertQuery(query, interval, expected);
+  }
+
   private Future<?> assertQuery(
       SearchQuery query,
       Interval interval,
@@ -674,37 +700,6 @@ public class ServerManagerTest
   {
     final Iterator<Pair<String, Interval>> expectedIter = expected.iterator();
     final List<Interval> intervals = Collections.singletonList(interval);
-    final QueryRunner<Result<SearchResultValue>> runner = serverManager.getQueryRunnerForIntervals(query, intervals);
-    return serverManagerExec.submit(
-        () -> {
-          Sequence<Result<SearchResultValue>> seq = runner.run(QueryPlus.wrap(query));
-          seq.toList();
-          Iterator<SegmentForTesting> adaptersIter = factory.getAdapters().iterator();
-
-          while (expectedIter.hasNext() && adaptersIter.hasNext()) {
-            Pair<String, Interval> expectedVals = expectedIter.next();
-            SegmentForTesting value = adaptersIter.next();
-
-            Assert.assertEquals(expectedVals.lhs, value.getVersion());
-            Assert.assertEquals(expectedVals.rhs, value.getInterval());
-          }
-
-          Assert.assertFalse(expectedIter.hasNext());
-          Assert.assertFalse(adaptersIter.hasNext());
-        }
-    );
-  }
-
-  private Future<?> assertQueryable(
-      Granularity granularity,
-      String dataSource,
-      Interval interval,
-      List<Pair<String, Interval>> expected
-  )
-  {
-    final Iterator<Pair<String, Interval>> expectedIter = expected.iterator();
-    final List<Interval> intervals = Collections.singletonList(interval);
-    final SearchQuery query = searchQuery(dataSource, interval, granularity);
     final QueryRunner<Result<SearchResultValue>> runner = serverManager.getQueryRunnerForIntervals(query, intervals);
     return serverManagerExec.submit(
         () -> {
@@ -768,14 +763,17 @@ public class ServerManagerTest
     public QueryRunner<Result<SearchResultValue>> createRunner(Segment adapter)
     {
       final ReferenceCountingSegment segment;
-      if (adapter instanceof ReferenceCountingSegment) {
+      if (this.adapters.stream()
+                       .map(SegmentForTesting::getId)
+                       .anyMatch(segmentId -> adapter.getId().equals(segmentId))) {
+        // Already have adapter for this segment, skip.
+        // For RestrictedSegment, we don't have access to RestrictedSegment.delegate, but it'd be recorded in segmentReferences.
+        // This means we can't test adapter and segmentReference unless there's already a ReferenceCountingSegment.
+      } else if (adapter instanceof ReferenceCountingSegment) {
         segment = (ReferenceCountingSegment) adapter;
         Assert.assertTrue(segment.getNumReferences() > 0);
         segmentReferences.add(segment);
         adapters.add((SegmentForTesting) segment.getBaseSegment());
-      } else if (adapter instanceof RestrictedSegment) {
-        // No access to RestrictedSegment.delegate, but it'd be recorded in segmentReferences. This means we can't test
-        // adapter and segmentReference unless there's already a ReferenceCountingSegment.
       } else {
         throw new IAE("Unsupported segment instance: [%s]", adapter.getClass());
       }
