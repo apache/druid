@@ -197,11 +197,8 @@ public class SupervisorManager
       try {
         byte[] specAsBytes = jsonMapper.writeValueAsBytes(spec);
         Pair<Supervisor, SupervisorSpec> currentSupervisor = supervisors.get(spec.getId());
-        if (currentSupervisor != null &&
-            Arrays.equals(specAsBytes, jsonMapper.writeValueAsBytes(currentSupervisor.rhs))
-        ) {
-          return false;
-        }
+        return currentSupervisor == null
+               || !Arrays.equals(specAsBytes, jsonMapper.writeValueAsBytes(currentSupervisor.rhs));
       }
       catch (JsonProcessingException ex) {
         log.warn("Failed to write spec as bytes for spec_id[%s]", spec.getId());
