@@ -121,8 +121,8 @@ public class SupervisorResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response specPost(
       final SupervisorSpec spec,
-      @Context final HttpServletRequest req,
-      @QueryParam("skipRestartIfUnmodified") boolean skipRestartIfUnmodified
+      @QueryParam("skipRestartIfUnmodified") Boolean skipRestartIfUnmodified,
+      @Context final HttpServletRequest req
   )
   {
     return asLeaderWithSupervisorManager(
@@ -155,23 +155,23 @@ public class SupervisorResource
           if (!authResult.allowAccessWithNoRestriction()) {
             throw new ForbiddenException(authResult.getErrorMessage());
           }
-          if (skipRestartIfUnmodified && !manager.shouldUpdateSupervisor(spec)) {
+          if (skipRestartIfUnmodified != null && skipRestartIfUnmodified && !manager.shouldUpdateSupervisor(spec)) {
             return Response.ok(ImmutableMap.of("id", spec.getId())).build();
           }
 
-          manager.createOrUpdateAndStartSupervisor(spec);
-
-          final String auditPayload
-              = StringUtils.format("Update supervisor[%s] for datasource[%s]", spec.getId(), spec.getDataSources());
-          auditManager.doAudit(
-              AuditEntry.builder()
-                        .key(spec.getId())
-                        .type("supervisor")
-                        .auditInfo(AuthorizationUtils.buildAuditInfo(req))
-                        .request(AuthorizationUtils.buildRequestInfo("overlord", req))
-                        .payload(auditPayload)
-                        .build()
-          );
+          if (manager.createOrUpdateAndStartSupervisor(spec)) {
+            final String auditPayload
+                = StringUtils.format("Update supervisor[%s] for datasource[%s]", spec.getId(), spec.getDataSources());
+            auditManager.doAudit(
+                AuditEntry.builder()
+                          .key(spec.getId())
+                          .type("supervisor")
+                          .auditInfo(AuthorizationUtils.buildAuditInfo(req))
+                          .request(AuthorizationUtils.buildRequestInfo("overlord", req))
+                          .payload(auditPayload)
+                          .build()
+            );
+          }
 
           return Response.ok(ImmutableMap.of("id", spec.getId())).build();
         }

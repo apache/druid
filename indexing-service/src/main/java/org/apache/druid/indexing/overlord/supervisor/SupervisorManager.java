@@ -158,6 +158,12 @@ public class SupervisorManager
     return true;
   }
 
+  /**
+   * Creates or updates a supervisor and then starts it.
+   * If no change has been made to the supervisor spec, it is only restarted.
+   *
+   * @return true if the supervisor was updated, false otherwise
+   */
   public boolean createOrUpdateAndStartSupervisor(SupervisorSpec spec)
   {
     Preconditions.checkState(started, "SupervisorManager not started");
@@ -167,8 +173,10 @@ public class SupervisorManager
 
     synchronized (lock) {
       Preconditions.checkState(started, "SupervisorManager not started");
+      final boolean shouldUpdateSpec = shouldUpdateSupervisor(spec);
       possiblyStopAndRemoveSupervisorInternal(spec.getId(), false);
-      return createAndStartSupervisorInternal(spec, true);
+      createAndStartSupervisorInternal(spec, true);
+      return shouldUpdateSpec;
     }
   }
 
@@ -176,7 +184,7 @@ public class SupervisorManager
    * Checks whether the submitted SupervisorSpec differs from the current spec in SupervisorManager's supervisor list.
    * This is used in SupervisorResource specPost to determine whether the Supervisor needs to be restarted
    * @param spec The spec submitted
-   * @return boolean - false if the spec is unchanged, else true
+   * @return boolean - true only if the spec has been modified, false otherwise
    */
   public boolean shouldUpdateSupervisor(SupervisorSpec spec)
   {
@@ -399,11 +407,12 @@ public class SupervisorManager
       return true;
     }
     catch (Exception e) {
-      log.error(e,
-                "Failed to upgrade pending segment[%s] to new pending segment[%s] on Supervisor[%s].",
-                upgradedPendingSegment.getUpgradedFromSegmentId(),
-                upgradedPendingSegment.getId().getVersion(),
-                supervisorId
+      log.error(
+          e,
+          "Failed to upgrade pending segment[%s] to new pending segment[%s] on Supervisor[%s].",
+          upgradedPendingSegment.getUpgradedFromSegmentId(),
+          upgradedPendingSegment.getId().getVersion(),
+          supervisorId
       );
     }
     return false;

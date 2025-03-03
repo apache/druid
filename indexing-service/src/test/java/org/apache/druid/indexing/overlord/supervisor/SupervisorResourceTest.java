@@ -161,7 +161,7 @@ public class SupervisorResourceTest extends EasyMockSupport
 
     replayAll();
 
-    Response response = supervisorResource.specPost(spec, request, false);
+    Response response = supervisorResource.specPost(spec, false, request);
     verifyAll();
 
     Assert.assertEquals(200, response.getStatus());
@@ -171,7 +171,7 @@ public class SupervisorResourceTest extends EasyMockSupport
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.absent());
     replayAll();
 
-    response = supervisorResource.specPost(spec, request, false);
+    response = supervisorResource.specPost(spec, false, request);
     verifyAll();
 
     Assert.assertEquals(503, response.getStatus());
@@ -198,7 +198,7 @@ public class SupervisorResourceTest extends EasyMockSupport
     EasyMock.expect(authConfig.isEnableInputSourceSecurity()).andReturn(true);
     replayAll();
 
-    Response response = supervisorResource.specPost(spec, request, true);
+    Response response = supervisorResource.specPost(spec, true, request);
     verifyAll();
 
     Assert.assertEquals(200, response.getStatus());
@@ -219,11 +219,38 @@ public class SupervisorResourceTest extends EasyMockSupport
 
     replayAll();
 
-    response = supervisorResource.specPost(spec, request, true);
+    response = supervisorResource.specPost(spec, true, request);
     verifyAll();
 
     Assert.assertEquals(200, response.getStatus());
     Assert.assertEquals(ImmutableMap.of("id", "my-id"), response.getEntity());
+  }
+
+  @Test
+  public void testAuditEntryNotCreatedWhenSpecUnmodified()
+  {
+    SupervisorSpec spec = new TestSupervisorSpec("my-id", null, null)
+    {
+
+      @Override
+      public List<String> getDataSources()
+      {
+        return Collections.singletonList("datasource1");
+      }
+    };
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager));
+    EasyMock.expect(supervisorManager.createOrUpdateAndStartSupervisor(spec)).andReturn(false);
+
+    setupMockRequest();
+
+    EasyMock.expect(authConfig.isEnableInputSourceSecurity()).andReturn(true);
+
+    replayAll();
+
+    Response response = supervisorResource.specPost(spec, false, request);
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(ImmutableMap.of("id", "my-id"), response.getEntity());
+    verifyAll();
   }
 
   @Test
@@ -250,7 +277,7 @@ public class SupervisorResourceTest extends EasyMockSupport
     EasyMock.expect(authConfig.isEnableInputSourceSecurity()).andReturn(true);
     replayAll();
 
-    Response response = supervisorResource.specPost(spec, request, false);
+    Response response = supervisorResource.specPost(spec, false, request);
     verifyAll();
 
     Assert.assertEquals(200, response.getStatus());
@@ -260,7 +287,7 @@ public class SupervisorResourceTest extends EasyMockSupport
     EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.absent());
     replayAll();
 
-    response = supervisorResource.specPost(spec, request, false);
+    response = supervisorResource.specPost(spec, false, request);
     verifyAll();
 
     Assert.assertEquals(503, response.getStatus());
@@ -290,7 +317,7 @@ public class SupervisorResourceTest extends EasyMockSupport
     EasyMock.expect(authConfig.isEnableInputSourceSecurity()).andReturn(true);
     replayAll();
 
-    Assert.assertThrows(ForbiddenException.class, () -> supervisorResource.specPost(spec, request, false));
+    Assert.assertThrows(ForbiddenException.class, () -> supervisorResource.specPost(spec, false, request));
     verifyAll();
   }
 

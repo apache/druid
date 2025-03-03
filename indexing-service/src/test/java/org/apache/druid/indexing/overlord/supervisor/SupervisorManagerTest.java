@@ -63,6 +63,7 @@ import java.util.Map;
 public class SupervisorManagerTest extends EasyMockSupport
 {
   private static final ObjectMapper MAPPER = new DefaultObjectMapper();
+
   @Mock
   private MetadataSupervisorManager metadataSupervisorManager;
 
@@ -193,6 +194,7 @@ public class SupervisorManagerTest extends EasyMockSupport
     Assert.assertFalse(manager.shouldUpdateSupervisor(spec));
     Assert.assertTrue(manager.shouldUpdateSupervisor(spec2));
   }
+
   @Test
   public void testStopAndRemoveSupervisorNotStarted()
   {
