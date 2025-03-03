@@ -22,7 +22,6 @@ package org.apache.druid.msq.test;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.msq.sql.MSQTaskSqlEngine;
 import org.apache.druid.sql.calcite.CalciteQueryTest;
 import org.apache.druid.sql.calcite.QueryTestBuilder;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
@@ -31,6 +30,7 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -43,7 +43,8 @@ public class CalciteSelectQueryMSQTest extends CalciteQueryTest
   protected QueryTestBuilder testBuilder()
   {
     return new QueryTestBuilder(new CalciteTestConfig(true))
-        .addCustomRunner(new ExtractResultsFactory(() -> (MSQTestOverlordServiceClient) ((MSQTaskSqlEngine) queryFramework().engine()).overlordClient()))
+        .addCustomRunner(new ExtractResultsFactory(() -> null))//(MSQTestOverlordServiceClient) ((DartSqlEngine) queryFramework().engine()).overlordClient()))
+        .queryContext(ImmutableMap.<String,Object>builder().put("asd",UUID.randomUUID().toString()).build())
         .skipVectorize(true)
         .verifyNativeQueries(new VerifyMSQSupportedNativeQueriesPredicate());
   }

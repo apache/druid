@@ -141,7 +141,7 @@ public class DartQueryMaker implements QueryMaker
     final List<Pair<SqlTypeName, ColumnType>> types =
         MSQTaskQueryMaker.getTypes(druidQuery, fieldMapping, plannerContext);
 
-    final String dartQueryId = druidQuery.getQuery().context().getString(DartSqlEngine.CTX_DART_QUERY_ID);
+    final String dartQueryId = druidQuery.getQuery().context().getString(DartSqlEngine.CTX_DART_QUERY_ID) +"asd";
     final ControllerContext controllerContext = controllerContextFactory.newContext(dartQueryId);
     final ControllerImpl controller = new ControllerImpl(
         dartQueryId,

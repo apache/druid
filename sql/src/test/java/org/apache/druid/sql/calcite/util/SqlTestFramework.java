@@ -29,8 +29,12 @@ import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.TypeLiteral;
+import org.apache.druid.client.SimpleServerView;
+import org.apache.druid.client.TestHttpClient;
+import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
+import org.apache.druid.collections.BlockingPool;
 import org.apache.druid.collections.NonBlockingPool;
 import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.guice.DruidInjectorBuilder;
@@ -44,12 +48,14 @@ import org.apache.druid.guice.ServerModule;
 import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.guice.annotations.Merging;
+import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.initialization.CoreInjectorBuilder;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.initialization.ServiceInjectorBuilder;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.DruidProcessingConfig;
@@ -78,6 +84,7 @@ import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.realtime.ChatHandlerProvider;
 import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
 import org.apache.druid.server.ClientQuerySegmentWalker;
+import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.LocalQuerySegmentWalker;
 import org.apache.druid.server.QueryLifecycle;
 import org.apache.druid.server.QueryLifecycleFactory;
@@ -771,6 +778,14 @@ public class SqlTestFramework
             .annotatedWith(Global.class)
             .to(TestBufferPool.class);
 
+      binder.bind(new TypeLiteral<BlockingPool<ByteBuffer>>(){})
+            .annotatedWith(Merging.class)
+            .to(TestBufferPool.class);
+
+      // FIXME
+      DruidNode self = new DruidNode("test", "test-host", true, 80, 443, false, true);
+      binder.bind(DruidNode.class).annotatedWith(Self.class).toInstance(self);
+
       TestRequestLogger testRequestLogger = new TestRequestLogger();
       binder.bind(RequestLogger.class).toInstance(testRequestLogger);
     }
@@ -1037,6 +1052,22 @@ public class SqlTestFramework
     public TestSegmentsBroker makeTimelines()
     {
       return new TestSegmentsBroker();
+    }
+
+    @Provides
+    @LazySingleton
+    public TimelineServerView makeTimelines1(ObjectMapper objectMapper, QueryRunnerFactoryConglomerate conglomerate,
+        HttpClient httpClient)
+    {
+      //FIXME connect TSB with this
+      return new SimpleServerView(conglomerate, objectMapper, httpClient);
+    }
+
+    @Provides
+    @LazySingleton
+    private HttpClient extracted(ObjectMapper objectMapper)
+    {
+      return new TestHttpClient(objectMapper);
     }
 
     @Provides

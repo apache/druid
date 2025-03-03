@@ -183,6 +183,7 @@ public class DruidAvaticaTestDriver implements Driver
     {
       return new DruidAvaticaJsonHandler(
           druidMeta,
+          //FIXME
           new DruidNode("dummy", "dummy", false, 1, null, true, false),
           new AvaticaMonitor()
       );
@@ -205,6 +206,7 @@ public class DruidAvaticaTestDriver implements Driver
       return DruidModuleCollection.of(
           super.getCoreModule(),
           binder -> {
+            // FIXME
             binder.bindConstant().annotatedWith(Names.named("serviceName")).to("test");
             binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
             binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);

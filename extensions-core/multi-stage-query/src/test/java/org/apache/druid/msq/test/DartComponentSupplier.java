@@ -24,17 +24,29 @@ import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Provides;
+import com.google.inject.TypeLiteral;
+import org.apache.druid.collections.NonBlockingPool;
+import org.apache.druid.discovery.DruidNodeDiscoveryProvider;
 import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.guice.annotations.EscalatedGlobal;
+import org.apache.druid.guice.annotations.Merging;
 import org.apache.druid.initialization.DruidModule;
+import org.apache.druid.java.util.http.client.HttpClient;
 import org.apache.druid.msq.dart.controller.sql.DartSqlEngine;
 import org.apache.druid.msq.dart.guice.DartControllerModule;
+import org.apache.druid.msq.dart.guice.DartWorkerMemoryManagementModule;
 import org.apache.druid.msq.dart.guice.DartWorkerModule;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
+import org.apache.druid.query.TestBufferPool;
+import org.apache.druid.rpc.ServiceClientFactory;
+import org.apache.druid.rpc.guice.ServiceClientModule;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.util.DruidModuleCollection;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
+
+import java.nio.ByteBuffer;
 
 public class DartComponentSupplier extends AbstractMSQComponentSupplierDelegate
 {
@@ -56,7 +68,9 @@ public class DartComponentSupplier extends AbstractMSQComponentSupplierDelegate
   {
     return DruidModuleCollection.of(super.getCoreModule(),
           new DartControllerModule(),
-          new DartWorkerModule()
+          new DartWorkerModule(),
+          new DartWorkerMemoryManagementModule(),
+          new L1()
         );
   }
 
@@ -70,11 +84,41 @@ public class DartComponentSupplier extends AbstractMSQComponentSupplierDelegate
   }
 
 
+
+  static class L1 implements DruidModule{
+
+    @Provides
+    @EscalatedGlobal
+    final ServiceClientFactory getServiceClientFactory(HttpClient ht) {
+      return ServiceClientModule.makeServiceClientFactory(ht);
+
+    }
+
+    @Provides
+    final DruidNodeDiscoveryProvider getDiscoveryProvider() {
+      return null;
+    }
+
+
+    @Override
+    public void configure(Binder binder)
+    {
+//      binder.bind(new TypeLiteral<BlockingPool<ByteBuffer>>(){})
+//      .annotatedWith(Merging.class)
+//      .to(TestBufferPool.class);
+
+    }
+
+  }
   static class LocalDartModule implements DruidModule{
 
     @Override
     public void configure(Binder binder)
     {
+      binder.bind(new TypeLiteral<NonBlockingPool<ByteBuffer>>(){})
+      .annotatedWith(Merging.class)
+      .to(TestBufferPool.class);
+
     }
 
 //    @Provides
