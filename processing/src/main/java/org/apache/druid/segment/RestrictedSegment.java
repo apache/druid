@@ -19,6 +19,7 @@
 
 package org.apache.druid.segment;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.druid.query.policy.NoRestrictionPolicy;
 import org.apache.druid.query.policy.Policy;
 import org.apache.druid.timeline.SegmentId;
@@ -42,13 +43,11 @@ import java.util.Optional;
  */
 public class RestrictedSegment implements SegmentReference
 {
-  protected final SegmentReference delegate;
-  protected final Policy policy;
+  @VisibleForTesting
+  public final SegmentReference delegate;
+  final Policy policy;
 
-  public RestrictedSegment(
-      SegmentReference delegate,
-      Policy policy
-  )
+  public RestrictedSegment(SegmentReference delegate, Policy policy)
   {
     this.delegate = delegate;
     this.policy = policy;

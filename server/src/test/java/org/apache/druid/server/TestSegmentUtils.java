@@ -45,6 +45,7 @@ import org.apache.druid.segment.loading.SegmentizerFactory;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.partition.NoneShardSpec;
+import org.apache.druid.timeline.partition.TombstoneShardSpec;
 import org.joda.time.Interval;
 import org.junit.Assert;
 
@@ -251,6 +252,25 @@ public class TestSegmentUtils
         closed = true;
       }
     }
+  }
+
+  public static DataSegment makeTombstoneSegment(String dataSource, String version, Interval interval)
+  {
+    return new DataSegment(
+        dataSource,
+        interval,
+        version,
+        ImmutableMap.of("version", version,
+                        "interval", interval,
+                        "type",
+                        DataSegment.TOMBSTONE_LOADSPEC_TYPE
+        ),
+        Arrays.asList("dim1", "dim2", "dim3"),
+        Arrays.asList("metric1", "metric2"),
+        TombstoneShardSpec.INSTANCE,
+        IndexIO.CURRENT_VERSION_ID,
+        1L
+    );
   }
 
   public static DataSegment makeSegment(String dataSource, String version, Interval interval)

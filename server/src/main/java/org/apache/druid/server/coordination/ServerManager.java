@@ -63,6 +63,7 @@ import org.apache.druid.server.ResourceIdPopulatingQueryRunner;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.SetAndVerifyContextQueryRunner;
 import org.apache.druid.server.initialization.ServerConfig;
+import org.apache.druid.server.security.AuthConfig;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
 import org.apache.druid.timeline.partition.PartitionChunk;
@@ -91,6 +92,7 @@ public class ServerManager implements QuerySegmentWalker
   private final CacheConfig cacheConfig;
   private final SegmentManager segmentManager;
   private final ServerConfig serverConfig;
+  private final AuthConfig authConfig;
 
   @Inject
   public ServerManager(
@@ -102,7 +104,8 @@ public class ServerManager implements QuerySegmentWalker
       Cache cache,
       CacheConfig cacheConfig,
       SegmentManager segmentManager,
-      ServerConfig serverConfig
+      ServerConfig serverConfig,
+      AuthConfig authConfig
   )
   {
     this.conglomerate = conglomerate;
@@ -116,6 +119,7 @@ public class ServerManager implements QuerySegmentWalker
     this.cacheConfig = cacheConfig;
     this.segmentManager = segmentManager;
     this.serverConfig = serverConfig;
+    this.authConfig = authConfig;
   }
 
   @Override
@@ -188,6 +192,10 @@ public class ServerManager implements QuerySegmentWalker
     if ((dataSourceFromQuery instanceof QueryDataSource)
         && !toolChest.canPerformSubquery(((QueryDataSource) dataSourceFromQuery).getQuery())) {
       throw new ISE("Cannot handle subquery: %s", dataSourceFromQuery);
+    }
+
+    if (!dataSourceFromQuery.validate(authConfig.getTableSecurityPolicyConfig())) {
+      throw new ISE("Failed security validation with dataSource [%s]", dataSourceFromQuery);
     }
 
     if (maybeTimeline.isPresent()) {
