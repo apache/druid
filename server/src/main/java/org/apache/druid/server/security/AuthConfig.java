@@ -214,7 +214,8 @@ public class AuthConfig
            && Objects.equals(unsecuredPaths, that.unsecuredPaths)
            && Objects.equals(unsecuredContextKeys, that.unsecuredContextKeys)
            && Objects.equals(securedContextKeys, that.securedContextKeys)
-           && Objects.equals(enableInputSourceSecurity, that.enableInputSourceSecurity);
+           && Objects.equals(enableInputSourceSecurity, that.enableInputSourceSecurity)
+           && Objects.equals(tableSecurityPolicyConfig, that.tableSecurityPolicyConfig);
   }
 
   @Override
@@ -228,7 +229,8 @@ public class AuthConfig
         authorizeQueryContextParams,
         unsecuredContextKeys,
         securedContextKeys,
-        enableInputSourceSecurity
+        enableInputSourceSecurity,
+        tableSecurityPolicyConfig
     );
   }
 
@@ -244,6 +246,7 @@ public class AuthConfig
            ", unsecuredContextKeys=" + unsecuredContextKeys +
            ", securedContextKeys=" + securedContextKeys +
            ", enableInputSourceSecurity=" + enableInputSourceSecurity +
+           ", tableSecurityPolicyConfig=" + tableSecurityPolicyConfig +
            '}';
   }
 
