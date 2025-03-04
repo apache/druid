@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package org.apache.druid.msq.dart.controller;
+package org.apache.druid.msq.test;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
@@ -28,25 +28,16 @@ import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.msq.dart.controller.DartControllerContextFactoryImpl;
 import org.apache.druid.msq.dart.worker.DartWorkerClient;
-import org.apache.druid.msq.exec.ControllerContext;
 import org.apache.druid.msq.exec.MemoryIntrospector;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.server.DruidNode;
 
-public class DartControllerContextFactoryImpl implements DartControllerContextFactory
+public class TestDartControllerContextFactoryImpl extends DartControllerContextFactoryImpl
 {
-  private final Injector injector;
-  private final ObjectMapper jsonMapper;
-  private final ObjectMapper smileMapper;
-  private final DruidNode selfNode;
-  private final ServiceClientFactory serviceClientFactory;
-  private final TimelineServerView serverView;
-  private final MemoryIntrospector memoryIntrospector;
-  private final ServiceEmitter emitter;
-
   @Inject
-  public DartControllerContextFactoryImpl(
+  public TestDartControllerContextFactoryImpl(
       final Injector injector,
       @Json final ObjectMapper jsonMapper,
       @Smile final ObjectMapper smileMapper,
@@ -54,35 +45,15 @@ public class DartControllerContextFactoryImpl implements DartControllerContextFa
       @EscalatedGlobal final ServiceClientFactory serviceClientFactory,
       final MemoryIntrospector memoryIntrospector,
       final TimelineServerView serverView,
-      final ServiceEmitter emitter
-  )
+      final ServiceEmitter emitter)
   {
-    this.injector = injector;
-    this.jsonMapper = jsonMapper;
-    this.smileMapper = smileMapper;
-    this.selfNode = selfNode;
-    this.serviceClientFactory = serviceClientFactory;
-    this.serverView = serverView;
-    this.memoryIntrospector = memoryIntrospector;
-    this.emitter = emitter;
+    super(injector, jsonMapper, smileMapper, selfNode, serviceClientFactory, memoryIntrospector, serverView, emitter);
   }
 
   @Override
-  public ControllerContext newContext(final String queryId)
+  protected DartWorkerClient makeWorkerClient(String queryId)
   {
-    return new DartControllerContext(
-        injector,
-        jsonMapper,
-        selfNode,
-        makeWorkerClient(queryId),
-        memoryIntrospector,
-        serverView,
-        emitter
-    );
+    return super.makeWorkerClient(queryId);
   }
 
-  protected DartWorkerClient makeWorkerClient(final String queryId)
-  {
-    return new DartWorkerClient(queryId, serviceClientFactory, smileMapper, selfNode.getHostAndPortToUse()); 
-  }
 }

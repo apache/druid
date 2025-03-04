@@ -32,6 +32,7 @@ import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Merging;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.msq.dart.controller.DartControllerContextFactory;
 import org.apache.druid.msq.dart.controller.sql.DartSqlEngine;
 import org.apache.druid.msq.dart.guice.DartControllerModule;
 import org.apache.druid.msq.dart.guice.DartWorkerMemoryManagementModule;
@@ -119,6 +120,9 @@ public class DartComponentSupplier extends AbstractMSQComponentSupplierDelegate
       .annotatedWith(Merging.class)
       .to(TestBufferPool.class);
 
+      binder.bind(DartControllerContextFactory.class)
+          .to(TestDartControllerContextFactoryImpl.class)
+          .in(LazySingleton.class);
     }
 
 //    @Provides
