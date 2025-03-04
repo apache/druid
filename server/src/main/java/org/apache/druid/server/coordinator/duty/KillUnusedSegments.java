@@ -276,14 +276,18 @@ public class KillUnusedSegments implements CoordinatorDuty
 
     // Once the first segment from a datasource is killed, we have a valid minStartTime.
     // Restricting the upper bound to scan segments metadata while running the kill task results in a efficient SQL query.
-    final DateTime maxIntervalFromLastKill = minStartTime != null
-                                            ? DateTimes.min(minStartTime.plus(maxIntervalToKill),
-                                            DateTimes.nowUtc().minus(durationToRetain))
-                                            : DateTimes.nowUtc().minus(durationToRetain);
-
-    final DateTime maxEndTime = ignoreDurationToRetain
-                                ? DateTimes.COMPARE_DATE_AS_STRING_MAX
-                                : maxIntervalFromLastKill;
+    final DateTime maxEndTime;
+    if (ignoreDurationToRetain) {
+      maxEndTime = DateTimes.COMPARE_DATE_AS_STRING_MAX;
+    } else if (minStartTime == null) {
+      maxEndTime = DateTimes.nowUtc().minus(durationToRetain);
+    } else {
+      // If we have already killed a segment, limit the kill interval based on the minStartTime
+      maxEndTime = DateTimes.min(
+              DateTimes.nowUtc().minus(durationToRetain),
+              minStartTime.plus(maxIntervalToKill)
+      );
+    }
 
     final List<Interval> unusedSegmentIntervals = limitToPeriod(
         segmentsMetadataManager.getUnusedSegmentIntervals(
