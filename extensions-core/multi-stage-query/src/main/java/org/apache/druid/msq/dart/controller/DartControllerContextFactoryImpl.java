@@ -29,6 +29,7 @@ import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.msq.dart.worker.DartWorkerClient;
+import org.apache.druid.msq.dart.worker.DartWorkerClientImpl;
 import org.apache.druid.msq.exec.ControllerContext;
 import org.apache.druid.msq.exec.MemoryIntrospector;
 import org.apache.druid.rpc.ServiceClientFactory;
@@ -54,8 +55,7 @@ public class DartControllerContextFactoryImpl implements DartControllerContextFa
       @EscalatedGlobal final ServiceClientFactory serviceClientFactory,
       final MemoryIntrospector memoryIntrospector,
       final TimelineServerView serverView,
-      final ServiceEmitter emitter
-  )
+      final ServiceEmitter emitter)
   {
     this.injector = injector;
     this.jsonMapper = jsonMapper;
@@ -83,6 +83,6 @@ public class DartControllerContextFactoryImpl implements DartControllerContextFa
 
   protected DartWorkerClient makeWorkerClient(final String queryId)
   {
-    return new DartWorkerClient(queryId, serviceClientFactory, smileMapper, selfNode.getHostAndPortToUse());
+    return new DartWorkerClientImpl(queryId, serviceClientFactory, smileMapper, selfNode.getHostAndPortToUse());
   }
 }

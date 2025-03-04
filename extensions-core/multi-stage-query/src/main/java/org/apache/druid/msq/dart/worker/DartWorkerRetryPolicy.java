@@ -25,7 +25,7 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 /**
- * Retry policy for {@link DartWorkerClient}. This is a {@link StandardRetryPolicy#unlimited()} with
+ * Retry policy for {@link DartWorkerClientImpl}. This is a {@link StandardRetryPolicy#unlimited()} with
  * {@link #retryHttpResponse(HttpResponse)} customized to retry fewer HTTP error codes.
  */
 public class DartWorkerRetryPolicy implements ServiceRetryPolicy
