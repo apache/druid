@@ -32,11 +32,13 @@ import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Merging;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.http.client.HttpClient;
+import org.apache.druid.msq.dart.Dart;
 import org.apache.druid.msq.dart.controller.DartControllerContextFactory;
 import org.apache.druid.msq.dart.controller.sql.DartSqlEngine;
 import org.apache.druid.msq.dart.guice.DartControllerModule;
 import org.apache.druid.msq.dart.guice.DartWorkerMemoryManagementModule;
 import org.apache.druid.msq.dart.guice.DartWorkerModule;
+import org.apache.druid.msq.exec.Worker;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.query.TestBufferPool;
 import org.apache.druid.rpc.ServiceClientFactory;
@@ -48,6 +50,8 @@ import org.apache.druid.sql.calcite.util.DruidModuleCollection;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 
 import java.nio.ByteBuffer;
+import java.util.HashMap;
+import java.util.Map;
 
 public class DartComponentSupplier extends AbstractMSQComponentSupplierDelegate
 {
@@ -130,6 +134,14 @@ public class DartComponentSupplier extends AbstractMSQComponentSupplierDelegate
         .in(LazySingleton.class);
 
       }
+    }
+
+    @Provides
+    @LazySingleton
+    @Dart
+    Map<String, Worker> workerMap()
+    {
+      return new HashMap<String, Worker>();
     }
 
 //    @Provides

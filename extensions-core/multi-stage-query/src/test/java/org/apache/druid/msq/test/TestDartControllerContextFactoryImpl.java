@@ -29,18 +29,23 @@ import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.msq.dart.Dart;
 import org.apache.druid.msq.dart.controller.DartControllerContextFactoryImpl;
 import org.apache.druid.msq.dart.worker.DartWorkerClient;
+import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.MemoryIntrospector;
 import org.apache.druid.msq.exec.Worker;
+import org.apache.druid.msq.exec.WorkerImpl;
+import org.apache.druid.msq.exec.WorkerStorageParameters;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.server.DruidNode;
 
-import java.util.HashMap;
 import java.util.Map;
 
 public class TestDartControllerContextFactoryImpl extends DartControllerContextFactoryImpl
 {
+  private Map<String, Worker> workerMap;
+
   @Inject
   public TestDartControllerContextFactoryImpl(
       final Injector injector,
@@ -50,29 +55,48 @@ public class TestDartControllerContextFactoryImpl extends DartControllerContextF
       @EscalatedGlobal final ServiceClientFactory serviceClientFactory,
       final MemoryIntrospector memoryIntrospector,
       final TimelineServerView serverView,
-      final ServiceEmitter emitter)
+      final ServiceEmitter emitter,
+      @Dart Map<String, Worker> workerMap
+      )
   {
     super(injector, jsonMapper, smileMapper, selfNode, serviceClientFactory, memoryIntrospector, serverView, emitter);
+    this.workerMap = workerMap;
   }
 
   @Override
   protected DartWorkerClient makeWorkerClient(String queryId)
   {
+    Controller controller = null;
+    Worker worker = new WorkerImpl(
+        null,
+        new MSQTestWorkerContext(
+            queryId,
+            workerMap,
+            controller,
+            jsonMapper,
+            injector,
+            MSQTestBase.makeTestWorkerMemoryParameters(),
+            WorkerStorageParameters.createInstanceForTests(Long.MAX_VALUE)
+        )
+    );
 
-    return
-    new DartTestWorkerClient(queryId, serviceClientFactory, smileMapper, selfNode.getHostAndPortToUse());
-    // new HashMap<String, Worker>());
+    return new DartTestWorkerClient(
+        queryId, serviceClientFactory, smileMapper, selfNode.getHostAndPortToUse(), workerMap
+    );
   }
 
   static class DartTestWorkerClient extends MSQTestWorkerClient implements DartWorkerClient
   {
-    private Map<String, Worker> m;
-    private MSQTestWorkerClient wc;
+    private Map<String, Worker> workerMap;
 
-    public DartTestWorkerClient(String queryId, ServiceClientFactory clientFactory, ObjectMapper smileMapper,
-        String controllerHost)
+    public DartTestWorkerClient(
+        String queryId,
+        ServiceClientFactory clientFactory,
+        ObjectMapper smileMapper,
+        String controllerHost, Map<String, Worker> workerMap
+      )
     {
-      super(new HashMap<>());
+      super(workerMap);
     }
 
     @Override
