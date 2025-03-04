@@ -17,17 +17,8 @@
  * under the License.
  */
 
-package org.apache.druid.server.coordination;
-
-import org.apache.druid.timeline.DataSegment;
-
-import javax.annotation.Nullable;
+package org.apache.druid.server.http;
 
 /**
+ *
  */
-public interface DataSegmentChangeHandler
-{
-  void addSegment(DataSegment segment, @Nullable DataSegmentChangeCallback callback);
-
-  void removeSegment(DataSegment segment, @Nullable DataSegmentChangeCallback callback);
-}

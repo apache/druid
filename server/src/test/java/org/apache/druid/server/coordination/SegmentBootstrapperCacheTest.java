@@ -219,12 +219,12 @@ public class SegmentBootstrapperCacheTest
 
     // Make sure adding segments beyond allowed size fails
     DataSegment newSegment = TestSegmentUtils.makeSegment("test", "new-segment", SEGMENT_SIZE);
-    loadDropHandler.addSegment(newSegment, null);
+    loadDropHandler.addSegment(newSegment, null, SegmentLoadDropHandler.SegmentLoadingMode.NORMAL);
     Assert.assertFalse(segmentAnnouncer.getObservedSegments().contains(newSegment));
 
     // Clearing some segment should allow for new segments
-    loadDropHandler.removeSegment(expectedSegments.get(0), null, false);
-    loadDropHandler.addSegment(newSegment, null);
+    loadDropHandler.removeSegment(expectedSegments.get(0), null, false, SegmentLoadDropHandler.SegmentLoadingMode.NORMAL);
+    loadDropHandler.addSegment(newSegment, null, SegmentLoadDropHandler.SegmentLoadingMode.NORMAL);
     Assert.assertTrue(segmentAnnouncer.getObservedSegments().contains(newSegment));
 
     bootstrapper.stop();

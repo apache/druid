@@ -230,7 +230,7 @@ public class SegmentLoadDropHandlerTest
         new SegmentChangeRequestDrop(segment2)
     );
 
-    ListenableFuture<List<DataSegmentChangeResponse>> future = handler.processBatch(batch);
+    ListenableFuture<List<DataSegmentChangeResponse>> future = handler.processBatch(batch, SegmentLoadDropHandler.SegmentLoadingMode.NORMAL);
 
     Map<DataSegmentChangeRequest, SegmentChangeStatus> expectedStatusMap = new HashMap<>();
     expectedStatusMap.put(batch.get(0), SegmentChangeStatus.PENDING);
@@ -244,7 +244,7 @@ public class SegmentLoadDropHandlerTest
       runnable.run();
     }
 
-    result = handler.processBatch(ImmutableList.of(new SegmentChangeRequestLoad(segment1))).get();
+    result = handler.processBatch(ImmutableList.of(new SegmentChangeRequestLoad(segment1)), SegmentLoadDropHandler.SegmentLoadingMode.NORMAL).get();
     Assert.assertEquals(SegmentChangeStatus.SUCCESS, result.get(0).getStatus());
 
     Assert.assertEquals(ImmutableList.of(segment1), segmentAnnouncer.getObservedSegments());
@@ -271,7 +271,7 @@ public class SegmentLoadDropHandlerTest
     DataSegment segment1 = makeSegment("batchtest1", "1", Intervals.of("P1d/2011-04-01"));
     List<DataSegmentChangeRequest> batch = ImmutableList.of(new SegmentChangeRequestLoad(segment1));
 
-    ListenableFuture<List<DataSegmentChangeResponse>> future = handler.processBatch(batch);
+    ListenableFuture<List<DataSegmentChangeResponse>> future = handler.processBatch(batch, SegmentLoadDropHandler.SegmentLoadingMode.NORMAL);
 
     for (Runnable runnable : scheduledRunnable) {
       runnable.run();
@@ -280,7 +280,7 @@ public class SegmentLoadDropHandlerTest
     Assert.assertEquals(State.FAILED, result.get(0).getStatus().getState());
     Assert.assertEquals(ImmutableList.of(), segmentAnnouncer.getObservedSegments());
 
-    future = handler.processBatch(batch);
+    future = handler.processBatch(batch, SegmentLoadDropHandler.SegmentLoadingMode.NORMAL);
     for (Runnable runnable : scheduledRunnable) {
       runnable.run();
     }
@@ -343,7 +343,7 @@ public class SegmentLoadDropHandlerTest
     List<DataSegmentChangeRequest> batch = ImmutableList.of(new SegmentChangeRequestLoad(segment1));
 
     // Request 1: Load the segment
-    ListenableFuture<List<DataSegmentChangeResponse>> future = handler.processBatch(batch);
+    ListenableFuture<List<DataSegmentChangeResponse>> future = handler.processBatch(batch, SegmentLoadDropHandler.SegmentLoadingMode.NORMAL);
     for (Runnable runnable : scheduledRunnable) {
       runnable.run();
     }
@@ -354,7 +354,7 @@ public class SegmentLoadDropHandlerTest
 
     // Request 2: Drop the segment
     batch = ImmutableList.of(new SegmentChangeRequestDrop(segment1));
-    future = handler.processBatch(batch);
+    future = handler.processBatch(batch, SegmentLoadDropHandler.SegmentLoadingMode.NORMAL);
     for (Runnable runnable : scheduledRunnable) {
       runnable.run();
     }
@@ -372,7 +372,7 @@ public class SegmentLoadDropHandlerTest
 
     // Request 3: Reload the segment
     batch = ImmutableList.of(new SegmentChangeRequestLoad(segment1));
-    future = handler.processBatch(batch);
+    future = handler.processBatch(batch, SegmentLoadDropHandler.SegmentLoadingMode.NORMAL);
     for (Runnable runnable : scheduledRunnable) {
       runnable.run();
     }
@@ -389,7 +389,7 @@ public class SegmentLoadDropHandlerTest
 
     // Request 4: Try to reload the segment - segment is loaded and announced again
     batch = ImmutableList.of(new SegmentChangeRequestLoad(segment1));
-    future = handler.processBatch(batch);
+    future = handler.processBatch(batch, SegmentLoadDropHandler.SegmentLoadingMode.NORMAL);
     for (Runnable runnable : scheduledRunnable) {
       runnable.run();
     }
@@ -420,7 +420,8 @@ public class SegmentLoadDropHandlerTest
         config,
         segmentAnnouncer,
         segmentManager,
-        scheduledExecutorFactory.create(5, "SegmentLoadDropHandlerTest-[%d]")
+        scheduledExecutorFactory.create(5, "SegmentLoadDropHandlerTest-[%d]"),
+        scheduledExecutorFactory.create(5, "TurboSegmentLoadDropHandlerTest-[%d]")
     );
   }
 }
