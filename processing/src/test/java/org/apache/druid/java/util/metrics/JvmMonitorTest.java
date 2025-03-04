@@ -28,6 +28,7 @@ import org.junit.Assume;
 import org.junit.Test;
 
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class JvmMonitorTest
 {
@@ -39,7 +40,7 @@ public class JvmMonitorTest
 
     final ServiceEmitter serviceEmitter = new ServiceEmitter("test", "localhost", emitter);
     serviceEmitter.start();
-    final JvmMonitor jvmMonitor = new JvmMonitor();
+    final JvmMonitor jvmMonitor = new JvmMonitor(new JvmMonitorConfig(false));
     // skip tests if gc counters fail to initialize with this JDK
     Assume.assumeNotNull(jvmMonitor.gcCollectors);
 
@@ -50,6 +51,30 @@ public class JvmMonitorTest
       emitter.reset();
       jvmMonitor.doMonitor(serviceEmitter);
       if (emitter.gcSeen()) {
+        return;
+      }
+      Thread.sleep(10);
+    }
+  }
+
+  @Test(timeout = 60_000L)
+  public void testGcEventDurationMetrics() throws InterruptedException
+  {
+    GcEventDurationTrackingEmitter emitter = new GcEventDurationTrackingEmitter();
+
+    final ServiceEmitter serviceEmitter = new ServiceEmitter("test", "localhost", emitter);
+    serviceEmitter.start();
+    final JvmMonitor jvmMonitor = new JvmMonitor(new JvmMonitorConfig(true));
+    // skip tests if gc counters fail to initialize with this JDK
+    Assume.assumeNotNull(jvmMonitor.gcEventCollector);
+
+    while (true) {
+      // generate some garbage to see gc events occur
+      @SuppressWarnings("unused")
+      byte[] b = new byte[1024 * 1024 * 50];
+      emitter.reset();
+      jvmMonitor.doMonitor(serviceEmitter);
+      if (emitter.eventDurationMetricSeen()) {
         return;
       }
       Thread.sleep(10);
@@ -145,6 +170,44 @@ public class JvmMonitorTest
     public void close()
     {
 
+    }
+  }
+
+  private static class GcEventDurationTrackingEmitter implements Emitter
+  {
+
+    private final AtomicLong numGcEvents = new AtomicLong(0);
+
+    @Override
+    public void start() {}
+
+    @Override
+    public void emit(Event e)
+    {
+      ServiceMetricEvent event = (ServiceMetricEvent) e;
+      switch (event.getMetric()) {
+        case "jvm/gc/pause":
+        case "jvm/gc/concurrentTime":
+          numGcEvents.incrementAndGet();
+        default:
+          break;
+      }
+    }
+
+    @Override
+    public void flush() {}
+
+    @Override
+    public void close() {}
+
+    void reset()
+    {
+      numGcEvents.set(0);
+    }
+
+    boolean eventDurationMetricSeen()
+    {
+      return numGcEvents.get() > 0;
     }
   }
 }
