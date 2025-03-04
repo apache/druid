@@ -395,6 +395,7 @@ kerberos
 keystore
 keytool
 keytab
+kubeconfig
 kubernetes
 kubexit
 k8s

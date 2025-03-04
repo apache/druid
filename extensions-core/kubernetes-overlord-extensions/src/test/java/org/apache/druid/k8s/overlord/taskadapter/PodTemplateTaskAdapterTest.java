@@ -68,7 +68,7 @@ public class PodTemplateTaskAdapterTest
   @BeforeEach
   public void setup()
   {
-    taskRunnerConfig = KubernetesTaskRunnerConfig.builder().build();
+    taskRunnerConfig = KubernetesTaskRunnerConfig.builder().withNamespace("namespace").build();
     taskConfig = new TaskConfigBuilder().setBaseDir("/tmp").build();
     node = new DruidNode(
         "test",
