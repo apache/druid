@@ -113,7 +113,6 @@ public class SupervisorManagerTest extends EasyMockSupport
     verifyAll();
 
     resetAll();
-    metadataSupervisorManager.insert("id1", spec2);
     supervisor2.start();
     supervisor1.stop(true);
     replayAll();
@@ -553,7 +552,7 @@ public class SupervisorManagerTest extends EasyMockSupport
     NoopSupervisorSpec noopSupervisorSpec = new NoopSupervisorSpec("noop", ImmutableList.of("noopDS"));
     metadataSupervisorManager.insert(EasyMock.anyString(), EasyMock.anyObject());
 
-    SeekableStreamSupervisorSpec suspendedSpec = EasyMock.mock(SeekableStreamSupervisorSpec.class);
+    SeekableStreamSupervisorSpec suspendedSpec = EasyMock.createNiceMock(SeekableStreamSupervisorSpec.class);
     Supervisor suspendedSupervisor = EasyMock.mock(SeekableStreamSupervisor.class);
     EasyMock.expect(suspendedSpec.getId()).andReturn("suspendedSpec").anyTimes();
     EasyMock.expect(suspendedSpec.isSuspended()).andReturn(true).anyTimes();
@@ -564,7 +563,7 @@ public class SupervisorManagerTest extends EasyMockSupport
     EasyMock.replay(suspendedSpec);
     metadataSupervisorManager.insert(EasyMock.anyString(), EasyMock.anyObject());
 
-    SeekableStreamSupervisorSpec activeSpec = EasyMock.mock(SeekableStreamSupervisorSpec.class);
+    SeekableStreamSupervisorSpec activeSpec = EasyMock.createNiceMock(SeekableStreamSupervisorSpec.class);
     Supervisor activeSupervisor = EasyMock.mock(SeekableStreamSupervisor.class);
     EasyMock.expect(activeSpec.getId()).andReturn("activeSpec").anyTimes();
     EasyMock.expect(activeSpec.isSuspended()).andReturn(false).anyTimes();
@@ -575,7 +574,7 @@ public class SupervisorManagerTest extends EasyMockSupport
     EasyMock.replay(activeSpec);
     metadataSupervisorManager.insert(EasyMock.anyString(), EasyMock.anyObject());
 
-    SeekableStreamSupervisorSpec activeSpecWithConcurrentLocks = EasyMock.mock(SeekableStreamSupervisorSpec.class);
+    SeekableStreamSupervisorSpec activeSpecWithConcurrentLocks = EasyMock.createNiceMock(SeekableStreamSupervisorSpec.class);
     Supervisor activeSupervisorWithConcurrentLocks = EasyMock.mock(SeekableStreamSupervisor.class);
     EasyMock.expect(activeSpecWithConcurrentLocks.getId()).andReturn("activeSpecWithConcurrentLocks").anyTimes();
     EasyMock.expect(activeSpecWithConcurrentLocks.isSuspended()).andReturn(false).anyTimes();
@@ -590,7 +589,7 @@ public class SupervisorManagerTest extends EasyMockSupport
     EasyMock.replay(activeSpecWithConcurrentLocks);
     metadataSupervisorManager.insert(EasyMock.anyString(), EasyMock.anyObject());
 
-    SeekableStreamSupervisorSpec activeAppendSpec = EasyMock.mock(SeekableStreamSupervisorSpec.class);
+    SeekableStreamSupervisorSpec activeAppendSpec = EasyMock.createNiceMock(SeekableStreamSupervisorSpec.class);
     Supervisor activeAppendSupervisor = EasyMock.mock(SeekableStreamSupervisor.class);
     EasyMock.expect(activeAppendSpec.getId()).andReturn("activeAppendSpec").anyTimes();
     EasyMock.expect(activeAppendSpec.isSuspended()).andReturn(false).anyTimes();
@@ -605,7 +604,7 @@ public class SupervisorManagerTest extends EasyMockSupport
     metadataSupervisorManager.insert(EasyMock.anyString(), EasyMock.anyObject());
 
     // A supervisor with useConcurrentLocks set to false explicitly must not use an append lock
-    SeekableStreamSupervisorSpec specWithUseConcurrentLocksFalse = EasyMock.mock(SeekableStreamSupervisorSpec.class);
+    SeekableStreamSupervisorSpec specWithUseConcurrentLocksFalse = EasyMock.createNiceMock(SeekableStreamSupervisorSpec.class);
     Supervisor supervisorWithUseConcurrentLocksFalse = EasyMock.mock(SeekableStreamSupervisor.class);
     EasyMock.expect(specWithUseConcurrentLocksFalse.getId()).andReturn("useConcurrentLocksFalse").anyTimes();
     EasyMock.expect(specWithUseConcurrentLocksFalse.isSuspended()).andReturn(false).anyTimes();
@@ -659,7 +658,7 @@ public class SupervisorManagerTest extends EasyMockSupport
     NoopSupervisorSpec noopSpec = new NoopSupervisorSpec("noop", ImmutableList.of("noopDS"));
     metadataSupervisorManager.insert(EasyMock.anyString(), EasyMock.anyObject());
 
-    SeekableStreamSupervisorSpec streamingSpec = EasyMock.mock(SeekableStreamSupervisorSpec.class);
+    SeekableStreamSupervisorSpec streamingSpec = EasyMock.createNiceMock(SeekableStreamSupervisorSpec.class);
     SeekableStreamSupervisor streamSupervisor = EasyMock.mock(SeekableStreamSupervisor.class);
     streamSupervisor.registerNewVersionOfPendingSegment(EasyMock.anyObject());
     EasyMock.expectLastCall().once();
