@@ -178,7 +178,7 @@ public class SupervisorResourceTest extends EasyMockSupport
   }
 
   @Test
-  public void testSpecPostskipRestartIfUnmodifiedTrue()
+  public void testSpecPost_whenSkipRestartIfUnmodifiedIsTrue()
   {
     SupervisorSpec spec = new TestSupervisorSpec("my-id", null, null)
     {
@@ -186,7 +186,7 @@ public class SupervisorResourceTest extends EasyMockSupport
       @Override
       public List<String> getDataSources()
       {
-        return Collections.singletonList("datasource1");
+        return List.of("datasource1");
       }
     };
 
@@ -264,6 +264,13 @@ public class SupervisorResourceTest extends EasyMockSupport
     verifyAll();
 
     Assert.assertEquals(503, response.getStatus());
+
+    resetAll();
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.absent());
+    replayAll();
+    response = supervisorResource.specPost(spec, null, request);
+    Assert.assertEquals(503, response.getStatus());
+    verifyAll();
   }
 
   @Test
@@ -279,7 +286,7 @@ public class SupervisorResourceTest extends EasyMockSupport
       }
     };
 
-    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager));
+    EasyMock.expect(taskMaster.getSupervisorManager()).andReturn(Optional.of(supervisorManager)).times(2);
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_ALLOW_UNSECURED_PATH)).andReturn(null).atLeastOnce();
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED)).andReturn(null).atLeastOnce();
     EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTHENTICATION_RESULT)).andReturn(
@@ -287,10 +294,11 @@ public class SupervisorResourceTest extends EasyMockSupport
     ).atLeastOnce();
     request.setAttribute(AuthConfig.DRUID_AUTHORIZATION_CHECKED, false);
     EasyMock.expectLastCall().anyTimes();
-    EasyMock.expect(authConfig.isEnableInputSourceSecurity()).andReturn(true);
+    EasyMock.expect(authConfig.isEnableInputSourceSecurity()).andReturn(true).times(2);
     replayAll();
 
     Assert.assertThrows(ForbiddenException.class, () -> supervisorResource.specPost(spec, false, request));
+    Assert.assertThrows(ForbiddenException.class, () -> supervisorResource.specPost(spec, null, request));
     verifyAll();
   }
 

@@ -192,6 +192,7 @@ public class SupervisorManagerTest extends EasyMockSupport
     manager.start();
     Assert.assertFalse(manager.shouldUpdateSupervisor(spec));
     Assert.assertTrue(manager.shouldUpdateSupervisor(spec2));
+    Assert.assertTrue(manager.shouldUpdateSupervisor(new NoopSupervisorSpec("id1", null)));
   }
 
   @Test
