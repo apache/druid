@@ -38,9 +38,9 @@ import org.apache.druid.server.coordination.DataSegmentChangeRequest;
 import org.apache.druid.server.coordination.DataSegmentChangeResponse;
 import org.apache.druid.server.coordination.SegmentChangeRequestLoad;
 import org.apache.druid.server.coordination.SegmentChangeStatus;
-import org.apache.druid.server.coordination.SegmentLoadDropHandler;
 import org.apache.druid.server.coordinator.BytesAccumulatingResponseHandler;
 import org.apache.druid.server.coordinator.CoordinatorConfigManager;
+import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.config.HttpLoadQueuePeonConfig;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.CoordinatorStat;
@@ -48,6 +48,7 @@ import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
 import org.apache.druid.server.http.HistoricalSegmentChangeRequest;
+import org.apache.druid.server.http.SegmentLoadingMode;
 import org.apache.druid.timeline.DataSegment;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
@@ -209,8 +210,8 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
       return;
     }
 
-    SegmentLoadDropHandler.SegmentLoadingMode loadingMode =
-        SegmentLoadDropHandler.getLoadingMode(coordinatorConfigManager.getCurrentDynamicConfig(), serverName);
+    SegmentLoadingMode loadingMode =
+        CoordinatorDynamicConfig.getLoadingMode(coordinatorConfigManager.getCurrentDynamicConfig(), serverName);
 
     HistoricalSegmentChangeRequest request = new HistoricalSegmentChangeRequest(newRequests, loadingMode);
 

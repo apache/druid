@@ -248,7 +248,7 @@ public class SegmentListerResource
 
     final ResponseContext context = createContext(req.getHeader("Accept"));
     final ListenableFuture<List<DataSegmentChangeResponse>> future =
-        loadDropRequestHandler.processBatch(changeRequestList, SegmentLoadDropHandler.SegmentLoadingMode.NORMAL);
+        loadDropRequestHandler.processBatch(changeRequestList, SegmentLoadingMode.NORMAL);
 
     final AsyncContext asyncContext = req.startAsync();
 

@@ -34,7 +34,7 @@ import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.segment.loading.SegmentLoadingException;
 import org.apache.druid.server.SegmentManager;
-import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
+import org.apache.druid.server.http.SegmentLoadingMode;
 import org.apache.druid.server.metrics.SegmentRowCountDistribution;
 import org.apache.druid.timeline.DataSegment;
 
@@ -45,7 +45,6 @@ import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -427,20 +426,6 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
       default:
         throw DruidException.defensive("Unknown execution mode [%s]", loadingMode);
     }
-  }
-
-  public static SegmentLoadingMode getLoadingMode(CoordinatorDynamicConfig coordinatorDynamicConfig, String serverName)
-  {
-    final Set<String> turboLoadHistoricals = coordinatorDynamicConfig.getTurboLoadHistoricals();
-    return turboLoadHistoricals.contains(serverName) ?
-           SegmentLoadingMode.TURBO :
-           SegmentLoadingMode.NORMAL;
-  }
-
-  public enum SegmentLoadingMode
-  {
-    NORMAL,
-    TURBO
   }
 }
 

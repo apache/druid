@@ -22,7 +22,6 @@ package org.apache.druid.server.http;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.server.coordination.DataSegmentChangeRequest;
-import org.apache.druid.server.coordination.SegmentLoadDropHandler;
 
 import java.util.List;
 
@@ -30,12 +29,12 @@ public class HistoricalSegmentChangeRequest
 {
   private final List<DataSegmentChangeRequest> changeRequestList;
 
-  private final SegmentLoadDropHandler.SegmentLoadingMode segmentLoadingMode;
+  private final SegmentLoadingMode segmentLoadingMode;
 
   @JsonCreator
   public HistoricalSegmentChangeRequest(
       @JsonProperty("changeRequestList") List<DataSegmentChangeRequest> changeRequestList,
-      @JsonProperty("segmentLoadingMode") SegmentLoadDropHandler.SegmentLoadingMode segmentLoadingMode
+      @JsonProperty("segmentLoadingMode") SegmentLoadingMode segmentLoadingMode
   )
   {
     this.changeRequestList = changeRequestList;
@@ -49,7 +48,7 @@ public class HistoricalSegmentChangeRequest
   }
 
   @JsonProperty("segmentLoadingMode")
-  public SegmentLoadDropHandler.SegmentLoadingMode getSegmentLoadingMode()
+  public SegmentLoadingMode getSegmentLoadingMode()
   {
     return segmentLoadingMode;
   }

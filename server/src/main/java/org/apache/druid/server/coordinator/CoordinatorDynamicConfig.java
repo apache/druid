@@ -27,6 +27,7 @@ import org.apache.druid.common.config.JacksonConfigManager;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.server.coordinator.duty.KillUnusedSegments;
 import org.apache.druid.server.coordinator.stats.Dimension;
+import org.apache.druid.server.http.SegmentLoadingMode;
 import org.apache.druid.utils.JvmUtils;
 
 import javax.annotation.Nullable;
@@ -202,6 +203,14 @@ public class CoordinatorDynamicConfig
     } else {
       return ImmutableSet.of();
     }
+  }
+
+  public static SegmentLoadingMode getLoadingMode(CoordinatorDynamicConfig coordinatorDynamicConfig, String serverName)
+  {
+    final Set<String> turboLoadHistoricals = coordinatorDynamicConfig.getTurboLoadHistoricals();
+    return turboLoadHistoricals.contains(serverName) ?
+           SegmentLoadingMode.TURBO :
+           SegmentLoadingMode.NORMAL;
   }
 
   @JsonProperty("millisToWaitBeforeDeleting")
