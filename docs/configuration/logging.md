@@ -95,9 +95,6 @@ The following example log4j2.xml is based upon the micro quickstart:
     </Logger>
 
     <!-- Quieter logging at startup -->
-    <Logger name="org.skife.config" level="warn" additivity="false">
-      <Appender-ref ref="FileAppender"/>
-    </Logger>
     <Logger name="com.sun.jersey.guice" level="warn" additivity="false">
       <Appender-ref ref="FileAppender"/>
     </Logger>
