@@ -36,14 +36,14 @@ import org.apache.druid.server.DruidNode;
 
 public class DartControllerContextFactoryImpl implements DartControllerContextFactory
 {
-  private final Injector injector;
-  private final ObjectMapper jsonMapper;
-  private final ObjectMapper smileMapper;
-  private final DruidNode selfNode;
-  private final ServiceClientFactory serviceClientFactory;
-  private final TimelineServerView serverView;
-  private final MemoryIntrospector memoryIntrospector;
-  private final ServiceEmitter emitter;
+  protected final Injector injector;
+  protected final ObjectMapper jsonMapper;
+  protected final ObjectMapper smileMapper;
+  protected final DruidNode selfNode;
+  protected final ServiceClientFactory serviceClientFactory;
+  protected final TimelineServerView serverView;
+  protected final MemoryIntrospector memoryIntrospector;
+  protected final ServiceEmitter emitter;
 
   @Inject
   public DartControllerContextFactoryImpl(
@@ -83,6 +83,6 @@ public class DartControllerContextFactoryImpl implements DartControllerContextFa
 
   protected DartWorkerClient makeWorkerClient(final String queryId)
   {
-    return new DartWorkerClient(queryId, serviceClientFactory, smileMapper, selfNode.getHostAndPortToUse()); 
+    return new DartWorkerClient(queryId, serviceClientFactory, smileMapper, selfNode.getHostAndPortToUse());
   }
 }

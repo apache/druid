@@ -20,19 +20,37 @@
 package org.apache.druid.msq.test;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
+import it.unimi.dsi.fastutil.Pair;
 import org.apache.druid.client.TimelineServerView;
+import org.apache.druid.frame.channel.ReadableByteChunksFrameChannel;
+import org.apache.druid.frame.key.ClusterByPartitions;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.java.util.http.client.response.HttpResponseHandler;
+import org.apache.druid.msq.counters.CounterSnapshotsTree;
 import org.apache.druid.msq.dart.controller.DartControllerContextFactoryImpl;
 import org.apache.druid.msq.dart.worker.DartWorkerClient;
+import org.apache.druid.msq.dart.worker.WorkerId;
 import org.apache.druid.msq.exec.MemoryIntrospector;
+import org.apache.druid.msq.exec.Worker;
+import org.apache.druid.msq.kernel.StageId;
+import org.apache.druid.msq.kernel.WorkOrder;
+import org.apache.druid.msq.rpc.SketchEncoding;
+import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
+import org.apache.druid.rpc.RequestBuilder;
+import org.apache.druid.rpc.ServiceClient;
 import org.apache.druid.rpc.ServiceClientFactory;
+import org.apache.druid.rpc.ServiceRetryPolicy;
 import org.apache.druid.server.DruidNode;
+
+import java.io.Closeable;
+import java.util.Map;
 
 public class TestDartControllerContextFactoryImpl extends DartControllerContextFactoryImpl
 {
@@ -53,7 +71,143 @@ public class TestDartControllerContextFactoryImpl extends DartControllerContextF
   @Override
   protected DartWorkerClient makeWorkerClient(String queryId)
   {
-    return super.makeWorkerClient(queryId);
+    return
+    // super.makeWorkerClient(queryId);
+
+    new DartTestWorkerClient(queryId, serviceClientFactory, smileMapper, selfNode.getHostAndPortToUse());
+    // new HashMap<String, Worker>());
   }
 
+  static class DartTestWorkerClient extends DartWorkerClient
+  {
+    private Map<String, Worker> m;
+    private MSQTestWorkerClient wc;
+
+    public DartTestWorkerClient(String queryId, ServiceClientFactory clientFactory, ObjectMapper smileMapper,
+        String controllerHost)
+    {
+      super(queryId, clientFactory, smileMapper, controllerHost);
+      wc = new MSQTestWorkerClient(m);
+    }
+
+    @Override
+    protected ServiceClient getClient(String workerIdString)
+    {
+      return super.getClient(workerIdString);
+    }
+
+    @Override
+    public void closeClient(String workerHost)
+    {
+      super.closeClient(workerHost);
+    }
+    @Override
+    protected Object clone() throws CloneNotSupportedException
+    {
+      return super.clone();
+    }
+    @Override
+    public ListenableFuture<?> stopWorker(String workerId)
+    {
+      return super.stopWorker(workerId);
+    }
+    @Override
+    public ListenableFuture<Boolean> fetchChannelData(String workerId, StageId stageId, int partitionNumber,
+        long offset, ReadableByteChunksFrameChannel channel)
+    {
+      return super.fetchChannelData(workerId, stageId, partitionNumber, offset, channel);
+    }
+
+    @Override
+    public ListenableFuture<ClusterByStatisticsSnapshot> fetchClusterByStatisticsSnapshot(String workerId,
+        StageId stageId, SketchEncoding sketchEncoding)
+    {
+      return super.fetchClusterByStatisticsSnapshot(workerId, stageId, sketchEncoding);
+
+    }
+    @Override
+    public ListenableFuture<ClusterByStatisticsSnapshot> fetchClusterByStatisticsSnapshotForTimeChunk(String workerId,
+        StageId stageId, long timeChunk, SketchEncoding sketchEncoding)
+    {
+      return super.fetchClusterByStatisticsSnapshotForTimeChunk(workerId, stageId, timeChunk, sketchEncoding);
+
+    }
+    @Override
+    public ListenableFuture<CounterSnapshotsTree> getCounters(String workerId)
+    {
+      return super.getCounters(workerId);
+
+    }
+    @Override
+    public ListenableFuture<Void> postCleanupStage(String workerId, StageId stageId)
+    {
+      return super.postCleanupStage(workerId, stageId);
+
+    }
+    @Override
+    public ListenableFuture<Void> postFinish(String workerId)
+    {
+      return super.postFinish(workerId);
+
+    }
+
+    @Override
+    public ListenableFuture<Void> postResultPartitionBoundaries(String workerId, StageId stageId,
+        ClusterByPartitions partitionBoundaries)
+    {
+      return super.postResultPartitionBoundaries(workerId, stageId, partitionBoundaries);
+
+    }
+    @Override
+    public ListenableFuture<Void> postWorkOrder(String workerId, WorkOrder workOrder)
+    {
+      return super.postWorkOrder(workerId, workOrder);
+
+    }
+
+    @Override
+    protected Pair<ServiceClient, Closeable> makeNewClient(WorkerId workerId)
+    {
+      ServiceClient client =new TestDartServiceClient(workerId);
+      return super.makeNewClient(workerId);
+    }
+
+
+  }
+
+  static class TestDartServiceClient implements ServiceClient {
+
+    public TestDartServiceClient(WorkerId workerId)
+    {
+      if(true)
+      {
+        throw new RuntimeException("FIXME: Unimplemented!");
+      }
+
+    }
+
+    @Override
+    public <IntermediateType, FinalType> ListenableFuture<FinalType> asyncRequest(RequestBuilder requestBuilder,
+        HttpResponseHandler<IntermediateType, FinalType> handler)
+    {
+      if(true)
+      {
+        throw new RuntimeException("FIXME: Unimplemented!");
+      }
+      return null;
+
+    }
+
+    @Override
+    public ServiceClient withRetryPolicy(ServiceRetryPolicy retryPolicy)
+    {
+      if(true)
+      {
+        throw new RuntimeException("FIXME: Unimplemented!");
+      }
+      return null;
+
+    }
+
+  }
 }

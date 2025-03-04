@@ -120,9 +120,16 @@ public class DartComponentSupplier extends AbstractMSQComponentSupplierDelegate
       .annotatedWith(Merging.class)
       .to(TestBufferPool.class);
 
+      if(true) {
       binder.bind(DartControllerContextFactory.class)
           .to(TestDartControllerContextFactoryImpl.class)
           .in(LazySingleton.class);
+      }else {
+        binder.bind(DartControllerContextFactory.class)
+        .to(MSQTestControllerContext.class)
+        .in(LazySingleton.class);
+
+      }
     }
 
 //    @Provides

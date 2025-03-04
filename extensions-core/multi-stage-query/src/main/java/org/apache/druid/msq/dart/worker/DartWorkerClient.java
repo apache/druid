@@ -158,7 +158,7 @@ public class DartWorkerClient extends BaseWorkerClientImpl
   /**
    * Create a new client. Called by {@link #getClient(String)} if a new one is needed.
    */
-  private Pair<ServiceClient, Closeable> makeNewClient(final WorkerId workerId)
+  protected Pair<ServiceClient, Closeable> makeNewClient(final WorkerId workerId)
   {
     final URI uri = workerId.toUri();
     final FixedServiceLocator locator = new FixedServiceLocator(ServiceLocation.fromUri(uri));
