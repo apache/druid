@@ -30,8 +30,24 @@ public class K8sTaskIdTest
   public void testModifyingTaskIDToBeK8sCompliant()
   {
     String original = "coordinator-issued_compact_k8smetrics_aeifmefd_2022-08-18T15:33:26.094Z";
-    String result = new K8sTaskId(original).getK8sJobName();
+    String result = new K8sTaskId(null, original).getK8sJobName();
     assertEquals("coordinatorissuedcompactk8smet-2e2c1862cb7ad1d01f4794b27a4438b0", result);
+  }
+
+  @Test
+  public void testModifyingTaskIDWithEmptyAliasToBeK8sCompliant()
+  {
+    String original = "coordinator-issued_compact_k8smetrics_aeifmefd_2022-08-18T15:33:26.094Z";
+    String result = new K8sTaskId("", original).getK8sJobName();
+    assertEquals("coordinatorissuedcompactk8smet-2e2c1862cb7ad1d01f4794b27a4438b0", result);
+  }
+
+  @Test
+  public void testModifyingTaskIDWithAliasToBeK8sCompliant()
+  {
+    String original = "coordinator-issued_compact_k8smetrics_aeifmefd_2022-08-18T15:33:26.094Z";
+    String result = new K8sTaskId("this-is_a:VERY-very-very-very-very-very-long-alias", original).getK8sJobName();
+    assertEquals("thisisaveryveryveryveryveryver-2e2c1862cb7ad1d01f4794b27a4438b0", result);
   }
 
   @Test
