@@ -70,6 +70,7 @@ import {
   compact,
   countBy,
   deepGet,
+  findMap,
   formatBytes,
   formatInteger,
   formatMillions,
@@ -1709,7 +1710,7 @@ GROUP BY 1, 2`;
   }
 
   render() {
-    const { capabilities, goToSegments } = this.props;
+    const { capabilities, filters, goToSegments } = this.props;
     const {
       showUnused,
       visibleColumns,
@@ -1737,7 +1738,16 @@ GROUP BY 1, 2`;
             label="Show segment timeline"
             onChange={() =>
               this.setState({
-                showSegmentTimeline: showSegmentTimeline ? undefined : { capabilities },
+                showSegmentTimeline: showSegmentTimeline
+                  ? undefined
+                  : {
+                      capabilities,
+                      datasource: findMap(filters, filter =>
+                        filter.id === 'datasource' && /^=[^=|]+$/.exec(String(filter.value))
+                          ? filter.value.slice(1)
+                          : undefined,
+                      ),
+                    },
               })
             }
             disabled={!capabilities.hasSqlOrCoordinatorAccess()}

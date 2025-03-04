@@ -686,3 +686,8 @@ export function offsetToRowColumn(str: string, offset: number): RowColumn | unde
 export function xor(a: unknown, b: unknown): boolean {
   return Boolean(a ? !b : b);
 }
+
+export function toggle<T>(xs: readonly T[], x: T, eq?: (a: T, b: T) => boolean): T[] {
+  const e = eq || ((a, b) => a === b);
+  return xs.find(_ => e(_, x)) ? xs.filter(d => !e(d, x)) : xs.concat([x]);
+}
