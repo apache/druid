@@ -469,7 +469,7 @@ public class CoordinatorSimulationBuilder
           executorFactory.create(1, ExecutorFactory.LOAD_CALLBACK_EXECUTOR),
           coordinatorConfig.getHttpLoadQueuePeonConfig(),
           httpClient,
-          coordinatorConfigManager
+          coordinatorConfigManager::getCurrentDynamicConfig
       );
 
       this.loadQueueManager =

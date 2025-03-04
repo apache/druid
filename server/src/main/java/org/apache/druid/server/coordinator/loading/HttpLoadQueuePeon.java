@@ -39,8 +39,6 @@ import org.apache.druid.server.coordination.DataSegmentChangeResponse;
 import org.apache.druid.server.coordination.SegmentChangeRequestLoad;
 import org.apache.druid.server.coordination.SegmentChangeStatus;
 import org.apache.druid.server.coordinator.BytesAccumulatingResponseHandler;
-import org.apache.druid.server.coordinator.CoordinatorConfigManager;
-import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.config.HttpLoadQueuePeonConfig;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.coordinator.stats.CoordinatorStat;
@@ -73,6 +71,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Supplier;
 
 /**
  *
@@ -116,7 +115,6 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
 
   private final HttpLoadQueuePeonConfig config;
 
-  private final String serverName;
   private final ObjectMapper jsonMapper;
   private final HttpClient httpClient;
   private final URL changeRequestURL;
@@ -124,19 +122,18 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
 
   private final AtomicBoolean mainLoopInProgress = new AtomicBoolean(false);
   private final ExecutorService callBackExecutor;
-  private final CoordinatorConfigManager coordinatorConfigManager;
+  private final Supplier<SegmentLoadingMode> loadingModeSupplier;
 
   private final ObjectWriter requestBodyWriter;
 
   public HttpLoadQueuePeon(
       String baseUrl,
-      String serverName,
       ObjectMapper jsonMapper,
       HttpClient httpClient,
       HttpLoadQueuePeonConfig config,
       ScheduledExecutorService processingExecutor,
       ExecutorService callBackExecutor,
-      CoordinatorConfigManager coordinatorConfigManager
+      Supplier<SegmentLoadingMode> loadingModeSupplier
   )
   {
     this.jsonMapper = jsonMapper;
@@ -145,10 +142,9 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
     this.config = config;
     this.processingExecutor = processingExecutor;
     this.callBackExecutor = callBackExecutor;
-    this.coordinatorConfigManager = coordinatorConfigManager;
 
     this.serverId = baseUrl;
-    this.serverName = serverName;
+    this.loadingModeSupplier = loadingModeSupplier;
     try {
       this.changeRequestURL = new URL(
           new URL(baseUrl),
@@ -210,8 +206,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
       return;
     }
 
-    SegmentLoadingMode loadingMode =
-        CoordinatorDynamicConfig.getLoadingMode(coordinatorConfigManager.getCurrentDynamicConfig(), serverName);
+    SegmentLoadingMode loadingMode = loadingModeSupplier.get();
 
     HistoricalSegmentChangeRequest request = new HistoricalSegmentChangeRequest(newRequests, loadingMode);
 

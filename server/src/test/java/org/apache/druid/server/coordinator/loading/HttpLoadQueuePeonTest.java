@@ -34,13 +34,13 @@ import org.apache.druid.server.coordination.DataSegmentChangeHandler;
 import org.apache.druid.server.coordination.DataSegmentChangeRequest;
 import org.apache.druid.server.coordination.DataSegmentChangeResponse;
 import org.apache.druid.server.coordination.SegmentChangeStatus;
-import org.apache.druid.server.coordinator.CoordinatorConfigManager;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.coordinator.config.HttpLoadQueuePeonConfig;
 import org.apache.druid.server.coordinator.simulate.BlockingExecutorService;
 import org.apache.druid.server.coordinator.simulate.WrappingScheduledExecutorService;
 import org.apache.druid.server.http.HistoricalSegmentChangeRequest;
+import org.apache.druid.server.http.SegmentLoadingMode;
 import org.apache.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
 import org.jboss.netty.buffer.ChannelBuffers;
@@ -93,7 +93,6 @@ public class HttpLoadQueuePeonTest
     EasyMock.replay(configManager);
     httpLoadQueuePeon = new HttpLoadQueuePeon(
         "http://dummy:4000",
-        "dummy:4000",
         MAPPER,
         httpClient,
         new HttpLoadQueuePeonConfig(null, null, 10),
@@ -103,7 +102,7 @@ public class HttpLoadQueuePeonTest
             true
         ),
         httpClient.callbackExecutor,
-        new CoordinatorConfigManager(configManager, null, null)
+        () -> SegmentLoadingMode.NORMAL
     );
     httpLoadQueuePeon.start();
   }

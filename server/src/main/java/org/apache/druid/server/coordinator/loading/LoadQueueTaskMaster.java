@@ -25,7 +25,7 @@ import com.google.errorprone.annotations.concurrent.GuardedBy;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.java.util.http.client.HttpClient;
-import org.apache.druid.server.coordinator.CoordinatorConfigManager;
+import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.config.HttpLoadQueuePeonConfig;
 
 import java.util.List;
@@ -35,6 +35,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Supplier;
 
 /**
  * Provides LoadQueuePeons
@@ -48,7 +49,7 @@ public class LoadQueueTaskMaster
   private final ExecutorService callbackExec;
   private final HttpLoadQueuePeonConfig config;
   private final HttpClient httpClient;
-  private final CoordinatorConfigManager coordinatorConfigManager;
+  private final Supplier<CoordinatorDynamicConfig> coordinatorDynamicConfigSupplier;
 
   @GuardedBy("this")
   private final AtomicBoolean isLeader = new AtomicBoolean(false);
@@ -61,7 +62,7 @@ public class LoadQueueTaskMaster
       ExecutorService callbackExec,
       HttpLoadQueuePeonConfig config,
       HttpClient httpClient,
-      CoordinatorConfigManager coordinatorConfigManager
+      Supplier<CoordinatorDynamicConfig> coordinatorDynamicConfigSupplier
   )
   {
     this.jsonMapper = jsonMapper;
@@ -69,12 +70,20 @@ public class LoadQueueTaskMaster
     this.callbackExec = callbackExec;
     this.config = config;
     this.httpClient = httpClient;
-    this.coordinatorConfigManager = coordinatorConfigManager;
+    this.coordinatorDynamicConfigSupplier = coordinatorDynamicConfigSupplier;
   }
 
   private LoadQueuePeon createPeon(ImmutableDruidServer server)
   {
-    return new HttpLoadQueuePeon(server.getURL(), server.getName(), jsonMapper, httpClient, config, peonExec, callbackExec, coordinatorConfigManager);
+    return new HttpLoadQueuePeon(
+        server.getURL(),
+        jsonMapper,
+        httpClient,
+        config,
+        peonExec,
+        callbackExec,
+        () -> CoordinatorDynamicConfig.getLoadingMode(coordinatorDynamicConfigSupplier.get(), server.getName())
+    );
   }
 
   public Map<String, LoadQueuePeon> getAllPeons()

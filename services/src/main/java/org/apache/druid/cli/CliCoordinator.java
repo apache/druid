@@ -318,7 +318,7 @@ public class CliCoordinator extends ServerRunnable
                 callBackExec,
                 config.getHttpLoadQueuePeonConfig(),
                 httpClient,
-                coordinatorConfigManager
+                coordinatorConfigManager::getCurrentDynamicConfig
             );
           }
         }
