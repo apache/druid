@@ -19,6 +19,7 @@
 
 package org.apache.druid.guice;
 
+import com.amazonaws.util.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Injector;
 import com.google.inject.ProvisionException;
@@ -27,12 +28,12 @@ import com.google.inject.util.Modules;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulator;
 import org.apache.druid.client.cache.CachePopulatorStats;
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.initialization.Initialization;
-import org.apache.druid.java.util.common.config.Config;
 import org.apache.druid.query.BrokerParallelMergeConfig;
 import org.apache.druid.query.DruidProcessingConfig;
-import org.apache.druid.query.LegacyBrokerParallelMergeConfig;
 import org.apache.druid.utils.JvmUtils;
+import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Before;
@@ -40,7 +41,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
-import org.skife.config.ConfigurationObjectFactory;
 
 import java.util.Properties;
 
@@ -88,15 +88,68 @@ public class BrokerProcessingModuleTest
   @Test
   public void testMergeProcessingPoolLegacyConfigs()
   {
-    Properties props = new Properties();
-    props.put("druid.processing.merge.pool.parallelism", "10");
-    props.put("druid.processing.merge.pool.defaultMaxQueryParallelism", "10");
-    props.put("druid.processing.merge.task.targetRunTimeMillis", "1000");
-    Injector gadget = makeInjector(props);
-    BrokerParallelMergeConfig config = gadget.getInstance(BrokerParallelMergeConfig.class);
-    Assert.assertEquals(10, config.getParallelism());
-    Assert.assertEquals(10, config.getDefaultMaxQueryParallelism());
-    Assert.assertEquals(1000, config.getTargetRunTimeMillis());
+    verifyOldConfigThrowsException(
+        "druid.processing.merge.pool.parallelism",
+        "10",
+        "Config[druid.processing.merge.pool.parallelism] has been removed."
+        + " Please use config[druid.processing.merge.parallelism] instead."
+    );
+    verifyOldConfigThrowsException(
+        "druid.processing.merge.pool.awaitShutdownMillis",
+        "1000",
+        "Config[druid.processing.merge.pool.awaitShutdownMillis] has been removed."
+        + " Please use config[druid.processing.merge.awaitShutdownMillis] instead."
+    );
+    verifyOldConfigThrowsException(
+        "druid.processing.merge.pool.defaultMaxQueryParallelism",
+        "100",
+        "Config[druid.processing.merge.pool.defaultMaxQueryParallelism] has been removed."
+        + " Please use config[druid.processing.merge.defaultMaxQueryParallelism] instead."
+    );
+  }
+
+  @Test
+  public void testMergeProcessingTaskLegacyConfigs()
+  {
+    verifyOldConfigThrowsException(
+        "druid.processing.merge.task.targetRunTimeMillis",
+        "10",
+        "Config[druid.processing.merge.task.targetRunTimeMillis] has been removed."
+        + " Please use config[druid.processing.merge.targetRunTimeMillis] instead."
+    );
+    verifyOldConfigThrowsException(
+        "druid.processing.merge.task.initialYieldNumRows",
+        "1000",
+        "Config[druid.processing.merge.task.initialYieldNumRows] has been removed."
+        + " Please use config[druid.processing.merge.initialYieldNumRows] instead."
+    );
+    verifyOldConfigThrowsException(
+        "druid.processing.merge.task.smallBatchNumRows",
+        "100",
+        "Config[druid.processing.merge.task.smallBatchNumRows] has been removed."
+        + " Please use config[druid.processing.merge.smallBatchNumRows] instead."
+    );
+  }
+
+  private void verifyOldConfigThrowsException(
+      String removedProperty,
+      String dummyValue,
+      String expectedMessage
+  )
+  {
+    final Properties props = new Properties();
+    props.setProperty(removedProperty, dummyValue);
+
+    final Injector gadget = makeInjector(props);
+    MatcherAssert.assertThat(
+        Throwables.getRootCause(
+            Assert.assertThrows(
+                ProvisionException.class,
+                () -> gadget.getInstance(BrokerParallelMergeConfig.class)
+            )
+        ),
+        DruidExceptionMatcher.invalidInput().expectMessageIs(expectedMessage)
+    );
   }
 
   @Test
@@ -138,10 +191,6 @@ public class BrokerProcessingModuleTest
                   binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
                   binder.bindConstant().annotatedWith(Names.named("tlsServicePort")).to(-1);
                   binder.bind(Properties.class).toInstance(props);
-                  ConfigurationObjectFactory factory = Config.createFactory(props);
-                  LegacyBrokerParallelMergeConfig legacyConfig = factory.build(LegacyBrokerParallelMergeConfig.class);
-                  binder.bind(ConfigurationObjectFactory.class).toInstance(factory);
-                  binder.bind(LegacyBrokerParallelMergeConfig.class).toInstance(legacyConfig);
                 },
                 target
             ).with((binder) -> {

@@ -2493,16 +2493,6 @@ libraries:
 
 ---
 
-name: Config Magic
-license_category: binary
-module: java-core
-license_name: Apache License version 2.0
-version: 0.9
-libraries:
-  - org.skife.config: config-magic
-
----
-
 name: Apache Hadoop
 license_category: binary
 module: hadoop-client
