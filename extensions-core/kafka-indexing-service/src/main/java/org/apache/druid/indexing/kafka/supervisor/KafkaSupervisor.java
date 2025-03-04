@@ -46,6 +46,7 @@ import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskIOConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskTuningConfig;
 import org.apache.druid.indexing.seekablestream.SeekableStreamSequenceNumbers;
 import org.apache.druid.indexing.seekablestream.SeekableStreamStartSequenceNumbers;
+import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
 import org.apache.druid.indexing.seekablestream.common.RecordSupplier;
 import org.apache.druid.indexing.seekablestream.common.StreamException;
@@ -91,6 +92,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
 
   private final Pattern pattern;
   private volatile Map<KafkaTopicPartition, Long> latestSequenceFromStream;
+  private volatile Map<KafkaTopicPartition, Long> partitionToTimeLag;
 
   private final KafkaSupervisorSpec spec;
 
@@ -171,6 +173,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
         ioConfig.getTaskDuration().getMillis() / 1000,
         includeOffsets ? latestSequenceFromStream : null,
         includeOffsets ? partitionLag : null,
+        includeOffsets ? getPartitionTimeLag() : null,
         includeOffsets ? partitionLag.values().stream().mapToLong(x -> Math.max(x, 0)).sum() : null,
         includeOffsets ? sequenceLastUpdated : null,
         spec.isSuspended(),
@@ -273,8 +276,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
   @Override
   protected Map<KafkaTopicPartition, Long> getPartitionTimeLag()
   {
-    // time lag not currently support with kafka
-    return null;
+    return partitionToTimeLag;
   }
 
   // suppress use of CollectionUtils.mapValues() since the valueMapper function is dependent on map key here
@@ -381,6 +383,108 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
   }
 
   /**
+   * This method is similar to updatePartitionLagFromStream
+   * but also determines time lag. Once this method has been
+   * tested, we can remove the older one.
+   */
+  private void updatePartitionTimeAndRecordLagFromStream()
+  {
+    final Map<KafkaTopicPartition, Long> highestCurrentOffsets = getHighestCurrentOffsets();
+
+    getRecordSupplierLock().lock();
+    try {
+      Set<KafkaTopicPartition> partitionIds;
+      try {
+        partitionIds = recordSupplier.getPartitionIds(getIoConfig().getStream());
+      }
+      catch (Exception e) {
+        log.warn("Could not fetch partitions for topic/stream [%s]", getIoConfig().getStream());
+        throw new StreamException(e);
+      }
+
+      final Set<StreamPartition<KafkaTopicPartition>> partitions = partitionIds
+          .stream()
+          .map(e -> new StreamPartition<>(getIoConfig().getStream(), e))
+          .collect(Collectors.toSet());
+
+      final Set<KafkaTopicPartition> yetToReadPartitions = new HashSet<>();
+      for (Map.Entry<KafkaTopicPartition, Long> entry : highestCurrentOffsets.entrySet()) {
+        if (partitionIds.contains(entry.getKey())) {
+          if (highestCurrentOffsets.get(entry.getKey()) == null || highestCurrentOffsets.get(entry.getKey()) == 0) {
+            yetToReadPartitions.add(entry.getKey());
+            continue;
+          }
+
+          recordSupplier.seek(new StreamPartition<>(getIoConfig().getStream(), entry.getKey()), entry.getValue() - 1);
+        }
+      }
+
+      final Map<KafkaTopicPartition, Long> lastIngestedTimestamps = getTimestampPerPartitionAtCurrentOffset(partitions);
+      // TODO: this might give wierd values for lag when the tasks are yet to start processing
+      yetToReadPartitions.forEach(p -> lastIngestedTimestamps.put(p, 0L));
+
+      recordSupplier.seekToLatest(partitions);
+      // this method isn't actually computing the lag, just fetching the latests offsets from the stream. This is
+      // because we currently only have record lag for kafka, which can be lazily computed by subtracting the highest
+      // task offsets from the latest offsets from the stream when it is needed
+      latestSequenceFromStream = recordSupplier.getLatestSequenceNumbers(partitions);
+
+      for (Map.Entry<KafkaTopicPartition, Long> entry : latestSequenceFromStream.entrySet()) {
+        // if there are no messages .getEndOffset would return 0, but if there are n msgs it would return n+1
+        // and hence we need to seek to n - 2 to get the nth msg in the next poll.
+        if (entry.getValue() != 0) {
+          recordSupplier.seek(new StreamPartition<>(getIoConfig().getStream(), entry.getKey()), entry.getValue() - 2);
+        }
+      }
+
+      partitionToTimeLag = getTimestampPerPartitionAtCurrentOffset(partitions)
+          .entrySet().stream().filter(e -> lastIngestedTimestamps.containsKey(e.getKey()))
+          .collect(
+              Collectors.toMap(
+                  Entry::getKey,
+                  e -> e.getValue() - lastIngestedTimestamps.get(e.getKey())
+              )
+          );
+    }
+    catch (InterruptedException e) {
+      throw new StreamException(e);
+    }
+    finally {
+      getRecordSupplierLock().unlock();
+    }
+  }
+
+  private Map<KafkaTopicPartition, Long> getTimestampPerPartitionAtCurrentOffset(Set<StreamPartition<KafkaTopicPartition>> allPartitions)
+  {
+    Map<KafkaTopicPartition, Long> result = new HashMap<>();
+    Set<StreamPartition<KafkaTopicPartition>> remainingPartitions = new HashSet<>(allPartitions);
+
+    try {
+      int maxPolls = 5;
+      while (!remainingPartitions.isEmpty() && maxPolls-- > 0) {
+        for (OrderedPartitionableRecord<KafkaTopicPartition, Long, KafkaRecordEntity> record : recordSupplier.poll(getIoConfig().getPollTimeout())) {
+          if (!result.containsKey(record.getPartitionId())) {
+            result.put(record.getPartitionId(), record.getTimestamp());
+            remainingPartitions.remove(new StreamPartition<>(getIoConfig().getStream(), record.getPartitionId()));
+            if (remainingPartitions.isEmpty()) {
+              break;
+            }
+          }
+          recordSupplier.assign(remainingPartitions);
+        }
+      }
+    }
+    finally {
+      recordSupplier.assign(allPartitions);
+    }
+
+    if (!remainingPartitions.isEmpty()) {
+      log.info("Couldn't fetch the latest timestamp for the following partitions: [%s]", remainingPartitions);
+    }
+    return result;
+  }
+
+  /**
    * Fetches the latest offsets from the Kafka stream and updates the map
    * {@link #latestSequenceFromStream}. The actual lag is computed lazily in
    * {@link #getPartitionRecordLag}.
@@ -388,6 +492,11 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
   @Override
   protected void updatePartitionLagFromStream()
   {
+    if (getIoConfig().isPublishTimeLag()) {
+      updatePartitionTimeAndRecordLagFromStream();
+      return;
+    }
+
     getRecordSupplierLock().lock();
     try {
       Set<KafkaTopicPartition> partitionIds;
