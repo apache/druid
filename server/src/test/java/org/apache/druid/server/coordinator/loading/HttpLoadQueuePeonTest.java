@@ -39,7 +39,6 @@ import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.coordinator.config.HttpLoadQueuePeonConfig;
 import org.apache.druid.server.coordinator.simulate.BlockingExecutorService;
 import org.apache.druid.server.coordinator.simulate.WrappingScheduledExecutorService;
-import org.apache.druid.server.http.HistoricalSegmentChangeRequest;
 import org.apache.druid.server.http.SegmentLoadingMode;
 import org.apache.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
@@ -364,12 +363,10 @@ public class HttpLoadQueuePeonTest
       httpResponse.setContent(ChannelBuffers.buffer(0));
       httpResponseHandler.handleResponse(httpResponse, null);
       try {
-        HistoricalSegmentChangeRequest segmentChangeRequest = MAPPER.readValue(
+        List<DataSegmentChangeRequest> changeRequests = MAPPER.readValue(
             request.getContent().array(),
             HttpLoadQueuePeon.REQUEST_ENTITY_TYPE_REF
         );
-
-        List<DataSegmentChangeRequest> changeRequests = segmentChangeRequest.getChangeRequestList();
 
         List<DataSegmentChangeResponse> statuses = new ArrayList<>(changeRequests.size());
         for (DataSegmentChangeRequest cr : changeRequests) {

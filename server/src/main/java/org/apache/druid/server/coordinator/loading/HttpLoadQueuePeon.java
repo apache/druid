@@ -45,7 +45,6 @@ import org.apache.druid.server.coordinator.stats.CoordinatorStat;
 import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
-import org.apache.druid.server.http.HistoricalSegmentChangeRequest;
 import org.apache.druid.server.http.SegmentLoadingMode;
 import org.apache.druid.timeline.DataSegment;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
@@ -78,7 +77,7 @@ import java.util.function.Supplier;
  */
 public class HttpLoadQueuePeon implements LoadQueuePeon
 {
-  public static final TypeReference<HistoricalSegmentChangeRequest> REQUEST_ENTITY_TYPE_REF =
+  public static final TypeReference<List<DataSegmentChangeRequest>> REQUEST_ENTITY_TYPE_REF =
       new TypeReference<>() {};
 
   public static final TypeReference<List<DataSegmentChangeResponse>> RESPONSE_ENTITY_TYPE_REF =
@@ -149,7 +148,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
       this.changeRequestURL = new URL(
           new URL(baseUrl),
           StringUtils.nonStrictFormat(
-              "druid-internal/v1/segments/segmentChangeRequests?timeout=%d",
+              "druid-internal/v1/segments/changeRequests?timeout=%d",
               config.getHostTimeout().getMillis()
           )
       );
@@ -208,8 +207,6 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
 
     SegmentLoadingMode loadingMode = loadingModeSupplier.get();
 
-    HistoricalSegmentChangeRequest request = new HistoricalSegmentChangeRequest(newRequests, loadingMode);
-
     try {
       log.trace("Sending [%d] load/drop requests to Server[%s] in loadingMode [%s].", newRequests.size(), serverId, loadingMode);
       final boolean hasLoadRequests = newRequests.stream().anyMatch(r -> r instanceof SegmentChangeRequestLoad);
@@ -222,7 +219,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
           new Request(HttpMethod.POST, changeRequestURL)
               .addHeader(HttpHeaders.Names.ACCEPT, MediaType.APPLICATION_JSON)
               .addHeader(HttpHeaders.Names.CONTENT_TYPE, MediaType.APPLICATION_JSON)
-              .setContent(requestBodyWriter.writeValueAsBytes(request)),
+              .setContent(requestBodyWriter.writeValueAsBytes(newRequests)),
           responseHandler,
           new Duration(config.getHostTimeout().getMillis() + 5000)
       );
