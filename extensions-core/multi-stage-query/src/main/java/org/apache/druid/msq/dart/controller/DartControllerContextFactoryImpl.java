@@ -22,7 +22,7 @@ package org.apache.druid.msq.dart.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
-import org.apache.druid.client.BrokerServerView;
+import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Self;
@@ -41,7 +41,7 @@ public class DartControllerContextFactoryImpl implements DartControllerContextFa
   private final ObjectMapper smileMapper;
   private final DruidNode selfNode;
   private final ServiceClientFactory serviceClientFactory;
-  private final BrokerServerView serverView;
+  private final TimelineServerView serverView;
   private final MemoryIntrospector memoryIntrospector;
   private final ServiceEmitter emitter;
 
@@ -53,7 +53,7 @@ public class DartControllerContextFactoryImpl implements DartControllerContextFa
       @Self final DruidNode selfNode,
       @EscalatedGlobal final ServiceClientFactory serviceClientFactory,
       final MemoryIntrospector memoryIntrospector,
-      final BrokerServerView serverView,
+      final TimelineServerView serverView,
       final ServiceEmitter emitter
   )
   {
