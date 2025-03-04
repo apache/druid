@@ -350,6 +350,15 @@ public class ControllerImpl implements Controller
       context.registerController(this, closer);
       queryDef = initializeQueryDefAndState(closer);
 
+      this.netClient = closer.register(new ExceptionWrappingWorkerClient(context.newWorkerClient()));
+      this.workerSketchFetcher = new WorkerSketchFetcher(
+          netClient,
+          workerManager,
+          queryKernelConfig.isFaultTolerant(),
+          MultiStageQueryContext.getSketchEncoding(querySpec.getContext())
+      );
+      closer.register(workerSketchFetcher::close);
+
       // Execution-related: run the multi-stage QueryDefinition.
       final InputSpecSlicerFactory inputSpecSlicerFactory =
           makeInputSpecSlicerFactory(context.newTableInputSpecSlicer(workerManager));
@@ -590,7 +599,6 @@ public class ControllerImpl implements Controller
   private QueryDefinition initializeQueryDefAndState(final Closer closer)
   {
     this.selfDruidNode = context.selfNode();
-    this.netClient = closer.register(new ExceptionWrappingWorkerClient(context.newWorkerClient()));
     this.queryKernelConfig = context.queryKernelConfig(queryId, querySpec);
 
     final QueryContext queryContext = querySpec.getContext();
@@ -654,13 +662,7 @@ public class ControllerImpl implements Controller
                 )
             )
     );
-    this.workerSketchFetcher = new WorkerSketchFetcher(
-        netClient,
-        workerManager,
-        queryKernelConfig.isFaultTolerant(),
-        MultiStageQueryContext.getSketchEncoding(queryContext)
-    );
-    closer.register(workerSketchFetcher::close);
+
 
     return queryDef;
   }
