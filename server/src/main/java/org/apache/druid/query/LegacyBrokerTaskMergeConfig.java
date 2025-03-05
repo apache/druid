@@ -26,6 +26,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * @deprecated These config paths were removed in Druid 33 and this class has
  * been retained only to generate appropriate error messages.
  */
+@Deprecated
 public class LegacyBrokerTaskMergeConfig
 {
   @JsonProperty
