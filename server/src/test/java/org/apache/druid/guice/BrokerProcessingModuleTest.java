@@ -19,7 +19,6 @@
 
 package org.apache.druid.guice;
 
-import com.amazonaws.util.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Injector;
 import com.google.inject.ProvisionException;
@@ -28,12 +27,10 @@ import com.google.inject.util.Modules;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulator;
 import org.apache.druid.client.cache.CachePopulatorStats;
-import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.initialization.Initialization;
 import org.apache.druid.query.BrokerParallelMergeConfig;
 import org.apache.druid.query.DruidProcessingConfig;
 import org.apache.druid.utils.JvmUtils;
-import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Before;
@@ -83,73 +80,6 @@ public class BrokerProcessingModuleTest
     BrokerParallelMergeConfig config = injector.getInstance(BrokerParallelMergeConfig.class);
     BrokerProcessingModule module = new BrokerProcessingModule();
     module.getMergeProcessingPoolProvider(config);
-  }
-
-  @Test
-  public void testMergeProcessingPoolLegacyConfigs()
-  {
-    verifyOldConfigThrowsException(
-        "druid.processing.merge.pool.parallelism",
-        "10",
-        "Config[druid.processing.merge.pool.parallelism] has been removed."
-        + " Please use config[druid.processing.merge.parallelism] instead."
-    );
-    verifyOldConfigThrowsException(
-        "druid.processing.merge.pool.awaitShutdownMillis",
-        "1000",
-        "Config[druid.processing.merge.pool.awaitShutdownMillis] has been removed."
-        + " Please use config[druid.processing.merge.awaitShutdownMillis] instead."
-    );
-    verifyOldConfigThrowsException(
-        "druid.processing.merge.pool.defaultMaxQueryParallelism",
-        "100",
-        "Config[druid.processing.merge.pool.defaultMaxQueryParallelism] has been removed."
-        + " Please use config[druid.processing.merge.defaultMaxQueryParallelism] instead."
-    );
-  }
-
-  @Test
-  public void testMergeProcessingTaskLegacyConfigs()
-  {
-    verifyOldConfigThrowsException(
-        "druid.processing.merge.task.targetRunTimeMillis",
-        "10",
-        "Config[druid.processing.merge.task.targetRunTimeMillis] has been removed."
-        + " Please use config[druid.processing.merge.targetRunTimeMillis] instead."
-    );
-    verifyOldConfigThrowsException(
-        "druid.processing.merge.task.initialYieldNumRows",
-        "1000",
-        "Config[druid.processing.merge.task.initialYieldNumRows] has been removed."
-        + " Please use config[druid.processing.merge.initialYieldNumRows] instead."
-    );
-    verifyOldConfigThrowsException(
-        "druid.processing.merge.task.smallBatchNumRows",
-        "100",
-        "Config[druid.processing.merge.task.smallBatchNumRows] has been removed."
-        + " Please use config[druid.processing.merge.smallBatchNumRows] instead."
-    );
-  }
-
-  private void verifyOldConfigThrowsException(
-      String removedProperty,
-      String dummyValue,
-      String expectedMessage
-  )
-  {
-    final Properties props = new Properties();
-    props.setProperty(removedProperty, dummyValue);
-
-    final Injector gadget = makeInjector(props);
-    MatcherAssert.assertThat(
-        Throwables.getRootCause(
-            Assert.assertThrows(
-                ProvisionException.class,
-                () -> gadget.getInstance(BrokerParallelMergeConfig.class)
-            )
-        ),
-        DruidExceptionMatcher.invalidInput().expectMessageIs(expectedMessage)
-    );
   }
 
   @Test

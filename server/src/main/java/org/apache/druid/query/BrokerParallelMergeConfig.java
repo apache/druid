@@ -22,8 +22,7 @@ package org.apache.druid.query;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.druid.error.DruidException;
-import org.apache.druid.error.InvalidInput;
+import org.apache.druid.common.config.Configs;
 import org.apache.druid.java.util.common.guava.ParallelMergeCombiningSequence;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.utils.JvmUtils;
@@ -50,12 +49,6 @@ public class BrokerParallelMergeConfig
   @JsonProperty
   private final int smallBatchNumRows;
 
-  // These are needed to make JsonConfigurator happy
-  @JsonProperty
-  private final LegacyBrokerTaskMergeConfig task;
-  @JsonProperty
-  private final LegacyBrokerPoolMergeConfig pool;
-
   @JsonCreator
   public BrokerParallelMergeConfig(
       @JsonProperty("useParallelMergePool") @Nullable Boolean useParallelMergePool,
@@ -64,27 +57,15 @@ public class BrokerParallelMergeConfig
       @JsonProperty("defaultMaxQueryParallelism") @Nullable Integer defaultMaxQueryParallelism,
       @JsonProperty("targetRunTimeMillis") @Nullable Integer targetRunTimeMillis,
       @JsonProperty("initialYieldNumRows") @Nullable Integer initialYieldNumRows,
-      @JsonProperty("smallBatchNumRows") @Nullable Integer smallBatchNumRows,
-      @JsonProperty("task") @Nullable LegacyBrokerTaskMergeConfig oldTaskConfig,
-      @JsonProperty("pool") @Nullable LegacyBrokerPoolMergeConfig oldPoolConfig
+      @JsonProperty("smallBatchNumRows") @Nullable Integer smallBatchNumRows
   )
   {
-    this.task = oldTaskConfig;
-    this.pool = oldPoolConfig;
-    if (parallelism == null) {
-      if (oldPoolConfig == null || oldPoolConfig.getMergePoolParallelism() == null) {
+    this.parallelism = Configs.valueOrDefault(
+        parallelism,
         // assume 2 hyper-threads per core, so that this value is probably by default the number
         // of physical cores * 1.5
-        this.parallelism = (int) Math.ceil(JvmUtils.getRuntimeInfo().getAvailableProcessors() * 0.75);
-      } else {
-        throw invalidConfigException(
-            "druid.processing.merge.pool.parallelism",
-            "druid.processing.merge.parallelism"
-        );
-      }
-    } else {
-      this.parallelism = parallelism;
-    }
+        (int) Math.ceil(JvmUtils.getRuntimeInfo().getAvailableProcessors() * 0.75)
+    );
 
     // need at least 3 to do 2 layer merge
     if (this.parallelism > 2) {
@@ -99,76 +80,36 @@ public class BrokerParallelMergeConfig
       this.useParallelMergePool = false;
     }
 
-    if (awaitShutdownMillis == null) {
-      if (oldPoolConfig == null || oldPoolConfig.getMergePoolAwaitShutdownMillis() == null) {
-        this.awaitShutdownMillis = DEFAULT_MERGE_POOL_AWAIT_SHUTDOWN_MILLIS;
-      } else {
-        throw invalidConfigException(
-            "druid.processing.merge.pool.awaitShutdownMillis",
-            "druid.processing.merge.awaitShutdownMillis"
-        );
-      }
-    } else {
-      this.awaitShutdownMillis = awaitShutdownMillis;
-    }
+    this.awaitShutdownMillis = Configs.valueOrDefault(
+        awaitShutdownMillis,
+        DEFAULT_MERGE_POOL_AWAIT_SHUTDOWN_MILLIS
+    );
 
-    if (defaultMaxQueryParallelism == null) {
-      if (oldPoolConfig == null || oldPoolConfig.getMergePoolDefaultMaxQueryParallelism() == null) {
-        this.defaultMaxQueryParallelism = (int) Math.max(JvmUtils.getRuntimeInfo().getAvailableProcessors() * 0.5, 1);
-      } else {
-        throw invalidConfigException(
-            "druid.processing.merge.pool.defaultMaxQueryParallelism",
-            "druid.processing.merge.defaultMaxQueryParallelism"
-        );
-      }
-    } else {
-      this.defaultMaxQueryParallelism = defaultMaxQueryParallelism;
-    }
+    this.defaultMaxQueryParallelism = Configs.valueOrDefault(
+        defaultMaxQueryParallelism,
+        (int) Math.max(JvmUtils.getRuntimeInfo().getAvailableProcessors() * 0.5, 1)
+    );
 
-    if (targetRunTimeMillis == null) {
-      if (oldTaskConfig == null || oldTaskConfig.getMergePoolTargetTaskRunTimeMillis() == null) {
-        this.targetRunTimeMillis = ParallelMergeCombiningSequence.DEFAULT_TASK_TARGET_RUN_TIME_MILLIS;
-      } else {
-        throw invalidConfigException(
-            "druid.processing.merge.task.targetRunTimeMillis",
-            "druid.processing.merge.targetRunTimeMillis"
-        );
-      }
-    } else {
-      this.targetRunTimeMillis = targetRunTimeMillis;
-    }
+    this.targetRunTimeMillis = Configs.valueOrDefault(
+        targetRunTimeMillis,
+        ParallelMergeCombiningSequence.DEFAULT_TASK_TARGET_RUN_TIME_MILLIS
+    );
 
-    if (initialYieldNumRows == null) {
-      if (oldTaskConfig == null || oldTaskConfig.getMergePoolTaskInitialYieldRows() == null) {
-        this.initialYieldNumRows = ParallelMergeCombiningSequence.DEFAULT_TASK_INITIAL_YIELD_NUM_ROWS;
-      } else {
-        throw invalidConfigException(
-            "druid.processing.merge.task.initialYieldNumRows",
-            "druid.processing.merge.initialYieldNumRows"
-        );
-      }
-    } else {
-      this.initialYieldNumRows = initialYieldNumRows;
-    }
+    this.initialYieldNumRows = Configs.valueOrDefault(
+        initialYieldNumRows,
+        ParallelMergeCombiningSequence.DEFAULT_TASK_INITIAL_YIELD_NUM_ROWS
+    );
 
-    if (smallBatchNumRows == null) {
-      if (oldTaskConfig == null || oldTaskConfig.getMergePoolSmallBatchRows() == null) {
-        this.smallBatchNumRows = ParallelMergeCombiningSequence.DEFAULT_TASK_SMALL_BATCH_NUM_ROWS;
-      } else {
-        throw invalidConfigException(
-            "druid.processing.merge.task.smallBatchNumRows",
-            "druid.processing.merge.smallBatchNumRows"
-        );
-      }
-    } else {
-      this.smallBatchNumRows = smallBatchNumRows;
-    }
+    this.smallBatchNumRows = Configs.valueOrDefault(
+        smallBatchNumRows,
+        ParallelMergeCombiningSequence.DEFAULT_TASK_SMALL_BATCH_NUM_ROWS
+    );
   }
 
   @VisibleForTesting
   public BrokerParallelMergeConfig()
   {
-    this(null, null, null, null, null, null, null, null, null);
+    this(null, null, null, null, null, null, null);
   }
 
   public boolean useParallelMergePool()
@@ -204,14 +145,5 @@ public class BrokerParallelMergeConfig
   public int getSmallBatchNumRows()
   {
     return smallBatchNumRows;
-  }
-
-  private static DruidException invalidConfigException(String oldPath, String newPath)
-  {
-    return InvalidInput.exception(
-        "Config[%s] has been removed. Please use config[%s] instead.",
-        oldPath,
-        newPath
-    );
   }
 }

@@ -24,6 +24,7 @@ import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.util.Providers;
 import org.apache.druid.common.config.NullValueHandlingConfig;
+import org.apache.druid.error.InvalidInput;
 import org.apache.druid.jackson.JacksonModule;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -163,6 +164,48 @@ public class StartupInjectorBuilder extends BaseInjectorBuilder<StartupInjectorB
             "%s set to 'false', but has been removed, see %s for details for how to migrate to SQL compliant behavior",
             ExpressionProcessingConfig.NULL_HANDLING_LEGACY_LOGICAL_OPS_STRING,
             docsLink
+        );
+      }
+
+      validateRemovedProcessingConfigs();
+    }
+
+    private void validateRemovedProcessingConfigs()
+    {
+      checkOldConfigAndThrow(
+          "druid.processing.merge.task.initialYieldNumRows",
+          "druid.processing.merge.initialYieldNumRows"
+      );
+      checkOldConfigAndThrow(
+          "druid.processing.merge.task.targetRunTimeMillis",
+          "druid.processing.merge.targetRunTimeMillis"
+      );
+      checkOldConfigAndThrow(
+          "druid.processing.merge.task.smallBatchNumRows",
+          "druid.processing.merge.smallBatchNumRows"
+      );
+
+      checkOldConfigAndThrow(
+          "druid.processing.merge.pool.awaitShutdownMillis",
+          "druid.processing.merge.awaitShutdownMillis"
+      );
+      checkOldConfigAndThrow(
+          "druid.processing.merge.pool.parallelism",
+          "druid.processing.merge.parallelism"
+      );
+      checkOldConfigAndThrow(
+          "druid.processing.merge.pool.defaultMaxQueryParallelism",
+          "druid.processing.merge.defaultMaxQueryParallelism"
+      );
+    }
+
+    private void checkOldConfigAndThrow(String oldPath, String newPath)
+    {
+      if (properties.getProperty(oldPath) != null) {
+        throw InvalidInput.exception(
+            "Config[%s] has been removed. Please use config[%s] instead.",
+            oldPath,
+            newPath
         );
       }
     }

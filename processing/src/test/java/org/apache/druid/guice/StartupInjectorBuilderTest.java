@@ -21,10 +21,13 @@ package org.apache.druid.guice;
 
 import com.google.inject.Injector;
 import org.apache.druid.common.config.NullValueHandlingConfig;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExpressionProcessingConfig;
 import org.apache.druid.utils.RuntimeInfo;
+import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -192,6 +195,64 @@ public class StartupInjectorBuilderTest
             StartupInjectorBuilder.getVersionString()
         ),
         t.getMessage()
+    );
+  }
+
+  @Test
+  public void testOldBrokerProcessingConfigs_throwException()
+  {
+    verifyOldConfigThrowsException(
+        "druid.processing.merge.pool.parallelism",
+        "10",
+        "Config[druid.processing.merge.pool.parallelism] has been removed."
+        + " Please use config[druid.processing.merge.parallelism] instead."
+    );
+    verifyOldConfigThrowsException(
+        "druid.processing.merge.pool.awaitShutdownMillis",
+        "1000",
+        "Config[druid.processing.merge.pool.awaitShutdownMillis] has been removed."
+        + " Please use config[druid.processing.merge.awaitShutdownMillis] instead."
+    );
+    verifyOldConfigThrowsException(
+        "druid.processing.merge.pool.defaultMaxQueryParallelism",
+        "100",
+        "Config[druid.processing.merge.pool.defaultMaxQueryParallelism] has been removed."
+        + " Please use config[druid.processing.merge.defaultMaxQueryParallelism] instead."
+    );
+
+    verifyOldConfigThrowsException(
+        "druid.processing.merge.task.targetRunTimeMillis",
+        "10",
+        "Config[druid.processing.merge.task.targetRunTimeMillis] has been removed."
+        + " Please use config[druid.processing.merge.targetRunTimeMillis] instead."
+    );
+    verifyOldConfigThrowsException(
+        "druid.processing.merge.task.initialYieldNumRows",
+        "1000",
+        "Config[druid.processing.merge.task.initialYieldNumRows] has been removed."
+        + " Please use config[druid.processing.merge.initialYieldNumRows] instead."
+    );
+    verifyOldConfigThrowsException(
+        "druid.processing.merge.task.smallBatchNumRows",
+        "100",
+        "Config[druid.processing.merge.task.smallBatchNumRows] has been removed."
+        + " Please use config[druid.processing.merge.smallBatchNumRows] instead."
+    );
+  }
+
+  private static void verifyOldConfigThrowsException(
+      String removedProperty,
+      String dummyValue,
+      String expectedMessage
+  )
+  {
+    final Properties props = new Properties();
+    props.setProperty(removedProperty, dummyValue);
+
+    final StartupInjectorBuilder builder = new StartupInjectorBuilder().withExtensions().withProperties(props);
+    MatcherAssert.assertThat(
+        Assert.assertThrows(DruidException.class, builder::build),
+        DruidExceptionMatcher.invalidInput().expectMessageIs(expectedMessage)
     );
   }
 }
