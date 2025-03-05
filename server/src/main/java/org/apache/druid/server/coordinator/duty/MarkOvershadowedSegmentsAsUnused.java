@@ -119,7 +119,7 @@ public class MarkOvershadowedSegmentsAsUnused implements CoordinatorDuty
           stats.add(Stats.Segments.OVERSHADOWED, datasourceKey, unusedSegments.size());
 
           final Stopwatch updateTime = Stopwatch.createStarted();
-          int updatedCount = deleteHandler.markSegmentsAsUnused(unusedSegments);
+          int updatedCount = deleteHandler.markSegmentsAsUnused(datasource, unusedSegments);
           log.info(
               "Marked [%d] segments of datasource[%s] as unused in [%,d]ms.",
               updatedCount, datasource, updateTime.millisElapsed()

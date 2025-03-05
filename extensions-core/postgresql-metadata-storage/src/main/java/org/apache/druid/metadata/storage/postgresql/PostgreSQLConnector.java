@@ -42,6 +42,7 @@ import java.sql.DatabaseMetaData;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 
 public class PostgreSQLConnector extends SQLMetadataConnector
 {
@@ -186,7 +187,7 @@ public class PostgreSQLConnector extends SQLMetadataConnector
   )
   {
     return getDBI().withHandle(
-        new HandleCallback<Void>()
+        new HandleCallback<>()
         {
           @Override
           public Void withHandle(Handle handle) throws Exception
@@ -286,5 +287,25 @@ public class PostgreSQLConnector extends SQLMetadataConnector
       return sqlState != null && (sqlState.startsWith("08") || sqlState.startsWith("53"));
     }
     return false;
+  }
+
+  /**
+   * This method has been overridden to pass lowercase tableName.
+   * This is done because PostgreSQL creates tables with lowercased names unless explicitly enclosed in double quotes.
+   */
+  @Override
+  protected boolean tableHasColumn(String tableName, String columnName)
+  {
+    return super.tableHasColumn(StringUtils.toLowerCase(tableName), columnName);
+  }
+
+  /**
+   * This method has been overridden to pass lowercase tableName.
+   * This is done because PostgreSQL creates tables with lowercased names unless explicitly enclosed in double quotes.
+   */
+  @Override
+  public Set<String> getIndexOnTable(String tableName)
+  {
+    return super.getIndexOnTable(StringUtils.toLowerCase(tableName));
   }
 }

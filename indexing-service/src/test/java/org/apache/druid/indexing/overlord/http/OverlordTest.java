@@ -67,6 +67,7 @@ import org.apache.druid.indexing.overlord.config.TaskLockConfig;
 import org.apache.druid.indexing.overlord.config.TaskQueueConfig;
 import org.apache.druid.indexing.overlord.duty.OverlordDutyExecutor;
 import org.apache.druid.indexing.overlord.supervisor.SupervisorManager;
+import org.apache.druid.indexing.scheduledbatch.ScheduledBatchTaskManager;
 import org.apache.druid.indexing.test.TestIndexerMetadataStorageCoordinator;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
@@ -74,6 +75,7 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
+import org.apache.druid.metadata.segment.cache.SegmentMetadataCache;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordinator.CoordinatorOverlordServiceConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
@@ -215,7 +217,7 @@ public class OverlordTest
     taskCompletionCountDownLatches.put(badTaskId, new CountDownLatch(1));
     taskCompletionCountDownLatches.put(goodTaskId, new CountDownLatch(1));
 
-    TaskRunnerFactory<MockTaskRunner> taskRunnerFactory = new TaskRunnerFactory<MockTaskRunner>()
+    TaskRunnerFactory<MockTaskRunner> taskRunnerFactory = new TaskRunnerFactory<>()
     {
       private MockTaskRunner runner;
 
@@ -258,7 +260,9 @@ public class OverlordTest
         EasyMock.createNiceMock(OverlordDutyExecutor.class),
         new TestDruidLeaderSelector(),
         EasyMock.createNiceMock(SegmentAllocationQueue.class),
+        EasyMock.createNiceMock(SegmentMetadataCache.class),
         EasyMock.createNiceMock(CompactionScheduler.class),
+        EasyMock.createNiceMock(ScheduledBatchTaskManager.class),
         new DefaultObjectMapper(),
         new NoopTaskContextEnricher()
     );
@@ -440,7 +444,7 @@ public class OverlordTest
               "noop_test_task_exec_%s"
           )
       ).submit(
-          new Callable<TaskStatus>()
+          new Callable<>()
           {
             @Override
             public TaskStatus call() throws Exception
@@ -499,7 +503,7 @@ public class OverlordTest
     {
       return Lists.transform(
           runningTasks,
-          new Function<String, TaskRunnerWorkItem>()
+          new Function<>()
           {
             @Nullable
             @Override

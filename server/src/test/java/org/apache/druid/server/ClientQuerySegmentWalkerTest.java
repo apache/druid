@@ -25,7 +25,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Injector;
 import org.apache.druid.client.DirectDruidClient;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -42,6 +41,7 @@ import org.apache.druid.query.Druids;
 import org.apache.druid.query.FrameBasedInlineDataSource;
 import org.apache.druid.query.GlobalTableDataSource;
 import org.apache.druid.query.InlineDataSource;
+import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.query.JoinDataSource;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
@@ -69,6 +69,7 @@ import org.apache.druid.query.spec.MultipleIntervalSegmentSpec;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.topn.TopNQuery;
 import org.apache.druid.query.topn.TopNQueryBuilder;
+import org.apache.druid.query.union.UnionQuery;
 import org.apache.druid.segment.FrameBasedInlineSegmentWrangler;
 import org.apache.druid.segment.InlineSegmentWrangler;
 import org.apache.druid.segment.MapSegmentWrangler;
@@ -551,7 +552,8 @@ public class ClientQuerySegmentWalkerTest
                                            new JoinableFactoryWrapper(QueryStackTests.makeJoinableFactoryFromDefault(
                                                null,
                                                null,
-                                               null))
+                                               null)),
+                                           JoinAlgorithm.BROADCAST
                                        )
                                    )
                                    .setGranularity(Granularities.ALL)
@@ -623,7 +625,8 @@ public class ClientQuerySegmentWalkerTest
                                            new JoinableFactoryWrapper(QueryStackTests.makeJoinableFactoryFromDefault(
                                                null,
                                                null,
-                                               null))
+                                               null)),
+                                           JoinAlgorithm.BROADCAST
                                        )
                                    )
                                    .setGranularity(Granularities.ALL)
@@ -800,7 +803,8 @@ public class ClientQuerySegmentWalkerTest
                                            JoinType.INNER,
                                            null,
                                            ExprMacroTable.nil(),
-                                           null
+                                           null,
+                                           JoinAlgorithm.BROADCAST
                                        )
                                    )
                                    .setGranularity(Granularities.ALL)
@@ -1515,7 +1519,7 @@ public class ClientQuerySegmentWalkerTest
     testQuery(
         query,
         ImmutableList.of(ExpectedQuery.cluster(query)),
-        ImmutableList.of(new Object[]{INTERVAL.getStartMillis(), NullHandling.sqlCompatible() ? null : 0L})
+        ImmutableList.of(new Object[]{INTERVAL.getStartMillis(), null})
     );
 
     Assert.assertEquals(1, scheduler.getTotalRun().get());
@@ -1541,13 +1545,65 @@ public class ClientQuerySegmentWalkerTest
     testQuery(
         query,
         ImmutableList.of(ExpectedQuery.cluster(query)),
-        ImmutableList.of(new Object[]{INTERVAL.getStartMillis(), NullHandling.sqlCompatible() ? null : 0L})
+        ImmutableList.of(new Object[]{INTERVAL.getStartMillis(), null})
     );
 
     Assert.assertEquals(1, scheduler.getTotalRun().get());
     Assert.assertEquals(1, scheduler.getTotalPrioritizedAndLaned().get());
     Assert.assertEquals(1, scheduler.getTotalAcquired().get());
     Assert.assertEquals(1, scheduler.getTotalReleased().get());
+  }
+
+  @Test
+  public void testUnionQuery()
+  {
+    TimeseriesQuery subQuery1 = (TimeseriesQuery) Druids.newTimeseriesQueryBuilder()
+        .dataSource(FOO)
+        .granularity(Granularities.ALL)
+        .intervals(Collections.singletonList(INTERVAL))
+        .aggregators(new LongSumAggregatorFactory("sum", "n"))
+        .context(ImmutableMap.of(TimeseriesQuery.CTX_GRAND_TOTAL, false))
+        .build()
+        .withId(DUMMY_QUERY_ID);
+    TimeseriesQuery subQuery2 = (TimeseriesQuery) Druids.newTimeseriesQueryBuilder()
+        .dataSource(BAR)
+        .granularity(Granularities.ALL)
+        .intervals(Collections.singletonList(INTERVAL))
+        .aggregators(new LongSumAggregatorFactory("sum", "n"))
+        .context(ImmutableMap.of(TimeseriesQuery.CTX_GRAND_TOTAL, false))
+        .build()
+        .withId(DUMMY_QUERY_ID);
+    final Query query = Druids.newScanQueryBuilder()
+        .columns("sum")
+        .intervals(new MultipleIntervalSegmentSpec(Collections.singletonList(Intervals.ETERNITY)))
+        .dataSource(
+            new UnionQuery(ImmutableList.of(subQuery1, subQuery2))
+        ).build();
+
+    testQuery(
+        query,
+        ImmutableList.of(
+            ExpectedQuery.cluster(subQuery1.withSubQueryId("1.1")),
+            ExpectedQuery.cluster(subQuery2.withSubQueryId("1.1")),
+            ExpectedQuery.local(
+                query.withDataSource(
+                    InlineDataSource.fromIterable(
+                        ImmutableList.of(
+                            new Object[] {946684800000L, 10L},
+                            new Object[] {946684800000L, 10L}
+                        ),
+                        RowSignature.builder().add("__time", ColumnType.LONG).add("sum", ColumnType.LONG).build()
+                    )
+                )
+            )
+        ),
+        ImmutableList.of(new Object[] {10L}, new Object[] {10L})
+    );
+
+    Assert.assertEquals(3, scheduler.getTotalRun().get());
+    Assert.assertEquals(2, scheduler.getTotalPrioritizedAndLaned().get());
+    Assert.assertEquals(3, scheduler.getTotalAcquired().get());
+    Assert.assertEquals(3, scheduler.getTotalReleased().get());
   }
 
   /**
@@ -1649,7 +1705,6 @@ public class ClientQuerySegmentWalkerTest
                     .build(),
                 conglomerate,
                 schedulerForTest,
-                new GroupByQueryConfig(),
                 injector
             ),
             ClusterOrLocal.CLUSTER

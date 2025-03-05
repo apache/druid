@@ -29,7 +29,6 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Injector;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.client.coordinator.CoordinatorClient;
-import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.indexer.RunnerTaskState;
@@ -40,6 +39,7 @@ import org.apache.druid.indexer.TaskStatusPlus;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
@@ -59,6 +59,7 @@ import org.apache.druid.msq.indexing.IndexerTableInputSpecSlicer;
 import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQWorkerTask;
 import org.apache.druid.msq.indexing.MSQWorkerTaskLauncher;
+import org.apache.druid.msq.indexing.MSQWorkerTaskLauncher.MSQWorkerTaskLauncherConfig;
 import org.apache.druid.msq.input.InputSpecSlicer;
 import org.apache.druid.msq.kernel.controller.ControllerQueryKernelConfig;
 import org.apache.druid.msq.querykit.QueryKit;
@@ -66,12 +67,14 @@ import org.apache.druid.msq.querykit.QueryKitSpec;
 import org.apache.druid.msq.util.MultiStageQueryContext;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.DruidNode;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
 import javax.annotation.Nullable;
+import java.io.File;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -88,10 +91,11 @@ public class MSQTestControllerContext implements ControllerContext
   private final TaskActionClient taskActionClient;
   private final Map<String, Worker> inMemoryWorkers = new HashMap<>();
   private final ConcurrentMap<String, TaskStatus> statusMap = new ConcurrentHashMap<>();
-  private final ListeningExecutorService executor = MoreExecutors.listeningDecorator(Execs.multiThreaded(
+  private static final ListeningExecutorService EXECUTOR = MoreExecutors.listeningDecorator(Execs.multiThreaded(
       NUM_WORKERS,
       "MultiStageQuery-test-controller-client"
   ));
+  private final File tempDir = FileUtils.createTempDir();
   private final CoordinatorClient coordinatorClient;
   private final DruidNode node = new DruidNode(
       "controller",
@@ -174,7 +178,7 @@ public class MSQTestControllerContext implements ControllerContext
       inMemoryWorkers.put(task.getId(), worker);
       statusMap.put(task.getId(), TaskStatus.running(task.getId()));
 
-      ListenableFuture<?> future = executor.submit(() -> {
+      ListenableFuture<?> future = EXECUTOR.submit(() -> {
         try {
           worker.run();
         }
@@ -350,14 +354,26 @@ public class MSQTestControllerContext implements ControllerContext
       WorkerFailureListener workerFailureListener
   )
   {
+    MSQWorkerTaskLauncherConfig taskLauncherConfig = new MSQWorkerTaskLauncherConfig();
+    taskLauncherConfig.highFrequencyCheckMillis = 1;
+    taskLauncherConfig.switchToLowFrequencyCheckAfterMillis = 25;
+    taskLauncherConfig.lowFrequencyCheckMillis = 2;
+
     return new MSQWorkerTaskLauncher(
         controller.queryId(),
         "test-datasource",
         overlordClient,
         workerFailureListener,
         IndexerControllerContext.makeTaskContext(querySpec, queryKernelConfig, ImmutableMap.of()),
-        0
+        0,
+        taskLauncherConfig
     );
+  }
+
+  @Override
+  public File taskTempDir()
+  {
+    return tempDir;
   }
 
   @Override

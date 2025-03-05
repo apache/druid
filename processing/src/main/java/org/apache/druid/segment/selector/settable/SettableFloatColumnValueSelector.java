@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment.selector.settable;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.FloatColumnSelector;
 
@@ -42,7 +41,7 @@ public class SettableFloatColumnValueSelector implements SettableColumnValueSele
   @Override
   public float getFloat()
   {
-    assert NullHandling.replaceWithDefault() || !isNull;
+    assert !isNull;
     return value;
   }
 

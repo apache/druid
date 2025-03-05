@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.frame.allocation.ArenaMemoryAllocator;
 import org.apache.druid.frame.allocation.SingleMemoryAllocatorFactory;
@@ -896,16 +895,9 @@ public class SortMergeJoinFrameProcessorTest extends FrameProcessorTestBase
     final String countryNameForNull;
     final Long countryNumberForNull;
 
-    if (NullHandling.sqlCompatible()) {
-      countryCodeForNull = null;
-      countryNameForNull = null;
-      countryNumberForNull = null;
-    } else {
-      // In default-value mode, null country number from the left-hand table converts to zero, which matches Australia.
-      countryCodeForNull = "AU";
-      countryNameForNull = "Australia";
-      countryNumberForNull = 0L;
-    }
+    countryCodeForNull = null;
+    countryNameForNull = null;
+    countryNumberForNull = null;
 
     final List<List<Object>> expectedRows = Lists.newArrayList(
         Arrays.asList("Agama mossambica", null, countryCodeForNull, countryNameForNull, countryNumberForNull),
@@ -938,12 +930,6 @@ public class SortMergeJoinFrameProcessorTest extends FrameProcessorTestBase
         Arrays.asList("Orange Soda", "MatchNothing", null, null, null),
         Arrays.asList("History of Fourems", "MMMM", "MMMM", "Fourems", 205L)
     );
-
-    if (!NullHandling.sqlCompatible()) {
-      // Sorting order is different in default-value mode, since 0 and null collapse.
-      // "Peremptory norm" moves before "Rallicula".
-      expectedRows.add(3, expectedRows.remove(5));
-    }
 
     assertResult(processor, outputChannel.readable(), joinSignature, expectedRows);
   }
@@ -991,16 +977,9 @@ public class SortMergeJoinFrameProcessorTest extends FrameProcessorTestBase
     final String countryNameForNull;
     final Long countryNumberForNull;
 
-    if (NullHandling.sqlCompatible()) {
-      countryCodeForNull = null;
-      countryNameForNull = null;
-      countryNumberForNull = null;
-    } else {
-      // In default-value mode, null country number from the left-hand table converts to zero, which matches Australia.
-      countryCodeForNull = "AU";
-      countryNameForNull = "Australia";
-      countryNumberForNull = 0L;
-    }
+    countryCodeForNull = null;
+    countryNameForNull = null;
+    countryNumberForNull = null;
 
     final List<List<Object>> expectedRows = Lists.newArrayList(
         Arrays.asList("Agama mossambica", null, countryCodeForNull, countryNameForNull, countryNumberForNull),
@@ -1033,12 +1012,6 @@ public class SortMergeJoinFrameProcessorTest extends FrameProcessorTestBase
         Arrays.asList("Orange Soda", "MatchNothing", null, null, null),
         Arrays.asList("History of Fourems", "MMMM", "MMMM", "Fourems", 205L)
     );
-
-    if (!NullHandling.sqlCompatible()) {
-      // Sorting order is different in default-value mode, since 0 and null collapse.
-      // "Peremptory norm" moves before "Rallicula".
-      expectedRows.add(3, expectedRows.remove(5));
-    }
 
     assertResult(processor, outputChannel.readable(), joinSignature, expectedRows);
   }

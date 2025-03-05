@@ -19,7 +19,6 @@
 import { Classes, Icon, Menu, MenuItem, Popover, Position, Tag } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
-import React from 'react';
 
 import type { OptionValue } from '../../models';
 

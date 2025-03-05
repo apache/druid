@@ -22,7 +22,6 @@ package org.apache.druid.server.coordinator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.SegmentsSplitHintSpec;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.indexer.CompactionEngine;
@@ -37,6 +36,7 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.data.CompressionFactory.LongEncodingStrategy;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.incremental.OnheapIncrementalIndex;
+import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.joda.time.Duration;
@@ -431,13 +431,12 @@ public class DataSourceCompactionConfigTest extends InitializedNullHandlingTest
   @Test
   public void testSerdeTransformSpec() throws IOException
   {
-    NullHandling.initializeForTests();
     final DataSourceCompactionConfig config = DataSourceCompactionConfig
         .builder()
         .forDataSource("dataSource")
         .withInputSegmentSizeBytes(500L)
         .withSkipOffsetFromLatest(new Period(3600))
-        .withTransformSpec(new UserCompactionTaskTransformConfig(new SelectorDimFilter("dim1", "foo", null)))
+        .withTransformSpec(new CompactionTransformSpec(new SelectorDimFilter("dim1", "foo", null)))
         .withTaskContext(ImmutableMap.of("key", "val"))
         .build();
     final String json = OBJECT_MAPPER.writeValueAsString(config);

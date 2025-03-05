@@ -33,7 +33,6 @@ import org.apache.druid.utils.CollectionUtils;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -144,10 +143,7 @@ public class UnionDataSource implements DataSource
   }
 
   @Override
-  public Function<SegmentReference, SegmentReference> createSegmentMapFunction(
-      Query query,
-      AtomicLong cpuTime
-  )
+  public Function<SegmentReference, SegmentReference> createSegmentMapFunction(Query query)
   {
     return Function.identity();
   }
@@ -167,7 +163,7 @@ public class UnionDataSource implements DataSource
   @Override
   public DataSourceAnalysis getAnalysis()
   {
-    return new DataSourceAnalysis(this, null, null, Collections.emptyList());
+    return new DataSourceAnalysis(this, null, null, Collections.emptyList(), null);
   }
 
   @Override
@@ -197,5 +193,10 @@ public class UnionDataSource implements DataSource
     return "UnionDataSource{" +
            "dataSources=" + dataSources +
            '}';
+  }
+
+  public static boolean isCompatibleDataSource(DataSource dataSource)
+  {
+    return (dataSource instanceof TableDataSource || dataSource instanceof InlineDataSource);
   }
 }

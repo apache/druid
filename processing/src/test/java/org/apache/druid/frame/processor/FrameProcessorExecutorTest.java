@@ -470,7 +470,7 @@ public class FrameProcessorExecutorTest
         }
 
         // Write to input files.
-        final Consumer<Frame> writer = new Consumer<Frame>()
+        final Consumer<Frame> writer = new Consumer<>()
         {
           private int j = 0;
 

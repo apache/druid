@@ -49,6 +49,7 @@ import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 
 public abstract class SketchAggregatorFactory extends AggregatorFactory
 {
@@ -264,6 +265,22 @@ public abstract class SketchAggregatorFactory extends AggregatorFactory
                      .putInt(size)
                      .put(fieldNameBytes)
                      .array();
+  }
+
+  @Override
+  public AggregatorFactory substituteCombiningFactory(AggregatorFactory preAggregated)
+  {
+    if (this == preAggregated) {
+      return getCombiningFactory();
+    }
+    if (getClass() != preAggregated.getClass()) {
+      return null;
+    }
+    SketchMergeAggregatorFactory that = (SketchMergeAggregatorFactory) preAggregated;
+    if (Objects.equals(fieldName, that.fieldName) && size <= that.size) {
+      return getCombiningFactory();
+    }
+    return null;
   }
 
   @Override

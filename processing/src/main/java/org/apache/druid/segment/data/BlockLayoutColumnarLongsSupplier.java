@@ -22,6 +22,7 @@ package org.apache.druid.segment.data;
 import com.google.common.base.Supplier;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.common.semantic.SemanticUtils;
+import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -43,6 +44,7 @@ public class BlockLayoutColumnarLongsSupplier implements Supplier<ColumnarLongs>
   // The number of longs per buffer.
   private final int sizePer;
   private final CompressionFactory.LongEncodingReader baseReader;
+  private final CompressionStrategy strategy;
 
   public BlockLayoutColumnarLongsSupplier(
       int totalSize,
@@ -50,10 +52,16 @@ public class BlockLayoutColumnarLongsSupplier implements Supplier<ColumnarLongs>
       ByteBuffer fromBuffer,
       ByteOrder order,
       CompressionFactory.LongEncodingReader reader,
-      CompressionStrategy strategy
+      CompressionStrategy strategy,
+      SmooshedFileMapper smooshMapper
   )
   {
-    this.baseLongBuffers = GenericIndexed.read(fromBuffer, DecompressingByteBufferObjectStrategy.of(order, strategy));
+    this.strategy = strategy;
+    this.baseLongBuffers = GenericIndexed.read(
+        fromBuffer,
+        DecompressingByteBufferObjectStrategy.of(order, strategy),
+        smooshMapper
+    );
     this.totalSize = totalSize;
     this.sizePer = sizePer;
     this.baseReader = reader;
@@ -124,7 +132,8 @@ public class BlockLayoutColumnarLongsSupplier implements Supplier<ColumnarLongs>
     }
   }
 
-  private class BlockLayoutColumnarLongs implements ColumnarLongs
+  // This needs to be a public class so that SemanticCreator is able to call it.
+  public class BlockLayoutColumnarLongs implements ColumnarLongs
   {
     final CompressionFactory.LongEncodingReader reader = baseReader.duplicate();
     final Indexed<ResourceHolder<ByteBuffer>> singleThreadedLongBuffers = baseLongBuffers.singleThreaded();
@@ -139,6 +148,16 @@ public class BlockLayoutColumnarLongsSupplier implements Supplier<ColumnarLongs>
      */
     @Nullable
     LongBuffer longBuffer;
+
+    public CompressionFactory.LongEncodingStrategy getEncodingStrategy()
+    {
+      return baseReader.getStrategy();
+    }
+
+    public CompressionStrategy getCompressionStrategy()
+    {
+      return strategy;
+    }
 
     @Override
     public int size()

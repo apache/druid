@@ -21,10 +21,8 @@ package org.apache.druid.query.aggregation.datasketches.theta.sql;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.inject.Injector;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.guice.DruidInjectorBuilder;
+import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -32,7 +30,6 @@ import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.QueryDataSource;
-import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
@@ -59,7 +56,6 @@ import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
@@ -68,6 +64,7 @@ import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
 import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.calcite.util.DruidModuleCollection;
 import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSupplier;
 import org.apache.druid.sql.calcite.util.TestDataBuilder;
 import org.apache.druid.sql.guice.SqlModule;
@@ -114,18 +111,13 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
     }
 
     @Override
-    public void configureGuice(DruidInjectorBuilder builder)
+    public DruidModule getCoreModule()
     {
-      super.configureGuice(builder);
-      builder.addModule(new SketchModule());
+      return DruidModuleCollection.of(super.getCoreModule(), new SketchModule());
     }
 
     @Override
-    public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
-        final QueryRunnerFactoryConglomerate conglomerate,
-        final JoinableFactoryWrapper joinableFactory,
-        final Injector injector
-    )
+    public SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(SpecificSegmentsQuerySegmentWalker walker)
     {
       SketchModule.registerSerde();
 
@@ -152,7 +144,7 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
                                                .rows(TestDataBuilder.ROWS1)
                                                .buildMMappedIndex();
 
-      return SpecificSegmentsQuerySegmentWalker.createWalker(injector, conglomerate).add(
+      return walker.add(
           DataSegment.builder()
                      .dataSource(DATA_SOURCE)
                      .interval(index.getDataInterval())
@@ -194,33 +186,17 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
                        // on native theta sketch column
                        + "FROM druid.foo";
 
-    final List<Object[]> expectedResults;
-
-    if (NullHandling.replaceWithDefault()) {
-      expectedResults = ImmutableList.of(
-          new Object[]{
-              6L,
-              2L,
-              2L,
-              1L,
-              2L,
-              5L,
-              5L
-          }
-      );
-    } else {
-      expectedResults = ImmutableList.of(
-          new Object[]{
-              6L,
-              2L,
-              2L,
-              1L,
-              1L,
-              5L,
-              5L
-          }
-      );
-    }
+    final List<Object[]> expectedResults = ImmutableList.of(
+        new Object[]{
+            6L,
+            2L,
+            2L,
+            1L,
+            1L,
+            5L,
+            5L
+        }
+    );
 
     testQuery(
         sql,
@@ -354,12 +330,7 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
                         .setInterval(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
                         .setGranularity(Granularities.ALL)
                         .setAggregatorSpecs(
-                            NullHandling.replaceWithDefault()
-                            ? Arrays.asList(
-                                new DoubleSumAggregatorFactory("_a0:sum", "a0"),
-                                new CountAggregatorFactory("_a0:count")
-                            )
-                            : Arrays.asList(
+                            Arrays.asList(
                                 new DoubleSumAggregatorFactory("_a0:sum", "a0"),
                                 new FilteredAggregatorFactory(
                                     new CountAggregatorFactory("_a0:count"),
@@ -416,37 +387,19 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
   @Test
   public void testThetaSketchPostAggs()
   {
-    final List<Object[]> expectedResults;
-
-    if (NullHandling.replaceWithDefault()) {
-      expectedResults = ImmutableList.of(
-          new Object[]{
-              6L,
-              2.0d,
-              3.0d,
-              "{\"estimate\":2.0,\"highBound\":2.0,\"lowBound\":2.0,\"numStdDev\":10}",
-              "\"AQMDAAA6zJOQxkPsNomrZQ==\"",
-              "\"AgMDAAAazJMGAAAAAACAP1XTBztMIcMJ+HOoBBne1zKQxkPsNomrZUeWbJt3n+VpF8EdUoUHAXvxsLkOSE0lfQ==\"",
-              "\"AQMDAAA6zJMXwR1ShQcBew==\"",
-              "\"AQMDAAA6zJOQxkPsNomrZQ==\"",
-              1.0d
-          }
-      );
-    } else {
-      expectedResults = ImmutableList.of(
-          new Object[]{
-              6L,
-              2.0d,
-              3.0d,
-              "{\"estimate\":2.0,\"highBound\":2.0,\"lowBound\":2.0,\"numStdDev\":10}",
-              "\"AQMDAAA6zJOQxkPsNomrZQ==\"",
-              "\"AgMDAAAazJMGAAAAAACAP1XTBztMIcMJ+HOoBBne1zKQxkPsNomrZUeWbJt3n+VpF8EdUoUHAXvxsLkOSE0lfQ==\"",
-              "\"AQMDAAA6zJMXwR1ShQcBew==\"",
-              "\"AQMDAAA6zJOQxkPsNomrZQ==\"",
-              1.0d
-          }
-      );
-    }
+    final List<Object[]> expectedResults = ImmutableList.of(
+        new Object[]{
+            6L,
+            2.0d,
+            3.0d,
+            "{\"estimate\":2.0,\"highBound\":2.0,\"lowBound\":2.0,\"numStdDev\":10}",
+            "\"AQMDAAA6zJOQxkPsNomrZQ==\"",
+            "\"AgMDAAAazJMGAAAAAACAP1XTBztMIcMJ+HOoBBne1zKQxkPsNomrZUeWbJt3n+VpF8EdUoUHAXvxsLkOSE0lfQ==\"",
+            "\"AQMDAAA6zJMXwR1ShQcBew==\"",
+            "\"AQMDAAA6zJOQxkPsNomrZQ==\"",
+            1.0d
+        }
+    );
 
     testQuery(
         "SELECT\n"
@@ -592,37 +545,19 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
                     .put(SketchQueryContext.CTX_FINALIZE_OUTER_SKETCHES, true)
                     .build();
 
-    final List<Object[]> expectedResults;
-
-    if (NullHandling.replaceWithDefault()) {
-      expectedResults = ImmutableList.of(
-          new Object[]{
-              6L,
-              2.0d,
-              3.0d,
-              "{\"estimate\":2.0,\"highBound\":2.0,\"lowBound\":2.0,\"numStdDev\":10}",
-              "\"AQMDAAA6zJOQxkPsNomrZQ==\"",
-              "\"AgMDAAAazJMGAAAAAACAP1XTBztMIcMJ+HOoBBne1zKQxkPsNomrZUeWbJt3n+VpF8EdUoUHAXvxsLkOSE0lfQ==\"",
-              "\"AQMDAAA6zJMXwR1ShQcBew==\"",
-              "\"AQMDAAA6zJOQxkPsNomrZQ==\"",
-              1.0d
-          }
-      );
-    } else {
-      expectedResults = ImmutableList.of(
-          new Object[]{
-              6L,
-              2.0d,
-              3.0d,
-              "{\"estimate\":2.0,\"highBound\":2.0,\"lowBound\":2.0,\"numStdDev\":10}",
-              "\"AQMDAAA6zJOQxkPsNomrZQ==\"",
-              "\"AgMDAAAazJMGAAAAAACAP1XTBztMIcMJ+HOoBBne1zKQxkPsNomrZUeWbJt3n+VpF8EdUoUHAXvxsLkOSE0lfQ==\"",
-              "\"AQMDAAA6zJMXwR1ShQcBew==\"",
-              "\"AQMDAAA6zJOQxkPsNomrZQ==\"",
-              1.0d
-          }
-      );
-    }
+    final List<Object[]> expectedResults = ImmutableList.of(
+        new Object[]{
+            6L,
+            2.0d,
+            3.0d,
+            "{\"estimate\":2.0,\"highBound\":2.0,\"lowBound\":2.0,\"numStdDev\":10}",
+            "\"AQMDAAA6zJOQxkPsNomrZQ==\"",
+            "\"AgMDAAAazJMGAAAAAACAP1XTBztMIcMJ+HOoBBne1zKQxkPsNomrZUeWbJt3n+VpF8EdUoUHAXvxsLkOSE0lfQ==\"",
+            "\"AQMDAAA6zJMXwR1ShQcBew==\"",
+            "\"AQMDAAA6zJOQxkPsNomrZQ==\"",
+            1.0d
+        }
+    );
 
     testQuery(
         "SELECT\n"
@@ -880,7 +815,7 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
                   .dataSource(CalciteTests.DATASOURCE1)
                   .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(Filtration.eternity())))
                   .granularity(Granularities.ALL)
-                  .filters(numericEquality("dim2", 0L, ColumnType.LONG))
+                  .filters(equality("dim2", 0L, ColumnType.LONG))
                   .aggregators(
                       ImmutableList.of(
                           new SketchMergeAggregatorFactory(
@@ -1108,11 +1043,12 @@ public class ThetaSketchSqlAggregatorTest extends BaseCalciteQueryTest
                 ))
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .columns("v0")
+                .columnTypes(ColumnType.DOUBLE)
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
         ),
         ImmutableList.of(
-            NullHandling.replaceWithDefault() ? new Object[]{null} : new Object[]{0.0D},
+            new Object[]{0.0D},
             new Object[]{1.0D},
             new Object[]{1.0D},
             new Object[]{1.0D},

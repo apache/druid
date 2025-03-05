@@ -47,13 +47,44 @@ public @interface DecoupledTestConfig
    */
   IgnoreQueriesReason ignoreExpectedQueriesReason() default IgnoreQueriesReason.NONE;
 
+  /**
+   * Ignores defaults mode for the given reason
+   */
+  IgnoreDefaultsReson ignoreDefaultsMode() default IgnoreDefaultsReson.NONE;
+
+  enum IgnoreDefaultsReson
+  {
+    NONE,
+    /**
+     * Decoupled mode avoids unnesting "" in defaults mode
+     *
+     * <pre>
+     * new Object[]{"a", "[\"a\",\"b\"]"},
+     * new Object[]{"a", ""}
+     * </pre>
+     */
+    UNNEST_EMPTY_DIFFERENCE,
+    /**
+     *
+     */
+    UNNEST_ARRAY_ISSUE
+  }
+
   enum IgnoreQueriesReason
   {
     NONE,
     /**
      * An extra ScanQuery to service a Project and/or Filter was added.
      */
-    UNNEST_EXTRA_SCANQUERY;
+    UNNEST_EXTRA_SCANQUERY,
+    /**
+     * Occurs in tandem with {@link NotYetSupported.Modes#PREDICATE_NOT_SUPPORTED}.
+     */
+    PREDICATE_NOT_SUPPORTED,
+    /**
+     * Not really different plan.
+     */
+    EQUIV_PLAN;
 
     public boolean isPresent()
     {
@@ -157,13 +188,19 @@ public @interface DecoupledTestConfig
     /**
      * New plan UNNEST-s a different resultset.
      */
-    UNNEST_DIFFERENT_RESULTSET;
+    UNNEST_DIFFERENT_RESULTSET,
+    /**
+     * Uses a UNION ALL query.
+     */
+    UNION_ALL_QUERY,
+    /**
+     * This is due to substring('',1') is null.
+     */
+    UNNEST_SUBSTRING_EMPTY;
 
     public boolean isPresent()
     {
       return this != NONE;
     }
   }
-
-  boolean separateDefaultModeTest() default false;
 }

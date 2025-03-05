@@ -52,7 +52,7 @@ public class AuthorizationUtilsTest
     resources.add("filteredResource");
     resources.add("hello");
 
-    Function<String, Iterable<ResourceAction>> resourceActionGenerator = new Function<String, Iterable<ResourceAction>>()
+    Function<String, Iterable<ResourceAction>> resourceActionGenerator = new Function<>()
     {
       @Nullable
       @Override

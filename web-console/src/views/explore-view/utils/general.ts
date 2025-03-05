@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
-import type { SqlExpression } from '@druid-toolkit/query';
-import { SqlColumn } from '@druid-toolkit/query';
+import type { SqlExpression } from 'druid-query-toolkit';
+import { SqlColumn } from 'druid-query-toolkit';
 
 export function addTableScope(expression: SqlExpression, newTableScope: string): SqlExpression {
   return expression.walk(ex => {

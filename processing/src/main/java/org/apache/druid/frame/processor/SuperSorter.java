@@ -789,7 +789,7 @@ public class SuperSorter
   {
     Futures.addCallback(
         exec.runFully(processorDecorator.decorate(worker), cancellationId),
-        new FutureCallback<T>()
+        new FutureCallback<>()
         {
           @Override
           public void onSuccess(T result)

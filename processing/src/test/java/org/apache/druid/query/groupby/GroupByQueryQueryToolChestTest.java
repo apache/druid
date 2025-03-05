@@ -29,7 +29,6 @@ import com.google.common.collect.Lists;
 import org.apache.druid.collections.BlockingPool;
 import org.apache.druid.collections.DefaultBlockingPool;
 import org.apache.druid.collections.SerializablePair;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.jackson.AggregatorsModule;
 import org.apache.druid.java.util.common.DateTimes;
@@ -95,7 +94,6 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
   @BeforeClass
   public static void setUpClass()
   {
-    NullHandling.initializeForTests();
     AggregatorsModule.registerComplexMetricsAndSerde();
   }
 
@@ -801,6 +799,7 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
           }
         },
         null,
+        null,
         null
     );
 
@@ -1295,14 +1294,17 @@ public class GroupByQueryQueryToolChestTest extends InitializedNullHandlingTest
         bufferSupplier,
         processingConfig.getNumMergeBuffers()
     );
-    GroupByResourcesReservationPool groupByResourcesReservationPool = new GroupByResourcesReservationPool(mergeBufferPool, queryConfig);
+    final GroupByStatsProvider groupByStatsProvider = new GroupByStatsProvider();
+    final GroupByResourcesReservationPool groupByResourcesReservationPool =
+        new GroupByResourcesReservationPool(mergeBufferPool, queryConfig);
     final GroupingEngine groupingEngine = new GroupingEngine(
         processingConfig,
         queryConfigSupplier,
         groupByResourcesReservationPool,
         TestHelper.makeJsonMapper(),
         new ObjectMapper(new SmileFactory()),
-        QueryRunnerTestHelper.NOOP_QUERYWATCHER
+        QueryRunnerTestHelper.NOOP_QUERYWATCHER,
+        groupByStatsProvider
     );
     final GroupByQueryQueryToolChest queryToolChest = new GroupByQueryQueryToolChest(groupingEngine, groupByResourcesReservationPool);
     final ObjectMapper mapper = TestHelper.makeJsonMapper();

@@ -26,7 +26,6 @@ import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.client.cache.CachePopulator;
 import org.apache.druid.client.cache.MapCache;
 import org.apache.druid.client.selector.HighestPriorityTierSelectorStrategy;
-import org.apache.druid.client.selector.QueryableDruidServer;
 import org.apache.druid.client.selector.RandomServerSelectorStrategy;
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.guice.http.DruidHttpClientConfig;
@@ -37,10 +36,12 @@ import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.BrokerParallelMergeConfig;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryLogic;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
+import org.apache.druid.query.QueryRunnerFactory;
+import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QueryToolChest;
-import org.apache.druid.query.QueryToolChestWarehouse;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.context.ResponseContext;
@@ -128,7 +129,7 @@ public class CachingClusteredClientPerfTest
     Mockito.doReturn(Optional.of(timeline)).when(serverView).getTimeline(any());
     Mockito.doReturn(new MockQueryRunner()).when(serverView).getQueryRunner(any());
     CachingClusteredClient cachingClusteredClient = new CachingClusteredClient(
-        new MockQueryToolChestWareHouse(),
+        new MockQueryRunnerFactoryConglomerate(),
         serverView,
         MapCache.create(1024),
         TestHelper.makeJsonMapper(),
@@ -170,13 +171,24 @@ public class CachingClusteredClientPerfTest
                       .build();
   }
 
-  private static class MockQueryToolChestWareHouse implements QueryToolChestWarehouse
+  private static class MockQueryRunnerFactoryConglomerate implements QueryRunnerFactoryConglomerate
   {
-
     @Override
     public <T, QueryType extends Query<T>> QueryToolChest<T, QueryType> getToolChest(QueryType query)
     {
       return new ServerManagerTest.NoopQueryToolChest<>();
+    }
+
+    @Override
+    public <T, QueryType extends Query<T>> QueryRunnerFactory<T, QueryType> findFactory(QueryType query)
+    {
+      return null;
+    }
+
+    @Override
+    public <T, QueryType extends Query<T>> QueryLogic getQueryLogic(QueryType query)
+    {
+      return null;
     }
   }
 
@@ -190,7 +202,7 @@ public class CachingClusteredClientPerfTest
     )
     {
       TestQuery query = (TestQuery) queryPlus.getQuery();
-      return TestSequence.create(((MultipleSpecificSegmentSpec) query.getSpec()).getDescriptors());
+      return TestSequence.create(((MultipleSpecificSegmentSpec) query.getQuerySegmentSpec()).getDescriptors());
     }
   }
 
@@ -244,7 +256,8 @@ public class CachingClusteredClientPerfTest
       return this;
     }
 
-    public QuerySegmentSpec getSpec()
+    @Override
+    public QuerySegmentSpec getQuerySegmentSpec()
     {
       return spec;
     }

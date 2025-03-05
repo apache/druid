@@ -36,7 +36,6 @@ import com.google.common.collect.Lists;
 import org.apache.curator.shaded.com.google.common.base.Verify;
 import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
-import org.apache.druid.client.indexing.ClientCompactionTaskTransformSpec;
 import org.apache.druid.collections.ResourceHolder;
 import org.apache.druid.data.input.SplitHintSpec;
 import org.apache.druid.data.input.impl.DimensionSchema;
@@ -48,6 +47,9 @@ import org.apache.druid.error.InvalidInput;
 import org.apache.druid.indexer.Checks;
 import org.apache.druid.indexer.Property;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.granularity.GranularitySpec;
+import org.apache.druid.indexer.granularity.UniformGranularitySpec;
+import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
@@ -80,14 +82,14 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.incremental.AppendableIndexSpec;
 import org.apache.druid.segment.indexing.CombinedDataSchema;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.indexing.TuningConfig;
-import org.apache.druid.segment.indexing.granularity.GranularitySpec;
-import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.loading.SegmentCacheManager;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorsManager;
+import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.server.coordinator.CompactionConfigValidationResult;
@@ -151,7 +153,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
   @Nullable
   private final DimensionsSpec dimensionsSpec;
   @Nullable
-  private final ClientCompactionTaskTransformSpec transformSpec;
+  private final CompactionTransformSpec transformSpec;
   @Nullable
   private final AggregatorFactory[] metricsSpec;
   @Nullable
@@ -175,7 +177,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       @JsonProperty("ioConfig") @Nullable CompactionIOConfig ioConfig,
       @JsonProperty("dimensions") @Nullable final DimensionsSpec dimensions,
       @JsonProperty("dimensionsSpec") @Nullable final DimensionsSpec dimensionsSpec,
-      @JsonProperty("transformSpec") @Nullable final ClientCompactionTaskTransformSpec transformSpec,
+      @JsonProperty("transformSpec") @Nullable final CompactionTransformSpec transformSpec,
       @JsonProperty("metricsSpec") @Nullable final AggregatorFactory[] metricsSpec,
       @JsonProperty("segmentGranularity") @Deprecated @Nullable final Granularity segmentGranularity,
       @JsonProperty("granularitySpec") @Nullable final ClientCompactionTaskGranularitySpec granularitySpec,
@@ -357,7 +359,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
 
   @JsonProperty
   @Nullable
-  public ClientCompactionTaskTransformSpec getTransformSpec()
+  public CompactionTransformSpec getTransformSpec()
   {
     return transformSpec;
   }
@@ -452,6 +454,50 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     return tuningConfig != null && tuningConfig.isForceGuaranteedRollup();
   }
 
+  /**
+   * Checks if multi-valued string dimensions need to be analyzed by downloading the segments.
+   * This method returns true only for MSQ engine when either of the following holds true:
+   * <ul>
+   * <li> Range partitioning is done on a string dimension or an unknown dimension
+   * (since MSQ does not support partitioning on a multi-valued string dimension) </li>
+   * <li> Rollup is done on a string dimension or an unknown dimension
+   * (since MSQ requires multi-valued string dimensions to be converted to arrays for rollup) </li>
+   * </ul>
+   * @return false for native engine, true for MSQ engine only when partitioning or rollup is done on a string
+   * or unknown dimension.
+   */
+  boolean identifyMultiValuedDimensions()
+  {
+    if (compactionRunner instanceof NativeCompactionRunner) {
+      return false;
+    }
+    // Rollup can be true even when granularitySpec is not known since rollup is then decided based on segment analysis
+    final boolean isPossiblyRollup = granularitySpec == null || !Boolean.FALSE.equals(granularitySpec.isRollup());
+    boolean isRangePartitioned = tuningConfig != null
+                                 && tuningConfig.getPartitionsSpec() instanceof DimensionRangePartitionsSpec;
+
+    if (dimensionsSpec == null || dimensionsSpec.getDimensions().isEmpty()) {
+      return isPossiblyRollup || isRangePartitioned;
+    } else {
+      boolean isRollupOnStringDimension = isPossiblyRollup &&
+                                          dimensionsSpec.getDimensions()
+                                                        .stream()
+                                                        .anyMatch(dim -> ColumnType.STRING.equals(dim.getColumnType()));
+
+      boolean isPartitionedOnStringDimension =
+          isRangePartitioned &&
+          dimensionsSpec.getDimensions()
+                        .stream()
+                        .anyMatch(
+                            dim -> ColumnType.STRING.equals(dim.getColumnType())
+                                   && ((DimensionRangePartitionsSpec) tuningConfig.getPartitionsSpec())
+                                       .getPartitionDimensions()
+                                       .contains(dim.getName())
+                        );
+      return isRollupOnStringDimension || isPartitionedOnStringDimension;
+    }
+  }
+
   @Override
   public TaskStatus runTask(TaskToolbox toolbox) throws Exception
   {
@@ -466,7 +512,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
         metricsSpec,
         granularitySpec,
         getMetricBuilder(),
-        !(compactionRunner instanceof NativeCompactionRunner)
+        this.identifyMultiValuedDimensions()
     );
 
     registerResourceCloserOnAbnormalExit(compactionRunner.getCurrentSubTaskHolder());
@@ -492,7 +538,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       final LockGranularity lockGranularityInUse,
       final SegmentProvider segmentProvider,
       @Nullable final DimensionsSpec dimensionsSpec,
-      @Nullable final ClientCompactionTaskTransformSpec transformSpec,
+      @Nullable final CompactionTransformSpec transformSpec,
       @Nullable final AggregatorFactory[] metricsSpec,
       @Nullable final ClientCompactionTaskGranularitySpec granularitySpec,
       final ServiceMetricEvent.Builder metricBuilder,
@@ -615,7 +661,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       Interval totalInterval,
       Iterable<Pair<DataSegment, Supplier<ResourceHolder<QueryableIndex>>>> segments,
       @Nullable DimensionsSpec dimensionsSpec,
-      @Nullable ClientCompactionTaskTransformSpec transformSpec,
+      @Nullable CompactionTransformSpec transformSpec,
       @Nullable AggregatorFactory[] metricsSpec,
       @Nonnull ClientCompactionTaskGranularitySpec granularitySpec,
       boolean needMultiValuedColumns
@@ -794,23 +840,25 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       this.needMultiValuedDimensions = needMultiValuedDimensions;
     }
 
-    private boolean shouldFetchSegments()
+    /**
+     * Segments are downloaded even when just needMultiValuedDimensions=true since MSQ switches to dynamic partitioning
+     * on finding any 'range' partition dimension to be multivalued at runtime, which ends up in a mismatch between
+     * the compaction config and the actual segments (lastCompactionState), leading to repeated compactions.
+     */
+    private boolean shouldDownloadSegments()
     {
-      // Don't fetch segments for just needMultiValueDimensions
-      return needRollup || needQueryGranularity || needDimensionsSpec || needMetricsSpec;
+
+      return needRollup || needQueryGranularity || needDimensionsSpec || needMetricsSpec || needMultiValuedDimensions;
     }
 
     public void fetchAndProcessIfNeeded()
     {
-      if (!shouldFetchSegments()) {
+      if (!shouldDownloadSegments()) {
         // Nothing to do; short-circuit and don't fetch segments.
         return;
       }
 
-      if (needMultiValuedDimensions) {
-        multiValuedDimensions = new HashSet<>();
-      }
-
+      multiValuedDimensions = new HashSet<>();
       final List<Pair<DataSegment, Supplier<ResourceHolder<QueryableIndex>>>> segments = sortSegmentsListNewestFirst();
 
       for (Pair<DataSegment, Supplier<ResourceHolder<QueryableIndex>>> segmentPair : segments) {
@@ -1105,7 +1153,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
     @Nullable
     private DimensionsSpec dimensionsSpec;
     @Nullable
-    private ClientCompactionTaskTransformSpec transformSpec;
+    private CompactionTransformSpec transformSpec;
     @Nullable
     private AggregatorFactory[] metricsSpec;
     @Nullable
@@ -1161,7 +1209,7 @@ public class CompactionTask extends AbstractBatchIndexTask implements PendingSeg
       return this;
     }
 
-    public Builder transformSpec(ClientCompactionTaskTransformSpec transformSpec)
+    public Builder transformSpec(CompactionTransformSpec transformSpec)
     {
       this.transformSpec = transformSpec;
       return this;

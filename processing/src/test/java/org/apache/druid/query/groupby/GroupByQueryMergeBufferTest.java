@@ -124,6 +124,7 @@ public class GroupByQueryMergeBufferTest extends InitializedNullHandlingTest
   )
   {
     final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
+    final GroupByStatsProvider groupByStatsProvider = new GroupByStatsProvider();
     final GroupByResourcesReservationPool groupByResourcesReservationPool =
         new GroupByResourcesReservationPool(MERGE_BUFFER_POOL, config);
 
@@ -133,7 +134,8 @@ public class GroupByQueryMergeBufferTest extends InitializedNullHandlingTest
         groupByResourcesReservationPool,
         TestHelper.makeJsonMapper(),
         mapper,
-        QueryRunnerTestHelper.NOOP_QUERYWATCHER
+        QueryRunnerTestHelper.NOOP_QUERYWATCHER,
+        groupByStatsProvider
     );
     final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(
         groupingEngine,

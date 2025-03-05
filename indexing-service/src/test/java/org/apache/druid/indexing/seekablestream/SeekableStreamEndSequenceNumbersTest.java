@@ -50,7 +50,7 @@ public class SeekableStreamEndSequenceNumbersTest
     // Check round-trip.
     final SeekableStreamEndSequenceNumbers<Integer, Long> partitions2 = OBJECT_MAPPER.readValue(
         serializedString,
-        new TypeReference<SeekableStreamEndSequenceNumbers<Integer, Long>>() {}
+        new TypeReference<>() {}
     );
 
     Assert.assertEquals("Round trip", partitions, partitions2);

@@ -622,7 +622,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   )
   {
     return getDBI().inTransaction(
-        new TransactionCallback<Void>()
+        new TransactionCallback<>()
         {
           @Override
           public Void inTransaction(Handle handle, TransactionStatus transactionStatus)
@@ -668,7 +668,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   {
     return getDBI().inTransaction(
         TransactionIsolationLevel.REPEATABLE_READ,
-        new TransactionCallback<Boolean>()
+        new TransactionCallback<>()
         {
           @Override
           public Boolean inTransaction(Handle handle, TransactionStatus transactionStatus)
@@ -886,12 +886,32 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     return makeDatasource(getConfig(), getValidationQuery());
   }
 
+  public final <T> T retryReadOnlyTransaction(
+      final TransactionCallback<T> callback,
+      int quietTries,
+      int maxTries
+  )
+  {
+    try {
+      return RetryUtils.retry(
+          () -> getDBI().inTransaction(TransactionIsolationLevel.READ_COMMITTED, callback),
+          shouldRetry,
+          quietTries,
+          maxTries
+      );
+    }
+    catch (Exception e) {
+      Throwables.throwIfUnchecked(e);
+      throw new RuntimeException(e);
+    }
+  }
+
   public final <T> T inReadOnlyTransaction(
       final TransactionCallback<T> callback
   )
   {
     return getDBI().withHandle(
-        new HandleCallback<T>()
+        new HandleCallback<>()
         {
           @Override
           public T withHandle(Handle handle) throws Exception

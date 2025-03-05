@@ -17,15 +17,12 @@
  */
 
 import { render } from '@testing-library/react';
-import React from 'react';
-
-import { Capabilities } from '../../../helpers';
 
 import { StatusCard } from './status-card';
 
 describe('StatusCard', () => {
   it('matches snapshot', () => {
-    const statusCard = <StatusCard capabilities={Capabilities.FULL} />;
+    const statusCard = <StatusCard />;
 
     const { container } = render(statusCard);
     expect(container.firstChild).toMatchSnapshot();

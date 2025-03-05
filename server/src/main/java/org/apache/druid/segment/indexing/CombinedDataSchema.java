@@ -21,8 +21,8 @@ package org.apache.druid.segment.indexing;
 
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.indexer.granularity.GranularitySpec;
 import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.transform.TransformSpec;
 
 import javax.annotation.Nullable;

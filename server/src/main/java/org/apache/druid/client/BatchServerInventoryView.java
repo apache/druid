@@ -98,7 +98,7 @@ public class BatchServerInventoryView implements ServerInventoryView, FilteredSe
           }
         },
         Execs.singleThreaded(pathChildrenCacheExecPrefix + "-%s"),
-        new CuratorInventoryManagerStrategy<DruidServer, Set<DataSegment>>()
+        new CuratorInventoryManagerStrategy<>()
         {
           @Override
           public DruidServer deserializeContainer(byte[] bytes)
@@ -115,9 +115,7 @@ public class BatchServerInventoryView implements ServerInventoryView, FilteredSe
           public Set<DataSegment> deserializeInventory(byte[] bytes)
           {
             try {
-              return jsonMapper.readValue(bytes, new TypeReference<Set<DataSegment>>()
-              {
-              });
+              return jsonMapper.readValue(bytes, new TypeReference<>() {});
             }
             catch (IOException e) {
               log.error(e, "Could not parse json: %s", StringUtils.fromUtf8(bytes));
@@ -343,7 +341,7 @@ public class BatchServerInventoryView implements ServerInventoryView, FilteredSe
             Iterables.filter(
                 Iterables.transform(
                     inventory,
-                    new Function<DataSegment, Pair<DruidServerMetadata, DataSegment>>()
+                    new Function<>()
                     {
                       @Override
                       public Pair<DruidServerMetadata, DataSegment> apply(DataSegment input)

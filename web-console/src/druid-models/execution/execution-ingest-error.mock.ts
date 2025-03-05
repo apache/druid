@@ -449,7 +449,6 @@ export const EXECUTION_INGEST_ERROR = Execution.fromTaskReport({
     },
     sqlResultsContext: {
       timeZone: 'UTC',
-      serializeComplexValues: true,
       stringifyArrays: true,
     },
     sqlTypeNames: ['TIMESTAMP', 'VARCHAR'],

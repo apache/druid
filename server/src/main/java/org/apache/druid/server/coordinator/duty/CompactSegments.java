@@ -32,7 +32,6 @@ import org.apache.druid.client.indexing.ClientCompactionTaskDimensionsSpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
 import org.apache.druid.client.indexing.ClientCompactionTaskQuery;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
-import org.apache.druid.client.indexing.ClientCompactionTaskTransformSpec;
 import org.apache.druid.client.indexing.ClientMSQContext;
 import org.apache.druid.client.indexing.TaskPayloadResponse;
 import org.apache.druid.common.guava.FutureUtils;
@@ -48,6 +47,7 @@ import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.metadata.LockFilterPolicy;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.rpc.indexing.OverlordClient;
+import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.server.compaction.CompactionCandidate;
 import org.apache.druid.server.compaction.CompactionCandidateSearchPolicy;
 import org.apache.druid.server.compaction.CompactionSegmentIterator;
@@ -513,14 +513,6 @@ public class CompactSegments implements CoordinatorCustomDuty
         dimensionsSpec = null;
       }
 
-      // Create transformSpec to send to compaction task
-      ClientCompactionTaskTransformSpec transformSpec = null;
-      if (config.getTransformSpec() != null) {
-        transformSpec = new ClientCompactionTaskTransformSpec(
-            config.getTransformSpec().getFilter()
-        );
-      }
-
       Boolean dropExisting = null;
       if (config.getIoConfig() != null) {
         dropExisting = config.getIoConfig().isDropExisting();
@@ -584,7 +576,7 @@ public class CompactSegments implements CoordinatorCustomDuty
           granularitySpec,
           dimensionsSpec,
           config.getMetricsSpec(),
-          transformSpec,
+          config.getTransformSpec(),
           dropExisting,
           autoCompactionContext,
           new ClientCompactionRunnerInfo(compactionEngine)
@@ -687,7 +679,7 @@ public class CompactSegments implements CoordinatorCustomDuty
       ClientCompactionTaskGranularitySpec granularitySpec,
       @Nullable ClientCompactionTaskDimensionsSpec dimensionsSpec,
       @Nullable AggregatorFactory[] metricsSpec,
-      @Nullable ClientCompactionTaskTransformSpec transformSpec,
+      @Nullable CompactionTransformSpec transformSpec,
       @Nullable Boolean dropExisting,
       @Nullable Map<String, Object> context,
       ClientCompactionRunnerInfo compactionRunner

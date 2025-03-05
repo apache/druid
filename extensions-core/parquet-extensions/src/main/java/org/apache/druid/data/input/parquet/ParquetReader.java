@@ -101,7 +101,7 @@ public class ParquetReader extends IntermediateRowParsingReader<Group>
       Thread.currentThread().setContextClassLoader(currentClassLoader);
     }
 
-    return new CloseableIterator<Group>()
+    return new CloseableIterator<>()
     {
       Group value = null;
 

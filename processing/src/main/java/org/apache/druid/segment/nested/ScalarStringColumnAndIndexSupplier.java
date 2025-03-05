@@ -85,7 +85,8 @@ public class ScalarStringColumnAndIndexSupplier implements Supplier<NestedCommon
         );
         final CompressedVSizeColumnarIntsSupplier ints = CompressedVSizeColumnarIntsSupplier.fromByteBuffer(
             encodedValueColumn,
-            byteOrder
+            byteOrder,
+            columnBuilder.getFileMapper()
         );
         final ByteBuffer valueIndexBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
             mapper,
@@ -117,6 +118,7 @@ public class ScalarStringColumnAndIndexSupplier implements Supplier<NestedCommon
   private final Supplier<ColumnarInts> encodedColumnSupplier;
   private final GenericIndexed<ImmutableBitmap> valueIndexes;
   private final ColumnIndexSupplier stringIndexSupplier;
+  private final BitmapSerdeFactory serdeFactory;
 
   private ScalarStringColumnAndIndexSupplier(
       Supplier<? extends Indexed<ByteBuffer>> dictionarySupplier,
@@ -128,6 +130,7 @@ public class ScalarStringColumnAndIndexSupplier implements Supplier<NestedCommon
     this.dictionarySupplier = dictionarySupplier;
     this.encodedColumnSupplier = encodedColumnSupplier;
     this.valueIndexes = valueIndexes;
+    this.serdeFactory = serdeFactory;
     this.stringIndexSupplier = new StringUtf8ColumnIndexSupplier<>(
         serdeFactory.getBitmapFactory(),
         dictionarySupplier,
@@ -139,7 +142,12 @@ public class ScalarStringColumnAndIndexSupplier implements Supplier<NestedCommon
   @Override
   public NestedCommonFormatColumn get()
   {
-    return new StringUtf8DictionaryEncodedColumn(encodedColumnSupplier.get(), null, dictionarySupplier.get());
+    return new StringUtf8DictionaryEncodedColumn(
+        encodedColumnSupplier.get(),
+        null,
+        dictionarySupplier.get(),
+        serdeFactory.getBitmapFactory()
+    );
   }
 
   @Nullable

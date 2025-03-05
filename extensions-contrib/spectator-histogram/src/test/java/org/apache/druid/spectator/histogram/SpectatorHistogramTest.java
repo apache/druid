@@ -281,7 +281,7 @@ public class SpectatorHistogramTest
     histogram.add(32, 4294967295L);
     histogram.add(33, 4294967296L);
 
-    ColumnValueSelector<SpectatorHistogram> selector = new ColumnValueSelector<SpectatorHistogram>()
+    ColumnValueSelector<SpectatorHistogram> selector = new ColumnValueSelector<>()
     {
       private int callCount = 0;
 

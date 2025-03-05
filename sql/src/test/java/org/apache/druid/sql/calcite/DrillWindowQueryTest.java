@@ -22,22 +22,17 @@ package org.apache.druid.sql.calcite;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.ByteStreams;
-import com.google.inject.Injector;
 import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql2rel.SqlToRelConverter;
 import org.apache.commons.io.FileUtils;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.Numbers;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.parsers.TimestampParser;
 import org.apache.druid.query.QueryContexts;
-import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.ValueType;
-import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
-import org.apache.druid.sql.calcite.DisableUnless.DisableUnlessRule;
 import org.apache.druid.sql.calcite.DrillWindowQueryTest.DrillComponentSupplier;
 import org.apache.druid.sql.calcite.NotYetSupported.Modes;
 import org.apache.druid.sql.calcite.NotYetSupported.NotYetSupportedProcessor;
@@ -79,6 +74,7 @@ import java.util.stream.Collectors;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * These test cases are borrowed from the drill-test-framework at
@@ -97,13 +93,6 @@ import static org.junit.Assert.fail;
 @SqlTestFrameworkConfig.ComponentSupplier(DrillComponentSupplier.class)
 public class DrillWindowQueryTest extends BaseCalciteQueryTest
 {
-  static {
-    NullHandling.initializeForTests();
-  }
-
-  @RegisterExtension
-  public DisableUnlessRule disableWhenNonSqlCompat = DisableUnless.SQL_COMPATIBLE;
-
   @RegisterExtension
   public NotYetSupportedProcessor ignoreProcessor = new NotYetSupportedProcessor();
 
@@ -113,8 +102,11 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
   @Test
   public void ensureAllDeclared() throws Exception
   {
+    assumeTrue(DrillWindowQueryTest.class.equals(getClass()));
+
     final URL windowQueriesUrl = ClassLoader.getSystemResource("drill/window/queries/");
     Path windowFolder = new File(windowQueriesUrl.toURI()).toPath();
+
 
     Set<String> allCases = FileUtils
         .streamFiles(windowFolder.toFile(), true, "q")
@@ -230,20 +222,12 @@ public class DrillWindowQueryTest extends BaseCalciteQueryTest
     }
 
     @Override
-    public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
-        QueryRunnerFactoryConglomerate conglomerate,
-        JoinableFactoryWrapper joinableFactory,
-        Injector injector
-    )
+    public SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(SpecificSegmentsQuerySegmentWalker walker)
     {
-      final SpecificSegmentsQuerySegmentWalker retVal = super.createQuerySegmentWalker(
-          conglomerate,
-          joinableFactory,
-          injector);
-
+      super.addSegmentsToWalker(walker);
       final File tmpFolder = tempDirProducer.newTempFolder();
-      TestDataBuilder.attachIndexesForDrillTestDatasources(retVal, tmpFolder);
-      return retVal;
+      TestDataBuilder.attachIndexesForDrillTestDatasources(walker, tmpFolder);
+      return walker;
     }
   }
 

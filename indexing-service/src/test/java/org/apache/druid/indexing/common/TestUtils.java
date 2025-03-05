@@ -25,19 +25,18 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.data.input.impl.NoopInputFormat;
 import org.apache.druid.data.input.impl.NoopInputSource;
 import org.apache.druid.guice.DruidSecondaryModule;
 import org.apache.druid.indexing.common.stats.DropwizardRowIngestionMetersFactory;
 import org.apache.druid.indexing.common.task.TestAppenderatorsManager;
-import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexSupervisorTaskClientProvider;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.expression.LookupEnabledTestExprMacroTable;
+import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.IndexIO;
 import org.apache.druid.segment.IndexMergerV9;
@@ -63,10 +62,6 @@ import java.util.concurrent.TimeUnit;
 public class TestUtils
 {
   public static final OverlordClient OVERLORD_SERVICE_CLIENT = new NoopOverlordClient();
-  public static final ParallelIndexSupervisorTaskClientProvider TASK_CLIENT_PROVIDER =
-      (supervisorTaskId, httpTimeout, numRetries) -> {
-        throw new UnsupportedOperationException();
-      };
   public static final AppenderatorsManager APPENDERATORS_MANAGER = new TestAppenderatorsManager();
 
   private static final Logger log = new Logger(TestUtils.class);

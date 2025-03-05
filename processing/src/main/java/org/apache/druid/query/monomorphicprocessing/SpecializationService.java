@@ -93,7 +93,7 @@ public final class SpecializationService
   private static final AtomicLong SPECIALIZED_CLASS_COUNTER = new AtomicLong();
 
   private static final ClassValue<PerPrototypeClassState> PER_PROTOTYPE_CLASS_STATE =
-      new ClassValue<PerPrototypeClassState>()
+      new ClassValue<>()
       {
         @Override
         protected PerPrototypeClassState computeValue(Class<?> type)

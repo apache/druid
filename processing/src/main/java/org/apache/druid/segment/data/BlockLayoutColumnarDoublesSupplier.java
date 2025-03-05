@@ -21,6 +21,7 @@ package org.apache.druid.segment.data;
 
 import com.google.common.base.Supplier;
 import org.apache.druid.collections.ResourceHolder;
+import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -36,16 +37,23 @@ public class BlockLayoutColumnarDoublesSupplier implements Supplier<ColumnarDoub
 
   // The number of doubles per buffer.
   private final int sizePer;
+  private final CompressionStrategy strategy;
 
   public BlockLayoutColumnarDoublesSupplier(
       int totalSize,
       int sizePer,
       ByteBuffer fromBuffer,
       ByteOrder byteOrder,
-      CompressionStrategy strategy
+      CompressionStrategy strategy,
+      SmooshedFileMapper smooshMapper
   )
   {
-    baseDoubleBuffers = GenericIndexed.read(fromBuffer, DecompressingByteBufferObjectStrategy.of(byteOrder, strategy));
+    this.strategy = strategy;
+    this.baseDoubleBuffers = GenericIndexed.read(
+        fromBuffer,
+        DecompressingByteBufferObjectStrategy.of(byteOrder, strategy),
+        smooshMapper
+    );
     this.totalSize = totalSize;
     this.sizePer = sizePer;
   }
@@ -78,7 +86,8 @@ public class BlockLayoutColumnarDoublesSupplier implements Supplier<ColumnarDoub
     }
   }
 
-  private class BlockLayoutColumnarDoubles implements ColumnarDoubles
+  // This needs to be a public class so that SemanticCreator is able to call it.
+  public class BlockLayoutColumnarDoubles implements ColumnarDoubles
   {
     final Indexed<ResourceHolder<ByteBuffer>> singleThreadedDoubleBuffers = baseDoubleBuffers.singleThreaded();
 
@@ -90,6 +99,11 @@ public class BlockLayoutColumnarDoublesSupplier implements Supplier<ColumnarDoub
      */
     @Nullable
     DoubleBuffer doubleBuffer;
+
+    public CompressionStrategy getCompressionStrategy()
+    {
+      return strategy;
+    }
 
     @Override
     public int size()
