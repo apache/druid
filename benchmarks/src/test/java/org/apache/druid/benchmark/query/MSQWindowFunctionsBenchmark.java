@@ -21,7 +21,6 @@ package org.apache.druid.benchmark.query;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Injector;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
@@ -70,10 +69,6 @@ import java.util.concurrent.TimeUnit;
 @SqlTestFrameworkConfig.ComponentSupplier(MSQWindowFunctionsBenchmark.MSQComponentSupplier.class)
 public class MSQWindowFunctionsBenchmark extends BaseCalciteQueryTest
 {
-  static {
-    NullHandling.initializeForTests();
-  }
-
   private static final Logger log = new Logger(MSQWindowFunctionsBenchmark.class);
   private final Closer closer = Closer.create();
 

@@ -37,7 +37,7 @@ import java.util.concurrent.ScheduledExecutorService;
  * Factory for building {@link DirectDruidClient}
  */
 @LazySingleton
-public class DirectDruidClientFactory
+public class DirectDruidClientFactory implements QueryableDruidServer.Maker
 {
   private final ServiceEmitter emitter;
   private final QueryRunnerFactoryConglomerate conglomerate;
@@ -77,5 +77,11 @@ public class DirectDruidClientFactory
         emitter,
         queryCancellationExecutor
     );
+  }
+
+  @Override
+  public QueryableDruidServer make(DruidServer server)
+  {
+    return new QueryableDruidServer(server, makeDirectClient(server));
   }
 }

@@ -103,7 +103,7 @@ Example:
 
 #### `doubleMin` aggregator
 
-`doubleMin` computes the minimum of all input values and null if `druid.generic.useDefaultValueForNull` is false or Double.POSITIVE_INFINITY if true.
+`doubleMin` computes the minimum of all input values and null.
 
 Example:
 ```json
@@ -112,7 +112,7 @@ Example:
 
 #### `doubleMax` aggregator
 
-`doubleMax` computes the maximum of all input values and null if `druid.generic.useDefaultValueForNull` is false or Double.NEGATIVE_INFINITY if true.
+`doubleMax` computes the maximum of all input values and null.
 
 Example:
 ```json
@@ -121,7 +121,7 @@ Example:
 
 #### `floatMin` aggregator
 
-`floatMin` computes the minimum of all input values and null if `druid.generic.useDefaultValueForNull` is false or Float.POSITIVE_INFINITY if true.
+`floatMin` computes the minimum of all input values and null.
 
 Example:
 ```json
@@ -130,7 +130,7 @@ Example:
 
 #### `floatMax` aggregator
 
-`floatMax` computes the maximum of all input values and null if `druid.generic.useDefaultValueForNull` is false or Float.NEGATIVE_INFINITY if true.
+`floatMax` computes the maximum of all input values and null.
 
 Example:
 ```json
@@ -139,7 +139,7 @@ Example:
 
 #### `longMin` aggregator
 
-`longMin` computes the minimum of all input values and null if `druid.generic.useDefaultValueForNull` is false or Long.MAX_VALUE if true.
+`longMin` computes the minimum of all input values and null.
 
 Example:
 ```json
@@ -148,7 +148,7 @@ Example:
 
 #### `longMax` aggregator
 
-`longMax` computes the maximum of all metric values and null if `druid.generic.useDefaultValueForNull` is false or Long.MIN_VALUE if true.
+`longMax` computes the maximum of all metric values and null.
 
 Example:
 ```json
@@ -485,7 +485,7 @@ Aggregator applicable only at query time. Aggregates results using [Druid expres
 | `finalize` | The finalize expression which can only refer to a single input variable, `o`. This expression is used to perform any final transformation of the output of the `fold` or `combine` expressions. If not set, then the value is not transformed. | No |
 | `initialValue` | The initial value of the accumulator for the `fold` (and `combine`, if `InitialCombineValue` is null) expression. | Yes |
 | `initialCombineValue` | The initial value of the accumulator for the `combine` expression. | No. Default `initialValue`. |
-| `isNullUnlessAggregated` | Indicates that the default output value should be `null` if the aggregator does not process any rows. If true, the value is `null`, if false, the result of running the expressions with initial values is used instead. | No. Defaults to the value of `druid.generic.useDefaultValueForNull`. |
+| `isNullUnlessAggregated` | If true, sets the default output value to `null` when the aggregator does not process any rows. If false, Druid computes the value as the result of running the expressions with initial values. | No. Defaults to `true`. |
 | `shouldAggregateNullInputs` | Indicates if the `fold` expression should operate on any `null` input values. | No. Defaults to `true`. |
 | `shouldCombineAggregateNullInputs` | Indicates if the `combine` expression should operate on any `null` input values. | No. Defaults to the value of `shouldAggregateNullInputs`. |
 | `maxSizeBytes` | Maximum size in bytes that variably sized aggregator output types such as strings and arrays are allowed to grow to before the aggregation fails. | No. Default is 8192 bytes. |

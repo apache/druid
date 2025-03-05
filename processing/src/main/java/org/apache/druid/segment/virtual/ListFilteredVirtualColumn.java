@@ -30,7 +30,6 @@ import it.unimi.dsi.fastutil.ints.IntIntImmutablePair;
 import it.unimi.dsi.fastutil.ints.IntIntPair;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
@@ -302,7 +301,7 @@ public class ListFilteredVirtualColumn implements VirtualColumn
       IdMapping idMapping
   )
   {
-    final int start = NullHandling.isNullOrEquivalent(delegateIndex.getValue(idMapping.getReverseId(0))) ? 1 : 0;
+    final int start = delegateIndex.getValue(idMapping.getReverseId(0)) == null ? 1 : 0;
     return getBitmapsInRange(
         delegateIndex,
         idMapping,
@@ -663,11 +662,11 @@ public class ListFilteredVirtualColumn implements VirtualColumn
     )
     {
       int startIndex, endIndex;
-      final int firstValue = NullHandling.isNullOrEquivalent(delegate.getValue(idMapping.getReverseId(0))) ? 1 : 0;
+      final int firstValue = delegate.getValue(idMapping.getReverseId(0)) == null ? 1 : 0;
       if (startValue == null) {
         startIndex = firstValue;
       } else {
-        final int found = getReverseIndex(NullHandling.emptyToNullIfNeeded(startValue));
+        final int found = getReverseIndex(startValue);
         if (found >= 0) {
           startIndex = startStrict ? found + 1 : found;
         } else {
@@ -678,7 +677,7 @@ public class ListFilteredVirtualColumn implements VirtualColumn
       if (endValue == null) {
         endIndex = idMapping.getValueCardinality();
       } else {
-        final int found = getReverseIndex(NullHandling.emptyToNullIfNeeded(endValue));
+        final int found = getReverseIndex(endValue);
         if (found >= 0) {
           endIndex = endStrict ? found : found + 1;
         } else {

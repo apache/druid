@@ -21,7 +21,6 @@ package org.apache.druid.segment.generator;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.hash.Hashing;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.AggregateProjectionSpec;
@@ -71,10 +70,6 @@ public class SegmentGenerator implements Closeable
   // Allow users to specify a cache directory via a JVM property or an environment variable.
   private static final String CACHE_DIR_PROPERTY = "druid.benchmark.cacheDir";
   private static final String CACHE_DIR_ENV_VAR = "DRUID_BENCHMARK_CACHE_DIR";
-
-  static {
-    NullHandling.initializeForTests();
-  }
 
   private final File cacheDir;
   private final boolean cleanupCacheDir;

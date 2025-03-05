@@ -23,7 +23,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.bitmap.MutableBitmap;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
@@ -276,7 +275,6 @@ public class NestedDataColumnSerializerV4 implements GenericColumnSerializer<Str
     // null is always 0
     dictionaryWriter.write(null);
     for (String value : strings) {
-      value = NullHandling.emptyToNullIfNeeded(value);
       if (value == null) {
         continue;
       }

@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.filter.vector;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.filter.DruidObjectPredicate;
@@ -44,14 +43,13 @@ public class MultiValueStringVectorValueMatcher implements VectorValueMatcherFac
   @Override
   public VectorValueMatcher makeMatcher(@Nullable final String value)
   {
-    final String etnValue = NullHandling.emptyToNullIfNeeded(value);
     final IdLookup idLookup = selector.idLookup();
     final int id;
 
     if (idLookup != null) {
       // Optimization when names can be looked up to IDs ahead of time.
-      id = idLookup.lookupId(etnValue);
-      final boolean hasNull = NullHandling.isNullOrEquivalent(selector.lookupName(0));
+      id = idLookup.lookupId(value);
+      final boolean hasNull = selector.lookupName(0) == null;
 
       if (id < 0) {
         // Value doesn't exist in this column.
@@ -78,7 +76,7 @@ public class MultiValueStringVectorValueMatcher implements VectorValueMatcherFac
 
             if (n == 0) {
               // null should match empty rows in multi-value columns
-              if (etnValue == null || includeUnknown) {
+              if (value == null || includeUnknown) {
                 selection[numRows++] = rowNum;
               }
             } else {
@@ -97,7 +95,7 @@ public class MultiValueStringVectorValueMatcher implements VectorValueMatcherFac
         }
       };
     } else {
-      return makeMatcher(etnValue == null ? DruidObjectPredicate.isNull() : DruidObjectPredicate.equalTo(etnValue));
+      return makeMatcher(value == null ? DruidObjectPredicate.isNull() : DruidObjectPredicate.equalTo(value));
     }
   }
 

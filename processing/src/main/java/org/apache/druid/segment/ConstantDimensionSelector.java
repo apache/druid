@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.filter.DruidObjectPredicate;
 import org.apache.druid.query.filter.DruidPredicateFactory;
 import org.apache.druid.query.filter.DruidPredicateMatch;
@@ -39,7 +38,7 @@ public class ConstantDimensionSelector implements SingleValueHistoricalDimension
 
   public ConstantDimensionSelector(final String value)
   {
-    if (NullHandling.isNullOrEquivalent(value)) {
+    if (value == null) {
       // There's an optimized implementation for nulls that callers should use instead.
       throw new IllegalArgumentException("Use DimensionSelector.constant(null)");
     }

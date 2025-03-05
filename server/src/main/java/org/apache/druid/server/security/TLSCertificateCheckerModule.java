@@ -38,12 +38,10 @@ public class TLSCertificateCheckerModule implements Module
 {
   private static final String CHECKER_TYPE_PROPERTY = "druid.tls.certificateChecker";
 
-  private final Properties props;
+  private Properties props;
 
   @Inject
-  public TLSCertificateCheckerModule(
-      Properties props
-  )
+  public void setProps(Properties props)
   {
     this.props = props;
   }

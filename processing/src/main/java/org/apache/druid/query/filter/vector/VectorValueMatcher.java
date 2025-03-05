@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.filter.vector;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.filter.Filter;
 import org.apache.druid.segment.IdLookup;
 import org.apache.druid.segment.data.IndexedInts;
@@ -50,7 +49,6 @@ public interface VectorValueMatcher extends VectorSizeInspector
    * @param includeUnknown mapping for Druid native two state logic system into SQL three-state logic system. If set
    *                       to true, match vectors returned by this method should include true values wherever the
    *                       matching result is 'unknown', such as from the input being null valued.
-   *                       See {@link NullHandling#useThreeValueLogic()}.
    *
    * @return the subset of "mask" that this value matcher accepts. May be the same instance as {@param mask} if
    * every row in the mask matches the filter.
@@ -104,7 +102,7 @@ public interface VectorValueMatcher extends VectorSizeInspector
 
             for (int i = 0; i < inputSelectionSize; i++) {
               final int rowNum = inputSelection[i];
-              if (NullHandling.isNullOrEquivalent(selector.lookupName(vector[rowNum]))) {
+              if (selector.lookupName(vector[rowNum]) == null) {
                 outputSelection[outputSelectionSize++] = rowNum;
               }
             }
@@ -180,7 +178,7 @@ public interface VectorValueMatcher extends VectorSizeInspector
               } else {
                 final int size = row.size();
                 for (int j = 0; j < size; j++) {
-                  if (NullHandling.isNullOrEquivalent(selector.lookupName(row.get(j)))) {
+                  if (selector.lookupName(row.get(j)) == null) {
                     selection[numRows++] = rowNum;
                     break;
                   }

@@ -60,8 +60,8 @@ ENV JAVA_HOME=/usr/lib/jvm/zulu17
 ENV PATH $PATH:$JAVA_HOME/bin
 
 # hadoop
-ARG APACHE_ARCHIVE_MIRROR_HOST=https://archive.apache.org
-RUN curl -s ${APACHE_ARCHIVE_MIRROR_HOST}/dist/hadoop/core/hadoop-3.3.6/hadoop-3.3.6.tar.gz | tar -xz -C /usr/local/
+ARG APACHE_ARCHIVE_MIRROR_HOST=https://downloads.apache.org
+RUN curl -s ${APACHE_ARCHIVE_MIRROR_HOST}/hadoop/core/hadoop-3.3.6/hadoop-3.3.6.tar.gz | tar -xz -C /usr/local/
 RUN cd /usr/local && ln -s ./hadoop-3.3.6 hadoop
 
 ENV HADOOP_HOME /usr/local/hadoop

@@ -23,7 +23,6 @@ package org.apache.druid.query.lookup;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.collect.Iterators;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.extraction.MapLookupExtractor;
 
 import javax.annotation.Nullable;
@@ -45,8 +44,8 @@ public abstract class LookupExtractor
    *
    * @param key The value to apply the lookup to.
    *
-   * @return The value for this key, or null when key is `null` in {@link NullHandling#sqlCompatible()} mode, or when
-   * key cannot have the lookup applied to it and should be treated as missing.
+   * @return The value for this key, or null when key is `null` or when key cannot have the lookup applied to it and
+   * should be treated as missing.
    */
   @Nullable
   public abstract String apply(@Nullable String key);
@@ -76,8 +75,7 @@ public abstract class LookupExtractor
    * Otherwise unused. Implementations that override {@link #unapplyAll(Set)} may throw
    * {@link UnsupportedOperationException} from this method.
    *
-   * @param value the value to apply the reverse lookup. {@link NullHandling#emptyToNullIfNeeded(String)} will have
-   *              been applied to the value.
+   * @param value the value to apply the reverse lookup.
    *
    * @return the list of keys that maps to the provided value. In SQL-compatible null handling mode, null keys
    * are omitted.
@@ -87,8 +85,7 @@ public abstract class LookupExtractor
   /**
    * Reverse lookup from a given set of values.
    *
-   * @param values set of values to reverse lookup. {@link NullHandling#emptyToNullIfNeeded(String)} will have
-   *               been applied to each value.
+   * @param values set of values to reverse lookup.
    *
    * @return iterator of keys that map to to the provided set of values. May contain duplicate keys. Returns null if
    * this lookup instance does not support reverse lookups. In SQL-compatible null handling mode, null keys are

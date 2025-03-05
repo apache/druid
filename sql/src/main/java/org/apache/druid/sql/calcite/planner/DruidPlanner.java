@@ -35,7 +35,7 @@ import org.apache.calcite.tools.ValidationException;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.query.QueryContext;
-import org.apache.druid.server.security.Access;
+import org.apache.druid.server.security.AuthorizationResult;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
@@ -74,7 +74,7 @@ public class DruidPlanner implements Closeable
 
   public static class AuthResult
   {
-    public final Access authorizationResult;
+    public final AuthorizationResult authorizationResult;
 
     /**
      * Resource actions used with authorizing a cancellation request. These actions
@@ -90,7 +90,7 @@ public class DruidPlanner implements Closeable
     public final Set<ResourceAction> allResourceActions;
 
     public AuthResult(
-        final Access authorizationResult,
+        final AuthorizationResult authorizationResult,
         final Set<ResourceAction> sqlResourceActions,
         final Set<ResourceAction> allResourceActions
     )
@@ -183,7 +183,7 @@ public class DruidPlanner implements Closeable
   /**
    * Uses {@link SqlParameterizerShuttle} to rewrite {@link SqlNode} to swap out any
    * {@link org.apache.calcite.sql.SqlDynamicParam} early for their {@link org.apache.calcite.sql.SqlLiteral}
-   *  replacement.
+   * replacement.
    *
    * @return a rewritten {@link SqlNode} with any dynamic parameters rewritten in the provided {@code original} node,
    * if they were present.
@@ -226,14 +226,14 @@ public class DruidPlanner implements Closeable
    * Authorizes the statement. Done within the planner to enforce the authorization
    * step within the planner's state machine.
    *
-   * @param authorizer   a function from resource actions to a {@link Access} result.
+   * @param authorizer   a function produces {@link AuthorizationResult} based on resource actions.
    * @param extraActions set of additional resource actions beyond those inferred
    *                     from the query itself. Specifically, the set of context keys to
    *                     authorize.
    * @return the return value from the authorizer
    */
   public AuthResult authorize(
-      final Function<Set<ResourceAction>, Access> authorizer,
+      final Function<Set<ResourceAction>, AuthorizationResult> authorizer,
       final Set<ResourceAction> extraActions
   )
   {
@@ -241,14 +241,14 @@ public class DruidPlanner implements Closeable
     Set<ResourceAction> sqlResourceActions = plannerContext.getResourceActions();
     Set<ResourceAction> allResourceActions = new HashSet<>(sqlResourceActions);
     allResourceActions.addAll(extraActions);
-    Access access = authorizer.apply(allResourceActions);
-    plannerContext.setAuthorizationResult(access);
+    AuthorizationResult authorizationResult = authorizer.apply(allResourceActions);
+    plannerContext.setAuthorizationResult(authorizationResult);
 
     // Authorization is done as a flag, not a state, alas.
     // Views prepare without authorization, Avatica does authorize, then prepare,
     // so the only constraint is that authorization be done before planning.
     authorized = true;
-    return new AuthResult(access, sqlResourceActions, allResourceActions);
+    return new AuthResult(authorizationResult, sqlResourceActions, allResourceActions);
   }
 
   /**

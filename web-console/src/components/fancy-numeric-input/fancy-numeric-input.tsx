@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import type { InputGroupProps2, Intent } from '@blueprintjs/core';
+import type { InputGroupProps, Intent } from '@blueprintjs/core';
 import { Button, ButtonGroup, Classes, ControlGroup, InputGroup, Keys } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
@@ -68,7 +68,7 @@ export interface FancyNumericInputProps {
   disabled?: boolean;
   readOnly?: boolean;
   placeholder?: string;
-  onBlur?: InputGroupProps2['onBlur'];
+  onBlur?: InputGroupProps['onBlur'];
 
   value: number | undefined;
   defaultValue?: number;

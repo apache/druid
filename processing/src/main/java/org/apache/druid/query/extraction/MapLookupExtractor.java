@@ -26,7 +26,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.lookup.ImmutableLookupMap;
 import org.apache.druid.query.lookup.LookupExtractor;
@@ -105,13 +104,10 @@ public class MapLookupExtractor extends LookupExtractor
   @Override
   public String apply(@Nullable String key)
   {
-    String keyEquivalent = NullHandling.nullToEmptyIfNeeded(key);
-    if (keyEquivalent == null) {
-      // keyEquivalent is null only for SQL Compatible Null Behavior
-      // otherwise null will be replaced with empty string in nullToEmptyIfNeeded above.
+    if (key == null) {
       return null;
     }
-    return NullHandling.emptyToNullIfNeeded(map.get(keyEquivalent));
+    return map.get(key);
   }
 
   @Override
@@ -129,11 +125,11 @@ public class MapLookupExtractor extends LookupExtractor
         Iterators.filter(
             map.entrySet().iterator(),
             entry -> {
-              if (NullHandling.sqlCompatible() && entry.getKey() == null) {
-                // Null keys are omitted in SQL-compatible mode.
+              if (entry.getKey() == null) {
+                // Null keys are omitted.
                 return false;
               } else {
-                return values.contains(NullHandling.emptyToNullIfNeeded(entry.getValue()));
+                return values.contains(entry.getValue());
               }
             }
         ),

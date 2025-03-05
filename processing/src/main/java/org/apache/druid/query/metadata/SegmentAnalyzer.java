@@ -21,7 +21,6 @@ package org.apache.druid.query.metadata;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
@@ -218,8 +217,8 @@ public class SegmentAnalyzer
         }
       }
       if (analyzingMinMax() && cardinality > 0) {
-        min = NullHandling.nullToEmptyIfNeeded(valueIndex.getValue(0));
-        max = NullHandling.nullToEmptyIfNeeded(valueIndex.getValue(cardinality - 1));
+        min = valueIndex.getValue(0);
+        max = valueIndex.getValue(cardinality - 1);
       }
     } else if (capabilities.isDictionaryEncoded().isTrue()) {
       // fallback if no bitmap index
@@ -228,8 +227,8 @@ public class SegmentAnalyzer
           DictionaryEncodedColumn<String> theColumn = (DictionaryEncodedColumn<String>) column;
           cardinality = theColumn.getCardinality();
           if (analyzingMinMax() && cardinality > 0) {
-            min = NullHandling.nullToEmptyIfNeeded(theColumn.lookupName(0));
-            max = NullHandling.nullToEmptyIfNeeded(theColumn.lookupName(cardinality - 1));
+            min = theColumn.lookupName(0);
+            max = theColumn.lookupName(cardinality - 1);
           }
         } else {
           cardinality = 0;

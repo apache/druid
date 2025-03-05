@@ -21,11 +21,9 @@ package org.apache.druid.segment.join;
 
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.data.IndexedInts;
 import org.junit.Assert;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class PossiblyNullDimensionSelectorTest
@@ -34,12 +32,6 @@ public class PossiblyNullDimensionSelectorTest
 
   private final DimensionSelector onNullSelector = makeSelector(DimensionSelector.constant(null));
   private final DimensionSelector onNonnullSelector = makeSelector(DimensionSelector.constant("foo"));
-
-  @BeforeClass
-  public static void setUpClass()
-  {
-    NullHandling.initializeForTests();
-  }
 
   @Test
   public void test_getRow_normalOnNullSelector()

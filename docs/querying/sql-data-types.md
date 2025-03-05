@@ -67,7 +67,7 @@ The following table describes how Druid maps SQL types onto native types when ru
 |OTHER|COMPLEX|none|May represent various Druid column types such as hyperUnique, approxHistogram, etc.|
 
 <sup>*</sup> 
-The default value is <code>NULL</code> for all types, except in the deprecated legacy mode (<code>druid.generic.useDefaultValueForNull = true</code>) which initialize a default value. 
+The default value is <code>NULL</code> for all types. 
 <br /><br />
 For casts between two SQL types, the behavior depends on the runtime type:
 
@@ -76,7 +76,6 @@ For casts between two SQL types, the behavior depends on the runtime type:
 * Casts between two SQL types that have different Druid runtime types generate a runtime cast in Druid.
 
 If a value cannot be cast to the target type, as in `CAST('foo' AS BIGINT)`, Druid a substitutes [NULL](#null-values).
-When `druid.generic.useDefaultValueForNull = true` (deprecated legacy mode), Druid instead substitutes a default value, including when NULL values cast to non-nullable types. For example, if `druid.generic.useDefaultValueForNull = true`, a null VARCHAR cast to BIGINT is converted to a zero.
 
 ## Arrays
 
@@ -141,53 +140,12 @@ as regular JSON arrays instead of in stringified form.
 ## NULL values
 
 By default, Druid treats NULL values similarly to the ANSI SQL standard.
-In the default mode:
-- numeric NULL is permitted.
-- NULL values and empty strings are not equal.
 
-This manner of null handling applies to both storage and queries.
-The [`druid.generic.useDefaultValueForNull`](../configuration/index.md#sql-compatible-null-handling)
-runtime property controls Druid's NULL handling mode. For the most SQL compliant behavior, maintain the default value of `false`.
-
-There is some performance impact for null handling. see [segment internals](../design/segments.md#handling-null-values) for more information.
 For examples of null handling, see the [null handling tutorial](../tutorials/tutorial-sql-null.md).
-
-### Legacy null handling mode
-
-:::info
-To ensure Druid always behaves in an ANSI SQL compatible manner, this mode will be removed in a future release.
-:::
-
-You can set `druid.generic.useDefaultValueForNull = true` to revert to Druid's deprecated legacy null handling mode, the default for Druid 27.0.0 and prior releases. This mode is not recommended.
-
-When running in the deprecated legacy mode, Druid treats NULL values and empty strings interchangeably.
-In this mode:
-- Druid does not distinguish between empty strings and nulls.
-- Druid SQL only has partial support for NULLs.
-- Numeric columns are not nullable; null or missing values are treated as 0. 
-
-For example, the following expressions are equivalent:
-
-- col IS NULL
-- col = ''
-
-Both evaluate to true if col contains an empty string.
-Similarly, the expression COALESCE(`col1`, `col2`) returns `col2` if `col1` is an empty string.
-
-The COUNT(*) aggregator counts all rows but the COUNT(expr) aggregator counts the number of rows where expr is neither null nor the empty string.
 
 ## Boolean logic
 
-By default, Druid uses [SQL three-valued logic](https://en.wikipedia.org/wiki/Three-valued_logic#SQL) for filter processing
-and boolean expression evaluation. This behavior relies on three settings:
-
-*  [`druid.generic.useDefaultValueForNull`](../configuration/index.md#sql-compatible-null-handling) must be set to false (default), a runtime property which allows NULL values to exist in numeric columns and expressions, and string typed columns to distinguish between NULL and the empty string 
-*  [`druid.expressions.useStrictBooleans`](../configuration/index.md#expression-processing-configurations) must be set to true (default), a runtime property controls Druid's boolean logic mode for expressions, as well as coercing all expression boolean values to be represented with a 1 for true and 0 for false
-*  [`druid.generic.useThreeValueLogicForNativeFilters`](../configuration/index.md#sql-compatible-null-handling) must be set to true (default), a runtime property which decouples three-value logic handling from `druid.generic.useDefaultValueForNull` and `druid.expressions.useStrictBooleans` for backwards compatibility with older versions of Druid that did not fully support SQL compatible null value logic handling
-
-If any of these settings is configured with a non-default value, Druid will use two-valued logic for non-expression based filters. Expression based filters are controlled independently with `druid.expressions.useStrictBooleans`, which if set to false Druid will use two-valued logic for expressions.
-
-These configurations have been deprecated and will be removed in a future release so that Druid always has SQL compliant behavior.
+Druid uses [SQL three-valued logic](https://en.wikipedia.org/wiki/Three-valued_logic#SQL) for filter processing and boolean expression evaluation.
 
 ## Nested columns
 

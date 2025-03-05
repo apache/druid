@@ -243,7 +243,7 @@ public class OutputChannel
    */
   public OutputChannel readOnly()
   {
-    return readOnly(readableChannelSupplier, partitionNumber);
+    return OutputChannel.readOnly(readableChannelSupplier, partitionNumber);
   }
 
   /**

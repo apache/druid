@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.aggregation.any;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.column.ColumnCapabilities;
@@ -95,6 +94,6 @@ public class DoubleAnyAggregatorFactoryTest extends InitializedNullHandlingTest
     Mockito.doReturn(false).when(capabilities).isNumeric();
     VectorAggregator aggregator = target.factorizeVector(selectorFactory);
     Assert.assertNotNull(aggregator);
-    Assert.assertEquals(NullHandling.defaultDoubleValue(), aggregator.get(BUFFER, POSITION));
+    Assert.assertNull(aggregator.get(BUFFER, POSITION));
   }
 }

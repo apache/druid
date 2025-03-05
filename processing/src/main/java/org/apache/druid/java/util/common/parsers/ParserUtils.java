@@ -25,7 +25,6 @@ import com.google.common.base.Splitter;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Longs;
 import org.apache.commons.lang3.math.NumberUtils;
-import org.apache.druid.common.config.NullHandling;
 import org.joda.time.DateTimeZone;
 
 import javax.annotation.Nullable;
@@ -70,18 +69,17 @@ public class ParserUtils
   {
     return (input) -> {
       if (input == null) {
-        return NullHandling.emptyToNullIfNeeded(input);
+        return input;
       }
 
       if (input.contains(listDelimiter)) {
         return StreamSupport.stream(listSplitter.split(input).spliterator(), false)
-            .map(NullHandling::emptyToNullIfNeeded)
-            .map(value -> tryParseNumbers ? tryParseStringAsNumber(value) : value)
+            .map(value -> tryParseNumbers ? ParserUtils.tryParseStringAsNumber(value) : value)
             .collect(Collectors.toList());
       } else {
         return tryParseNumbers ?
             tryParseStringAsNumber(input) :
-            NullHandling.emptyToNullIfNeeded(input);
+            input;
 
       }
     };
@@ -96,7 +94,7 @@ public class ParserUtils
   private static Object tryParseStringAsNumber(@Nullable final String input)
   {
     if (!NumberUtils.isCreatable(input)) {
-      return NullHandling.emptyToNullIfNeeded(input);
+      return input;
     }
 
     final Long l = Longs.tryParse(input);

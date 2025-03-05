@@ -19,7 +19,6 @@
 
 package org.apache.druid.math.expr.vector;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.Expr;
 
 import java.lang.reflect.Array;
@@ -36,7 +35,6 @@ public abstract class BivariateFunctionVectorObjectProcessor<TLeftInput, TRightI
   final ExprVectorProcessor<TLeftInput> left;
   final ExprVectorProcessor<TRightInput> right;
   final TOutput outValues;
-  final boolean sqlCompatible = NullHandling.sqlCompatible();
 
   protected BivariateFunctionVectorObjectProcessor(
       ExprVectorProcessor<TLeftInput> left,
@@ -60,16 +58,10 @@ public abstract class BivariateFunctionVectorObjectProcessor<TLeftInput, TRightI
     final TLeftInput leftInput = lhs.values();
     final TRightInput rightInput = rhs.values();
 
-    if (sqlCompatible) {
-      for (int i = 0; i < currentSize; i++) {
-        if (Array.get(leftInput, i) == null || Array.get(rightInput, i) == null) {
-          processNull(i);
-        } else {
-          processIndex(leftInput, rightInput, i);
-        }
-      }
-    } else {
-      for (int i = 0; i < currentSize; i++) {
+    for (int i = 0; i < currentSize; i++) {
+      if (Array.get(leftInput, i) == null || Array.get(rightInput, i) == null) {
+        processNull(i);
+      } else {
         processIndex(leftInput, rightInput, i);
       }
     }

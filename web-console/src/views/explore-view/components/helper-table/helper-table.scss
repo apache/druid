@@ -1,0 +1,85 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+.helper-table {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+
+  &:not(:first-child) {
+    border-top: 1px solid black;
+  }
+
+  .helper-header {
+    display: flex;
+
+    .helper-title {
+      flex: 1;
+      padding: 5px 10px;
+      font-weight: bold;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      overflow: hidden;
+    }
+  }
+
+  & > .clearable-input {
+    padding: 1px 2px;
+  }
+
+  .values-container {
+    position: relative;
+    flex: 1;
+
+    .values {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      user-select: none;
+
+      .row {
+        position: relative;
+        display: flex;
+        padding: 5px 10px;
+        cursor: pointer;
+
+        &.with-filter {
+          padding-left: 25px;
+
+          .filter-indicator {
+            position: absolute;
+            top: 2px;
+            left: 1px;
+          }
+        }
+
+        .column-value {
+          flex: 1;
+          white-space: nowrap;
+          text-overflow: ellipsis;
+          overflow: hidden;
+        }
+
+        .value {
+          padding-left: 10px;
+        }
+      }
+    }
+  }
+}

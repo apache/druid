@@ -19,6 +19,7 @@
 
 package org.apache.druid.guice;
 
+import com.google.common.collect.ImmutableSet;
 import com.google.inject.Binder;
 import com.google.inject.TypeLiteral;
 import com.google.inject.multibindings.MapBinder;
@@ -32,6 +33,9 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.segment.SegmentWrangler;
 import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.server.DruidNode;
+
+import java.lang.annotation.Annotation;
+import java.util.Set;
 
 public class DruidBinders
 {
@@ -62,32 +66,73 @@ public class DruidBinders
     );
   }
 
-  public static QueryLogicBinder queryLogicBinder(Binder binder)
+  public static QueryBinder queryBinder(Binder binder)
   {
-    return new QueryLogicBinder(binder);
+    return new QueryBinder(binder);
   }
 
-  public static class QueryLogicBinder
+  public static class QueryBinder
   {
-    private MapBinder<Class<? extends Query>, QueryLogic> queryLogicMapBinder;
-    private Binder binder;
+    MapBinderHelper<Class<? extends Query>, QueryLogic> queryLogicBinder;
+    MapBinderHelper<Class<? extends Query>, QueryRunnerFactory> queryRunnerFactoryBinder;
+    MapBinderHelper<Class<? extends Query>, QueryToolChest> queryToolChestBinder;
 
-    public QueryLogicBinder(Binder binder)
+    public QueryBinder(Binder binder)
     {
-      this.binder = binder;
-      queryLogicMapBinder = queryLogicBinderType(binder);
+      queryLogicBinder = new MapBinderHelper<>(
+          binder,
+          queryLogicBinderType(binder),
+          ImmutableSet.of(LazySingleton.class)
+      );
+      queryRunnerFactoryBinder = new MapBinderHelper<>(
+          binder,
+          queryRunnerFactoryBinder(binder),
+          ImmutableSet.of(LazySingleton.class)
+      );
+      queryToolChestBinder = new MapBinderHelper<>(
+          binder,
+          queryToolChestBinder(binder),
+          ImmutableSet.of(LazySingleton.class)
+      );
     }
 
-    QueryLogicBinder bindQueryLogic(
+    public QueryBinder bindQueryLogic(
         Class<? extends Query> queryTypeClazz,
         Class<? extends QueryLogic> queryLogicClazz)
     {
-      queryLogicMapBinder.addBinding(queryTypeClazz).to(queryLogicClazz);
-      binder.bind(queryLogicClazz).in(LazySingleton.class);
+      queryLogicBinder.bind(queryTypeClazz, queryLogicClazz);
       return this;
     }
-  }
 
+    public QueryBinder bindQueryRunnerFactory(
+        Class<? extends Query> queryTypeClazz,
+        Class<? extends QueryRunnerFactory> queryRunnerFactory)
+    {
+      queryRunnerFactoryBinder.bind(queryTypeClazz, queryRunnerFactory);
+      return this;
+    }
+
+    public QueryBinder naiveBinding2(Class<? extends Query> class1, Class<? extends QueryToolChest> class2)
+    {
+      return bindQueryToolChest(class1, class2);
+    }
+
+    public QueryBinder bindQueryToolChest(
+        Class<? extends Query> queryTypeClazz,
+        Class<? extends QueryToolChest> queryToolChest)
+    {
+      queryToolChestBinder.bind(queryTypeClazz, queryToolChest);
+      return this;
+    }
+
+    public QueryBinder naiveBinding(
+        Class<? extends Query> queryTypeClazz,
+        Class<? extends QueryRunnerFactory> queryRunnerFactory)
+
+    {
+      return bindQueryRunnerFactory(queryTypeClazz, queryRunnerFactory);
+    }
+  }
 
   public static Multibinder<KeyHolder<DruidNode>> discoveryAnnouncementBinder(Binder binder)
   {
@@ -123,5 +168,41 @@ public class DruidBinders
         new TypeLiteral<>() {},
         new TypeLiteral<>() {}
     );
+  }
+
+  public static class MapBinderHelper<KeyClass, ValueClass>
+  {
+    protected final Binder binder;
+    protected final MapBinder<KeyClass, ValueClass> mapBinder;
+    protected final Set<Class<? extends Annotation>> scopes;
+
+    private MapBinderHelper(
+        Binder binder,
+        MapBinder<KeyClass, ValueClass> mapBinder,
+        Set<Class<? extends Annotation>> scopes)
+    {
+      this.binder = binder;
+      this.mapBinder = mapBinder;
+      this.scopes = scopes;
+    }
+
+    protected Binder getBinder()
+    {
+      return binder;
+    }
+
+    protected MapBinder<KeyClass, ValueClass> getMapBinder()
+    {
+      return mapBinder;
+    }
+
+    public MapBinderHelper<KeyClass, ValueClass> bind(KeyClass key, Class<? extends ValueClass> value)
+    {
+      mapBinder.addBinding(key).to(value);
+      for (Class<? extends Annotation> clazz : scopes) {
+        binder.bind(value).in(clazz);
+      }
+      return this;
+    }
   }
 }

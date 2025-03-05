@@ -21,7 +21,6 @@ package org.apache.druid.query.filter;
 
 import org.apache.druid.annotations.SubclassesMustOverrideEqualsAndHashCode;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.query.filter.vector.VectorValueMatcher;
@@ -60,7 +59,6 @@ public interface Filter
    * @param includeUnknown      mapping for Druid native two state logic system into SQL three-state logic system. If
    *                            set to true, bitmaps returned by this method should include true bits for any rows
    *                            where the matching result is 'unknown', such as from the input being null valued.
-   *                            See {@link NullHandling#useThreeValueLogic()}
    * @param <T>                 type of {@link BitmapResultFactory} results, {@link ImmutableBitmap} by default
    * @return {@link FilterBundle} containing any indexes and/or matchers that are needed to build
    * a cursor

@@ -47,11 +47,17 @@ druid.auth.authenticator.jwt.type=jwt
 ### Properties
 |Property|Description|Default|required|
 |--------|---------------|-----------|-------|
-|`druid.auth.pac4j.cookiePassphrase`|passphrase for encrypting the cookies used to manage authentication session with browser. It can be provided as plaintext string or The [Password Provider](../../operations/password-provider.md).|none|Yes|
+|`druid.auth.pac4j.cookiePassphrase`|Passphrase for encrypting the cookies used to manage authentication session with browser. It can be provided as plaintext string or the (recommended) [Password Provider](../../operations/password-provider.md).|none|Yes|
 |`druid.auth.pac4j.readTimeout`|Socket connect and read timeout duration used when communicating with authentication server|PT5S|No|
 |`druid.auth.pac4j.enableCustomSslContext`|Whether to use custom SSLContext setup via [simple-client-sslcontext](simple-client-sslcontext.md) extension which must be added to extensions list when this property is set to true.|false|No|
 |`druid.auth.pac4j.oidc.clientID`|OAuth Client Application id.|none|Yes|
 |`druid.auth.pac4j.oidc.clientSecret`|OAuth Client Application secret. It can be provided as plaintext string or The [Password Provider](../../operations/password-provider.md).|none|Yes|
 |`druid.auth.pac4j.oidc.discoveryURI`|discovery URI for fetching OP metadata [see this](http://openid.net/specs/openid-connect-discovery-1_0.html).|none|Yes|
 |`druid.auth.pac4j.oidc.oidcClaim`|[claim](https://openid.net/specs/openid-connect-core-1_0.html#Claims) that will be extracted from the ID Token after validation.|name|No|
-|`druid.auth.pac4j.oidc.scope`| scope is used by an application during authentication to authorize access to a user's details                                                                                                       |`openid profile email`|No
+|`druid.auth.pac4j.oidc.scope`| scope is used by an application during authentication to authorize access to a user's details.|`openid profile email`|No|
+
+:::info
+Users must set a strong passphrase to ensure that an attacker is not able to guess it simply by brute force.
+A compromised passphrase may allow an attacker to read and manipulate session cookies.
+For more details, see [CVE-2024-45384](https://nvd.nist.gov/vuln/detail/CVE-2024-45384).
+:::

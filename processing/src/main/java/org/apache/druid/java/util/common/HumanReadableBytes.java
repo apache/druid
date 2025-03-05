@@ -30,7 +30,7 @@ public class HumanReadableBytes
 
   public HumanReadableBytes(String bytes)
   {
-    this.bytes = parse(bytes);
+    this.bytes = HumanReadableBytes.parse(bytes);
   }
 
   public HumanReadableBytes(long bytes)

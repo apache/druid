@@ -57,31 +57,31 @@ public interface Segment extends Closeable
 
   /**
    * Request an implementation of a particular interface.
-   *
+   * <p>
    * If the passed-in interface is {@link QueryableIndex} or {@link CursorFactory}, then this method behaves
    * identically to {@link #asQueryableIndex()} or {@link #asCursorFactory()}. Other interfaces are only
    * expected to be requested by callers that have specific knowledge of extra features provided by specific
    * segment types. For example, an extension might provide a custom Segment type that can offer both
    * StorageAdapter and some new interface. That extension can also offer a Query that uses that new interface.
-   *
+   * <p>
    * Implementations which accept classes other than {@link QueryableIndex} or {@link CursorFactory} are limited
    * to using those classes within the extension. This means that one extension cannot rely on the `Segment.as`
    * behavior of another extension.
    *
    * @param clazz desired interface
    * @param <T>   desired interface
-   *
-   * @return instance of clazz, or null if the interface is not supported by this segment
-   *
-   * @see CursorFactory to make cursors to run queries. Never null.
-   * @see QueryableIndex index object, if this is a memory-mapped regular segment.
-   * @see IndexedTable table object, if this is a joinable indexed table.
-   * @see TimeBoundaryInspector inspector for min/max timestamps, if supported by this segment.
-   * @see PhysicalSegmentInspector inspector for physical segment details, if supported by this segment.
-   * @see MaxIngestedEventTimeInspector inspector for {@link DataSourceMetadataResultValue#getMaxIngestedEventTime()}
-   * @see TopNOptimizationInspector inspector containing information for topN specific optimizations
-   * @see CloseableShapeshifter stepping stone to {@link org.apache.druid.query.rowsandcols.RowsAndColumns}.
-   *
+   * @return instance of clazz, or null if the interface is not supported by this segment, one of the following:
+   * <ul>
+   *   <li> {@link CursorFactory}, to make cursors to run queries. Never null.</li>
+   *   <li> {@link QueryableIndex}, index object, if this is a memory-mapped regular segment.
+   *   <li> {@link IndexedTable}, table object, if this is a joinable indexed table.
+   *   <li> {@link TimeBoundaryInspector}, inspector for min/max timestamps, if supported by this segment.
+   *   <li> {@link PhysicalSegmentInspector}, inspector for physical segment details, if supported by this segment.
+   *   <li> {@link MaxIngestedEventTimeInspector}, inspector for {@link DataSourceMetadataResultValue#getMaxIngestedEventTime()}
+   *   <li> {@link TopNOptimizationInspector}, inspector containing information for topN specific optimizations
+   *   <li> {@link CloseableShapeshifter}, stepping stone to {@link org.apache.druid.query.rowsandcols.RowsAndColumns}.
+   *   <li> {@link BypassRestrictedSegment}, a policy-aware segment, converted from a policy-enforced segment.
+   * </ul>
    */
   @SuppressWarnings({"unused", "unchecked"})
   @Nullable

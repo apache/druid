@@ -46,7 +46,6 @@ exports[`ExecutionDetailsPane matches snapshot no init tab 1`] = `
       <Blueprint5.Tag
         active={false}
         fill={false}
-        interactive={false}
         large={false}
         minimal={true}
         round={false}
@@ -59,7 +58,6 @@ exports[`ExecutionDetailsPane matches snapshot no init tab 1`] = `
         <Blueprint5.Tag
           active={false}
           fill={false}
-          interactive={false}
           large={false}
           minimal={true}
           round={false}
@@ -73,7 +71,6 @@ exports[`ExecutionDetailsPane matches snapshot no init tab 1`] = `
       <Blueprint5.Tag
         active={false}
         fill={false}
-        interactive={false}
         large={false}
         minimal={true}
         round={false}
@@ -85,7 +82,6 @@ exports[`ExecutionDetailsPane matches snapshot no init tab 1`] = `
       <Blueprint5.Tag
         active={false}
         fill={false}
-        interactive={false}
         large={false}
         minimal={true}
         round={false}

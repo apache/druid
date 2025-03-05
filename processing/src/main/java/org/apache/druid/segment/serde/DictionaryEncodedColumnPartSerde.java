@@ -91,7 +91,7 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
 
     public static VERSION fromByte(byte b)
     {
-      final VERSION[] values = values();
+      final VERSION[] values = VERSION.values();
       Preconditions.checkArgument(b < values.length, "Unsupported dictionary column version[%s]", b);
       return values[b];
     }

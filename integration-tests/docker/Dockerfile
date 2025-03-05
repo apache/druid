@@ -24,7 +24,7 @@ ARG KAFKA_VERSION
 # ZooKeeper version to install in the base image
 # This is passed in by maven at build time to align with the client version we depend on in the pom file
 ARG ZK_VERSION
-ARG APACHE_ARCHIVE_MIRROR_HOST=https://archive.apache.org
+ARG APACHE_ARCHIVE_MIRROR_HOST=https://downloads.apache.org
 ARG SETUP_RETRIES=3
 # Retry mechanism for running the setup script up to limit of 3 times.
 RUN set -e; \

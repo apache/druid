@@ -23,7 +23,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.concurrent.Execs;
@@ -112,10 +111,7 @@ public class PollingLookup extends LookupExtractor
   @Nullable
   public String apply(@Nullable String key)
   {
-    String keyEquivalent = NullHandling.nullToEmptyIfNeeded(key);
-    if (keyEquivalent == null) {
-      // valueEquivalent is null only for SQL Compatible Null Behavior
-      // otherwise null will be replaced with empty string in nullToEmptyIfNeeded above.
+    if (key == null) {
       return null;
     }
     final CacheRefKeeper cacheRefKeeper = refOfCacheKeeper.get();
@@ -126,9 +122,9 @@ public class PollingLookup extends LookupExtractor
     try {
       if (cache == null) {
         // it must've been closed after swapping while I was getting it.  Try again.
-        return this.apply(keyEquivalent);
+        return this.apply(key);
       }
-      return NullHandling.emptyToNullIfNeeded((String) cache.get(keyEquivalent));
+      return (String) cache.get(key);
     }
     finally {
       if (cache != null) {
@@ -140,11 +136,7 @@ public class PollingLookup extends LookupExtractor
   @Override
   public List<String> unapply(@Nullable final String value)
   {
-    String valueEquivalent = NullHandling.nullToEmptyIfNeeded(value);
-    if (valueEquivalent == null) {
-      // valueEquivalent is null only for SQL Compatible Null Behavior
-      // otherwise null will be replaced with empty string in nullToEmptyIfNeeded above.
-      // null value maps to empty list when SQL Compatible
+    if (value == null) {
       return Collections.emptyList();
     }
 
@@ -156,9 +148,9 @@ public class PollingLookup extends LookupExtractor
     try {
       if (cache == null) {
         // it must've been closed after swapping while I was getting it.  Try again.
-        return this.unapply(valueEquivalent);
+        return this.unapply(value);
       }
-      return cache.getKeys(valueEquivalent);
+      return cache.getKeys(value);
     }
     finally {
       if (cache != null) {

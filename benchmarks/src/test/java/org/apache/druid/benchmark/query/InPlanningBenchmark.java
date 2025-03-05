@@ -23,7 +23,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.java.util.common.ISE;
@@ -92,7 +91,6 @@ public class InPlanningBenchmark
   private static final Logger log = new Logger(InPlanningBenchmark.class);
 
   static {
-    NullHandling.initializeForTests();
     ExpressionProcessing.initializeForTests();
   }
 

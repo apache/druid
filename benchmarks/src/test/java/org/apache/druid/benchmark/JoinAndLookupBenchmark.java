@@ -21,7 +21,6 @@ package org.apache.druid.benchmark;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -87,10 +86,6 @@ public class JoinAndLookupBenchmark
 {
   private static final String LOOKUP_COUNTRY_CODE_TO_NAME = "country_code_to_name";
   private static final String LOOKUP_COUNTRY_NUMBER_TO_NAME = "country_number_to_name";
-
-  static {
-    NullHandling.initializeForTests();
-  }
 
   @Param({"500000"})
   int rows;

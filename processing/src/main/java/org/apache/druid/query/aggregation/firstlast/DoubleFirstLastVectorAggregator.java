@@ -60,7 +60,7 @@ public class DoubleFirstLastVectorAggregator extends FirstLastVectorAggregator<D
     buf.putLong(position, selectionPredicate.initValue());
     buf.put(
         position + NULLITY_OFFSET,
-        NullHandling.replaceWithDefault() ? NullHandling.IS_NOT_NULL_BYTE : NullHandling.IS_NULL_BYTE
+        NullHandling.IS_NULL_BYTE
     );
     buf.putDouble(position + VALUE_OFFSET, 0.0D);
   }
@@ -99,14 +99,6 @@ public class DoubleFirstLastVectorAggregator extends FirstLastVectorAggregator<D
     buf.put(position + NULLITY_OFFSET, NullHandling.IS_NULL_BYTE);
     buf.putDouble(position + VALUE_OFFSET, 0.0D);
 
-  }
-
-  @Override
-  protected void putDefaultValue(ByteBuffer buf, int position, long time)
-  {
-    buf.putLong(position, time);
-    buf.put(position + NULLITY_OFFSET, NullHandling.IS_NOT_NULL_BYTE);
-    buf.putDouble(position, 0.0D);
   }
 
   @Override

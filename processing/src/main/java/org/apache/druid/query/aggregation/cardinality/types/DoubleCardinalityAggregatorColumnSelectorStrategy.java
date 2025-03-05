@@ -20,17 +20,10 @@
 package org.apache.druid.query.aggregation.cardinality.types;
 
 import com.google.common.hash.Hasher;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.query.aggregation.cardinality.CardinalityAggregator;
 import org.apache.druid.segment.BaseDoubleColumnValueSelector;
 
-/**
- * If performance of this class appears to be a bottleneck for somebody,
- * one simple way to improve it is to split it into two different classes,
- * one that is used when {@link NullHandling#replaceWithDefault()} is false,
- * and one - when it's true, moving this computation out of the tight loop
- */
 public class DoubleCardinalityAggregatorColumnSelectorStrategy
     implements CardinalityAggregatorColumnSelectorStrategy<BaseDoubleColumnValueSelector>
 {
@@ -42,7 +35,7 @@ public class DoubleCardinalityAggregatorColumnSelectorStrategy
   @Override
   public void hashRow(BaseDoubleColumnValueSelector selector, Hasher hasher)
   {
-    if (NullHandling.replaceWithDefault() || !selector.isNull()) {
+    if (!selector.isNull()) {
       hasher.putDouble(selector.getDouble());
     }
   }
@@ -50,7 +43,7 @@ public class DoubleCardinalityAggregatorColumnSelectorStrategy
   @Override
   public void hashValues(BaseDoubleColumnValueSelector selector, HyperLogLogCollector collector)
   {
-    if (NullHandling.replaceWithDefault() || !selector.isNull()) {
+    if (!selector.isNull()) {
       addDoubleToCollector(collector, selector.getDouble());
     }
   }

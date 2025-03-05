@@ -21,7 +21,6 @@ package org.apache.druid.sql.calcite;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.calcite.avatica.SqlType;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.java.util.common.DateTimes;
@@ -34,7 +33,6 @@ import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.groupby.GroupByQuery;
-import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.scan.ScanQuery;
 import org.apache.druid.query.scan.ScanQuery.ResultFormat;
 import org.apache.druid.segment.column.ColumnType;
@@ -127,7 +125,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
         ImmutableList.of(Druids.newTimeseriesQueryBuilder()
                                .dataSource(CalciteTests.DATASOURCE1)
                                .intervals(querySegmentSpec(Filtration.eternity()))
-                               .filters(numericEquality("dim2", 0L, ColumnType.LONG))
+                               .filters(equality("dim2", 0L, ColumnType.LONG))
                                .granularity(Granularities.ALL)
                                .aggregators(aggregators(
                                    new CountAggregatorFactory("a0"),
@@ -139,7 +137,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
                                .context(QUERY_CONTEXT_DEFAULT)
                                .build()),
         ImmutableList.of(
-            new Object[]{11.0, NullHandling.defaultDoubleValue()}
+            new Object[]{11.0, null}
         )
     );
   }
@@ -256,7 +254,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
         ),
         ImmutableList.of(
             new Object[]{"a"},
-            new Object[]{NULL_STRING}
+            new Object[]{null}
         ),
         ImmutableList.of(
             new SqlParameter(SqlType.INTEGER, 1),
@@ -285,11 +283,6 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        NullHandling.replaceWithDefault() ?
-        ImmutableList.of(
-            new Object[]{"", 1.0f, 1L},
-            new Object[]{"2", 3.0f, 1L}
-        ) :
         ImmutableList.of(
             new Object[]{"2", 3.0f, 1L}
         ),
@@ -329,14 +322,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        NullHandling.replaceWithDefault()
-        ? ImmutableList.of(
-            new Object[]{"10.1", 1L},
-            new Object[]{"2", 1L},
-            new Object[]{"abc", 1L},
-            new Object[]{"def", 1L}
-        )
-        : ImmutableList.of(
+        ImmutableList.of(
             new Object[]{"2", 1L},
             new Object[]{"def", 1L}
         ),
@@ -413,7 +399,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
                                .context(QUERY_CONTEXT_DEFAULT)
                                .build()),
         ImmutableList.of(
-            new Object[]{11.0, NullHandling.defaultDoubleValue()}
+            new Object[]{11.0, null}
         )
     );
 
@@ -450,7 +436,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
                                .context(QUERY_CONTEXT_DEFAULT)
                                .build()),
         ImmutableList.of(
-            new Object[]{11.0, NullHandling.defaultDoubleValue()}
+            new Object[]{11.0, null}
         )
     );
   }
@@ -487,7 +473,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
                                .context(QUERY_CONTEXT_DEFAULT)
                                .build()),
         ImmutableList.of(
-            new Object[]{11.0, NullHandling.defaultDoubleValue()}
+            new Object[]{11.0, null}
         )
     );
   }
@@ -503,9 +489,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
                   .filters(
-                      NullHandling.replaceWithDefault()
-                      ? bound("cnt", "1.1", "100000001", true, true, null, StringComparators.NUMERIC)
-                      : range("cnt", ColumnType.DOUBLE, 1.1, 100000001.0, true, true)
+                      range("cnt", ColumnType.DOUBLE, 1.1, 100000001.0, true, true)
                   )
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
                   .context(QUERY_CONTEXT_DEFAULT)
@@ -527,9 +511,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .granularity(Granularities.ALL)
                   .filters(
-                      NullHandling.replaceWithDefault()
-                      ? in("cnt", ImmutableList.of("1.0", "100000001"))
-                      : in("cnt", ColumnType.DOUBLE, ImmutableList.of(1.0, 1.00000001E8))
+                      in("cnt", ColumnType.DOUBLE, ImmutableList.of(1.0, 1.00000001E8))
                   )
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
                   .context(QUERY_CONTEXT_DEFAULT)
@@ -658,23 +640,7 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
         "SELECT COUNT(*)\n"
         + "FROM druid.numfoo\n"
         + "WHERE l1 > ? AND f1 = ?",
-        useDefault
-        ? ImmutableList.of(
-            Druids.newTimeseriesQueryBuilder()
-                  .dataSource(CalciteTests.DATASOURCE3)
-                  .intervals(querySegmentSpec(Filtration.eternity()))
-                  .granularity(Granularities.ALL)
-                  .filters(
-                      and(
-                          bound("l1", "3", null, true, false, null, StringComparators.NUMERIC),
-                          selector("f1", "0.0", null)
-                      )
-                  )
-                  .aggregators(aggregators(new CountAggregatorFactory("a0")))
-                  .context(QUERY_CONTEXT_DEFAULT)
-                  .build()
-        )
-        : ImmutableList.of(
+        ImmutableList.of(
             Druids.newScanQueryBuilder()
                   .dataSource(
                       InlineDataSource.fromIterable(
@@ -722,12 +688,6 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        NullHandling.replaceWithDefault() ?
-        ImmutableList.of(
-            new Object[]{"a", 2L},
-            new Object[]{"abc", 1L},
-            new Object[]{"parameter", 3L}
-        ) :
         ImmutableList.of(
             new Object[]{"", 1L},
             new Object[]{"a", 2L},
@@ -757,12 +717,6 @@ public class CalciteParameterQueryTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        NullHandling.replaceWithDefault() ?
-        ImmutableList.of(
-            new Object[]{"a", 2L},
-            new Object[]{"abc", 1L},
-            new Object[]{"parameter", 3L}
-        ) :
         ImmutableList.of(
             new Object[]{"", 1L},
             new Object[]{"a", 2L},

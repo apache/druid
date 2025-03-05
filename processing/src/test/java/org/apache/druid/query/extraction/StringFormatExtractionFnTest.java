@@ -21,7 +21,6 @@ package org.apache.druid.query.extraction;
 
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.junit.Assert;
 import org.junit.Test;
@@ -57,7 +56,7 @@ public class StringFormatExtractionFnTest
     String test = null;
     Assert.assertEquals("null", format("%s", "nullString").apply(test));
     Assert.assertEquals(
-        NullHandling.emptyToNullIfNeeded(""),
+        "",
         format("%s", "emptyString").apply(test)
     );
     Assert.assertNull(format("%s", "returnNull").apply(test));

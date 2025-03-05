@@ -22,7 +22,6 @@ package org.apache.druid.query.extraction;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.search.SearchQuerySpec;
 
 import javax.annotation.Nullable;
@@ -64,7 +63,7 @@ public class SearchQuerySpecDimExtractionFn extends DimExtractionFn
   @Override
   public String apply(@Nullable String dimValue)
   {
-    return searchQuerySpec.accept(dimValue) ? NullHandling.emptyToNullIfNeeded(dimValue) : null;
+    return searchQuerySpec.accept(dimValue) ? dimValue : null;
   }
 
   @Override

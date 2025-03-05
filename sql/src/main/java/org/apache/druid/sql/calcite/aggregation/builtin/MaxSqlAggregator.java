@@ -71,7 +71,7 @@ public class MaxSqlAggregator extends SimpleSqlAggregator
       default:
         // This error refers to the Druid type. But, we're in SQL validation.
         // It should refer to the SQL type.
-        throw badTypeException(fieldName, "MAX", aggregationType);
+        throw SimpleSqlAggregator.badTypeException(fieldName, "MAX", aggregationType);
     }
   }
 }

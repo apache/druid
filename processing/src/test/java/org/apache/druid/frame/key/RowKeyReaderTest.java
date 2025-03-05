@@ -19,7 +19,6 @@
 
 package org.apache.druid.frame.key;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.frame.testutil.FrameTestUtil;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -53,14 +52,14 @@ public class RowKeyReaderTest extends InitializedNullHandlingTest
 
   private final List<Object> objects = Arrays.asList(
       5L,
-      NullHandling.defaultLongValue(),
+      null,
       6f,
-      NullHandling.defaultFloatValue(),
+      null,
       "foo",
       null,
       Arrays.asList("bar", "qux"),
       7d,
-      NullHandling.defaultDoubleValue(),
+      null,
       new Object[]{"abc", "xyz"}
   );
 

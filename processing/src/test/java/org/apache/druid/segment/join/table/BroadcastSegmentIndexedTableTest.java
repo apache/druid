@@ -26,7 +26,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import it.unimi.dsi.fastutil.ints.IntBidirectionalIterator;
 import it.unimi.dsi.fastutil.ints.IntSortedSet;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.jackson.SegmentizerModule;
 import org.apache.druid.java.util.common.DateTimes;
@@ -180,21 +179,21 @@ public class BroadcastSegmentIndexedTableTest extends InitializedNullHandlingTes
   @Test
   public void testLongKeyColumn()
   {
-    final Long[] vals = new Long[] {NullHandling.replaceWithDefault() ? 0L : null, 10L, 20L};
+    final Long[] vals = new Long[] {null, 10L, 20L};
     checkIndexAndReader(LONG_COL_1, vals);
   }
 
   @Test
   public void testFloatKeyColumn()
   {
-    final Float[] vals = new Float[] {NullHandling.replaceWithDefault() ? 0.0f : null, 10.0f, 20.0f};
+    final Float[] vals = new Float[] {null, 10.0f, 20.0f};
     checkIndexAndReader(FLOAT_COL_1, vals);
   }
 
   @Test
   public void testDoubleKeyColumn()
   {
-    final Double[] vals = new Double[] {NullHandling.replaceWithDefault() ? 0.0 : null, 10.0, 20.0};
+    final Double[] vals = new Double[] {null, 10.0, 20.0};
     checkIndexAndReader(DOUBLE_COL_1, vals);
   }
 

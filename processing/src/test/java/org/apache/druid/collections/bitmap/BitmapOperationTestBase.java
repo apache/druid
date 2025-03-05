@@ -20,7 +20,6 @@
 package org.apache.druid.collections.bitmap;
 
 import org.apache.druid.collections.ResourceHolder;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.extendedset.intset.ImmutableConciseSet;
 import org.apache.druid.java.util.common.ByteBufferUtils;
 import org.apache.druid.utils.CloseableUtils;
@@ -58,10 +57,6 @@ public abstract class BitmapOperationTestBase
   static long roaringCount = 0;
   static long unionCount = 0;
   static long minIntersection = 0;
-
-  static {
-    NullHandling.initializeForTests();
-  }
 
   protected static ResourceHolder<ImmutableConciseSet> makeOffheapConcise(ImmutableConciseSet concise)
   {

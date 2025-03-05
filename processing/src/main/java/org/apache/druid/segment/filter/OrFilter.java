@@ -144,7 +144,7 @@ public class OrFilter implements BooleanFilter
           }
 
           currentMask.removeAll(currentMatch);
-          currentMatch = baseMatchers[i].match(currentMask, false);
+          currentMatch = baseMatchers[i].match(currentMask, includeUnknown);
           retVal.addAll(currentMatch, scratch);
 
           if (currentMatch == currentMask) {

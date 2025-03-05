@@ -160,7 +160,7 @@ public class BasicAuthUtils
       userMap = new HashMap<>();
     } else {
       try {
-        userMap = objectMapper.readValue(userMapBytes, AUTHORIZER_USER_MAP_TYPE_REFERENCE);
+        userMap = objectMapper.readValue(userMapBytes, BasicAuthUtils.AUTHORIZER_USER_MAP_TYPE_REFERENCE);
       }
       catch (IOException ioe) {
         throw new RuntimeException("Couldn't deserialize authorizer userMap!", ioe);
@@ -189,7 +189,7 @@ public class BasicAuthUtils
       groupMappingMap = new HashMap<>();
     } else {
       try {
-        groupMappingMap = objectMapper.readValue(groupMappingMapBytes, AUTHORIZER_GROUP_MAPPING_MAP_TYPE_REFERENCE);
+        groupMappingMap = objectMapper.readValue(groupMappingMapBytes, BasicAuthUtils.AUTHORIZER_GROUP_MAPPING_MAP_TYPE_REFERENCE);
       }
       catch (IOException ioe) {
         throw new RuntimeException("Couldn't deserialize authorizer groupMappingMap!", ioe);
@@ -218,7 +218,7 @@ public class BasicAuthUtils
       roleMap = new HashMap<>();
     } else {
       try {
-        roleMap = objectMapper.readValue(roleMapBytes, AUTHORIZER_ROLE_MAP_TYPE_REFERENCE);
+        roleMap = objectMapper.readValue(roleMapBytes, BasicAuthUtils.AUTHORIZER_ROLE_MAP_TYPE_REFERENCE);
       }
       catch (IOException ioe) {
         throw new RuntimeException("Couldn't deserialize authorizer roleMap!", ioe);

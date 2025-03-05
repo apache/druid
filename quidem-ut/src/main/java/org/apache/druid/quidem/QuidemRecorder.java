@@ -53,7 +53,7 @@ public class QuidemRecorder implements AutoCloseable, DruidHook<String>
     printStream.println("#started " + new Date());
     printStream.println("!use " + quidemURI);
     printStream.println("!set outputformat mysql");
-    hookDispatcher.register(SQL, this);
+    hookDispatcher.register(DruidHook.SQL, this);
   }
 
   @Override
@@ -63,13 +63,13 @@ public class QuidemRecorder implements AutoCloseable, DruidHook<String>
       printStream.close();
       printStream = null;
     }
-    hookDispatcher.unregister(SQL, this);
+    hookDispatcher.unregister(DruidHook.SQL, this);
   }
 
   @Override
   public synchronized void invoke(HookKey<String> key, String query)
   {
-    if (SQL.equals(key)) {
+    if (DruidHook.SQL.equals(key)) {
       if (queries.contains(query)) {
         // ignore duplicate queries
         return;

@@ -38,8 +38,6 @@ public abstract class NumericAnyBufferAggregator<TSelector extends BaseNullableC
   private static final byte BYTE_FLAG_NULL_MASK = 0x01;
   static final int FOUND_VALUE_OFFSET = Byte.BYTES;
 
-  private final boolean useDefault = NullHandling.replaceWithDefault();
-
   final TSelector valueSelector;
 
   public NumericAnyBufferAggregator(TSelector valueSelector)
@@ -61,7 +59,7 @@ public abstract class NumericAnyBufferAggregator<TSelector extends BaseNullableC
   @Override
   public void init(ByteBuffer buf, int position)
   {
-    buf.put(position, useDefault ? NullHandling.IS_NOT_NULL_BYTE : NullHandling.IS_NULL_BYTE);
+    buf.put(position, NullHandling.IS_NULL_BYTE);
     initValue(buf, position);
   }
 
@@ -69,7 +67,7 @@ public abstract class NumericAnyBufferAggregator<TSelector extends BaseNullableC
   public void aggregate(ByteBuffer buf, int position)
   {
     if ((buf.get(position) & BYTE_FLAG_FOUND_MASK) != BYTE_FLAG_FOUND_MASK) {
-      if (useDefault || !valueSelector.isNull()) {
+      if (!valueSelector.isNull()) {
         putValue(buf, position);
         buf.put(position, (byte) (BYTE_FLAG_FOUND_MASK | NullHandling.IS_NOT_NULL_BYTE));
       } else {

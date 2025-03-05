@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment.filter;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.Rows;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.query.filter.DruidDoublePredicate;
@@ -209,8 +208,7 @@ public class PredicateValueMatcherFactory implements ColumnProcessorFactory<Valu
             }
 
             for (String rowValueString : rowValueStrings) {
-              final String coerced = NullHandling.emptyToNullIfNeeded(rowValueString);
-              if (getStringPredicate().apply(coerced).matches(includeUnknown)) {
+              if (getStringPredicate().apply(rowValueString).matches(includeUnknown)) {
                 return true;
               }
             }

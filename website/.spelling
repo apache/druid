@@ -56,6 +56,7 @@ CORS
 CNF
 CPUs
 CSVs
+centralized
 CentralizedDatasourceSchema
 Ceph
 circledR
@@ -179,6 +180,7 @@ LRU
 LZ4
 LZO
 LimitSpec
+LISTAGG
 Long.MAX_VALUE
 Long.MAX_VALUE.
 Long.MIN_VALUE
@@ -346,11 +348,14 @@ filterColumn
 filterValue
 firefox
 firehose
+FirehoseFactory
 firehoses
+FireHydrant
 fromPigAvroStorage
 frontends
 granularities
 granularitySpec
+gRPC
 gzip
 gzipped
 hadoop
@@ -509,6 +514,7 @@ reingesting
 reingestion
 repo
 requireSSL
+resize
 rollup
 rollups
 ROW_NUMBER
@@ -2036,6 +2042,7 @@ autoscale
 autoscalers
 batch_index_task
 cgroup
+cgroupv2
 classloader
 com.metamx
 common.runtime.properties
@@ -2185,9 +2192,7 @@ regionName
 json
 metastore
 UserGroupInformation
-CVE-2019-17571
-CVE-2019-12399
-CVE-2018-17196
+CVE-2024-45384
 bin.tar.gz
 0s
 1T
@@ -2364,6 +2369,7 @@ druid-time-min-max
 sqlserver-metadata-storage
 graphite-emitter|Graphite metrics emitter
 statsd-emitter|StatsD metrics emitter
+statsd
 kafka-emitter|Kafka metrics emitter
 druid-thrift-extensions
 druid-opentsdb-emitter

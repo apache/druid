@@ -133,7 +133,6 @@ public class SqlExecutionReporter
         statsMap.put("identity", plannerContext.getAuthenticationResult().getIdentity());
         queryContext.put("nativeQueryIds", plannerContext.getNativeQueryIds().toString());
       }
-      statsMap.put("context", queryContext);
       if (e != null) {
         statsMap.put("exception", e.toString());
 

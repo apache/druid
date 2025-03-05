@@ -241,7 +241,7 @@ public class ExpressionTypeConversion
   @Nullable
   public static ExpressionType integerMathFunction(@Nullable ExpressionType type, @Nullable ExpressionType other)
   {
-    final ExpressionType functionType = function(type, other);
+    final ExpressionType functionType = ExpressionTypeConversion.function(type, other);
     // any number is long
     return Types.isNumeric(functionType) ? ExpressionType.LONG : functionType;
   }

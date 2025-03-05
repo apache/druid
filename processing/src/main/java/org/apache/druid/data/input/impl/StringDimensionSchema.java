@@ -54,7 +54,7 @@ public class StringDimensionSchema extends DimensionSchema
   @Override
   public String getTypeName()
   {
-    return STRING_TYPE_NAME;
+    return DimensionSchema.STRING_TYPE_NAME;
   }
 
   @Override

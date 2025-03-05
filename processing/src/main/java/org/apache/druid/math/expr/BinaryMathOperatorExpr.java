@@ -21,7 +21,6 @@ package org.apache.druid.math.expr;
 
 import com.google.common.math.LongMath;
 import com.google.common.primitives.Ints;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
 import org.apache.druid.math.expr.vector.VectorMathProcessors;
 import org.apache.druid.math.expr.vector.VectorStringProcessors;
@@ -54,7 +53,7 @@ final class BinPlusExpr extends BinaryEvalOpExprBase
   @Override
   protected ExprEval evalString(@Nullable String left, @Nullable String right)
   {
-    return ExprEval.of(NullHandling.nullToEmptyIfNeeded(left) + NullHandling.nullToEmptyIfNeeded(right));
+    return ExprEval.of(left + right);
   }
 
   @Override

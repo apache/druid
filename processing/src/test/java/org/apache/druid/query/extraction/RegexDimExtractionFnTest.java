@@ -22,7 +22,6 @@ package org.apache.druid.query.extraction;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Sets;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.junit.Assert;
 import org.junit.Test;
@@ -147,11 +146,11 @@ public class RegexDimExtractionFnTest
     String regex = "(.*)/.*/.*";
     ExtractionFn extractionFn = new RegexDimExtractionFn(regex, false, null);
     // no match, map empty input value to null
-    Assert.assertEquals(NullHandling.replaceWithDefault() ? null : "", extractionFn.apply(""));
+    Assert.assertEquals("", extractionFn.apply(""));
     // null value, returns null
-    Assert.assertEquals(null, extractionFn.apply(null));
+    Assert.assertNull(extractionFn.apply(null));
     // empty match, map empty result to null
-    Assert.assertEquals(NullHandling.replaceWithDefault() ? null : "", extractionFn.apply("/a/b"));
+    Assert.assertEquals("", extractionFn.apply("/a/b"));
   }
 
   @Test
@@ -170,8 +169,8 @@ public class RegexDimExtractionFnTest
   {
     String regex = "^()$";
     ExtractionFn extractionFn = new RegexDimExtractionFn(regex, true, "NO MATCH");
-    Assert.assertEquals(NullHandling.replaceWithDefault() ? null : "", extractionFn.apply(""));
-    Assert.assertEquals(NullHandling.replaceWithDefault() ? null : "NO MATCH", extractionFn.apply(null));
+    Assert.assertEquals("", extractionFn.apply(""));
+    Assert.assertEquals("NO MATCH", extractionFn.apply(null));
     Assert.assertEquals("NO MATCH", extractionFn.apply("abc"));
   }
 
@@ -180,10 +179,10 @@ public class RegexDimExtractionFnTest
   {
     String regex = "(bob)";
     ExtractionFn extractionFn = new RegexDimExtractionFn(regex, true, "");
-    Assert.assertEquals(NullHandling.replaceWithDefault() ? null : "", extractionFn.apply(null));
-    Assert.assertEquals(NullHandling.replaceWithDefault() ? null : "", extractionFn.apply(""));
-    Assert.assertEquals(NullHandling.replaceWithDefault() ? null : "", extractionFn.apply("abc"));
-    Assert.assertEquals(NullHandling.replaceWithDefault() ? null : "", extractionFn.apply("123"));
+    Assert.assertEquals("", extractionFn.apply(null));
+    Assert.assertEquals("", extractionFn.apply(""));
+    Assert.assertEquals("", extractionFn.apply("abc"));
+    Assert.assertEquals("", extractionFn.apply("123"));
     Assert.assertEquals("bob", extractionFn.apply("bobby"));
   }
 

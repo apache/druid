@@ -22,7 +22,6 @@ package org.apache.druid.segment;
 import com.google.common.primitives.Doubles;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.MutableBitmap;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.java.util.common.IAE;
@@ -99,7 +98,7 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
         ExprEval<?> eval = ExprEval.bestEffortOf(fieldValue);
         FieldIndexer fieldIndexer = fieldIndexers.get(fieldName);
         if (fieldIndexer == null) {
-          estimatedFieldKeySize += estimateStringSize(fieldName);
+          estimatedFieldKeySize += StructuredDataProcessor.estimateStringSize(fieldName);
           fieldIndexer = new FieldIndexer(globalDictionary);
           fieldIndexers.put(fieldName, fieldIndexer);
         }
@@ -120,7 +119,7 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
         final String fieldName = NestedPathFinder.toNormalizedJsonPath(fieldPath);
         FieldIndexer fieldIndexer = fieldIndexers.get(fieldName);
         if (fieldIndexer == null) {
-          estimatedFieldKeySize += estimateStringSize(fieldName);
+          estimatedFieldKeySize += StructuredDataProcessor.estimateStringSize(fieldName);
           fieldIndexer = new FieldIndexer(globalDictionary);
           fieldIndexers.put(fieldName, fieldIndexer);
         }
@@ -592,7 +591,6 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
     if (root == null) {
       return null;
     }
-    final Object defaultValue = getDefaultValueForType(getLogicalType());
     return new ColumnValueSelector<>()
     {
       @Override
@@ -647,11 +645,11 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
           final StructuredData data = (StructuredData) dims[dimIndex];
           if (data != null) {
             final Object o = ExprEval.bestEffortOf(data.getValue()).valueOrDefault();
-            return o == null ? defaultValue : o;
+            return o;
           }
         }
 
-        return defaultValue;
+        return null;
       }
 
       @Nullable
@@ -824,15 +822,6 @@ public class AutoTypeColumnIndexer implements DimensionIndexer<StructuredData, S
   @Nullable
   private static Object getDefaultValueForType(@Nullable ColumnType columnType)
   {
-    if (NullHandling.replaceWithDefault()) {
-      if (columnType != null) {
-        if (ColumnType.LONG.equals(columnType)) {
-          return NullHandling.defaultLongValue();
-        } else if (ColumnType.DOUBLE.equals(columnType)) {
-          return NullHandling.defaultDoubleValue();
-        }
-      }
-    }
     return null;
   }
 }

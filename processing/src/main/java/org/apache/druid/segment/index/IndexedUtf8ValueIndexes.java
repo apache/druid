@@ -26,7 +26,6 @@ import com.google.common.collect.Iterables;
 import org.apache.druid.annotations.SuppressFBWarnings;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.ByteBufferUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprEval;
@@ -92,7 +91,7 @@ public final class IndexedUtf8ValueIndexes<TDictionary extends Indexed<ByteBuffe
       @Override
       public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
       {
-        if (includeUnknown && NullHandling.isNullOrEquivalent(dictionary.get(0))) {
+        if (includeUnknown && dictionary.get(0) == null) {
           return bitmapResultFactory.unionDimensionValueBitmaps(
               ImmutableList.of(getBitmapForValue(), getBitmap(0))
           );
@@ -187,7 +186,7 @@ public final class IndexedUtf8ValueIndexes<TDictionary extends Indexed<ByteBuffe
           dictionary,
           bitmaps,
           () -> {
-            if (!valuesContainsNull && NullHandling.isNullOrEquivalent(dictionary.get(0))) {
+            if (!valuesContainsNull && dictionary.get(0) == null) {
               return bitmaps.get(0);
             }
             return null;
@@ -204,7 +203,7 @@ public final class IndexedUtf8ValueIndexes<TDictionary extends Indexed<ByteBuffe
         dictionary,
         bitmaps,
         () -> {
-          if (!valuesContainsNull && NullHandling.isNullOrEquivalent(dictionary.get(0))) {
+          if (!valuesContainsNull && dictionary.get(0) == null) {
             return bitmaps.get(0);
           }
           return null;
@@ -241,7 +240,7 @@ public final class IndexedUtf8ValueIndexes<TDictionary extends Indexed<ByteBuffe
       } else {
         tailSet = baseSet;
       }
-      if (tailSet.size() > SORTED_SCAN_RATIO_THRESHOLD * dictionary.size()) {
+      if (tailSet.size() > ValueSetIndexes.SORTED_SCAN_RATIO_THRESHOLD * dictionary.size()) {
         return ValueSetIndexes.buildBitmapColumnIndexFromSortedIteratorScan(
             bitmapFactory,
             ByteBufferUtils.utf8Comparator(),

@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 
+import { Duration } from 'chronoshift';
 import type { SqlAlias, SqlExpression, SqlOrderByExpression, SqlTable } from 'druid-query-toolkit';
 import {
   C,
@@ -31,7 +32,7 @@ import {
 } from 'druid-query-toolkit';
 
 import type { ColumnHint } from '../../../utils';
-import { Duration, forceSignInNumberFormatter, formatNumber, formatPercent } from '../../../utils';
+import { forceSignInNumberFormatter, formatNumber, formatPercent } from '../../../utils';
 import type { ExpressionMeta } from '../models';
 import { Measure } from '../models';
 
@@ -178,7 +179,7 @@ function getInnerJoinConditions(groupByExpressions: SqlAlias[]): SqlExpression[]
   return groupByExpressions.map(groupByExpression =>
     groupByExpression
       .getUnderlyingExpression()
-      .isNotDistinctFrom(T(TOP_VALUES_NAME).column(groupByExpression.getOutputName()!)),
+      .isNotDistinctFrom(T(TOP_VALUES_NAME).column(groupByExpression.getOutputName() || '')),
   );
 }
 

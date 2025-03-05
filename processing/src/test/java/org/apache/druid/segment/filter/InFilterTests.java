@@ -30,7 +30,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.Sets;
 import nl.jqno.equalsverifier.EqualsVerifier;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -139,28 +138,15 @@ public class InFilterTests
           ImmutableList.of("a", "b", "c", "d", "f")
       );
 
-      if (NullHandling.sqlCompatible()) {
-        assertTypedFilterMatches(
-            inFilter("dim1", ColumnType.LONG, Arrays.asList(2L, 10L)),
-            ImmutableList.of("b", "c")
-        );
+      assertTypedFilterMatches(
+          inFilter("dim1", ColumnType.LONG, Arrays.asList(2L, 10L)),
+          ImmutableList.of("b", "c")
+      );
 
-        assertTypedFilterMatches(
-            inFilter("dim1", ColumnType.DOUBLE, Arrays.asList(2.0, 10.0)),
-            ImmutableList.of("b", "c")
-        );
-      } else {
-        // in default value mode, we actually end up using a classic InDimFilter, it does not match numbers well
-        assertTypedFilterMatches(
-            inFilter("dim1", ColumnType.LONG, Arrays.asList(2L, 10L)),
-            ImmutableList.of("b", "c")
-        );
-
-        assertTypedFilterMatches(
-            inFilter("dim1", ColumnType.DOUBLE, Arrays.asList(2.0, 10.0)),
-            ImmutableList.of()
-        );
-      }
+      assertTypedFilterMatches(
+          inFilter("dim1", ColumnType.DOUBLE, Arrays.asList(2.0, 10.0)),
+          ImmutableList.of("b", "c")
+      );
     }
     @Test
     public void testSingleValueStringColumnWithNulls()
@@ -190,46 +176,22 @@ public class InFilterTests
           ImmutableList.of()
       );
 
-      if (NullHandling.sqlCompatible()) {
-        assertFilterMatches(
-            inFilter("dim1", ColumnType.STRING, Arrays.asList(null, "10", "abc")),
-            ImmutableList.of("b", "f")
-        );
-        assertFilterMatches(
-            NotDimFilter.of(inFilter("dim1", ColumnType.STRING, Arrays.asList("-1", "ab", "de"))),
-            ImmutableList.of("a", "b", "c", "d", "e", "f")
-        );
-        assertFilterMatches(
-            NotDimFilter.of(inFilter("s0", ColumnType.STRING, Arrays.asList("a", "b"))),
-            ImmutableList.of("a", "e")
-        );
-        assertFilterMatches(
-            NotDimFilter.of(inFilter("s0", ColumnType.STRING, Collections.singletonList("noexist"))),
-            ImmutableList.of("a", "b", "d", "e", "f")
-        );
-      } else {
-        // typed in filter doesn't support default value mode, so use classic filter only
-        assertLegacyFilterMatches(
-            legacyInFilter("dim1", null, "10", "abc"),
-            ImmutableList.of("a", "b", "f")
-        );
-        assertLegacyFilterMatches(
-            legacyInFilter("dim1", null, "10", "abc"),
-            ImmutableList.of("a", "b", "f")
-        );
-        assertLegacyFilterMatches(
-            NotDimFilter.of(legacyInFilter("dim1", "-1", "ab", "de")),
-            ImmutableList.of("a", "b", "c", "d", "e", "f")
-        );
-        assertLegacyFilterMatches(
-            NotDimFilter.of(legacyInFilter("s0", "a", "b")),
-            ImmutableList.of("a", "c", "e")
-        );
-        assertLegacyFilterMatches(
-            NotDimFilter.of(legacyInFilter("s0", "noexist")),
-            ImmutableList.of("a", "b", "c", "d", "e", "f")
-        );
-      }
+      assertFilterMatches(
+          inFilter("dim1", ColumnType.STRING, Arrays.asList(null, "10", "abc")),
+          ImmutableList.of("b", "f")
+      );
+      assertFilterMatches(
+          NotDimFilter.of(inFilter("dim1", ColumnType.STRING, Arrays.asList("-1", "ab", "de"))),
+          ImmutableList.of("a", "b", "c", "d", "e", "f")
+      );
+      assertFilterMatches(
+          NotDimFilter.of(inFilter("s0", ColumnType.STRING, Arrays.asList("a", "b"))),
+          ImmutableList.of("a", "e")
+      );
+      assertFilterMatches(
+          NotDimFilter.of(inFilter("s0", ColumnType.STRING, Collections.singletonList("noexist"))),
+          ImmutableList.of("a", "b", "d", "e", "f")
+      );
     }
 
     @Test
@@ -237,45 +199,22 @@ public class InFilterTests
     {
       Assume.assumeFalse(isAutoSchema());
 
-      if (NullHandling.sqlCompatible()) {
-        assertFilterMatches(
-            inFilter("dim2", ColumnType.STRING, Collections.singletonList(null)),
-            ImmutableList.of("b", "f")
-        );
-        assertFilterMatches(
-            inFilter("dim2", ColumnType.STRING, Arrays.asList(null, "a")),
-            ImmutableList.of("a", "b", "d", "f")
-        );
-        assertFilterMatches(
-            inFilter("dim2", ColumnType.STRING, Arrays.asList(null, "b")),
-            ImmutableList.of("a", "b", "f")
-        );
-        assertFilterMatches(
-            inFilter("dim2", ColumnType.STRING, Collections.singletonList("")),
-            ImmutableList.of("c")
-        );
-      } else {
-        assertLegacyFilterMatches(
-            legacyInFilter("dim2", "b", "d"),
-            ImmutableList.of("a")
-        );
-        assertLegacyFilterMatches(
-            legacyInFilter("dim2", null),
-            ImmutableList.of("b", "c", "f")
-        );
-        assertLegacyFilterMatches(
-            legacyInFilter("dim2", null, "a"),
-            ImmutableList.of("a", "b", "c", "d", "f")
-        );
-        assertLegacyFilterMatches(
-            legacyInFilter("dim2", null, "b"),
-            ImmutableList.of("a", "b", "c", "f")
-        );
-        assertLegacyFilterMatches(
-            legacyInFilter("dim2", ""),
-            ImmutableList.of("b", "c", "f")
-        );
-      }
+      assertFilterMatches(
+          inFilter("dim2", ColumnType.STRING, Collections.singletonList(null)),
+          ImmutableList.of("b", "f")
+      );
+      assertFilterMatches(
+          inFilter("dim2", ColumnType.STRING, Arrays.asList(null, "a")),
+          ImmutableList.of("a", "b", "d", "f")
+      );
+      assertFilterMatches(
+          inFilter("dim2", ColumnType.STRING, Arrays.asList(null, "b")),
+          ImmutableList.of("a", "b", "f")
+      );
+      assertFilterMatches(
+          inFilter("dim2", ColumnType.STRING, Collections.singletonList("")),
+          ImmutableList.of("c")
+      );
 
       assertFilterMatches(
           inFilter("dim2", ColumnType.STRING, Arrays.asList("", null)),
@@ -323,47 +262,27 @@ public class InFilterTests
       );
 
 
-      if (NullHandling.sqlCompatible()) {
-        assertFilterMatches(
-            inFilter("dim3", ColumnType.STRING, Collections.singletonList("")),
-            ImmutableList.of()
-        );
-        assertFilterMatches(
-            NotDimFilter.of(inFilter("dim3", ColumnType.STRING, Collections.singletonList(""))),
-            ImmutableList.of()
-        );
-        assertFilterMatches(
-            NotDimFilter.of(inFilter("dim3", ColumnType.STRING, Collections.singletonList("a"))),
-            ImmutableList.of()
-        );
-        assertFilterMatches(
-            NotDimFilter.of(inFilter("dim3", ColumnType.STRING, Arrays.asList(null, "a"))),
-            ImmutableList.of()
-        );
-      } else {
-        assertLegacyFilterMatches(
-            legacyInFilter("dim3", ""),
-            ImmutableList.of("a", "b", "c", "d", "e", "f")
-        );
-        assertLegacyFilterMatches(
-            NotDimFilter.of(legacyInFilter("dim3", "")),
-            ImmutableList.of()
-        );
-        assertLegacyFilterMatches(
-            NotDimFilter.of(legacyInFilter("dim3", "a")),
-            ImmutableList.of("a", "b", "c", "d", "e", "f")
-        );
-        assertLegacyFilterMatches(
-            NotDimFilter.of(legacyInFilter("dim3", null, "a")),
-            ImmutableList.of()
-        );
-      }
+      assertFilterMatches(
+          inFilter("dim3", ColumnType.STRING, Collections.singletonList("")),
+          ImmutableList.of()
+      );
+      assertFilterMatches(
+          NotDimFilter.of(inFilter("dim3", ColumnType.STRING, Collections.singletonList(""))),
+          ImmutableList.of()
+      );
+      assertFilterMatches(
+          NotDimFilter.of(inFilter("dim3", ColumnType.STRING, Collections.singletonList("a"))),
+          ImmutableList.of()
+      );
+      assertFilterMatches(
+          NotDimFilter.of(inFilter("dim3", ColumnType.STRING, Arrays.asList(null, "a"))),
+          ImmutableList.of()
+      );
     }
 
     @Test
     public void testNumeric()
     {
-      Assume.assumeTrue(NullHandling.sqlCompatible());
       assertFilterMatches(
           inFilter("f0", ColumnType.FLOAT, Collections.singletonList(0f)),
           ImmutableList.of("a")
@@ -441,77 +360,43 @@ public class InFilterTests
     @Test
     public void testLegacyNumericDefaults()
     {
-      if (canTestNumericNullsAsDefaultValues) {
-        assertLegacyFilterMatches(new InDimFilter("f0", Sets.newHashSet("0"), null), ImmutableList.of("a", "e"));
-        assertLegacyFilterMatches(new InDimFilter("d0", Sets.newHashSet("0"), null), ImmutableList.of("a", "c"));
-        assertLegacyFilterMatches(new InDimFilter("l0", Sets.newHashSet("0"), null), ImmutableList.of("a", "d"));
-        assertLegacyFilterMatches(
-            NotDimFilter.of(new InDimFilter("f0", Sets.newHashSet("0"), null)),
-            ImmutableList.of("b", "c", "d", "f")
-        );
-        assertLegacyFilterMatches(
-            NotDimFilter.of(new InDimFilter("d0", Sets.newHashSet("0"), null)),
-            ImmutableList.of("b", "d", "e", "f")
-        );
-        assertLegacyFilterMatches(
-            NotDimFilter.of(new InDimFilter("l0", Sets.newHashSet("0"), null)),
-            ImmutableList.of("b", "c", "e", "f")
-        );
-        assertLegacyFilterMatches(new InDimFilter("f0", Collections.singleton(null), null), ImmutableList.of());
-        assertLegacyFilterMatches(new InDimFilter("d0", Collections.singleton(null), null), ImmutableList.of());
-        assertLegacyFilterMatches(new InDimFilter("l0", Collections.singleton(null), null), ImmutableList.of());
+      assertLegacyFilterMatches(new InDimFilter("f0", Sets.newHashSet("0"), null), ImmutableList.of("a"));
+      assertLegacyFilterMatches(new InDimFilter("d0", Sets.newHashSet("0"), null), ImmutableList.of("a"));
+      assertLegacyFilterMatches(new InDimFilter("l0", Sets.newHashSet("0"), null), ImmutableList.of("a"));
+      assertLegacyFilterMatches(
+          NotDimFilter.of(new InDimFilter("f0", Sets.newHashSet("0"), null)),
+          ImmutableList.of("b", "c", "d", "f")
+      );
+      assertLegacyFilterMatches(
+          NotDimFilter.of(new InDimFilter("d0", Sets.newHashSet("0"), null)),
+          ImmutableList.of("b", "d", "e", "f")
+      );
+      assertLegacyFilterMatches(
+          NotDimFilter.of(new InDimFilter("l0", Sets.newHashSet("0"), null)),
+          ImmutableList.of("b", "c", "e", "f")
+      );
+      assertLegacyFilterMatches(new InDimFilter("f0", Collections.singleton(null), null), ImmutableList.of("e"));
+      assertLegacyFilterMatches(new InDimFilter("d0", Collections.singleton(null), null), ImmutableList.of("c"));
+      assertLegacyFilterMatches(new InDimFilter("l0", Collections.singleton(null), null), ImmutableList.of("d"));
+      assertLegacyFilterMatches(
+          NotDimFilter.of(new InDimFilter("f0", Collections.singleton(null), null)),
+          ImmutableList.of("a", "b", "c", "d", "f")
+      );
+      assertLegacyFilterMatches(
+          NotDimFilter.of(new InDimFilter("d0", Collections.singleton(null), null)),
+          ImmutableList.of("a", "b", "d", "e", "f")
+      );
+      assertLegacyFilterMatches(
+          NotDimFilter.of(new InDimFilter("l0", Collections.singleton(null), null)),
+          ImmutableList.of("a", "b", "c", "e", "f")
+      );
 
-        assertLegacyFilterMatches(new InDimFilter("f0", Sets.newHashSet("0", "999"), null), ImmutableList.of("a", "e"));
-        assertLegacyFilterMatches(new InDimFilter("d0", Sets.newHashSet("0", "999"), null), ImmutableList.of("a", "c"));
-        assertLegacyFilterMatches(new InDimFilter("l0", Sets.newHashSet("0", "999"), null), ImmutableList.of("a", "d"));
-        assertLegacyFilterMatches(new InDimFilter("f0", Sets.newHashSet(null, "999"), null), ImmutableList.of());
-        assertLegacyFilterMatches(new InDimFilter("d0", Sets.newHashSet(null, "999"), null), ImmutableList.of());
-        assertLegacyFilterMatches(new InDimFilter("l0", Sets.newHashSet(null, "999"), null), ImmutableList.of());
-      } else {
-        assertLegacyFilterMatches(new InDimFilter("f0", Sets.newHashSet("0"), null), ImmutableList.of("a"));
-        assertLegacyFilterMatches(new InDimFilter("d0", Sets.newHashSet("0"), null), ImmutableList.of("a"));
-        assertLegacyFilterMatches(new InDimFilter("l0", Sets.newHashSet("0"), null), ImmutableList.of("a"));
-        assertLegacyFilterMatches(
-            NotDimFilter.of(new InDimFilter("f0", Sets.newHashSet("0"), null)),
-            NullHandling.sqlCompatible()
-            ? ImmutableList.of("b", "c", "d", "f")
-            : ImmutableList.of("b", "c", "d", "e", "f")
-        );
-        assertLegacyFilterMatches(
-            NotDimFilter.of(new InDimFilter("d0", Sets.newHashSet("0"), null)),
-            NullHandling.sqlCompatible()
-            ? ImmutableList.of("b", "d", "e", "f")
-            : ImmutableList.of("b", "c", "d", "e", "f")
-        );
-        assertLegacyFilterMatches(
-            NotDimFilter.of(new InDimFilter("l0", Sets.newHashSet("0"), null)),
-            NullHandling.sqlCompatible()
-            ? ImmutableList.of("b", "c", "e", "f")
-            : ImmutableList.of("b", "c", "d", "e", "f")
-        );
-        assertLegacyFilterMatches(new InDimFilter("f0", Collections.singleton(null), null), ImmutableList.of("e"));
-        assertLegacyFilterMatches(new InDimFilter("d0", Collections.singleton(null), null), ImmutableList.of("c"));
-        assertLegacyFilterMatches(new InDimFilter("l0", Collections.singleton(null), null), ImmutableList.of("d"));
-        assertLegacyFilterMatches(
-            NotDimFilter.of(new InDimFilter("f0", Collections.singleton(null), null)),
-            ImmutableList.of("a", "b", "c", "d", "f")
-        );
-        assertLegacyFilterMatches(
-            NotDimFilter.of(new InDimFilter("d0", Collections.singleton(null), null)),
-            ImmutableList.of("a", "b", "d", "e", "f")
-        );
-        assertLegacyFilterMatches(
-            NotDimFilter.of(new InDimFilter("l0", Collections.singleton(null), null)),
-            ImmutableList.of("a", "b", "c", "e", "f")
-        );
-
-        assertLegacyFilterMatches(new InDimFilter("f0", Sets.newHashSet("0", "999"), null), ImmutableList.of("a"));
-        assertLegacyFilterMatches(new InDimFilter("d0", Sets.newHashSet("0", "999"), null), ImmutableList.of("a"));
-        assertLegacyFilterMatches(new InDimFilter("l0", Sets.newHashSet("0", "999"), null), ImmutableList.of("a"));
-        assertLegacyFilterMatches(new InDimFilter("f0", Sets.newHashSet(null, "999"), null), ImmutableList.of("e"));
-        assertLegacyFilterMatches(new InDimFilter("d0", Sets.newHashSet(null, "999"), null), ImmutableList.of("c"));
-        assertLegacyFilterMatches(new InDimFilter("l0", Sets.newHashSet(null, "999"), null), ImmutableList.of("d"));
-      }
+      assertLegacyFilterMatches(new InDimFilter("f0", Sets.newHashSet("0", "999"), null), ImmutableList.of("a"));
+      assertLegacyFilterMatches(new InDimFilter("d0", Sets.newHashSet("0", "999"), null), ImmutableList.of("a"));
+      assertLegacyFilterMatches(new InDimFilter("l0", Sets.newHashSet("0", "999"), null), ImmutableList.of("a"));
+      assertLegacyFilterMatches(new InDimFilter("f0", Sets.newHashSet(null, "999"), null), ImmutableList.of("e"));
+      assertLegacyFilterMatches(new InDimFilter("d0", Sets.newHashSet(null, "999"), null), ImmutableList.of("c"));
+      assertLegacyFilterMatches(new InDimFilter("l0", Sets.newHashSet(null, "999"), null), ImmutableList.of("d"));
     }
     @Test
     public void testLegacyMatchWithExtractionFn()
@@ -522,58 +407,31 @@ public class InFilterTests
       String nullJsFn = "function(str) { if (str === null) { return 'YES'; } else { return 'NO';} }";
       ExtractionFn yesNullFn = new JavaScriptExtractionFn(nullJsFn, false, JavaScriptConfig.getEnabledInstance());
 
-      if (NullHandling.replaceWithDefault()) {
-        assertFilterMatchesSkipArrays(
-            legacyInFilterWithFn("dim2", superFn, "super-null", "super-a", "super-b"),
-            ImmutableList.of("a", "b", "c", "d", "f")
-        );
-        assertFilterMatchesSkipArrays(
-            NotDimFilter.of(legacyInFilterWithFn("dim2", superFn, "super-null", "super-a", "super-b")),
-            ImmutableList.of("e")
-        );
-        assertFilterMatchesSkipArrays(
-            legacyInFilterWithFn("dim2", yesNullFn, "YES"),
-            ImmutableList.of("b", "c", "f")
-        );
-        assertFilterMatchesSkipArrays(
-            NotDimFilter.of(legacyInFilterWithFn("dim2", yesNullFn, "YES")),
-            ImmutableList.of("a", "d", "e")
-        );
-        assertLegacyFilterMatches(
-            legacyInFilterWithFn("dim1", superFn, "super-null", "super-10", "super-def"),
-            ImmutableList.of("a", "b", "e")
-        );
-        assertLegacyFilterMatches(
-            legacyInFilterWithFn("dim1", yesNullFn, "NO"),
-            ImmutableList.of("b", "c", "d", "e", "f")
-        );
-      } else {
-        assertFilterMatchesSkipArrays(
-            legacyInFilterWithFn("dim2", superFn, "super-null", "super-a", "super-b"),
-            ImmutableList.of("a", "b", "d", "f")
-        );
-        assertFilterMatchesSkipArrays(
-            NotDimFilter.of(legacyInFilterWithFn("dim2", superFn, "super-null", "super-a", "super-b")),
-            ImmutableList.of("c", "e")
-        );
-        assertFilterMatchesSkipArrays(
-            legacyInFilterWithFn("dim2", yesNullFn, "YES"),
-            ImmutableList.of("b", "f")
-        );
-        assertFilterMatchesSkipArrays(
-            NotDimFilter.of(legacyInFilterWithFn("dim2", yesNullFn, "YES")),
-            ImmutableList.of("a", "c", "d", "e")
-        );
-        assertLegacyFilterMatches(
-            legacyInFilterWithFn("dim1", superFn, "super-null", "super-10", "super-def"),
-            ImmutableList.of("b", "e")
-        );
+      assertFilterMatchesSkipArrays(
+          legacyInFilterWithFn("dim2", superFn, "super-null", "super-a", "super-b"),
+          ImmutableList.of("a", "b", "d", "f")
+      );
+      assertFilterMatchesSkipArrays(
+          NotDimFilter.of(legacyInFilterWithFn("dim2", superFn, "super-null", "super-a", "super-b")),
+          ImmutableList.of("c", "e")
+      );
+      assertFilterMatchesSkipArrays(
+          legacyInFilterWithFn("dim2", yesNullFn, "YES"),
+          ImmutableList.of("b", "f")
+      );
+      assertFilterMatchesSkipArrays(
+          NotDimFilter.of(legacyInFilterWithFn("dim2", yesNullFn, "YES")),
+          ImmutableList.of("a", "c", "d", "e")
+      );
+      assertLegacyFilterMatches(
+          legacyInFilterWithFn("dim1", superFn, "super-null", "super-10", "super-def"),
+          ImmutableList.of("b", "e")
+      );
 
-        assertLegacyFilterMatches(
-            legacyInFilterWithFn("dim1", yesNullFn, "NO"),
-            ImmutableList.of("a", "b", "c", "d", "e", "f")
-        );
-      }
+      assertLegacyFilterMatches(
+          legacyInFilterWithFn("dim1", yesNullFn, "NO"),
+          ImmutableList.of("a", "b", "c", "d", "e", "f")
+      );
 
       assertLegacyFilterMatches(
           legacyInFilterWithFn("dim3", yesNullFn, "NO"),
@@ -703,7 +561,6 @@ public class InFilterTests
     @Test
     public void testSerde() throws JsonProcessingException
     {
-      Assume.assumeTrue(NullHandling.sqlCompatible());
       ObjectMapper mapper = new DefaultObjectMapper();
       TypedInFilter filter = inFilter("column", ColumnType.STRING, Arrays.asList("a", "b", "c"));
       String s = mapper.writeValueAsString(filter);
@@ -733,18 +590,8 @@ public class InFilterTests
     }
 
     @Test
-    public void testConvertToLegacy()
-    {
-      Assume.assumeTrue(NullHandling.replaceWithDefault());
-      TypedInFilter aFilter = new TypedInFilter("column", ColumnType.STRING, Arrays.asList("a", "b", "c"), null, null);
-      Assert.assertTrue(aFilter.optimize(false) instanceof InDimFilter);
-      Assert.assertTrue(aFilter.toFilter() instanceof InDimFilter);
-    }
-
-    @Test
     public void testGetCacheKey()
     {
-      Assume.assumeTrue(NullHandling.sqlCompatible());
       TypedInFilter filterUnsorted = inFilter("column", ColumnType.STRING, Arrays.asList("a", "b", null, "c"));
       TypedInFilter filterDifferent = inFilter("column", ColumnType.STRING, Arrays.asList("a", "c", "b"));
       TypedInFilter filterPresorted = new TypedInFilter(
@@ -809,7 +656,6 @@ public class InFilterTests
     @Test
     public void testInvalidParameters()
     {
-      Assume.assumeTrue(NullHandling.sqlCompatible());
       Throwable t = Assert.assertThrows(
           DruidException.class,
           () -> new TypedInFilter(null, ColumnType.STRING, null, null, null)
@@ -833,7 +679,6 @@ public class InFilterTests
     @Test
     public void testGetDimensionRangeSet()
     {
-      Assume.assumeTrue(NullHandling.sqlCompatible());
       TypedInFilter filter = inFilter("x", ColumnType.STRING, Arrays.asList(null, "a", "b", "c"));
       TypedInFilter filter2 = inFilter("x", ColumnType.STRING, Arrays.asList("a", "b", null, "c"));
 
@@ -863,7 +708,6 @@ public class InFilterTests
     @Test
     public void testRequiredColumnRewrite()
     {
-      Assume.assumeTrue(NullHandling.sqlCompatible());
       TypedInFilter filter = inFilter("dim0", ColumnType.STRING, Arrays.asList("a", "c"));
       TypedInFilter filter2 = inFilter("dim1", ColumnType.STRING, Arrays.asList("a", "c"));
 
@@ -886,7 +730,6 @@ public class InFilterTests
     @Test
     public void testEquals()
     {
-      Assume.assumeTrue(NullHandling.sqlCompatible());
       EqualsVerifier.forClass(TypedInFilter.class).usingGetClass()
                     .withNonnullFields(
                         "column",

@@ -19,7 +19,6 @@
 
 package org.apache.druid.benchmark.indexing;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.segment.StringDimensionIndexer;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -48,10 +47,6 @@ import java.util.concurrent.TimeUnit;
 @Measurement(iterations = 10)
 public class StringDimensionIndexerProcessBenchmark
 {
-  static {
-    NullHandling.initializeForTests();
-  }
-
   String[] inputData;
   StringDimensionIndexer emptyIndexer;
   StringDimensionIndexer fullIndexer;

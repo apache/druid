@@ -397,7 +397,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
               coordinatorClient,
               dataSource,
               interval,
-              splitHintSpec == null ? DEFAULT_SPLIT_HINT_SPEC : splitHintSpec
+              splitHintSpec == null ? SplittableInputSource.DEFAULT_SPLIT_HINT_SPEC : splitHintSpec
           )
       );
     } else {
@@ -417,7 +417,7 @@ public class DruidInputSource extends AbstractInputSource implements SplittableI
               coordinatorClient,
               dataSource,
               interval,
-              splitHintSpec == null ? DEFAULT_SPLIT_HINT_SPEC : splitHintSpec
+              splitHintSpec == null ? SplittableInputSource.DEFAULT_SPLIT_HINT_SPEC : splitHintSpec
           )
       );
     } else {

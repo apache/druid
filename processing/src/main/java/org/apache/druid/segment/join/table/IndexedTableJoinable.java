@@ -22,7 +22,6 @@ package org.apache.druid.segment.join.table;
 import com.google.common.collect.ImmutableSet;
 import it.unimi.dsi.fastutil.ints.IntBidirectionalIterator;
 import it.unimi.dsi.fastutil.ints.IntSortedSet;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -105,7 +104,7 @@ public class IndexedTableJoinable implements Joinable
       for (int i = 0; i < table.numRows(); i++) {
         final String s = DimensionHandlerUtils.convertObjectToString(reader.read(i));
 
-        if (includeNull || !NullHandling.isNullOrEquivalent(s)) {
+        if (includeNull || s != null) {
           if (!matchableValues.add(s)) {
             // Duplicate found
             allUnique = false;

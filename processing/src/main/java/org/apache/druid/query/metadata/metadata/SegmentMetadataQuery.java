@@ -164,7 +164,7 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
   @Override
   public String getType()
   {
-    return SEGMENT_METADATA;
+    return Query.SEGMENT_METADATA;
   }
 
   @JsonProperty
@@ -249,14 +249,14 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
   public String toString()
   {
     return "SegmentMetadataQuery{" +
-        "dataSource='" + getDataSource() + '\'' +
-        ", querySegmentSpec=" + getQuerySegmentSpec() +
-        ", toInclude=" + toInclude +
-        ", merge=" + merge +
-        ", usingDefaultInterval=" + usingDefaultInterval +
-        ", analysisTypes=" + analysisTypes +
-        ", aggregatorMergeStrategy=" + aggregatorMergeStrategy +
-        '}';
+           "dataSource='" + getDataSource() + '\'' +
+           ", querySegmentSpec=" + getQuerySegmentSpec() +
+           ", toInclude=" + toInclude +
+           ", merge=" + merge +
+           ", usingDefaultInterval=" + usingDefaultInterval +
+           ", analysisTypes=" + analysisTypes +
+           ", aggregatorMergeStrategy=" + aggregatorMergeStrategy +
+           '}';
   }
 
   @Override
@@ -273,10 +273,10 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
     }
     SegmentMetadataQuery that = (SegmentMetadataQuery) o;
     return merge == that.merge &&
-        usingDefaultInterval == that.usingDefaultInterval &&
-        Objects.equals(toInclude, that.toInclude) &&
-        Objects.equals(analysisTypes, that.analysisTypes) &&
-        Objects.equals(aggregatorMergeStrategy, that.aggregatorMergeStrategy);
+           usingDefaultInterval == that.usingDefaultInterval &&
+           Objects.equals(toInclude, that.toInclude) &&
+           Objects.equals(analysisTypes, that.analysisTypes) &&
+           Objects.equals(aggregatorMergeStrategy, that.aggregatorMergeStrategy);
   }
 
   @Override

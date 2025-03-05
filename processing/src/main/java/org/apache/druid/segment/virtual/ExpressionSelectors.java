@@ -23,7 +23,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.Expr;
@@ -419,16 +418,12 @@ public class ExpressionSelectors
       Supplier<T> supplier
   )
   {
-    if (NullHandling.replaceWithDefault()) {
-      return supplier;
-    } else {
-      return () -> {
-        if (selector.isNull()) {
-          return null;
-        }
-        return supplier.get();
-      };
-    }
+    return () -> {
+      if (selector.isNull()) {
+        return null;
+      }
+      return supplier.get();
+    };
   }
 
   /**

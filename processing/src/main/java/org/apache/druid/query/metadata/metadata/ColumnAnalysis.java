@@ -22,7 +22,6 @@ package org.apache.druid.query.metadata.metadata;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
@@ -151,7 +150,7 @@ public class ColumnAnalysis
     }
 
     if (isError() && rhs.isError()) {
-      return errorMessage.equals(rhs.getErrorMessage()) ? this : error("multiple_errors");
+      return errorMessage.equals(rhs.getErrorMessage()) ? this : ColumnAnalysis.error("multiple_errors");
     } else if (isError()) {
       return this;
     } else if (rhs.isError()) {
@@ -159,13 +158,13 @@ public class ColumnAnalysis
     }
 
     if (!Objects.equals(type, rhs.getType())) {
-      return error(
+      return ColumnAnalysis.error(
           StringUtils.format("cannot_merge_diff_types: [%s] and [%s]", type, rhs.getType())
       );
     }
 
     if (!Objects.equals(typeSignature, rhs.getTypeSignature())) {
-      return error(
+      return ColumnAnalysis.error(
           StringUtils.format(
               "cannot_merge_diff_types: [%s] and [%s]",
               typeSignature.asTypeString(),
@@ -187,11 +186,6 @@ public class ColumnAnalysis
     Comparable newMin = choose(minValue, rhs.minValue, false);
     Comparable newMax = choose(maxValue, rhs.maxValue, true);
 
-    // min and max are currently set for only string columns
-    if (typeSignature.equals(ColumnType.STRING)) {
-      newMin = NullHandling.nullToEmptyIfNeeded((String) newMin);
-      newMax = NullHandling.nullToEmptyIfNeeded((String) newMax);
-    }
     return builder().withType(typeSignature)
                     .withTypeName(type)
                     .hasMultipleValues(multipleValues)

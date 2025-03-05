@@ -20,19 +20,9 @@ import { IconNames } from '@blueprintjs/icons';
 import React, { useState } from 'react';
 
 import { StatusDialog } from '../../../dialogs/status-dialog/status-dialog';
-import type { Capabilities } from '../../../helpers';
 import { useQueryManager } from '../../../hooks';
 import { Api } from '../../../singletons';
-import type { NullModeDetection } from '../../../utils';
-import {
-  deepGet,
-  explainNullModeDetection,
-  NULL_DETECTION_QUERY,
-  nullDetectionQueryResultDecoder,
-  pluralIfNeeded,
-  queryDruidRune,
-  summarizeNullModeDetection,
-} from '../../../utils';
+import { pluralIfNeeded } from '../../../utils';
 import { HomeViewCard } from '../home-view-card/home-view-card';
 
 interface StatusSummary {
@@ -40,12 +30,7 @@ interface StatusSummary {
   extensionCount: number;
 }
 
-export interface StatusCardProps {
-  capabilities: Capabilities;
-}
-
-export const StatusCard = React.memo(function StatusCard(props: StatusCardProps) {
-  const { capabilities } = props;
+export const StatusCard = React.memo(function StatusCard() {
   const [showStatusDialog, setShowStatusDialog] = useState(false);
   const [statusSummaryState] = useQueryManager<null, StatusSummary>({
     initQuery: null,
@@ -58,17 +43,7 @@ export const StatusCard = React.memo(function StatusCard(props: StatusCardProps)
     },
   });
 
-  const [nullModeDetectionState] = useQueryManager<Capabilities, NullModeDetection>({
-    initQuery: capabilities,
-    processQuery: async (capabilities, cancelToken) => {
-      if (!capabilities.hasQuerying()) return {};
-      const nullDetectionResponse = await queryDruidRune(NULL_DETECTION_QUERY, cancelToken);
-      return nullDetectionQueryResultDecoder(deepGet(nullDetectionResponse, '0.result'));
-    },
-  });
-
   const statusSummary = statusSummaryState.data;
-  const nullModeDetection = nullModeDetectionState.data;
   return (
     <>
       <HomeViewCard
@@ -87,17 +62,9 @@ export const StatusCard = React.memo(function StatusCard(props: StatusCardProps)
             <p>{`${pluralIfNeeded(statusSummary.extensionCount, 'extension')} loaded`}</p>
           </>
         )}
-        {nullModeDetection && (
-          <p
-            className="tooltip-info"
-            data-tooltip={[
-              'Null related server properties',
-              ...explainNullModeDetection(nullModeDetection),
-            ].join('\n')}
-          >
-            {summarizeNullModeDetection(nullModeDetection)}
-          </p>
-        )}
+        <p data-tooltip="This version of Druid only supports the SQL compliant querying mode.">
+          SQL compliant NULL mode (built-in)
+        </p>
       </HomeViewCard>
       {showStatusDialog && (
         <StatusDialog

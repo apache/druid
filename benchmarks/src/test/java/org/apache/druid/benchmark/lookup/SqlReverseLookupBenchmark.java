@@ -21,7 +21,6 @@ package org.apache.druid.benchmark.lookup;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.benchmark.query.SqlBaseBenchmark;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -66,10 +65,6 @@ import java.util.concurrent.TimeUnit;
 @Measurement(iterations = 5)
 public class SqlReverseLookupBenchmark
 {
-  static {
-    NullHandling.initializeForTests();
-  }
-
   /**
    * Type of lookup to benchmark. All are members of enum {@link LookupBenchmarkUtil.LookupType}.
    */

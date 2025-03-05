@@ -23,7 +23,6 @@ import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import nl.jqno.equalsverifier.EqualsVerifier;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.js.JavaScriptConfig;
 import org.apache.druid.query.extraction.ExtractionFn;
@@ -94,12 +93,8 @@ public class JavaScriptFilterTest extends BaseFilterTest
   @Test
   public void testSingleValueStringColumnWithNulls()
   {
-    if (NullHandling.replaceWithDefault()) {
-      assertFilterMatchesSkipVectorize(newJavaScriptDimFilter("dim1", jsNullFilter, null), ImmutableList.of("0"));
-    } else {
-      assertFilterMatchesSkipVectorize(newJavaScriptDimFilter("dim1", jsNullFilter, null), ImmutableList.of());
-      assertFilterMatchesSkipVectorize(newJavaScriptDimFilter("dim1", jsValueFilter(""), null), ImmutableList.of("0"));
-    }
+    assertFilterMatchesSkipVectorize(newJavaScriptDimFilter("dim1", jsNullFilter, null), ImmutableList.of());
+    assertFilterMatchesSkipVectorize(newJavaScriptDimFilter("dim1", jsValueFilter(""), null), ImmutableList.of("0"));
     assertFilterMatchesSkipVectorize(newJavaScriptDimFilter("dim1", jsValueFilter("10"), null), ImmutableList.of("1"));
     assertFilterMatchesSkipVectorize(newJavaScriptDimFilter("dim1", jsValueFilter("2"), null), ImmutableList.of("2"));
     assertFilterMatchesSkipVectorize(newJavaScriptDimFilter("dim1", jsValueFilter("1"), null), ImmutableList.of("3"));
@@ -115,15 +110,8 @@ public class JavaScriptFilterTest extends BaseFilterTest
       return;
     }
     // multi-val null......
-    if (NullHandling.replaceWithDefault()) {
-      assertFilterMatchesSkipVectorize(
-          newJavaScriptDimFilter("dim2", jsNullFilter, null),
-          ImmutableList.of("1", "2", "5")
-      );
-    } else {
-      assertFilterMatchesSkipVectorize(newJavaScriptDimFilter("dim2", jsNullFilter, null), ImmutableList.of("1", "5"));
-      assertFilterMatchesSkipVectorize(newJavaScriptDimFilter("dim2", jsValueFilter(""), null), ImmutableList.of("2"));
-    }
+    assertFilterMatchesSkipVectorize(newJavaScriptDimFilter("dim2", jsNullFilter, null), ImmutableList.of("1", "5"));
+    assertFilterMatchesSkipVectorize(newJavaScriptDimFilter("dim2", jsValueFilter(""), null), ImmutableList.of("2"));
     assertFilterMatchesSkipVectorize(
         newJavaScriptDimFilter("dim2", jsValueFilter("a"), null),
         ImmutableList.of("0", "3")
@@ -220,15 +208,9 @@ public class JavaScriptFilterTest extends BaseFilterTest
   @Test
   public void testNumericNull()
   {
-    if (canTestNumericNullsAsDefaultValues) {
-      assertFilterMatchesSkipVectorize(newJavaScriptDimFilter("f0", jsNullFilter, null), ImmutableList.of());
-      assertFilterMatchesSkipVectorize(newJavaScriptDimFilter("d0", jsNullFilter, null), ImmutableList.of());
-      assertFilterMatchesSkipVectorize(newJavaScriptDimFilter("l0", jsNullFilter, null), ImmutableList.of());
-    } else {
-      assertFilterMatchesSkipVectorize(newJavaScriptDimFilter("f0", jsNullFilter, null), ImmutableList.of("4"));
-      assertFilterMatchesSkipVectorize(newJavaScriptDimFilter("d0", jsNullFilter, null), ImmutableList.of("2"));
-      assertFilterMatchesSkipVectorize(newJavaScriptDimFilter("l0", jsNullFilter, null), ImmutableList.of("3"));
-    }
+    assertFilterMatchesSkipVectorize(newJavaScriptDimFilter("f0", jsNullFilter, null), ImmutableList.of("4"));
+    assertFilterMatchesSkipVectorize(newJavaScriptDimFilter("d0", jsNullFilter, null), ImmutableList.of("2"));
+    assertFilterMatchesSkipVectorize(newJavaScriptDimFilter("l0", jsNullFilter, null), ImmutableList.of("3"));
     assertFilterMatchesSkipVectorize(newJavaScriptDimFilter("f0", jsNumericValueFilter("5.5"), null), ImmutableList.of("2"));
     assertFilterMatchesSkipVectorize(newJavaScriptDimFilter("d0", jsNumericValueFilter("120.0245"), null), ImmutableList.of("3"));
     assertFilterMatchesSkipVectorize(newJavaScriptDimFilter("l0", jsNumericValueFilter("9001"), null), ImmutableList.of("4"));

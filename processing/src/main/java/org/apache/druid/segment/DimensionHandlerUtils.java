@@ -327,7 +327,7 @@ public final class DimensionHandlerUtils
     } else if (valObj instanceof Boolean) {
       return Evals.asLong((Boolean) valObj);
     } else if (valObj instanceof String) {
-      Long ret = getExactLongFromDecimalString((String) valObj);
+      Long ret = DimensionHandlerUtils.getExactLongFromDecimalString((String) valObj);
       if (reportParseExceptions && ret == null) {
         final String message;
         if (objectKey != null) {
@@ -518,7 +518,7 @@ public final class DimensionHandlerUtils
       case ARRAY:
         return coerceToObjectArrayWithElementCoercionFunction(
             obj,
-            x -> convertObjectToType(x, type.getElementType(), reportParseExceptions, fieldName)
+            x -> DimensionHandlerUtils.convertObjectToType(x, type.getElementType(), reportParseExceptions, fieldName)
         );
       case COMPLEX:
         // Can't coerce complex objects, and we shouldn't need to. If in future selectors behave weirdly, or we need to

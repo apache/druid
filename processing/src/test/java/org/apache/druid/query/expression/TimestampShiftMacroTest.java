@@ -20,7 +20,6 @@
 package org.apache.druid.query.expression;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.math.expr.Expr;
@@ -241,10 +240,6 @@ public class TimestampShiftMacroTest extends MacroTestBase
         )
     );
 
-    if (NullHandling.replaceWithDefault()) {
-      Assert.assertEquals(2678400000L, expr.eval(InputBindings.nilBindings()).value());
-    } else {
-      Assert.assertNull(expr.eval(InputBindings.nilBindings()).value());
-    }
+    Assert.assertNull(expr.eval(InputBindings.nilBindings()).value());
   }
 }

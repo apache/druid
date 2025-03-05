@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.incremental.AppendableIndexSpec;
+import org.apache.druid.segment.indexing.TuningConfig;
 import org.apache.druid.segment.realtime.appenderator.AppenderatorConfig;
 import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.joda.time.Period;
@@ -130,14 +131,14 @@ public abstract class SeekableStreamIndexTaskTuningConfig implements Appenderato
       this.maxSavedParseExceptions = maxSavedParseExceptions == null ? 0 : Math.min(1, maxSavedParseExceptions);
     } else {
       this.maxParseExceptions = maxParseExceptions == null
-                                ? DEFAULT_MAX_PARSE_EXCEPTIONS
+                                ? TuningConfig.DEFAULT_MAX_PARSE_EXCEPTIONS
                                 : maxParseExceptions;
       this.maxSavedParseExceptions = maxSavedParseExceptions == null
-                                     ? DEFAULT_MAX_SAVED_PARSE_EXCEPTIONS
+                                     ? TuningConfig.DEFAULT_MAX_SAVED_PARSE_EXCEPTIONS
                                      : maxSavedParseExceptions;
     }
     this.logParseExceptions = logParseExceptions == null
-                              ? DEFAULT_LOG_PARSE_EXCEPTIONS
+                              ? TuningConfig.DEFAULT_LOG_PARSE_EXCEPTIONS
                               : logParseExceptions;
     this.numPersistThreads = numPersistThreads == null ?
                                 DEFAULT_NUM_PERSIST_THREADS : Math.max(numPersistThreads, DEFAULT_NUM_PERSIST_THREADS);

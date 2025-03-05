@@ -19,7 +19,6 @@
 
 package org.apache.druid.sql.calcite.expression;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionType;
 
@@ -28,9 +27,7 @@ import javax.annotation.Nullable;
 /**
  * Literal value, plus a {@link ExpressionType} that represents how to interpret the literal value.
  *
- * These are similar to {@link ExprEval}, but not identical: unlike {@link ExprEval}, string values in this class
- * are not normalized through {@link NullHandling#emptyToNullIfNeeded(String)}. This allows us to differentiate
- * between null and empty-string literals even when {@link NullHandling#replaceWithDefault()}.
+ * These are similar to {@link ExprEval}.
  */
 public class DruidLiteral
 {

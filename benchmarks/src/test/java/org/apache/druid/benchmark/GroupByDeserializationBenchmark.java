@@ -22,7 +22,6 @@ package org.apache.druid.benchmark;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.jackson.AggregatorsModule;
 import org.apache.druid.java.util.common.DateTimes;
@@ -66,9 +65,7 @@ import java.util.concurrent.TimeUnit;
 @Measurement(iterations = 5)
 public class GroupByDeserializationBenchmark
 {
-
   static {
-    NullHandling.initializeForTests();
     BuiltInTypesModule.registerHandlersAndSerde();
     AggregatorsModule.registerComplexMetricsAndSerde();
   }

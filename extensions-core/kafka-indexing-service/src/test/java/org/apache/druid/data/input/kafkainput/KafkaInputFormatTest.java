@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.ColumnsFilter;
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputRow;
@@ -60,10 +59,6 @@ import java.util.Optional;
 
 public class KafkaInputFormatTest
 {
-  static {
-    NullHandling.initializeForTests();
-  }
-
   private static final long TIMESTAMP_MILLIS = DateTimes.of("2021-06-24").getMillis();
   private static final String TOPIC = "sample";
   private static final byte[] SIMPLE_JSON_KEY_BYTES = StringUtils.toUtf8(

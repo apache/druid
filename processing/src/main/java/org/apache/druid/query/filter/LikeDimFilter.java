@@ -28,7 +28,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.RangeSet;
 import com.google.common.io.BaseEncoding;
 import com.google.common.primitives.Chars;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.segment.filter.LikeFilter;
@@ -230,7 +229,7 @@ public class LikeDimFilter extends AbstractOptimizableDimFilter implements DimFi
     {
       this.likePattern = likePattern;
       this.suffixMatch = Preconditions.checkNotNull(suffixMatch, "suffixMatch");
-      this.prefix = NullHandling.nullToEmptyIfNeeded(prefix);
+      this.prefix = prefix;
       this.pattern = Preconditions.checkNotNull(pattern, "pattern");
     }
 
@@ -303,20 +302,19 @@ public class LikeDimFilter extends AbstractOptimizableDimFilter implements DimFi
 
     private static DruidPredicateMatch matches(@Nullable final String s, List<Pattern> pattern)
     {
-      String val = NullHandling.nullToEmptyIfNeeded(s);
-      if (val == null) {
+      if (s == null) {
         return DruidPredicateMatch.UNKNOWN;
       }
 
       if (pattern.size() == 1) {
         // Most common case is a single pattern: a% => ^a, %z => z$, %m% => m
-        return DruidPredicateMatch.of(pattern.get(0).matcher(val).find());
+        return DruidPredicateMatch.of(pattern.get(0).matcher(s).find());
       }
 
       int offset = 0;
 
       for (Pattern part : pattern) {
-        Matcher matcher = part.matcher(val);
+        Matcher matcher = part.matcher(s);
 
         if (!matcher.find(offset)) {
           return DruidPredicateMatch.FALSE;

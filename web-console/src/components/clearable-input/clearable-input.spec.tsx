@@ -27,7 +27,7 @@ describe('ClearableInput', () => {
         className="testClassName"
         value="testValue"
         placeholder="testPlaceholder"
-        onChange={() => {}}
+        onValueChange={() => {}}
       />
     );
 

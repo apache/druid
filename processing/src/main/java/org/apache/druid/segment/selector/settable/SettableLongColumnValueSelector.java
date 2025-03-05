@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment.selector.settable;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.LongColumnSelector;
 
@@ -48,7 +47,7 @@ public class SettableLongColumnValueSelector implements SettableColumnValueSelec
   @Override
   public long getLong()
   {
-    assert NullHandling.replaceWithDefault() || !isNull;
+    assert !isNull;
     return value;
   }
 

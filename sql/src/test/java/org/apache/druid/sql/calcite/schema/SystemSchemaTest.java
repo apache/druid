@@ -44,7 +44,6 @@ import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.client.InternalQueryConfig;
 import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.coordinator.NoopCoordinatorClient;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.discovery.DataNodeService;
 import org.apache.druid.discovery.DiscoveryDruidNode;
@@ -915,7 +914,7 @@ public class SystemSchemaTest extends CalciteTestBase
     rows.sort((Object[] row1, Object[] row2) -> ((Comparable) row1[0]).compareTo(row2[0]));
 
     final List<Object[]> expectedRows = new ArrayList<>();
-    final Long nonLeader = NullHandling.defaultLongValue();
+    final Long nonLeader = null;
     final String startTimeStr = startTime.toString();
     expectedRows.add(
         createExpectedRow(

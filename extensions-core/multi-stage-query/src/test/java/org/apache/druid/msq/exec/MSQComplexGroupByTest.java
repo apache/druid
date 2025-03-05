@@ -22,7 +22,6 @@ package org.apache.druid.msq.exec;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.data.input.impl.systemfield.SystemFields;
@@ -45,7 +44,6 @@ import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.filter.DimFilter;
 import org.apache.druid.query.filter.NotDimFilter;
 import org.apache.druid.query.filter.NullFilter;
-import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
@@ -61,7 +59,6 @@ import org.apache.druid.sql.calcite.planner.ColumnMappings;
 import org.apache.druid.sql.calcite.planner.PlannerConfig;
 import org.apache.druid.timeline.SegmentId;
 import org.apache.druid.utils.CompressionUtils;
-import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -439,7 +436,6 @@ public class MSQComplexGroupByTest extends MSQTestBase
   @ParameterizedTest(name = "{index}:with context {0}")
   public void testExactCountDistinctOnNestedData(String contextName, Map<String, Object> context)
   {
-    Assumptions.assumeTrue(NullHandling.sqlCompatible());
     RowSignature rowSignature = RowSignature.builder()
                                             .add("distinct_obj", ColumnType.LONG)
                                             .build();
@@ -449,9 +445,7 @@ public class MSQComplexGroupByTest extends MSQTestBase
                                                       .put(PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT, false)
                                                       .build();
 
-    DimFilter innerFilter = NullHandling.replaceWithDefault()
-                            ? new SelectorDimFilter("d0", null, null)
-                            : new NullFilter("d0", null);
+    DimFilter innerFilter = new NullFilter("d0", null);
 
     testSelectQuery().setSql("SELECT\n"
                              + " COUNT(DISTINCT obj) AS distinct_obj\n"
@@ -525,7 +519,6 @@ public class MSQComplexGroupByTest extends MSQTestBase
   @ParameterizedTest(name = "{index}:with context {0}")
   public void testExactCountDistinctOnNestedData2(String contextName, Map<String, Object> context)
   {
-    Assumptions.assumeTrue(NullHandling.sqlCompatible());
     RowSignature dataFileSignature = RowSignature.builder()
                                                  .add("timestamp", ColumnType.STRING)
                                                  .add("cObj", ColumnType.NESTED_DATA)
@@ -544,9 +537,7 @@ public class MSQComplexGroupByTest extends MSQTestBase
                                                       .put(PlannerConfig.CTX_KEY_USE_APPROXIMATE_COUNT_DISTINCT, false)
                                                       .build();
 
-    DimFilter innerFilter = NullHandling.replaceWithDefault()
-                            ? new SelectorDimFilter("d0", null, null)
-                            : new NullFilter("d0", null);
+    DimFilter innerFilter = new NullFilter("d0", null);
 
     testSelectQuery().setSql("SELECT\n"
                              + " COUNT(DISTINCT cObj) AS distinct_obj\n"

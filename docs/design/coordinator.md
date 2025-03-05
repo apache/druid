@@ -79,11 +79,19 @@ On each run, the Coordinator determines and cleans up unneeded eternity tombston
 
 ## Segment availability
 
-If a Historical service restarts or becomes unavailable for any reason, the Coordinator will notice a service has gone missing and treat all segments served by that service as being dropped. Given a sufficient period of time, the segments may be reassigned to other Historical services in the cluster. However, each segment that is dropped is not immediately forgotten. Instead, there is a transitional data structure that stores all dropped segments with an associated lifetime. The lifetime represents a period of time in which the Coordinator will not reassign a dropped segment. Hence, if a Historical service becomes unavailable and available again within a short period of time, the Historical service will start up and serve segments from its cache without any those segments being reassigned across the cluster.
+If a Historical service restarts or becomes unavailable for any reason, the Coordinator notices that a service has gone missing and treats all segments served by that service as being dropped. The segments are then reassigned to other Historical services in the cluster. However, each segment that is dropped is not immediately forgotten. Instead, there is a transitional data structure that stores all dropped segments with an associated lifetime. The lifetime represents a period of time in which the Coordinator will not reassign a dropped segment. Hence, if a Historical service becomes unavailable and available again within a short period of time, the Historical service will start up and serve segments from its cache without any of those segments being reassigned across the cluster.
 
-## Balancing segment load
+## Balancing segments in a tier
 
-To ensure an even distribution of segments across Historical services in the cluster, the Coordinator service will find the total size of all segments being served by every Historical service each time the Coordinator runs. For every Historical service tier in the cluster, the Coordinator service will determine the Historical service with the highest utilization and the Historical service with the lowest utilization. The percent difference in utilization between the two services is computed, and if the result exceeds a certain threshold, a number of segments will be moved from the highest utilized service to the lowest utilized service. There is a configurable limit on the number of segments that can be moved from one service to another each time the Coordinator runs. Segments to be moved are selected at random and only moved if the resulting utilization calculation indicates the percentage difference between the highest and lowest servers has decreased.
+Druid queries perform optimally when segments are distributed evenly across Historical services. An ideal distribution would ensure that all Historicals participate equally in the query load thus avoiding hot-spots in the system. To some extent, this can be achieved by keeping multiple replicas of a segment in a cluster.
+But in a tier with several Historicals (or a low replication factor), segment replication is not sufficient to attain balance.
+Thus, the Coordinator constantly monitors the set of segments present on each Historical in a tier and employs one of the following strategies to identify segments that may be moved from one Historical to another to retain balance.
+
+- `cost` (default): For a given segment in a tier, this strategy picks the server with the minimum "cost" of placing that segment. The cost is a function of the data interval of the segment and the data intervals of all the segments already present on the candidate server. In essence, this strategy tries to avoid placing segments with adjacent or overlapping data intervals on the same server. This is based on the premise that adjacent-interval segments are more likely to be used together in a query and placing them on the same server may lead to skewed CPU usages of Historicals.
+- `diskNormalized`: A derivative of the `cost` strategy that weights the cost of placing a segment on a server with the disk usage ratio of the server. There are known issues with this strategy and is not recommended for a production cluster.
+- `random`: Distributes segments randomly across servers. This is an experimental strategy and is not recommended for a production cluster.
+
+All of the above strategies prioritize moving segments from the Historical with the least available disk space.
 
 ## Automatic compaction
 

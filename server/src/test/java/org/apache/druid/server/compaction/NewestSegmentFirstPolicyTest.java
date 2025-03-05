@@ -26,7 +26,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.client.indexing.ClientCompactionTaskQueryTuningConfig;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
@@ -1217,7 +1216,6 @@ public class NewestSegmentFirstPolicyTest
   @Test
   public void testIteratorReturnsSegmentsAsSegmentsWasCompactedAndHaveDifferentFilter() throws Exception
   {
-    NullHandling.initializeForTests();
     // Same indexSpec as what is set in the auto compaction config
     Map<String, Object> indexSpec = IndexSpec.DEFAULT.asMap(mapper);
     // Same partitionsSpec as what is set in the auto compaction config
@@ -1323,7 +1321,6 @@ public class NewestSegmentFirstPolicyTest
   @Test
   public void testIteratorReturnsSegmentsAsSegmentsWasCompactedAndHaveDifferentMetricsSpec()
   {
-    NullHandling.initializeForTests();
     mapper.setInjectableValues(
         new InjectableValues.Std()
             .addValue(ExprMacroTable.class.getName(), TestExprMacroTable.INSTANCE)
@@ -1507,7 +1504,6 @@ public class NewestSegmentFirstPolicyTest
   @Test
   public void testIteratorDoesNotReturnSegmentWithChangingAppendableIndexSpec()
   {
-    NullHandling.initializeForTests();
     PartitionsSpec partitionsSpec = CompactionStatus.findPartitionsSpecFromConfig(ClientCompactionTaskQueryTuningConfig.from(null));
     final SegmentTimeline timeline = createTimeline(
         createSegments()

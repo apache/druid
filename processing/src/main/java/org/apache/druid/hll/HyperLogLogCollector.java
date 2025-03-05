@@ -394,7 +394,7 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
         convertToDenseStorage();
       }
 
-      other = makeCollector(tmpBuffer);
+      other = HyperLogLogCollector.makeCollector(tmpBuffer);
     }
 
     final ByteBuffer otherBuffer = other.storageBuffer;
@@ -574,7 +574,7 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
 
     final ByteBuffer denseStorageBuffer;
     if (storageBuffer.remaining() != getNumBytesForDenseStorage()) {
-      HyperLogLogCollector denseCollector = makeCollector(storageBuffer.duplicate());
+      HyperLogLogCollector denseCollector = HyperLogLogCollector.makeCollector(storageBuffer.duplicate());
       denseCollector.convertToDenseStorage();
       denseStorageBuffer = denseCollector.storageBuffer;
     } else {
@@ -582,7 +582,7 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
     }
 
     if (otherBuffer.remaining() != getNumBytesForDenseStorage()) {
-      HyperLogLogCollector otherCollector = makeCollector(otherBuffer.duplicate());
+      HyperLogLogCollector otherCollector = HyperLogLogCollector.makeCollector(otherBuffer.duplicate());
       otherCollector.convertToDenseStorage();
       otherBuffer = otherCollector.storageBuffer;
     }

@@ -20,7 +20,6 @@
 package org.apache.druid.frame.field;
 
 import org.apache.datasketches.memory.WritableMemory;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.ColumnValueSelector;
 
@@ -143,24 +142,24 @@ public class NumericArrayFieldWriter implements FieldWriter
         public double getDouble()
         {
           final Number n = getObject();
-          assert NullHandling.replaceWithDefault() || n != null;
-          return n != null ? n.doubleValue() : 0d;
+          assert n != null;
+          return n.doubleValue();
         }
 
         @Override
         public float getFloat()
         {
           final Number n = getObject();
-          assert NullHandling.replaceWithDefault() || n != null;
-          return n != null ? n.floatValue() : 0f;
+          assert n != null;
+          return n.floatValue();
         }
 
         @Override
         public long getLong()
         {
           final Number n = getObject();
-          assert NullHandling.replaceWithDefault() || n != null;
-          return n != null ? n.longValue() : 0L;
+          assert n != null;
+          return n.longValue();
         }
 
         @Override
@@ -172,12 +171,6 @@ public class NumericArrayFieldWriter implements FieldWriter
         @Override
         public boolean isNull()
         {
-          // Arrays preserve the individual element's nullity when they are written and read.
-          // Therefore, when working with SQL incompatible mode, [7, null] won't change to [7, 0] when written to and
-          // read from the underlying serialization (as compared with the primitives). Therefore,
-          // even when NullHandling.replaceWithDefault() is true we need to write null as is, and not convert it to their
-          // default value when writing the array. Therefore, the check is `getObject() == null` ignoring the value of
-          // `NullHandling.replaceWithDefaul()`.
           return getObject() == null;
         }
 

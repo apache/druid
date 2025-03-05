@@ -43,7 +43,6 @@ import it.unimi.dsi.fastutil.floats.FloatOpenHashSet;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import it.unimi.dsi.fastutil.longs.LongSet;
 import it.unimi.dsi.fastutil.objects.ObjectArrays;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.IAE;
@@ -229,9 +228,6 @@ public class TypedInFilter extends AbstractOptimizableDimFilter implements Filte
   @Override
   public DimFilter optimize(final boolean mayIncludeUnknown)
   {
-    if (NullHandling.replaceWithDefault()) {
-      return convertToLegacy().optimize(mayIncludeUnknown);
-    }
     final List<?> matchValues = this.sortedMatchValues.get();
     if (matchValues.isEmpty()) {
       return FalseDimFilter.instance();
@@ -252,9 +248,6 @@ public class TypedInFilter extends AbstractOptimizableDimFilter implements Filte
   @Override
   public Filter toFilter()
   {
-    if (NullHandling.replaceWithDefault()) {
-      return convertToLegacy().toFilter();
-    }
     return this;
   }
 

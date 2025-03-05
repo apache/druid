@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.aggregation.firstlast;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.query.aggregation.SerializablePairLongString;
 import org.apache.druid.segment.vector.VectorObjectSelector;
@@ -73,17 +72,6 @@ public class StringFirstLastVectorAggregator extends FirstLastVectorAggregator<S
   protected void putValue(ByteBuffer buf, int position, long time, VectorValueSelector valueSelector, int index)
   {
     throw DruidException.defensive("This variant is not applicable to the StringFirstLastVectorAggregator");
-  }
-
-  @Override
-  protected void putDefaultValue(ByteBuffer buf, int position, long time)
-  {
-    StringFirstLastUtils.writePair(
-        buf,
-        position,
-        new SerializablePairLongString(time, NullHandling.defaultStringValue()),
-        maxStringBytes
-    );
   }
 
   @Override

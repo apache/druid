@@ -119,7 +119,7 @@ public class StringAnyAggregatorFactory extends AggregatorFactory
   @Override
   public Comparator getComparator()
   {
-    return VALUE_COMPARATOR;
+    return StringAnyAggregatorFactory.VALUE_COMPARATOR;
   }
 
   @Override

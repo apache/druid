@@ -34,7 +34,7 @@ public final class MetadataAction
   @FunctionalInterface
   public interface DeleteSegments
   {
-    int markSegmentsAsUnused(Set<SegmentId> segmentIds);
+    int markSegmentsAsUnused(String datasource, Set<SegmentId> segmentIds);
   }
 
   @FunctionalInterface

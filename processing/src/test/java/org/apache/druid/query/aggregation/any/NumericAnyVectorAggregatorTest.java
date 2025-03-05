@@ -95,7 +95,7 @@ public class NumericAnyVectorAggregatorTest extends InitializedNullHandlingTest
     target.init(buf, POSITION);
     Assert.assertEquals(0, buf.get(POSITION) & BYTE_FLAG_FOUND_MASK);
     Assert.assertEquals(
-        NullHandling.sqlCompatible() ? NullHandling.IS_NULL_BYTE : NullHandling.IS_NOT_NULL_BYTE,
+        NullHandling.IS_NULL_BYTE,
         buf.get(POSITION)
     );
   }
@@ -104,11 +104,7 @@ public class NumericAnyVectorAggregatorTest extends InitializedNullHandlingTest
   public void aggregateNotFoundAndHasNullsShouldPutNull()
   {
     target.aggregate(buf, POSITION, 0, 3);
-    if (NullHandling.sqlCompatible()) {
-      Assert.assertEquals(BYTE_FLAG_FOUND_MASK | NullHandling.IS_NULL_BYTE, buf.get(POSITION));
-    } else {
-      Assert.assertEquals(BYTE_FLAG_FOUND_MASK | NullHandling.IS_NOT_NULL_BYTE, buf.get(POSITION));
-    }
+    Assert.assertEquals(BYTE_FLAG_FOUND_MASK | NullHandling.IS_NULL_BYTE, buf.get(POSITION));
   }
 
   @Test

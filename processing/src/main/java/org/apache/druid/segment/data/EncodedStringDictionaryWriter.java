@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment.data;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.segment.column.StringEncodingStrategy;
@@ -60,7 +59,7 @@ public class EncodedStringDictionaryWriter implements DictionaryWriter<String>
   @Override
   public int write(@Nullable String objectToWrite) throws IOException
   {
-    return delegate.write(StringUtils.toUtf8Nullable(NullHandling.emptyToNullIfNeeded(objectToWrite)));
+    return delegate.write(StringUtils.toUtf8Nullable(objectToWrite));
   }
 
   @Nullable

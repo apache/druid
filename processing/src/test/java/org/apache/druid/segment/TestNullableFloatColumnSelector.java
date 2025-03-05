@@ -19,8 +19,6 @@
 
 package org.apache.druid.segment;
 
-import org.apache.druid.common.config.NullHandling;
-
 public class TestNullableFloatColumnSelector extends TestFloatColumnSelector
 {
 
@@ -38,8 +36,6 @@ public class TestNullableFloatColumnSelector extends TestFloatColumnSelector
   {
     if (floats[index] != null) {
       return floats[index];
-    } else if (NullHandling.replaceWithDefault()) {
-      return NullHandling.ZERO_FLOAT;
     } else {
       throw new IllegalStateException("Should never be invoked when current value is null && SQL-compatible null handling is enabled!");
     }
@@ -48,7 +44,7 @@ public class TestNullableFloatColumnSelector extends TestFloatColumnSelector
   @Override
   public boolean isNull()
   {
-    return !NullHandling.replaceWithDefault() && floats[index] == null;
+    return floats[index] == null;
   }
 
   public void increment()

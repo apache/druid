@@ -20,7 +20,6 @@
 package org.apache.druid.query.aggregation.histogram;
 
 import com.google.common.collect.Lists;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -103,35 +102,6 @@ public class ApproximateHistogramAggregationTest extends InitializedNullHandling
         "Histogram{breaks=[71.61954498291016, 92.78276062011719, 113.94597625732422, 135.10919189453125], counts=[1.0, 3.0, 1.0]}",
         row.getRaw("index_equal").toString()
     );
-  }
-
-  @Test
-  public void testIngestWithNullsToZeroAndQuery() throws Exception
-  {
-    // Nulls are ignored and not replaced with default for SQL compatible null handling.
-    // This is already tested in testIngestWithNullsIgnoredAndQuery()
-    if (NullHandling.replaceWithDefault()) {
-      MapBasedRow row = ingestAndQuery(false);
-      Assert.assertEquals(0.0F, row.getMetric("index_min"));
-      Assert.assertEquals(135.109191, row.getMetric("index_max").floatValue(), 0.0001);
-      Assert.assertEquals(131.428176, row.getMetric("index_quantile").floatValue(), 0.0001);
-      Assert.assertEquals(
-          new Quantiles(new float[]{0.2f, 0.7f}, new float[]{0.0f, 92.95146f}, 0.0f, 135.109191f),
-          row.getRaw("index_quantiles")
-      );
-      Assert.assertEquals(
-          "Histogram{breaks=[-2.0, 92.0, 94.0, 96.0, 98.0, 100.0, 106.0, 108.0, 134.0, 136.0], counts=[8.0, 1.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0]}",
-          row.getRaw("index_buckets").toString()
-      );
-      Assert.assertEquals(
-          "Histogram{breaks=[50.0, 100.0], counts=[3.0]}",
-          row.getRaw("index_custom").toString()
-      );
-      Assert.assertEquals(
-          "Histogram{breaks=[-67.55459594726562, 0.0, 67.55459594726562, 135.10919189453125], counts=[8.0, 0.0, 5.0]}",
-          row.getRaw("index_equal").toString()
-      );
-    }
   }
 
   private MapBasedRow ingestAndQuery(boolean ignoreNulls) throws Exception

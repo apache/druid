@@ -579,7 +579,7 @@ export class SegmentsView extends React.PureComponent<SegmentsViewProps, Segment
         pageSize={pageSize}
         onPageSizeChange={pageSize => this.setState({ pageSize })}
         pageSizeOptions={STANDARD_TABLE_PAGE_SIZE_OPTIONS}
-        showPagination
+        showPagination={segments.length >= STANDARD_TABLE_PAGE_SIZE}
         showPageJump={false}
         ofText=""
         pivotBy={groupByInterval ? ['interval'] : []}

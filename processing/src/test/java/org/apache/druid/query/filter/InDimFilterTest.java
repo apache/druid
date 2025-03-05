@@ -25,7 +25,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.query.extraction.RegexDimExtractionFn;
@@ -97,13 +96,8 @@ public class InDimFilterTest extends InitializedNullHandlingTest
   {
     final InDimFilter.ValuesSet values = InDimFilter.ValuesSet.copyOf(ImmutableSet.of("v1", "", "v3"));
     final InDimFilter filter = new InDimFilter("dim", values);
-    if (NullHandling.replaceWithDefault()) {
-      Assert.assertSame(values, filter.getValues());
-      Assert.assertEquals(Sets.newHashSet("v1", null, "v3"), filter.getValues());
-    } else {
-      Assert.assertSame(values, filter.getValues());
-      Assert.assertEquals(Sets.newHashSet("v1", "", "v3"), filter.getValues());
-    }
+    Assert.assertSame(values, filter.getValues());
+    Assert.assertEquals(Sets.newHashSet("v1", "", "v3"), filter.getValues());
   }
 
   @Test
@@ -120,11 +114,7 @@ public class InDimFilterTest extends InitializedNullHandlingTest
     final InDimFilter inDimFilter1 = new InDimFilter("dimTest", Arrays.asList(null, "abc"), null);
     final InDimFilter inDimFilter2 = new InDimFilter("dimTest", Arrays.asList("", "abc"), null);
 
-    if (NullHandling.sqlCompatible()) {
-      Assert.assertFalse(Arrays.equals(inDimFilter1.getCacheKey(), inDimFilter2.getCacheKey()));
-    } else {
-      Assert.assertArrayEquals(inDimFilter1.getCacheKey(), inDimFilter2.getCacheKey());
-    }
+    Assert.assertFalse(Arrays.equals(inDimFilter1.getCacheKey(), inDimFilter2.getCacheKey()));
   }
 
   @Test
@@ -270,7 +260,7 @@ public class InDimFilterTest extends InitializedNullHandlingTest
 
     Assert.assertEquals(
         "reverse lookup empty string",
-        NullHandling.sqlCompatible() ? Collections.emptySet() : null,
+        Collections.emptySet(),
         InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton(""), extractionFn), false)
     );
 
@@ -401,13 +391,12 @@ public class InDimFilterTest extends InitializedNullHandlingTest
 
     Assert.assertEquals(
         "reverse lookup empty string",
-        NullHandling.sqlCompatible() ? Collections.emptySet() : Collections.singleton("nv"),
+        Collections.emptySet(),
         InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton(""), extractionFn), false)
     );
 
-    Assert.assertEquals(
+    Assert.assertNull(
         "reverse lookup empty string (includeUnknown)",
-        NullHandling.sqlCompatible() ? null : Collections.singleton("nv"),
         InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton(""), extractionFn), true)
     );
   }
@@ -440,7 +429,7 @@ public class InDimFilterTest extends InitializedNullHandlingTest
 
     Assert.assertEquals(
         "reverse lookup baz (includeUnknown)",
-        NullHandling.sqlCompatible() ? Collections.emptySet() : null,
+        Collections.emptySet(),
         InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton("baz"), extractionFn), true)
     );
 
@@ -456,13 +445,13 @@ public class InDimFilterTest extends InitializedNullHandlingTest
 
     Assert.assertEquals(
         "reverse lookup null",
-        NullHandling.sqlCompatible() ? Collections.emptySet() : Collections.singleton("emptystring"),
+        Collections.emptySet(),
         InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton(null), extractionFn), false)
     );
 
     Assert.assertEquals(
         "reverse lookup null (includeUnknown)",
-        NullHandling.sqlCompatible() ? Collections.emptySet() : Collections.singleton("emptystring"),
+        Collections.emptySet(),
         InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton(null), extractionFn), true)
     );
 
@@ -489,7 +478,7 @@ public class InDimFilterTest extends InitializedNullHandlingTest
 
     Assert.assertEquals(
         "reverse lookup empty string",
-        NullHandling.sqlCompatible() ? Collections.singleton("emptystring") : null,
+        Collections.singleton("emptystring"),
         InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton(""), extractionFn), false)
     );
 
@@ -519,7 +508,7 @@ public class InDimFilterTest extends InitializedNullHandlingTest
 
     Assert.assertEquals(
         "reverse lookup bar",
-        NullHandling.sqlCompatible() ? Collections.singleton("") : Collections.singleton(null),
+        Collections.singleton(""),
         InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton("bar"), extractionFn), false)
     );
 
@@ -595,13 +584,13 @@ public class InDimFilterTest extends InitializedNullHandlingTest
 
     Assert.assertEquals(
         "reverse lookup empty string",
-        NullHandling.sqlCompatible() ? Collections.singleton("") : Collections.singleton(null),
+        Collections.singleton(""),
         InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton(""), extractionFn), false)
     );
 
     Assert.assertEquals(
         "reverse lookup empty string (includeUnknown)",
-        NullHandling.sqlCompatible() ? null : Collections.singleton(null),
+        null,
         InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton(""), extractionFn), true)
     );
   }
@@ -653,13 +642,13 @@ public class InDimFilterTest extends InitializedNullHandlingTest
 
     Assert.assertEquals(
         "reverse lookup null",
-        NullHandling.sqlCompatible() ? Collections.singleton(null) : Collections.emptySet(),
+        Collections.singleton(null),
         InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton(null), extractionFn), false)
     );
 
     Assert.assertEquals(
         "reverse lookup null (includeUnknown)",
-        NullHandling.sqlCompatible() ? Collections.singleton(null) : Collections.emptySet(),
+        Collections.singleton(null),
         InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton(null), extractionFn), true)
     );
 
@@ -686,8 +675,7 @@ public class InDimFilterTest extends InitializedNullHandlingTest
 
     Assert.assertEquals(
         "reverse lookup nv",
-        // null keys are always mapped to null in SQL-compatible mode
-        NullHandling.sqlCompatible() ? Collections.emptySet() : Collections.singleton(null),
+        Collections.emptySet(),
         InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton("nv"), extractionFn), false)
     );
 
@@ -708,7 +696,7 @@ public class InDimFilterTest extends InitializedNullHandlingTest
 
     Assert.assertEquals(
         "reverse lookup empty string",
-        NullHandling.sqlCompatible() ? Collections.emptySet() : null,
+        Collections.emptySet(),
         InDimFilter.optimizeLookup(new InDimFilter("dim", Collections.singleton(""), extractionFn), false)
     );
 

@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.expression;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.InputBindings;
@@ -89,9 +88,7 @@ public class CaseInsensitiveExprMacroTest extends MacroTestBase
   @Test
   public void testNullSearch()
   {
-    if (NullHandling.sqlCompatible()) {
-      expectException(IllegalArgumentException.class, "Function[icontains_string] substring must be a string literal");
-    }
+    expectException(IllegalArgumentException.class, "Function[icontains_string] substring must be a string literal");
 
     final ExprEval<?> result = eval(
         "icontains_string(a, null)",
@@ -119,9 +116,7 @@ public class CaseInsensitiveExprMacroTest extends MacroTestBase
   @Test
   public void testNullSearchOnEmptyString()
   {
-    if (NullHandling.sqlCompatible()) {
-      expectException(IllegalArgumentException.class, "Function[icontains_string] substring must be a string literal");
-    }
+    expectException(IllegalArgumentException.class, "Function[icontains_string] substring must be a string literal");
 
     final ExprEval<?> result = eval(
         "icontains_string(a, null)",
@@ -149,9 +144,7 @@ public class CaseInsensitiveExprMacroTest extends MacroTestBase
   @Test
   public void testNullSearchOnNull()
   {
-    if (NullHandling.sqlCompatible()) {
-      expectException(IllegalArgumentException.class, "Function[icontains_string] substring must be a string literal");
-    }
+    expectException(IllegalArgumentException.class, "Function[icontains_string] substring must be a string literal");
 
     final ExprEval<?> result = eval(
         "icontains_string(a, null)",
@@ -167,10 +160,6 @@ public class CaseInsensitiveExprMacroTest extends MacroTestBase
   public void testEmptyStringSearchOnNull()
   {
     ExprEval<?> result = eval("icontains_string(a, '')", InputBindings.nilBindings());
-    if (NullHandling.sqlCompatible()) {
-      Assert.assertNull(result.value());
-    } else {
-      Assert.assertEquals(ExprEval.ofLongBoolean(true).value(), result.value());
-    }
+    Assert.assertNull(result.value());
   }
 }

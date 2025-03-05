@@ -35,7 +35,6 @@ import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexUtil;
 import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.tools.RelBuilder;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.Pair;
 
 import java.util.ArrayList;
@@ -166,7 +165,7 @@ public abstract class FilterJoinExcludePushToChildRule<C extends FilterJoinRule.
     }
 
     // once the filters are pushed to join from top, try to remove redudant 'IS NOT NULL' filters
-    removeRedundantIsNotNullFilters(joinFilters, joinType, NullHandling.sqlCompatible());
+    removeRedundantIsNotNullFilters(joinFilters, joinType);
 
     // if nothing actually got pushed and there is nothing leftover,
     // then this rule is a no-op
@@ -285,14 +284,14 @@ public abstract class FilterJoinExcludePushToChildRule<C extends FilterJoinRule.
    * This tries to find all the 'IS NOT NULL' filters in an inner join whose checking column is also
    * a part of an equi-condition between the two tables. It removes such 'IS NOT NULL' filters from join since
    * the equi-condition will never return true for null input, thus making the 'IS NOT NULL' filter a no-op.
+   *
    * @param joinFilters
    * @param joinType
-   * @param isSqlCompatible
    */
-  static void removeRedundantIsNotNullFilters(List<RexNode> joinFilters, JoinRelType joinType, boolean isSqlCompatible)
+  static void removeRedundantIsNotNullFilters(List<RexNode> joinFilters, JoinRelType joinType)
   {
-    if (joinType != JoinRelType.INNER || !isSqlCompatible) {
-      return; // only works for inner joins in SQL mode
+    if (joinType != JoinRelType.INNER) {
+      return; // only works for inner joins
     }
 
     ImmutableList.Builder<RexNode> isNotNullFiltersBuilder = ImmutableList.builder();

@@ -20,7 +20,6 @@
 package org.apache.druid.segment.virtual;
 
 import org.apache.druid.collections.bitmap.RoaringBitmapFactory;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
@@ -55,10 +54,6 @@ import java.util.Arrays;
 @SuppressWarnings("ALL")
 public class FallbackVirtualColumnTest
 {
-  static {
-    NullHandling.initializeForTests();
-  }
-
   @Test
   public void testGetOutputName()
   {

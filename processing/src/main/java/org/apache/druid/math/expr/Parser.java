@@ -110,7 +110,7 @@ public class Parser
    */
   public static Supplier<Expr> lazyParse(@Nullable String in, ExprMacroTable macroTable)
   {
-    return Suppliers.memoize(() -> in == null ? null : parse(in, macroTable));
+    return Suppliers.memoize(() -> in == null ? null : Parser.parse(in, macroTable));
   }
 
   /**

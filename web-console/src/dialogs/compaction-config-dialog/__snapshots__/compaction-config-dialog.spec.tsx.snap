@@ -360,7 +360,7 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (dynamic 
               For more information refer to the
                
               <Memo(ExternalLink)
-                href="https://druid.apache.org/docs/latest/ingestion/concurrent-append-replace"
+                href="https://druid.apache.org/docs/32.0.0/ingestion/concurrent-append-replace"
               >
                 documentation
               </Memo(ExternalLink)>
@@ -372,7 +372,7 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (dynamic 
       >
         <Blueprint5.Switch
           checked={false}
-          label="Use concurrent locks (experimental)"
+          label="Use concurrent locks"
           onChange={[Function]}
         />
       </Memo(FormGroupWithInfo)>
@@ -770,7 +770,7 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (hashed p
               For more information refer to the
                
               <Memo(ExternalLink)
-                href="https://druid.apache.org/docs/latest/ingestion/concurrent-append-replace"
+                href="https://druid.apache.org/docs/32.0.0/ingestion/concurrent-append-replace"
               >
                 documentation
               </Memo(ExternalLink)>
@@ -782,7 +782,7 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (hashed p
       >
         <Blueprint5.Switch
           checked={false}
-          label="Use concurrent locks (experimental)"
+          label="Use concurrent locks"
           onChange={[Function]}
         />
       </Memo(FormGroupWithInfo)>
@@ -1180,7 +1180,7 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (range pa
               For more information refer to the
                
               <Memo(ExternalLink)
-                href="https://druid.apache.org/docs/latest/ingestion/concurrent-append-replace"
+                href="https://druid.apache.org/docs/32.0.0/ingestion/concurrent-append-replace"
               >
                 documentation
               </Memo(ExternalLink)>
@@ -1192,7 +1192,7 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (range pa
       >
         <Blueprint5.Switch
           checked={false}
-          label="Use concurrent locks (experimental)"
+          label="Use concurrent locks"
           onChange={[Function]}
         />
       </Memo(FormGroupWithInfo)>
@@ -1590,7 +1590,7 @@ exports[`CompactionConfigDialog matches snapshot without compactionConfig 1`] = 
               For more information refer to the
                
               <Memo(ExternalLink)
-                href="https://druid.apache.org/docs/latest/ingestion/concurrent-append-replace"
+                href="https://druid.apache.org/docs/32.0.0/ingestion/concurrent-append-replace"
               >
                 documentation
               </Memo(ExternalLink)>
@@ -1602,7 +1602,7 @@ exports[`CompactionConfigDialog matches snapshot without compactionConfig 1`] = 
       >
         <Blueprint5.Switch
           checked={false}
-          label="Use concurrent locks (experimental)"
+          label="Use concurrent locks"
           onChange={[Function]}
         />
       </Memo(FormGroupWithInfo)>

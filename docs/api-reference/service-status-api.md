@@ -400,7 +400,6 @@ Host: http://ROUTER_IP:ROUTER_PORT
     "druid.emitter": "noop",
     "sun.io.unicode.encoding": "UnicodeBig",
     "druid.storage.type": "local",
-    "druid.expressions.useStrictBooleans": "true",
     "java.class.version": "55.0",
     "socksNonProxyHosts": "local|*.local|169.254/16|*.169.254/16",
     "druid.server.hiddenProperties": "[\"druid.s3.accessKey\",\"druid.s3.secretKey\",\"druid.metadata.storage.connector.password\", \"password\", \"key\", \"token\", \"pwd\"]"

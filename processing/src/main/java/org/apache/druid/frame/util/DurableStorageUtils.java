@@ -252,7 +252,7 @@ public class DurableStorageUtils
     if (elements.size() < 2) {
       return false;
     }
-    if (!QUERY_RESULTS_DIR.equals(elements.get(0))) {
+    if (!DurableStorageUtils.QUERY_RESULTS_DIR.equals(elements.get(0))) {
       return false;
     }
     return knownTasks.contains(elements.get(1));

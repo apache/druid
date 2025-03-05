@@ -20,7 +20,6 @@
 package org.apache.druid.benchmark.query;
 
 import com.google.common.collect.ImmutableSet;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -84,10 +83,6 @@ public class SqlVsNativeBenchmark
   private int rowsPerSegment;
 
   private static final Logger log = new Logger(SqlVsNativeBenchmark.class);
-
-  static {
-    NullHandling.initializeForTests();
-  }
 
   private SpecificSegmentsQuerySegmentWalker walker;
   private SqlEngine engine;

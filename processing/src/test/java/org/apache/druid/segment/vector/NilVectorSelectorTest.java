@@ -20,7 +20,6 @@
 package org.apache.druid.segment.vector;
 
 import org.apache.druid.collections.bitmap.WrappedRoaringBitmap;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
@@ -76,7 +75,7 @@ public class NilVectorSelectorTest extends InitializedNullHandlingTest
         Assert.assertEquals(0L, longs[i]);
         Assert.assertEquals(0.0, doubles[i], 0.0);
         Assert.assertEquals(0f, floats[i], 0.0);
-        Assert.assertEquals(NullHandling.sqlCompatible(), nulls[i]);
+        Assert.assertTrue(nulls[i]);
         Assert.assertNull(objects[i]);
       }
       offset.advance();

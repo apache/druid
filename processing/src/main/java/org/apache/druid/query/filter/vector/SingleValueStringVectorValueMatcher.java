@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.filter.vector;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.filter.DruidObjectPredicate;
@@ -45,12 +44,10 @@ public class SingleValueStringVectorValueMatcher implements VectorValueMatcherFa
   @Override
   public VectorValueMatcher makeMatcher(@Nullable final String value)
   {
-    final String etnValue = NullHandling.emptyToNullIfNeeded(value);
-
     final ConstantMatcherType constantMatcherType = ValueMatchers.toConstantMatcherTypeIfPossible(
         selector,
         false,
-        etnValue == null ? DruidObjectPredicate.isNull() : DruidObjectPredicate.equalTo(etnValue)
+        value == null ? DruidObjectPredicate.isNull() : DruidObjectPredicate.equalTo(value)
     );
     if (constantMatcherType != null) {
       return constantMatcherType.asVectorMatcher(selector);
@@ -61,13 +58,13 @@ public class SingleValueStringVectorValueMatcher implements VectorValueMatcherFa
 
     if (idLookup != null) {
       // Optimization when names can be looked up to IDs ahead of time.
-      id = idLookup.lookupId(etnValue);
+      id = idLookup.lookupId(value);
 
       if (id < 0) {
         // Value doesn't exist in this column.
         return VectorValueMatcher.allFalseSingleValueDimensionMatcher(selector);
       }
-      final boolean hasNull = NullHandling.isNullOrEquivalent(selector.lookupName(0));
+      final boolean hasNull = selector.lookupName(0) == null;
 
       // Check for "id".
       return new BaseVectorValueMatcher(selector)
@@ -95,7 +92,7 @@ public class SingleValueStringVectorValueMatcher implements VectorValueMatcherFa
         }
       };
     } else {
-      return makeMatcher(DruidObjectPredicate.equalTo(etnValue));
+      return makeMatcher(DruidObjectPredicate.equalTo(value));
     }
   }
 

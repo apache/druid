@@ -24,7 +24,6 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.ListBasedInputRow;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
@@ -193,7 +192,6 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
   @Parameterized.Parameters(name = "{0}")
   public static Collection<Object[]> constructorFeeder()
   {
-    NullHandling.initializeForTests();
     setUpClass();
 
     final List<Object[]> constructors = new ArrayList<>();
@@ -762,14 +760,9 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
         .build();
 
-    List<ResultRow> expectedResults = NullHandling.sqlCompatible() ? Arrays.asList(
+    List<ResultRow> expectedResults = Arrays.asList(
         makeRow(query, timestamp, "v0", null, "rows", 2L),
         makeRow(query, timestamp, "v0", "", "rows", 1L),
-        makeRow(query, timestamp, "v0", "a", "rows", 1L),
-        makeRow(query, timestamp, "v0", "b", "rows", 1L),
-        makeRow(query, timestamp, "v0", "c", "rows", 1L)
-    ) : Arrays.asList(
-        makeRow(query, timestamp, "v0", null, "rows", 3L),
         makeRow(query, timestamp, "v0", "a", "rows", 1L),
         makeRow(query, timestamp, "v0", "b", "rows", 1L),
         makeRow(query, timestamp, "v0", "c", "rows", 1L)
@@ -840,14 +833,9 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
         .build();
 
-    List<ResultRow> expectedResults = NullHandling.sqlCompatible() ? Arrays.asList(
+    List<ResultRow> expectedResults = Arrays.asList(
         makeRow(query, timestamp, "v0", null, "rows", 6L),
         makeRow(query, timestamp, "v0", "", "rows", 1L),
-        makeRow(query, timestamp, "v0", "a", "rows", 1L),
-        makeRow(query, timestamp, "v0", "b", "rows", 1L),
-        makeRow(query, timestamp, "v0", "c", "rows", 1L)
-    ) : Arrays.asList(
-        makeRow(query, timestamp, "v0", null, "rows", 7L),
         makeRow(query, timestamp, "v0", "a", "rows", 1L),
         makeRow(query, timestamp, "v0", "b", "rows", 1L),
         makeRow(query, timestamp, "v0", "c", "rows", 1L)
@@ -1022,14 +1010,9 @@ public class UnnestGroupByQueryRunnerTest extends InitializedNullHandlingTest
         .setGranularity(QueryRunnerTestHelper.ALL_GRAN)
         .build();
 
-    List<ResultRow> expectedResults = NullHandling.sqlCompatible() ? Arrays.asList(
+    List<ResultRow> expectedResults = Arrays.asList(
         makeRow(query, timestamp, "v1", null, "rows", 2L),
         makeRow(query, timestamp, "v1", "", "rows", 1L),
-        makeRow(query, timestamp, "v1", "a", "rows", 1L),
-        makeRow(query, timestamp, "v1", "b", "rows", 1L),
-        makeRow(query, timestamp, "v1", "c", "rows", 1L)
-    ) : Arrays.asList(
-        makeRow(query, timestamp, "v1", null, "rows", 3L),
         makeRow(query, timestamp, "v1", "a", "rows", 1L),
         makeRow(query, timestamp, "v1", "b", "rows", 1L),
         makeRow(query, timestamp, "v1", "c", "rows", 1L)

@@ -179,8 +179,8 @@ public class ColumnType extends BaseTypeSignature<ValueType>
     }
     // if either is nested data, use nested data, otherwise error
     if (type.is(ValueType.COMPLEX) || other.is(ValueType.COMPLEX)) {
-      if (NESTED_DATA.equals(type) || NESTED_DATA.equals(other)) {
-        return NESTED_DATA;
+      if (ColumnType.NESTED_DATA.equals(type) || ColumnType.NESTED_DATA.equals(other)) {
+        return ColumnType.NESTED_DATA;
       }
       throw new Types.IncompatibleTypeException(type, other);
     }
@@ -198,14 +198,14 @@ public class ColumnType extends BaseTypeSignature<ValueType>
             (ColumnType) other.getElementType()
         );
 
-        return ofArray(commonElementType);
+        return ColumnType.ofArray(commonElementType);
       } else {
         commonElementType = leastRestrictiveType(
             (ColumnType) type.getElementType(),
             other
         );
       }
-      return ofArray(commonElementType);
+      return ColumnType.ofArray(commonElementType);
     }
     if (other.isArray()) {
       if (type.equals(type.getElementType())) {
@@ -217,22 +217,22 @@ public class ColumnType extends BaseTypeSignature<ValueType>
           type,
           (ColumnType) other.getElementType()
       );
-      return ofArray(commonElementType);
+      return ColumnType.ofArray(commonElementType);
     }
     // if either argument is a string, type becomes a string
     if (Types.is(type, ValueType.STRING) || Types.is(other, ValueType.STRING)) {
-      return STRING;
+      return ColumnType.STRING;
     }
 
     // all numbers win over longs
     if (Types.is(type, ValueType.LONG) && Types.isNullOr(other, ValueType.LONG)) {
-      return LONG;
+      return ColumnType.LONG;
     }
     // doubles win over floats
     if (Types.is(type, ValueType.FLOAT) && Types.isNullOr(other, ValueType.FLOAT)) {
-      return FLOAT;
+      return ColumnType.FLOAT;
     }
-    return DOUBLE;
+    return ColumnType.DOUBLE;
   }
 
 }

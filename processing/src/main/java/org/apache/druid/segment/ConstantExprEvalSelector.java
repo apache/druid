@@ -20,7 +20,6 @@
 package org.apache.druid.segment;
 
 import com.google.common.base.Preconditions;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 
@@ -36,7 +35,7 @@ public class ConstantExprEvalSelector implements ColumnValueSelector<ExprEval>
   {
     this.eval = Preconditions.checkNotNull(eval, "eval");
 
-    if (NullHandling.sqlCompatible() && eval.isNumericNull()) {
+    if (eval.isNumericNull()) {
       longValue = 0L;
       floatValue = 0f;
       doubleValue = 0d;

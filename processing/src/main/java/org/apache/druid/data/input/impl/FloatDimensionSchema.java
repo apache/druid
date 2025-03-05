@@ -39,7 +39,7 @@ public class FloatDimensionSchema extends DimensionSchema
   @Override
   public String getTypeName()
   {
-    return FLOAT_TYPE_NAME;
+    return DimensionSchema.FLOAT_TYPE_NAME;
   }
 
   @Override

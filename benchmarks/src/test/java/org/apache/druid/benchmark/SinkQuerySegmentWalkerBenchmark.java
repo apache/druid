@@ -22,7 +22,6 @@ package org.apache.druid.benchmark;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.DateTimes;
@@ -72,10 +71,6 @@ import java.util.concurrent.TimeUnit;
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
 public class SinkQuerySegmentWalkerBenchmark
 {
-  static {
-    NullHandling.initializeForTests();
-  }
-
   @Param({"10", "50", "100", "200"})
   private int numFireHydrants;
 

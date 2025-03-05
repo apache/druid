@@ -49,10 +49,10 @@ expectedOutput:
   timestamp: 2017-01-02T00:00Z
   event:
     gender: f
-    timespent_secs: 0
-    timeSpent: 0.0
+    timespent_secs: null
+    timeSpent: null
     trailing7DayAvgTimeSpent: 1.0
-    someSum: 0.0
+    someSum: null
 intermediateResults:
   groupBy:
   - [1483228800000, m, 120, 5.0, 2.0]

@@ -21,7 +21,6 @@ package org.apache.druid.query.aggregation.datasketches.kll;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -363,7 +362,7 @@ public class KllFloatsSketchAggregatorTest extends InitializedNullHandlingTest
     Object sketchObjectWithNulls = row.get(1);
     Assert.assertTrue(sketchObjectWithNulls instanceof Long);
     long sketchValueWithNulls = (long) sketchObjectWithNulls;
-    Assert.assertEquals(NullHandling.replaceWithDefault() ? 400 : 355, sketchValueWithNulls);
+    Assert.assertEquals(355, sketchValueWithNulls);
 
     // post agg
     Object quantileObject = row.get(2);
@@ -391,7 +390,7 @@ public class KllFloatsSketchAggregatorTest extends InitializedNullHandlingTest
     Object quantileObjectWithNulls = row.get(5);
     Assert.assertTrue(quantileObjectWithNulls instanceof Float);
     Assert.assertEquals(
-        NullHandling.replaceWithDefault() ? 7.2f : 7.5f,
+        7.5f,
         (float) quantileObjectWithNulls,
         0.1
     ); // median value
@@ -400,8 +399,8 @@ public class KllFloatsSketchAggregatorTest extends InitializedNullHandlingTest
     Object quantilesObjectWithNulls = row.get(6);
     Assert.assertTrue(quantilesObjectWithNulls instanceof float[]);
     float[] quantilesWithNulls = (float[]) quantilesObjectWithNulls;
-    Assert.assertEquals(NullHandling.replaceWithDefault() ? 0 : 5f, quantilesWithNulls[0], 0.05); // min value
-    Assert.assertEquals(NullHandling.replaceWithDefault() ? 7.2f : 7.5f, quantilesWithNulls[1], 0.1); // median value
+    Assert.assertEquals(5f, quantilesWithNulls[0], 0.05); // min value
+    Assert.assertEquals(7.5f, quantilesWithNulls[1], 0.1); // median value
     Assert.assertEquals(10f, quantilesWithNulls[2], 0.05); // max value
 
     // post agg with nulls

@@ -19,8 +19,15 @@
 
 package org.apache.druid.guice;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.inject.Inject;
+import com.google.inject.Injector;
 import com.google.inject.util.Providers;
+import org.apache.druid.common.config.NullValueHandlingConfig;
 import org.apache.druid.jackson.JacksonModule;
+import org.apache.druid.java.util.common.ISE;
+import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.math.expr.ExpressionProcessingConfig;
 import org.apache.druid.math.expr.ExpressionProcessingModule;
 import org.apache.druid.utils.RuntimeInfo;
 
@@ -52,8 +59,17 @@ public class StartupInjectorBuilder extends BaseInjectorBuilder<StartupInjectorB
         new ConfigModule(),
         new NullHandlingModule(),
         new ExpressionProcessingModule(),
-        binder -> binder.bind(DruidSecondaryModule.class)
+        binder -> binder.bind(DruidSecondaryModule.class),
+        binder -> binder.bind(PropertiesValidator.class) // this gets properties injected, later call to validate checks
     );
+  }
+
+  @Override
+  public Injector build()
+  {
+    Injector injector = super.build();
+    injector.getInstance(PropertiesValidator.class).validate();
+    return injector;
   }
 
   public StartupInjectorBuilder withProperties(Properties properties)
@@ -96,5 +112,69 @@ public class StartupInjectorBuilder extends BaseInjectorBuilder<StartupInjectorB
       binder.bind(RuntimeInfo.class).toProvider(Providers.of(null));
     });
     return this;
+  }
+
+  /**
+   * Centralized validation of runtime.properties to allow checking for configuration which has been removed and
+   * alerting or failing fast as needed.
+   */
+  private static final class PropertiesValidator
+  {
+    private final Properties properties;
+
+    @Inject
+    public PropertiesValidator(Properties properties)
+    {
+      this.properties = properties;
+    }
+
+    public void validate()
+    {
+      final boolean defaultValueMode = Boolean.parseBoolean(
+          properties.getProperty(NullValueHandlingConfig.NULL_HANDLING_CONFIG_STRING, "false")
+      );
+      if (defaultValueMode) {
+        final String docsLink = StringUtils.format("https://druid.apache.org/docs/%s/release-info/migr-ansi-sql-null", getVersionString());
+        throw new ISE(
+            "%s set to 'true', but has been removed, see %s for details for how to migrate to SQL compliant behavior",
+            NullValueHandlingConfig.NULL_HANDLING_CONFIG_STRING,
+            docsLink
+        );
+      }
+
+      final boolean no3vl = !Boolean.parseBoolean(
+          properties.getProperty(NullValueHandlingConfig.THREE_VALUE_LOGIC_CONFIG_STRING, "true")
+      );
+      if (no3vl) {
+        final String docsLink = StringUtils.format("https://druid.apache.org/docs/%s/release-info/migr-ansi-sql-null", getVersionString());
+        throw new ISE(
+            "%s set to 'false', but has been removed, see %s for details for how to migrate to SQL compliant behavior",
+            NullValueHandlingConfig.THREE_VALUE_LOGIC_CONFIG_STRING,
+            docsLink
+        );
+      }
+
+      final boolean nonStrictExpressions = !Boolean.parseBoolean(
+          properties.getProperty(ExpressionProcessingConfig.NULL_HANDLING_LEGACY_LOGICAL_OPS_STRING, "true")
+      );
+      if (nonStrictExpressions) {
+        final String docsLink = StringUtils.format("https://druid.apache.org/docs/%s/release-info/migr-ansi-sql-null", getVersionString());
+        throw new ISE(
+            "%s set to 'false', but has been removed, see %s for details for how to migrate to SQL compliant behavior",
+            ExpressionProcessingConfig.NULL_HANDLING_LEGACY_LOGICAL_OPS_STRING,
+            docsLink
+        );
+      }
+    }
+  }
+
+  @VisibleForTesting
+  public static String getVersionString()
+  {
+    final String version = StartupInjectorBuilder.class.getPackage().getImplementationVersion();
+    if (version == null || version.contains("SNAPSHOT")) {
+      return "latest";
+    }
+    return version;
   }
 }

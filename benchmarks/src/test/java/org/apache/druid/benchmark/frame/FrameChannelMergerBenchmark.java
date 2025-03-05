@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.FrameType;
@@ -85,7 +84,6 @@ import java.util.stream.Collectors;
 public class FrameChannelMergerBenchmark
 {
   static {
-    NullHandling.initializeForTests();
     BuiltInTypesModule.registerHandlersAndSerde();
   }
 

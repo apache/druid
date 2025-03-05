@@ -36,7 +36,7 @@ public class DoubleDimensionSchema extends DimensionSchema
   @Override
   public String getTypeName()
   {
-    return DOUBLE_TYPE_NAME;
+    return DimensionSchema.DOUBLE_TYPE_NAME;
   }
 
   @Override

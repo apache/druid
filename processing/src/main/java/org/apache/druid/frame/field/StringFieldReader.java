@@ -22,7 +22,6 @@ package org.apache.druid.frame.field;
 import com.google.common.primitives.Ints;
 import it.unimi.dsi.fastutil.objects.ObjectArrays;
 import org.apache.datasketches.memory.Memory;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.NotYetImplemented;
 import org.apache.druid.frame.Frame;
@@ -128,7 +127,7 @@ public class StringFieldReader implements FieldReader
     if (firstByte == StringFieldWriter.NULL_ROW) {
       return true;
     } else if (!asArray) {
-      return (NullHandling.replaceWithDefault() || firstByte == StringFieldWriter.NULL_BYTE)
+      return firstByte == StringFieldWriter.NULL_BYTE
              && memory.getByte(position + 1) == StringFieldWriter.VALUE_TERMINATOR
              && memory.getByte(position + 2) == StringFieldWriter.ROW_TERMINATOR;
     } else {
@@ -585,13 +584,8 @@ public class StringFieldReader implements FieldReader
             if (b == StringFieldWriter.VALUE_TERMINATOR) {
               final int len = Ints.checkedCast(i - position);
 
-              if (len == 0 && NullHandling.replaceWithDefault()) {
-                // Empty strings and nulls are the same in this mode.
-                list.add(null);
-              } else {
-                final ByteBuffer buf = FrameReaderUtils.readByteBuffer(memory, position, len);
-                list.add(buf);
-              }
+              final ByteBuffer buf = FrameReaderUtils.readByteBuffer(memory, position, len);
+              list.add(buf);
 
               position += len;
 

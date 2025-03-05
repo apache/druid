@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.aggregation.variance;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.aggregation.VectorAggregator;
 import org.apache.druid.segment.vector.VectorValueSelector;
 
@@ -32,7 +31,6 @@ import java.nio.ByteBuffer;
 public class VarianceLongVectorAggregator implements VectorAggregator
 {
   private final VectorValueSelector selector;
-  private final boolean replaceWithDefault = NullHandling.replaceWithDefault();
 
   public VarianceLongVectorAggregator(VectorValueSelector selector)
   {
@@ -51,7 +49,7 @@ public class VarianceLongVectorAggregator implements VectorAggregator
     long[] vector = selector.getLongVector();
     long count = 0;
     double sum = 0, nvariance = 0;
-    boolean[] nulls = replaceWithDefault ? null : selector.getNullVector();
+    boolean[] nulls = selector.getNullVector();
     for (int i = startRow; i < endRow; i++) {
       if (nulls == null || !nulls[i]) {
         count++;
@@ -86,7 +84,7 @@ public class VarianceLongVectorAggregator implements VectorAggregator
   )
   {
     long[] vector = selector.getLongVector();
-    boolean[] nulls = replaceWithDefault ? null : selector.getNullVector();
+    boolean[] nulls = selector.getNullVector();
     for (int i = 0; i < numRows; i++) {
       int position = positions[i] + positionOffset;
       int row = rows != null ? rows[i] : i;

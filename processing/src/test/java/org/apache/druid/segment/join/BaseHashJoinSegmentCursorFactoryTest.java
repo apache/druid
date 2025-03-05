@@ -20,7 +20,6 @@
 package org.apache.druid.segment.join;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.QueryContexts;
@@ -86,8 +85,7 @@ public class BaseHashJoinSegmentCursorFactoryTest extends InitializedNullHandlin
   @BeforeClass
   public static void setUpStatic()
   {
-    NullHandling.initializeForTests();
-    NULL_COUNTRY = NullHandling.sqlCompatible() ? null : 0L;
+    NULL_COUNTRY = null;
   }
 
   @Before

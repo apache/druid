@@ -22,7 +22,6 @@ package org.apache.druid.query.aggregation.hyperloglog;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.hll.VersionZeroHyperLogLogCollector;
@@ -51,10 +50,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class HyperUniquesAggregatorFactoryTest
 {
-  static {
-    NullHandling.initializeForTests();
-  }
-
   static final HyperUniquesAggregatorFactory AGGREGATOR_FACTORY = new HyperUniquesAggregatorFactory(
       "hyperUnique",
       "uniques"

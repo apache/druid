@@ -22,7 +22,6 @@ package org.apache.druid.query.aggregation.post;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.Queries;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.PostAggregator;
@@ -83,7 +82,7 @@ public class DoubleGreatestPostAggregator implements PostAggregator
   public Object compute(Map<String, Object> values)
   {
     Iterator<PostAggregator> fieldsIter = fields.iterator();
-    Double retVal = NullHandling.replaceWithDefault() ? Double.NEGATIVE_INFINITY : null;
+    Double retVal = null;
     while (fieldsIter.hasNext()) {
       Number nextVal = ((Number) fieldsIter.next().compute(values));
       // Ignore NULL values and return the greatest out of non-null values.

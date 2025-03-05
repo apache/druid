@@ -36,9 +36,9 @@ import org.apache.druid.query.DefaultQueryConfig;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.ResponseContextConfig;
 import org.apache.druid.server.initialization.ServerConfig;
-import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthenticationResult;
+import org.apache.druid.server.security.AuthorizationResult;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Resource;
@@ -144,7 +144,7 @@ public class DartSqlResource extends SqlResource
   )
   {
     final AuthenticationResult authenticationResult = AuthorizationUtils.authenticationResultFromRequest(req);
-    final Access stateReadAccess = AuthorizationUtils.authorizeAllResourceActions(
+    final AuthorizationResult stateReadAccess = AuthorizationUtils.authorizeAllResourceActions(
         authenticationResult,
         Collections.singletonList(new ResourceAction(Resource.STATE_RESOURCE, Action.READ)),
         authorizerMapper
@@ -175,7 +175,7 @@ public class DartSqlResource extends SqlResource
     queries.sort(Comparator.comparing(DartQueryInfo::getStartTime).thenComparing(DartQueryInfo::getDartQueryId));
 
     final GetQueriesResponse response;
-    if (stateReadAccess.isAllowed()) {
+    if (stateReadAccess.allowAccessWithNoRestriction()) {
       // User can READ STATE, so they can see all running queries, as well as authentication details.
       response = new GetQueriesResponse(queries);
     } else {
@@ -245,9 +245,9 @@ public class DartSqlResource extends SqlResource
       return Response.status(Response.Status.ACCEPTED).build();
     }
 
-    final Access access = authorizeCancellation(req, cancelables);
+    final AuthorizationResult authResult = authorizeCancellation(req, cancelables);
 
-    if (access.isAllowed()) {
+    if (authResult.allowAccessWithNoRestriction()) {
       sqlLifecycleManager.removeAll(sqlQueryId, cancelables);
 
       // Don't call cancel() on the cancelables. That just cancels native queries, which is useless here. Instead,

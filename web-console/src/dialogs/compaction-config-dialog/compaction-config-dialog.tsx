@@ -130,7 +130,7 @@ export const CompactionConfigDialog = React.memo(function CompactionConfigDialog
               }
             >
               <Switch
-                label="Use concurrent locks (experimental)"
+                label="Use concurrent locks"
                 checked={Boolean(deepGet(currentConfig, 'taskContext.useConcurrentLocks'))}
                 onChange={() => {
                   setCurrentConfig(

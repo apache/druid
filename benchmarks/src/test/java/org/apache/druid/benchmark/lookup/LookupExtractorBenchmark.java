@@ -21,7 +21,6 @@ package org.apache.druid.benchmark.lookup;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterators;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.lookup.LookupExtractor;
@@ -53,10 +52,6 @@ import java.util.concurrent.TimeUnit;
 @Measurement(iterations = 5)
 public class LookupExtractorBenchmark
 {
-  static {
-    NullHandling.initializeForTests();
-  }
-
   /**
    * Type of lookup to benchmark. All are members of enum {@link LookupBenchmarkUtil.LookupType}.
    */

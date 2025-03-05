@@ -524,7 +524,7 @@ public class HttpPostEmitter implements Flushable, Closeable, Emitter
 
     private boolean needsToShutdown()
     {
-      boolean needsToShutdown = interrupted() || shuttingDown;
+      boolean needsToShutdown = Thread.interrupted() || shuttingDown;
       if (needsToShutdown) {
         Object lastBatch = concurrentBatch.getAndSet(null);
         if (lastBatch instanceof Batch) {
@@ -722,7 +722,7 @@ public class HttpPostEmitter implements Flushable, Closeable, Emitter
       final long backoffCheckDelayMillis = config.getMinHttpTimeoutMillis() / 5;
 
       try {
-        sleep(backoffCheckDelayMillis);
+        Thread.sleep(backoffCheckDelayMillis);
       }
       catch (InterruptedException ignored) {
         return;

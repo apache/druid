@@ -20,7 +20,6 @@
 package org.apache.druid.segment.filter;
 
 import com.google.common.collect.ImmutableSet;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.filter.ColumnIndexSelector;
@@ -85,7 +84,7 @@ public class SelectorFilter implements Filter
     if (!Filters.checkFilterTuningUseIndex(dimension, selector, filterTuning)) {
       return null;
     }
-    final boolean isNull = NullHandling.isNullOrEquivalent(value);
+    final boolean isNull = value == null;
     final ColumnIndexSupplier indexSupplier = selector.getIndexSupplier(dimension);
     if (indexSupplier == null) {
       if (isNull) {

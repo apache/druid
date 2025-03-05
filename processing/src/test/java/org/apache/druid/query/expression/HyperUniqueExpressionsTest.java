@@ -21,7 +21,6 @@ package org.apache.druid.query.expression;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.math.expr.Expr;
@@ -106,7 +105,7 @@ public class HyperUniqueExpressionsTest extends InitializedNullHandlingTest
 
     Assert.assertEquals(HyperUniqueExpressions.TYPE, eval.type());
     Assert.assertTrue(eval.value() instanceof HyperLogLogCollector);
-    Assert.assertEquals(NullHandling.replaceWithDefault() ? 1.0 : 0.0, ((HyperLogLogCollector) eval.value()).estimateCardinality(), 0.01);
+    Assert.assertEquals(0.0, ((HyperLogLogCollector) eval.value()).estimateCardinality(), 0.01);
   }
 
   @Test
@@ -138,7 +137,7 @@ public class HyperUniqueExpressionsTest extends InitializedNullHandlingTest
 
     Assert.assertEquals(HyperUniqueExpressions.TYPE, eval.type());
     Assert.assertTrue(eval.value() instanceof HyperLogLogCollector);
-    Assert.assertEquals(NullHandling.replaceWithDefault() ? 1.0 : 0.0, ((HyperLogLogCollector) eval.value()).estimateCardinality(), 0.01);
+    Assert.assertEquals(0.0, ((HyperLogLogCollector) eval.value()).estimateCardinality(), 0.01);
   }
 
   @Test
@@ -170,7 +169,7 @@ public class HyperUniqueExpressionsTest extends InitializedNullHandlingTest
 
     Assert.assertEquals(HyperUniqueExpressions.TYPE, eval.type());
     Assert.assertTrue(eval.value() instanceof HyperLogLogCollector);
-    Assert.assertEquals(NullHandling.replaceWithDefault() ? 1.0 : 0.0, ((HyperLogLogCollector) eval.value()).estimateCardinality(), 0.01);
+    Assert.assertEquals(0.0, ((HyperLogLogCollector) eval.value()).estimateCardinality(), 0.01);
   }
 
   @Test

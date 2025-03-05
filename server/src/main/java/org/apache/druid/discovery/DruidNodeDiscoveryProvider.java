@@ -67,7 +67,7 @@ public abstract class DruidNodeDiscoveryProvider
         serviceName,
         service -> {
 
-          Set<NodeRole> nodeRolesToWatch = SERVICE_TO_NODE_TYPES.get(service);
+          Set<NodeRole> nodeRolesToWatch = DruidNodeDiscoveryProvider.SERVICE_TO_NODE_TYPES.get(service);
           if (nodeRolesToWatch == null) {
             throw new IAE("Unknown service [%s].", service);
           }

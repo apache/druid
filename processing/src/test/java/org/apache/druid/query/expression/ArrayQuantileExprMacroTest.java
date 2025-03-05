@@ -22,7 +22,6 @@ package org.apache.druid.query.expression;
 import com.google.common.collect.ImmutableList;
 import it.unimi.dsi.fastutil.doubles.DoubleList;
 import it.unimi.dsi.fastutil.doubles.DoubleLists;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.math.expr.InputBindings;
@@ -110,12 +109,7 @@ public class ArrayQuantileExprMacroTest extends InitializedNullHandlingTest
         )
     );
 
-    if (NullHandling.sqlCompatible()) {
-      Assert.assertTrue(result.eval(InputBindings.nilBindings()).isNumericNull());
-    } else {
-      Assert.assertFalse(result.eval(InputBindings.nilBindings()).isNumericNull());
-      Assert.assertEquals(0, result.eval(InputBindings.nilBindings()).asDouble(), 0);
-    }
+    Assert.assertTrue(result.eval(InputBindings.nilBindings()).isNumericNull());
   }
 
   @Test
@@ -128,12 +122,7 @@ public class ArrayQuantileExprMacroTest extends InitializedNullHandlingTest
         )
     );
 
-    if (NullHandling.sqlCompatible()) {
-      Assert.assertTrue(result.eval(InputBindings.nilBindings()).isNumericNull());
-    } else {
-      Assert.assertFalse(result.eval(InputBindings.nilBindings()).isNumericNull());
-      Assert.assertEquals(0, result.eval(InputBindings.nilBindings()).asDouble(), 0);
-    }
+    Assert.assertTrue(result.eval(InputBindings.nilBindings()).isNumericNull());
   }
 
   @Test

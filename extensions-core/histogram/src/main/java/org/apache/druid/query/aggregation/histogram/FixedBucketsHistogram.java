@@ -25,7 +25,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 
@@ -445,11 +444,7 @@ public class FixedBucketsHistogram
   public void combine(@Nullable Object val)
   {
     if (val == null) {
-      if (NullHandling.replaceWithDefault()) {
-        add(NullHandling.defaultDoubleValue());
-      } else {
-        incrementMissing();
-      }
+      incrementMissing();
     } else if (val instanceof String) {
       combineHistogram(fromBase64((String) val));
     } else if (val instanceof FixedBucketsHistogram) {

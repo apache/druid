@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.movingaverage;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.MapBasedRow;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -613,8 +612,6 @@ public class MovingAverageIterableTest extends InitializedNullHandlingTest
   @Test
   public void testMissingDaysInMiddle()
   {
-    System.setProperty("druid.generic.useDefaultValueForNull", "true");
-    NullHandling.initializeForTests();
     Map<String, Object> event1 = new HashMap<>();
     Map<String, Object> event2 = new HashMap<>();
 
@@ -733,8 +730,6 @@ public class MovingAverageIterableTest extends InitializedNullHandlingTest
   @Test
   public void testMissingDaysAtEnd()
   {
-    System.setProperty("druid.generic.useDefaultValueForNull", "true");
-    NullHandling.initializeForTests();
     Map<String, Object> event1 = new HashMap<>();
     Map<String, Object> event2 = new HashMap<>();
 
@@ -798,12 +793,6 @@ public class MovingAverageIterableTest extends InitializedNullHandlingTest
     Assert.assertEquals(JAN_5, result.getTimestamp());
     Assert.assertEquals("m", (result.getDimension("gender")).get(0));
     Assert.assertEquals(5.0f, result.getMetric("movingAvgPageViews").floatValue(), 0.0f);
-
-    Assert.assertTrue(iter.hasNext());
-    result = iter.next();
-    Assert.assertEquals(JAN_6, result.getTimestamp());
-    Assert.assertEquals("m", (result.getDimension("gender")).get(0));
-    Assert.assertEquals(0.0f, result.getMetric("movingAvgPageViews").floatValue(), 0.0f);
 
     Assert.assertFalse(iter.hasNext());
   }

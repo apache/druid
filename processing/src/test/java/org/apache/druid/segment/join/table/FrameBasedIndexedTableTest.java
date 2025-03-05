@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import it.unimi.dsi.fastutil.ints.IntBidirectionalIterator;
 import it.unimi.dsi.fastutil.ints.IntSortedSet;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.allocation.HeapMemoryAllocator;
 import org.apache.druid.frame.allocation.SingleMemoryAllocatorFactory;
@@ -267,14 +266,14 @@ public class FrameBasedIndexedTableTest extends InitializedNullHandlingTest
   @Test
   public void testLongKeyColumn()
   {
-    final Long[] vals = new Long[]{NullHandling.replaceWithDefault() ? 0L : null, 1L, 2L, 4L, 5L};
+    final Long[] vals = new Long[]{null, 1L, 2L, 4L, 5L};
     checkIndexAndReader(LONG_COL_1, vals);
   }
 
   @Test
   public void testFloatKeyColumn()
   {
-    final Float[] vals = new Float[]{NullHandling.replaceWithDefault() ? 0.0f : null, 3.1f, 3.2f, 3.5f, 3.8f, 3.9f};
+    final Float[] vals = new Float[]{null, 3.1f, 3.2f, 3.5f, 3.8f, 3.9f};
     checkIndexAndReader(FLOAT_COL_1, vals);
   }
 
@@ -282,7 +281,7 @@ public class FrameBasedIndexedTableTest extends InitializedNullHandlingTest
   public void testDoubleKeyColumn()
   {
     final Double[] vals = new Double[]{
-        NullHandling.replaceWithDefault() ? 0.0 : null, 1.1d, 1.2d, 1.3d, 1.5d, 1.7d, 1.8d
+        null, 1.1d, 1.2d, 1.3d, 1.5d, 1.7d, 1.8d
     };
     checkIndexAndReader(DOUBLE_COL_1, vals);
   }

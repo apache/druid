@@ -20,7 +20,6 @@
 package org.apache.druid.msq.test;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
 import org.apache.druid.query.QueryDataSource;
@@ -113,10 +112,6 @@ public class CalciteUnionQueryMSQTest extends CalciteUnionQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        NullHandling.replaceWithDefault() ?
-        ImmutableList.of(
-            new Object[]{12L, 3L}
-        ) :
         ImmutableList.of(
             new Object[]{12L, 4L}
         )

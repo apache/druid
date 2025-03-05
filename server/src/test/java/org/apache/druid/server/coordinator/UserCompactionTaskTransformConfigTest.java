@@ -21,7 +21,6 @@ package org.apache.druid.server.coordinator;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import nl.jqno.equalsverifier.EqualsVerifier;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.junit.Assert;
@@ -43,7 +42,6 @@ public class UserCompactionTaskTransformConfigTest
   @Test
   public void testSerde() throws IOException
   {
-    NullHandling.initializeForTests();
     final UserCompactionTaskTransformConfig expected = new UserCompactionTaskTransformConfig(
         new SelectorDimFilter("dim1", "foo", null)
     );

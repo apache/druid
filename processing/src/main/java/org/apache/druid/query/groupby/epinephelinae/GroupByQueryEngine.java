@@ -23,7 +23,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularities;
@@ -837,7 +836,7 @@ public class GroupByQueryEngine
         if (intKey != GroupByColumnSelectorStrategy.GROUP_BY_MISSING_VALUE) {
           resultRow.set(dim.getResultRowPosition(), ((DimensionSelector) dim.getSelector()).lookupName(intKey));
         } else {
-          resultRow.set(dim.getResultRowPosition(), NullHandling.defaultStringValue());
+          resultRow.set(dim.getResultRowPosition(), null);
         }
       }
     }

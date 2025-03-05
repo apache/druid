@@ -19,7 +19,6 @@
 
 package org.apache.druid.frame.key;
 
-import org.apache.datasketches.memory.Memory;
 import org.apache.druid.frame.Frame;
 
 /**
@@ -37,11 +36,6 @@ public interface FrameComparisonWidget
 
   /**
    * Whether particular key parts in a particular row are non-null.
-   *
-   * When {@link org.apache.druid.common.config.NullHandling#replaceWithDefault()}, default values (like empty strings
-   * and numeric zeroes) are considered null for purposes of this method. This behavior is inherited from
-   * {@link org.apache.druid.frame.field.FieldReader#isNull(Memory, long)} and enables join code to behave
-   * similarly in MSQ and native queries.
    *
    * @param row      row number
    * @param keyParts parts to check

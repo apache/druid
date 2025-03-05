@@ -1,0 +1,2848 @@
+!set useApproximateCountDistinct false
+!use druidtest:///?componentSupplier=KttmNestedComponentSupplier
+!set outputformat mysql
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00';
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TEST_ID: A1: array
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (array_prepend('1', mv_to_array("language")) IS NULL
+       OR (array_prepend('1', mv_to_array("language")) = array_prepend('1', mv_to_array("language"))
+           AND array_prepend('1', mv_to_array("language")) IS NOT DISTINCT
+           FROM array_prepend('1', mv_to_array("language"))
+           AND array_prepend('1', mv_to_array("language")) <> array_prepend('0', mv_to_array("language"))
+           AND (array_prepend('1', mv_to_array("language")) IS DISTINCT
+                FROM array_prepend('0', mv_to_array("language")))
+           AND array_prepend('1', mv_to_array("language")) > array_prepend('0', mv_to_array("language"))
+           AND array_prepend('1', mv_to_array("language")) >= array_prepend('0', mv_to_array("language"))
+           AND array_prepend('1', mv_to_array("language")) < array_prepend('2', mv_to_array("language"))
+           AND array_prepend('1', mv_to_array("language")) <= array_prepend('2', mv_to_array("language"))
+           AND (array_prepend('1', mv_to_array("language")) <> array_prepend('0', mv_to_array("language"))) IS TRUE
+           AND (array_prepend('1', mv_to_array("language")) = array_prepend('0', mv_to_array("language"))) IS NOT TRUE
+           AND (array_prepend('1', mv_to_array("language")) = array_prepend('0', mv_to_array("language"))) IS FALSE
+           AND (array_prepend('1', mv_to_array("language")) <> array_prepend('0', mv_to_array("language"))) IS NOT FALSE
+           AND array_prepend('1', mv_to_array("language")) BETWEEN array_prepend('0', mv_to_array("language")) AND array_prepend('2', mv_to_array("language"))
+           AND array_prepend('1', mv_to_array("language")) NOT BETWEEN array_prepend('1', mv_to_array("language")) AND array_prepend('0', mv_to_array("language"))
+           AND array_prepend('1', mv_to_array("language")) IN (array_prepend('0', mv_to_array("language")),
+                                                               array_prepend('1', mv_to_array("language")),
+                                                               array_prepend('2', mv_to_array("language")))
+           AND array_prepend('1', mv_to_array("language")) NOT IN (array_prepend('0', mv_to_array("language")),
+                                                                   array_prepend('2', mv_to_array("language"))))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          array_prepend('1', mv_to_array("language")),
+                          count(*)
+   FROM kttm_nested
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND (array_prepend('1', mv_to_array("language")) IS NULL
+          OR (array_prepend('1', mv_to_array("language")) = array_prepend('1', mv_to_array("language"))
+              AND array_prepend('1', mv_to_array("language")) IS NOT DISTINCT
+              FROM array_prepend('1', mv_to_array("language"))
+              AND array_prepend('1', mv_to_array("language")) <> array_prepend('0', mv_to_array("language"))
+              AND (array_prepend('1', mv_to_array("language")) IS DISTINCT
+                   FROM array_prepend('0', mv_to_array("language")))
+              AND array_prepend('1', mv_to_array("language")) > array_prepend('0', mv_to_array("language"))
+              AND array_prepend('1', mv_to_array("language")) >= array_prepend('0', mv_to_array("language"))
+              AND array_prepend('1', mv_to_array("language")) < array_prepend('2', mv_to_array("language"))
+              AND array_prepend('1', mv_to_array("language")) <= array_prepend('2', mv_to_array("language"))
+              AND (array_prepend('1', mv_to_array("language")) <> array_prepend('0', mv_to_array("language"))) IS TRUE
+              AND (array_prepend('1', mv_to_array("language")) = array_prepend('0', mv_to_array("language"))) IS NOT TRUE
+              AND (array_prepend('1', mv_to_array("language")) = array_prepend('0', mv_to_array("language"))) IS FALSE
+              AND (array_prepend('1', mv_to_array("language")) <> array_prepend('0', mv_to_array("language"))) IS NOT FALSE
+              AND array_prepend('1', mv_to_array("language")) BETWEEN array_prepend('0', mv_to_array("language")) AND array_prepend('2', mv_to_array("language"))
+              AND array_prepend('1', mv_to_array("language")) NOT BETWEEN array_prepend('1', mv_to_array("language")) AND array_prepend('0', mv_to_array("language"))
+              AND array_prepend('1', mv_to_array("language")) IN (array_prepend('0', mv_to_array("language")),
+                                                                  array_prepend('1', mv_to_array("language")),
+                                                                  array_prepend('2', mv_to_array("language")))
+              AND array_prepend('1', mv_to_array("language")) NOT IN (array_prepend('0', mv_to_array("language")),
+                                                                      array_prepend('2', mv_to_array("language")))))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TEST_ID: A2: array_length
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (array_length(mv_to_array("language")) IS NULL
+       OR (array_length(mv_to_array("language")) = array_length(mv_to_array("language"))+0
+           AND array_length(mv_to_array("language")) IS NOT DISTINCT
+           FROM array_length(mv_to_array("language"))+0
+           AND array_length(mv_to_array("language")) <> array_length(mv_to_array("language"))-1
+           AND (array_length(mv_to_array("language")) IS DISTINCT
+                FROM array_length(mv_to_array("language"))-1)
+           AND array_length(mv_to_array("language")) > array_length(mv_to_array("language"))-1
+           AND array_length(mv_to_array("language")) >= array_length(mv_to_array("language"))-1
+           AND array_length(mv_to_array("language")) < array_length(mv_to_array("language"))+1
+           AND array_length(mv_to_array("language")) <= array_length(mv_to_array("language"))+1
+           AND (array_length(mv_to_array("language")) <> array_length(mv_to_array("language"))-1) IS TRUE
+           AND (array_length(mv_to_array("language")) = array_length(mv_to_array("language"))-1) IS NOT TRUE
+           AND (array_length(mv_to_array("language")) = array_length(mv_to_array("language"))-1) IS FALSE
+           AND (array_length(mv_to_array("language")) <> array_length(mv_to_array("language"))-1) IS NOT FALSE
+           AND array_length(mv_to_array("language")) BETWEEN array_length(mv_to_array("language"))-1 AND array_length(mv_to_array("language"))+1
+           AND array_length(mv_to_array("language")) NOT BETWEEN array_length(mv_to_array("language")) AND array_length(mv_to_array("language"))-1
+           AND array_length(mv_to_array("language")) like '%'
+           AND array_length(mv_to_array("language")) not like '__DOES_NOT_EXIST__%'
+           AND array_length(mv_to_array("language")) IN (array_length(mv_to_array("language"))-1,
+                                                                                              array_length(mv_to_array("language"))+0,
+                                                                                              array_length(mv_to_array("language"))+1)
+           AND array_length(mv_to_array("language")) NOT IN (array_length(mv_to_array("language"))-1,
+                                                                                                  array_length(mv_to_array("language"))+1))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (array_length(mv_to_array("language")) IS NULL
+       OR array_length(mv_to_array("language")) IN
+         (SELECT array_length(mv_to_array("language"))
+          FROM kttm_nested
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND (array_length(mv_to_array("language")) IS NULL
+                 OR (array_length(mv_to_array("language")) = array_length(mv_to_array("language"))+0
+                     AND array_length(mv_to_array("language")) IS NOT DISTINCT
+                     FROM array_length(mv_to_array("language"))+0
+                     AND array_length(mv_to_array("language")) <> array_length(mv_to_array("language"))-1
+                     AND (array_length(mv_to_array("language")) IS DISTINCT
+                          FROM array_length(mv_to_array("language"))-1)
+                     AND array_length(mv_to_array("language")) > array_length(mv_to_array("language"))-1
+                     AND array_length(mv_to_array("language")) >= array_length(mv_to_array("language"))-1
+                     AND array_length(mv_to_array("language")) < array_length(mv_to_array("language"))+1
+                     AND array_length(mv_to_array("language")) <= array_length(mv_to_array("language"))+1
+                     AND (array_length(mv_to_array("language")) <> array_length(mv_to_array("language"))-1) IS TRUE
+                     AND (array_length(mv_to_array("language")) = array_length(mv_to_array("language"))-1) IS NOT TRUE
+                     AND (array_length(mv_to_array("language")) = array_length(mv_to_array("language"))-1) IS FALSE
+                     AND (array_length(mv_to_array("language")) <> array_length(mv_to_array("language"))-1) IS NOT FALSE
+                     AND array_length(mv_to_array("language")) BETWEEN array_length(mv_to_array("language"))-1 AND array_length(mv_to_array("language"))+1
+                     AND array_length(mv_to_array("language")) NOT BETWEEN array_length(mv_to_array("language")) AND array_length(mv_to_array("language"))-1
+                     AND array_length(mv_to_array("language")) like '%'
+                     AND array_length(mv_to_array("language")) not like '__DOES_NOT_EXIST__%'
+                     AND array_length(mv_to_array("language")) IN (array_length(mv_to_array("language"))-1,
+                                                                                                        array_length(mv_to_array("language"))+0,
+                                                                                                        array_length(mv_to_array("language"))+1)
+                     AND array_length(mv_to_array("language")) NOT IN (array_length(mv_to_array("language"))-1,
+                                                                                                            array_length(mv_to_array("language"))+1)))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          array_length(mv_to_array("language")),
+                          count(*)
+   FROM kttm_nested
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND (array_length(mv_to_array("language")) IS NULL
+          OR (array_length(mv_to_array("language")) = array_length(mv_to_array("language"))+0
+              AND array_length(mv_to_array("language")) IS NOT DISTINCT
+              FROM array_length(mv_to_array("language"))+0
+              AND array_length(mv_to_array("language")) <> array_length(mv_to_array("language"))-1
+              AND (array_length(mv_to_array("language")) IS DISTINCT
+                   FROM array_length(mv_to_array("language"))-1)
+              AND array_length(mv_to_array("language")) > array_length(mv_to_array("language"))-1
+              AND array_length(mv_to_array("language")) >= array_length(mv_to_array("language"))-1
+              AND array_length(mv_to_array("language")) < array_length(mv_to_array("language"))+1
+              AND array_length(mv_to_array("language")) <= array_length(mv_to_array("language"))+1
+              AND (array_length(mv_to_array("language")) <> array_length(mv_to_array("language"))-1) IS TRUE
+              AND (array_length(mv_to_array("language")) = array_length(mv_to_array("language"))-1) IS NOT TRUE
+              AND (array_length(mv_to_array("language")) = array_length(mv_to_array("language"))-1) IS FALSE
+              AND (array_length(mv_to_array("language")) <> array_length(mv_to_array("language"))-1) IS NOT FALSE
+              AND array_length(mv_to_array("language")) BETWEEN array_length(mv_to_array("language"))-1 AND array_length(mv_to_array("language"))+1
+              AND array_length(mv_to_array("language")) NOT BETWEEN array_length(mv_to_array("language")) AND array_length(mv_to_array("language"))-1
+              AND array_length(mv_to_array("language")) like '%'
+              AND array_length(mv_to_array("language")) not like '__DOES_NOT_EXIST__%'
+              AND array_length(mv_to_array("language")) IN (array_length(mv_to_array("language"))-1,
+                                                                                                 array_length(mv_to_array("language"))+0,
+                                                                                                 array_length(mv_to_array("language"))+1)
+              AND array_length(mv_to_array("language")) NOT IN (array_length(mv_to_array("language"))-1,
+                                                                                                     array_length(mv_to_array("language"))+1)))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TEST_ID: A3: array_offset
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||array_offset(mv_to_array("language"), 0) IS NULL
+       OR ('1'||array_offset(mv_to_array("language"), 0) = 1||array_offset(mv_to_array("language"), 0)
+           AND '1'||array_offset(mv_to_array("language"), 0) IS NOT DISTINCT
+           FROM 1||array_offset(mv_to_array("language"), 0)
+           AND '1'||array_offset(mv_to_array("language"), 0) <> 0||array_offset(mv_to_array("language"), 0)
+           AND ('1'||array_offset(mv_to_array("language"), 0) IS DISTINCT
+                FROM 0||array_offset(mv_to_array("language"), 0))
+           AND '1'||array_offset(mv_to_array("language"), 0) > 0||array_offset(mv_to_array("language"), 0)
+           AND '1'||array_offset(mv_to_array("language"), 0) >= 0||array_offset(mv_to_array("language"), 0)
+           AND '1'||array_offset(mv_to_array("language"), 0) < 2||array_offset(mv_to_array("language"), 0)
+           AND '1'||array_offset(mv_to_array("language"), 0) <= 2||array_offset(mv_to_array("language"), 0)
+           AND ('1'||array_offset(mv_to_array("language"), 0) <> 0||array_offset(mv_to_array("language"), 0)) IS TRUE
+           AND ('1'||array_offset(mv_to_array("language"), 0) = 0||array_offset(mv_to_array("language"), 0)) IS NOT TRUE
+           AND ('1'||array_offset(mv_to_array("language"), 0) = 0||array_offset(mv_to_array("language"), 0)) IS FALSE
+           AND ('1'||array_offset(mv_to_array("language"), 0) <> 0||array_offset(mv_to_array("language"), 0)) IS NOT FALSE
+           AND '1'||array_offset(mv_to_array("language"), 0) BETWEEN 0||array_offset(mv_to_array("language"), 0) AND 2||array_offset(mv_to_array("language"), 0)
+           AND '1'||array_offset(mv_to_array("language"), 0) NOT BETWEEN '1'||array_offset(mv_to_array("language"), 0) AND 0||array_offset(mv_to_array("language"), 0)
+           AND '1'||array_offset(mv_to_array("language"), 0) like '%'
+           AND '1'||array_offset(mv_to_array("language"), 0) not like '__DOES_NOT_EXIST__%'
+           AND '1'||array_offset(mv_to_array("language"), 0) IN (0||array_offset(mv_to_array("language"), 0),
+                                                                 1||array_offset(mv_to_array("language"), 0),
+                                                                 2||array_offset(mv_to_array("language"), 0))
+           AND '1'||array_offset(mv_to_array("language"), 0) NOT IN (0||array_offset(mv_to_array("language"), 0),
+                                                                     2||array_offset(mv_to_array("language"), 0)))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||array_offset(mv_to_array("language"), 0) IS NULL
+       OR '1'||array_offset(mv_to_array("language"), 0) IN
+         (SELECT '1'||array_offset(mv_to_array("language"), 0)
+          FROM kttm_nested
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND ('1'||array_offset(mv_to_array("language"), 0) IS NULL
+                 OR ('1'||array_offset(mv_to_array("language"), 0) = 1||array_offset(mv_to_array("language"), 0)
+                     AND '1'||array_offset(mv_to_array("language"), 0) IS NOT DISTINCT
+                     FROM 1||array_offset(mv_to_array("language"), 0)
+                     AND '1'||array_offset(mv_to_array("language"), 0) <> 0||array_offset(mv_to_array("language"), 0)
+                     AND ('1'||array_offset(mv_to_array("language"), 0) IS DISTINCT
+                          FROM 0||array_offset(mv_to_array("language"), 0))
+                     AND '1'||array_offset(mv_to_array("language"), 0) > 0||array_offset(mv_to_array("language"), 0)
+                     AND '1'||array_offset(mv_to_array("language"), 0) >= 0||array_offset(mv_to_array("language"), 0)
+                     AND '1'||array_offset(mv_to_array("language"), 0) < 2||array_offset(mv_to_array("language"), 0)
+                     AND '1'||array_offset(mv_to_array("language"), 0) <= 2||array_offset(mv_to_array("language"), 0)
+                     AND ('1'||array_offset(mv_to_array("language"), 0) <> 0||array_offset(mv_to_array("language"), 0)) IS TRUE
+                     AND ('1'||array_offset(mv_to_array("language"), 0) = 0||array_offset(mv_to_array("language"), 0)) IS NOT TRUE
+                     AND ('1'||array_offset(mv_to_array("language"), 0) = 0||array_offset(mv_to_array("language"), 0)) IS FALSE
+                     AND ('1'||array_offset(mv_to_array("language"), 0) <> 0||array_offset(mv_to_array("language"), 0)) IS NOT FALSE
+                     AND '1'||array_offset(mv_to_array("language"), 0) BETWEEN 0||array_offset(mv_to_array("language"), 0) AND 2||array_offset(mv_to_array("language"), 0)
+                     AND '1'||array_offset(mv_to_array("language"), 0) NOT BETWEEN '1'||array_offset(mv_to_array("language"), 0) AND 0||array_offset(mv_to_array("language"), 0)
+                     AND '1'||array_offset(mv_to_array("language"), 0) like '%'
+                     AND '1'||array_offset(mv_to_array("language"), 0) not like '__DOES_NOT_EXIST__%'
+                     AND '1'||array_offset(mv_to_array("language"), 0) IN (0||array_offset(mv_to_array("language"), 0),
+                                                                           1||array_offset(mv_to_array("language"), 0),
+                                                                           2||array_offset(mv_to_array("language"), 0))
+                     AND '1'||array_offset(mv_to_array("language"), 0) NOT IN (0||array_offset(mv_to_array("language"), 0),
+                                                                               2||array_offset(mv_to_array("language"), 0))))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          '1'||array_offset(mv_to_array("language"), 0),
+                          count(*)
+   FROM kttm_nested
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND ('1'||array_offset(mv_to_array("language"), 0) IS NULL
+          OR ('1'||array_offset(mv_to_array("language"), 0) = 1||array_offset(mv_to_array("language"), 0)
+              AND '1'||array_offset(mv_to_array("language"), 0) IS NOT DISTINCT
+              FROM 1||array_offset(mv_to_array("language"), 0)
+              AND '1'||array_offset(mv_to_array("language"), 0) <> 0||array_offset(mv_to_array("language"), 0)
+              AND ('1'||array_offset(mv_to_array("language"), 0) IS DISTINCT
+                   FROM 0||array_offset(mv_to_array("language"), 0))
+              AND '1'||array_offset(mv_to_array("language"), 0) > 0||array_offset(mv_to_array("language"), 0)
+              AND '1'||array_offset(mv_to_array("language"), 0) >= 0||array_offset(mv_to_array("language"), 0)
+              AND '1'||array_offset(mv_to_array("language"), 0) < 2||array_offset(mv_to_array("language"), 0)
+              AND '1'||array_offset(mv_to_array("language"), 0) <= 2||array_offset(mv_to_array("language"), 0)
+              AND ('1'||array_offset(mv_to_array("language"), 0) <> 0||array_offset(mv_to_array("language"), 0)) IS TRUE
+              AND ('1'||array_offset(mv_to_array("language"), 0) = 0||array_offset(mv_to_array("language"), 0)) IS NOT TRUE
+              AND ('1'||array_offset(mv_to_array("language"), 0) = 0||array_offset(mv_to_array("language"), 0)) IS FALSE
+              AND ('1'||array_offset(mv_to_array("language"), 0) <> 0||array_offset(mv_to_array("language"), 0)) IS NOT FALSE
+              AND '1'||array_offset(mv_to_array("language"), 0) BETWEEN 0||array_offset(mv_to_array("language"), 0) AND 2||array_offset(mv_to_array("language"), 0)
+              AND '1'||array_offset(mv_to_array("language"), 0) NOT BETWEEN '1'||array_offset(mv_to_array("language"), 0) AND 0||array_offset(mv_to_array("language"), 0)
+              AND '1'||array_offset(mv_to_array("language"), 0) like '%'
+              AND '1'||array_offset(mv_to_array("language"), 0) not like '__DOES_NOT_EXIST__%'
+              AND '1'||array_offset(mv_to_array("language"), 0) IN (0||array_offset(mv_to_array("language"), 0),
+                                                                    1||array_offset(mv_to_array("language"), 0),
+                                                                    2||array_offset(mv_to_array("language"), 0))
+              AND '1'||array_offset(mv_to_array("language"), 0) NOT IN (0||array_offset(mv_to_array("language"), 0),
+                                                                        2||array_offset(mv_to_array("language"), 0))))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TEST_ID: A4: array_ordinal
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||array_ordinal(mv_to_array("language"), 1) IS NULL
+       OR ('1'||array_ordinal(mv_to_array("language"), 1) = 1||array_ordinal(mv_to_array("language"), 1)
+           AND '1'||array_ordinal(mv_to_array("language"), 1) IS NOT DISTINCT
+           FROM 1||array_ordinal(mv_to_array("language"), 1)
+           AND '1'||array_ordinal(mv_to_array("language"), 1) <> 0||array_ordinal(mv_to_array("language"), 1)
+           AND ('1'||array_ordinal(mv_to_array("language"), 1) IS DISTINCT
+                FROM 0||array_ordinal(mv_to_array("language"), 1))
+           AND '1'||array_ordinal(mv_to_array("language"), 1) > 0||array_ordinal(mv_to_array("language"), 1)
+           AND '1'||array_ordinal(mv_to_array("language"), 1) >= 0||array_ordinal(mv_to_array("language"), 1)
+           AND '1'||array_ordinal(mv_to_array("language"), 1) < 2||array_ordinal(mv_to_array("language"), 1)
+           AND '1'||array_ordinal(mv_to_array("language"), 1) <= 2||array_ordinal(mv_to_array("language"), 1)
+           AND ('1'||array_ordinal(mv_to_array("language"), 1) <> 0||array_ordinal(mv_to_array("language"), 1)) IS TRUE
+           AND ('1'||array_ordinal(mv_to_array("language"), 1) = 0||array_ordinal(mv_to_array("language"), 1)) IS NOT TRUE
+           AND ('1'||array_ordinal(mv_to_array("language"), 1) = 0||array_ordinal(mv_to_array("language"), 1)) IS FALSE
+           AND ('1'||array_ordinal(mv_to_array("language"), 1) <> 0||array_ordinal(mv_to_array("language"), 1)) IS NOT FALSE
+           AND '1'||array_ordinal(mv_to_array("language"), 1) BETWEEN 0||array_ordinal(mv_to_array("language"), 1) AND 2||array_ordinal(mv_to_array("language"), 1)
+           AND '1'||array_ordinal(mv_to_array("language"), 1) NOT BETWEEN '1'||array_ordinal(mv_to_array("language"), 1) AND 0||array_ordinal(mv_to_array("language"), 1)
+           AND '1'||array_ordinal(mv_to_array("language"), 1) like '%'
+           AND '1'||array_ordinal(mv_to_array("language"), 1) not like '__DOES_NOT_EXIST__%'
+           AND '1'||array_ordinal(mv_to_array("language"), 1) IN (0||array_ordinal(mv_to_array("language"), 1),
+                                                                  1||array_ordinal(mv_to_array("language"), 1),
+                                                                  2||array_ordinal(mv_to_array("language"), 1))
+           AND '1'||array_ordinal(mv_to_array("language"), 1) NOT IN (0||array_ordinal(mv_to_array("language"), 1),
+                                                                      2||array_ordinal(mv_to_array("language"), 1)))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||array_ordinal(mv_to_array("language"), 1) IS NULL
+       OR '1'||array_ordinal(mv_to_array("language"), 1) IN
+         (SELECT '1'||array_ordinal(mv_to_array("language"), 1)
+          FROM kttm_nested
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND ('1'||array_ordinal(mv_to_array("language"), 1) IS NULL
+                 OR ('1'||array_ordinal(mv_to_array("language"), 1) = 1||array_ordinal(mv_to_array("language"), 1)
+                     AND '1'||array_ordinal(mv_to_array("language"), 1) IS NOT DISTINCT
+                     FROM 1||array_ordinal(mv_to_array("language"), 1)
+                     AND '1'||array_ordinal(mv_to_array("language"), 1) <> 0||array_ordinal(mv_to_array("language"), 1)
+                     AND ('1'||array_ordinal(mv_to_array("language"), 1) IS DISTINCT
+                          FROM 0||array_ordinal(mv_to_array("language"), 1))
+                     AND '1'||array_ordinal(mv_to_array("language"), 1) > 0||array_ordinal(mv_to_array("language"), 1)
+                     AND '1'||array_ordinal(mv_to_array("language"), 1) >= 0||array_ordinal(mv_to_array("language"), 1)
+                     AND '1'||array_ordinal(mv_to_array("language"), 1) < 2||array_ordinal(mv_to_array("language"), 1)
+                     AND '1'||array_ordinal(mv_to_array("language"), 1) <= 2||array_ordinal(mv_to_array("language"), 1)
+                     AND ('1'||array_ordinal(mv_to_array("language"), 1) <> 0||array_ordinal(mv_to_array("language"), 1)) IS TRUE
+                     AND ('1'||array_ordinal(mv_to_array("language"), 1) = 0||array_ordinal(mv_to_array("language"), 1)) IS NOT TRUE
+                     AND ('1'||array_ordinal(mv_to_array("language"), 1) = 0||array_ordinal(mv_to_array("language"), 1)) IS FALSE
+                     AND ('1'||array_ordinal(mv_to_array("language"), 1) <> 0||array_ordinal(mv_to_array("language"), 1)) IS NOT FALSE
+                     AND '1'||array_ordinal(mv_to_array("language"), 1) BETWEEN 0||array_ordinal(mv_to_array("language"), 1) AND 2||array_ordinal(mv_to_array("language"), 1)
+                     AND '1'||array_ordinal(mv_to_array("language"), 1) NOT BETWEEN '1'||array_ordinal(mv_to_array("language"), 1) AND 0||array_ordinal(mv_to_array("language"), 1)
+                     AND '1'||array_ordinal(mv_to_array("language"), 1) like '%'
+                     AND '1'||array_ordinal(mv_to_array("language"), 1) not like '__DOES_NOT_EXIST__%'
+                     AND '1'||array_ordinal(mv_to_array("language"), 1) IN (0||array_ordinal(mv_to_array("language"), 1),
+                                                                            1||array_ordinal(mv_to_array("language"), 1),
+                                                                            2||array_ordinal(mv_to_array("language"), 1))
+                     AND '1'||array_ordinal(mv_to_array("language"), 1) NOT IN (0||array_ordinal(mv_to_array("language"), 1),
+                                                                                2||array_ordinal(mv_to_array("language"), 1))))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          '1'||array_ordinal(mv_to_array("language"), 1),
+                          count(*)
+   FROM kttm_nested
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND ('1'||array_ordinal(mv_to_array("language"), 1) IS NULL
+          OR ('1'||array_ordinal(mv_to_array("language"), 1) = 1||array_ordinal(mv_to_array("language"), 1)
+              AND '1'||array_ordinal(mv_to_array("language"), 1) IS NOT DISTINCT
+              FROM 1||array_ordinal(mv_to_array("language"), 1)
+              AND '1'||array_ordinal(mv_to_array("language"), 1) <> 0||array_ordinal(mv_to_array("language"), 1)
+              AND ('1'||array_ordinal(mv_to_array("language"), 1) IS DISTINCT
+                   FROM 0||array_ordinal(mv_to_array("language"), 1))
+              AND '1'||array_ordinal(mv_to_array("language"), 1) > 0||array_ordinal(mv_to_array("language"), 1)
+              AND '1'||array_ordinal(mv_to_array("language"), 1) >= 0||array_ordinal(mv_to_array("language"), 1)
+              AND '1'||array_ordinal(mv_to_array("language"), 1) < 2||array_ordinal(mv_to_array("language"), 1)
+              AND '1'||array_ordinal(mv_to_array("language"), 1) <= 2||array_ordinal(mv_to_array("language"), 1)
+              AND ('1'||array_ordinal(mv_to_array("language"), 1) <> 0||array_ordinal(mv_to_array("language"), 1)) IS TRUE
+              AND ('1'||array_ordinal(mv_to_array("language"), 1) = 0||array_ordinal(mv_to_array("language"), 1)) IS NOT TRUE
+              AND ('1'||array_ordinal(mv_to_array("language"), 1) = 0||array_ordinal(mv_to_array("language"), 1)) IS FALSE
+              AND ('1'||array_ordinal(mv_to_array("language"), 1) <> 0||array_ordinal(mv_to_array("language"), 1)) IS NOT FALSE
+              AND '1'||array_ordinal(mv_to_array("language"), 1) BETWEEN 0||array_ordinal(mv_to_array("language"), 1) AND 2||array_ordinal(mv_to_array("language"), 1)
+              AND '1'||array_ordinal(mv_to_array("language"), 1) NOT BETWEEN '1'||array_ordinal(mv_to_array("language"), 1) AND 0||array_ordinal(mv_to_array("language"), 1)
+              AND '1'||array_ordinal(mv_to_array("language"), 1) like '%'
+              AND '1'||array_ordinal(mv_to_array("language"), 1) not like '__DOES_NOT_EXIST__%'
+              AND '1'||array_ordinal(mv_to_array("language"), 1) IN (0||array_ordinal(mv_to_array("language"), 1),
+                                                                     1||array_ordinal(mv_to_array("language"), 1),
+                                                                     2||array_ordinal(mv_to_array("language"), 1))
+              AND '1'||array_ordinal(mv_to_array("language"), 1) NOT IN (0||array_ordinal(mv_to_array("language"), 1),
+                                                                         2||array_ordinal(mv_to_array("language"), 1))))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TEST_ID: A5: array_contains
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (CASE
+           WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 1
+           ELSE 1
+       END IS NULL
+       OR (CASE
+               WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 1
+               ELSE 1
+           END = CASE
+                     WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 1
+                     ELSE 1
+                 END
+           AND CASE
+                   WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 1
+                   ELSE 1
+               END IS NOT DISTINCT
+           FROM CASE
+                    WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 1
+                    ELSE 1
+                END
+           AND CASE
+                   WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 1
+                   ELSE 1
+               END <> CASE
+                          WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 0
+                          ELSE 0
+                      END
+           AND (CASE
+                    WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 1
+                    ELSE 1
+                END IS DISTINCT
+                FROM CASE
+                         WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 0
+                         ELSE 0
+                     END)
+           AND CASE
+                   WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 1
+                   ELSE 1
+               END > CASE
+                         WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 0
+                         ELSE 0
+                     END
+           AND CASE
+                   WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 1
+                   ELSE 1
+               END >= CASE
+                          WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 0
+                          ELSE 0
+                      END
+           AND CASE
+                   WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 1
+                   ELSE 1
+               END < CASE
+                         WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 3
+                         ELSE 2
+                     END
+           AND CASE
+                   WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 1
+                   ELSE 1
+               END <= CASE
+                          WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 3
+                          ELSE 2
+                      END
+           AND (CASE
+                    WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 1
+                    ELSE 1
+                END <> CASE
+                           WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 0
+                           ELSE 0
+                       END) IS TRUE
+           AND (CASE
+                    WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 1
+                    ELSE 1
+                END = CASE
+                          WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 0
+                          ELSE 0
+                      END) IS NOT TRUE
+           AND (CASE
+                    WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 1
+                    ELSE 1
+                END = CASE
+                          WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 0
+                          ELSE 0
+                      END) IS FALSE
+           AND (CASE
+                    WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 1
+                    ELSE 1
+                END <> CASE
+                           WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 0
+                           ELSE 0
+                       END) IS NOT FALSE
+           AND CASE
+                   WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 1
+                   ELSE 1
+               END BETWEEN CASE
+                               WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 0
+                               ELSE 0
+                           END AND CASE
+                                       WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 3
+                                       ELSE 2
+                                   END
+           AND CASE
+                   WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 1
+                   ELSE 1
+               END NOT BETWEEN CASE
+                                   WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 1
+                                   ELSE 1
+                               END AND CASE
+                                           WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 0
+                                           ELSE 0
+                                       END
+           AND CASE
+                   WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 1
+                   ELSE 1
+               END like '%'
+           AND CASE
+                   WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 1
+                   ELSE 1
+               END not like '__DOES_NOT_EXIST__%'
+           AND CASE
+                   WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 1
+                   ELSE 1
+               END IN (CASE
+                           WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 0
+                           ELSE 0
+                       END,
+                       CASE
+                           WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 1
+                           ELSE 1
+                       END,
+                       CASE
+                           WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 3
+                           ELSE 2
+                       END)
+           AND CASE
+                   WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 1
+                   ELSE 1
+               END NOT IN (CASE
+                               WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 0
+                               ELSE 0
+                           END,
+                           CASE
+                               WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 3
+                               ELSE 2
+                           END))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (CASE
+           WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 1
+           ELSE 1
+       END IS NULL
+       OR CASE
+              WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 1
+              ELSE 1
+          END IN
+         (SELECT CASE
+                     WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 1
+                     ELSE 1
+                 END
+          FROM kttm_nested
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND (CASE
+                     WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 1
+                     ELSE 1
+                 END IS NULL
+                 OR (CASE
+                         WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 1
+                         ELSE 1
+                     END = CASE
+                               WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 1
+                               ELSE 1
+                           END
+                     AND CASE
+                             WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 1
+                             ELSE 1
+                         END IS NOT DISTINCT
+                     FROM CASE
+                              WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 1
+                              ELSE 1
+                          END
+                     AND CASE
+                             WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 1
+                             ELSE 1
+                         END <> CASE
+                                    WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 0
+                                    ELSE 0
+                                END
+                     AND (CASE
+                              WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 1
+                              ELSE 1
+                          END IS DISTINCT
+                          FROM CASE
+                                   WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 0
+                                   ELSE 0
+                               END)
+                     AND CASE
+                             WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 1
+                             ELSE 1
+                         END > CASE
+                                   WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 0
+                                   ELSE 0
+                               END
+                     AND CASE
+                             WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 1
+                             ELSE 1
+                         END >= CASE
+                                    WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 0
+                                    ELSE 0
+                                END
+                     AND CASE
+                             WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 1
+                             ELSE 1
+                         END < CASE
+                                   WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 3
+                                   ELSE 2
+                               END
+                     AND CASE
+                             WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 1
+                             ELSE 1
+                         END <= CASE
+                                    WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 3
+                                    ELSE 2
+                                END
+                     AND (CASE
+                              WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 1
+                              ELSE 1
+                          END <> CASE
+                                     WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 0
+                                     ELSE 0
+                                 END) IS TRUE
+                     AND (CASE
+                              WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 1
+                              ELSE 1
+                          END = CASE
+                                    WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 0
+                                    ELSE 0
+                                END) IS NOT TRUE
+                     AND (CASE
+                              WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 1
+                              ELSE 1
+                          END = CASE
+                                    WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 0
+                                    ELSE 0
+                                END) IS FALSE
+                     AND (CASE
+                              WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 1
+                              ELSE 1
+                          END <> CASE
+                                     WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 0
+                                     ELSE 0
+                                 END) IS NOT FALSE
+                     AND CASE
+                             WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 1
+                             ELSE 1
+                         END BETWEEN CASE
+                                         WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 0
+                                         ELSE 0
+                                     END AND CASE
+                                                 WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 3
+                                                 ELSE 2
+                                             END
+                     AND CASE
+                             WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 1
+                             ELSE 1
+                         END NOT BETWEEN CASE
+                                             WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 1
+                                             ELSE 1
+                                         END AND CASE
+                                                     WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 0
+                                                     ELSE 0
+                                                 END
+                     AND CASE
+                             WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 1
+                             ELSE 1
+                         END like '%'
+                     AND CASE
+                             WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 1
+                             ELSE 1
+                         END not like '__DOES_NOT_EXIST__%'
+                     AND CASE
+                             WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 1
+                             ELSE 1
+                         END IN (CASE
+                                     WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 0
+                                     ELSE 0
+                                 END,
+                                 CASE
+                                     WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 1
+                                     ELSE 1
+                                 END,
+                                 CASE
+                                     WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 3
+                                     ELSE 2
+                                 END)
+                     AND CASE
+                             WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 1
+                             ELSE 1
+                         END NOT IN (CASE
+                                         WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 0
+                                         ELSE 0
+                                     END,
+                                     CASE
+                                         WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 3
+                                         ELSE 2
+                                     END)))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          CASE
+                              WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 1
+                              ELSE 1
+                          END,
+                          count(*)
+   FROM kttm_nested
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND (CASE
+              WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 1
+              ELSE 1
+          END IS NULL
+          OR (CASE
+                  WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 1
+                  ELSE 1
+              END = CASE
+                        WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 1
+                        ELSE 1
+                    END
+              AND CASE
+                      WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 1
+                      ELSE 1
+                  END IS NOT DISTINCT
+              FROM CASE
+                       WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 1
+                       ELSE 1
+                   END
+              AND CASE
+                      WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 1
+                      ELSE 1
+                  END <> CASE
+                             WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 0
+                             ELSE 0
+                         END
+              AND (CASE
+                       WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 1
+                       ELSE 1
+                   END IS DISTINCT
+                   FROM CASE
+                            WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 0
+                            ELSE 0
+                        END)
+              AND CASE
+                      WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 1
+                      ELSE 1
+                  END > CASE
+                            WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 0
+                            ELSE 0
+                        END
+              AND CASE
+                      WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 1
+                      ELSE 1
+                  END >= CASE
+                             WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 0
+                             ELSE 0
+                         END
+              AND CASE
+                      WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 1
+                      ELSE 1
+                  END < CASE
+                            WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 3
+                            ELSE 2
+                        END
+              AND CASE
+                      WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 1
+                      ELSE 1
+                  END <= CASE
+                             WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 3
+                             ELSE 2
+                         END
+              AND (CASE
+                       WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 1
+                       ELSE 1
+                   END <> CASE
+                              WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 0
+                              ELSE 0
+                          END) IS TRUE
+              AND (CASE
+                       WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 1
+                       ELSE 1
+                   END = CASE
+                             WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 0
+                             ELSE 0
+                         END) IS NOT TRUE
+              AND (CASE
+                       WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 1
+                       ELSE 1
+                   END = CASE
+                             WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 0
+                             ELSE 0
+                         END) IS FALSE
+              AND (CASE
+                       WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 1
+                       ELSE 1
+                   END <> CASE
+                              WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 0
+                              ELSE 0
+                          END) IS NOT FALSE
+              AND CASE
+                      WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 1
+                      ELSE 1
+                  END BETWEEN CASE
+                                  WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 0
+                                  ELSE 0
+                              END AND CASE
+                                          WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 3
+                                          ELSE 2
+                                      END
+              AND CASE
+                      WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 1
+                      ELSE 1
+                  END NOT BETWEEN CASE
+                                      WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 1
+                                      ELSE 1
+                                  END AND CASE
+                                              WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 0
+                                              ELSE 0
+                                          END
+              AND CASE
+                      WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 1
+                      ELSE 1
+                  END like '%'
+              AND CASE
+                      WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 1
+                      ELSE 1
+                  END not like '__DOES_NOT_EXIST__%'
+              AND CASE
+                      WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 1
+                      ELSE 1
+                  END IN (CASE
+                              WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 0
+                              ELSE 0
+                          END,
+                          CASE
+                              WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 1
+                              ELSE 1
+                          END,
+                          CASE
+                              WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 3
+                              ELSE 2
+                          END)
+              AND CASE
+                      WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 1
+                      ELSE 1
+                  END NOT IN (CASE
+                                  WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 0
+                                  ELSE 0
+                              END,
+                              CASE
+                                  WHEN array_contains(mv_to_array("language"), mv_to_array("language")) THEN 3
+                                  ELSE 2
+                              END)))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TEST_ID: A6: array_overlap
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (CASE
+           WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 1
+           ELSE 1
+       END IS NULL
+       OR (CASE
+               WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 1
+               ELSE 1
+           END = CASE
+                     WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 1
+                     ELSE 1
+                 END
+           AND CASE
+                   WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 1
+                   ELSE 1
+               END IS NOT DISTINCT
+           FROM CASE
+                    WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 1
+                    ELSE 1
+                END
+           AND CASE
+                   WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 1
+                   ELSE 1
+               END <> CASE
+                          WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 0
+                          ELSE 0
+                      END
+           AND (CASE
+                    WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 1
+                    ELSE 1
+                END IS DISTINCT
+                FROM CASE
+                         WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 0
+                         ELSE 0
+                     END)
+           AND CASE
+                   WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 1
+                   ELSE 1
+               END > CASE
+                         WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 0
+                         ELSE 0
+                     END
+           AND CASE
+                   WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 1
+                   ELSE 1
+               END >= CASE
+                          WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 0
+                          ELSE 0
+                      END
+           AND CASE
+                   WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 1
+                   ELSE 1
+               END < CASE
+                         WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 3
+                         ELSE 2
+                     END
+           AND CASE
+                   WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 1
+                   ELSE 1
+               END <= CASE
+                          WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 3
+                          ELSE 2
+                      END
+           AND (CASE
+                    WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 1
+                    ELSE 1
+                END <> CASE
+                           WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 0
+                           ELSE 0
+                       END) IS TRUE
+           AND (CASE
+                    WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 1
+                    ELSE 1
+                END = CASE
+                          WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 0
+                          ELSE 0
+                      END) IS NOT TRUE
+           AND (CASE
+                    WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 1
+                    ELSE 1
+                END = CASE
+                          WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 0
+                          ELSE 0
+                      END) IS FALSE
+           AND (CASE
+                    WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 1
+                    ELSE 1
+                END <> CASE
+                           WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 0
+                           ELSE 0
+                       END) IS NOT FALSE
+           AND CASE
+                   WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 1
+                   ELSE 1
+               END BETWEEN CASE
+                               WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 0
+                               ELSE 0
+                           END AND CASE
+                                       WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 3
+                                       ELSE 2
+                                   END
+           AND CASE
+                   WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 1
+                   ELSE 1
+               END NOT BETWEEN CASE
+                                   WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 1
+                                   ELSE 1
+                               END AND CASE
+                                           WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 0
+                                           ELSE 0
+                                       END
+           AND CASE
+                   WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 1
+                   ELSE 1
+               END like '%'
+           AND CASE
+                   WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 1
+                   ELSE 1
+               END not like '__DOES_NOT_EXIST__%'
+           AND CASE
+                   WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 1
+                   ELSE 1
+               END IN (CASE
+                           WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 0
+                           ELSE 0
+                       END,
+                       CASE
+                           WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 1
+                           ELSE 1
+                       END,
+                       CASE
+                           WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 3
+                           ELSE 2
+                       END)
+           AND CASE
+                   WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 1
+                   ELSE 1
+               END NOT IN (CASE
+                               WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 0
+                               ELSE 0
+                           END,
+                           CASE
+                               WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 3
+                               ELSE 2
+                           END))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (CASE
+           WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 1
+           ELSE 1
+       END IS NULL
+       OR CASE
+              WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 1
+              ELSE 1
+          END IN
+         (SELECT CASE
+                     WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 1
+                     ELSE 1
+                 END
+          FROM kttm_nested
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND (CASE
+                     WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 1
+                     ELSE 1
+                 END IS NULL
+                 OR (CASE
+                         WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 1
+                         ELSE 1
+                     END = CASE
+                               WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 1
+                               ELSE 1
+                           END
+                     AND CASE
+                             WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 1
+                             ELSE 1
+                         END IS NOT DISTINCT
+                     FROM CASE
+                              WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 1
+                              ELSE 1
+                          END
+                     AND CASE
+                             WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 1
+                             ELSE 1
+                         END <> CASE
+                                    WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 0
+                                    ELSE 0
+                                END
+                     AND (CASE
+                              WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 1
+                              ELSE 1
+                          END IS DISTINCT
+                          FROM CASE
+                                   WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 0
+                                   ELSE 0
+                               END)
+                     AND CASE
+                             WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 1
+                             ELSE 1
+                         END > CASE
+                                   WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 0
+                                   ELSE 0
+                               END
+                     AND CASE
+                             WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 1
+                             ELSE 1
+                         END >= CASE
+                                    WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 0
+                                    ELSE 0
+                                END
+                     AND CASE
+                             WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 1
+                             ELSE 1
+                         END < CASE
+                                   WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 3
+                                   ELSE 2
+                               END
+                     AND CASE
+                             WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 1
+                             ELSE 1
+                         END <= CASE
+                                    WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 3
+                                    ELSE 2
+                                END
+                     AND (CASE
+                              WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 1
+                              ELSE 1
+                          END <> CASE
+                                     WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 0
+                                     ELSE 0
+                                 END) IS TRUE
+                     AND (CASE
+                              WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 1
+                              ELSE 1
+                          END = CASE
+                                    WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 0
+                                    ELSE 0
+                                END) IS NOT TRUE
+                     AND (CASE
+                              WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 1
+                              ELSE 1
+                          END = CASE
+                                    WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 0
+                                    ELSE 0
+                                END) IS FALSE
+                     AND (CASE
+                              WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 1
+                              ELSE 1
+                          END <> CASE
+                                     WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 0
+                                     ELSE 0
+                                 END) IS NOT FALSE
+                     AND CASE
+                             WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 1
+                             ELSE 1
+                         END BETWEEN CASE
+                                         WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 0
+                                         ELSE 0
+                                     END AND CASE
+                                                 WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 3
+                                                 ELSE 2
+                                             END
+                     AND CASE
+                             WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 1
+                             ELSE 1
+                         END NOT BETWEEN CASE
+                                             WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 1
+                                             ELSE 1
+                                         END AND CASE
+                                                     WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 0
+                                                     ELSE 0
+                                                 END
+                     AND CASE
+                             WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 1
+                             ELSE 1
+                         END like '%'
+                     AND CASE
+                             WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 1
+                             ELSE 1
+                         END not like '__DOES_NOT_EXIST__%'
+                     AND CASE
+                             WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 1
+                             ELSE 1
+                         END IN (CASE
+                                     WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 0
+                                     ELSE 0
+                                 END,
+                                 CASE
+                                     WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 1
+                                     ELSE 1
+                                 END,
+                                 CASE
+                                     WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 3
+                                     ELSE 2
+                                 END)
+                     AND CASE
+                             WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 1
+                             ELSE 1
+                         END NOT IN (CASE
+                                         WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 0
+                                         ELSE 0
+                                     END,
+                                     CASE
+                                         WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 3
+                                         ELSE 2
+                                     END)))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          CASE
+                              WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 1
+                              ELSE 1
+                          END,
+                          count(*)
+   FROM kttm_nested
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND (CASE
+              WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 1
+              ELSE 1
+          END IS NULL
+          OR (CASE
+                  WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 1
+                  ELSE 1
+              END = CASE
+                        WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 1
+                        ELSE 1
+                    END
+              AND CASE
+                      WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 1
+                      ELSE 1
+                  END IS NOT DISTINCT
+              FROM CASE
+                       WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 1
+                       ELSE 1
+                   END
+              AND CASE
+                      WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 1
+                      ELSE 1
+                  END <> CASE
+                             WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 0
+                             ELSE 0
+                         END
+              AND (CASE
+                       WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 1
+                       ELSE 1
+                   END IS DISTINCT
+                   FROM CASE
+                            WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 0
+                            ELSE 0
+                        END)
+              AND CASE
+                      WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 1
+                      ELSE 1
+                  END > CASE
+                            WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 0
+                            ELSE 0
+                        END
+              AND CASE
+                      WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 1
+                      ELSE 1
+                  END >= CASE
+                             WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 0
+                             ELSE 0
+                         END
+              AND CASE
+                      WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 1
+                      ELSE 1
+                  END < CASE
+                            WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 3
+                            ELSE 2
+                        END
+              AND CASE
+                      WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 1
+                      ELSE 1
+                  END <= CASE
+                             WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 3
+                             ELSE 2
+                         END
+              AND (CASE
+                       WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 1
+                       ELSE 1
+                   END <> CASE
+                              WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 0
+                              ELSE 0
+                          END) IS TRUE
+              AND (CASE
+                       WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 1
+                       ELSE 1
+                   END = CASE
+                             WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 0
+                             ELSE 0
+                         END) IS NOT TRUE
+              AND (CASE
+                       WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 1
+                       ELSE 1
+                   END = CASE
+                             WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 0
+                             ELSE 0
+                         END) IS FALSE
+              AND (CASE
+                       WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 1
+                       ELSE 1
+                   END <> CASE
+                              WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 0
+                              ELSE 0
+                          END) IS NOT FALSE
+              AND CASE
+                      WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 1
+                      ELSE 1
+                  END BETWEEN CASE
+                                  WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 0
+                                  ELSE 0
+                              END AND CASE
+                                          WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 3
+                                          ELSE 2
+                                      END
+              AND CASE
+                      WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 1
+                      ELSE 1
+                  END NOT BETWEEN CASE
+                                      WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 1
+                                      ELSE 1
+                                  END AND CASE
+                                              WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 0
+                                              ELSE 0
+                                          END
+              AND CASE
+                      WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 1
+                      ELSE 1
+                  END like '%'
+              AND CASE
+                      WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 1
+                      ELSE 1
+                  END not like '__DOES_NOT_EXIST__%'
+              AND CASE
+                      WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 1
+                      ELSE 1
+                  END IN (CASE
+                              WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 0
+                              ELSE 0
+                          END,
+                          CASE
+                              WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 1
+                              ELSE 1
+                          END,
+                          CASE
+                              WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 3
+                              ELSE 2
+                          END)
+              AND CASE
+                      WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 1
+                      ELSE 1
+                  END NOT IN (CASE
+                                  WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 0
+                                  ELSE 0
+                              END,
+                              CASE
+                                  WHEN array_overlap(mv_to_array("language"), mv_to_array("language")) THEN 3
+                                  ELSE 2
+                              END)))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TEST_ID: A7: scalar_in_array
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (CASE
+           WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 1
+           ELSE 1
+       END IS NULL
+       OR (CASE
+               WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 1
+               ELSE 1
+           END = CASE
+                     WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 1
+                     ELSE 1
+                 END
+           AND CASE
+                   WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 1
+                   ELSE 1
+               END IS NOT DISTINCT
+           FROM CASE
+                    WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 1
+                    ELSE 1
+                END
+           AND CASE
+                   WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 1
+                   ELSE 1
+               END <> CASE
+                          WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 0
+                          ELSE 0
+                      END
+           AND (CASE
+                    WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 1
+                    ELSE 1
+                END IS DISTINCT
+                FROM CASE
+                         WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 0
+                         ELSE 0
+                     END)
+           AND CASE
+                   WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 1
+                   ELSE 1
+               END > CASE
+                         WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 0
+                         ELSE 0
+                     END
+           AND CASE
+                   WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 1
+                   ELSE 1
+               END >= CASE
+                          WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 0
+                          ELSE 0
+                      END
+           AND CASE
+                   WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 1
+                   ELSE 1
+               END < CASE
+                         WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 3
+                         ELSE 2
+                     END
+           AND CASE
+                   WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 1
+                   ELSE 1
+               END <= CASE
+                          WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 3
+                          ELSE 2
+                      END
+           AND (CASE
+                    WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 1
+                    ELSE 1
+                END <> CASE
+                           WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 0
+                           ELSE 0
+                       END) IS TRUE
+           AND (CASE
+                    WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 1
+                    ELSE 1
+                END = CASE
+                          WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 0
+                          ELSE 0
+                      END) IS NOT TRUE
+           AND (CASE
+                    WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 1
+                    ELSE 1
+                END = CASE
+                          WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 0
+                          ELSE 0
+                      END) IS FALSE
+           AND (CASE
+                    WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 1
+                    ELSE 1
+                END <> CASE
+                           WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 0
+                           ELSE 0
+                       END) IS NOT FALSE
+           AND CASE
+                   WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 1
+                   ELSE 1
+               END BETWEEN CASE
+                               WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 0
+                               ELSE 0
+                           END AND CASE
+                                       WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 3
+                                       ELSE 2
+                                   END
+           AND CASE
+                   WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 1
+                   ELSE 1
+               END NOT BETWEEN CASE
+                                   WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 1
+                                   ELSE 1
+                               END AND CASE
+                                           WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 0
+                                           ELSE 0
+                                       END
+           AND CASE
+                   WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 1
+                   ELSE 1
+               END like '%'
+           AND CASE
+                   WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 1
+                   ELSE 1
+               END not like '__DOES_NOT_EXIST__%'
+           AND CASE
+                   WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 1
+                   ELSE 1
+               END IN (CASE
+                           WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 0
+                           ELSE 0
+                       END,
+                       CASE
+                           WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 1
+                           ELSE 1
+                       END,
+                       CASE
+                           WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 3
+                           ELSE 2
+                       END)
+           AND CASE
+                   WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 1
+                   ELSE 1
+               END NOT IN (CASE
+                               WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 0
+                               ELSE 0
+                           END,
+                           CASE
+                               WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 3
+                               ELSE 2
+                           END))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (CASE
+           WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 1
+           ELSE 1
+       END IS NULL
+       OR CASE
+              WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 1
+              ELSE 1
+          END IN
+         (SELECT CASE
+                     WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 1
+                     ELSE 1
+                 END
+          FROM kttm_nested
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND (CASE
+                     WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 1
+                     ELSE 1
+                 END IS NULL
+                 OR (CASE
+                         WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 1
+                         ELSE 1
+                     END = CASE
+                               WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 1
+                               ELSE 1
+                           END
+                     AND CASE
+                             WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 1
+                             ELSE 1
+                         END IS NOT DISTINCT
+                     FROM CASE
+                              WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 1
+                              ELSE 1
+                          END
+                     AND CASE
+                             WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 1
+                             ELSE 1
+                         END <> CASE
+                                    WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 0
+                                    ELSE 0
+                                END
+                     AND (CASE
+                              WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 1
+                              ELSE 1
+                          END IS DISTINCT
+                          FROM CASE
+                                   WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 0
+                                   ELSE 0
+                               END)
+                     AND CASE
+                             WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 1
+                             ELSE 1
+                         END > CASE
+                                   WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 0
+                                   ELSE 0
+                               END
+                     AND CASE
+                             WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 1
+                             ELSE 1
+                         END >= CASE
+                                    WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 0
+                                    ELSE 0
+                                END
+                     AND CASE
+                             WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 1
+                             ELSE 1
+                         END < CASE
+                                   WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 3
+                                   ELSE 2
+                               END
+                     AND CASE
+                             WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 1
+                             ELSE 1
+                         END <= CASE
+                                    WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 3
+                                    ELSE 2
+                                END
+                     AND (CASE
+                              WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 1
+                              ELSE 1
+                          END <> CASE
+                                     WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 0
+                                     ELSE 0
+                                 END) IS TRUE
+                     AND (CASE
+                              WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 1
+                              ELSE 1
+                          END = CASE
+                                    WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 0
+                                    ELSE 0
+                                END) IS NOT TRUE
+                     AND (CASE
+                              WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 1
+                              ELSE 1
+                          END = CASE
+                                    WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 0
+                                    ELSE 0
+                                END) IS FALSE
+                     AND (CASE
+                              WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 1
+                              ELSE 1
+                          END <> CASE
+                                     WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 0
+                                     ELSE 0
+                                 END) IS NOT FALSE
+                     AND CASE
+                             WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 1
+                             ELSE 1
+                         END BETWEEN CASE
+                                         WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 0
+                                         ELSE 0
+                                     END AND CASE
+                                                 WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 3
+                                                 ELSE 2
+                                             END
+                     AND CASE
+                             WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 1
+                             ELSE 1
+                         END NOT BETWEEN CASE
+                                             WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 1
+                                             ELSE 1
+                                         END AND CASE
+                                                     WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 0
+                                                     ELSE 0
+                                                 END
+                     AND CASE
+                             WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 1
+                             ELSE 1
+                         END like '%'
+                     AND CASE
+                             WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 1
+                             ELSE 1
+                         END not like '__DOES_NOT_EXIST__%'
+                     AND CASE
+                             WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 1
+                             ELSE 1
+                         END IN (CASE
+                                     WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 0
+                                     ELSE 0
+                                 END,
+                                 CASE
+                                     WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 1
+                                     ELSE 1
+                                 END,
+                                 CASE
+                                     WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 3
+                                     ELSE 2
+                                 END)
+                     AND CASE
+                             WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 1
+                             ELSE 1
+                         END NOT IN (CASE
+                                         WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 0
+                                         ELSE 0
+                                     END,
+                                     CASE
+                                         WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 3
+                                         ELSE 2
+                                     END)))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          CASE
+                              WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 1
+                              ELSE 1
+                          END,
+                          count(*)
+   FROM kttm_nested
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND (CASE
+              WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 1
+              ELSE 1
+          END IS NULL
+          OR (CASE
+                  WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 1
+                  ELSE 1
+              END = CASE
+                        WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 1
+                        ELSE 1
+                    END
+              AND CASE
+                      WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 1
+                      ELSE 1
+                  END IS NOT DISTINCT
+              FROM CASE
+                       WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 1
+                       ELSE 1
+                   END
+              AND CASE
+                      WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 1
+                      ELSE 1
+                  END <> CASE
+                             WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 0
+                             ELSE 0
+                         END
+              AND (CASE
+                       WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 1
+                       ELSE 1
+                   END IS DISTINCT
+                   FROM CASE
+                            WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 0
+                            ELSE 0
+                        END)
+              AND CASE
+                      WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 1
+                      ELSE 1
+                  END > CASE
+                            WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 0
+                            ELSE 0
+                        END
+              AND CASE
+                      WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 1
+                      ELSE 1
+                  END >= CASE
+                             WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 0
+                             ELSE 0
+                         END
+              AND CASE
+                      WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 1
+                      ELSE 1
+                  END < CASE
+                            WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 3
+                            ELSE 2
+                        END
+              AND CASE
+                      WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 1
+                      ELSE 1
+                  END <= CASE
+                             WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 3
+                             ELSE 2
+                         END
+              AND (CASE
+                       WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 1
+                       ELSE 1
+                   END <> CASE
+                              WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 0
+                              ELSE 0
+                          END) IS TRUE
+              AND (CASE
+                       WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 1
+                       ELSE 1
+                   END = CASE
+                             WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 0
+                             ELSE 0
+                         END) IS NOT TRUE
+              AND (CASE
+                       WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 1
+                       ELSE 1
+                   END = CASE
+                             WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 0
+                             ELSE 0
+                         END) IS FALSE
+              AND (CASE
+                       WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 1
+                       ELSE 1
+                   END <> CASE
+                              WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 0
+                              ELSE 0
+                          END) IS NOT FALSE
+              AND CASE
+                      WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 1
+                      ELSE 1
+                  END BETWEEN CASE
+                                  WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 0
+                                  ELSE 0
+                              END AND CASE
+                                          WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 3
+                                          ELSE 2
+                                      END
+              AND CASE
+                      WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 1
+                      ELSE 1
+                  END NOT BETWEEN CASE
+                                      WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 1
+                                      ELSE 1
+                                  END AND CASE
+                                              WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 0
+                                              ELSE 0
+                                          END
+              AND CASE
+                      WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 1
+                      ELSE 1
+                  END like '%'
+              AND CASE
+                      WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 1
+                      ELSE 1
+                  END not like '__DOES_NOT_EXIST__%'
+              AND CASE
+                      WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 1
+                      ELSE 1
+                  END IN (CASE
+                              WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 0
+                              ELSE 0
+                          END,
+                          CASE
+                              WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 1
+                              ELSE 1
+                          END,
+                          CASE
+                              WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 3
+                              ELSE 2
+                          END)
+              AND CASE
+                      WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 1
+                      ELSE 1
+                  END NOT IN (CASE
+                                  WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 0
+                                  ELSE 0
+                              END,
+                              CASE
+                                  WHEN scalar_in_array('en-US', mv_to_array("language")) THEN 3
+                                  ELSE 2
+                              END)))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TEST_ID: A8: array_offset_of
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0)) IS NULL
+       OR (array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0)) = array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0))+0
+           AND array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0)) IS NOT DISTINCT
+           FROM array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0))+0
+           AND array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0)) <> array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0))-1
+           AND (array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0)) IS DISTINCT
+                FROM array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0))-1)
+           AND array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0)) > array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0))-1
+           AND array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0)) >= array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0))-1
+           AND array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0)) < array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0))+1
+           AND array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0)) <= array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0))+1
+           AND (array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0)) <> array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0))-1) IS TRUE
+           AND (array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0)) = array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0))-1) IS NOT TRUE
+           AND (array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0)) = array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0))-1) IS FALSE
+           AND (array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0)) <> array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0))-1) IS NOT FALSE
+           AND array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0)) BETWEEN array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0))-1 AND array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0))+1
+           AND array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0)) NOT BETWEEN array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0)) AND array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0))-1
+           AND array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0)) like '%'
+           AND array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0)) not like '__DOES_NOT_EXIST__%'
+           AND array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0)) IN (array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0))-1,
+                                                                                                                                                                                        array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0))+0,
+                                                                                                                                                                                        array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0))+1)
+           AND array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0)) NOT IN (array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0))-1,
+                                                                                                                                                                                            array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0))+1))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0)) IS NULL
+       OR array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0)) IN
+         (SELECT array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0))
+          FROM kttm_nested
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND (array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0)) IS NULL
+                 OR (array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0)) = array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0))+0
+                     AND array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0)) IS NOT DISTINCT
+                     FROM array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0))+0
+                     AND array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0)) <> array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0))-1
+                     AND (array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0)) IS DISTINCT
+                          FROM array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0))-1)
+                     AND array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0)) > array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0))-1
+                     AND array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0)) >= array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0))-1
+                     AND array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0)) < array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0))+1
+                     AND array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0)) <= array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0))+1
+                     AND (array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0)) <> array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0))-1) IS TRUE
+                     AND (array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0)) = array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0))-1) IS NOT TRUE
+                     AND (array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0)) = array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0))-1) IS FALSE
+                     AND (array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0)) <> array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0))-1) IS NOT FALSE
+                     AND array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0)) BETWEEN array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0))-1 AND array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0))+1
+                     AND array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0)) NOT BETWEEN array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0)) AND array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0))-1
+                     AND array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0)) like '%'
+                     AND array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0)) not like '__DOES_NOT_EXIST__%'
+                     AND array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0)) IN (array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0))-1,
+                                                                                                                                                                                                  array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0))+0,
+                                                                                                                                                                                                  array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0))+1)
+                     AND array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0)) NOT IN (array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0))-1,
+                                                                                                                                                                                                      array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0))+1)))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0)),
+                          count(*)
+   FROM kttm_nested
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND (array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0)) IS NULL
+          OR (array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0)) = array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0))+0
+              AND array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0)) IS NOT DISTINCT
+              FROM array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0))+0
+              AND array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0)) <> array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0))-1
+              AND (array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0)) IS DISTINCT
+                   FROM array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0))-1)
+              AND array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0)) > array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0))-1
+              AND array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0)) >= array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0))-1
+              AND array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0)) < array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0))+1
+              AND array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0)) <= array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0))+1
+              AND (array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0)) <> array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0))-1) IS TRUE
+              AND (array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0)) = array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0))-1) IS NOT TRUE
+              AND (array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0)) = array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0))-1) IS FALSE
+              AND (array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0)) <> array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0))-1) IS NOT FALSE
+              AND array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0)) BETWEEN array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0))-1 AND array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0))+1
+              AND array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0)) NOT BETWEEN array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0)) AND array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0))-1
+              AND array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0)) like '%'
+              AND array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0)) not like '__DOES_NOT_EXIST__%'
+              AND array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0)) IN (array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0))-1,
+                                                                                                                                                                                           array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0))+0,
+                                                                                                                                                                                           array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0))+1)
+              AND array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0)) NOT IN (array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0))-1,
+                                                                                                                                                                                               array_offset_of(mv_to_array("language"), array_offset(mv_to_array("language"), 0))+1)))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TEST_ID: A9: array_ordinal_of
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1)) IS NULL
+       OR (array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1)) = array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1))+0
+           AND array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1)) IS NOT DISTINCT
+           FROM array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1))+0
+           AND array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1)) <> array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1))-1
+           AND (array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1)) IS DISTINCT
+                FROM array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1))-1)
+           AND array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1)) > array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1))-1
+           AND array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1)) >= array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1))-1
+           AND array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1)) < array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1))+1
+           AND array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1)) <= array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1))+1
+           AND (array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1)) <> array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1))-1) IS TRUE
+           AND (array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1)) = array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1))-1) IS NOT TRUE
+           AND (array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1)) = array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1))-1) IS FALSE
+           AND (array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1)) <> array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1))-1) IS NOT FALSE
+           AND array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1)) BETWEEN array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1))-1 AND array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1))+1
+           AND array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1)) NOT BETWEEN array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1)) AND array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1))-1
+           AND array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1)) like '%'
+           AND array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1)) not like '__DOES_NOT_EXIST__%'
+           AND array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1)) IN (array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1))-1,
+                                                                                                                                                                                            array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1))+0,
+                                                                                                                                                                                            array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1))+1)
+           AND array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1)) NOT IN (array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1))-1,
+                                                                                                                                                                                                array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1))+1))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1)) IS NULL
+       OR array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1)) IN
+         (SELECT array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1))
+          FROM kttm_nested
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND (array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1)) IS NULL
+                 OR (array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1)) = array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1))+0
+                     AND array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1)) IS NOT DISTINCT
+                     FROM array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1))+0
+                     AND array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1)) <> array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1))-1
+                     AND (array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1)) IS DISTINCT
+                          FROM array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1))-1)
+                     AND array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1)) > array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1))-1
+                     AND array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1)) >= array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1))-1
+                     AND array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1)) < array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1))+1
+                     AND array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1)) <= array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1))+1
+                     AND (array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1)) <> array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1))-1) IS TRUE
+                     AND (array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1)) = array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1))-1) IS NOT TRUE
+                     AND (array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1)) = array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1))-1) IS FALSE
+                     AND (array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1)) <> array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1))-1) IS NOT FALSE
+                     AND array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1)) BETWEEN array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1))-1 AND array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1))+1
+                     AND array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1)) NOT BETWEEN array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1)) AND array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1))-1
+                     AND array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1)) like '%'
+                     AND array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1)) not like '__DOES_NOT_EXIST__%'
+                     AND array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1)) IN (array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1))-1,
+                                                                                                                                                                                                      array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1))+0,
+                                                                                                                                                                                                      array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1))+1)
+                     AND array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1)) NOT IN (array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1))-1,
+                                                                                                                                                                                                          array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1))+1)))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1)),
+                          count(*)
+   FROM kttm_nested
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND (array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1)) IS NULL
+          OR (array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1)) = array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1))+0
+              AND array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1)) IS NOT DISTINCT
+              FROM array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1))+0
+              AND array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1)) <> array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1))-1
+              AND (array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1)) IS DISTINCT
+                   FROM array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1))-1)
+              AND array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1)) > array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1))-1
+              AND array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1)) >= array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1))-1
+              AND array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1)) < array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1))+1
+              AND array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1)) <= array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1))+1
+              AND (array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1)) <> array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1))-1) IS TRUE
+              AND (array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1)) = array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1))-1) IS NOT TRUE
+              AND (array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1)) = array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1))-1) IS FALSE
+              AND (array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1)) <> array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1))-1) IS NOT FALSE
+              AND array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1)) BETWEEN array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1))-1 AND array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1))+1
+              AND array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1)) NOT BETWEEN array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1)) AND array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1))-1
+              AND array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1)) like '%'
+              AND array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1)) not like '__DOES_NOT_EXIST__%'
+              AND array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1)) IN (array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1))-1,
+                                                                                                                                                                                               array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1))+0,
+                                                                                                                                                                                               array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1))+1)
+              AND array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1)) NOT IN (array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1))-1,
+                                                                                                                                                                                                   array_ordinal_of(mv_to_array("language"), array_ordinal(mv_to_array("language"), 1))+1)))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TEST_ID: A10: array_prepend
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (array_prepend('1', mv_to_array("language")) IS NULL
+       OR (array_prepend('1', mv_to_array("language")) = array_prepend('1', mv_to_array("language"))
+           AND array_prepend('1', mv_to_array("language")) IS NOT DISTINCT
+           FROM array_prepend('1', mv_to_array("language"))
+           AND array_prepend('1', mv_to_array("language")) <> array_prepend('0', mv_to_array("language"))
+           AND (array_prepend('1', mv_to_array("language")) IS DISTINCT
+                FROM array_prepend('0', mv_to_array("language")))
+           AND array_prepend('1', mv_to_array("language")) > array_prepend('0', mv_to_array("language"))
+           AND array_prepend('1', mv_to_array("language")) >= array_prepend('0', mv_to_array("language"))
+           AND array_prepend('1', mv_to_array("language")) < array_prepend('2', mv_to_array("language"))
+           AND array_prepend('1', mv_to_array("language")) <= array_prepend('2', mv_to_array("language"))
+           AND (array_prepend('1', mv_to_array("language")) <> array_prepend('0', mv_to_array("language"))) IS TRUE
+           AND (array_prepend('1', mv_to_array("language")) = array_prepend('0', mv_to_array("language"))) IS NOT TRUE
+           AND (array_prepend('1', mv_to_array("language")) = array_prepend('0', mv_to_array("language"))) IS FALSE
+           AND (array_prepend('1', mv_to_array("language")) <> array_prepend('0', mv_to_array("language"))) IS NOT FALSE
+           AND array_prepend('1', mv_to_array("language")) BETWEEN array_prepend('0', mv_to_array("language")) AND array_prepend('2', mv_to_array("language"))
+           AND array_prepend('1', mv_to_array("language")) NOT BETWEEN array_prepend('1', mv_to_array("language")) AND array_prepend('0', mv_to_array("language"))
+           AND array_prepend('1', mv_to_array("language")) IN (array_prepend('0', mv_to_array("language")),
+                                                               array_prepend('1', mv_to_array("language")),
+                                                               array_prepend('2', mv_to_array("language")))
+           AND array_prepend('1', mv_to_array("language")) NOT IN (array_prepend('0', mv_to_array("language")),
+                                                                   array_prepend('2', mv_to_array("language"))))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          array_prepend('1', mv_to_array("language")),
+                          count(*)
+   FROM kttm_nested
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND (array_prepend('1', mv_to_array("language")) IS NULL
+          OR (array_prepend('1', mv_to_array("language")) = array_prepend('1', mv_to_array("language"))
+              AND array_prepend('1', mv_to_array("language")) IS NOT DISTINCT
+              FROM array_prepend('1', mv_to_array("language"))
+              AND array_prepend('1', mv_to_array("language")) <> array_prepend('0', mv_to_array("language"))
+              AND (array_prepend('1', mv_to_array("language")) IS DISTINCT
+                   FROM array_prepend('0', mv_to_array("language")))
+              AND array_prepend('1', mv_to_array("language")) > array_prepend('0', mv_to_array("language"))
+              AND array_prepend('1', mv_to_array("language")) >= array_prepend('0', mv_to_array("language"))
+              AND array_prepend('1', mv_to_array("language")) < array_prepend('2', mv_to_array("language"))
+              AND array_prepend('1', mv_to_array("language")) <= array_prepend('2', mv_to_array("language"))
+              AND (array_prepend('1', mv_to_array("language")) <> array_prepend('0', mv_to_array("language"))) IS TRUE
+              AND (array_prepend('1', mv_to_array("language")) = array_prepend('0', mv_to_array("language"))) IS NOT TRUE
+              AND (array_prepend('1', mv_to_array("language")) = array_prepend('0', mv_to_array("language"))) IS FALSE
+              AND (array_prepend('1', mv_to_array("language")) <> array_prepend('0', mv_to_array("language"))) IS NOT FALSE
+              AND array_prepend('1', mv_to_array("language")) BETWEEN array_prepend('0', mv_to_array("language")) AND array_prepend('2', mv_to_array("language"))
+              AND array_prepend('1', mv_to_array("language")) NOT BETWEEN array_prepend('1', mv_to_array("language")) AND array_prepend('0', mv_to_array("language"))
+              AND array_prepend('1', mv_to_array("language")) IN (array_prepend('0', mv_to_array("language")),
+                                                                  array_prepend('1', mv_to_array("language")),
+                                                                  array_prepend('2', mv_to_array("language")))
+              AND array_prepend('1', mv_to_array("language")) NOT IN (array_prepend('0', mv_to_array("language")),
+                                                                      array_prepend('2', mv_to_array("language")))))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TEST_ID: A11: array_append
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (array_prepend('1', array_append(mv_to_array("language"), 'A')) IS NULL
+       OR (array_prepend('1', array_append(mv_to_array("language"), 'A')) = array_prepend('1', array_append(mv_to_array("language"), 'A'))
+           AND array_prepend('1', array_append(mv_to_array("language"), 'A')) IS NOT DISTINCT
+           FROM array_prepend('1', array_append(mv_to_array("language"), 'A'))
+           AND array_prepend('1', array_append(mv_to_array("language"), 'A')) <> array_prepend('0', array_append(mv_to_array("language"), 'A'))
+           AND (array_prepend('1', array_append(mv_to_array("language"), 'A')) IS DISTINCT
+                FROM array_prepend('0', array_append(mv_to_array("language"), 'A')))
+           AND array_prepend('1', array_append(mv_to_array("language"), 'A')) > array_prepend('0', array_append(mv_to_array("language"), 'A'))
+           AND array_prepend('1', array_append(mv_to_array("language"), 'A')) >= array_prepend('0', array_append(mv_to_array("language"), 'A'))
+           AND array_prepend('1', array_append(mv_to_array("language"), 'A')) < array_prepend('2', array_append(mv_to_array("language"), 'A'))
+           AND array_prepend('1', array_append(mv_to_array("language"), 'A')) <= array_prepend('2', array_append(mv_to_array("language"), 'A'))
+           AND (array_prepend('1', array_append(mv_to_array("language"), 'A')) <> array_prepend('0', array_append(mv_to_array("language"), 'A'))) IS TRUE
+           AND (array_prepend('1', array_append(mv_to_array("language"), 'A')) = array_prepend('0', array_append(mv_to_array("language"), 'A'))) IS NOT TRUE
+           AND (array_prepend('1', array_append(mv_to_array("language"), 'A')) = array_prepend('0', array_append(mv_to_array("language"), 'A'))) IS FALSE
+           AND (array_prepend('1', array_append(mv_to_array("language"), 'A')) <> array_prepend('0', array_append(mv_to_array("language"), 'A'))) IS NOT FALSE
+           AND array_prepend('1', array_append(mv_to_array("language"), 'A')) BETWEEN array_prepend('0', array_append(mv_to_array("language"), 'A')) AND array_prepend('2', array_append(mv_to_array("language"), 'A'))
+           AND array_prepend('1', array_append(mv_to_array("language"), 'A')) NOT BETWEEN array_prepend('1', array_append(mv_to_array("language"), 'A')) AND array_prepend('0', array_append(mv_to_array("language"), 'A'))
+           AND array_prepend('1', array_append(mv_to_array("language"), 'A')) IN (array_prepend('0', array_append(mv_to_array("language"), 'A')),
+                                                                                  array_prepend('1', array_append(mv_to_array("language"), 'A')),
+                                                                                  array_prepend('2', array_append(mv_to_array("language"), 'A')))
+           AND array_prepend('1', array_append(mv_to_array("language"), 'A')) NOT IN (array_prepend('0', array_append(mv_to_array("language"), 'A')),
+                                                                                      array_prepend('2', array_append(mv_to_array("language"), 'A'))))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          array_prepend('1', array_append(mv_to_array("language"), 'A')),
+                          count(*)
+   FROM kttm_nested
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND (array_prepend('1', array_append(mv_to_array("language"), 'A')) IS NULL
+          OR (array_prepend('1', array_append(mv_to_array("language"), 'A')) = array_prepend('1', array_append(mv_to_array("language"), 'A'))
+              AND array_prepend('1', array_append(mv_to_array("language"), 'A')) IS NOT DISTINCT
+              FROM array_prepend('1', array_append(mv_to_array("language"), 'A'))
+              AND array_prepend('1', array_append(mv_to_array("language"), 'A')) <> array_prepend('0', array_append(mv_to_array("language"), 'A'))
+              AND (array_prepend('1', array_append(mv_to_array("language"), 'A')) IS DISTINCT
+                   FROM array_prepend('0', array_append(mv_to_array("language"), 'A')))
+              AND array_prepend('1', array_append(mv_to_array("language"), 'A')) > array_prepend('0', array_append(mv_to_array("language"), 'A'))
+              AND array_prepend('1', array_append(mv_to_array("language"), 'A')) >= array_prepend('0', array_append(mv_to_array("language"), 'A'))
+              AND array_prepend('1', array_append(mv_to_array("language"), 'A')) < array_prepend('2', array_append(mv_to_array("language"), 'A'))
+              AND array_prepend('1', array_append(mv_to_array("language"), 'A')) <= array_prepend('2', array_append(mv_to_array("language"), 'A'))
+              AND (array_prepend('1', array_append(mv_to_array("language"), 'A')) <> array_prepend('0', array_append(mv_to_array("language"), 'A'))) IS TRUE
+              AND (array_prepend('1', array_append(mv_to_array("language"), 'A')) = array_prepend('0', array_append(mv_to_array("language"), 'A'))) IS NOT TRUE
+              AND (array_prepend('1', array_append(mv_to_array("language"), 'A')) = array_prepend('0', array_append(mv_to_array("language"), 'A'))) IS FALSE
+              AND (array_prepend('1', array_append(mv_to_array("language"), 'A')) <> array_prepend('0', array_append(mv_to_array("language"), 'A'))) IS NOT FALSE
+              AND array_prepend('1', array_append(mv_to_array("language"), 'A')) BETWEEN array_prepend('0', array_append(mv_to_array("language"), 'A')) AND array_prepend('2', array_append(mv_to_array("language"), 'A'))
+              AND array_prepend('1', array_append(mv_to_array("language"), 'A')) NOT BETWEEN array_prepend('1', array_append(mv_to_array("language"), 'A')) AND array_prepend('0', array_append(mv_to_array("language"), 'A'))
+              AND array_prepend('1', array_append(mv_to_array("language"), 'A')) IN (array_prepend('0', array_append(mv_to_array("language"), 'A')),
+                                                                                     array_prepend('1', array_append(mv_to_array("language"), 'A')),
+                                                                                     array_prepend('2', array_append(mv_to_array("language"), 'A')))
+              AND array_prepend('1', array_append(mv_to_array("language"), 'A')) NOT IN (array_prepend('0', array_append(mv_to_array("language"), 'A')),
+                                                                                         array_prepend('2', array_append(mv_to_array("language"), 'A')))))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TEST_ID: A12: array_concat
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (array_prepend('1', array_concat(mv_to_array("language"), mv_to_array("language"))) IS NULL
+       OR (array_prepend('1', array_concat(mv_to_array("language"), mv_to_array("language"))) = array_prepend('1', array_concat(mv_to_array("language"), mv_to_array("language")))
+           AND array_prepend('1', array_concat(mv_to_array("language"), mv_to_array("language"))) IS NOT DISTINCT
+           FROM array_prepend('1', array_concat(mv_to_array("language"), mv_to_array("language")))
+           AND array_prepend('1', array_concat(mv_to_array("language"), mv_to_array("language"))) <> array_prepend('0', array_concat(mv_to_array("language"), mv_to_array("language")))
+           AND (array_prepend('1', array_concat(mv_to_array("language"), mv_to_array("language"))) IS DISTINCT
+                FROM array_prepend('0', array_concat(mv_to_array("language"), mv_to_array("language"))))
+           AND array_prepend('1', array_concat(mv_to_array("language"), mv_to_array("language"))) > array_prepend('0', array_concat(mv_to_array("language"), mv_to_array("language")))
+           AND array_prepend('1', array_concat(mv_to_array("language"), mv_to_array("language"))) >= array_prepend('0', array_concat(mv_to_array("language"), mv_to_array("language")))
+           AND array_prepend('1', array_concat(mv_to_array("language"), mv_to_array("language"))) < array_prepend('2', array_concat(mv_to_array("language"), mv_to_array("language")))
+           AND array_prepend('1', array_concat(mv_to_array("language"), mv_to_array("language"))) <= array_prepend('2', array_concat(mv_to_array("language"), mv_to_array("language")))
+           AND (array_prepend('1', array_concat(mv_to_array("language"), mv_to_array("language"))) <> array_prepend('0', array_concat(mv_to_array("language"), mv_to_array("language")))) IS TRUE
+           AND (array_prepend('1', array_concat(mv_to_array("language"), mv_to_array("language"))) = array_prepend('0', array_concat(mv_to_array("language"), mv_to_array("language")))) IS NOT TRUE
+           AND (array_prepend('1', array_concat(mv_to_array("language"), mv_to_array("language"))) = array_prepend('0', array_concat(mv_to_array("language"), mv_to_array("language")))) IS FALSE
+           AND (array_prepend('1', array_concat(mv_to_array("language"), mv_to_array("language"))) <> array_prepend('0', array_concat(mv_to_array("language"), mv_to_array("language")))) IS NOT FALSE
+           AND array_prepend('1', array_concat(mv_to_array("language"), mv_to_array("language"))) BETWEEN array_prepend('0', array_concat(mv_to_array("language"), mv_to_array("language"))) AND array_prepend('2', array_concat(mv_to_array("language"), mv_to_array("language")))
+           AND array_prepend('1', array_concat(mv_to_array("language"), mv_to_array("language"))) NOT BETWEEN array_prepend('1', array_concat(mv_to_array("language"), mv_to_array("language"))) AND array_prepend('0', array_concat(mv_to_array("language"), mv_to_array("language")))
+           AND array_prepend('1', array_concat(mv_to_array("language"), mv_to_array("language"))) IN (array_prepend('0', array_concat(mv_to_array("language"), mv_to_array("language"))),
+                                                                                                      array_prepend('1', array_concat(mv_to_array("language"), mv_to_array("language"))),
+                                                                                                      array_prepend('2', array_concat(mv_to_array("language"), mv_to_array("language"))))
+           AND array_prepend('1', array_concat(mv_to_array("language"), mv_to_array("language"))) NOT IN (array_prepend('0', array_concat(mv_to_array("language"), mv_to_array("language"))),
+                                                                                                          array_prepend('2', array_concat(mv_to_array("language"), mv_to_array("language")))))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          array_prepend('1', array_concat(mv_to_array("language"), mv_to_array("language"))),
+                          count(*)
+   FROM kttm_nested
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND (array_prepend('1', array_concat(mv_to_array("language"), mv_to_array("language"))) IS NULL
+          OR (array_prepend('1', array_concat(mv_to_array("language"), mv_to_array("language"))) = array_prepend('1', array_concat(mv_to_array("language"), mv_to_array("language")))
+              AND array_prepend('1', array_concat(mv_to_array("language"), mv_to_array("language"))) IS NOT DISTINCT
+              FROM array_prepend('1', array_concat(mv_to_array("language"), mv_to_array("language")))
+              AND array_prepend('1', array_concat(mv_to_array("language"), mv_to_array("language"))) <> array_prepend('0', array_concat(mv_to_array("language"), mv_to_array("language")))
+              AND (array_prepend('1', array_concat(mv_to_array("language"), mv_to_array("language"))) IS DISTINCT
+                   FROM array_prepend('0', array_concat(mv_to_array("language"), mv_to_array("language"))))
+              AND array_prepend('1', array_concat(mv_to_array("language"), mv_to_array("language"))) > array_prepend('0', array_concat(mv_to_array("language"), mv_to_array("language")))
+              AND array_prepend('1', array_concat(mv_to_array("language"), mv_to_array("language"))) >= array_prepend('0', array_concat(mv_to_array("language"), mv_to_array("language")))
+              AND array_prepend('1', array_concat(mv_to_array("language"), mv_to_array("language"))) < array_prepend('2', array_concat(mv_to_array("language"), mv_to_array("language")))
+              AND array_prepend('1', array_concat(mv_to_array("language"), mv_to_array("language"))) <= array_prepend('2', array_concat(mv_to_array("language"), mv_to_array("language")))
+              AND (array_prepend('1', array_concat(mv_to_array("language"), mv_to_array("language"))) <> array_prepend('0', array_concat(mv_to_array("language"), mv_to_array("language")))) IS TRUE
+              AND (array_prepend('1', array_concat(mv_to_array("language"), mv_to_array("language"))) = array_prepend('0', array_concat(mv_to_array("language"), mv_to_array("language")))) IS NOT TRUE
+              AND (array_prepend('1', array_concat(mv_to_array("language"), mv_to_array("language"))) = array_prepend('0', array_concat(mv_to_array("language"), mv_to_array("language")))) IS FALSE
+              AND (array_prepend('1', array_concat(mv_to_array("language"), mv_to_array("language"))) <> array_prepend('0', array_concat(mv_to_array("language"), mv_to_array("language")))) IS NOT FALSE
+              AND array_prepend('1', array_concat(mv_to_array("language"), mv_to_array("language"))) BETWEEN array_prepend('0', array_concat(mv_to_array("language"), mv_to_array("language"))) AND array_prepend('2', array_concat(mv_to_array("language"), mv_to_array("language")))
+              AND array_prepend('1', array_concat(mv_to_array("language"), mv_to_array("language"))) NOT BETWEEN array_prepend('1', array_concat(mv_to_array("language"), mv_to_array("language"))) AND array_prepend('0', array_concat(mv_to_array("language"), mv_to_array("language")))
+              AND array_prepend('1', array_concat(mv_to_array("language"), mv_to_array("language"))) IN (array_prepend('0', array_concat(mv_to_array("language"), mv_to_array("language"))),
+                                                                                                         array_prepend('1', array_concat(mv_to_array("language"), mv_to_array("language"))),
+                                                                                                         array_prepend('2', array_concat(mv_to_array("language"), mv_to_array("language"))))
+              AND array_prepend('1', array_concat(mv_to_array("language"), mv_to_array("language"))) NOT IN (array_prepend('0', array_concat(mv_to_array("language"), mv_to_array("language"))),
+                                                                                                             array_prepend('2', array_concat(mv_to_array("language"), mv_to_array("language"))))))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TEST_ID: A13: array_slice
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (array_prepend('1', array_slice(mv_to_array("language"), 0, 1)) IS NULL
+       OR (array_prepend('1', array_slice(mv_to_array("language"), 0, 1)) = array_prepend('1', array_slice(mv_to_array("language"), 0, 1))
+           AND array_prepend('1', array_slice(mv_to_array("language"), 0, 1)) IS NOT DISTINCT
+           FROM array_prepend('1', array_slice(mv_to_array("language"), 0, 1))
+           AND array_prepend('1', array_slice(mv_to_array("language"), 0, 1)) <> array_prepend('0', array_slice(mv_to_array("language"), 0, 1))
+           AND (array_prepend('1', array_slice(mv_to_array("language"), 0, 1)) IS DISTINCT
+                FROM array_prepend('0', array_slice(mv_to_array("language"), 0, 1)))
+           AND array_prepend('1', array_slice(mv_to_array("language"), 0, 1)) > array_prepend('0', array_slice(mv_to_array("language"), 0, 1))
+           AND array_prepend('1', array_slice(mv_to_array("language"), 0, 1)) >= array_prepend('0', array_slice(mv_to_array("language"), 0, 1))
+           AND array_prepend('1', array_slice(mv_to_array("language"), 0, 1)) < array_prepend('2', array_slice(mv_to_array("language"), 0, 1))
+           AND array_prepend('1', array_slice(mv_to_array("language"), 0, 1)) <= array_prepend('2', array_slice(mv_to_array("language"), 0, 1))
+           AND (array_prepend('1', array_slice(mv_to_array("language"), 0, 1)) <> array_prepend('0', array_slice(mv_to_array("language"), 0, 1))) IS TRUE
+           AND (array_prepend('1', array_slice(mv_to_array("language"), 0, 1)) = array_prepend('0', array_slice(mv_to_array("language"), 0, 1))) IS NOT TRUE
+           AND (array_prepend('1', array_slice(mv_to_array("language"), 0, 1)) = array_prepend('0', array_slice(mv_to_array("language"), 0, 1))) IS FALSE
+           AND (array_prepend('1', array_slice(mv_to_array("language"), 0, 1)) <> array_prepend('0', array_slice(mv_to_array("language"), 0, 1))) IS NOT FALSE
+           AND array_prepend('1', array_slice(mv_to_array("language"), 0, 1)) BETWEEN array_prepend('0', array_slice(mv_to_array("language"), 0, 1)) AND array_prepend('2', array_slice(mv_to_array("language"), 0, 1))
+           AND array_prepend('1', array_slice(mv_to_array("language"), 0, 1)) NOT BETWEEN array_prepend('1', array_slice(mv_to_array("language"), 0, 1)) AND array_prepend('0', array_slice(mv_to_array("language"), 0, 1))
+           AND array_prepend('1', array_slice(mv_to_array("language"), 0, 1)) IN (array_prepend('0', array_slice(mv_to_array("language"), 0, 1)),
+                                                                                  array_prepend('1', array_slice(mv_to_array("language"), 0, 1)),
+                                                                                  array_prepend('2', array_slice(mv_to_array("language"), 0, 1)))
+           AND array_prepend('1', array_slice(mv_to_array("language"), 0, 1)) NOT IN (array_prepend('0', array_slice(mv_to_array("language"), 0, 1)),
+                                                                                      array_prepend('2', array_slice(mv_to_array("language"), 0, 1))))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          array_prepend('1', array_slice(mv_to_array("language"), 0, 1)),
+                          count(*)
+   FROM kttm_nested
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND (array_prepend('1', array_slice(mv_to_array("language"), 0, 1)) IS NULL
+          OR (array_prepend('1', array_slice(mv_to_array("language"), 0, 1)) = array_prepend('1', array_slice(mv_to_array("language"), 0, 1))
+              AND array_prepend('1', array_slice(mv_to_array("language"), 0, 1)) IS NOT DISTINCT
+              FROM array_prepend('1', array_slice(mv_to_array("language"), 0, 1))
+              AND array_prepend('1', array_slice(mv_to_array("language"), 0, 1)) <> array_prepend('0', array_slice(mv_to_array("language"), 0, 1))
+              AND (array_prepend('1', array_slice(mv_to_array("language"), 0, 1)) IS DISTINCT
+                   FROM array_prepend('0', array_slice(mv_to_array("language"), 0, 1)))
+              AND array_prepend('1', array_slice(mv_to_array("language"), 0, 1)) > array_prepend('0', array_slice(mv_to_array("language"), 0, 1))
+              AND array_prepend('1', array_slice(mv_to_array("language"), 0, 1)) >= array_prepend('0', array_slice(mv_to_array("language"), 0, 1))
+              AND array_prepend('1', array_slice(mv_to_array("language"), 0, 1)) < array_prepend('2', array_slice(mv_to_array("language"), 0, 1))
+              AND array_prepend('1', array_slice(mv_to_array("language"), 0, 1)) <= array_prepend('2', array_slice(mv_to_array("language"), 0, 1))
+              AND (array_prepend('1', array_slice(mv_to_array("language"), 0, 1)) <> array_prepend('0', array_slice(mv_to_array("language"), 0, 1))) IS TRUE
+              AND (array_prepend('1', array_slice(mv_to_array("language"), 0, 1)) = array_prepend('0', array_slice(mv_to_array("language"), 0, 1))) IS NOT TRUE
+              AND (array_prepend('1', array_slice(mv_to_array("language"), 0, 1)) = array_prepend('0', array_slice(mv_to_array("language"), 0, 1))) IS FALSE
+              AND (array_prepend('1', array_slice(mv_to_array("language"), 0, 1)) <> array_prepend('0', array_slice(mv_to_array("language"), 0, 1))) IS NOT FALSE
+              AND array_prepend('1', array_slice(mv_to_array("language"), 0, 1)) BETWEEN array_prepend('0', array_slice(mv_to_array("language"), 0, 1)) AND array_prepend('2', array_slice(mv_to_array("language"), 0, 1))
+              AND array_prepend('1', array_slice(mv_to_array("language"), 0, 1)) NOT BETWEEN array_prepend('1', array_slice(mv_to_array("language"), 0, 1)) AND array_prepend('0', array_slice(mv_to_array("language"), 0, 1))
+              AND array_prepend('1', array_slice(mv_to_array("language"), 0, 1)) IN (array_prepend('0', array_slice(mv_to_array("language"), 0, 1)),
+                                                                                     array_prepend('1', array_slice(mv_to_array("language"), 0, 1)),
+                                                                                     array_prepend('2', array_slice(mv_to_array("language"), 0, 1)))
+              AND array_prepend('1', array_slice(mv_to_array("language"), 0, 1)) NOT IN (array_prepend('0', array_slice(mv_to_array("language"), 0, 1)),
+                                                                                         array_prepend('2', array_slice(mv_to_array("language"), 0, 1)))))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TEST_ID: A14: array_to_string
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||array_to_string(mv_to_array("language"), '|') IS NULL
+       OR ('1'||array_to_string(mv_to_array("language"), '|') = 1||array_to_string(mv_to_array("language"), '|')
+           AND '1'||array_to_string(mv_to_array("language"), '|') IS NOT DISTINCT
+           FROM 1||array_to_string(mv_to_array("language"), '|')
+           AND '1'||array_to_string(mv_to_array("language"), '|') <> 0||array_to_string(mv_to_array("language"), '|')
+           AND ('1'||array_to_string(mv_to_array("language"), '|') IS DISTINCT
+                FROM 0||array_to_string(mv_to_array("language"), '|'))
+           AND '1'||array_to_string(mv_to_array("language"), '|') > 0||array_to_string(mv_to_array("language"), '|')
+           AND '1'||array_to_string(mv_to_array("language"), '|') >= 0||array_to_string(mv_to_array("language"), '|')
+           AND '1'||array_to_string(mv_to_array("language"), '|') < 2||array_to_string(mv_to_array("language"), '|')
+           AND '1'||array_to_string(mv_to_array("language"), '|') <= 2||array_to_string(mv_to_array("language"), '|')
+           AND ('1'||array_to_string(mv_to_array("language"), '|') <> 0||array_to_string(mv_to_array("language"), '|')) IS TRUE
+           AND ('1'||array_to_string(mv_to_array("language"), '|') = 0||array_to_string(mv_to_array("language"), '|')) IS NOT TRUE
+           AND ('1'||array_to_string(mv_to_array("language"), '|') = 0||array_to_string(mv_to_array("language"), '|')) IS FALSE
+           AND ('1'||array_to_string(mv_to_array("language"), '|') <> 0||array_to_string(mv_to_array("language"), '|')) IS NOT FALSE
+           AND '1'||array_to_string(mv_to_array("language"), '|') BETWEEN 0||array_to_string(mv_to_array("language"), '|') AND 2||array_to_string(mv_to_array("language"), '|')
+           AND '1'||array_to_string(mv_to_array("language"), '|') NOT BETWEEN '1'||array_to_string(mv_to_array("language"), '|') AND 0||array_to_string(mv_to_array("language"), '|')
+           AND '1'||array_to_string(mv_to_array("language"), '|') like '%'
+           AND '1'||array_to_string(mv_to_array("language"), '|') not like '__DOES_NOT_EXIST__%'
+           AND '1'||array_to_string(mv_to_array("language"), '|') IN (0||array_to_string(mv_to_array("language"), '|'),
+                                                                      1||array_to_string(mv_to_array("language"), '|'),
+                                                                      2||array_to_string(mv_to_array("language"), '|'))
+           AND '1'||array_to_string(mv_to_array("language"), '|') NOT IN (0||array_to_string(mv_to_array("language"), '|'),
+                                                                          2||array_to_string(mv_to_array("language"), '|')))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||array_to_string(mv_to_array("language"), '|') IS NULL
+       OR '1'||array_to_string(mv_to_array("language"), '|') IN
+         (SELECT '1'||array_to_string(mv_to_array("language"), '|')
+          FROM kttm_nested
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND ('1'||array_to_string(mv_to_array("language"), '|') IS NULL
+                 OR ('1'||array_to_string(mv_to_array("language"), '|') = 1||array_to_string(mv_to_array("language"), '|')
+                     AND '1'||array_to_string(mv_to_array("language"), '|') IS NOT DISTINCT
+                     FROM 1||array_to_string(mv_to_array("language"), '|')
+                     AND '1'||array_to_string(mv_to_array("language"), '|') <> 0||array_to_string(mv_to_array("language"), '|')
+                     AND ('1'||array_to_string(mv_to_array("language"), '|') IS DISTINCT
+                          FROM 0||array_to_string(mv_to_array("language"), '|'))
+                     AND '1'||array_to_string(mv_to_array("language"), '|') > 0||array_to_string(mv_to_array("language"), '|')
+                     AND '1'||array_to_string(mv_to_array("language"), '|') >= 0||array_to_string(mv_to_array("language"), '|')
+                     AND '1'||array_to_string(mv_to_array("language"), '|') < 2||array_to_string(mv_to_array("language"), '|')
+                     AND '1'||array_to_string(mv_to_array("language"), '|') <= 2||array_to_string(mv_to_array("language"), '|')
+                     AND ('1'||array_to_string(mv_to_array("language"), '|') <> 0||array_to_string(mv_to_array("language"), '|')) IS TRUE
+                     AND ('1'||array_to_string(mv_to_array("language"), '|') = 0||array_to_string(mv_to_array("language"), '|')) IS NOT TRUE
+                     AND ('1'||array_to_string(mv_to_array("language"), '|') = 0||array_to_string(mv_to_array("language"), '|')) IS FALSE
+                     AND ('1'||array_to_string(mv_to_array("language"), '|') <> 0||array_to_string(mv_to_array("language"), '|')) IS NOT FALSE
+                     AND '1'||array_to_string(mv_to_array("language"), '|') BETWEEN 0||array_to_string(mv_to_array("language"), '|') AND 2||array_to_string(mv_to_array("language"), '|')
+                     AND '1'||array_to_string(mv_to_array("language"), '|') NOT BETWEEN '1'||array_to_string(mv_to_array("language"), '|') AND 0||array_to_string(mv_to_array("language"), '|')
+                     AND '1'||array_to_string(mv_to_array("language"), '|') like '%'
+                     AND '1'||array_to_string(mv_to_array("language"), '|') not like '__DOES_NOT_EXIST__%'
+                     AND '1'||array_to_string(mv_to_array("language"), '|') IN (0||array_to_string(mv_to_array("language"), '|'),
+                                                                                1||array_to_string(mv_to_array("language"), '|'),
+                                                                                2||array_to_string(mv_to_array("language"), '|'))
+                     AND '1'||array_to_string(mv_to_array("language"), '|') NOT IN (0||array_to_string(mv_to_array("language"), '|'),
+                                                                                    2||array_to_string(mv_to_array("language"), '|'))))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          '1'||array_to_string(mv_to_array("language"), '|'),
+                          count(*)
+   FROM kttm_nested
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND ('1'||array_to_string(mv_to_array("language"), '|') IS NULL
+          OR ('1'||array_to_string(mv_to_array("language"), '|') = 1||array_to_string(mv_to_array("language"), '|')
+              AND '1'||array_to_string(mv_to_array("language"), '|') IS NOT DISTINCT
+              FROM 1||array_to_string(mv_to_array("language"), '|')
+              AND '1'||array_to_string(mv_to_array("language"), '|') <> 0||array_to_string(mv_to_array("language"), '|')
+              AND ('1'||array_to_string(mv_to_array("language"), '|') IS DISTINCT
+                   FROM 0||array_to_string(mv_to_array("language"), '|'))
+              AND '1'||array_to_string(mv_to_array("language"), '|') > 0||array_to_string(mv_to_array("language"), '|')
+              AND '1'||array_to_string(mv_to_array("language"), '|') >= 0||array_to_string(mv_to_array("language"), '|')
+              AND '1'||array_to_string(mv_to_array("language"), '|') < 2||array_to_string(mv_to_array("language"), '|')
+              AND '1'||array_to_string(mv_to_array("language"), '|') <= 2||array_to_string(mv_to_array("language"), '|')
+              AND ('1'||array_to_string(mv_to_array("language"), '|') <> 0||array_to_string(mv_to_array("language"), '|')) IS TRUE
+              AND ('1'||array_to_string(mv_to_array("language"), '|') = 0||array_to_string(mv_to_array("language"), '|')) IS NOT TRUE
+              AND ('1'||array_to_string(mv_to_array("language"), '|') = 0||array_to_string(mv_to_array("language"), '|')) IS FALSE
+              AND ('1'||array_to_string(mv_to_array("language"), '|') <> 0||array_to_string(mv_to_array("language"), '|')) IS NOT FALSE
+              AND '1'||array_to_string(mv_to_array("language"), '|') BETWEEN 0||array_to_string(mv_to_array("language"), '|') AND 2||array_to_string(mv_to_array("language"), '|')
+              AND '1'||array_to_string(mv_to_array("language"), '|') NOT BETWEEN '1'||array_to_string(mv_to_array("language"), '|') AND 0||array_to_string(mv_to_array("language"), '|')
+              AND '1'||array_to_string(mv_to_array("language"), '|') like '%'
+              AND '1'||array_to_string(mv_to_array("language"), '|') not like '__DOES_NOT_EXIST__%'
+              AND '1'||array_to_string(mv_to_array("language"), '|') IN (0||array_to_string(mv_to_array("language"), '|'),
+                                                                         1||array_to_string(mv_to_array("language"), '|'),
+                                                                         2||array_to_string(mv_to_array("language"), '|'))
+              AND '1'||array_to_string(mv_to_array("language"), '|') NOT IN (0||array_to_string(mv_to_array("language"), '|'),
+                                                                             2||array_to_string(mv_to_array("language"), '|'))))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TEST_ID: A15: string_to_array
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND (array_prepend('1', string_to_array('A|B', '|')) IS NULL
+       OR (array_prepend('1', string_to_array('A|B', '|')) = array_prepend('1', string_to_array('A|B', '|'))
+           AND array_prepend('1', string_to_array('A|B', '|')) IS NOT DISTINCT
+           FROM array_prepend('1', string_to_array('A|B', '|'))
+           AND array_prepend('1', string_to_array('A|B', '|')) <> array_prepend('0', string_to_array('A|B', '|'))
+           AND (array_prepend('1', string_to_array('A|B', '|')) IS DISTINCT
+                FROM array_prepend('0', string_to_array('A|B', '|')))
+           AND array_prepend('1', string_to_array('A|B', '|')) > array_prepend('0', string_to_array('A|B', '|'))
+           AND array_prepend('1', string_to_array('A|B', '|')) >= array_prepend('0', string_to_array('A|B', '|'))
+           AND array_prepend('1', string_to_array('A|B', '|')) < array_prepend('2', string_to_array('A|B', '|'))
+           AND array_prepend('1', string_to_array('A|B', '|')) <= array_prepend('2', string_to_array('A|B', '|'))
+           AND (array_prepend('1', string_to_array('A|B', '|')) <> array_prepend('0', string_to_array('A|B', '|'))) IS TRUE
+           AND (array_prepend('1', string_to_array('A|B', '|')) = array_prepend('0', string_to_array('A|B', '|'))) IS NOT TRUE
+           AND (array_prepend('1', string_to_array('A|B', '|')) = array_prepend('0', string_to_array('A|B', '|'))) IS FALSE
+           AND (array_prepend('1', string_to_array('A|B', '|')) <> array_prepend('0', string_to_array('A|B', '|'))) IS NOT FALSE
+           AND array_prepend('1', string_to_array('A|B', '|')) BETWEEN array_prepend('0', string_to_array('A|B', '|')) AND array_prepend('2', string_to_array('A|B', '|'))
+           AND array_prepend('1', string_to_array('A|B', '|')) NOT BETWEEN array_prepend('1', string_to_array('A|B', '|')) AND array_prepend('0', string_to_array('A|B', '|'))
+           AND array_prepend('1', string_to_array('A|B', '|')) IN (array_prepend('0', string_to_array('A|B', '|')),
+                                                                   array_prepend('1', string_to_array('A|B', '|')),
+                                                                   array_prepend('2', string_to_array('A|B', '|')))
+           AND array_prepend('1', string_to_array('A|B', '|')) NOT IN (array_prepend('0', string_to_array('A|B', '|')),
+                                                                       array_prepend('2', string_to_array('A|B', '|'))))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          array_prepend('1', string_to_array('A|B', '|')),
+                          count(*)
+   FROM kttm_nested
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND (array_prepend('1', string_to_array('A|B', '|')) IS NULL
+          OR (array_prepend('1', string_to_array('A|B', '|')) = array_prepend('1', string_to_array('A|B', '|'))
+              AND array_prepend('1', string_to_array('A|B', '|')) IS NOT DISTINCT
+              FROM array_prepend('1', string_to_array('A|B', '|'))
+              AND array_prepend('1', string_to_array('A|B', '|')) <> array_prepend('0', string_to_array('A|B', '|'))
+              AND (array_prepend('1', string_to_array('A|B', '|')) IS DISTINCT
+                   FROM array_prepend('0', string_to_array('A|B', '|')))
+              AND array_prepend('1', string_to_array('A|B', '|')) > array_prepend('0', string_to_array('A|B', '|'))
+              AND array_prepend('1', string_to_array('A|B', '|')) >= array_prepend('0', string_to_array('A|B', '|'))
+              AND array_prepend('1', string_to_array('A|B', '|')) < array_prepend('2', string_to_array('A|B', '|'))
+              AND array_prepend('1', string_to_array('A|B', '|')) <= array_prepend('2', string_to_array('A|B', '|'))
+              AND (array_prepend('1', string_to_array('A|B', '|')) <> array_prepend('0', string_to_array('A|B', '|'))) IS TRUE
+              AND (array_prepend('1', string_to_array('A|B', '|')) = array_prepend('0', string_to_array('A|B', '|'))) IS NOT TRUE
+              AND (array_prepend('1', string_to_array('A|B', '|')) = array_prepend('0', string_to_array('A|B', '|'))) IS FALSE
+              AND (array_prepend('1', string_to_array('A|B', '|')) <> array_prepend('0', string_to_array('A|B', '|'))) IS NOT FALSE
+              AND array_prepend('1', string_to_array('A|B', '|')) BETWEEN array_prepend('0', string_to_array('A|B', '|')) AND array_prepend('2', string_to_array('A|B', '|'))
+              AND array_prepend('1', string_to_array('A|B', '|')) NOT BETWEEN array_prepend('1', string_to_array('A|B', '|')) AND array_prepend('0', string_to_array('A|B', '|'))
+              AND array_prepend('1', string_to_array('A|B', '|')) IN (array_prepend('0', string_to_array('A|B', '|')),
+                                                                      array_prepend('1', string_to_array('A|B', '|')),
+                                                                      array_prepend('2', string_to_array('A|B', '|')))
+              AND array_prepend('1', string_to_array('A|B', '|')) NOT IN (array_prepend('0', string_to_array('A|B', '|')),
+                                                                          array_prepend('2', string_to_array('A|B', '|')))))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# TEST_ID: A16: array_to_mv
+#-------------------------------------------------------------------------
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||mv_offset_of(array_to_mv(mv_to_array("language")), 0) IS NULL
+       OR ('1'||mv_offset_of(array_to_mv(mv_to_array("language")), 0) = 1||mv_offset_of(array_to_mv(mv_to_array("language")), 0)
+           AND '1'||mv_offset_of(array_to_mv(mv_to_array("language")), 0) IS NOT DISTINCT
+           FROM 1||mv_offset_of(array_to_mv(mv_to_array("language")), 0)
+           AND '1'||mv_offset_of(array_to_mv(mv_to_array("language")), 0) <> 0||mv_offset_of(array_to_mv(mv_to_array("language")), 0)
+           AND ('1'||mv_offset_of(array_to_mv(mv_to_array("language")), 0) IS DISTINCT
+                FROM 0||mv_offset_of(array_to_mv(mv_to_array("language")), 0))
+           AND '1'||mv_offset_of(array_to_mv(mv_to_array("language")), 0) > 0||mv_offset_of(array_to_mv(mv_to_array("language")), 0)
+           AND '1'||mv_offset_of(array_to_mv(mv_to_array("language")), 0) >= 0||mv_offset_of(array_to_mv(mv_to_array("language")), 0)
+           AND '1'||mv_offset_of(array_to_mv(mv_to_array("language")), 0) < 2||mv_offset_of(array_to_mv(mv_to_array("language")), 0)
+           AND '1'||mv_offset_of(array_to_mv(mv_to_array("language")), 0) <= 2||mv_offset_of(array_to_mv(mv_to_array("language")), 0)
+           AND ('1'||mv_offset_of(array_to_mv(mv_to_array("language")), 0) <> 0||mv_offset_of(array_to_mv(mv_to_array("language")), 0)) IS TRUE
+           AND ('1'||mv_offset_of(array_to_mv(mv_to_array("language")), 0) = 0||mv_offset_of(array_to_mv(mv_to_array("language")), 0)) IS NOT TRUE
+           AND ('1'||mv_offset_of(array_to_mv(mv_to_array("language")), 0) = 0||mv_offset_of(array_to_mv(mv_to_array("language")), 0)) IS FALSE
+           AND ('1'||mv_offset_of(array_to_mv(mv_to_array("language")), 0) <> 0||mv_offset_of(array_to_mv(mv_to_array("language")), 0)) IS NOT FALSE
+           AND '1'||mv_offset_of(array_to_mv(mv_to_array("language")), 0) BETWEEN 0||mv_offset_of(array_to_mv(mv_to_array("language")), 0) AND 2||mv_offset_of(array_to_mv(mv_to_array("language")), 0)
+           AND '1'||mv_offset_of(array_to_mv(mv_to_array("language")), 0) NOT BETWEEN '1'||mv_offset_of(array_to_mv(mv_to_array("language")), 0) AND 0||mv_offset_of(array_to_mv(mv_to_array("language")), 0)
+           AND '1'||mv_offset_of(array_to_mv(mv_to_array("language")), 0) like '%'
+           AND '1'||mv_offset_of(array_to_mv(mv_to_array("language")), 0) not like '__DOES_NOT_EXIST__%'
+           AND '1'||mv_offset_of(array_to_mv(mv_to_array("language")), 0) IN (0||mv_offset_of(array_to_mv(mv_to_array("language")), 0),
+                                                                              1||mv_offset_of(array_to_mv(mv_to_array("language")), 0),
+                                                                              2||mv_offset_of(array_to_mv(mv_to_array("language")), 0))
+           AND '1'||mv_offset_of(array_to_mv(mv_to_array("language")), 0) NOT IN (0||mv_offset_of(array_to_mv(mv_to_array("language")), 0),
+                                                                                  2||mv_offset_of(array_to_mv(mv_to_array("language")), 0)))) ;
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM kttm_nested
+WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+  AND ('1'||mv_offset_of(array_to_mv(mv_to_array("language")), 0) IS NULL
+       OR '1'||mv_offset_of(array_to_mv(mv_to_array("language")), 0) IN
+         (SELECT '1'||mv_offset_of(array_to_mv(mv_to_array("language")), 0)
+          FROM kttm_nested
+          WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+            AND ('1'||mv_offset_of(array_to_mv(mv_to_array("language")), 0) IS NULL
+                 OR ('1'||mv_offset_of(array_to_mv(mv_to_array("language")), 0) = 1||mv_offset_of(array_to_mv(mv_to_array("language")), 0)
+                     AND '1'||mv_offset_of(array_to_mv(mv_to_array("language")), 0) IS NOT DISTINCT
+                     FROM 1||mv_offset_of(array_to_mv(mv_to_array("language")), 0)
+                     AND '1'||mv_offset_of(array_to_mv(mv_to_array("language")), 0) <> 0||mv_offset_of(array_to_mv(mv_to_array("language")), 0)
+                     AND ('1'||mv_offset_of(array_to_mv(mv_to_array("language")), 0) IS DISTINCT
+                          FROM 0||mv_offset_of(array_to_mv(mv_to_array("language")), 0))
+                     AND '1'||mv_offset_of(array_to_mv(mv_to_array("language")), 0) > 0||mv_offset_of(array_to_mv(mv_to_array("language")), 0)
+                     AND '1'||mv_offset_of(array_to_mv(mv_to_array("language")), 0) >= 0||mv_offset_of(array_to_mv(mv_to_array("language")), 0)
+                     AND '1'||mv_offset_of(array_to_mv(mv_to_array("language")), 0) < 2||mv_offset_of(array_to_mv(mv_to_array("language")), 0)
+                     AND '1'||mv_offset_of(array_to_mv(mv_to_array("language")), 0) <= 2||mv_offset_of(array_to_mv(mv_to_array("language")), 0)
+                     AND ('1'||mv_offset_of(array_to_mv(mv_to_array("language")), 0) <> 0||mv_offset_of(array_to_mv(mv_to_array("language")), 0)) IS TRUE
+                     AND ('1'||mv_offset_of(array_to_mv(mv_to_array("language")), 0) = 0||mv_offset_of(array_to_mv(mv_to_array("language")), 0)) IS NOT TRUE
+                     AND ('1'||mv_offset_of(array_to_mv(mv_to_array("language")), 0) = 0||mv_offset_of(array_to_mv(mv_to_array("language")), 0)) IS FALSE
+                     AND ('1'||mv_offset_of(array_to_mv(mv_to_array("language")), 0) <> 0||mv_offset_of(array_to_mv(mv_to_array("language")), 0)) IS NOT FALSE
+                     AND '1'||mv_offset_of(array_to_mv(mv_to_array("language")), 0) BETWEEN 0||mv_offset_of(array_to_mv(mv_to_array("language")), 0) AND 2||mv_offset_of(array_to_mv(mv_to_array("language")), 0)
+                     AND '1'||mv_offset_of(array_to_mv(mv_to_array("language")), 0) NOT BETWEEN '1'||mv_offset_of(array_to_mv(mv_to_array("language")), 0) AND 0||mv_offset_of(array_to_mv(mv_to_array("language")), 0)
+                     AND '1'||mv_offset_of(array_to_mv(mv_to_array("language")), 0) like '%'
+                     AND '1'||mv_offset_of(array_to_mv(mv_to_array("language")), 0) not like '__DOES_NOT_EXIST__%'
+                     AND '1'||mv_offset_of(array_to_mv(mv_to_array("language")), 0) IN (0||mv_offset_of(array_to_mv(mv_to_array("language")), 0),
+                                                                                        1||mv_offset_of(array_to_mv(mv_to_array("language")), 0),
+                                                                                        2||mv_offset_of(array_to_mv(mv_to_array("language")), 0))
+                     AND '1'||mv_offset_of(array_to_mv(mv_to_array("language")), 0) NOT IN (0||mv_offset_of(array_to_mv(mv_to_array("language")), 0),
+                                                                                            2||mv_offset_of(array_to_mv(mv_to_array("language")), 0))))));
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+SELECT count(*) cnt
+FROM
+  (SELECT __time, number, client_ip,
+                          '1'||mv_offset_of(array_to_mv(mv_to_array("language")), 0),
+                          count(*)
+   FROM kttm_nested
+   WHERE time_floor(__time, 'PT1H') BETWEEN timestamp '2019-08-25 00:00:00' AND timestamp '2019-08-25 06:00:00'
+     AND ('1'||mv_offset_of(array_to_mv(mv_to_array("language")), 0) IS NULL
+          OR ('1'||mv_offset_of(array_to_mv(mv_to_array("language")), 0) = 1||mv_offset_of(array_to_mv(mv_to_array("language")), 0)
+              AND '1'||mv_offset_of(array_to_mv(mv_to_array("language")), 0) IS NOT DISTINCT
+              FROM 1||mv_offset_of(array_to_mv(mv_to_array("language")), 0)
+              AND '1'||mv_offset_of(array_to_mv(mv_to_array("language")), 0) <> 0||mv_offset_of(array_to_mv(mv_to_array("language")), 0)
+              AND ('1'||mv_offset_of(array_to_mv(mv_to_array("language")), 0) IS DISTINCT
+                   FROM 0||mv_offset_of(array_to_mv(mv_to_array("language")), 0))
+              AND '1'||mv_offset_of(array_to_mv(mv_to_array("language")), 0) > 0||mv_offset_of(array_to_mv(mv_to_array("language")), 0)
+              AND '1'||mv_offset_of(array_to_mv(mv_to_array("language")), 0) >= 0||mv_offset_of(array_to_mv(mv_to_array("language")), 0)
+              AND '1'||mv_offset_of(array_to_mv(mv_to_array("language")), 0) < 2||mv_offset_of(array_to_mv(mv_to_array("language")), 0)
+              AND '1'||mv_offset_of(array_to_mv(mv_to_array("language")), 0) <= 2||mv_offset_of(array_to_mv(mv_to_array("language")), 0)
+              AND ('1'||mv_offset_of(array_to_mv(mv_to_array("language")), 0) <> 0||mv_offset_of(array_to_mv(mv_to_array("language")), 0)) IS TRUE
+              AND ('1'||mv_offset_of(array_to_mv(mv_to_array("language")), 0) = 0||mv_offset_of(array_to_mv(mv_to_array("language")), 0)) IS NOT TRUE
+              AND ('1'||mv_offset_of(array_to_mv(mv_to_array("language")), 0) = 0||mv_offset_of(array_to_mv(mv_to_array("language")), 0)) IS FALSE
+              AND ('1'||mv_offset_of(array_to_mv(mv_to_array("language")), 0) <> 0||mv_offset_of(array_to_mv(mv_to_array("language")), 0)) IS NOT FALSE
+              AND '1'||mv_offset_of(array_to_mv(mv_to_array("language")), 0) BETWEEN 0||mv_offset_of(array_to_mv(mv_to_array("language")), 0) AND 2||mv_offset_of(array_to_mv(mv_to_array("language")), 0)
+              AND '1'||mv_offset_of(array_to_mv(mv_to_array("language")), 0) NOT BETWEEN '1'||mv_offset_of(array_to_mv(mv_to_array("language")), 0) AND 0||mv_offset_of(array_to_mv(mv_to_array("language")), 0)
+              AND '1'||mv_offset_of(array_to_mv(mv_to_array("language")), 0) like '%'
+              AND '1'||mv_offset_of(array_to_mv(mv_to_array("language")), 0) not like '__DOES_NOT_EXIST__%'
+              AND '1'||mv_offset_of(array_to_mv(mv_to_array("language")), 0) IN (0||mv_offset_of(array_to_mv(mv_to_array("language")), 0),
+                                                                                 1||mv_offset_of(array_to_mv(mv_to_array("language")), 0),
+                                                                                 2||mv_offset_of(array_to_mv(mv_to_array("language")), 0))
+              AND '1'||mv_offset_of(array_to_mv(mv_to_array("language")), 0) NOT IN (0||mv_offset_of(array_to_mv(mv_to_array("language")), 0),
+                                                                                     2||mv_offset_of(array_to_mv(mv_to_array("language")), 0))))
+   GROUP BY 1,
+            2,
+            3,
+            4);
++-------+
+| cnt   |
++-------+
+| 78197 |
++-------+
+(1 row)
+
+!ok
+
+#-------------------------------------------------------------------------
+# Total query count 43
+#-------------------------------------------------------------------------

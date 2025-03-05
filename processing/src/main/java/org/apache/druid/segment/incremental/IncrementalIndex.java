@@ -30,7 +30,6 @@ import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.ListBasedInputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
@@ -1339,7 +1338,7 @@ public abstract class IncrementalIndex implements IncrementalIndexRowSelector, C
     @Override
     public double getDouble()
     {
-      assert NullHandling.replaceWithDefault() || !isNull();
+      assert !isNull();
       return rowSelector.getMetricDoubleValue(currEntry.get().getRowIndex(), metricIndex);
     }
 

@@ -47,10 +47,10 @@ public class ExtensionsModule implements Module
    */
   public static class SecondaryModule implements Module
   {
-    private final ExtensionsLoader extnLoader;
+    private ExtensionsLoader extnLoader;
 
     @Inject
-    public SecondaryModule(final ExtensionsLoader extnLoader)
+    public void setExtensionLoader(final ExtensionsLoader extnLoader)
     {
       this.extnLoader = extnLoader;
     }

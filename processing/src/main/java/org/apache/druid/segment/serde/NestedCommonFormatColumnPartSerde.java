@@ -22,7 +22,6 @@ package org.apache.druid.segment.serde;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.io.smoosh.SmooshedFileMapper;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnCapabilitiesImpl;
@@ -325,12 +324,9 @@ public class NestedCommonFormatColumnPartSerde implements ColumnPartSerde
       builder.setType(logicalType);
       builder.setHasNulls(hasNulls);
       builder.setNestedCommonFormatColumnSupplier(supplier);
-      // in default value mode, SQL planning by default uses selector filters for things like 'is null', which does
-      // not work correctly for complex types (or arrays). so, only hook up this index in sql compatible mode so that
-      // query results are consistent when using an index or the value matcher
-      // additionally, nested columns only have a null value index, so we only bother with the index supplier if there
-      // are actually any null rows, otherwise we use the default 'no indexes' supplier
-      if (NullHandling.sqlCompatible() && hasNulls) {
+      // nested columns only have a null value index on the whole values, so we only bother with the index supplier if
+      // there are actually any null rows, otherwise we use the default 'no indexes' supplier
+      if (hasNulls) {
         builder.setIndexSupplier(supplier, false, false);
       }
       builder.setColumnFormat(new NestedCommonFormatColumn.Format(logicalType, hasNulls, enforceLogicalType));

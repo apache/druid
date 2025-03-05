@@ -81,6 +81,7 @@ import org.apache.druid.server.http.SelfDiscoveryResource;
 import org.apache.druid.server.initialization.jetty.JettyServerInitializer;
 import org.apache.druid.server.metrics.ServiceStatusMonitor;
 import org.apache.druid.server.metrics.WorkerTaskCountStatsProvider;
+import org.apache.druid.storage.local.LocalTmpStorageConfig;
 import org.apache.druid.timeline.PruneLastCompactionState;
 import org.eclipse.jetty.server.Server;
 
@@ -184,6 +185,10 @@ public class CliMiddleManager extends ServerRunnable
             LifecycleModule.registerKey(binder, Key.get(SelfDiscoveryResource.class));
 
             configureIntermediaryData(binder);
+
+            binder.bind(LocalTmpStorageConfig.class)
+                  .toProvider(new LocalTmpStorageConfig.DefaultLocalTmpStorageConfigProvider("middle-manager"))
+                  .in(LazySingleton.class);
           }
 
           private void configureIntermediaryData(Binder binder)

@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.guice.BloomFilterExtensionModule;
 import org.apache.druid.guice.BloomFilterSerializersModule;
 import org.apache.druid.jackson.DefaultObjectMapper;
@@ -58,14 +57,13 @@ import java.util.stream.IntStream;
 
 public class BloomFilterAggregatorTest extends InitializedNullHandlingTest
 {
-  private static final String NULLISH = NullHandling.replaceWithDefault() ? "" : null;
   private static final List<String[]> VALUES1 = dimensionValues(
       "a",
       "b",
       "c",
       "a",
       "a",
-      NULLISH,
+      null,
       "b",
       "b",
       "b",
@@ -81,8 +79,8 @@ public class BloomFilterAggregatorTest extends InitializedNullHandlingTest
       "a",
       "e",
       "b",
-      new String[]{NULLISH, "x"},
-      new String[]{"x", NULLISH},
+      new String[]{null, "x"},
+      new String[]{"x", null},
       new String[]{"y", "x"},
       new String[]{"x", "y"},
       new String[]{"x", "y", "a"}
@@ -144,12 +142,12 @@ public class BloomFilterAggregatorTest extends InitializedNullHandlingTest
   {
     for (String[] vals : values) {
       for (String val : vals) {
-        if (!NullHandling.replaceWithDefault() && val == null) {
+        if (val == null) {
           filter.addBytes(null, 0, 0);
           combinedValuesFilter.addBytes(null, 0, 0);
         } else {
-          filter.addString(NullHandling.nullToEmptyIfNeeded(val));
-          combinedValuesFilter.addString(NullHandling.nullToEmptyIfNeeded(val));
+          filter.addString(val);
+          combinedValuesFilter.addString(val);
         }
       }
     }

@@ -20,7 +20,6 @@
 package org.apache.druid.query.aggregation.momentsketch.aggregator;
 
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.guava.Sequence;
@@ -46,7 +45,6 @@ import java.util.List;
 @RunWith(Parameterized.class)
 public class MomentsSketchAggregatorTest extends InitializedNullHandlingTest
 {
-  private final boolean hasNulls = !NullHandling.replaceWithDefault();
   private final AggregationTestHelper helper;
 
   @Rule
@@ -133,7 +131,7 @@ public class MomentsSketchAggregatorTest extends InitializedNullHandlingTest
     MomentSketchWrapper sketchObjectWithNulls = (MomentSketchWrapper) row.get(1); // "sketchWithNulls"
     // 23 null values (377 when nulls are not replaced with default)
     Assert.assertEquals(
-        NullHandling.replaceWithDefault() ? 400.0 : 377.0,
+        377.0,
         sketchObjectWithNulls.getPowerSums()[0],
         1e-10
     );
@@ -150,16 +148,16 @@ public class MomentsSketchAggregatorTest extends InitializedNullHandlingTest
     Assert.assertEquals(0.9969, maxValue, 0.0001);
 
     double[] quantilesArrayWithNulls = (double[]) row.get(5); // "quantilesWithNulls"
-    Assert.assertEquals(NullHandling.replaceWithDefault() ? 0.0 : 5.0, quantilesArrayWithNulls[0], 0.05);
+    Assert.assertEquals(5.0, quantilesArrayWithNulls[0], 0.05);
     Assert.assertEquals(
-        NullHandling.replaceWithDefault() ? 7.721400294818661d : 7.57,
+        7.57,
         quantilesArrayWithNulls[1],
         0.05
     );
     Assert.assertEquals(10.0, quantilesArrayWithNulls[2], 0.05);
 
     Double minValueWithNulls = (Double) row.get(6); // "minWithNulls"
-    Assert.assertEquals(NullHandling.replaceWithDefault() ? 0.0 : 5.0164, minValueWithNulls, 0.0001);
+    Assert.assertEquals(5.0164, minValueWithNulls, 0.0001);
 
     Double maxValueWithNulls = (Double) row.get(7); // "maxWithNulls"
     Assert.assertEquals(9.9788, maxValueWithNulls, 0.0001);
@@ -217,9 +215,7 @@ public class MomentsSketchAggregatorTest extends InitializedNullHandlingTest
 
     MomentSketchWrapper sketchObjectWithNulls = (MomentSketchWrapper) row.get(1); // "sketchWithNulls"
 
-    // in default mode, all 385 rows have a number value so will be computed, but only 377 rows have actual values in
-    // sql null mode
-    Assert.assertEquals(hasNulls ? 377.0 : 385.0, sketchObjectWithNulls.getPowerSums()[0], 1e-10);
+    Assert.assertEquals(377.0, sketchObjectWithNulls.getPowerSums()[0], 1e-10);
   }
 }
 

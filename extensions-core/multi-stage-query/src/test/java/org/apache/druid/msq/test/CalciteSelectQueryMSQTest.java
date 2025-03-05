@@ -21,7 +21,6 @@ package org.apache.druid.msq.test;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
 import org.apache.druid.sql.calcite.CalciteQueryTest;
@@ -116,22 +115,6 @@ public class CalciteSelectQueryMSQTest extends CalciteQueryTest
   @Disabled
   @Override
   @Test
-  public void testUnplannableJoinQueriesInNonSQLCompatibleMode()
-  {
-
-  }
-
-  @Disabled
-  @Override
-  @Test
-  public void testQueryWithMoreThanMaxNumericInFilter()
-  {
-
-  }
-
-  @Disabled
-  @Override
-  @Test
   public void testUnSupportedNullsFirst()
   {
   }
@@ -209,7 +192,7 @@ public class CalciteSelectQueryMSQTest extends CalciteQueryTest
     testBuilder().queryContext(QUERY_CONTEXT_DEFAULT)
                  .sql("select count(*) from druid.foo where parse_long(dim1, 10) is null")
                  .expectedResults(
-                     NullHandling.sqlCompatible() ? ImmutableList.of(new Object[]{4L}) : ImmutableList.of()
+                     ImmutableList.of(new Object[]{4L})
                  )
                  .run();
   }

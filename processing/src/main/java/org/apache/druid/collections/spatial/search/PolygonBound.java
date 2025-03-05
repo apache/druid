@@ -101,7 +101,7 @@ public class PolygonBound extends RectangularBound
 
   public static PolygonBound from(float[] abscissa, float[] ordinate)
   {
-    return from(abscissa, ordinate, 0);
+    return PolygonBound.from(abscissa, ordinate, 0);
   }
 
   @JsonProperty

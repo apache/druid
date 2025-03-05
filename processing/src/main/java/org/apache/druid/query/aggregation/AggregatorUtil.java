@@ -219,7 +219,7 @@ public class AggregatorUtil
   )
   {
 
-    List<PostAggregator> condensedPostAggs = pruneDependentPostAgg(postAggList, metric);
+    List<PostAggregator> condensedPostAggs = AggregatorUtil.pruneDependentPostAgg(postAggList, metric);
     // calculate dependent aggregators for these postAgg
     Set<String> dependencySet = new HashSet<>();
     dependencySet.add(metric);
@@ -427,7 +427,7 @@ public class AggregatorUtil
       return ByteBuffer.allocate(2 + fieldNameBytes.length + expressionBytes.length)
                        .put(aggregatorType)
                        .put(fieldNameBytes)
-                       .put(STRING_SEPARATOR)
+                       .put(AggregatorUtil.STRING_SEPARATOR)
                        .put(expressionBytes)
                        .array();
     });

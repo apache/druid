@@ -124,7 +124,7 @@ export const NamedExpressionsInput = function NamedExpressionsInput<
                 'drop-before': dropIndex === i && dropBefore,
                 'drop-after': dropIndex === i && !dropBefore,
               })}
-              title={`Expression: ${c.expression}`}
+              data-tooltip={`Expression: ${c.expression}`}
               interactive
               onClick={() => setMenuOpenOn({ openOn: c })}
               draggable={allowReordering}

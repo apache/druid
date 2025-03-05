@@ -24,7 +24,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.primitives.Ints;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 import it.unimi.dsi.fastutil.longs.LongList;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -296,9 +295,6 @@ public class GenericIndexedWriter<T> implements DictionaryWriter<T>
     long endOffset = getOffset(index);
     int valueSize = checkedCastNonnegativeLongToInt(endOffset - startOffset);
     if (valueSize == 0) {
-      if (NullHandling.replaceWithDefault()) {
-        return null;
-      }
       ByteBuffer bb = ByteBuffer.allocate(Integer.BYTES);
       valuesOut.readFully(startOffset - Integer.BYTES, bb);
       bb.flip();

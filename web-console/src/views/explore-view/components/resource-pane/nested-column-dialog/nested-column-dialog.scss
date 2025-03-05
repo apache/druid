@@ -27,6 +27,7 @@
   .#{$bp-ns}-dialog-body {
     display: flex;
     flex-direction: column;
+    position: relative;
 
     .path-selector {
       flex: 1;

@@ -287,7 +287,7 @@ public class SegmentGeneratorFrameProcessorFactory
       @Override
       public AppendableIndexSpec getAppendableIndexSpec()
       {
-        return DEFAULT_APPENDABLE_INDEX;
+        return TuningConfig.DEFAULT_APPENDABLE_INDEX;
       }
 
       @Override
@@ -346,7 +346,7 @@ public class SegmentGeneratorFrameProcessorFactory
       @Override
       public boolean isSkipBytesInMemoryOverheadCheck()
       {
-        return DEFAULT_SKIP_BYTES_IN_MEMORY_OVERHEAD_CHECK;
+        return TuningConfig.DEFAULT_SKIP_BYTES_IN_MEMORY_OVERHEAD_CHECK;
       }
 
       @Override

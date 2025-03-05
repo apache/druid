@@ -20,7 +20,6 @@
 package org.apache.druid.segment.metadata;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.any.StringAnyAggregatorFactory;
 import org.apache.druid.query.aggregation.firstlast.first.LongFirstAggregatorFactory;
@@ -38,10 +37,6 @@ import java.util.Map;
 
 public class FingerprintGeneratorTest
 {
-  static {
-    NullHandling.initializeForTests();
-  }
-
   private final ObjectMapper mapper = TestHelper.makeJsonMapper();
   private final FingerprintGenerator fingerprintGenerator = new FingerprintGenerator(mapper);
 

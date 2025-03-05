@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.aggregation.cardinality;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.query.aggregation.cardinality.vector.DoubleCardinalityVectorProcessor;
 import org.apache.druid.query.aggregation.cardinality.vector.FloatCardinalityVectorProcessor;
@@ -49,9 +48,7 @@ public class CardinalityVectorAggregatorTest extends InitializedNullHandlingTest
   public void testAggregateLong()
   {
     final long[] values = {1, 2, 2, 3, 3, 3, 0};
-    final boolean[] nulls = NullHandling.replaceWithDefault()
-                            ? null
-                            : new boolean[]{false, false, false, false, false, false, true};
+    final boolean[] nulls = new boolean[]{false, false, false, false, false, false, true};
 
     final CardinalityVectorAggregator aggregator = new CardinalityVectorAggregator(
         Collections.singletonList(
@@ -75,16 +72,14 @@ public class CardinalityVectorAggregatorTest extends InitializedNullHandlingTest
         )
     );
 
-    testAggregate(aggregator, values.length, NullHandling.replaceWithDefault() ? 4 : 3);
+    testAggregate(aggregator, values.length, 3);
   }
 
   @Test
   public void testAggregateDouble()
   {
     final double[] values = {1, 2, 2, 3, 3, 3, 0};
-    final boolean[] nulls = NullHandling.replaceWithDefault()
-                            ? null
-                            : new boolean[]{false, false, false, false, false, false, true};
+    final boolean[] nulls = new boolean[]{false, false, false, false, false, false, true};
 
     final CardinalityVectorAggregator aggregator = new CardinalityVectorAggregator(
         Collections.singletonList(
@@ -108,16 +103,14 @@ public class CardinalityVectorAggregatorTest extends InitializedNullHandlingTest
         )
     );
 
-    testAggregate(aggregator, values.length, NullHandling.replaceWithDefault() ? 4 : 3);
+    testAggregate(aggregator, values.length, 3);
   }
 
   @Test
   public void testAggregateFloat()
   {
     final float[] values = {1, 2, 2, 3, 3, 3, 0};
-    final boolean[] nulls = NullHandling.replaceWithDefault()
-                            ? null
-                            : new boolean[]{false, false, false, false, false, false, true};
+    final boolean[] nulls = new boolean[]{false, false, false, false, false, false, true};
 
     final CardinalityVectorAggregator aggregator = new CardinalityVectorAggregator(
         Collections.singletonList(
@@ -141,7 +134,7 @@ public class CardinalityVectorAggregatorTest extends InitializedNullHandlingTest
         )
     );
 
-    testAggregate(aggregator, values.length, NullHandling.replaceWithDefault() ? 4 : 3);
+    testAggregate(aggregator, values.length, 3);
   }
 
   @Test
@@ -203,7 +196,7 @@ public class CardinalityVectorAggregatorTest extends InitializedNullHandlingTest
         )
     );
 
-    testAggregate(aggregator, ids.length, NullHandling.replaceWithDefault() ? 4 : 3);
+    testAggregate(aggregator, ids.length, 3);
   }
 
   @Test
@@ -271,7 +264,7 @@ public class CardinalityVectorAggregatorTest extends InitializedNullHandlingTest
         )
     );
 
-    testAggregate(aggregator, ids.length, NullHandling.replaceWithDefault() ? 4 : 3);
+    testAggregate(aggregator, ids.length, 3);
   }
 
   private static void testAggregate(

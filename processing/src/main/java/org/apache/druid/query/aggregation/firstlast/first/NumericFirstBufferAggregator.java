@@ -36,7 +36,6 @@ public abstract class NumericFirstBufferAggregator implements BufferAggregator
   static final int NULL_OFFSET = Long.BYTES;
   static final int VALUE_OFFSET = NULL_OFFSET + Byte.BYTES;
 
-  private final boolean useDefault = NullHandling.replaceWithDefault();
   private final BaseLongColumnValueSelector timeSelector;
   private final boolean needsFoldCheck;
 
@@ -90,7 +89,7 @@ public abstract class NumericFirstBufferAggregator implements BufferAggregator
   public void init(ByteBuffer buf, int position)
   {
     buf.putLong(position, Long.MAX_VALUE);
-    buf.put(position + NULL_OFFSET, useDefault ? NullHandling.IS_NOT_NULL_BYTE : NullHandling.IS_NULL_BYTE);
+    buf.put(position + NULL_OFFSET, NullHandling.IS_NULL_BYTE);
     initValue(buf, position + VALUE_OFFSET);
   }
 
@@ -120,7 +119,7 @@ public abstract class NumericFirstBufferAggregator implements BufferAggregator
     long time = timeSelector.getLong();
 
     if (time < firstTime) {
-      if (useDefault || !valueSelector.isNull()) {
+      if (!valueSelector.isNull()) {
         updateTimeWithValue(buf, position, time, valueSelector);
       } else {
         updateTimeWithNull(buf, position, time);

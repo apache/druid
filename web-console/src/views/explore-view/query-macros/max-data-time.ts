@@ -21,18 +21,25 @@ import { L, SqlFunction } from 'druid-query-toolkit';
 
 import { getMaxTimeForTable } from '../utils';
 
-export async function rewriteMaxDataTime(query: SqlQuery) {
-  if (!query.containsFunction('MAX_DATA_TIME')) return query;
+export async function rewriteMaxDataTime(
+  query: SqlQuery,
+): Promise<{ query: SqlQuery; maxTime?: Date }> {
+  if (!query.containsFunction('MAX_DATA_TIME')) return { query };
 
   const tableName = query.getFirstTableName();
-  if (!tableName) return query;
+  if (!tableName) return { query };
 
   const maxTime = await getMaxTimeForTable(tableName);
-  if (!maxTime) return query;
+  if (!maxTime) return { query };
 
-  return query.walk(ex =>
-    ex instanceof SqlFunction && ex.getEffectiveFunctionName() === 'MAX_DATA_TIME'
-      ? L(new Date(maxTime.valueOf() + 1)) // Add 1ms to the maxTime date to allow filters like `"__time" < {maxTime}" to capture the last event which might also be the only event
-      : ex,
-  ) as SqlQuery;
+  const adjustedMaxTime = new Date(maxTime.valueOf() + 1); // Add 1ms to the maxTime date to allow filters like `"__time" < {maxTime}" to capture the last event which might also be the only event
+
+  return {
+    query: query.walk(ex =>
+      ex instanceof SqlFunction && ex.getEffectiveFunctionName() === 'MAX_DATA_TIME'
+        ? L(adjustedMaxTime)
+        : ex,
+    ) as SqlQuery,
+    maxTime: adjustedMaxTime,
+  };
 }

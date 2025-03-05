@@ -703,7 +703,7 @@ export class SupervisorsView extends React.PureComponent<
         pageSize={pageSize}
         onPageSizeChange={pageSize => this.setState({ pageSize })}
         pageSizeOptions={SMALL_TABLE_PAGE_SIZE_OPTIONS}
-        showPagination={supervisors.length > SMALL_TABLE_PAGE_SIZE}
+        showPagination={supervisors.length >= SMALL_TABLE_PAGE_SIZE}
         showPageJump={false}
         ofText=""
         columns={[

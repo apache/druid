@@ -21,7 +21,6 @@ package org.apache.druid.benchmark;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.FileUtils;
@@ -99,10 +98,6 @@ import java.util.concurrent.TimeUnit;
 @Measurement(iterations = 25)
 public class FilterPartitionBenchmark
 {
-  static {
-    NullHandling.initializeForTests();
-  }
-
   @Param({"750000"})
   private int rowsPerSegment;
 
@@ -548,14 +543,12 @@ public class FilterPartitionBenchmark
       if (extractionFn == null) {
         return new NoBitmapSelectorFilter(dimension, value);
       } else {
-        final String valueOrNull = NullHandling.emptyToNullIfNeeded(value);
-
         final DruidPredicateFactory predicateFactory = new DruidPredicateFactory()
         {
           @Override
           public DruidObjectPredicate<String> makeStringPredicate()
           {
-            return valueOrNull == null ? DruidObjectPredicate.isNull() : DruidObjectPredicate.equalTo(valueOrNull);
+            return value == null ? DruidObjectPredicate.isNull() : DruidObjectPredicate.equalTo(value);
           }
 
           @Override

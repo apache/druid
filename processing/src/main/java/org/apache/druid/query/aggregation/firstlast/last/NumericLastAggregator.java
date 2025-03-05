@@ -20,7 +20,6 @@
 package org.apache.druid.query.aggregation.firstlast.last;
 
 import org.apache.druid.collections.SerializablePair;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.segment.BaseLongColumnValueSelector;
 import org.apache.druid.segment.ColumnValueSelector;
@@ -32,8 +31,6 @@ import org.apache.druid.segment.ColumnValueSelector;
  */
 public abstract class NumericLastAggregator implements Aggregator
 {
-  private final boolean useDefault = NullHandling.replaceWithDefault();
-
   private final BaseLongColumnValueSelector timeSelector;
   final ColumnValueSelector valueSelector;
   final boolean needsFoldCheck;
@@ -48,7 +45,7 @@ public abstract class NumericLastAggregator implements Aggregator
     this.needsFoldCheck = needsFoldCheck;
 
     lastTime = Long.MIN_VALUE;
-    rhsNull = !useDefault;
+    rhsNull = true;
   }
 
   /**
@@ -87,7 +84,7 @@ public abstract class NumericLastAggregator implements Aggregator
     long time = timeSelector.getLong();
     if (time >= lastTime) {
       lastTime = time;
-      if (useDefault || !valueSelector.isNull()) {
+      if (!valueSelector.isNull()) {
         setLastValue();
         rhsNull = false;
       } else {

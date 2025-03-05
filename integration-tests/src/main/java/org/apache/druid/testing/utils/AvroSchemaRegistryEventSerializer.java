@@ -73,7 +73,7 @@ public class AvroSchemaRegistryEventSerializer extends AvroEventSerializer
     try {
       RetryUtils.retry(
           () -> {
-            schemaId = client.register(topic, SCHEMA);
+            schemaId = client.register(topic, AvroEventSerializer.SCHEMA);
             fromRegistry = client.getById(schemaId);
             return 0;
           },

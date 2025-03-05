@@ -80,7 +80,7 @@ public class SumSqlAggregator extends SimpleSqlAggregator
       case DOUBLE:
         return new DoubleSumAggregatorFactory(name, fieldName, null, macroTable);
       default:
-        throw badTypeException(fieldName, "SUM", aggregationType);
+        throw SimpleSqlAggregator.badTypeException(fieldName, "SUM", aggregationType);
     }
   }
 }

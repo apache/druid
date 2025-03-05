@@ -22,7 +22,6 @@ package org.apache.druid.segment.join.lookup;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Sets;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.lookup.LookupExtractor;
@@ -109,9 +108,6 @@ public class LookupJoinable implements Joinable
       } else {
         nonMatchingValues = new HashSet<>();
         nonMatchingValues.add(null);
-        if (NullHandling.replaceWithDefault()) {
-          nonMatchingValues.add(NullHandling.defaultStringValue());
-        }
       }
 
       // size() of Sets.difference is slow; avoid it.

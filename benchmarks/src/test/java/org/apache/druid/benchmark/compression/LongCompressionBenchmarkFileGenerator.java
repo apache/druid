@@ -20,7 +20,6 @@
 package org.apache.druid.benchmark.compression;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.ColumnarLongsSerializer;
@@ -46,10 +45,6 @@ import java.util.Map;
 
 public class LongCompressionBenchmarkFileGenerator
 {
-  static {
-    NullHandling.initializeForTests();
-  }
-
   private static final Logger log = new Logger(LongCompressionBenchmarkFileGenerator.class);
   public static final int ROW_NUM = 5000000;
   public static final List<CompressionStrategy> COMPRESSIONS =

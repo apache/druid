@@ -25,7 +25,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
@@ -345,8 +344,8 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                     false,
                     0,
                     0,
-                    NullHandling.defaultStringValue(),
-                    NullHandling.defaultStringValue(),
+                    null,
+                    null,
                     null
                 ),
                 "placementish",
@@ -357,8 +356,8 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                     false,
                     0,
                     0,
-                    NullHandling.defaultStringValue(),
-                    NullHandling.defaultStringValue(),
+                    null,
+                    null,
                     null
                 )
             )
@@ -419,8 +418,8 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                     false,
                     0,
                     1,
-                    NullHandling.defaultStringValue(),
-                    NullHandling.defaultStringValue(),
+                    null,
+                    null,
                     null
                 ),
                 "placementish",
@@ -431,8 +430,8 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                     false,
                     0,
                     9,
-                    NullHandling.defaultStringValue(),
-                    NullHandling.defaultStringValue(),
+                    null,
+                    null,
                     null
                 )
             )
@@ -493,8 +492,8 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                     false,
                     0,
                     1,
-                    NullHandling.defaultStringValue(),
-                    NullHandling.defaultStringValue(),
+                    null,
+                    null,
                     null
                 ),
                 "quality_uniques",
@@ -707,8 +706,8 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                     false,
                     0,
                     0,
-                    NullHandling.defaultStringValue(),
-                    NullHandling.defaultStringValue(),
+                    null,
+                    null,
                     null
                 )
             )
@@ -773,8 +772,8 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                     false,
                     0,
                     0,
-                    NullHandling.defaultStringValue(),
-                    NullHandling.defaultStringValue(),
+                    null,
+                    null,
                     null
                 )
             )
@@ -839,8 +838,8 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                     false,
                     0,
                     0,
-                    NullHandling.defaultStringValue(),
-                    NullHandling.defaultStringValue(),
+                    null,
+                    null,
                     null
                 )
             )
@@ -902,8 +901,8 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                     false,
                     0,
                     0,
-                    NullHandling.defaultStringValue(),
-                    NullHandling.defaultStringValue(),
+                    null,
+                    null,
                     null
                 )
             )
@@ -964,8 +963,8 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
                     false,
                     0,
                     0,
-                    NullHandling.defaultStringValue(),
-                    NullHandling.defaultStringValue(),
+                    null,
+                    null,
                     null
                 )
             )
@@ -1480,7 +1479,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
         ColumnType.LONG,
         ValueType.LONG.toString(),
         false,
-        NullHandling.replaceWithDefault() ? false : true,
+        true,
         19344,
         null,
         null,
@@ -1497,7 +1496,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
         ColumnType.DOUBLE,
         ValueType.DOUBLE.toString(),
         false,
-        NullHandling.replaceWithDefault() ? false : true,
+        true,
         19344,
         null,
         null,
@@ -1515,7 +1514,7 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
         ColumnType.FLOAT,
         ValueType.FLOAT.toString(),
         false,
-        NullHandling.replaceWithDefault() ? false : true,
+        true,
         19344,
         null,
         null,
@@ -1535,8 +1534,8 @@ public class SegmentMetadataQueryTest extends InitializedNullHandlingTest
         true,
         0,
         1,
-        NullHandling.defaultStringValue(),
-        NullHandling.defaultStringValue(),
+        null,
+        null,
         null
     );
     testSegmentMetadataQueryWithDefaultAnalysisMerge("null_column", analysis);

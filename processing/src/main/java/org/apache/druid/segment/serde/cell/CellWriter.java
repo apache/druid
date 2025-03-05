@@ -23,6 +23,7 @@ import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
 import org.apache.druid.segment.data.CompressionStrategy;
 import org.apache.druid.segment.serde.Serializer;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
+import org.apache.druid.utils.CloseableUtils;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
@@ -174,8 +175,7 @@ public class CellWriter implements Serializer, Closeable
   @Override
   public void close() throws IOException
   {
-    cellIndexWriter.close();
-    payloadWriter.close();
+    CloseableUtils.closeAll(cellIndexWriter, payloadWriter::close);
   }
 
   @Override

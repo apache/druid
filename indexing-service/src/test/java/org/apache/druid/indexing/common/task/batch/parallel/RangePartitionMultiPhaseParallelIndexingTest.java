@@ -24,7 +24,6 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.SetMultimap;
-import org.apache.druid.common.config.NullValueHandlingConfig;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.data.input.impl.CSVParseSpec;
@@ -50,9 +49,7 @@ import org.hamcrest.Matchers;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.contrib.java.lang.system.ProvideSystemProperty;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
@@ -126,13 +123,6 @@ public class RangePartitionMultiPhaseParallelIndexingTest extends AbstractMultiP
         new Object[]{LockGranularity.SEGMENT, USE_INPUT_FORMAT_API, 2, USE_MULTIVALUE_DIM, INTERVAL_TO_INDEX}  // expected to fail
     );
   }
-
-  // Interpret empty values in CSV as null
-  @Rule
-  public final ProvideSystemProperty noDefaultNullValue = new ProvideSystemProperty(
-      NullValueHandlingConfig.NULL_HANDLING_CONFIG_STRING,
-      "false"
-  );
 
   private File inputDir;
   private SetMultimap<Interval, List<Object>> intervalToDims;

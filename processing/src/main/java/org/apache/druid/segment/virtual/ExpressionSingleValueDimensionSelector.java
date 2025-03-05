@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment.virtual;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.query.extraction.ExtractionFn;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
@@ -51,7 +50,7 @@ class ExpressionSingleValueDimensionSelector extends BaseSingleValueDimensionSel
   @Override
   protected String getValue()
   {
-    return NullHandling.emptyToNullIfNeeded(baseSelector.getObject().asString());
+    return baseSelector.getObject().asString();
   }
 
   @Override
@@ -77,7 +76,7 @@ class ExpressionSingleValueDimensionSelector extends BaseSingleValueDimensionSel
     @Override
     protected String getValue()
     {
-      return extractionFn.apply(NullHandling.emptyToNullIfNeeded(baseSelector.getObject().asString()));
+      return extractionFn.apply(baseSelector.getObject().asString());
     }
 
     @Override

@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.java.util.common.DateTimes;
@@ -297,7 +296,7 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
       //expectedSizeInBytes =
       // 44(map overhead) + 28 (TimeAndDims overhead) + 56 (aggregator metrics) + 54 (dimsKeySize) =
       // 182 + 1 byte when null handling is enabled
-      int nullHandlingOverhead = NullHandling.sqlCompatible() ? 1 : 0;
+      int nullHandlingOverhead = 1;
       Assert.assertEquals(
           182 + nullHandlingOverhead,
           ((BatchAppenderator) appenderator).getBytesInMemory(IDENTIFIERS.get(0))
@@ -330,7 +329,7 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
       appenderator.startJob();
       appenderator.add(IDENTIFIERS.get(0), createInputRow("2000", "foo", 1), null);
       //expectedSizeInBytes = 44(map overhead) + 28 (TimeAndDims overhead) + 56 (aggregator metrics) + 54 (dimsKeySize) = 182
-      int nullHandlingOverhead = NullHandling.sqlCompatible() ? 1 : 0;
+      int nullHandlingOverhead = 1;
       Assert.assertEquals(182 + nullHandlingOverhead, ((BatchAppenderator) appenderator).getBytesCurrentlyInMemory());
       appenderator.add(IDENTIFIERS.get(1), createInputRow("2000", "bar", 1), null);
       Assert.assertEquals(
@@ -353,7 +352,7 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
       appenderator.add(IDENTIFIERS.get(0), createInputRow("2000", "foo", 1), null);
       // Still under maxSizeInBytes after the add. Hence, we do not persist yet
       //expectedSizeInBytes = 44(map overhead) + 28 (TimeAndDims overhead) + 56 (aggregator metrics) + 54 (dimsKeySize) = 182 + 1 byte when null handling is enabled
-      int nullHandlingOverhead = NullHandling.sqlCompatible() ? 1 : 0;
+      int nullHandlingOverhead = 1;
       int currentInMemoryIndexSize = 182 + nullHandlingOverhead;
       int sinkSizeOverhead = BatchAppenderator.ROUGH_OVERHEAD_PER_SINK;
       // currHydrant in the sink still has > 0 bytesInMemory since we do not persist yet
@@ -476,7 +475,7 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
       appenderator.add(IDENTIFIERS.get(0), createInputRow("2000", "foo", 1), null);
 
       // Still under maxSizeInBytes after the add. Hence, we do not persist yet
-      int nullHandlingOverhead = NullHandling.sqlCompatible() ? 1 : 0;
+      int nullHandlingOverhead = 1;
       int currentInMemoryIndexSize = 182 + nullHandlingOverhead;
       int sinkSizeOverhead = BatchAppenderator.ROUGH_OVERHEAD_PER_SINK;
       Assert.assertEquals(
@@ -506,7 +505,7 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
 
       // Still under maxSizeInBytes after the add. Hence, we do not persist yet
       //expectedSizeInBytes = 44(map overhead) + 28 (TimeAndDims overhead) + 56 (aggregator metrics) + 54 (dimsKeySize) = 182 + 1 byte when null handling is enabled
-      int nullHandlingOverhead = NullHandling.sqlCompatible() ? 1 : 0;
+      int nullHandlingOverhead = 1;
       int currentInMemoryIndexSize = 182 + nullHandlingOverhead;
       int sinkSizeOverhead = 2 * BatchAppenderator.ROUGH_OVERHEAD_PER_SINK;
       // currHydrant in the sink still has > 0 bytesInMemory since we do not persist yet
@@ -625,7 +624,7 @@ public class BatchAppenderatorTest extends InitializedNullHandlingTest
       Assert.assertEquals(0, ((BatchAppenderator) appenderator).getRowsInMemory());
       appenderator.add(IDENTIFIERS.get(0), createInputRow("2000", "foo", 1), null);
       //we still calculate the size even when ignoring it to make persist decision
-      int nullHandlingOverhead = NullHandling.sqlCompatible() ? 1 : 0;
+      int nullHandlingOverhead = 1;
       Assert.assertEquals(
           182 + nullHandlingOverhead,
           ((BatchAppenderator) appenderator).getBytesInMemory(IDENTIFIERS.get(0))

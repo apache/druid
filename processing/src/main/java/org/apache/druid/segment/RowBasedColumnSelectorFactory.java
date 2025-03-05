@@ -20,7 +20,6 @@
 package org.apache.druid.segment;
 
 import com.google.common.base.Preconditions;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.Rows;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.extraction.ExtractionFn;
@@ -243,8 +242,7 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
               }
 
               for (String dimensionValue : dimensionValues) {
-                final String coerced = NullHandling.emptyToNullIfNeeded(dimensionValue);
-                if ((includeUnknown && coerced == null) || Objects.equals(coerced, value)) {
+                if ((includeUnknown && dimensionValue == null) || Objects.equals(dimensionValue, value)) {
                   return true;
                 }
               }
@@ -277,8 +275,7 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
               }
 
               for (String dimensionValue : dimensionValues) {
-                final String coerced = NullHandling.emptyToNullIfNeeded(dimensionValue);
-                if (predicate.apply(coerced).matches(includeUnknown)) {
+                if (predicate.apply(dimensionValue).matches(includeUnknown)) {
                   return true;
                 }
               }
@@ -298,14 +295,14 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
         @Override
         public int getValueCardinality()
         {
-          return CARDINALITY_UNKNOWN;
+          return DimensionDictionarySelector.CARDINALITY_UNKNOWN;
         }
 
         @Override
         public String lookupName(int id)
         {
           updateCurrentValues();
-          return NullHandling.emptyToNullIfNeeded(dimensionValues.get(id));
+          return dimensionValues.get(id);
         }
 
         @Override
@@ -353,7 +350,7 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
               final Object rawValue = dimFunction.apply(rowSupplier.get());
 
               if (rawValue == null || rawValue instanceof String) {
-                final String s = NullHandling.emptyToNullIfNeeded((String) rawValue);
+                final String s = (String) rawValue;
 
                 if (extractionFn == null) {
                   dimensionValues = Collections.singletonList(s);
@@ -390,12 +387,10 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
                 dimensionValues = new ArrayList<>(nonExtractedValues.size());
 
                 for (final String value : nonExtractedValues) {
-                  final String s = NullHandling.emptyToNullIfNeeded(value);
-
                   if (extractionFn == null) {
-                    dimensionValues.add(s);
+                    dimensionValues.add(value);
                   } else {
-                    dimensionValues.add(extractionFn.apply(s));
+                    dimensionValues.add(extractionFn.apply(value));
                   }
                 }
               }
@@ -461,31 +456,31 @@ public class RowBasedColumnSelectorFactory<T> implements ColumnSelectorFactory
         public boolean isNull()
         {
           updateCurrentValueAsNumber();
-          return !NullHandling.replaceWithDefault() && currentValueAsNumber == null;
+          return currentValueAsNumber == null;
         }
 
         @Override
         public double getDouble()
         {
           updateCurrentValueAsNumber();
-          assert NullHandling.replaceWithDefault() || currentValueAsNumber != null;
-          return currentValueAsNumber != null ? currentValueAsNumber.doubleValue() : 0d;
+          assert currentValueAsNumber != null;
+          return currentValueAsNumber.doubleValue();
         }
 
         @Override
         public float getFloat()
         {
           updateCurrentValueAsNumber();
-          assert NullHandling.replaceWithDefault() || currentValueAsNumber != null;
-          return currentValueAsNumber != null ? currentValueAsNumber.floatValue() : 0f;
+          assert currentValueAsNumber != null;
+          return currentValueAsNumber.floatValue();
         }
 
         @Override
         public long getLong()
         {
           updateCurrentValueAsNumber();
-          assert NullHandling.replaceWithDefault() || currentValueAsNumber != null;
-          return currentValueAsNumber != null ? currentValueAsNumber.longValue() : 0L;
+          assert currentValueAsNumber != null;
+          return currentValueAsNumber.longValue();
         }
 
         @Nullable

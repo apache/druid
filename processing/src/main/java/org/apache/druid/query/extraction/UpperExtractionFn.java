@@ -21,7 +21,6 @@ package org.apache.druid.query.extraction;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.Nullable;
@@ -52,7 +51,7 @@ public class UpperExtractionFn extends DimExtractionFn
   @Override
   public String apply(@Nullable String key)
   {
-    if (NullHandling.isNullOrEquivalent(key)) {
+    if (key == null) {
       return null;
     }
     return key.toUpperCase(locale);
