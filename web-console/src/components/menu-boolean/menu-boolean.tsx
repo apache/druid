@@ -31,9 +31,9 @@ function toKey(value: boolean | undefined) {
 
 const DEFAULT_OPTIONS_TEXT: Partial<Record<TrueFalseUndefined, string>> = { undefined: 'Auto' };
 
-export const ENABLE_DISABLE_OPTIONS_TEXT: Partial<Record<TrueFalseUndefined, string>> = {
-  true: 'Enable',
-  false: 'Disable',
+export const ENABLED_DISABLED_OPTIONS_TEXT: Partial<Record<TrueFalseUndefined, string>> = {
+  true: 'Enabled',
+  false: 'Disabled',
   undefined: 'Auto',
 };
 
