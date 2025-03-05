@@ -29,6 +29,7 @@ import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.filter.FalseDimFilter;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.TrueDimFilter;
+import org.apache.druid.query.planning.ExecutionVertexTest;
 import org.apache.druid.query.planning.JoinDataSourceAnalysis;
 import org.apache.druid.query.policy.NoRestrictionPolicy;
 import org.apache.druid.segment.TestHelper;
@@ -43,8 +44,6 @@ import org.hamcrest.CoreMatchers;
 import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
 import org.junit.Test;
-import org.mockito.Mockito;
-
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Optional;
@@ -207,7 +206,7 @@ public class JoinDataSourceTest
     IllegalArgumentException e = assertThrows(
         IllegalArgumentException.class,
         () -> JoinDataSource.create(
-            new QueryDataSource(Mockito.mock(Query.class)),
+            new QueryDataSource(ExecutionVertexTest.makeScanQuery(barTable)),
             new TableDataSource("table"),
             "j.",
             "x == \"j.x\"",
