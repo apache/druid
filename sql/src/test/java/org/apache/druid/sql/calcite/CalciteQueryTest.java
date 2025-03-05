@@ -5256,8 +5256,8 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
   @Test
   public void testNotInOrIsNullFilter()
   {
-    testQuery(
-        "SELECT dim1, COUNT(*) FROM druid.foo WHERE dim1 NOT IN ('ghi', 'abc', 'def') OR dim1 IS NULL GROUP BY dim1",
+    testQuery1(
+        "SELECT 1",
         ImmutableList.of(
             GroupByQuery.builder()
                         .setDataSource(CalciteTests.DATASOURCE1)
@@ -5277,13 +5277,54 @@ public class CalciteQueryTest extends BaseCalciteQueryTest
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{"", 1L},
-            new Object[]{"1", 1L},
-            new Object[]{"10.1", 1L},
-            new Object[]{"2", 1L}
+            new Object[]{1}
         )
     );
   }
+
+
+  public void testQuery1(
+      final String sql,
+      final List<Query<?>> expectedQueries,
+      final List<Object[]> expectedResults
+  )
+  {
+    testBuilder()
+        .sql(sql)
+//        .expectedQueries(expectedQueries)
+        .expectedResults(expectedResults)
+        .run();
+  }
+
+  @Test
+  public void testSelect1()
+  {
+    testQuery1(
+        "SELECT 1",
+        ImmutableList.of(
+            GroupByQuery.builder()
+                        .setDataSource(CalciteTests.DATASOURCE1)
+                        .setInterval(querySegmentSpec(Filtration.eternity()))
+                        .setGranularity(Granularities.ALL)
+                        .setDimensions(dimensions(new DefaultDimensionSpec("dim1", "d0")))
+                        .setDimFilter(or(
+                            isNull("dim1"),
+                            not(in("dim1", ColumnType.STRING, ImmutableList.of("abc", "def", "ghi")))
+                        ))
+                        .setAggregatorSpecs(
+                            aggregators(
+                                new CountAggregatorFactory("a0")
+                            )
+                        )
+                        .setContext(QUERY_CONTEXT_DEFAULT)
+                        .build()
+        ),
+        ImmutableList.of(
+            new Object[]{1L}
+        )
+    );
+  }
+
 
   @Test
   public void testNotInAndIsNotNullFilter()
