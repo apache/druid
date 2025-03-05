@@ -50,4 +50,16 @@ public class CalciteSelectQueryDartTest extends BaseCalciteQueryTest
         .run();
   }
 
+  @Test
+  public void testSelectFromFoo()
+  {
+    testBuilder()
+        .sql("SELECT 2 from foo limit 2")
+        .expectedResults(
+            new Object[] {2},
+            new Object[] {2}
+        )
+        .run();
+  }
+
 }
