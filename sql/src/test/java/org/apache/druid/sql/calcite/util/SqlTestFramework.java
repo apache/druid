@@ -29,6 +29,7 @@ import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.TypeLiteral;
+import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.cache.Cache;
 import org.apache.druid.client.cache.CacheConfig;
 import org.apache.druid.collections.NonBlockingPool;
@@ -672,7 +673,8 @@ public class SqlTestFramework
           viewManager,
           componentSupplier.createSchemaManager(),
           framework.authorizerMapper,
-          framework.builder.catalogResolver
+          framework.builder.catalogResolver,
+          framework.injector.getInstance(TimelineServerView.class)
       );
 
       this.plannerFactory = new PlannerFactory(
@@ -923,25 +925,35 @@ public class SqlTestFramework
         final Injector injector,
         QueryRunnerFactoryConglomerate conglomerate,
         QuerySegmentWalker walker,
-        Builder builder)
+        Builder builder,
+        TimelineServerView timelineServerView)
     {
       return QueryFrameworkUtils.createMockSchema(
           injector,
           conglomerate,
           (SpecificSegmentsQuerySegmentWalker) walker,
           builder.componentSupplier.getPlannerComponentSupplier().createSchemaManager(),
-          builder.catalogResolver
+          builder.catalogResolver,
+          timelineServerView
       );
     }
 
     @Provides
     @LazySingleton
-    private SystemSchema makeSystemSchema(QuerySegmentWalker walker, AuthorizerMapper authorizerMapper,
-        DruidSchema druidSchema)
+    private SystemSchema makeSystemSchema(AuthorizerMapper authorizerMapper, DruidSchema druidSchema,
+        TimelineServerView timelineServerView)
     {
-      return CalciteTests
-          .createMockSystemSchema(druidSchema, (SpecificSegmentsQuerySegmentWalker) walker, authorizerMapper);
+      return CalciteTests.createMockSystemSchema(druidSchema, timelineServerView, authorizerMapper);
     }
+
+
+    @Provides
+    @LazySingleton
+    private TimelineServerView makeTimelineServerView(SpecificSegmentsQuerySegmentWalker walker)
+    {
+      return new TestTimelineServerView(walker.getSegments());
+    }
+
 
     @Provides
     @LazySingleton

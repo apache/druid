@@ -81,7 +81,7 @@ public class TestTimelineServerView implements TimelineServerView
 
   public TestTimelineServerView(List<DataSegment> segments)
   {
-    this.segments.addAll(segments);
+    this(segments, Collections.emptyList());
   }
 
   public TestTimelineServerView(List<DataSegment> segments, List<DataSegment> realtimeSegments)
