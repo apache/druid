@@ -22,6 +22,7 @@ package org.apache.druid.msq.shuffle.output;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import org.apache.druid.common.guava.FutureUtils;
+import org.apache.druid.frame.Frame;
 import org.apache.druid.frame.channel.ReadableFileFrameChannel;
 import org.apache.druid.frame.channel.ReadableFrameChannel;
 import org.apache.druid.frame.channel.ReadableNilFrameChannel;
@@ -74,6 +75,38 @@ public class StageOutputHolder implements Closeable
   public ReadableFrameChannel readLocally()
   {
     return new FutureReadableFrameChannel(FutureUtils.transform(readerFuture, StageOutputReader::readLocally));
+  }
+
+  public ReadableFrameChannel readLocally1()
+  {
+    return new FutureReadableFrameChannel(FutureUtils.transform(readerFuture, StageOutputReader::readLocally));
+  }
+
+
+  public ListenableFuture<InputStream> readLocally12(long offset)
+  {
+
+    ReadableFrameChannel l = readLocally();
+
+    ListenableFuture<?> afr = l.readabilityFuture();
+    Frame a = l.read();
+    long b = a.numBytes();
+//    WritableMemory wm = a.writableMemory();
+
+    return (ListenableFuture<InputStream>) afr;
+////    byte[] buffer = new byte[8 * 1024];
+////    boolean didRead = false;
+////    int bytesRead;
+////    while ((bytesRead = inputStream.read(buffer)) != -1) {
+////      channel.addChunk(Arrays.copyOf(buffer, bytesRead));
+////      didRead = true;
+////    }
+////    inputStream.close();
+//
+//
+//    setChannel(readLocally());
+//    ListenableFuture<StageOutputReader> aa = FutureUtils.transform(channelFuture, StageOutputHolder::createReader);
+//    return FutureUtils.transformAsync(aa, reader -> reader.readRemotelyFrom(offset));
   }
 
   /**

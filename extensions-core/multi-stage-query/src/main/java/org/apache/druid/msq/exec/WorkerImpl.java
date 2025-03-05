@@ -556,7 +556,7 @@ public class WorkerImpl implements Worker
       final long offset
   )
   {
-    return getOrCreateStageOutputHolder(stageId, partitionNumber).readRemotelyFrom(offset);
+    return getOrCreateStageOutputHolder(stageId, partitionNumber).readLocally12(offset);
   }
 
   /**

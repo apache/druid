@@ -1068,6 +1068,7 @@ public class SqlTestFramework
       //FIXME connect TSB with this
 ///.      return new SimpleServerView(conglomerate, objectMapper, httpClient);
 
+
       SimpleServerView simpleServerView = new SimpleServerView(conglomerate, objectMapper, httpClient);
       return simpleServerView;
     }

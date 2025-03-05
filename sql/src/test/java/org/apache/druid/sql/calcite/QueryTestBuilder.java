@@ -21,7 +21,6 @@ package org.apache.druid.sql.calcite;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
-import org.apache.curator.shaded.com.google.common.collect.ImmutableList;
 import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.quidem.DruidQTestInfo;
@@ -167,11 +166,6 @@ public class QueryTestBuilder
   public QueryTestBuilder expectedResults(final List<Object[]> expectedResults)
   {
     return expectedResults(ResultMatchMode.EQUALS, expectedResults);
-  }
-
-  public QueryTestBuilder expectedResults(Object[]... expectedResults)
-  {
-    return expectedResults(ResultMatchMode.EQUALS, ImmutableList.of(expectedResults));
   }
 
   public QueryTestBuilder expectedResults(

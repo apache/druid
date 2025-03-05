@@ -28,7 +28,7 @@ import org.junit.jupiter.api.Test;
 import java.util.UUID;
 
 @SqlTestFrameworkConfig.ComponentSupplier(DartComponentSupplier.class)
-public class CalciteSelectQueryDartTest extends BaseCalciteQueryTest
+public class SimpleDartTest extends BaseCalciteQueryTest
 {
   @Override
   protected QueryTestBuilder testBuilder()
@@ -56,8 +56,10 @@ public class CalciteSelectQueryDartTest extends BaseCalciteQueryTest
     testBuilder()
         .sql("SELECT 2 from foo limit 2")
         .expectedResults(
-            new Object[] {2},
-            new Object[] {2}
+            ImmutableList.of(
+                new Object[] {2},
+                new Object[] {2}
+            )
         )
         .run();
   }

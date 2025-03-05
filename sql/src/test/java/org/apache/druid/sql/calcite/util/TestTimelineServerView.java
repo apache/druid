@@ -25,7 +25,10 @@ import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.ImmutableDruidDataSource;
 import org.apache.druid.client.ImmutableDruidServer;
 import org.apache.druid.client.TimelineServerView;
+import org.apache.druid.client.selector.HighestPriorityTierSelectorStrategy;
+import org.apache.druid.client.selector.RandomServerSelectorStrategy;
 import org.apache.druid.client.selector.ServerSelector;
+import org.apache.druid.client.selector.TierSelectorStrategy;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.TableDataSource;
@@ -33,9 +36,12 @@ import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.TimelineLookup;
-
+import org.apache.druid.timeline.VersionedIntervalTimeline;
+import org.apache.druid.timeline.partition.PartitionChunk;
+import org.apache.druid.timeline.partition.SingleElementPartitionChunk;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Executor;
@@ -93,6 +99,20 @@ public class TestTimelineServerView implements TimelineServerView
   @Override
   public Optional<? extends TimelineLookup<String, ServerSelector>> getTimeline(TableDataSource table)
   {
+    for (DataSegment s : segments) {
+      if (!s.getDataSource().equals(table.getName())) {
+        continue;
+      }
+      VersionedIntervalTimeline<String, ServerSelector> a = new VersionedIntervalTimeline<String, ServerSelector>(Comparator.naturalOrder());
+    TierSelectorStrategy st = new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy());
+    ServerSelector sss = new ServerSelector(s, st );
+
+    PartitionChunk<ServerSelector> aa = new SingleElementPartitionChunk(sss);
+    a.add(        s.getInterval(), s.getVersion(), aa);
+    return Optional.of(a);
+//      return Optional.of();
+
+    }
   return Optional.empty();
 //    throw new UnsupportedOperationException();
   }
