@@ -23,9 +23,18 @@ import org.apache.druid.indexing.common.task.Task;
 
 import java.util.Map;
 
-public class LimiterUtils
+public class TaskLimiterUtils
 {
 
+  /**
+   * Determines whether the given task can be executed based on task limits and available capacity.
+   *
+   * @param task The task to evaluate.
+   * @param taskLimits The limits and ratios defining task execution constraints.
+   * @param currentSlotsUsed The current capacity used by tasks of the same type.
+   * @param totalCapacity The total available capacity across all workers.
+   * @return {@code true} if the task meets the defined limits and capacity constraints; {@code false} otherwise.
+   */
   public static boolean canRunTask(Task task, TaskLimits taskLimits, Integer currentSlotsUsed, Integer totalCapacity)
   {
     return meetsTaskLimit(
