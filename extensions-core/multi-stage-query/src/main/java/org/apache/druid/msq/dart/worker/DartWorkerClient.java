@@ -24,7 +24,6 @@ import org.apache.druid.msq.exec.WorkerClient;
 
 public interface DartWorkerClient extends WorkerClient
 {
-
   void closeClient(String hostAndPort);
 
   ListenableFuture<?> stopWorker(String workerId);

@@ -39,7 +39,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public class MSQTestWorkerClient implements WorkerClient
 {
-  private final Map<String, Worker> inMemoryWorkers;
+  protected final Map<String, Worker> inMemoryWorkers;
   private final AtomicBoolean closed = new AtomicBoolean();
 
   public MSQTestWorkerClient(Map<String, Worker> inMemoryWorkers)
@@ -50,8 +50,20 @@ public class MSQTestWorkerClient implements WorkerClient
   @Override
   public ListenableFuture<Void> postWorkOrder(String workerTaskId, WorkOrder workOrder)
   {
-    inMemoryWorkers.get(workerTaskId).postWorkOrder(workOrder);
+    getWorkerFor(workerTaskId).postWorkOrder(workOrder);
+
     return Futures.immediateFuture(null);
+  }
+
+  protected Worker getWorkerFor(String workerTaskId)
+  {
+
+    return inMemoryWorkers.computeIfAbsent(workerTaskId, this::newWorker);
+  }
+
+  protected Worker newWorker(String workerId)
+  {
+    throw new RuntimeException("FIXME: Unimplemented!");
   }
 
   @Override
@@ -61,7 +73,7 @@ public class MSQTestWorkerClient implements WorkerClient
       SketchEncoding sketchEncoding
   )
   {
-    return Futures.immediateFuture(inMemoryWorkers.get(workerTaskId).fetchStatisticsSnapshot(stageId));
+    return Futures.immediateFuture(getWorkerFor(workerTaskId).fetchStatisticsSnapshot(stageId));
   }
 
   @Override
@@ -73,7 +85,7 @@ public class MSQTestWorkerClient implements WorkerClient
   )
   {
     return Futures.immediateFuture(
-        inMemoryWorkers.get(workerTaskId).fetchStatisticsSnapshotForTimeChunk(stageId, timeChunk)
+        getWorkerFor(workerTaskId).fetchStatisticsSnapshotForTimeChunk(stageId, timeChunk)
     );
   }
 
@@ -85,7 +97,7 @@ public class MSQTestWorkerClient implements WorkerClient
   )
   {
     try {
-      inMemoryWorkers.get(workerTaskId).postResultPartitionBoundaries(stageId, partitionBoundaries);
+      getWorkerFor(workerTaskId).postResultPartitionBoundaries(stageId, partitionBoundaries);
       return Futures.immediateFuture(null);
     }
     catch (Exception e) {
@@ -96,21 +108,21 @@ public class MSQTestWorkerClient implements WorkerClient
   @Override
   public ListenableFuture<Void> postCleanupStage(String workerTaskId, StageId stageId)
   {
-    inMemoryWorkers.get(workerTaskId).postCleanupStage(stageId);
+    getWorkerFor(workerTaskId).postCleanupStage(stageId);
     return Futures.immediateFuture(null);
   }
 
   @Override
   public ListenableFuture<Void> postFinish(String taskId)
   {
-    inMemoryWorkers.get(taskId).postFinish();
+    getWorkerFor(taskId).postFinish();
     return Futures.immediateFuture(null);
   }
 
   @Override
   public ListenableFuture<CounterSnapshotsTree> getCounters(String taskId)
   {
-    return Futures.immediateFuture(inMemoryWorkers.get(taskId).getCounters());
+    return Futures.immediateFuture(getWorkerFor(taskId).getCounters());
   }
 
   @Override
@@ -123,7 +135,7 @@ public class MSQTestWorkerClient implements WorkerClient
   )
   {
     try (InputStream inputStream =
-             inMemoryWorkers.get(workerTaskId).readStageOutput(stageId, partitionNumber, offset).get()) {
+             getWorkerFor(workerTaskId).readStageOutput(stageId, partitionNumber, offset).get()) {
       byte[] buffer = new byte[8 * 1024];
       boolean didRead = false;
       int bytesRead;

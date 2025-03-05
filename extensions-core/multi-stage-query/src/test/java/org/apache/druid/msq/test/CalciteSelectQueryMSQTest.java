@@ -43,6 +43,7 @@ public class CalciteSelectQueryMSQTest extends CalciteQueryTest
   protected QueryTestBuilder testBuilder()
   {
     return new QueryTestBuilder(new CalciteTestConfig(true))
+//        .addCustomRunner(new ExtractResultsFactory(() -> null))//(MSQTestOverlordServiceClient) ((DartSqlEngine) queryFramework().engine()).overlordClient()))
         .addCustomRunner(new ExtractResultsFactory(() -> null))//(MSQTestOverlordServiceClient) ((DartSqlEngine) queryFramework().engine()).overlordClient()))
         .queryContext(ImmutableMap.<String,Object>builder().put("asd",UUID.randomUUID().toString()).build())
         .skipVectorize(true)

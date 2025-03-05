@@ -30,17 +30,24 @@ import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.msq.dart.Dart;
+import org.apache.druid.msq.dart.controller.DartControllerContext;
 import org.apache.druid.msq.dart.controller.DartControllerContextFactoryImpl;
 import org.apache.druid.msq.dart.worker.DartWorkerClient;
 import org.apache.druid.msq.exec.Controller;
+import org.apache.druid.msq.exec.ControllerContext;
 import org.apache.druid.msq.exec.MemoryIntrospector;
 import org.apache.druid.msq.exec.Worker;
 import org.apache.druid.msq.exec.WorkerImpl;
 import org.apache.druid.msq.exec.WorkerStorageParameters;
+import org.apache.druid.msq.kernel.StageId;
+import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.server.DruidNode;
 
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 public class TestDartControllerContextFactoryImpl extends DartControllerContextFactoryImpl
 {
@@ -64,30 +71,50 @@ public class TestDartControllerContextFactoryImpl extends DartControllerContextF
   }
 
   @Override
+  public ControllerContext newContext(String queryId)
+  {
+    DartControllerContext ctx;
+    DartTestWorkerClient wc;
+    ctx=new DartControllerContext(
+        injector,
+        jsonMapper,
+        selfNode,
+        wc=(DartTestWorkerClient) makeWorkerClient(queryId),
+        memoryIntrospector,
+        serverView,
+        emitter
+    );
+    wc.controllerCtx=ctx;
+    return ctx;
+  }
+
+  @Override
   protected DartWorkerClient makeWorkerClient(String queryId)
   {
-    Controller controller = null;
-    Worker worker = new WorkerImpl(
-        null,
-        new MSQTestWorkerContext(
-            queryId,
-            workerMap,
-            controller,
-            jsonMapper,
-            injector,
-            MSQTestBase.makeTestWorkerMemoryParameters(),
-            WorkerStorageParameters.createInstanceForTests(Long.MAX_VALUE)
-        )
-    );
+//    Controller controller = null;
+//    Worker worker = new WorkerImpl(
+//        null,
+//        new MSQTestWorkerContext(
+//            queryId,
+//            workerMap,
+//            controller,
+//            jsonMapper,
+//            injector,
+//            MSQTestBase.makeTestWorkerMemoryParameters(),
+//            WorkerStorageParameters.createInstanceForTests(Long.MAX_VALUE)
+//        )
+//    );
 
+//    injector.
     return new DartTestWorkerClient(
         queryId, serviceClientFactory, smileMapper, selfNode.getHostAndPortToUse(), workerMap
     );
   }
 
-  static class DartTestWorkerClient extends MSQTestWorkerClient implements DartWorkerClient
+  public class DartTestWorkerClient extends MSQTestWorkerClient implements DartWorkerClient
   {
-    private Map<String, Worker> workerMap;
+    private final ExecutorService EXECUTOR = Executors.newCachedThreadPool();
+    public DartControllerContext controllerCtx;
 
     public DartTestWorkerClient(
         String queryId,
@@ -100,22 +127,69 @@ public class TestDartControllerContextFactoryImpl extends DartControllerContextF
     }
 
     @Override
+    protected Worker newWorker(String workerId)
+    {
+      String queryId=workerId;
+      Controller controller=controllerCtx.theController;
+      Worker worker = new WorkerImpl(
+          null,
+          new MSQTestWorkerContext(
+              queryId,
+              inMemoryWorkers,
+              controller,
+              jsonMapper,
+              injector,
+              MSQTestBase.makeTestWorkerMemoryParameters(),
+              WorkerStorageParameters.createInstanceForTests(Long.MAX_VALUE)
+          )
+      );
+
+      Future<?> future = EXECUTOR.submit(() -> {
+        try {
+          worker.run();
+        }
+        catch (Exception e) {
+          throw new RuntimeException(e);
+        }
+      });
+
+      return worker;
+    }
+
+    @Override
+    public ListenableFuture<Void> postWorkOrder(String workerTaskId, WorkOrder workOrder)
+    {
+
+      return super.postWorkOrder(workerTaskId, workOrder);
+
+    }
+    @Override
+    public ListenableFuture<Void> postCleanupStage(String workerTaskId, StageId stageId)
+    {
+//      if(true)
+//      {
+//        throw new RuntimeException("FIXME: Unimplemented!");
+//      }
+      return super.postCleanupStage(workerTaskId, stageId);
+
+    }
+    @Override
     public void closeClient(String hostAndPort)
     {
-      if(true)
-      {
-        throw new RuntimeException("FIXME: Unimplemented!");
-      }
+//      if(true)
+//      {
+//        throw new RuntimeException("FIXME: Unimplemented!");
+//      }
 
     }
 
     @Override
     public ListenableFuture<?> stopWorker(String workerId)
     {
-      if(true)
-      {
-        throw new RuntimeException("FIXME: Unimplemented!");
-      }
+//      if(true)
+//      {
+//        throw new RuntimeException("FIXME: Unimplemented!");
+//      }
       return null;
 
     }
