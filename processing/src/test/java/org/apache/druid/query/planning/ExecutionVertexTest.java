@@ -185,7 +185,7 @@ public class ExecutionVertexTest
     final QueryDataSource queryDataSource = makeQueryDS(LOOKUP_LOOKYLOO);
     final ExecutionVertex ev = ExecutionVertex.of(makeScanQuery(queryDataSource));
 
-    Assert.assertFalse(ev.isProcessable());
+    Assert.assertTrue(ev.isProcessable());
     Assert.assertFalse(ev.isTableBased());
     Assert.assertEquals(queryDataSource, ev.getBaseDataSource());
     Assert.assertEquals(new MultipleIntervalSegmentSpec(MILLENIUM_INTERVALS), ev.getEffectiveQuerySegmentSpec());
@@ -691,7 +691,7 @@ public class ExecutionVertexTest
         .build();
   }
 
-  private static ScanQuery makeScanQuery(final DataSource dataSource)
+  public static ScanQuery makeScanQuery(final DataSource dataSource)
   {
     return Druids.newScanQueryBuilder()
         .dataSource(dataSource)
