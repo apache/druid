@@ -35,6 +35,9 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class TypeStrategies
 {
+  public static final byte IS_NULL_BYTE = (byte) 1;
+  public static final byte IS_NOT_NULL_BYTE = (byte) 0;
+  
   public static final int VALUE_OFFSET = Byte.BYTES;
   public static final int NULLABLE_LONG_SIZE = Byte.BYTES + Long.BYTES;
   public static final int NULLABLE_DOUBLE_SIZE = Byte.BYTES + Double.BYTES;
@@ -45,8 +48,6 @@ public class TypeStrategies
   public static final DoubleTypeStrategy DOUBLE = new DoubleTypeStrategy();
   public static final StringTypeStrategy STRING = new StringTypeStrategy();
   public static final ConcurrentHashMap<String, TypeStrategy<?>> COMPLEX_STRATEGIES = new ConcurrentHashMap<>();
-  public static final byte IS_NULL_BYTE = (byte) 1;
-  public static final byte IS_NOT_NULL_BYTE = (byte) 0;
 
   /**
    * Get an {@link TypeStrategy} registered to some {@link TypeSignature#getComplexTypeName()}.
