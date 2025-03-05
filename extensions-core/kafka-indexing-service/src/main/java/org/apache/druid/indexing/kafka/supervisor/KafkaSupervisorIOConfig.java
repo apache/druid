@@ -52,7 +52,7 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
   private final KafkaConfigOverrides configOverrides;
   private final String topic;
   private final String topicPattern;
-  private final boolean publishTimeLag;
+  private final boolean emitTimeLagMetrics;
 
   @JsonCreator
   public KafkaSupervisorIOConfig(
@@ -75,7 +75,7 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
       @JsonProperty("configOverrides") KafkaConfigOverrides configOverrides,
       @JsonProperty("idleConfig") IdleConfig idleConfig,
       @JsonProperty("stopTaskCount") Integer stopTaskCount,
-      @Nullable @JsonProperty("publishTimeLag") Boolean publishTimeLag
+      @Nullable @JsonProperty("emitTimeLagMetrics") Boolean emitTimeLagMetrics
   )
   {
     super(
@@ -105,7 +105,7 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
     this.configOverrides = configOverrides;
     this.topic = topic;
     this.topicPattern = topicPattern;
-    this.publishTimeLag = Configs.valueOrDefault(publishTimeLag, false);
+    this.emitTimeLagMetrics = Configs.valueOrDefault(emitTimeLagMetrics, false);
   }
 
   /**
@@ -159,9 +159,9 @@ public class KafkaSupervisorIOConfig extends SeekableStreamSupervisorIOConfig
    * @return true if supervisor needs to publish the time lag.
    */
   @JsonProperty
-  public boolean isPublishTimeLag()
+  public boolean isEmitTimeLagMetrics()
   {
-    return publishTimeLag;
+    return emitTimeLagMetrics;
   }
 
   @Override

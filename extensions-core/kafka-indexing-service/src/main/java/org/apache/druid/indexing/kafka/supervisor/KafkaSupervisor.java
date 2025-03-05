@@ -407,26 +407,23 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
           .map(e -> new StreamPartition<>(getIoConfig().getStream(), e))
           .collect(Collectors.toSet());
 
+      // Since we cannot compute the current timestamp for partitions for
+      // which we haven't started reading yet explictly set them.
       final Set<KafkaTopicPartition> yetToReadPartitions = new HashSet<>();
-      for (Map.Entry<KafkaTopicPartition, Long> entry : highestCurrentOffsets.entrySet()) {
-        if (partitionIds.contains(entry.getKey())) {
-          if (highestCurrentOffsets.get(entry.getKey()) == null || highestCurrentOffsets.get(entry.getKey()) == 0) {
-            yetToReadPartitions.add(entry.getKey());
-            continue;
-          }
-
-          recordSupplier.seek(new StreamPartition<>(getIoConfig().getStream(), entry.getKey()), entry.getValue() - 1);
+      for (KafkaTopicPartition partition : partitionIds) {
+        Long highestCurrentOffset = highestCurrentOffsets.get(partition);
+        if (highestCurrentOffset == null || highestCurrentOffset == 0) {
+          yetToReadPartitions.add(partition);
+        } else {
+          recordSupplier.seek(new StreamPartition<>(getIoConfig().getStream(), partition), highestCurrentOffset - 1);
         }
       }
 
       final Map<KafkaTopicPartition, Long> lastIngestedTimestamps = getTimestampPerPartitionAtCurrentOffset(partitions);
-      // TODO: this might give wierd values for lag when the tasks are yet to start processing
+      // Note: this might give weird values for lag when the tasks are yet to start processing
       yetToReadPartitions.forEach(p -> lastIngestedTimestamps.put(p, 0L));
 
       recordSupplier.seekToLatest(partitions);
-      // this method isn't actually computing the lag, just fetching the latests offsets from the stream. This is
-      // because we currently only have record lag for kafka, which can be lazily computed by subtracting the highest
-      // task offsets from the latest offsets from the stream when it is needed
       latestSequenceFromStream = recordSupplier.getLatestSequenceNumbers(partitions);
 
       for (Map.Entry<KafkaTopicPartition, Long> entry : latestSequenceFromStream.entrySet()) {
@@ -479,7 +476,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
     }
 
     if (!remainingPartitions.isEmpty()) {
-      log.info("Couldn't fetch the latest timestamp for the following partitions: [%s]", remainingPartitions);
+      log.info("Could not fetch the latest timestamp for partitions [%s].", remainingPartitions);
     }
     return result;
   }
@@ -492,7 +489,7 @@ public class KafkaSupervisor extends SeekableStreamSupervisor<KafkaTopicPartitio
   @Override
   protected void updatePartitionLagFromStream()
   {
-    if (getIoConfig().isPublishTimeLag()) {
+    if (getIoConfig().isEmitTimeLagMetrics()) {
       updatePartitionTimeAndRecordLagFromStream();
       return;
     }

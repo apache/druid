@@ -41,7 +41,7 @@ public class OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType, Rec
   private final PartitionIdType partitionId;
   private final SequenceOffsetType sequenceNumber;
   private final List<RecordType> data;
-  private final long timestamp;
+  private final Long timestamp;
 
   public OrderedPartitionableRecord(
       String stream,
@@ -50,7 +50,7 @@ public class OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType, Rec
       List<RecordType> data
   )
   {
-    this(stream, partitionId, sequenceNumber, data, -1);
+    this(stream, partitionId, sequenceNumber, data, null);
   }
 
   public OrderedPartitionableRecord(
@@ -58,7 +58,7 @@ public class OrderedPartitionableRecord<PartitionIdType, SequenceOffsetType, Rec
       PartitionIdType partitionId,
       SequenceOffsetType sequenceNumber,
       List<RecordType> data,
-      long timestamp
+      Long timestamp
   )
   {
     Preconditions.checkNotNull(stream, "stream");
