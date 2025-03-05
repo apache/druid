@@ -285,7 +285,7 @@ public class NestedDataScanQueryTest extends InitializedNullHandlingTest
                                              .limit(100)
                                              .context(ImmutableMap.of())
                                              .build();
-    List<Segment> segs = NestedDataTestUtils.createSimpleSegmentsTsvV4(tempFolder, closer);
+    List<Segment> segs = NestedDataTestUtils.createSimpleSegmentsTsvNested(tempFolder, closer);
 
     final Sequence<ScanResultValue> seq = helper.runQueryOnSegmentsObjs(segs, scanQuery);
 

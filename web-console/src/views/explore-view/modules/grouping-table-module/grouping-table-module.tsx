@@ -18,6 +18,7 @@
 
 import { Button } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
+import type { Timezone } from 'chronoshift';
 import type { SqlExpression, SqlOrderByDirection, SqlQuery } from 'druid-query-toolkit';
 import { C, F } from 'druid-query-toolkit';
 import { useMemo } from 'react';
@@ -45,6 +46,7 @@ import './grouping-table-module.scss';
 const NEEDS_GROUPING_TO_ORDER = true;
 
 interface QueryAndMore {
+  timezone: Timezone;
   originalWhere: SqlExpression;
   queryAndHints: QueryAndHints;
 }
@@ -208,6 +210,7 @@ ModuleRepository.registerModule<GroupingTableParameterValues>({
     const {
       stage,
       querySource,
+      timezone,
       where,
       setWhere,
       parameterValues,
@@ -245,6 +248,7 @@ ModuleRepository.registerModule<GroupingTableParameterValues>({
         : undefined;
 
       return {
+        timezone,
         originalWhere: where,
         queryAndHints: makeTableQueryAndHints({
           source: querySource.query,
@@ -265,14 +269,14 @@ ModuleRepository.registerModule<GroupingTableParameterValues>({
           useGroupingToOrderSubQueries: NEEDS_GROUPING_TO_ORDER,
         }),
       };
-    }, [querySource.query, where, parameterValues, pivotValueState.data]);
+    }, [querySource.query, timezone, where, parameterValues, pivotValueState.data]);
 
     const [resultState] = useQueryManager({
       query: queryAndMore,
       processQuery: async (queryAndMore, cancelToken) => {
-        const { originalWhere, queryAndHints } = queryAndMore;
+        const { timezone, originalWhere, queryAndHints } = queryAndMore;
         const { query, columnHints } = queryAndHints;
-        let result = await runSqlQuery(query, cancelToken);
+        let result = await runSqlQuery({ query, timezone }, cancelToken);
         if (result.sqlQuery) {
           result = result.attachQuery(
             { query: '' },
@@ -303,6 +307,7 @@ ModuleRepository.registerModule<GroupingTableParameterValues>({
         ) : resultData ? (
           <GenericOutputTable
             queryResult={resultData.result}
+            timezone={timezone}
             columnHints={resultData.columnHints}
             showTypeIcons={false}
             onOrderByChange={(columnName, desc) => {

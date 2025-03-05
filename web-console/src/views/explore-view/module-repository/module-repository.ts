@@ -18,6 +18,7 @@
 
 import type { IconName } from '@blueprintjs/icons';
 import type { CancelToken } from 'axios';
+import type { Timezone } from 'chronoshift';
 import type { QueryResult, SqlExpression, SqlQuery } from 'druid-query-toolkit';
 
 import type { Stage } from '../../../utils';
@@ -34,11 +35,15 @@ interface ModuleDefinition<P> {
 interface ModuleComponentProps<P> {
   stage: Stage;
   querySource: QuerySource;
+  timezone: Timezone;
   where: SqlExpression;
   setWhere(where: SqlExpression): void;
   parameterValues: P;
   setParameterValues: (parameters: Partial<P>) => void;
-  runSqlQuery(query: string | SqlQuery, cancelToken?: CancelToken): Promise<QueryResult>;
+  runSqlQuery(
+    query: string | SqlQuery | { query: string | SqlQuery; timezone?: Timezone },
+    cancelToken?: CancelToken,
+  ): Promise<QueryResult>;
 }
 
 export class ModuleRepository {

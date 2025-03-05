@@ -43,7 +43,7 @@ public class WorkerFailedFault extends BaseMSQFault
       @JsonProperty("errorMsg") @Nullable final String errorMsg
   )
   {
-    super(CODE, "Worker task failed: [%s]%s", workerTaskId, errorMsg != null ? " (" + errorMsg + ")" : "");
+    super(CODE, "Worker[%s] failed%s", workerTaskId, errorMsg != null ? ": " + errorMsg : "");
     this.workerTaskId = workerTaskId;
     this.errorMsg = errorMsg;
   }

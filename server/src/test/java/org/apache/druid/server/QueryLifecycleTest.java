@@ -307,13 +307,13 @@ public class QueryLifecycleTest
   }
 
   @Test
-  public void testRunSimple_foundMultiplePolicyRestrictions()
+  public void testRunSimple_foundDifferentPolicyRestrictions()
   {
     // Multiple policy restrictions indicates most likely the system is trying to double-authorizing the request
     // This is not allowed in any case.
     expectedException.expect(ISE.class);
     expectedException.expectMessage(
-        "Multiple restrictions on table [some_datasource]: policy [RowFilterPolicy{rowFilter=some-column IS NULL}] and policy [RowFilterPolicy{rowFilter=some-column2 IS NULL}]");
+        "Different restrictions on table [some_datasource]: previous policy [RowFilterPolicy{rowFilter=some-column IS NULL}] and new policy [RowFilterPolicy{rowFilter=some-column2 IS NULL}]");
 
     DimFilter originalFilterOnRDS = new NullFilter("some-column", null);
     Policy originalFilterPolicy = RowFilterPolicy.from(originalFilterOnRDS);

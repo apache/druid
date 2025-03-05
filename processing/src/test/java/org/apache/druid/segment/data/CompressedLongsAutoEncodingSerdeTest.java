@@ -115,7 +115,7 @@ public class CompressedLongsAutoEncodingSerdeTest
     serializer.writeTo(Channels.newChannel(baos), null);
     Assert.assertEquals(baos.size(), serializer.getSerializedSize());
     CompressedColumnarLongsSupplier supplier =
-        CompressedColumnarLongsSupplier.fromByteBuffer(ByteBuffer.wrap(baos.toByteArray()), order);
+        CompressedColumnarLongsSupplier.fromByteBuffer(ByteBuffer.wrap(baos.toByteArray()), order, null);
     ColumnarLongs longs = supplier.get();
 
     assertIndexMatchesVals(longs, values);

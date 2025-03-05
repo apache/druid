@@ -29,6 +29,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.math.expr.vector.CastToTypeVectorProcessor;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
+import org.apache.druid.math.expr.vector.VectorConditionalProcessors;
 import org.apache.druid.math.expr.vector.VectorMathProcessors;
 import org.apache.druid.math.expr.vector.VectorProcessors;
 import org.apache.druid.math.expr.vector.VectorStringProcessors;
@@ -792,7 +793,7 @@ public interface Function extends NamedFunction
     @Override
     public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
     {
-      return VectorMathProcessors.abs(inspector, args.get(0));
+      return VectorMathProcessors.abs().asProcessor(inspector, args.get(0));
     }
   }
 
@@ -813,7 +814,7 @@ public interface Function extends NamedFunction
     @Override
     public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
     {
-      return VectorMathProcessors.acos(inspector, args.get(0));
+      return VectorMathProcessors.acos().asProcessor(inspector, args.get(0));
     }
   }
 
@@ -834,7 +835,7 @@ public interface Function extends NamedFunction
     @Override
     public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
     {
-      return VectorMathProcessors.asin(inspector, args.get(0));
+      return VectorMathProcessors.asin().asProcessor(inspector, args.get(0));
     }
   }
 
@@ -855,16 +856,18 @@ public interface Function extends NamedFunction
     @Override
     public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
     {
-      return VectorMathProcessors.atan(inspector, args.get(0));
+      return VectorMathProcessors.atan().asProcessor(inspector, args.get(0));
     }
   }
 
   class BitwiseComplement extends UnivariateMathFunction
   {
+    public static final String NAME = "bitwiseComplement";
+
     @Override
     public String name()
     {
-      return "bitwiseComplement";
+      return NAME;
     }
 
     @Nullable
@@ -883,7 +886,7 @@ public interface Function extends NamedFunction
     @Override
     public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
     {
-      return VectorMathProcessors.bitwiseComplement(inspector, args.get(0));
+      return VectorMathProcessors.bitwiseComplement().asProcessor(inspector, args.get(0));
     }
   }
 
@@ -915,7 +918,7 @@ public interface Function extends NamedFunction
     @Override
     public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
     {
-      return VectorMathProcessors.bitwiseConvertLongBitsToDouble(inspector, args.get(0));
+      return VectorMathProcessors.bitwiseConvertLongBitsToDouble().asProcessor(inspector, args.get(0));
     }
   }
 
@@ -947,7 +950,7 @@ public interface Function extends NamedFunction
     @Override
     public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
     {
-      return VectorMathProcessors.bitwiseConvertDoubleToLongBits(inspector, args.get(0));
+      return VectorMathProcessors.bitwiseConvertDoubleToLongBits().asProcessor(inspector, args.get(0));
     }
   }
 
@@ -968,7 +971,7 @@ public interface Function extends NamedFunction
     @Override
     public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
     {
-      return VectorMathProcessors.bitwiseAnd(inspector, args.get(0), args.get(1));
+      return VectorMathProcessors.bitwiseAnd().asProcessor(inspector, args.get(0), args.get(1));
     }
   }
 
@@ -989,7 +992,7 @@ public interface Function extends NamedFunction
     @Override
     public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
     {
-      return VectorMathProcessors.bitwiseOr(inspector, args.get(0), args.get(1));
+      return VectorMathProcessors.bitwiseOr().asProcessor(inspector, args.get(0), args.get(1));
     }
   }
 
@@ -1010,7 +1013,7 @@ public interface Function extends NamedFunction
     @Override
     public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
     {
-      return VectorMathProcessors.bitwiseShiftLeft(inspector, args.get(0), args.get(1));
+      return VectorMathProcessors.bitwiseShiftLeft().asProcessor(inspector, args.get(0), args.get(1));
     }
   }
 
@@ -1031,7 +1034,7 @@ public interface Function extends NamedFunction
     @Override
     public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
     {
-      return VectorMathProcessors.bitwiseShiftRight(inspector, args.get(0), args.get(1));
+      return VectorMathProcessors.bitwiseShiftRight().asProcessor(inspector, args.get(0), args.get(1));
     }
   }
 
@@ -1052,7 +1055,7 @@ public interface Function extends NamedFunction
     @Override
     public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
     {
-      return VectorMathProcessors.bitwiseXor(inspector, args.get(0), args.get(1));
+      return VectorMathProcessors.bitwiseXor().asProcessor(inspector, args.get(0), args.get(1));
     }
   }
 
@@ -1073,7 +1076,7 @@ public interface Function extends NamedFunction
     @Override
     public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
     {
-      return VectorMathProcessors.cbrt(inspector, args.get(0));
+      return VectorMathProcessors.cbrt().asProcessor(inspector, args.get(0));
     }
   }
 
@@ -1094,7 +1097,7 @@ public interface Function extends NamedFunction
     @Override
     public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
     {
-      return VectorMathProcessors.ceil(inspector, args.get(0));
+      return VectorMathProcessors.ceil().asProcessor(inspector, args.get(0));
     }
   }
 
@@ -1115,7 +1118,7 @@ public interface Function extends NamedFunction
     @Override
     public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
     {
-      return VectorMathProcessors.cos(inspector, args.get(0));
+      return VectorMathProcessors.cos().asProcessor(inspector, args.get(0));
     }
   }
 
@@ -1136,7 +1139,7 @@ public interface Function extends NamedFunction
     @Override
     public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
     {
-      return VectorMathProcessors.cosh(inspector, args.get(0));
+      return VectorMathProcessors.cosh().asProcessor(inspector, args.get(0));
     }
   }
 
@@ -1157,7 +1160,7 @@ public interface Function extends NamedFunction
     @Override
     public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
     {
-      return VectorMathProcessors.cot(inspector, args.get(0));
+      return VectorMathProcessors.cot().asProcessor(inspector, args.get(0));
     }
   }
 
@@ -1232,7 +1235,7 @@ public interface Function extends NamedFunction
     @Override
     public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
     {
-      return VectorMathProcessors.longDivide(inspector, args.get(0), args.get(1));
+      return VectorMathProcessors.longDivide().asProcessor(inspector, args.get(0), args.get(1));
     }
   }
 
@@ -1253,7 +1256,7 @@ public interface Function extends NamedFunction
     @Override
     public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
     {
-      return VectorMathProcessors.exp(inspector, args.get(0));
+      return VectorMathProcessors.exp().asProcessor(inspector, args.get(0));
     }
   }
 
@@ -1274,7 +1277,7 @@ public interface Function extends NamedFunction
     @Override
     public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
     {
-      return VectorMathProcessors.expm1(inspector, args.get(0));
+      return VectorMathProcessors.expm1().asProcessor(inspector, args.get(0));
     }
   }
 
@@ -1295,7 +1298,7 @@ public interface Function extends NamedFunction
     @Override
     public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
     {
-      return VectorMathProcessors.floor(inspector, args.get(0));
+      return VectorMathProcessors.floor().asProcessor(inspector, args.get(0));
     }
   }
 
@@ -1323,7 +1326,7 @@ public interface Function extends NamedFunction
     @Override
     public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
     {
-      return VectorMathProcessors.getExponent(inspector, args.get(0));
+      return VectorMathProcessors.getExponent().asProcessor(inspector, args.get(0));
     }
   }
 
@@ -1344,7 +1347,7 @@ public interface Function extends NamedFunction
     @Override
     public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
     {
-      return VectorMathProcessors.log(inspector, args.get(0));
+      return VectorMathProcessors.log().asProcessor(inspector, args.get(0));
     }
   }
 
@@ -1365,7 +1368,7 @@ public interface Function extends NamedFunction
     @Override
     public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
     {
-      return VectorMathProcessors.log10(inspector, args.get(0));
+      return VectorMathProcessors.log10().asProcessor(inspector, args.get(0));
     }
   }
 
@@ -1386,7 +1389,7 @@ public interface Function extends NamedFunction
     @Override
     public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
     {
-      return VectorMathProcessors.log1p(inspector, args.get(0));
+      return VectorMathProcessors.log1p().asProcessor(inspector, args.get(0));
     }
   }
 
@@ -1407,7 +1410,7 @@ public interface Function extends NamedFunction
     @Override
     public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
     {
-      return VectorMathProcessors.nextUp(inspector, args.get(0));
+      return VectorMathProcessors.nextUp().asProcessor(inspector, args.get(0));
     }
   }
 
@@ -1428,7 +1431,7 @@ public interface Function extends NamedFunction
     @Override
     public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
     {
-      return VectorMathProcessors.rint(inspector, args.get(0));
+      return VectorMathProcessors.rint().asProcessor(inspector, args.get(0));
     }
   }
 
@@ -1539,7 +1542,7 @@ public interface Function extends NamedFunction
     @Override
     public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
     {
-      return VectorMathProcessors.signum(inspector, args.get(0));
+      return VectorMathProcessors.signum().asProcessor(inspector, args.get(0));
     }
   }
 
@@ -1560,7 +1563,7 @@ public interface Function extends NamedFunction
     @Override
     public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
     {
-      return VectorMathProcessors.sin(inspector, args.get(0));
+      return VectorMathProcessors.sin().asProcessor(inspector, args.get(0));
     }
   }
 
@@ -1581,7 +1584,7 @@ public interface Function extends NamedFunction
     @Override
     public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
     {
-      return VectorMathProcessors.sinh(inspector, args.get(0));
+      return VectorMathProcessors.sinh().asProcessor(inspector, args.get(0));
     }
   }
 
@@ -1602,7 +1605,7 @@ public interface Function extends NamedFunction
     @Override
     public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
     {
-      return VectorMathProcessors.sqrt(inspector, args.get(0));
+      return VectorMathProcessors.sqrt().asProcessor(inspector, args.get(0));
     }
   }
 
@@ -1623,7 +1626,7 @@ public interface Function extends NamedFunction
     @Override
     public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
     {
-      return VectorMathProcessors.tan(inspector, args.get(0));
+      return VectorMathProcessors.tan().asProcessor(inspector, args.get(0));
     }
   }
 
@@ -1644,7 +1647,7 @@ public interface Function extends NamedFunction
     @Override
     public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
     {
-      return VectorMathProcessors.tanh(inspector, args.get(0));
+      return VectorMathProcessors.tanh().asProcessor(inspector, args.get(0));
     }
   }
 
@@ -1665,7 +1668,7 @@ public interface Function extends NamedFunction
     @Override
     public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
     {
-      return VectorMathProcessors.toDegrees(inspector, args.get(0));
+      return VectorMathProcessors.toDegrees().asProcessor(inspector, args.get(0));
     }
   }
 
@@ -1686,7 +1689,7 @@ public interface Function extends NamedFunction
     @Override
     public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
     {
-      return VectorMathProcessors.toRadians(inspector, args.get(0));
+      return VectorMathProcessors.toRadians().asProcessor(inspector, args.get(0));
     }
   }
 
@@ -1707,7 +1710,7 @@ public interface Function extends NamedFunction
     @Override
     public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
     {
-      return VectorMathProcessors.ulp(inspector, args.get(0));
+      return VectorMathProcessors.ulp().asProcessor(inspector, args.get(0));
     }
   }
 
@@ -1728,7 +1731,7 @@ public interface Function extends NamedFunction
     @Override
     public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
     {
-      return VectorMathProcessors.atan2(inspector, args.get(0), args.get(1));
+      return VectorMathProcessors.atan2().asProcessor(inspector, args.get(0), args.get(1));
     }
   }
 
@@ -1749,7 +1752,7 @@ public interface Function extends NamedFunction
     @Override
     public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
     {
-      return VectorMathProcessors.copySign(inspector, args.get(0), args.get(1));
+      return VectorMathProcessors.copySign().asProcessor(inspector, args.get(0), args.get(1));
     }
   }
 
@@ -1770,7 +1773,7 @@ public interface Function extends NamedFunction
     @Override
     public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
     {
-      return VectorMathProcessors.hypot(inspector, args.get(0), args.get(1));
+      return VectorMathProcessors.hypot().asProcessor(inspector, args.get(0), args.get(1));
     }
   }
 
@@ -1791,7 +1794,7 @@ public interface Function extends NamedFunction
     @Override
     public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
     {
-      return VectorMathProcessors.remainder(inspector, args.get(0), args.get(1));
+      return VectorMathProcessors.remainder().asProcessor(inspector, args.get(0), args.get(1));
     }
   }
 
@@ -1818,7 +1821,7 @@ public interface Function extends NamedFunction
     @Override
     public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
     {
-      return VectorMathProcessors.max(inspector, args.get(0), args.get(1));
+      return VectorMathProcessors.max().asProcessor(inspector, args.get(0), args.get(1));
     }
   }
 
@@ -1845,7 +1848,7 @@ public interface Function extends NamedFunction
     @Override
     public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
     {
-      return VectorMathProcessors.min(inspector, args.get(0), args.get(1));
+      return VectorMathProcessors.min().asProcessor(inspector, args.get(0), args.get(1));
     }
   }
 
@@ -1866,7 +1869,7 @@ public interface Function extends NamedFunction
     @Override
     public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
     {
-      return VectorMathProcessors.nextAfter(inspector, args.get(0), args.get(1));
+      return VectorMathProcessors.nextAfter().asProcessor(inspector, args.get(0), args.get(1));
     }
   }
 
@@ -1887,7 +1890,7 @@ public interface Function extends NamedFunction
     @Override
     public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
     {
-      return VectorMathProcessors.doublePower(inspector, args.get(0), args.get(1));
+      return VectorMathProcessors.doublePower().asProcessor(inspector, args.get(0), args.get(1));
     }
   }
 
@@ -1931,7 +1934,7 @@ public interface Function extends NamedFunction
     @Override
     public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
     {
-      return VectorMathProcessors.scalb(inspector, args.get(0), args.get(1));
+      return VectorMathProcessors.scalb().asProcessor(inspector, args.get(0), args.get(1));
     }
   }
 
@@ -2019,8 +2022,7 @@ public interface Function extends NamedFunction
     {
       return CastToTypeVectorProcessor.cast(
           args.get(0).asVectorProcessor(inspector),
-          ExpressionType.fromString(StringUtils.toUpperCase(args.get(1).getLiteralValue().toString())),
-          inspector.getMaxVectorSize()
+          ExpressionType.fromString(StringUtils.toUpperCase(args.get(1).getLiteralValue().toString()))
       );
     }
   }
@@ -2551,7 +2553,7 @@ public interface Function extends NamedFunction
     @Override
     public <T> ExprVectorProcessor<T> asVectorProcessor(Expr.VectorInputBindingInspector inspector, List<Expr> args)
     {
-      return VectorProcessors.nvl(inspector, args.get(0), args.get(1));
+      return VectorConditionalProcessors.nvl(inspector, args.get(0), args.get(1));
     }
   }
 

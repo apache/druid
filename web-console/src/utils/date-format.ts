@@ -16,9 +16,9 @@
  * limitations under the License.
  */
 
-import type { Duration } from 'chronoshift';
+import type { Duration, Timezone } from 'chronoshift';
 
-import { prettyFormatIsoDate } from './date';
+import { prettyFormatIsoDate, toIsoStringInTimezone } from './date';
 
 export function formatStartDuration(start: Date, duration: Duration): string {
   let sliceLength;
@@ -54,9 +54,9 @@ export function formatStartDuration(start: Date, duration: Duration): string {
   )}`;
 }
 
-export function formatIsoDateRange(start: Date, end: Date): string {
-  let startStr = prettyFormatIsoDate(start);
-  let endStr = prettyFormatIsoDate(end);
+export function formatIsoDateRange(start: Date, end: Date, timezone: Timezone): string {
+  let startStr = prettyFormatIsoDate(toIsoStringInTimezone(start, timezone));
+  let endStr = prettyFormatIsoDate(toIsoStringInTimezone(end, timezone));
 
   if (start.getMinutes() === 0 && end.getMinutes() === 0) {
     startStr = startStr.slice(0, 16);

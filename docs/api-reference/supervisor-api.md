@@ -2353,6 +2353,64 @@ Content-Length: 1359
 </TabItem>
 </Tabs>
 
+#### Sample request with `skipRestartIfUnmodified`
+
+The following example sets the `skipRestartIfUnmodified` flag to true. With this flag set to true, the Supervisor will only restart if there has been a modification to the SupervisorSpec. If left unset, the flag defaults to false.
+```shell
+curl "http://ROUTER_IP:ROUTER_PORT/druid/indexer/v1/supervisor?skipRestartIfUnmodified=true" \
+--header 'Content-Type: application/json' \
+--data '{
+    "type": "kafka",
+    "spec": {
+        "ioConfig": {
+            "type": "kafka",
+            "consumerProperties": {
+                "bootstrap.servers": "localhost:9094"
+            },
+            "topic": "social_media",
+            "inputFormat": {
+                "type": "json"
+            },
+            "useEarliestOffset": true
+        },
+        "tuningConfig": {
+            "type": "kafka"
+        },
+        "dataSchema": {
+            "dataSource": "social_media",
+            "timestampSpec": {
+                "column": "__time",
+                "format": "iso"
+            },
+            "dimensionsSpec": {
+                "dimensions": [
+                    "username",
+                    "post_title",
+                    {
+                        "type": "long",
+                        "name": "views"
+                    },
+                    {
+                        "type": "long",
+                        "name": "upvotes"
+                    },
+                    {
+                        "type": "long",
+                        "name": "comments"
+                    },
+                    "edited"
+                ]
+            },
+            "granularitySpec": {
+                "queryGranularity": "none",
+                "rollup": false,
+                "segmentGranularity": "hour"
+            }
+        }
+    }
+}'
+```
+
 #### Sample response
 
 <details>

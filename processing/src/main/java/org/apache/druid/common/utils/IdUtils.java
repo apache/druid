@@ -22,8 +22,10 @@ package org.apache.druid.common.utils;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.timeline.SegmentId;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -146,5 +148,23 @@ public class IdUtils
     objects.add(now.toString());
 
     return String.join("_", objects);
+  }
+
+  /**
+   * Tries to parse the serialized ID as a {@link SegmentId} of the given datasource.
+   *
+   * @throws DruidException if the segment ID could not be parsed.
+   */
+  public static SegmentId getValidSegmentId(String dataSource, String serializedSegmentId)
+  {
+    final SegmentId parsedSegmentId = SegmentId.tryParse(dataSource, serializedSegmentId);
+    if (parsedSegmentId == null) {
+      throw InvalidInput.exception(
+          "Could not parse segment ID[%s] for datasource[%s]",
+          serializedSegmentId, dataSource
+      );
+    } else {
+      return parsedSegmentId;
+    }
   }
 }

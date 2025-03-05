@@ -139,7 +139,23 @@ public class SqlExpressionBenchmark extends SqlBaseQueryBenchmark
       "SELECT ARRAY_OVERLAP(\"multi-string3\", ARRAY[1, 2, 10, 11, 20, 22, 30, 33, 40, 44, 50, 55, 100]) FROM expressions",
       // 46: filters with random orders
       "SELECT string2, SUM(long1) FROM expressions WHERE string5 LIKE '%1%' AND string1 = '1000' GROUP BY 1 ORDER BY 2",
-      "SELECT string2, SUM(long1) FROM expressions WHERE string5 LIKE '%1%' AND (string3 in ('1', '10', '20', '22', '32') AND long2 IN (1, 19, 21, 23, 25, 26, 46) AND double3 < 1010.0 AND double3 > 1000.0 AND (string4 = '1' OR REGEXP_EXTRACT(string1, '^1') IS NOT NULL OR REGEXP_EXTRACT('Z' || string2, '^Z2') IS NOT NULL)) AND string1 = '1000' GROUP BY 1 ORDER BY 2"
+      "SELECT string2, SUM(long1) FROM expressions WHERE string5 LIKE '%1%' AND (string3 in ('1', '10', '20', '22', '32') AND long2 IN (1, 19, 21, 23, 25, 26, 46) AND double3 < 1010.0 AND double3 > 1000.0 AND (string4 = '1' OR REGEXP_EXTRACT(string1, '^1') IS NOT NULL OR REGEXP_EXTRACT('Z' || string2, '^Z2') IS NOT NULL)) AND string1 = '1000' GROUP BY 1 ORDER BY 2",
+      // 48-57 nvl tests
+      // lower cardinality
+      "SELECT NVL(string2, string1), SUM(double1) FROM expressions GROUP BY 1 ORDER BY 2",
+      "SELECT NVL(string2, CONCAT(string1, '-', long2)), SUM(double1) FROM expressions GROUP BY 1 ORDER BY 2",
+      // higher cardinality
+      "SELECT NVL(string5, string3), SUM(double1) FROM expressions GROUP BY 1 ORDER BY 2",
+      "SELECT NVL(string5, CONCAT(string3, '-', long2)), SUM(double1) FROM expressions GROUP BY 1 ORDER BY 2",
+      // no lhs nulls
+      "SELECT NVL(string1, string3), SUM(double1) FROM expressions GROUP BY 1 ORDER BY 2",
+      "SELECT NVL(string1, CONCAT(string3, '-', long2)), SUM(double1) FROM expressions GROUP BY 1 ORDER BY 2",
+      // numeric
+      "SELECT NVL(long5, long3), SUM(double1) FROM expressions GROUP BY 1 ORDER BY 2",
+      "SELECT NVL(long5, long1 + long3), SUM(double1) FROM expressions GROUP BY 1 ORDER BY 2",
+      // numeric no lhs null
+      "SELECT NVL(long1, long3), SUM(double1) FROM expressions GROUP BY 1 ORDER BY 2",
+      "SELECT NVL(long1, long5 + long3), SUM(double1) FROM expressions GROUP BY 1 ORDER BY 2"
   );
 
   @Param({
@@ -200,7 +216,17 @@ public class SqlExpressionBenchmark extends SqlBaseQueryBenchmark
       "44",
       "45",
       "46",
-      "47"
+      "47",
+      "48",
+      "49",
+      "50",
+      "51",
+      "52",
+      "53",
+      "54",
+      "55",
+      "56",
+      "57"
   })
   private String query;
 

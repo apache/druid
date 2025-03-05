@@ -18,6 +18,7 @@
 
 import {
   Button,
+  Icon,
   InputGroup,
   Intent,
   Menu,
@@ -148,6 +149,9 @@ export const ControlPane = function ControlPane(props: ControlPaneProps) {
                     <MenuItem
                       key={i}
                       text={getModuleOptionLabel(o, parameter)}
+                      labelElement={
+                        o === selectedOption ? <Icon icon={IconNames.TICK} /> : undefined
+                      }
                       onClick={() => onValueChange(o)}
                     />
                   ))}

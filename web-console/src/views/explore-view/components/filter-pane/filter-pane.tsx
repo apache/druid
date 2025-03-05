@@ -19,6 +19,7 @@
 import { Button, Popover } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import type { CancelToken } from 'axios';
+import type { Timezone } from 'chronoshift';
 import classNames from 'classnames';
 import { isDate } from 'date-fns';
 import type {
@@ -47,6 +48,7 @@ import './filter-pane.scss';
 
 export interface FilterPaneProps {
   querySource: QuerySource | undefined;
+  timezone: Timezone;
   filter: SqlExpression;
   onFilterChange(filter: SqlExpression): void;
   runSqlQuery(query: string | SqlQuery, cancelToken?: CancelToken): Promise<QueryResult>;
@@ -57,6 +59,7 @@ export interface FilterPaneProps {
 export const FilterPane = forwardRef(function FilterPane(props: FilterPaneProps, ref) {
   const {
     querySource,
+    timezone,
     filter,
     onFilterChange,
     runSqlQuery,
@@ -165,7 +168,7 @@ export const FilterPane = forwardRef(function FilterPane(props: FilterPaneProps,
                 <Button
                   className={classNames('filter-text-button', { negated: pattern.negated })}
                   minimal
-                  text={formatPatternWithoutNegation(pattern)}
+                  text={formatPatternWithoutNegation(pattern, timezone)}
                   onClick={() => setMenuIndex(i)}
                   data-tooltip={i !== menuIndex ? filterTooltip(pattern) : undefined}
                 />
@@ -174,7 +177,7 @@ export const FilterPane = forwardRef(function FilterPane(props: FilterPaneProps,
               <Button
                 className={classNames('filter-text-button', { negated: pattern.negated })}
                 minimal
-                text={formatPatternWithoutNegation(pattern)}
+                text={formatPatternWithoutNegation(pattern, timezone)}
                 disabled
               />
             )}

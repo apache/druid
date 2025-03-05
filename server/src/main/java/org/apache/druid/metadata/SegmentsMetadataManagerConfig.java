@@ -19,25 +19,42 @@
 
 package org.apache.druid.metadata;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.druid.common.config.Configs;
 import org.joda.time.Period;
 
 /**
+ * Config that dictates polling and caching of segment metadata on leader
+ * Coordinator or Overlord services.
  */
 public class SegmentsMetadataManagerConfig
 {
   public static final String CONFIG_PREFIX = "druid.manager.segments";
 
   @JsonProperty
-  private Period pollDuration = new Period("PT1M");
+  private final Period pollDuration;
+
+  @JsonProperty
+  private final boolean useCache;
+
+  @JsonCreator
+  public SegmentsMetadataManagerConfig(
+      @JsonProperty("pollDuration") Period pollDuration,
+      @JsonProperty("useCache") Boolean useCache
+  )
+  {
+    this.pollDuration = Configs.valueOrDefault(pollDuration, Period.minutes(1));
+    this.useCache = Configs.valueOrDefault(useCache, false);
+  }
+
+  public boolean isUseCache()
+  {
+    return useCache;
+  }
 
   public Period getPollDuration()
   {
     return pollDuration;
-  }
-
-  public void setPollDuration(Period pollDuration)
-  {
-    this.pollDuration = pollDuration;
   }
 }

@@ -112,7 +112,7 @@ public class BrokerServerViewTest extends CuratorTestBase
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentAddedLatch));
 
     TimelineLookup<String, ServerSelector> timeline = brokerServerView.getTimeline(
-        (new TableDataSource("test_broker_server_view")).getAnalysis()
+        new TableDataSource("test_broker_server_view")
     ).get();
     List<TimelineObjectHolder<String, ServerSelector>> serverLookupRes = timeline.lookup(intervals);
     Assert.assertEquals(1, serverLookupRes.size());
@@ -174,7 +174,7 @@ public class BrokerServerViewTest extends CuratorTestBase
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentAddedLatch));
 
     TimelineLookup timeline = brokerServerView.getTimeline(
-        (new TableDataSource("test_broker_server_view")).getAnalysis()
+        new TableDataSource("test_broker_server_view")
     ).get();
     assertValues(
         Arrays.asList(
@@ -197,7 +197,7 @@ public class BrokerServerViewTest extends CuratorTestBase
     segmentRemovedLatch = new CountDownLatch(4);
 
     timeline = brokerServerView.getTimeline(
-        (new TableDataSource("test_broker_server_view")).getAnalysis()
+        new TableDataSource("test_broker_server_view")
     ).get();
     assertValues(
         Arrays.asList(
@@ -276,7 +276,7 @@ public class BrokerServerViewTest extends CuratorTestBase
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentAddedLatch));
 
     TimelineLookup timeline = brokerServerView.getTimeline(
-        (new TableDataSource("test_broker_server_view")).getAnalysis()
+        new TableDataSource("test_broker_server_view")
     ).get();
 
     assertValues(
@@ -306,7 +306,7 @@ public class BrokerServerViewTest extends CuratorTestBase
     segmentRemovedLatch = new CountDownLatch(5);
 
     timeline = brokerServerView.getTimeline(
-        (new TableDataSource("test_broker_server_view")).getAnalysis()
+        new TableDataSource("test_broker_server_view")
     ).get();
 
     // expect same set of segments as before
@@ -362,7 +362,7 @@ public class BrokerServerViewTest extends CuratorTestBase
 
     // Get the timeline for the datasource
     TimelineLookup<String, ServerSelector> timeline = brokerServerView.getTimeline(
-        (new TableDataSource(segment1.getDataSource())).getAnalysis()
+        new TableDataSource(segment1.getDataSource())
     ).get();
 
     // Verify that the timeline has no entry for the interval of segment 1
@@ -422,7 +422,7 @@ public class BrokerServerViewTest extends CuratorTestBase
 
     // Get the timeline for the datasource
     TimelineLookup<String, ServerSelector> timeline = brokerServerView.getTimeline(
-        (new TableDataSource(segment1.getDataSource())).getAnalysis()
+        new TableDataSource(segment1.getDataSource())
     ).get();
 
     // Verify that the timeline has no entry for the interval of segment 1
@@ -484,7 +484,7 @@ public class BrokerServerViewTest extends CuratorTestBase
 
     // Get the timeline for the datasource
     TimelineLookup<String, ServerSelector> timeline = brokerServerView.getTimeline(
-        (new TableDataSource(segment1.getDataSource())).getAnalysis()
+        new TableDataSource(segment1.getDataSource())
     ).get();
 
     // Verify that the timeline has no entry for the interval of segment 1

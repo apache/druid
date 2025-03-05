@@ -37,6 +37,7 @@ DruidProject(EXPR$0=[CAST($0):BIGINT], channel=[CAST($1):VARCHAR], druid=[logica
   "dataSource" : {
     "type" : "inline",
     "columnNames" : [ "EXPR$0", "EXPR$1" ],
+    "columnTypes" : [ "STRING", "STRING" ],
     "rows" : [ [ null, null ] ]
   },
   "intervals" : {
@@ -46,16 +47,11 @@ DruidProject(EXPR$0=[CAST($0):BIGINT], channel=[CAST($1):VARCHAR], druid=[logica
   "virtualColumns" : [ {
     "type" : "expression",
     "name" : "v0",
-    "expression" : "null",
+    "expression" : "CAST(\"EXPR$0\", 'LONG')",
     "outputType" : "LONG"
-  }, {
-    "type" : "expression",
-    "name" : "v1",
-    "expression" : "null",
-    "outputType" : "STRING"
   } ],
   "resultFormat" : "compactedList",
-  "columns" : [ "v0", "v1" ],
+  "columns" : [ "v0", "EXPR$1" ],
   "columnTypes" : [ "LONG", "STRING" ],
   "granularity" : {
     "type" : "all"

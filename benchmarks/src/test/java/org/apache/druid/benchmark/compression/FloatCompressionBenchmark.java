@@ -75,7 +75,7 @@ public class FloatCompressionBenchmark
     File compFile = new File(dir, file + "-" + strategy);
     bufferHandler = FileUtils.map(compFile);
     ByteBuffer buffer = bufferHandler.get();
-    supplier = CompressedColumnarFloatsSupplier.fromByteBuffer(buffer, ByteOrder.nativeOrder());
+    supplier = CompressedColumnarFloatsSupplier.fromByteBuffer(buffer, ByteOrder.nativeOrder(), null);
   }
 
   @TearDown

@@ -19,12 +19,15 @@
 
 package org.apache.druid.indexing.overlord.supervisor;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.inject.Inject;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.error.DruidException;
+import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.task.Tasks;
 import org.apache.druid.indexing.overlord.DataSourceMetadata;
@@ -42,6 +45,7 @@ import org.apache.druid.segment.incremental.ParseExceptionReport;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -62,10 +66,12 @@ public class SupervisorManager
   private final Object lock = new Object();
 
   private volatile boolean started = false;
+  private final ObjectMapper jsonMapper;
 
   @Inject
-  public SupervisorManager(MetadataSupervisorManager metadataSupervisorManager)
+  public SupervisorManager(@Json ObjectMapper jsonMapper, MetadataSupervisorManager metadataSupervisorManager)
   {
+    this.jsonMapper = jsonMapper;
     this.metadataSupervisorManager = metadataSupervisorManager;
   }
 
@@ -152,6 +158,12 @@ public class SupervisorManager
     return true;
   }
 
+  /**
+   * Creates or updates a supervisor and then starts it.
+   * If no change has been made to the supervisor spec, it is only restarted.
+   *
+   * @return true if the supervisor was updated, false otherwise
+   */
   public boolean createOrUpdateAndStartSupervisor(SupervisorSpec spec)
   {
     Preconditions.checkState(started, "SupervisorManager not started");
@@ -161,9 +173,38 @@ public class SupervisorManager
 
     synchronized (lock) {
       Preconditions.checkState(started, "SupervisorManager not started");
+      final boolean shouldUpdateSpec = shouldUpdateSupervisor(spec);
       possiblyStopAndRemoveSupervisorInternal(spec.getId(), false);
-      return createAndStartSupervisorInternal(spec, true);
+      createAndStartSupervisorInternal(spec, shouldUpdateSpec);
+      return shouldUpdateSpec;
     }
+  }
+
+  /**
+   * Checks whether the submitted SupervisorSpec differs from the current spec in SupervisorManager's supervisor list.
+   * This is used in SupervisorResource specPost to determine whether the Supervisor needs to be restarted
+   * @param spec The spec submitted
+   * @return boolean - true only if the spec has been modified, false otherwise
+   */
+  public boolean shouldUpdateSupervisor(SupervisorSpec spec)
+  {
+    Preconditions.checkState(started, "SupervisorManager not started");
+    Preconditions.checkNotNull(spec, "spec");
+    Preconditions.checkNotNull(spec.getId(), "spec.getId()");
+    Preconditions.checkNotNull(spec.getDataSources(), "spec.getDatasources()");
+    synchronized (lock) {
+      Preconditions.checkState(started, "SupervisorManager not started");
+      try {
+        byte[] specAsBytes = jsonMapper.writeValueAsBytes(spec);
+        Pair<Supervisor, SupervisorSpec> currentSupervisor = supervisors.get(spec.getId());
+        return currentSupervisor == null
+               || !Arrays.equals(specAsBytes, jsonMapper.writeValueAsBytes(currentSupervisor.rhs));
+      }
+      catch (JsonProcessingException ex) {
+        log.warn("Failed to write spec as bytes for spec_id[%s]", spec.getId());
+      }
+    }
+    return true;
   }
 
   public boolean stopAndRemoveSupervisor(String id)
@@ -363,8 +404,13 @@ public class SupervisorManager
       return true;
     }
     catch (Exception e) {
-      log.error(e, "Failed to upgrade pending segment[%s] to new pending segment[%s] on Supervisor[%s].",
-                upgradedPendingSegment.getUpgradedFromSegmentId(), upgradedPendingSegment.getId().getVersion(), supervisorId);
+      log.error(
+          e,
+          "Failed to upgrade pending segment[%s] to new pending segment[%s] on Supervisor[%s].",
+          upgradedPendingSegment.getUpgradedFromSegmentId(),
+          upgradedPendingSegment.getId().getVersion(),
+          supervisorId
+      );
     }
     return false;
   }

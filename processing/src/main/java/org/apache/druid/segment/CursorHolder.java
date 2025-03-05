@@ -31,6 +31,22 @@ import java.io.Closeable;
 import java.util.Collections;
 import java.util.List;
 
+/**
+ * Provides {@link Cursor} and if available, {@link VectorCursor} which readers can use to scan a set of rows defined
+ * originally from a {@link CursorBuildSpec} which describes how data is to be scanned, transformed, filter, grouped and
+ * aggregated, and/or ordered.
+ * <p>
+ * If {@link #canVectorize()} then {@link #asVectorCursor()} will return a non-null value allowing for processing rows
+ * in batches instead of individually.
+ * <p>
+ * If {@link #isPreAggregated()} is true, readers which are aggregating must call
+ * {@link #getAggregatorsForPreAggregated()} to get the updated set of {@link AggregatorFactory} to correctly process
+ * results
+ * <p>
+ * {@link #getOrdering()} defines how the data is ordered in the {@link Cursor} or {@link VectorCursor}, allowing
+ * readers to compare to their own desired ordering and potentially skip ordering their own results if it is
+ * pre-ordered.
+ */
 public interface CursorHolder extends Closeable
 {
   /**
@@ -60,8 +76,9 @@ public interface CursorHolder extends Closeable
   }
 
   /**
-   * Returns true if the {@link Cursor} or {@link VectorCursor} contains pre-aggregated columns for all
-   * {@link AggregatorFactory} specified in {@link CursorBuildSpec#getAggregators()}.
+   * Returns true if the {@link Cursor} or {@link VectorCursor} contains pre-aggregated columns for all grouping columns
+   * specified in {@link CursorBuildSpec#getGroupingColumns()} and all {@link AggregatorFactory} specified in
+   * {@link CursorBuildSpec#getAggregators()}.
    * <p>
    * If this method returns true, {@link ColumnSelectorFactory} and
    * {@link org.apache.druid.segment.vector.VectorColumnSelectorFactory} created from {@link Cursor} and
@@ -90,7 +107,7 @@ public interface CursorHolder extends Closeable
   /**
    * Returns cursor ordering, which may or may not match {@link CursorBuildSpec#getPreferredOrdering()}. If returns
    * an empty list then the cursor has no defined ordering.
-   *
+   * <p>
    * Cursors associated with this holder return rows in this ordering, using the natural comparator for the column type.
    * Includes {@link ColumnHolder#TIME_COLUMN_NAME} if appropriate.
    */

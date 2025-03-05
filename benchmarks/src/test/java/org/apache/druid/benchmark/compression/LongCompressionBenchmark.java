@@ -79,7 +79,7 @@ public class LongCompressionBenchmark
     File compFile = new File(dir, file + "-" + strategy + "-" + format);
     bufferHandler = FileUtils.map(compFile);
     ByteBuffer buffer = bufferHandler.get();
-    supplier = CompressedColumnarLongsSupplier.fromByteBuffer(buffer, ByteOrder.nativeOrder());
+    supplier = CompressedColumnarLongsSupplier.fromByteBuffer(buffer, ByteOrder.nativeOrder(), null);
   }
 
   @TearDown

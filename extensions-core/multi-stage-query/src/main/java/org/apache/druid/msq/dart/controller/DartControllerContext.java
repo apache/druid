@@ -140,7 +140,7 @@ public class DartControllerContext implements ControllerContext
         );
 
     final int maxConcurrentStages = MultiStageQueryContext.getMaxConcurrentStagesWithDefault(
-        querySpec.getQuery().context(),
+        querySpec.getContext(),
         DEFAULT_MAX_CONCURRENT_STAGES
     );
 
@@ -225,7 +225,7 @@ public class DartControllerContext implements ControllerContext
       final ControllerQueryKernelConfig queryKernelConfig
   )
   {
-    final QueryContext queryContext = querySpec.getQuery().context();
+    final QueryContext queryContext = querySpec.getContext();
     return new QueryKitSpec(
         queryKit,
         queryId,

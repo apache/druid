@@ -72,11 +72,16 @@ import java.util.stream.Collectors;
 public class MSQWorkerTaskLauncher implements RetryCapableWorkerManager
 {
   private static final Logger log = new Logger(MSQWorkerTaskLauncher.class);
-  private static final long HIGH_FREQUENCY_CHECK_MILLIS = 100;
-  private static final long LOW_FREQUENCY_CHECK_MILLIS = 2000;
-  private static final long SWITCH_TO_LOW_FREQUENCY_CHECK_AFTER_MILLIS = 10000;
-  private static final long SHUTDOWN_TIMEOUT_MILLIS = Duration.ofMinutes(1).toMillis();
+
   private int currentRelaunchCount = 0;
+
+  public static class MSQWorkerTaskLauncherConfig
+  {
+    public long highFrequencyCheckMillis = 100;
+    public long lowFrequencyCheckMillis = 2000;
+    public long switchToLowFrequencyCheckAfterMillis = 10000;
+    public long shutdownTimeoutMillis = Duration.ofMinutes(1).toMillis();
+  }
 
   // States for "state" variable.
   private enum State
@@ -91,13 +96,14 @@ public class MSQWorkerTaskLauncher implements RetryCapableWorkerManager
   private final OverlordClient overlordClient;
   private final ExecutorService exec;
   private final long maxTaskStartDelayMillis;
+  private final MSQWorkerTaskLauncherConfig config;
 
   // Mutable state meant to be accessible by threads outside the main loop.
   private final SettableFuture<?> stopFuture = SettableFuture.create();
   private final AtomicReference<State> state = new AtomicReference<>(State.NEW);
   private final AtomicBoolean cancelTasksOnStop = new AtomicBoolean();
 
-  // Set by launchTasksIfNeeded.
+  // Set by launchWorkersIfNeeded.
   @GuardedBy("taskIds")
   private int desiredTaskCount = 0;
 
@@ -150,7 +156,8 @@ public class MSQWorkerTaskLauncher implements RetryCapableWorkerManager
       final OverlordClient overlordClient,
       final WorkerFailureListener workerFailureListener,
       final Map<String, Object> taskContextOverrides,
-      final long maxTaskStartDelayMillis
+      final long maxTaskStartDelayMillis,
+      final MSQWorkerTaskLauncherConfig config
   )
   {
     this.controllerTaskId = controllerTaskId;
@@ -162,6 +169,7 @@ public class MSQWorkerTaskLauncher implements RetryCapableWorkerManager
     );
     this.workerFailureListener = workerFailureListener;
     this.maxTaskStartDelayMillis = maxTaskStartDelayMillis;
+    this.config = config;
   }
 
   @Override
@@ -396,11 +404,11 @@ public class MSQWorkerTaskLauncher implements RetryCapableWorkerManager
         // Sleep for a bit, maybe.
         final long now = System.currentTimeMillis();
 
-        if (now > stopStartTime + SHUTDOWN_TIMEOUT_MILLIS) {
+        if (now > stopStartTime + config.shutdownTimeoutMillis) {
           if (caught != null) {
             throw caught;
           } else {
-            throw new ISE("Task shutdown timed out (limit = %,dms)", SHUTDOWN_TIMEOUT_MILLIS);
+            throw new ISE("Task shutdown timed out (limit = %,dms)", config.shutdownTimeoutMillis);
           }
         }
 
@@ -459,13 +467,7 @@ public class MSQWorkerTaskLauncher implements RetryCapableWorkerManager
       );
 
       taskTrackers.put(task.getId(), new TaskTracker(i, task));
-      workerToTaskIds.compute(i, (workerId, taskIds) -> {
-        if (taskIds == null) {
-          taskIds = new ArrayList<>();
-        }
-        taskIds.add(task.getId());
-        return taskIds;
-      });
+      workerToTaskIds.computeIfAbsent(i, (unused) -> (new ArrayList<>())).add(task.getId());
 
       FutureUtils.getUnchecked(overlordClient.runTask(task.getId(), task), true);
 
@@ -754,10 +756,10 @@ public class MSQWorkerTaskLauncher implements RetryCapableWorkerManager
         taskTrackers.values().stream().mapToLong(tracker -> tracker.startTimeMillis).max();
 
     if (maxTaskStartTime.isPresent() &&
-        System.currentTimeMillis() - maxTaskStartTime.getAsLong() < SWITCH_TO_LOW_FREQUENCY_CHECK_AFTER_MILLIS) {
-      return HIGH_FREQUENCY_CHECK_MILLIS - loopDurationMillis;
+        System.currentTimeMillis() - maxTaskStartTime.getAsLong() < config.switchToLowFrequencyCheckAfterMillis) {
+      return config.highFrequencyCheckMillis - loopDurationMillis;
     } else {
-      return LOW_FREQUENCY_CHECK_MILLIS - loopDurationMillis;
+      return config.lowFrequencyCheckMillis - loopDurationMillis;
     }
   }
 
@@ -769,7 +771,7 @@ public class MSQWorkerTaskLauncher implements RetryCapableWorkerManager
       } else {
         // wait on taskIds so we can wake up early if needed.
         synchronized (taskIds) {
-          // desiredTaskCount is set by launchTasksIfNeeded, and acknowledgedDesiredTaskCount is set by mainLoop when
+          // desiredTaskCount is set by launchWorkersIfNeeded, and acknowledgedDesiredTaskCount is set by mainLoop when
           // it acknowledges a new target. If these are not equal, do another run immediately and launch more tasks.
           if (acknowledgedDesiredTaskCount == desiredTaskCount) {
             taskIds.wait(sleepMillis);

@@ -30,6 +30,7 @@ import {
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import type { CancelToken } from 'axios';
+import { Timezone } from 'chronoshift';
 import type {
   Column,
   FilterPattern,
@@ -379,7 +380,7 @@ export const FilterMenu = React.memo(function FilterMenu(props: FilterMenuProps)
                       if (tab === 'compose') {
                         onAddToSourceQueryAsColumn(
                           filterPatternToExpression(pattern).as(
-                            formatPatternWithoutNegation(pattern),
+                            formatPatternWithoutNegation(pattern, Timezone.UTC),
                           ),
                         );
                       } else {

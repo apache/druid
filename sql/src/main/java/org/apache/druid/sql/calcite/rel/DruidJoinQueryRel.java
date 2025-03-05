@@ -249,6 +249,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
         getPlannerContext(),
         getCluster().getRexBuilder(),
         finalizeAggregations,
+        true,
         sourceDesc.virtualColumnRegistry
     );
   }
@@ -264,6 +265,7 @@ public class DruidJoinQueryRel extends DruidRel<DruidJoinQueryRel>
         ),
         getPlannerContext(),
         getCluster().getRexBuilder(),
+        false,
         false
     );
   }

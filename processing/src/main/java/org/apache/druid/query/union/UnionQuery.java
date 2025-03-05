@@ -49,7 +49,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
 public class UnionQuery implements Query<Object>
@@ -222,7 +221,7 @@ public class UnionQuery implements Query<Object>
   public DataSourceAnalysis getDataSourceAnalysis()
   {
     OpaqueDataSourceCover ds = new OpaqueDataSourceCover(new UnionDataSource(getDataSources()));
-    return new DataSourceAnalysis(ds, null, null, Collections.emptyList());
+    return new DataSourceAnalysis(ds, null, null, Collections.emptyList(), null);
   }
 
   private static class OpaqueDataSourceCover implements DataSource
@@ -271,7 +270,7 @@ public class UnionQuery implements Query<Object>
     }
 
     @Override
-    public Function<SegmentReference, SegmentReference> createSegmentMapFunction(Query query, AtomicLong cpuTimeAcc)
+    public Function<SegmentReference, SegmentReference> createSegmentMapFunction(Query query)
     {
       throw methodNotSupported();
     }

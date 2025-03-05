@@ -19,11 +19,38 @@
 
 package org.apache.druid.segment;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
+import org.apache.druid.data.input.InputRow;
+import org.apache.druid.data.input.ListBasedInputRow;
+import org.apache.druid.data.input.impl.AggregateProjectionSpec;
+import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.DoubleDimensionSchema;
+import org.apache.druid.data.input.impl.LongDimensionSchema;
+import org.apache.druid.data.input.impl.StringDimensionSchema;
+import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.FileUtils;
+import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.java.util.common.io.Closer;
+import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryContexts;
+import org.apache.druid.query.aggregation.AggregatorFactory;
+import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
+import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.segment.column.NumericColumn;
 import org.apache.druid.segment.data.ReadableOffset;
+import org.apache.druid.segment.incremental.IncrementalIndexSchema;
+import org.apache.druid.utils.CloseableUtils;
+import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Test;
+
+import java.io.File;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 
 public class QueryableIndexCursorHolderTest
 {
@@ -113,5 +140,100 @@ public class QueryableIndexCursorHolderTest
         11,
         QueryableIndexCursorHolder.timeSearch(column, 15, 0, values.length)
     );
+  }
+
+  @Test
+  public void testProjectionTimeBoundaryInspector()
+  {
+    final DateTime startTime = DateTimes.nowUtc();
+    final DimensionsSpec dims = DimensionsSpec.builder()
+                                              .setDimensions(
+                                                  Arrays.asList(
+                                                      new StringDimensionSchema("a"),
+                                                      new StringDimensionSchema("b"),
+                                                      new LongDimensionSchema("c"),
+                                                      new DoubleDimensionSchema("d")
+                                                  )
+                                              )
+                                              .build();
+    File tmp = FileUtils.createTempDir();
+    final Closer closer = Closer.create();
+    closer.register(tmp::delete);
+    final List<InputRow> rows = Arrays.asList(
+        new ListBasedInputRow(
+            CursorFactoryProjectionTest.ROW_SIGNATURE,
+            startTime,
+            CursorFactoryProjectionTest.ROW_SIGNATURE.getColumnNames(),
+            Arrays.asList("a", "aa", 1L, 1.0)
+        ),
+        new ListBasedInputRow(
+            CursorFactoryProjectionTest.ROW_SIGNATURE,
+            startTime.plusMinutes(2),
+            CursorFactoryProjectionTest.ROW_SIGNATURE.getColumnNames(),
+            Arrays.asList("a", "bb", 1L, 1.1, 1.1f)
+        )
+    );
+    IndexBuilder bob = IndexBuilder.create()
+                                   .tmpDir(tmp)
+                                   .schema(
+                                       IncrementalIndexSchema.builder()
+                                                             .withDimensionsSpec(dims)
+                                                             .withRollup(false)
+                                                             .withMinTimestamp(startTime.getMillis())
+                                                             .withProjections(
+                                                                 Collections.singletonList(
+                                                                     new AggregateProjectionSpec(
+                                                                         "ab_hourly_cd_sum_time_ordered",
+                                                                         VirtualColumns.create(
+                                                                             Granularities.toVirtualColumn(
+                                                                                 Granularities.HOUR,
+                                                                                 "__gran"
+                                                                             )
+                                                                         ),
+                                                                         Arrays.asList(
+                                                                             new LongDimensionSchema("__gran"),
+                                                                             new StringDimensionSchema("a"),
+                                                                             new StringDimensionSchema("b")
+                                                                         ),
+                                                                         new AggregatorFactory[]{
+                                                                             new LongSumAggregatorFactory(
+                                                                                 "_c_sum",
+                                                                                 "c"
+                                                                             ),
+                                                                             new DoubleSumAggregatorFactory("d", "d")
+                                                                         }
+                                                                     )
+                                                                 )
+                                                             )
+                                                             .build()
+                                   )
+                                   .rows(rows);
+
+    try (QueryableIndex index = bob.buildMMappedIndex()) {
+      CursorBuildSpec buildSpec = CursorBuildSpec.builder()
+                                                 .setGroupingColumns(ImmutableList.of("a", "b"))
+                                                 .setPhysicalColumns(ImmutableSet.of("a", "b"))
+                                                 .setAggregators(
+                                                     ImmutableList.of(
+                                                         new LongSumAggregatorFactory("c_sum", "c")
+                                                     )
+                                                 )
+                                                 .setQueryContext(QueryContext.of(ImmutableMap.of(QueryContexts.FORCE_PROJECTION, true)))
+                                                 .build();
+      final CursorFactory cursorFactory = new QueryableIndexCursorFactory(index);
+
+      try (final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(buildSpec)) {
+        final Cursor cursor = cursorHolder.asCursor();
+        int rowCount = 0;
+        while (!cursor.isDone()) {
+          rowCount++;
+          cursor.advance();
+        }
+        Assert.assertEquals(2, rowCount);
+      }
+    }
+    finally {
+      CloseableUtils.closeAndWrapExceptions(closer);
+    }
   }
 }

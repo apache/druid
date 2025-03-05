@@ -19,15 +19,12 @@
 
 package org.apache.druid.indexing.rabbitstream;
 
-import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.segment.indexing.IOConfig;
 import org.junit.Assert;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 import java.util.Collections;
 
@@ -38,11 +35,8 @@ public class RabbitStreamIndexTaskIOConfigTest
   public RabbitStreamIndexTaskIOConfigTest()
   {
     mapper = new DefaultObjectMapper();
-    mapper.registerModules((Iterable<Module>) new RabbitStreamIndexTaskModule().getJacksonModules());
+    mapper.registerModules(new RabbitStreamIndexTaskModule().getJacksonModules());
   }
-
-  @Rule
-  public final ExpectedException exception = ExpectedException.none();
 
   @Test
   public void testSerdeWithDefaults() throws Exception
@@ -56,31 +50,29 @@ public class RabbitStreamIndexTaskIOConfigTest
         + "}";
 
     RabbitStreamIndexTaskIOConfig config = (RabbitStreamIndexTaskIOConfig) mapper.readValue(
-        mapper.writeValueAsString(
-            mapper.readValue(
-                jsonStr,
-                IOConfig.class)),
-        IOConfig.class);
+        mapper.writeValueAsString(mapper.readValue(jsonStr, IOConfig.class)),
+        IOConfig.class
+    );
 
     Assert.assertNull(config.getTaskGroupId());
     Assert.assertEquals("my-sequence-name", config.getBaseSequenceName());
 
     Assert.assertEquals("mystream", config.getStartSequenceNumbers().getStream());
 
-    Assert.assertEquals(Long.class,
-        config.getStartSequenceNumbers().getPartitionSequenceNumberMap().get("stream-1").getClass());
     Assert.assertEquals(
-        ImmutableMap.of("stream-0", Long.valueOf(1), "stream-1", Long.valueOf(10)),
-        config.getStartSequenceNumbers().getPartitionSequenceNumberMap());
+        ImmutableMap.of("stream-0", 1L, "stream-1", 10L),
+        config.getStartSequenceNumbers().getPartitionSequenceNumberMap()
+    );
 
     Assert.assertEquals("mystream", config.getEndSequenceNumbers().getStream());
 
     Assert.assertEquals(
-        ImmutableMap.of("stream-0", Long.valueOf(15L), "stream-1", Long.valueOf(200L)),
-        config.getEndSequenceNumbers().getPartitionSequenceNumberMap());
+        ImmutableMap.of("stream-0", 15L, "stream-1", 200L),
+        config.getEndSequenceNumbers().getPartitionSequenceNumberMap()
+    );
 
     Assert.assertTrue(config.isUseTransaction());
-    Assert.assertFalse("minimumMessageTime", config.getMinimumMessageTime().isPresent());
+    Assert.assertNull("minimumMessageTime", config.getMinimumMessageTime());
     Assert.assertEquals(config.getUri(), "rabbitmq-stream://localhost:5552");
     Assert.assertEquals(Collections.emptySet(), config.getStartSequenceNumbers().getExclusivePartitions());
   }

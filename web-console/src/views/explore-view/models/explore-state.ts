@@ -16,6 +16,7 @@
  * limitations under the License.
  */
 
+import { Timezone } from 'chronoshift';
 import type { Column } from 'druid-query-toolkit';
 import {
   filterPatternToExpression,
@@ -59,6 +60,7 @@ export type ExploreModuleLayout =
 interface ExploreStateValue {
   source: string;
   showSourceQuery?: boolean;
+  timezone?: Timezone;
   where: SqlExpression;
   moduleStates: Readonly<Record<string, ModuleState>>;
   layout?: ExploreModuleLayout;
@@ -112,6 +114,7 @@ export class ExploreState {
     }
     return new ExploreState({
       ...js,
+      timezone: js.timezone ? Timezone.fromJS(js.timezone) : undefined,
       where: SqlExpression.maybeParse(js.where) || SqlLiteral.TRUE,
       moduleStates: mapRecord(moduleStatesJS, ModuleState.fromJS),
       helpers: ExpressionMeta.inflateArray(js.helpers || []),
@@ -120,6 +123,7 @@ export class ExploreState {
 
   public readonly source: string;
   public readonly showSourceQuery: boolean;
+  public readonly timezone?: Timezone;
   public readonly where: SqlExpression;
   public readonly moduleStates: Readonly<Record<string, ModuleState>>;
   public readonly layout?: ExploreModuleLayout;
@@ -133,6 +137,7 @@ export class ExploreState {
   constructor(value: ExploreStateValue) {
     this.source = value.source;
     this.showSourceQuery = Boolean(value.showSourceQuery);
+    this.timezone = value.timezone;
     this.where = value.where;
     this.moduleStates = value.moduleStates;
     this.layout = value.layout;
@@ -259,6 +264,14 @@ export class ExploreState {
     });
   }
 
+  public changeTimezone(timezone: Timezone | undefined): ExploreState {
+    return this.change({ timezone });
+  }
+
+  public getEffectiveTimezone(): Timezone {
+    return this.timezone || Timezone.UTC;
+  }
+
   public applyShowColumn(column: Column, k = 0): ExploreState {
     const { moduleStates } = this;
     return this.change({
@@ -300,6 +313,7 @@ export class ExploreState {
   public isInitState(): boolean {
     return (
       this.source === '' &&
+      !this.timezone &&
       this.where instanceof SqlLiteral &&
       isEmpty(this.moduleStates) &&
       !this.hideResources &&

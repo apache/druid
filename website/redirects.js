@@ -295,6 +295,10 @@ const Redirects=[
     "to": "/docs/latest/development/extensions-core/google"
   },
   {
+    "from": "/docs/latest/development/extensions-contrib/k8s-jobs",
+    "to": "/docs/latest/development/extensions-core/k8s-jobs"
+  },
+  {
     "from": "/docs/latest/development/integrating-druid-with-other-technologies.html",
     "to": "/docs/latest/ingestion/"
   },
@@ -341,6 +345,10 @@ const Redirects=[
   {
     "from":  "/docs/latest/operations/api-reference/",
     "to": "/docs/latest/api-reference/"
+  },
+  {
+    "from": "/docs/latest/development/extensions-core/druid-ranger-security",
+    "to": "/docs/latest/development/extensions-contrib/druid-ranger-security"
   }
 ]
 

@@ -1,0 +1,71 @@
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: "CI"
+
+on:
+  workflow_call:
+    inputs:
+      jdk:
+        required: false
+        type: string
+        default: '17'
+
+jobs:
+  run-unit-tests:
+    name: "unit tests"
+    strategy:
+      fail-fast: false
+      matrix:
+        Dtest: [ "A*,F*,S*", "B*,D*,L*,T*", "C*,O*", "E*,N*,Q*", "G*,R*,U*", "H*,I*,J*", "K*,P*,V*,W*,X*,Y*,Z*", "M*"]
+    uses: ./.github/workflows/worker.yml
+    with:
+      script: .github/scripts/run-unit-tests.sh -Dtest='${{ matrix.Dtest }}' -Dmaven.test.failure.ignore=true
+      jdk: ${{ inputs.jdk }}
+      artifact_prefix: "unit-test-reports"
+      key: ${{ matrix.Dtest }}
+
+  reporting-unit-test-failures:
+    name: "report-unit-test-failures"
+    needs: run-unit-tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download reports for all unit test jobs
+        uses: actions/download-artifact@v4
+        with:
+          pattern: "unit-test-reports-*"
+          path: target/surefire-reports
+
+      - name: Publish Test Report
+        uses: mikepenz/action-junit-report@v5
+        with:
+          check_name: "Unit Test Report"
+          report_paths: '**/target/surefire-reports/TEST-*.xml'
+          detailed_summary: true
+          flaky_summary: true
+          annotate_only: true
+          fail_on_failure: true
+          check_retries: true
+          truncate_stack_traces: false
+
+  reporting-jacoco-coverage-failures:
+    name: "report-jacoco-coverage-failures"
+    needs: run-unit-tests
+    uses: ./.github/workflows/worker.yml
+    if: ${{ !contains( github.event.pull_request.labels.*.name, 'jacoco:skip') }}
+    with:
+      script: .github/scripts/create-jacoco-coverage-report.sh
+      artifacts_to_download: "unit-test-reports-*"
+      key: "jacoco-coverage-report"

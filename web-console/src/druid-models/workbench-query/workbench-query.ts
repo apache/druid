@@ -404,7 +404,7 @@ export class WorkbenchQuery {
 
     if (this.isJsonLike()) return false;
 
-    return /(?:INSERT|REPLACE)\s+INTO/i.test(queryString);
+    return /(?:INSERT|REPLACE|MERGE)\s+INTO/i.test(queryString);
   }
 
   public toggleUnlimited(): WorkbenchQuery {

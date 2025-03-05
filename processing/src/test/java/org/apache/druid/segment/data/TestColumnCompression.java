@@ -92,7 +92,8 @@ public class TestColumnCompression
     );
     this.compressed = CompressedVSizeColumnarMultiIntsSupplier.fromByteBuffer(
         buffer,
-        ByteOrder.nativeOrder()
+        ByteOrder.nativeOrder(),
+        null
     ).get();
 
     filter = new BitSet();

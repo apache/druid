@@ -33,7 +33,12 @@ import { IconNames } from '@blueprintjs/icons';
 import type { JSX } from 'react';
 import React, { useCallback, useMemo, useState } from 'react';
 
-import { ENABLE_DISABLE_OPTIONS_TEXT, MenuBoolean, MenuCheckbox } from '../../../components';
+import {
+  ENABLE_DISABLE_OPTIONS_TEXT,
+  MenuBoolean,
+  MenuCheckbox,
+  TimezoneMenuItems,
+} from '../../../components';
 import { EditContextDialog, StringInputDialog } from '../../../dialogs';
 import { IndexSpecDialog } from '../../../dialogs/index-spec-dialog/index-spec-dialog';
 import type {
@@ -51,7 +56,6 @@ import { deepGet, pluralIfNeeded, removeUndefinedValues, tickIcon } from '../../
 import type { MaxTasksButtonProps } from '../max-tasks-button/max-tasks-button';
 import { MaxTasksButton } from '../max-tasks-button/max-tasks-button';
 import { QueryParametersDialog } from '../query-parameters-dialog/query-parameters-dialog';
-import { TimezoneMenuItems } from '../timezone-menu-items/timezone-menu-items';
 
 import './run-panel.scss';
 
@@ -384,6 +388,7 @@ export const RunPanel = React.memo(function RunPanel(props: RunPanelProps) {
                     text="Timezone"
                     label={sqlTimeZone ?? defaultQueryContext.sqlTimeZone}
                   >
+                    <MenuDivider title="Timezone type" />
                     <TimezoneMenuItems
                       sqlTimeZone={sqlTimeZone}
                       setSqlTimeZone={sqlTimeZone =>

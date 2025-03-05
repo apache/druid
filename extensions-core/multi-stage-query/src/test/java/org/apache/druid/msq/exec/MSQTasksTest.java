@@ -36,6 +36,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.msq.indexing.MSQWorkerTask;
 import org.apache.druid.msq.indexing.MSQWorkerTaskLauncher;
+import org.apache.druid.msq.indexing.MSQWorkerTaskLauncher.MSQWorkerTaskLauncherConfig;
 import org.apache.druid.msq.indexing.error.InsertTimeNullFault;
 import org.apache.druid.msq.indexing.error.MSQErrorReport;
 import org.apache.druid.msq.indexing.error.MSQException;
@@ -137,7 +138,7 @@ public class MSQTasksTest
     final MSQErrorReport controllerReport = MSQTasks.makeErrorReport(
         WORKER_ID,
         WORKER_HOST,
-        MSQErrorReport.fromFault(WORKER_ID, WORKER_HOST, null, new WorkerRpcFailedFault(WORKER_ID)),
+        MSQErrorReport.fromFault(WORKER_ID, WORKER_HOST, null, new WorkerRpcFailedFault(WORKER_ID, null)),
         null
     );
 
@@ -231,7 +232,8 @@ public class MSQTasksTest
         new TasksTestOverlordClient(numSlots),
         (task, fault) -> {},
         ImmutableMap.of(),
-        TimeUnit.SECONDS.toMillis(5)
+        TimeUnit.SECONDS.toMillis(5),
+        new MSQWorkerTaskLauncherConfig()
     );
 
     try {

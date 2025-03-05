@@ -318,7 +318,7 @@ public class BaseColumnarLongsBenchmark
       case "none-longs":
       case "zstd-auto":
       case "zstd-longs":
-        return CompressedColumnarLongsSupplier.fromByteBuffer(buffer, ByteOrder.LITTLE_ENDIAN).get();
+        return CompressedColumnarLongsSupplier.fromByteBuffer(buffer, ByteOrder.LITTLE_ENDIAN, null).get();
     }
 
     throw new IllegalArgumentException("unknown encoding");

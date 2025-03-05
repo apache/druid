@@ -22,7 +22,6 @@ package org.apache.druid.sql.calcite;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.inject.Injector;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.ResourceInputSource;
@@ -39,7 +38,6 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.NestedDataTestUtils;
-import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.UnnestDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -66,7 +64,6 @@ import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.nested.NestedPathField;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.segment.virtual.NestedFieldVirtualColumn;
@@ -191,13 +188,8 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
       super(tempFolderProducer);
     }
 
-    @SuppressWarnings("resource")
     @Override
-    public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
-        final QueryRunnerFactoryConglomerate conglomerate,
-        final JoinableFactoryWrapper joinableFactory,
-        final Injector injector
-    )
+    public SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(SpecificSegmentsQuerySegmentWalker walker)
     {
       BuiltInTypesModule.registerHandlersAndSerde();
       final QueryableIndex index =
@@ -353,8 +345,6 @@ public class CalciteNestedDataQueryTest extends BaseCalciteQueryTest
                       .inputTmpDir(tempDirProducer.newTempFolder())
                       .buildIncrementalIndex();
 
-
-      SpecificSegmentsQuerySegmentWalker walker = SpecificSegmentsQuerySegmentWalker.createWalker(injector, conglomerate);
       walker.add(
           DataSegment.builder()
                      .dataSource(DATA_SOURCE)

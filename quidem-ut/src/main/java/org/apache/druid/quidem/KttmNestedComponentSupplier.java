@@ -19,7 +19,6 @@
 
 package org.apache.druid.quidem;
 
-import com.google.inject.Injector;
 import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.ResourceInputSource;
 import org.apache.druid.data.input.impl.DimensionSchema;
@@ -30,7 +29,6 @@ import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.IndexSpec;
@@ -38,7 +36,6 @@ import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.writeout.OffHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.TempDirProducer;
@@ -60,10 +57,9 @@ public class KttmNestedComponentSupplier extends StandardComponentSupplier
   }
 
   @Override
-  public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(QueryRunnerFactoryConglomerate conglomerate,
-      JoinableFactoryWrapper joinableFactory, Injector injector)
+  public SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(SpecificSegmentsQuerySegmentWalker walker)
   {
-    SpecificSegmentsQuerySegmentWalker walker = super.createQuerySegmentWalker(conglomerate, joinableFactory, injector);
+    walker = super.addSegmentsToWalker(walker);
     QueryableIndex idx = makeKttmIndex(tempDirProducer.newTempFolder());
 
     walker.add(

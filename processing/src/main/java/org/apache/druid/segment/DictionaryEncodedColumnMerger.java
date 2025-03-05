@@ -461,7 +461,8 @@ public abstract class DictionaryEncodedColumnMerger<T extends Comparable<T>> imp
             segmentWriteOutMedium,
             filenameBase,
             cardinality,
-            compressionStrategy
+            compressionStrategy,
+            GenericIndexedWriter.MAX_FILE_SIZE
         );
       } else {
         encodedValueSerializer =

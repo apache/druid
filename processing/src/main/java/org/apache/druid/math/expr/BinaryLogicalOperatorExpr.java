@@ -78,7 +78,7 @@ class BinLtExpr extends BinaryBooleanOpExprBase
   @Override
   public <T> ExprVectorProcessor<T> asVectorProcessor(VectorInputBindingInspector inspector)
   {
-    return VectorComparisonProcessors.lessThan(inspector, left, right);
+    return VectorComparisonProcessors.lessThan().asProcessor(inspector, left, right);
   }
 }
 
@@ -126,7 +126,7 @@ class BinLeqExpr extends BinaryBooleanOpExprBase
   @Override
   public <T> ExprVectorProcessor<T> asVectorProcessor(VectorInputBindingInspector inspector)
   {
-    return VectorComparisonProcessors.lessThanOrEqual(inspector, left, right);
+    return VectorComparisonProcessors.lessThanOrEquals().asProcessor(inspector, left, right);
   }
 }
 
@@ -174,7 +174,7 @@ class BinGtExpr extends BinaryBooleanOpExprBase
   @Override
   public <T> ExprVectorProcessor<T> asVectorProcessor(VectorInputBindingInspector inspector)
   {
-    return VectorComparisonProcessors.greaterThan(inspector, left, right);
+    return VectorComparisonProcessors.greaterThan().asProcessor(inspector, left, right);
   }
 }
 
@@ -222,7 +222,7 @@ class BinGeqExpr extends BinaryBooleanOpExprBase
   @Override
   public <T> ExprVectorProcessor<T> asVectorProcessor(VectorInputBindingInspector inspector)
   {
-    return VectorComparisonProcessors.greaterThanOrEqual(inspector, left, right);
+    return VectorComparisonProcessors.greaterThanOrEquals().asProcessor(inspector, left, right);
   }
 }
 
@@ -269,7 +269,7 @@ class BinEqExpr extends BinaryBooleanOpExprBase
   @Override
   public <T> ExprVectorProcessor<T> asVectorProcessor(VectorInputBindingInspector inspector)
   {
-    return VectorComparisonProcessors.equal(inspector, left, right);
+    return VectorComparisonProcessors.equals().asProcessor(inspector, left, right);
   }
 }
 
@@ -316,7 +316,7 @@ class BinNeqExpr extends BinaryBooleanOpExprBase
   @Override
   public <T> ExprVectorProcessor<T> asVectorProcessor(VectorInputBindingInspector inspector)
   {
-    return VectorComparisonProcessors.notEqual(inspector, left, right);
+    return VectorComparisonProcessors.notEquals().asProcessor(inspector, left, right);
   }
 }
 

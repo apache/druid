@@ -147,10 +147,10 @@ public class CalciteTests
     public Authorizer getAuthorizer(String name)
     {
       return (authenticationResult, resource, action) -> {
-        boolean isRestrictedTable = resource.getName().equals(RESTRICTED_DATASOURCE);
+        boolean readRestrictedTable = resource.getName().equals(RESTRICTED_DATASOURCE) && action.equals(Action.READ);
 
         if (TEST_SUPERUSER_NAME.equals(authenticationResult.getIdentity())) {
-          return isRestrictedTable ? Access.allowWithRestriction(POLICY_NO_RESTRICTION_SUPERUSER) : Access.OK;
+          return readRestrictedTable ? Access.allowWithRestriction(POLICY_NO_RESTRICTION_SUPERUSER) : Access.OK;
         }
 
         switch (resource.getType()) {
@@ -159,7 +159,7 @@ public class CalciteTests
               case FORBIDDEN_DATASOURCE:
                 return Access.DENIED;
               default:
-                return isRestrictedTable ? Access.allowWithRestriction(POLICY_RESTRICTION) : Access.OK;
+                return readRestrictedTable ? Access.allowWithRestriction(POLICY_RESTRICTION) : Access.OK;
             }
           case ResourceType.VIEW:
             if ("forbiddenView".equals(resource.getName())) {
@@ -191,10 +191,10 @@ public class CalciteTests
     public Authorizer getAuthorizer(String name)
     {
       return (authenticationResult, resource, action) -> {
-        boolean isRestrictedTable = resource.getName().equals(RESTRICTED_DATASOURCE);
+        boolean readRestrictedTable = resource.getName().equals(RESTRICTED_DATASOURCE) && action.equals(Action.READ);
 
         if (TEST_SUPERUSER_NAME.equals(authenticationResult.getIdentity())) {
-          return isRestrictedTable ? Access.allowWithRestriction(POLICY_NO_RESTRICTION_SUPERUSER) : Access.OK;
+          return readRestrictedTable ? Access.allowWithRestriction(POLICY_NO_RESTRICTION_SUPERUSER) : Access.OK;
         }
 
         switch (resource.getType()) {
@@ -202,7 +202,7 @@ public class CalciteTests
             if (FORBIDDEN_DATASOURCE.equals(resource.getName())) {
               return Access.DENIED;
             } else {
-              return isRestrictedTable ? Access.allowWithRestriction(POLICY_RESTRICTION) : Access.OK;
+              return readRestrictedTable ? Access.allowWithRestriction(POLICY_RESTRICTION) : Access.OK;
             }
           case ResourceType.VIEW:
             if ("forbiddenView".equals(resource.getName())) {

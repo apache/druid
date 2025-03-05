@@ -151,7 +151,8 @@ public class ScalarLongColumnAndIndexSupplier implements Supplier<NestedCommonFo
 
         final Supplier<ColumnarLongs> longs = CompressedColumnarLongsSupplier.fromByteBuffer(
             longsValueColumn,
-            byteOrder
+            byteOrder,
+            columnBuilder.getFileMapper()
         );
         return new ScalarLongColumnAndIndexSupplier(
             longDictionarySupplier,

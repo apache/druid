@@ -142,33 +142,6 @@ public class CompressedVSizeColumnarIntsSupplier implements WritableSupplier<Col
 
   public static CompressedVSizeColumnarIntsSupplier fromByteBuffer(
       ByteBuffer buffer,
-      ByteOrder order
-  )
-  {
-    byte versionFromBuffer = buffer.get();
-
-    if (versionFromBuffer == VERSION) {
-      final int numBytes = buffer.get();
-      final int totalSize = buffer.getInt();
-      final int sizePer = buffer.getInt();
-
-      final CompressionStrategy compression = CompressionStrategy.forId(buffer.get());
-
-      return new CompressedVSizeColumnarIntsSupplier(
-          totalSize,
-          sizePer,
-          numBytes,
-          GenericIndexed.read(buffer, DecompressingByteBufferObjectStrategy.of(order, compression)),
-          compression
-      );
-
-    }
-
-    throw new IAE("Unknown version[%s]", versionFromBuffer);
-  }
-
-  public static CompressedVSizeColumnarIntsSupplier fromByteBuffer(
-      ByteBuffer buffer,
       ByteOrder order,
       SmooshedFileMapper mapper
   )

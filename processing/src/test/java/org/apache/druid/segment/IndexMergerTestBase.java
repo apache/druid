@@ -96,7 +96,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-public class IndexMergerTestBase extends InitializedNullHandlingTest
+public abstract class IndexMergerTestBase extends InitializedNullHandlingTest
 {
   @Rule
   public final TemporaryFolder temporaryFolder = new TemporaryFolder();

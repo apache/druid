@@ -37,5 +37,6 @@ export * from './sanitizers';
 export * from './sql';
 export * from './stage';
 export * from './table-helpers';
+export * from './ticks';
 export * from './types';
 export * from './values-query';

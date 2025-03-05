@@ -28,6 +28,12 @@ import org.apache.druid.segment.DimensionHandlerUtils;
 import javax.annotation.Nullable;
 import java.util.Objects;
 
+/**
+ * Legacy fallback column format used by columns which do not directly implement {@link ColumnFormat}. This should be
+ * avoided if possible in favor of implementing a {@link ColumnFormat} that is specific to the column type and can
+ * accurately capture the physical storage details and have fine-grained control over how {@link #merge(ColumnFormat)},
+ * {@link #getColumnSchema(String)} and {@link #getColumnHandler(String)} behave.
+ */
 public class CapabilitiesBasedFormat implements ColumnFormat
 {
   // merge logic for the state capabilities will be in after incremental index is persisted
@@ -98,11 +104,10 @@ public class CapabilitiesBasedFormat implements ColumnFormat
 
     ColumnCapabilitiesImpl merged = ColumnCapabilitiesImpl.copyOf(this.toColumnCapabilities());
     ColumnCapabilitiesImpl otherSnapshot = ColumnCapabilitiesImpl.copyOf(otherFormat.toColumnCapabilities());
-
+    final String mergedType = merged.getType() == null ? null : merged.asTypeString();
+    final String otherType = otherSnapshot.getType() == null ? null : otherSnapshot.asTypeString();
     if (!Objects.equals(merged.getType(), otherSnapshot.getType())
         || !Objects.equals(merged.getElementType(), otherSnapshot.getElementType())) {
-      final String mergedType = merged.getType() == null ? null : merged.asTypeString();
-      final String otherType = otherSnapshot.getType() == null ? null : otherSnapshot.asTypeString();
       throw new ISE(
           "Cannot merge columns of type[%s] and [%s]",
           mergedType,
@@ -111,8 +116,8 @@ public class CapabilitiesBasedFormat implements ColumnFormat
     } else if (!Objects.equals(merged.getComplexTypeName(), otherSnapshot.getComplexTypeName())) {
       throw new ISE(
           "Cannot merge columns of type[%s] and [%s]",
-          merged.getComplexTypeName(),
-          otherSnapshot.getComplexTypeName()
+          mergedType,
+          otherType
       );
     }
 

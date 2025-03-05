@@ -136,7 +136,7 @@ public class SqlTestFrameworkConfigTest
     );
 
     assertEquals(
-        "Invalid configuration key(s) specified [[nonExistent]]; valid options are [[numMergeBuffers, minTopNThreshold, resultCache, componentSupplier]]",
+        "Invalid configuration key(s) specified [[nonExistent]]; valid options are [[numMergeBuffers, minTopNThreshold, resultCache, componentSupplier, datasets]]",
         e.getMessage()
     );
   }

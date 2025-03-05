@@ -96,7 +96,7 @@ ModuleRepository.registerModule<BarChartParameterValues>({
     },
   },
   component: function BarChartModule(props) {
-    const { querySource, where, setWhere, parameterValues, stage, runSqlQuery } = props;
+    const { querySource, timezone, where, setWhere, parameterValues, stage, runSqlQuery } = props;
     const containerRef = useRef<HTMLDivElement>();
     const chartRef = useRef<ECharts>();
     const [highlight, setHighlight] = useState<BarChartHighlight | undefined>();
@@ -106,25 +106,28 @@ ModuleRepository.registerModule<BarChartParameterValues>({
     const dataQuery = useMemo(() => {
       const splitExpression = splitColumn ? splitColumn.expression : L(OVERALL_LABEL);
 
-      return querySource
-        .getInitQuery(where)
-        .addSelect(
-          splitExpression.applyIf(timeBucket, ex => F.timeFloor(ex, timeBucket)).as('dim'),
-          {
-            addToGroupBy: 'end',
-            addToOrderBy: !measureToSort && timeBucket ? 'end' : undefined,
-            direction: 'ASC',
-          },
-        )
-        .addSelect(measure.expression.as('met'), {
-          addToOrderBy: !measureToSort && !timeBucket ? 'end' : undefined,
-          direction: 'DESC',
-        })
-        .applyIf(measureToSort, q =>
-          q.addOrderBy(measureToSort.expression.toOrderByExpression('DESC')),
-        )
-        .changeLimitValue(limit);
-    }, [querySource, where, splitColumn, timeBucket, measure, measureToSort, limit]);
+      return {
+        query: querySource
+          .getInitQuery(where)
+          .addSelect(
+            splitExpression.applyIf(timeBucket, ex => F.timeFloor(ex, timeBucket)).as('dim'),
+            {
+              addToGroupBy: 'end',
+              addToOrderBy: !measureToSort && timeBucket ? 'end' : undefined,
+              direction: 'ASC',
+            },
+          )
+          .addSelect(measure.expression.as('met'), {
+            addToOrderBy: !measureToSort && !timeBucket ? 'end' : undefined,
+            direction: 'DESC',
+          })
+          .applyIf(measureToSort, q =>
+            q.addOrderBy(measureToSort.expression.toOrderByExpression('DESC')),
+          )
+          .changeLimitValue(limit),
+        timezone,
+      };
+    }, [querySource, timezone, where, splitColumn, timeBucket, measure, measureToSort, limit]);
 
     const [sourceDataState, queryManager] = useQueryManager({
       query: dataQuery,

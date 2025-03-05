@@ -61,10 +61,10 @@ import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.RetryQueryRunnerConfig;
 import org.apache.druid.query.SegmentDescriptor;
+import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.ResultRow;
 import org.apache.druid.query.movingaverage.test.TestConfig;
-import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.timeseries.TimeseriesQuery;
 import org.apache.druid.query.timeseries.TimeseriesResultValue;
 import org.apache.druid.segment.join.MapJoinableFactory;
@@ -322,7 +322,7 @@ public class MovingAverageQueryTest extends InitializedNullHandlingTest
         new TimelineServerView()
         {
           @Override
-          public Optional<? extends TimelineLookup<String, ServerSelector>> getTimeline(DataSourceAnalysis analysis)
+          public Optional<? extends TimelineLookup<String, ServerSelector>> getTimeline(TableDataSource analysis)
           {
             return Optional.empty();
           }

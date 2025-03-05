@@ -249,6 +249,21 @@ public class LocalInputSourceTest
     Assert.assertTrue(iteratedFiles.stream().allMatch(file -> file.length() > 0));
   }
 
+  @Test
+  public void testRebuildSame()
+  {
+    final LocalInputSource src = new LocalInputSource(
+        new File("myFile"),
+        "myFilter",
+        ImmutableList.of(new File("someFile")),
+        new SystemFields(EnumSet.of(SystemField.URI, SystemField.PATH))
+    );
+    LocalInputSource copy = new LocalInputSource(
+        src.getBaseDir(), src.getFilter(), src.getFiles(), src.getSystemFields()
+    );
+    Assert.assertEquals(src, copy);
+  }
+
   private static List<File> mockFiles(int numFiles, long fileSize)
   {
     final List<File> files = new ArrayList<>();

@@ -26,7 +26,6 @@ import org.apache.druid.segment.DefaultColumnFormatConfig;
 import org.apache.druid.segment.DimensionHandlerProvider;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.NestedCommonFormatColumnHandler;
-import org.apache.druid.segment.NestedDataColumnHandlerV4;
 import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -88,7 +87,6 @@ public class BuiltInTypesModuleTest
   {
     DimensionHandlerUtils.DIMENSION_HANDLER_PROVIDERS.remove(NestedDataComplexTypeSerde.TYPE_NAME);
     Properties props = new Properties();
-    props.setProperty("druid.indexing.formats.nestedColumnFormatVersion", "4");
     props.setProperty("druid.indexing.formats.stringMultiValueHandlingMode", "sorted_array");
     Injector gadget = makeInjector(props);
 
@@ -98,7 +96,6 @@ public class BuiltInTypesModuleTest
     DimensionHandlerProvider provider = DimensionHandlerUtils.DIMENSION_HANDLER_PROVIDERS.get(
         NestedDataComplexTypeSerde.TYPE_NAME
     );
-    Assert.assertTrue(provider.get("test") instanceof NestedDataColumnHandlerV4);
 
     Assert.assertEquals(
         DimensionSchema.MultiValueHandling.SORTED_ARRAY,

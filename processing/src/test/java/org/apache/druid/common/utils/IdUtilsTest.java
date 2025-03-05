@@ -22,6 +22,7 @@ package org.apache.druid.common.utils;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.timeline.SegmentId;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -168,5 +169,25 @@ public class IdUtilsTest
         DateTimes.of("2020-01-01").toString()
     );
     Assert.assertEquals(expected, id);
+  }
+
+  @Test
+  public void testGetValidSegmentId()
+  {
+    final SegmentId segmentId = SegmentId.of("wiki", Intervals.ETERNITY, "v1", 1);
+    Assert.assertEquals(
+        segmentId,
+        IdUtils.getValidSegmentId("wiki", segmentId.toString())
+    );
+  }
+
+  @Test
+  public void testGetValidSegmentId_throwsException_withUnparseableId()
+  {
+    DruidExceptionMatcher.invalidInput().expectMessageIs(
+        "Could not parse segment ID[abc] for datasource[wiki]"
+    ).assertThrowsAndMatches(
+        () -> IdUtils.getValidSegmentId("wiki", "abc")
+    );
   }
 }

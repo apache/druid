@@ -66,6 +66,12 @@ npm i && npm run jest -- -u
 ```
 to ensure that any web console tests that include documentation links are updated correctly to ensure that CI will pass on the release branch.
 
+Note:
+If there are any test failures here, it may be indicating that the webconsole needs to be rebuilt. Run the following command first:
+```
+npm run compile
+```
+
 
 The sample [`docker-compose.yml`](https://github.com/apache/druid/blob/master/distribution/docker/docker-compose.yml) used in the Docker quickstart documentation should match the release version:
 
@@ -127,6 +133,8 @@ Release manager must also ensure that CI is passing successfully on the release 
 To check the CI status on a release branch, you can go to the commits page e.g. https://github.com/apache/druid/commits/24.0.0. On this page, latest commmit should show
 a green &#10004; in the commit description. If the commit has a failed build, please click on red &#10005; icon in the commit description to go to travis build job and investigate. 
 You can restart a failed build via travis if it is flaky. 
+
+The release manager should also keep an eye-out for `Cron Job Unit Tests` failures: https://github.com/apache/druid/actions/workflows/cron-job-unit-tests.yml. If there are failures, we need to fix them before creating an RC.
 
 Once all issues and PRs that are still tagged with the release milestone have been merged, closed, or removed from the milestone and CI on branch is green, the next step is to put together a release candidate.
 
@@ -421,7 +429,9 @@ To make the staged repo publicly accessible, "Close" the staging repo.
 
 Release votes are held on the dev mailing list, dev@druid.apache.org. Druid PMC votes are binding.
 
-You can use the following template for the release vote thread, replacing values as necessary.
+You can use the following template for the release vote thread, replacing values as necessary. Any linebreaks should
+be copied as is to allow them to be run directly, even if it appears to fit in one line, since the Apache mailing list
+provider inserts linebreaks beyond a certain length.
 
 ##### Subject
 
@@ -594,7 +604,7 @@ Tag the rc that passed vote as the release tag and push to github.
 ```bash
 $ git checkout druid-0.17.0-rc3
 $ git tag druid-0.17.0
-$ git push origin/druid-0.17.0
+$ git push origin tag druid-0.17.0
 ```
 
 ### Publish release artifacts to SVN

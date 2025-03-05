@@ -17,6 +17,8 @@
  */
 
 import type { DateRange, NonNullDateRange } from '@blueprintjs/datetime';
+import { fromDate, toTimeZone } from '@internationalized/date';
+import type { Timezone } from 'chronoshift';
 
 const CURRENT_YEAR = new Date().getUTCFullYear();
 
@@ -38,24 +40,10 @@ export function prettyFormatIsoDate(isoDate: string | Date): string {
   return prettyFormatIsoDateWithMsIfNeeded(isoDate).replace(/\.\d\d\d/, '');
 }
 
-export function prettyFormatIsoDateTick(date: Date): string {
-  // s like 2016-06-27T19:00:00.000Z
-  let s = date.toISOString();
-  if (!s.endsWith('.000Z')) {
-    return s.slice(19, 23); // => ".001"
-  }
-  s = s.slice(0, 19); // s like 2016-06-27T19:00:00
-
-  if (!s.endsWith(':00')) {
-    return s.slice(11); // => 00:00:01
-  }
-  s = s.slice(0, 16); // s like 2016-06-27T19:00
-
-  if (!s.endsWith('T00:00')) {
-    return s.slice(11); // => 00:00
-  }
-
-  return s.slice(0, 10); // s like 2016-06-27
+export function toIsoStringInTimezone(date: Date, timezone: Timezone): string {
+  if (timezone.isUTC()) return date.toISOString();
+  const zonedDate = toTimeZone(fromDate(date, 'Etc/UTC'), timezone.toString());
+  return zonedDate.toString().replace(/[+-]\d\d:\d\d\[.+$/, '');
 }
 
 export function utcToLocalDate(utcDate: Date): Date {

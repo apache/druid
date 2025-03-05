@@ -41,6 +41,8 @@ public class MetricsTest
     Assert.assertEquals("host_name", dimensions[2]);
     Assert.assertEquals("type", dimensions[3]);
     Assert.assertEquals(1000.0, dimensionsAndCollector.getConversionFactor(), 0.0);
+    double[] defaultHistogramBuckets = {0.1, 0.25, 0.5, 0.75, 1.0, 2.5, 5.0, 7.5, 10.0, 30.0, 60.0, 120.0, 300.0};
+    Assert.assertArrayEquals(defaultHistogramBuckets, dimensionsAndCollector.getHistogramBuckets(), 0.0);
     Assert.assertTrue(dimensionsAndCollector.getCollector() instanceof Histogram);
 
     DimensionsAndCollector d = metrics.getByName("segment/loadQueue/count", "historical");
@@ -67,6 +69,8 @@ public class MetricsTest
     Assert.assertEquals("host_name", dimensions[3]);
     Assert.assertEquals("type", dimensions[4]);
     Assert.assertEquals(1000.0, dimensionsAndCollector.getConversionFactor(), 0.0);
+    double[] defaultHistogramBuckets = {0.1, 0.25, 0.5, 0.75, 1.0, 2.5, 5.0, 7.5, 10.0, 30.0, 60.0, 120.0, 300.0};
+    Assert.assertArrayEquals(defaultHistogramBuckets, dimensionsAndCollector.getHistogramBuckets(), 0.0);
     Assert.assertTrue(dimensionsAndCollector.getCollector() instanceof Histogram);
 
     DimensionsAndCollector d = metrics.getByName("segment/loadQueue/count", "historical");
@@ -106,8 +110,26 @@ public class MetricsTest
   @Test
   public void testMetricsConfigurationWithUnSupportedType()
   {
-    Assert.assertThrows(ISE.class, () -> {
-      new Metrics("test_5", "src/test/resources/defaultMetricsTest.json", true, true, null);
+    ISE iseException = Assert.assertThrows(ISE.class, () -> {
+      new Metrics("test_5", "src/test/resources/defaultInvalidMetricsTest.json", true, true, null);
     });
+    Assert.assertEquals("Failed to parse metric configuration", iseException.getMessage());
   }
+
+  @Test
+  public void testMetricsConfigurationWithTimerHistogramBuckets()
+  {
+    Metrics metrics = new Metrics("test_6", "src/test/resources/defaultMetricsTest.json", true, true, null);
+    DimensionsAndCollector dimensionsAndCollector = metrics.getByName("query/time", "historical");
+    Assert.assertNotNull(dimensionsAndCollector);
+    String[] dimensions = dimensionsAndCollector.getDimensions();
+    Assert.assertEquals("dataSource", dimensions[0]);
+    Assert.assertEquals("druid_service", dimensions[1]);
+    Assert.assertEquals("host_name", dimensions[2]);
+    Assert.assertEquals("type", dimensions[3]);
+    Assert.assertEquals(1000.0, dimensionsAndCollector.getConversionFactor(), 0.0);
+    double[] expectedHistogramBuckets = {10.0, 30.0, 60.0, 120.0, 200.0, 300.0};
+    Assert.assertArrayEquals(expectedHistogramBuckets, dimensionsAndCollector.getHistogramBuckets(), 0.0);
+  }
+
 }

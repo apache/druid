@@ -32,7 +32,6 @@ import org.apache.druid.query.QueryRunner;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QuerySegmentWalker;
 import org.apache.druid.query.SegmentDescriptor;
-import org.apache.druid.query.groupby.GroupByQueryConfig;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainer;
 import org.apache.druid.query.lookup.LookupExtractorFactoryContainerProvider;
 import org.apache.druid.segment.FrameBasedInlineSegmentWrangler;
@@ -50,11 +49,14 @@ import org.apache.druid.segment.join.JoinableFactory;
 import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.initialization.ServerConfig;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
+import org.apache.druid.sql.calcite.util.datasets.TestDataSet;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.VersionedIntervalTimeline;
+import org.apache.druid.timeline.partition.LinearShardSpec;
 import org.joda.time.Interval;
 
 import java.io.Closeable;
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -114,11 +116,13 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
       final QueryRunnerFactoryConglomerate conglomerate,
       final SegmentWrangler segmentWrangler,
       final JoinableFactoryWrapper joinableFactoryWrapper,
-      final QueryScheduler scheduler,
-      final GroupByQueryConfig groupByQueryConfig
+      final QueryScheduler scheduler
   )
   {
     Map<String, VersionedIntervalTimeline<String, ReferenceCountingSegment>> timelines = new HashMap<>();
+    NoopServiceEmitter emitter = new NoopServiceEmitter();
+    ServerConfig serverConfig = new ServerConfig();
+
     return new SpecificSegmentsQuerySegmentWalker(
         timelines,
         QueryStackTests.createClientQuerySegmentWalker(
@@ -127,7 +131,6 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
                 timelines,
                 conglomerate,
                 scheduler,
-                groupByQueryConfig,
                 injector
             ),
             QueryStackTests.createLocalQuerySegmentWalker(
@@ -135,12 +138,12 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
                 segmentWrangler,
                 joinableFactoryWrapper,
                 scheduler,
-                new NoopServiceEmitter()
+                emitter
             ),
             conglomerate,
             joinableFactoryWrapper.getJoinableFactory(),
-            new ServerConfig(),
-            new NoopServiceEmitter()
+            serverConfig,
+            emitter
         )
     );
   }
@@ -168,8 +171,7 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
                         .build()
         ),
         new JoinableFactoryWrapper(QueryStackTests.makeJoinableFactoryForLookup(LOOKUP_EXTRACTOR_FACTORY_CONTAINER_PROVIDER)),
-        QueryStackTests.DEFAULT_NOOP_SCHEDULER,
-        new GroupByQueryConfig()
+        QueryStackTests.DEFAULT_NOOP_SCHEDULER
     );
   }
 
@@ -235,5 +237,20 @@ public class SpecificSegmentsQuerySegmentWalker implements QuerySegmentWalker, C
     for (Closeable closeable : closeables) {
       Closeables.close(closeable, true);
     }
+  }
+
+  public SpecificSegmentsQuerySegmentWalker add(TestDataSet dataset, File tmpDir)
+  {
+    QueryableIndex indexNumericDims = dataset.makeIndex(tmpDir);
+    return add(
+        DataSegment.builder()
+            .dataSource(dataset.getName())
+            .interval(indexNumericDims.getDataInterval())
+            .version("1")
+            .shardSpec(new LinearShardSpec(0))
+            .size(0)
+            .build(),
+        indexNumericDims
+    );
   }
 }

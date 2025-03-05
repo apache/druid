@@ -351,23 +351,6 @@ public interface IndexerMetadataStorageCoordinator
   );
 
   /**
-   * Creates and inserts new IDs for the pending segments hat overlap with the given
-   * replace segments being committed. The newly created pending segment IDs:
-   * <ul>
-   * <li>Have the same interval and version as that of an overlapping segment
-   * committed by the REPLACE task.</li>
-   * <li>Cannot be committed but are only used to serve realtime queries against
-   * those versions.</li>
-   * </ul>
-   *
-   * @param replaceSegments Segments being committed by a REPLACE task
-   * @return List of inserted pending segment records
-   */
-  List<PendingSegmentRecord> upgradePendingSegmentsOverlappingWith(
-      Set<DataSegment> replaceSegments
-  );
-
-  /**
    * Retrieves data source's metadata from the metadata store. Returns null if there is no metadata.
    */
   @Nullable DataSourceMetadata retrieveDataSourceMetadata(String dataSource);
@@ -444,16 +427,14 @@ public interface IndexerMetadataStorageCoordinator
   /**
    * Retrieve the segment for a given id from the metadata store. Return null if no such segment exists
    * <br>
-   * If {@code includeUnused} is set, the segment {@code id} retrieval should also consider the set of unused segments
-   * in the metadata store. Unused segments could be deleted by a kill task at any time and might lead to unexpected behaviour.
+   * The retrieval also considers the set of unused segments in the metadata store.
+   * Unused segments could be deleted by a kill task at any time and might lead to unexpected behaviour.
    * This option exists mainly to provide a consistent view of the metadata, for example, in calls from MSQ controller
    * and worker and would generally not be required.
-   *
-   * @param id The segment id to retrieve
-   *
-   * @return DataSegment used segment corresponding to given id
    */
-  DataSegment retrieveSegmentForId(String id, boolean includeUnused);
+  DataSegment retrieveSegmentForId(String dataSource, String segmentId);
+
+  DataSegment retrieveUsedSegmentForId(String dataSource, String segmentId);
 
   /**
    * Delete entries from the upgrade segments table after the corresponding replace task has ended

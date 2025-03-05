@@ -1705,7 +1705,6 @@ public class ClientQuerySegmentWalkerTest
                     .build(),
                 conglomerate,
                 schedulerForTest,
-                new GroupByQueryConfig(),
                 injector
             ),
             ClusterOrLocal.CLUSTER

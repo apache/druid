@@ -114,6 +114,7 @@ abstract class UnaryExpr implements Expr
 @SuppressWarnings("ClassName")
 class UnaryMinusExpr extends UnaryExpr
 {
+
   UnaryMinusExpr(String op, Expr expr)
   {
     super(op, expr);
@@ -154,7 +155,7 @@ class UnaryMinusExpr extends UnaryExpr
   @Override
   public <T> ExprVectorProcessor<T> asVectorProcessor(VectorInputBindingInspector inspector)
   {
-    return VectorMathProcessors.negate(inspector, expr);
+    return VectorMathProcessors.negate().asProcessor(inspector, expr);
   }
 }
 

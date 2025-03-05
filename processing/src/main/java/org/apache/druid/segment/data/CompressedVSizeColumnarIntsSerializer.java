@@ -63,6 +63,7 @@ public class CompressedVSizeColumnarIntsSerializer extends SingleValueColumnarIn
         CompressedVSizeColumnarIntsSupplier.maxIntsInBufferForValue(maxValue),
         IndexIO.BYTE_ORDER,
         compression,
+        GenericIndexedWriter.MAX_FILE_SIZE,
         closer
     );
   }
@@ -87,6 +88,7 @@ public class CompressedVSizeColumnarIntsSerializer extends SingleValueColumnarIn
       final int chunkFactor,
       final ByteOrder byteOrder,
       final CompressionStrategy compression,
+      final int fileSizeLimit,
       final Closer closer
   )
   {
@@ -101,6 +103,7 @@ public class CompressedVSizeColumnarIntsSerializer extends SingleValueColumnarIn
             filenameBase,
             compression,
             sizePer(maxValue, chunkFactor),
+            fileSizeLimit,
             closer
         ),
         closer

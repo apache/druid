@@ -32,7 +32,6 @@ import org.apache.druid.segment.DimensionHandler;
 import org.apache.druid.segment.DimensionHandlerProvider;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.NestedCommonFormatColumnHandler;
-import org.apache.druid.segment.NestedDataColumnHandlerV4;
 import org.apache.druid.segment.nested.NestedDataComplexTypeSerde;
 import org.apache.druid.segment.nested.StructuredData;
 import org.apache.druid.segment.nested.StructuredDataJsonSerializer;
@@ -72,12 +71,7 @@ public class BuiltInTypesModule implements DruidModule
   @LazySingleton
   public SideEffectRegisterer initDimensionHandlerAndMvHandlingMode(DefaultColumnFormatConfig formatsConfig)
   {
-    if (formatsConfig.getNestedColumnFormatVersion() != null && formatsConfig.getNestedColumnFormatVersion() == 4) {
-      DimensionHandlerUtils.registerDimensionHandlerProvider(
-          NestedDataComplexTypeSerde.TYPE_NAME,
-          new NestedColumnV4HandlerProvider()
-      );
-    } else {
+    if (formatsConfig.getNestedColumnFormatVersion() == null || formatsConfig.getNestedColumnFormatVersion() == 5) {
       DimensionHandlerUtils.registerDimensionHandlerProvider(
           NestedDataComplexTypeSerde.TYPE_NAME,
           new NestedCommonFormatHandlerProvider()
@@ -141,17 +135,6 @@ public class BuiltInTypesModule implements DruidModule
     public DimensionHandler<StructuredData, StructuredData, StructuredData> get(String dimensionName)
     {
       return new NestedCommonFormatColumnHandler(dimensionName, null);
-    }
-  }
-
-  public static class NestedColumnV4HandlerProvider
-      implements DimensionHandlerProvider<StructuredData, StructuredData, StructuredData>
-  {
-
-    @Override
-    public DimensionHandler<StructuredData, StructuredData, StructuredData> get(String dimensionName)
-    {
-      return new NestedDataColumnHandlerV4(dimensionName);
     }
   }
 

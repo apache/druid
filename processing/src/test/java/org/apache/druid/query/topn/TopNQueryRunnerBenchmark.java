@@ -46,6 +46,7 @@ import java.util.Map;
 /**
  * Based on TopNQueryRunnerTest
  */
+@Ignore
 public class TopNQueryRunnerBenchmark extends AbstractBenchmark
 {
 

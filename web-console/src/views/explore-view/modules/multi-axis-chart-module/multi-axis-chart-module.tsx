@@ -19,7 +19,6 @@
 import { Button, Intent } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import { Duration, Timezone } from 'chronoshift';
-import type { SqlQuery } from 'druid-query-toolkit';
 import { C, F, L } from 'druid-query-toolkit';
 import type { ECharts } from 'echarts';
 import * as echarts from 'echarts';
@@ -32,8 +31,8 @@ import {
   formatIsoDateRange,
   formatNumber,
   getAutoGranularity,
-  prettyFormatIsoDateTick,
   prettyFormatIsoDateWithMsIfNeeded,
+  tickFormatWithTimezone,
 } from '../../../../utils';
 import { Issue } from '../../components';
 import type { ExpressionMeta } from '../../models';
@@ -72,7 +71,7 @@ ModuleRepository.registerModule<MultiAxisChartParameterValues>({
     },
   },
   component: function MultiAxisChartModule(props) {
-    const { querySource, where, setWhere, parameterValues, stage, runSqlQuery } = props;
+    const { querySource, timezone, where, setWhere, parameterValues, stage, runSqlQuery } = props;
     const containerRef = useRef<HTMLDivElement>();
     const chartRef = useRef<ECharts>();
     const [highlight, setHighlight] = useState<MultiAxisChartHighlight | undefined>();
@@ -86,19 +85,22 @@ ModuleRepository.registerModule<MultiAxisChartParameterValues>({
     const { measures } = parameterValues;
 
     const dataQuery = useMemo(() => {
-      return querySource
-        .getInitQuery(where)
-        .addSelect(F.timeFloor(C(timeColumnName || '__time'), L(timeGranularity)).as('time'), {
-          addToGroupBy: 'end',
-          addToOrderBy: 'end',
-          direction: 'ASC',
-        })
-        .applyForEach(measures, (q, measure) => q.addSelect(measure.expression.as(measure.name)));
-    }, [querySource, where, timeColumnName, timeGranularity, measures]);
+      return {
+        query: querySource
+          .getInitQuery(where)
+          .addSelect(F.timeFloor(C(timeColumnName || '__time'), L(timeGranularity)).as('time'), {
+            addToGroupBy: 'end',
+            addToOrderBy: 'end',
+            direction: 'ASC',
+          })
+          .applyForEach(measures, (q, measure) => q.addSelect(measure.expression.as(measure.name))),
+        timezone,
+      };
+    }, [querySource, timezone, where, timeColumnName, timeGranularity, measures]);
 
     const [sourceDataState, queryManager] = useQueryManager({
       query: dataQuery,
-      processQuery: async (query: SqlQuery, cancelToken) => {
+      processQuery: async (query, cancelToken) => {
         if (!timeColumnName) {
           throw new Error(`Must have a column of type TIMESTAMP for the multi-axis chart to work`);
         }
@@ -146,7 +148,7 @@ ModuleRepository.registerModule<MultiAxisChartParameterValues>({
             boundaryGap: false,
             axisLabel: {
               formatter(value: any) {
-                return prettyFormatIsoDateTick(new Date(value));
+                return tickFormatWithTimezone(new Date(value), timezone);
               },
             },
           },
@@ -234,7 +236,7 @@ ModuleRepository.registerModule<MultiAxisChartParameterValues>({
         const x1 = myChart.convertToPixel({ xAxisIndex: 0 }, params.areas[0].coordRange[1]);
 
         setHighlight({
-          title: formatIsoDateRange(start, end),
+          title: formatIsoDateRange(start, end, Timezone.UTC),
           x: (x0 + x1) / 2,
           y: 50,
           start,

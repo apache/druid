@@ -93,7 +93,7 @@ public class HyperUniquesSerdeForTest extends ComplexMetricSerde
   {
     final GenericIndexed column;
     if (columnBuilder.getFileMapper() == null) {
-      column = GenericIndexed.read(byteBuffer, getObjectStrategy());
+      column = GenericIndexed.read(byteBuffer, getObjectStrategy(), null);
     } else {
       column = GenericIndexed.read(byteBuffer, getObjectStrategy(), columnBuilder.getFileMapper());
     }

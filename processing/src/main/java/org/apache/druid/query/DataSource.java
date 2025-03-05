@@ -25,12 +25,10 @@ import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.planning.PreJoinableClause;
 import org.apache.druid.query.policy.Policy;
 import org.apache.druid.segment.SegmentReference;
-
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -108,12 +106,8 @@ public interface DataSource
 
   /**
    * Returns a segment function on to how to segment should be modified.
-   *
-   * @param query      the input query
-   * @param cpuTimeAcc the cpu time accumulator
-   * @return the segment function
    */
-  Function<SegmentReference, SegmentReference> createSegmentMapFunction(Query query, AtomicLong cpuTimeAcc);
+  Function<SegmentReference, SegmentReference> createSegmentMapFunction(Query query);
 
   /**
    * Returns an updated datasource based on the specified new source.
@@ -124,7 +118,7 @@ public interface DataSource
   DataSource withUpdatedDataSource(DataSource newSource);
 
   /**
-   * Returns the query with an updated datasource based on the policy restrictions on tables.
+   * Returns an updated datasource based on the policy restrictions on tables.
    * <p>
    * If this datasource contains no table, no changes should occur.
    *

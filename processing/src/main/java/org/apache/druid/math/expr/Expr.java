@@ -39,10 +39,12 @@ import org.apache.druid.segment.virtual.ExpressionSelectors;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Base interface of Druid expression language abstract syntax tree nodes. All {@link Expr} implementations are
@@ -468,7 +470,7 @@ public interface Expr extends Cacheable
    */
   interface VectorInputBinding extends VectorInputBindingInspector
   {
-    <T> T[] getObjectVector(String name);
+    Object[] getObjectVector(String name);
 
     long[] getLongVector(String name);
 
@@ -577,6 +579,50 @@ public interface Expr extends Cacheable
     }
 
     /**
+     * Create an instance by combining a collection of other instances.
+     */
+    public static BindingAnalysis collect(final Collection<BindingAnalysis> others)
+    {
+      if (others.isEmpty()) {
+        return EMTPY;
+      } else if (others.size() == 1) {
+        return Iterables.getOnlyElement(others);
+      } else {
+        final ImmutableSet.Builder<IdentifierExpr> freeVariables = ImmutableSet.builder();
+        final ImmutableSet.Builder<IdentifierExpr> scalarVariables = ImmutableSet.builder();
+        final ImmutableSet.Builder<IdentifierExpr> arrayVariables = ImmutableSet.builder();
+
+        boolean hasInputArrays = false;
+        boolean isOutputArray = false;
+
+        for (final BindingAnalysis other : others) {
+          hasInputArrays = hasInputArrays || other.hasInputArrays;
+          isOutputArray = isOutputArray || other.isOutputArray;
+
+          freeVariables.addAll(other.freeVariables);
+          scalarVariables.addAll(other.scalarVariables);
+          arrayVariables.addAll(other.arrayVariables);
+        }
+
+        return new BindingAnalysis(
+            freeVariables.build(),
+            scalarVariables.build(),
+            arrayVariables.build(),
+            hasInputArrays,
+            isOutputArray
+        );
+      }
+    }
+
+    /**
+     * Create an instance by combining a collection of analyses from {@link Expr#analyzeInputs()}.
+     */
+    public static BindingAnalysis collectExprs(final Collection<Expr> exprs)
+    {
+      return collect(exprs.stream().map(Expr::analyzeInputs).collect(Collectors.toList()));
+    }
+
+    /**
      * Get the list of required column inputs to evaluate an expression ({@link IdentifierExpr#binding})
      */
     public List<String> getRequiredBindingsList()
@@ -656,28 +702,6 @@ public interface Expr extends Cacheable
     public boolean isOutputArray()
     {
       return isOutputArray;
-    }
-
-    /**
-     * Combine with {@link BindingAnalysis} from {@link Expr#analyzeInputs()}
-     */
-    public BindingAnalysis with(Expr other)
-    {
-      return with(other.analyzeInputs());
-    }
-
-    /**
-     * Combine (union) another {@link BindingAnalysis}
-     */
-    public BindingAnalysis with(BindingAnalysis other)
-    {
-      return new BindingAnalysis(
-          ImmutableSet.copyOf(Sets.union(freeVariables, other.freeVariables)),
-          ImmutableSet.copyOf(Sets.union(scalarVariables, other.scalarVariables)),
-          ImmutableSet.copyOf(Sets.union(arrayVariables, other.arrayVariables)),
-          hasInputArrays || other.hasInputArrays,
-          isOutputArray || other.isOutputArray
-      );
     }
 
     /**

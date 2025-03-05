@@ -27,7 +27,7 @@ import org.apache.druid.math.expr.ExpressionType;
 
 import javax.annotation.Nullable;
 
-public final class ExprEvalObjectVector extends ExprEvalVector<Object[]>
+public final class ExprEvalObjectVector extends BaseExprEvalVector<Object[]>
 {
   @Nullable
   private long[] longs;

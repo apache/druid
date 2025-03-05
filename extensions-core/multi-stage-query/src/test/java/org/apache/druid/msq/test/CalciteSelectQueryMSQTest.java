@@ -181,19 +181,4 @@ public class CalciteSelectQueryMSQTest extends CalciteQueryTest
         )
         .run();
   }
-
-  @Override
-  @Test
-  public void testFilterParseLongNullable()
-  {
-    // this isn't really correct in default value mode, the result should be ImmutableList.of(new Object[]{0L})
-    // but MSQ is missing default aggregator values in empty group results. this override can be removed when this
-    // is fixed
-    testBuilder().queryContext(QUERY_CONTEXT_DEFAULT)
-                 .sql("select count(*) from druid.foo where parse_long(dim1, 10) is null")
-                 .expectedResults(
-                     ImmutableList.of(new Object[]{4L})
-                 )
-                 .run();
-  }
 }

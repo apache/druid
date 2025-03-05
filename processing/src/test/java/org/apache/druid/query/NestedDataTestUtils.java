@@ -106,16 +106,16 @@ public class NestedDataTestUtils
                     )
                     .build();
 
-  public static final DimensionsSpec TSV_V4_SCHEMA =
+  public static final DimensionsSpec TSV_NESTED_SCHEMA =
       DimensionsSpec.builder()
                     .setDimensions(
                         Arrays.asList(
-                            new NestedDataColumnSchema("dim", 4),
-                            new NestedDataColumnSchema("nest_json", 4),
-                            new NestedDataColumnSchema("nester_json", 4),
-                            new NestedDataColumnSchema("variant_json", 4),
-                            new NestedDataColumnSchema("list_json", 4),
-                            new NestedDataColumnSchema("nonexistent", 4)
+                            new NestedDataColumnSchema("dim", 5),
+                            new NestedDataColumnSchema("nest_json", 5),
+                            new NestedDataColumnSchema("nester_json", 5),
+                            new NestedDataColumnSchema("variant_json", 5),
+                            new NestedDataColumnSchema("list_json", 5),
+                            new NestedDataColumnSchema("nonexistent", 5)
                         )
                     )
                     .build();
@@ -176,7 +176,7 @@ public class NestedDataTestUtils
     );
   }
 
-  public static List<Segment> createSimpleSegmentsTsvV4(
+  public static List<Segment> createSimpleSegmentsTsvNested(
       TemporaryFolder tempFolder,
       Closer closer
   )
@@ -186,7 +186,7 @@ public class NestedDataTestUtils
         tempFolder,
         closer,
         Granularities.NONE,
-        TSV_V4_SCHEMA,
+        TSV_NESTED_SCHEMA,
         true
     );
   }

@@ -53,6 +53,7 @@ import org.skife.jdbi.v2.PreparedBatch;
 import org.skife.jdbi.v2.ResultIterator;
 import org.skife.jdbi.v2.util.StringMapper;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -562,6 +563,32 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
       ObjectMapper jsonMapper
   )
   {
+    final Set<DataSegmentPlus> usedSegments = new HashSet<>();
+    for (DataSegment segment : dataSegments) {
+      final DateTime now = DateTimes.nowUtc();
+      usedSegments.add(
+          new DataSegmentPlus(
+              segment,
+              now,
+              now,
+              true,
+              null,
+              null,
+              upgradedFromSegmentIdMap.get(segment.getId().toString())
+          )
+      );
+    }
+
+    insertSegments(usedSegments, connector, table, jsonMapper);
+  }
+
+  public static void insertSegments(
+      Set<DataSegmentPlus> dataSegments,
+      SQLMetadataConnector connector,
+      String table,
+      ObjectMapper jsonMapper
+  )
+  {
     connector.retryWithHandle(
         handle -> {
           PreparedBatch preparedBatch = handle.prepareBatch(
@@ -574,20 +601,21 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
                   connector.getQuoteString()
               )
           );
-          for (DataSegment segment : dataSegments) {
+          for (DataSegmentPlus segmentPlus : dataSegments) {
+            final DataSegment segment = segmentPlus.getDataSegment();
             String id = segment.getId().toString();
             preparedBatch.add()
                          .bind("id", id)
                          .bind("dataSource", segment.getDataSource())
-                         .bind("created_date", DateTimes.nowUtc().toString())
+                         .bind("created_date", nullSafeString(segmentPlus.getCreatedDate()))
                          .bind("start", segment.getInterval().getStart().toString())
                          .bind("end", segment.getInterval().getEnd().toString())
                          .bind("partitioned", !(segment.getShardSpec() instanceof NoneShardSpec))
                          .bind("version", segment.getVersion())
-                         .bind("used", true)
+                         .bind("used", Boolean.TRUE.equals(segmentPlus.getUsed()))
                          .bind("payload", jsonMapper.writeValueAsBytes(segment))
-                         .bind("used_status_last_updated", DateTimes.nowUtc().toString())
-                         .bind("upgraded_from_segment_id", upgradedFromSegmentIdMap.get(segment.getId().toString()));
+                         .bind("used_status_last_updated", nullSafeString(segmentPlus.getUsedStatusLastUpdatedDate()))
+                         .bind("upgraded_from_segment_id", segmentPlus.getUpgradedFromSegmentId());
           }
 
           final int[] affectedRows = preparedBatch.execute();
@@ -598,5 +626,11 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
           return true;
         }
     );
+  }
+
+  @Nullable
+  private static String nullSafeString(DateTime date)
+  {
+    return date == null ? null : date.toString();
   }
 }

@@ -136,7 +136,7 @@ public class CompressedVSizeColumnarIntsSupplierTest extends CompressionStrategy
     final byte[] bytes = baos.toByteArray();
     Assert.assertEquals(theSupplier.getSerializedSize(), bytes.length);
 
-    supplier = CompressedVSizeColumnarIntsSupplier.fromByteBuffer(ByteBuffer.wrap(bytes), byteOrder);
+    supplier = CompressedVSizeColumnarIntsSupplier.fromByteBuffer(ByteBuffer.wrap(bytes), byteOrder, null);
     columnarInts = supplier.get();
   }
 

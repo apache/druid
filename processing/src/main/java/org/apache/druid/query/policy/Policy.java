@@ -39,6 +39,11 @@ public interface Policy
   /**
    * Apply this policy to a {@link CursorBuildSpec} to seamlessly enforce policies for cursor-based queries. The
    * application must encapsulate 100% of the requirements of this policy.
+   * <p>
+   * Any transforms done to the spec must be sure to update {@link CursorBuildSpec#getPhysicalColumns()} and
+   * {@link CursorBuildSpec#getVirtualColumns()} as needed to ensure the underlying
+   * {@link org.apache.druid.segment.CursorHolder} that is being restricted has accurate information about the set of
+   * required columns.
    */
   CursorBuildSpec visit(CursorBuildSpec spec);
 

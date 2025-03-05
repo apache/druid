@@ -25,7 +25,9 @@ sidebar_label: "Durable storage"
 
 You can use durable storage to improve querying from deep storage and SQL-based ingestion.
 
-> Note that S3, Azure and Google are all supported as durable storage locations.
+:::info
+ S3, Google Storage, and Azure Blob Storage are supported as durable storage locations.
+:::
 
 Durable storage for queries from deep storage provides a location where you can write the results of deep storage queries to. Durable storage for SQL-based ingestion is used to temporarily house intermediate files, which can improve reliability.
 
@@ -35,21 +37,48 @@ If the configured limit is too low, Druid may throw the error, `NotEnoughTempora
 
 ## Enable durable storage
 
-To enable durable storage, you need to set the following common service properties:
+To enable durable storage, you need to set the following common service properties.
+
+For S3:
 
 ```
 druid.msq.intermediate.storage.enable=true
-druid.msq.intermediate.storage.tempDir=/path/to/your/temp/dir
+druid.msq.intermediate.storage.type=s3
 
-# Include these configs if you're using S3
-# druid.msq.intermediate.storage.type=s3
-# druid.msq.intermediate.storage.bucket=YOUR_BUCKET
-
-# Include these configs if you're using Azure Blob Storage
-# druid.msq.intermediate.storage.type=azure
-# druid.sq.intermediate.storage.container=YOUR_CONTAINER
-
+# Remote storage location
+druid.msq.intermediate.storage.bucket=YOUR_BUCKET
 druid.msq.intermediate.storage.prefix=YOUR_PREFIX
+
+# Local temporary directory (on each Druid server)
+druid.msq.intermediate.storage.tempDir=/path/to/your/temp/dir
+```
+
+For Google Storage:
+
+```
+druid.msq.intermediate.storage.enable=true
+druid.msq.intermediate.storage.type=google
+
+# Remote storage location
+druid.msq.intermediate.storage.bucket=YOUR_BUCKET
+druid.msq.intermediate.storage.prefix=YOUR_PREFIX
+
+# Local temporary directory (on each Druid server)
+druid.msq.intermediate.storage.tempDir=/path/to/your/temp/dir
+```
+
+For Azure Blob Storage:
+
+```
+druid.msq.intermediate.storage.enable=true
+druid.msq.intermediate.storage.type=azure
+
+# Remote storage location
+druid.msq.intermediate.storage.container=YOUR_CONTAINER
+druid.msq.intermediate.storage.prefix=YOUR_PREFIX
+
+# Local temporary directory (on each Druid server)
+druid.msq.intermediate.storage.tempDir=/path/to/your/temp/dir
 ```
 
 For detailed information about these and additional settings related to durable storage, see [Durable storage configurations](../multi-stage-query/reference.md#durable-storage-configurations).

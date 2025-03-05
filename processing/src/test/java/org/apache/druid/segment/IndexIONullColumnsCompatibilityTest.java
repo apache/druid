@@ -237,8 +237,7 @@ public class IndexIONullColumnsCompatibilityTest extends InitializedNullHandling
           dims,
           segmentBitmapSerdeFactory.getBitmapFactory(),
           columns,
-          smooshedFiles,
-          lazy
+          smooshedFiles
       )
       {
         @Override

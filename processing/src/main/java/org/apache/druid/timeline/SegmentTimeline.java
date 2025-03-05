@@ -60,6 +60,16 @@ public class SegmentTimeline extends VersionedIntervalTimeline<String, DataSegme
     );
   }
 
+  public void add(DataSegment segment)
+  {
+    add(segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(segment));
+  }
+
+  public void remove(DataSegment segment)
+  {
+    remove(segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(segment));
+  }
+
   public boolean isOvershadowed(DataSegment segment)
   {
     return isOvershadowed(segment.getInterval(), segment.getVersion(), segment);

@@ -116,6 +116,52 @@ public class SQLMetadataRuleManagerTest
   }
 
   @Test
+  public void testAuditEntryNotCreatedWhenRetentionRulesUnchanged()
+  {
+    List<Rule> rules = Collections.singletonList(
+        new IntervalLoadRule(
+            Intervals.of("2015-01-01/2015-02-01"),
+            ImmutableMap.of(DruidServer.DEFAULT_TIER, DruidServer.DEFAULT_NUM_REPLICANTS),
+            null
+        )
+    );
+    ruleManager.overrideRule(TestDataSource.WIKI, rules, createAuditInfo("override rule"));
+    ruleManager.overrideRule(TestDataSource.WIKI, rules, createAuditInfo("override rule"));
+    ruleManager.overrideRule(TestDataSource.WIKI, rules, createAuditInfo("override rule"));
+    Assert.assertEquals(1, auditManager.fetchAuditHistory(TestDataSource.WIKI, "rules", 3).size());
+  }
+
+  @Test
+  public void testAuditEntryCreatedWhenRetentionRulesChanged()
+  {
+    List<Rule> rules = Collections.singletonList(
+        new IntervalLoadRule(
+            Intervals.of("2015-01-01/2015-02-01"),
+            ImmutableMap.of(DruidServer.DEFAULT_TIER, DruidServer.DEFAULT_NUM_REPLICANTS),
+            null
+        )
+    );
+    ruleManager.overrideRule(TestDataSource.WIKI, rules, createAuditInfo("override rule"));
+    rules = Collections.singletonList(
+        new IntervalLoadRule(
+            Intervals.of("2015-01-01/2015-02-02"),
+            ImmutableMap.of(DruidServer.DEFAULT_TIER, DruidServer.DEFAULT_NUM_REPLICANTS),
+            null
+        )
+    );
+    ruleManager.overrideRule(TestDataSource.WIKI, rules, createAuditInfo("override rule"));
+    rules = Collections.singletonList(
+        new IntervalLoadRule(
+            Intervals.of("2015-01-01/2015-02-03"),
+            ImmutableMap.of(DruidServer.DEFAULT_TIER, DruidServer.DEFAULT_NUM_REPLICANTS),
+            null
+        )
+    );
+    ruleManager.overrideRule(TestDataSource.WIKI, rules, createAuditInfo("override rule"));
+    Assert.assertEquals(3, auditManager.fetchAuditHistory(TestDataSource.WIKI, "rules", 3).size());
+  }
+
+  @Test
   public void testOverrideRuleWithNull()
   {
     // Datasource level rules cannot be null

@@ -145,7 +145,8 @@ public class FloatNumericColumnPartSerdeV2 implements ColumnPartSerde
       int initialPos = buffer.position();
       final CompressedColumnarFloatsSupplier column = CompressedColumnarFloatsSupplier.fromByteBuffer(
           buffer,
-          byteOrder
+          byteOrder,
+          builder.getFileMapper()
       );
       buffer.position(initialPos + offset);
       final ImmutableBitmap bitmap;

@@ -886,6 +886,26 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     return makeDatasource(getConfig(), getValidationQuery());
   }
 
+  public final <T> T retryReadOnlyTransaction(
+      final TransactionCallback<T> callback,
+      int quietTries,
+      int maxTries
+  )
+  {
+    try {
+      return RetryUtils.retry(
+          () -> getDBI().inTransaction(TransactionIsolationLevel.READ_COMMITTED, callback),
+          shouldRetry,
+          quietTries,
+          maxTries
+      );
+    }
+    catch (Exception e) {
+      Throwables.throwIfUnchecked(e);
+      throw new RuntimeException(e);
+    }
+  }
+
   public final <T> T inReadOnlyTransaction(
       final TransactionCallback<T> callback
   )

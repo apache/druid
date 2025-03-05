@@ -43,12 +43,12 @@ An example Scan query object is shown below:
    "queryType": "scan",
    "dataSource": "wikipedia",
    "resultFormat": "list",
-   "columns":[],
+   "columns":[ "__time", "isRobot", "page","added", "isAnonymous", "user", "deleted" ],
    "intervals": [
-     "2013-01-01/2013-01-02"
+     "2016-01-01/2017-01-02"
    ],
    "batchSize":20480,
-   "limit":3
+   "limit":2
  }
 ```
 
@@ -73,86 +73,83 @@ The following are the main parameters for Scan queries:
 The format of the result when resultFormat equals `list`:
 
 ```json
- [{
-    "segmentId" : "wikipedia_editstream_2012-12-29T00:00:00.000Z_2013-01-10T08:00:00.000Z_2013-01-10T08:13:47.830Z_v9",
-    "columns" : [
-      "timestamp",
-      "robot",
-      "namespace",
-      "anonymous",
-      "unpatrolled",
-      "page",
-      "language",
-      "newpage",
-      "user",
-      "count",
-      "added",
-      "delta",
-      "variation",
-      "deleted"
-    ],
-    "events" : [ {
-        "timestamp" : "2013-01-01T00:00:00.000Z",
-        "robot" : "1",
-        "namespace" : "article",
-        "anonymous" : "0",
-        "unpatrolled" : "0",
-        "page" : "11._korpus_(NOVJ)",
-        "language" : "sl",
-        "newpage" : "0",
-        "user" : "EmausBot",
-        "count" : 1.0,
-        "added" : 39.0,
-        "delta" : 39.0,
-        "variation" : 39.0,
-        "deleted" : 0.0
-    }, {
-        "timestamp" : "2013-01-01T00:00:00.000Z",
-        "robot" : "0",
-        "namespace" : "article",
-        "anonymous" : "0",
-        "unpatrolled" : "0",
-        "page" : "112_U.S._580",
-        "language" : "en",
-        "newpage" : "1",
-        "user" : "MZMcBride",
-        "count" : 1.0,
-        "added" : 70.0,
-        "delta" : 70.0,
-        "variation" : 70.0,
-        "deleted" : 0.0
-    }, {
-        "timestamp" : "2013-01-01T00:00:00.000Z",
-        "robot" : "0",
-        "namespace" : "article",
-        "anonymous" : "0",
-        "unpatrolled" : "0",
-        "page" : "113_U.S._243",
-        "language" : "en",
-        "newpage" : "1",
-        "user" : "MZMcBride",
-        "count" : 1.0,
-        "added" : 77.0,
-        "delta" : 77.0,
-        "variation" : 77.0,
-        "deleted" : 0.0
-    } ]
+ [ {
+  "segmentId" : "wikipedia_2016-06-27T00:00:00.000Z_2016-06-28T00:00:00.000Z_2024-12-17T13:08:03.142Z",
+  "columns" : [ "__time", "isRobot", "page","added", "isAnonymous", "user", "deleted" ],
+  "events" : [ {
+    "__time" : 1466985611080,
+    "isRobot" : "true",
+    "page" : "Salo Toraut",
+    "added" : 31,
+    "isAnonymous" : "false",
+    "user" : "Lsjbot",
+    "deleted" : 0
+  }, {
+    "__time" : 1466985634959,
+    "isRobot" : "false",
+    "page" : "Bailando 2015",
+    "added" : 2,
+    "isAnonymous" : "true",
+    "user" : "181.230.118.178",
+    "deleted" : 0
+  } ],
+  "rowSignature" : [ {
+    "name" : "__time",
+    "type" : "LONG"
+  }, {
+    "name" : "isRobot",
+    "type" : "STRING"
+  }, {
+    "name" : "page",
+    "type" : "STRING"
+  }, {
+    "name" : "added",
+    "type" : "LONG"
+  }, {
+    "name" : "isAnonymous",
+    "type" : "STRING"
+  }, {
+    "name" : "user",
+    "type" : "STRING"
+  }, {
+    "name" : "deleted",
+    "type" : "LONG"
+  } ]
 } ]
 ```
 
 The format of the result when resultFormat equals `compactedList`:
 
 ```json
- [{
-    "segmentId" : "wikipedia_editstream_2012-12-29T00:00:00.000Z_2013-01-10T08:00:00.000Z_2013-01-10T08:13:47.830Z_v9",
-    "columns" : [
-      "timestamp", "robot", "namespace", "anonymous", "unpatrolled", "page", "language", "newpage", "user", "count", "added", "delta", "variation", "deleted"
-    ],
-    "events" : [
-     ["2013-01-01T00:00:00.000Z", "1", "article", "0", "0", "11._korpus_(NOVJ)", "sl", "0", "EmausBot", 1.0, 39.0, 39.0, 39.0, 0.0],
-     ["2013-01-01T00:00:00.000Z", "0", "article", "0", "0", "112_U.S._580", "en", "1", "MZMcBride", 1.0, 70.0, 70.0, 70.0, 0.0],
-     ["2013-01-01T00:00:00.000Z", "0", "article", "0", "0", "113_U.S._243", "en", "1", "MZMcBride", 1.0, 77.0, 77.0, 77.0, 0.0]
-    ]
+ [ {
+  "segmentId" : "wikipedia_2016-06-27T00:00:00.000Z_2016-06-28T00:00:00.000Z_2024-12-17T13:08:03.142Z",
+  "columns" : [ "__time", "isRobot", "isUnpatrolled", "page","added", "isNew", "delta", "isAnonymous", "user", "deleted", "namespace" ],
+  "events" : [
+    [ 1466985611080, "true", "Salo Toraut", 31, "false", "Lsjbot", 0 ],
+    [ 1466985634959, "false", "Bailando 2015", 2, "true", "181.230.118.178", 0]
+  ],
+  "rowSignature" : [ {
+    "name" : "__time",
+    "type" : "LONG"
+  }, {
+    "name" : "isRobot",
+    "type" : "STRING"
+  }, {
+    "name" : "page",
+    "type" : "STRING"
+  }, {
+    "name" : "added",
+    "type" : "LONG"
+  }, {
+    "name" : "isAnonymous",
+    "type" : "STRING"
+  }, {
+    "name" : "user",
+    "type" : "STRING"
+  }, {
+    "name" : "deleted",
+    "type" : "LONG"
+  } ]
 } ]
 ```
 

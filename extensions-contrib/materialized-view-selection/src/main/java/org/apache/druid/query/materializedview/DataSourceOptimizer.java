@@ -84,7 +84,7 @@ public class DataSourceOptimizer
       return Collections.singletonList(query);
     }
     String datasourceName = ((TableDataSource) query.getDataSource()).getName();
-    // get all derivatives for datasource in query. The derivatives set is sorted by average size of 
+    // get all derivatives for datasource in query. The derivatives set is sorted by average size of
     // per segment granularity.
     Set<DerivativeDataSource> derivatives = DerivativeDataSourceManager.getDerivatives(datasourceName);
 
@@ -118,13 +118,13 @@ public class DataSourceOptimizer
       }
 
       List<Query> queries = new ArrayList<>();
-      List<Interval> remainingQueryIntervals = (List<Interval>) query.getIntervals();
+      List<Interval> remainingQueryIntervals = query.getIntervals();
 
       for (DerivativeDataSource derivativeDataSource : ImmutableSortedSet.copyOf(derivativesWithRequiredFields)) {
         TableDataSource tableDataSource = new TableDataSource(derivativeDataSource.getName());
         final List<Interval> derivativeIntervals = remainingQueryIntervals.stream()
             .flatMap(interval -> serverView
-                .getTimeline(tableDataSource.getAnalysis())
+                .getTimeline(tableDataSource)
                 .orElseThrow(() -> new ISE("No timeline for dataSource: %s", derivativeDataSource.getName()))
                 .lookup(interval)
                 .stream()
@@ -132,7 +132,7 @@ public class DataSourceOptimizer
             )
             .collect(Collectors.toList());
         // if the derivative does not contain any parts of intervals in the query, the derivative will
-        // not be selected. 
+        // not be selected.
         if (derivativeIntervals.isEmpty()) {
           continue;
         }
@@ -154,7 +154,7 @@ public class DataSourceOptimizer
       }
 
       //after materialized view selection, the result of the remaining query interval will be computed based on
-      // the original datasource. 
+      // the original datasource.
       if (!remainingQueryIntervals.isEmpty()) {
         queries.add(query.withQuerySegmentSpec(new MultipleIntervalSegmentSpec(remainingQueryIntervals)));
       }

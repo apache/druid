@@ -45,11 +45,11 @@ public class DefaultColumnFormatsConfigTest
   @Test
   public void testDefaultsSerdeOverride() throws JsonProcessingException
   {
-    DefaultColumnFormatConfig defaultColumnFormatConfig = new DefaultColumnFormatConfig(4, "ARRAY");
+    DefaultColumnFormatConfig defaultColumnFormatConfig = new DefaultColumnFormatConfig(5, "ARRAY");
     String there = MAPPER.writeValueAsString(defaultColumnFormatConfig);
     DefaultColumnFormatConfig andBack = MAPPER.readValue(there, DefaultColumnFormatConfig.class);
     Assert.assertEquals(defaultColumnFormatConfig, andBack);
-    Assert.assertEquals(4, (int) andBack.getNestedColumnFormatVersion());
+    Assert.assertEquals(5, (int) andBack.getNestedColumnFormatVersion());
     Assert.assertEquals(DimensionSchema.MultiValueHandling.ARRAY.toString(), andBack.getStringMultiValueHandlingMode());
   }
 

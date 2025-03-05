@@ -113,16 +113,9 @@ public class RestrictedDataSourceTest
   }
 
   @Test
-  public void test_withAnalysis()
-  {
-    Assert.assertEquals(restrictedFooDataSource.getAnalysis(), fooDataSource.getAnalysis());
-    Assert.assertEquals(restrictedBarDataSource.getAnalysis(), barDataSource.getAnalysis());
-  }
-
-  @Test
   public void test_equals()
   {
-    EqualsVerifier.forClass(RestrictedDataSource.class).usingGetClass().withNonnullFields("base").verify();
+    EqualsVerifier.forClass(RestrictedDataSource.class).usingGetClass().withNonnullFields("base", "policy").verify();
   }
 
   @Test

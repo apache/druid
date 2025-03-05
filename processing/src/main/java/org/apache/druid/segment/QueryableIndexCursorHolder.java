@@ -178,6 +178,7 @@ public class QueryableIndexCursorHolder implements CursorHolder
 
     final long timeStart = Math.max(interval.getStartMillis(), minDataTimestamp);
     final long timeEnd = interval.getEndMillis();
+    final Offset offset;
 
     if (timeOrder == Order.ASCENDING) {
       for (; baseOffset.withinBounds(); baseOffset.increment()) {
@@ -185,17 +186,6 @@ public class QueryableIndexCursorHolder implements CursorHolder
           break;
         }
       }
-    } else if (timeOrder == Order.DESCENDING) {
-      for (; baseOffset.withinBounds(); baseOffset.increment()) {
-        if (resources.getTimestampsColumn().getLongSingleValueRow(baseOffset.getOffset()) < timeEnd) {
-          break;
-        }
-      }
-    }
-
-    final Offset offset;
-
-    if (timeOrder == Order.ASCENDING) {
       offset = new AscendingTimestampCheckingOffset(
           baseOffset,
           resources.getTimestampsColumn(),
@@ -203,6 +193,11 @@ public class QueryableIndexCursorHolder implements CursorHolder
           maxDataTimestamp < timeEnd
       );
     } else if (timeOrder == Order.DESCENDING) {
+      for (; baseOffset.withinBounds(); baseOffset.increment()) {
+        if (resources.getTimestampsColumn().getLongSingleValueRow(baseOffset.getOffset()) < timeEnd) {
+          break;
+        }
+      }
       offset = new DescendingTimestampCheckingOffset(
           baseOffset,
           resources.getTimestampsColumn(),

@@ -21,6 +21,7 @@ package org.apache.druid.msq.indexing;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.msq.indexing.MSQWorkerTaskLauncher.MSQWorkerTaskLauncherConfig;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.junit.Assert;
 import org.junit.Before;
@@ -43,7 +44,8 @@ public class MSQWorkerTaskLauncherTest
         Mockito.mock(OverlordClient.class),
         (task, fault) -> {},
         ImmutableMap.of(),
-        TimeUnit.SECONDS.toMillis(5)
+        TimeUnit.SECONDS.toMillis(5),
+        new MSQWorkerTaskLauncherConfig()
     );
   }
 

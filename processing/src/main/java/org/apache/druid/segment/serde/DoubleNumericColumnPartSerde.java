@@ -99,7 +99,8 @@ public class DoubleNumericColumnPartSerde implements ColumnPartSerde
     return (buffer, builder, columnConfig, parent) -> {
       final Supplier<ColumnarDoubles> column = CompressedColumnarDoublesSuppliers.fromByteBuffer(
           buffer,
-          byteOrder
+          byteOrder,
+          builder.getFileMapper()
       );
       DoubleNumericColumnSupplier columnSupplier = new DoubleNumericColumnSupplier(
           column,

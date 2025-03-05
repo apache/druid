@@ -163,7 +163,8 @@ public class VariantColumnAndIndexSupplier implements Supplier<NestedCommonForma
         );
         final CompressedVSizeColumnarIntsSupplier ints = CompressedVSizeColumnarIntsSupplier.fromByteBuffer(
             encodedValueColumn,
-            byteOrder
+            byteOrder,
+            fileMapper
         );
         final ByteBuffer valueIndexBuffer = NestedCommonFormatColumnPartSerde.loadInternalFile(
             fileMapper,

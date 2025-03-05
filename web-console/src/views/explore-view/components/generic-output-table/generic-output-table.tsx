@@ -19,6 +19,7 @@
 import { Button, Icon, Intent, Menu, MenuItem, Popover } from '@blueprintjs/core';
 import type { IconName } from '@blueprintjs/icons';
 import { IconNames } from '@blueprintjs/icons';
+import type { Timezone } from 'chronoshift';
 import classNames from 'classnames';
 import type { Column, QueryResult } from 'druid-query-toolkit';
 import { SqlColumn, SqlExpression, SqlLiteral, trimString } from 'druid-query-toolkit';
@@ -99,6 +100,7 @@ export function calculateInitPageSize(height: number): number {
 
 export interface GenericOutputTableProps {
   queryResult: QueryResult;
+  timezone: Timezone;
   onWhereChange?(where: SqlExpression): void;
   onHavingChange?(having: SqlExpression): void;
   onOrderByChange?(columnName: string, desc: boolean): void;
@@ -113,6 +115,7 @@ export const GenericOutputTable = React.memo(function GenericOutputTable(
 ) {
   const {
     queryResult,
+    timezone,
     onWhereChange,
     onHavingChange,
     onOrderByChange,
@@ -462,7 +465,7 @@ export const GenericOutputTable = React.memo(function GenericOutputTable(
                             padFractionalPart
                           />
                         ) : (
-                          <TableCell value={value} unlimited />
+                          <TableCell value={value} timezone={timezone} unlimited />
                         )}
                       </Popover>
                     </div>
