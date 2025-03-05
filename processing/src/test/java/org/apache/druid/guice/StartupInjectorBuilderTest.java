@@ -20,7 +20,6 @@
 package org.apache.druid.guice;
 
 import com.google.inject.Injector;
-import org.apache.druid.common.config.NullValueHandlingConfig;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExpressionProcessingConfig;
@@ -145,7 +144,7 @@ public class StartupInjectorBuilderTest
   public void testValidator()
   {
     final Properties propsDefaultValueMode = new Properties();
-    propsDefaultValueMode.put(NullValueHandlingConfig.NULL_HANDLING_CONFIG_STRING, "true");
+    propsDefaultValueMode.put(StartupInjectorBuilder.NULL_HANDLING_CONFIG_STRING, "true");
 
     Throwable t = Assert.assertThrows(
         ISE.class,
@@ -162,7 +161,7 @@ public class StartupInjectorBuilderTest
     );
 
     final Properties propsNo3vl = new Properties();
-    propsNo3vl.put(NullValueHandlingConfig.THREE_VALUE_LOGIC_CONFIG_STRING, "false");
+    propsNo3vl.put(StartupInjectorBuilder.THREE_VALUE_LOGIC_CONFIG_STRING, "false");
     t = Assert.assertThrows(
         ISE.class,
         () -> new StartupInjectorBuilder().withExtensions()

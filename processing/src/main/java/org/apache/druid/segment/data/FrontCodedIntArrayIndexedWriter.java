@@ -20,12 +20,12 @@
 package org.apache.druid.segment.data;
 
 import com.google.common.primitives.Ints;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.io.Channels;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
+import org.apache.druid.segment.column.TypeStrategies;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 import org.apache.druid.segment.writeout.WriteOutBytes;
 
@@ -186,7 +186,7 @@ public class FrontCodedIntArrayIndexedWriter implements DictionaryWriter<int[]>
     // version 0
     scratch.put((byte) 0);
     scratch.put((byte) bucketSize);
-    scratch.put(hasNulls ? NullHandling.IS_NULL_BYTE : NullHandling.IS_NOT_NULL_BYTE);
+    scratch.put(hasNulls ? TypeStrategies.IS_NULL_BYTE : TypeStrategies.IS_NOT_NULL_BYTE);
     VByte.writeInt(scratch, numWritten);
     VByte.writeInt(scratch, Ints.checkedCast(headerOut.size() + valuesOut.size()));
     scratch.flip();
