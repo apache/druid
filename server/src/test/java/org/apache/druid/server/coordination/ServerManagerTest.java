@@ -101,9 +101,7 @@ import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -136,9 +134,6 @@ public class ServerManagerTest
       .add(TestSegmentUtils.makeSegment("test2", "1", Intervals.of("P1d/2011-04-02")))
       .build();
 
-  @Inject
-  private ServerManager serverManager;
-
   @Bind
   private QueryRunnerFactoryConglomerate conglomerate;
   @Bind
@@ -164,8 +159,8 @@ public class ServerManagerTest
   private MyQueryRunnerFactory factory;
   private ExecutorService serverManagerExec;
 
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @Inject
+  private ServerManager serverManager;
 
   @Before
   public void setUp()
