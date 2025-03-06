@@ -21,8 +21,7 @@ package org.apache.druid.guice;
 
 import com.google.inject.Injector;
 import org.apache.druid.common.config.NullValueHandlingConfig;
-import org.apache.druid.error.DruidException;
-import org.apache.druid.error.DruidExceptionMatcher;
+import org.apache.druid.error.ExceptionMatcher;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExpressionProcessingConfig;
@@ -251,8 +250,8 @@ public class StartupInjectorBuilderTest
 
     final StartupInjectorBuilder builder = new StartupInjectorBuilder().withExtensions().withProperties(props);
     MatcherAssert.assertThat(
-        Assert.assertThrows(DruidException.class, builder::build),
-        DruidExceptionMatcher.invalidInput().expectMessageIs(expectedMessage)
+        Assert.assertThrows(ISE.class, builder::build),
+        ExceptionMatcher.of(ISE.class).expectMessageIs(expectedMessage)
     );
   }
 }
