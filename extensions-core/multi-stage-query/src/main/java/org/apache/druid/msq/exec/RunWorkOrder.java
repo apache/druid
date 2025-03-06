@@ -370,13 +370,7 @@ public class RunWorkOrder
 
     final OutputChannelFactory baseOutputChannelFactory;
 
-    if (workOrder.getStageDefinition().doesShuffle()) {
-      // Writing to a consumer in the same JVM (which will be set up later on in this method).
-      baseOutputChannelFactory = new BlockingQueueOutputChannelFactory(frameContext.memoryParameters().getFrameSize());
-    } else {
-      // Writing stage output.
-      baseOutputChannelFactory = makeStageOutputChannelFactory();
-    }
+    baseOutputChannelFactory = makeStageOutputChannelFactory();
 
     workOutputChannelFactory = new CountingOutputChannelFactory(
         baseOutputChannelFactory,
@@ -617,6 +611,11 @@ public class RunWorkOrder
 
   private OutputChannelFactory makeStageOutputChannelFactory()
   {
+    if (workOrder.getStageDefinition().doesShuffle()) {
+      // Writing to a consumer in the same JVM (which will be set up later on in this method).
+      return new BlockingQueueOutputChannelFactory(frameContext.memoryParameters().getFrameSize());
+    }
+
     // Use the standard frame size, since we assume this size when computing how much is needed to merge output
     // files from different workers.
     final int frameSize = frameContext.memoryParameters().getFrameSize();
