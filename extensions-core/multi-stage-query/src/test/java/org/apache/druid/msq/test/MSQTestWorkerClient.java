@@ -57,7 +57,6 @@ public class MSQTestWorkerClient implements WorkerClient
 
   protected Worker getWorkerFor(String workerTaskId)
   {
-
     return inMemoryWorkers.computeIfAbsent(workerTaskId, this::newWorker);
   }
 
@@ -157,6 +156,7 @@ public class MSQTestWorkerClient implements WorkerClient
   {
     if (closed.compareAndSet(false, true)) {
       inMemoryWorkers.forEach((k, v) -> v.stop());
+      inMemoryWorkers.clear();
     }
   }
 }

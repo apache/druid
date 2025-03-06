@@ -58,6 +58,10 @@ public class SimpleDartTest extends BaseCalciteQueryTest
         .expectedResults(
             ImmutableList.of(
                 new Object[] {2},
+                new Object[] {2},
+                new Object[] {2},
+                new Object[] {2},
+                new Object[] {2},
                 new Object[] {2}
             )
         )
@@ -68,11 +72,15 @@ public class SimpleDartTest extends BaseCalciteQueryTest
   public void testSelectFromFoo11()
   {
     testBuilder()
-        .sql("SELECT dim1 from foo ")
+        .sql("SELECT dim1 from foo")
         .expectedResults(
             ImmutableList.of(
-                new Object[] {2},
-                new Object[] {2}
+                new Object[]{""},
+                new Object[]{"10.1"},
+                new Object[]{"2"},
+                new Object[]{"1"},
+                new Object[]{"def"},
+                new Object[]{"abc"}
             )
         )
         .run();
@@ -87,8 +95,10 @@ public class SimpleDartTest extends BaseCalciteQueryTest
         .sql(sql)
         .expectedResults(
             ImmutableList.of(
-                new Object[] {2},
-                new Object[] {2}
+                new Object[]{"", 1L},
+                new Object[]{"1", 1L},
+                new Object[]{"10.1", 1L},
+                new Object[]{"2", 1L}
             )
         )
         .run();
