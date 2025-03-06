@@ -59,7 +59,7 @@ public class ServiceClientModule implements DruidModule
     // Nothing to do.
   }
 
-  @Provides
+//  @Provides
   @LazySingleton
   @EscalatedGlobal
   public ServiceClientFactory getServiceClientFactory(@EscalatedGlobal final HttpClient httpClient)

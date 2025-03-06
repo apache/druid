@@ -27,8 +27,10 @@ import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.msq.exec.TestMSQSqlModule;
 import org.apache.druid.msq.guice.MSQExternalDataSourceModule;
 import org.apache.druid.msq.guice.MSQIndexingModule;
+import org.apache.druid.msq.guice.MSQSqlModule;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
 import org.apache.druid.msq.test.CalciteMSQTestsHelper.MSQTestModule;
+import org.apache.druid.rpc.guice.ServiceClientModule;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.util.DruidModuleCollection;
@@ -56,6 +58,8 @@ public class AbstractMSQComponentSupplierDelegate extends QueryComponentSupplier
         new JoinableFactoryModule(),
         new MSQExternalDataSourceModule(),
         new MSQIndexingModule(),
+        new MSQSqlModule(),
+        new ServiceClientModule(),
         new TestMSQSqlModule()
     );
   }

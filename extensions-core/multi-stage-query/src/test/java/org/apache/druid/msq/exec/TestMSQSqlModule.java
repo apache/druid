@@ -38,7 +38,7 @@ import org.apache.druid.sql.avatica.MSQDruidMeta;
 
 public class TestMSQSqlModule extends TestDruidModule
 {
-  @Provides
+//  @Provides
   @MultiStageQuery
   @LazySingleton
   public SqlStatementFactory makeMSQSqlStatementFactory(
@@ -48,7 +48,7 @@ public class TestMSQSqlModule extends TestDruidModule
     return new SqlStatementFactory(toolbox.withEngine(sqlEngine));
   }
 
-  @Provides
+//  @Provides
   @LazySingleton
   public MSQTaskSqlEngine createEngine(
       ObjectMapper queryJsonMapper,
