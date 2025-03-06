@@ -47,3 +47,14 @@ Now Sumbit the Supervisor Config with [source input format](https://druid.apache
   .
 }
 ```
+
+## Supported Types
+### Metric Types:
+* SUM
+* GAUGE
+
+### Data Types:
+* INT_VALUE:
+* BOOL_VALUE:
+* DOUBLE_VALUE:
+* STRING_VALUE:

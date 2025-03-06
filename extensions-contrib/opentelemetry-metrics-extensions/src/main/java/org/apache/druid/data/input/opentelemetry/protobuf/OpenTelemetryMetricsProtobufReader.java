@@ -167,7 +167,6 @@ public class OpenTelemetryMetricsProtobufReader implements InputEntityReader
             });
         break;
       }
-      // TODO Support HISTOGRAM and SUMMARY metrics
       case HISTOGRAM:
       case SUMMARY:
       default:
@@ -223,9 +222,6 @@ public class OpenTelemetryMetricsProtobufReader implements InputEntityReader
         return value.getDoubleValue();
       case STRING_VALUE:
         return value.getStringValue();
-
-      // TODO: Support KVLIST_VALUE, ARRAY_VALUE and BYTES_VALUE
-
       default:
         // VALUE_NOT_SET
         return null;
