@@ -199,40 +199,40 @@ public class StartupInjectorBuilderTest
   }
 
   @Test
-  public void testOldBrokerProcessingConfigs_throwException()
+  public void verifyInjectorBuild_withDeletedConfig_throwsException()
   {
-    verifyOldConfigThrowsException(
+    verifyInjectorBuild_withDeletedConfig_throwsException(
         "druid.processing.merge.pool.parallelism",
         "10",
         "Config[druid.processing.merge.pool.parallelism] has been removed."
         + " Please use config[druid.processing.merge.parallelism] instead."
     );
-    verifyOldConfigThrowsException(
+    verifyInjectorBuild_withDeletedConfig_throwsException(
         "druid.processing.merge.pool.awaitShutdownMillis",
         "1000",
         "Config[druid.processing.merge.pool.awaitShutdownMillis] has been removed."
         + " Please use config[druid.processing.merge.awaitShutdownMillis] instead."
     );
-    verifyOldConfigThrowsException(
+    verifyInjectorBuild_withDeletedConfig_throwsException(
         "druid.processing.merge.pool.defaultMaxQueryParallelism",
         "100",
         "Config[druid.processing.merge.pool.defaultMaxQueryParallelism] has been removed."
         + " Please use config[druid.processing.merge.defaultMaxQueryParallelism] instead."
     );
 
-    verifyOldConfigThrowsException(
+    verifyInjectorBuild_withDeletedConfig_throwsException(
         "druid.processing.merge.task.targetRunTimeMillis",
         "10",
         "Config[druid.processing.merge.task.targetRunTimeMillis] has been removed."
         + " Please use config[druid.processing.merge.targetRunTimeMillis] instead."
     );
-    verifyOldConfigThrowsException(
+    verifyInjectorBuild_withDeletedConfig_throwsException(
         "druid.processing.merge.task.initialYieldNumRows",
         "1000",
         "Config[druid.processing.merge.task.initialYieldNumRows] has been removed."
         + " Please use config[druid.processing.merge.initialYieldNumRows] instead."
     );
-    verifyOldConfigThrowsException(
+    verifyInjectorBuild_withDeletedConfig_throwsException(
         "druid.processing.merge.task.smallBatchNumRows",
         "100",
         "Config[druid.processing.merge.task.smallBatchNumRows] has been removed."
@@ -240,7 +240,7 @@ public class StartupInjectorBuilderTest
     );
   }
 
-  private static void verifyOldConfigThrowsException(
+  private static void verifyInjectorBuild_withDeletedConfig_throwsException(
       String removedProperty,
       String dummyValue,
       String expectedMessage

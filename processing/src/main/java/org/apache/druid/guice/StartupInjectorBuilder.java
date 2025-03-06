@@ -24,7 +24,6 @@ import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.util.Providers;
 import org.apache.druid.common.config.NullValueHandlingConfig;
-import org.apache.druid.error.InvalidInput;
 import org.apache.druid.jackson.JacksonModule;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -172,40 +171,43 @@ public class StartupInjectorBuilder extends BaseInjectorBuilder<StartupInjectorB
 
     private void validateRemovedProcessingConfigs()
     {
-      checkOldConfigAndThrow(
+      checkDeletedConfigAndThrow(
           "druid.processing.merge.task.initialYieldNumRows",
           "druid.processing.merge.initialYieldNumRows"
       );
-      checkOldConfigAndThrow(
+      checkDeletedConfigAndThrow(
           "druid.processing.merge.task.targetRunTimeMillis",
           "druid.processing.merge.targetRunTimeMillis"
       );
-      checkOldConfigAndThrow(
+      checkDeletedConfigAndThrow(
           "druid.processing.merge.task.smallBatchNumRows",
           "druid.processing.merge.smallBatchNumRows"
       );
 
-      checkOldConfigAndThrow(
+      checkDeletedConfigAndThrow(
           "druid.processing.merge.pool.awaitShutdownMillis",
           "druid.processing.merge.awaitShutdownMillis"
       );
-      checkOldConfigAndThrow(
+      checkDeletedConfigAndThrow(
           "druid.processing.merge.pool.parallelism",
           "druid.processing.merge.parallelism"
       );
-      checkOldConfigAndThrow(
+      checkDeletedConfigAndThrow(
           "druid.processing.merge.pool.defaultMaxQueryParallelism",
           "druid.processing.merge.defaultMaxQueryParallelism"
       );
     }
 
-    private void checkOldConfigAndThrow(String oldPath, String newPath)
+    /**
+     * Checks if a deleted config is present in the properties and throws an ISE.
+     */
+    private void checkDeletedConfigAndThrow(String deletedConfigName, String replaceConfigName)
     {
-      if (properties.getProperty(oldPath) != null) {
-        throw InvalidInput.exception(
+      if (properties.getProperty(deletedConfigName) != null) {
+        throw new ISE(
             "Config[%s] has been removed. Please use config[%s] instead.",
-            oldPath,
-            newPath
+            deletedConfigName,
+            replaceConfigName
         );
       }
     }
