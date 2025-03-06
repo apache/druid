@@ -64,4 +64,34 @@ public class SimpleDartTest extends BaseCalciteQueryTest
         .run();
   }
 
+  @Test
+  public void testSelectFromFoo11()
+  {
+    testBuilder()
+        .sql("SELECT dim1 from foo ")
+        .expectedResults(
+            ImmutableList.of(
+                new Object[] {2},
+                new Object[] {2}
+            )
+        )
+        .run();
+  }
+  @Test
+  public void testSelectFromFoo1()
+  {
+    String sql = "SELECT dim1, COUNT(*) FROM druid.foo "
+        + "WHERE dim1 NOT IN ('ghi', 'abc', 'def') AND dim1 IS NOT NULL "
+        + "GROUP BY dim1";
+    testBuilder()
+        .sql(sql)
+        .expectedResults(
+            ImmutableList.of(
+                new Object[] {2},
+                new Object[] {2}
+            )
+        )
+        .run();
+  }
+
 }
