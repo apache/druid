@@ -44,7 +44,7 @@ public class FillCapacityWorkerSelectStrategy implements WorkerSelectStrategy
   )
   {
     this.affinityConfig = affinityConfig;
-    this.taskLimits = Configs.valueOrDefault(taskLimits, new TaskLimits());
+    this.taskLimits = Configs.valueOrDefault(taskLimits, TaskLimits.EMPTY);
   }
 
   @JsonProperty
@@ -93,18 +93,14 @@ public class FillCapacityWorkerSelectStrategy implements WorkerSelectStrategy
       return false;
     }
     final FillCapacityWorkerSelectStrategy that = (FillCapacityWorkerSelectStrategy) o;
-    if (!Objects.equals(affinityConfig, that.affinityConfig)) {
-      return false;
-    }
-    return Objects.equals(taskLimits, that.taskLimits);
+    return Objects.equals(affinityConfig, that.affinityConfig)
+           && Objects.equals(taskLimits, that.taskLimits);
   }
 
   @Override
   public int hashCode()
   {
-    int result = affinityConfig != null ? affinityConfig.hashCode() : 0;
-    result = 31 * result + (taskLimits != null ? taskLimits.hashCode() : 0);
-    return result;
+    return Objects.hash(affinityConfig, taskLimits);
   }
 
   @Override

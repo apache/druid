@@ -42,7 +42,7 @@ public class EqualDistributionWithCategorySpecWorkerSelectStrategy implements Wo
   )
   {
     this.workerCategorySpec = workerCategorySpec;
-    this.taskLimits = Configs.valueOrDefault(taskLimits, new TaskLimits());
+    this.taskLimits = Configs.valueOrDefault(taskLimits, TaskLimits.EMPTY);
   }
 
   @JsonProperty
@@ -85,16 +85,14 @@ public class EqualDistributionWithCategorySpecWorkerSelectStrategy implements Wo
       return false;
     }
     final EqualDistributionWithCategorySpecWorkerSelectStrategy that = (EqualDistributionWithCategorySpecWorkerSelectStrategy) o;
-    if (!Objects.equals(workerCategorySpec, that.workerCategorySpec)) {
-      return false;
-    }
-    return Objects.equals(taskLimits, that.taskLimits);
+    return Objects.equals(workerCategorySpec, that.workerCategorySpec)
+           && Objects.equals(taskLimits, that.taskLimits);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(workerCategorySpec);
+    return Objects.hash(workerCategorySpec, taskLimits);
   }
 
   @Override

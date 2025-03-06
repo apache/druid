@@ -484,11 +484,14 @@ public class PendingTaskBasedWorkerProvisioningStrategy extends AbstractWorkerPr
                                     : 0;
     int taskCapacity = task.getTaskResource().getRequiredCapacity();
 
+    final Map<String, Integer> typeSpecificCapacity = new HashMap<>(immutableWorker.getCurrCapacityUsedByTaskType());
+    typeSpecificCapacity.merge(task.getType(), taskCapacity, Integer::sum);
+
     return new ImmutableWorkerInfo(
         immutableWorker.getWorker(),
         immutableWorker.getCurrCapacityUsed() + 1,
         immutableWorker.getCurrParallelIndexCapacityUsed() + parallelIndexTaskCapacity,
-        immutableWorker.incrementTypeSpecificCapacity(task.getType(), taskCapacity),
+        typeSpecificCapacity,
         Sets.union(
             immutableWorker.getAvailabilityGroups(),
             Sets.newHashSet(

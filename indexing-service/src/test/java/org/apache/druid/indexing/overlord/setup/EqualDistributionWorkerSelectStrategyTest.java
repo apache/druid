@@ -190,7 +190,8 @@ public class EqualDistributionWorkerSelectStrategyTest
                 "bar", ImmutableSet.of("nonexistent-worker")
             ),
             false
-        ), null
+        ),
+        null
     );
 
     ImmutableWorkerInfo workerFoo = strategy.findWorkerForTask(
@@ -226,7 +227,8 @@ public class EqualDistributionWorkerSelectStrategyTest
                 "bar", ImmutableSet.of("nonexistent-worker")
             ),
             true
-        ), null
+        ),
+        null
     );
 
     ImmutableWorkerInfo workerFoo = strategy.findWorkerForTask(

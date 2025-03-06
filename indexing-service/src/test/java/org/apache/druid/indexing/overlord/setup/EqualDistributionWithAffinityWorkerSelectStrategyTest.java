@@ -35,6 +35,7 @@ import org.junit.Test;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 public class EqualDistributionWithAffinityWorkerSelectStrategyTest
 {
@@ -174,8 +175,8 @@ public class EqualDistributionWithAffinityWorkerSelectStrategyTest
             "localhost0",
             new ImmutableWorkerInfo(
                 new Worker("http", "localhost0", "localhost0", 2, "v1", WorkerConfig.DEFAULT_CATEGORY), 0,
-                new HashSet<>(),
-                new HashSet<>(),
+                Set.of(),
+                Set.of(),
                 DateTimes.nowUtc()
             ),
             "localhost1",
@@ -183,8 +184,8 @@ public class EqualDistributionWithAffinityWorkerSelectStrategyTest
                 new Worker("http", "localhost1", "localhost1", 2, "v1", WorkerConfig.DEFAULT_CATEGORY), 0,
                 0,
                 capacityUsed,
-                new HashSet<>(),
-                new HashSet<>(),
+                Set.of(),
+                Set.of(),
                 DateTimes.nowUtc()
             )
         ),
@@ -200,8 +201,8 @@ public class EqualDistributionWithAffinityWorkerSelectStrategyTest
                 new Worker("http", "localhost0", "localhost0", 2, "v1", WorkerConfig.DEFAULT_CATEGORY), 0,
                 0,
                 capacityUsed,
-                new HashSet<>(),
-                new HashSet<>(),
+                Set.of(),
+                Set.of(),
                 DateTimes.nowUtc()
             ),
             "localhost1",
@@ -209,8 +210,8 @@ public class EqualDistributionWithAffinityWorkerSelectStrategyTest
                 new Worker("http", "localhost1", "localhost1", 2, "v1", WorkerConfig.DEFAULT_CATEGORY), 0,
                 0,
                 capacityUsed,
-                new HashSet<>(),
-                new HashSet<>(),
+                Set.of(),
+                Set.of(),
                 DateTimes.nowUtc()
             )
         ),
@@ -241,8 +242,8 @@ public class EqualDistributionWithAffinityWorkerSelectStrategyTest
             "localhost0",
             new ImmutableWorkerInfo(
                 new Worker("http", "localhost0", "localhost0", 2, "v1", WorkerConfig.DEFAULT_CATEGORY), 0,
-                new HashSet<>(),
-                new HashSet<>(),
+                Set.of(),
+                Set.of(),
                 DateTimes.nowUtc()
             ),
             "localhost1",
@@ -250,8 +251,8 @@ public class EqualDistributionWithAffinityWorkerSelectStrategyTest
                 new Worker("http", "localhost1", "localhost1", 2, "v1", WorkerConfig.DEFAULT_CATEGORY), 0,
                 0,
                 capacityUsed,
-                new HashSet<>(),
-                new HashSet<>(),
+                Set.of(),
+                Set.of(),
                 DateTimes.nowUtc()
             )
         ),
@@ -267,8 +268,8 @@ public class EqualDistributionWithAffinityWorkerSelectStrategyTest
                 new Worker("http", "localhost0", "localhost0", 2, "v1", WorkerConfig.DEFAULT_CATEGORY), 0,
                 0,
                 capacityUsed,
-                new HashSet<>(),
-                new HashSet<>(),
+                Set.of(),
+                Set.of(),
                 DateTimes.nowUtc()
             ),
             "localhost1",
@@ -276,8 +277,8 @@ public class EqualDistributionWithAffinityWorkerSelectStrategyTest
                 new Worker("http", "localhost1", "localhost1", 2, "v1", WorkerConfig.DEFAULT_CATEGORY), 0,
                 0,
                 capacityUsed,
-                new HashSet<>(),
-                new HashSet<>(),
+                Set.of(),
+                Set.of(),
                 DateTimes.nowUtc()
             )
         ),

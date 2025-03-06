@@ -152,9 +152,10 @@ public class WorkerSelectUtils
       final TaskLimits taskLimits
   )
   {
-    if (!TaskLimiterUtils.canRunTask(task,
-                                     taskLimits,
-                                     getTotalCapacityUsedByType(allWorkers, task.getType()), getTotalCapacity(allWorkers)
+    if (!taskLimits.canRunTask(
+        task,
+        getTotalCapacityUsedByType(allWorkers, task.getType()),
+        getTotalCapacity(allWorkers)
     )) {
       return Collections.emptyMap();
     }

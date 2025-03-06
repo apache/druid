@@ -244,13 +244,6 @@ public class ImmutableWorkerInfo
     return workerParallelIndexCapacity;
   }
 
-  public Map<String, Integer> incrementTypeSpecificCapacity(String type, int capacityToAdd)
-  {
-    Map<String, Integer> result = new HashMap<>(currCapacityUsedByTaskType);
-    result.merge(type, capacityToAdd, Integer::sum);
-    return result;
-  }
-
   @Override
   public boolean equals(Object o)
   {
