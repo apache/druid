@@ -791,12 +791,16 @@ public class SqlTestFramework
             .annotatedWith(Merging.class)
             .to(TestBufferPool.class);
 
-      // FIXME
-      DruidNode self = new DruidNode("test", "test-host", true, 80, 443, false, true);
-      binder.bind(DruidNode.class).annotatedWith(Self.class).toInstance(self);
-
       TestRequestLogger testRequestLogger = new TestRequestLogger();
       binder.bind(RequestLogger.class).toInstance(testRequestLogger);
+    }
+
+    @Provides
+    @Self
+    @LazySingleton
+    public DruidNode makeSelfDruidNode()
+    {
+      return new DruidNode("test", "test-host", true, 80, 443, false, true);
     }
 
     @Provides

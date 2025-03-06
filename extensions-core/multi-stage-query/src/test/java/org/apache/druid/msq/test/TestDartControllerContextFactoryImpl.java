@@ -47,7 +47,6 @@ import org.apache.druid.server.DruidNode;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 
 public class TestDartControllerContextFactoryImpl extends DartControllerContextFactoryImpl
 {
@@ -63,8 +62,7 @@ public class TestDartControllerContextFactoryImpl extends DartControllerContextF
       final MemoryIntrospector memoryIntrospector,
       final TimelineServerView serverView,
       final ServiceEmitter emitter,
-      @Dart Map<String, Worker> workerMap
-      )
+      @Dart Map<String, Worker> workerMap)
   {
     super(injector, jsonMapper, smileMapper, selfNode, serviceClientFactory, memoryIntrospector, serverView, emitter);
     this.workerMap = workerMap;
@@ -75,37 +73,22 @@ public class TestDartControllerContextFactoryImpl extends DartControllerContextF
   {
     DartControllerContext ctx;
     DartTestWorkerClient wc;
-    ctx=new DartControllerContext(
+    ctx = new DartControllerContext(
         injector,
         jsonMapper,
         selfNode,
-        wc=(DartTestWorkerClient) makeWorkerClient(queryId),
+        wc = (DartTestWorkerClient) makeWorkerClient(queryId),
         memoryIntrospector,
         serverView,
         emitter
     );
-    wc.controllerCtx=ctx;
+    wc.controllerCtx = ctx;
     return ctx;
   }
 
   @Override
   protected DartWorkerClient makeWorkerClient(String queryId)
   {
-//    Controller controller = null;
-//    Worker worker = new WorkerImpl(
-//        null,
-//        new MSQTestWorkerContext(
-//            queryId,
-//            workerMap,
-//            controller,
-//            jsonMapper,
-//            injector,
-//            MSQTestBase.makeTestWorkerMemoryParameters(),
-//            WorkerStorageParameters.createInstanceForTests(Long.MAX_VALUE)
-//        )
-//    );
-
-//    injector.
     return new DartTestWorkerClient(
         queryId, serviceClientFactory, smileMapper, selfNode.getHostAndPortToUse(), workerMap
     );
@@ -120,8 +103,7 @@ public class TestDartControllerContextFactoryImpl extends DartControllerContextF
         String queryId,
         ServiceClientFactory clientFactory,
         ObjectMapper smileMapper,
-        String controllerHost, Map<String, Worker> workerMap
-      )
+        String controllerHost, Map<String, Worker> workerMap)
     {
       super(workerMap);
     }
@@ -129,8 +111,8 @@ public class TestDartControllerContextFactoryImpl extends DartControllerContextF
     @Override
     protected Worker newWorker(String workerId)
     {
-      String queryId=workerId;
-      Controller controller=controllerCtx.theController;
+      String queryId = workerId;
+      Controller controller = controllerCtx.theController;
       Worker worker = new WorkerImpl(
           null,
           new MSQTestWorkerContext(
@@ -144,7 +126,7 @@ public class TestDartControllerContextFactoryImpl extends DartControllerContextF
           )
       );
 
-      Future<?> future = EXECUTOR.submit(() -> {
+      EXECUTOR.submit(() -> {
         try {
           worker.run();
         }
@@ -159,172 +141,26 @@ public class TestDartControllerContextFactoryImpl extends DartControllerContextF
     @Override
     public ListenableFuture<Void> postWorkOrder(String workerTaskId, WorkOrder workOrder)
     {
-
       return super.postWorkOrder(workerTaskId, workOrder);
-
     }
+
     @Override
     public ListenableFuture<Void> postCleanupStage(String workerTaskId, StageId stageId)
     {
-//      if(true)
-//      {
-//        throw new RuntimeException("FIXME: Unimplemented!");
-//      }
       return super.postCleanupStage(workerTaskId, stageId);
 
     }
+
     @Override
     public void closeClient(String hostAndPort)
     {
-//      if(true)
-//      {
-//        throw new RuntimeException("FIXME: Unimplemented!");
-//      }
-
     }
 
     @Override
     public ListenableFuture<?> stopWorker(String workerId)
     {
-//      if(true)
-//      {
-//        throw new RuntimeException("FIXME: Unimplemented!");
-//      }
       return null;
 
     }
   }
-
-  // @Override
-  // protected ServiceClient getClient(String workerIdString)
-  // {
-  // return super.getClient(workerIdString);
-  // }
-  //
-  // @Override
-  // public void closeClient(String workerHost)
-  // {
-  // super.closeClient(workerHost);
-  // }
-  // @Override
-  // protected Object clone() throws CloneNotSupportedException
-  // {
-  // return super.clone();
-  // }
-  // @Override
-  // public ListenableFuture<?> stopWorker(String workerId)
-  // {
-  // return super.stopWorker(workerId);
-  // }
-  // @Override
-  // public ListenableFuture<Boolean> fetchChannelData(String workerId, StageId
-  // stageId, int partitionNumber,
-  // long offset, ReadableByteChunksFrameChannel channel)
-  // {
-  // return super.fetchChannelData(workerId, stageId, partitionNumber, offset,
-  // channel);
-  // }
-  //
-  // @Override
-  // public ListenableFuture<ClusterByStatisticsSnapshot>
-  // fetchClusterByStatisticsSnapshot(String workerId,
-  // StageId stageId, SketchEncoding sketchEncoding)
-  // {
-  // return super.fetchClusterByStatisticsSnapshot(workerId, stageId,
-  // sketchEncoding);
-  //
-  // }
-  // @Override
-  // public ListenableFuture<ClusterByStatisticsSnapshot>
-  // fetchClusterByStatisticsSnapshotForTimeChunk(String workerId,
-  // StageId stageId, long timeChunk, SketchEncoding sketchEncoding)
-  // {
-  // return super.fetchClusterByStatisticsSnapshotForTimeChunk(workerId,
-  // stageId, timeChunk, sketchEncoding);
-  //
-  // }
-  // @Override
-  // public ListenableFuture<CounterSnapshotsTree> getCounters(String workerId)
-  // {
-  // return super.getCounters(workerId);
-  //
-  // }
-  // @Override
-  // public ListenableFuture<Void> postCleanupStage(String workerId, StageId
-  // stageId)
-  // {
-  // return super.postCleanupStage(workerId, stageId);
-  //
-  // }
-  // @Override
-  // public ListenableFuture<Void> postFinish(String workerId)
-  // {
-  // return super.postFinish(workerId);
-  //
-  // }
-  //
-  // @Override
-  // public ListenableFuture<Void> postResultPartitionBoundaries(String
-  // workerId, StageId stageId,
-  // ClusterByPartitions partitionBoundaries)
-  // {
-  // return super.postResultPartitionBoundaries(workerId, stageId,
-  // partitionBoundaries);
-  //
-  // }
-  // @Override
-  // public ListenableFuture<Void> postWorkOrder(String workerId, WorkOrder
-  // workOrder)
-  // {
-  // return super.postWorkOrder(workerId, workOrder);
-  //
-  // }
-  //
-  // @Override
-  // protected Pair<ServiceClient, Closeable> makeNewClient(WorkerId workerId)
-  // {
-  // ServiceClient client =new TestDartServiceClient(workerId);
-  // Closeable c=null;
-  // Pair<ServiceClient, Closeable> p = Pair.of(client, c);
-  // return p;
-  // }
-  //
-  //
-  // }
-  //
-  // static class TestDartServiceClient implements ServiceClient {
-  //
-  //
-  // private MSQTestWorkerClient a;
-  //
-  // public TestDartServiceClient(WorkerId workerId)
-  // {
-  // a = new MSQTestWorkerClient(null);
-  // }
-  //
-  // @Override
-  // public <IntermediateType, FinalType> ListenableFuture<FinalType>
-  // asyncRequest(RequestBuilder requestBuilder,
-  // HttpResponseHandler<IntermediateType, FinalType> handler)
-  // {
-  // if(true)
-  // {
-  // throw new RuntimeException("FIXME: Unimplemented!");
-  // }
-  // return null;
-  //
-  // }
-  //
-  // @Override
-  // public ServiceClient withRetryPolicy(ServiceRetryPolicy retryPolicy)
-  // {
-  // if(true)
-  // {
-  // throw new RuntimeException("FIXME: Unimplemented!");
-  // }
-  // return null;
-  //
-  // }
-  //
-  // }
 }
