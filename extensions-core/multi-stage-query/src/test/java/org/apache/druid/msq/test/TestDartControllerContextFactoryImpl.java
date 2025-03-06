@@ -33,7 +33,6 @@ import org.apache.druid.msq.dart.Dart;
 import org.apache.druid.msq.dart.controller.DartControllerContext;
 import org.apache.druid.msq.dart.controller.DartControllerContextFactoryImpl;
 import org.apache.druid.msq.dart.worker.DartWorkerClient;
-import org.apache.druid.msq.dart.worker.DartWorkerClientImpl;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerContext;
 import org.apache.druid.msq.exec.MemoryIntrospector;
@@ -113,7 +112,7 @@ public class TestDartControllerContextFactoryImpl extends DartControllerContextF
     );
   }
 
-  public class DartTestWorkerClient extends DartWorkerClientImpl
+  public class DartTestWorkerClient extends MSQTestWorkerClient implements DartWorkerClient
   {
     private final ExecutorService EXECUTOR = Executors.newCachedThreadPool();
     public DartControllerContext controllerCtx;
@@ -125,7 +124,7 @@ public class TestDartControllerContextFactoryImpl extends DartControllerContextF
         String controllerHost, Map<String, Worker> workerMap
       )
     {
-      super(queryId, clientFactory, smileMapper, controllerHost);
+      super(workerMap);
     }
 
     @Override

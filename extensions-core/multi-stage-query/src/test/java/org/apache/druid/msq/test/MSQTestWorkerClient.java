@@ -21,6 +21,7 @@ package org.apache.druid.msq.test;
 
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.frame.channel.ReadableByteChunksFrameChannel;
 import org.apache.druid.frame.key.ClusterByPartitions;
 import org.apache.druid.java.util.common.ISE;
@@ -32,7 +33,6 @@ import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.rpc.SketchEncoding;
 import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
 
-import java.io.InputStream;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -134,22 +134,26 @@ public class MSQTestWorkerClient implements WorkerClient
       final ReadableByteChunksFrameChannel channel
   )
   {
-    try (InputStream inputStream =
-             getWorkerFor(workerTaskId).readStageOutput(stageId, partitionNumber, offset).get()) {
-      byte[] buffer = new byte[8 * 1024];
-      boolean didRead = false;
-      int bytesRead;
-      while ((bytesRead = inputStream.read(buffer)) != -1) {
-        channel.addChunk(Arrays.copyOf(buffer, bytesRead));
-        didRead = true;
-      }
-      inputStream.close();
+    return FutureUtils.transform(
+        getWorkerFor(workerTaskId).readStageOutput(stageId, partitionNumber, offset),
+        inputStream -> {
+          try {
+            byte[] buffer = new byte[8 * 1024];
+            boolean didRead = false;
+            int bytesRead;
+            while ((bytesRead = inputStream.read(buffer)) != -1) {
+              channel.addChunk(Arrays.copyOf(buffer, bytesRead));
+              didRead = true;
+            }
+            inputStream.close();
 
-      return Futures.immediateFuture(!didRead);
-    }
-    catch (Exception e) {
-      throw new ISE(e, "Error reading frame file channel");
-    }
+            return !didRead;
+          }
+          catch (Exception e) {
+            throw new ISE(e, "Error reading frame file channel");
+          }
+        }
+    );
   }
 
   @Override
