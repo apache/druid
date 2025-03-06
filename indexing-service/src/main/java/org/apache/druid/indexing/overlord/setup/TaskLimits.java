@@ -66,14 +66,14 @@ public class TaskLimits
   /**
    * Determines whether the given task can be executed based on task limits and available capacity.
    *
-   * @param task The task to check.
+   * @param task             The task to check.
    * @param currentSlotsUsed The current capacity used by tasks of the same type.
-   * @param totalCapacity The total available capacity across all workers.
+   * @param totalCapacity    The total available capacity across all workers.
    * @return {@code true} if the task meets the defined limits and capacity constraints; {@code false} otherwise.
    */
   public boolean canRunTask(Task task, Integer currentSlotsUsed, Integer totalCapacity)
   {
-    if (maxSlotRatioByType.isEmpty() && maxSlotCountByType.isEmpty()){
+    if (maxSlotRatioByType.isEmpty() && maxSlotCountByType.isEmpty()) {
       return true;
     }
     return meetsTaskLimit(
@@ -138,9 +138,15 @@ public class TaskLimits
   private void validateLimits(Map<String, Integer> taskCountLimits, Map<String, Double> taskRatios)
   {
     if (taskCountLimits != null && taskCountLimits.values().stream().anyMatch(val -> val < 0)) {
-      throw InvalidInput.exception("Max task slot count limit for any type must be greater than zero. Found[%s].", taskCountLimits);
+      throw InvalidInput.exception(
+          "Max task slot count limit for any type must be greater than zero. Found[%s].",
+          taskCountLimits
+      );
     } else if (taskRatios != null && taskRatios.values().stream().anyMatch(val -> val < 0 || val > 1)) {
-      throw InvalidInput.exception("Max task slot ratios should be in the interval of [0, 1]. Found[%s].", taskCountLimits);
+      throw InvalidInput.exception(
+          "Max task slot ratios should be in the interval of [0, 1]. Found[%s].",
+          taskCountLimits
+      );
     }
   }
 
@@ -166,7 +172,10 @@ public class TaskLimits
       return false;
     }
     TaskLimits that = (TaskLimits) o;
-    return Objects.equals(maxSlotCountByType, that.maxSlotCountByType) && Objects.equals(maxSlotRatioByType, that.maxSlotRatioByType);
+    return Objects.equals(maxSlotCountByType, that.maxSlotCountByType) && Objects.equals(
+        maxSlotRatioByType,
+        that.maxSlotRatioByType
+    );
   }
 
   @Override
