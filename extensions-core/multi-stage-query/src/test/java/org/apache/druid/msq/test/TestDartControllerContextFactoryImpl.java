@@ -33,6 +33,7 @@ import org.apache.druid.msq.dart.Dart;
 import org.apache.druid.msq.dart.controller.DartControllerContext;
 import org.apache.druid.msq.dart.controller.DartControllerContextFactoryImpl;
 import org.apache.druid.msq.dart.worker.DartWorkerClient;
+import org.apache.druid.msq.dart.worker.DartWorkerClientImpl;
 import org.apache.druid.msq.exec.Controller;
 import org.apache.druid.msq.exec.ControllerContext;
 import org.apache.druid.msq.exec.MemoryIntrospector;
@@ -41,6 +42,7 @@ import org.apache.druid.msq.exec.WorkerImpl;
 import org.apache.druid.msq.exec.WorkerStorageParameters;
 import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.msq.kernel.WorkOrder;
+import org.apache.druid.msq.shuffle.output.StageOutputHolder;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.server.DruidNode;
 
@@ -111,7 +113,7 @@ public class TestDartControllerContextFactoryImpl extends DartControllerContextF
     );
   }
 
-  public class DartTestWorkerClient extends MSQTestWorkerClient implements DartWorkerClient
+  public class DartTestWorkerClient extends DartWorkerClientImpl
   {
     private final ExecutorService EXECUTOR = Executors.newCachedThreadPool();
     public DartControllerContext controllerCtx;
@@ -123,7 +125,7 @@ public class TestDartControllerContextFactoryImpl extends DartControllerContextF
         String controllerHost, Map<String, Worker> workerMap
       )
     {
-      super(workerMap);
+      super(queryId, clientFactory, smileMapper, controllerHost);
     }
 
     @Override
@@ -142,7 +144,13 @@ public class TestDartControllerContextFactoryImpl extends DartControllerContextF
               MSQTestBase.makeTestWorkerMemoryParameters(),
               WorkerStorageParameters.createInstanceForTests(Long.MAX_VALUE)
           )
-      );
+      ) {
+        @Override
+        protected StageOutputHolder makeStageOutputHolder(StageId stageId, int partitionNumber)
+        {
+          return new StageOutputHolder();
+        };
+      };
 
       Future<?> future = EXECUTOR.submit(() -> {
         try {
