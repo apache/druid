@@ -556,21 +556,7 @@ public class WorkerImpl implements Worker
       final long offset
   )
   {
-    StageOutputHolder orCreateStageOutputHolder = getOrCreateStageOutputHolder(stageId, partitionNumber);
-
-    return orCreateStageOutputHolder.readRemotelyFrom(offset);
-  }
-
-  public ReadableFrameChannel readStageOutput1(
-      final StageId stageId,
-      final int partitionNumber,
-      final long offset
-  )
-  {
-    StageOutputHolder orCreateStageOutputHolder = getOrCreateStageOutputHolder(stageId, partitionNumber);
-    return orCreateStageOutputHolder.readLocally();
-
-//    return orCreateStageOutputHolder.readRemotelyFrom(offset);
+    return getOrCreateStageOutputHolder(stageId, partitionNumber).readRemotelyFrom(offset);
   }
 
   /**
@@ -707,7 +693,7 @@ public class WorkerImpl implements Worker
    * Create a {@link RunWorkOrderListener} for {@link RunWorkOrder} that hooks back into the {@link KernelHolders}
    * in the main loop.
    */
-  protected RunWorkOrderListener makeRunWorkOrderListener(
+  private RunWorkOrderListener makeRunWorkOrderListener(
       final WorkOrder workOrder,
       final ControllerClient controllerClient,
       final Set<String> criticalWarningCodes,
@@ -809,7 +795,7 @@ public class WorkerImpl implements Worker
     };
   }
 
-  protected InputChannelFactory makeBaseInputChannelFactory(
+  private InputChannelFactory makeBaseInputChannelFactory(
       final WorkOrder workOrder,
       final ControllerClient controllerClient,
       final Closer closer
@@ -978,12 +964,7 @@ public class WorkerImpl implements Worker
   private StageOutputHolder getOrCreateStageOutputHolder(final StageId stageId, final int partitionNumber)
   {
     return stageOutputs.computeIfAbsent(stageId, ignored1 -> new ConcurrentHashMap<>())
-                       .computeIfAbsent(partitionNumber, ignored -> makeStageOutputHolder(stageId, partitionNumber));
-  }
-
-  protected StageOutputHolder makeStageOutputHolder(StageId stageId, int partitionNumber)
-  {
-    return new StageOutputHolder();
+                       .computeIfAbsent(partitionNumber, ignored -> new StageOutputHolder());
   }
 
   /**

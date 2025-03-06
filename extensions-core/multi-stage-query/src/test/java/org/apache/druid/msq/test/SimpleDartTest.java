@@ -54,7 +54,6 @@ public class SimpleDartTest extends BaseCalciteQueryTest
   public void testSelectFromFoo()
   {
     testBuilder()
-//        .sql("SELECT 2 from foo limit 2")
         .sql("SELECT 2 from foo order by dim1")
         .expectedResults(
             ImmutableList.of(

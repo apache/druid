@@ -41,7 +41,6 @@ import org.apache.druid.msq.exec.WorkerImpl;
 import org.apache.druid.msq.exec.WorkerStorageParameters;
 import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.msq.kernel.WorkOrder;
-import org.apache.druid.msq.shuffle.output.StageOutputHolder;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.server.DruidNode;
 
@@ -143,13 +142,7 @@ public class TestDartControllerContextFactoryImpl extends DartControllerContextF
               MSQTestBase.makeTestWorkerMemoryParameters(),
               WorkerStorageParameters.createInstanceForTests(Long.MAX_VALUE)
           )
-      ) {
-        @Override
-        protected StageOutputHolder makeStageOutputHolder(StageId stageId, int partitionNumber)
-        {
-          return new StageOutputHolder();
-        };
-      };
+      );
 
       Future<?> future = EXECUTOR.submit(() -> {
         try {

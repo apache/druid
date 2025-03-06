@@ -33,6 +33,7 @@ import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.msq.rpc.SketchEncoding;
 import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
 
+import java.io.InputStream;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -134,26 +135,47 @@ public class MSQTestWorkerClient implements WorkerClient
       final ReadableByteChunksFrameChannel channel
   )
   {
-    return FutureUtils.transform(
-        getWorkerFor(workerTaskId).readStageOutput(stageId, partitionNumber, offset),
-        inputStream -> {
-          try {
-            byte[] buffer = new byte[8 * 1024];
-            boolean didRead = false;
-            int bytesRead;
-            while ((bytesRead = inputStream.read(buffer)) != -1) {
-              channel.addChunk(Arrays.copyOf(buffer, bytesRead));
-              didRead = true;
-            }
-            inputStream.close();
+    if(false) {
+      return FutureUtils.transform(
+          getWorkerFor(workerTaskId).readStageOutput(stageId, partitionNumber, offset),
+          inputStream -> {
+            try {
+              byte[] buffer = new byte[8 * 1024];
+              boolean didRead = false;
+              int bytesRead;
+              while ((bytesRead = inputStream.read(buffer)) != -1) {
+                channel.addChunk(Arrays.copyOf(buffer, bytesRead));
+                didRead = true;
+              }
+              inputStream.close();
 
-            return !didRead;
+              return !didRead;
+            }
+            catch (Exception e) {
+              throw new ISE(e, "Error reading frame file channel");
+            }
           }
-          catch (Exception e) {
-            throw new ISE(e, "Error reading frame file channel");
-          }
-        }
-    );
+      );
+    } else
+    {
+          try (InputStream inputStream =
+                       inMemoryWorkers.get(workerTaskId).readStageOutput(stageId, partitionNumber, offset).get()) {
+                byte[] buffer = new byte[8 * 1024];
+                boolean didRead = false;
+                int bytesRead;
+                while ((bytesRead = inputStream.read(buffer)) != -1) {
+                  channel.addChunk(Arrays.copyOf(buffer, bytesRead));
+                  didRead = true;
+                }
+                inputStream.close();
+
+                return Futures.immediateFuture(!didRead);
+              }
+              catch (Exception e) {
+                throw new ISE(e, "Error reading frame file channel");
+              }
+
+    }
   }
 
   @Override
