@@ -26,6 +26,7 @@ import org.apache.druid.indexing.overlord.ImmutableWorkerInfo;
 import org.apache.druid.indexing.overlord.config.WorkerTaskRunnerConfig;
 
 import javax.annotation.Nullable;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
@@ -54,10 +55,11 @@ public class WorkerSelectUtils
       final Map<String, ImmutableWorkerInfo> allWorkers,
       final WorkerTaskRunnerConfig workerTaskRunnerConfig,
       @Nullable final AffinityConfig affinityConfig,
-      final Function<ImmutableMap<String, ImmutableWorkerInfo>, ImmutableWorkerInfo> workerSelector
+      final Function<ImmutableMap<String, ImmutableWorkerInfo>, ImmutableWorkerInfo> workerSelector,
+      final TaskLimits taskLimits
   )
   {
-    final Map<String, ImmutableWorkerInfo> runnableWorkers = getRunnableWorkers(task, allWorkers, workerTaskRunnerConfig);
+    final Map<String, ImmutableWorkerInfo> runnableWorkers = getRunnableWorkers(task, allWorkers, workerTaskRunnerConfig, taskLimits);
 
     if (affinityConfig == null) {
       // All runnable workers are valid.
@@ -105,10 +107,11 @@ public class WorkerSelectUtils
       final Map<String, ImmutableWorkerInfo> allWorkers,
       final WorkerTaskRunnerConfig workerTaskRunnerConfig,
       @Nullable final WorkerCategorySpec workerCategorySpec,
-      final Function<ImmutableMap<String, ImmutableWorkerInfo>, ImmutableWorkerInfo> workerSelector
+      final Function<ImmutableMap<String, ImmutableWorkerInfo>, ImmutableWorkerInfo> workerSelector,
+      final TaskLimits taskLimits
   )
   {
-    final Map<String, ImmutableWorkerInfo> runnableWorkers = getRunnableWorkers(task, allWorkers, workerTaskRunnerConfig);
+    final Map<String, ImmutableWorkerInfo> runnableWorkers = getRunnableWorkers(task, allWorkers, workerTaskRunnerConfig, taskLimits);
 
     // select worker according to worker category spec
     if (workerCategorySpec != null) {
@@ -145,9 +148,17 @@ public class WorkerSelectUtils
   private static Map<String, ImmutableWorkerInfo> getRunnableWorkers(
       final Task task,
       final Map<String, ImmutableWorkerInfo> allWorkers,
-      final WorkerTaskRunnerConfig workerTaskRunnerConfig
+      final WorkerTaskRunnerConfig workerTaskRunnerConfig,
+      final TaskLimits taskLimits
   )
   {
+    if (!taskLimits.canRunTask(
+        task,
+        getTotalCapacityUsedByType(allWorkers, task.getType()),
+        getTotalCapacity(allWorkers)
+    )) {
+      return Collections.emptyMap();
+    }
     return allWorkers.values()
                      .stream()
                      .filter(worker -> worker.canRunTask(task, workerTaskRunnerConfig.getParallelIndexTaskSlotRatio())
@@ -192,5 +203,21 @@ public class WorkerSelectUtils
             workerHost -> !affinityConfig.getAffinityWorkers().contains(workerHost)
         )
     );
+  }
+
+  private static int getTotalCapacity(final Map<String, ImmutableWorkerInfo> allWorkers)
+  {
+    return allWorkers.values().stream().mapToInt(workerInfo -> workerInfo.getWorker().getCapacity()).sum();
+  }
+
+  private static int getTotalCapacityUsedByType(
+      final Map<String, ImmutableWorkerInfo> allWorkers,
+      final String taskType
+  )
+  {
+    return allWorkers.values()
+                     .stream()
+                     .mapToInt(workerInfo -> workerInfo.getCurrCapacityUsedByTaskType().getOrDefault(taskType, 0))
+                     .sum();
   }
 }
