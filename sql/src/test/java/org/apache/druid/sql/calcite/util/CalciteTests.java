@@ -32,6 +32,7 @@ import org.apache.druid.client.DruidServer;
 import org.apache.druid.client.FilteredServerInventoryView;
 import org.apache.druid.client.ServerInventoryView;
 import org.apache.druid.client.ServerView;
+import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.discovery.DiscoveryDruidNode;
 import org.apache.druid.discovery.DruidLeaderClient;
 import org.apache.druid.discovery.DruidNodeDiscovery;
@@ -397,7 +398,7 @@ public class CalciteTests
 
   public static SystemSchema createMockSystemSchema(
       final DruidSchema druidSchema,
-      final SpecificSegmentsQuerySegmentWalker walker,
+      final TimelineServerView timelineServerView,
       final AuthorizerMapper authorizerMapper
   )
   {
@@ -474,8 +475,7 @@ public class CalciteTests
             new BrokerSegmentWatcherConfig(),
             BrokerSegmentMetadataCacheConfig.create()
         ),
-        //FIXME use the same
-        new TestTimelineServerView(walker.getSegments()),
+        timelineServerView,
         new FakeServerInventoryView(),
         authorizerMapper,
         druidLeaderClient,

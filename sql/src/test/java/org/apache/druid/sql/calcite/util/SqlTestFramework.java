@@ -135,6 +135,7 @@ import org.apache.druid.sql.guice.SqlModule;
 import org.apache.druid.sql.hook.DruidHookDispatcher;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.utils.JvmUtils;
+
 import javax.inject.Named;
 
 import java.io.Closeable;
@@ -686,7 +687,8 @@ public class SqlTestFramework
           viewManager,
           componentSupplier.createSchemaManager(),
           framework.authorizerMapper,
-          framework.builder.catalogResolver
+          framework.builder.catalogResolver,
+          framework.injector.getInstance(TimelineServerView.class)
       );
 
       this.plannerFactory = new PlannerFactory(
@@ -945,25 +947,35 @@ public class SqlTestFramework
         final Injector injector,
         QueryRunnerFactoryConglomerate conglomerate,
         QuerySegmentWalker walker,
-        Builder builder)
+        Builder builder,
+        TimelineServerView timelineServerView)
     {
       return QueryFrameworkUtils.createMockSchema(
           injector,
           conglomerate,
           (SpecificSegmentsQuerySegmentWalker) walker,
           builder.componentSupplier.getPlannerComponentSupplier().createSchemaManager(),
-          builder.catalogResolver
+          builder.catalogResolver,
+          timelineServerView
       );
     }
 
     @Provides
     @LazySingleton
-    private SystemSchema makeSystemSchema(QuerySegmentWalker walker, AuthorizerMapper authorizerMapper,
-        DruidSchema druidSchema)
+    private SystemSchema makeSystemSchema(AuthorizerMapper authorizerMapper, DruidSchema druidSchema,
+        TimelineServerView timelineServerView)
     {
-      return CalciteTests
-          .createMockSystemSchema(druidSchema, (SpecificSegmentsQuerySegmentWalker) walker, authorizerMapper);
+      return CalciteTests.createMockSystemSchema(druidSchema, timelineServerView, authorizerMapper);
     }
+
+
+    @Provides
+    @LazySingleton
+    private TimelineServerView makeTimelineServerView(SpecificSegmentsQuerySegmentWalker walker)
+    {
+      return new TestTimelineServerView(walker.getSegments());
+    }
+
 
     @Provides
     @LazySingleton
@@ -1072,16 +1084,6 @@ public class SqlTestFramework
       SimpleServerView simpleServerView = new SimpleServerView(conglomerate, objectMapper, httpClient);
       return simpleServerView;
     }
-    @Provides
-    @LazySingleton
-    public TimelineServerView makeTimelines2(SpecificSegmentsQuerySegmentWalker  walker, QueryRunnerFactoryConglomerate conglomerate,
-        HttpClient httpClient)
-    {
-      List<DataSegment> realtimeSegments = Collections.emptyList();
-      return new TestTimelineServerView(walker.getSegments(), realtimeSegments);
-    }
-
-
 
     @Provides
     @LazySingleton

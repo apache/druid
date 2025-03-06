@@ -55,7 +55,8 @@ public class DartControllerContextFactoryImpl implements DartControllerContextFa
       @EscalatedGlobal final ServiceClientFactory serviceClientFactory,
       final MemoryIntrospector memoryIntrospector,
       final TimelineServerView serverView,
-      final ServiceEmitter emitter)
+      final ServiceEmitter emitter
+  )
   {
     this.injector = injector;
     this.jsonMapper = jsonMapper;
