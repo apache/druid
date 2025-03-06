@@ -40,6 +40,8 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -97,6 +99,35 @@ public class OpenTelemetryMetricsProtobufReaderTest
         .setName(INSTRUMENTATION_SCOPE_NAME)
         .setVersion(INSTRUMENTATION_SCOPE_VERSION);
 
+  }
+
+  @Test
+  public void testSumWithAttributesFromProtoFile() throws IOException
+  {
+    String protoFilePath = "src/test/resources/metrics.proto";
+    byte[] metricsBytes = Files.readAllBytes(Paths.get(protoFilePath));
+
+    SettableByteEntity<ByteEntity> settableByteEntity = new SettableByteEntity<>();
+    settableByteEntity.setEntity(new ByteEntity(metricsBytes));
+    CloseableIterator<InputRow> rows = new OpenTelemetryMetricsProtobufReader(
+            dimensionsSpec,
+            settableByteEntity,
+            "metric.name",
+            "raw.value",
+            "descriptor.",
+            "custom."
+    ).read();
+
+    List<InputRow> rowList = new ArrayList<>();
+    rows.forEachRemaining(rowList::add);
+    Assert.assertEquals(1, rowList.size());
+
+    InputRow row = rowList.get(0);
+    Assert.assertEquals(4, row.getDimensions().size());
+    assertDimensionEquals(row, "metric.name", "example_sum");
+    assertDimensionEquals(row, "custom.country", "usa");
+    assertDimensionEquals(row, "descriptor.color", "red");
+    assertDimensionEquals(row, "raw.value", "6");
   }
 
   @Test
@@ -431,6 +462,8 @@ public class OpenTelemetryMetricsProtobufReaderTest
 
     Assert.assertFalse(rows.hasNext());
   }
+
+
 
   private void assertDimensionEquals(InputRow row, String dimension, Object expected)
   {
