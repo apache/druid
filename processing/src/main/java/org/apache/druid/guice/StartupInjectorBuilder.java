@@ -165,6 +165,51 @@ public class StartupInjectorBuilder extends BaseInjectorBuilder<StartupInjectorB
             docsLink
         );
       }
+
+      validateRemovedProcessingConfigs();
+    }
+
+    private void validateRemovedProcessingConfigs()
+    {
+      checkDeletedConfigAndThrow(
+          "druid.processing.merge.task.initialYieldNumRows",
+          "druid.processing.merge.initialYieldNumRows"
+      );
+      checkDeletedConfigAndThrow(
+          "druid.processing.merge.task.targetRunTimeMillis",
+          "druid.processing.merge.targetRunTimeMillis"
+      );
+      checkDeletedConfigAndThrow(
+          "druid.processing.merge.task.smallBatchNumRows",
+          "druid.processing.merge.smallBatchNumRows"
+      );
+
+      checkDeletedConfigAndThrow(
+          "druid.processing.merge.pool.awaitShutdownMillis",
+          "druid.processing.merge.awaitShutdownMillis"
+      );
+      checkDeletedConfigAndThrow(
+          "druid.processing.merge.pool.parallelism",
+          "druid.processing.merge.parallelism"
+      );
+      checkDeletedConfigAndThrow(
+          "druid.processing.merge.pool.defaultMaxQueryParallelism",
+          "druid.processing.merge.defaultMaxQueryParallelism"
+      );
+    }
+
+    /**
+     * Checks if a deleted config is present in the properties and throws an ISE.
+     */
+    private void checkDeletedConfigAndThrow(String deletedConfigName, String replaceConfigName)
+    {
+      if (properties.getProperty(deletedConfigName) != null) {
+        throw new ISE(
+            "Config[%s] has been removed. Please use config[%s] instead.",
+            deletedConfigName,
+            replaceConfigName
+        );
+      }
     }
   }
 
