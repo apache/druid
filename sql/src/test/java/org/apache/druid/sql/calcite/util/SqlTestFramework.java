@@ -54,7 +54,6 @@ import org.apache.druid.guice.QueryableModule;
 import org.apache.druid.guice.SegmentWranglerModule;
 import org.apache.druid.guice.ServerModule;
 import org.apache.druid.guice.StartupInjectorBuilder;
-import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Global;
 import org.apache.druid.guice.annotations.Merging;
 import org.apache.druid.guice.annotations.Self;
@@ -1093,14 +1092,6 @@ public class SqlTestFramework
     @Provides
     @LazySingleton
     private HttpClient extracted(ObjectMapper objectMapper)
-    {
-      return new TestHttpClient(objectMapper);
-    }
-
-    @Provides
-    @EscalatedGlobal
-    @LazySingleton
-    private HttpClient extracted1(ObjectMapper objectMapper)
     {
       return new TestHttpClient(objectMapper);
     }
