@@ -964,7 +964,12 @@ public class WorkerImpl implements Worker
   private StageOutputHolder getOrCreateStageOutputHolder(final StageId stageId, final int partitionNumber)
   {
     return stageOutputs.computeIfAbsent(stageId, ignored1 -> new ConcurrentHashMap<>())
-                       .computeIfAbsent(partitionNumber, ignored -> new StageOutputHolder());
+                       .computeIfAbsent(partitionNumber, ignored -> makeStageOutputHolder());
+  }
+
+  protected StageOutputHolder makeStageOutputHolder()
+  {
+    return new StageOutputHolder();
   }
 
   /**

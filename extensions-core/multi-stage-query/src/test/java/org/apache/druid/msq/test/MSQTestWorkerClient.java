@@ -21,7 +21,6 @@ package org.apache.druid.msq.test;
 
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.frame.channel.ReadableByteChunksFrameChannel;
 import org.apache.druid.frame.key.ClusterByPartitions;
 import org.apache.druid.java.util.common.ISE;
@@ -135,46 +134,21 @@ public class MSQTestWorkerClient implements WorkerClient
       final ReadableByteChunksFrameChannel channel
   )
   {
-    if(false) {
-      return FutureUtils.transform(
-          getWorkerFor(workerTaskId).readStageOutput(stageId, partitionNumber, offset),
-          inputStream -> {
-            try {
-              byte[] buffer = new byte[8 * 1024];
-              boolean didRead = false;
-              int bytesRead;
-              while ((bytesRead = inputStream.read(buffer)) != -1) {
-                channel.addChunk(Arrays.copyOf(buffer, bytesRead));
-                didRead = true;
-              }
-              inputStream.close();
+    try (InputStream inputStream =
+             getWorkerFor(workerTaskId).readStageOutput(stageId, partitionNumber, offset).get()) {
+      byte[] buffer = new byte[8 * 1024];
+      boolean didRead = false;
+      int bytesRead;
+      while ((bytesRead = inputStream.read(buffer)) != -1) {
+        channel.addChunk(Arrays.copyOf(buffer, bytesRead));
+        didRead = true;
+      }
+      inputStream.close();
 
-              return !didRead;
-            }
-            catch (Exception e) {
-              throw new ISE(e, "Error reading frame file channel");
-            }
-          }
-      );
-    } else
-    {
-          try (InputStream inputStream =
-                       inMemoryWorkers.get(workerTaskId).readStageOutput(stageId, partitionNumber, offset).get()) {
-                byte[] buffer = new byte[8 * 1024];
-                boolean didRead = false;
-                int bytesRead;
-                while ((bytesRead = inputStream.read(buffer)) != -1) {
-                  channel.addChunk(Arrays.copyOf(buffer, bytesRead));
-                  didRead = true;
-                }
-                inputStream.close();
-
-                return Futures.immediateFuture(!didRead);
-              }
-              catch (Exception e) {
-                throw new ISE(e, "Error reading frame file channel");
-              }
-
+      return Futures.immediateFuture(!didRead);
+    }
+    catch (Exception e) {
+      throw new ISE(e, "Error reading frame file channel");
     }
   }
 
