@@ -77,7 +77,6 @@ public class QueryableModuleTest
             new JacksonModule(),
             new ConfigModule(),
             new QueryRunnerFactoryModule(),
-            new LegacyBrokerParallelMergeConfigModule(),
             new BrokerProcessingModule(),
             new LifecycleModule(),
             binder -> binder.bind(ServiceEmitter.class).to(NoopServiceEmitter.class),
