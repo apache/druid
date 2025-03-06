@@ -143,5 +143,6 @@ public interface DataSource extends Cacheable
    *
    * @return the cache key to be used as part of query cache key
    */
+  @Override
   byte[] getCacheKey();
 }

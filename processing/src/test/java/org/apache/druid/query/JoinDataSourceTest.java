@@ -125,15 +125,15 @@ public class JoinDataSourceTest
   }
 
   @Test
-  public void test_isConcrete_tableToTable()
+  public void test_isProcessable_tableToTable()
   {
     Assert.assertFalse(joinTableToTable.isProcessable());
   }
 
   @Test
-  public void test_isConcrete_tableToLookup()
+  public void test_isProcessable_tableToLookup()
   {
-    Assert.assertFalse(joinTableToLookup.isProcessable());
+    Assert.assertTrue(joinTableToLookup.isProcessable());
   }
 
   @Test

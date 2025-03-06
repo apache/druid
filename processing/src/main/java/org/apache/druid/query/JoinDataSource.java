@@ -276,9 +276,7 @@ public class JoinDataSource implements DataSource
   @Override
   public boolean isProcessable()
   {
-    // FIXME: shouldn't this be?
     return left.isProcessable() && right.isGlobal();
-    // return false;
   }
 
   /**
