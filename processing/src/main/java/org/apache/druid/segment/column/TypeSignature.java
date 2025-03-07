@@ -109,8 +109,8 @@ public interface TypeSignature<Type extends TypeDescriptor>
   /**
    * A {@link NullableTypeStrategy} is a {@link TypeStrategy} which can handle reading and writing null values, at the
    * very high cost of an additional byte per value, of which a single bit is used to store
-   * {@link org.apache.druid.common.config.NullHandling#IS_NULL_BYTE} or
-   * {@link org.apache.druid.common.config.NullHandling#IS_NOT_NULL_BYTE} as appropriate.
+   * {@link TypeStrategies#IS_NULL_BYTE} or
+   * {@link TypeStrategies#IS_NOT_NULL_BYTE} as appropriate.
    *
    * This pattern is common among buffer aggregators, which don't have access to an external memory location for more
    * efficient tracking of null values and must store this information inline with the accumulated value.
