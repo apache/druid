@@ -182,7 +182,29 @@ public class PodTemplateTaskAdapterTest
         .addToAnnotations(DruidK8sConstants.TASK_ID, "ID")
         .endMetadata().endTemplate().endSpec().build();
 
-    assertEquals(new K8sTaskId("ID"), adapter.getTaskId(job));
+    assertEquals(new K8sTaskId(null, "ID"), adapter.getTaskId(job));
+  }
+
+  @Test
+  public void test_getTaskIdWithAlias()
+  {
+    TestPodTemplateSelector podTemplateSelector = new TestPodTemplateSelector(podTemplateSpec);
+    taskRunnerConfig = KubernetesTaskRunnerConfig.builder().withAlias("alias").build();
+
+    PodTemplateTaskAdapter adapter = new PodTemplateTaskAdapter(
+        taskRunnerConfig,
+        taskConfig,
+        node,
+        mapper,
+        taskLogs,
+        podTemplateSelector
+    );
+    Job job = new JobBuilder()
+        .editSpec().editTemplate().editMetadata()
+        .addToAnnotations(DruidK8sConstants.TASK_ID, "ID")
+        .endMetadata().endTemplate().endSpec().build();
+
+    assertEquals(new K8sTaskId("alias", "ID"), adapter.getTaskId(job));
   }
 
   @Test

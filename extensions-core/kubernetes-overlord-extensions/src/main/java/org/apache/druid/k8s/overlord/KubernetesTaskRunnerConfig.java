@@ -39,6 +39,9 @@ public class KubernetesTaskRunnerConfig
   private String namespace;
 
   @JsonProperty
+  private String alias = "";
+
+  @JsonProperty
   private boolean debugJobs = false;
 
   /**
@@ -131,6 +134,7 @@ public class KubernetesTaskRunnerConfig
 
   private KubernetesTaskRunnerConfig(
       @Nonnull String namespace,
+      String alias,
       boolean debugJobs,
       boolean sidecarSupport,
       String primaryContainerName,
@@ -151,6 +155,7 @@ public class KubernetesTaskRunnerConfig
   )
   {
     this.namespace = namespace;
+    this.alias = alias;
     this.debugJobs = ObjectUtils.defaultIfNull(
         debugJobs,
         this.debugJobs
@@ -221,6 +226,11 @@ public class KubernetesTaskRunnerConfig
   public String getNamespace()
   {
     return namespace;
+  }
+
+  public String getAlias()
+  {
+    return alias;
   }
 
   public boolean isDebugJobs()
@@ -317,6 +327,7 @@ public class KubernetesTaskRunnerConfig
   public static class Builder
   {
     private String namespace;
+    private String alias;
     private boolean debugJob;
     private boolean sidecarSupport;
     private String primaryContainerName;
@@ -342,6 +353,12 @@ public class KubernetesTaskRunnerConfig
     public Builder withNamespace(String namespace)
     {
       this.namespace = namespace;
+      return this;
+    }
+
+    public Builder withAlias(String alias)
+    {
+      this.alias = alias;
       return this;
     }
 
@@ -452,6 +469,7 @@ public class KubernetesTaskRunnerConfig
     {
       return new KubernetesTaskRunnerConfig(
           this.namespace,
+          this.alias,
           this.debugJob,
           this.sidecarSupport,
           this.primaryContainerName,
