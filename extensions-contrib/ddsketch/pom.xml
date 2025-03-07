@@ -128,7 +128,7 @@
     <dependency>
       <groupId>org.apache.curator</groupId>
       <artifactId>curator-client</artifactId>
-      <version>5.5.0</version>
+      <version>5.7.1</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
