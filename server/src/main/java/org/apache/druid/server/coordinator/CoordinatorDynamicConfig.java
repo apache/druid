@@ -205,7 +205,10 @@ public class CoordinatorDynamicConfig
     }
   }
 
-  public static SegmentLoadingMode getLoadingMode(CoordinatorDynamicConfig coordinatorDynamicConfig, String serverName)
+  public static SegmentLoadingMode getLoadingModeForServer(
+      CoordinatorDynamicConfig coordinatorDynamicConfig,
+      String serverName
+  )
   {
     final Set<String> turboLoadHistoricals = coordinatorDynamicConfig.getTurboLoadHistoricals();
     return turboLoadHistoricals.contains(serverName) ?

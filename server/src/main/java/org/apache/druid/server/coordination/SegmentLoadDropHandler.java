@@ -416,7 +416,7 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     }
   }
 
-  public ScheduledExecutorService getExecutorService(SegmentLoadingMode loadingMode)
+  private ScheduledExecutorService getExecutorService(SegmentLoadingMode loadingMode)
   {
     switch (loadingMode) {
       case TURBO:
