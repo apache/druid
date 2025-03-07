@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.segment.nested.NestedCommonFormatColumnFormatSpec;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
@@ -33,16 +34,22 @@ public class DefaultColumnFormatConfig
 {
   private static final Logger LOG = new Logger(DefaultColumnFormatConfig.class);
 
-  public static void validateNestedFormatVersion(@Nullable Integer formatVersion)
+  @Nullable
+  public static Integer validateNestedFormatVersion(@Nullable Integer formatVersion)
   {
     if (formatVersion != null) {
       if (formatVersion != 5) {
         LOG.warn("Unsupported nested column format version[%s], using default version instead", formatVersion);
+        return null;
       }
     }
+    return formatVersion;
   }
 
-  private static void validateMultiValueHandlingMode(@Nullable String stringMultiValueHandlingMode)
+  @Nullable
+  private static String validateMultiValueHandlingMode(
+      @Nullable String stringMultiValueHandlingMode
+  )
   {
     if (stringMultiValueHandlingMode != null) {
       try {
@@ -59,6 +66,7 @@ public class DefaultColumnFormatConfig
                             );
       }
     }
+    return stringMultiValueHandlingMode;
   }
 
   @Nullable
@@ -69,17 +77,30 @@ public class DefaultColumnFormatConfig
   @JsonProperty("stringMultiValueHandlingMode")
   private final String stringMultiValueHandlingMode;
 
+  @Nullable
+  @JsonProperty
+  private final NestedCommonFormatColumnFormatSpec nestedColumnFormatSpec;
+
   @JsonCreator
   public DefaultColumnFormatConfig(
+      @JsonProperty("stringMultiValueHandlingMode") @Nullable String stringMultiValueHandlingMode,
       @JsonProperty("nestedColumnFormatVersion") @Nullable Integer nestedColumnFormatVersion,
-      @JsonProperty("stringMultiValueHandlingMode") @Nullable String stringMultiValueHandlingMode
+      @JsonProperty("nestedColumnFormatSpec") @Nullable NestedCommonFormatColumnFormatSpec nestedColumnFormatSpec
   )
   {
-    validateNestedFormatVersion(nestedColumnFormatVersion);
     validateMultiValueHandlingMode(stringMultiValueHandlingMode);
+    validateNestedFormatVersion(nestedColumnFormatVersion);
 
+    this.stringMultiValueHandlingMode = validateMultiValueHandlingMode(stringMultiValueHandlingMode);
     this.nestedColumnFormatVersion = nestedColumnFormatVersion;
-    this.stringMultiValueHandlingMode = stringMultiValueHandlingMode;
+    this.nestedColumnFormatSpec = nestedColumnFormatSpec;
+  }
+
+  @Nullable
+  @JsonProperty("stringMultiValueHandlingMode")
+  public String getStringMultiValueHandlingMode()
+  {
+    return stringMultiValueHandlingMode;
   }
 
   @Nullable
@@ -90,10 +111,10 @@ public class DefaultColumnFormatConfig
   }
 
   @Nullable
-  @JsonProperty("stringMultiValueHandlingMode")
-  public String getStringMultiValueHandlingMode()
+  @JsonProperty("nestedColumnFormatSpec")
+  public NestedCommonFormatColumnFormatSpec getNestedColumnFormatSpec()
   {
-    return stringMultiValueHandlingMode;
+    return nestedColumnFormatSpec;
   }
 
   @Override
@@ -107,21 +128,23 @@ public class DefaultColumnFormatConfig
     }
     DefaultColumnFormatConfig that = (DefaultColumnFormatConfig) o;
     return Objects.equals(nestedColumnFormatVersion, that.nestedColumnFormatVersion)
-           && Objects.equals(stringMultiValueHandlingMode, that.stringMultiValueHandlingMode);
+           && Objects.equals(stringMultiValueHandlingMode, that.stringMultiValueHandlingMode)
+           && Objects.equals(nestedColumnFormatSpec, that.nestedColumnFormatSpec);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(nestedColumnFormatVersion, stringMultiValueHandlingMode);
+    return Objects.hash(nestedColumnFormatVersion, stringMultiValueHandlingMode, nestedColumnFormatSpec);
   }
 
   @Override
   public String toString()
   {
     return "DefaultColumnFormatConfig{" +
-           "nestedColumnFormatVersion=" + nestedColumnFormatVersion +
-           ", stringMultiValueHandlingMode=" + stringMultiValueHandlingMode +
+           "stringMultiValueHandlingMode=" + stringMultiValueHandlingMode +
+           ", nestedColumnFormatVersion=" + nestedColumnFormatVersion +
+           ", nestedColumnFormatSpec=" + nestedColumnFormatSpec +
            '}';
   }
 }
