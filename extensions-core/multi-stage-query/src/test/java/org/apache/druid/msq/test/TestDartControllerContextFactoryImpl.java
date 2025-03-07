@@ -45,15 +45,19 @@ import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.server.DruidNode;
 
+import javax.management.RuntimeErrorException;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
 public class TestDartControllerContextFactoryImpl extends DartControllerContextFactoryImpl
 {
   private Map<String, Worker> workerMap;
+  private DartTestControllerContext controllerContext;
 
   @Inject
   public TestDartControllerContextFactoryImpl(
@@ -74,31 +78,31 @@ public class TestDartControllerContextFactoryImpl extends DartControllerContextF
   @Override
   public ControllerContext newContext(String queryId)
   {
-    return new DartTestControllerContext(queryId);
+    if (controllerContext != null) {
+      throw new RuntimeException();
+    }
+    controllerContext = new DartTestControllerContext(queryId);
+    return controllerContext;
   }
 
+  public DartTestWorkerClient dartTestWorkerClient = new DartTestWorkerClient();
 
-  protected DartWorkerClient makeWorkerClient(String queryId)
+  public class DartTestControllerContext extends DartControllerContext
   {
-    return new DartTestWorkerClient(null);
-  }
-
-  public class DartTestControllerContext extends DartControllerContext {
 
     public ExecutorService executor = Executors.newCachedThreadPool();
-    public Controller controller;
     public Map<String, Worker> inMemoryWorkers = new HashMap<>();
 
     public DartTestControllerContext(String queryId)
     {
-      super(injector, jsonMapper, selfNode, makeWorkerClient(queryId), memoryIntrospector, serverView, emitter);
+      super(injector, jsonMapper, selfNode, dartTestWorkerClient, memoryIntrospector, serverView, emitter);
     }
 
     @Override
     public void registerController(Controller controller, Closer closer)
     {
       super.registerController(controller, closer);
-      this.controller= controller;
+      dartTestWorkerClient.controller = controller;
     }
 
     protected Worker newWorker(String workerId)
@@ -129,14 +133,13 @@ public class TestDartControllerContextFactoryImpl extends DartControllerContextF
     }
   }
 
-
   public class DartTestWorkerClient extends MSQTestWorkerClient implements DartWorkerClient
   {
     public DartControllerContext controllerCtx;
 
-    public DartTestWorkerClient(Function<String, Worker> workerFactory)
+    public DartTestWorkerClient()
     {
-      super(workerMap);
+      super(new HashMap<>());
     }
 
     @Override
@@ -147,8 +150,7 @@ public class TestDartControllerContextFactoryImpl extends DartControllerContextF
 
     private Worker makeWorker(String workerId)
     {
-      if(true)
-      {
+      if (true) {
         throw new RuntimeException("FIXME: Unimplemented!");
       }
       return null;
