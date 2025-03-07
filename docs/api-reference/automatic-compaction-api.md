@@ -265,11 +265,11 @@ This includes the following fields:
 
 |Config|Description|Default value|
 |------|-----------|-------------|
-|compactionTaskSlotRatio|Ratio of number of slots taken up by compaction tasks to the number of total task slots across all workers.|0.1|
-|maxCompactionTaskSlots|Maximum number of task slots that can be taken up by compaction tasks.|2147483647 (i.e. total task slots)|
-|compactionPolicy|Policy to prioritize intervals for compaction|`newestSegmentFirst`|
-|useSupervisors|Whether compaction should be run on Overlord using supervisors instead of Coordinator duties.|false|
-|engine|Engine to use for running compaction tasks, native or MSQ.|Native|
+|`compactionTaskSlotRatio`|Ratio of number of slots taken up by compaction tasks to the number of total task slots across all workers.|0.1|
+|`maxCompactionTaskSlots`|Maximum number of task slots that can be taken up by compaction tasks.|2147483647 (i.e. total task slots)|
+|`compactionPolicy`|Policy to prioritize intervals for compaction|`newestSegmentFirst`|
+|`useSupervisors`|Whether compaction should be run on Overlord using supervisors instead of Coordinator duties.|false|
+|`engine`|Engine to use for running compaction tasks, native or MSQ.|Native|
 
 #### URL
 
