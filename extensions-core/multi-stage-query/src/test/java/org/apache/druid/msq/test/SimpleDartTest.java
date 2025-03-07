@@ -44,9 +44,7 @@ public class SimpleDartTest extends BaseCalciteQueryTest
   {
     testBuilder()
         .sql("SELECT 1")
-        .expectedResults(
-            ImmutableList.of(new Object[] {1})
-        )
+        .expectedResults(ImmutableList.of(new Object[] {1}))
         .run();
   }
 
@@ -69,24 +67,41 @@ public class SimpleDartTest extends BaseCalciteQueryTest
   }
 
   @Test
-  public void testSelectFromFoo11()
+  public void testSelectDim1FromFoo11()
   {
     testBuilder()
         .sql("SELECT dim1 from foo")
         .expectedResults(
             ImmutableList.of(
-                new Object[]{""},
-                new Object[]{"10.1"},
-                new Object[]{"2"},
-                new Object[]{"1"},
-                new Object[]{"def"},
-                new Object[]{"abc"}
+                new Object[] {""},
+                new Object[] {"10.1"},
+                new Object[] {"2"},
+                new Object[] {"1"},
+                new Object[] {"def"},
+                new Object[] {"abc"}
             )
         )
         .run();
   }
+
   @Test
-  public void testSelectFromFoo1()
+  public void testGby()
+  {
+    testBuilder()
+        .sql("SELECT 3 from foo group by dim2")
+        .expectedResults(
+            ImmutableList.of(
+                new Object[] {3},
+                new Object[] {3},
+                new Object[] {3},
+                new Object[] {3}
+            )
+        )
+        .run();
+  }
+
+  @Test
+  public void testComplexFromFoo()
   {
     String sql = "SELECT dim1, COUNT(*) FROM druid.foo "
         + "WHERE dim1 NOT IN ('ghi', 'abc', 'def') AND dim1 IS NOT NULL "
@@ -95,13 +110,12 @@ public class SimpleDartTest extends BaseCalciteQueryTest
         .sql(sql)
         .expectedResults(
             ImmutableList.of(
-                new Object[]{"", 1L},
-                new Object[]{"1", 1L},
-                new Object[]{"10.1", 1L},
-                new Object[]{"2", 1L}
+                new Object[] {"", 1L},
+                new Object[] {"1", 1L},
+                new Object[] {"10.1", 1L},
+                new Object[] {"2", 1L}
             )
         )
         .run();
   }
-
 }
