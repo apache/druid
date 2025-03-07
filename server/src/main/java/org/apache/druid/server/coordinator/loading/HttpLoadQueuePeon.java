@@ -382,12 +382,10 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
       if (stopped) {
         return;
       }
-      log.info("Stopping load queue peon for server[%s].", serverId);
       stopped = true;
 
       if (!queuedSegments.isEmpty()) {
         queuedSegments.forEach(holder -> onRequestCompleted(holder, RequestStatus.CANCELLED));
-        log.info("Cancelled [%d] requests queued on server[%s].", queuedSegments.size(), serverId);
       }
 
       segmentsToDrop.clear();

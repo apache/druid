@@ -19,10 +19,10 @@
 
 package org.apache.druid.query;
 
-import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.druid.common.config.Configs;
 import org.apache.druid.java.util.common.guava.ParallelMergeCombiningSequence;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.utils.JvmUtils;
@@ -57,25 +57,15 @@ public class BrokerParallelMergeConfig
       @JsonProperty("defaultMaxQueryParallelism") @Nullable Integer defaultMaxQueryParallelism,
       @JsonProperty("targetRunTimeMillis") @Nullable Integer targetRunTimeMillis,
       @JsonProperty("initialYieldNumRows") @Nullable Integer initialYieldNumRows,
-      @JsonProperty("smallBatchNumRows") @Nullable Integer smallBatchNumRows,
-      @JacksonInject LegacyBrokerParallelMergeConfig oldConfig
+      @JsonProperty("smallBatchNumRows") @Nullable Integer smallBatchNumRows
   )
   {
-    if (parallelism == null) {
-      if (oldConfig == null || oldConfig.getMergePoolParallelism() == null) {
+    this.parallelism = Configs.valueOrDefault(
+        parallelism,
         // assume 2 hyper-threads per core, so that this value is probably by default the number
         // of physical cores * 1.5
-        this.parallelism = (int) Math.ceil(JvmUtils.getRuntimeInfo().getAvailableProcessors() * 0.75);
-      } else {
-        warnDeprecated(
-            "druid.processing.merge.pool.parallelism",
-            "druid.processing.merge.parallelism"
-        );
-        this.parallelism = oldConfig.getMergePoolParallelism();
-      }
-    } else {
-      this.parallelism = parallelism;
-    }
+        (int) Math.ceil(JvmUtils.getRuntimeInfo().getAvailableProcessors() * 0.75)
+    );
 
     // need at least 3 to do 2 layer merge
     if (this.parallelism > 2) {
@@ -90,81 +80,36 @@ public class BrokerParallelMergeConfig
       this.useParallelMergePool = false;
     }
 
-    if (awaitShutdownMillis == null) {
-      if (oldConfig == null || oldConfig.getMergePoolAwaitShutdownMillis() == null) {
-        this.awaitShutdownMillis = DEFAULT_MERGE_POOL_AWAIT_SHUTDOWN_MILLIS;
-      } else {
-        warnDeprecated(
-            "druid.processing.merge.pool.awaitShutdownMillis",
-            "druid.processing.merge.awaitShutdownMillis"
-        );
-        this.awaitShutdownMillis = oldConfig.getMergePoolAwaitShutdownMillis();
-      }
-    } else {
-      this.awaitShutdownMillis = awaitShutdownMillis;
-    }
+    this.awaitShutdownMillis = Configs.valueOrDefault(
+        awaitShutdownMillis,
+        DEFAULT_MERGE_POOL_AWAIT_SHUTDOWN_MILLIS
+    );
 
-    if (defaultMaxQueryParallelism == null) {
-      if (oldConfig == null || oldConfig.getMergePoolDefaultMaxQueryParallelism() == null) {
-        this.defaultMaxQueryParallelism = (int) Math.max(JvmUtils.getRuntimeInfo().getAvailableProcessors() * 0.5, 1);
-      } else {
-        warnDeprecated(
-            "druid.processing.merge.pool.defaultMaxQueryParallelism",
-            "druid.processing.merge.defaultMaxQueryParallelism"
-        );
-        this.defaultMaxQueryParallelism = oldConfig.getMergePoolDefaultMaxQueryParallelism();
-      }
-    } else {
-      this.defaultMaxQueryParallelism = defaultMaxQueryParallelism;
-    }
+    this.defaultMaxQueryParallelism = Configs.valueOrDefault(
+        defaultMaxQueryParallelism,
+        (int) Math.max(JvmUtils.getRuntimeInfo().getAvailableProcessors() * 0.5, 1)
+    );
 
-    if (targetRunTimeMillis == null) {
-      if (oldConfig == null || oldConfig.getMergePoolTargetTaskRunTimeMillis() == null) {
-        this.targetRunTimeMillis = ParallelMergeCombiningSequence.DEFAULT_TASK_TARGET_RUN_TIME_MILLIS;
-      } else {
-        warnDeprecated(
-            "druid.processing.merge.task.targetRunTimeMillis",
-            "druid.processing.merge.targetRunTimeMillis"
-        );
-        this.targetRunTimeMillis = oldConfig.getMergePoolTargetTaskRunTimeMillis();
-      }
-    } else {
-      this.targetRunTimeMillis = targetRunTimeMillis;
-    }
+    this.targetRunTimeMillis = Configs.valueOrDefault(
+        targetRunTimeMillis,
+        ParallelMergeCombiningSequence.DEFAULT_TASK_TARGET_RUN_TIME_MILLIS
+    );
 
-    if (initialYieldNumRows == null) {
-      if (oldConfig == null || oldConfig.getMergePoolTaskInitialYieldRows() == null) {
-        this.initialYieldNumRows = ParallelMergeCombiningSequence.DEFAULT_TASK_INITIAL_YIELD_NUM_ROWS;
-      } else {
-        warnDeprecated(
-            "druid.processing.merge.task.initialYieldNumRows",
-            "druid.processing.merge.initialYieldNumRows"
-        );
-        this.initialYieldNumRows = oldConfig.getMergePoolTaskInitialYieldRows();
-      }
-    } else {
-      this.initialYieldNumRows = initialYieldNumRows;
-    }
+    this.initialYieldNumRows = Configs.valueOrDefault(
+        initialYieldNumRows,
+        ParallelMergeCombiningSequence.DEFAULT_TASK_INITIAL_YIELD_NUM_ROWS
+    );
 
-    if (smallBatchNumRows == null) {
-      if (oldConfig == null || oldConfig.getMergePoolSmallBatchRows() == null) {
-        this.smallBatchNumRows = ParallelMergeCombiningSequence.DEFAULT_TASK_SMALL_BATCH_NUM_ROWS;
-      } else {
-        warnDeprecated(
-            "druid.processing.merge.task.smallBatchNumRows",
-            "druid.processing.merge.smallBatchNumRows"
-        );
-        this.smallBatchNumRows = oldConfig.getMergePoolSmallBatchRows();
-      }
-    } else {
-      this.smallBatchNumRows = smallBatchNumRows;
-    }
+    this.smallBatchNumRows = Configs.valueOrDefault(
+        smallBatchNumRows,
+        ParallelMergeCombiningSequence.DEFAULT_TASK_SMALL_BATCH_NUM_ROWS
+    );
   }
 
   @VisibleForTesting
   public BrokerParallelMergeConfig()
   {
-    this(null, null, null, null, null, null, null, null);
+    this(null, null, null, null, null, null, null);
   }
 
   public boolean useParallelMergePool()
@@ -200,16 +145,5 @@ public class BrokerParallelMergeConfig
   public int getSmallBatchNumRows()
   {
     return smallBatchNumRows;
-  }
-
-  private static void warnDeprecated(String oldPath, String newPath)
-  {
-    LOG.warn(
-        "Using deprecated config [%s] which has been replace by [%s]. This path is deprecated and will be "
-        + "removed in a future release, please transition to using [%s]",
-        oldPath,
-        newPath,
-        newPath
-    );
   }
 }

@@ -38,6 +38,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.metrics.Monitor;
 import org.apache.druid.metadata.DynamicConfigProvider;
 import org.apache.druid.metadata.PasswordProvider;
+import org.apache.druid.utils.CollectionUtils;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.PartitionInfo;
@@ -166,7 +167,8 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
           record.topic(),
           new KafkaTopicPartition(multiTopic, record.topic(), record.partition()),
           record.offset(),
-          record.value() == null ? null : ImmutableList.of(new KafkaRecordEntity(record))
+          record.value() == null ? null : ImmutableList.of(new KafkaRecordEntity(record)),
+          record.timestamp()
       ));
     }
     return polledRecords;
@@ -204,6 +206,21 @@ public class KafkaRecordSupplier implements RecordSupplier<KafkaTopicPartition, 
   public Long getPosition(StreamPartition<KafkaTopicPartition> partition)
   {
     return wrapExceptions(() -> consumer.position(partition.getPartitionId().asTopicPartition(partition.getStream())));
+  }
+
+  @Override
+  public Map<KafkaTopicPartition, Long> getLatestSequenceNumbers(Set<StreamPartition<KafkaTopicPartition>> partitions)
+  {
+    return wrapExceptions(() -> CollectionUtils.mapKeys(
+      consumer.endOffsets(
+        partitions
+            .stream()
+            .map(e -> e.getPartitionId().asTopicPartition(e.getStream()))
+            .collect(Collectors.toList()
+        )
+      ),
+      p -> new KafkaTopicPartition(multiTopic, p.topic(), p.partition())
+    ));
   }
 
   @Override
