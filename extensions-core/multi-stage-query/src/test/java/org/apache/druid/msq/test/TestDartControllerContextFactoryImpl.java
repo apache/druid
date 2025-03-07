@@ -28,6 +28,7 @@ import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.guice.annotations.Smile;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.msq.dart.Dart;
 import org.apache.druid.msq.dart.controller.DartControllerContext;
@@ -72,33 +73,22 @@ public class TestDartControllerContextFactoryImpl extends DartControllerContextF
   @Override
   public ControllerContext newContext(String queryId)
   {
-    DartControllerContext ctx;
-    DartTestWorkerClient wc;
-    ctx = new DartControllerContext(
+    return new DartControllerContext(
         injector,
         jsonMapper,
         selfNode,
-        wc = (DartTestWorkerClient) makeWorkerClient(queryId),
+        new DartTestWorkerClient(queryId, serviceClientFactory, smileMapper, selfNode.getHostAndPortToUse(), workerMap),
         memoryIntrospector,
         serverView,
         emitter
-    ) {
-      public void registerController(Controller controller, org.apache.druid.java.util.common.io.Closer closer) {
+    )
+    {
+      public void registerController(Controller controller, Closer closer)
+      {
         super.registerController(controller, closer);
-        theController1=controller;
-
+        theController1 = controller;
       };
     };
-    return ctx;
-  }
-
-
-  @Override
-  protected DartWorkerClient makeWorkerClient(String queryId)
-  {
-    return new DartTestWorkerClient(
-        queryId, serviceClientFactory, smileMapper, selfNode.getHostAndPortToUse(), workerMap
-    );
   }
 
   public class DartTestWorkerClient extends MSQTestWorkerClient implements DartWorkerClient

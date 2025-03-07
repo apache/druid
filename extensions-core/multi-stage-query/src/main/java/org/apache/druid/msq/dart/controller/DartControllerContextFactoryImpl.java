@@ -28,7 +28,6 @@ import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
-import org.apache.druid.msq.dart.worker.DartWorkerClient;
 import org.apache.druid.msq.dart.worker.DartWorkerClientImpl;
 import org.apache.druid.msq.exec.ControllerContext;
 import org.apache.druid.msq.exec.MemoryIntrospector;
@@ -75,15 +74,10 @@ public class DartControllerContextFactoryImpl implements DartControllerContextFa
         injector,
         jsonMapper,
         selfNode,
-        makeWorkerClient(queryId),
+        new DartWorkerClientImpl(queryId, serviceClientFactory, smileMapper, selfNode.getHostAndPortToUse()),
         memoryIntrospector,
         serverView,
         emitter
     );
-  }
-
-  protected DartWorkerClient makeWorkerClient(final String queryId)
-  {
-    return new DartWorkerClientImpl(queryId, serviceClientFactory, smileMapper, selfNode.getHostAndPortToUse());
   }
 }
