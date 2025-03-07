@@ -17,4 +17,3 @@ select count(1) from foo ;
 
 !ok
 
-

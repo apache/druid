@@ -33,8 +33,8 @@ import org.apache.druid.msq.test.MSQTestOverlordServiceClient;
 import org.apache.druid.msq.test.MSQTestTaskActionClient;
 import org.apache.druid.sql.SqlStatementFactory;
 import org.apache.druid.sql.SqlToolbox;
-import org.apache.druid.sql.avatica.DartDruidMeta;
 import org.apache.druid.sql.avatica.DruidMeta;
+import org.apache.druid.sql.avatica.MSQDruidMeta;
 
 public class TestMSQSqlModule extends TestDruidModule
 {
@@ -83,7 +83,7 @@ public class TestMSQSqlModule extends TestDruidModule
 
   @Provides
   @LazySingleton
-  public DruidMeta createMeta(DartDruidMeta druidMeta)
+  public DruidMeta createMeta(MSQDruidMeta druidMeta)
   {
     return druidMeta;
   }

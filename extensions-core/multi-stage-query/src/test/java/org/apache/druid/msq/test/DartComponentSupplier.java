@@ -45,6 +45,8 @@ import org.apache.druid.query.TestBufferPool;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.rpc.guice.ServiceClientModule;
 import org.apache.druid.server.QueryLifecycleFactory;
+import org.apache.druid.sql.avatica.DartDruidMeta;
+import org.apache.druid.sql.avatica.DruidMeta;
 import org.apache.druid.sql.calcite.TempDirProducer;
 import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.apache.druid.sql.calcite.util.DruidModuleCollection;
@@ -125,6 +127,13 @@ public class DartComponentSupplier extends AbstractMSQComponentSupplierDelegate
 
   }
   static class LocalDartModule implements DruidModule{
+
+    @Provides
+    @LazySingleton
+    public DruidMeta createMeta(DartDruidMeta druidMeta)
+    {
+      return druidMeta;
+    }
 
     @Override
     public void configure(Binder binder)
