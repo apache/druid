@@ -152,6 +152,7 @@ public class DartQueryMaker implements QueryMaker
         ),
         controllerContext
     );
+    controllerContext.registerController(controller, null);
 
     final ControllerHolder controllerHolder = new ControllerHolder(
         controller,

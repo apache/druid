@@ -28,6 +28,7 @@ import org.apache.druid.guice.annotations.EscalatedGlobal;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.guice.annotations.Smile;
+import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.emitter.service.ServiceEmitter;
 import org.apache.druid.msq.dart.Dart;
 import org.apache.druid.msq.dart.controller.DartControllerContext;
@@ -44,9 +45,11 @@ import org.apache.druid.msq.kernel.WorkOrder;
 import org.apache.druid.rpc.ServiceClientFactory;
 import org.apache.druid.server.DruidNode;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.function.Function;
 
 public class TestDartControllerContextFactoryImpl extends DartControllerContextFactoryImpl
 {
@@ -71,52 +74,39 @@ public class TestDartControllerContextFactoryImpl extends DartControllerContextF
   @Override
   public ControllerContext newContext(String queryId)
   {
-    DartControllerContext ctx;
-    DartTestWorkerClient wc;
-    ctx = new DartControllerContext(
-        injector,
-        jsonMapper,
-        selfNode,
-        wc = (DartTestWorkerClient) makeWorkerClient(queryId),
-        memoryIntrospector,
-        serverView,
-        emitter
-    );
-    wc.controllerCtx = ctx;
-    return ctx;
+    return new DartTestControllerContext(queryId);
   }
 
-  @Override
+
   protected DartWorkerClient makeWorkerClient(String queryId)
   {
-    return new DartTestWorkerClient(
-        queryId, serviceClientFactory, smileMapper, selfNode.getHostAndPortToUse(), workerMap
-    );
+    return new DartTestWorkerClient(null);
   }
 
-  public class DartTestWorkerClient extends MSQTestWorkerClient implements DartWorkerClient
-  {
-    private final ExecutorService EXECUTOR = Executors.newCachedThreadPool();
-    public DartControllerContext controllerCtx;
+  public class DartTestControllerContext extends DartControllerContext {
 
-    public DartTestWorkerClient(
-        String queryId,
-        ServiceClientFactory clientFactory,
-        ObjectMapper smileMapper,
-        String controllerHost, Map<String, Worker> workerMap)
+    public ExecutorService executor = Executors.newCachedThreadPool();
+    public Controller controller;
+    public Map<String, Worker> inMemoryWorkers = new HashMap<>();
+
+    public DartTestControllerContext(String queryId)
     {
-      super(workerMap);
+      super(injector, jsonMapper, selfNode, makeWorkerClient(queryId), memoryIntrospector, serverView, emitter);
     }
 
     @Override
+    public void registerController(Controller controller, Closer closer)
+    {
+      super.registerController(controller, closer);
+      this.controller= controller;
+    }
+
     protected Worker newWorker(String workerId)
     {
-      String queryId = workerId;
-      Controller controller = controllerCtx.theController;
       Worker worker = new WorkerImpl(
           null,
           new MSQTestWorkerContext(
-              queryId,
+              workerId,
               inMemoryWorkers,
               controller,
               jsonMapper,
@@ -126,7 +116,7 @@ public class TestDartControllerContextFactoryImpl extends DartControllerContextF
           )
       );
 
-      EXECUTOR.submit(() -> {
+      executor.submit(() -> {
         try {
           worker.run();
         }
@@ -136,6 +126,33 @@ public class TestDartControllerContextFactoryImpl extends DartControllerContextF
       });
 
       return worker;
+    }
+  }
+
+
+  public class DartTestWorkerClient extends MSQTestWorkerClient implements DartWorkerClient
+  {
+    public DartControllerContext controllerCtx;
+
+    public DartTestWorkerClient(Function<String, Worker> workerFactory)
+    {
+      super(workerMap);
+    }
+
+    @Override
+    protected Worker newWorker(String workerId)
+    {
+      return makeWorker(workerId);
+    }
+
+    private Worker makeWorker(String workerId)
+    {
+      if(true)
+      {
+        throw new RuntimeException("FIXME: Unimplemented!");
+      }
+      return null;
+
     }
 
     @Override

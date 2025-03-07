@@ -89,8 +89,6 @@ public class DartControllerContext implements ControllerContext
   private final ServiceMetricEvent.Builder metricBuilder;
   private final ServiceEmitter emitter;
 
-  public Controller theController;
-
   public DartControllerContext(
       final Injector injector,
       final ObjectMapper jsonMapper,
@@ -217,11 +215,6 @@ public class DartControllerContext implements ControllerContext
   public void registerController(Controller controller, Closer closer)
   {
     closer.register(workerClient);
-    // FIXME:
-    // workerClient.setController();
-    // controller
-    theController = controller;
-
   }
 
   @Override
