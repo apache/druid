@@ -71,7 +71,7 @@ public class CoordinatorDynamicConfig
   private final Map<String, String> debugDimensions;
   private final Map<Dimension, String> validDebugDimensions;
 
-  private final Set<String> turboLoadHistoricals;
+  private final Set<String> turboLoadingNodes;
 
   /**
    * Stale pending segments belonging to the data sources in this list are not killed by {@code
@@ -122,7 +122,7 @@ public class CoordinatorDynamicConfig
       @JsonProperty("useRoundRobinSegmentAssignment") @Nullable Boolean useRoundRobinSegmentAssignment,
       @JsonProperty("smartSegmentLoading") @Nullable Boolean smartSegmentLoading,
       @JsonProperty("debugDimensions") @Nullable Map<String, String> debugDimensions,
-      @JsonProperty("turboLoadHistoricals") @Nullable Set<String> turboLoadHistoricals
+      @JsonProperty("turboLoadingNodes") @Nullable Set<String> turboLoadingNodes
   )
   {
     this.markSegmentAsUnusedDelayMillis =
@@ -166,7 +166,7 @@ public class CoordinatorDynamicConfig
     );
     this.debugDimensions = debugDimensions;
     this.validDebugDimensions = validateDebugDimensions(debugDimensions);
-    this.turboLoadHistoricals = parseJsonStringOrArray(turboLoadHistoricals);
+    this.turboLoadingNodes = parseJsonStringOrArray(turboLoadingNodes);
   }
 
   private Map<Dimension, String> validateDebugDimensions(Map<String, String> debugDimensions)
@@ -210,8 +210,8 @@ public class CoordinatorDynamicConfig
       String serverName
   )
   {
-    final Set<String> turboLoadHistoricals = coordinatorDynamicConfig.getTurboLoadHistoricals();
-    return turboLoadHistoricals.contains(serverName) ?
+    final Set<String> turboLoadingNodes = coordinatorDynamicConfig.getTurboLoadingNodes();
+    return turboLoadingNodes.contains(serverName) ?
            SegmentLoadingMode.TURBO :
            SegmentLoadingMode.NORMAL;
   }
@@ -325,9 +325,9 @@ public class CoordinatorDynamicConfig
   }
 
   @JsonProperty
-  public Set<String> getTurboLoadHistoricals()
+  public Set<String> getTurboLoadingNodes()
   {
-    return turboLoadHistoricals;
+    return turboLoadingNodes;
   }
 
   @Override
@@ -348,7 +348,7 @@ public class CoordinatorDynamicConfig
            ", decommissioningNodes=" + decommissioningNodes +
            ", pauseCoordination=" + pauseCoordination +
            ", replicateAfterLoadTimeout=" + replicateAfterLoadTimeout +
-           ", turboLoadHistoricals=" + turboLoadHistoricals +
+           ", turboLoadingNodes=" + turboLoadingNodes +
            '}';
   }
 
@@ -382,7 +382,7 @@ public class CoordinatorDynamicConfig
                dataSourcesToNotKillStalePendingSegmentsIn,
                that.dataSourcesToNotKillStalePendingSegmentsIn)
            && Objects.equals(decommissioningNodes, that.decommissioningNodes)
-           && Objects.equals(turboLoadHistoricals, that.turboLoadHistoricals)
+           && Objects.equals(turboLoadingNodes, that.turboLoadingNodes)
            && Objects.equals(debugDimensions, that.debugDimensions);
   }
 
@@ -403,7 +403,7 @@ public class CoordinatorDynamicConfig
         decommissioningNodes,
         pauseCoordination,
         debugDimensions,
-        turboLoadHistoricals
+        turboLoadingNodes
     );
   }
 
@@ -455,7 +455,7 @@ public class CoordinatorDynamicConfig
     private Boolean replicateAfterLoadTimeout;
     private Boolean useRoundRobinSegmentAssignment;
     private Boolean smartSegmentLoading;
-    private Set<String> turboLoadHistoricals;
+    private Set<String> turboLoadingNodes;
 
     public Builder()
     {
@@ -479,7 +479,7 @@ public class CoordinatorDynamicConfig
         @JsonProperty("useRoundRobinSegmentAssignment") @Nullable Boolean useRoundRobinSegmentAssignment,
         @JsonProperty("smartSegmentLoading") @Nullable Boolean smartSegmentLoading,
         @JsonProperty("debugDimensions") @Nullable Map<String, String> debugDimensions,
-        @JsonProperty("turboLoadHistoricals") @Nullable Set<String> turboLoadHistoricals
+        @JsonProperty("turboLoadingNodes") @Nullable Set<String> turboLoadingNodes
     )
     {
       this.markSegmentAsUnusedDelayMillis = markSegmentAsUnusedDelayMillis;
@@ -498,7 +498,7 @@ public class CoordinatorDynamicConfig
       this.useRoundRobinSegmentAssignment = useRoundRobinSegmentAssignment;
       this.smartSegmentLoading = smartSegmentLoading;
       this.debugDimensions = debugDimensions;
-      this.turboLoadHistoricals = turboLoadHistoricals;
+      this.turboLoadingNodes = turboLoadingNodes;
     }
 
     public Builder withMarkSegmentAsUnusedDelayMillis(long leadingTimeMillis)
@@ -519,9 +519,9 @@ public class CoordinatorDynamicConfig
       return this;
     }
 
-    public Builder withTurboLoadHistoricals(Set<String> turboLoadHistoricals)
+    public Builder withTurboLoadingNodes(Set<String> turboLoadingNodes)
     {
-      this.turboLoadHistoricals = turboLoadHistoricals;
+      this.turboLoadingNodes = turboLoadingNodes;
       return this;
     }
 
@@ -617,7 +617,7 @@ public class CoordinatorDynamicConfig
           valueOrDefault(useRoundRobinSegmentAssignment, Defaults.USE_ROUND_ROBIN_ASSIGNMENT),
           valueOrDefault(smartSegmentLoading, Defaults.SMART_SEGMENT_LOADING),
           debugDimensions,
-          turboLoadHistoricals
+          turboLoadingNodes
       );
     }
 
@@ -648,7 +648,7 @@ public class CoordinatorDynamicConfig
           valueOrDefault(useRoundRobinSegmentAssignment, defaults.isUseRoundRobinSegmentAssignment()),
           valueOrDefault(smartSegmentLoading, defaults.isSmartSegmentLoading()),
           valueOrDefault(debugDimensions, defaults.getDebugDimensions()),
-          valueOrDefault(turboLoadHistoricals, defaults.getTurboLoadHistoricals())
+          valueOrDefault(turboLoadingNodes, defaults.getTurboLoadingNodes())
       );
     }
   }
