@@ -27,6 +27,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.query.policy.NoRestrictionPolicy;
 import org.apache.druid.query.policy.Policy;
+import org.apache.druid.query.policy.PolicyConfig;
 import org.apache.druid.segment.RestrictedSegment;
 import org.apache.druid.segment.SegmentReference;
 
@@ -143,7 +144,7 @@ public class RestrictedDataSource implements DataSource
     }
 
     Optional<Policy> newPolicy = policyMap.getOrDefault(base.getName(), Optional.empty());
-    if (!newPolicy.isPresent()) {
+    if (newPolicy.isEmpty()) {
       throw new ISE(
           "No restriction found on table [%s], but had policy [%s] before.",
           base.getName(),
@@ -165,6 +166,12 @@ public class RestrictedDataSource implements DataSource
     // The only happy path is, newPolicy is NoRestrictionPolicy, which means this comes from an anthenticated and
     // authorized druid-internal request.
     return this;
+  }
+
+  @Override
+  public boolean validate(PolicyConfig tableSecurityPolicyConfig)
+  {
+    return tableSecurityPolicyConfig.allowPolicy(policy);
   }
 
   @Override
