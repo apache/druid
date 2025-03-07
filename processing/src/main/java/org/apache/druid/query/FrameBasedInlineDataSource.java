@@ -24,7 +24,6 @@ import org.apache.druid.frame.read.FrameReader;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
-import org.apache.druid.query.planning.DataSourceAnalysis;
 import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
@@ -164,7 +163,7 @@ public class FrameBasedInlineDataSource implements DataSource
   }
 
   @Override
-  public boolean isConcrete()
+  public boolean isProcessable()
   {
     return true;
   }
@@ -176,20 +175,9 @@ public class FrameBasedInlineDataSource implements DataSource
   }
 
   @Override
-  public DataSource withUpdatedDataSource(DataSource newSource)
-  {
-    return newSource;
-  }
-
-  @Override
   public byte[] getCacheKey()
   {
     return null;
   }
 
-  @Override
-  public DataSourceAnalysis getAnalysis()
-  {
-    return new DataSourceAnalysis(this, null, null, Collections.emptyList(), null);
-  }
 }
