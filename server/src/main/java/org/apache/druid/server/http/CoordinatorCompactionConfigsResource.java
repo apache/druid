@@ -112,7 +112,6 @@ public class CoordinatorCompactionConfigsResource
   public Response setCompactionTaskLimit(
       @QueryParam("ratio") Double compactionTaskSlotRatio,
       @QueryParam("max") Integer maxCompactionTaskSlots,
-      @QueryParam("useAutoScaleSlots") Boolean useAutoScaleSlots,
       @Context HttpServletRequest req
   )
   {
@@ -120,7 +119,8 @@ public class CoordinatorCompactionConfigsResource
         new ClusterCompactionConfig(
             compactionTaskSlotRatio,
             maxCompactionTaskSlots,
-            useAutoScaleSlots,
+            null,
+            null,
             null
         ),
         req
