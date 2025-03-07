@@ -50,7 +50,7 @@ public class HdfsTaskLogsTest
     final File tmpDir = tempFolder.newFolder();
     final File logDir = new File(tmpDir, "logs");
     final File logFile = new File(tmpDir, "log");
-    Files.write("blah", logFile, StandardCharsets.UTF_8);
+    Files.asCharSink(logFile, StandardCharsets.UTF_8).write("blah");
     final TaskLogs taskLogs = new HdfsTaskLogs(new HdfsTaskLogsConfig(logDir.toString()), new Configuration());
     taskLogs.pushTaskLog("foo", logFile);
 
@@ -69,11 +69,11 @@ public class HdfsTaskLogsTest
     final File logFile = new File(tmpDir, "log");
     final TaskLogs taskLogs = new HdfsTaskLogs(new HdfsTaskLogsConfig(logDir.toString()), new Configuration());
 
-    Files.write("blah", logFile, StandardCharsets.UTF_8);
+    Files.asCharSink(logFile, StandardCharsets.UTF_8).write("blah");
     taskLogs.pushTaskLog("foo", logFile);
     Assert.assertEquals("blah", readLog(taskLogs, "foo", 0));
 
-    Files.write("blah blah", logFile, StandardCharsets.UTF_8);
+    Files.asCharSink(logFile, StandardCharsets.UTF_8).write("blah blah");
     taskLogs.pushTaskLog("foo", logFile);
     Assert.assertEquals("blah blah", readLog(taskLogs, "foo", 0));
   }
@@ -87,12 +87,25 @@ public class HdfsTaskLogsTest
     final TaskLogs taskLogs = new HdfsTaskLogs(new HdfsTaskLogsConfig(logDir.toString()), new Configuration());
 
 
-    Files.write("{}", statusFile, StandardCharsets.UTF_8);
+    Files.asCharSink(statusFile, StandardCharsets.UTF_8).write("{}");
     taskLogs.pushTaskStatus("id", statusFile);
     Assert.assertEquals(
         "{}",
         StringUtils.fromUtf8(ByteStreams.toByteArray(taskLogs.streamTaskStatus("id").get()))
     );
+  }
+
+  @Test
+  public void test_taskPayload() throws Exception
+  {
+    final File tmpDir = tempFolder.newFolder();
+    final File logDir = new File(tmpDir, "logs");
+    final File payload = new File(tmpDir, "payload.json");
+    final TaskLogs taskLogs = new HdfsTaskLogs(new HdfsTaskLogsConfig(logDir.toString()), new Configuration());
+
+    Files.asCharSink(payload, StandardCharsets.UTF_8).write("{}");
+    taskLogs.pushTaskPayload("id", payload);
+    Assert.assertEquals("{}", StringUtils.fromUtf8(ByteStreams.toByteArray(taskLogs.streamTaskPayload("id").get())));
   }
 
   @Test
@@ -107,7 +120,7 @@ public class HdfsTaskLogsTest
 
     final TaskLogs taskLogs = new HdfsTaskLogs(new HdfsTaskLogsConfig(logDir.toString()), new Configuration());
 
-    Files.write("log1content", logFile, StandardCharsets.UTF_8);
+    Files.asCharSink(logFile, StandardCharsets.UTF_8).write("log1content");
     taskLogs.pushTaskLog("log1", logFile);
     Assert.assertEquals("log1content", readLog(taskLogs, "log1", 0));
 
@@ -118,7 +131,7 @@ public class HdfsTaskLogsTest
     long time = (System.currentTimeMillis() / 1000) * 1000;
     Assert.assertTrue(fs.getFileStatus(new Path(logDirPath, "log1")).getModificationTime() < time);
 
-    Files.write("log2content", logFile, StandardCharsets.UTF_8);
+    Files.asCharSink(logFile, StandardCharsets.UTF_8).write("log2content");
     taskLogs.pushTaskLog("log2", logFile);
     Assert.assertEquals("log2content", readLog(taskLogs, "log2", 0));
     Assert.assertTrue(fs.getFileStatus(new Path(logDirPath, "log2")).getModificationTime() >= time);

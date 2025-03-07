@@ -45,6 +45,10 @@ import org.apache.druid.rpc.IgnoreHttpResponseHandler;
 import org.apache.druid.rpc.RequestBuilder;
 import org.apache.druid.rpc.ServiceClient;
 import org.apache.druid.rpc.ServiceRetryPolicy;
+import org.apache.druid.server.compaction.CompactionProgressResponse;
+import org.apache.druid.server.compaction.CompactionStatusResponse;
+import org.apache.druid.server.http.SegmentsToUpdateFilter;
+import org.apache.druid.timeline.SegmentId;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.joda.time.Interval;
 
@@ -171,7 +175,7 @@ public class OverlordClientImpl implements OverlordClient
             new BytesFullResponseHandler()
         ),
         holder ->
-            JacksonUtils.readValue(jsonMapper, holder.getContent(), new TypeReference<Map<String, TaskStatus>>() {})
+            JacksonUtils.readValue(jsonMapper, holder.getContent(), new TypeReference<>() {})
     );
   }
 
@@ -206,7 +210,7 @@ public class OverlordClientImpl implements OverlordClient
           final Map<String, List<Interval>> response = JacksonUtils.readValue(
               jsonMapper,
               holder.getContent(),
-              new TypeReference<Map<String, List<Interval>>>() {}
+              new TypeReference<>() {}
           );
 
           return response == null ? Collections.emptyMap() : response;
@@ -253,7 +257,7 @@ public class OverlordClientImpl implements OverlordClient
             new BytesFullResponseHandler()
         ),
         holder ->
-            JacksonUtils.readValue(jsonMapper, holder.getContent(), new TypeReference<List<IndexingWorkerInfo>>() {})
+            JacksonUtils.readValue(jsonMapper, holder.getContent(), new TypeReference<>() {})
     );
   }
 
@@ -309,6 +313,158 @@ public class OverlordClientImpl implements OverlordClient
             new BytesFullResponseHandler()
         ),
         holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), TaskPayloadResponse.class)
+    );
+  }
+
+  @Override
+  public ListenableFuture<CompactionStatusResponse> getCompactionSnapshots(@Nullable String dataSource)
+  {
+    final StringBuilder pathBuilder = new StringBuilder("/druid/indexer/v1/compaction/status");
+    if (dataSource != null && !dataSource.isEmpty()) {
+      pathBuilder.append("?").append("dataSource=").append(dataSource);
+    }
+
+    return FutureUtils.transform(
+        client.asyncRequest(
+            new RequestBuilder(HttpMethod.GET, pathBuilder.toString()),
+            new BytesFullResponseHandler()
+        ),
+        holder -> JacksonUtils.readValue(
+            jsonMapper,
+            holder.getContent(),
+            CompactionStatusResponse.class
+        )
+    );
+  }
+
+  @Override
+  public ListenableFuture<SegmentUpdateResponse> markNonOvershadowedSegmentsAsUsed(String dataSource)
+  {
+    final String path = StringUtils.format(
+        "/druid/indexer/v1/datasources/%s",
+        StringUtils.urlEncode(dataSource)
+    );
+    return FutureUtils.transform(
+        client.asyncRequest(
+            new RequestBuilder(HttpMethod.POST, path),
+            new BytesFullResponseHandler()
+        ),
+        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), SegmentUpdateResponse.class)
+    );
+  }
+
+  @Override
+  public ListenableFuture<SegmentUpdateResponse> markNonOvershadowedSegmentsAsUsed(
+      String dataSource,
+      SegmentsToUpdateFilter filter
+  )
+  {
+    final String path = StringUtils.format(
+        "/druid/indexer/v1/datasources/%s/markUsed",
+        StringUtils.urlEncode(dataSource)
+    );
+    return FutureUtils.transform(
+        client.asyncRequest(
+            new RequestBuilder(HttpMethod.POST, path)
+                .jsonContent(jsonMapper, filter),
+            new BytesFullResponseHandler()
+        ),
+        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), SegmentUpdateResponse.class)
+    );
+  }
+
+  @Override
+  public ListenableFuture<SegmentUpdateResponse> markSegmentAsUsed(SegmentId segmentId)
+  {
+    final String path = StringUtils.format(
+        "/druid/indexer/v1/datasources/%s/segments/%s",
+        StringUtils.urlEncode(segmentId.getDataSource()),
+        StringUtils.urlEncode(segmentId.toString())
+    );
+    return FutureUtils.transform(
+        client.asyncRequest(
+            new RequestBuilder(HttpMethod.POST, path),
+            new BytesFullResponseHandler()
+        ),
+        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), SegmentUpdateResponse.class)
+    );
+  }
+
+  @Override
+  public ListenableFuture<SegmentUpdateResponse> markSegmentsAsUnused(String dataSource)
+  {
+    final String path = StringUtils.format(
+        "/druid/indexer/v1/datasources/%s",
+        StringUtils.urlEncode(dataSource)
+    );
+    return FutureUtils.transform(
+        client.asyncRequest(
+            new RequestBuilder(HttpMethod.DELETE, path),
+            new BytesFullResponseHandler()
+        ),
+        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), SegmentUpdateResponse.class)
+    );
+  }
+
+  @Override
+  public ListenableFuture<SegmentUpdateResponse> markSegmentsAsUnused(
+      String dataSource,
+      SegmentsToUpdateFilter filter
+  )
+  {
+    final String path = StringUtils.format(
+        "/druid/indexer/v1/datasources/%s/markUnused",
+        StringUtils.urlEncode(dataSource)
+    );
+    return FutureUtils.transform(
+        client.asyncRequest(
+            new RequestBuilder(HttpMethod.POST, path)
+                .jsonContent(jsonMapper, filter),
+            new BytesFullResponseHandler()
+        ),
+        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), SegmentUpdateResponse.class)
+    );
+  }
+
+  @Override
+  public ListenableFuture<SegmentUpdateResponse> markSegmentAsUnused(SegmentId segmentId)
+  {
+    final String path = StringUtils.format(
+        "/druid/indexer/v1/datasources/%s/segments/%s",
+        StringUtils.urlEncode(segmentId.getDataSource()),
+        StringUtils.urlEncode(segmentId.toString())
+    );
+    return FutureUtils.transform(
+        client.asyncRequest(
+            new RequestBuilder(HttpMethod.DELETE, path),
+            new BytesFullResponseHandler()
+        ),
+        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), SegmentUpdateResponse.class)
+    );
+  }
+
+  @Override
+  public ListenableFuture<CompactionProgressResponse> getBytesAwaitingCompaction(String dataSource)
+  {
+    final String path = "/druid/indexer/v1/compaction/progress?dataSource=" + dataSource;
+    return FutureUtils.transform(
+        client.asyncRequest(
+            new RequestBuilder(HttpMethod.GET, path),
+            new BytesFullResponseHandler()
+        ),
+        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), CompactionProgressResponse.class)
+    );
+  }
+
+  @Override
+  public ListenableFuture<Boolean> isCompactionSupervisorEnabled()
+  {
+    return FutureUtils.transform(
+        client.asyncRequest(
+            new RequestBuilder(HttpMethod.GET, "/druid/indexer/v1/compaction/isSupervisorEnabled"),
+            new BytesFullResponseHandler()
+        ),
+        holder -> JacksonUtils.readValue(jsonMapper, holder.getContent(), Boolean.class)
     );
   }
 

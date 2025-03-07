@@ -42,9 +42,11 @@ import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.join.JoinType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
+import org.apache.druid.sql.calcite.DecoupledTestConfig.IgnoreQueriesReason;
 import org.apache.druid.sql.calcite.util.CalciteTests;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
@@ -125,9 +127,7 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
                                                 .setDimensions(new DefaultDimensionSpec("d1", "_d0"))
                                                 .setAggregatorSpecs(
                                                     new DoubleSumAggregatorFactory("_a0:sum", "a0"),
-                                                    useDefault
-                                                    ? new CountAggregatorFactory("_a0:count")
-                                                    : new FilteredAggregatorFactory(
+                                                    new FilteredAggregatorFactory(
                                                         new CountAggregatorFactory("_a0:count"),
                                                         notNull("a0")
                                                     )
@@ -168,6 +168,7 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @DecoupledTestConfig(ignoreExpectedQueriesReason = IgnoreQueriesReason.UNNEST_EXTRA_SCANQUERY)
   @MethodSource("provideQueryContexts")
   @ParameterizedTest(name = "{0}")
   public void testCorrelatedSubqueryWithLeftFilter(Map<String, Object> queryContext)
@@ -257,6 +258,7 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @DecoupledTestConfig(ignoreExpectedQueriesReason = IgnoreQueriesReason.UNNEST_EXTRA_SCANQUERY)
   @MethodSource("provideQueryContexts")
   @ParameterizedTest(name = "{0}")
   public void testCorrelatedSubqueryWithLeftFilter_leftDirectAccessDisabled(Map<String, Object> queryContext)
@@ -285,7 +287,8 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
                                                                              "B",
                                                                              ColumnType.STRING
                                                                          ))
-                                                                         .columns("__time", "city", "country")
+                                                                         .columns("__time", "country", "city")
+                                                                         .columnTypes(ColumnType.LONG, ColumnType.STRING, ColumnType.STRING)
                                                                          .build()),
                                 new QueryDataSource(
                                     GroupByQuery.builder()
@@ -352,6 +355,7 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @DecoupledTestConfig(ignoreExpectedQueriesReason = IgnoreQueriesReason.UNNEST_EXTRA_SCANQUERY)
   @MethodSource("provideQueryContexts")
   @ParameterizedTest(name = "{0}")
   public void testCorrelatedSubqueryWithCorrelatedQueryFilter(Map<String, Object> queryContext)
@@ -446,6 +450,7 @@ public class CalciteCorrelatedQueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @DecoupledTestConfig(ignoreExpectedQueriesReason = IgnoreQueriesReason.UNNEST_EXTRA_SCANQUERY)
   @MethodSource("provideQueryContexts")
   @ParameterizedTest(name = "{0}")
   public void testCorrelatedSubqueryWithCorrelatedQueryFilter_Scan(Map<String, Object> queryContext)

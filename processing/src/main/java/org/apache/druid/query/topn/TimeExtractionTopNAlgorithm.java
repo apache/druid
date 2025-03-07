@@ -20,11 +20,11 @@
 package org.apache.druid.query.topn;
 
 import org.apache.druid.query.ColumnSelectorPlus;
+import org.apache.druid.query.CursorGranularizer;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.DimensionSelector;
-import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.column.ColumnType;
 
 import java.util.HashMap;
@@ -38,9 +38,9 @@ public class TimeExtractionTopNAlgorithm extends BaseTopNAlgorithm<int[], Map<Ob
   private final TopNQuery query;
   private final Function<Object, Object> dimensionValueConverter;
 
-  public TimeExtractionTopNAlgorithm(StorageAdapter storageAdapter, TopNQuery query)
+  public TimeExtractionTopNAlgorithm(TopNQuery query, TopNCursorInspector cursorInspector)
   {
-    super(storageAdapter);
+    super(cursorInspector);
     this.query = query;
 
     // This strategy is used for ExtractionFns on the __time column. They always return STRING, so we need to convert
@@ -53,11 +53,12 @@ public class TimeExtractionTopNAlgorithm extends BaseTopNAlgorithm<int[], Map<Ob
 
   @Override
   @SuppressWarnings("unchecked")
-  public TopNParams makeInitParams(ColumnSelectorPlus selectorPlus, Cursor cursor)
+  public TopNParams makeInitParams(ColumnSelectorPlus selectorPlus, Cursor cursor, CursorGranularizer granularizer)
   {
     return new TopNParams(
         selectorPlus,
         cursor,
+        granularizer,
         Integer.MAX_VALUE
     );
   }
@@ -88,23 +89,27 @@ public class TimeExtractionTopNAlgorithm extends BaseTopNAlgorithm<int[], Map<Ob
   )
   {
     final Cursor cursor = params.getCursor();
+    final CursorGranularizer granularizer = params.getGranularizer();
     final DimensionSelector dimSelector = params.getDimSelector();
 
     long processedRows = 0;
-    while (!cursor.isDone()) {
-      final Object key = dimensionValueConverter.apply(dimSelector.lookupName(dimSelector.getRow().get(0)));
+    if (granularizer.currentOffsetWithinBucket()) {
+      while (!cursor.isDone()) {
+        final Object key = dimensionValueConverter.apply(dimSelector.lookupName(dimSelector.getRow().get(0)));
 
-      Aggregator[] theAggregators = aggregatesStore.computeIfAbsent(
-          key,
-          k -> makeAggregators(cursor, query.getAggregatorSpecs())
-      );
+        Aggregator[] theAggregators = aggregatesStore.computeIfAbsent(
+            key,
+            k -> makeAggregators(cursor, query.getAggregatorSpecs())
+        );
 
-      for (Aggregator aggregator : theAggregators) {
-        aggregator.aggregate();
+        for (Aggregator aggregator : theAggregators) {
+          aggregator.aggregate();
+        }
+        processedRows++;
+        if (!granularizer.advanceCursorWithinBucket()) {
+          break;
+        }
       }
-
-      cursor.advance();
-      processedRows++;
     }
     return processedRows;
   }

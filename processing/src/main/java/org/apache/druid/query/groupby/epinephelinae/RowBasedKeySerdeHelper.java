@@ -65,4 +65,9 @@ interface RowBasedKeySerdeHelper
    * Return a {@link BufferComparator} to compare keys stored in ByteBuffer.
    */
   BufferComparator getBufferComparator();
+
+  /**
+   * Returns the expected class of the key which used to deserialize the objects correctly from the spilled files.
+   */
+  Class<?> getClazz();
 }

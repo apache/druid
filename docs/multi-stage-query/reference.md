@@ -72,9 +72,8 @@ FROM TABLE(
    `name` and a `type`. The type can be `string`, `long`, `double`, or `float`. This row signature is
    used to map the external data into the SQL layer.
 
-Variation 2, with the input schema expressed in SQL using an `EXTEND` clause. (See the next
-section for more detail on `EXTEND`). This format also uses named arguments to make the
-SQL a bit easier to read:
+Variation 2, with the input schema expressed in SQL using an `EXTEND` clause. See the next
+section for more detail on `EXTEND`. This format also uses named arguments to make the SQL easier to read:
 
 ```sql
 SELECT
@@ -95,12 +94,12 @@ For more information, see [Read external data with EXTERN](concepts.md#read-exte
 
 #### `EXTERN` to export to a destination
 
-`EXTERN` can be used to specify a destination where you want to export data to.
-This variation of EXTERN requires one argument, the details of the destination as specified below.
-This variation additionally requires an `AS` clause to specify the format of the exported rows.
+You can use `EXTERN` to specify a destination to export data.
+This variation of `EXTERN` accepts the details of the destination as the only argument and requires an `AS` clause to specify the format of the exported rows.
 
-While exporting data, some metadata files will also be created at the destination in addition to the data. These files will be created in a directory `_symlink_format_manifest`.
-- `_symlink_format_manifest/manifest`: Lists the files which were created as part of the export. The file is in the symlink manifest format, and consists of a list of absolute paths to the files created.
+When you export data, Druid creates metadata files in a subdirectory named `_symlink_format_manifest`.
+Within the `_symlink_format_manifest/manifest` directory, the `manifest` file lists absolute paths to exported files using the symlink manifest format. For example:
+
 ```text
 s3://export-bucket/export/query-6564a32f-2194-423a-912e-eead470a37c4-worker2-partition2.csv
 s3://export-bucket/export/query-6564a32f-2194-423a-912e-eead470a37c4-worker1-partition1.csv
@@ -112,8 +111,8 @@ s3://export-bucket/export/query-6564a32f-2194-423a-912e-eead470a37c4-worker0-par
 Keep the following in mind when using EXTERN to export rows:
 - Only INSERT statements are supported.
 - Only `CSV` format is supported as an export format.
-- Partitioning (`PARTITIONED BY`) and clustering (`CLUSTERED BY`) aren't supported with export statements.
-- You can export to Amazon S3 or local storage.
+- Partitioning (`PARTITIONED BY`) and clustering (`CLUSTERED BY`) aren't supported with EXTERN statements.
+- You can export to Amazon S3, Google GCS, or local storage.
 - The destination provided should contain no other files or directories.
 
 When you export data, use the `rowsPerPage` context parameter to restrict the size of exported files.
@@ -128,15 +127,19 @@ SELECT
 FROM <table>
 ```
 
-##### S3
+##### S3 - Amazon S3
 
-Export results to S3 by passing the function `S3()` as an argument to the `EXTERN` function. Note that this requires the `druid-s3-extensions`.
-The `S3()` function is a Druid function that configures the connection. Arguments for `S3()` should be passed as named parameters with the value in single quotes like the following example:
+To export results to S3, pass the `s3()` function as an argument to the `EXTERN` function.
+Export to S3 requires the `druid-s3-extensions` extension.
+For a list of S3 permissions the MSQ task engine requires to perform export, see [Permissions for durable storage](./security.md#s3).
+
+The `s3()` function configures the connection to AWS.
+Pass all arguments for `s3()` as named parameters with their values enclosed in single quotes. For example:
 
 ```sql
 INSERT INTO
   EXTERN(
-    S3(bucket => 'your_bucket', prefix => 'prefix/to/files')
+    s3(bucket => 'your_bucket', prefix => 'prefix/to/files')
   )
 AS CSV
 SELECT
@@ -146,25 +149,26 @@ FROM <table>
 
 Supported arguments for the function:
 
-| Parameter   | Required | Description                                                                                                                                                                                                                                                                    | Default |
-|-------------|----------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------|
-| `bucket`    | Yes      | The S3 bucket to which the files are exported to. The bucket and prefix combination should be whitelisted in `druid.export.storage.s3.allowedExportPaths`.                                                                                                                     | n/a     |
-| `prefix`    | Yes      | Path where the exported files would be created. The export query expects the destination to be empty. If the location includes other files, then the query will fail. The bucket and prefix combination should be whitelisted in `druid.export.storage.s3.allowedExportPaths`. | n/a     |
+| Parameter | Required | Description | Default |
+|---|---|---|---|
+| `bucket` | Yes  | S3 bucket destination for exported files. You must add the bucket and prefix combination to the `druid.export.storage.s3.allowedExportPaths` allow list. | n/a |
+| `prefix` | Yes  | Destination path in the bucket to create exported files. The export query expects the destination path to be empty. If the location includes other files, the query will fail. You must add the bucket and prefix combination to the `druid.export.storage.s3.allowedExportPaths` allow list. | n/a |
 
-The following runtime parameters must be configured to export into an S3 destination:
+Configure the following runtime parameters to export to an S3 destination:
 
-| Runtime Parameter                            | Required | Description                                                                                                                                                                                                                          | Default |
-|----------------------------------------------|----------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----|
-| `druid.export.storage.s3.tempLocalDir`       | Yes      | Directory used on the local storage of the worker to store temporary files required while uploading the data.                                                                                                                        | n/a |
-| `druid.export.storage.s3.allowedExportPaths` | Yes      | An array of S3 prefixes that are whitelisted as export destinations. Export queries fail if the export destination does not match any of the configured prefixes. Example: `[\"s3://bucket1/export/\", \"s3://bucket2/export/\"]`    | n/a |
-| `druid.export.storage.s3.maxRetry`           | No       | Defines the max number times to attempt S3 API calls to avoid failures due to transient errors.                                                                                                                                      | 10  |
-| `druid.export.storage.s3.chunkSize`          | No       | Defines the size of each chunk to temporarily store in `tempDir`. The chunk size must be between 5 MiB and 5 GiB. A large chunk size reduces the API calls to S3, however it requires more disk space to store the temporary chunks. | 100MiB |
+| Runtime parameter | Required | Description | Default |
+|---|---|---|---|
+| `druid.export.storage.s3.allowedExportPaths` | Yes | Array of S3 prefixes allowed as export destinations. Export queries fail if the export destination does not match any of the configured prefixes. For example: `[\"s3://bucket1/export/\", \"s3://bucket2/export/\"]` | n/a |
+| `druid.export.storage.s3.tempLocalDir` | No | Directory for local storage where the worker stores temporary files before uploading the data to S3. | n/a |
+| `druid.export.storage.s3.maxRetry` | No | Maximum number of  attempts for S3 API calls to avoid failures due to transient errors. | 10 |
+| `druid.export.storage.s3.chunkSize` | No | Individual chunk size to store temporarily in `tempDir`. Large chunk sizes reduce the number of API calls to S3, but require more disk space to store temporary chunks. | 100MiB |
 
+##### GOOGLE - Google Cloud Storage
 
-##### GS
+To export query results to Google Cloud Storage (GCS), pass the `google()` function as an argument to the `EXTERN` function.
+Export to GCS requires the `druid-google-extensions` extension.
 
-Export results to GCS by passing the function `google()` as an argument to the `EXTERN` function. Note that this requires the `druid-google-extensions`.
-The `google()` function is a Druid function that configures the connection. Arguments for `google()` should be passed as named parameters with the value in single quotes like the following example:
+The `google()` function configures the connection to GCS. Pass the arguments for `google()` as named parameters with their values enclosed in single quotes. For example:
 
 ```sql
 INSERT INTO
@@ -179,29 +183,30 @@ FROM <table>
 
 Supported arguments for the function:
 
-| Parameter   | Required | Description                                                                                                                                                                                                                                                                        | Default |
-|-------------|----------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------|
-| `bucket`    | Yes      | The GS bucket to which the files are exported to. The bucket and prefix combination should be whitelisted in `druid.export.storage.google.allowedExportPaths`.                                                                                                                     | n/a     |
-| `prefix`    | Yes      | Path where the exported files would be created. The export query expects the destination to be empty. If the location includes other files, then the query will fail. The bucket and prefix combination should be whitelisted in `druid.export.storage.google.allowedExportPaths`. | n/a     |
+| Parameter   | Required | Description | Default |
+|---|---|---|---|
+| `bucket`    | Yes | GCS bucket destination for exported files. You must add the bucket and prefix combination to the `druid.export.storage.google.allowedExportPaths` allow list. | n/a |
+| `prefix` | Yes  | Destination path in the bucket to create exported files. The export query expects the destination path to be empty. If the location includes other files, the query will fail. You must add the bucket and prefix combination to the `druid.export.storage.google.allowedExportPaths` allow list. | n/a |
 
-The following runtime parameters must be configured to export into a GCS destination:
+Configure the following runtime parameters to export query results to a GCS destination:
 
-| Runtime Parameter                                | Required | Description                                                                                                                                                                                                                       | Default |
-|--------------------------------------------------|----------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------|
-| `druid.export.storage.google.tempLocalDir`       | Yes      | Directory used on the local storage of the worker to store temporary files required while uploading the data.                                                                                                                     | n/a     |
-| `druid.export.storage.google.allowedExportPaths` | Yes      | An array of GS prefixes that are allowed as export destinations. Export queries fail if the export destination does not match any of the configured prefixes. Example: `[\"gs://bucket1/export/\", \"gs://bucket2/export/\"]` | n/a     |
-| `druid.export.storage.google.maxRetry`           | No       | Defines the max number times to attempt GS API calls to avoid failures due to transient errors.                                                                                                                                   | 10      |
-| `druid.export.storage.google.chunkSize`          | No       | Defines the size of each chunk to temporarily store in `tempDir`. A large chunk size reduces the API calls to GS; however, it requires more disk space to store the temporary chunks.                                              | 4MiB    |
+| Runtime parameter | Required | Description | Default |
+|---|---|---|---|
+| `druid.export.storage.google.allowedExportPaths` | Yes | Array of GCS prefixes allowed as export destinations. Export queries fail if the export destination does not match any of the configured prefixes. For example: `[\"gs://bucket1/export/\", \"gs://bucket2/export/\"]` | n/a     |
+| `druid.export.storage.google.tempLocalDir` | No | Directory for local storage where the worker stores temporary files before uploading the data to GCS. | n/a |
+| `druid.export.storage.google.maxRetry` | No |  Maximum number of attempts for GCS API calls to avoid failures due to transient errors. | 10 |
+| `druid.export.storage.google.chunkSize` | No | Individual chunk size to store temporarily in `tempDir`. Large chunk sizes reduce the number of API calls to GS, but require more disk space to store temporary chunks. | 4 MiB |
 
-##### LOCAL
 
-You can export to the local storage, which exports the results to the filesystem of the MSQ worker.
+##### LOCAL - local file storage
+
+You can export queries to local storage. This process writes the results to the filesystem on the MSQ worker.
 This is useful in a single node setup or for testing but is not suitable for production use cases.
 
-Export results to local storage by passing the function `LOCAL()` as an argument for the `EXTERN FUNCTION`.
-To use local storage as an export destination, the runtime property `druid.export.storage.baseDir` must be configured on the Indexer/Middle Manager.
-This value must be set to an absolute path on the local machine. Exporting data will be allowed to paths which match the prefix set by this value.
-Arguments to `LOCAL()` should be passed as named parameters with the value in single quotes in the following example:
+To export results to local storage, pass the `LOCAL()` function as an argument to the EXTERN function.
+You must configure the runtime property `druid.export.storage.baseDir` as an absolute path on the Indexer or Middle Manager to use local storage as an export destination.
+You can export data to paths that match this value as a prefix.
+Pass all arguments to `LOCAL()` as named parameters with values enclosed in single quotes. For example:
 
 ```sql
 INSERT INTO
@@ -214,13 +219,13 @@ SELECT
 FROM <table>
 ```
 
-Supported arguments to the function:
+Supported arguments for the function:
 
-| Parameter   | Required | Description                                                                                                                                                                                                                                              | Default |
-|-------------|--------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------| --|
-| `exportPath`  | Yes | Absolute path to a subdirectory of `druid.export.storage.baseDir` used as the destination to export the results to. The export query expects the destination to be empty. If the location includes other files or directories, then the query will fail. | n/a |
+| Parameter | Required | Description | Default |
+|---|---|---|---|
+| `exportPath`  | Yes | Absolute path to a subdirectory of `druid.export.storage.baseDir` where Druid exports the query results. The destination must be empty. If the location includes other files or directories, the query will fail. | n/a |
 
-For more information, see [Read external data with EXTERN](concepts.md#write-to-an-external-destination-with-extern).
+For more information, see [Export external data with EXTERN](concepts.md#write-to-an-external-destination-with-extern).
 
 ### `INSERT`
 
@@ -362,8 +367,13 @@ For more information about partitioning, see [Partitioning](concepts.md#partitio
 ### `CLUSTERED BY`
 
 The `CLUSTERED BY <column list>` clause is optional for [INSERT](#insert) and [REPLACE](#replace). It accepts a list of
-column names or expressions. Druid's segment generation only supports ascending order, so an `INSERT` or `REPLACE` query with
-`CLUSTERED BY` columns in `DESC` ordering is not allowed.
+column names or expressions.
+
+This column list is used for [secondary partitioning](../ingestion/partitioning.md#secondary-partitioning) of segments
+within a time chunk, and [sorting](../ingestion/partitioning.md#sorting) of rows within a segment. For sorting purposes,
+Druid implicitly prepends `__time` to the `CLUSTERED BY` column list, unless
+[`forceSegmentSortByTime`](#context) is set to `false`
+(an experimental feature; see [Sorting](../ingestion/partitioning.md#sorting) for details).
 
 For more information about clustering, see [Clustering](concepts.md#clustering).
 
@@ -397,14 +407,15 @@ The following table lists the context parameters for the MSQ task engine:
 | `arrayIngestMode` | INSERT, REPLACE<br /><br /> Controls how ARRAY type values are stored in Druid segments. When set to `array` (recommended for SQL compliance), Druid will store all ARRAY typed values in [ARRAY typed columns](../querying/arrays.md), and supports storing both VARCHAR and numeric typed arrays. When set to `mvd` (the default, for backwards compatibility), Druid only supports VARCHAR typed arrays, and will store them as [multi-value string columns](../querying/multi-value-dimensions.md). See [`arrayIngestMode`] in the [Arrays](../querying/arrays.md) page for more details. | `mvd` (for backwards compatibility, recommended to use `array` for SQL compliance)|
 | `sqlJoinAlgorithm` | SELECT, INSERT, REPLACE<br /><br />Algorithm to use for JOIN. Use `broadcast` (the default) for broadcast hash join or `sortMerge` for sort-merge join. Affects all JOIN operations in the query. This is a hint to the MSQ engine and the actual joins in the query may proceed in a different way than specified. See [Joins](#joins) for more details. | `broadcast` |
 | `rowsInMemory` | INSERT or REPLACE<br /><br />Maximum number of rows to store in memory at once before flushing to disk during the segment generation process. Ignored for non-INSERT queries. In most cases, use the default value. You may need to override the default if you run into one of the [known issues](./known-issues.md) around memory usage. | 100,000 |
-| `segmentSortOrder` | INSERT or REPLACE<br /><br />Normally, Druid sorts rows in individual segments using `__time` first, followed by the [CLUSTERED BY](#clustered-by) clause. When you set `segmentSortOrder`, Druid sorts rows in segments using this column list first, followed by the CLUSTERED BY order.<br /><br />You provide the column list as comma-separated values or as a JSON array in string form. If your query includes `__time`, then this list must begin with `__time`. For example, consider an INSERT query that uses `CLUSTERED BY country` and has `segmentSortOrder` set to `__time,city`. Within each time chunk, Druid assigns rows to segments based on `country`, and then within each of those segments, Druid sorts those rows by `__time` first, then `city`, then `country`. | empty list |
+| `segmentSortOrder` | INSERT or REPLACE<br /><br />Normally, Druid sorts rows in individual segments using `__time` first, followed by the [CLUSTERED BY](#clustered-by) clause. When you set `segmentSortOrder`, Druid uses the order from this context parameter instead. Provide the column list as comma-separated values or as a JSON array in string form.<br />< br/>For example, consider an INSERT query that uses `CLUSTERED BY country` and has `segmentSortOrder` set to `__time,city,country`. Within each time chunk, Druid assigns rows to segments based on `country`, and then within each of those segments, Druid sorts those rows by `__time` first, then `city`, then `country`. | empty list |
+| `forceSegmentSortByTime` | INSERT or REPLACE<br /><br />When set to `true` (the default), Druid prepends `__time` to [CLUSTERED BY](#clustered-by) when determining the sort order for individual segments. Druid also requires that `segmentSortOrder`, if provided, starts with `__time`.<br /><br />When set to `false`, Druid uses the [CLUSTERED BY](#clustered-by) alone to determine the sort order for individual segments, and does not require that `segmentSortOrder` begin with `__time`. Setting this parameter to `false` is an experimental feature; see [Sorting](../ingestion/partitioning#sorting) for details. | `true` |
 | `maxParseExceptions`| SELECT, INSERT, REPLACE<br /><br />Maximum number of parse exceptions that are ignored while executing the query before it stops with `TooManyWarningsFault`. To ignore all the parse exceptions, set the value to -1. | 0 |
 | `rowsPerSegment` | INSERT or REPLACE<br /><br />The number of rows per segment to target. The actual number of rows per segment may be somewhat higher or lower than this number. In most cases, use the default. For general information about sizing rows per segment, see [Segment Size Optimization](../operations/segment-optimization.md). | 3,000,000 |
 | `indexSpec` | INSERT or REPLACE<br /><br />An [`indexSpec`](../ingestion/ingestion-spec.md#indexspec) to use when generating segments. May be a JSON string or object. See [Front coding](../ingestion/ingestion-spec.md#front-coding) for details on configuring an `indexSpec` with front coding. | See [`indexSpec`](../ingestion/ingestion-spec.md#indexspec). |
 | `durableShuffleStorage` | SELECT, INSERT, REPLACE <br /><br />Whether to use durable storage for shuffle mesh. To use this feature, configure the durable storage at the server level using `druid.msq.intermediate.storage.enable=true`). If these properties are not configured, any query with the context variable `durableShuffleStorage=true` fails with a configuration error. <br /><br /> | `false` |
 | `faultTolerance` | SELECT, INSERT, REPLACE<br /><br /> Whether to turn on fault tolerance mode or not. Failed workers are retried based on [Limits](#limits). Cannot be used when `durableShuffleStorage` is explicitly set to false. | `false` |
 | `selectDestination` | SELECT<br /><br /> Controls where the final result of the select query is written. <br />Use `taskReport`(the default) to write select results to the task report. <b> This is not scalable since task reports size explodes for large results </b> <br/>Use `durableStorage` to write results to durable storage location. <b>For large results sets, its recommended to use `durableStorage` </b>. To configure durable storage see [`this`](#durable-storage) section. | `taskReport` |
-| `waitUntilSegmentsLoad` | INSERT, REPLACE<br /><br /> If set, the ingest query waits for the generated segment to be loaded before exiting, else the ingest query exits without waiting. The task and live reports contain the information about the status of loading segments if this flag is set. This will ensure that any future queries made after the ingestion exits will include results from the ingestion. The drawback is that the controller task will stall till the segments are loaded. | `false` |
+| `waitUntilSegmentsLoad` | INSERT, REPLACE<br /><br /> If set, the ingest query waits for the generated segments to be loaded before exiting, else the ingest query exits without waiting. The task and live reports contain the information about the status of loading segments if this flag is set. This will ensure that any future queries made after the ingestion exits will include results from the ingestion. The drawback is that the controller task will stall till the segments are loaded. | `false` |
 | `includeSegmentSource` | SELECT, INSERT, REPLACE<br /><br /> Controls the sources, which will be queried for results in addition to the segments present on deep storage. Can be `NONE` or `REALTIME`. If this value is `NONE`, only non-realtime (published and used) segments will be downloaded from deep storage. If this value is `REALTIME`, results will also be included from realtime tasks. `REALTIME` cannot be used while writing data into the same datasource it is read from.| `NONE` |
 | `rowsPerPage` | SELECT<br /><br />The number of rows per page to target. The actual number of rows per page may be somewhat higher or lower than this number. In most cases, use the default.<br /> This property comes into effect only when `selectDestination` is set to `durableStorage` | 100000 |
 | `skipTypeVerification` | INSERT or REPLACE<br /><br />During query validation, Druid validates that [string arrays](../querying/arrays.md) and [multi-value dimensions](../querying/multi-value-dimensions.md) are not mixed in the same column. If you are intentionally migrating from one to the other, use this context parameter to disable type validation.<br /><br />Provide the column list as comma-separated values or as a JSON array in string form.| empty list |
@@ -525,7 +536,7 @@ Common properties to configure the behavior of durable storage
 |--|--|--|
 |`druid.msq.intermediate.storage.enable`  | Yes |  Whether to enable durable storage for the cluster. Set it to true to enable durable storage. For more information about enabling durable storage, see [Durable storage](../operations/durable-storage.md). | false | 
 |`druid.msq.intermediate.storage.type` |  Yes | The type of storage to use. Set it to `s3` for S3, `azure` for Azure and `google` for Google | n/a |
-|`druid.msq.intermediate.storage.tempDir`| Yes |  Directory path on the local disk to store temporary files required while uploading and downloading the data  | n/a |
+|`druid.msq.intermediate.storage.tempDir`| Yes |  Directory path on the local disk to store temporary files required while uploading and downloading the data. If the property is not configured on the indexer or middle manager, it defaults to using the task temporary directory. | n/a |
 |`druid.msq.intermediate.storage.maxRetry` |  No | Defines the max number times to attempt S3 API calls to avoid failures due to transient errors. | 10 |
 |`druid.msq.intermediate.storage.chunkSize` | No | Defines the size of each chunk to temporarily store in `druid.msq.intermediate.storage.tempDir`. The chunk size must be between 5 MiB and 5 GiB. A large chunk size reduces the API calls made to the durable storage, however it requires more disk space to store the temporary chunks. Druid uses a default of 100MiB if the value is not provided.| 100MiB | 
 

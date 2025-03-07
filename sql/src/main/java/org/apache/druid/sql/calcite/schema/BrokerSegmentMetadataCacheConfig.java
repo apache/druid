@@ -74,6 +74,12 @@ public class BrokerSegmentMetadataCacheConfig extends SegmentMetadataCacheConfig
     return metadataSegmentPollPeriod;
   }
 
+  public BrokerSegmentMetadataCacheConfig setAwaitInitializationOnStart(boolean awaitInitializationOnStart)
+  {
+    this.awaitInitializationOnStart = awaitInitializationOnStart;
+    return this;
+  }
+
   /**
    * This property is overriden on the broker, so that the cache initialization blocks startup.
    */

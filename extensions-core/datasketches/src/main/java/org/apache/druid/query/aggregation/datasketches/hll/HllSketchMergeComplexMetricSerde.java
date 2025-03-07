@@ -21,18 +21,10 @@ package org.apache.druid.query.aggregation.datasketches.hll;
 
 import org.apache.datasketches.hll.HllSketch;
 import org.apache.druid.data.input.InputRow;
-import org.apache.druid.segment.GenericColumnSerializer;
-import org.apache.druid.segment.column.ColumnBuilder;
-import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.ObjectStrategy;
 import org.apache.druid.segment.data.SafeWritableMemory;
-import org.apache.druid.segment.serde.ComplexColumnPartSupplier;
 import org.apache.druid.segment.serde.ComplexMetricExtractor;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
-import org.apache.druid.segment.serde.LargeColumnSupportedComplexColumnSerializer;
-import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
-
-import java.nio.ByteBuffer;
 
 public class HllSketchMergeComplexMetricSerde extends ComplexMetricSerde
 {
@@ -74,22 +66,4 @@ public class HllSketchMergeComplexMetricSerde extends ComplexMetricSerde
       }
     };
   }
-
-  @Override
-  public void deserializeColumn(final ByteBuffer buf, final ColumnBuilder columnBuilder)
-  {
-    columnBuilder.setComplexColumnSupplier(
-        new ComplexColumnPartSupplier(
-            getTypeName(),
-            GenericIndexed.read(buf, HllSketchHolderObjectStrategy.STRATEGY, columnBuilder.getFileMapper())
-        )
-    );
-  }
-
-  @Override
-  public GenericColumnSerializer getSerializer(final SegmentWriteOutMedium segmentWriteOutMedium, final String column)
-  {
-    return LargeColumnSupportedComplexColumnSerializer.create(segmentWriteOutMedium, column, this.getObjectStrategy());
-  }
-
 }

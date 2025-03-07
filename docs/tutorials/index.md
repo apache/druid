@@ -40,7 +40,7 @@ You can follow these steps on a relatively modest machine, such as a workstation
 The software requirements for the installation machine are:
 
 * Linux, Mac OS X, or other Unix-like OS. (Windows is not supported)
-* [Java 8u92+, 11, or 17](../operations/java.md)
+* [Java 11 or 17](../operations/java.md)
 * Python 3 (preferred) or Python 2
 * Perl 5
 

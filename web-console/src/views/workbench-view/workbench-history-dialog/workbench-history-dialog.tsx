@@ -16,8 +16,16 @@
  * limitations under the License.
  */
 
-import { Button, Classes, Dialog, Intent, Tab, Tabs } from '@blueprintjs/core';
-import { Popover2 } from '@blueprintjs/popover2';
+import {
+  Button,
+  Classes,
+  Dialog,
+  Intent,
+  Popover,
+  Tab,
+  Tabs,
+  TabsExpander,
+} from '@blueprintjs/core';
 import * as JSONBig from 'json-bigint-native';
 import type { JSX } from 'react';
 import React, { useState } from 'react';
@@ -56,7 +64,7 @@ export const WorkbenchHistoryDialog = React.memo(function WorkbenchHistoryDialog
     return (
       <div className="query-entry">
         <div className="query-info-bar">
-          <Popover2
+          <Popover
             content={
               <pre className="json-popover-content">
                 {JSONBig.stringify(record.query.queryContext, undefined, 2)}
@@ -71,7 +79,7 @@ export const WorkbenchHistoryDialog = React.memo(function WorkbenchHistoryDialog
               minimal
               small
             />
-          </Popover2>
+          </Popover>
         </div>
         <AceEditor
           mode={jsonMode ? 'hjson' : 'dsql'}
@@ -112,7 +120,7 @@ export const WorkbenchHistoryDialog = React.memo(function WorkbenchHistoryDialog
             panelClassName="panel"
           />
         ))}
-        <Tabs.Expander />
+        <TabsExpander />
       </Tabs>
     );
   }

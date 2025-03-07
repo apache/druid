@@ -111,7 +111,7 @@ public class MemcachedCache implements Cache
     final AbstractMonitor monitor =
         new AbstractMonitor()
         {
-          final AtomicReference<Map<String, Long>> priorValues = new AtomicReference<Map<String, Long>>(new HashMap<String, Long>());
+          final AtomicReference<Map<String, Long>> priorValues = new AtomicReference<>(new HashMap<>());
 
           @Override
           public boolean doMonitor(ServiceEmitter emitter)
@@ -168,7 +168,7 @@ public class MemcachedCache implements Cache
         opQueueFactory = new LinkedOperationQueueFactory();
       }
 
-      final Predicate<String> interesting = new Predicate<String>()
+      final Predicate<String> interesting = new Predicate<>()
       {
         // See net.spy.memcached.MemcachedConnection.registerMetrics()
         private final Set<String> interestingMetrics = ImmutableSet.of(
@@ -356,7 +356,7 @@ public class MemcachedCache implements Cache
       if (config.getNumConnections() > 1) {
         clientSupplier = new MemcacheClientPool(
             config.getNumConnections(),
-            new Supplier<MemcachedClientIF>()
+            new Supplier<>()
             {
               @Override
               public MemcachedClientIF get()
@@ -566,7 +566,7 @@ public class MemcachedCache implements Cache
     try (ResourceHolder<MemcachedClientIF> clientHolder = client.get()) {
       Map<String, NamedKey> keyLookup = Maps.uniqueIndex(
           keys,
-          new Function<NamedKey, String>()
+          new Function<>()
           {
             @Override
             public String apply(

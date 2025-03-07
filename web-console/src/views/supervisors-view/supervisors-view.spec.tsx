@@ -16,8 +16,6 @@
  * limitations under the License.
  */
 
-import React from 'react';
-
 import { Capabilities } from '../../helpers';
 import { shallow } from '../../utils/shallow-renderer';
 

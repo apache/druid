@@ -25,7 +25,6 @@ import com.google.common.collect.Lists;
 import org.apache.calcite.avatica.ColumnMetaData;
 import org.apache.calcite.avatica.Meta;
 import org.apache.calcite.avatica.remote.TypedValue;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -47,6 +46,7 @@ import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.util.CalciteTestBase;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.hook.DruidHookDispatcher;
 import org.junit.Assert;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -112,7 +112,8 @@ public class DruidStatementTest extends CalciteTestBase
         new CalciteRulesManager(ImmutableSet.of()),
         joinableFactoryWrapper,
         CatalogResolver.NULL_RESOLVER,
-        new AuthConfig()
+        new AuthConfig(),
+        new DruidHookDispatcher()
     );
     this.sqlStatementFactory = CalciteTests.createSqlStatementFactory(
         CalciteTests.createMockSqlEngine(walker, conglomerate),
@@ -304,13 +305,13 @@ public class DruidStatementTest extends CalciteTestBase
                       DateTimes.of("2000-01-02").getMillis(),
                       1L,
                       "10.1",
-                      NullHandling.defaultStringValue(),
+                      null,
                       2.0f
                   },
                   new Object[]{DateTimes.of("2000-01-03").getMillis(), 1L, "2", "", 3.0f},
                   new Object[]{DateTimes.of("2001-01-01").getMillis(), 1L, "1", "a", 4.0f},
                   new Object[]{DateTimes.of("2001-01-02").getMillis(), 1L, "def", "abc", 5.0f},
-                  new Object[]{DateTimes.of("2001-01-03").getMillis(), 1L, "abc", NullHandling.defaultStringValue(), 6.0f}
+                  new Object[]{DateTimes.of("2001-01-03").getMillis(), 1L, "abc", null, 6.0f}
               )
           ),
           frame
@@ -436,7 +437,7 @@ public class DruidStatementTest extends CalciteTestBase
                 DateTimes.of("2000-01-02").getMillis(),
                 1L,
                 "10.1",
-                NullHandling.defaultStringValue(),
+                null,
                 2.0f
             }
         )
@@ -452,7 +453,7 @@ public class DruidStatementTest extends CalciteTestBase
             new Object[]{DateTimes.of("2000-01-03").getMillis(), 1L, "2", "", 3.0f},
             new Object[]{DateTimes.of("2001-01-01").getMillis(), 1L, "1", "a", 4.0f},
             new Object[]{DateTimes.of("2001-01-02").getMillis(), 1L, "def", "abc", 5.0f},
-            new Object[]{DateTimes.of("2001-01-03").getMillis(), 1L, "abc", NullHandling.defaultStringValue(), 6.0f}
+            new Object[]{DateTimes.of("2001-01-03").getMillis(), 1L, "abc", null, 6.0f}
         )
     );
   }

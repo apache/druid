@@ -144,9 +144,7 @@ public class CoordinatorRunStatsTest
 
     final String expectedTable
         = "\nError: {duty=duty1} ==> {error1=10}"
-          + "\nInfo : {duty=duty1} ==> {info1=20}"
-          + "\nDebug: 1 hidden stats. Set 'debugDimensions' to see these."
-          + "\nTOTAL: 3 stats for 1 dimension keys";
+          + "\nInfo : {duty=duty1} ==> {info1=20}";
 
     Assert.assertEquals(expectedTable, stats.buildStatsTable());
   }
@@ -162,8 +160,7 @@ public class CoordinatorRunStatsTest
     final String expectedTable
         = "\nError: {duty=duty1} ==> {error1=10}"
           + "\nInfo : {duty=duty1} ==> {info1=20}"
-          + "\nDebug: {duty=duty1} ==> {debug1=30}"
-          + "\nTOTAL: 3 stats for 1 dimension keys";
+          + "\nDebug: {duty=duty1} ==> {debug1=30}";
 
     Assert.assertEquals(expectedTable, debugStats.buildStatsTable());
   }

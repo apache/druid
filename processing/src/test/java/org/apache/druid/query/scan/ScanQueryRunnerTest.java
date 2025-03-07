@@ -29,8 +29,7 @@ import com.google.common.collect.Sets;
 import com.google.common.hash.Hashing;
 import com.google.common.io.CharSource;
 import com.google.common.io.LineProcessor;
-import org.apache.commons.lang.ArrayUtils;
-import org.apache.druid.common.config.NullHandling;
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
@@ -41,6 +40,7 @@ import org.apache.druid.query.DefaultGenericQueryMetricsFactory;
 import org.apache.druid.query.DirectQueryProcessingPool;
 import org.apache.druid.query.Druids;
 import org.apache.druid.query.MetricsEmittingQueryRunner;
+import org.apache.druid.query.Order;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunner;
@@ -62,7 +62,6 @@ import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.virtual.ExpressionVirtualColumn;
 import org.apache.druid.testing.InitializedNullHandlingTest;
-import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -103,7 +102,7 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
     List<String> lines = new ArrayList<>();
     try {
       sampleData.readLines(
-          new LineProcessor<Object>()
+          new LineProcessor<>()
           {
             int count = 0;
 
@@ -138,7 +137,6 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
   public static final String[] V_0112_0114 = ObjectArrays.concat(V_0112, V_0113, String.class);
 
   private static final ScanQueryQueryToolChest TOOL_CHEST = new ScanQueryQueryToolChest(
-      new ScanQueryConfig(),
       DefaultGenericQueryMetricsFactory.instance()
   );
 
@@ -148,28 +146,23 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
       new ScanQueryConfig()
   );
 
-  @Parameterized.Parameters(name = "{0}, legacy = {1}")
+  @Parameterized.Parameters(name = "{0}")
   public static Iterable<Object[]> constructorFeeder()
   {
-
-    return QueryRunnerTestHelper.cartesian(
-        QueryRunnerTestHelper.makeQueryRunners(
-            FACTORY
-        ),
-        ImmutableList.of(false, true)
+    return Iterables.transform(
+        QueryRunnerTestHelper.makeQueryRunners(FACTORY, false),
+        (runner) -> new Object[]{runner}
     );
   }
 
   private final QueryRunner runner;
-  private final boolean legacy;
   private final List<String> columns;
 
-  public ScanQueryRunnerTest(final QueryRunner runner, final boolean legacy)
+  public ScanQueryRunnerTest(final QueryRunner runner)
   {
     this.runner = runner;
-    this.legacy = legacy;
     this.columns = Lists.newArrayList(
-        getTimestampName(),
+        ColumnHolder.TIME_COLUMN_NAME,
         "expr",
         "market",
         "quality",
@@ -200,8 +193,7 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
                  .dataSource(new TableDataSource(QueryRunnerTestHelper.DATA_SOURCE))
                  .columns(Collections.emptyList())
                  .eternityInterval()
-                 .limit(3)
-                 .legacy(legacy);
+                 .limit(3);
   }
 
   @Test
@@ -270,7 +262,7 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
 
     final List<List<Map<String, Object>>> expectedEvents = toEvents(
         new String[]{
-            getTimestampName() + ":TIME",
+            ColumnHolder.TIME_COLUMN_NAME + ":TIME",
             QueryRunnerTestHelper.MARKET_DIMENSION + ":STRING",
             null,
             null,
@@ -284,24 +276,12 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
             null,
             QueryRunnerTestHelper.INDEX_METRIC + ":DOUBLE"
         },
-        legacy,
         V_0112_0114
     );
 
-    // Add "__time" to all the expected events in legacy mode
-    if (legacy) {
-      for (List<Map<String, Object>> batch : expectedEvents) {
-        for (Map<String, Object> event : batch) {
-          event.put("__time", ((DateTime) event.get("timestamp")).getMillis());
-        }
-      }
-    }
-
     List<ScanResultValue> expectedResults = toExpected(
         expectedEvents,
-        legacy
-        ? Lists.newArrayList(getTimestampName(), "__time", "market", "index")
-        : Lists.newArrayList("__time", "market", "index"),
+        Lists.newArrayList("__time", "market", "index"),
         0,
         3
     );
@@ -321,7 +301,7 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
     List<ScanResultValue> expectedResults = toExpected(
         toEvents(
             new String[]{
-                legacy ? getTimestampName() + ":TIME" : null,
+                null,
                 QueryRunnerTestHelper.MARKET_DIMENSION + ":STRING",
                 null,
                 null,
@@ -335,10 +315,9 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
                 null,
                 QueryRunnerTestHelper.INDEX_METRIC + ":DOUBLE"
             },
-            legacy,
             V_0112_0114
         ),
-        legacy ? Lists.newArrayList(getTimestampName(), "market", "index") : Lists.newArrayList("market", "index"),
+        Lists.newArrayList("market", "index"),
         0,
         3
     );
@@ -359,7 +338,7 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
     List<ScanResultValue> expectedResults = toExpected(
         toEvents(
             new String[]{
-                legacy ? getTimestampName() + ":TIME" : null,
+                null,
                 QueryRunnerTestHelper.MARKET_DIMENSION + ":STRING",
                 null,
                 null,
@@ -373,10 +352,9 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
                 null,
                 QueryRunnerTestHelper.INDEX_METRIC + ":DOUBLE"
             },
-            legacy,
             V_0112_0114
         ),
-        legacy ? Lists.newArrayList(getTimestampName(), "market", "index") : Lists.newArrayList("market", "index"),
+        Lists.newArrayList("market", "index"),
         0,
         3
     );
@@ -399,14 +377,13 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
 
       final List<List<Map<String, Object>>> events = toEvents(
           new String[]{
-              legacy ? getTimestampName() + ":TIME" : null,
+              null,
               null,
               QueryRunnerTestHelper.QUALITY_DIMENSION + ":STRING",
               null,
               null,
               QueryRunnerTestHelper.INDEX_METRIC + ":DOUBLE"
           },
-          legacy,
           // filtered values with day granularity
           new String[]{
               "2011-01-12T00:00:00.000Z\tspot\tautomotive\tpreferred\tapreferred\t100.000000",
@@ -434,7 +411,7 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
 
       List<ScanResultValue> expectedResults = toExpected(
           events,
-          legacy ? Lists.newArrayList(getTimestampName(), "quality", "index") : Lists.newArrayList("quality", "index"),
+          Lists.newArrayList("quality", "index"),
           0,
           limit
       );
@@ -463,14 +440,13 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
 
     final List<List<Map<String, Object>>> events = toEvents(
         new String[]{
-            legacy ? getTimestampName() + ":TIME" : null,
+            null,
             null,
             QueryRunnerTestHelper.QUALITY_DIMENSION + ":STRING",
             null,
             null,
             QueryRunnerTestHelper.INDEX_METRIC + ":DOUBLE"
         },
-        legacy,
         // filtered values with day granularity
         new String[]{
             "2011-01-12T00:00:00.000Z\ttotal_market\tmezzanine\tpreferred\tmpreferred\t1000.000000",
@@ -484,11 +460,7 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
 
     List<ScanResultValue> expectedResults = toExpected(
         events,
-        legacy ? Lists.newArrayList(
-            getTimestampName(),
-            QueryRunnerTestHelper.QUALITY_DIMENSION,
-            QueryRunnerTestHelper.INDEX_METRIC
-        ) : Lists.newArrayList(
+        Lists.newArrayList(
             QueryRunnerTestHelper.QUALITY_DIMENSION,
             QueryRunnerTestHelper.INDEX_METRIC
         ),
@@ -533,14 +505,13 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
     Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query)).toList();
 
     final List<List<Map<String, Object>>> events = toEvents(
-        legacy ? new String[]{getTimestampName() + ":TIME"} : new String[0],
-        legacy,
+        new String[0],
         V_0112_0114
     );
 
     List<ScanResultValue> expectedResults = toExpected(
         events,
-        legacy ? Lists.newArrayList(getTimestampName(), "foo", "foo2") : Lists.newArrayList("foo", "foo2"),
+        Lists.newArrayList("foo", "foo2"),
         0,
         3
     );
@@ -562,7 +533,7 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
               QueryRunnerTestHelper.INDEX_METRIC
           )
           .limit(limit)
-          .order(ScanQuery.Order.ASCENDING)
+          .order(Order.ASCENDING)
           .context(ImmutableMap.of(ScanQuery.CTX_KEY_OUTERMOST, false))
           .build();
 
@@ -591,40 +562,23 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
       };
       final List<List<Map<String, Object>>> ascendingEvents = toEvents(
           new String[]{
-              legacy ? getTimestampName() + ":TIME" : ColumnHolder.TIME_COLUMN_NAME,
+              ColumnHolder.TIME_COLUMN_NAME,
               null,
               QueryRunnerTestHelper.QUALITY_DIMENSION + ":STRING",
               null,
               null,
               QueryRunnerTestHelper.INDEX_METRIC + ":DOUBLE"
           },
-          legacy,
           (String[]) ArrayUtils.addAll(seg1Results, seg2Results)
       );
-
-      if (legacy) {
-        for (List<Map<String, Object>> batch : ascendingEvents) {
-          for (Map<String, Object> event : batch) {
-            event.put("__time", ((DateTime) event.get("timestamp")).getMillis());
-          }
-        }
-      } else {
-        for (List<Map<String, Object>> batch : ascendingEvents) {
-          for (Map<String, Object> event : batch) {
-            event.put("__time", (DateTimes.of((String) event.get("__time"))).getMillis());
-          }
+      for (List<Map<String, Object>> batch : ascendingEvents) {
+        for (Map<String, Object> event : batch) {
+          event.put("__time", (DateTimes.of((String) event.get("__time"))).getMillis());
         }
       }
 
       List<ScanResultValue> ascendingExpectedResults = toExpected(
           ascendingEvents,
-          legacy ?
-          Lists.newArrayList(
-              QueryRunnerTestHelper.TIME_DIMENSION,
-              getTimestampName(),
-              "quality",
-              "index"
-          ) :
           Lists.newArrayList(
               QueryRunnerTestHelper.TIME_DIMENSION,
               "quality",
@@ -651,7 +605,7 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
               QueryRunnerTestHelper.INDEX_METRIC
           )
           .limit(limit)
-          .order(ScanQuery.Order.DESCENDING)
+          .order(Order.DESCENDING)
           .build();
 
       Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query)).toList();
@@ -681,39 +635,23 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
       ArrayUtils.reverse(expectedRet);
       final List<List<Map<String, Object>>> descendingEvents = toEvents(
           new String[]{
-              legacy ? getTimestampName() + ":TIME" : ColumnHolder.TIME_COLUMN_NAME,
+              ColumnHolder.TIME_COLUMN_NAME,
               null,
               QueryRunnerTestHelper.QUALITY_DIMENSION + ":STRING",
               null,
               null,
               QueryRunnerTestHelper.INDEX_METRIC + ":DOUBLE"
           },
-          legacy,
           expectedRet
       );
-      if (legacy) {
-        for (List<Map<String, Object>> batch : descendingEvents) {
-          for (Map<String, Object> event : batch) {
-            event.put("__time", ((DateTime) event.get("timestamp")).getMillis());
-          }
-        }
-      } else {
-        for (List<Map<String, Object>> batch : descendingEvents) {
-          for (Map<String, Object> event : batch) {
-            event.put("__time", (DateTimes.of((String) event.get("__time"))).getMillis());
-          }
+
+      for (List<Map<String, Object>> batch : descendingEvents) {
+        for (Map<String, Object> event : batch) {
+          event.put("__time", (DateTimes.of((String) event.get("__time"))).getMillis());
         }
       }
       List<ScanResultValue> descendingExpectedResults = toExpected(
           descendingEvents,
-          legacy ?
-          Lists.newArrayList(
-              QueryRunnerTestHelper.TIME_DIMENSION,
-              getTimestampName(),
-              // getTimestampName() always returns the legacy timestamp when legacy is true
-              "quality",
-              "index"
-          ) :
           Lists.newArrayList(
               QueryRunnerTestHelper.TIME_DIMENSION,
               "quality",
@@ -763,46 +701,29 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
               QueryRunnerTestHelper.INDEX_METRIC
           )
           .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-          .order(ScanQuery.Order.ASCENDING)
+          .order(Order.ASCENDING)
           .limit(limit)
           .build();
 
       Iterable<ScanResultValue> results = runner.run(QueryPlus.wrap(query)).toList();
       final List<List<Map<String, Object>>> ascendingEvents = toEvents(
           new String[]{
-              legacy ? getTimestampName() + ":TIME" : ColumnHolder.TIME_COLUMN_NAME,
+              ColumnHolder.TIME_COLUMN_NAME,
               null,
               QueryRunnerTestHelper.QUALITY_DIMENSION + ":STRING",
               null,
               null,
               QueryRunnerTestHelper.INDEX_METRIC + ":DOUBLE"
           },
-          legacy,
           (String[]) ArrayUtils.addAll(seg1Results, seg2Results)
       );
-      if (legacy) {
-        for (List<Map<String, Object>> batch : ascendingEvents) {
-          for (Map<String, Object> event : batch) {
-            event.put("__time", ((DateTime) event.get("timestamp")).getMillis());
-          }
-        }
-      } else {
-        for (List<Map<String, Object>> batch : ascendingEvents) {
-          for (Map<String, Object> event : batch) {
-            event.put("__time", ((DateTimes.of((String) event.get("__time"))).getMillis()));
-          }
+      for (List<Map<String, Object>> batch : ascendingEvents) {
+        for (Map<String, Object> event : batch) {
+          event.put("__time", ((DateTimes.of((String) event.get("__time"))).getMillis()));
         }
       }
       List<ScanResultValue> ascendingExpectedResults = toExpected(
           ascendingEvents,
-          legacy ?
-          Lists.newArrayList(
-              QueryRunnerTestHelper.TIME_DIMENSION,
-              getTimestampName(),
-              // getTimestampName() always returns the legacy timestamp when legacy is true
-              "quality",
-              "index"
-          ) :
           Lists.newArrayList(
               QueryRunnerTestHelper.TIME_DIMENSION,
               "quality",
@@ -853,7 +774,7 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
               QueryRunnerTestHelper.INDEX_METRIC
           )
           .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-          .order(ScanQuery.Order.DESCENDING)
+          .order(Order.DESCENDING)
           .context(ImmutableMap.of(ScanQuery.CTX_KEY_OUTERMOST, false))
           .limit(limit)
           .build();
@@ -863,39 +784,22 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
       ArrayUtils.reverse(expectedRet);
       final List<List<Map<String, Object>>> descendingEvents = toEvents(
           new String[]{
-              legacy ? getTimestampName() + ":TIME" : ColumnHolder.TIME_COLUMN_NAME,
+              ColumnHolder.TIME_COLUMN_NAME,
               null,
               QueryRunnerTestHelper.QUALITY_DIMENSION + ":STRING",
               null,
               null,
               QueryRunnerTestHelper.INDEX_METRIC + ":DOUBLE"
           },
-          legacy,
           expectedRet //segments in reverse order from above
       );
-      if (legacy) {
-        for (List<Map<String, Object>> batch : descendingEvents) {
-          for (Map<String, Object> event : batch) {
-            event.put("__time", ((DateTime) event.get("timestamp")).getMillis());
-          }
-        }
-      } else {
-        for (List<Map<String, Object>> batch : descendingEvents) {
-          for (Map<String, Object> event : batch) {
-            event.put("__time", ((DateTimes.of((String) event.get("__time"))).getMillis()));
-          }
+      for (List<Map<String, Object>> batch : descendingEvents) {
+        for (Map<String, Object> event : batch) {
+          event.put("__time", ((DateTimes.of((String) event.get("__time"))).getMillis()));
         }
       }
       List<ScanResultValue> descendingExpectedResults = toExpected(
           descendingEvents,
-          legacy ?
-          Lists.newArrayList(
-              QueryRunnerTestHelper.TIME_DIMENSION,
-              getTimestampName(),
-              // getTimestampName() always returns the legacy timestamp when legacy is true
-              "quality",
-              "index"
-          ) :
           Lists.newArrayList(
               QueryRunnerTestHelper.TIME_DIMENSION,
               "quality",
@@ -996,7 +900,7 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
   {
     return toEvents(
         new String[]{
-            getTimestampName() + ":TIME",
+            ColumnHolder.TIME_COLUMN_NAME + ":TIME",
             QueryRunnerTestHelper.MARKET_DIMENSION + ":STRING",
             QueryRunnerTestHelper.QUALITY_DIMENSION + ":STRING",
             "qualityLong" + ":LONG",
@@ -1018,12 +922,11 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
             "indexMaxFloat",
             "quality_uniques"
         },
-        legacy,
         valueSet
     );
   }
 
-  public static List<List<Map<String, Object>>> toEvents(final String[] dimSpecs, boolean legacy, final String[]... valueSet)
+  public static List<List<Map<String, Object>>> toEvents(final String[] dimSpecs, final String[]... valueSet)
   {
     List<String> values = new ArrayList<>();
     for (String[] vSet : valueSet) {
@@ -1085,10 +988,10 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
                     if (specs.length == 1 || specs[1].equals("STRING")) {
                       eventVal = values1[i];
                     } else if (specs[1].equals("TIME")) {
-                      eventVal = toTimestamp(values1[i], legacy);
+                      eventVal = DateTimes.of(values1[i]).getMillis();
                     } else if (specs[1].equals("FLOAT")) {
                       try {
-                        eventVal = values1[i].isEmpty() ? NullHandling.defaultFloatValue() : Float.valueOf(values1[i]);
+                        eventVal = values1[i].isEmpty() ? null : Float.valueOf(values1[i]);
                       }
                       catch (NumberFormatException nfe) {
                         throw new ISE("This object cannot be converted to a Float!");
@@ -1096,7 +999,7 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
                     } else if (specs[1].equals("DOUBLE")) {
                       try {
                         eventVal = values1[i].isEmpty()
-                                   ? NullHandling.defaultDoubleValue()
+                                   ? null
                                    : Double.valueOf(values1[i]);
                       }
                       catch (NumberFormatException nfe) {
@@ -1104,7 +1007,7 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
                       }
                     } else if (specs[1].equals("LONG")) {
                       try {
-                        eventVal = values1[i].isEmpty() ? NullHandling.defaultLongValue() : Long.valueOf(values1[i]);
+                        eventVal = values1[i].isEmpty() ? null : Long.valueOf(values1[i]);
                       }
                       catch (NumberFormatException nfe) {
                         throw new ISE("This object cannot be converted to a Long!");
@@ -1125,20 +1028,6 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
         )
     );
     return events;
-  }
-
-  private static Object toTimestamp(final String value, boolean legacy)
-  {
-    if (legacy) {
-      return DateTimes.of(value);
-    } else {
-      return DateTimes.of(value).getMillis();
-    }
-  }
-
-  private String getTimestampName()
-  {
-    return legacy ? "timestamp" : ColumnHolder.TIME_COLUMN_NAME;
   }
 
   private List<ScanResultValue> toExpected(
@@ -1265,7 +1154,7 @@ public class ScanQueryRunnerTest extends InitializedNullHandlingTest
 
   private Iterable<ScanResultValue> compactedListToRow(Iterable<ScanResultValue> results)
   {
-    return Lists.newArrayList(Iterables.transform(results, new Function<ScanResultValue, ScanResultValue>()
+    return Lists.newArrayList(Iterables.transform(results, new Function<>()
     {
       @Override
       public ScanResultValue apply(ScanResultValue input)

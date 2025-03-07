@@ -21,6 +21,8 @@ package org.apache.druid.indexing.common.task.batch.parallel;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import org.apache.druid.indexer.granularity.GranularitySpec;
+import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexing.common.actions.LockListAction;
 import org.apache.druid.indexing.common.actions.RetrieveUsedSegmentsAction;
 import org.apache.druid.indexing.common.actions.TaskAction;
@@ -32,8 +34,6 @@ import org.apache.druid.java.util.common.JodaUtils;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.indexing.granularity.GranularitySpec;
-import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.TombstoneShardSpec;
@@ -67,8 +67,7 @@ public class TombstoneHelperTest
     GranularitySpec granularitySpec = new UniformGranularitySpec(Granularities.DAY, null, false,
                                                                  Collections.singletonList(interval)
     );
-    DataSchema dataSchema =
-        new DataSchema("test", null, null, null, granularitySpec, null);
+    DataSchema dataSchema = DataSchema.builder().withDataSource("test").withGranularity(granularitySpec).build();
     // no segments will be pushed when all rows are thrown away, assume that:
     List<DataSegment> pushedSegments = Collections.emptyList();
 
@@ -93,8 +92,7 @@ public class TombstoneHelperTest
     GranularitySpec granularitySpec = new UniformGranularitySpec(Granularities.DAY, null, false,
                                                                  Collections.singletonList(interval)
     );
-    DataSchema dataSchema =
-        new DataSchema("test", null, null, null, granularitySpec, null);
+    DataSchema dataSchema = DataSchema.builder().withDataSource("test").withGranularity(granularitySpec).build();
     // no segments will be pushed when all rows are thrown away, assume that:
     List<DataSegment> pushedSegments = Collections.emptyList();
 

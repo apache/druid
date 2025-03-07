@@ -8,49 +8,49 @@ exports[`ShowLog describe show log 1`] = `
     class="top-actions"
   >
     <label
-      class="bp4-control bp4-switch tail-log"
+      class="bp5-control bp5-switch tail-log"
     >
       <input
         checked=""
         type="checkbox"
       />
       <span
-        class="bp4-control-indicator"
+        class="bp5-control-indicator"
       />
       Tail log
     </label>
     <div
-      class="bp4-button-group right-buttons"
+      class="bp5-button-group right-buttons"
     >
       <a
-        class="bp4-button bp4-minimal"
+        aria-disabled="false"
+        class="bp5-button bp5-minimal"
         download="test"
         href="/some/base_url/druid/index/test/log"
         role="button"
-        tabindex="0"
       >
         <span
-          class="bp4-button-text"
+          class="bp5-button-text"
         >
           Download
         </span>
       </a>
       <button
-        class="bp4-button bp4-minimal"
+        class="bp5-button bp5-minimal"
         type="button"
       >
         <span
-          class="bp4-button-text"
+          class="bp5-button-text"
         >
           Copy
         </span>
       </button>
       <button
-        class="bp4-button bp4-minimal"
+        class="bp5-button bp5-minimal"
         type="button"
       >
         <span
-          class="bp4-button-text"
+          class="bp5-button-text"
         >
           View full log
         </span>

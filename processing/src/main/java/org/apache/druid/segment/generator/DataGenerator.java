@@ -139,7 +139,7 @@ public class DataGenerator
     columnGenerators.addAll(
         Lists.transform(
             columnSchemas,
-            new Function<GeneratorColumnSchema, ColumnValueGenerator>()
+            new Function<>()
             {
               @Override
               public ColumnValueGenerator apply(

@@ -28,10 +28,9 @@ import com.google.inject.name.Names;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
 import org.apache.druid.collections.bitmap.RoaringBitmapFactory;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
-import org.apache.druid.guice.NestedDataModule;
+import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.guice.StartupInjectorBuilder;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.initialization.ServerInjectorBuilder;
@@ -56,6 +55,7 @@ import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestHelper;
+import org.apache.druid.segment.TestIndex;
 import org.apache.druid.segment.column.ColumnConfig;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ColumnIndexSupplier;
@@ -84,7 +84,7 @@ public class DumpSegmentTest extends InitializedNullHandlingTest
 
   public DumpSegmentTest()
   {
-    NestedDataModule.registerHandlersAndSerde();
+    BuiltInTypesModule.registerHandlersAndSerde();
     this.closer = Closer.create();
   }
 
@@ -103,6 +103,7 @@ public class DumpSegmentTest extends InitializedNullHandlingTest
     QueryRunner runner = Mockito.mock(QueryRunner.class);
     QueryRunner mergeRunner = Mockito.mock(QueryRunner.class);
     Query query = Mockito.mock(Query.class);
+    QueryableIndex index = Mockito.mock(QueryableIndex.class);
     Sequence expected = Sequences.simple(Collections.singletonList(123));
     Mockito.when(query.withOverriddenContext(ArgumentMatchers.any())).thenReturn(query);
     Mockito.when(injector.getInstance(QueryRunnerFactoryConglomerate.class)).thenReturn(conglomerate);
@@ -111,8 +112,47 @@ public class DumpSegmentTest extends InitializedNullHandlingTest
     Mockito.when(factory.getToolchest().mergeResults(factory.mergeRunners(DirectQueryProcessingPool.INSTANCE, ImmutableList.of(runner)))).thenReturn(mergeRunner);
     Mockito.when(factory.getToolchest().mergeResults(factory.mergeRunners(DirectQueryProcessingPool.INSTANCE, ImmutableList.of(runner)), true)).thenReturn(mergeRunner);
     Mockito.when(mergeRunner.run(ArgumentMatchers.any(), ArgumentMatchers.any())).thenReturn(expected);
-    Sequence actual = DumpSegment.executeQuery(injector, null, query);
+    Mockito.when(index.getOrdering()).thenReturn(Collections.emptyList());
+    Sequence actual = DumpSegment.executeQuery(injector, index, query);
     Assert.assertSame(expected, actual);
+  }
+
+  @Test
+  public void testDumpRows() throws Exception
+  {
+    Injector injector = Mockito.mock(Injector.class);
+    ObjectMapper mapper = TestHelper.makeJsonMapper();
+    mapper.registerModules(BuiltInTypesModule.getJacksonModulesList());
+    mapper.setInjectableValues(
+        new InjectableValues.Std()
+            .addValue(ExprMacroTable.class.getName(), TestExprMacroTable.INSTANCE)
+            .addValue(ObjectMapper.class.getName(), mapper)
+            .addValue(DefaultColumnFormatConfig.class, new DefaultColumnFormatConfig(null, null))
+    );
+    Mockito.when(injector.getInstance(Key.get(ObjectMapper.class, Json.class))).thenReturn(mapper);
+    Mockito.when(injector.getInstance(DefaultColumnFormatConfig.class)).thenReturn(new DefaultColumnFormatConfig(null, null));
+
+    List<Segment> segments = createSegments(tempFolder, closer);
+    QueryableIndex queryableIndex = segments.get(0).as(QueryableIndex.class);
+
+    File outputFile = tempFolder.newFile();
+
+    DumpSegment.runDump(
+        injector,
+        outputFile.getPath(),
+        queryableIndex,
+        DumpSegment.getColumnsToInclude(queryableIndex, Collections.emptyList()),
+        null,
+        false
+    );
+    final byte[] fileBytes = Files.readAllBytes(outputFile.toPath());
+    final String output = StringUtils.fromUtf8(fileBytes);
+    final String expected = "{\"__time\":1609459200000,\"nest\":{\"x\":200,\"y\":2.2},\"count\":1}\n"
+                            + "{\"__time\":1609459200000,\"nest\":{\"x\":400,\"y\":1.1,\"z\":\"a\"},\"count\":1}\n"
+                            + "{\"__time\":1609459200000,\"nest\":{\"x\":200,\"z\":\"b\"},\"count\":1}\n"
+                            + "{\"__time\":1609459200000,\"nest\":{\"x\":100,\"y\":1.1,\"z\":\"a\"},\"count\":1}\n"
+                            + "{\"__time\":1609459200000,\"nest\":{\"y\":3.3,\"z\":\"b\"},\"count\":1}\n";
+    Assert.assertEquals(expected, output);
   }
 
   @Test
@@ -156,18 +196,18 @@ public class DumpSegmentTest extends InitializedNullHandlingTest
   {
     Injector injector = Mockito.mock(Injector.class);
     ObjectMapper mapper = TestHelper.makeJsonMapper();
-    mapper.registerModules(NestedDataModule.getJacksonModulesList());
+    mapper.registerModules(BuiltInTypesModule.getJacksonModulesList());
     mapper.setInjectableValues(
         new InjectableValues.Std()
             .addValue(ExprMacroTable.class.getName(), TestExprMacroTable.INSTANCE)
             .addValue(ObjectMapper.class.getName(), mapper)
-            .addValue(DefaultColumnFormatConfig.class, new DefaultColumnFormatConfig(null))
+            .addValue(DefaultColumnFormatConfig.class, new DefaultColumnFormatConfig(null, null))
     );
     Mockito.when(injector.getInstance(Key.get(ObjectMapper.class, Json.class))).thenReturn(mapper);
-    Mockito.when(injector.getInstance(DefaultColumnFormatConfig.class)).thenReturn(new DefaultColumnFormatConfig(null));
+    Mockito.when(injector.getInstance(DefaultColumnFormatConfig.class)).thenReturn(new DefaultColumnFormatConfig(null, null));
 
     List<Segment> segments = createSegments(tempFolder, closer);
-    QueryableIndex queryableIndex = segments.get(0).asQueryableIndex();
+    QueryableIndex queryableIndex = segments.get(0).as(QueryableIndex.class);
 
     File outputFile = tempFolder.newFile();
     DumpSegment.runDumpNestedColumn(
@@ -178,17 +218,10 @@ public class DumpSegmentTest extends InitializedNullHandlingTest
     );
     final byte[] fileBytes = Files.readAllBytes(outputFile.toPath());
     final String output = StringUtils.fromUtf8(fileBytes);
-    if (NullHandling.sqlCompatible()) {
-      Assert.assertEquals(
-          "{\"nest\":{\"fields\":[{\"path\":\"$.x\",\"types\":[\"LONG\"]},{\"path\":\"$.y\",\"types\":[\"DOUBLE\"]},{\"path\":\"$.z\",\"types\":[\"STRING\"]}],\"dictionaries\":{\"strings\":[{\"globalId\":0,\"value\":null},{\"globalId\":1,\"value\":\"a\"},{\"globalId\":2,\"value\":\"b\"}],\"longs\":[{\"globalId\":3,\"value\":100},{\"globalId\":4,\"value\":200},{\"globalId\":5,\"value\":400}],\"doubles\":[{\"globalId\":6,\"value\":1.1},{\"globalId\":7,\"value\":2.2},{\"globalId\":8,\"value\":3.3}],\"nullRows\":[]}}}",
-          output
-      );
-    } else {
-      Assert.assertEquals(
-          "{\"nest\":{\"fields\":[{\"path\":\"$.x\",\"types\":[\"LONG\"]},{\"path\":\"$.y\",\"types\":[\"DOUBLE\"]},{\"path\":\"$.z\",\"types\":[\"STRING\"]}],\"dictionaries\":{\"strings\":[{\"globalId\":0,\"value\":null},{\"globalId\":1,\"value\":\"a\"},{\"globalId\":2,\"value\":\"b\"}],\"longs\":[{\"globalId\":3,\"value\":0},{\"globalId\":4,\"value\":100},{\"globalId\":5,\"value\":200},{\"globalId\":6,\"value\":400}],\"doubles\":[{\"globalId\":7,\"value\":0.0},{\"globalId\":8,\"value\":1.1},{\"globalId\":9,\"value\":2.2},{\"globalId\":10,\"value\":3.3}],\"nullRows\":[]}}}",
-          output
-      );
-    }
+    Assert.assertEquals(
+        "{\"nest\":{\"fields\":[{\"path\":\"$.x\",\"types\":[\"LONG\"]},{\"path\":\"$.y\",\"types\":[\"DOUBLE\"]},{\"path\":\"$.z\",\"types\":[\"STRING\"]}],\"dictionaries\":{\"strings\":[{\"globalId\":0,\"value\":null},{\"globalId\":1,\"value\":\"a\"},{\"globalId\":2,\"value\":\"b\"}],\"longs\":[{\"globalId\":3,\"value\":100},{\"globalId\":4,\"value\":200},{\"globalId\":5,\"value\":400}],\"doubles\":[{\"globalId\":6,\"value\":1.1},{\"globalId\":7,\"value\":2.2},{\"globalId\":8,\"value\":3.3}],\"nullRows\":[]}}}",
+        output
+    );
   }
 
   @Test
@@ -196,18 +229,18 @@ public class DumpSegmentTest extends InitializedNullHandlingTest
   {
     Injector injector = Mockito.mock(Injector.class);
     ObjectMapper mapper = TestHelper.makeJsonMapper();
-    mapper.registerModules(NestedDataModule.getJacksonModulesList());
+    mapper.registerModules(BuiltInTypesModule.getJacksonModulesList());
     mapper.setInjectableValues(
         new InjectableValues.Std()
             .addValue(ExprMacroTable.class.getName(), TestExprMacroTable.INSTANCE)
             .addValue(ObjectMapper.class.getName(), mapper)
-            .addValue(DefaultColumnFormatConfig.class, new DefaultColumnFormatConfig(null))
+            .addValue(DefaultColumnFormatConfig.class, new DefaultColumnFormatConfig(null, null))
     );
     Mockito.when(injector.getInstance(Key.get(ObjectMapper.class, Json.class))).thenReturn(mapper);
-    Mockito.when(injector.getInstance(DefaultColumnFormatConfig.class)).thenReturn(new DefaultColumnFormatConfig(null));
+    Mockito.when(injector.getInstance(DefaultColumnFormatConfig.class)).thenReturn(new DefaultColumnFormatConfig(null, null));
 
     List<Segment> segments = createSegments(tempFolder, closer);
-    QueryableIndex queryableIndex = segments.get(0).asQueryableIndex();
+    QueryableIndex queryableIndex = segments.get(0).as(QueryableIndex.class);
 
     File outputFile = tempFolder.newFile();
     DumpSegment.runDumpNestedColumnPath(
@@ -219,17 +252,10 @@ public class DumpSegmentTest extends InitializedNullHandlingTest
     );
     final byte[] fileBytes = Files.readAllBytes(outputFile.toPath());
     final String output = StringUtils.fromUtf8(fileBytes);
-    if (NullHandling.sqlCompatible()) {
-      Assert.assertEquals(
-          "{\"bitmapSerdeFactory\":{\"type\":\"roaring\"},\"nest\":{\"$.x\":{\"types\":[\"LONG\"],\"dictionary\":[{\"localId\":0,\"globalId\":0,\"value\":null,\"rows\":[4]},{\"localId\":1,\"globalId\":3,\"value\":\"100\",\"rows\":[3]},{\"localId\":2,\"globalId\":4,\"value\":\"200\",\"rows\":[0,2]},{\"localId\":3,\"globalId\":5,\"value\":\"400\",\"rows\":[1]}],\"column\":[{\"row\":0,\"raw\":{\"x\":200,\"y\":2.2},\"fieldId\":2,\"fieldValue\":\"200\"},{\"row\":1,\"raw\":{\"x\":400,\"y\":1.1,\"z\":\"a\"},\"fieldId\":3,\"fieldValue\":\"400\"},{\"row\":2,\"raw\":{\"x\":200,\"z\":\"b\"},\"fieldId\":2,\"fieldValue\":\"200\"},{\"row\":3,\"raw\":{\"x\":100,\"y\":1.1,\"z\":\"a\"},\"fieldId\":1,\"fieldValue\":\"100\"},{\"row\":4,\"raw\":{\"y\":3.3,\"z\":\"b\"},\"fieldId\":0,\"fieldValue\":null}]}}}",
-          output
-      );
-    } else {
-      Assert.assertEquals(
-          "{\"bitmapSerdeFactory\":{\"type\":\"roaring\"},\"nest\":{\"$.x\":{\"types\":[\"LONG\"],\"dictionary\":[{\"localId\":0,\"globalId\":0,\"value\":null,\"rows\":[4]},{\"localId\":1,\"globalId\":4,\"value\":\"100\",\"rows\":[3]},{\"localId\":2,\"globalId\":5,\"value\":\"200\",\"rows\":[0,2]},{\"localId\":3,\"globalId\":6,\"value\":\"400\",\"rows\":[1]}],\"column\":[{\"row\":0,\"raw\":{\"x\":200,\"y\":2.2},\"fieldId\":2,\"fieldValue\":\"200\"},{\"row\":1,\"raw\":{\"x\":400,\"y\":1.1,\"z\":\"a\"},\"fieldId\":3,\"fieldValue\":\"400\"},{\"row\":2,\"raw\":{\"x\":200,\"z\":\"b\"},\"fieldId\":2,\"fieldValue\":\"200\"},{\"row\":3,\"raw\":{\"x\":100,\"y\":1.1,\"z\":\"a\"},\"fieldId\":1,\"fieldValue\":\"100\"},{\"row\":4,\"raw\":{\"y\":3.3,\"z\":\"b\"},\"fieldId\":0,\"fieldValue\":null}]}}}",
-          output
-      );
-    }
+    Assert.assertEquals(
+        "{\"bitmapSerdeFactory\":{\"type\":\"roaring\"},\"nest\":{\"$.x\":{\"types\":[\"LONG\"],\"dictionary\":[{\"localId\":0,\"globalId\":0,\"value\":null,\"rows\":[4]},{\"localId\":1,\"globalId\":3,\"value\":\"100\",\"rows\":[3]},{\"localId\":2,\"globalId\":4,\"value\":\"200\",\"rows\":[0,2]},{\"localId\":3,\"globalId\":5,\"value\":\"400\",\"rows\":[1]}],\"column\":[{\"row\":0,\"raw\":{\"x\":200,\"y\":2.2},\"fieldId\":2,\"fieldValue\":\"200\"},{\"row\":1,\"raw\":{\"x\":400,\"y\":1.1,\"z\":\"a\"},\"fieldId\":3,\"fieldValue\":\"400\"},{\"row\":2,\"raw\":{\"x\":200,\"z\":\"b\"},\"fieldId\":2,\"fieldValue\":\"200\"},{\"row\":3,\"raw\":{\"x\":100,\"y\":1.1,\"z\":\"a\"},\"fieldId\":1,\"fieldValue\":\"100\"},{\"row\":4,\"raw\":{\"y\":3.3,\"z\":\"b\"},\"fieldId\":0,\"fieldValue\":null}]}}}",
+        output
+    );
   }
 
   @Test
@@ -257,7 +283,7 @@ public class DumpSegmentTest extends InitializedNullHandlingTest
         tempFolder,
         closer,
         "nested-test-data.json",
-        NestedDataTestUtils.DEFAULT_JSON_INPUT_FORMAT,
+        TestIndex.DEFAULT_JSON_INPUT_FORMAT,
         new TimestampSpec("timestamp", null, null),
         DimensionsSpec.builder().useSchemaDiscovery(true).build(),
         null,

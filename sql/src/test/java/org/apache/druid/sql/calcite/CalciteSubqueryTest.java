@@ -21,8 +21,6 @@ package org.apache.druid.sql.calcite;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.inject.Injector;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.InputRowSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
@@ -36,10 +34,11 @@ import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.PeriodGranularity;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.Druids;
+import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.query.JoinDataSource;
+import org.apache.druid.query.Order;
 import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.QueryDataSource;
-import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
@@ -51,13 +50,18 @@ import org.apache.druid.query.aggregation.LongMaxAggregatorFactory;
 import org.apache.druid.query.aggregation.LongMinAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.aggregation.SingleValueAggregatorFactory;
+import org.apache.druid.query.aggregation.firstlast.first.StringFirstAggregatorFactory;
 import org.apache.druid.query.aggregation.post.ArithmeticPostAggregator;
 import org.apache.druid.query.aggregation.post.FieldAccessPostAggregator;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.ExtractionDimensionSpec;
+import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.extraction.SubstringDimExtractionFn;
+import org.apache.druid.query.filter.DimFilter;
+import org.apache.druid.query.filter.TypedInFilter;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.groupby.orderby.DefaultLimitSpec;
+import org.apache.druid.query.groupby.orderby.NoopLimitSpec;
 import org.apache.druid.query.groupby.orderby.OrderByColumnSpec;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.scan.ScanQuery;
@@ -69,7 +73,6 @@ import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
 import org.apache.druid.segment.join.JoinType;
-import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.segment.writeout.OnHeapMemorySegmentWriteOutMediumFactory;
 import org.apache.druid.server.SpecificSegmentsQuerySegmentWalker;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
@@ -158,10 +161,6 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                         .setContext(queryContext)
                         .build()
         ),
-        NullHandling.replaceWithDefault() ?
-        ImmutableList.of(
-            new Object[]{3L, 1L}
-        ) :
         ImmutableList.of(
             new Object[]{2L, 1L}
         )
@@ -193,6 +192,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                                     .dataSource("dsMissingCol")
                                     .intervals(querySegmentSpec(Filtration.eternity()))
                                     .columns("__time", "col1", "col2", "col3")
+                                    .columnTypes(ColumnType.LONG, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING)
                                     .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                                     .limit(10)
                                     .build()
@@ -213,8 +213,8 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                         .build()
         ),
         ImmutableList.of(
-            new Object[]{946684800000L, "abc", NullHandling.defaultStringValue(), "def", 1L},
-            new Object[]{946684800000L, "foo", "bar", NullHandling.defaultStringValue(), 1L}
+            new Object[]{946684800000L, "abc", null, "def", 1L},
+            new Object[]{946684800000L, "foo", "bar", null, 1L}
         )
     );
   }
@@ -363,12 +363,13 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                 )
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("a0", "j0.a0")
+                .columnTypes(ColumnType.LONG, ColumnType.LONG)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
         ),
         ImmutableList.of(
-            new Object[]{NullHandling.sqlCompatible() ? 6L : 5L, NullHandling.sqlCompatible() ? 3L : 2L}
+            new Object[]{6L, 3L}
         )
     );
   }
@@ -392,6 +393,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                                   newScanQueryBuilder().dataSource(CalciteTests.DATASOURCE3)
                                                        .intervals(querySegmentSpec(Filtration.eternity()))
                                                        .columns("dim2")
+                                                       .columnTypes(ColumnType.STRING)
                                                        .context(queryContextModified)
                                                        .build()
                               ),
@@ -404,6 +406,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                               newScanQueryBuilder().dataSource(CalciteTests.DATASOURCE1)
                                                    .intervals(querySegmentSpec(Filtration.eternity()))
                                                    .columns("dim2")
+                                                   .columnTypes(ColumnType.STRING)
                                                    .context(queryContextModified)
                                                    .build()
                           ),
@@ -414,28 +417,19 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                   )
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .virtualColumns(
-                      NullHandling.replaceWithDefault()
-                      ? VirtualColumns.EMPTY
-                      : VirtualColumns.create(
+                      VirtualColumns.create(
                           expressionVirtualColumn("v0", "substring(\"dim1\", 0, 1)", ColumnType.STRING)
                       )
                   )
                   .filters(
-                      NullHandling.replaceWithDefault()
-                      ? not(selector("dim1", "z", new SubstringDimExtractionFn(0, 1)))
-                      : not(equality("v0", "z", ColumnType.STRING))
+                      not(equality("v0", "z", ColumnType.STRING))
                   )
                   .granularity(Granularities.ALL)
                   .aggregators(aggregators(new CountAggregatorFactory("a0")))
                   .context(queryContextModified)
                   .build()
         ),
-        NullHandling.replaceWithDefault()
-        ? ImmutableList.of(
-            new Object[]{8L}
-        )
-        // in sql compatible mode, expression filter correctly does not match null values...
-        : ImmutableList.of(
+        ImmutableList.of(
             new Object[]{4L}
         )
     );
@@ -448,6 +442,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
     if (!queryContext.containsKey(QueryContexts.MAX_SUBQUERY_BYTES_KEY)) {
       cannotVectorize();
     }
+    cannotVectorizeUnlessFallback();
     testQuery(
         "SELECT TIME_FORMAT(\"date\", 'yyyy-MM'), SUM(x)\n"
         + "FROM (\n"
@@ -526,15 +521,10 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                 )
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .columns("dim1", "dim2")
+                .columnTypes(ColumnType.STRING, ColumnType.STRING)
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
         ),
-        NullHandling.replaceWithDefault() ?
-        ImmutableList.of(
-            new Object[]{"", "a"},
-            new Object[]{"1", "a"},
-            new Object[]{"def", "abc"}
-        ) :
         ImmutableList.of(
             new Object[]{"", "a"},
             new Object[]{"2", ""},
@@ -595,6 +585,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .virtualColumns(expressionVirtualColumn("v0", "'abc'", ColumnType.STRING))
                 .columns("__time", "cnt", "dim1", "v0")
+                .columnTypes(ColumnType.LONG, ColumnType.LONG, ColumnType.STRING, ColumnType.STRING)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                 .context(QUERY_CONTEXT_DEFAULT)
                 .build()
@@ -637,15 +628,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                         .setInterval(querySegmentSpec(Filtration.eternity()))
                         .setGranularity(Granularities.ALL)
                         .setAggregatorSpecs(
-                            useDefault ?
                             aggregators(
-                                new LongMaxAggregatorFactory("_a0", "a0"),
-                                new LongMinAggregatorFactory("_a1", "a0"),
-                                new DoubleSumAggregatorFactory("_a2:sum", "a0"),
-                                new CountAggregatorFactory("_a2:count"),
-                                new LongMaxAggregatorFactory("_a3", "d0"),
-                                new CountAggregatorFactory("_a4")
-                            ) : aggregators(
                                 new LongMaxAggregatorFactory("_a0", "a0"),
                                 new LongMinAggregatorFactory("_a1", "a0"),
                                 new DoubleSumAggregatorFactory("_a2:sum", "a0"),
@@ -728,10 +711,10 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                   )
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .columns("a0", "j0.a0")
+                  .columnTypes(ColumnType.LONG, ColumnType.LONG)
                   .limit(10)
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                   .context(QUERY_CONTEXT_DEFAULT)
-                  .legacy(false)
                   .build()
         ),
         ImmutableList.of()
@@ -814,10 +797,6 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                         .setContext(queryContext)
                         .build()
         ),
-        NullHandling.replaceWithDefault() ?
-        ImmutableList.of(
-            new Object[]{3L, 1L}
-        ) :
         ImmutableList.of(
             new Object[]{2L, 1L}
         )
@@ -873,6 +852,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                                         .dataSource(CalciteTests.DATASOURCE1)
                                         .intervals(querySegmentSpec(Intervals.ETERNITY))
                                         .columns("__time", "dim1")
+                                        .columnTypes(ColumnType.LONG, ColumnType.STRING)
                                         .limit(2)
                                         .build()
                                 ),
@@ -884,6 +864,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                                                             .dataSource(CalciteTests.DATASOURCE1)
                                                             .intervals(querySegmentSpec(Intervals.ETERNITY))
                                                             .columns("dim1")
+                                                            .columnTypes(ColumnType.STRING)
                                                             .limit(2)
                                                             .build()
                                                     )
@@ -928,9 +909,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                         .setContext(QUERY_CONTEXT_DEFAULT)
                         .build()
         ),
-        NullHandling.sqlCompatible()
-        ? ImmutableList.of(new Object[]{946684800000L, "", 1L}, new Object[]{946771200000L, "10.1", 1L})
-        : ImmutableList.of(new Object[]{946771200000L, "10.1", 1L})
+        ImmutableList.of(new Object[]{946684800000L, "", 1L}, new Object[]{946771200000L, "10.1", 1L})
     );
   }
 
@@ -952,7 +931,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                                              .intervals(querySegmentSpec(Filtration.eternity()))
                                              .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                                              .columns("__time")
-                                             .legacy(false)
+                                             .columnTypes(ColumnType.LONG)
                                              .context(queryContext)
                                              .build()),
                                    "j0.",
@@ -960,7 +939,8 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                                    JoinType.INNER,
                                    null,
                                    ExprMacroTable.nil(),
-                                   CalciteTests.createJoinableFactoryWrapper()
+                                   CalciteTests.createJoinableFactoryWrapper(),
+                                   JoinAlgorithm.BROADCAST
                                ))
                                .intervals(querySegmentSpec(Filtration.eternity()))
                                .granularity(Granularities.ALL)
@@ -989,6 +969,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                                 .intervals(querySegmentSpec(Filtration.eternity()))
                                 .virtualColumns(expressionVirtualColumn("v0", "0", ColumnType.LONG))
                                 .columns("v0")
+                                .columnTypes(ColumnType.LONG)
                                 .limit(10)
                                 .context(queryContext)
                                 .build()
@@ -1023,18 +1004,8 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                               newScanQueryBuilder()
                                   .dataSource(CalciteTests.DATASOURCE1)
                                   .intervals(querySegmentSpec(Filtration.eternity()))
-                                  .columns(
-                                      ImmutableList.of(
-                                          "__time",
-                                          "cnt",
-                                          "dim1",
-                                          "dim2",
-                                          "dim3",
-                                          "m1",
-                                          "m2",
-                                          "unique_dim1"
-                                      )
-                                  )
+                                  .columns("__time", "dim1", "dim2", "dim3", "cnt", "m1", "m2", "unique_dim1")
+                                  .columnTypes(ColumnType.LONG, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.LONG, ColumnType.FLOAT, ColumnType.DOUBLE, ColumnType.ofComplex("hyperUnique"))
                                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                                   .context(queryContext)
                                   .build()
@@ -1061,18 +1032,13 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
   public void testJoinWithSubqueries(String testName, Map<String, Object> queryContext)
   {
     List<Object[]> results = new ArrayList<>(ImmutableList.of(
-        new Object[]{"", NullHandling.defaultStringValue()},
-        new Object[]{"10.1", NullHandling.defaultStringValue()},
-        new Object[]{"2", NullHandling.defaultStringValue()},
-        new Object[]{"1", NullHandling.defaultStringValue()},
-        new Object[]{"def", NullHandling.defaultStringValue()},
-        new Object[]{"abc", NullHandling.defaultStringValue()}
+        new Object[]{"", null},
+        new Object[]{"10.1", null},
+        new Object[]{"2", null},
+        new Object[]{"1", null},
+        new Object[]{"def", null},
+        new Object[]{"abc", null}
     ));
-
-    if (NullHandling.replaceWithDefault()) {
-      results.add(new Object[]{NullHandling.defaultStringValue(), NullHandling.defaultStringValue()});
-    }
-
 
     testQuery(
         "SELECT a.dim1, b.dim2\n"
@@ -1091,6 +1057,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                                 newScanQueryBuilder()
                                     .dataSource("foo2")
                                     .columns("dim1")
+                                    .columnTypes(ColumnType.STRING)
                                     .eternityInterval()
                                     .build()
                             ),
@@ -1099,7 +1066,8 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                             JoinType.LEFT,
                             null,
                             ExprMacroTable.nil(),
-                            CalciteTests.createJoinableFactoryWrapper()
+                            CalciteTests.createJoinableFactoryWrapper(),
+                            JoinAlgorithm.BROADCAST
                         ),
                         new QueryDataSource(
                             newScanQueryBuilder()
@@ -1110,6 +1078,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                                             newScanQueryBuilder()
                                                 .dataSource("foo2")
                                                 .columns("dim1", "dim2")
+                                                .columnTypes(ColumnType.STRING, ColumnType.STRING)
                                                 .eternityInterval()
                                                 .build()
                                         ),
@@ -1118,10 +1087,12 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                                         JoinType.LEFT,
                                         null,
                                         ExprMacroTable.nil(),
-                                        CalciteTests.createJoinableFactoryWrapper()
+                                        CalciteTests.createJoinableFactoryWrapper(),
+                                        JoinAlgorithm.BROADCAST
                                     )
                                 )
                                 .columns("dim1", "j0.dim2")
+                                .columnTypes(ColumnType.STRING, ColumnType.STRING)
                                 .eternityInterval()
                                 .build()
                         ),
@@ -1130,10 +1101,12 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                         JoinType.FULL,
                         null,
                         ExprMacroTable.nil(),
-                        CalciteTests.createJoinableFactoryWrapper()
+                        CalciteTests.createJoinableFactoryWrapper(),
+                        JoinAlgorithm.BROADCAST
                     )
                 )
-                .columns("_j0.j0.dim2", "dim1")
+                .columns("dim1", "_j0.j0.dim2")
+                .columnTypes(ColumnType.STRING, ColumnType.STRING)
                 .eternityInterval()
                 .build()
         ),
@@ -1167,7 +1140,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                         ),
                         "j0.",
                         "1",
-                        NullHandling.replaceWithDefault() ? JoinType.LEFT : JoinType.INNER
+                        JoinType.INNER
                     )
                 )
                 .intervals(querySegmentSpec(Filtration.eternity()))
@@ -1214,7 +1187,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                         ),
                         "j0.",
                         "1",
-                        NullHandling.replaceWithDefault() ? JoinType.LEFT : JoinType.INNER
+                        JoinType.INNER
                     )
                 )
                 .intervals(querySegmentSpec(Filtration.eternity()))
@@ -1267,7 +1240,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                         ),
                         "j0.",
                         "1",
-                        NullHandling.replaceWithDefault() ? JoinType.LEFT : JoinType.INNER
+                        JoinType.INNER
                     )
                 )
                 .intervals(querySegmentSpec(Filtration.eternity()))
@@ -1305,9 +1278,9 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
                                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
                                 .offset(6L)
                                 .limit(1L)
-                                .order(ScanQuery.Order.DESCENDING)
-                                .columns("__time", "channel")
-                                .legacy(false)
+                                .order(Order.DESCENDING)
+                                .columns("channel", "__time")
+                                .columnTypes(ColumnType.STRING, ColumnType.STRING)
                                 .context(QUERY_CONTEXT_DEFAULT)
                                 .build()
                         ),
@@ -1388,6 +1361,235 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
     );
   }
 
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void testGroupBySubqueryWithEarliestAggregator(String testName, Map<String, Object> queryContext)
+  {
+    cannotVectorize();
+
+    // Note: EARLIEST aggregator is used because the intermediate type "serializablePair" is different from the finalized type
+    final List<Object[]> expectedResults = ImmutableList.of(
+        new Object[]{"", "a", "a", ""},
+        new Object[]{"", "b", "a", ""},
+        new Object[]{"1", "", "a", "1"},
+        new Object[]{"10.1", "b", null, "10.1"},
+        new Object[]{"10.1", "c", null, "10.1"},
+        new Object[]{"2", "d", "", "2"},
+        new Object[]{"abc", null, null, "abc"},
+        new Object[]{"def", null, "abc", "def"}
+    );
+
+    testQuery(
+        "SELECT a.dim1, a.dim3, a.e_dim2, b.dim1 "
+        + "FROM ("
+        + " SELECT dim1, dim3, EARLIEST(dim2) AS e_dim2 "
+        + " FROM foo GROUP BY 1, 2 LIMIT 100"
+        + ") a "
+        + "INNER JOIN foo b ON a.dim1 = b.dim1",
+        queryContext,
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(
+                    JoinDataSource.create(
+                        new QueryDataSource(
+                            GroupByQuery.builder()
+                                        .setDataSource("foo")
+                                        .setInterval(querySegmentSpec(Intervals.ETERNITY))
+                                        .setGranularity(Granularities.ALL)
+                                        .setDimensions(
+                                            new DefaultDimensionSpec("dim1", "d0", ColumnType.STRING),
+                                            new DefaultDimensionSpec("dim3", "d1", ColumnType.STRING)
+                                        )
+                                        .addAggregator(new StringFirstAggregatorFactory("a0", "dim2", "__time", 1024))
+                                        .setLimitSpec(new DefaultLimitSpec(Collections.emptyList(), 100))
+                                        .build()
+                        ),
+                        new QueryDataSource(
+                            newScanQueryBuilder()
+                                .dataSource("foo")
+                                .intervals(querySegmentSpec(Intervals.ETERNITY))
+                                .columns("dim1")
+                                .columnTypes(ColumnType.STRING)
+                                .build()
+                        ),
+                        "j0.",
+                        "(\"d0\" == \"j0.dim1\")",
+                        JoinType.INNER,
+                        null,
+                        TestExprMacroTable.INSTANCE,
+                        null,
+                        JoinAlgorithm.BROADCAST
+                    )
+                )
+                .intervals(querySegmentSpec(Intervals.ETERNITY))
+                .columns("d0", "d1", "a0", "j0.dim1")
+                .columnTypes(ColumnType.STRING, ColumnType.STRING, ColumnType.STRING, ColumnType.STRING)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        expectedResults
+    );
+  }
+
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void testTopNSubqueryWithEarliestAggregator(String testName, Map<String, Object> queryContext)
+  {
+    final List<Object[]> expectedResults = ImmutableList.of(
+        new Object[]{"", "a", ""},
+        new Object[]{"1", "a", "1"},
+        new Object[]{"10.1", null, "10.1"},
+        new Object[]{"2", "", "2"},
+        new Object[]{"abc", null, "abc"},
+        new Object[]{"def", "abc", "def"}
+    );
+
+    testQuery(
+        "SELECT a.dim1, a.e_dim2, b.dim1 "
+        + "FROM ("
+        + " SELECT dim1, EARLIEST(dim2) AS e_dim2 "
+        + " FROM foo "
+        + " GROUP BY 1 "
+        + " LIMIT 100"
+        + ") a "
+        + "INNER JOIN foo b ON a.dim1 = b.dim1",
+        queryContext,
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(
+                    JoinDataSource.create(
+                        new QueryDataSource(
+                            new TopNQueryBuilder()
+                                .dataSource("foo")
+                                .dimension(new DefaultDimensionSpec("dim1", "d0", ColumnType.STRING))
+                                .metric(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC))
+                                .threshold(100)
+                                .intervals(querySegmentSpec(Intervals.ETERNITY))
+                                .granularity(Granularities.ALL)
+                                .aggregators(
+                                    new StringFirstAggregatorFactory("a0", "dim2", "__time", 1024)
+                                )
+                                .build()
+                        ),
+                        new QueryDataSource(
+                            newScanQueryBuilder()
+                                .dataSource("foo")
+                                .intervals(querySegmentSpec(Intervals.ETERNITY))
+                                .columns("dim1")
+                                .columnTypes(ColumnType.STRING)
+                                .build()
+                        ),
+                        "j0.",
+                        "(\"d0\" == \"j0.dim1\")",
+                        JoinType.INNER,
+                        null,
+                        TestExprMacroTable.INSTANCE,
+                        null,
+                        JoinAlgorithm.BROADCAST
+                    )
+                )
+                .intervals(querySegmentSpec(Intervals.ETERNITY))
+                .columns("d0", "a0", "j0.dim1")
+                .columnTypes(ColumnType.STRING, ColumnType.STRING, ColumnType.STRING)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        expectedResults
+    );
+  }
+
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void testTimeseriesSubqueryWithEarliestAggregator(String testName, Map<String, Object> queryContext)
+  {
+    testQuery(
+        "SELECT a.__time, a.e_dim2, b.__time "
+        + "FROM ("
+        + " SELECT TIME_FLOOR(\"__time\", 'PT24H') as __time, EARLIEST(dim2) AS e_dim2 "
+        + " FROM foo "
+        + " GROUP BY 1 "
+        + ") a "
+        + "INNER JOIN foo b ON a.__time = b.__time",
+        queryContext,
+        ImmutableList.of(
+            newScanQueryBuilder()
+                .dataSource(
+                    JoinDataSource.create(
+                        new QueryDataSource(
+                            Druids.newTimeseriesQueryBuilder()
+                                  .dataSource("foo")
+                                  .intervals(querySegmentSpec(Intervals.ETERNITY))
+                                  .granularity(new PeriodGranularity(
+                                      new Period("PT24H"),
+                                      null,
+                                      DateTimeZone.UTC
+                                  ))
+                                  .aggregators(new StringFirstAggregatorFactory("a0", "dim2", "__time", 1024))
+                                  .build()
+                        ),
+                        new QueryDataSource(
+                            newScanQueryBuilder()
+                                .dataSource("foo")
+                                .intervals(querySegmentSpec(Intervals.ETERNITY))
+                                .columns("__time")
+                                .columnTypes(ColumnType.LONG)
+                                .build()
+                        ),
+                        "j0.",
+                        "(\"d0\" == \"j0.__time\")",
+                        JoinType.INNER,
+                        null,
+                        TestExprMacroTable.INSTANCE,
+                        null,
+                        JoinAlgorithm.BROADCAST
+                    )
+                )
+                .intervals(querySegmentSpec(Intervals.ETERNITY))
+                .columns("d0", "a0", "j0.__time")
+                .columnTypes(ColumnType.LONG, ColumnType.STRING, ColumnType.LONG)
+                .context(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{946684800000L, "a", 946684800000L},
+            new Object[]{946771200000L, null, 946771200000L},
+            new Object[]{946857600000L, "", 946857600000L},
+            new Object[]{978307200000L, "a", 978307200000L},
+            new Object[]{978393600000L, "abc", 978393600000L},
+            new Object[]{978480000000L, null, 978480000000L}
+        )
+    );
+  }
+
+  @MethodSource("constructorFeeder")
+  @ParameterizedTest(name = "{0}")
+  public void testScalarInArrayToUseHavingFilter(String testName, Map<String, Object> queryContext)
+  {
+    cannotVectorizeUnlessFallback();
+    DimFilter filter = new TypedInFilter("v0", ColumnType.LONG, null, ImmutableList.of(1, 17), null);
+    testQuery(
+        "select countryName from "
+        + "(select countryName, length(countryName) as cname from wikipedia group by countryName) "
+        + "where SCALAR_IN_ARRAY(cname, ARRAY[17, 1])",
+        queryContext,
+        ImmutableList.of(
+            GroupByQuery.builder()
+                .setDataSource(new TableDataSource(CalciteTests.WIKIPEDIA))
+                .setInterval(querySegmentSpec(Intervals.ETERNITY))
+                .setVirtualColumns(expressionVirtualColumn("v0", "strlen(\"countryName\")", ColumnType.LONG))
+                .setDimFilter(filter)
+                .setGranularity(Granularities.ALL)
+                .setDimensions(new DefaultDimensionSpec("countryName", "d0", ColumnType.STRING))
+                .setLimitSpec(NoopLimitSpec.instance())
+                .setContext(QUERY_CONTEXT_DEFAULT)
+                .build()
+        ),
+        ImmutableList.of(
+            new Object[]{"Republic of Korea"}
+        )
+    );
+  }
+
   public static class SubqueryComponentSupplier extends SqlTestFramework.StandardComponentSupplier
   {
 
@@ -1400,14 +1602,8 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
     }
 
     @Override
-    public SpecificSegmentsQuerySegmentWalker createQuerySegmentWalker(
-        QueryRunnerFactoryConglomerate conglomerate,
-        JoinableFactoryWrapper joinableFactory,
-        Injector injector
-    )
+    public SpecificSegmentsQuerySegmentWalker addSegmentsToWalker(SpecificSegmentsQuerySegmentWalker walker)
     {
-      SpecificSegmentsQuerySegmentWalker walker =
-          super.createQuerySegmentWalker(conglomerate, joinableFactory, injector);
 
       final String datasource1 = "dsMissingCol";
       final File tmpFolder = tempDirProducer.newTempFolder();
@@ -1492,6 +1688,7 @@ public class CalciteSubqueryTest extends BaseCalciteQueryTest
           .rows(rows2)
           .buildMMappedIndex();
 
+      super.addSegmentsToWalker(walker);
       walker.add(
           DataSegment.builder()
               .dataSource(datasource1)

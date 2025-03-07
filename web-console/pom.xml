@@ -28,14 +28,14 @@
   <parent>
     <groupId>org.apache.druid</groupId>
     <artifactId>druid</artifactId>
-    <version>31.0.0-SNAPSHOT</version>
+    <version>33.0.0-SNAPSHOT</version>
   </parent>
 
   <properties>
     <resources.directory>${project.build.directory}/resources</resources.directory>
     <web.console.skip>false</web.console.skip>  <!-- this property is overidden in Travis CI to skip the javascript-related work -->
-    <node.version>v16.17.0</node.version>
-    <npm.version>8.15.0</npm.version>
+    <node.version>v20.9.0</node.version>
+    <npm.version>10.9.0</npm.version>
   </properties>
 
   <build>

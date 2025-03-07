@@ -39,6 +39,7 @@ import java.util.List;
 public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnClusteredClientTestBase
 {
   private Cache cache;
+  private static final int DEFAULT_CACHE_ENTRY_MAX_SIZE = Integer.MAX_VALUE;
 
   @Before
   public void setup()
@@ -58,7 +59,7 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
     prepareCluster(10);
     final Query<Result<TimeseriesResultValue>> query = timeseriesQuery(BASE_SCHEMA_INFO.getDataInterval());
     final ResultLevelCachingQueryRunner<Result<TimeseriesResultValue>> queryRunner1 = createQueryRunner(
-        newCacheConfig(false, false),
+        newCacheConfig(false, false, DEFAULT_CACHE_ENTRY_MAX_SIZE),
         query
     );
 
@@ -72,7 +73,7 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
     Assert.assertEquals(0, cache.getStats().getNumMisses());
 
     final ResultLevelCachingQueryRunner<Result<TimeseriesResultValue>> queryRunner2 = createQueryRunner(
-        newCacheConfig(false, false),
+        newCacheConfig(false, false, DEFAULT_CACHE_ENTRY_MAX_SIZE),
         query
     );
 
@@ -93,7 +94,7 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
     prepareCluster(10);
     final Query<Result<TimeseriesResultValue>> query = timeseriesQuery(BASE_SCHEMA_INFO.getDataInterval());
     final ResultLevelCachingQueryRunner<Result<TimeseriesResultValue>> queryRunner1 = createQueryRunner(
-        newCacheConfig(true, false),
+        newCacheConfig(true, false, DEFAULT_CACHE_ENTRY_MAX_SIZE),
         query
     );
 
@@ -107,7 +108,7 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
     Assert.assertEquals(0, cache.getStats().getNumMisses());
 
     final ResultLevelCachingQueryRunner<Result<TimeseriesResultValue>> queryRunner2 = createQueryRunner(
-        newCacheConfig(true, false),
+        newCacheConfig(true, false, DEFAULT_CACHE_ENTRY_MAX_SIZE),
         query
     );
 
@@ -128,7 +129,7 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
     prepareCluster(10);
     final Query<Result<TimeseriesResultValue>> query = timeseriesQuery(BASE_SCHEMA_INFO.getDataInterval());
     final ResultLevelCachingQueryRunner<Result<TimeseriesResultValue>> queryRunner1 = createQueryRunner(
-        newCacheConfig(false, false),
+        newCacheConfig(false, false, DEFAULT_CACHE_ENTRY_MAX_SIZE),
         query
     );
 
@@ -142,7 +143,7 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
     Assert.assertEquals(0, cache.getStats().getNumMisses());
 
     final ResultLevelCachingQueryRunner<Result<TimeseriesResultValue>> queryRunner2 = createQueryRunner(
-        newCacheConfig(false, true),
+        newCacheConfig(false, true, DEFAULT_CACHE_ENTRY_MAX_SIZE),
         query
     );
 
@@ -163,7 +164,7 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
     prepareCluster(10);
     final Query<Result<TimeseriesResultValue>> query = timeseriesQuery(BASE_SCHEMA_INFO.getDataInterval());
     final ResultLevelCachingQueryRunner<Result<TimeseriesResultValue>> queryRunner1 = createQueryRunner(
-        newCacheConfig(true, true),
+        newCacheConfig(true, true, DEFAULT_CACHE_ENTRY_MAX_SIZE),
         query
     );
 
@@ -177,7 +178,7 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
     Assert.assertEquals(1, cache.getStats().getNumMisses());
 
     final ResultLevelCachingQueryRunner<Result<TimeseriesResultValue>> queryRunner2 = createQueryRunner(
-        newCacheConfig(true, true),
+        newCacheConfig(true, true, DEFAULT_CACHE_ENTRY_MAX_SIZE),
         query
     );
 
@@ -190,6 +191,41 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
     Assert.assertEquals(1, cache.getStats().getNumHits());
     Assert.assertEquals(1, cache.getStats().getNumEntries());
     Assert.assertEquals(1, cache.getStats().getNumMisses());
+  }
+
+  @Test
+  public void testNoPopulateIfEntrySizeExceedsMaximum()
+  {
+    prepareCluster(10);
+    final Query<Result<TimeseriesResultValue>> query = timeseriesQuery(BASE_SCHEMA_INFO.getDataInterval());
+    final ResultLevelCachingQueryRunner<Result<TimeseriesResultValue>> queryRunner1 = createQueryRunner(
+        newCacheConfig(true, true, 128),
+        query
+    );
+
+    final Sequence<Result<TimeseriesResultValue>> sequence1 = queryRunner1.run(
+        QueryPlus.wrap(query),
+        responseContext()
+    );
+    final List<Result<TimeseriesResultValue>> results1 = sequence1.toList();
+    Assert.assertEquals(0, cache.getStats().getNumHits());
+    Assert.assertEquals(0, cache.getStats().getNumEntries());
+    Assert.assertEquals(1, cache.getStats().getNumMisses());
+
+    final ResultLevelCachingQueryRunner<Result<TimeseriesResultValue>> queryRunner2 = createQueryRunner(
+        newCacheConfig(true, true, DEFAULT_CACHE_ENTRY_MAX_SIZE),
+        query
+    );
+
+    final Sequence<Result<TimeseriesResultValue>> sequence2 = queryRunner2.run(
+        QueryPlus.wrap(query),
+        responseContext()
+    );
+    final List<Result<TimeseriesResultValue>> results2 = sequence2.toList();
+    Assert.assertEquals(results1, results2);
+    Assert.assertEquals(0, cache.getStats().getNumHits());
+    Assert.assertEquals(1, cache.getStats().getNumEntries());
+    Assert.assertEquals(2, cache.getStats().getNumMisses());
   }
 
   @Test
@@ -206,7 +242,7 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
 
     final Query<Result<TimeseriesResultValue>> query = timeseriesQuery(BASE_SCHEMA_INFO.getDataInterval());
     final ResultLevelCachingQueryRunner<Result<TimeseriesResultValue>> queryRunner = createQueryRunner(
-        newCacheConfig(true, false),
+        newCacheConfig(true, false, DEFAULT_CACHE_ENTRY_MAX_SIZE),
         query
     );
 
@@ -241,7 +277,7 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
             new RetryQueryRunnerConfig(),
             objectMapper
         ),
-        toolChestWarehouse.getToolChest(query),
+        conglomerate.getToolChest(query),
         query,
         objectMapper,
         cache,
@@ -249,7 +285,11 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
     );
   }
 
-  private CacheConfig newCacheConfig(boolean populateResultLevelCache, boolean useResultLevelCache)
+  private CacheConfig newCacheConfig(
+      boolean populateResultLevelCache,
+      boolean useResultLevelCache,
+      int resultLevelCacheLimit
+  )
   {
     return new CacheConfig()
     {
@@ -263,6 +303,12 @@ public class ResultLevelCachingQueryRunnerTest extends QueryRunnerBasedOnCluster
       public boolean isUseResultLevelCache()
       {
         return useResultLevelCache;
+      }
+
+      @Override
+      public int getResultLevelCacheLimit()
+      {
+        return resultLevelCacheLimit;
       }
     };
   }

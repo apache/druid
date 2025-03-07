@@ -27,7 +27,9 @@ import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.InputBindings;
 import org.apache.druid.math.expr.vector.CastToTypeVectorProcessor;
 import org.apache.druid.math.expr.vector.ExprVectorProcessor;
-import org.apache.druid.math.expr.vector.LongOutLongInFunctionVectorValueProcessor;
+import org.apache.druid.math.expr.vector.LongUnivariateLongFunctionVectorProcessor;
+import org.apache.druid.segment.column.ColumnHolder;
+import org.joda.time.Period;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -36,7 +38,27 @@ import java.util.Objects;
 
 public class TimestampFloorExprMacro implements ExprMacroTable.ExprMacro
 {
+  public static String forQueryGranularity(Period period)
+  {
+    return FN_NAME + "(" + ColumnHolder.TIME_COLUMN_NAME + ",'" + period + "')";
+  }
+
   private static final String FN_NAME = "timestamp_floor";
+
+  private static PeriodGranularity computeGranularity(
+      final Expr expr,
+      final List<Expr> args,
+      final Expr.ObjectBinding bindings
+  )
+  {
+    return ExprUtils.toPeriodGranularity(
+        expr,
+        args.get(1),
+        args.size() > 2 ? args.get(2) : null,
+        args.size() > 3 ? args.get(3) : null,
+        bindings
+    );
+  }
 
   @Override
   public String name()
@@ -54,21 +76,6 @@ public class TimestampFloorExprMacro implements ExprMacroTable.ExprMacro
     } else {
       return new TimestampFloorDynamicExpr(this, args);
     }
-  }
-
-  private static PeriodGranularity computeGranularity(
-      final Expr expr,
-      final List<Expr> args,
-      final Expr.ObjectBinding bindings
-  )
-  {
-    return ExprUtils.toPeriodGranularity(
-        expr,
-        args.get(1),
-        args.size() > 2 ? args.get(2) : null,
-        args.size() > 3 ? args.get(3) : null,
-        bindings
-    );
   }
 
   public static class TimestampFloorExpr extends ExprMacroTable.BaseScalarMacroFunctionExpr
@@ -125,18 +132,10 @@ public class TimestampFloorExprMacro implements ExprMacroTable.ExprMacro
     @Override
     public <T> ExprVectorProcessor<T> asVectorProcessor(VectorInputBindingInspector inspector)
     {
-      ExprVectorProcessor<?> processor;
-      processor = new LongOutLongInFunctionVectorValueProcessor(
+      final ExprVectorProcessor<?> processor = new LongUnivariateLongFunctionVectorProcessor(
           CastToTypeVectorProcessor.cast(args.get(0).asVectorProcessor(inspector), ExpressionType.LONG),
-          inspector.getMaxVectorSize()
-      )
-      {
-        @Override
-        public long apply(long input)
-        {
-          return granularity.bucketStart(input);
-        }
-      };
+          granularity::bucketStart
+      );
 
       return (ExprVectorProcessor<T>) processor;
     }

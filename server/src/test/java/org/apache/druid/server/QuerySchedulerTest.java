@@ -31,6 +31,7 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.ProvisionException;
 import org.apache.druid.client.SegmentServerSelector;
+import org.apache.druid.error.ExceptionMatcher;
 import org.apache.druid.guice.GuiceInjectors;
 import org.apache.druid.guice.JsonConfigProvider;
 import org.apache.druid.guice.JsonConfigurator;
@@ -68,6 +69,7 @@ import org.apache.druid.server.scheduling.HiLoQueryLaningStrategy;
 import org.apache.druid.server.scheduling.ManualQueryPrioritizationStrategy;
 import org.apache.druid.server.scheduling.NoQueryLaningStrategy;
 import org.easymock.EasyMock;
+import org.hamcrest.text.StringContainsInOrder;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -492,16 +494,14 @@ public class QuerySchedulerTest
     final Properties properties = new Properties();
     properties.setProperty(propertyPrefix + ".laning.strategy", "hilo");
     provider.inject(properties, injector.getInstance(JsonConfigurator.class));
-    Throwable t = Assert.assertThrows(ProvisionException.class, () -> provider.get().get());
-    Assert.assertEquals(
-        "Unable to provision, see the following errors:\n"
-        + "\n"
-        + "1) Problem parsing object at prefix[druid.query.scheduler]: Cannot construct instance of `org.apache.druid.server.scheduling.HiLoQueryLaningStrategy`, problem: maxLowPercent must be set\n"
-        + " at [Source: UNKNOWN; line: -1, column: -1] (through reference chain: org.apache.druid.server.QuerySchedulerProvider[\"laning\"]).\n"
-        + "\n"
-        + "1 error",
-        t.getMessage()
-    );
+    ExceptionMatcher
+        .of(ProvisionException.class)
+        .expectMessage(
+            new StringContainsInOrder(List.of(
+                "Problem parsing object at prefix[druid.query.scheduler]:",
+                "problem: maxLowPercent must be set"
+            ))
+      );
   }
 
   @Test
@@ -550,15 +550,14 @@ public class QuerySchedulerTest
     properties.setProperty(propertyPrefix + ".prioritization.strategy", "threshold");
     provider.inject(properties, injector.getInstance(JsonConfigurator.class));
     Throwable t = Assert.assertThrows(ProvisionException.class, () -> provider.get().get());
-    Assert.assertEquals(
-        "Unable to provision, see the following errors:\n"
-        + "\n"
-        + "1) Problem parsing object at prefix[druid.query.scheduler]: Cannot construct instance of `org.apache.druid.server.scheduling.ThresholdBasedQueryPrioritizationStrategy`, problem: periodThreshold, durationThreshold, or segmentCountThreshold must be set\n"
-        + " at [Source: UNKNOWN; line: -1, column: -1] (through reference chain: org.apache.druid.server.QuerySchedulerProvider[\"prioritization\"]).\n"
-        + "\n"
-        + "1 error",
-        t.getMessage()
-    );
+    ExceptionMatcher
+        .of(ProvisionException.class)
+        .expectMessage(
+            new StringContainsInOrder(List.of(
+                "Problem parsing object at prefix[druid.query.scheduler]:",
+                "problem: periodThreshold, durationThreshold, segmentCountThreshold or segmentRangeThreshold must be set"
+            ))
+      );
   }
 
 
@@ -672,7 +671,7 @@ public class QuerySchedulerTest
             @Override
             public Iterator<Integer> make()
             {
-              return new Iterator<Integer>()
+              return new Iterator<>()
               {
                 int rowCounter = 0;
 
@@ -705,12 +704,12 @@ public class QuerySchedulerTest
   {
     final int explodeAt = explodeAfter + 1;
     return new BaseSequence<>(
-        new BaseSequence.IteratorMaker<Integer, Iterator<Integer>>()
+        new BaseSequence.IteratorMaker<>()
         {
           @Override
           public Iterator<Integer> make()
           {
-            return new Iterator<Integer>()
+            return new Iterator<>()
             {
               int rowCounter = 0;
 

@@ -292,7 +292,7 @@ public class BufferArrayGrouper implements VectorGrouper, IntGrouper
     final MemoryPointer reusableKey = new MemoryPointer(keyMemory, 0);
     final ReusableEntry<MemoryPointer> reusableEntry = new ReusableEntry<>(reusableKey, new Object[aggregators.size()]);
 
-    return new CloseableIterator<Entry<MemoryPointer>>()
+    return new CloseableIterator<>()
     {
       @Override
       public boolean hasNext()
@@ -324,7 +324,7 @@ public class BufferArrayGrouper implements VectorGrouper, IntGrouper
       throw new UnsupportedOperationException("sorted iterator is not supported yet");
     }
 
-    return new CloseableIterator<Entry<IntKey>>()
+    return new CloseableIterator<>()
     {
       final ReusableEntry<IntKey> reusableEntry =
           new ReusableEntry<>(new IntKey(0), new Object[aggregators.size()]);

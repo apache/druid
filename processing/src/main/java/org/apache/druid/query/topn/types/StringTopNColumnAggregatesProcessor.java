@@ -19,8 +19,10 @@
 
 package org.apache.druid.query.topn.types;
 
+import org.apache.druid.query.CursorGranularizer;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.topn.BaseTopNAlgorithm;
+import org.apache.druid.query.topn.TopNCursorInspector;
 import org.apache.druid.query.topn.TopNParams;
 import org.apache.druid.query.topn.TopNQuery;
 import org.apache.druid.query.topn.TopNResultBuilder;
@@ -28,7 +30,6 @@ import org.apache.druid.segment.Cursor;
 import org.apache.druid.segment.DimensionDictionarySelector;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.DimensionSelector;
-import org.apache.druid.segment.StorageAdapter;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.data.IndexedInts;
@@ -60,7 +61,7 @@ public class StringTopNColumnAggregatesProcessor implements TopNColumnAggregates
   }
 
   @Override
-  public Aggregator[][] getRowSelector(TopNQuery query, TopNParams params, StorageAdapter storageAdapter)
+  public Aggregator[][] getRowSelector(TopNQuery query, TopNParams params, TopNCursorInspector cursorInspector)
   {
     if (params.getCardinality() < 0) {
       throw new UnsupportedOperationException("Cannot operate on a dimension with unknown cardinality");
@@ -73,8 +74,8 @@ public class StringTopNColumnAggregatesProcessor implements TopNColumnAggregates
     final BaseTopNAlgorithm.AggregatorArrayProvider provider = new BaseTopNAlgorithm.AggregatorArrayProvider(
         (DimensionSelector) params.getSelectorPlus().getSelector(),
         query,
-        params.getCardinality(),
-        storageAdapter
+        cursorInspector,
+        params.getCardinality()
     );
 
     return provider.build();
@@ -112,6 +113,7 @@ public class StringTopNColumnAggregatesProcessor implements TopNColumnAggregates
       TopNQuery query,
       DimensionSelector selector,
       Cursor cursor,
+      CursorGranularizer granularizer,
       Aggregator[][] rowSelector
   )
   {
@@ -120,10 +122,11 @@ public class StringTopNColumnAggregatesProcessor implements TopNColumnAggregates
     // we must know cardinality to use array based aggregation. in cases where the same dictionary ids map to different
     // values (1:* or *:*), results can be entirely incorrect since an aggregator for a different value might be
     // chosen from the array based on the re-used dictionary id
-    if (notUnknown && hasDictionary) {
-      return scanAndAggregateWithCardinalityKnown(query, cursor, selector, rowSelector);
+    // finally, 'run' passes in selector as null for unknown case, so to be safe check for null
+    if (notUnknown && hasDictionary && rowSelector != null) {
+      return scanAndAggregateWithCardinalityKnown(query, cursor, granularizer, selector, rowSelector);
     } else {
-      return scanAndAggregateWithCardinalityUnknown(query, cursor, selector);
+      return scanAndAggregateWithCardinalityUnknown(query, cursor, granularizer, selector);
     }
   }
 
@@ -141,31 +144,36 @@ public class StringTopNColumnAggregatesProcessor implements TopNColumnAggregates
   private long scanAndAggregateWithCardinalityKnown(
       TopNQuery query,
       Cursor cursor,
+      CursorGranularizer granularizer,
       DimensionSelector selector,
       Aggregator[][] rowSelector
   )
   {
     long processedRows = 0;
-    while (!cursor.isDone()) {
-      final IndexedInts dimValues = selector.getRow();
-      for (int i = 0, size = dimValues.size(); i < size; ++i) {
-        final int dimIndex = dimValues.get(i);
-        Aggregator[] aggs = rowSelector[dimIndex];
-        if (aggs == null) {
-          final Object key = dimensionValueConverter.apply(selector.lookupName(dimIndex));
-          aggs = aggregatesStore.computeIfAbsent(
-              key,
-              k -> BaseTopNAlgorithm.makeAggregators(cursor, query.getAggregatorSpecs())
-          );
-          rowSelector[dimIndex] = aggs;
-        }
+    if (granularizer.currentOffsetWithinBucket()) {
+      while (!cursor.isDone()) {
+        final IndexedInts dimValues = selector.getRow();
+        for (int i = 0, size = dimValues.size(); i < size; ++i) {
+          final int dimIndex = dimValues.get(i);
+          Aggregator[] aggs = rowSelector[dimIndex];
+          if (aggs == null) {
+            final Object key = dimensionValueConverter.apply(selector.lookupName(dimIndex));
+            aggs = aggregatesStore.computeIfAbsent(
+                key,
+                k -> BaseTopNAlgorithm.makeAggregators(cursor, query.getAggregatorSpecs())
+            );
+            rowSelector[dimIndex] = aggs;
+          }
 
-        for (Aggregator aggregator : aggs) {
-          aggregator.aggregate();
+          for (Aggregator aggregator : aggs) {
+            aggregator.aggregate();
+          }
+        }
+        processedRows++;
+        if (!granularizer.advanceCursorWithinBucket()) {
+          break;
         }
       }
-      cursor.advance();
-      processedRows++;
     }
     return processedRows;
   }
@@ -181,25 +189,30 @@ public class StringTopNColumnAggregatesProcessor implements TopNColumnAggregates
   private long scanAndAggregateWithCardinalityUnknown(
       TopNQuery query,
       Cursor cursor,
+      CursorGranularizer granularizer,
       DimensionSelector selector
   )
   {
     long processedRows = 0;
-    while (!cursor.isDone()) {
-      final IndexedInts dimValues = selector.getRow();
-      for (int i = 0, size = dimValues.size(); i < size; ++i) {
-        final int dimIndex = dimValues.get(i);
-        final Object key = dimensionValueConverter.apply(selector.lookupName(dimIndex));
-        Aggregator[] aggs = aggregatesStore.computeIfAbsent(
-            key,
-            k -> BaseTopNAlgorithm.makeAggregators(cursor, query.getAggregatorSpecs())
-        );
-        for (Aggregator aggregator : aggs) {
-          aggregator.aggregate();
+    if (granularizer.currentOffsetWithinBucket()) {
+      while (!cursor.isDone()) {
+        final IndexedInts dimValues = selector.getRow();
+        for (int i = 0, size = dimValues.size(); i < size; ++i) {
+          final int dimIndex = dimValues.get(i);
+          final Object key = dimensionValueConverter.apply(selector.lookupName(dimIndex));
+          Aggregator[] aggs = aggregatesStore.computeIfAbsent(
+              key,
+              k -> BaseTopNAlgorithm.makeAggregators(cursor, query.getAggregatorSpecs())
+          );
+          for (Aggregator aggregator : aggs) {
+            aggregator.aggregate();
+          }
+        }
+        processedRows++;
+        if (!granularizer.advanceCursorWithinBucket()) {
+          break;
         }
       }
-      cursor.advance();
-      processedRows++;
     }
     return processedRows;
   }

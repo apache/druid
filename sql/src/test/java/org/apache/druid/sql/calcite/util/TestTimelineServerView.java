@@ -28,13 +28,12 @@ import org.apache.druid.client.TimelineServerView;
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.query.QueryRunner;
-import org.apache.druid.query.planning.DataSourceAnalysis;
+import org.apache.druid.query.TableDataSource;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.TimelineLookup;
 
-import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -92,12 +91,11 @@ public class TestTimelineServerView implements TimelineServerView
   }
 
   @Override
-  public Optional<? extends TimelineLookup<String, ServerSelector>> getTimeline(DataSourceAnalysis analysis)
+  public Optional<? extends TimelineLookup<String, ServerSelector>> getTimeline(TableDataSource table)
   {
     throw new UnsupportedOperationException();
   }
 
-  @Nullable
   @Override
   public List<ImmutableDruidServer> getDruidServers()
   {

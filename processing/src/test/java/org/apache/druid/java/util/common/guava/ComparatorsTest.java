@@ -102,4 +102,23 @@ public class ComparatorsTest
         intervals
     );
   }
+
+  @Test
+  public void testAlwaysFirst()
+  {
+    final Comparator<Integer> comparator = Comparators.alwaysFirst(25);
+    Assert.assertEquals(0, comparator.compare(25, 25));
+    Assert.assertEquals(-1, comparator.compare(25, 1000));
+    Assert.assertEquals(1, comparator.compare(1000, 25));
+    Assert.assertEquals(-1, comparator.compare(25, 1));
+    Assert.assertEquals(1, comparator.compare(1, 25));
+    Assert.assertEquals(0, comparator.compare(10, 12));
+
+    Integer[] array = {25, 0, 1, 25, -10, 100, 31, 77, 89, 25};
+    Arrays.sort(array, comparator);
+    Assert.assertArrayEquals(
+        new Integer[]{25, 25, 25, 0, 1, -10, 100, 31, 77, 89},
+        array
+    );
+  }
 }

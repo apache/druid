@@ -23,7 +23,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 
 /**
- * Like {@link org.apache.druid.common.config.NullHandling}, except for expressions processing configs
+ * Expressions processing configs
  */
 public class ExpressionProcessing
 {
@@ -45,28 +45,19 @@ public class ExpressionProcessing
   @VisibleForTesting
   public static void initializeForTests()
   {
-    INSTANCE = new ExpressionProcessingConfig(null, null, null);
-  }
-
-  @VisibleForTesting
-  public static void initializeForStrictBooleansTests(boolean useStrict)
-  {
-    INSTANCE = new ExpressionProcessingConfig(useStrict, null, null);
+    INSTANCE = new ExpressionProcessingConfig(null, null, null, null);
   }
 
   @VisibleForTesting
   public static void initializeForHomogenizeNullMultiValueStrings()
   {
-    INSTANCE = new ExpressionProcessingConfig(null, null, true);
+    INSTANCE = new ExpressionProcessingConfig(null, null, true, null);
   }
 
-  /**
-   * All boolean expressions are {@link ExpressionType#LONG}
-   */
-  public static boolean useStrictBooleans()
+  @VisibleForTesting
+  public static void initializeForFallback()
   {
-    checkInitialized();
-    return INSTANCE.isUseStrictBooleans();
+    INSTANCE = new ExpressionProcessingConfig(null, null, null, true);
   }
 
   /**
@@ -88,6 +79,12 @@ public class ExpressionProcessing
   {
     checkInitialized();
     return INSTANCE.isHomogenizeNullMultiValueStringArrays();
+  }
+
+  public static boolean allowVectorizeFallback()
+  {
+    checkInitialized();
+    return INSTANCE.allowVectorizeFallback();
   }
 
   private static void checkInitialized()

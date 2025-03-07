@@ -65,10 +65,17 @@ public class GroupByPreShuffleFrameProcessorFactory extends BaseLeafFrameProcess
     return new GroupByPreShuffleFrameProcessor(
         query,
         frameContext.groupingEngine(),
+        frameContext.processingBuffers().getBufferPool(),
         baseInput,
         segmentMapFn,
         outputChannelHolder,
         frameWriterFactoryHolder
     );
+  }
+
+  @Override
+  public boolean usesProcessingBuffers()
+  {
+    return true;
   }
 }

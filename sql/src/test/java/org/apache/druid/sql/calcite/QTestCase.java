@@ -25,6 +25,7 @@ import com.google.common.io.Files;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.quidem.DruidQTestInfo;
+import org.apache.druid.quidem.DruidQuidemCommandHandler;
 import org.apache.druid.quidem.DruidQuidemTestBase;
 import org.apache.druid.quidem.DruidQuidemTestBase.DruidQuidemRunner;
 import org.apache.druid.sql.calcite.QueryTestRunner.QueryRunStep;
@@ -69,7 +70,7 @@ public class QTestCase
             isValidTestCaseFile(testInfo.getIQFile());
           }
 
-          DruidQuidemRunner runner = new DruidQuidemTestBase.DruidQuidemRunner();
+          DruidQuidemRunner runner = new DruidQuidemTestBase.DruidQuidemRunner(new DruidQuidemCommandHandler());
           runner.run(testInfo.getIQFile());
         }
         catch (Exception e) {

@@ -28,6 +28,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
+import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.server.coordination.ServerType;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.server.coordinator.CreateDataSegments;
@@ -65,8 +66,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 @RunWith(Parameterized.class)
 public class LoadRuleTest
 {
-  private static final String DS_WIKI = "wiki";
-
   private ListeningExecutorService exec;
   private BalancerStrategy balancerStrategy;
 
@@ -112,13 +111,13 @@ public class LoadRuleTest
         .addTier(Tier.T2, server2)
         .build();
 
-    final DataSegment segment = createDataSegment(DS_WIKI);
+    final DataSegment segment = createDataSegment(TestDataSource.WIKI);
     LoadRule rule = loadForever(ImmutableMap.of(Tier.T1, 1, Tier.T2, 2));
     Assert.assertTrue(rule.shouldMatchingSegmentBeLoaded());
     CoordinatorRunStats stats = runRuleAndGetStats(rule, segment, druidCluster);
 
-    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T1, DS_WIKI));
-    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T2, DS_WIKI));
+    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T1, TestDataSource.WIKI));
+    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T2, TestDataSource.WIKI));
   }
 
   private CoordinatorRunStats runRuleAndGetStats(LoadRule rule, DataSegment segment, DruidCluster cluster)
@@ -143,7 +142,7 @@ public class LoadRuleTest
   )
   {
     return DruidCoordinatorRuntimeParams
-        .newBuilder(DateTimes.nowUtc())
+        .builder()
         .withDruidCluster(druidCluster)
         .withBalancerStrategy(balancerStrategy)
         .withUsedSegments(usedSegments)
@@ -168,7 +167,7 @@ public class LoadRuleTest
         .build();
 
     final LoadRule rule = loadForever(ImmutableMap.of(Tier.T1, 1));
-    final DataSegment segment = createDataSegment(DS_WIKI);
+    final DataSegment segment = createDataSegment(TestDataSource.WIKI);
     CoordinatorRunStats firstRunStats = runRuleAndGetStats(rule, segment, druidCluster);
     Assert.assertEquals(1L, firstRunStats.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T1, segment.getDataSource()));
     Assert.assertEquals(1, server1.getLoadingSegments().size() + server2.getLoadingSegments().size());
@@ -191,7 +190,7 @@ public class LoadRuleTest
         .build();
 
     final LoadRule rule = loadForever(ImmutableMap.of(Tier.T1, 1));
-    final DataSegment segment = createDataSegment(DS_WIKI);
+    final DataSegment segment = createDataSegment(TestDataSource.WIKI);
     CoordinatorRunStats stats = runRuleAndGetStats(rule, segment, druidCluster);
 
     // Ensure that the segment is assigned to one of the historicals
@@ -199,7 +198,7 @@ public class LoadRuleTest
 
     // Ensure that the primary segment is assigned again in case the peon timed out on loading the segment
     CoordinatorRunStats statsAfterLoadPrimary = runRuleAndGetStats(rule, segment, druidCluster);
-    Assert.assertEquals(1L, statsAfterLoadPrimary.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T1, DS_WIKI));
+    Assert.assertEquals(1L, statsAfterLoadPrimary.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T1, TestDataSource.WIKI));
   }
 
   @Test
@@ -213,7 +212,7 @@ public class LoadRuleTest
         .build();
 
     final LoadRule rule = loadForever(ImmutableMap.of(Tier.T1, 1));
-    final DataSegment segment = createDataSegment(DS_WIKI);
+    final DataSegment segment = createDataSegment(TestDataSource.WIKI);
     CoordinatorRunStats stats = runRuleAndGetStats(rule, segment, druidCluster);
 
     // Ensure that the segment is assigned to one of the historicals
@@ -230,7 +229,7 @@ public class LoadRuleTest
   public void testLoadUsedSegmentsForAllSegmentGranularityAndCachingCostBalancerStrategy()
   {
     final List<DataSegment> segments =
-        CreateDataSegments.ofDatasource(DS_WIKI)
+        CreateDataSegments.ofDatasource(TestDataSource.WIKI)
                           .forIntervals(1, Granularities.ALL)
                           .withNumPartitions(2)
                           .eachOfSizeInMb(100);
@@ -249,13 +248,13 @@ public class LoadRuleTest
         segments.get(1),
         makeCoordinatorRuntimeParams(druidCluster, segments.toArray(new DataSegment[0]))
     );
-    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T1, DS_WIKI));
+    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T1, TestDataSource.WIKI));
   }
 
   @Test
   public void testSegmentsAreDroppedIfLoadRuleHasZeroReplicas()
   {
-    final DataSegment segment = createDataSegment(DS_WIKI);
+    final DataSegment segment = createDataSegment(TestDataSource.WIKI);
 
     final ServerHolder serverT11 = createServer(Tier.T1, segment);
     final ServerHolder serverT12 = createServer(Tier.T2, segment);
@@ -271,8 +270,8 @@ public class LoadRuleTest
     Assert.assertFalse(rule.shouldMatchingSegmentBeLoaded());
     CoordinatorRunStats stats = runRuleAndGetStats(rule, segment, druidCluster);
 
-    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.DROPPED, Tier.T1, DS_WIKI));
-    Assert.assertEquals(2L, stats.getSegmentStat(Stats.Segments.DROPPED, Tier.T2, DS_WIKI));
+    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.DROPPED, Tier.T1, TestDataSource.WIKI));
+    Assert.assertEquals(2L, stats.getSegmentStat(Stats.Segments.DROPPED, Tier.T2, TestDataSource.WIKI));
   }
 
   @Test
@@ -284,18 +283,18 @@ public class LoadRuleTest
         .addTier(Tier.T1, server)
         .build();
 
-    final DataSegment segment = createDataSegment(DS_WIKI);
+    final DataSegment segment = createDataSegment(TestDataSource.WIKI);
     LoadRule rule = loadForever(ImmutableMap.of("invalidTier", 1, Tier.T1, 1));
     Assert.assertTrue(rule.shouldMatchingSegmentBeLoaded());
     CoordinatorRunStats stats = runRuleAndGetStats(rule, segment, druidCluster);
-    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T1, DS_WIKI));
-    Assert.assertEquals(0L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "invalidTier", DS_WIKI));
+    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T1, TestDataSource.WIKI));
+    Assert.assertEquals(0L, stats.getSegmentStat(Stats.Segments.ASSIGNED, "invalidTier", TestDataSource.WIKI));
   }
 
   @Test
   public void testDropIgnoresInvalidTiers()
   {
-    final DataSegment segment = createDataSegment(DS_WIKI);
+    final DataSegment segment = createDataSegment(TestDataSource.WIKI);
 
     // Cluster has 1 tier with 2 servers
     ServerHolder server1 = createServer(Tier.T1, segment);
@@ -308,8 +307,8 @@ public class LoadRuleTest
     LoadRule rule = loadForever(ImmutableMap.of("invalidTier", 1, Tier.T1, 1));
     CoordinatorRunStats stats = runRuleAndGetStats(rule, segment, druidCluster);
 
-    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.DROPPED, Tier.T1, DS_WIKI));
-    Assert.assertEquals(0L, stats.getSegmentStat(Stats.Segments.DROPPED, "invalidTier", DS_WIKI));
+    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.DROPPED, Tier.T1, TestDataSource.WIKI));
+    Assert.assertEquals(0L, stats.getSegmentStat(Stats.Segments.DROPPED, "invalidTier", TestDataSource.WIKI));
   }
 
   @Test
@@ -334,7 +333,7 @@ public class LoadRuleTest
     DataSegment dataSegment3 = createDataSegment("ds3");
 
     DruidCoordinatorRuntimeParams params = DruidCoordinatorRuntimeParams
-        .newBuilder(DateTimes.nowUtc())
+        .builder()
         .withDruidCluster(druidCluster)
         .withBalancerStrategy(balancerStrategy)
         .withUsedSegments(dataSegment1, dataSegment2, dataSegment3)
@@ -374,11 +373,11 @@ public class LoadRuleTest
     // Load rule requires 1 replica on each tier
     LoadRule rule = loadForever(ImmutableMap.of(Tier.T1, 1, Tier.T2, 1));
     Assert.assertTrue(rule.shouldMatchingSegmentBeLoaded());
-    DataSegment segment = createDataSegment(DS_WIKI);
+    DataSegment segment = createDataSegment(TestDataSource.WIKI);
     CoordinatorRunStats stats = runRuleAndGetStats(rule, segment, druidCluster);
 
     // Verify that segment is not loaded on decommissioning server
-    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T2, DS_WIKI));
+    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T2, TestDataSource.WIKI));
     Assert.assertEquals(0, decommServerT1.getLoadingSegments().size());
     Assert.assertTrue(serverT2.getLoadingSegments().contains(segment));
   }
@@ -392,7 +391,7 @@ public class LoadRuleTest
     ServerHolder serverT21 = createServer(Tier.T2);
     ServerHolder serverT22 = createServer(Tier.T2);
 
-    final DataSegment segment = createDataSegment(DS_WIKI);
+    final DataSegment segment = createDataSegment(TestDataSource.WIKI);
     DruidCluster druidCluster = DruidCluster
         .builder()
         .addTier(Tier.T1, decommServerT11, serverT12)
@@ -404,11 +403,11 @@ public class LoadRuleTest
     CoordinatorRunStats stats = runRuleAndGetStats(rule, segment, druidCluster);
 
     // Verify that no replica is assigned to decommissioning server
-    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T1, DS_WIKI));
+    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T1, TestDataSource.WIKI));
     Assert.assertTrue(decommServerT11.getLoadingSegments().isEmpty());
     Assert.assertEquals(0, decommServerT11.getLoadingSegments().size());
 
-    Assert.assertEquals(2L, stats.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T2, DS_WIKI));
+    Assert.assertEquals(2L, stats.getSegmentStat(Stats.Segments.ASSIGNED, Tier.T2, TestDataSource.WIKI));
   }
 
   /**
@@ -444,7 +443,7 @@ public class LoadRuleTest
   @Test
   public void testExtraReplicasAreDroppedFromDecommissioningServer()
   {
-    final DataSegment segment1 = createDataSegment(DS_WIKI);
+    final DataSegment segment1 = createDataSegment(TestDataSource.WIKI);
 
     // 3 servers, each serving the same segment
     final ServerHolder server1 = createServer(Tier.T1, segment1);
@@ -465,7 +464,7 @@ public class LoadRuleTest
     );
 
     // Verify that the extra replica is dropped from the decommissioning server
-    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.DROPPED, Tier.T1, DS_WIKI));
+    Assert.assertEquals(1L, stats.getSegmentStat(Stats.Segments.DROPPED, Tier.T1, TestDataSource.WIKI));
     Assert.assertEquals(0, server1.getPeon().getSegmentsToDrop().size());
     Assert.assertEquals(1, server2.getPeon().getSegmentsToDrop().size());
     Assert.assertEquals(0, server3.getPeon().getSegmentsToDrop().size());

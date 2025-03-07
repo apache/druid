@@ -24,7 +24,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import org.apache.druid.guice.NestedDataModule;
+import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.java.util.common.io.smoosh.FileSmoosher;
@@ -167,7 +167,7 @@ public class VariantColumnSupplierTest extends InitializedNullHandlingTest
   @BeforeClass
   public static void staticSetup()
   {
-    NestedDataModule.registerHandlersAndSerde();
+    BuiltInTypesModule.registerHandlersAndSerde();
   }
 
   @Parameterized.Parameters(name = "data = {0}")
@@ -275,14 +275,14 @@ public class VariantColumnSupplierTest extends InitializedNullHandlingTest
           closer
       );
 
-      serializer.openDictionaryWriter();
+      serializer.openDictionaryWriter(tempFolder.newFolder());
       serializer.serializeDictionaries(
           globalDictionarySortedCollector.getSortedStrings(),
           globalDictionarySortedCollector.getSortedLongs(),
           globalDictionarySortedCollector.getSortedDoubles(),
           () -> new AutoTypeColumnMerger.ArrayDictionaryMergingIterator(
               new Iterable[]{globalDictionarySortedCollector.getSortedArrays()},
-              serializer.getGlobalLookup()
+              serializer.getDictionaryIdLookup()
           )
       );
       serializer.open();
@@ -317,7 +317,8 @@ public class VariantColumnSupplierTest extends InitializedNullHandlingTest
         ByteOrder.nativeOrder(),
         bitmapSerdeFactory,
         baseBuffer,
-        bob
+        bob.getFileMapper(),
+        null
     );
     try (VariantColumn<?> column = (VariantColumn<?>) supplier.get()) {
       smokeTest(supplier, column, data, expectedTypes);
@@ -335,7 +336,8 @@ public class VariantColumnSupplierTest extends InitializedNullHandlingTest
         ByteOrder.nativeOrder(),
         bitmapSerdeFactory,
         baseBuffer,
-        bob
+        bob.getFileMapper(),
+        null
     );
     final String expectedReason = "none";
     final AtomicReference<String> failureReason = new AtomicReference<>(expectedReason);
@@ -344,28 +346,33 @@ public class VariantColumnSupplierTest extends InitializedNullHandlingTest
     ListeningExecutorService executorService = MoreExecutors.listeningDecorator(
         Execs.multiThreaded(threads, "StandardNestedColumnSupplierTest-%d")
     );
-    Collection<ListenableFuture<?>> futures = new ArrayList<>(threads);
-    final CountDownLatch threadsStartLatch = new CountDownLatch(1);
-    for (int i = 0; i < threads; ++i) {
-      futures.add(
-          executorService.submit(() -> {
-            try {
-              threadsStartLatch.await();
-              for (int iter = 0; iter < 5000; iter++) {
-                try (VariantColumn column = (VariantColumn) supplier.get()) {
-                  smokeTest(supplier, column, data, expectedTypes);
+    try {
+      Collection<ListenableFuture<?>> futures = new ArrayList<>(threads);
+      final CountDownLatch threadsStartLatch = new CountDownLatch(1);
+      for (int i = 0; i < threads; ++i) {
+        futures.add(
+            executorService.submit(() -> {
+              try {
+                threadsStartLatch.await();
+                for (int iter = 0; iter < 5000; iter++) {
+                  try (VariantColumn column = (VariantColumn) supplier.get()) {
+                    smokeTest(supplier, column, data, expectedTypes);
+                  }
                 }
               }
-            }
-            catch (Throwable ex) {
-              failureReason.set(ex.getMessage());
-            }
-          })
-      );
+              catch (Throwable ex) {
+                failureReason.set(ex.getMessage());
+              }
+            })
+        );
+      }
+      threadsStartLatch.countDown();
+      Futures.allAsList(futures).get();
+      Assert.assertEquals(expectedReason, failureReason.get());
     }
-    threadsStartLatch.countDown();
-    Futures.allAsList(futures).get();
-    Assert.assertEquals(expectedReason, failureReason.get());
+    finally {
+      executorService.shutdownNow();
+    }
   }
 
   private void smokeTest(

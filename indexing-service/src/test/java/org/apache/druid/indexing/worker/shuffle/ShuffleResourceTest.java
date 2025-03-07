@@ -24,7 +24,6 @@ import com.google.common.primitives.Ints;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.commons.io.FileUtils;
-import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexing.common.config.TaskConfig;
@@ -32,6 +31,7 @@ import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.indexing.worker.shuffle.ShuffleMetrics.PerDatasourceShuffleMetrics;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.timeline.DataSegment;
@@ -93,7 +93,6 @@ public class ShuffleResourceTest
     };
     final TaskConfig taskConfig = new TaskConfigBuilder()
         .setShuffleDataLocations(ImmutableList.of(new StorageLocationConfig(tempDir.newFolder(), null, null)))
-        .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
         .build();
     final OverlordClient overlordClient = new NoopOverlordClient()
     {

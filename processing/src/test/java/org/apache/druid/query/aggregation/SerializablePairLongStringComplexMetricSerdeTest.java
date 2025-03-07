@@ -20,9 +20,9 @@
 package org.apache.druid.query.aggregation;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.GenericColumnSerializer;
+import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.column.ColumnHolder;
 import org.apache.druid.segment.column.ComplexColumn;
@@ -47,10 +47,6 @@ import java.util.concurrent.atomic.AtomicReference;
 
 public class SerializablePairLongStringComplexMetricSerdeTest
 {
-  static {
-    NullHandling.initializeForTests();
-  }
-
   private static final SerializablePairLongStringComplexMetricSerde LEGACY_SERDE =
       new SerializablePairLongStringComplexMetricSerde();
   private static final SerializablePairLongStringComplexMetricSerde COMPRESSED_SERDE =
@@ -152,12 +148,12 @@ public class SerializablePairLongStringComplexMetricSerdeTest
     SegmentWriteOutMedium writeOutMedium = new OnHeapMemorySegmentWriteOutMedium();
     ByteBuffer legacyBuffer = serializeAllValuesToByteBuffer(
         expected,
-        LEGACY_SERDE.getSerializer(writeOutMedium, "not-used"),
+        LEGACY_SERDE.getSerializer(writeOutMedium, "not-used", IndexSpec.DEFAULT),
         expectedLegacySize
     ).asReadOnlyBuffer();
     ByteBuffer compressedBuffer = serializeAllValuesToByteBuffer(
         expected,
-        COMPRESSED_SERDE.getSerializer(writeOutMedium, "not-used"),
+        COMPRESSED_SERDE.getSerializer(writeOutMedium, "not-used", IndexSpec.DEFAULT),
         expectedCompressedSize
     ).asReadOnlyBuffer();
 
@@ -204,7 +200,7 @@ public class SerializablePairLongStringComplexMetricSerdeTest
 
     final AtomicReference<SerializablePairLongString> reference = new AtomicReference<>(null);
     ColumnValueSelector<SerializablePairLongString> valueSelector =
-        new SingleObjectColumnValueSelector<SerializablePairLongString>(
+        new SingleObjectColumnValueSelector<>(
             SerializablePairLongString.class
         )
         {

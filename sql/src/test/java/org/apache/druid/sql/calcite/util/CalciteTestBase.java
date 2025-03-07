@@ -20,7 +20,6 @@
 package org.apache.druid.sql.calcite.util;
 
 import com.google.common.collect.ImmutableList;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.segment.column.ColumnType;
@@ -50,7 +49,6 @@ public abstract class CalciteTestBase
   @BeforeAll
   public static void setupCalciteProperties()
   {
-    NullHandling.initializeForTests();
     ExpressionProcessing.initializeForTests();
   }
 
@@ -92,24 +90,6 @@ public abstract class CalciteTestBase
       throw new RuntimeException(e);
     }
   }
-
-  // FIXME remove
-  public TempFolderOverTempDir temXMEXAXISporaryFolder = new TempFolderOverTempDir();
-
-  public class TempFolderOverTempDir
-  {
-
-    public File newFolder()
-    {
-      return newTempFolder("unknown");
-    }
-
-    public File newFolder(String string)
-    {
-      return newTempFolder(string);
-    }
-  }
-
 
   /**
    * @deprecated prefer to make {@link DruidExpression} directly to ensure expression tests accurately test the full

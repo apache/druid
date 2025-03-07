@@ -42,7 +42,7 @@ public class SegmentToMoveCalculator
 {
   /**
    * At least this number of segments must be picked for moving in every cycle
-   * to keep the cluster well balanced.
+   * to keep the cluster well-balanced.
    */
   private static final int MIN_SEGMENTS_TO_MOVE = 100;
 
@@ -150,7 +150,7 @@ public class SegmentToMoveCalculator
     int maxComputationsInThousands = (numBalancerThreads * num30sPeriods) << 20;
     int maxSegmentsToMove = (maxComputationsInThousands / totalSegments) * 1000;
 
-    if (upperBound < lowerBound) {
+    if (upperBound < lowerBound || maxSegmentsToMove < lowerBound) {
       return Math.min(lowerBound, totalSegments);
     } else {
       return Math.min(maxSegmentsToMove, upperBound);
@@ -248,7 +248,7 @@ public class SegmentToMoveCalculator
 
     final int numSegmentsToMove = maxCountDifference.getKey() / 2;
     if (numSegmentsToMove > 0) {
-      log.info(
+      log.debug(
           "Need to move [%,d] segments of datasource[%s] in tier[%s] to fix gap between min[%,d] and max[%,d].",
           numSegmentsToMove, mostUnbalancedDatasource, tier, minNumSegments, maxNumSegments
       );
@@ -290,7 +290,7 @@ public class SegmentToMoveCalculator
                                   ? 0 : (int) (differenceInUsageBytes / averageSegmentSize) / 2;
 
     if (numSegmentsToMove > 0) {
-      log.info(
+      log.debug(
           "Need to move [%,d] segments of avg size [%,d MB] in tier[%s] to fix"
           + " disk usage gap between min[%d GB][%.1f%%] and max[%d GB][%.1f%%].",
           numSegmentsToMove, ((long) averageSegmentSize) >> 20, tier,

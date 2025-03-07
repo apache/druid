@@ -21,8 +21,7 @@ package org.apache.druid.query.groupby;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.guice.NestedDataModule;
+import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.io.Closer;
@@ -34,9 +33,10 @@ import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.expression.TestExprMacroTable;
-import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.InDimFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.segment.column.RowSignature;
@@ -82,10 +82,10 @@ public class NestedDataGroupByQueryTest extends InitializedNullHandlingTest
       String vectorize
   )
   {
-    NestedDataModule.registerHandlersAndSerde();
+    BuiltInTypesModule.registerHandlersAndSerde();
     this.vectorize = QueryContexts.Vectorize.fromString(vectorize);
     this.helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
-        NestedDataModule.getJacksonModulesList(),
+        BuiltInTypesModule.getJacksonModulesList(),
         config,
         tempFolder
     );
@@ -184,13 +184,7 @@ public class NestedDataGroupByQueryTest extends InitializedNullHandlingTest
 
     runResults(
         groupQuery,
-        NullHandling.replaceWithDefault()
-        ? ImmutableList.of(
-            new Object[]{"100", null, 100L, 1L, "1", 0L, 2L},
-            new Object[]{"hello", null, 0L, 1L, "1", 0L, 12L},
-            new Object[]{"world", null, 0L, 1L, "1", 0L, 2L}
-        )
-        : ImmutableList.of(
+        ImmutableList.of(
             new Object[]{"100", null, 100L, 1L, "1", null, 2L},
             new Object[]{"hello", null, null, 1L, "1", null, 12L},
             new Object[]{"world", null, null, 1L, "1", null, 2L}
@@ -202,7 +196,7 @@ public class NestedDataGroupByQueryTest extends InitializedNullHandlingTest
   public void testGroupBySomeFieldWithFilter()
   {
     List<String> vals = new ArrayList<>();
-    vals.add(NullHandling.defaultStringValue());
+    vals.add(null);
     vals.add("100");
     vals.add("200");
     vals.add("300");
@@ -233,7 +227,7 @@ public class NestedDataGroupByQueryTest extends InitializedNullHandlingTest
   public void testGroupByNoFieldWithFilter()
   {
     List<String> vals = new ArrayList<>();
-    vals.add(NullHandling.defaultStringValue());
+    vals.add(null);
     vals.add("100");
     vals.add("200");
     vals.add("300");
@@ -256,7 +250,7 @@ public class NestedDataGroupByQueryTest extends InitializedNullHandlingTest
   public void testGroupBySomeFieldWithNonExistentAgg()
   {
     List<String> vals = new ArrayList<>();
-    vals.add(NullHandling.defaultStringValue());
+    vals.add(null);
     vals.add("100");
     vals.add("200");
     vals.add("300");
@@ -276,7 +270,7 @@ public class NestedDataGroupByQueryTest extends InitializedNullHandlingTest
                                           .build();
 
 
-    runResults(groupQuery, ImmutableList.of(new Object[]{null, NullHandling.defaultLongValue()}));
+    runResults(groupQuery, ImmutableList.of(new Object[]{null, null}));
   }
 
   @Test
@@ -302,9 +296,7 @@ public class NestedDataGroupByQueryTest extends InitializedNullHandlingTest
 
     runResults(
         groupQuery,
-        NullHandling.sqlCompatible()
-        ? ImmutableList.of(new Object[]{null, 16L})
-        : ImmutableList.of(new Object[]{"foo", 16L})
+        ImmutableList.of(new Object[]{null, 16L})
     );
   }
 
@@ -547,8 +539,8 @@ public class NestedDataGroupByQueryTest extends InitializedNullHandlingTest
     runResults(
         groupQuery,
         ImmutableList.of(
-            new Object[]{1672531200000L, NullHandling.defaultLongValue(), 8L},
-            new Object[]{1672617600000L, NullHandling.defaultLongValue(), 8L}
+            new Object[]{1672531200000L, null, 8L},
+            new Object[]{1672617600000L, null, 8L}
         )
     );
   }
@@ -654,18 +646,17 @@ public class NestedDataGroupByQueryTest extends InitializedNullHandlingTest
     List<Segment> segments = segmentsGenerator.apply(tempFolder, closer);
     Supplier<List<ResultRow>> runner =
         () -> helper.runQueryOnSegmentsObjs(segments, groupQuery).toList();
-    Filter filter = groupQuery.getFilter() == null ? null : groupQuery.getFilter().toFilter();
+    final CursorBuildSpec spec = GroupingEngine.makeCursorBuildSpec(groupQuery, null);
     boolean allCanVectorize = segments.stream()
                                       .allMatch(
-                                          s -> s.asStorageAdapter()
-                                                .canVectorize(
-                                                    filter,
-                                                    groupQuery.getVirtualColumns(),
-                                                    groupQuery.isDescending()
-                                                )
-                                      );
+                                          s -> {
+                                            final CursorHolder cursorHolder = s.asCursorFactory()
+                                                                               .makeCursorHolder(spec);
+                                            final boolean canVectorize = cursorHolder.canVectorize();
+                                            cursorHolder.close();
+                                            return canVectorize;
+                                          });
 
-    Assert.assertEquals(NestedDataTestUtils.expectSegmentGeneratorCanVectorize(segmentsName), allCanVectorize);
     if (!allCanVectorize) {
       if (vectorize == QueryContexts.Vectorize.FORCE) {
         Throwable t = Assert.assertThrows(RuntimeException.class, runner::get);

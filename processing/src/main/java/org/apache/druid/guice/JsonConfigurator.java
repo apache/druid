@@ -189,7 +189,7 @@ public class JsonConfigurator
       throw new ProvisionException(
           Iterables.transform(
               messages,
-              new Function<String, Message>()
+              new Function<>()
               {
                 @Override
                 public Message apply(String input)
@@ -236,7 +236,7 @@ public class JsonConfigurator
       // to configure ParametrizedUriEmitterConfig object. So skipping xxx=yyy key-value pair when configuring Emitter
       // doesn't make any difference. That is why we just log this situation, instead of throwing an exception.
       log.info(
-          "Skipping %s property: one of it's prefixes is also used as a property key. Prefix: %s",
+          "Skipping property [%s]: one of it's prefixes [%s] is also used as a property key.",
           originalProperty,
           propertyPrefix
       );

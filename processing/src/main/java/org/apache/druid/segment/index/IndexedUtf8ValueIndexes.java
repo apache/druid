@@ -26,7 +26,6 @@ import com.google.common.collect.Iterables;
 import org.apache.druid.annotations.SuppressFBWarnings;
 import org.apache.druid.collections.bitmap.BitmapFactory;
 import org.apache.druid.collections.bitmap.ImmutableBitmap;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.ByteBufferUtils;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprEval;
@@ -83,11 +82,16 @@ public final class IndexedUtf8ValueIndexes<TDictionary extends Indexed<ByteBuffe
     final ByteBuffer utf8 = StringUtils.toUtf8ByteBuffer(value);
     return new SimpleBitmapColumnIndex()
     {
+      @Override
+      public int estimatedComputeCost()
+      {
+        return 1;
+      }
 
       @Override
       public <T> T computeBitmapResult(BitmapResultFactory<T> bitmapResultFactory, boolean includeUnknown)
       {
-        if (includeUnknown && NullHandling.isNullOrEquivalent(dictionary.get(0))) {
+        if (includeUnknown && dictionary.get(0) == null) {
           return bitmapResultFactory.unionDimensionValueBitmaps(
               ImmutableList.of(getBitmapForValue(), getBitmap(0))
           );
@@ -122,10 +126,7 @@ public final class IndexedUtf8ValueIndexes<TDictionary extends Indexed<ByteBuffe
   public BitmapColumnIndex forSortedValues(SortedSet<String> values)
   {
     return getBitmapColumnIndexForSortedIterableUtf8(
-        Iterables.transform(
-            values,
-            StringUtils::toUtf8ByteBuffer
-        ),
+        Iterables.transform(values, StringUtils::toUtf8ByteBuffer),
         values.size(),
         values.contains(null)
     );
@@ -181,10 +182,11 @@ public final class IndexedUtf8ValueIndexes<TDictionary extends Indexed<ByteBuffe
           bitmapFactory,
           COMPARATOR,
           valuesUtf8,
+          size,
           dictionary,
           bitmaps,
           () -> {
-            if (!valuesContainsNull && NullHandling.isNullOrEquivalent(dictionary.get(0))) {
+            if (!valuesContainsNull && dictionary.get(0) == null) {
               return bitmaps.get(0);
             }
             return null;
@@ -197,10 +199,11 @@ public final class IndexedUtf8ValueIndexes<TDictionary extends Indexed<ByteBuffe
     return ValueSetIndexes.buildBitmapColumnIndexFromSortedIteratorBinarySearch(
         bitmapFactory,
         valuesUtf8,
+        size,
         dictionary,
         bitmaps,
         () -> {
-          if (!valuesContainsNull && NullHandling.isNullOrEquivalent(dictionary.get(0))) {
+          if (!valuesContainsNull && dictionary.get(0) == null) {
             return bitmaps.get(0);
           }
           return null;
@@ -230,7 +233,7 @@ public final class IndexedUtf8ValueIndexes<TDictionary extends Indexed<ByteBuffe
         final Object minValueInColumn = dictionary.get(0);
         final int position = Collections.binarySearch(
             sortedValues,
-            StringUtils.fromUtf8((ByteBuffer) minValueInColumn),
+            StringUtils.fromUtf8Nullable((ByteBuffer) minValueInColumn),
             matchValueType.getNullableStrategy()
         );
         tailSet = baseSet.subList(position >= 0 ? position : -(position + 1), baseSet.size());
@@ -242,6 +245,7 @@ public final class IndexedUtf8ValueIndexes<TDictionary extends Indexed<ByteBuffe
             bitmapFactory,
             ByteBufferUtils.utf8Comparator(),
             Iterables.transform(tailSet, StringUtils::toUtf8ByteBuffer),
+            tailSet.size(),
             dictionary,
             bitmaps,
             unknownsIndex
@@ -251,6 +255,7 @@ public final class IndexedUtf8ValueIndexes<TDictionary extends Indexed<ByteBuffe
       return ValueSetIndexes.buildBitmapColumnIndexFromSortedIteratorBinarySearch(
           bitmapFactory,
           Iterables.transform(tailSet, StringUtils::toUtf8ByteBuffer),
+          tailSet.size(),
           dictionary,
           bitmaps,
           unknownsIndex
@@ -262,6 +267,7 @@ public final class IndexedUtf8ValueIndexes<TDictionary extends Indexed<ByteBuffe
               sortedValues,
               x -> StringUtils.toUtf8ByteBuffer(DimensionHandlerUtils.convertObjectToString(x))
           ),
+          sortedValues.size(),
           dictionary,
           bitmaps,
           unknownsIndex

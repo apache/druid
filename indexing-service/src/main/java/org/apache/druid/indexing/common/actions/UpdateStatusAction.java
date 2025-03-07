@@ -68,9 +68,7 @@ public class UpdateStatusAction implements TaskAction<Void>
   @Override
   public TypeReference<Void> getReturnTypeReference()
   {
-    return new TypeReference<Void>()
-    {
-    };
+    return new TypeReference<>() {};
   }
 
   @Override
@@ -83,12 +81,6 @@ public class UpdateStatusAction implements TaskAction<Void>
       taskRunner.get().updateStatus(task, result);
     }
     return null;
-  }
-
-  @Override
-  public boolean isAudited()
-  {
-    return true;
   }
 
   @Override

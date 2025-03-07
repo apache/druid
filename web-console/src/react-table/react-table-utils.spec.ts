@@ -75,5 +75,9 @@ describe('react-table-utils', () => {
       { id: 'x', value: '~y' },
       { id: 'z', value: '=w&' },
     ]);
+    expect(stringToTableFilters('x<3&y<=3')).toEqual([
+      { id: 'x', value: '<3' },
+      { id: 'y', value: '<=3' },
+    ]);
   });
 });

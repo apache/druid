@@ -56,7 +56,7 @@ public class SegmentMetadataUpdateAction implements TaskAction<Void>
   @Override
   public TypeReference<Void> getReturnTypeReference()
   {
-    return new TypeReference<Void>() {};
+    return new TypeReference<>() {};
   }
 
   @Override
@@ -97,12 +97,6 @@ public class SegmentMetadataUpdateAction implements TaskAction<Void>
     }
 
     return null;
-  }
-
-  @Override
-  public boolean isAudited()
-  {
-    return true;
   }
 
   @Override

@@ -37,6 +37,8 @@ import org.apache.druid.data.input.InputSource;
 import org.apache.druid.indexer.IngestionState;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.granularity.ArbitraryGranularitySpec;
+import org.apache.druid.indexer.granularity.GranularitySpec;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
@@ -64,6 +66,7 @@ import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.logger.Logger;
+import org.apache.druid.java.util.emitter.service.ServiceMetricEvent;
 import org.apache.druid.rpc.HttpResponseException;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.SegmentSchemaMapping;
@@ -72,13 +75,11 @@ import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.incremental.RowIngestionMetersTotals;
 import org.apache.druid.segment.incremental.SimpleRowIngestionMeters;
 import org.apache.druid.segment.indexing.TuningConfig;
-import org.apache.druid.segment.indexing.granularity.ArbitraryGranularitySpec;
-import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
+import org.apache.druid.segment.realtime.ChatHandler;
+import org.apache.druid.segment.realtime.ChatHandlers;
 import org.apache.druid.segment.realtime.appenderator.SegmentIdWithShardSpec;
 import org.apache.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
-import org.apache.druid.segment.realtime.firehose.ChatHandler;
-import org.apache.druid.segment.realtime.firehose.ChatHandlers;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.Resource;
@@ -290,9 +291,6 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
   @Override
   public Set<ResourceAction> getInputSourceResources()
   {
-    if (getIngestionSchema().getIOConfig().getFirehoseFactory() != null) {
-      throw getInputSecurityOnFirehoseUnsupportedError();
-    }
     return getIngestionSchema().getIOConfig().getInputSource() != null ?
            getIngestionSchema().getIOConfig().getInputSource().getTypes()
                                .stream()
@@ -556,7 +554,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
       } else {
         if (!baseInputSource.isSplittable()) {
           LOG.warn(
-              "firehoseFactory[%s] is not splittable. Running sequentially.",
+              "inputSource[%s] is not splittable. Running sequentially.",
               baseInputSource.getClass().getSimpleName()
           );
         } else if (ingestionSchema.getTuningConfig().getMaxNumConcurrentSubTasks() <= 1) {
@@ -1254,7 +1252,7 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
    */
   private TaskReport.ReportMap getTaskCompletionReports(TaskStatus taskStatus)
   {
-    return buildIngestionStatsReport(
+    return buildIngestionStatsAndContextReport(
         IngestionState.COMPLETED,
         taskStatus.getErrorMsg(),
         segmentsRead,
@@ -1282,9 +1280,27 @@ public class ParallelIndexSupervisorTask extends AbstractBatchIndexTask
 
   private void writeCompletionReports()
   {
+    emitCompletionMetrics();
     if (!isCompactionTask) {
       toolbox.getTaskReportFileWriter().write(getId(), completionReports);
     }
+  }
+
+  private void emitCompletionMetrics()
+  {
+    final Map<String, Object> rowStats = getTaskCompletionRowStats();
+    if (rowStats == null) {
+      return;
+    }
+
+    final Number totalProcessedBytes = (Number) rowStats.get("processedBytes");
+    if (totalProcessedBytes == null) {
+      return;
+    }
+
+    final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder();
+    IndexTaskUtils.setTaskDimensions(metricBuilder, this);
+    toolbox.getEmitter().emit(metricBuilder.setMetric("ingest/input/bytes", totalProcessedBytes));
   }
 
   private static IndexTuningConfig convertToIndexTuningConfig(ParallelIndexTuningConfig tuningConfig)

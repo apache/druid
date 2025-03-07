@@ -20,18 +20,40 @@
 package org.apache.druid.quidem;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.inject.Injector;
+import org.apache.druid.error.DruidException;
+import org.apache.druid.sql.hook.DruidHookDispatcher;
+
+import java.sql.Connection;
 
 public interface DruidConnectionExtras
 {
   ObjectMapper getObjectMapper();
 
+  DruidHookDispatcher getDruidHookDispatcher();
+
+  boolean isExplainSupported();
+
+  Injector getInjector();
+
   class DruidConnectionExtrasImpl implements DruidConnectionExtras
   {
     private final ObjectMapper objectMapper;
+    private final DruidHookDispatcher druidHookDispatcher;
+    private final boolean isExplainSupported;
+    private final Injector injector;
 
-    public DruidConnectionExtrasImpl(ObjectMapper objectMapper)
+    public DruidConnectionExtrasImpl(
+        ObjectMapper objectMapper,
+        DruidHookDispatcher druidHookDispatcher,
+        boolean isExplainSupported,
+        Injector injector
+    )
     {
       this.objectMapper = objectMapper;
+      this.druidHookDispatcher = druidHookDispatcher;
+      this.isExplainSupported = isExplainSupported;
+      this.injector = injector;
     }
 
     @Override
@@ -39,5 +61,32 @@ public interface DruidConnectionExtras
     {
       return objectMapper;
     }
+
+    @Override
+    public DruidHookDispatcher getDruidHookDispatcher()
+    {
+      return druidHookDispatcher;
+    }
+
+    @Override
+    public boolean isExplainSupported()
+    {
+      return isExplainSupported;
+    }
+
+    @Override
+    public Injector getInjector()
+    {
+      return injector;
+    }
   }
+
+  static DruidConnectionExtras unwrapOrThrow(Connection connection)
+  {
+    if (connection instanceof DruidConnectionExtras) {
+      return (DruidConnectionExtras) connection;
+    }
+    throw DruidException.defensive("Expected class [%s] to implement DruidConnectionExtras!", connection.getClass());
+  }
+
 }

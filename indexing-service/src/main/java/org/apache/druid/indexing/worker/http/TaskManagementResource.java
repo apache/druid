@@ -167,7 +167,7 @@ public class TaskManagementResource
             try {
               HttpServletResponse response = (HttpServletResponse) asyncContext.getResponse();
               response.setStatus(HttpServletResponse.SC_OK);
-              context.inputMapper.writerWithType(WorkerHolder.WORKER_SYNC_RESP_TYPE_REF)
+              context.inputMapper.writerFor(WorkerHolder.WORKER_SYNC_RESP_TYPE_REF)
                                  .writeValue(asyncContext.getResponse().getOutputStream(), result);
               asyncContext.complete();
             }

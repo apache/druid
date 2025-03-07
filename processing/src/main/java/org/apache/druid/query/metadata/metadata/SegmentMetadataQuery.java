@@ -97,7 +97,7 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
       @JsonProperty("aggregatorMergeStrategy") AggregatorMergeStrategy aggregatorMergeStrategy
   )
   {
-    super(dataSource, querySegmentSpec == null ? DEFAULT_SEGMENT_SPEC : querySegmentSpec, false, context);
+    super(dataSource, querySegmentSpec == null ? DEFAULT_SEGMENT_SPEC : querySegmentSpec, context);
 
     if (querySegmentSpec == null) {
       this.usingDefaultInterval = true;
@@ -249,14 +249,14 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
   public String toString()
   {
     return "SegmentMetadataQuery{" +
-        "dataSource='" + getDataSource() + '\'' +
-        ", querySegmentSpec=" + getQuerySegmentSpec() +
-        ", toInclude=" + toInclude +
-        ", merge=" + merge +
-        ", usingDefaultInterval=" + usingDefaultInterval +
-        ", analysisTypes=" + analysisTypes +
-        ", aggregatorMergeStrategy=" + aggregatorMergeStrategy +
-        '}';
+           "dataSource='" + getDataSource() + '\'' +
+           ", querySegmentSpec=" + getQuerySegmentSpec() +
+           ", toInclude=" + toInclude +
+           ", merge=" + merge +
+           ", usingDefaultInterval=" + usingDefaultInterval +
+           ", analysisTypes=" + analysisTypes +
+           ", aggregatorMergeStrategy=" + aggregatorMergeStrategy +
+           '}';
   }
 
   @Override
@@ -273,10 +273,10 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
     }
     SegmentMetadataQuery that = (SegmentMetadataQuery) o;
     return merge == that.merge &&
-        usingDefaultInterval == that.usingDefaultInterval &&
-        Objects.equals(toInclude, that.toInclude) &&
-        Objects.equals(analysisTypes, that.analysisTypes) &&
-        Objects.equals(aggregatorMergeStrategy, that.aggregatorMergeStrategy);
+           usingDefaultInterval == that.usingDefaultInterval &&
+           Objects.equals(toInclude, that.toInclude) &&
+           Objects.equals(analysisTypes, that.analysisTypes) &&
+           Objects.equals(aggregatorMergeStrategy, that.aggregatorMergeStrategy);
   }
 
   @Override

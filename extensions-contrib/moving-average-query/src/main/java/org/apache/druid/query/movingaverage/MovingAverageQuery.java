@@ -30,12 +30,12 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.Row;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.guava.Sequences;
+import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.BaseQuery;
 import org.apache.druid.query.DataSource;
 import org.apache.druid.query.Query;
@@ -63,6 +63,7 @@ import java.util.Set;
 @JsonTypeName("movingAverage")
 public class MovingAverageQuery extends BaseQuery<Row>
 {
+  private static final Logger LOG = new Logger(MovingAverageQuery.class);
 
   public static final String MOVING_AVG_QUERY_TYPE = "movingAverage";
   public static final String CTX_KEY_SORT_BY_DIMS_FIRST = "sortByDimsFirst";
@@ -103,13 +104,7 @@ public class MovingAverageQuery extends BaseQuery<Row>
       @JsonProperty("context") Map<String, Object> context
   )
   {
-    super(dataSource, querySegmentSpec, false, context);
-
-    //TBD: Implement null awareness to respect the contract of this flag.
-    Preconditions.checkArgument(
-        NullHandling.replaceWithDefault(),
-        "movingAverage does not support druid.generic.useDefaultValueForNull=false"
-    );
+    super(dataSource, querySegmentSpec, context);
 
     this.dimFilter = dimFilter;
     this.granularity = granularity;
@@ -207,7 +202,7 @@ public class MovingAverageQuery extends BaseQuery<Row>
       Map<String, Object> context
   )
   {
-    super(dataSource, querySegmentSpec, false, context);
+    super(dataSource, querySegmentSpec, context);
 
     this.dimFilter = dimFilter;
     this.granularity = granularity;

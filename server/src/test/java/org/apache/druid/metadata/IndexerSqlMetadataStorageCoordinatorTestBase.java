@@ -32,6 +32,7 @@ import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.segment.SegmentSchemaMapping;
+import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.FingerprintGenerator;
@@ -52,12 +53,14 @@ import org.skife.jdbi.v2.PreparedBatch;
 import org.skife.jdbi.v2.ResultIterator;
 import org.skife.jdbi.v2.util.StringMapper;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
@@ -309,19 +312,16 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
   protected FingerprintGenerator fingerprintGenerator;
   protected SegmentSchemaTestUtils segmentSchemaTestUtils;
 
-  protected static class DS
-  {
-    static final String WIKI = "wiki";
-  }
-
   protected DataSegment createSegment(Interval interval, String version, ShardSpec shardSpec)
   {
     return DataSegment.builder()
-                      .dataSource(DS.WIKI)
+                      .dataSource(TestDataSource.WIKI)
                       .interval(interval)
                       .version(version)
                       .shardSpec(shardSpec)
                       .size(100)
+                      // hash to get a unique load spec as segmentId has not yet been generated
+                      .loadSpec(ImmutableMap.of("hash", Objects.hash(interval, version, shardSpec)))
                       .build();
   }
 
@@ -362,7 +362,7 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
                                                tablesConfig,
                                                mapper
                                            )
-                                           .retrieveUnusedSegments(DS.WIKI, intervals, null, limit, lastSegmentId, sortOrder, maxUsedStatusLastUpdatedTime)) {
+                                           .retrieveUnusedSegments(TestDataSource.WIKI, intervals, null, limit, lastSegmentId, sortOrder, maxUsedStatusLastUpdatedTime)) {
             return ImmutableList.copyOf(iterator);
           }
         }
@@ -381,13 +381,8 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
     return derbyConnector.inReadOnlyTransaction(
         (handle, status) -> {
           try (final CloseableIterator<DataSegmentPlus> iterator =
-                   SqlSegmentsMetadataQuery.forHandle(
-                                               handle,
-                                               derbyConnector,
-                                               tablesConfig,
-                                               mapper
-                                           )
-                                           .retrieveUnusedSegmentsPlus(DS.WIKI, intervals, null, limit, lastSegmentId, sortOrder, maxUsedStatusLastUpdatedTime)) {
+                   SqlSegmentsMetadataQuery.forHandle(handle, derbyConnector, tablesConfig, mapper)
+                                           .retrieveUnusedSegmentsPlus(TestDataSource.WIKI, intervals, null, limit, lastSegmentId, sortOrder, maxUsedStatusLastUpdatedTime)) {
             return ImmutableList.copyOf(iterator);
           }
         }
@@ -558,5 +553,84 @@ public class IndexerSqlMetadataStorageCoordinatorTestBase
           return true;
         }
     );
+  }
+
+  public static void insertUsedSegments(
+      Set<DataSegment> dataSegments,
+      Map<String, String> upgradedFromSegmentIdMap,
+      SQLMetadataConnector connector,
+      String table,
+      ObjectMapper jsonMapper
+  )
+  {
+    final Set<DataSegmentPlus> usedSegments = new HashSet<>();
+    for (DataSegment segment : dataSegments) {
+      final DateTime now = DateTimes.nowUtc();
+      usedSegments.add(
+          new DataSegmentPlus(
+              segment,
+              now,
+              now,
+              true,
+              null,
+              null,
+              upgradedFromSegmentIdMap.get(segment.getId().toString())
+          )
+      );
+    }
+
+    insertSegments(usedSegments, connector, table, jsonMapper);
+  }
+
+  public static void insertSegments(
+      Set<DataSegmentPlus> dataSegments,
+      SQLMetadataConnector connector,
+      String table,
+      ObjectMapper jsonMapper
+  )
+  {
+    connector.retryWithHandle(
+        handle -> {
+          PreparedBatch preparedBatch = handle.prepareBatch(
+              StringUtils.format(
+                  "INSERT INTO %1$s (id, dataSource, created_date, start, %2$send%2$s, partitioned, version,"
+                  + " used, payload, used_status_last_updated, upgraded_from_segment_id) "
+                  + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version,"
+                  + " :used, :payload, :used_status_last_updated, :upgraded_from_segment_id)",
+                  table,
+                  connector.getQuoteString()
+              )
+          );
+          for (DataSegmentPlus segmentPlus : dataSegments) {
+            final DataSegment segment = segmentPlus.getDataSegment();
+            String id = segment.getId().toString();
+            preparedBatch.add()
+                         .bind("id", id)
+                         .bind("dataSource", segment.getDataSource())
+                         .bind("created_date", nullSafeString(segmentPlus.getCreatedDate()))
+                         .bind("start", segment.getInterval().getStart().toString())
+                         .bind("end", segment.getInterval().getEnd().toString())
+                         .bind("partitioned", !(segment.getShardSpec() instanceof NoneShardSpec))
+                         .bind("version", segment.getVersion())
+                         .bind("used", Boolean.TRUE.equals(segmentPlus.getUsed()))
+                         .bind("payload", jsonMapper.writeValueAsBytes(segment))
+                         .bind("used_status_last_updated", nullSafeString(segmentPlus.getUsedStatusLastUpdatedDate()))
+                         .bind("upgraded_from_segment_id", segmentPlus.getUpgradedFromSegmentId());
+          }
+
+          final int[] affectedRows = preparedBatch.execute();
+          final boolean succeeded = Arrays.stream(affectedRows).allMatch(eachAffectedRows -> eachAffectedRows == 1);
+          if (!succeeded) {
+            throw new ISE("Failed to publish segments to DB");
+          }
+          return true;
+        }
+    );
+  }
+
+  @Nullable
+  private static String nullSafeString(DateTime date)
+  {
+    return date == null ? null : date.toString();
   }
 }

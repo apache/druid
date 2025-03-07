@@ -164,7 +164,7 @@ public class SequenceMetadataTest
 
   private OrderedSequenceNumber<String> makeSequenceNumber(String seq, boolean isExclusive)
   {
-    return new OrderedSequenceNumber<String>(seq, isExclusive)
+    return new OrderedSequenceNumber<>(seq, isExclusive)
     {
       @Override
       public int compareTo(OrderedSequenceNumber<String> o)

@@ -16,9 +16,8 @@
  * limitations under the License.
  */
 
-import { FormGroup, Icon } from '@blueprintjs/core';
+import { FormGroup, Icon, Popover } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { Popover2 } from '@blueprintjs/popover2';
 import type { JSX } from 'react';
 import React from 'react';
 
@@ -26,6 +25,7 @@ import './form-group-with-info.scss';
 
 export interface FormGroupWithInfoProps {
   label?: React.ReactNode;
+  inline?: boolean;
   info?: JSX.Element | string;
   inlineInfo?: boolean;
   children?: React.ReactNode;
@@ -34,18 +34,19 @@ export interface FormGroupWithInfoProps {
 export const FormGroupWithInfo = React.memo(function FormGroupWithInfo(
   props: FormGroupWithInfoProps,
 ) {
-  const { label, info, inlineInfo, children } = props;
+  const { label, inline, info, inlineInfo, children } = props;
 
   const popover = (
-    <Popover2 className="info-popover" content={info} position="left-bottom">
+    <Popover className="info-popover" content={info} position="left-bottom">
       <Icon icon={IconNames.INFO_SIGN} size={14} />
-    </Popover2>
+    </Popover>
   );
 
   return (
     <FormGroup
       className="form-group-with-info"
       label={label}
+      inline={inline}
       labelInfo={info && !inlineInfo && popover}
     >
       {children}

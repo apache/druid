@@ -16,8 +16,6 @@
  * limitations under the License.
  */
 
-import React from 'react';
-
 import type { QueryExplanation } from '../../../utils';
 import { QueryState } from '../../../utils';
 import { shallow } from '../../../utils/shallow-renderer';
@@ -160,6 +158,16 @@ describe('ExplainDialog', () => {
               type: 'LONG',
             },
           ],
+          columnMappings: [
+            {
+              queryColumn: 'd0',
+              outputColumn: 'channel',
+            },
+            {
+              queryColumn: 'a0',
+              outputColumn: 'Count',
+            },
+          ],
         },
       ],
     });
@@ -187,7 +195,6 @@ describe('ExplainDialog', () => {
             limit: 101,
             filter: null,
             columns: ['channel'],
-            legacy: false,
             context: {},
             descending: false,
             granularity: {
@@ -198,6 +205,12 @@ describe('ExplainDialog', () => {
             {
               name: 'channel',
               type: 'STRING',
+            },
+          ],
+          columnMappings: [
+            {
+              queryColumn: 'channel',
+              outputColumn: 'channel',
             },
           ],
         },
@@ -223,7 +236,6 @@ describe('ExplainDialog', () => {
               extractionFn: null,
             },
             columns: ['channel'],
-            legacy: false,
             context: {},
             descending: false,
             granularity: {
@@ -234,6 +246,12 @@ describe('ExplainDialog', () => {
             {
               name: 'channel',
               type: 'STRING',
+            },
+          ],
+          columnMappings: [
+            {
+              queryColumn: 'channel',
+              outputColumn: 'channel',
             },
           ],
         },

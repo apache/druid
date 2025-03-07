@@ -43,12 +43,12 @@ An example Scan query object is shown below:
    "queryType": "scan",
    "dataSource": "wikipedia",
    "resultFormat": "list",
-   "columns":[],
+   "columns":[ "__time", "isRobot", "page","added", "isAnonymous", "user", "deleted" ],
    "intervals": [
-     "2013-01-01/2013-01-02"
+     "2016-01-01/2017-01-02"
    ],
    "batchSize":20480,
-   "limit":3
+   "limit":2
  }
 ```
 
@@ -66,7 +66,6 @@ The following are the main parameters for Scan queries:
 |limit|How many rows to return. If not specified, all rows will be returned.|no|
 |offset|Skip this many rows when returning results. Skipped rows will still need to be generated internally and then discarded, meaning that raising offsets to high values can cause queries to use additional resources.<br /><br />Together, "limit" and "offset" can be used to implement pagination. However, note that if the underlying datasource is modified in between page fetches in ways that affect overall query results, then the different pages will not necessarily align with each other.|no|
 |order|The ordering of returned rows based on timestamp.  "ascending", "descending", and "none" (default) are supported.  Currently, "ascending" and "descending" are only supported for queries where the `__time` column is included in the `columns` field and the requirements outlined in the [time ordering](#time-ordering) section are met.|none|
-|legacy|Return results consistent with the legacy "scan-query" contrib extension. Defaults to the value set by `druid.query.scan.legacy`, which in turn defaults to false. See [Legacy mode](#legacy-mode) for details.|no|
 |context|An additional JSON Object which can be used to specify certain flags (see the `query context properties` section below).|no|
 
 ## Example results
@@ -74,99 +73,96 @@ The following are the main parameters for Scan queries:
 The format of the result when resultFormat equals `list`:
 
 ```json
- [{
-    "segmentId" : "wikipedia_editstream_2012-12-29T00:00:00.000Z_2013-01-10T08:00:00.000Z_2013-01-10T08:13:47.830Z_v9",
-    "columns" : [
-      "timestamp",
-      "robot",
-      "namespace",
-      "anonymous",
-      "unpatrolled",
-      "page",
-      "language",
-      "newpage",
-      "user",
-      "count",
-      "added",
-      "delta",
-      "variation",
-      "deleted"
-    ],
-    "events" : [ {
-        "timestamp" : "2013-01-01T00:00:00.000Z",
-        "robot" : "1",
-        "namespace" : "article",
-        "anonymous" : "0",
-        "unpatrolled" : "0",
-        "page" : "11._korpus_(NOVJ)",
-        "language" : "sl",
-        "newpage" : "0",
-        "user" : "EmausBot",
-        "count" : 1.0,
-        "added" : 39.0,
-        "delta" : 39.0,
-        "variation" : 39.0,
-        "deleted" : 0.0
-    }, {
-        "timestamp" : "2013-01-01T00:00:00.000Z",
-        "robot" : "0",
-        "namespace" : "article",
-        "anonymous" : "0",
-        "unpatrolled" : "0",
-        "page" : "112_U.S._580",
-        "language" : "en",
-        "newpage" : "1",
-        "user" : "MZMcBride",
-        "count" : 1.0,
-        "added" : 70.0,
-        "delta" : 70.0,
-        "variation" : 70.0,
-        "deleted" : 0.0
-    }, {
-        "timestamp" : "2013-01-01T00:00:00.000Z",
-        "robot" : "0",
-        "namespace" : "article",
-        "anonymous" : "0",
-        "unpatrolled" : "0",
-        "page" : "113_U.S._243",
-        "language" : "en",
-        "newpage" : "1",
-        "user" : "MZMcBride",
-        "count" : 1.0,
-        "added" : 77.0,
-        "delta" : 77.0,
-        "variation" : 77.0,
-        "deleted" : 0.0
-    } ]
+ [ {
+  "segmentId" : "wikipedia_2016-06-27T00:00:00.000Z_2016-06-28T00:00:00.000Z_2024-12-17T13:08:03.142Z",
+  "columns" : [ "__time", "isRobot", "page","added", "isAnonymous", "user", "deleted" ],
+  "events" : [ {
+    "__time" : 1466985611080,
+    "isRobot" : "true",
+    "page" : "Salo Toraut",
+    "added" : 31,
+    "isAnonymous" : "false",
+    "user" : "Lsjbot",
+    "deleted" : 0
+  }, {
+    "__time" : 1466985634959,
+    "isRobot" : "false",
+    "page" : "Bailando 2015",
+    "added" : 2,
+    "isAnonymous" : "true",
+    "user" : "181.230.118.178",
+    "deleted" : 0
+  } ],
+  "rowSignature" : [ {
+    "name" : "__time",
+    "type" : "LONG"
+  }, {
+    "name" : "isRobot",
+    "type" : "STRING"
+  }, {
+    "name" : "page",
+    "type" : "STRING"
+  }, {
+    "name" : "added",
+    "type" : "LONG"
+  }, {
+    "name" : "isAnonymous",
+    "type" : "STRING"
+  }, {
+    "name" : "user",
+    "type" : "STRING"
+  }, {
+    "name" : "deleted",
+    "type" : "LONG"
+  } ]
 } ]
 ```
 
 The format of the result when resultFormat equals `compactedList`:
 
 ```json
- [{
-    "segmentId" : "wikipedia_editstream_2012-12-29T00:00:00.000Z_2013-01-10T08:00:00.000Z_2013-01-10T08:13:47.830Z_v9",
-    "columns" : [
-      "timestamp", "robot", "namespace", "anonymous", "unpatrolled", "page", "language", "newpage", "user", "count", "added", "delta", "variation", "deleted"
-    ],
-    "events" : [
-     ["2013-01-01T00:00:00.000Z", "1", "article", "0", "0", "11._korpus_(NOVJ)", "sl", "0", "EmausBot", 1.0, 39.0, 39.0, 39.0, 0.0],
-     ["2013-01-01T00:00:00.000Z", "0", "article", "0", "0", "112_U.S._580", "en", "1", "MZMcBride", 1.0, 70.0, 70.0, 70.0, 0.0],
-     ["2013-01-01T00:00:00.000Z", "0", "article", "0", "0", "113_U.S._243", "en", "1", "MZMcBride", 1.0, 77.0, 77.0, 77.0, 0.0]
-    ]
+ [ {
+  "segmentId" : "wikipedia_2016-06-27T00:00:00.000Z_2016-06-28T00:00:00.000Z_2024-12-17T13:08:03.142Z",
+  "columns" : [ "__time", "isRobot", "isUnpatrolled", "page","added", "isNew", "delta", "isAnonymous", "user", "deleted", "namespace" ],
+  "events" : [
+    [ 1466985611080, "true", "Salo Toraut", 31, "false", "Lsjbot", 0 ],
+    [ 1466985634959, "false", "Bailando 2015", 2, "true", "181.230.118.178", 0]
+  ],
+  "rowSignature" : [ {
+    "name" : "__time",
+    "type" : "LONG"
+  }, {
+    "name" : "isRobot",
+    "type" : "STRING"
+  }, {
+    "name" : "page",
+    "type" : "STRING"
+  }, {
+    "name" : "added",
+    "type" : "LONG"
+  }, {
+    "name" : "isAnonymous",
+    "type" : "STRING"
+  }, {
+    "name" : "user",
+    "type" : "STRING"
+  }, {
+    "name" : "deleted",
+    "type" : "LONG"
+  } ]
 } ]
 ```
 
 ## Time ordering
 
-The Scan query currently supports ordering based on timestamp for non-legacy queries.  Note that using time ordering
-will yield results that do not indicate which segment rows are from (`segmentId` will show up as `null`).  Furthermore,
-time ordering is only supported where the result set limit is less than `druid.query.scan.maxRowsQueuedForOrdering`
-rows **or** all segments scanned have fewer than `druid.query.scan.maxSegmentPartitionsOrderedInMemory` partitions.  Also,
-time ordering is not supported for queries issued directly to historicals unless a list of segments is specified.  The
-reasoning behind these limitations is that the implementation of time ordering uses two strategies that can consume too
-much heap memory if left unbounded.  These strategies (listed below) are chosen on a per-Historical basis depending on
-query result set limit and the number of segments being scanned.
+The Scan query currently supports ordering based on timestamp.  Note that using time ordering will yield results that
+do not indicate which segment rows are from (`segmentId` will show up as `null`).  Furthermore, time ordering is only
+supported where the result set limit is less than `druid.query.scan.maxRowsQueuedForOrdering` rows **or** all segments
+scanned have fewer than `druid.query.scan.maxSegmentPartitionsOrderedInMemory` partitions.  Also, time ordering is not
+supported for queries issued directly to historicals unless a list of segments is specified.  The reasoning behind
+these limitations is that the implementation of time ordering uses two strategies that can consume too much heap memory
+if left unbounded.  These strategies (listed below) are chosen on a per-Historical basis depending on query result set
+limit and the number of segments being scanned.
 
 1. Priority Queue: Each segment on a Historical is opened sequentially.  Every row is added to a bounded priority
 queue which is ordered by timestamp.  For every row above the result set limit, the row with the earliest (if descending)
@@ -187,21 +183,6 @@ configurable and can be tuned based on hardware specs and number of dimensions b
 can also be overridden using the `maxRowsQueuedForOrdering` and `maxSegmentPartitionsOrderedInMemory` properties in
 the query context (see the Query Context Properties section).
 
-## Legacy mode
-
-The Scan query supports a legacy mode designed for protocol compatibility with the former scan-query contrib extension.
-In legacy mode you can expect the following behavior changes:
-
-- The `__time` column is returned as `"timestamp"` rather than `"__time"`. This will take precedence over any other column
-you may have that is named `"timestamp"`.
-- The `__time` column is included in the list of columns even if you do not specifically ask for it.
-- Timestamps are returned as ISO8601 time strings rather than integers (milliseconds since 1970-01-01 00:00:00 UTC).
-
-Legacy mode can be triggered either by passing `"legacy" : true` in your query JSON, or by setting
-`druid.query.scan.legacy = true` on your Druid processes. If you were previously using the scan-query contrib extension,
-the best way to migrate is to activate legacy mode during a rolling upgrade, then switch it off after the upgrade
-is complete.
-
 ## Configuration Properties
 
 Configuration properties:
@@ -210,7 +191,6 @@ Configuration properties:
 |--------|-----------|------|-------|
 |druid.query.scan.maxRowsQueuedForOrdering|The maximum number of rows returned when time ordering is used|An integer in [1, 2147483647]|100000|
 |druid.query.scan.maxSegmentPartitionsOrderedInMemory|The maximum number of segments scanned per historical when time ordering is used|An integer in [1, 2147483647]|50|
-|druid.query.scan.legacy|Whether legacy mode should be turned on for Scan queries|true or false|false|
 
 
 ## Query context properties
@@ -228,3 +208,7 @@ Sample query context JSON object:
   "maxSegmentPartitionsOrderedInMemory": 100
 }
 ```
+
+## Legacy mode
+
+In older versions of Druid, the scan query supported a legacy mode designed for protocol compatibility with the former scan-query contrib extension from versions of Druid older than 0.11. This mode has been removed.

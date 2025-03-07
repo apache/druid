@@ -52,8 +52,10 @@ import org.apache.druid.data.input.kafka.KafkaRecordEntity;
 import org.apache.druid.data.input.kafka.KafkaTopicPartition;
 import org.apache.druid.data.input.kafkainput.KafkaInputFormat;
 import org.apache.druid.data.input.kafkainput.KafkaStringHeaderFormat;
+import org.apache.druid.indexer.IngestionState;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexer.report.IngestionStatsAndErrors;
 import org.apache.druid.indexing.common.LockGranularity;
 import org.apache.druid.indexing.common.TestUtils;
@@ -91,7 +93,6 @@ import org.apache.druid.query.QueryPlus;
 import org.apache.druid.query.QueryRunnerFactory;
 import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.SegmentDescriptor;
-import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.filter.SelectorDimFilter;
@@ -109,7 +110,6 @@ import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.incremental.RowIngestionMetersTotals;
 import org.apache.druid.segment.incremental.RowMeters;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.transform.ExpressionTransform;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.server.security.Action;
@@ -120,6 +120,7 @@ import org.apache.druid.timeline.DataSegment;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.header.Header;
+import org.joda.time.Duration;
 import org.joda.time.Period;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -357,7 +358,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
-            null
+            null,
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
     Assert.assertTrue(task.supportsQueries());
@@ -413,7 +415,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
-            null
+            null,
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
     final ListenableFuture<TaskStatus> future = runTask(task);
@@ -461,7 +464,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
-            null
+            null,
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
     task.addToContext(Tasks.STORE_EMPTY_COLUMNS_KEY, false);
@@ -496,7 +500,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             null,
-            null
+            null,
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
 
@@ -537,7 +542,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
-            null
+            null,
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
 
@@ -588,7 +594,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
-            null
+            null,
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
     final ListenableFuture<TaskStatus> future = runTask(task);
@@ -665,7 +672,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
-            null
+            null,
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
     final ListenableFuture<TaskStatus> future = runTask(task);
@@ -768,7 +776,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
-            null
+            null,
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
     final ListenableFuture<TaskStatus> future = runTask(task);
@@ -894,7 +903,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
-            null
+            null,
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
     final ListenableFuture<TaskStatus> future = runTask(task);
@@ -972,7 +982,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
-            null
+            null,
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
     final ListenableFuture<TaskStatus> future = runTask(task);
@@ -1035,7 +1046,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
-            null
+            null,
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
     final KafkaIndexTask staleReplica = createTask(
@@ -1051,7 +1063,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
-            null
+            null,
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
 
@@ -1117,7 +1130,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             DateTimes.of("2010"),
             null,
             INPUT_FORMAT,
-            null
+            null,
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
 
@@ -1165,7 +1179,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             DateTimes.of("2010"),
             INPUT_FORMAT,
-            null
+            null,
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
 
@@ -1222,7 +1237,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
-            null
+            null,
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
 
@@ -1261,28 +1277,27 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     final KafkaIndexTask task = createTask(
         null,
-        new DataSchema(
-            "test_ds",
-            new TimestampSpec("timestamp", "iso", null),
-            new DimensionsSpec(
-                Arrays.asList(
-                    new StringDimensionSchema("dim1"),
-                    new StringDimensionSchema("dim1t"),
-                    new StringDimensionSchema("dim2"),
-                    new LongDimensionSchema("dimLong"),
-                    new FloatDimensionSchema("dimFloat"),
-                    new StringDimensionSchema("kafka.topic"),
-                    new LongDimensionSchema("kafka.offset"),
-                    new StringDimensionSchema("kafka.header.encoding")
-                )
-            ),
-            new AggregatorFactory[]{
-                new DoubleSumAggregatorFactory("met1sum", "met1"),
-                new CountAggregatorFactory("rows")
-            },
-            new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null),
-            null
-        ),
+        DataSchema.builder()
+                  .withDataSource("test_ds")
+                  .withTimestamp(new TimestampSpec("timestamp", "iso", null))
+                  .withDimensions(
+                      new StringDimensionSchema("dim1"),
+                      new StringDimensionSchema("dim1t"),
+                      new StringDimensionSchema("dim2"),
+                      new LongDimensionSchema("dimLong"),
+                      new FloatDimensionSchema("dimFloat"),
+                      new StringDimensionSchema("kafka.topic"),
+                      new LongDimensionSchema("kafka.offset"),
+                      new StringDimensionSchema("kafka.header.encoding")
+                  )
+                  .withAggregators(
+                      new DoubleSumAggregatorFactory("met1sum", "met1"),
+                      new CountAggregatorFactory("rows")
+                  )
+                  .withGranularity(
+                      new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null)
+                  )
+                  .build(),
         new KafkaIndexTaskIOConfig(
             0,
             "sequence0",
@@ -1294,7 +1309,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             new TestKafkaInputFormat(INPUT_FORMAT),
-            null
+            null,
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
     Assert.assertTrue(task.supportsQueries());
@@ -1336,26 +1352,25 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     final KafkaIndexTask task = createTask(
         null,
-        new DataSchema(
-            "test_ds",
-            new TimestampSpec("timestamp", "iso", null),
-            new DimensionsSpec(
-                Arrays.asList(
-                    new StringDimensionSchema("dim1"),
-                    new StringDimensionSchema("dim1t"),
-                    new StringDimensionSchema("dim2"),
-                    new LongDimensionSchema("dimLong"),
-                    new FloatDimensionSchema("dimFloat"),
-                    new StringDimensionSchema("kafka.testheader.encoding")
-                )
-            ),
-            new AggregatorFactory[]{
-                new DoubleSumAggregatorFactory("met1sum", "met1"),
-                new CountAggregatorFactory("rows")
-            },
-            new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null),
-            null
-        ),
+        DataSchema.builder()
+                  .withDataSource("test_ds")
+                  .withTimestamp(new TimestampSpec("timestamp", "iso", null))
+                  .withDimensions(
+                      new StringDimensionSchema("dim1"),
+                      new StringDimensionSchema("dim1t"),
+                      new StringDimensionSchema("dim2"),
+                      new LongDimensionSchema("dimLong"),
+                      new FloatDimensionSchema("dimFloat"),
+                      new StringDimensionSchema("kafka.testheader.encoding")
+                  )
+                  .withAggregators(
+                      new DoubleSumAggregatorFactory("met1sum", "met1"),
+                      new CountAggregatorFactory("rows")
+                  )
+                  .withGranularity(
+                      new UniformGranularitySpec(Granularities.DAY, Granularities.NONE, null)
+                  )
+                  .build(),
         new KafkaIndexTaskIOConfig(
             0,
             "sequence0",
@@ -1367,7 +1382,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             KAFKA_INPUT_FORMAT,
-            null
+            null,
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
     Assert.assertTrue(task.supportsQueries());
@@ -1418,7 +1434,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
-            null
+            null,
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
 
@@ -1453,7 +1470,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
-            null
+            null,
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
 
@@ -1499,7 +1517,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
-            null
+            null,
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
 
@@ -1550,7 +1569,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
-            null
+            null,
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
 
@@ -1588,7 +1608,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
-            null
+            null,
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
 
@@ -1616,6 +1637,10 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     );
 
     IngestionStatsAndErrors reportData = getTaskReportData();
+
+    // Verify ingestion state and error message
+    Assert.assertEquals(IngestionState.COMPLETED, reportData.getIngestionState());
+    Assert.assertNull(reportData.getErrorMsg());
 
     Map<String, Object> expectedMetrics = ImmutableMap.of(
         RowIngestionMeters.BUILD_SEGMENTS,
@@ -1676,7 +1701,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
-            null
+            null,
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
 
@@ -1696,6 +1722,10 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assert.assertNull(newDataSchemaMetadata());
 
     IngestionStatsAndErrors reportData = getTaskReportData();
+
+    // Verify ingestion state and error message
+    Assert.assertEquals(IngestionState.BUILD_SEGMENTS, reportData.getIngestionState());
+    Assert.assertNotNull(reportData.getErrorMsg());
 
     Map<String, Object> expectedMetrics = ImmutableMap.of(
         RowIngestionMeters.BUILD_SEGMENTS,
@@ -1738,7 +1768,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
-            null
+            null,
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
     final KafkaIndexTask task2 = createTask(
@@ -1754,7 +1785,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
-            null
+            null,
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
 
@@ -1802,7 +1834,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
-            null
+            null,
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
     final KafkaIndexTask task2 = createTask(
@@ -1818,7 +1851,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
-            null
+            null,
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
 
@@ -1868,7 +1902,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
-            null
+            null,
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
     final KafkaIndexTask task2 = createTask(
@@ -1884,7 +1919,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
-            null
+            null,
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
 
@@ -1932,7 +1968,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
-            null
+            null,
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
 
@@ -1978,7 +2015,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
-            null
+            null,
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
     final KafkaIndexTask task2 = createTask(
@@ -1994,7 +2032,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
-            null
+            null,
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
 
@@ -2044,7 +2083,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
-            null
+            null,
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
 
@@ -2078,7 +2118,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
-            null
+            null,
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
 
@@ -2128,7 +2169,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
-            null
+            null,
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
 
@@ -2171,7 +2213,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
-            null
+            null,
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
 
@@ -2222,9 +2265,12 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
-            null
+            null,
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
+
+    Assert.assertEquals(Status.NOT_STARTED.toString(), task.getCurrentRunnerStatus());
 
     final ListenableFuture<TaskStatus> future = runTask(task);
 
@@ -2236,14 +2282,15 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     }
     Assert.assertEquals(2, countEvents(task));
     Assert.assertEquals(Status.READING, task.getRunner().getStatus());
+    Assert.assertEquals(Status.READING.toString(), task.getCurrentRunnerStatus());
+
 
     Map<KafkaTopicPartition, Long> currentOffsets = OBJECT_MAPPER.readValue(
         task.getRunner().pause().getEntity().toString(),
-        new TypeReference<Map<KafkaTopicPartition, Long>>()
-        {
-        }
+        new TypeReference<>() {}
     );
     Assert.assertEquals(Status.PAUSED, task.getRunner().getStatus());
+    Assert.assertEquals(Status.PAUSED.toString(), task.getCurrentRunnerStatus());
     // Insert remaining data
     insertData(Iterables.skip(records, 4));
 
@@ -2261,6 +2308,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     Assert.assertEquals(TaskState.SUCCESS, future.get().getStatusCode());
     Assert.assertEquals(task.getRunner().getEndOffsets(), task.getRunner().getCurrentOffsets());
+    Assert.assertEquals(Status.PUBLISHING.toString(), task.getCurrentRunnerStatus());
     verifyTaskMetrics(task, RowMeters.with().bytes(getTotalSizeOfRecords(2, 5)).totalProcessed(3));
 
     // Check published metadata and segments in deep storage
@@ -2293,7 +2341,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
-            null
+            null,
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
 
@@ -2330,7 +2379,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
-            null
+            null,
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
 
@@ -2377,7 +2427,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
-            null
+            null,
+            Duration.standardHours(2).getStandardMinutes()
         ),
         context
     );
@@ -2421,7 +2472,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
-            null
+            null,
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
 
@@ -2460,7 +2512,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
-            null
+            null,
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
 
@@ -2541,7 +2594,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
                     null,
                     null,
                     INPUT_FORMAT,
-                    null
+                    null,
+                    Duration.standardHours(2).getStandardMinutes()
             )
     );
 
@@ -2601,7 +2655,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
-            null
+            null,
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
     final ListenableFuture<TaskStatus> future = runTask(task);
@@ -2624,7 +2679,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
-            null
+            null,
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
 
@@ -2670,7 +2726,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
-            null
+            null,
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
 
@@ -2702,7 +2759,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
-            null
+            null,
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
 
@@ -2852,6 +2910,7 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         logParseExceptions,
         maxParseExceptions,
         maxSavedParseExceptions,
+        null,
         null
     );
     if (!context.containsKey(SeekableStreamSupervisor.CHECKPOINTS_CTX_KEY)) {
@@ -2878,46 +2937,32 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
   private static DataSchema cloneDataSchema(final DataSchema dataSchema)
   {
-    return new DataSchema(
-        dataSchema.getDataSource(),
-        dataSchema.getTimestampSpec(),
-        dataSchema.getDimensionsSpec(),
-        dataSchema.getAggregators(),
-        dataSchema.getGranularitySpec(),
-        dataSchema.getTransformSpec(),
-        dataSchema.getParserMap(),
-        OBJECT_MAPPER
-    );
+    return DataSchema.builder(dataSchema).withObjectMapper(OBJECT_MAPPER).build();
   }
 
   @Override
   protected QueryRunnerFactoryConglomerate makeQueryRunnerConglomerate()
   {
-    return new DefaultQueryRunnerFactoryConglomerate(
-        ImmutableMap.<Class<? extends Query>, QueryRunnerFactory>builder()
-                    .put(
-                        TimeseriesQuery.class,
-                        new TimeseriesQueryRunnerFactory(
-                            new TimeseriesQueryQueryToolChest(),
-                            new TimeseriesQueryEngine(),
-                            (query, future) -> {
-                              // do nothing
-                            }
-                        )
+    return DefaultQueryRunnerFactoryConglomerate.buildFromQueryRunnerFactories(ImmutableMap.<Class<? extends Query>, QueryRunnerFactory>builder()
+                .put(
+                    TimeseriesQuery.class,
+                    new TimeseriesQueryRunnerFactory(
+                        new TimeseriesQueryQueryToolChest(),
+                        new TimeseriesQueryEngine(),
+                        (query, future) -> {
+                          // do nothing
+                        }
                     )
-                    .put(
-                        ScanQuery.class,
-                        new ScanQueryRunnerFactory(
-                            new ScanQueryQueryToolChest(
-                                new ScanQueryConfig(),
-                                new DefaultGenericQueryMetricsFactory()
-                            ),
-                            new ScanQueryEngine(),
-                            new ScanQueryConfig()
-                        )
+                )
+                .put(
+                    ScanQuery.class,
+                    new ScanQueryRunnerFactory(
+                        new ScanQueryQueryToolChest(DefaultGenericQueryMetricsFactory.instance()),
+                        new ScanQueryEngine(),
+                        new ScanQueryConfig()
                     )
-                    .build()
-    );
+                )
+                .build());
   }
 
   private void makeToolboxFactory() throws IOException
@@ -2975,7 +3020,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
-            null
+            null,
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
 
@@ -3036,7 +3082,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             new TestKafkaFormatWithMalformedDataDetection(INPUT_FORMAT),
-            null
+            null,
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
 
@@ -3060,9 +3107,13 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
         newDataSchemaMetadata()
     );
 
-    // Verify unparseable data
     IngestionStatsAndErrors reportData = getTaskReportData();
 
+    // Verify ingestion state and error message
+    Assert.assertEquals(IngestionState.COMPLETED, reportData.getIngestionState());
+    Assert.assertNull(reportData.getErrorMsg());
+
+    // Verify unparseable data
     ParseExceptionReport parseExceptionReport =
         ParseExceptionReport.forPhase(reportData, RowIngestionMeters.BUILD_SEGMENTS);
 
@@ -3104,7 +3155,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             new TestKafkaFormatWithMalformedDataDetection(INPUT_FORMAT),
-            null
+            null,
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
 
@@ -3178,7 +3230,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             new TestKafkaFormatWithMalformedDataDetection(INPUT_FORMAT),
-            null
+            null,
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
 
@@ -3193,9 +3246,14 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
     Assert.assertEquals(ImmutableList.of(), publishedDescriptors());
     Assert.assertNull(newDataSchemaMetadata());
 
+    // Verify ingestion state and error message
+    final IngestionStatsAndErrors reportData = getTaskReportData();
+    Assert.assertEquals(IngestionState.BUILD_SEGMENTS, reportData.getIngestionState());
+    Assert.assertNotNull(reportData.getErrorMsg());
+
     // Verify there is no unparseable data in the report since we've 0 saved parse exceptions
     ParseExceptionReport parseExceptionReport =
-        ParseExceptionReport.forPhase(getTaskReportData(), RowIngestionMeters.BUILD_SEGMENTS);
+        ParseExceptionReport.forPhase(reportData, RowIngestionMeters.BUILD_SEGMENTS);
 
     Assert.assertEquals(ImmutableList.of(), parseExceptionReport.getErrorMessages());
   }
@@ -3225,7 +3283,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
-            null
+            null,
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
 
@@ -3234,6 +3293,12 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     Assert.assertEquals(TaskState.SUCCESS, status.getStatusCode());
     IngestionStatsAndErrors reportData = getTaskReportData();
+
+    // Verify ingestion state and error message
+    Assert.assertEquals(IngestionState.COMPLETED, reportData.getIngestionState());
+    Assert.assertNull(reportData.getErrorMsg());
+
+    // Verify report metrics
     Assert.assertEquals(reportData.getRecordsProcessed().size(), 1);
     Assert.assertEquals(reportData.getRecordsProcessed().values().iterator().next(), (Long) 6L);
   }
@@ -3273,7 +3338,8 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
             null,
             null,
             INPUT_FORMAT,
-            null
+            null,
+            Duration.standardHours(2).getStandardMinutes()
         )
     );
 
@@ -3282,6 +3348,12 @@ public class KafkaIndexTaskTest extends SeekableStreamIndexTaskTestBase
 
     Assert.assertEquals(TaskState.SUCCESS, status.getStatusCode());
     IngestionStatsAndErrors reportData = getTaskReportData();
+
+    // Verify ingestion state and error message
+    Assert.assertEquals(IngestionState.COMPLETED, reportData.getIngestionState());
+    Assert.assertNull(reportData.getErrorMsg());
+
+    // Verify report metrics
     Assert.assertEquals(reportData.getRecordsProcessed().size(), 2);
     Assert.assertTrue(reportData.getRecordsProcessed().values().containsAll(ImmutableSet.of(6L, 2L)));
   }

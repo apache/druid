@@ -67,7 +67,7 @@ public class CardinalityAggregatorFactory extends AggregatorFactory
     return ImmutableList.copyOf(
         Lists.transform(
             fields,
-            new Function<DimensionSpec, String>()
+            new Function<>()
             {
               @Override
               public String apply(DimensionSpec input)
@@ -84,7 +84,7 @@ public class CardinalityAggregatorFactory extends AggregatorFactory
     return ImmutableList.copyOf(
         Lists.transform(
             fieldNames,
-            new Function<String, DimensionSpec>()
+            new Function<>()
             {
               @Override
               public DimensionSpec apply(String input)

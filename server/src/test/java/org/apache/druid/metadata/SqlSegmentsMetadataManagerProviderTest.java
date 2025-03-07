@@ -44,7 +44,7 @@ public class SqlSegmentsMetadataManagerProviderTest
   public void testLifecycleStartCreatesSegmentTables() throws Exception
   {
     final TestDerbyConnector connector = derbyConnectorRule.getConnector();
-    final SegmentsMetadataManagerConfig config = new SegmentsMetadataManagerConfig();
+    final SegmentsMetadataManagerConfig config = new SegmentsMetadataManagerConfig(null, null);
     final Lifecycle lifecycle = new Lifecycle();
     final SegmentSchemaCache segmentSchemaCache = new SegmentSchemaCache(new NoopServiceEmitter());
     SqlSegmentsMetadataManagerProvider provider = new SqlSegmentsMetadataManagerProvider(
@@ -54,7 +54,8 @@ public class SqlSegmentsMetadataManagerProviderTest
         connector,
         lifecycle,
         segmentSchemaCache,
-        CentralizedDatasourceSchemaConfig.create()
+        CentralizedDatasourceSchemaConfig.create(),
+        NoopServiceEmitter.instance()
     );
     SegmentsMetadataManager manager = provider.get();
     Assert.assertTrue(manager instanceof SqlSegmentsMetadataManager);

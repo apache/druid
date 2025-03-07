@@ -25,6 +25,7 @@ import {
   Intent,
   Tab,
   Tabs,
+  TabsExpander,
 } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import * as JSONBig from 'json-bigint-native';
@@ -40,10 +41,11 @@ import { Api } from '../../../singletons';
 import type { QueryExplanation } from '../../../utils';
 import {
   deepGet,
-  formatSignature,
+  formatColumnMappingsAndSignature,
   getDruidErrorMessage,
   nonEmptyArray,
   queryDruidSql,
+  queryDruidSqlDart,
 } from '../../../utils';
 
 import './explain-dialog.scss';
@@ -73,7 +75,8 @@ export const ExplainDialog = React.memo(function ExplainDialog(props: ExplainDia
   const { queryWithContext, onClose, openQueryLabel, onOpenQuery, mandatoryQueryContext } = props;
 
   const [explainState] = useQueryManager<QueryContextEngine, QueryExplanation[] | string>({
-    processQuery: async queryWithContext => {
+    initQuery: queryWithContext,
+    processQuery: async (queryWithContext, cancelToken) => {
       const { engine, queryString, queryContext, wrapQueryLimit } = queryWithContext;
 
       let context: QueryContext | undefined;
@@ -94,13 +97,25 @@ export const ExplainDialog = React.memo(function ExplainDialog(props: ExplainDia
       };
 
       let result: any[];
-      try {
-        result =
-          engine === 'sql-msq-task'
-            ? (await Api.instance.post(`/druid/v2/sql/task`, payload)).data
-            : await queryDruidSql(payload);
-      } catch (e) {
-        throw new Error(getDruidErrorMessage(e));
+      switch (engine) {
+        case 'sql-native':
+          result = await queryDruidSql(payload, cancelToken);
+          break;
+
+        case 'sql-msq-task':
+          try {
+            result = (await Api.instance.post(`/druid/v2/sql/task`, payload, { cancelToken })).data;
+          } catch (e) {
+            throw new Error(getDruidErrorMessage(e));
+          }
+          break;
+
+        case 'sql-msq-dart':
+          result = await queryDruidSqlDart(payload, cancelToken);
+          break;
+
+        default:
+          throw new Error(`Explain not supported for engine ${engine}`);
       }
 
       const plan = deepGet(result, '0.PLAN');
@@ -114,7 +129,6 @@ export const ExplainDialog = React.memo(function ExplainDialog(props: ExplainDia
         return plan;
       }
     },
-    initQuery: queryWithContext,
   });
 
   let content: JSX.Element;
@@ -141,7 +155,7 @@ export const ExplainDialog = React.memo(function ExplainDialog(props: ExplainDia
           />
         </FormGroup>
         <FormGroup className="signature-group" label="Signature">
-          <InputGroup defaultValue={formatSignature(queryExplanation)} readOnly />
+          <InputGroup defaultValue={formatColumnMappingsAndSignature(queryExplanation)} readOnly />
         </FormGroup>
         {openQueryLabel && (
           <Button
@@ -180,7 +194,7 @@ export const ExplainDialog = React.memo(function ExplainDialog(props: ExplainDia
               panel={renderQueryExplanation(queryExplanation)}
             />
           ))}
-          <Tabs.Expander />
+          <TabsExpander />
         </Tabs>
       );
     }

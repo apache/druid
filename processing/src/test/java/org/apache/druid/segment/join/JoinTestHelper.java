@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
 import org.apache.druid.data.input.impl.DimensionSchema;
@@ -34,8 +33,6 @@ import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
@@ -48,6 +45,7 @@ import org.apache.druid.segment.BaseObjectColumnValueSelector;
 import org.apache.druid.segment.ColumnProcessorFactory;
 import org.apache.druid.segment.ColumnProcessors;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.DimensionHandlerUtils;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IndexBuilder;
@@ -122,7 +120,7 @@ public class JoinTestHelper
                   .build();
 
   private static final ColumnProcessorFactory<Supplier<Object>> SIMPLE_READER =
-      new ColumnProcessorFactory<Supplier<Object>>()
+      new ColumnProcessorFactory<>()
       {
         @Override
         public ColumnType defaultType()
@@ -139,19 +137,19 @@ public class JoinTestHelper
         @Override
         public Supplier<Object> makeFloatProcessor(BaseFloatColumnValueSelector selector)
         {
-          return () -> NullHandling.sqlCompatible() && selector.isNull() ? null : selector.getFloat();
+          return () -> selector.isNull() ? null : selector.getFloat();
         }
 
         @Override
         public Supplier<Object> makeDoubleProcessor(BaseDoubleColumnValueSelector selector)
         {
-          return () -> NullHandling.sqlCompatible() && selector.isNull() ? null : selector.getDouble();
+          return () -> selector.isNull() ? null : selector.getDouble();
         }
 
         @Override
         public Supplier<Object> makeLongProcessor(BaseLongColumnValueSelector selector)
         {
-          return () -> NullHandling.sqlCompatible() && selector.isNull() ? null : selector.getLong();
+          return () -> selector.isNull() ? null : selector.getLong();
         }
 
         @Override
@@ -175,7 +173,7 @@ public class JoinTestHelper
 
   private static RowAdapter<Map<String, Object>> createMapRowAdapter(final RowSignature signature)
   {
-    return new RowAdapter<Map<String, Object>>()
+    return new RowAdapter<>()
     {
       @Override
       public ToLongFunction<Map<String, Object>> timestampFunction()
@@ -325,47 +323,70 @@ public class JoinTestHelper
     );
   }
 
-  public static List<Object[]> readCursors(final Sequence<Cursor> cursors, final List<String> columns)
+  public static List<Object[]> readCursor(final CursorHolder cursorHolder, final List<String> columns)
   {
-    return cursors.flatMap(
-        cursor -> {
-          final List<Supplier<Object>> readers = columns
-              .stream()
-              .map(
-                  column ->
-                      ColumnProcessors.makeProcessor(
-                          column,
-                          SIMPLE_READER,
-                          cursor.getColumnSelectorFactory()
-                      )
-              )
-              .collect(Collectors.toList());
+    try {
+      final Cursor cursor = cursorHolder.asCursor();
+      final List<Supplier<Object>> readers = columns
+          .stream()
+          .map(
+              column ->
+                  ColumnProcessors.makeProcessor(
+                      column,
+                      SIMPLE_READER,
+                      cursor.getColumnSelectorFactory()
+                  )
+          )
+          .collect(Collectors.toList());
 
-          final List<Object[]> rows = new ArrayList<>();
+      final List<Object[]> rows = new ArrayList<>();
+      boolean interruptible = false; // test both advance() and advanceUninterruptibly()
 
-          while (!cursor.isDone()) {
-            final Object[] row = new Object[columns.size()];
-
-            for (int i = 0; i < row.length; i++) {
-              row[i] = readers.get(i).get();
-            }
-
-            rows.add(row);
-            cursor.advance();
-          }
-
-          return Sequences.simple(rows);
+      // test cursor reset
+      while (!cursor.isDone()) {
+        if (interruptible) {
+          cursor.advance();
+        } else {
+          cursor.advanceUninterruptibly();
         }
-    ).toList();
+
+        interruptible = !interruptible;
+      }
+
+      cursor.reset();
+
+      while (!cursor.isDone()) {
+        final Object[] row = new Object[columns.size()];
+
+        for (int i = 0; i < row.length; i++) {
+          row[i] = readers.get(i).get();
+        }
+
+        rows.add(row);
+        if (interruptible) {
+          cursor.advance();
+        } else {
+          cursor.advanceUninterruptibly();
+        }
+
+        interruptible = !interruptible;
+      }
+
+      return rows;
+    }
+    finally {
+      cursorHolder.close();
+    }
   }
 
-  public static void verifyCursors(
-      final Sequence<Cursor> cursors,
+
+  public static void verifyCursor(
+      final CursorHolder cursorHolder,
       final List<String> columns,
       final List<Object[]> expectedRows
   )
   {
-    final List<Object[]> rows = readCursors(cursors, columns);
+    final List<Object[]> rows = readCursor(cursorHolder, columns);
 
     for (int i = 0; i < rows.size(); i++) {
       try {

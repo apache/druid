@@ -56,7 +56,6 @@ public class SQLMetadataConnectorSchemaPersistenceTest
     tables.add(tablesConfig.getSegmentsTable());
     tables.add(tablesConfig.getRulesTable());
     tables.add(tablesConfig.getLockTable(entryType));
-    tables.add(tablesConfig.getLogTable(entryType));
     tables.add(tablesConfig.getEntryTable(entryType));
     tables.add(tablesConfig.getAuditTable());
     tables.add(tablesConfig.getSupervisorTable());
@@ -67,7 +66,6 @@ public class SQLMetadataConnectorSchemaPersistenceTest
     dropSequence.add(tablesConfig.getSegmentSchemasTable());
     dropSequence.add(tablesConfig.getRulesTable());
     dropSequence.add(tablesConfig.getLockTable(entryType));
-    dropSequence.add(tablesConfig.getLogTable(entryType));
     dropSequence.add(tablesConfig.getEntryTable(entryType));
     dropSequence.add(tablesConfig.getAuditTable());
     dropSequence.add(tablesConfig.getSupervisorTable());

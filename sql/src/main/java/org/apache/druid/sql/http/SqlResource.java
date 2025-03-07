@@ -33,7 +33,7 @@ import org.apache.druid.server.QueryResponse;
 import org.apache.druid.server.QueryResultPusher;
 import org.apache.druid.server.ResponseContextConfig;
 import org.apache.druid.server.initialization.ServerConfig;
-import org.apache.druid.server.security.Access;
+import org.apache.druid.server.security.AuthorizationResult;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ResourceAction;
@@ -82,7 +82,7 @@ public class SqlResource
   private final DruidNode selfNode;
 
   @Inject
-  SqlResource(
+  protected SqlResource(
       final ObjectMapper jsonMapper,
       final AuthorizerMapper authorizerMapper,
       final @NativeQuery SqlStatementFactory sqlStatementFactory,
@@ -140,21 +140,9 @@ public class SqlResource
       return Response.status(Status.NOT_FOUND).build();
     }
 
-    // Considers only datasource and table resources; not context
-    // key resources when checking permissions. This means that a user's
-    // permission to cancel a query depends on the datasource, not the
-    // context variables used in the query.
-    Set<ResourceAction> resources = lifecycles
-        .stream()
-        .flatMap(lifecycle -> lifecycle.resources().stream())
-        .collect(Collectors.toSet());
-    Access access = AuthorizationUtils.authorizeAllResourceActions(
-        req,
-        resources,
-        authorizerMapper
-    );
+    final AuthorizationResult authResult = authorizeCancellation(req, lifecycles);
 
-    if (access.isAllowed()) {
+    if (authResult.allowAccessWithNoRestriction()) {
       // should remove only the lifecycles in the snapshot.
       sqlLifecycleManager.removeAll(sqlQueryId, lifecycles);
       lifecycles.forEach(Cancelable::cancel);
@@ -340,5 +328,24 @@ public class SqlResource
       }
       out.write(jsonMapper.writeValueAsBytes(ex));
     }
+  }
+
+  /**
+   * Authorize a query cancellation operation.
+   * <p>
+   * Considers only datasource and table resources; not context key resources when checking permissions. This means
+   * that a user's permission to cancel a query depends on the datasource, not the context variables used in the query.
+   */
+  public AuthorizationResult authorizeCancellation(final HttpServletRequest req, final List<Cancelable> cancelables)
+  {
+    Set<ResourceAction> resources = cancelables
+        .stream()
+        .flatMap(lifecycle -> lifecycle.resources().stream())
+        .collect(Collectors.toSet());
+    return AuthorizationUtils.authorizeAllResourceActions(
+        req,
+        resources,
+        authorizerMapper
+    );
   }
 }

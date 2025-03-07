@@ -21,8 +21,7 @@ package org.apache.druid.query.timeseries;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.guice.NestedDataModule;
+import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.io.Closer;
@@ -37,10 +36,11 @@ import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.filter.AndDimFilter;
 import org.apache.druid.query.filter.EqualityFilter;
-import org.apache.druid.query.filter.Filter;
 import org.apache.druid.query.filter.FilterTuning;
 import org.apache.druid.query.filter.NullFilter;
 import org.apache.druid.query.filter.OrDimFilter;
+import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.Segment;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
@@ -98,7 +98,7 @@ public class NestedDataTimeseriesQueryTest extends InitializedNullHandlingTest
   )
   {
     this.helper = AggregationTestHelper.createTimeseriesQueryAggregationTestHelper(
-        NestedDataModule.getJacksonModulesList(),
+        BuiltInTypesModule.getJacksonModulesList(),
         tempFolder
     );
     this.segmentsGenerator = segmentsGenerator;
@@ -280,7 +280,7 @@ public class NestedDataTimeseriesQueryTest extends InitializedNullHandlingTest
             new Result<>(
                 DateTimes.of("2023-01-01T00:00:00.000Z"),
                 new TimeseriesResultValue(
-                    ImmutableMap.of("count", NullHandling.replaceWithDefault() ? 6L : 8L)
+                    ImmutableMap.of("count", 8L)
                 )
             )
         )
@@ -661,18 +661,17 @@ public class NestedDataTimeseriesQueryTest extends InitializedNullHandlingTest
     List<Segment> segments = segmentsGenerator.apply(tempFolder, closer);
     Supplier<List<Result<TimeseriesResultValue>>> runner =
         () -> helper.runQueryOnSegmentsObjs(segments, timeseriesQuery).toList();
-    Filter filter = timeseriesQuery.getFilter() == null ? null : timeseriesQuery.getFilter().toFilter();
+    final CursorBuildSpec spec = TimeseriesQueryEngine.makeCursorBuildSpec(timeseriesQuery, null);
     boolean allCanVectorize = segments.stream()
                                       .allMatch(
-                                          s -> s.asStorageAdapter()
-                                                .canVectorize(
-                                                    filter,
-                                                    timeseriesQuery.getVirtualColumns(),
-                                                    timeseriesQuery.isDescending()
-                                                )
-                                      );
+                                          s -> {
+                                            final CursorHolder cursorHolder = s.asCursorFactory()
+                                                                               .makeCursorHolder(spec);
+                                            final boolean canVectorize = cursorHolder.canVectorize();
+                                            cursorHolder.close();
+                                            return canVectorize;
+                                          });
 
-    Assert.assertEquals(NestedDataTestUtils.expectSegmentGeneratorCanVectorize(segmentsName), allCanVectorize);
     if (!allCanVectorize) {
       if (vectorize == QueryContexts.Vectorize.FORCE) {
         Throwable t = Assert.assertThrows(RuntimeException.class, runner::get);

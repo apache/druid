@@ -114,7 +114,7 @@ public class LDAPCredentialsValidatorTest
               ArgumentMatchers.eq(LDAP_CONFIG.getBaseDn()),
               ArgumentMatchers.eq(StringUtils.format(LDAP_CONFIG.getUserSearch(), encodedUsername)),
               ArgumentMatchers.any(SearchControls.class))
-      ).thenReturn(new NamingEnumeration<SearchResult>()
+      ).thenReturn(new NamingEnumeration<>()
       {
         @Override
         public SearchResult next()

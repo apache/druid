@@ -25,7 +25,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.opencsv.RFC4180Parser;
 import com.opencsv.RFC4180ParserBuilder;
 import com.opencsv.enums.CSVReaderNullFieldIndicator;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputRowSchema;
@@ -47,10 +46,11 @@ public class CsvInputFormat extends FlatTextInputFormat
       @JsonProperty("listDelimiter") @Nullable String listDelimiter,
       @Deprecated @JsonProperty("hasHeaderRow") @Nullable Boolean hasHeaderRow,
       @JsonProperty("findColumnsFromHeader") @Nullable Boolean findColumnsFromHeader,
-      @JsonProperty("skipHeaderRows") int skipHeaderRows
+      @JsonProperty("skipHeaderRows") int skipHeaderRows,
+      @JsonProperty("tryParseNumbers") @Nullable Boolean tryParseNumbers
   )
   {
-    super(columns, listDelimiter, String.valueOf(SEPARATOR), hasHeaderRow, findColumnsFromHeader, skipHeaderRows);
+    super(columns, listDelimiter, String.valueOf(SEPARATOR), hasHeaderRow, findColumnsFromHeader, skipHeaderRows, tryParseNumbers);
   }
 
   @Override
@@ -80,17 +80,16 @@ public class CsvInputFormat extends FlatTextInputFormat
         isFindColumnsFromHeader(),
         getSkipHeaderRows(),
         line -> Arrays.asList(parser.parseLine(StringUtils.fromUtf8(line))),
-        useListBasedInputRows()
+        useListBasedInputRows(),
+        shouldTryParseNumbers()
     );
   }
 
   public static RFC4180Parser createOpenCsvParser()
   {
-    return NullHandling.replaceWithDefault()
-           ? new RFC4180ParserBuilder().withSeparator(SEPARATOR).build()
-           : new RFC4180ParserBuilder().withFieldAsNull(CSVReaderNullFieldIndicator.EMPTY_SEPARATORS)
-                                       .withSeparator(SEPARATOR)
-                                       .build();
+    return new RFC4180ParserBuilder().withFieldAsNull(CSVReaderNullFieldIndicator.EMPTY_SEPARATORS)
+                                     .withSeparator(SEPARATOR)
+                                     .build();
   }
 
   @Override

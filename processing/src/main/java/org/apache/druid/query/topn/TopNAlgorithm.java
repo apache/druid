@@ -20,6 +20,7 @@
 package org.apache.druid.query.topn;
 
 import org.apache.druid.query.ColumnSelectorPlus;
+import org.apache.druid.query.CursorGranularizer;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.topn.types.TopNColumnAggregatesProcessor;
 import org.apache.druid.segment.Cursor;
@@ -34,7 +35,7 @@ public interface TopNAlgorithm<DimValSelector, Parameters extends TopNParams>
   int INIT_POSITION_VALUE = -1;
   int SKIP_POSITION_VALUE = -2;
 
-  TopNParams makeInitParams(ColumnSelectorPlus<TopNColumnAggregatesProcessor> selectorPlus, Cursor cursor);
+  TopNParams makeInitParams(ColumnSelectorPlus<TopNColumnAggregatesProcessor> selectorPlus, Cursor cursor, CursorGranularizer granularizer);
 
   void run(
       Parameters params,

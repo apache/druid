@@ -84,45 +84,7 @@ public class DummyForInjectionAppenderatorsManager implements AppenderatorsManag
   }
 
   @Override
-  public Appenderator createOfflineAppenderatorForTask(
-      String taskId,
-      DataSchema schema,
-      AppenderatorConfig config,
-      SegmentGenerationMetrics metrics,
-      DataSegmentPusher dataSegmentPusher,
-      ObjectMapper objectMapper,
-      IndexIO indexIO,
-      IndexMerger indexMerger,
-      RowIngestionMeters rowIngestionMeters,
-      ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates,
-      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
-  )
-  {
-    throw new UOE(ERROR_MSG);
-  }
-
-  @Override
-  public Appenderator createOpenSegmentsOfflineAppenderatorForTask(
-      String taskId,
-      DataSchema schema,
-      AppenderatorConfig config,
-      SegmentGenerationMetrics metrics,
-      DataSegmentPusher dataSegmentPusher,
-      ObjectMapper objectMapper,
-      IndexIO indexIO,
-      IndexMerger indexMerger,
-      RowIngestionMeters rowIngestionMeters,
-      ParseExceptionHandler parseExceptionHandler,
-      boolean useMaxMemoryEstimates,
-      CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig
-  )
-  {
-    throw new UOE(ERROR_MSG);
-  }
-
-  @Override
-  public Appenderator createClosedSegmentsOfflineAppenderatorForTask(
+  public Appenderator createBatchAppenderatorForTask(
       String taskId,
       DataSchema schema,
       AppenderatorConfig config,

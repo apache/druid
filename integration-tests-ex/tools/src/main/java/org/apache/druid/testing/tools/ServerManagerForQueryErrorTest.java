@@ -47,7 +47,6 @@ import org.apache.druid.query.ResourceLimitExceededException;
 import org.apache.druid.query.SegmentDescriptor;
 import org.apache.druid.segment.ReferenceCountingSegment;
 import org.apache.druid.segment.SegmentReference;
-import org.apache.druid.segment.join.JoinableFactoryWrapper;
 import org.apache.druid.server.SegmentManager;
 import org.apache.druid.server.coordination.ServerManager;
 import org.apache.druid.server.initialization.ServerConfig;
@@ -98,7 +97,6 @@ public class ServerManagerForQueryErrorTest extends ServerManager
       Cache cache,
       CacheConfig cacheConfig,
       SegmentManager segmentManager,
-      JoinableFactoryWrapper joinableFactoryWrapper,
       ServerConfig serverConfig
   )
   {
@@ -111,7 +109,6 @@ public class ServerManagerForQueryErrorTest extends ServerManager
         cache,
         cacheConfig,
         segmentManager,
-        joinableFactoryWrapper,
         serverConfig
     );
   }
@@ -150,7 +147,7 @@ public class ServerManagerForQueryErrorTest extends ServerManager
         return new ReportTimelineMissingSegmentQueryRunner<>(descriptor);
       }
     } else if (queryContext.getBoolean(QUERY_TIMEOUT_TEST_CONTEXT_KEY, false)) {
-      return (queryPlus, responseContext) -> new Sequence<T>()
+      return (queryPlus, responseContext) -> new Sequence<>()
       {
         @Override
         public <OutType> OutType accumulate(OutType initValue, Accumulator<OutType, T> accumulator)
@@ -165,7 +162,7 @@ public class ServerManagerForQueryErrorTest extends ServerManager
         }
       };
     } else if (queryContext.getBoolean(QUERY_CAPACITY_EXCEEDED_TEST_CONTEXT_KEY, false)) {
-      return (queryPlus, responseContext) -> new Sequence<T>()
+      return (queryPlus, responseContext) -> new Sequence<>()
       {
         @Override
         public <OutType> OutType accumulate(OutType initValue, Accumulator<OutType, T> accumulator)
@@ -180,7 +177,7 @@ public class ServerManagerForQueryErrorTest extends ServerManager
         }
       };
     } else if (queryContext.getBoolean(QUERY_UNSUPPORTED_TEST_CONTEXT_KEY, false)) {
-      return (queryPlus, responseContext) -> new Sequence<T>()
+      return (queryPlus, responseContext) -> new Sequence<>()
       {
         @Override
         public <OutType> OutType accumulate(OutType initValue, Accumulator<OutType, T> accumulator)
@@ -195,7 +192,7 @@ public class ServerManagerForQueryErrorTest extends ServerManager
         }
       };
     } else if (queryContext.getBoolean(RESOURCE_LIMIT_EXCEEDED_TEST_CONTEXT_KEY, false)) {
-      return (queryPlus, responseContext) -> new Sequence<T>()
+      return (queryPlus, responseContext) -> new Sequence<>()
       {
         @Override
         public <OutType> OutType accumulate(OutType initValue, Accumulator<OutType, T> accumulator)
@@ -210,7 +207,7 @@ public class ServerManagerForQueryErrorTest extends ServerManager
         }
       };
     } else if (queryContext.getBoolean(QUERY_FAILURE_TEST_CONTEXT_KEY, false)) {
-      return (queryPlus, responseContext) -> new Sequence<T>()
+      return (queryPlus, responseContext) -> new Sequence<>()
       {
         @Override
         public <OutType> OutType accumulate(OutType initValue, Accumulator<OutType, T> accumulator)

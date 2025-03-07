@@ -46,14 +46,16 @@ import org.apache.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import org.apache.druid.metadata.MetadataSupervisorManager;
 import org.apache.druid.metadata.SqlSegmentsMetadataManager;
 import org.apache.druid.metadata.TestDerbyConnector;
+import org.apache.druid.metadata.segment.SqlSegmentMetadataTransactionFactory;
+import org.apache.druid.metadata.segment.cache.NoopSegmentMetadataCache;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.indexing.DataSchema;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
-import org.apache.druid.segment.realtime.firehose.ChatHandlerProvider;
-import org.apache.druid.segment.transform.TransformSpec;
+import org.apache.druid.segment.realtime.ChatHandlerProvider;
+import org.apache.druid.server.coordinator.simulate.TestDruidLeaderSelector;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
@@ -106,6 +108,13 @@ public class MaterializedViewSupervisorTest
         derbyConnector
     );
     indexerMetadataStorageCoordinator = new IndexerSQLMetadataStorageCoordinator(
+        new SqlSegmentMetadataTransactionFactory(
+            objectMapper,
+            derbyConnectorRule.metadataTablesConfigSupplier().get(),
+            derbyConnector,
+            new TestDruidLeaderSelector(),
+            new NoopSegmentMetadataCache()
+        ),
         objectMapper,
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         derbyConnector,
@@ -237,14 +246,10 @@ public class MaterializedViewSupervisorTest
     Map<Interval, HadoopIndexTask> runningTasks = runningTasksPair.lhs;
     Map<Interval, String> runningVersion = runningTasksPair.rhs;
 
-    DataSchema dataSchema = new DataSchema(
-        "test_datasource",
-        null,
-        null,
-        null,
-        TransformSpec.NONE,
-        objectMapper
-    );
+    DataSchema dataSchema = DataSchema.builder()
+                                      .withDataSource("test_datasource")
+                                      .withObjectMapper(objectMapper)
+                                      .build();
     HadoopIOConfig hadoopIOConfig = new HadoopIOConfig(new HashMap<>(), null, null);
     HadoopIngestionSpec spec = new HadoopIngestionSpec(dataSchema, hadoopIOConfig, null);
     HadoopIndexTask task1 = new HadoopIndexTask(
@@ -336,39 +341,6 @@ public class MaterializedViewSupervisorTest
 
     EasyMock.replay(mock);
     supervisor.run();
-  }
-
-  @Test
-  public void testResetOffsetsNotSupported()
-  {
-    MaterializedViewSupervisorSpec suspended = new MaterializedViewSupervisorSpec(
-        "base",
-        new DimensionsSpec(Collections.singletonList(new StringDimensionSchema("dim"))),
-        new AggregatorFactory[]{new LongSumAggregatorFactory("m1", "m1")},
-        HadoopTuningConfig.makeDefaultTuningConfig(),
-        null,
-        null,
-        null,
-        null,
-        null,
-        true,
-        objectMapper,
-        taskMaster,
-        taskStorage,
-        metadataSupervisorManager,
-        sqlSegmentsMetadataManager,
-        indexerMetadataStorageCoordinator,
-        new MaterializedViewTaskConfig(),
-        EasyMock.createMock(AuthorizerMapper.class),
-        EasyMock.createMock(ChatHandlerProvider.class),
-        new SupervisorStateManagerConfig()
-    );
-    MaterializedViewSupervisor supervisor = (MaterializedViewSupervisor) suspended.createSupervisor();
-    Assert.assertThrows(
-        "Reset offsets not supported in MaterializedViewSupervisor",
-        UnsupportedOperationException.class,
-        () -> supervisor.resetOffsets(null)
-    );
   }
 
   private List<DataSegment> createBaseSegments()

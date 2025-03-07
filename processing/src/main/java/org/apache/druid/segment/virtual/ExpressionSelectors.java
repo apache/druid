@@ -23,7 +23,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.NonnullPair;
 import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.Expr;
@@ -205,10 +204,14 @@ public class ExpressionSelectors
       final String column = plan.getSingleInputName();
       final ColumnType inputType = plan.getSingleInputType();
       if (inputType.is(ValueType.LONG)) {
+        // Skip LRU cache when the underlying data is sorted by __time. Note: data is not always sorted by __time; when
+        // forceSegmentSortByTime: false, segments can be written in non-__time order. However, this
+        // information is not currently available here, so we assume the common case, which is __time-sortedness.
+        final boolean useLruCache = !ColumnHolder.TIME_COLUMN_NAME.equals(column);
         return new SingleLongInputCachingExpressionColumnValueSelector(
             columnSelectorFactory.makeColumnValueSelector(column),
             plan.getExpression(),
-            !ColumnHolder.TIME_COLUMN_NAME.equals(column), // __time doesn't need an LRU cache since it is sorted.
+            useLruCache,
             rowIdSupplier
         );
       } else if (inputType.is(ValueType.STRING)) {
@@ -415,16 +418,12 @@ public class ExpressionSelectors
       Supplier<T> supplier
   )
   {
-    if (NullHandling.replaceWithDefault()) {
-      return supplier;
-    } else {
-      return () -> {
-        if (selector.isNull()) {
-          return null;
-        }
-        return supplier.get();
-      };
-    }
+    return () -> {
+      if (selector.isNull()) {
+        return null;
+      }
+      return supplier.get();
+    };
   }
 
   /**
@@ -475,15 +474,15 @@ public class ExpressionSelectors
     }
 
     final Class<?> clazz = selector.classOfObject();
-    if (Number.class.isAssignableFrom(clazz) || String.class.isAssignableFrom(clazz)) {
-      // Number, String supported as-is.
+    if (Number.class.isAssignableFrom(clazz) || String.class.isAssignableFrom(clazz) || Object[].class.isAssignableFrom(clazz)) {
+      // Number, String, Arrays supported as-is.
       return selector::getObject;
     } else if (clazz.isAssignableFrom(Number.class) || clazz.isAssignableFrom(String.class)) {
       // Might be Numbers and Strings. Use a selector that double-checks.
       return () -> {
         final Object val = selector.getObject();
         if (val instanceof List) {
-          NonnullPair<ExpressionType, Object[]> coerced = ExprEval.coerceListToArray((List) val, homogenizeMultiValue);
+          NonnullPair<ExpressionType, Object[]> coerced = ExprEval.coerceListToArray((List<?>) val, homogenizeMultiValue);
           if (coerced == null) {
             return null;
           }
@@ -496,7 +495,7 @@ public class ExpressionSelectors
       return () -> {
         final Object val = selector.getObject();
         if (val != null) {
-          NonnullPair<ExpressionType, Object[]> coerced = ExprEval.coerceListToArray((List) val, homogenizeMultiValue);
+          NonnullPair<ExpressionType, Object[]> coerced = ExprEval.coerceListToArray((List<?>) val, homogenizeMultiValue);
           if (coerced == null) {
             return null;
           }

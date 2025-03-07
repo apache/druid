@@ -41,15 +41,16 @@ import org.apache.druid.indexing.overlord.http.security.SupervisorResourceFilter
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.segment.incremental.ParseExceptionReport;
-import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.AuthConfig;
+import org.apache.druid.server.security.AuthorizationResult;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
 import org.apache.druid.server.security.ResourceType;
+import org.apache.druid.utils.CollectionUtils;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -118,12 +119,16 @@ public class SupervisorResource
   @POST
   @Consumes(MediaType.APPLICATION_JSON)
   @Produces(MediaType.APPLICATION_JSON)
-  public Response specPost(final SupervisorSpec spec, @Context final HttpServletRequest req)
+  public Response specPost(
+      final SupervisorSpec spec,
+      @QueryParam("skipRestartIfUnmodified") Boolean skipRestartIfUnmodified,
+      @Context final HttpServletRequest req
+  )
   {
     return asLeaderWithSupervisorManager(
         manager -> {
           Preconditions.checkArgument(
-              spec.getDataSources() != null && spec.getDataSources().size() > 0,
+              !CollectionUtils.isNullOrEmpty(spec.getDataSources()),
               "No dataSources found to perform authorization checks"
           );
           final Set<ResourceAction> resourceActions;
@@ -141,14 +146,17 @@ public class SupervisorResource
                            .build();
           }
 
-          Access authResult = AuthorizationUtils.authorizeAllResourceActions(
+          AuthorizationResult authResult = AuthorizationUtils.authorizeAllResourceActions(
               req,
               resourceActions,
               authorizerMapper
           );
 
-          if (!authResult.isAllowed()) {
-            throw new ForbiddenException(authResult.toString());
+          if (!authResult.allowAccessWithNoRestriction()) {
+            throw new ForbiddenException(authResult.getErrorMessage());
+          }
+          if (Boolean.TRUE.equals(skipRestartIfUnmodified) && !manager.shouldUpdateSupervisor(spec)) {
+            return Response.ok(ImmutableMap.of("id", spec.getId())).build();
           }
 
           manager.createOrUpdateAndStartSupervisor(spec);
@@ -409,13 +417,16 @@ public class SupervisorResource
   @Consumes(MediaType.APPLICATION_JSON)
   @Produces(MediaType.APPLICATION_JSON)
   @ResourceFilters(SupervisorResourceFilter.class)
-  public Response handoffTaskGroups(@PathParam("id") final String id, @Nonnull final HandoffTaskGroupsRequest handoffTaskGroupsRequest)
+  public Response handoffTaskGroups(
+      @PathParam("id") final String id,
+      @Nonnull final HandoffTaskGroupsRequest handoffTaskGroupsRequest
+  )
   {
     List<Integer> taskGroupIds = handoffTaskGroupsRequest.getTaskGroupIds();
-    if (taskGroupIds == null || taskGroupIds.isEmpty()) {
+    if (CollectionUtils.isNullOrEmpty(taskGroupIds)) {
       return Response.status(Response.Status.BAD_REQUEST)
-          .entity(ImmutableMap.of("error", "List of task groups to handoff can't be empty"))
-          .build();
+                     .entity(ImmutableMap.of("error", "List of task groups to handoff can't be empty"))
+                     .build();
 
     }
     return asLeaderWithSupervisorManager(
@@ -425,14 +436,20 @@ public class SupervisorResource
               return Response.ok().build();
             } else {
               return Response.status(Response.Status.NOT_FOUND)
-                  .entity(ImmutableMap.of("error", StringUtils.format("Supervisor was not found [%s]", id)))
-                  .build();
+                             .entity(ImmutableMap.of("error", StringUtils.format("Supervisor was not found [%s]", id)))
+                             .build();
             }
           }
           catch (NotImplementedException e) {
             return Response.status(Response.Status.BAD_REQUEST)
-                .entity(ImmutableMap.of("error", StringUtils.format("Supervisor [%s] does not support early handoff", id)))
-                .build();
+                           .entity(ImmutableMap.of(
+                               "error",
+                               StringUtils.format(
+                                   "Supervisor [%s] does not support early handoff",
+                                   id
+                               )
+                           ))
+                           .build();
           }
         }
     );
@@ -533,7 +550,7 @@ public class SupervisorResource
                         authorizerMapper
                     )
                 );
-            if (authorizedHistoryForId.size() > 0) {
+            if (!authorizedHistoryForId.isEmpty()) {
               return Response.ok(authorizedHistoryForId).build();
             }
           }

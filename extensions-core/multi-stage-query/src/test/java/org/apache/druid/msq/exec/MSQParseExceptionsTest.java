@@ -157,7 +157,7 @@ public class MSQParseExceptionsTest extends MSQTestBase
             .dataSource(
                 new ExternalDataSource(
                     new LocalInputSource(null, null, ImmutableList.of(toRead), SystemFields.none()),
-                    new CsvInputFormat(null, null, null, true, 0),
+                    new CsvInputFormat(null, null, null, true, 0, null),
                     RowSignature.builder()
                                 .add("timestamp", ColumnType.STRING)
                                 .add("agent_category", ColumnType.STRING)
@@ -180,6 +180,7 @@ public class MSQParseExceptionsTest extends MSQTestBase
                 )
             )
             .columns("v0", "v1")
+            .columnTypes(ColumnType.LONG, ColumnType.STRING)
             .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
             .context(defaultScanQueryContext(
                 context,
@@ -225,7 +226,7 @@ public class MSQParseExceptionsTest extends MSQTestBase
                         new ColumnMapping("v1", "agent_category")
                     )
                 ))
-                .destination(new DataSourceMSQDestination("foo1", Granularities.ALL, null, null))
+                .destination(new DataSourceMSQDestination("foo1", Granularities.ALL, null, null, null, null))
                 .tuningConfig(MSQTuningConfig.defaultConfig())
                 .build())
         .setQueryContext(DEFAULT_MSQ_CONTEXT)
@@ -255,7 +256,7 @@ public class MSQParseExceptionsTest extends MSQTestBase
             .dataSource(
                 new ExternalDataSource(
                     new LocalInputSource(null, null, ImmutableList.of(toRead), SystemFields.none()),
-                    new CsvInputFormat(null, null, null, true, 0),
+                    new CsvInputFormat(null, null, null, true, 0, null),
                     RowSignature.builder()
                                 .add("timestamp", ColumnType.STRING)
                                 .add("agent_category", ColumnType.STRING)
@@ -272,13 +273,14 @@ public class MSQParseExceptionsTest extends MSQTestBase
                     ColumnType.LONG
                 )
             )
-            .columns("agent_category", "v0")
+            .columns("v0", "agent_category")
+            .columnTypes(ColumnType.LONG, ColumnType.STRING)
             .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
             .context(defaultScanQueryContext(
                 context,
                 RowSignature.builder()
-                            .add("agent_category", ColumnType.STRING)
                             .add("v0", ColumnType.LONG)
+                            .add("agent_category", ColumnType.STRING)
                             .build()
             ))
             .build();
@@ -318,7 +320,7 @@ public class MSQParseExceptionsTest extends MSQTestBase
                         new ColumnMapping("agent_category", "agent_category")
                     )
                 ))
-                .destination(new DataSourceMSQDestination("foo1", Granularities.ALL, null, null))
+                .destination(new DataSourceMSQDestination("foo1", Granularities.ALL, null, null, null, null))
                 .tuningConfig(MSQTuningConfig.defaultConfig())
                 .build())
         .setQueryContext(runtimeContext)

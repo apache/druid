@@ -168,7 +168,7 @@ public class ForkingTaskRunner
           new ForkingTaskRunnerWorkItem(
             task,
             exec.submit(
-              new Callable<TaskStatus>() {
+              new Callable<>() {
                 @Override
                 public TaskStatus call()
                 {
@@ -273,7 +273,7 @@ public class ForkingTaskRunner
                         try {
                           List<String> taskJavaOptsArray = jsonMapper.convertValue(
                               task.getContextValue(ForkingTaskRunnerConfig.JAVA_OPTS_ARRAY_PROPERTY),
-                              new TypeReference<List<String>>() {}
+                              new TypeReference<>() {}
                           );
                           if (taskJavaOptsArray != null) {
                             command.addAll(taskJavaOptsArray);
@@ -376,11 +376,15 @@ public class ForkingTaskRunner
                         }
 
                         // If the task type is queryable, we need to load broadcast segments on the peon, used for
-                        // join queries
+                        // join queries. This is replaced by --loadBroadcastDatasourceMode option, but is preserved here
+                        // for backwards compatibility and can be removed in a future release.
                         if (task.supportsQueries()) {
                           command.add("--loadBroadcastSegments");
                           command.add("true");
                         }
+
+                        command.add("--loadBroadcastDatasourceMode");
+                        command.add(task.getBroadcastDatasourceLoadingSpec().getMode().toString());
 
                         if (!taskFile.exists()) {
                           jsonMapper.writeValue(taskFile, task);

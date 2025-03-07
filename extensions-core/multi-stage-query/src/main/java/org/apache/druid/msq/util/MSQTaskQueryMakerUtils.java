@@ -21,16 +21,15 @@ package org.apache.druid.msq.util;
 
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.java.util.common.IAE;
+import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.msq.exec.SegmentSource;
 import org.apache.druid.msq.indexing.MSQControllerTask;
-import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.destination.DataSourceMSQDestination;
-import org.apache.druid.segment.column.ColumnHolder;
+import org.apache.druid.msq.indexing.destination.MSQDestination;
+import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContext;
 
-import java.util.Collection;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.regex.Matcher;
@@ -76,23 +75,22 @@ public class MSQTaskQueryMakerUtils
   }
 
   /**
-   * Validates if each element of the sort order appears in the final output and if it is not empty then it starts with the
-   * __time column
+   * Validates that each element of {@link MultiStageQueryContext#CTX_SORT_ORDER}, if provided, appears in the
+   * final output.
    */
-  public static void validateSegmentSortOrder(final List<String> sortOrder, final Collection<String> allOutputColumns)
+  public static void validateContextSortOrderColumnsExist(
+      final List<String> contextSortOrder,
+      final Set<String> allOutputColumns
+  )
   {
-    final Set<String> allOutputColumnsSet = new HashSet<>(allOutputColumns);
-
-    for (final String column : sortOrder) {
-      if (!allOutputColumnsSet.contains(column)) {
-        throw new IAE("Column [%s] in segment sort order does not appear in the query output", column);
+    for (final String column : contextSortOrder) {
+      if (!allOutputColumns.contains(column)) {
+        throw InvalidSqlInput.exception(
+            "Column[%s] from context parameter[%s] does not appear in the query output",
+            column,
+            MultiStageQueryContext.CTX_SORT_ORDER
+        );
       }
-    }
-
-    if (sortOrder.size() > 0
-        && allOutputColumns.contains(ColumnHolder.TIME_COLUMN_NAME)
-        && !ColumnHolder.TIME_COLUMN_NAME.equals(sortOrder.get(0))) {
-      throw new IAE("Segment sort order must begin with column [%s]", ColumnHolder.TIME_COLUMN_NAME);
     }
   }
 
@@ -100,18 +98,19 @@ public class MSQTaskQueryMakerUtils
    * Validates that a query does not read from a datasource that it is ingesting data into, if realtime segments are
    * being queried.
    */
-  public static void validateRealtimeReindex(final MSQSpec querySpec)
+  public static void validateRealtimeReindex(QueryContext context, MSQDestination destination, Query<?> query)
   {
-    final SegmentSource segmentSources = MultiStageQueryContext.getSegmentSources(querySpec.getQuery().context());
-    if (MSQControllerTask.isReplaceInputDataSourceTask(querySpec) && SegmentSource.REALTIME.equals(segmentSources)) {
+    final SegmentSource segmentSources = MultiStageQueryContext.getSegmentSources(context);
+    if (MSQControllerTask.isReplaceInputDataSourceTask(query, destination) && SegmentSource.REALTIME.equals(segmentSources)) {
       throw DruidException.forPersona(DruidException.Persona.USER)
                           .ofCategory(DruidException.Category.INVALID_INPUT)
                           .build("Cannot ingest into datasource[%s] since it is also being queried from, with "
                                  + "REALTIME segments included. Ingest to a different datasource, or disable querying "
                                  + "of realtime segments by modifying [%s] in the query context.",
-                                 ((DataSourceMSQDestination) querySpec.getDestination()).getDataSource(),
+                                 ((DataSourceMSQDestination) destination).getDataSource(),
                                  MultiStageQueryContext.CTX_INCLUDE_SEGMENT_SOURCE
                           );
     }
   }
+
 }

@@ -36,15 +36,20 @@ import com.google.common.collect.Sets;
 import com.google.common.collect.TreeRangeSet;
 import com.google.common.hash.Hasher;
 import com.google.common.hash.Hashing;
+import com.google.common.primitives.Doubles;
 import it.unimi.dsi.fastutil.doubles.DoubleOpenHashSet;
+import it.unimi.dsi.fastutil.doubles.DoubleSet;
 import it.unimi.dsi.fastutil.floats.FloatOpenHashSet;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
+import it.unimi.dsi.fastutil.longs.LongSet;
 import it.unimi.dsi.fastutil.objects.ObjectArrays;
-import org.apache.druid.common.config.NullHandling;
+import org.apache.druid.common.guava.GuavaUtils;
 import org.apache.druid.error.InvalidInput;
 import org.apache.druid.java.util.common.IAE;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.Evals;
+import org.apache.druid.math.expr.ExprEval;
+import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.query.cache.CacheKeyBuilder;
 import org.apache.druid.query.filter.vector.VectorValueMatcher;
 import org.apache.druid.query.filter.vector.VectorValueMatcherColumnProcessorFactory;
@@ -223,9 +228,6 @@ public class TypedInFilter extends AbstractOptimizableDimFilter implements Filte
   @Override
   public DimFilter optimize(final boolean mayIncludeUnknown)
   {
-    if (NullHandling.replaceWithDefault()) {
-      return convertToLegacy().optimize(mayIncludeUnknown);
-    }
     final List<?> matchValues = this.sortedMatchValues.get();
     if (matchValues.isEmpty()) {
       return FalseDimFilter.instance();
@@ -246,9 +248,6 @@ public class TypedInFilter extends AbstractOptimizableDimFilter implements Filte
   @Override
   public Filter toFilter()
   {
-    if (NullHandling.replaceWithDefault()) {
-      return convertToLegacy().toFilter();
-    }
     return this;
   }
 
@@ -301,9 +300,11 @@ public class TypedInFilter extends AbstractOptimizableDimFilter implements Filte
       }
     }
 
-    final ValueSetIndexes valueSetIndexes = indexSupplier.as(ValueSetIndexes.class);
-    if (valueSetIndexes != null) {
-      return valueSetIndexes.forSortedValues(sortedMatchValues.get(), matchValueType);
+    if (EqualityFilter.useSimpleEquality(selector.getColumnCapabilities(column), matchValueType)) {
+      final ValueSetIndexes valueSetIndexes = indexSupplier.as(ValueSetIndexes.class);
+      if (valueSetIndexes != null) {
+        return valueSetIndexes.forSortedValues(sortedMatchValues.get(), matchValueType);
+      }
     }
 
     return Filters.makePredicateIndex(
@@ -452,20 +453,20 @@ public class TypedInFilter extends AbstractOptimizableDimFilter implements Filte
   }
 
   @Nullable
-  private static Object coerceValue(@Nullable Object o, ColumnType matchValueType)
+  private static <T> T coerceValue(@Nullable Object o, ColumnType matchValueType)
   {
     if (o == null) {
       return null;
     }
     switch (matchValueType.getType()) {
       case STRING:
-        return DimensionHandlerUtils.convertObjectToString(o);
+        return (T) DimensionHandlerUtils.convertObjectToString(o);
       case LONG:
-        return DimensionHandlerUtils.convertObjectToLong(o);
+        return (T) DimensionHandlerUtils.convertObjectToLong(o);
       case FLOAT:
-        return DimensionHandlerUtils.convertObjectToFloat(o);
+        return (T) DimensionHandlerUtils.convertObjectToFloat(o);
       case DOUBLE:
-        return DimensionHandlerUtils.convertObjectToDouble(o);
+        return (T) DimensionHandlerUtils.convertObjectToDouble(o);
       default:
         throw InvalidInput.exception("Unsupported matchValueType[%s]", matchValueType);
     }
@@ -540,11 +541,51 @@ public class TypedInFilter extends AbstractOptimizableDimFilter implements Filte
         final int index = Collections.binarySearch(sortedValues, value, comparator);
         return DruidPredicateMatch.of(index >= 0);
       };
+    } else if (matchValueType.is(ValueType.LONG)) {
+      final LongSet valueSet = new LongOpenHashSet(sortedValues.size());
+      for (Object o : sortedValues) {
+        final Long l = DimensionHandlerUtils.convertObjectToLong(o);
+        if (l != null) {
+          valueSet.add(l.longValue());
+        }
+      }
+      return value -> {
+        if (value == null) {
+          return containsNull ? DruidPredicateMatch.TRUE : DruidPredicateMatch.UNKNOWN;
+        }
+        final Long castValue = GuavaUtils.tryParseLong(value);
+        if (castValue == null) {
+          return DruidPredicateMatch.FALSE;
+        }
+        return DruidPredicateMatch.of(valueSet.contains(castValue));
+      };
+    } else if (matchValueType.isNumeric()) {
+      // double or float
+      final DoubleSet valueSet = new DoubleOpenHashSet(sortedValues.size());
+      for (Object o : sortedValues) {
+        Double d = DimensionHandlerUtils.convertObjectToDouble(o);
+        if (d != null) {
+          valueSet.add(d.doubleValue());
+        }
+      }
+      return value -> {
+        if (value == null) {
+          return containsNull ? DruidPredicateMatch.TRUE : DruidPredicateMatch.UNKNOWN;
+        }
+
+        final Double d = Doubles.tryParse(value);
+        if (d == null) {
+          return DruidPredicateMatch.FALSE;
+        }
+        return DruidPredicateMatch.of(valueSet.contains(d));
+      };
     }
+
     // convert set to strings
+    final ExpressionType matchExpressionType = ExpressionType.fromColumnTypeStrict(matchValueType);
     final Set<String> stringSet = Sets.newHashSetWithExpectedSize(sortedValues.size());
     for (Object o : sortedValues) {
-      stringSet.add(Evals.asString(o));
+      stringSet.add(ExprEval.ofType(matchExpressionType, o).castTo(ExpressionType.STRING).asString());
     }
     return value -> {
       if (value == null) {

@@ -21,6 +21,7 @@ package org.apache.druid.query.rowsandcols.semantic;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.UOE;
 import org.apache.druid.query.aggregation.Aggregator;
@@ -28,6 +29,9 @@ import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.dimension.DimensionSpec;
 import org.apache.druid.query.monomorphicprocessing.RuntimeShapeInspector;
 import org.apache.druid.query.operator.window.WindowFrame;
+import org.apache.druid.query.operator.window.WindowFrame.Groups;
+import org.apache.druid.query.operator.window.WindowFrame.OffsetFrame;
+import org.apache.druid.query.operator.window.WindowFrame.Rows;
 import org.apache.druid.query.rowsandcols.RowsAndColumns;
 import org.apache.druid.query.rowsandcols.column.ObjectArrayColumn;
 import org.apache.druid.segment.ColumnSelectorFactory;
@@ -106,22 +110,38 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
   public static Iterable<AggInterval> buildIteratorFor(AppendableRowsAndColumns rac, WindowFrame frame)
   {
     int numRows = rac.numRows();
-    if (frame.getLowerOffsetClamped(numRows) == -numRows && frame.getUpperOffsetClamped(numRows) == numRows) {
-      return buildUnboundedIteratorFor(rac, frame);
-    } else if (frame.getPeerType() == WindowFrame.PeerType.RANGE) {
-      return buildGroupIteratorFor(rac, frame);
-    } else {
-      return buildRowIteratorFor(rac, frame);
+    if (isEffectivelyUnbounded(frame, numRows)) {
+      return buildUnboundedIteratorFor(rac);
     }
+    Rows rowsFrame = frame.unwrap(WindowFrame.Rows.class);
+    if (rowsFrame != null) {
+      return buildRowIteratorFor(rac, rowsFrame);
+    }
+    Groups groupsFrame = frame.unwrap(WindowFrame.Groups.class);
+    if (groupsFrame != null) {
+      return buildGroupIteratorFor(rac, groupsFrame);
+    }
+    throw DruidException.defensive("Unable to handle WindowFrame [%s]!", frame);
   }
 
-  private static Iterable<AggInterval> buildUnboundedIteratorFor(AppendableRowsAndColumns rac, WindowFrame frame)
+  private static boolean isEffectivelyUnbounded(WindowFrame frame, int numRows)
   {
-    int[] groupBoundaries = new int[]{0, rac.numRows()};
-    return new GroupIteratorForWindowFrame(frame, groupBoundaries);
+    OffsetFrame offsetFrame = frame.unwrap(WindowFrame.OffsetFrame.class);
+    if (offsetFrame.getLowerOffsetClamped(numRows) == -numRows
+        && offsetFrame.getUpperOffsetClamped(numRows) == numRows) {
+      // regardless the actual mode; all rows will be inside the frame!
+      return true;
+    }
+    return false;
   }
 
-  private static Iterable<AggInterval> buildRowIteratorFor(AppendableRowsAndColumns rac, WindowFrame frame)
+  private static Iterable<AggInterval> buildUnboundedIteratorFor(AppendableRowsAndColumns rac)
+  {
+    int[] groupBoundaries = new int[] {0, rac.numRows()};
+    return new GroupIteratorForWindowFrame(WindowFrame.rows(null, null), groupBoundaries);
+  }
+
+  private static Iterable<AggInterval> buildRowIteratorFor(AppendableRowsAndColumns rac, WindowFrame.Rows frame)
   {
     int[] groupBoundaries = new int[rac.numRows() + 1];
     for (int j = 0; j < groupBoundaries.length; j++) {
@@ -130,9 +150,9 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
     return new GroupIteratorForWindowFrame(frame, groupBoundaries);
   }
 
-  private static Iterable<AggInterval> buildGroupIteratorFor(AppendableRowsAndColumns rac, WindowFrame frame)
+  private static Iterable<AggInterval> buildGroupIteratorFor(AppendableRowsAndColumns rac, WindowFrame.Groups frame)
   {
-    int[] groupBoundaries = ClusteredGroupPartitioner.fromRAC(rac).computeBoundaries(frame.getOrderByColNames());
+    int[] groupBoundaries = ClusteredGroupPartitioner.fromRAC(rac).computeBoundaries(frame.getOrderByColumns());
     return new GroupIteratorForWindowFrame(frame, groupBoundaries);
   }
 
@@ -145,7 +165,7 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
     // upper exclusive
     private final int upperOffset;
 
-    public GroupIteratorForWindowFrame(WindowFrame frame, int[] groupBoundaries)
+    public GroupIteratorForWindowFrame(WindowFrame.OffsetFrame frame, int[] groupBoundaries)
     {
       this.groupBoundaries = groupBoundaries;
       numGroups = groupBoundaries.length - 1;
@@ -156,7 +176,7 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
     @Override
     public Iterator<AggInterval> iterator()
     {
-      return new Iterator<AggInterval>()
+      return new Iterator<>()
       {
         int currentGroupIndex = 0;
 
@@ -250,7 +270,7 @@ public class DefaultFramedOnHeapAggregatable implements FramedOnHeapAggregatable
     @Override
     public Iterator<Integer> iterator()
     {
-      return new Iterator<Integer>()
+      return new Iterator<>()
       {
         int current = a;
 

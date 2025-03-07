@@ -28,7 +28,6 @@ import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
 import com.google.inject.Injector;
 import org.apache.commons.io.FileUtils;
-import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.guice.GuiceAnnotationIntrospector;
 import org.apache.druid.guice.GuiceInjectableValues;
 import org.apache.druid.guice.GuiceInjectors;
@@ -37,6 +36,7 @@ import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.Intervals;
+import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.loading.LoadSpec;
 import org.apache.druid.segment.loading.LocalDataSegmentPuller;
@@ -101,7 +101,6 @@ public class ShuffleDataSegmentPusherTest
     final WorkerConfig workerConfig = new WorkerConfig();
     final TaskConfig taskConfig = new TaskConfigBuilder()
         .setShuffleDataLocations(ImmutableList.of(new StorageLocationConfig(temporaryFolder.newFolder(), null, null)))
-        .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
         .build();
     final OverlordClient overlordClient = new NoopOverlordClient();
     if (LOCAL.equals(intermediateDataStore)) {

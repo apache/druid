@@ -74,7 +74,6 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
@@ -92,6 +91,13 @@ public class GroupByQuery extends BaseQuery<ResultRow>
   public static final String CTX_TIMESTAMP_RESULT_FIELD = "timestampResultField";
   public static final String CTX_TIMESTAMP_RESULT_FIELD_GRANULARITY = "timestampResultFieldGranularity";
   public static final String CTX_TIMESTAMP_RESULT_FIELD_INDEX = "timestampResultFieldInOriginalDimensions";
+
+  /**
+   * Context key for whether this query has any "dropped" dimensions. This is set true for queries like
+   * "GROUP BY 'constant'", and enables {@link GroupingEngine#summaryRowPreconditions(GroupByQuery)} to correctly
+   * determine whether to include a summary row.
+   */
+  public static final String CTX_HAS_DROPPED_DIMENSIONS = "hasDroppedDimensions";
   private static final String CTX_KEY_FUDGE_TIMESTAMP = "fudgeTimestamp";
 
   private static final Comparator<ResultRow> NON_GRANULAR_TIME_COMP =
@@ -109,6 +115,8 @@ public class GroupByQuery extends BaseQuery<ResultRow>
   @Nullable
   private final DimFilter dimFilter;
   private final List<DimensionSpec> dimensions;
+  private final List<String> groupingColumns;
+
   private final List<AggregatorFactory> aggregatorSpecs;
   private final List<PostAggregator> postAggregatorSpecs;
   @Nullable
@@ -201,13 +209,15 @@ public class GroupByQuery extends BaseQuery<ResultRow>
       final Map<String, Object> context
   )
   {
-    super(dataSource, querySegmentSpec, false, context, granularity);
+    super(dataSource, querySegmentSpec, context, granularity);
 
     this.virtualColumns = VirtualColumns.nullToEmpty(virtualColumns);
     this.dimFilter = dimFilter;
     this.dimensions = dimensions == null ? ImmutableList.of() : dimensions;
+    this.groupingColumns = new ArrayList<>();
     for (DimensionSpec spec : this.dimensions) {
       Preconditions.checkArgument(spec != null, "dimensions has null DimensionSpec");
+      groupingColumns.add(spec.getDimension());
     }
 
     this.aggregatorSpecs = aggregatorSpecs == null ? ImmutableList.of() : aggregatorSpecs;
@@ -327,11 +337,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
     return subtotalsSpec;
   }
 
-  /**
-   * Equivalent to {@code getResultRowSignature(Finalization.UNKNOWN)}.
-   *
-   * @see ResultRow for documentation about the order that fields will be in
-   */
+  @Override
   public RowSignature getResultRowSignature()
   {
     return resultRowSignature;
@@ -347,6 +353,7 @@ public class GroupByQuery extends BaseQuery<ResultRow>
    *
    * @see ResultRow for documentation about the order that fields will be in
    */
+  @Override
   public RowSignature getResultRowSignature(final RowSignature.Finalization finalization)
   {
     if (finalization == RowSignature.Finalization.UNKNOWN) {
@@ -463,6 +470,14 @@ public class GroupByQuery extends BaseQuery<ResultRow>
   public boolean getApplyLimitPushDownFromContext()
   {
     return context().getBoolean(GroupByQueryConfig.CTX_KEY_APPLY_LIMIT_PUSH_DOWN, true);
+  }
+
+  /**
+   * See {@link #CTX_HAS_DROPPED_DIMENSIONS}.
+   */
+  public boolean hasDroppedDimensions()
+  {
+    return context().getBoolean(CTX_HAS_DROPPED_DIMENSIONS, false);
   }
 
   @Override
@@ -795,10 +810,15 @@ public class GroupByQuery extends BaseQuery<ResultRow>
     return Queries.computeRequiredColumns(
         virtualColumns,
         dimFilter,
-        dimensions,
-        aggregatorSpecs,
-        Collections.emptyList()
+        groupingColumns,
+        aggregatorSpecs
     );
+  }
+
+  @JsonIgnore
+  public List<String> getGroupingColumns()
+  {
+    return groupingColumns;
   }
 
   @Override
@@ -1300,5 +1320,15 @@ public class GroupByQuery extends BaseQuery<ResultRow>
         postAggregatorSpecs,
         subtotalsSpec
     );
+  }
+
+  @Override
+  public boolean mayCollapseQueryDataSource()
+  {
+    if (getDataSource() instanceof QueryDataSource) {
+      QueryDataSource queryDataSource = (QueryDataSource) getDataSource();
+      return queryDataSource.getQuery() instanceof GroupByQuery;
+    }
+    return false;
   }
 }

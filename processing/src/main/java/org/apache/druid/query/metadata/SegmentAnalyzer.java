@@ -21,21 +21,19 @@ package org.apache.druid.query.metadata;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.common.guava.Accumulator;
-import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.metadata.metadata.ColumnAnalysis;
 import org.apache.druid.query.metadata.metadata.SegmentMetadataQuery;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorFactory;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.DimensionSelector;
+import org.apache.druid.segment.PhysicalSegmentInspector;
 import org.apache.druid.segment.QueryableIndex;
 import org.apache.druid.segment.Segment;
-import org.apache.druid.segment.StorageAdapter;
-import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.BaseColumn;
 import org.apache.druid.segment.column.ColumnCapabilities;
 import org.apache.druid.segment.column.ColumnHolder;
@@ -48,12 +46,9 @@ import org.apache.druid.segment.column.RowSignature;
 import org.apache.druid.segment.column.TypeSignature;
 import org.apache.druid.segment.column.ValueType;
 import org.apache.druid.segment.data.IndexedInts;
-import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
 import org.apache.druid.segment.index.semantic.DictionaryEncodedStringValueIndex;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
 import org.apache.druid.segment.serde.ComplexMetrics;
-import org.joda.time.DateTime;
-import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -84,32 +79,31 @@ public class SegmentAnalyzer
 
   public long numRows(Segment segment)
   {
-    return Preconditions.checkNotNull(segment, "segment").asStorageAdapter().getNumRows();
+    return Preconditions.checkNotNull(segment.as(PhysicalSegmentInspector.class), "PhysicalSegmentInspector")
+                        .getNumRows();
   }
 
   public Map<String, ColumnAnalysis> analyze(Segment segment)
   {
     Preconditions.checkNotNull(segment, "segment");
+    final PhysicalSegmentInspector segmentInspector = segment.as(PhysicalSegmentInspector.class);
 
-    // index is null for incremental-index-based segments, but storageAdapter is always available
-    final QueryableIndex index = segment.asQueryableIndex();
-    final StorageAdapter storageAdapter = segment.asStorageAdapter();
+    // index is null for incremental-index-based segments, but segmentInspector should always be available
+    final QueryableIndex index = segment.as(QueryableIndex.class);
 
-    // get length and column names from storageAdapter
-    final int numRows = storageAdapter.getNumRows();
+    final int numRows = segmentInspector != null ? segmentInspector.getNumRows() : 0;
 
     // Use LinkedHashMap to preserve column order.
     final Map<String, ColumnAnalysis> columns = new LinkedHashMap<>();
 
-    final RowSignature rowSignature = storageAdapter.getRowSignature();
+    final RowSignature rowSignature = segment.asCursorFactory().getRowSignature();
     for (String columnName : rowSignature.getColumnNames()) {
       final ColumnCapabilities capabilities;
 
-      if (storageAdapter instanceof IncrementalIndexStorageAdapter) {
-        // See javadocs for getSnapshotColumnCapabilities for a discussion of why we need to do this.
-        capabilities = ((IncrementalIndexStorageAdapter) storageAdapter).getSnapshotColumnCapabilities(columnName);
+      if (segmentInspector != null) {
+        capabilities = segmentInspector.getColumnCapabilities(columnName);
       } else {
-        capabilities = storageAdapter.getColumnCapabilities(columnName);
+        capabilities = null;
       }
 
       if (capabilities == null) {
@@ -137,7 +131,7 @@ public class SegmentAnalyzer
             if (index != null) {
               analysis = analyzeStringColumn(capabilities, index.getColumnHolder(columnName));
             } else {
-              analysis = analyzeStringColumn(capabilities, storageAdapter, columnName);
+              analysis = analyzeStringColumn(capabilities, segmentInspector, segment.asCursorFactory(), columnName);
             }
             break;
           case ARRAY:
@@ -223,8 +217,8 @@ public class SegmentAnalyzer
         }
       }
       if (analyzingMinMax() && cardinality > 0) {
-        min = NullHandling.nullToEmptyIfNeeded(valueIndex.getValue(0));
-        max = NullHandling.nullToEmptyIfNeeded(valueIndex.getValue(cardinality - 1));
+        min = valueIndex.getValue(0);
+        max = valueIndex.getValue(cardinality - 1);
       }
     } else if (capabilities.isDictionaryEncoded().isTrue()) {
       // fallback if no bitmap index
@@ -233,8 +227,8 @@ public class SegmentAnalyzer
           DictionaryEncodedColumn<String> theColumn = (DictionaryEncodedColumn<String>) column;
           cardinality = theColumn.getCardinality();
           if (analyzingMinMax() && cardinality > 0) {
-            min = NullHandling.nullToEmptyIfNeeded(theColumn.lookupName(0));
-            max = NullHandling.nullToEmptyIfNeeded(theColumn.lookupName(cardinality - 1));
+            min = theColumn.lookupName(0);
+            max = theColumn.lookupName(cardinality - 1);
           }
         } else {
           cardinality = 0;
@@ -259,7 +253,8 @@ public class SegmentAnalyzer
 
   private ColumnAnalysis analyzeStringColumn(
       final ColumnCapabilities capabilities,
-      final StorageAdapter storageAdapter,
+      @Nullable final PhysicalSegmentInspector analysisInspector,
+      final CursorFactory cursorFactory,
       final String columnName
   )
   {
@@ -269,58 +264,35 @@ public class SegmentAnalyzer
     Comparable min = null;
     Comparable max = null;
 
-    if (analyzingCardinality()) {
-      cardinality = storageAdapter.getDimensionCardinality(columnName);
+    if (analyzingCardinality() && analysisInspector != null) {
+      cardinality = analysisInspector.getDimensionCardinality(columnName);
+    }
+
+    if (analyzingMinMax() && analysisInspector != null) {
+      min = analysisInspector.getMinValue(columnName);
+      max = analysisInspector.getMaxValue(columnName);
     }
 
     if (analyzingSize()) {
-      final DateTime start = storageAdapter.getMinTime();
-      final DateTime end = storageAdapter.getMaxTime();
+      try (final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+        final Cursor cursor = cursorHolder.asCursor();
 
-      final Sequence<Cursor> cursors =
-          storageAdapter.makeCursors(
-              null,
-              new Interval(start, end),
-              VirtualColumns.EMPTY,
-              Granularities.ALL,
-              false,
-              null
-          );
-
-      size = cursors.accumulate(
-          0L,
-          new Accumulator<Long, Cursor>()
-          {
-            @Override
-            public Long accumulate(Long accumulated, Cursor cursor)
-            {
-              DimensionSelector selector = cursor
-                  .getColumnSelectorFactory()
-                  .makeDimensionSelector(new DefaultDimensionSpec(columnName, columnName));
-              if (selector == null) {
-                return accumulated;
+        if (cursor != null) {
+          final DimensionSelector selector =
+              cursor.getColumnSelectorFactory()
+                    .makeDimensionSelector(new DefaultDimensionSpec(columnName, columnName));
+          while (!cursor.isDone()) {
+            final IndexedInts row = selector.getRow();
+            for (int i = 0, rowSize = row.size(); i < rowSize; ++i) {
+              final String dimVal = selector.lookupName(row.get(i));
+              if (dimVal != null && !dimVal.isEmpty()) {
+                size += StringUtils.estimatedBinaryLengthAsUTF8(dimVal);
               }
-              long current = accumulated;
-              while (!cursor.isDone()) {
-                final IndexedInts row = selector.getRow();
-                for (int i = 0, rowSize = row.size(); i < rowSize; ++i) {
-                  final String dimVal = selector.lookupName(row.get(i));
-                  if (dimVal != null && !dimVal.isEmpty()) {
-                    current += StringUtils.estimatedBinaryLengthAsUTF8(dimVal);
-                  }
-                }
-                cursor.advance();
-              }
-
-              return current;
             }
+            cursor.advance();
           }
-      );
-    }
-
-    if (analyzingMinMax()) {
-      min = storageAdapter.getMinValue(columnName);
-      max = storageAdapter.getMaxValue(columnName);
+        }
+      }
     }
 
     return ColumnAnalysis.builder()

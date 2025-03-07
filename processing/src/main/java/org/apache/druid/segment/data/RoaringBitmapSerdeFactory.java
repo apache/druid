@@ -84,7 +84,7 @@ public class RoaringBitmapSerdeFactory implements BitmapSerdeFactory
     @Override
     public byte[] toBytes(@Nullable ImmutableBitmap val)
     {
-      if (val == null || val.size() == 0) {
+      if (val == null || val.isEmpty()) {
         return new byte[]{};
       }
       return val.toBytes();

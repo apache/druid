@@ -141,6 +141,7 @@ public class CalciteTimeBoundaryQueryTest extends BaseCalciteQueryTest
   @Test
   public void testMinTimeQueryWithTimeAndExpressionFilters()
   {
+    cannotVectorizeUnlessFallback();
     HashMap<String, Object> queryContext = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     queryContext.put(QueryContexts.TIME_BOUNDARY_PLANNING_KEY, true);
     testQuery(
@@ -197,6 +198,9 @@ public class CalciteTimeBoundaryQueryTest extends BaseCalciteQueryTest
   @Test
   public void testMaxTimeQueryWithJoin()
   {
+    // Cannot vectorize timeBoundary with maxTime (the engine will request descending order, which cannot vectorize).
+    cannotVectorize();
+
     HashMap<String, Object> context = new HashMap<>(QUERY_CONTEXT_DEFAULT);
     context.put(QueryContexts.TIME_BOUNDARY_PLANNING_KEY, true);
 
@@ -216,6 +220,7 @@ public class CalciteTimeBoundaryQueryTest extends BaseCalciteQueryTest
                                       .dataSource(CalciteTests.DATASOURCE1)
                                       .intervals(querySegmentSpec(Filtration.eternity()))
                                       .columns("cnt")
+                                      .columnTypes(ColumnType.LONG)
                                       .context(context)
                                       .build()
                               ),

@@ -44,7 +44,7 @@ This applies to all metadata entities in this topic except compaction configurat
 You can configure the retention period for each metadata type, when available, through the record's `durationToRetain` property.
 Certain records may require additional conditions be satisfied before clean up occurs.
 
-See the [example](#example) for how you can customize the automated metadata cleanup for a specific use case.
+See the [example](#example-configuration-for-automated-metadata-cleanup) for how you can customize the automated metadata cleanup for a specific use case.
 
 
 ## Automated cleanup strategies
@@ -62,13 +62,12 @@ You can configure cleanup for each entity separately, as described in this secti
 Define the properties in the `coordinator/runtime.properties` file.
 
 The cleanup of one entity may depend on the cleanup of another entity as follows:
-- You have to configure a [kill task for segment records](#kill-task) before you can configure automated cleanup for [rules](#rules-records) or [compaction configuration](#compaction-configuration-records).
+- You have to configure a [kill task for segment records](#segment-records-and-segments-in-deep-storage-kill-task) before you can configure automated cleanup for [rules](#rules-records) or [compaction configuration](#compaction-configuration-records).
 - You have to schedule the metadata management tasks to run at the same or higher frequency as your most frequent cleanup job. For example, if your most frequent cleanup job is every hour, set the metadata store management period to one hour or less: `druid.coordinator.period.metadataStoreManagementPeriod=P1H`.
 
 For details on configuration properties, see [Metadata management](../configuration/index.md#metadata-management).
-If you want to skip the details, check out the [example](#example) for configuring automated metadata cleanup.
+If you want to skip the details, check out the [example](#example-configuration-for-automated-metadata-cleanup) for configuring automated metadata cleanup.
 
-<a name="kill-task"></a>
 ### Segment records and segments in deep storage (kill task)
 
 :::info
@@ -89,6 +88,7 @@ If `killDataSourceWhitelist` is not set or empty, then kill tasks can be submitt
 - `druid.coordinator.kill.ignoreDurationToRetain`: A way to override `druid.coordinator.kill.durationToRetain`. When enabled, the coordinator considers all unused segments as eligible to be killed.
 - `druid.coordinator.kill.bufferPeriod`: Defines the amount of time that a segment must be unused before it can be permanently removed from metadata and deep storage. This serves as a buffer period to prevent data loss if data ends up being needed after being marked unused.
 - `druid.coordinator.kill.maxSegments`: Defines the maximum number of segments to delete per kill task.
+- `druid.coordinator.kill.maxInterval`: Defines the largest interval, as an [ISO 8601 duration](https://en.wikipedia.org/wiki/ISO_8601#Durations), of segments to delete per kill task. Set to zero, e.g. `PT0S`, for unlimited.
 
 ### Audit records
 
@@ -110,7 +110,7 @@ Supervisor cleanup uses the following configuration:
 
 ### Rules records
 
-Rule records become eligible for deletion when all segments for the datasource have been killed by the kill task and the `durationToRetain` time has passed since their creation. Automated cleanup for rules requires a [kill task](#kill-task).
+Rule records become eligible for deletion when all segments for the datasource have been killed by the kill task and the `durationToRetain` time has passed since their creation. Automated cleanup for rules requires a [kill task](#segment-records-and-segments-in-deep-storage-kill-task).
 
 Rule cleanup uses the following configuration:
  - `druid.coordinator.kill.rule.on`: When `true`, enables cleanup for rules records.
@@ -129,7 +129,7 @@ To prevent the configuration from being prematurely removed, wait for the dataso
 
 Unlike other metadata records, compaction configuration records do not have a retention period set by `durationToRetain`. Druid deletes compaction configuration records at every cleanup cycle for inactive datasources, which do not have segments either used or unused.
 
-Compaction configuration records in the `druid_config` table become eligible for deletion after all segments for the datasource have been killed by the kill task. Automated cleanup for compaction configuration requires a [kill task](#kill-task).
+Compaction configuration records in the `druid_config` table become eligible for deletion after all segments for the datasource have been killed by the kill task. Automated cleanup for compaction configuration requires a [kill task](#segment-records-and-segments-in-deep-storage-kill-task).
 
 Compaction configuration cleanup uses the following configuration:
  - `druid.coordinator.kill.compaction.on`: When `true`, enables cleanup for compaction configuration records.
@@ -153,7 +153,7 @@ Datasource cleanup uses the following configuration:
 
 You can configure the Overlord to periodically delete indexer task logs and associated metadata. During cleanup, the Overlord removes the following:
 * Indexer task logs from deep storage.
-* Indexer task log metadata from the tasks and tasklogs tables in [metadata storage](../configuration/index.md#metadata-storage) (named `druid_tasks` and `druid_tasklogs` by default). Druid no longer uses the tasklogs table, and the table is always empty.
+* Indexer task log metadata from the tasks table in [metadata storage](../configuration/index.md#metadata-storage) (named `druid_tasks` by default).
 
 To configure cleanup of task logs by the Overlord, set the following properties in the `overlord/runtime.properties` file.
 
@@ -188,7 +188,6 @@ druid.coordinator.kill.rule.on=false
 druid.coordinator.kill.datasource.on=false
 ```
 
-<a name="example"></a>
 ## Example configuration for automated metadata cleanup
 
 Consider a scenario where you have scripts to create and delete hundreds of datasources and related entities a day. You do not want to fill your metadata store with leftover records. The datasources and related entities tend to persist for only one or two days. Therefore, you want to run a cleanup job that identifies and removes leftover records that are at least four days old after a seven day buffer period in case you want to recover the data. The exception is for audit logs, which you need to retain for 30 days:

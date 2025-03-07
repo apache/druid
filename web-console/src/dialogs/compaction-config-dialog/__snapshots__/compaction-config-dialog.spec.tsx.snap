@@ -1,7 +1,7 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`CompactionConfigDialog matches snapshot with compactionConfig (dynamic partitionsSpec) 1`] = `
-<Blueprint4.Dialog
+<Blueprint5.Dialog
   canOutsideClickClose={false}
   className="compaction-config-dialog"
   isOpen={true}
@@ -36,17 +36,17 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (dynamic 
             {
               "info": <p>
                 For perfect rollup, you should use either 
-                <Unknown>
+                <ForwardRef>
                   hashed
-                </Unknown>
+                </ForwardRef>
                  (partitioning based on the hash of dimensions in each row) or 
-                <Unknown>
+                <ForwardRef>
                   range
-                </Unknown>
+                </ForwardRef>
                  (based on several dimensions). For best-effort rollup, you should use 
-                <Unknown>
+                <ForwardRef>
                   dynamic
-                </Unknown>
+                </ForwardRef>
                 .
               </p>,
               "label": "Partitioning type",
@@ -87,29 +87,29 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (dynamic 
                 </p>
                 <p>
                   If 
-                  <Unknown>
+                  <ForwardRef>
                     numShards
-                  </Unknown>
+                  </ForwardRef>
                    is left unspecified, the Parallel task will determine
                    
-                  <Unknown>
+                  <ForwardRef>
                     numShards
-                  </Unknown>
+                  </ForwardRef>
                    automatically by 
-                  <Unknown>
+                  <ForwardRef>
                     targetRowsPerSegment
-                  </Unknown>
+                  </ForwardRef>
                   .
                 </p>
                 <p>
                   Note that either 
-                  <Unknown>
+                  <ForwardRef>
                     targetRowsPerSegment
-                  </Unknown>
+                  </ForwardRef>
                    or 
-                  <Unknown>
+                  <ForwardRef>
                     numShards
-                  </Unknown>
+                  </ForwardRef>
                    will be used to evenly distribute rows and find the best partitioning. Leave blank to show all properties.
                 </p>
               </React.Fragment>,
@@ -125,39 +125,39 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (dynamic 
                   Target number of rows to include in a partition, should be a number that targets segments of 500MB~1GB.
                 </p>
                 <p>
-                  <Unknown>
+                  <ForwardRef>
                     maxRowsPerSegment
-                  </Unknown>
+                  </ForwardRef>
                    renamed to 
-                  <Unknown>
+                  <ForwardRef>
                     targetRowsPerSegment
-                  </Unknown>
+                  </ForwardRef>
                 </p>
                 <p>
                   If 
-                  <Unknown>
+                  <ForwardRef>
                     numShards
-                  </Unknown>
+                  </ForwardRef>
                    is left unspecified, the Parallel task will determine
                    
-                  <Unknown>
+                  <ForwardRef>
                     numShards
-                  </Unknown>
+                  </ForwardRef>
                    automatically by 
-                  <Unknown>
+                  <ForwardRef>
                     targetRowsPerSegment
-                  </Unknown>
+                  </ForwardRef>
                   .
                 </p>
                 <p>
                   Note that either 
-                  <Unknown>
+                  <ForwardRef>
                     targetRowsPerSegment
-                  </Unknown>
+                  </ForwardRef>
                    or 
-                  <Unknown>
+                  <ForwardRef>
                     numShards
-                  </Unknown>
+                  </ForwardRef>
                    will be used to evenly distribute rows and find the best partitioning. Leave blank to show all properties.
                 </p>
               </React.Fragment>,
@@ -176,13 +176,13 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (dynamic 
                 </p>
                 <p>
                   Note that either 
-                  <Unknown>
+                  <ForwardRef>
                     targetRowsPerSegment
-                  </Unknown>
+                  </ForwardRef>
                    or 
-                  <Unknown>
+                  <ForwardRef>
                     numShards
-                  </Unknown>
+                  </ForwardRef>
                    will be used to evenly distribute rows across partitions and find the best partitioning. Leave blank to show all properties.
                 </p>
               </React.Fragment>,
@@ -225,13 +225,13 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (dynamic 
                 </p>
                 <p>
                   Note that either 
-                  <Unknown>
+                  <ForwardRef>
                     targetRowsPerSegment
-                  </Unknown>
+                  </ForwardRef>
                    or 
-                  <Unknown>
+                  <ForwardRef>
                     maxRowsPerSegment
-                  </Unknown>
+                  </ForwardRef>
                    will be used to find the best partitioning. Leave blank to show all properties.
                 </p>
               </React.Fragment>,
@@ -248,13 +248,13 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (dynamic 
                 </p>
                 <p>
                   Note that either 
-                  <Unknown>
+                  <ForwardRef>
                     targetRowsPerSegment
-                  </Unknown>
+                  </ForwardRef>
                    or 
-                  <Unknown>
+                  <ForwardRef>
                     maxRowsPerSegment
-                  </Unknown>
+                  </ForwardRef>
                    will be used to find the best partitioning. Leave blank to show all properties.
                 </p>
               </React.Fragment>,
@@ -322,13 +322,13 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (dynamic 
               "hideInMore": true,
               "info": <React.Fragment>
                 Maximum number of input segments to process in a single subtask. This limit is to avoid task failures when the ingestion spec is too long. There are two known limits on the max size of serialized ingestion spec, i.e., the max ZNode size in ZooKeeper (
-                <Unknown>
+                <ForwardRef>
                   jute.maxbuffer
-                </Unknown>
+                </ForwardRef>
                 ) and the max packet size in MySQL (
-                <Unknown>
+                <ForwardRef>
                   max_allowed_packet
-                </Unknown>
+                </ForwardRef>
                 ). These can make ingestion tasks fail if the serialized ingestion spec size hits one of them.
               </React.Fragment>,
               "label": "Max num files (segments)",
@@ -360,7 +360,7 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (dynamic 
               For more information refer to the
                
               <Memo(ExternalLink)
-                href="https://druid.apache.org/docs/latest/ingestion/concurrent-append-replace.html"
+                href="https://druid.apache.org/docs/latest/ingestion/concurrent-append-replace"
               >
                 documentation
               </Memo(ExternalLink)>
@@ -370,36 +370,36 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (dynamic 
         }
         inlineInfo={true}
       >
-        <Blueprint4.Switch
+        <Blueprint5.Switch
           checked={false}
-          label="Use concurrent locks (experimental)"
+          label="Use concurrent locks"
           onChange={[Function]}
         />
       </Memo(FormGroupWithInfo)>
     </React.Fragment>
   </div>
   <div
-    className="bp4-dialog-footer"
+    className="bp5-dialog-footer"
   >
     <div
-      className="bp4-dialog-footer-actions"
+      className="bp5-dialog-footer-actions"
     >
-      <Blueprint4.Button
+      <Blueprint5.Button
         className="history-button"
         minimal={true}
         onClick={[Function]}
         text="History"
       />
-      <Blueprint4.Button
+      <Blueprint5.Button
         intent="danger"
         onClick={[Function]}
         text="Delete"
       />
-      <Blueprint4.Button
+      <Blueprint5.Button
         onClick={[Function]}
         text="Close"
       />
-      <Blueprint4.Button
+      <Blueprint5.Button
         disabled={false}
         intent="primary"
         onClick={[Function]}
@@ -407,11 +407,11 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (dynamic 
       />
     </div>
   </div>
-</Blueprint4.Dialog>
+</Blueprint5.Dialog>
 `;
 
 exports[`CompactionConfigDialog matches snapshot with compactionConfig (hashed partitionsSpec) 1`] = `
-<Blueprint4.Dialog
+<Blueprint5.Dialog
   canOutsideClickClose={false}
   className="compaction-config-dialog"
   isOpen={true}
@@ -446,17 +446,17 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (hashed p
             {
               "info": <p>
                 For perfect rollup, you should use either 
-                <Unknown>
+                <ForwardRef>
                   hashed
-                </Unknown>
+                </ForwardRef>
                  (partitioning based on the hash of dimensions in each row) or 
-                <Unknown>
+                <ForwardRef>
                   range
-                </Unknown>
+                </ForwardRef>
                  (based on several dimensions). For best-effort rollup, you should use 
-                <Unknown>
+                <ForwardRef>
                   dynamic
-                </Unknown>
+                </ForwardRef>
                 .
               </p>,
               "label": "Partitioning type",
@@ -497,29 +497,29 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (hashed p
                 </p>
                 <p>
                   If 
-                  <Unknown>
+                  <ForwardRef>
                     numShards
-                  </Unknown>
+                  </ForwardRef>
                    is left unspecified, the Parallel task will determine
                    
-                  <Unknown>
+                  <ForwardRef>
                     numShards
-                  </Unknown>
+                  </ForwardRef>
                    automatically by 
-                  <Unknown>
+                  <ForwardRef>
                     targetRowsPerSegment
-                  </Unknown>
+                  </ForwardRef>
                   .
                 </p>
                 <p>
                   Note that either 
-                  <Unknown>
+                  <ForwardRef>
                     targetRowsPerSegment
-                  </Unknown>
+                  </ForwardRef>
                    or 
-                  <Unknown>
+                  <ForwardRef>
                     numShards
-                  </Unknown>
+                  </ForwardRef>
                    will be used to evenly distribute rows and find the best partitioning. Leave blank to show all properties.
                 </p>
               </React.Fragment>,
@@ -535,39 +535,39 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (hashed p
                   Target number of rows to include in a partition, should be a number that targets segments of 500MB~1GB.
                 </p>
                 <p>
-                  <Unknown>
+                  <ForwardRef>
                     maxRowsPerSegment
-                  </Unknown>
+                  </ForwardRef>
                    renamed to 
-                  <Unknown>
+                  <ForwardRef>
                     targetRowsPerSegment
-                  </Unknown>
+                  </ForwardRef>
                 </p>
                 <p>
                   If 
-                  <Unknown>
+                  <ForwardRef>
                     numShards
-                  </Unknown>
+                  </ForwardRef>
                    is left unspecified, the Parallel task will determine
                    
-                  <Unknown>
+                  <ForwardRef>
                     numShards
-                  </Unknown>
+                  </ForwardRef>
                    automatically by 
-                  <Unknown>
+                  <ForwardRef>
                     targetRowsPerSegment
-                  </Unknown>
+                  </ForwardRef>
                   .
                 </p>
                 <p>
                   Note that either 
-                  <Unknown>
+                  <ForwardRef>
                     targetRowsPerSegment
-                  </Unknown>
+                  </ForwardRef>
                    or 
-                  <Unknown>
+                  <ForwardRef>
                     numShards
-                  </Unknown>
+                  </ForwardRef>
                    will be used to evenly distribute rows and find the best partitioning. Leave blank to show all properties.
                 </p>
               </React.Fragment>,
@@ -586,13 +586,13 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (hashed p
                 </p>
                 <p>
                   Note that either 
-                  <Unknown>
+                  <ForwardRef>
                     targetRowsPerSegment
-                  </Unknown>
+                  </ForwardRef>
                    or 
-                  <Unknown>
+                  <ForwardRef>
                     numShards
-                  </Unknown>
+                  </ForwardRef>
                    will be used to evenly distribute rows across partitions and find the best partitioning. Leave blank to show all properties.
                 </p>
               </React.Fragment>,
@@ -635,13 +635,13 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (hashed p
                 </p>
                 <p>
                   Note that either 
-                  <Unknown>
+                  <ForwardRef>
                     targetRowsPerSegment
-                  </Unknown>
+                  </ForwardRef>
                    or 
-                  <Unknown>
+                  <ForwardRef>
                     maxRowsPerSegment
-                  </Unknown>
+                  </ForwardRef>
                    will be used to find the best partitioning. Leave blank to show all properties.
                 </p>
               </React.Fragment>,
@@ -658,13 +658,13 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (hashed p
                 </p>
                 <p>
                   Note that either 
-                  <Unknown>
+                  <ForwardRef>
                     targetRowsPerSegment
-                  </Unknown>
+                  </ForwardRef>
                    or 
-                  <Unknown>
+                  <ForwardRef>
                     maxRowsPerSegment
-                  </Unknown>
+                  </ForwardRef>
                    will be used to find the best partitioning. Leave blank to show all properties.
                 </p>
               </React.Fragment>,
@@ -732,13 +732,13 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (hashed p
               "hideInMore": true,
               "info": <React.Fragment>
                 Maximum number of input segments to process in a single subtask. This limit is to avoid task failures when the ingestion spec is too long. There are two known limits on the max size of serialized ingestion spec, i.e., the max ZNode size in ZooKeeper (
-                <Unknown>
+                <ForwardRef>
                   jute.maxbuffer
-                </Unknown>
+                </ForwardRef>
                 ) and the max packet size in MySQL (
-                <Unknown>
+                <ForwardRef>
                   max_allowed_packet
-                </Unknown>
+                </ForwardRef>
                 ). These can make ingestion tasks fail if the serialized ingestion spec size hits one of them.
               </React.Fragment>,
               "label": "Max num files (segments)",
@@ -770,7 +770,7 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (hashed p
               For more information refer to the
                
               <Memo(ExternalLink)
-                href="https://druid.apache.org/docs/latest/ingestion/concurrent-append-replace.html"
+                href="https://druid.apache.org/docs/latest/ingestion/concurrent-append-replace"
               >
                 documentation
               </Memo(ExternalLink)>
@@ -780,36 +780,36 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (hashed p
         }
         inlineInfo={true}
       >
-        <Blueprint4.Switch
+        <Blueprint5.Switch
           checked={false}
-          label="Use concurrent locks (experimental)"
+          label="Use concurrent locks"
           onChange={[Function]}
         />
       </Memo(FormGroupWithInfo)>
     </React.Fragment>
   </div>
   <div
-    className="bp4-dialog-footer"
+    className="bp5-dialog-footer"
   >
     <div
-      className="bp4-dialog-footer-actions"
+      className="bp5-dialog-footer-actions"
     >
-      <Blueprint4.Button
+      <Blueprint5.Button
         className="history-button"
         minimal={true}
         onClick={[Function]}
         text="History"
       />
-      <Blueprint4.Button
+      <Blueprint5.Button
         intent="danger"
         onClick={[Function]}
         text="Delete"
       />
-      <Blueprint4.Button
+      <Blueprint5.Button
         onClick={[Function]}
         text="Close"
       />
-      <Blueprint4.Button
+      <Blueprint5.Button
         disabled={false}
         intent="primary"
         onClick={[Function]}
@@ -817,11 +817,11 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (hashed p
       />
     </div>
   </div>
-</Blueprint4.Dialog>
+</Blueprint5.Dialog>
 `;
 
 exports[`CompactionConfigDialog matches snapshot with compactionConfig (range partitionsSpec) 1`] = `
-<Blueprint4.Dialog
+<Blueprint5.Dialog
   canOutsideClickClose={false}
   className="compaction-config-dialog"
   isOpen={true}
@@ -856,17 +856,17 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (range pa
             {
               "info": <p>
                 For perfect rollup, you should use either 
-                <Unknown>
+                <ForwardRef>
                   hashed
-                </Unknown>
+                </ForwardRef>
                  (partitioning based on the hash of dimensions in each row) or 
-                <Unknown>
+                <ForwardRef>
                   range
-                </Unknown>
+                </ForwardRef>
                  (based on several dimensions). For best-effort rollup, you should use 
-                <Unknown>
+                <ForwardRef>
                   dynamic
-                </Unknown>
+                </ForwardRef>
                 .
               </p>,
               "label": "Partitioning type",
@@ -907,29 +907,29 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (range pa
                 </p>
                 <p>
                   If 
-                  <Unknown>
+                  <ForwardRef>
                     numShards
-                  </Unknown>
+                  </ForwardRef>
                    is left unspecified, the Parallel task will determine
                    
-                  <Unknown>
+                  <ForwardRef>
                     numShards
-                  </Unknown>
+                  </ForwardRef>
                    automatically by 
-                  <Unknown>
+                  <ForwardRef>
                     targetRowsPerSegment
-                  </Unknown>
+                  </ForwardRef>
                   .
                 </p>
                 <p>
                   Note that either 
-                  <Unknown>
+                  <ForwardRef>
                     targetRowsPerSegment
-                  </Unknown>
+                  </ForwardRef>
                    or 
-                  <Unknown>
+                  <ForwardRef>
                     numShards
-                  </Unknown>
+                  </ForwardRef>
                    will be used to evenly distribute rows and find the best partitioning. Leave blank to show all properties.
                 </p>
               </React.Fragment>,
@@ -945,39 +945,39 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (range pa
                   Target number of rows to include in a partition, should be a number that targets segments of 500MB~1GB.
                 </p>
                 <p>
-                  <Unknown>
+                  <ForwardRef>
                     maxRowsPerSegment
-                  </Unknown>
+                  </ForwardRef>
                    renamed to 
-                  <Unknown>
+                  <ForwardRef>
                     targetRowsPerSegment
-                  </Unknown>
+                  </ForwardRef>
                 </p>
                 <p>
                   If 
-                  <Unknown>
+                  <ForwardRef>
                     numShards
-                  </Unknown>
+                  </ForwardRef>
                    is left unspecified, the Parallel task will determine
                    
-                  <Unknown>
+                  <ForwardRef>
                     numShards
-                  </Unknown>
+                  </ForwardRef>
                    automatically by 
-                  <Unknown>
+                  <ForwardRef>
                     targetRowsPerSegment
-                  </Unknown>
+                  </ForwardRef>
                   .
                 </p>
                 <p>
                   Note that either 
-                  <Unknown>
+                  <ForwardRef>
                     targetRowsPerSegment
-                  </Unknown>
+                  </ForwardRef>
                    or 
-                  <Unknown>
+                  <ForwardRef>
                     numShards
-                  </Unknown>
+                  </ForwardRef>
                    will be used to evenly distribute rows and find the best partitioning. Leave blank to show all properties.
                 </p>
               </React.Fragment>,
@@ -996,13 +996,13 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (range pa
                 </p>
                 <p>
                   Note that either 
-                  <Unknown>
+                  <ForwardRef>
                     targetRowsPerSegment
-                  </Unknown>
+                  </ForwardRef>
                    or 
-                  <Unknown>
+                  <ForwardRef>
                     numShards
-                  </Unknown>
+                  </ForwardRef>
                    will be used to evenly distribute rows across partitions and find the best partitioning. Leave blank to show all properties.
                 </p>
               </React.Fragment>,
@@ -1045,13 +1045,13 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (range pa
                 </p>
                 <p>
                   Note that either 
-                  <Unknown>
+                  <ForwardRef>
                     targetRowsPerSegment
-                  </Unknown>
+                  </ForwardRef>
                    or 
-                  <Unknown>
+                  <ForwardRef>
                     maxRowsPerSegment
-                  </Unknown>
+                  </ForwardRef>
                    will be used to find the best partitioning. Leave blank to show all properties.
                 </p>
               </React.Fragment>,
@@ -1068,13 +1068,13 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (range pa
                 </p>
                 <p>
                   Note that either 
-                  <Unknown>
+                  <ForwardRef>
                     targetRowsPerSegment
-                  </Unknown>
+                  </ForwardRef>
                    or 
-                  <Unknown>
+                  <ForwardRef>
                     maxRowsPerSegment
-                  </Unknown>
+                  </ForwardRef>
                    will be used to find the best partitioning. Leave blank to show all properties.
                 </p>
               </React.Fragment>,
@@ -1142,13 +1142,13 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (range pa
               "hideInMore": true,
               "info": <React.Fragment>
                 Maximum number of input segments to process in a single subtask. This limit is to avoid task failures when the ingestion spec is too long. There are two known limits on the max size of serialized ingestion spec, i.e., the max ZNode size in ZooKeeper (
-                <Unknown>
+                <ForwardRef>
                   jute.maxbuffer
-                </Unknown>
+                </ForwardRef>
                 ) and the max packet size in MySQL (
-                <Unknown>
+                <ForwardRef>
                   max_allowed_packet
-                </Unknown>
+                </ForwardRef>
                 ). These can make ingestion tasks fail if the serialized ingestion spec size hits one of them.
               </React.Fragment>,
               "label": "Max num files (segments)",
@@ -1180,7 +1180,7 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (range pa
               For more information refer to the
                
               <Memo(ExternalLink)
-                href="https://druid.apache.org/docs/latest/ingestion/concurrent-append-replace.html"
+                href="https://druid.apache.org/docs/latest/ingestion/concurrent-append-replace"
               >
                 documentation
               </Memo(ExternalLink)>
@@ -1190,36 +1190,36 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (range pa
         }
         inlineInfo={true}
       >
-        <Blueprint4.Switch
+        <Blueprint5.Switch
           checked={false}
-          label="Use concurrent locks (experimental)"
+          label="Use concurrent locks"
           onChange={[Function]}
         />
       </Memo(FormGroupWithInfo)>
     </React.Fragment>
   </div>
   <div
-    className="bp4-dialog-footer"
+    className="bp5-dialog-footer"
   >
     <div
-      className="bp4-dialog-footer-actions"
+      className="bp5-dialog-footer-actions"
     >
-      <Blueprint4.Button
+      <Blueprint5.Button
         className="history-button"
         minimal={true}
         onClick={[Function]}
         text="History"
       />
-      <Blueprint4.Button
+      <Blueprint5.Button
         intent="danger"
         onClick={[Function]}
         text="Delete"
       />
-      <Blueprint4.Button
+      <Blueprint5.Button
         onClick={[Function]}
         text="Close"
       />
-      <Blueprint4.Button
+      <Blueprint5.Button
         disabled={true}
         intent="primary"
         onClick={[Function]}
@@ -1227,11 +1227,11 @@ exports[`CompactionConfigDialog matches snapshot with compactionConfig (range pa
       />
     </div>
   </div>
-</Blueprint4.Dialog>
+</Blueprint5.Dialog>
 `;
 
 exports[`CompactionConfigDialog matches snapshot without compactionConfig 1`] = `
-<Blueprint4.Dialog
+<Blueprint5.Dialog
   canOutsideClickClose={false}
   className="compaction-config-dialog"
   isOpen={true}
@@ -1266,17 +1266,17 @@ exports[`CompactionConfigDialog matches snapshot without compactionConfig 1`] = 
             {
               "info": <p>
                 For perfect rollup, you should use either 
-                <Unknown>
+                <ForwardRef>
                   hashed
-                </Unknown>
+                </ForwardRef>
                  (partitioning based on the hash of dimensions in each row) or 
-                <Unknown>
+                <ForwardRef>
                   range
-                </Unknown>
+                </ForwardRef>
                  (based on several dimensions). For best-effort rollup, you should use 
-                <Unknown>
+                <ForwardRef>
                   dynamic
-                </Unknown>
+                </ForwardRef>
                 .
               </p>,
               "label": "Partitioning type",
@@ -1317,29 +1317,29 @@ exports[`CompactionConfigDialog matches snapshot without compactionConfig 1`] = 
                 </p>
                 <p>
                   If 
-                  <Unknown>
+                  <ForwardRef>
                     numShards
-                  </Unknown>
+                  </ForwardRef>
                    is left unspecified, the Parallel task will determine
                    
-                  <Unknown>
+                  <ForwardRef>
                     numShards
-                  </Unknown>
+                  </ForwardRef>
                    automatically by 
-                  <Unknown>
+                  <ForwardRef>
                     targetRowsPerSegment
-                  </Unknown>
+                  </ForwardRef>
                   .
                 </p>
                 <p>
                   Note that either 
-                  <Unknown>
+                  <ForwardRef>
                     targetRowsPerSegment
-                  </Unknown>
+                  </ForwardRef>
                    or 
-                  <Unknown>
+                  <ForwardRef>
                     numShards
-                  </Unknown>
+                  </ForwardRef>
                    will be used to evenly distribute rows and find the best partitioning. Leave blank to show all properties.
                 </p>
               </React.Fragment>,
@@ -1355,39 +1355,39 @@ exports[`CompactionConfigDialog matches snapshot without compactionConfig 1`] = 
                   Target number of rows to include in a partition, should be a number that targets segments of 500MB~1GB.
                 </p>
                 <p>
-                  <Unknown>
+                  <ForwardRef>
                     maxRowsPerSegment
-                  </Unknown>
+                  </ForwardRef>
                    renamed to 
-                  <Unknown>
+                  <ForwardRef>
                     targetRowsPerSegment
-                  </Unknown>
+                  </ForwardRef>
                 </p>
                 <p>
                   If 
-                  <Unknown>
+                  <ForwardRef>
                     numShards
-                  </Unknown>
+                  </ForwardRef>
                    is left unspecified, the Parallel task will determine
                    
-                  <Unknown>
+                  <ForwardRef>
                     numShards
-                  </Unknown>
+                  </ForwardRef>
                    automatically by 
-                  <Unknown>
+                  <ForwardRef>
                     targetRowsPerSegment
-                  </Unknown>
+                  </ForwardRef>
                   .
                 </p>
                 <p>
                   Note that either 
-                  <Unknown>
+                  <ForwardRef>
                     targetRowsPerSegment
-                  </Unknown>
+                  </ForwardRef>
                    or 
-                  <Unknown>
+                  <ForwardRef>
                     numShards
-                  </Unknown>
+                  </ForwardRef>
                    will be used to evenly distribute rows and find the best partitioning. Leave blank to show all properties.
                 </p>
               </React.Fragment>,
@@ -1406,13 +1406,13 @@ exports[`CompactionConfigDialog matches snapshot without compactionConfig 1`] = 
                 </p>
                 <p>
                   Note that either 
-                  <Unknown>
+                  <ForwardRef>
                     targetRowsPerSegment
-                  </Unknown>
+                  </ForwardRef>
                    or 
-                  <Unknown>
+                  <ForwardRef>
                     numShards
-                  </Unknown>
+                  </ForwardRef>
                    will be used to evenly distribute rows across partitions and find the best partitioning. Leave blank to show all properties.
                 </p>
               </React.Fragment>,
@@ -1455,13 +1455,13 @@ exports[`CompactionConfigDialog matches snapshot without compactionConfig 1`] = 
                 </p>
                 <p>
                   Note that either 
-                  <Unknown>
+                  <ForwardRef>
                     targetRowsPerSegment
-                  </Unknown>
+                  </ForwardRef>
                    or 
-                  <Unknown>
+                  <ForwardRef>
                     maxRowsPerSegment
-                  </Unknown>
+                  </ForwardRef>
                    will be used to find the best partitioning. Leave blank to show all properties.
                 </p>
               </React.Fragment>,
@@ -1478,13 +1478,13 @@ exports[`CompactionConfigDialog matches snapshot without compactionConfig 1`] = 
                 </p>
                 <p>
                   Note that either 
-                  <Unknown>
+                  <ForwardRef>
                     targetRowsPerSegment
-                  </Unknown>
+                  </ForwardRef>
                    or 
-                  <Unknown>
+                  <ForwardRef>
                     maxRowsPerSegment
-                  </Unknown>
+                  </ForwardRef>
                    will be used to find the best partitioning. Leave blank to show all properties.
                 </p>
               </React.Fragment>,
@@ -1552,13 +1552,13 @@ exports[`CompactionConfigDialog matches snapshot without compactionConfig 1`] = 
               "hideInMore": true,
               "info": <React.Fragment>
                 Maximum number of input segments to process in a single subtask. This limit is to avoid task failures when the ingestion spec is too long. There are two known limits on the max size of serialized ingestion spec, i.e., the max ZNode size in ZooKeeper (
-                <Unknown>
+                <ForwardRef>
                   jute.maxbuffer
-                </Unknown>
+                </ForwardRef>
                 ) and the max packet size in MySQL (
-                <Unknown>
+                <ForwardRef>
                   max_allowed_packet
-                </Unknown>
+                </ForwardRef>
                 ). These can make ingestion tasks fail if the serialized ingestion spec size hits one of them.
               </React.Fragment>,
               "label": "Max num files (segments)",
@@ -1590,7 +1590,7 @@ exports[`CompactionConfigDialog matches snapshot without compactionConfig 1`] = 
               For more information refer to the
                
               <Memo(ExternalLink)
-                href="https://druid.apache.org/docs/latest/ingestion/concurrent-append-replace.html"
+                href="https://druid.apache.org/docs/latest/ingestion/concurrent-append-replace"
               >
                 documentation
               </Memo(ExternalLink)>
@@ -1600,46 +1600,37 @@ exports[`CompactionConfigDialog matches snapshot without compactionConfig 1`] = 
         }
         inlineInfo={true}
       >
-        <Blueprint4.Switch
+        <Blueprint5.Switch
           checked={false}
-          label="Use concurrent locks (experimental)"
+          label="Use concurrent locks"
           onChange={[Function]}
         />
       </Memo(FormGroupWithInfo)>
     </React.Fragment>
   </div>
   <div
-    className="bp4-dialog-footer"
+    className="bp5-dialog-footer"
   >
     <div
-      className="bp4-dialog-footer-actions"
+      className="bp5-dialog-footer-actions"
     >
-      <Blueprint4.Button
+      <Blueprint5.Button
         className="history-button"
         minimal={true}
         onClick={[Function]}
         text="History"
       />
-      <Blueprint4.Tooltip2
-        compact={false}
-        content="There is no compaction config currently set for this datasource"
-        hoverCloseDelay={0}
-        hoverOpenDelay={100}
-        interactionKind="hover-target"
-        minimal={false}
-        transitionDuration={100}
-      >
-        <Blueprint4.Button
-          disabled={true}
-          intent="danger"
-          text="Delete"
-        />
-      </Blueprint4.Tooltip2>
-      <Blueprint4.Button
+      <Blueprint5.Button
+        data-tooltip="There is no compaction config currently set for this datasource"
+        disabled={true}
+        intent="danger"
+        text="Delete"
+      />
+      <Blueprint5.Button
         onClick={[Function]}
         text="Close"
       />
-      <Blueprint4.Button
+      <Blueprint5.Button
         disabled={false}
         intent="primary"
         onClick={[Function]}
@@ -1647,5 +1638,5 @@ exports[`CompactionConfigDialog matches snapshot without compactionConfig 1`] = 
       />
     </div>
   </div>
-</Blueprint4.Dialog>
+</Blueprint5.Dialog>
 `;

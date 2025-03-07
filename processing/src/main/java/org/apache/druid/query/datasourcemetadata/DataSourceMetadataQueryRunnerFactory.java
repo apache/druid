@@ -33,12 +33,17 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.Result;
 import org.apache.druid.query.context.ResponseContext;
+import org.apache.druid.segment.MaxIngestedEventTimeInspector;
 import org.apache.druid.segment.Segment;
-import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.TimeBoundaryInspector;
+import org.joda.time.DateTime;
+import org.joda.time.Interval;
 
 import java.util.Iterator;
+import java.util.function.Supplier;
 
 /**
+ *
  */
 public class DataSourceMetadataQueryRunnerFactory
     implements QueryRunnerFactory<Result<DataSourceMetadataResultValue>, DataSourceMetadataQuery>
@@ -79,11 +84,13 @@ public class DataSourceMetadataQueryRunnerFactory
 
   private static class DataSourceMetadataQueryRunner implements QueryRunner<Result<DataSourceMetadataResultValue>>
   {
-    private final StorageAdapter adapter;
+    private final Interval segmentInterval;
+    private final Supplier<DateTime> inspector;
 
     public DataSourceMetadataQueryRunner(Segment segment)
     {
-      this.adapter = segment.asStorageAdapter();
+      this.segmentInterval = segment.getDataInterval();
+      this.inspector = createInspector(segment);
     }
 
     @Override
@@ -100,20 +107,14 @@ public class DataSourceMetadataQueryRunnerFactory
       final DataSourceMetadataQuery legacyQuery = (DataSourceMetadataQuery) query;
 
       return new BaseSequence<>(
-          new BaseSequence.IteratorMaker<Result<DataSourceMetadataResultValue>, Iterator<Result<DataSourceMetadataResultValue>>>()
+          new BaseSequence.IteratorMaker<>()
           {
             @Override
             public Iterator<Result<DataSourceMetadataResultValue>> make()
             {
-              if (adapter == null) {
-                throw new ISE(
-                    "Null storage adapter found. Probably trying to issue a query against a segment being memory unmapped."
-                );
-              }
-
               return legacyQuery.buildResult(
-                  adapter.getInterval().getStart(),
-                  adapter.getMaxIngestedEventTime()
+                  segmentInterval.getStart(),
+                  inspector.get()
               ).iterator();
             }
 
@@ -124,6 +125,24 @@ public class DataSourceMetadataQueryRunnerFactory
             }
           }
       );
+    }
+
+    /**
+     * Create a maxIngestedEventTime supplier for a given segment.
+     */
+    private static Supplier<DateTime> createInspector(final Segment segment)
+    {
+      final MaxIngestedEventTimeInspector ingestedEventTimeInspector = segment.as(MaxIngestedEventTimeInspector.class);
+      if (ingestedEventTimeInspector != null) {
+        return ingestedEventTimeInspector::getMaxIngestedEventTime;
+      }
+
+      final TimeBoundaryInspector timeBoundaryInspector = segment.as(TimeBoundaryInspector.class);
+      if (timeBoundaryInspector != null && timeBoundaryInspector.isMinMaxExact()) {
+        return timeBoundaryInspector::getMaxTime;
+      }
+
+      return () -> null;
     }
   }
 }

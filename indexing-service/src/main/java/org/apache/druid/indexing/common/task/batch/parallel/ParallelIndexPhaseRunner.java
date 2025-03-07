@@ -247,7 +247,7 @@ public abstract class ParallelIndexPhaseRunner<SubTaskType extends Task, SubTask
     final ListenableFuture<SubTaskCompleteEvent<SubTaskType>> future = taskMonitor.submit(spec);
     Futures.addCallback(
         future,
-        new FutureCallback<SubTaskCompleteEvent<SubTaskType>>()
+        new FutureCallback<>()
         {
           @Override
           public void onSuccess(SubTaskCompleteEvent<SubTaskType> completeEvent)

@@ -17,7 +17,6 @@
  */
 
 import { Button, Callout, Classes, Code, Dialog, Intent, Switch } from '@blueprintjs/core';
-import { Tooltip2 } from '@blueprintjs/popover2';
 import React, { useState } from 'react';
 
 import type { FormJsonTabs } from '../../components';
@@ -122,9 +121,7 @@ export const CompactionConfigDialog = React.memo(function CompactionConfigDialog
                   </p>
                   <p>
                     For more information refer to the{' '}
-                    <ExternalLink
-                      href={`${getLink('DOCS')}/ingestion/concurrent-append-replace.html`}
-                    >
+                    <ExternalLink href={`${getLink('DOCS')}/ingestion/concurrent-append-replace`}>
                       documentation
                     </ExternalLink>
                     .
@@ -133,7 +130,7 @@ export const CompactionConfigDialog = React.memo(function CompactionConfigDialog
               }
             >
               <Switch
-                label="Use concurrent locks (experimental)"
+                label="Use concurrent locks"
                 checked={Boolean(deepGet(currentConfig, 'taskContext.useConcurrentLocks'))}
                 onChange={() => {
                   setCurrentConfig(
@@ -166,9 +163,12 @@ export const CompactionConfigDialog = React.memo(function CompactionConfigDialog
           {compactionConfig ? (
             <Button text="Delete" intent={Intent.DANGER} onClick={onDelete} />
           ) : (
-            <Tooltip2 content="There is no compaction config currently set for this datasource">
-              <Button text="Delete" disabled intent={Intent.DANGER} />
-            </Tooltip2>
+            <Button
+              text="Delete"
+              disabled
+              intent={Intent.DANGER}
+              data-tooltip="There is no compaction config currently set for this datasource"
+            />
           )}
           <Button text="Close" onClick={onClose} />
           <Button

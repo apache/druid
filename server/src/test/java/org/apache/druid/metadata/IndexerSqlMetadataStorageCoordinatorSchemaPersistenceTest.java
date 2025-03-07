@@ -19,6 +19,7 @@
 
 package org.apache.druid.metadata;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -27,6 +28,9 @@ import org.apache.druid.indexing.overlord.DataSourceMetadata;
 import org.apache.druid.indexing.overlord.SegmentPublishResult;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
+import org.apache.druid.metadata.segment.SegmentMetadataTransaction;
+import org.apache.druid.metadata.segment.SqlSegmentMetadataTransactionFactory;
+import org.apache.druid.metadata.segment.cache.NoopSegmentMetadataCache;
 import org.apache.druid.segment.SchemaPayload;
 import org.apache.druid.segment.SchemaPayloadPlus;
 import org.apache.druid.segment.SegmentSchemaMapping;
@@ -36,6 +40,7 @@ import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
 import org.apache.druid.segment.metadata.FingerprintGenerator;
 import org.apache.druid.segment.metadata.SegmentSchemaManager;
 import org.apache.druid.segment.metadata.SegmentSchemaTestUtils;
+import org.apache.druid.server.coordinator.simulate.TestDruidLeaderSelector;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.partition.HashBasedNumberedShardSpec;
 import org.apache.druid.timeline.partition.LinearShardSpec;
@@ -44,10 +49,10 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.skife.jdbi.v2.Handle;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -86,7 +91,15 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
     CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig = new CentralizedDatasourceSchemaConfig();
     centralizedDatasourceSchemaConfig.setEnabled(true);
 
+    SqlSegmentMetadataTransactionFactory transactionFactory = new SqlSegmentMetadataTransactionFactory(
+        mapper,
+        derbyConnectorRule.metadataTablesConfigSupplier().get(),
+        derbyConnector,
+        new TestDruidLeaderSelector(),
+        new NoopSegmentMetadataCache()
+    );
     coordinator = new IndexerSQLMetadataStorageCoordinator(
+        transactionFactory,
         mapper,
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         derbyConnector,
@@ -96,7 +109,7 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
     {
       @Override
       protected DataStoreMetadataUpdateResult updateDataSourceMetadataWithHandle(
-          Handle handle,
+          SegmentMetadataTransaction transaction,
           String dataSource,
           DataSourceMetadata startMetadata,
           DataSourceMetadata endMetadata
@@ -104,13 +117,7 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
       {
         // Count number of times this method is called.
         metadataUpdateCounter.getAndIncrement();
-        return super.updateDataSourceMetadataWithHandle(handle, dataSource, startMetadata, endMetadata);
-      }
-
-      @Override
-      public int getSqlMetadataMaxRetry()
-      {
-        return MAX_SQL_MEATADATA_RETRY_FOR_TEST;
+        return super.updateDataSourceMetadataWithHandle(transaction, dataSource, startMetadata, endMetadata);
       }
     };
   }
@@ -278,6 +285,112 @@ public class IndexerSqlMetadataStorageCoordinatorSchemaPersistenceTest extends
     // Should not update dataSource metadata.
     Assert.assertEquals(0, metadataUpdateCounter.get());
 
+    segmentSchemaTestUtils.verifySegmentSchema(segmentIdSchemaMap);
+  }
+
+  @Test
+  public void testSchemaPermutation() throws JsonProcessingException
+  {
+    Set<DataSegment> segments = new HashSet<>();
+    SegmentSchemaMapping segmentSchemaMapping = new SegmentSchemaMapping(CentralizedDatasourceSchemaConfig.SCHEMA_VERSION);
+    // Store the first observed column order for each segment for verification purpose
+    Map<String, Pair<SchemaPayload, Integer>> segmentIdSchemaMap = new HashMap<>();
+
+    RowSignature originalOrder =
+        RowSignature.builder()
+                    .add("d7", ColumnType.LONG_ARRAY)
+                    .add("b1", ColumnType.FLOAT)
+                    .add("a5", ColumnType.DOUBLE)
+                    .build();
+
+    // column permutations
+    List<List<String>> permutations = Arrays.asList(
+        Arrays.asList("d7", "a5", "b1"),
+        Arrays.asList("a5", "b1", "d7"),
+        Arrays.asList("a5", "d7", "b1"),
+        Arrays.asList("b1", "d7", "a5"),
+        Arrays.asList("b1", "a5", "d7"),
+        Arrays.asList("d7", "a5", "b1")
+    );
+
+    boolean first = true;
+
+    Random random = ThreadLocalRandom.current();
+    Random permutationRandom = ThreadLocalRandom.current();
+
+    for (int i = 0; i < 105; i++) {
+      DataSegment segment = new DataSegment(
+          "fooDataSource",
+          Intervals.of("2015-01-01T00Z/2015-01-02T00Z"),
+          "version",
+          ImmutableMap.of(),
+          ImmutableList.of("dim1"),
+          ImmutableList.of("m1"),
+          new LinearShardSpec(i),
+          9,
+          100
+      );
+      segments.add(segment);
+
+      int randomNum = random.nextInt();
+
+      RowSignature rowSignature;
+
+      if (first) {
+        rowSignature = originalOrder;
+      } else {
+        RowSignature.Builder builder = RowSignature.builder();
+        List<String> columns = permutations.get(permutationRandom.nextInt(permutations.size()));
+
+        for (String column : columns) {
+          builder.add(column, originalOrder.getColumnType(column).get());
+        }
+
+        rowSignature = builder.build();
+      }
+
+      SchemaPayload schemaPayload = new SchemaPayload(rowSignature);
+      segmentIdSchemaMap.put(segment.getId().toString(), Pair.of(new SchemaPayload(originalOrder), randomNum));
+      segmentSchemaMapping.addSchema(
+          segment.getId(),
+          new SchemaPayloadPlus(schemaPayload, (long) randomNum),
+          fingerprintGenerator.generateFingerprint(
+              schemaPayload,
+              segment.getDataSource(),
+              CentralizedDatasourceSchemaConfig.SCHEMA_VERSION
+          )
+      );
+
+      if (first) {
+        coordinator.commitSegments(segments, segmentSchemaMapping);
+        first = false;
+      }
+    }
+
+    coordinator.commitSegments(segments, segmentSchemaMapping);
+    for (DataSegment segment : segments) {
+      Assert.assertArrayEquals(
+          mapper.writeValueAsString(segment).getBytes(StandardCharsets.UTF_8),
+          derbyConnector.lookup(
+              derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable(),
+              "id",
+              "payload",
+              segment.getId().toString()
+          )
+      );
+    }
+
+    List<String> segmentIds = segments.stream()
+                                      .map(segment -> segment.getId().toString())
+                                      .sorted(Comparator.naturalOrder())
+                                      .collect(Collectors.toList());
+
+    Assert.assertEquals(segmentIds, retrieveUsedSegmentIds(derbyConnectorRule.metadataTablesConfigSupplier().get()));
+
+    // Should not update dataSource metadata.
+    Assert.assertEquals(0, metadataUpdateCounter.get());
+
+    // verify that only a single schema is created
     segmentSchemaTestUtils.verifySegmentSchema(segmentIdSchemaMap);
   }
 

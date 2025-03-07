@@ -137,11 +137,9 @@ export const SchemaTable = React.memo(function SchemaTable(props: SchemaTablePro
               <div
                 className="clickable"
                 onClick={() => {
-                  if (isTimestamp) return;
-
                   if (definedDimensions && dimensionSpec) {
                     onDimensionSelect(inflateDimensionSpec(dimensionSpec), dimensionSpecIndex);
-                  } else {
+                  } else if (!isTimestamp) {
                     onAutoDimensionSelect(columnName);
                   }
                 }}

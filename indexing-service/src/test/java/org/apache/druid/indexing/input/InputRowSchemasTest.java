@@ -29,6 +29,7 @@ import org.apache.druid.data.input.impl.FloatDimensionSchema;
 import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.math.expr.ExprMacroTable;
 import org.apache.druid.query.aggregation.AggregatorFactory;
@@ -36,7 +37,6 @@ import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.transform.ExpressionTransform;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -122,17 +122,19 @@ public class InputRowSchemasTest extends InitializedNullHandlingTest
             new DoubleDimensionSchema("d5")
         )
     );
-    DataSchema schema = new DataSchema(
-        "dataSourceName",
-        new TimestampSpec(null, null, null),
-        dimensionsSpec,
-        new AggregatorFactory[]{
-            new CountAggregatorFactory("count"),
-            new LongSumAggregatorFactory("met", "met")
-        },
-        new UniformGranularitySpec(Granularities.MINUTE, Granularities.NONE, null),
-        null
-    );
+    DataSchema schema =
+        DataSchema.builder()
+                  .withDataSource("dataSourceName")
+                  .withTimestamp(new TimestampSpec(null, null, null))
+                  .withDimensions(dimensionsSpec)
+                  .withAggregators(
+                      new CountAggregatorFactory("count"),
+                      new LongSumAggregatorFactory("met", "met")
+                  )
+                  .withGranularity(
+                      new UniformGranularitySpec(Granularities.MINUTE, Granularities.NONE, null)
+                  )
+                  .build();
 
     InputRowSchema inputRowSchema = InputRowSchemas.fromDataSchema(schema);
     Assert.assertEquals(timestampSpec, inputRowSchema.getTimestampSpec());
@@ -154,14 +156,12 @@ public class InputRowSchemasTest extends InitializedNullHandlingTest
             new DoubleDimensionSchema("d5")
         )
     );
-    DataSchema schema = new DataSchema(
-        "dataSourceName",
-        new TimestampSpec(null, null, null),
-        dimensionsSpec,
-        new AggregatorFactory[]{},
-        new UniformGranularitySpec(Granularities.MINUTE, Granularities.NONE, null),
-        null
-    );
+    DataSchema schema = DataSchema.builder()
+                                  .withDataSource("dataSourceName")
+                                  .withTimestamp(new TimestampSpec(null, null, null))
+                                  .withDimensions(dimensionsSpec)
+                                  .withGranularity(new UniformGranularitySpec(Granularities.MINUTE, Granularities.NONE, null))
+                                  .build();
 
     InputRowSchema inputRowSchema = InputRowSchemas.fromDataSchema(schema);
     Assert.assertEquals(timestampSpec, inputRowSchema.getTimestampSpec());

@@ -44,7 +44,6 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- *
  * Append segments to metadata storage. The segment versions must all be less than or equal to a lock held by
  * your task for the segment intervals.
  *
@@ -133,9 +132,7 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
   @Override
   public TypeReference<SegmentPublishResult> getReturnTypeReference()
   {
-    return new TypeReference<SegmentPublishResult>()
-    {
-    };
+    return new TypeReference<>() {};
   }
 
   @Override
@@ -207,12 +204,6 @@ public class SegmentTransactionalAppendAction implements TaskAction<SegmentPubli
 
     IndexTaskUtils.emitSegmentPublishMetrics(retVal, task, toolbox);
     return retVal;
-  }
-
-  @Override
-  public boolean isAudited()
-  {
-    return true;
   }
 
   @Override

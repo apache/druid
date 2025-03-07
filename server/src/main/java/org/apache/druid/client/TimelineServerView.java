@@ -21,12 +21,13 @@ package org.apache.druid.client;
 
 import org.apache.druid.client.selector.ServerSelector;
 import org.apache.druid.query.QueryRunner;
-import org.apache.druid.query.planning.DataSourceAnalysis;
+import org.apache.druid.query.TableDataSource;
 import org.apache.druid.segment.realtime.appenderator.SegmentSchemas;
 import org.apache.druid.server.coordination.DruidServerMetadata;
 import org.apache.druid.timeline.DataSegment;
 import org.apache.druid.timeline.TimelineLookup;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Executor;
@@ -36,19 +37,29 @@ import java.util.concurrent.Executor;
 public interface TimelineServerView extends ServerView
 {
   /**
-   * Returns the timeline for a datasource, if it exists. The analysis object passed in must represent a scan-based
-   * datasource of a single table.
+   * Returns the timeline for a table, if it exists.
    *
-   * @param analysis data source analysis information
+   * @param dataSource the table
    *
    * @return timeline, if it exists
-   *
-   * @throws IllegalStateException if 'analysis' does not represent a scan-based datasource of a single table
    */
-  Optional<? extends TimelineLookup<String, ServerSelector>> getTimeline(DataSourceAnalysis analysis);
+  <T extends TimelineLookup<String, ServerSelector>> Optional<T> getTimeline(TableDataSource dataSource);
 
   /**
-   * Returns a list of {@link ImmutableDruidServer}
+   * Returns a snapshot of the current set of server metadata.
+   */
+  default List<DruidServerMetadata> getDruidServerMetadatas()
+  {
+    final List<ImmutableDruidServer> druidServers = getDruidServers();
+    final List<DruidServerMetadata> metadatas = new ArrayList<>(druidServers.size());
+    for (final ImmutableDruidServer druidServer : druidServers) {
+      metadatas.add(druidServer.getMetadata());
+    }
+    return metadatas;
+  }
+
+  /**
+   * Returns a snapshot of the current servers, their metadata, and their inventory.
    */
   List<ImmutableDruidServer> getDruidServers();
 

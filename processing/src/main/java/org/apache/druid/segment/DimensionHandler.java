@@ -21,6 +21,7 @@ package org.apache.druid.segment;
 
 import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionSchema.MultiValueHandling;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.io.Closer;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.dimension.DimensionSpec;
@@ -29,6 +30,7 @@ import org.apache.druid.segment.selector.settable.SettableColumnValueSelector;
 import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
 import javax.annotation.Nullable;
+import java.io.File;
 import java.util.Comparator;
 
 /**
@@ -101,24 +103,66 @@ public interface DimensionHandler
   DimensionIndexer<EncodedType, EncodedKeyComponentType, ActualType> makeIndexer(boolean useMaxMemoryEstimates);
 
   /**
-   * Creates a new DimensionMergerV9, a per-dimension object responsible for merging indexes/row data across segments
-   * and building the on-disk representation of a dimension. For use with IndexMergerV9 only.
+   * @deprecated use {@link #makeMerger(String, IndexSpec, SegmentWriteOutMedium, ColumnCapabilities, ProgressIndicator, File, Closer)}
    *
-   * See {@link DimensionMergerV9} interface for more information.
-   *
-   * @param indexSpec     Specification object for the index merge
-   * @param segmentWriteOutMedium  this SegmentWriteOutMedium object could be used internally in the created merger, if needed
-   * @param capabilities  The ColumnCapabilities of the dimension represented by this DimensionHandler
-   * @param progress      ProgressIndicator used by the merging process
-   * @return A new DimensionMergerV9 object.
+   * This method exists for backwards compatiblity with older versions of Druid since this is an unofficial extension
+   * point that must be implemented to create custom dimension types, and will be removed in a future release.
    */
-  DimensionMergerV9 makeMerger(
+  @Deprecated
+  default DimensionMergerV9 makeMerger(
+      String outputName,
       IndexSpec indexSpec,
       SegmentWriteOutMedium segmentWriteOutMedium,
       ColumnCapabilities capabilities,
       ProgressIndicator progress,
       Closer closer
-  );
+  )
+  {
+    throw DruidException.defensive(
+        "this method is no longer supported, use makeMerger(String, IndexSpec, SegmentWriteOutMedium, ColumnCapabilities, ProgressIndicator, File, Closer) instead"
+    );
+  }
+
+
+  /**
+   * Creates a new DimensionMergerV9, a per-dimension object responsible for merging indexes/row data across segments
+   * and building the on-disk representation of a dimension. For use with IndexMergerV9 only.
+   *
+   * See {@link DimensionMergerV9} interface for more information.
+   *
+   * @param outputName            Output "file" name for the column to use for serializers, to control where it is
+   *                              stored in the segments internal files
+   * @param indexSpec             Specification object for the index merge
+   * @param segmentWriteOutMedium this SegmentWriteOutMedium object could be used internally in the created merger, if
+   *                              needed
+   * @param capabilities          The ColumnCapabilities of the dimension represented by this DimensionHandler
+   * @param progress              ProgressIndicator used by the merging process
+   * @param segmentBaseDir        segment write out path; temporary files may be created here, though should delete
+   *                              after merge is finished OR be registered with the Closer parameter
+   * @param closer                Closer tied to segment completion. Anything which is not cleaned up inside of the
+   *                              merger after merge is complete should be registered with this closer. For example,
+   *                              resources which are required for final serialization of the column
+   * @return A new DimensionMergerV9 object.
+   */
+  default DimensionMergerV9 makeMerger(
+      String outputName,
+      IndexSpec indexSpec,
+      SegmentWriteOutMedium segmentWriteOutMedium,
+      ColumnCapabilities capabilities,
+      ProgressIndicator progress,
+      File segmentBaseDir,
+      Closer closer
+  )
+  {
+    return makeMerger(
+        outputName,
+        indexSpec,
+        segmentWriteOutMedium,
+        capabilities,
+        progress,
+        closer
+    );
+  }
 
   /**
    * Given an key component representing a single set of row value(s) for this dimension as an Object,

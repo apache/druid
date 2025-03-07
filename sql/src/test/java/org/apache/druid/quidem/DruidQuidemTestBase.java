@@ -72,13 +72,12 @@ import static org.junit.jupiter.api.Assertions.fail;
  * <li>Copy over the .iq.out to .iq to accept the changes</li>
  * </ol>
  *
- * To shorten the above 2 steps
+ * To shorten the above 2 steps you can run the test with system property quiem.overwrite=true
  *
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public abstract class DruidQuidemTestBase
 {
-
   public static final String IQ_SUFFIX = ".iq";
   /**
    * System property name for "overwrite mode"; note: empty value is treated as
@@ -101,13 +100,13 @@ public abstract class DruidQuidemTestBase
       }
       filter = new WildcardFileFilter(filterStr);
     }
-    druidQuidemRunner = new DruidQuidemRunner();
+    druidQuidemRunner = new DruidQuidemRunner(createCommandHandler());
   }
 
   /** Creates a command handler. */
   protected CommandHandler createCommandHandler()
   {
-    return Quidem.EMPTY_COMMAND_HANDLER;
+    return new DruidQuidemCommandHandler();
   }
 
   @ParameterizedTest
@@ -122,8 +121,11 @@ public abstract class DruidQuidemTestBase
 
   public static class DruidQuidemRunner
   {
-    public DruidQuidemRunner()
+    private CommandHandler commandHandler;
+
+    public DruidQuidemRunner(CommandHandler commandHandler)
     {
+      this.commandHandler = commandHandler;
     }
 
     public void run(File inFile) throws Exception
@@ -143,7 +145,7 @@ public abstract class DruidQuidemTestBase
         ConfigBuilder configBuilder = Quidem.configBuilder()
             .withConnectionFactory(connectionFactory)
             .withPropertyHandler(connectionFactory)
-            .withCommandHandler(new DruidQuidemCommandHandler());
+            .withCommandHandler(commandHandler);
 
         Config config = configBuilder
             .withReader(reader)
@@ -175,7 +177,7 @@ public abstract class DruidQuidemTestBase
 
   protected final List<String> getFileNames() throws IOException
   {
-    List<String> ret = new ArrayList<String>();
+    List<String> ret = new ArrayList<>();
 
     File testRoot = getTestRoot();
     if (!testRoot.exists()) {

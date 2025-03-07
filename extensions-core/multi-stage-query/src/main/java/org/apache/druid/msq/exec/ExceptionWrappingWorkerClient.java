@@ -32,6 +32,7 @@ import org.apache.druid.msq.indexing.error.MSQException;
 import org.apache.druid.msq.indexing.error.WorkerRpcFailedFault;
 import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.msq.kernel.WorkOrder;
+import org.apache.druid.msq.rpc.SketchEncoding;
 import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
 
 import javax.annotation.Nullable;
@@ -60,23 +61,25 @@ public class ExceptionWrappingWorkerClient implements WorkerClient
   @Override
   public ListenableFuture<ClusterByStatisticsSnapshot> fetchClusterByStatisticsSnapshot(
       String workerTaskId,
-      StageId stageId
+      StageId stageId,
+      SketchEncoding sketchEncoding
   )
   {
-    return wrap(workerTaskId, client, c -> c.fetchClusterByStatisticsSnapshot(workerTaskId, stageId));
+    return wrap(workerTaskId, client, c -> c.fetchClusterByStatisticsSnapshot(workerTaskId, stageId, sketchEncoding));
   }
 
   @Override
   public ListenableFuture<ClusterByStatisticsSnapshot> fetchClusterByStatisticsSnapshotForTimeChunk(
       String workerTaskId,
       StageId stageId,
-      long timeChunk
+      long timeChunk,
+      SketchEncoding sketchEncoding
   )
   {
     return wrap(
         workerTaskId,
         client,
-        c -> c.fetchClusterByStatisticsSnapshotForTimeChunk(workerTaskId, stageId, timeChunk)
+        c -> c.fetchClusterByStatisticsSnapshotForTimeChunk(workerTaskId, stageId, timeChunk, sketchEncoding)
     );
   }
 
@@ -139,12 +142,12 @@ public class ExceptionWrappingWorkerClient implements WorkerClient
       clientFuture = clientFn.apply(client);
     }
     catch (Exception e) {
-      throw new MSQException(e, new WorkerRpcFailedFault(workerTaskId));
+      throw new MSQException(e, new WorkerRpcFailedFault(workerTaskId, e.toString()));
     }
 
     Futures.addCallback(
         clientFuture,
-        new FutureCallback<T>()
+        new FutureCallback<>()
         {
           @Override
           public void onSuccess(@Nullable T result)
@@ -155,7 +158,7 @@ public class ExceptionWrappingWorkerClient implements WorkerClient
           @Override
           public void onFailure(Throwable t)
           {
-            retVal.setException(new MSQException(t, new WorkerRpcFailedFault(workerTaskId)));
+            retVal.setException(new MSQException(t, new WorkerRpcFailedFault(workerTaskId, t.toString())));
           }
         },
         MoreExecutors.directExecutor()

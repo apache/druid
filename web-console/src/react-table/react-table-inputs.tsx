@@ -16,12 +16,13 @@
  * limitations under the License.
  */
 
-import { Button, HTMLSelect, Icon, InputGroup, Menu, MenuItem } from '@blueprintjs/core';
+import { Button, HTMLSelect, Icon, InputGroup, Menu, MenuItem, Popover } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { Popover2 } from '@blueprintjs/popover2';
 import classNames from 'classnames';
-import React, { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { Column, ReactTableFunction } from 'react-table';
+
+import { filterMap, toggle } from '../utils';
 
 import {
   combineModeAndNeedle,
@@ -40,8 +41,10 @@ interface FilterRendererProps {
 }
 
 export function GenericFilterInput({ column, filter, onChange, key }: FilterRendererProps) {
+  const INPUT_DEBOUNCE_TIME_IN_MILLISECONDS = 1000;
   const [menuOpen, setMenuOpen] = useState(false);
   const [focusedText, setFocusedText] = useState<string | undefined>();
+  const [debouncedValue, setDebouncedValue] = useState<string | undefined>();
 
   const enableComparisons = String(column.headerClassName).includes('enable-comparisons');
 
@@ -50,6 +53,19 @@ export function GenericFilterInput({ column, filter, onChange, key }: FilterRend
     needle: '',
   };
 
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      if (focusedText !== undefined && focusedText !== debouncedValue) {
+        onChange(combineModeAndNeedle(mode, focusedText));
+        setDebouncedValue(focusedText);
+      }
+    }, INPUT_DEBOUNCE_TIME_IN_MILLISECONDS);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [focusedText, debouncedValue, mode, onChange]);
+
   return (
     <InputGroup
       className={classNames('generic-filter-input', {
@@ -57,7 +73,7 @@ export function GenericFilterInput({ column, filter, onChange, key }: FilterRend
       })}
       key={key}
       leftElement={
-        <Popover2
+        <Popover
           placement="bottom-start"
           minimal
           isOpen={menuOpen}
@@ -77,24 +93,77 @@ export function GenericFilterInput({ column, filter, onChange, key }: FilterRend
           }
         >
           <Button className="filter-mode-button" icon={filterModeToIcon(mode)} minimal />
-        </Popover2>
+        </Popover>
       }
       value={focusedText ?? needle}
-      onChange={e => {
-        const enteredText = e.target.value;
-        setFocusedText(enteredText);
-        onChange(combineModeAndNeedle(mode, enteredText));
+      onChange={e => setFocusedText(e.target.value)}
+      onKeyDown={e => {
+        if (e.key === 'Enter') {
+          const inputValue = (e.target as HTMLInputElement).value;
+          setDebouncedValue(undefined); // Reset debounce to avoid duplicate triggers
+          onChange(combineModeAndNeedle(mode, inputValue));
+        }
       }}
       rightElement={
         filter ? <Button icon={IconNames.CROSS} minimal onClick={() => onChange('')} /> : undefined
       }
-      onFocus={() => setFocusedText(needle)}
       onBlur={e => {
         setFocusedText(undefined);
         if (filter && !e.target.value) onChange('');
       }}
     />
   );
+}
+
+export function suggestibleFilterInput(suggestions: string[]) {
+  return function SuggestibleFilterInput({ filter, onChange, key, ...rest }: FilterRendererProps) {
+    let valuesFilteredOn: string[] | undefined;
+    if (filter) {
+      const modeAndNeedle = parseFilterModeAndNeedle(filter, true);
+      if (modeAndNeedle && modeAndNeedle.mode === '=') {
+        valuesFilteredOn = modeAndNeedle.needleParts;
+      }
+    }
+    return (
+      <Popover
+        key={key}
+        placement="bottom-start"
+        minimal
+        content={
+          <Menu>
+            {filterMap(suggestions, (suggestion, i) => {
+              return (
+                <MenuItem
+                  key={i}
+                  icon={
+                    valuesFilteredOn
+                      ? valuesFilteredOn.includes(suggestion)
+                        ? IconNames.MINUS
+                        : IconNames.PLUS
+                      : IconNames.EQUALS
+                  }
+                  text={suggestion}
+                  onClick={() =>
+                    onChange(
+                      combineModeAndNeedle(
+                        '=',
+                        valuesFilteredOn
+                          ? toggle(valuesFilteredOn, suggestion).join('|')
+                          : suggestion,
+                        true,
+                      ),
+                    )
+                  }
+                />
+              );
+            })}
+          </Menu>
+        }
+      >
+        <GenericFilterInput filter={filter} onChange={onChange} {...rest} />
+      </Popover>
+    );
+  };
 }
 
 export function BooleanFilterInput({ filter, onChange, key }: FilterRendererProps) {

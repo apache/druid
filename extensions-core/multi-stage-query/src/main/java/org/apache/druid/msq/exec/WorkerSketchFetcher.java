@@ -34,6 +34,7 @@ import org.apache.druid.msq.indexing.error.MSQFault;
 import org.apache.druid.msq.indexing.error.WorkerRpcFailedFault;
 import org.apache.druid.msq.kernel.StageId;
 import org.apache.druid.msq.kernel.controller.ControllerQueryKernel;
+import org.apache.druid.msq.rpc.SketchEncoding;
 import org.apache.druid.msq.statistics.ClusterByStatisticsCollector;
 import org.apache.druid.msq.statistics.ClusterByStatisticsSnapshot;
 import org.apache.druid.msq.statistics.CompleteKeyStatisticsInformation;
@@ -57,6 +58,7 @@ public class WorkerSketchFetcher implements AutoCloseable
   private static final int DEFAULT_THREAD_COUNT = 4;
 
   private final WorkerClient workerClient;
+  private final SketchEncoding sketchEncoding;
   private final WorkerManager workerManager;
 
   private final boolean retryEnabled;
@@ -68,10 +70,12 @@ public class WorkerSketchFetcher implements AutoCloseable
   public WorkerSketchFetcher(
       WorkerClient workerClient,
       WorkerManager workerManager,
-      boolean retryEnabled
+      boolean retryEnabled,
+      SketchEncoding sketchEncoding
   )
   {
     this.workerClient = workerClient;
+    this.sketchEncoding = sketchEncoding;
     this.executorService = Execs.multiThreaded(DEFAULT_THREAD_COUNT, "SketchFetcherThreadPool-%d");
     this.workerManager = workerManager;
     this.retryEnabled = retryEnabled;
@@ -96,7 +100,7 @@ public class WorkerSketchFetcher implements AutoCloseable
         executorService.submit(() -> {
           fetchStatsFromWorker(
               kernelActions,
-              () -> workerClient.fetchClusterByStatisticsSnapshot(taskId, stageId),
+              () -> workerClient.fetchClusterByStatisticsSnapshot(taskId, stageId, sketchEncoding),
               taskId,
               (kernel, snapshot) ->
                   kernel.mergeClusterByStatisticsCollectorForAllTimeChunks(stageId, workerNumber, snapshot),
@@ -152,7 +156,7 @@ public class WorkerSketchFetcher implements AutoCloseable
 
     SettableFuture<Boolean> kernelActionFuture = SettableFuture.create();
 
-    Futures.addCallback(fetchFuture, new FutureCallback<ClusterByStatisticsSnapshot>()
+    Futures.addCallback(fetchFuture, new FutureCallback<>()
     {
       @Override
       public void onSuccess(@Nullable ClusterByStatisticsSnapshot result)
@@ -186,7 +190,7 @@ public class WorkerSketchFetcher implements AutoCloseable
           try {
             kernelActions.accept((kernel) -> {
               try {
-                retryOperation.accept(kernel, worker, new WorkerRpcFailedFault(taskId));
+                retryOperation.accept(kernel, worker, new WorkerRpcFailedFault(taskId, t.toString()));
                 kernelActionFuture.set(false);
 
               }
@@ -252,7 +256,8 @@ public class WorkerSketchFetcher implements AutoCloseable
                 () -> workerClient.fetchClusterByStatisticsSnapshotForTimeChunk(
                     taskId,
                     new StageId(stageId.getQueryId(), stageId.getStageNumber()),
-                    timeChunk
+                    timeChunk,
+                    sketchEncoding
                 ),
                 taskId,
                 (kernel, snapshot) -> kernel.mergeClusterByStatisticsCollectorForTimeChunk(

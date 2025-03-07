@@ -25,6 +25,7 @@ import com.fasterxml.jackson.dataformat.smile.SmileGenerator;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -37,7 +38,7 @@ import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.http.client.HttpClient;
-import org.apache.druid.query.QueryToolChestWarehouse;
+import org.apache.druid.query.QueryRunnerFactoryConglomerate;
 import org.apache.druid.query.QueryWatcher;
 import org.apache.druid.query.TableDataSource;
 import org.apache.druid.segment.TestHelper;
@@ -65,6 +66,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
+import java.util.stream.Collectors;
 
 public class BrokerServerViewTest extends CuratorTestBase
 {
@@ -110,7 +112,7 @@ public class BrokerServerViewTest extends CuratorTestBase
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentAddedLatch));
 
     TimelineLookup<String, ServerSelector> timeline = brokerServerView.getTimeline(
-        (new TableDataSource("test_broker_server_view")).getAnalysis()
+        new TableDataSource("test_broker_server_view")
     ).get();
     List<TimelineObjectHolder<String, ServerSelector>> serverLookupRes = timeline.lookup(intervals);
     Assert.assertEquals(1, serverLookupRes.size());
@@ -172,7 +174,7 @@ public class BrokerServerViewTest extends CuratorTestBase
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentAddedLatch));
 
     TimelineLookup timeline = brokerServerView.getTimeline(
-        (new TableDataSource("test_broker_server_view")).getAnalysis()
+        new TableDataSource("test_broker_server_view")
     ).get();
     assertValues(
         Arrays.asList(
@@ -180,7 +182,7 @@ public class BrokerServerViewTest extends CuratorTestBase
             createExpected("2011-04-02/2011-04-06", "v2", druidServers.get(2), segments.get(2)),
             createExpected("2011-04-06/2011-04-09", "v3", druidServers.get(3), segments.get(3))
         ),
-        (List<TimelineObjectHolder>) timeline.lookup(
+        timeline.lookup(
             Intervals.of(
                 "2011-04-01/2011-04-09"
             )
@@ -195,7 +197,7 @@ public class BrokerServerViewTest extends CuratorTestBase
     segmentRemovedLatch = new CountDownLatch(4);
 
     timeline = brokerServerView.getTimeline(
-        (new TableDataSource("test_broker_server_view")).getAnalysis()
+        new TableDataSource("test_broker_server_view")
     ).get();
     assertValues(
         Arrays.asList(
@@ -204,7 +206,7 @@ public class BrokerServerViewTest extends CuratorTestBase
             createExpected("2011-04-03/2011-04-06", "v1", druidServers.get(1), segments.get(1)),
             createExpected("2011-04-06/2011-04-09", "v3", druidServers.get(3), segments.get(3))
         ),
-        (List<TimelineObjectHolder>) timeline.lookup(
+        timeline.lookup(
             Intervals.of(
                 "2011-04-01/2011-04-09"
             )
@@ -274,7 +276,7 @@ public class BrokerServerViewTest extends CuratorTestBase
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentAddedLatch));
 
     TimelineLookup timeline = brokerServerView.getTimeline(
-        (new TableDataSource("test_broker_server_view")).getAnalysis()
+        new TableDataSource("test_broker_server_view")
     ).get();
 
     assertValues(
@@ -283,11 +285,17 @@ public class BrokerServerViewTest extends CuratorTestBase
             createExpected("2011-04-02/2011-04-06", "v2", druidServers.get(2), segments.get(2)),
             createExpected("2011-04-06/2011-04-09", "v3", druidServers.get(3), segments.get(3))
         ),
-        (List<TimelineObjectHolder>) timeline.lookup(
+        timeline.lookup(
             Intervals.of(
                 "2011-04-01/2011-04-09"
             )
         )
+    );
+
+    // check server metadatas
+    Assert.assertEquals(
+        druidServers.stream().map(DruidServer::getMetadata).collect(Collectors.toSet()),
+        ImmutableSet.copyOf(brokerServerView.getDruidServerMetadatas())
     );
 
     // unannounce the broker segment should do nothing to announcements
@@ -298,7 +306,7 @@ public class BrokerServerViewTest extends CuratorTestBase
     segmentRemovedLatch = new CountDownLatch(5);
 
     timeline = brokerServerView.getTimeline(
-        (new TableDataSource("test_broker_server_view")).getAnalysis()
+        new TableDataSource("test_broker_server_view")
     ).get();
 
     // expect same set of segments as before
@@ -308,7 +316,7 @@ public class BrokerServerViewTest extends CuratorTestBase
             createExpected("2011-04-02/2011-04-06", "v2", druidServers.get(2), segments.get(2)),
             createExpected("2011-04-06/2011-04-09", "v3", druidServers.get(3), segments.get(3))
         ),
-        (List<TimelineObjectHolder>) timeline.lookup(
+        timeline.lookup(
             Intervals.of(
                 "2011-04-01/2011-04-09"
             )
@@ -354,7 +362,7 @@ public class BrokerServerViewTest extends CuratorTestBase
 
     // Get the timeline for the datasource
     TimelineLookup<String, ServerSelector> timeline = brokerServerView.getTimeline(
-        (new TableDataSource(segment1.getDataSource())).getAnalysis()
+        new TableDataSource(segment1.getDataSource())
     ).get();
 
     // Verify that the timeline has no entry for the interval of segment 1
@@ -414,7 +422,7 @@ public class BrokerServerViewTest extends CuratorTestBase
 
     // Get the timeline for the datasource
     TimelineLookup<String, ServerSelector> timeline = brokerServerView.getTimeline(
-        (new TableDataSource(segment1.getDataSource())).getAnalysis()
+        new TableDataSource(segment1.getDataSource())
     ).get();
 
     // Verify that the timeline has no entry for the interval of segment 1
@@ -476,7 +484,7 @@ public class BrokerServerViewTest extends CuratorTestBase
 
     // Get the timeline for the datasource
     TimelineLookup<String, ServerSelector> timeline = brokerServerView.getTimeline(
-        (new TableDataSource(segment1.getDataSource())).getAnalysis()
+        new TableDataSource(segment1.getDataSource())
     ).get();
 
     // Verify that the timeline has no entry for the interval of segment 1
@@ -593,7 +601,8 @@ public class BrokerServerViewTest extends CuratorTestBase
     setupViews(null, null, true);
   }
 
-  private void setupViews(Set<String> watchedTiers, Set<String> ignoredTiers, boolean watchRealtimeTasks) throws Exception
+  private void setupViews(Set<String> watchedTiers, Set<String> ignoredTiers, boolean watchRealtimeTasks)
+      throws Exception
   {
     baseView = new BatchServerInventoryView(
         zkPathsConfig,
@@ -646,7 +655,7 @@ public class BrokerServerViewTest extends CuratorTestBase
 
     DirectDruidClientFactory druidClientFactory = new DirectDruidClientFactory(
         new NoopServiceEmitter(),
-        EasyMock.createMock(QueryToolChestWarehouse.class),
+        EasyMock.createMock(QueryRunnerFactoryConglomerate.class),
         EasyMock.createMock(QueryWatcher.class),
         getSmileMapper(),
         EasyMock.createMock(HttpClient.class)

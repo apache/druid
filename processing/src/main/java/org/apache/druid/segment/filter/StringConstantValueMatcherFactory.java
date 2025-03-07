@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment.filter;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.filter.SelectorPredicateFactory;
 import org.apache.druid.query.filter.ValueMatcher;
 import org.apache.druid.segment.BaseDoubleColumnValueSelector;
@@ -43,7 +42,7 @@ public class StringConstantValueMatcherFactory implements ColumnProcessorFactory
 
   StringConstantValueMatcherFactory(@Nullable String matchValue)
   {
-    this.matchValue = NullHandling.emptyToNullIfNeeded(matchValue);
+    this.matchValue = matchValue;
   }
 
   @Override

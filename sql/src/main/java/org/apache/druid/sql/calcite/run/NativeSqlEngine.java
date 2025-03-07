@@ -27,12 +27,12 @@ import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.druid.error.InvalidSqlInput;
 import org.apache.druid.guice.LazySingleton;
+import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.query.groupby.GroupByQuery;
 import org.apache.druid.query.timeboundary.TimeBoundaryQuery;
 import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.sql.calcite.parser.DruidSqlInsert;
 import org.apache.druid.sql.calcite.parser.DruidSqlReplace;
-import org.apache.druid.sql.calcite.planner.JoinAlgorithm;
 import org.apache.druid.sql.calcite.planner.PlannerContext;
 import org.apache.druid.sql.calcite.rel.DruidQuery;
 import org.apache.druid.sql.destination.IngestDestination;
@@ -83,13 +83,21 @@ public class NativeSqlEngine implements SqlEngine
   }
 
   @Override
-  public RelDataType resultTypeForSelect(RelDataTypeFactory typeFactory, RelDataType validatedRowType)
+  public RelDataType resultTypeForSelect(
+      RelDataTypeFactory typeFactory,
+      RelDataType validatedRowType,
+      Map<String, Object> queryContext
+  )
   {
     return validatedRowType;
   }
 
   @Override
-  public RelDataType resultTypeForInsert(RelDataTypeFactory typeFactory, RelDataType validatedRowType)
+  public RelDataType resultTypeForInsert(
+      RelDataTypeFactory typeFactory,
+      RelDataType validatedRowType,
+      Map<String, Object> queryContext
+  )
   {
     throw new UnsupportedOperationException();
   }

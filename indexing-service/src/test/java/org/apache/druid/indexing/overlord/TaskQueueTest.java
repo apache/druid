@@ -41,6 +41,7 @@ import org.apache.druid.indexer.RunnerTaskState;
 import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexing.common.TaskLock;
 import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.TaskToolbox;
@@ -81,7 +82,6 @@ import org.apache.druid.metadata.DefaultPasswordProvider;
 import org.apache.druid.metadata.DerbyMetadataStorageActionHandlerFactory;
 import org.apache.druid.metadata.SQLMetadataConnector;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.server.DruidNode;
 import org.apache.druid.server.coordinator.stats.CoordinatorRunStats;
 import org.apache.druid.server.initialization.IndexerZkConfig;
@@ -519,7 +519,7 @@ public class TaskQueueTest extends IngestionTestBase
     final String password = "AbCd_1234";
     final ObjectMapper mapper = getObjectMapper();
 
-    final HttpInputSourceConfig httpInputSourceConfig = new HttpInputSourceConfig(Collections.singleton("http"));
+    final HttpInputSourceConfig httpInputSourceConfig = new HttpInputSourceConfig(Collections.singleton("http"), null);
     mapper.setInjectableValues(new InjectableValues.Std()
                                    .addValue(HttpInputSourceConfig.class, httpInputSourceConfig)
                                    .addValue(ObjectMapper.class, new DefaultObjectMapper())
@@ -549,19 +549,20 @@ public class TaskQueueTest extends IngestionTestBase
         new NoopTaskContextEnricher()
     );
 
-    final DataSchema dataSchema = new DataSchema(
-        "DS",
-        new TimestampSpec(null, null, null),
-        new DimensionsSpec(null),
-        null,
-        new UniformGranularitySpec(Granularities.YEAR, Granularities.DAY, null),
-        null
-    );
+    final DataSchema dataSchema =
+        DataSchema.builder()
+                  .withDataSource("DS")
+                  .withTimestamp(new TimestampSpec(null, null, null))
+                  .withDimensions(DimensionsSpec.builder().build())
+                  .withGranularity(
+                      new UniformGranularitySpec(Granularities.YEAR, Granularities.DAY, null)
+                  )
+                  .build();
     final ParallelIndexIOConfig ioConfig = new ParallelIndexIOConfig(
-        null,
         new HttpInputSource(Collections.singletonList(URI.create("http://host.org")),
                             "user",
                             new DefaultPasswordProvider(password),
+                            null,
                             null,
                             httpInputSourceConfig),
         new NoopInputFormat(),

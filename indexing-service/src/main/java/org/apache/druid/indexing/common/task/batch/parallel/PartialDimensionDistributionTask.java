@@ -36,6 +36,7 @@ import org.apache.druid.data.input.InputSource;
 import org.apache.druid.data.input.Rows;
 import org.apache.druid.data.input.StringTuple;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.granularity.GranularitySpec;
 import org.apache.druid.indexer.partitions.DimensionRangePartitionsSpec;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.actions.SurrogateTaskActionClient;
@@ -50,7 +51,6 @@ import org.apache.druid.java.util.common.parsers.CloseableIterator;
 import org.apache.druid.segment.incremental.ParseExceptionHandler;
 import org.apache.druid.segment.incremental.RowIngestionMeters;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.server.security.Action;
 import org.apache.druid.server.security.Resource;
 import org.apache.druid.server.security.ResourceAction;
@@ -180,9 +180,6 @@ public class PartialDimensionDistributionTask extends PerfectRollupWorkerTask
   @Override
   public Set<ResourceAction> getInputSourceResources()
   {
-    if (getIngestionSchema().getIOConfig().getFirehoseFactory() != null) {
-      throw getInputSecurityOnFirehoseUnsupportedError();
-    }
     return getIngestionSchema().getIOConfig().getInputSource() != null ?
            getIngestionSchema().getIOConfig().getInputSource().getTypes()
                                .stream()

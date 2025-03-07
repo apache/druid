@@ -19,21 +19,13 @@
 
 package org.apache.druid.msq.test;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import com.google.inject.Injector;
-import com.google.inject.Module;
-import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.sql.MSQTaskSqlEngine;
-import org.apache.druid.query.groupby.TestGroupByBuffers;
-import org.apache.druid.server.QueryLifecycleFactory;
 import org.apache.druid.sql.calcite.CalciteNestedDataQueryTest;
 import org.apache.druid.sql.calcite.QueryTestBuilder;
 import org.apache.druid.sql.calcite.SqlTestFrameworkConfig;
 import org.apache.druid.sql.calcite.TempDirProducer;
-import org.apache.druid.sql.calcite.run.SqlEngine;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -44,46 +36,11 @@ import org.junit.jupiter.api.Test;
 public class CalciteNestedDataQueryMSQTest extends CalciteNestedDataQueryTest
 {
 
-  public static class NestedDataQueryMSQComponentSupplier extends NestedComponentSupplier
+  public static class NestedDataQueryMSQComponentSupplier extends AbstractMSQComponentSupplierDelegate
   {
     public NestedDataQueryMSQComponentSupplier(TempDirProducer tempFolderProducer)
     {
-      super(tempFolderProducer);
-    }
-
-    @Override
-    public void configureGuice(DruidInjectorBuilder builder)
-    {
-      super.configureGuice(builder);
-      builder.addModules(
-          CalciteMSQTestsHelper.fetchModules(tempDirProducer::newTempFolder, TestGroupByBuffers.createDefault()).toArray(new Module[0])
-      );
-    }
-
-    @Override
-    public SqlEngine createEngine(
-        QueryLifecycleFactory qlf,
-        ObjectMapper queryJsonMapper,
-        Injector injector
-    )
-    {
-      final WorkerMemoryParameters workerMemoryParameters =
-          WorkerMemoryParameters.createInstance(
-              WorkerMemoryParameters.PROCESSING_MINIMUM_BYTES * 50,
-              2,
-              10,
-              2,
-              0,
-              0
-          );
-      final MSQTestOverlordServiceClient indexingServiceClient = new MSQTestOverlordServiceClient(
-          queryJsonMapper,
-          injector,
-          new MSQTestTaskActionClient(queryJsonMapper, injector),
-          workerMemoryParameters,
-          ImmutableList.of()
-      );
-      return new MSQTaskSqlEngine(indexingServiceClient, queryJsonMapper);
+      super(new NestedComponentSupplier(tempFolderProducer));
     }
   }
 

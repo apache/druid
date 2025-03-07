@@ -22,12 +22,13 @@ package org.apache.druid.indexing.rabbitstream.supervisor;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import org.apache.druid.data.input.InputFormat;
 import org.apache.druid.data.input.impl.DimensionSchema;
-import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.TaskMaster;
@@ -38,18 +39,17 @@ import org.apache.druid.indexing.overlord.supervisor.SupervisorStateManagerConfi
 import org.apache.druid.indexing.rabbitstream.RabbitStreamIndexTaskClientFactory;
 import org.apache.druid.indexing.rabbitstream.RabbitStreamRecordSupplier;
 import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskClient;
+import org.apache.druid.indexing.seekablestream.SeekableStreamIndexTaskIOConfig;
 import org.apache.druid.indexing.seekablestream.supervisor.SeekableStreamSupervisorReportPayload;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.parsers.JSONPathSpec;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.java.util.metrics.DruidMonitorSchedulerConfig;
 import org.apache.druid.java.util.metrics.StubServiceEmitter;
-import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.incremental.RowIngestionMetersFactory;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.server.metrics.NoopServiceEmitter;
 import org.easymock.EasyMockSupport;
 import org.joda.time.Period;
@@ -74,7 +74,6 @@ public class RabbitStreamSupervisorTest extends EasyMockSupport
       false,
       false);
   private static final String DATASOURCE = "testDS";
-  private static final int TEST_CHAT_THREADS = 3;
   private static final long TEST_CHAT_RETRIES = 9L;
   private static final Period TEST_HTTP_TIMEOUT = new Period("PT10S");
   private static final Period TEST_SHUTDOWN_TIMEOUT = new Period("PT80S");
@@ -103,16 +102,19 @@ public class RabbitStreamSupervisorTest extends EasyMockSupport
     dimensions.add(StringDimensionSchema.create("dim1"));
     dimensions.add(StringDimensionSchema.create("dim2"));
 
-    return new DataSchema(
-        dataSource,
-        new TimestampSpec("timestamp", "iso", null),
-        new DimensionsSpec(dimensions),
-        new AggregatorFactory[] {new CountAggregatorFactory("rows")},
-        new UniformGranularitySpec(
-            Granularities.HOUR,
-            Granularities.NONE,
-            ImmutableList.of()),
-        null);
+    return DataSchema.builder()
+                     .withDataSource(dataSource)
+                     .withTimestamp(new TimestampSpec("timestamp", "iso", null))
+                     .withDimensions(dimensions)
+                     .withAggregators(new CountAggregatorFactory("rows"))
+                     .withGranularity(
+                         new UniformGranularitySpec(
+                             Granularities.HOUR,
+                             Granularities.NONE,
+                             ImmutableList.of()
+                         )
+                     )
+                     .build();
   }
 
   @BeforeClass
@@ -148,8 +150,6 @@ public class RabbitStreamSupervisorTest extends EasyMockSupport
         null,
         null,
         numThreads, // worker threads
-        null,
-        TEST_CHAT_THREADS,
         TEST_CHAT_RETRIES,
         TEST_HTTP_TIMEOUT,
         TEST_SHUTDOWN_TIMEOUT,
@@ -161,7 +161,9 @@ public class RabbitStreamSupervisorTest extends EasyMockSupport
         null,
         null,
         null,
-        100);
+        100,
+        null
+    );
     rowIngestionMetersFactory = new TestUtils().getRowIngestionMetersFactory();
     serviceEmitter = new StubServiceEmitter("RabbitStreamSupervisorTest", "localhost");
     EmittingLogger.registerEmitter(serviceEmitter);
@@ -366,4 +368,49 @@ public class RabbitStreamSupervisorTest extends EasyMockSupport
     Assert.assertEquals(30 * 60, payload.getDurationSeconds());
   }
 
+  @Test
+  public void testCreateTaskIOConfig()
+  {
+    supervisor = getSupervisor(
+        1,
+        1,
+        false,
+        "PT30M",
+        null,
+        null,
+        RabbitStreamSupervisorTest.dataSchema,
+        tuningConfig
+    );
+
+    SeekableStreamIndexTaskIOConfig ioConfig = supervisor.createTaskIoConfig(
+        1,
+        ImmutableMap.of(),
+        ImmutableMap.of(),
+        "test",
+        null,
+        null,
+        ImmutableSet.of(),
+        new RabbitStreamSupervisorIOConfig(
+            STREAM, // stream
+            URI, // uri
+            INPUT_FORMAT, // inputFormat
+            1, // replicas
+            1, // taskCount
+            new Period("PT30M"), // taskDuration
+            null, // consumerProperties
+            null, // autoscalerConfig
+            400L, // poll timeout
+            new Period("P1D"), // start delat
+            new Period("PT30M"), // period
+            new Period("PT30S"), // completiontimeout
+            false, // useearliest
+            null, // latemessagerejection
+            null, // early message rejection
+            null, // latemessagerejectionstartdatetime
+            1
+        )
+    );
+
+    Assert.assertEquals(30L, ioConfig.getRefreshRejectionPeriodsInMinutes().longValue());
+  }
 }

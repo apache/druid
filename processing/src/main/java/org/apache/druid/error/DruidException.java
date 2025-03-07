@@ -24,6 +24,7 @@ import com.google.common.base.Preconditions;
 import org.apache.druid.java.util.common.StringUtils;
 
 import javax.annotation.concurrent.NotThreadSafe;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -130,6 +131,8 @@ import java.util.Map;
 @NotThreadSafe
 public class DruidException extends RuntimeException
 {
+  public static final String CLASS_NAME_STR = DruidException.class.getName();
+
   /**
    * Starts building a "general" DruidException targeting the specified persona.
    *
@@ -167,13 +170,24 @@ public class DruidException extends RuntimeException
 
   /**
    * Build a "defensive" exception, this is an exception that should never actually be triggered, but we are
-   * throwing it inside of a defensive check.
+   * throwing it inside a defensive check.
    *
    * @return A builder for a defensive exception.
    */
   public static DruidException defensive(String format, Object... args)
   {
     return defensive().build(format, args);
+  }
+
+  /**
+   * Build a "defensive" exception, this is an exception that should never actually be triggered, but we are
+   * throwing it inside a defensive check.
+   *
+   * @return A builder for a defensive exception.
+   */
+  public static DruidException defensive(Throwable cause, String format, Object... args)
+  {
+    return defensive().build(cause, format, args);
   }
 
   /**
@@ -373,6 +387,10 @@ public class DruidException extends RuntimeException
      */
     RUNTIME_FAILURE(500),
     /**
+     * Indicates that the underlying service is unavailable to serve the request.
+     */
+    SERVICE_UNAVAILABLE(503),
+    /**
      * A timeout happened
      */
     TIMEOUT(504),
@@ -467,7 +485,7 @@ public class DruidException extends RuntimeException
 
     public DruidException build(Throwable cause, String formatMe, Object... vals)
     {
-      return new DruidException(
+      final DruidException retVal = new DruidException(
           cause,
           errorCode,
           targetPersona,
@@ -475,6 +493,19 @@ public class DruidException extends RuntimeException
           StringUtils.nonStrictFormat(formatMe, vals),
           deserialized
       );
+
+      StackTraceElement[] stackTrace = retVal.getStackTrace();
+      int firstNonDruidExceptionIndex = 0;
+      while (
+          firstNonDruidExceptionIndex < stackTrace.length
+          && stackTrace[firstNonDruidExceptionIndex].getClassName().startsWith(CLASS_NAME_STR)) {
+        ++firstNonDruidExceptionIndex;
+      }
+      if (firstNonDruidExceptionIndex > 0) {
+        retVal.setStackTrace(Arrays.copyOfRange(stackTrace, firstNonDruidExceptionIndex, stackTrace.length));
+      }
+
+      return retVal;
     }
   }
 
@@ -496,5 +527,4 @@ public class DruidException extends RuntimeException
 
     protected abstract DruidException makeException(DruidExceptionBuilder bob);
   }
-
 }

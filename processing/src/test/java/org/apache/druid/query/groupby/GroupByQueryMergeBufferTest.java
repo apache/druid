@@ -124,23 +124,24 @@ public class GroupByQueryMergeBufferTest extends InitializedNullHandlingTest
   )
   {
     final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
+    final GroupByStatsProvider groupByStatsProvider = new GroupByStatsProvider();
     final GroupByResourcesReservationPool groupByResourcesReservationPool =
         new GroupByResourcesReservationPool(MERGE_BUFFER_POOL, config);
 
     final GroupingEngine groupingEngine = new GroupingEngine(
         PROCESSING_CONFIG,
         configSupplier,
-        BUFFER_POOL,
         groupByResourcesReservationPool,
         TestHelper.makeJsonMapper(),
         mapper,
-        QueryRunnerTestHelper.NOOP_QUERYWATCHER
+        QueryRunnerTestHelper.NOOP_QUERYWATCHER,
+        groupByStatsProvider
     );
     final GroupByQueryQueryToolChest toolChest = new GroupByQueryQueryToolChest(
         groupingEngine,
         groupByResourcesReservationPool
     );
-    return new GroupByQueryRunnerFactory(groupingEngine, toolChest);
+    return new GroupByQueryRunnerFactory(groupingEngine, toolChest, BUFFER_POOL);
   }
 
   private static final CloseableStupidPool<ByteBuffer> BUFFER_POOL = new CloseableStupidPool<>(
@@ -173,7 +174,7 @@ public class GroupByQueryMergeBufferTest extends InitializedNullHandlingTest
   public static Collection<Object[]> constructorFeeder()
   {
     final List<Object[]> args = new ArrayList<>();
-    for (QueryRunner<ResultRow> runner : QueryRunnerTestHelper.makeQueryRunners(FACTORY)) {
+    for (QueryRunner<ResultRow> runner : QueryRunnerTestHelper.makeQueryRunners(FACTORY, true)) {
       args.add(new Object[]{runner});
     }
     return args;

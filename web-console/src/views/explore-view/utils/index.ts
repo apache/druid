@@ -16,7 +16,11 @@
  * limitations under the License.
  */
 
-export * from './date-format';
-export * from './get-auto-granularity';
+export * from './filter-pattern-helpers';
+export * from './general';
+export * from './known-aggregations';
+export * from './max-time-for-table';
 export * from './misc';
-export * from './snap-to-granularity';
+export * from './query-log';
+export * from './table-query';
+export * from './time-manipulation';

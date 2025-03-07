@@ -22,10 +22,8 @@ package org.apache.druid.indexing.kinesis;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.druid.indexing.seekablestream.SeekableStreamEndSequenceNumbers;
@@ -35,6 +33,7 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.segment.indexing.IOConfig;
 import org.hamcrest.CoreMatchers;
 import org.joda.time.DateTime;
+import org.joda.time.Duration;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -52,7 +51,7 @@ public class KinesisIOConfigTest
   public KinesisIOConfigTest()
   {
     mapper = new DefaultObjectMapper();
-    mapper.registerModules((Iterable<Module>) new KinesisIndexingServiceModule().getJacksonModules());
+    mapper.registerModules(new KinesisIndexingServiceModule().getJacksonModules());
   }
 
   @Rule
@@ -91,7 +90,7 @@ public class KinesisIOConfigTest
         config.getEndSequenceNumbers().getPartitionSequenceNumberMap()
     );
     Assert.assertTrue(config.isUseTransaction());
-    Assert.assertFalse("minimumMessageTime", config.getMinimumMessageTime().isPresent());
+    Assert.assertNull("minimumMessageTime", config.getMinimumMessageTime());
     Assert.assertEquals(config.getEndpoint(), "kinesis.us-east-1.amazonaws.com");
     Assert.assertEquals(config.getFetchDelayMillis(), 0);
     Assert.assertEquals(Collections.emptySet(), config.getStartSequenceNumbers().getExclusivePartitions());
@@ -139,10 +138,8 @@ public class KinesisIOConfigTest
         config.getEndSequenceNumbers().getPartitionSequenceNumberMap()
     );
     Assert.assertFalse(config.isUseTransaction());
-    Assert.assertTrue("maximumMessageTime", config.getMaximumMessageTime().isPresent());
-    Assert.assertTrue("minimumMessageTime", config.getMinimumMessageTime().isPresent());
-    Assert.assertEquals(DateTimes.of("2016-05-31T12:00Z"), config.getMinimumMessageTime().get());
-    Assert.assertEquals(DateTimes.of("2016-05-31T14:00Z"), config.getMaximumMessageTime().get());
+    Assert.assertEquals(DateTimes.of("2016-05-31T12:00Z"), config.getMinimumMessageTime());
+    Assert.assertEquals(DateTimes.of("2016-05-31T14:00Z"), config.getMaximumMessageTime());
     Assert.assertEquals(config.getEndpoint(), "kinesis.us-east-2.amazonaws.com");
     Assert.assertEquals(config.getStartSequenceNumbers().getExclusivePartitions(), ImmutableSet.of("0"));
     Assert.assertEquals(1000, config.getFetchDelayMillis());
@@ -267,7 +264,8 @@ public class KinesisIOConfigTest
         "endpoint",
         2000,
         "awsAssumedRoleArn",
-        "awsExternalId"
+        "awsExternalId",
+        Duration.standardHours(2).getStandardMinutes()
     );
 
     final byte[] json = mapper.writeValueAsBytes(currentConfig);
@@ -348,8 +346,8 @@ public class KinesisIOConfigTest
     private final SeekableStreamEndSequenceNumbers<String, String> endPartitions;
     private final Set<String> exclusiveStartSequenceNumberPartitions;
     private final boolean useTransaction;
-    private final Optional<DateTime> minimumMessageTime;
-    private final Optional<DateTime> maximumMessageTime;
+    private final DateTime minimumMessageTime;
+    private final DateTime maximumMessageTime;
     private final String endpoint;
     private final Integer fetchDelayMillis;
     private final String awsAssumedRoleArn;
@@ -375,8 +373,8 @@ public class KinesisIOConfigTest
       this.endPartitions = endPartitions;
       this.exclusiveStartSequenceNumberPartitions = exclusiveStartSequenceNumberPartitions;
       this.useTransaction = useTransaction;
-      this.minimumMessageTime = Optional.fromNullable(minimumMessageTime);
-      this.maximumMessageTime = Optional.fromNullable(maximumMessageTime);
+      this.minimumMessageTime = minimumMessageTime;
+      this.maximumMessageTime = maximumMessageTime;
       this.endpoint = endpoint;
       this.fetchDelayMillis = fetchDelayMillis;
       this.awsAssumedRoleArn = awsAssumedRoleArn;
@@ -414,13 +412,13 @@ public class KinesisIOConfigTest
     }
 
     @JsonProperty
-    public Optional<DateTime> getMinimumMessageTime()
+    public DateTime getMinimumMessageTime()
     {
       return minimumMessageTime;
     }
 
     @JsonProperty
-    public Optional<DateTime> getMaximumMessageTime()
+    public DateTime getMaximumMessageTime()
     {
       return maximumMessageTime;
     }

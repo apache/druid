@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.InputEntity;
 import org.apache.druid.data.input.InputEntityReader;
 import org.apache.druid.data.input.InputRowSchema;
@@ -52,7 +51,8 @@ public class DelimitedInputFormat extends FlatTextInputFormat
       @JsonProperty("delimiter") @Nullable String delimiter,
       @Deprecated @JsonProperty("hasHeaderRow") @Nullable Boolean hasHeaderRow,
       @JsonProperty("findColumnsFromHeader") @Nullable Boolean findColumnsFromHeader,
-      @JsonProperty("skipHeaderRows") int skipHeaderRows
+      @JsonProperty("skipHeaderRows") int skipHeaderRows,
+      @JsonProperty("tryParseNumbers") @Nullable Boolean tryParseNumbers
   )
   {
     super(
@@ -61,7 +61,8 @@ public class DelimitedInputFormat extends FlatTextInputFormat
         delimiter == null ? DEFAULT_DELIMITER : delimiter,
         hasHeaderRow,
         findColumnsFromHeader,
-        skipHeaderRows
+        skipHeaderRows,
+        tryParseNumbers
     );
   }
 
@@ -85,7 +86,8 @@ public class DelimitedInputFormat extends FlatTextInputFormat
             getDelimiter(),
             useListBasedInputRows() ? getColumns().size() : DelimitedBytes.UNKNOWN_FIELD_COUNT
         ),
-        useListBasedInputRows()
+        useListBasedInputRows(),
+        shouldTryParseNumbers()
     );
   }
 
@@ -123,7 +125,7 @@ public class DelimitedInputFormat extends FlatTextInputFormat
 
     while (iterator.hasNext()) {
       String splitValue = iterator.next();
-      if (!NullHandling.replaceWithDefault() && splitValue.isEmpty()) {
+      if (splitValue.isEmpty()) {
         result.add(null);
       } else {
         result.add(splitValue);

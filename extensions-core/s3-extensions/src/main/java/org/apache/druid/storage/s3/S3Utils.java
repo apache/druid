@@ -70,7 +70,7 @@ public class S3Utils
    */
   public static final String ERROR_ENTITY_TOO_LARGE = "EntityTooLarge";
 
-  public static final Predicate<Throwable> S3RETRY = new Predicate<Throwable>()
+  public static final Predicate<Throwable> S3RETRY = new Predicate<>()
   {
     @Override
     public boolean apply(Throwable e)
@@ -379,7 +379,7 @@ public class S3Utils
   {
     final Protocol protocolFromClientConfig = parseProtocol(clientConfig.getProtocol());
     final String endpointUrl = endpointConfig.getUrl();
-    if (org.apache.commons.lang.StringUtils.isNotEmpty(endpointUrl)) {
+    if (org.apache.commons.lang3.StringUtils.isNotEmpty(endpointUrl)) {
       //noinspection ConstantConditions
       final URI uri = URIs.parse(endpointUrl, protocolFromClientConfig.toString());
       final Protocol protocol = parseProtocol(uri.getScheme());
@@ -394,16 +394,16 @@ public class S3Utils
 
   public static ClientConfiguration setProxyConfig(ClientConfiguration conf, AWSProxyConfig proxyConfig)
   {
-    if (org.apache.commons.lang.StringUtils.isNotEmpty(proxyConfig.getHost())) {
+    if (org.apache.commons.lang3.StringUtils.isNotEmpty(proxyConfig.getHost())) {
       conf.setProxyHost(proxyConfig.getHost());
     }
     if (proxyConfig.getPort() != -1) {
       conf.setProxyPort(proxyConfig.getPort());
     }
-    if (org.apache.commons.lang.StringUtils.isNotEmpty(proxyConfig.getUsername())) {
+    if (org.apache.commons.lang3.StringUtils.isNotEmpty(proxyConfig.getUsername())) {
       conf.setProxyUsername(proxyConfig.getUsername());
     }
-    if (org.apache.commons.lang.StringUtils.isNotEmpty(proxyConfig.getPassword())) {
+    if (org.apache.commons.lang3.StringUtils.isNotEmpty(proxyConfig.getPassword())) {
       conf.setProxyPassword(proxyConfig.getPassword());
     }
     return conf;

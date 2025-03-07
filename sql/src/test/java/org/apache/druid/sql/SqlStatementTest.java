@@ -58,6 +58,7 @@ import org.apache.druid.sql.calcite.planner.PlannerFactory;
 import org.apache.druid.sql.calcite.planner.PrepareResult;
 import org.apache.druid.sql.calcite.schema.DruidSchemaCatalog;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.hook.DruidHookDispatcher;
 import org.apache.druid.sql.http.SqlQuery;
 import org.easymock.EasyMock;
 import org.hamcrest.MatcherAssert;
@@ -114,7 +115,7 @@ public class SqlStatementTest
       {
         return super.run(
             query,
-            new LazySequence<T>(() -> resultSequence)
+            new LazySequence<>(() -> resultSequence)
         );
       }
     };
@@ -134,7 +135,7 @@ public class SqlStatementTest
   {
     executorService = MoreExecutors.listeningDecorator(Execs.multiThreaded(8, "test_sql_resource_%s"));
 
-    final PlannerConfig plannerConfig = PlannerConfig.builder().serializeComplexValues(false).build();
+    final PlannerConfig plannerConfig = PlannerConfig.builder().build();
     final DruidSchemaCatalog rootSchema = CalciteTests.createMockRootSchema(
         conglomerate,
         walker,
@@ -158,7 +159,8 @@ public class SqlStatementTest
         new CalciteRulesManager(ImmutableSet.of()),
         joinableFactoryWrapper,
         CatalogResolver.NULL_RESOLVER,
-        new AuthConfig()
+        new AuthConfig(),
+        new DruidHookDispatcher()
     );
 
     this.sqlStatementFactory = new SqlStatementFactory(

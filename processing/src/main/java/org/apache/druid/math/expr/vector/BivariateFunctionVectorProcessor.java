@@ -26,8 +26,8 @@ import javax.annotation.Nullable;
 
 /**
  * Basic vector processor that processes 2 inputs and works for both primitive value vectors and object vectors.
- * Different from {@link BivariateLongFunctionVectorValueProcessor}, {@link BivariateDoubleFunctionVectorValueProcessor}
- * and {@link BivariateFunctionVectorObjectProcessor} in that subclasses of this class must check for and directly
+ * Different from {@link LongBivariateFunctionVectorProcessor}, {@link DoubleBivariateFunctionVectorProcessor}
+ * and {@link BivariateObjectsFunctionVectorProcessor} in that subclasses of this class must check for and directly
  * decide how to handle null values.
  */
 public abstract class BivariateFunctionVectorProcessor<TLeftInput, TRightInput, TOutput>
@@ -54,8 +54,8 @@ public abstract class BivariateFunctionVectorProcessor<TLeftInput, TRightInput, 
     final ExprEvalVector<TLeftInput> lhs = left.evalVector(bindings);
     final ExprEvalVector<TRightInput> rhs = right.evalVector(bindings);
 
-    TLeftInput leftValues = lhs.values;
-    TRightInput rightValues = rhs.values;
+    TLeftInput leftValues = lhs.values();
+    TRightInput rightValues = rhs.values();
     final boolean[] leftNulls = outputType.isNumeric() ? lhs.getNullVector() : null;
     final boolean[] rightNulls = outputType.isNumeric() ? rhs.getNullVector() : null;
 
@@ -79,5 +79,11 @@ public abstract class BivariateFunctionVectorProcessor<TLeftInput, TRightInput, 
   public ExpressionType getOutputType()
   {
     return outputType;
+  }
+
+  @Override
+  public int maxVectorSize()
+  {
+    return left.maxVectorSize();
   }
 }

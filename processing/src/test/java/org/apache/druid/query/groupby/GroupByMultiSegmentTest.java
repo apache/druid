@@ -241,20 +241,23 @@ public class GroupByMultiSegmentTest extends InitializedNullHandlingTest
     };
 
     final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
-    final GroupByResourcesReservationPool groupByResourcesReservationPool = new GroupByResourcesReservationPool(mergePool, config);
+    final GroupByStatsProvider groupByStatsProvider = new GroupByStatsProvider();
+    final GroupByResourcesReservationPool groupByResourcesReservationPool =
+        new GroupByResourcesReservationPool(mergePool, config);
     final GroupingEngine groupingEngine = new GroupingEngine(
         druidProcessingConfig,
         configSupplier,
-        bufferPool,
         groupByResourcesReservationPool,
         TestHelper.makeJsonMapper(),
         new ObjectMapper(new SmileFactory()),
-        NOOP_QUERYWATCHER
+        NOOP_QUERYWATCHER,
+        groupByStatsProvider
     );
 
     groupByFactory = new GroupByQueryRunnerFactory(
         groupingEngine,
-        new GroupByQueryQueryToolChest(groupingEngine, groupByResourcesReservationPool)
+        new GroupByQueryQueryToolChest(groupingEngine, groupByResourcesReservationPool),
+        bufferPool
     );
   }
 

@@ -29,9 +29,10 @@ public class EqualDistributionWithAffinityWorkerSelectStrategy extends EqualDist
 {
   @JsonCreator
   public EqualDistributionWithAffinityWorkerSelectStrategy(
-      @JsonProperty("affinityConfig") AffinityConfig affinityConfig
+      @JsonProperty("affinityConfig") AffinityConfig affinityConfig,
+      @JsonProperty("taskLimits") TaskLimits taskLimits
   )
   {
-    super(affinityConfig);
+    super(affinityConfig, taskLimits);
   }
 }

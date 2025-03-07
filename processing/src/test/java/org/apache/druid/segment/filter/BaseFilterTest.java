@@ -24,9 +24,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.common.guava.SettableSupplier;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.impl.DimensionSchema;
@@ -40,20 +38,20 @@ import org.apache.druid.data.input.impl.TimeAndDimsParseSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.frame.FrameType;
 import org.apache.druid.frame.segment.FrameSegment;
-import org.apache.druid.frame.segment.FrameStorageAdapter;
-import org.apache.druid.guice.NestedDataModule;
+import org.apache.druid.frame.segment.columnar.ColumnarFrameCursorFactory;
+import org.apache.druid.frame.segment.row.RowFrameCursorFactory;
+import org.apache.druid.guice.BuiltInTypesModule;
 import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.ISE;
-import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.java.util.common.StringUtils;
-import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.common.guava.Sequence;
-import org.apache.druid.java.util.common.guava.Sequences;
 import org.apache.druid.math.expr.Expr;
 import org.apache.druid.math.expr.ExprType;
+import org.apache.druid.math.expr.ExpressionProcessing;
 import org.apache.druid.math.expr.ExpressionType;
 import org.apache.druid.math.expr.Parser;
+import org.apache.druid.query.QueryContext;
+import org.apache.druid.query.QueryContexts;
 import org.apache.druid.query.aggregation.Aggregator;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.FilteredAggregatorFactory;
@@ -70,15 +68,17 @@ import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.ColumnInspector;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorFactory;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IndexBuilder;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.QueryableIndex;
-import org.apache.druid.segment.QueryableIndexStorageAdapter;
+import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.RowAdapters;
 import org.apache.druid.segment.RowBasedColumnSelectorFactory;
-import org.apache.druid.segment.RowBasedStorageAdapter;
-import org.apache.druid.segment.StorageAdapter;
+import org.apache.druid.segment.RowBasedCursorFactory;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
@@ -91,8 +91,8 @@ import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.data.RoaringBitmapSerdeFactory;
 import org.apache.druid.segment.filter.cnf.CNFFilterExplosionException;
 import org.apache.druid.segment.incremental.IncrementalIndex;
+import org.apache.druid.segment.incremental.IncrementalIndexCursorFactory;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
 import org.apache.druid.segment.index.BitmapColumnIndex;
 import org.apache.druid.segment.vector.SingleValueDimensionVectorSelector;
 import org.apache.druid.segment.vector.VectorColumnSelectorFactory;
@@ -107,7 +107,6 @@ import org.apache.druid.segment.writeout.SegmentWriteOutMediumFactory;
 import org.apache.druid.segment.writeout.TmpFileSegmentWriteOutMediumFactory;
 import org.apache.druid.testing.InitializedNullHandlingTest;
 import org.junit.Assert;
-import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
@@ -115,8 +114,6 @@ import org.junit.runners.Parameterized;
 
 import javax.annotation.Nullable;
 import java.io.Closeable;
-import java.io.File;
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -163,7 +160,11 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
           new NestedFieldVirtualColumn("nested", "$.l0", "nested.l0", ColumnType.LONG),
           new NestedFieldVirtualColumn("nested", "$.arrayLong", "nested.arrayLong", ColumnType.LONG_ARRAY),
           new NestedFieldVirtualColumn("nested", "$.arrayDouble", "nested.arrayDouble", ColumnType.DOUBLE_ARRAY),
-          new NestedFieldVirtualColumn("nested", "$.arrayString", "nested.arrayString", ColumnType.STRING_ARRAY)
+          new NestedFieldVirtualColumn("nested", "$.arrayString", "nested.arrayString", ColumnType.STRING_ARRAY),
+          new ExpressionVirtualColumn("arrayLongAsMvd", "array_to_mv(arrayLong)", ColumnType.STRING, TestExprMacroTable.INSTANCE),
+          new ExpressionVirtualColumn("arrayDoubleAsMvd", "array_to_mv(arrayDouble)", ColumnType.STRING, TestExprMacroTable.INSTANCE),
+          new ExpressionVirtualColumn("arrayStringAsMvd", "array_to_mv(arrayString)", ColumnType.STRING, TestExprMacroTable.INSTANCE),
+          new ExpressionVirtualColumn("arrayConstantAsMvd", "array_to_mv(array(1,2,3))", ColumnType.STRING, TestExprMacroTable.INSTANCE)
       )
   );
 
@@ -404,30 +405,27 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
   private final List<InputRow> rows;
 
   protected final IndexBuilder indexBuilder;
-  protected final Function<IndexBuilder, Pair<StorageAdapter, Closeable>> finisher;
+  protected final Function<IndexBuilder, Pair<CursorFactory, Closeable>> finisher;
   protected final boolean cnf;
   protected final boolean optimize;
   protected final String testName;
 
-  // 'rowBasedWithoutTypeSignature' does not handle numeric null default values correctly, is equivalent to
-  // druid.generic.useDefaultValueForNull being set to false, regardless of how it is actually set.
-  // In other words, numeric null values will be treated as nulls instead of the default value
-  protected final boolean canTestNumericNullsAsDefaultValues;
+  protected CursorFactory cursorFactory;
 
-  protected StorageAdapter adapter;
+  protected VirtualColumns virtualColumns;
 
   // JUnit creates a new test instance for every test method call.
   // For filter tests, the test setup creates a segment.
-  // Creating a new segment for every test method call is pretty slow, so cache the StorageAdapters.
+  // Creating a new segment for every test method call is pretty slow, so cache the CursorFactory.
   // Each thread gets its own map.
-  private static ThreadLocal<Map<String, Map<String, Pair<StorageAdapter, Closeable>>>> adapterCache =
+  private static ThreadLocal<Map<String, Map<String, CursorStuff>>> adapterCache =
       ThreadLocal.withInitial(HashMap::new);
 
   public BaseFilterTest(
       String testName,
       List<InputRow> rows,
       IndexBuilder indexBuilder,
-      Function<IndexBuilder, Pair<StorageAdapter, Closeable>> finisher,
+      Function<IndexBuilder, Pair<CursorFactory, Closeable>> finisher,
       boolean cnf,
       boolean optimize
   )
@@ -438,41 +436,47 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
     this.finisher = finisher;
     this.cnf = cnf;
     this.optimize = optimize;
-    this.canTestNumericNullsAsDefaultValues =
-        NullHandling.replaceWithDefault() && !testName.contains("finisher[rowBasedWithoutTypeSignature]");
   }
 
   @Before
   public void setUp() throws Exception
   {
-    NestedDataModule.registerHandlersAndSerde();
+    BuiltInTypesModule.registerHandlersAndSerde();
     String className = getClass().getName();
-    Map<String, Pair<StorageAdapter, Closeable>> adaptersForClass = adapterCache.get().get(className);
+    Map<String, CursorStuff> adaptersForClass = adapterCache.get().get(className);
     if (adaptersForClass == null) {
       adaptersForClass = new HashMap<>();
       adapterCache.get().put(className, adaptersForClass);
     }
 
-    Pair<StorageAdapter, Closeable> pair = adaptersForClass.get(testName);
-    if (pair == null) {
-      pair = finisher.apply(
+    CursorStuff cursorStuff = adaptersForClass.get(testName);
+    if (cursorStuff == null) {
+      Pair<CursorFactory, Closeable> pair = finisher.apply(
           indexBuilder.tmpDir(temporaryFolder.newFolder()).rows(rows)
       );
-      adaptersForClass.put(testName, pair);
+      cursorStuff = new CursorStuff(
+          pair.lhs,
+          VirtualColumns.create(
+              Arrays.stream(VIRTUAL_COLUMNS.getVirtualColumns())
+                    .filter(x -> x.canVectorize(VIRTUAL_COLUMNS.wrapInspector(pair.lhs)))
+                    .collect(Collectors.toList())
+          ),
+          pair.rhs
+      );
+      adaptersForClass.put(testName, cursorStuff);
     }
 
-    this.adapter = pair.lhs;
-
+    this.cursorFactory = cursorStuff.cursorFactory;
+    this.virtualColumns = cursorStuff.virtualColumns;
   }
 
   public static void tearDown(String className) throws Exception
   {
-    Map<String, Pair<StorageAdapter, Closeable>> adaptersForClass = adapterCache.get().get(className);
+    Map<String, CursorStuff> adaptersForClass = adapterCache.get().get(className);
 
     if (adaptersForClass != null) {
-      for (Map.Entry<String, Pair<StorageAdapter, Closeable>> entry : adaptersForClass.entrySet()) {
-        Closeable closeable = entry.getValue().rhs;
-        closeable.close();
+      for (Map.Entry<String, CursorStuff> entry : adaptersForClass.entrySet()) {
+        entry.getValue().closeable.close();
       }
       adapterCache.get().put(className, null);
     }
@@ -498,13 +502,13 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
         "off-heap memory segment write-out medium", OffHeapMemorySegmentWriteOutMediumFactory.instance()
     );
 
-    final Map<String, Function<IndexBuilder, Pair<StorageAdapter, Closeable>>> finishers =
-        ImmutableMap.<String, Function<IndexBuilder, Pair<StorageAdapter, Closeable>>>builder()
+    final Map<String, Function<IndexBuilder, Pair<CursorFactory, Closeable>>> finishers =
+        ImmutableMap.<String, Function<IndexBuilder, Pair<CursorFactory, Closeable>>>builder()
                     .put(
                         "incremental",
                         input -> {
                           final IncrementalIndex index = input.buildIncrementalIndex();
-                          return Pair.of(new IncrementalIndexStorageAdapter(index), index);
+                          return Pair.of(new IncrementalIndexCursorFactory(index), index);
                         }
                     )
                     .put(
@@ -516,7 +520,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                                   new IncrementalIndexSchema(
                                       schema.getMinTimestamp(),
                                       schema.getTimestampSpec(),
-                                      schema.getGran(),
+                                      schema.getQueryGranularity(),
                                       schema.getVirtualColumns(),
                                       schema.getDimensionsSpec().withDimensions(
                                           schema.getDimensionsSpec()
@@ -528,11 +532,12 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                                                 .collect(Collectors.toList())
                                       ),
                                       schema.getMetrics(),
-                                      schema.isRollup()
+                                      schema.isRollup(),
+                                      schema.getProjections()
                                   )
                           );
                           final IncrementalIndex index = input.buildIncrementalIndex();
-                          return Pair.of(new IncrementalIndexStorageAdapter(index), index);
+                          return Pair.of(new IncrementalIndexCursorFactory(index), index);
                         }
                     )
                     .put(
@@ -544,7 +549,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                                   new IncrementalIndexSchema(
                                       schema.getMinTimestamp(),
                                       schema.getTimestampSpec(),
-                                      schema.getGran(),
+                                      schema.getQueryGranularity(),
                                       schema.getVirtualColumns(),
                                       schema.getDimensionsSpec().withDimensions(
                                           schema.getDimensionsSpec()
@@ -556,11 +561,12 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                                                 .collect(Collectors.toList())
                                       ),
                                       schema.getMetrics(),
-                                      schema.isRollup()
+                                      schema.isRollup(),
+                                      schema.getProjections()
                                   )
                           );
                           final QueryableIndex index = input.buildMMappedIndex();
-                          return Pair.of(new QueryableIndexStorageAdapter(index), index);
+                          return Pair.of(new QueryableIndexCursorFactory(index), index);
                         }
                     )
                     .put(
@@ -573,7 +579,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                                           new IncrementalIndexSchema(
                                               schema.getMinTimestamp(),
                                               schema.getTimestampSpec(),
-                                              schema.getGran(),
+                                              schema.getQueryGranularity(),
                                               schema.getVirtualColumns(),
                                               schema.getDimensionsSpec().withDimensions(
                                                   schema.getDimensionsSpec()
@@ -585,7 +591,8 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                                                         .collect(Collectors.toList())
                                               ),
                                               schema.getMetrics(),
-                                              schema.isRollup()
+                                              schema.isRollup(),
+                                              schema.getProjections()
                                           )
                                   )
                                   // if 1 row per segment some of the columns have null values for the row which causes 'auto'
@@ -595,55 +602,30 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                                   .intermediaryPersistSize(3)
                                   .buildMMappedIndex();
 
-                          return Pair.of(new QueryableIndexStorageAdapter(index), index);
+                          return Pair.of(new QueryableIndexCursorFactory(index), index);
                         }
                     )
                     .put(
                         "mmapped",
                         input -> {
                           final QueryableIndex index = input.buildMMappedIndex();
-                          return Pair.of(new QueryableIndexStorageAdapter(index), index);
+                          return Pair.of(new QueryableIndexCursorFactory(index), index);
                         }
                     )
                     .put(
                         "mmappedMerged",
                         input -> {
                           final QueryableIndex index = input.buildMMappedMergedIndex();
-                          return Pair.of(new QueryableIndexStorageAdapter(index), index);
-                        }
-                    )
-                    .put(
-                        "mmappedWithSqlCompatibleNulls",
-                        input -> {
-                          // Build mmapped index in SQL-compatible null handling mode; read it in default-value mode.
-                          Assume.assumeTrue(NullHandling.replaceWithDefault());
-                          final File file;
-                          try {
-                            NullHandling.initializeForTestsWithValues(false, null);
-                            Assert.assertTrue(NullHandling.sqlCompatible());
-                            file = input.buildMMappedIndexFile();
-                          }
-                          finally {
-                            NullHandling.initializeForTests();
-                          }
-
-                          Assert.assertTrue(NullHandling.replaceWithDefault());
-                          try {
-                            final QueryableIndex index = input.getIndexIO().loadIndex(file);
-                            return Pair.of(new QueryableIndexStorageAdapter(index), index);
-                          }
-                          catch (IOException e) {
-                            throw new RuntimeException(e);
-                          }
+                          return Pair.of(new QueryableIndexCursorFactory(index), index);
                         }
                     )
                     .put(
                         "rowBasedWithoutTypeSignature",
-                        input -> Pair.of(input.buildRowBasedSegmentWithoutTypeSignature().asStorageAdapter(), () -> {})
+                        input -> Pair.of(input.buildRowBasedSegmentWithoutTypeSignature().asCursorFactory(), () -> {})
                     )
                     .put(
                         "rowBasedWithTypeSignature",
-                        input -> Pair.of(input.buildRowBasedSegmentWithTypeSignature().asStorageAdapter(), () -> {})
+                        input -> Pair.of(input.buildRowBasedSegmentWithTypeSignature().asCursorFactory(), () -> {})
                     )
                     .put("frame (row-based)", input -> {
                       // remove variant type columns from row frames since they aren't currently supported
@@ -652,7 +634,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                               new IncrementalIndexSchema(
                                   schema.getMinTimestamp(),
                                   schema.getTimestampSpec(),
-                                  schema.getGran(),
+                                  schema.getQueryGranularity(),
                                   schema.getVirtualColumns(),
                                   schema.getDimensionsSpec().withDimensions(
                                       schema.getDimensionsSpec()
@@ -662,11 +644,12 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                                             .collect(Collectors.toList())
                                   ),
                                   schema.getMetrics(),
-                                  schema.isRollup()
+                                  schema.isRollup(),
+                                  schema.getProjections()
                               )
                       );
                       final FrameSegment segment = input.buildFrameSegment(FrameType.ROW_BASED);
-                      return Pair.of(segment.asStorageAdapter(), segment);
+                      return Pair.of(segment.asCursorFactory(), segment);
                     })
                     .put("frame (columnar)", input -> {
                       // remove array type columns from columnar frames since they aren't currently supported
@@ -675,7 +658,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                               new IncrementalIndexSchema(
                                   schema.getMinTimestamp(),
                                   schema.getTimestampSpec(),
-                                  schema.getGran(),
+                                  schema.getQueryGranularity(),
                                   schema.getVirtualColumns(),
                                   schema.getDimensionsSpec().withDimensions(
                                       schema.getDimensionsSpec()
@@ -685,11 +668,12 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
                                             .collect(Collectors.toList())
                                   ),
                                   schema.getMetrics(),
-                                  schema.isRollup()
+                                  schema.isRollup(),
+                                  schema.getProjections()
                               )
                       );
                       final FrameSegment segment = input.buildFrameSegment(FrameType.COLUMNAR);
-                      return Pair.of(segment.asStorageAdapter(), segment);
+                      return Pair.of(segment.asCursorFactory(), segment);
                     })
                     .build();
 
@@ -701,7 +685,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
     for (Map.Entry<String, BitmapSerdeFactory> bitmapSerdeFactoryEntry : bitmapSerdeFactories.entrySet()) {
       for (Map.Entry<String, SegmentWriteOutMediumFactory> segmentWriteOutMediumFactoryEntry :
           segmentWriteOutMediumFactories.entrySet()) {
-        for (Map.Entry<String, Function<IndexBuilder, Pair<StorageAdapter, Closeable>>> finisherEntry :
+        for (Map.Entry<String, Function<IndexBuilder, Pair<CursorFactory, Closeable>>> finisherEntry :
             finishers.entrySet()) {
           for (boolean cnf : ImmutableList.of(false, true)) {
             for (boolean optimize : ImmutableList.of(false, true)) {
@@ -762,7 +746,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
       return null;
     }
 
-    final DimFilter maybeOptimized = optimize ? dimFilter.optimize(false) : dimFilter;
+    final DimFilter maybeOptimized = maybeOptimize(dimFilter);
     final Filter filter = maybeOptimized.toFilter();
     try {
       return cnf ? Filters.toCnf(filter) : filter;
@@ -780,29 +764,32 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
     return optimize ? dimFilter.optimize(false) : dimFilter;
   }
 
-  private Sequence<Cursor> makeCursorSequence(final Filter filter)
+  private CursorBuildSpec makeCursorBuildSpec(@Nullable Filter filter)
   {
-    return adapter.makeCursors(
-        filter,
-        Intervals.ETERNITY,
-        VIRTUAL_COLUMNS,
-        Granularities.ALL,
-        false,
-        null
-    );
+    return CursorBuildSpec.builder()
+                          .setFilter(filter)
+                          .setVirtualColumns(VIRTUAL_COLUMNS)
+                          .build();
+
+  }
+
+  private CursorBuildSpec makeVectorCursorBuildSpec(@Nullable Filter filter)
+  {
+    return CursorBuildSpec.builder()
+                          .setFilter(filter)
+                          .setVirtualColumns(virtualColumns)
+                          .setQueryContext(
+                              QueryContext.of(
+                                  ImmutableMap.of(QueryContexts.VECTOR_SIZE_KEY, 3)
+                              )
+                          )
+                          .build();
   }
 
   private VectorCursor makeVectorCursor(final Filter filter)
   {
-
-    return adapter.makeVectorCursor(
-        filter,
-        Intervals.ETERNITY,
-        VIRTUAL_COLUMNS,
-        false,
-        3, // Vector size smaller than the number of rows, to ensure we use more than one.
-        null
-    );
+    final CursorBuildSpec buildSpec = makeVectorCursorBuildSpec(filter);
+    return cursorFactory.makeCursorHolder(buildSpec).asVectorCursor();
   }
 
   /**
@@ -810,59 +797,52 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
    */
   private List<String> selectColumnValuesMatchingFilter(final DimFilter filter, final String selectColumn)
   {
-    final Sequence<Cursor> cursors = makeCursorSequence(makeFilter(filter));
-    Sequence<List<String>> seq = Sequences.map(
-        cursors,
-        cursor -> {
-          final DimensionSelector selector = cursor
-              .getColumnSelectorFactory()
-              .makeDimensionSelector(new DefaultDimensionSpec(selectColumn, selectColumn));
+    try (final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(makeCursorBuildSpec(makeFilter(filter)))) {
+      final Cursor cursor = cursorHolder.asCursor();
+      final DimensionSelector selector = cursor
+          .getColumnSelectorFactory()
+          .makeDimensionSelector(new DefaultDimensionSpec(selectColumn, selectColumn));
 
-          final List<String> values = new ArrayList<>();
+      final List<String> values = new ArrayList<>();
 
-          while (!cursor.isDone()) {
-            IndexedInts row = selector.getRow();
-            Preconditions.checkState(row.size() == 1);
-            values.add(selector.lookupName(row.get(0)));
-            cursor.advance();
-          }
-
-          return values;
-        }
-    );
-    return seq.toList().get(0);
+      while (!cursor.isDone()) {
+        IndexedInts row = selector.getRow();
+        Preconditions.checkState(row.size() == 1);
+        values.add(selector.lookupName(row.get(0)));
+        cursor.advance();
+      }
+      return values;
+    }
   }
 
   private long selectCountUsingFilteredAggregator(final DimFilter filter)
   {
-    final Sequence<Cursor> cursors = makeCursorSequence(null);
-    Sequence<Aggregator> aggSeq = Sequences.map(
-        cursors,
-        cursor -> {
-          Aggregator agg = new FilteredAggregatorFactory(
-              new CountAggregatorFactory("count"),
-              maybeOptimize(filter)
-          ).factorize(cursor.getColumnSelectorFactory());
+    try (final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(makeCursorBuildSpec(null))) {
+      final Cursor cursor = cursorHolder.asCursor();
+      Aggregator agg = new FilteredAggregatorFactory(
+          new CountAggregatorFactory("count"),
+          maybeOptimize(filter)
+      ).factorize(cursor.getColumnSelectorFactory());
 
-          for (; !cursor.isDone(); cursor.advance()) {
-            agg.aggregate();
-          }
+      for (; !cursor.isDone(); cursor.advance()) {
+        agg.aggregate();
+      }
 
-          return agg;
-        }
-    );
-    return aggSeq.toList().get(0).getLong();
+      return agg.getLong();
+    }
   }
 
   private long selectCountUsingVectorizedFilteredAggregator(final DimFilter dimFilter)
   {
     Preconditions.checkState(
-        makeFilter(dimFilter).canVectorizeMatcher(adapter),
+        makeFilter(dimFilter).canVectorizeMatcher(cursorFactory),
         "Cannot vectorize filter: %s",
         dimFilter
     );
 
-    try (final VectorCursor cursor = makeVectorCursor(null)) {
+
+    try (final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(makeVectorCursorBuildSpec(null))) {
+      final VectorCursor cursor = cursorHolder.asVectorCursor();
       final FilteredAggregatorFactory aggregatorFactory = new FilteredAggregatorFactory(
           new CountAggregatorFactory("count"),
           maybeOptimize(dimFilter)
@@ -928,27 +908,23 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
       }
     };
 
-    final Sequence<Cursor> cursors = makeCursorSequence(postFilteringFilter);
-    Sequence<List<String>> seq = Sequences.map(
-        cursors,
-        cursor -> {
-          final DimensionSelector selector = cursor
-              .getColumnSelectorFactory()
-              .makeDimensionSelector(new DefaultDimensionSpec(selectColumn, selectColumn));
+    try (final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(makeCursorBuildSpec(postFilteringFilter))) {
+      final Cursor cursor = cursorHolder.asCursor();
+      final DimensionSelector selector = cursor
+          .getColumnSelectorFactory()
+          .makeDimensionSelector(new DefaultDimensionSpec(selectColumn, selectColumn));
 
-          final List<String> values = new ArrayList<>();
+      final List<String> values = new ArrayList<>();
 
-          while (!cursor.isDone()) {
-            IndexedInts row = selector.getRow();
-            Preconditions.checkState(row.size() == 1);
-            values.add(selector.lookupName(row.get(0)));
-            cursor.advance();
-          }
+      while (!cursor.isDone()) {
+        IndexedInts row = selector.getRow();
+        Preconditions.checkState(row.size() == 1);
+        values.add(selector.lookupName(row.get(0)));
+        cursor.advance();
+      }
 
-          return values;
-        }
-    );
-    return seq.toList().get(0);
+      return values;
+    }
   }
 
   private List<String> selectColumnValuesMatchingFilterUsingVectorizedPostFiltering(
@@ -992,7 +968,8 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
       }
     };
 
-    try (final VectorCursor cursor = makeVectorCursor(postFilteringFilter)) {
+    try (final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(makeVectorCursorBuildSpec(postFilteringFilter))) {
+      final VectorCursor cursor = cursorHolder.asVectorCursor();
       final SingleValueDimensionVectorSelector selector = cursor
           .getColumnSelectorFactory()
           .makeSingleValueDimensionSelector(new DefaultDimensionSpec(selectColumn, selectColumn));
@@ -1016,7 +993,8 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
       final String selectColumn
   )
   {
-    try (final VectorCursor cursor = makeVectorCursor(makeFilter(filter))) {
+    try (final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(makeVectorCursorBuildSpec(makeFilter(filter)))) {
+      final VectorCursor cursor = cursorHolder.asVectorCursor();
       final SingleValueDimensionVectorSelector selector = cursor
           .getColumnSelectorFactory()
           .makeSingleValueDimensionSelector(new DefaultDimensionSpec(selectColumn, selectColumn));
@@ -1042,7 +1020,8 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
   )
   {
     final Expr parsedIdentifier = Parser.parse(selectColumn, TestExprMacroTable.INSTANCE);
-    try (final VectorCursor cursor = makeVectorCursor(makeFilter(filter))) {
+    try (final CursorHolder cursorHolder = cursorFactory.makeCursorHolder(makeVectorCursorBuildSpec(makeFilter(filter)))) {
+      final VectorCursor cursor = cursorHolder.asVectorCursor();
 
       final ExpressionType outputType = parsedIdentifier.getOutputType(cursor.getColumnSelectorFactory());
       final List<String> values = new ArrayList<>();
@@ -1097,10 +1076,6 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
   )
   {
     // Generate rowSignature
-    final RowSignature.Builder rowSignatureBuilder = RowSignature.builder();
-    for (String columnName : Iterables.concat(adapter.getAvailableDimensions(), adapter.getAvailableMetrics())) {
-      rowSignatureBuilder.add(columnName, adapter.getColumnCapabilities(columnName).toColumnType());
-    }
 
     // Perform test
     final SettableSupplier<InputRow> rowSupplier = new SettableSupplier<>();
@@ -1109,7 +1084,7 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
             RowBasedColumnSelectorFactory.create(
                 RowAdapters.standardRow(),
                 rowSupplier::get,
-                rowSignatureBuilder.build(),
+                cursorFactory.getRowSignature(),
                 false,
                 false
             )
@@ -1131,12 +1106,13 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
   )
   {
     // IncrementalIndex, RowBasedSegment cannot vectorize.
-    // Columnar FrameStorageAdapter *can* vectorize, but the tests won't pass, because the vectorizable cases
-    // differ from QueryableIndexStorageAdapter due to frames not having indexes. So, skip these too.
+    // ColumnarFrameCursorFactory *can* vectorize, but the tests won't pass, because the vectorizable cases
+    // differ from QueryableIndexCursorFactory due to frames not having indexes. So, skip these too.
     final boolean testVectorized =
-        !(adapter instanceof IncrementalIndexStorageAdapter)
-        && !(adapter instanceof RowBasedStorageAdapter)
-        && !(adapter instanceof FrameStorageAdapter);
+        !(cursorFactory instanceof IncrementalIndexCursorFactory)
+        && !(cursorFactory instanceof RowBasedCursorFactory)
+        && !(cursorFactory instanceof RowFrameCursorFactory)
+        && !(cursorFactory instanceof ColumnarFrameCursorFactory);
 
     assertFilterMatches(filter, expectedRows, testVectorized);
     // test double inverted
@@ -1151,12 +1127,13 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
   )
   {
     // IncrementalIndex, RowBasedSegment cannot vectorize.
-    // Columnar FrameStorageAdapter *can* vectorize, but the tests won't pass, because the vectorizable cases
-    // differ from QueryableIndexStorageAdapter due to frames not having indexes. So, skip these too.
+    // ColumnarFrameCursorHolderFactory *can* vectorize, but the tests won't pass, because the vectorizable cases
+    // differ from QueryableIndexCursorFactory due to frames not having indexes. So, skip these too.
     final boolean testVectorized =
-        !(adapter instanceof IncrementalIndexStorageAdapter)
-        && !(adapter instanceof RowBasedStorageAdapter)
-        && !(adapter instanceof FrameStorageAdapter);
+        !(cursorFactory instanceof IncrementalIndexCursorFactory)
+        && !(cursorFactory instanceof RowBasedCursorFactory)
+        && !(cursorFactory instanceof RowFrameCursorFactory)
+        && !(cursorFactory instanceof ColumnarFrameCursorFactory);
 
     if (isAutoSchema()) {
       Throwable t = Assert.assertThrows(
@@ -1182,6 +1159,19 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
     // test double inverted
     if (!StringUtils.toLowerCase(testName).contains("concise")) {
       assertFilterMatches(NotDimFilter.of(NotDimFilter.of(filter)), expectedRows, false);
+    }
+  }
+
+  protected void assertFilterMatchesSkipVectorizeUnlessFallback(
+      final DimFilter filter,
+      final List<String> expectedRows
+  )
+  {
+    final boolean vectorize = ExpressionProcessing.allowVectorizeFallback();
+    assertFilterMatches(filter, expectedRows, vectorize);
+    // test double inverted
+    if (!StringUtils.toLowerCase(testName).contains("concise")) {
+      assertFilterMatches(NotDimFilter.of(NotDimFilter.of(filter)), expectedRows, vectorize);
     }
   }
 
@@ -1238,6 +1228,24 @@ public abstract class BaseFilterTest extends InitializedNullHandlingTest
           expectedRows.size(),
           selectCountUsingVectorizedFilteredAggregator(filter)
       );
+    }
+  }
+
+  private static class CursorStuff
+  {
+    private final CursorFactory cursorFactory;
+    private final VirtualColumns virtualColumns;
+    private final Closeable closeable;
+
+    private CursorStuff(
+        CursorFactory cursorFactory,
+        VirtualColumns virtualColumns,
+        Closeable closeable
+    )
+    {
+      this.cursorFactory = cursorFactory;
+      this.virtualColumns = virtualColumns;
+      this.closeable = closeable;
     }
   }
 }

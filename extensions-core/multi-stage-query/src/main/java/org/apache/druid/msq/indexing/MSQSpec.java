@@ -26,9 +26,9 @@ import org.apache.druid.msq.indexing.destination.MSQDestination;
 import org.apache.druid.msq.indexing.destination.TaskReportMSQDestination;
 import org.apache.druid.msq.kernel.WorkerAssignmentStrategy;
 import org.apache.druid.query.Query;
+import org.apache.druid.query.QueryContext;
 import org.apache.druid.sql.calcite.planner.ColumnMappings;
 
-import javax.annotation.Nullable;
 import java.util.Map;
 import java.util.Objects;
 
@@ -43,7 +43,7 @@ public class MSQSpec
   @JsonCreator
   public MSQSpec(
       @JsonProperty("query") Query<?> query,
-      @JsonProperty("columnMappings") @Nullable ColumnMappings columnMappings,
+      @JsonProperty("columnMappings") ColumnMappings columnMappings,
       @JsonProperty("destination") MSQDestination destination,
       @JsonProperty("assignmentStrategy") WorkerAssignmentStrategy assignmentStrategy,
       @JsonProperty("tuningConfig") MSQTuningConfig tuningConfig
@@ -65,6 +65,11 @@ public class MSQSpec
   public Query<?> getQuery()
   {
     return query;
+  }
+
+  public QueryContext getContext()
+  {
+    return query.context();
   }
 
   @JsonProperty("columnMappings")

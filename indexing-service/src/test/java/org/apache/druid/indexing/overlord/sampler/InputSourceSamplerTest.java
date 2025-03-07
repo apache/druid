@@ -23,7 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import net.thisptr.jackson.jq.internal.misc.Lists;
+import com.google.common.collect.Lists;
 import org.apache.druid.client.indexing.SamplerResponse;
 import org.apache.druid.client.indexing.SamplerResponse.SamplerResponseRow;
 import org.apache.druid.data.input.InputFormat;
@@ -41,6 +41,8 @@ import org.apache.druid.data.input.impl.JsonInputFormat;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.StringInputRowParser;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.indexer.granularity.GranularitySpec;
+import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexing.seekablestream.RecordSupplierInputSource;
 import org.apache.druid.indexing.seekablestream.common.OrderedPartitionableRecord;
 import org.apache.druid.indexing.seekablestream.common.OrderedSequenceNumber;
@@ -58,8 +60,6 @@ import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.expression.TestExprMacroTable;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.indexing.granularity.GranularitySpec;
-import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.transform.ExpressionTransform;
 import org.apache.druid.segment.transform.TransformSpec;
 import org.apache.druid.testing.InitializedNullHandlingTest;
@@ -1460,7 +1460,7 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
       case STR_JSON:
         return new JsonInputFormat(null, null, null, null, null);
       case STR_CSV:
-        return new CsvInputFormat(ImmutableList.of("t", "dim1", "dim2", "met1"), null, null, false, 0);
+        return new CsvInputFormat(ImmutableList.of("t", "dim1", "dim2", "met1"), null, null, false, 0, null);
       default:
         throw new IAE("Unknown parser type: %s", parserType);
     }
@@ -1497,24 +1497,24 @@ public class InputSourceSamplerTest extends InitializedNullHandlingTest
   ) throws IOException
   {
     if (useInputFormatApi) {
-      return new DataSchema(
-          "sampler",
-          timestampSpec,
-          dimensionsSpec,
-          aggregators,
-          granularitySpec,
-          transformSpec
-      );
+      return DataSchema.builder()
+                       .withDataSource("sampler")
+                       .withTimestamp(timestampSpec)
+                       .withDimensions(dimensionsSpec)
+                       .withAggregators(aggregators)
+                       .withGranularity(granularitySpec)
+                       .withTransform(transformSpec)
+                       .build();
     } else {
       final Map<String, Object> parserMap = getParserMap(createInputRowParser(timestampSpec, dimensionsSpec));
-      return new DataSchema(
-          "sampler",
-          parserMap,
-          aggregators,
-          granularitySpec,
-          transformSpec,
-          OBJECT_MAPPER
-      );
+      return DataSchema.builder()
+                       .withDataSource("sampler")
+                       .withParserMap(parserMap)
+                       .withAggregators(aggregators)
+                       .withGranularity(granularitySpec)
+                       .withTransform(transformSpec)
+                       .withObjectMapper(OBJECT_MAPPER)
+                       .build();
     }
   }
 

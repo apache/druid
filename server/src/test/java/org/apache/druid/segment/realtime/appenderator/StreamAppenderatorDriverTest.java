@@ -26,7 +26,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.ListenableFuture;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.data.input.Committer;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.data.input.MapBasedInputRow;
@@ -107,10 +106,6 @@ public class StreamAppenderatorDriverTest extends EasyMockSupport
 
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
-
-  static {
-    NullHandling.initializeForTests();
-  }
 
   @Before
   public void setUp() throws Exception
@@ -543,7 +538,7 @@ public class StreamAppenderatorDriverTest extends EasyMockSupport
     }
 
     @Override
-    public SegmentHandoffNotifier createSegmentHandoffNotifier(String dataSource)
+    public SegmentHandoffNotifier createSegmentHandoffNotifier(String dataSource, String taskId)
     {
       return new SegmentHandoffNotifier()
       {

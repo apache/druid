@@ -16,30 +16,32 @@
  * limitations under the License.
  */
 
+import type { InputGroupProps } from '@blueprintjs/core';
 import { Button, InputGroup } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
 import classNames from 'classnames';
 import React from 'react';
 
-export interface ClearableInputProps {
+export interface ClearableInputProps extends InputGroupProps {
   className?: string;
   value: string;
-  onChange: (value: string) => void;
-  placeholder: string;
+  onValueChange: (value: string) => void;
 }
 
 export const ClearableInput = React.memo(function ClearableInput(props: ClearableInputProps) {
-  const { className, value, onChange, placeholder } = props;
+  const { className, value, onValueChange, ...otherProps } = props;
 
   return (
     <InputGroup
       className={classNames('clearable-input', className)}
       value={value}
-      onChange={(e: any) => onChange(e.target.value)}
+      onChange={(e: any) => onValueChange(e.target.value)}
       rightElement={
-        value ? <Button icon={IconNames.CROSS} minimal onClick={() => onChange('')} /> : undefined
+        value ? (
+          <Button icon={IconNames.CROSS} minimal onClick={() => onValueChange('')} />
+        ) : undefined
       }
-      placeholder={placeholder}
+      {...otherProps}
     />
   );
 });

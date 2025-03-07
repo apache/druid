@@ -25,7 +25,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import org.apache.druid.common.aws.AWSCredentialsConfig;
 import org.apache.druid.common.utils.IdUtils;
-import org.apache.druid.data.input.impl.ByteEntity;
+import org.apache.druid.data.input.kinesis.KinesisRecordEntity;
 import org.apache.druid.indexing.common.task.Task;
 import org.apache.druid.indexing.common.task.TaskResource;
 import org.apache.druid.indexing.kinesis.KinesisDataSourceMetadata;
@@ -74,14 +74,12 @@ import java.util.stream.Collectors;
  * tasks to satisfy the desired number of replicas. As tasks complete, new tasks are queued to process the next range of
  * Kinesis sequences.
  */
-public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, ByteEntity>
+public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, KinesisRecordEntity>
 {
   private static final EmittingLogger log = new EmittingLogger(KinesisSupervisor.class);
 
   public static final TypeReference<TreeMap<Integer, Map<String, String>>> CHECKPOINTS_TYPE_REF =
-      new TypeReference<TreeMap<Integer, Map<String, String>>>()
-      {
-      };
+      new TypeReference<>() {};
 
   public static final String OFFSET_NOT_SET = "-1";
   private final KinesisSupervisorSpec spec;
@@ -145,12 +143,13 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
         ioConfig.getEndpoint(),
         ioConfig.getFetchDelayMillis(),
         ioConfig.getAwsAssumedRoleArn(),
-        ioConfig.getAwsExternalId()
+        ioConfig.getAwsExternalId(),
+        ioConfig.getTaskDuration().getStandardMinutes()
     );
   }
 
   @Override
-  protected List<SeekableStreamIndexTask<String, String, ByteEntity>> createIndexTasks(
+  protected List<SeekableStreamIndexTask<String, String, KinesisRecordEntity>> createIndexTasks(
       int replicas,
       String baseSequenceName,
       ObjectMapper sortingMapper,
@@ -164,7 +163,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
     final Map<String, Object> context = createBaseTaskContexts();
     context.put(CHECKPOINTS_CTX_KEY, checkpoints);
 
-    List<SeekableStreamIndexTask<String, String, ByteEntity>> taskList = new ArrayList<>();
+    List<SeekableStreamIndexTask<String, String, KinesisRecordEntity>> taskList = new ArrayList<>();
     for (int i = 0; i < replicas; i++) {
       String taskId = IdUtils.getRandomIdWithPrefix(baseSequenceName);
       taskList.add(new KinesisIndexTask(
@@ -183,7 +182,7 @@ public class KinesisSupervisor extends SeekableStreamSupervisor<String, String, 
 
 
   @Override
-  protected RecordSupplier<String, String, ByteEntity> setupRecordSupplier() throws RuntimeException
+  protected RecordSupplier<String, String, KinesisRecordEntity> setupRecordSupplier() throws RuntimeException
   {
     KinesisSupervisorIOConfig ioConfig = spec.getIoConfig();
     KinesisIndexTaskTuningConfig taskTuningConfig = spec.getTuningConfig();

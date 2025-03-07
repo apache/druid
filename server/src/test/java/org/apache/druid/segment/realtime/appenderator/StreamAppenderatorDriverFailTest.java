@@ -497,7 +497,7 @@ public class StreamAppenderatorDriverFailTest extends EasyMockSupport
         );
       } else {
         if (interruptPush) {
-          return new AbstractFuture<SegmentsAndCommitMetadata>()
+          return new AbstractFuture<>()
           {
             @Override
             public SegmentsAndCommitMetadata get(long timeout, TimeUnit unit)

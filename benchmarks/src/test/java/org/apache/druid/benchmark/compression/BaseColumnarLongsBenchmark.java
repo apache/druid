@@ -304,9 +304,7 @@ public class BaseColumnarLongsBenchmark
     }
 
     serializer.open();
-    for (long val : vals) {
-      serializer.add(val);
-    }
+    serializer.addAll(vals, 0, vals.length);
     serializer.writeTo(output, null);
     return (int) serializer.getSerializedSize();
   }
@@ -320,7 +318,7 @@ public class BaseColumnarLongsBenchmark
       case "none-longs":
       case "zstd-auto":
       case "zstd-longs":
-        return CompressedColumnarLongsSupplier.fromByteBuffer(buffer, ByteOrder.LITTLE_ENDIAN).get();
+        return CompressedColumnarLongsSupplier.fromByteBuffer(buffer, ByteOrder.LITTLE_ENDIAN, null).get();
     }
 
     throw new IllegalArgumentException("unknown encoding");

@@ -19,7 +19,6 @@
 
 package org.apache.druid.query.aggregation.firstlast.last;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.Pair;
 import org.apache.druid.query.aggregation.AggregateCombiner;
 import org.apache.druid.query.aggregation.Aggregator;
@@ -65,7 +64,6 @@ public class StringLastAggregationTest
   @Before
   public void setup()
   {
-    NullHandling.initializeForTests();
     stringLastAggFactory = new StringLastAggregatorFactory("billy", "nilly", null, MAX_STRING_SIZE);
     combiningAggFactory = stringLastAggFactory.getCombiningFactory();
     timeSelector = new TestLongColumnSelector(times);

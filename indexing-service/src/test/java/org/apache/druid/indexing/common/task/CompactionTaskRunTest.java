@@ -19,10 +19,10 @@
 
 package org.apache.druid.indexing.common.task;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Ordering;
 import com.google.common.io.Files;
 import com.google.common.util.concurrent.Futures;
@@ -30,32 +30,29 @@ import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.druid.client.coordinator.CoordinatorClient;
 import org.apache.druid.client.coordinator.NoopCoordinatorClient;
 import org.apache.druid.client.indexing.ClientCompactionTaskGranularitySpec;
-import org.apache.druid.client.indexing.ClientCompactionTaskTransformSpec;
-import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.data.input.impl.CSVParseSpec;
+import org.apache.druid.data.input.impl.DimensionSchema;
 import org.apache.druid.data.input.impl.DimensionsSpec;
+import org.apache.druid.data.input.impl.LongDimensionSchema;
 import org.apache.druid.data.input.impl.NewSpatialDimensionSchema;
 import org.apache.druid.data.input.impl.ParseSpec;
 import org.apache.druid.data.input.impl.StringDimensionSchema;
 import org.apache.druid.data.input.impl.TimestampSpec;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
+import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.HashedPartitionsSpec;
 import org.apache.druid.indexer.report.IngestionStatsAndErrors;
 import org.apache.druid.indexer.report.SingleFileTaskReportFileWriter;
 import org.apache.druid.indexing.common.LockGranularity;
-import org.apache.druid.indexing.common.RetryPolicyConfig;
-import org.apache.druid.indexing.common.RetryPolicyFactory;
 import org.apache.druid.indexing.common.SegmentCacheManagerFactory;
 import org.apache.druid.indexing.common.TaskToolbox;
 import org.apache.druid.indexing.common.TestUtils;
 import org.apache.druid.indexing.common.config.TaskConfig;
 import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.common.task.CompactionTask.Builder;
-import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
 import org.apache.druid.indexing.overlord.Segments;
-import org.apache.druid.jackson.DefaultObjectMapper;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.Pair;
@@ -64,25 +61,27 @@ import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.java.util.common.granularity.Granularity;
 import org.apache.druid.java.util.common.guava.Comparators;
-import org.apache.druid.java.util.common.guava.Sequence;
+import org.apache.druid.query.OrderBy;
 import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.CountAggregatorFactory;
 import org.apache.druid.query.aggregation.LongSumAggregatorFactory;
 import org.apache.druid.query.dimension.DefaultDimensionSpec;
 import org.apache.druid.query.filter.SelectorDimFilter;
+import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.AutoTypeColumnSchema;
 import org.apache.druid.segment.ColumnSelectorFactory;
 import org.apache.druid.segment.ColumnValueSelector;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.DataSegmentsWithSchemas;
 import org.apache.druid.segment.DimensionSelector;
 import org.apache.druid.segment.IndexSpec;
-import org.apache.druid.segment.QueryableIndexStorageAdapter;
+import org.apache.druid.segment.QueryableIndex;
+import org.apache.druid.segment.QueryableIndexCursorFactory;
 import org.apache.druid.segment.TestIndex;
-import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.segment.join.NoopJoinableFactory;
 import org.apache.druid.segment.loading.LeastBytesUsedStorageLocationSelectorStrategy;
 import org.apache.druid.segment.loading.LocalDataSegmentPuller;
@@ -97,8 +96,9 @@ import org.apache.druid.segment.loading.StorageLocation;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.segment.loading.TombstoneLoadSpec;
 import org.apache.druid.segment.metadata.CentralizedDatasourceSchemaConfig;
-import org.apache.druid.segment.realtime.firehose.NoopChatHandlerProvider;
-import org.apache.druid.segment.realtime.firehose.WindowedStorageAdapter;
+import org.apache.druid.segment.realtime.NoopChatHandlerProvider;
+import org.apache.druid.segment.realtime.WindowedCursorFactory;
+import org.apache.druid.segment.transform.CompactionTransformSpec;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.apache.druid.timeline.CompactionState;
 import org.apache.druid.timeline.DataSegment;
@@ -128,10 +128,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.CountDownLatch;
@@ -170,17 +168,17 @@ public class CompactionTaskRunTest extends IngestionTestBase
       "2014-01-01T02:00:30Z,c|d|e,3\n"
   );
 
-  @Parameterized.Parameters(name = "{0}")
+  @Parameterized.Parameters(name = "lockGranularity={0}, useSegmentMetadataCache={1}")
   public static Iterable<Object[]> constructorFeeder()
   {
     return ImmutableList.of(
-        new Object[]{LockGranularity.TIME_CHUNK},
-        new Object[]{LockGranularity.SEGMENT}
+        new Object[]{LockGranularity.TIME_CHUNK, true},
+        new Object[]{LockGranularity.TIME_CHUNK, false},
+        new Object[]{LockGranularity.SEGMENT, true}
     );
   }
 
   private static final String DATA_SOURCE = "test";
-  private static final RetryPolicyFactory RETRY_POLICY_FACTORY = new RetryPolicyFactory(new RetryPolicyConfig());
   private final OverlordClient overlordClient;
   private final CoordinatorClient coordinatorClient;
   private final SegmentCacheManagerFactory segmentCacheManagerFactory;
@@ -190,8 +188,9 @@ public class CompactionTaskRunTest extends IngestionTestBase
   private ExecutorService exec;
   private File localDeepStorage;
 
-  public CompactionTaskRunTest(LockGranularity lockGranularity)
+  public CompactionTaskRunTest(LockGranularity lockGranularity, boolean useSegmentMetadataCache)
   {
+    super(useSegmentMetadataCache);
     testUtils = new TestUtils();
     overlordClient = new NoopOverlordClient();
     coordinatorClient = new NoopCoordinatorClient()
@@ -217,17 +216,19 @@ public class CompactionTaskRunTest extends IngestionTestBase
       Granularity segmentGranularity,
       Granularity queryGranularity,
       List<Interval> intervals
-  ) throws JsonProcessingException
+  )
   {
-    Map<String, String> expectedLongSumMetric = new HashMap<>();
-    expectedLongSumMetric.put("type", "longSum");
-    expectedLongSumMetric.put("name", "val");
-    expectedLongSumMetric.put("fieldName", "val");
+    AggregatorFactory expectedLongSumMetric = new LongSumAggregatorFactory("val", "val");
     return getDefaultCompactionState(
         segmentGranularity,
         queryGranularity,
         intervals,
-        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
+        new DimensionsSpec(
+            ImmutableList.of(
+                new StringDimensionSchema("ts", DimensionSchema.MultiValueHandling.ARRAY, null),
+                new StringDimensionSchema("dim", DimensionSchema.MultiValueHandling.ARRAY, null)
+            )
+        ),
         expectedLongSumMetric
     );
   }
@@ -237,27 +238,21 @@ public class CompactionTaskRunTest extends IngestionTestBase
       Granularity queryGranularity,
       List<Interval> intervals,
       DimensionsSpec expectedDims,
-      Map<String, String> expectedMetric
-  ) throws JsonProcessingException
+      AggregatorFactory expectedMetric
+  )
   {
-    ObjectMapper mapper = new DefaultObjectMapper();
     // Expected compaction state to exist after compaction as we store compaction state by default
     return new CompactionState(
         new DynamicPartitionsSpec(5000000, Long.MAX_VALUE),
         expectedDims,
         ImmutableList.of(expectedMetric),
         null,
-        IndexSpec.DEFAULT.asMap(mapper),
-        mapper.readValue(
-            mapper.writeValueAsString(
-                new UniformGranularitySpec(
-                    segmentGranularity,
-                    queryGranularity,
-                    true,
-                    intervals
-                )
-            ),
-            Map.class
+        IndexSpec.DEFAULT,
+        new UniformGranularitySpec(
+            segmentGranularity,
+            queryGranularity,
+            true,
+            intervals
         )
     );
   }
@@ -284,8 +279,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY
+        segmentCacheManagerFactory
     );
 
     final CompactionTask compactionTask = builder
@@ -309,9 +303,10 @@ public class CompactionTaskRunTest extends IngestionTestBase
           getDefaultCompactionState(
               Granularities.HOUR,
               Granularities.MINUTE,
-              ImmutableList.of(Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00",
-                                            i,
-                                            i + 1
+              ImmutableList.of(Intervals.of(
+                  "2014-01-01T0%d:00:00/2014-01-01T0%d:00:00",
+                  i,
+                  i + 1
               ))
           ),
           segments.get(i).getLastCompactionState()
@@ -352,47 +347,16 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY
+        segmentCacheManagerFactory
     );
 
     final CompactionTask compactionTask = builder
         .interval(Intervals.of("2014-01-01/2014-01-02"))
         .tuningConfig(
-            new ParallelIndexTuningConfig(
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                new HashedPartitionsSpec(null, 3, null),
-                null,
-                null,
-                null,
-                true,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null
-            )
+            TuningConfigBuilder.forParallelIndexTask()
+                               .withForceGuaranteedRollup(true)
+                               .withPartitionsSpec(new HashedPartitionsSpec(null, 3, null))
+                               .build()
         )
         .build();
 
@@ -412,26 +376,23 @@ public class CompactionTaskRunTest extends IngestionTestBase
             interval,
             segments.get(segmentIdx).getInterval()
         );
-        Map<String, String> expectedLongSumMetric = new HashMap<>();
-        expectedLongSumMetric.put("type", "longSum");
-        expectedLongSumMetric.put("name", "val");
-        expectedLongSumMetric.put("fieldName", "val");
+        AggregatorFactory expectedLongSumMetric = new LongSumAggregatorFactory("val", "val");
         CompactionState expectedState = new CompactionState(
             new HashedPartitionsSpec(null, 3, null),
-            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
+            new DimensionsSpec(
+                ImmutableList.of(
+                    new StringDimensionSchema("ts", DimensionSchema.MultiValueHandling.ARRAY, null),
+                    new StringDimensionSchema("dim", DimensionSchema.MultiValueHandling.ARRAY, null)
+                )
+            ),
             ImmutableList.of(expectedLongSumMetric),
             null,
-            compactionTask.getTuningConfig().getIndexSpec().asMap(getObjectMapper()),
-            getObjectMapper().readValue(
-                getObjectMapper().writeValueAsString(
-                    new UniformGranularitySpec(
-                        Granularities.HOUR,
-                        Granularities.MINUTE,
-                        true,
-                        ImmutableList.of(Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1))
-                    )
-                ),
-                Map.class
+            compactionTask.getTuningConfig().getIndexSpec(),
+            new UniformGranularitySpec(
+                Granularities.HOUR,
+                Granularities.MINUTE,
+                true,
+                ImmutableList.of(Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1))
             )
         );
         Assert.assertEquals(expectedState, segments.get(segmentIdx).getLastCompactionState());
@@ -452,8 +413,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY
+        segmentCacheManagerFactory
     );
 
     final CompactionTask compactionTask1 = builder
@@ -477,9 +437,10 @@ public class CompactionTaskRunTest extends IngestionTestBase
           getDefaultCompactionState(
               Granularities.HOUR,
               Granularities.MINUTE,
-              ImmutableList.of(Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00",
-                                            i,
-                                            i + 1
+              ImmutableList.of(Intervals.of(
+                  "2014-01-01T0%d:00:00/2014-01-01T0%d:00:00",
+                  i,
+                  i + 1
               ))
           ),
           segments.get(i).getLastCompactionState()
@@ -515,9 +476,10 @@ public class CompactionTaskRunTest extends IngestionTestBase
           getDefaultCompactionState(
               Granularities.HOUR,
               Granularities.MINUTE,
-              ImmutableList.of(Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00",
-                                            i,
-                                            i + 1
+              ImmutableList.of(Intervals.of(
+                  "2014-01-01T0%d:00:00/2014-01-01T0%d:00:00",
+                  i,
+                  i + 1
               ))
           ),
           segments.get(i).getLastCompactionState()
@@ -547,8 +509,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY
+        segmentCacheManagerFactory
     );
 
     final CompactionTask compactionTask = builder
@@ -633,9 +594,10 @@ public class CompactionTaskRunTest extends IngestionTestBase
           getDefaultCompactionState(
               Granularities.HOUR,
               Granularities.MINUTE,
-              ImmutableList.of(Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00",
-                                            i,
-                                            i + 1
+              ImmutableList.of(Intervals.of(
+                  "2014-01-01T0%d:00:00/2014-01-01T0%d:00:00",
+                  i,
+                  i + 1
               ))
           ),
           segments.get(i).getLastCompactionState()
@@ -659,8 +621,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY
+        segmentCacheManagerFactory
     );
 
     // day segmentGranularity
@@ -729,8 +690,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY
+        segmentCacheManagerFactory
     );
 
     final CompactionTask compactionTask1 = builder
@@ -764,8 +724,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY
+        segmentCacheManagerFactory
     );
 
     // day segmentGranularity
@@ -809,15 +768,14 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY
+        segmentCacheManagerFactory
     );
 
     // day segmentGranularity
     final CompactionTask compactionTask = builder
         .interval(Intervals.of("2014-01-01/2014-01-02"))
         .granularitySpec(new ClientCompactionTaskGranularitySpec(Granularities.DAY, null, null))
-        .transformSpec(new ClientCompactionTaskTransformSpec(new SelectorDimFilter("dim", "a", null)))
+        .transformSpec(new CompactionTransformSpec(new SelectorDimFilter("dim", "a", null)))
         .build();
 
     Pair<TaskStatus, DataSegmentsWithSchemas> resultPair = runTask(compactionTask);
@@ -832,27 +790,23 @@ public class CompactionTaskRunTest extends IngestionTestBase
     Assert.assertEquals(Intervals.of("2014-01-01/2014-01-02"), segments.get(0).getInterval());
     Assert.assertEquals(new NumberedShardSpec(0, 1), segments.get(0).getShardSpec());
 
-    ObjectMapper mapper = new DefaultObjectMapper();
-    Map<String, String> expectedLongSumMetric = new HashMap<>();
-    expectedLongSumMetric.put("type", "longSum");
-    expectedLongSumMetric.put("name", "val");
-    expectedLongSumMetric.put("fieldName", "val");
+    AggregatorFactory expectedLongSumMetric = new LongSumAggregatorFactory("val", "val");
     CompactionState expectedCompactionState = new CompactionState(
         new DynamicPartitionsSpec(5000000, Long.MAX_VALUE),
-        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
+        new DimensionsSpec(
+            ImmutableList.of(
+                new StringDimensionSchema("ts", DimensionSchema.MultiValueHandling.ARRAY, null),
+                new StringDimensionSchema("dim", DimensionSchema.MultiValueHandling.ARRAY, null)
+            )
+        ),
         ImmutableList.of(expectedLongSumMetric),
-        getObjectMapper().readValue(getObjectMapper().writeValueAsString(compactionTask.getTransformSpec()), Map.class),
-        IndexSpec.DEFAULT.asMap(mapper),
-        mapper.readValue(
-            mapper.writeValueAsString(
-                new UniformGranularitySpec(
-                    Granularities.DAY,
-                    Granularities.MINUTE,
-                    true,
-                    ImmutableList.of(Intervals.of("2014-01-01T00:00:00/2014-01-01T03:00:00"))
-                )
-            ),
-            Map.class
+        compactionTask.getTransformSpec(),
+        IndexSpec.DEFAULT,
+        new UniformGranularitySpec(
+            Granularities.DAY,
+            Granularities.MINUTE,
+            true,
+            ImmutableList.of(Intervals.of("2014-01-01T00:00:00/2014-01-01T03:00:00"))
         )
     );
     Assert.assertEquals(
@@ -869,8 +823,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY
+        segmentCacheManagerFactory
     );
 
     // day segmentGranularity
@@ -895,30 +848,24 @@ public class CompactionTaskRunTest extends IngestionTestBase
     Assert.assertEquals(Intervals.of("2014-01-01/2014-01-02"), segments.get(0).getInterval());
     Assert.assertEquals(new NumberedShardSpec(0, 1), segments.get(0).getShardSpec());
 
-    ObjectMapper mapper = new DefaultObjectMapper();
-    Map<String, String> expectedCountMetric = new HashMap<>();
-    expectedCountMetric.put("type", "count");
-    expectedCountMetric.put("name", "cnt");
-    Map<String, String> expectedLongSumMetric = new HashMap<>();
-    expectedLongSumMetric.put("type", "longSum");
-    expectedLongSumMetric.put("name", "val");
-    expectedLongSumMetric.put("fieldName", "val");
+    AggregatorFactory expectedCountMetric = new CountAggregatorFactory("cnt");
+    AggregatorFactory expectedLongSumMetric = new LongSumAggregatorFactory("val", "val");
     CompactionState expectedCompactionState = new CompactionState(
         new DynamicPartitionsSpec(5000000, Long.MAX_VALUE),
-        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("ts", "dim"))),
+        new DimensionsSpec(
+            ImmutableList.of(
+                new StringDimensionSchema("ts", DimensionSchema.MultiValueHandling.ARRAY, null),
+                new StringDimensionSchema("dim", DimensionSchema.MultiValueHandling.ARRAY, null)
+            )
+        ),
         ImmutableList.of(expectedCountMetric, expectedLongSumMetric),
-        getObjectMapper().readValue(getObjectMapper().writeValueAsString(compactionTask.getTransformSpec()), Map.class),
-        IndexSpec.DEFAULT.asMap(mapper),
-        mapper.readValue(
-            mapper.writeValueAsString(
-                new UniformGranularitySpec(
-                    Granularities.DAY,
-                    Granularities.MINUTE,
-                    true,
-                    ImmutableList.of(Intervals.of("2014-01-01T00:00:00/2014-01-01T03:00:00"))
-                )
-            ),
-            Map.class
+        compactionTask.getTransformSpec(),
+        IndexSpec.DEFAULT,
+        new UniformGranularitySpec(
+            Granularities.DAY,
+            Granularities.MINUTE,
+            true,
+            ImmutableList.of(Intervals.of("2014-01-01T00:00:00/2014-01-01T03:00:00"))
         )
     );
     Assert.assertEquals(
@@ -935,8 +882,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY
+        segmentCacheManagerFactory
     );
 
     // day segmentGranularity
@@ -1004,8 +950,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY
+        segmentCacheManagerFactory
     );
 
     // day queryGranularity
@@ -1032,9 +977,10 @@ public class CompactionTaskRunTest extends IngestionTestBase
           getDefaultCompactionState(
               Granularities.HOUR,
               Granularities.SECOND,
-              ImmutableList.of(Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00",
-                                            i,
-                                            i + 1
+              ImmutableList.of(Intervals.of(
+                  "2014-01-01T0%d:00:00/2014-01-01T0%d:00:00",
+                  i,
+                  i + 1
               ))
           ),
           segments.get(i).getLastCompactionState()
@@ -1058,8 +1004,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY
+        segmentCacheManagerFactory
     );
 
     // day segmentGranularity and day queryGranularity
@@ -1097,8 +1042,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY
+        segmentCacheManagerFactory
     );
 
     final CompactionTask compactionTask1 = builder
@@ -1124,9 +1068,10 @@ public class CompactionTaskRunTest extends IngestionTestBase
           getDefaultCompactionState(
               Granularities.HOUR,
               Granularities.MINUTE,
-              ImmutableList.of(Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00",
-                                            i,
-                                            i + 1
+              ImmutableList.of(Intervals.of(
+                  "2014-01-01T0%d:00:00/2014-01-01T0%d:00:00",
+                  i,
+                  i + 1
               ))
           ),
           segments.get(i).getLastCompactionState()
@@ -1150,8 +1095,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY
+        segmentCacheManagerFactory
     );
 
     final CompactionTask compactionTask = builder
@@ -1212,8 +1156,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY
+        segmentCacheManagerFactory
     );
 
     // Setup partial compaction:
@@ -1368,8 +1311,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY
+        segmentCacheManagerFactory
     );
 
     // Setup partial interval compaction:
@@ -1476,8 +1418,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY
+        segmentCacheManagerFactory
     );
 
     final Interval partialInterval = Intervals.of("2014-01-01T01:00:00/2014-01-01T02:00:00");
@@ -1548,8 +1489,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY
+        segmentCacheManagerFactory
     );
 
     final CompactionTask compactionTask = builder
@@ -1603,8 +1543,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY
+        segmentCacheManagerFactory
     );
 
     final CompactionTask compactionTask = builder
@@ -1689,13 +1628,18 @@ public class CompactionTaskRunTest extends IngestionTestBase
         false,
         0
     );
-    Pair<TaskStatus, DataSegmentsWithSchemas> indexTaskResult = runIndexTask(null, null, spatialSpec, spatialrows, false);
+    Pair<TaskStatus, DataSegmentsWithSchemas> indexTaskResult = runIndexTask(
+        null,
+        null,
+        spatialSpec,
+        spatialrows,
+        false
+    );
     verifySchema(indexTaskResult.rhs);
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY
+        segmentCacheManagerFactory
     );
 
     final CompactionTask compactionTask = builder
@@ -1715,10 +1659,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
           Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1),
           segments.get(i).getInterval()
       );
-      Map<String, String> expectedLongSumMetric = new HashMap<>();
-      expectedLongSumMetric.put("name", "val");
-      expectedLongSumMetric.put("type", "longSum");
-      expectedLongSumMetric.put("fieldName", "val");
+      AggregatorFactory expectedLongSumMetric = new LongSumAggregatorFactory("val", "val");
       Assert.assertEquals(
           getDefaultCompactionState(
               Granularities.HOUR,
@@ -1726,8 +1667,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
               ImmutableList.of(Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1)),
               DimensionsSpec.builder()
                             .setDimensions(Arrays.asList(
-                                new StringDimensionSchema("ts"),
-                                new StringDimensionSchema("dim"),
+                                new StringDimensionSchema("ts", DimensionSchema.MultiValueHandling.ARRAY, null),
+                                new StringDimensionSchema("dim", DimensionSchema.MultiValueHandling.ARRAY, null),
                                 new NewSpatialDimensionSchema("spatial", Collections.singletonList("spatial"))
                             ))
                             .build(),
@@ -1752,27 +1693,23 @@ public class CompactionTaskRunTest extends IngestionTestBase
     for (DataSegment segment : segments) {
       final File segmentFile = segmentCacheManager.getSegmentFiles(segment);
 
-      final WindowedStorageAdapter adapter = new WindowedStorageAdapter(
-          new QueryableIndexStorageAdapter(testUtils.getTestIndexIO().loadIndex(segmentFile)),
+      final WindowedCursorFactory windowed = new WindowedCursorFactory(
+          new QueryableIndexCursorFactory(testUtils.getTestIndexIO().loadIndex(segmentFile)),
           segment.getInterval()
       );
-      final Sequence<Cursor> cursorSequence = adapter.getAdapter().makeCursors(
-          null,
-          segment.getInterval(),
-          VirtualColumns.EMPTY,
-          Granularities.ALL,
-          false,
-          null
-      );
-
-      cursorSequence.accumulate(rowsFromSegment, (accumulated, cursor) -> {
+      try (final CursorHolder cursorHolder = windowed.getCursorFactory().makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+        final Cursor cursor = cursorHolder.asCursor();
+        Assert.assertNotNull(cursor);
         cursor.reset();
         final ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
         Assert.assertTrue(factory.getColumnCapabilities("spatial").hasSpatialIndexes());
         while (!cursor.isDone()) {
           final ColumnValueSelector<?> selector1 = factory.makeColumnValueSelector("ts");
           final DimensionSelector selector2 = factory.makeDimensionSelector(new DefaultDimensionSpec("dim", "dim"));
-          final DimensionSelector selector3 = factory.makeDimensionSelector(new DefaultDimensionSpec("spatial", "spatial"));
+          final DimensionSelector selector3 = factory.makeDimensionSelector(new DefaultDimensionSpec(
+              "spatial",
+              "spatial"
+          ));
           final DimensionSelector selector4 = factory.makeDimensionSelector(new DefaultDimensionSpec("val", "val"));
 
 
@@ -1788,9 +1725,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
           cursor.advance();
         }
-
-        return accumulated;
-      });
+      }
     }
     Assert.assertEquals(spatialrows, rowsFromSegment);
   }
@@ -1826,8 +1761,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
     final Builder builder = new Builder(
         DATA_SOURCE,
-        segmentCacheManagerFactory,
-        RETRY_POLICY_FACTORY
+        segmentCacheManagerFactory
     );
 
     final CompactionTask compactionTask = builder
@@ -1848,10 +1782,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
           Intervals.of("2014-01-01T0%d:00:00/2014-01-01T0%d:00:00", i, i + 1),
           segments.get(i).getInterval()
       );
-      Map<String, String> expectedLongSumMetric = new HashMap<>();
-      expectedLongSumMetric.put("name", "val");
-      expectedLongSumMetric.put("type", "longSum");
-      expectedLongSumMetric.put("fieldName", "val");
+      AggregatorFactory expectedLongSumMetric = new LongSumAggregatorFactory("val", "val");
       Assert.assertEquals(
           getDefaultCompactionState(
               Granularities.HOUR,
@@ -1887,20 +1818,13 @@ public class CompactionTaskRunTest extends IngestionTestBase
     for (DataSegment segment : segments) {
       final File segmentFile = segmentCacheManager.getSegmentFiles(segment);
 
-      final WindowedStorageAdapter adapter = new WindowedStorageAdapter(
-          new QueryableIndexStorageAdapter(testUtils.getTestIndexIO().loadIndex(segmentFile)),
+      final WindowedCursorFactory windowed = new WindowedCursorFactory(
+          new QueryableIndexCursorFactory(testUtils.getTestIndexIO().loadIndex(segmentFile)),
           segment.getInterval()
       );
-      final Sequence<Cursor> cursorSequence = adapter.getAdapter().makeCursors(
-          null,
-          segment.getInterval(),
-          VirtualColumns.EMPTY,
-          Granularities.ALL,
-          false,
-          null
-      );
-
-      cursorSequence.accumulate(rowsFromSegment, (accumulated, cursor) -> {
+      try (final CursorHolder cursorHolder = windowed.getCursorFactory().makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+        final Cursor cursor = cursorHolder.asCursor();
+        Assert.assertNotNull(cursor);
         cursor.reset();
         final ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
         Assert.assertEquals(ColumnType.STRING, factory.getColumnCapabilities("ts").toColumnType());
@@ -1928,11 +1852,161 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
           cursor.advance();
         }
-
-        return accumulated;
-      });
+      }
     }
     Assert.assertEquals(rows, rowsFromSegment);
+  }
+
+  @Test
+  public void testRunWithAutoCastDimensionsSortByDimension() throws Exception
+  {
+    // Compaction will produce one segment sorted by [x, __time], even though input rows are sorted by __time.
+    final List<String> rows = ImmutableList.of(
+        "2014-01-01T00:00:10Z,a,10,100,1\n",
+        "2014-01-01T00:00:10Z,b,20,110,2\n",
+        "2014-01-01T00:00:10Z,c,30,120,3\n",
+        "2014-01-01T00:01:20Z,a,10,100,1\n",
+        "2014-01-01T00:01:20Z,b,20,110,2\n",
+        "2014-01-01T00:01:20Z,c,30,120,3\n"
+    );
+    final ParseSpec spec = new CSVParseSpec(
+        new TimestampSpec("ts", "auto", null),
+        DimensionsSpec.builder()
+                      .setDimensions(Arrays.asList(
+                          new AutoTypeColumnSchema("x", ColumnType.LONG),
+                          new LongDimensionSchema("__time"),
+                          new AutoTypeColumnSchema("ts", ColumnType.STRING),
+                          new AutoTypeColumnSchema("dim", null),
+                          new AutoTypeColumnSchema("y", ColumnType.LONG)
+                      ))
+                      .setForceSegmentSortByTime(false)
+                      .build(),
+        "|",
+        Arrays.asList("ts", "dim", "x", "y", "val"),
+        false,
+        0
+    );
+    Pair<TaskStatus, DataSegmentsWithSchemas> indexTaskResult = runIndexTask(null, null, spec, rows, false);
+    verifySchema(indexTaskResult.rhs);
+
+    final Builder builder = new Builder(
+        DATA_SOURCE,
+        segmentCacheManagerFactory
+    );
+
+    final CompactionTask compactionTask = builder
+        .interval(Intervals.of("2014-01-01/2014-01-02"))
+        .build();
+
+    final Pair<TaskStatus, DataSegmentsWithSchemas> resultPair = runTask(compactionTask);
+    verifySchema(resultPair.rhs);
+
+    Assert.assertTrue(resultPair.lhs.isSuccess());
+
+    final DataSegmentsWithSchemas dataSegmentsWithSchemas = resultPair.rhs;
+    final List<DataSegment> segments = new ArrayList<>(dataSegmentsWithSchemas.getSegments());
+    Assert.assertEquals(1, segments.size());
+
+    final DataSegment compactSegment = Iterables.getOnlyElement(segments);
+    Assert.assertEquals(
+        Intervals.of("2014-01-01T00:00:00/2014-01-01T01:00:00"),
+        compactSegment.getInterval()
+    );
+    AggregatorFactory expectedLongSumMetric = new LongSumAggregatorFactory("val", "val");
+    Assert.assertEquals(
+        getDefaultCompactionState(
+            Granularities.HOUR,
+            Granularities.MINUTE,
+            ImmutableList.of(Intervals.of("2014-01-01T00:00:00/2014-01-01T01:00:00")),
+            DimensionsSpec.builder()
+                          .setDimensions(Arrays.asList(
+                              // check explicitly that time ordering is preserved
+                              new AutoTypeColumnSchema("x", ColumnType.LONG),
+                              new LongDimensionSchema("__time"),
+                              new AutoTypeColumnSchema("ts", ColumnType.STRING),
+                              new AutoTypeColumnSchema("dim", null),
+                              new AutoTypeColumnSchema("y", ColumnType.LONG)
+                          ))
+                          .setForceSegmentSortByTime(false)
+                          .build(),
+            expectedLongSumMetric
+        ),
+        compactSegment.getLastCompactionState()
+    );
+    if (lockGranularity == LockGranularity.SEGMENT) {
+      Assert.assertEquals(
+          new NumberedOverwriteShardSpec(32768, 0, 3, (short) 1, (short) 1),
+          compactSegment.getShardSpec()
+      );
+    } else {
+      Assert.assertEquals(new NumberedShardSpec(0, 1), compactSegment.getShardSpec());
+    }
+
+    final File cacheDir = temporaryFolder.newFolder();
+    final SegmentCacheManager segmentCacheManager = segmentCacheManagerFactory.manufacturate(cacheDir);
+
+    List<String> rowsFromSegment = new ArrayList<>();
+    final File segmentFile = segmentCacheManager.getSegmentFiles(compactSegment);
+
+    final QueryableIndex queryableIndex = testUtils.getTestIndexIO().loadIndex(segmentFile);
+    final WindowedCursorFactory windowed = new WindowedCursorFactory(
+        new QueryableIndexCursorFactory(queryableIndex),
+        compactSegment.getInterval()
+    );
+    Assert.assertEquals(
+        ImmutableList.of(
+            OrderBy.ascending("x"),
+            OrderBy.ascending("__time"),
+            OrderBy.ascending("ts"),
+            OrderBy.ascending("dim"),
+            OrderBy.ascending("y")
+        ),
+        queryableIndex.getOrdering()
+    );
+
+    try (final CursorHolder cursorHolder =
+             windowed.getCursorFactory()
+                     .makeCursorHolder(CursorBuildSpec.builder().setInterval(compactSegment.getInterval()).build())) {
+      final Cursor cursor = cursorHolder.asCursor();
+      cursor.reset();
+      final ColumnSelectorFactory factory = cursor.getColumnSelectorFactory();
+      Assert.assertEquals(ColumnType.STRING, factory.getColumnCapabilities("ts").toColumnType());
+      Assert.assertEquals(ColumnType.STRING, factory.getColumnCapabilities("dim").toColumnType());
+      Assert.assertEquals(ColumnType.LONG, factory.getColumnCapabilities("x").toColumnType());
+      Assert.assertEquals(ColumnType.LONG, factory.getColumnCapabilities("y").toColumnType());
+      while (!cursor.isDone()) {
+        final ColumnValueSelector<?> selector1 = factory.makeColumnValueSelector("ts");
+        final DimensionSelector selector2 = factory.makeDimensionSelector(new DefaultDimensionSpec("dim", "dim"));
+        final DimensionSelector selector3 = factory.makeDimensionSelector(new DefaultDimensionSpec("x", "x"));
+        final DimensionSelector selector4 = factory.makeDimensionSelector(new DefaultDimensionSpec("y", "y"));
+        final DimensionSelector selector5 = factory.makeDimensionSelector(new DefaultDimensionSpec("val", "val"));
+
+        rowsFromSegment.add(
+            StringUtils.format(
+                "%s,%s,%s,%s,%s",
+                selector1.getObject(),
+                selector2.getObject(),
+                selector3.getObject(),
+                selector4.getObject(),
+                selector5.getObject()
+            )
+        );
+
+        cursor.advance();
+      }
+    }
+
+    Assert.assertEquals(
+        ImmutableList.of(
+            "2014-01-01T00:00:10Z,a,10,100,1",
+            "2014-01-01T00:01:20Z,a,10,100,1",
+            "2014-01-01T00:00:10Z,b,20,110,2",
+            "2014-01-01T00:01:20Z,b,20,110,2",
+            "2014-01-01T00:00:10Z,c,30,120,3",
+            "2014-01-01T00:01:20Z,c,30,120,3"
+        ),
+        rowsFromSegment
+    );
   }
 
   private Pair<TaskStatus, DataSegmentsWithSchemas> runIndexTask() throws Exception
@@ -2058,7 +2132,8 @@ public class CompactionTaskRunTest extends IngestionTestBase
           status,
           new DataSegmentsWithSchemas(
               new TreeSet<>(((TestLocalTaskActionClient) box.getTaskActionClient()).getPublishedSegments()),
-              ((TestLocalTaskActionClient) box.getTaskActionClient()).getSegmentSchemas())
+              ((TestLocalTaskActionClient) box.getTaskActionClient()).getSegmentSchemas()
+          )
       );
     } else {
       throw new ISE("task[%s] is not ready", task.getId());
@@ -2085,8 +2160,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
     );
 
     final TaskConfig config = new TaskConfigBuilder()
-            .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
-            .build();
+        .build();
     CentralizedDatasourceSchemaConfig centralizedDatasourceSchemaConfig = CentralizedDatasourceSchemaConfig.create();
     centralizedDatasourceSchemaConfig.setEnabled(true);
     return new TaskToolbox.Builder()
@@ -2122,20 +2196,13 @@ public class CompactionTaskRunTest extends IngestionTestBase
     for (DataSegment segment : segments) {
       final File segmentFile = segmentCacheManager.getSegmentFiles(segment);
 
-      final WindowedStorageAdapter adapter = new WindowedStorageAdapter(
-          new QueryableIndexStorageAdapter(testUtils.getTestIndexIO().loadIndex(segmentFile)),
+      final WindowedCursorFactory windowed = new WindowedCursorFactory(
+          new QueryableIndexCursorFactory(testUtils.getTestIndexIO().loadIndex(segmentFile)),
           segment.getInterval()
       );
-      final Sequence<Cursor> cursorSequence = adapter.getAdapter().makeCursors(
-          null,
-          segment.getInterval(),
-          VirtualColumns.EMPTY,
-          Granularities.ALL,
-          false,
-          null
-      );
-
-      cursorSequence.accumulate(rowsFromSegment, (accumulated, cursor) -> {
+      try (final CursorHolder cursorHolder = windowed.getCursorFactory().makeCursorHolder(CursorBuildSpec.FULL_SCAN)) {
+        final Cursor cursor = cursorHolder.asCursor();
+        Assert.assertNotNull(cursor);
         cursor.reset();
         while (!cursor.isDone()) {
           final DimensionSelector selector1 = cursor.getColumnSelectorFactory()
@@ -2163,9 +2230,7 @@ public class CompactionTaskRunTest extends IngestionTestBase
 
           cursor.advance();
         }
-
-        return accumulated;
-      });
+      }
     }
 
     return rowsFromSegment;

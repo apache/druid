@@ -20,6 +20,7 @@
 package org.apache.druid.server.coordinator.simulate;
 
 import org.apache.druid.client.DruidServer;
+import org.apache.druid.segment.TestDataSource;
 import org.apache.druid.server.coordinator.CoordinatorDynamicConfig;
 import org.apache.druid.timeline.DataSegment;
 import org.junit.Test;
@@ -50,7 +51,7 @@ public class MarkSegmentsAsUnusedTest extends CoordinatorSimulationBaseTest
         = CoordinatorDynamicConfig.builder().withMarkSegmentAsUnusedDelayMillis(0).build();
     final CoordinatorSimulation sim =
         CoordinatorSimulation.builder()
-                             .withRules(DS.WIKI, Load.on(Tier.T1, 0).forever())
+                             .withRules(TestDataSource.WIKI, Load.on(Tier.T1, 0).forever())
                              .withServers(servers)
                              .withSegments(segmentsV0)
                              .withDynamicConfig(dynamicConfig)

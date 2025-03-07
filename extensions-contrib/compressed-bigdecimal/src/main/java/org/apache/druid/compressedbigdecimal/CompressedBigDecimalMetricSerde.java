@@ -20,6 +20,7 @@
 package org.apache.druid.compressedbigdecimal;
 
 import org.apache.druid.data.input.InputRow;
+import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.column.ColumnBuilder;
 import org.apache.druid.segment.data.ObjectStrategy;
 import org.apache.druid.segment.serde.ComplexMetricExtractor;
@@ -48,7 +49,7 @@ public class CompressedBigDecimalMetricSerde extends ComplexMetricSerde
   @Override
   public ComplexMetricExtractor<CompressedBigDecimal> getExtractor()
   {
-    return new ComplexMetricExtractor<CompressedBigDecimal>()
+    return new ComplexMetricExtractor<>()
     {
       @Override
       public Class<CompressedBigDecimal> extractedClass()
@@ -73,7 +74,8 @@ public class CompressedBigDecimalMetricSerde extends ComplexMetricSerde
   public void deserializeColumn(ByteBuffer buffer, ColumnBuilder builder)
   {
     builder.setComplexColumnSupplier(
-        CompressedBigDecimalColumnPartSupplier.fromByteBuffer(buffer));
+        CompressedBigDecimalColumnPartSupplier.fromByteBuffer(buffer, builder.getFileMapper())
+    );
   }
 
   /* (non-Javadoc)
@@ -83,7 +85,8 @@ public class CompressedBigDecimalMetricSerde extends ComplexMetricSerde
   @Override
   public CompressedBigDecimalLongColumnSerializer getSerializer(
       SegmentWriteOutMedium segmentWriteOutMedium,
-      String column
+      String column,
+      IndexSpec indexSpec
   )
   {
     return CompressedBigDecimalLongColumnSerializer.create(segmentWriteOutMedium, column);

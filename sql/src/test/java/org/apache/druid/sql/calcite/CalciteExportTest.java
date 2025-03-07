@@ -26,7 +26,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import org.apache.calcite.avatica.SqlType;
 import org.apache.druid.error.DruidException;
-import org.apache.druid.guice.DruidInjectorBuilder;
 import org.apache.druid.initialization.DruidModule;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.query.Druids;
@@ -37,10 +36,11 @@ import org.apache.druid.server.security.ForbiddenException;
 import org.apache.druid.sql.calcite.CalciteExportTest.ExportComponentSupplier;
 import org.apache.druid.sql.calcite.filtration.Filtration;
 import org.apache.druid.sql.calcite.util.CalciteTests;
+import org.apache.druid.sql.calcite.util.DruidModuleCollection;
 import org.apache.druid.sql.destination.ExportDestination;
 import org.apache.druid.sql.http.SqlParameter;
 import org.apache.druid.storage.StorageConfig;
-import org.apache.druid.storage.StorageConnector;
+import org.apache.druid.storage.StorageConnectorModule;
 import org.apache.druid.storage.StorageConnectorProvider;
 import org.apache.druid.storage.local.LocalFileExportStorageProvider;
 import org.apache.druid.storage.local.LocalFileStorageConnectorProvider;
@@ -63,45 +63,40 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
     }
 
     @Override
-    public void configureGuice(DruidInjectorBuilder builder)
+    public DruidModule getCoreModule()
     {
-      super.configureGuice(builder);
-      builder.addModule(
-          new DruidModule()
-          {
-            @Override
-            public void configure(Binder binder)
-            {
-            }
+      return DruidModuleCollection.of(
+          super.getCoreModule(),
+          new StorageConnectorModule()
+      );
+    }
 
-            @Override
-            public List<? extends Module> getJacksonModules()
-            {
-              return ImmutableList.of(
-                  new SimpleModule(StorageConnectorProvider.class.getSimpleName()).registerSubtypes(
-                      new NamedType(LocalFileExportStorageProvider.class, CalciteTests.FORBIDDEN_DESTINATION)
-                  )
-              );
-            }
-          });
-      builder.addModule(new DruidModule()
+    @Override
+    public DruidModule getOverrideModule()
+    {
+      return DruidModuleCollection.of(
+          super.getOverrideModule(),
+          new LocalOverrideModule()
+      );
+    }
+
+    private static final class LocalOverrideModule implements DruidModule
+    {
+      @Override
+      public List<? extends Module> getJacksonModules()
       {
-        @Override
-        public List<? extends Module> getJacksonModules()
-        {
-          return ImmutableList.of(
-              new SimpleModule(StorageConnector.class.getSimpleName())
-                  .registerSubtypes(LocalFileStorageConnectorProvider.class)
-                  .registerSubtypes(LocalFileExportStorageProvider.class)
-          );
-        }
+        return ImmutableList.of(
+            new SimpleModule(StorageConnectorProvider.class.getSimpleName()).registerSubtypes(
+                new NamedType(LocalFileExportStorageProvider.class, CalciteTests.FORBIDDEN_DESTINATION)
+            )
+        );
+      }
 
-        @Override
-        public void configure(Binder binder)
-        {
-          binder.bind(StorageConfig.class).toInstance(new StorageConfig("/tmp/export"));
-        }
-      });
+      @Override
+      public void configure(Binder binder)
+      {
+        binder.bind(StorageConfig.class).toInstance(new StorageConfig("/tmp/export"));
+      }
     }
   }
 
@@ -122,8 +117,8 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
                   )
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .columns("dim2")
+                  .columnTypes(ColumnType.STRING)
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                  .legacy(false)
                   .build()
         )
         .expectResources(dataSourceRead("foo"), externalWrite(LocalFileExportStorageProvider.TYPE_NAME))
@@ -197,15 +192,14 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
                   )
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .columns("dim2")
+                  .columnTypes(ColumnType.STRING)
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                  .legacy(false)
                   .build()
         )
         .expectResources(dataSourceRead("foo"), externalWrite(LocalFileStorageConnectorProvider.TYPE_NAME))
         .expectTarget(ExportDestination.TYPE_KEY, RowSignature.builder().add("dim2", ColumnType.STRING).build())
         .verify();
   }
-
 
   @Test
   public void testInsertIntoExternParameterized()
@@ -223,8 +217,8 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .filters(equality("dim2", "val", ColumnType.STRING))
                 .columns("dim2")
+                .columnTypes(ColumnType.STRING)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                .legacy(false)
                 .build()
         )
         .expectResources(dataSourceRead("foo"), externalWrite(LocalFileStorageConnectorProvider.TYPE_NAME))
@@ -250,8 +244,8 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
                 .intervals(querySegmentSpec(Filtration.eternity()))
                 .filters(equality("dim2", "val", ColumnType.STRING))
                 .columns("dim2")
+                .columnTypes(ColumnType.STRING)
                 .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                .legacy(false)
                 .build()
         )
         .expectResources(dataSourceRead("foo"), externalWrite(LocalFileStorageConnectorProvider.TYPE_NAME))
@@ -305,8 +299,8 @@ public class CalciteExportTest extends CalciteIngestionDmlTest
                   .dataSource("foo")
                   .intervals(querySegmentSpec(Filtration.eternity()))
                   .columns("dim2")
+                  .columnTypes(ColumnType.STRING)
                   .resultFormat(ScanQuery.ResultFormat.RESULT_FORMAT_COMPACTED_LIST)
-                  .legacy(false)
                   .build()
         )
         .expectResources(dataSourceRead("foo"), dataSourceWrite("csv"))

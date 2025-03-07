@@ -26,9 +26,9 @@ import org.apache.druid.java.util.common.DateTimes;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
 import org.apache.druid.msq.guice.MSQIndexingModule;
+import org.apache.druid.query.JoinAlgorithm;
 import org.apache.druid.segment.TestHelper;
 import org.apache.druid.segment.column.ColumnType;
-import org.apache.druid.sql.calcite.planner.JoinAlgorithm;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -74,7 +74,7 @@ public class MSQFaultSerdeTest
     ));
     assertFaultSerde(new InvalidNullByteFault("the source", 1, "the column", "the value", 2));
     assertFaultSerde(new InvalidFieldFault("the source", "the column", 1, "the error", "the log msg"));
-    assertFaultSerde(new NotEnoughMemoryFault(1000, 1000, 900, 1, 2));
+    assertFaultSerde(new NotEnoughMemoryFault(1234, 1000, 1000, 900, 1, 2, 2));
     assertFaultSerde(QueryNotSupportedFault.INSTANCE);
     assertFaultSerde(new QueryRuntimeFault("new error", "base error"));
     assertFaultSerde(new QueryRuntimeFault("new error", null));
@@ -85,6 +85,7 @@ public class MSQFaultSerdeTest
     assertFaultSerde(new TooManyClusteredByColumnsFault(10, 8, 1));
     assertFaultSerde(new TooManyInputFilesFault(15, 10, 5));
     assertFaultSerde(new TooManyPartitionsFault(10));
+    assertFaultSerde(new TooManyRowsInAWindowFault(10, 20));
     assertFaultSerde(new TooManyRowsWithSameKeyFault(Arrays.asList("foo", 123), 1, 2));
     assertFaultSerde(new TooManySegmentsInTimeChunkFault(DateTimes.nowUtc(), 10, 1, Granularities.ALL));
     assertFaultSerde(new TooManyWarningsFault(10, "the error"));
@@ -93,8 +94,10 @@ public class MSQFaultSerdeTest
     assertFaultSerde(new TooManyAttemptsForJob(2, 2, "taskId", "rootError"));
     assertFaultSerde(UnknownFault.forMessage(null));
     assertFaultSerde(UnknownFault.forMessage("the message"));
+    assertFaultSerde(new WorkerFailedFault("the worker task", null));
     assertFaultSerde(new WorkerFailedFault("the worker task", "the error msg"));
-    assertFaultSerde(new WorkerRpcFailedFault("the worker task"));
+    assertFaultSerde(new WorkerRpcFailedFault("the worker task", null));
+    assertFaultSerde(new WorkerRpcFailedFault("the worker task", "the error msg"));
     assertFaultSerde(new NotEnoughTemporaryStorageFault(250, 2));
   }
 

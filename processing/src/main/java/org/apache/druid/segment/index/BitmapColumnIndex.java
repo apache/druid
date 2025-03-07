@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment.index;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.query.BitmapResultFactory;
 import org.apache.druid.segment.column.ColumnIndexCapabilities;
 
@@ -36,6 +35,14 @@ public interface BitmapColumnIndex
   ColumnIndexCapabilities getIndexCapabilities();
 
   /**
+   * Returns an estimated cost for computing the bitmap result. Generally this is equivalent to number of bitmap union
+   * or intersection operations need to be performed. E.x. null value index bitmap has a cost of 0, non-null value index
+   * bitmap union with null bitmap has a cost of 1, range (size of 10) scanning index bitmap union with null bitmap has
+   * a cost of 10.
+   */
+  int estimatedComputeCost();
+
+  /**
    * Compute a bitmap result wrapped with the {@link BitmapResultFactory} representing the rows matched by this index.
    * If building a cursor, use {@link #computeBitmapResult(BitmapResultFactory, int, int, boolean)} instead.
    *
@@ -44,8 +51,6 @@ public interface BitmapColumnIndex
    * @param includeUnknown      mapping for Druid native two state logic system into SQL three-state logic system. If set
    *                            to true, bitmaps returned by this method should include true bits for any rows where
    *                            the matching result is 'unknown', such as from the input being null valued.
-   *                            See {@link NullHandling#useThreeValueLogic()}.
-   *
    * @return bitmap result representing rows matched by this index
    */
   <T> T computeBitmapResult(
@@ -68,7 +73,6 @@ public interface BitmapColumnIndex
    * @param includeUnknown      mapping for Druid native two state logic system into SQL three-state logic system. If
    *                            set to true, bitmaps returned by this method should include true bits for any rows where
    *                            the matching result is 'unknown', such as from the input being null valued.
-   *                            See {@link NullHandling#useThreeValueLogic()}.
    *
    * @return bitmap result representing rows matched by this index
    */

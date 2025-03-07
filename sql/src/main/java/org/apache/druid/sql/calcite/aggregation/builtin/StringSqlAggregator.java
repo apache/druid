@@ -36,7 +36,6 @@ import org.apache.calcite.sql.type.SqlReturnTypeInference;
 import org.apache.calcite.sql.type.SqlTypeFamily;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.calcite.util.Optionality;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.HumanReadableBytes;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.math.expr.ExprMacroTable;
@@ -47,6 +46,7 @@ import org.apache.druid.query.filter.NullFilter;
 import org.apache.druid.query.filter.SelectorDimFilter;
 import org.apache.druid.segment.column.ColumnType;
 import org.apache.druid.sql.calcite.aggregation.Aggregation;
+import org.apache.druid.sql.calcite.aggregation.NativelySupportsDistinct;
 import org.apache.druid.sql.calcite.aggregation.SqlAggregator;
 import org.apache.druid.sql.calcite.expression.DruidExpression;
 import org.apache.druid.sql.calcite.expression.Expressions;
@@ -148,7 +148,7 @@ public class StringSqlAggregator implements SqlAggregator
     final String finalizer = StringUtils.format("if(array_length(o) == 0, null, array_to_string(o, '%s'))", separator);
     final NotDimFilter dimFilter = new NotDimFilter(
         plannerContext.isUseBoundsAndSelectors()
-        ? new SelectorDimFilter(fieldName, NullHandling.defaultStringValue(), null)
+        ? new SelectorDimFilter(fieldName, null, null)
         : NullFilter.forColumn(fieldName)
     );
     if (aggregateCall.isDistinct()) {
@@ -226,6 +226,7 @@ public class StringSqlAggregator implements SqlAggregator
     }
   }
 
+  @NativelySupportsDistinct
   private static class StringAggFunction extends SqlAggFunction
   {
     private static final StringAggReturnTypeInference RETURN_TYPE_INFERENCE = new StringAggReturnTypeInference();

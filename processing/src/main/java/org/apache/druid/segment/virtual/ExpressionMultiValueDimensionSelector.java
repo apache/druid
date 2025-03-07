@@ -19,7 +19,6 @@
 
 package org.apache.druid.segment.virtual;
 
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.math.expr.Evals;
 import org.apache.druid.math.expr.ExprEval;
 import org.apache.druid.query.extraction.ExtractionFn;
@@ -76,10 +75,14 @@ public class ExpressionMultiValueDimensionSelector implements DimensionSelector
     return evaluated.asString();
   }
 
+  @Nullable
   List<String> getArrayAsList(ExprEval evaluated)
   {
     assert evaluated.isArray();
     //noinspection ConstantConditions
+    if (evaluated.asArray() == null) {
+      return null;
+    }
     return Arrays.stream(evaluated.asArray())
                  .map(Evals::asString)
                  .collect(Collectors.toList());
@@ -133,6 +136,9 @@ public class ExpressionMultiValueDimensionSelector implements DimensionSelector
         ExprEval evaluated = getEvaluated();
         if (evaluated.isArray()) {
           List<String> array = getArrayAsList(evaluated);
+          if (array == null) {
+            return includeUnknown || value == null;
+          }
           return array.stream().anyMatch(x -> (includeUnknown && x == null) || Objects.equals(x, value));
         }
         final String rowValue = getValue(evaluated);
@@ -159,6 +165,9 @@ public class ExpressionMultiValueDimensionSelector implements DimensionSelector
         final DruidObjectPredicate<String> predicate = predicateFactory.makeStringPredicate();
         if (evaluated.isArray()) {
           List<String> array = getArrayAsList(evaluated);
+          if (array == null) {
+            return predicate.apply(null).matches(includeUnknown);
+          }
           return array.stream().anyMatch(x -> predicate.apply(x).matches(includeUnknown));
         }
         final String rowValue = getValue(evaluated);
@@ -227,7 +236,7 @@ public class ExpressionMultiValueDimensionSelector implements DimensionSelector
     String getValue(ExprEval evaluated)
     {
       assert !evaluated.isArray();
-      return extractionFn.apply(NullHandling.emptyToNullIfNeeded(evaluated.asString()));
+      return extractionFn.apply(evaluated.asString());
     }
 
     @Override

@@ -29,7 +29,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Contains statistics typically tracked during a single coordinator run or the
@@ -87,7 +86,7 @@ public class CoordinatorRunStats
 
   public long get(CoordinatorStat stat)
   {
-    return get(stat, RowKey.EMPTY);
+    return get(stat, RowKey.empty());
   }
 
   public long get(CoordinatorStat stat, RowKey rowKey)
@@ -112,8 +111,6 @@ public class CoordinatorRunStats
   public String buildStatsTable()
   {
     final StringBuilder statsTable = new StringBuilder();
-    final AtomicInteger hiddenStats = new AtomicInteger(0);
-    final AtomicInteger totalStats = new AtomicInteger();
 
     allStats.forEach(
         (rowKey, statMap) -> {
@@ -129,7 +126,6 @@ public class CoordinatorRunStats
           // Add all the errors
           final Map<CoordinatorStat, Long> errorStats = levelToStats
               .getOrDefault(CoordinatorStat.Level.ERROR, Collections.emptyMap());
-          totalStats.addAndGet(errorStats.size());
           if (!errorStats.isEmpty()) {
             statsTable.append(
                 StringUtils.format("\nError: %s ==> %s", rowKey, errorStats)
@@ -139,7 +135,6 @@ public class CoordinatorRunStats
           // Add all the info level stats
           final Map<CoordinatorStat, Long> infoStats = levelToStats
               .getOrDefault(CoordinatorStat.Level.INFO, Collections.emptyMap());
-          totalStats.addAndGet(infoStats.size());
           if (!infoStats.isEmpty()) {
             statsTable.append(
                 StringUtils.format("\nInfo : %s ==> %s", rowKey, infoStats)
@@ -149,27 +144,13 @@ public class CoordinatorRunStats
           // Add all the debug level stats if the row key has a debug dimension
           final Map<CoordinatorStat, Long> debugStats = levelToStats
               .getOrDefault(CoordinatorStat.Level.DEBUG, Collections.emptyMap());
-          totalStats.addAndGet(debugStats.size());
           if (!debugStats.isEmpty() && hasDebugDimension(rowKey)) {
             statsTable.append(
                 StringUtils.format("\nDebug: %s ==> %s", rowKey, debugStats)
             );
-          } else {
-            hiddenStats.addAndGet(debugStats.size());
           }
         }
     );
-
-    if (hiddenStats.get() > 0) {
-      statsTable.append(
-          StringUtils.format("\nDebug: %d hidden stats. Set 'debugDimensions' to see these.", hiddenStats.get())
-      );
-    }
-    if (totalStats.get() > 0) {
-      statsTable.append(
-          StringUtils.format("\nTOTAL: %d stats for %d dimension keys", totalStats.get(), rowCount())
-      );
-    }
 
     return statsTable.toString();
   }
@@ -196,7 +177,7 @@ public class CoordinatorRunStats
 
   public void add(CoordinatorStat stat, long value)
   {
-    add(stat, RowKey.EMPTY, value);
+    add(stat, RowKey.empty(), value);
   }
 
   public void add(CoordinatorStat stat, RowKey rowKey, long value)

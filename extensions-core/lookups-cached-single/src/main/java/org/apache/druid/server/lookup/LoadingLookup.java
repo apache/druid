@@ -21,15 +21,16 @@ package org.apache.druid.server.lookup;
 
 
 import com.google.common.base.Preconditions;
-import org.apache.druid.common.config.NullHandling;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.query.lookup.LookupExtractor;
 import org.apache.druid.server.lookup.cache.loading.LoadingCache;
 
 import javax.annotation.Nullable;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -66,37 +67,34 @@ public class LoadingLookup extends LookupExtractor
   @Override
   public String apply(@Nullable final String key)
   {
-    String keyEquivalent = NullHandling.nullToEmptyIfNeeded(key);
-    if (keyEquivalent == null) {
-      // valueEquivalent is null only for SQL Compatible Null Behavior
-      // otherwise null will be replaced with empty string in nullToEmptyIfNeeded above.
+    if (key == null) {
       return null;
     }
 
-    final String presentVal;
-    try {
-      presentVal = loadingCache.get(keyEquivalent, new ApplyCallable(keyEquivalent));
-      return NullHandling.emptyToNullIfNeeded(presentVal);
+    final String presentVal = this.loadingCache.getIfPresent(key);
+    if (presentVal != null) {
+      return presentVal;
     }
-    catch (ExecutionException e) {
-      LOGGER.debug("value not found for key [%s]", key);
+
+    final String val = this.dataFetcher.fetch(key);
+    if (val == null) {
       return null;
     }
+
+    this.loadingCache.putAll(Collections.singletonMap(key, val));
+
+    return val;
   }
 
   @Override
   public List<String> unapply(@Nullable final String value)
   {
-    String valueEquivalent = NullHandling.nullToEmptyIfNeeded(value);
-    if (valueEquivalent == null) {
-      // valueEquivalent is null only for SQL Compatible Null Behavior
-      // otherwise null will be replaced with empty string in nullToEmptyIfNeeded above.
-      // null value maps to empty list when SQL Compatible
+    if (value == null) {
       return Collections.emptyList();
     }
     final List<String> retList;
     try {
-      retList = reverseLoadingCache.get(valueEquivalent, new UnapplyCallable(valueEquivalent));
+      retList = reverseLoadingCache.get(value, new UnapplyCallable(value));
       return retList;
     }
     catch (ExecutionException e) {
@@ -108,37 +106,22 @@ public class LoadingLookup extends LookupExtractor
   @Override
   public boolean supportsAsMap()
   {
-    return false;
+    return true;
   }
 
   @Override
   public Map<String, String> asMap()
   {
-    throw new UnsupportedOperationException("Cannot get map view");
+    final Map<String, String> map = new HashMap<>();
+    Optional.ofNullable(this.dataFetcher.fetchAll())
+            .ifPresent(data -> data.forEach(entry -> map.put(entry.getKey(), entry.getValue())));
+    return map;
   }
 
   @Override
   public byte[] getCacheKey()
   {
     return LookupExtractionModule.getRandomCacheKey();
-  }
-
-  private class ApplyCallable implements Callable<String>
-  {
-    private final String key;
-
-    public ApplyCallable(String key)
-    {
-      this.key = key;
-    }
-
-    @Override
-    public String call()
-    {
-      // When SQL compatible null handling is disabled,
-      // avoid returning null and return an empty string to cache it.
-      return NullHandling.nullToEmptyIfNeeded(dataFetcher.fetch(key));
-    }
   }
 
   public synchronized void close()

@@ -22,15 +22,9 @@ package org.apache.druid.query.aggregation.hyperloglog;
 import org.apache.druid.data.input.InputRow;
 import org.apache.druid.hll.HyperLogLogCollector;
 import org.apache.druid.hll.HyperLogLogHash;
-import org.apache.druid.segment.GenericColumnSerializer;
-import org.apache.druid.segment.column.ColumnBuilder;
-import org.apache.druid.segment.data.GenericIndexed;
 import org.apache.druid.segment.data.ObjectStrategy;
-import org.apache.druid.segment.serde.ComplexColumnPartSupplier;
 import org.apache.druid.segment.serde.ComplexMetricExtractor;
 import org.apache.druid.segment.serde.ComplexMetricSerde;
-import org.apache.druid.segment.serde.LargeColumnSupportedComplexColumnSerializer;
-import org.apache.druid.segment.writeout.SegmentWriteOutMedium;
 
 import java.nio.ByteBuffer;
 import java.util.Comparator;
@@ -64,7 +58,7 @@ public class HyperUniquesSerde extends ComplexMetricSerde
   @Override
   public ComplexMetricExtractor<HyperLogLogCollector> getExtractor()
   {
-    return new ComplexMetricExtractor<HyperLogLogCollector>()
+    return new ComplexMetricExtractor<>()
     {
       @Override
       public Class<HyperLogLogCollector> extractedClass()
@@ -94,13 +88,6 @@ public class HyperUniquesSerde extends ComplexMetricSerde
         }
       }
     };
-  }
-
-  @Override
-  public void deserializeColumn(ByteBuffer byteBuffer, ColumnBuilder columnBuilder)
-  {
-    final GenericIndexed column = GenericIndexed.read(byteBuffer, getObjectStrategy(), columnBuilder.getFileMapper());
-    columnBuilder.setComplexColumnSupplier(new ComplexColumnPartSupplier(getTypeName(), column));
   }
 
   @Override
@@ -143,11 +130,4 @@ public class HyperUniquesSerde extends ComplexMetricSerde
       }
     };
   }
-
-  @Override
-  public GenericColumnSerializer getSerializer(SegmentWriteOutMedium segmentWriteOutMedium, String column)
-  {
-    return LargeColumnSupportedComplexColumnSerializer.create(segmentWriteOutMedium, column, this.getObjectStrategy());
-  }
-
 }

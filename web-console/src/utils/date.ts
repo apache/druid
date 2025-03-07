@@ -16,16 +16,34 @@
  * limitations under the License.
  */
 
-import type { DateRange } from '@blueprintjs/datetime2';
+import type { DateRange, NonNullDateRange } from '@blueprintjs/datetime';
+import { fromDate, toTimeZone } from '@internationalized/date';
+import type { Timezone } from 'chronoshift';
 
 const CURRENT_YEAR = new Date().getUTCFullYear();
+
+export function isNonNullRange(range: DateRange): range is NonNullDateRange {
+  return range[0] != null && range[1] != null;
+}
 
 export function dateToIsoDateString(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
+export function prettyFormatIsoDateWithMsIfNeeded(isoDate: string | Date): string {
+  return (typeof isoDate === 'string' ? isoDate : isoDate.toISOString())
+    .replace('T', ' ')
+    .replace('Z', '')
+    .replace('.000', '');
+}
 
-export function prettyFormatIsoDate(isoDate: string): string {
-  return isoDate.replace('T', ' ').replace(/\.\d\d\dZ$/, '');
+export function prettyFormatIsoDate(isoDate: string | Date): string {
+  return prettyFormatIsoDateWithMsIfNeeded(isoDate).replace(/\.\d\d\d/, '');
+}
+
+export function toIsoStringInTimezone(date: Date, timezone: Timezone): string {
+  if (timezone.isUTC()) return date.toISOString();
+  const zonedDate = toTimeZone(fromDate(date, 'Etc/UTC'), timezone.toString());
+  return zonedDate.toString().replace(/[+-]\d\d:\d\d\[.+$/, '');
 }
 
 export function utcToLocalDate(utcDate: Date): Date {
@@ -36,6 +54,14 @@ export function utcToLocalDate(utcDate: Date): Date {
 export function localToUtcDate(localDate: Date): Date {
   // Function removes the local timezone of the date and displays it in UTC
   return new Date(localDate.getTime() - localDate.getTimezoneOffset() * 60000);
+}
+
+export function utcToLocalDateRange([start, end]: DateRange): DateRange {
+  return [start ? utcToLocalDate(start) : null, end ? utcToLocalDate(end) : null];
+}
+
+export function localToUtcDateRange([start, end]: DateRange): DateRange {
+  return [start ? localToUtcDate(start) : null, end ? localToUtcDate(end) : null];
 }
 
 export function intervalToLocalDateRange(interval: string): DateRange {
@@ -61,9 +87,10 @@ export function localDateRangeToInterval(localRange: DateRange): string {
   }`;
 }
 
-export function ceilToUtcDay(date: Date): Date {
-  date = new Date(date.valueOf());
-  date.setUTCHours(0, 0, 0, 0);
-  date.setUTCDate(date.getUTCDate() + 1);
-  return date;
+export function maxDate(a: Date, b: Date): Date {
+  return a > b ? a : b;
+}
+
+export function minDate(a: Date, b: Date): Date {
+  return a < b ? a : b;
 }

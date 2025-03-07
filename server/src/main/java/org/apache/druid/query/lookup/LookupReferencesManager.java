@@ -28,7 +28,7 @@ import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
-import org.apache.commons.lang.mutable.MutableBoolean;
+import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.druid.client.coordinator.Coordinator;
 import org.apache.druid.concurrent.LifecycleLock;
 import org.apache.druid.discovery.DruidLeaderClient;
@@ -90,9 +90,7 @@ public class LookupReferencesManager implements LookupExtractorFactoryContainerP
   private static final EmittingLogger LOG = new EmittingLogger(LookupReferencesManager.class);
 
   private static final TypeReference<Map<String, Object>> LOOKUPS_ALL_GENERIC_REFERENCE =
-      new TypeReference<Map<String, Object>>()
-      {
-      };
+      new TypeReference<>() {};
 
   // Lookups state (loaded/to-be-loaded/to-be-dropped etc) is managed by immutable LookupUpdateState instance.
   // Any update to state is done by creating updated LookupUpdateState instance and atomically setting that

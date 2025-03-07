@@ -29,7 +29,6 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Injector;
 import org.apache.druid.client.ImmutableSegmentLoadInfo;
 import org.apache.druid.client.coordinator.CoordinatorClient;
-import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.client.indexing.TaskStatusResponse;
 import org.apache.druid.common.guava.FutureUtils;
 import org.apache.druid.indexer.RunnerTaskState;
@@ -37,8 +36,10 @@ import org.apache.druid.indexer.TaskLocation;
 import org.apache.druid.indexer.TaskState;
 import org.apache.druid.indexer.TaskStatus;
 import org.apache.druid.indexer.TaskStatusPlus;
+import org.apache.druid.indexing.common.TaskLockType;
 import org.apache.druid.indexing.common.actions.TaskActionClient;
 import org.apache.druid.java.util.common.DateTimes;
+import org.apache.druid.java.util.common.FileUtils;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.concurrent.Execs;
 import org.apache.druid.java.util.common.io.Closer;
@@ -54,21 +55,26 @@ import org.apache.druid.msq.exec.WorkerManager;
 import org.apache.druid.msq.exec.WorkerMemoryParameters;
 import org.apache.druid.msq.exec.WorkerStorageParameters;
 import org.apache.druid.msq.indexing.IndexerControllerContext;
+import org.apache.druid.msq.indexing.IndexerTableInputSpecSlicer;
 import org.apache.druid.msq.indexing.MSQSpec;
 import org.apache.druid.msq.indexing.MSQWorkerTask;
 import org.apache.druid.msq.indexing.MSQWorkerTaskLauncher;
+import org.apache.druid.msq.indexing.MSQWorkerTaskLauncher.MSQWorkerTaskLauncherConfig;
 import org.apache.druid.msq.input.InputSpecSlicer;
-import org.apache.druid.msq.input.table.TableInputSpecSlicer;
-import org.apache.druid.msq.kernel.QueryDefinition;
 import org.apache.druid.msq.kernel.controller.ControllerQueryKernelConfig;
+import org.apache.druid.msq.querykit.QueryKit;
+import org.apache.druid.msq.querykit.QueryKitSpec;
 import org.apache.druid.msq.util.MultiStageQueryContext;
+import org.apache.druid.query.Query;
 import org.apache.druid.query.QueryContext;
+import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.server.DruidNode;
 import org.mockito.ArgumentMatchers;
 import org.mockito.Mockito;
 
 import javax.annotation.Nullable;
+import java.io.File;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -85,10 +91,11 @@ public class MSQTestControllerContext implements ControllerContext
   private final TaskActionClient taskActionClient;
   private final Map<String, Worker> inMemoryWorkers = new HashMap<>();
   private final ConcurrentMap<String, TaskStatus> statusMap = new ConcurrentHashMap<>();
-  private final ListeningExecutorService executor = MoreExecutors.listeningDecorator(Execs.multiThreaded(
+  private static final ListeningExecutorService EXECUTOR = MoreExecutors.listeningDecorator(Execs.multiThreaded(
       NUM_WORKERS,
       "MultiStageQuery-test-controller-client"
   ));
+  private final File tempDir = FileUtils.createTempDir();
   private final CoordinatorClient coordinatorClient;
   private final DruidNode node = new DruidNode(
       "controller",
@@ -104,6 +111,7 @@ public class MSQTestControllerContext implements ControllerContext
 
   private Controller controller;
   private final WorkerMemoryParameters workerMemoryParameters;
+  private final TaskLockType taskLockType;
   private final QueryContext queryContext;
 
   public MSQTestControllerContext(
@@ -112,6 +120,7 @@ public class MSQTestControllerContext implements ControllerContext
       TaskActionClient taskActionClient,
       WorkerMemoryParameters workerMemoryParameters,
       List<ImmutableSegmentLoadInfo> loadedSegments,
+      TaskLockType taskLockType,
       QueryContext queryContext
   )
   {
@@ -132,6 +141,7 @@ public class MSQTestControllerContext implements ControllerContext
                                              .collect(Collectors.toList())
     );
     this.workerMemoryParameters = workerMemoryParameters;
+    this.taskLockType = taskLockType;
     this.queryContext = queryContext;
   }
 
@@ -156,32 +166,33 @@ public class MSQTestControllerContext implements ControllerContext
       Worker worker = new WorkerImpl(
           task,
           new MSQTestWorkerContext(
+              task.getId(),
               inMemoryWorkers,
               controller,
               mapper,
               injector,
-              workerMemoryParameters
-          ),
-          workerStorageParameters
+              workerMemoryParameters,
+              workerStorageParameters
+          )
       );
       inMemoryWorkers.put(task.getId(), worker);
       statusMap.put(task.getId(), TaskStatus.running(task.getId()));
 
-      ListenableFuture<TaskStatus> future = executor.submit(() -> {
+      ListenableFuture<?> future = EXECUTOR.submit(() -> {
         try {
-          return worker.run();
+          worker.run();
         }
         catch (Exception e) {
           throw new RuntimeException(e);
         }
       });
 
-      Futures.addCallback(future, new FutureCallback<TaskStatus>()
+      Futures.addCallback(future, new FutureCallback<Object>()
       {
         @Override
-        public void onSuccess(@Nullable TaskStatus result)
+        public void onSuccess(@Nullable Object result)
         {
-          statusMap.put(task.getId(), result);
+          statusMap.put(task.getId(), TaskStatus.success(task.getId()));
         }
 
         @Override
@@ -261,16 +272,33 @@ public class MSQTestControllerContext implements ControllerContext
     {
       final Worker worker = inMemoryWorkers.remove(workerId);
       if (worker != null) {
-        worker.stopGracefully();
+        worker.stop();
       }
       return Futures.immediateFuture(null);
     }
   };
 
   @Override
-  public ControllerQueryKernelConfig queryKernelConfig(MSQSpec querySpec, QueryDefinition queryDef)
+  public ControllerQueryKernelConfig queryKernelConfig(String queryId, MSQSpec querySpec)
   {
     return IndexerControllerContext.makeQueryKernelConfig(querySpec, new ControllerMemoryParameters(100_000_000));
+  }
+
+  @Override
+  public QueryKitSpec makeQueryKitSpec(
+      final QueryKit<Query<?>> queryKit,
+      final String queryId,
+      final MSQSpec querySpec,
+      final ControllerQueryKernelConfig queryKernelConfig
+  )
+  {
+    return new QueryKitSpec(
+        queryKit,
+        queryId,
+        querySpec.getTuningConfig().getMaxNumWorkers(),
+        querySpec.getTuningConfig().getMaxNumWorkers(),
+        1
+    );
   }
 
   @Override
@@ -303,9 +331,15 @@ public class MSQTestControllerContext implements ControllerContext
   }
 
   @Override
-  public InputSpecSlicer newTableInputSpecSlicer()
+  public TaskLockType taskLockType()
   {
-    return new TableInputSpecSlicer(
+    return taskLockType;
+  }
+
+  @Override
+  public InputSpecSlicer newTableInputSpecSlicer(WorkerManager workerManager)
+  {
+    return new IndexerTableInputSpecSlicer(
         coordinatorClient,
         taskActionClient,
         MultiStageQueryContext.getSegmentSources(queryContext)
@@ -320,14 +354,26 @@ public class MSQTestControllerContext implements ControllerContext
       WorkerFailureListener workerFailureListener
   )
   {
+    MSQWorkerTaskLauncherConfig taskLauncherConfig = new MSQWorkerTaskLauncherConfig();
+    taskLauncherConfig.highFrequencyCheckMillis = 1;
+    taskLauncherConfig.switchToLowFrequencyCheckAfterMillis = 25;
+    taskLauncherConfig.lowFrequencyCheckMillis = 2;
+
     return new MSQWorkerTaskLauncher(
         controller.queryId(),
         "test-datasource",
         overlordClient,
         workerFailureListener,
         IndexerControllerContext.makeTaskContext(querySpec, queryKernelConfig, ImmutableMap.of()),
-        0
+        0,
+        taskLauncherConfig
     );
+  }
+
+  @Override
+  public File taskTempDir()
+  {
+    return tempDir;
   }
 
   @Override

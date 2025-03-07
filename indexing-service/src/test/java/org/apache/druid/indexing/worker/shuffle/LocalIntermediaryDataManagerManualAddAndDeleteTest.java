@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.io.ByteSource;
 import com.google.common.primitives.Ints;
 import org.apache.commons.io.FileUtils;
-import org.apache.druid.client.indexing.NoopOverlordClient;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.DruidExceptionMatcher;
 import org.apache.druid.indexing.common.config.TaskConfig;
@@ -31,6 +30,7 @@ import org.apache.druid.indexing.common.config.TaskConfigBuilder;
 import org.apache.druid.indexing.worker.config.WorkerConfig;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.StringUtils;
+import org.apache.druid.rpc.indexing.NoopOverlordClient;
 import org.apache.druid.rpc.indexing.OverlordClient;
 import org.apache.druid.segment.loading.StorageLocationConfig;
 import org.apache.druid.timeline.DataSegment;
@@ -70,7 +70,6 @@ public class LocalIntermediaryDataManagerManualAddAndDeleteTest
     siblingLocation = tempDir.newFolder();
     final TaskConfig taskConfig = new TaskConfigBuilder()
         .setShuffleDataLocations(ImmutableList.of(new StorageLocationConfig(intermediarySegmentsLocation, 1200L, null)))
-        .setBatchProcessingMode(TaskConfig.BATCH_PROCESSING_MODE_DEFAULT.name())
         .build();
     final OverlordClient overlordClient = new NoopOverlordClient();
     intermediaryDataManager = new LocalIntermediaryDataManager(workerConfig, taskConfig, overlordClient);

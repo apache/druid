@@ -31,6 +31,9 @@ apache.org
 AvroStorage
 ARN
 ASC
+arcsine
+arccosine
+arctangent
 autokill
 AWS
 AWS_CONTAINER_CREDENTIALS_RELATIVE_URI
@@ -55,6 +58,7 @@ CPUs
 CSVs
 CentralizedDatasourceSchema
 Ceph
+circledR
 CloudWatch
 ColumnDescriptor
 Corretto
@@ -97,7 +101,6 @@ EMRFS
 ETL
 Elasticsearch
 Enums
-FirehoseFactory
 FIRST_VALUE
 FlattenSpec
 Float.NEGATIVE_INFINITY
@@ -112,9 +115,9 @@ GUIs
 GroupBy
 Guice
 HDFS
-HDFSFirehose
 HLL
 HashSet
+HashSets
 Homebrew
 html
 HyperLogLog
@@ -176,6 +179,7 @@ LRU
 LZ4
 LZO
 LimitSpec
+LISTAGG
 Long.MAX_VALUE
 Long.MAX_VALUE.
 Long.MIN_VALUE
@@ -228,7 +232,6 @@ SSDs
 SSL
 Samza
 Splunk
-SqlFirehose
 SqlParameter
 SslContextFactory
 StatsD
@@ -241,6 +244,7 @@ TLS
 tls
 TopN
 TopNs
+tryParseNumbers
 UI
 UIs
 UPSERT
@@ -275,6 +279,7 @@ averager
 averagers
 backend
 backfills
+backfilled
 backpressure
 base64
 big-endian
@@ -297,6 +302,7 @@ colocation
 colocating
 compactable
 compactionTask
+complexMetricCompression
 config
 configs
 consumerProperties
@@ -323,6 +329,7 @@ deserializes
 downtimes
 druid
 druid–kubernetes-extensions
+druid.table
 e.g.
 encodings
 endian
@@ -340,6 +347,7 @@ filterColumn
 filterValue
 firefox
 firehose
+FirehoseFactory
 firehoses
 fromPigAvroStorage
 frontends
@@ -380,7 +388,9 @@ json_paths
 json_query
 json_query_array
 json_value
+json_merge
 karlkfi
+kbps
 kerberos
 keystore
 keytool
@@ -405,6 +415,7 @@ maxNumSegments
 max_map_count
 memcached
 mergeable
+mergeability
 metadata
 metastores
 millis
@@ -509,6 +520,7 @@ schemas
 schemaless
 searchable
 secondaryPartitionPruning
+seekable
 seekable-stream
 servlet
 setProcessingThreadNames
@@ -542,6 +554,8 @@ subtasks
 supervisorTaskId
 SVG
 symlink
+sync
+syncs
 syntaxes
 systemFields
 tablePath
@@ -553,6 +567,7 @@ timestamps
 to_json_string
 tradeoffs
 transformSpec
+transactionally
 try_parse_json
 tsv
 ulimit
@@ -879,8 +894,6 @@ hadoop3
 ambari-metrics
 metricName
 trustStore
-StaticAzureBlobStoreFirehose
-StaticS3Firehose
 fetchTimeout
 gz
 maxCacheCapacityBytes
@@ -889,11 +902,9 @@ maxFetchRetry
 prefetchTriggerBytes
 shardSpecs
 sharedAccessStorageToken
-StaticCloudFilesFirehose
 cloudfiles
 rackspace-cloudfiles-uk
 rackspace-cloudfiles-us
-StaticAzureBlobStoreFirehose
 gz
 shardSpecs
 maxCacheCapacityBytes
@@ -1095,7 +1106,6 @@ POD_NAMESPACE
 ConfigMap
 PT17S
 GCS
-StaticGoogleBlobStoreFirehose
 gcs-connector
 hdfs
 Aotearoa
@@ -1295,7 +1305,6 @@ QueryRunnerFactory
 segmentmetadataquery
 SegmentMetadataQuery
 SegmentMetadataQueryQueryToolChest
-StaticS3FirehoseFactory
 loadSpec
 multibind
 pom.xml
@@ -1336,10 +1345,8 @@ valueFormat
 IOConfig
 compactionTask
 compactionTasks
-ingestSegmentFirehose
 numShards
 IngestSegment
-IngestSegmentFirehose
 maxSizes
 snapshotTime
 windowPeriod
@@ -1401,14 +1408,10 @@ useYarnRMJobStatusFallback
 workingPath
 z.example.com
 150MB
-CombiningFirehose
 DataSchema
 DefaultPassword
 EnvironmentVariablePasswordProvider
-HttpFirehose
 IOConfig
-InlineFirehose
-LocalFirehose
 PartitionsSpec
 PasswordProviders
 SegmentsSplitHintSpec
@@ -1445,12 +1448,9 @@ splitHintSpec
 taskStatusCheckPeriodMs
 timeChunk
 totalNumMergeTasks
-StaticS3Firehose
 prefetchTriggerBytes
 awaitSegmentAvailabilityTimeoutMillis
-LocalFirehose
 baseDir
-HttpFirehose
 httpAuthenticationUsername
 DefaultPassword
 PasswordProviders
@@ -1461,8 +1461,6 @@ maxInputSegmentBytesPerTask
 foldCase
 sqls
 connectorConfig
-InlineFirehose
-CombiningFirehose
 httpAuthenticationPassword
 accessKeyId
 secretAccessKey
@@ -1659,8 +1657,6 @@ Temurin
 0.14.x
 1s
 Bufferpool
-EventReceiverFirehose
-EventReceiverFirehoseMonitor
 Filesystem
 JVMMonitor
 jvmVersion
@@ -1983,7 +1979,6 @@ GiB
 Autoscaler
 APPROX_COUNT_DISTINCT_BUILTIN
 AvaticaConnectionBalancer
-EventReceiverFirehose
 File.getFreeSpace
 File.getTotalSpace
 ForkJoinPool
@@ -2194,9 +2189,7 @@ regionName
 json
 metastore
 UserGroupInformation
-CVE-2019-17571
-CVE-2019-12399
-CVE-2018-17196
+CVE-2024-45384
 bin.tar.gz
 0s
 1T
@@ -2431,3 +2424,11 @@ percentilesSpectatorHistogram
 quantilesFromDDSketch
 quantileFromDDSketch
 collapsingLowestDense
+snapshotVersion
+
+- ../docs/development/extensions-core/catalog.md
+ColumnSpec
+PropertyKeyName
+PropertyValueType
+tableSpec
+TableSpec

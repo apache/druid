@@ -16,13 +16,12 @@
  * limitations under the License.
  */
 
-import { Intent } from '@blueprintjs/core';
+import { Intent, ResizeSensor } from '@blueprintjs/core';
 import { IconNames } from '@blueprintjs/icons';
-import { ResizeSensor2 } from '@blueprintjs/popover2';
-import { C, dedupe, T } from '@druid-toolkit/query';
 import type { Ace } from 'ace-builds';
 import ace from 'ace-builds';
 import classNames from 'classnames';
+import { C, dedupe, T } from 'druid-query-toolkit';
 import debounce from 'lodash.debounce';
 import React from 'react';
 import AceEditor from 'react-ace';
@@ -82,6 +81,10 @@ export class FlexibleQueryInput extends React.PureComponent<
     // Local completions
     {
       getCompletions: (_state, session, pos, prefix, callback) => {
+        if (/^\d+$/.test(prefix)) {
+          callback(null, []); // Don't start completing if the user is typing a number
+          return;
+        }
         const charBeforePrefix = session.getLine(pos.row)[pos.column - prefix.length - 1];
         callback(
           null,
@@ -294,7 +297,7 @@ export class FlexibleQueryInput extends React.PureComponent<
     // Set the key in the AceEditor to force a rebind and prevent an error that happens otherwise
     return (
       <div className="flexible-query-input">
-        <ResizeSensor2 onResize={this.handleAceContainerResize}>
+        <ResizeSensor onResize={this.handleAceContainerResize}>
           <div
             className={classNames('ace-container', running ? 'query-running' : 'query-idle')}
             onClick={e => {
@@ -352,6 +355,7 @@ export class FlexibleQueryInput extends React.PureComponent<
                   ),
                   'sub-query-highlight',
                   'text',
+                  false,
                 );
               this.highlightFoundQuery = { row, marker };
             }}
@@ -365,7 +369,7 @@ export class FlexibleQueryInput extends React.PureComponent<
           >
             {this.renderAce()}
           </div>
-        </ResizeSensor2>
+        </ResizeSensor>
       </div>
     );
   }

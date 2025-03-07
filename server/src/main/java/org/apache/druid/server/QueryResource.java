@@ -19,11 +19,12 @@
 
 package org.apache.druid.server;
 
+import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ObjectWriter;
-import com.fasterxml.jackson.databind.SequenceWriter;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.datatype.joda.ser.DateTimeSerializer;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
@@ -37,6 +38,7 @@ import org.apache.druid.guice.LazySingleton;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Self;
 import org.apache.druid.guice.annotations.Smile;
+import org.apache.druid.java.util.common.jackson.JacksonUtils;
 import org.apache.druid.java.util.emitter.EmittingLogger;
 import org.apache.druid.query.BadJsonQueryException;
 import org.apache.druid.query.Query;
@@ -47,8 +49,8 @@ import org.apache.druid.query.QueryToolChest;
 import org.apache.druid.query.context.ResponseContext;
 import org.apache.druid.query.context.ResponseContext.Keys;
 import org.apache.druid.server.metrics.QueryCountStatsProvider;
-import org.apache.druid.server.security.Access;
 import org.apache.druid.server.security.AuthConfig;
+import org.apache.druid.server.security.AuthorizationResult;
 import org.apache.druid.server.security.AuthorizationUtils;
 import org.apache.druid.server.security.AuthorizerMapper;
 import org.apache.druid.server.security.ForbiddenException;
@@ -92,6 +94,8 @@ public class QueryResource implements QueryCountStatsProvider
   public static final String HEADER_RESPONSE_CONTEXT = "X-Druid-Response-Context";
   public static final String HEADER_IF_NONE_MATCH = "If-None-Match";
   public static final String QUERY_ID_RESPONSE_HEADER = "X-Druid-Query-Id";
+  public static final String ERROR_MESSAGE_TRAILER_HEADER = "X-Error-Message";
+  public static final String RESPONSE_COMPLETE_TRAILER_HEADER = "X-Druid-Response-Complete";
   public static final String HEADER_ETAG = "ETag";
 
   protected final QueryLifecycleFactory queryLifecycleFactory;
@@ -148,14 +152,14 @@ public class QueryResource implements QueryCountStatsProvider
       datasources = new TreeSet<>();
     }
 
-    Access authResult = AuthorizationUtils.authorizeAllResourceActions(
+    AuthorizationResult authResult = AuthorizationUtils.authorizeAllResourceActions(
         req,
         Iterables.transform(datasources, AuthorizationUtils.DATASOURCE_WRITE_RA_GENERATOR),
         authorizerMapper
     );
 
-    if (!authResult.isAllowed()) {
-      throw new ForbiddenException(authResult.toString());
+    if (!authResult.allowAccessWithNoRestriction()) {
+      throw new ForbiddenException(authResult.getErrorMessage());
     }
 
     queryScheduler.cancelQuery(queryId);
@@ -194,7 +198,7 @@ public class QueryResource implements QueryCountStatsProvider
         log.debug("Got query [%s]", queryLifecycle.getQuery());
       }
 
-      final Access authResult;
+      final AuthorizationResult authResult;
       try {
         authResult = queryLifecycle.authorize(req);
       }
@@ -210,8 +214,9 @@ public class QueryResource implements QueryCountStatsProvider
         return io.getResponseWriter().buildNonOkResponse(qe.getFailType().getExpectedStatus(), qe);
       }
 
-      if (!authResult.isAllowed()) {
-        throw new ForbiddenException(authResult.toString());
+      if (!authResult.allowBasicAccess()) {
+        log.info("Query[%s] forbidden due to reason[%s]", query.getId(), authResult.getErrorMessage());
+        throw new ForbiddenException(authResult.getErrorMessage());
       }
 
       final QueryResourceQueryResultPusher pusher = new QueryResourceQueryResultPusher(req, queryLifecycle, io);
@@ -374,7 +379,7 @@ public class QueryResource implements QueryCountStatsProvider
       return responseType;
     }
 
-    ObjectWriter newOutputWriter(
+    ObjectMapper newOutputWriter(
         @Nullable QueryToolChest<?, Query<?>> toolChest,
         @Nullable Query<?> query,
         boolean serializeDateTimeAsLong
@@ -387,7 +392,7 @@ public class QueryResource implements QueryCountStatsProvider
       } else {
         decoratedMapper = mapper;
       }
-      return isPretty ? decoratedMapper.writerWithDefaultPrettyPrinter() : decoratedMapper.writer();
+      return isPretty ? decoratedMapper.copy().enable(SerializationFeature.INDENT_OUTPUT) : decoratedMapper;
     }
 
     Response ok(Object object) throws IOException
@@ -531,35 +536,7 @@ public class QueryResource implements QueryCountStatsProvider
         @Override
         public Writer makeWriter(OutputStream out) throws IOException
         {
-          final ObjectWriter objectWriter = queryLifecycle.newOutputWriter(io);
-          final SequenceWriter sequenceWriter = objectWriter.writeValuesAsArray(out);
-          return new Writer()
-          {
-
-            @Override
-            public void writeResponseStart()
-            {
-              // Do nothing
-            }
-
-            @Override
-            public void writeRow(Object obj) throws IOException
-            {
-              sequenceWriter.write(obj);
-            }
-
-            @Override
-            public void writeResponseEnd()
-            {
-              // Do nothing
-            }
-
-            @Override
-            public void close() throws IOException
-            {
-              sequenceWriter.close();
-            }
-          };
+          return new NativeQueryWriter(queryLifecycle.newOutputWriter(io), out);
         }
 
         @Override
@@ -585,8 +562,49 @@ public class QueryResource implements QueryCountStatsProvider
     @Override
     public void writeException(Exception e, OutputStream out) throws IOException
     {
-      final ObjectWriter objectWriter = queryLifecycle.newOutputWriter(io);
-      out.write(objectWriter.writeValueAsBytes(e));
+      final ObjectMapper objectMapper = queryLifecycle.newOutputWriter(io);
+      out.write(objectMapper.writeValueAsBytes(e));
+    }
+  }
+
+  static class NativeQueryWriter implements QueryResultPusher.Writer
+  {
+    private final SerializerProvider serializers;
+    private final JsonGenerator jsonGenerator;
+
+    public NativeQueryWriter(final ObjectMapper responseMapper, final OutputStream out) throws IOException
+    {
+      // Don't use objectWriter.writeValuesAsArray(out), because that causes an end array ] to be written when the
+      // writer is closed, even if it's closed in case of an exception. This causes valid JSON to be emitted in case
+      // of an exception, which makes it difficult for callers to detect problems. Note: this means that if an error
+      // occurs on a Historical (or other data server) after it started to push results to the Broker, the Broker
+      // will experience that as "JsonEOFException: Unexpected end-of-input: expected close marker for Array".
+      this.serializers = responseMapper.getSerializerProviderInstance();
+      this.jsonGenerator = responseMapper.createGenerator(out);
+    }
+
+    @Override
+    public void writeResponseStart() throws IOException
+    {
+      jsonGenerator.writeStartArray();
+    }
+
+    @Override
+    public void writeRow(Object obj) throws IOException
+    {
+      JacksonUtils.writeObjectUsingSerializerProvider(jsonGenerator, serializers, obj);
+    }
+
+    @Override
+    public void writeResponseEnd() throws IOException
+    {
+      jsonGenerator.writeEndArray();
+    }
+
+    @Override
+    public void close() throws IOException
+    {
+      jsonGenerator.close();
     }
   }
 }

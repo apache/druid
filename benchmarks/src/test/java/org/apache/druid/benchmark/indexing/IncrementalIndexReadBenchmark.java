@@ -19,9 +19,6 @@
 
 package org.apache.druid.benchmark.indexing;
 
-import org.apache.druid.common.config.NullHandling;
-import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.java.util.common.guava.Sequence;
 import org.apache.druid.java.util.common.logger.Logger;
 import org.apache.druid.js.JavaScriptConfig;
 import org.apache.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
@@ -36,8 +33,10 @@ import org.apache.druid.query.filter.SearchQueryDimFilter;
 import org.apache.druid.query.ordering.StringComparators;
 import org.apache.druid.query.search.ContainsSearchQuerySpec;
 import org.apache.druid.segment.Cursor;
+import org.apache.druid.segment.CursorBuildSpec;
+import org.apache.druid.segment.CursorFactory;
+import org.apache.druid.segment.CursorHolder;
 import org.apache.druid.segment.DimensionSelector;
-import org.apache.druid.segment.VirtualColumns;
 import org.apache.druid.segment.data.IndexedInts;
 import org.apache.druid.segment.generator.DataGenerator;
 import org.apache.druid.segment.generator.GeneratorBasicSchemas;
@@ -45,8 +44,8 @@ import org.apache.druid.segment.generator.GeneratorSchemaInfo;
 import org.apache.druid.segment.incremental.AppendableIndexSpec;
 import org.apache.druid.segment.incremental.IncrementalIndex;
 import org.apache.druid.segment.incremental.IncrementalIndexCreator;
+import org.apache.druid.segment.incremental.IncrementalIndexCursorFactory;
 import org.apache.druid.segment.incremental.IncrementalIndexSchema;
-import org.apache.druid.segment.incremental.IncrementalIndexStorageAdapter;
 import org.apache.druid.segment.serde.ComplexMetrics;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
@@ -89,10 +88,6 @@ public class IncrementalIndexReadBenchmark
 
   private static final Logger log = new Logger(IncrementalIndexReadBenchmark.class);
   private static final int RNG_SEED = 9999;
-
-  static {
-    NullHandling.initializeForTests();
-  }
 
   private AppendableIndexSpec appendableIndexSpec;
   private IncrementalIndex incIndex;
@@ -148,23 +143,24 @@ public class IncrementalIndexReadBenchmark
   @OutputTimeUnit(TimeUnit.MICROSECONDS)
   public void read(Blackhole blackhole)
   {
-    IncrementalIndexStorageAdapter sa = new IncrementalIndexStorageAdapter(incIndex);
-    Sequence<Cursor> cursors = makeCursors(sa, null);
-    Cursor cursor = cursors.limit(1).toList().get(0);
+    final CursorFactory cursorFactory = new IncrementalIndexCursorFactory(incIndex);
+    try (final CursorHolder cursorHolder = makeCursor(cursorFactory, null)) {
+      Cursor cursor = cursorHolder.asCursor();
 
-    List<DimensionSelector> selectors = new ArrayList<>();
-    selectors.add(makeDimensionSelector(cursor, "dimSequential"));
-    selectors.add(makeDimensionSelector(cursor, "dimZipf"));
-    selectors.add(makeDimensionSelector(cursor, "dimUniform"));
-    selectors.add(makeDimensionSelector(cursor, "dimSequentialHalfNull"));
+      List<DimensionSelector> selectors = new ArrayList<>();
+      selectors.add(makeDimensionSelector(cursor, "dimSequential"));
+      selectors.add(makeDimensionSelector(cursor, "dimZipf"));
+      selectors.add(makeDimensionSelector(cursor, "dimUniform"));
+      selectors.add(makeDimensionSelector(cursor, "dimSequentialHalfNull"));
 
-    cursor.reset();
-    while (!cursor.isDone()) {
-      for (DimensionSelector selector : selectors) {
-        IndexedInts row = selector.getRow();
-        blackhole.consume(selector.lookupName(row.get(0)));
+      cursor.reset();
+      while (!cursor.isDone()) {
+        for (DimensionSelector selector : selectors) {
+          IndexedInts row = selector.getRow();
+          blackhole.consume(selector.lookupName(row.get(0)));
+        }
+        cursor.advance();
       }
-      cursor.advance();
     }
   }
 
@@ -183,36 +179,35 @@ public class IncrementalIndexReadBenchmark
         )
     );
 
-    IncrementalIndexStorageAdapter sa = new IncrementalIndexStorageAdapter(incIndex);
-    Sequence<Cursor> cursors = makeCursors(sa, filter);
-    Cursor cursor = cursors.limit(1).toList().get(0);
+    IncrementalIndexCursorFactory cursorFactory = new IncrementalIndexCursorFactory(incIndex);
+    try (final CursorHolder cursorHolder = makeCursor(cursorFactory, filter)) {
+      Cursor cursor = cursorHolder.asCursor();
 
-    List<DimensionSelector> selectors = new ArrayList<>();
-    selectors.add(makeDimensionSelector(cursor, "dimSequential"));
-    selectors.add(makeDimensionSelector(cursor, "dimZipf"));
-    selectors.add(makeDimensionSelector(cursor, "dimUniform"));
-    selectors.add(makeDimensionSelector(cursor, "dimSequentialHalfNull"));
+      List<DimensionSelector> selectors = new ArrayList<>();
+      selectors.add(makeDimensionSelector(cursor, "dimSequential"));
+      selectors.add(makeDimensionSelector(cursor, "dimZipf"));
+      selectors.add(makeDimensionSelector(cursor, "dimUniform"));
+      selectors.add(makeDimensionSelector(cursor, "dimSequentialHalfNull"));
 
-    cursor.reset();
-    while (!cursor.isDone()) {
-      for (DimensionSelector selector : selectors) {
-        IndexedInts row = selector.getRow();
-        blackhole.consume(selector.lookupName(row.get(0)));
+      cursor.reset();
+      while (!cursor.isDone()) {
+        for (DimensionSelector selector : selectors) {
+          IndexedInts row = selector.getRow();
+          blackhole.consume(selector.lookupName(row.get(0)));
+        }
+        cursor.advance();
       }
-      cursor.advance();
     }
   }
 
-  private Sequence<Cursor> makeCursors(IncrementalIndexStorageAdapter sa, DimFilter filter)
+  private CursorHolder makeCursor(CursorFactory factory, DimFilter filter)
   {
-    return sa.makeCursors(
-        filter == null ? null : filter.toFilter(),
-        schemaInfo.getDataInterval(),
-        VirtualColumns.EMPTY,
-        Granularities.ALL,
-        false,
-        null
-    );
+    CursorBuildSpec.CursorBuildSpecBuilder builder = CursorBuildSpec.builder()
+                                                                    .setInterval(schemaInfo.getDataInterval());
+    if (filter != null) {
+      builder.setFilter(filter.toFilter());
+    }
+    return factory.makeCursorHolder(builder.build());
   }
 
   private static DimensionSelector makeDimensionSelector(Cursor cursor, String name)

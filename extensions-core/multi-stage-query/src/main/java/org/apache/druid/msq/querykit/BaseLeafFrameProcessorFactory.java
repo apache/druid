@@ -58,7 +58,6 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -163,7 +162,7 @@ public abstract class BaseLeafFrameProcessorFactory extends BaseFrameProcessorFa
 
     if (segmentMapFnProcessor == null) {
       final Function<SegmentReference, SegmentReference> segmentMapFn =
-          query.getDataSource().createSegmentMapFunction(query, new AtomicLong());
+          query.getDataSource().createSegmentMapFunction(query);
       processorManager = processorManagerFn.apply(ImmutableList.of(segmentMapFn));
     } else {
       processorManager = new ChainedProcessorManager<>(ProcessorManagers.of(() -> segmentMapFnProcessor), processorManagerFn);
@@ -340,7 +339,7 @@ public abstract class BaseLeafFrameProcessorFactory extends BaseFrameProcessorFa
         );
 
     if (broadcastInputs.isEmpty()) {
-      if (query.getDataSource().getAnalysis().isJoin()) {
+      if (query.getDataSourceAnalysis().isJoin()) {
         // Joins may require significant computation to compute the segmentMapFn. Offload it to a processor.
         return new SimpleSegmentMapFnProcessor(query);
       } else {
@@ -352,7 +351,7 @@ public abstract class BaseLeafFrameProcessorFactory extends BaseFrameProcessorFa
       return BroadcastJoinSegmentMapFnProcessor.create(
           query,
           broadcastInputs,
-          frameContext.memoryParameters().getBroadcastJoinMemory()
+          frameContext.memoryParameters().getBroadcastBufferMemory()
       );
     }
   }

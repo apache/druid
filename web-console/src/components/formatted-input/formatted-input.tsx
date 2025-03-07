@@ -16,9 +16,8 @@
  * limitations under the License.
  */
 
-import type { InputGroupProps2 } from '@blueprintjs/core';
-import { InputGroup, Intent, TextArea } from '@blueprintjs/core';
-import { Tooltip2 } from '@blueprintjs/popover2';
+import type { InputGroupProps } from '@blueprintjs/core';
+import { InputGroup, Intent, TextArea, Tooltip } from '@blueprintjs/core';
 import classNames from 'classnames';
 import React, { useState } from 'react';
 
@@ -26,7 +25,7 @@ import type { Formatter } from '../../utils';
 
 import './formatted-input.scss';
 
-export interface FormattedInputProps extends InputGroupProps2 {
+export interface FormattedInputProps extends InputGroupProps {
   formatter: Formatter<any>;
   onValueChange: (newValue: undefined | string) => void;
   sanitizer?: (rawValue: string) => string;
@@ -121,7 +120,7 @@ export const FormattedInput = React.memo(function FormattedInput(props: Formatte
         />
       )}
       {showIssue && (
-        <Tooltip2
+        <Tooltip
           isOpen
           content={showIssue ? issue : undefined}
           position="right"
@@ -129,7 +128,7 @@ export const FormattedInput = React.memo(function FormattedInput(props: Formatte
           targetTagName="div"
         >
           <div className="target-dummy" />
-        </Tooltip2>
+        </Tooltip>
       )}
     </div>
   );

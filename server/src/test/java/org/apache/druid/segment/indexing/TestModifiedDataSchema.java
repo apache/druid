@@ -25,8 +25,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.druid.data.input.impl.DimensionsSpec;
 import org.apache.druid.data.input.impl.TimestampSpec;
+import org.apache.druid.indexer.granularity.GranularitySpec;
 import org.apache.druid.query.aggregation.AggregatorFactory;
-import org.apache.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.druid.segment.transform.TransformSpec;
 
 import javax.annotation.Nullable;
@@ -56,6 +56,7 @@ public class TestModifiedDataSchema extends DataSchema
         aggregators,
         granularitySpec,
         transformSpec,
+        null,
         parserMap,
         objectMapper
     );

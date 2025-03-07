@@ -19,21 +19,17 @@
 
 package org.apache.druid.indexing.common.task;
 
-import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import org.apache.druid.data.input.Firehose;
-import org.apache.druid.data.input.FirehoseFactory;
 import org.apache.druid.data.input.impl.DimensionsSpec;
-import org.apache.druid.data.input.impl.InputRowParser;
 import org.apache.druid.data.input.impl.LocalInputSource;
 import org.apache.druid.data.input.impl.NoopInputFormat;
 import org.apache.druid.data.input.impl.TimestampSpec;
-import org.apache.druid.guice.FirehoseModule;
 import org.apache.druid.indexer.HadoopIOConfig;
 import org.apache.druid.indexer.HadoopIngestionSpec;
+import org.apache.druid.indexer.granularity.UniformGranularitySpec;
 import org.apache.druid.indexer.partitions.DynamicPartitionsSpec;
 import org.apache.druid.indexer.partitions.PartitionsSpec;
 import org.apache.druid.indexing.common.TestUtils;
@@ -43,11 +39,9 @@ import org.apache.druid.indexing.common.task.IndexTask.IndexTuningConfig;
 import org.apache.druid.indexing.common.task.batch.parallel.ParallelIndexTuningConfig;
 import org.apache.druid.java.util.common.Intervals;
 import org.apache.druid.java.util.common.granularity.Granularities;
-import org.apache.druid.query.aggregation.AggregatorFactory;
 import org.apache.druid.query.aggregation.DoubleSumAggregatorFactory;
 import org.apache.druid.segment.IndexSpec;
 import org.apache.druid.segment.indexing.DataSchema;
-import org.apache.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.apache.druid.server.security.AuthTestUtils;
 import org.hamcrest.CoreMatchers;
 import org.joda.time.Period;
@@ -70,14 +64,9 @@ public class TaskSerdeTest
   {
     TestUtils testUtils = new TestUtils();
     jsonMapper = testUtils.getTestObjectMapper();
-
-    for (final Module jacksonModule : new FirehoseModule().getJacksonModules()) {
-      jsonMapper.registerModule(jacksonModule);
-    }
     jsonMapper.registerSubtypes(
         new NamedType(ParallelIndexTuningConfig.class, "index_parallel"),
-        new NamedType(IndexTuningConfig.class, "index"),
-        new NamedType(MockFirehoseFactory.class, "mock")
+        new NamedType(IndexTuningConfig.class, "index")
     );
   }
 
@@ -230,46 +219,28 @@ public class TaskSerdeTest
         null,
         null,
         new IndexIngestionSpec(
-            new DataSchema(
-                "foo",
-                new TimestampSpec(null, null, null),
-                DimensionsSpec.EMPTY,
-                new AggregatorFactory[]{new DoubleSumAggregatorFactory("met", "met")},
-                new UniformGranularitySpec(
-                    Granularities.DAY,
-                    null,
-                    ImmutableList.of(Intervals.of("2010-01-01/P2D"))
-                ),
-                null
-            ),
-            new IndexIOConfig(null, new LocalInputSource(new File("lol"), "rofl"), new NoopInputFormat(), true, false),
-            new IndexTuningConfig(
-                null,
-                null,
-                null,
-                10,
-                null,
-                null,
-                null,
-                9999,
-                null,
-                null,
-                new DynamicPartitionsSpec(10000, null),
-                indexSpec,
-                null,
-                3,
-                false,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                1L,
-                null
-            )
+            DataSchema.builder()
+                      .withDataSource("foo")
+                      .withTimestamp(new TimestampSpec(null, null, null))
+                      .withDimensions(DimensionsSpec.EMPTY)
+                      .withAggregators(new DoubleSumAggregatorFactory("met", "met"))
+                      .withGranularity(
+                          new UniformGranularitySpec(
+                              Granularities.DAY,
+                              null,
+                              ImmutableList.of(Intervals.of("2010-01-01/P2D"))
+                          )
+                      )
+                      .build(),
+            new IndexIOConfig(new LocalInputSource(new File("lol"), "rofl"), new NoopInputFormat(), true, false),
+            TuningConfigBuilder.forIndexTask()
+                               .withMaxRowsInMemory(10)
+                               .withPartitionsSpec(new DynamicPartitionsSpec(10000, null))
+                               .withIndexSpec(indexSpec)
+                               .withMaxPendingPersists(3)
+                               .withForceGuaranteedRollup(false)
+                               .withAwaitSegmentAvailabilityTimeoutMillis(1L)
+                               .build()
         ),
         null
     );
@@ -317,53 +288,30 @@ public class TaskSerdeTest
         null,
         new TaskResource("rofl", 2),
         new IndexIngestionSpec(
-            new DataSchema(
-                "foo",
-                new TimestampSpec(null, null, null),
-                DimensionsSpec.EMPTY,
-                new AggregatorFactory[]{new DoubleSumAggregatorFactory("met", "met")},
-                new UniformGranularitySpec(
-                    Granularities.DAY,
-                    null,
-                    ImmutableList.of(Intervals.of("2010-01-01/P2D"))
-                ),
-                null
-            ),
-            new IndexIOConfig(null, new LocalInputSource(new File("lol"), "rofl"), new NoopInputFormat(), true, false),
-            new IndexTuningConfig(
-                null,
-                null,
-                null,
-                10,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                new DynamicPartitionsSpec(10000, null),
-                indexSpec,
-                null,
-                3,
-                false,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null
-            )
+            DataSchema.builder()
+                      .withDataSource("foo")
+                      .withTimestamp(new TimestampSpec(null, null, null))
+                      .withDimensions(DimensionsSpec.EMPTY)
+                      .withAggregators(new DoubleSumAggregatorFactory("met", "met"))
+                      .withGranularity(
+                          new UniformGranularitySpec(
+                              Granularities.DAY,
+                              null,
+                              ImmutableList.of(Intervals.of("2010-01-01/P2D"))
+                          )
+                      )
+                      .build(),
+            new IndexIOConfig(new LocalInputSource(new File("lol"), "rofl"), new NoopInputFormat(), true, false),
+            TuningConfigBuilder.forIndexTask()
+                               .withMaxRowsInMemory(10)
+                               .withForceGuaranteedRollup(false)
+                               .withPartitionsSpec(new DynamicPartitionsSpec(10000, null))
+                               .withIndexSpec(indexSpec)
+                               .withMaxPendingPersists(3)
+                               .build()
         ),
         null
     );
-
-    for (final Module jacksonModule : new FirehoseModule().getJacksonModules()) {
-      jsonMapper.registerModule(jacksonModule);
-    }
 
     final String json = jsonMapper.writeValueAsString(task);
 
@@ -465,15 +413,19 @@ public class TaskSerdeTest
     final HadoopIndexTask task = new HadoopIndexTask(
         null,
         new HadoopIngestionSpec(
-            new DataSchema(
-                "foo", null, new AggregatorFactory[0], new UniformGranularitySpec(
-                Granularities.DAY,
-                null,
-                ImmutableList.of(Intervals.of("2010-01-01/P1D"))
-            ),
-                null,
-                jsonMapper
-            ), new HadoopIOConfig(ImmutableMap.of("paths", "bar"), null, null), null
+            DataSchema.builder()
+                      .withDataSource("foo")
+                      .withGranularity(
+                          new UniformGranularitySpec(
+                              Granularities.DAY,
+                              null,
+                              ImmutableList.of(Intervals.of("2010-01-01/P1D"))
+                          )
+                      )
+                      .withObjectMapper(jsonMapper)
+                      .build(),
+            new HadoopIOConfig(ImmutableMap.of("paths", "bar"), null, null),
+            null
         ),
         null,
         null,
@@ -501,34 +453,24 @@ public class TaskSerdeTest
     Assert.assertEquals("blah", task2.getClasspathPrefix());
   }
 
-  private static class MockFirehoseFactory implements FirehoseFactory
-  {
-    @Override
-    public Firehose connect(InputRowParser parser, File temporaryDirectory)
-    {
-      return null;
-    }
-  }
-
   @Test
   public void testHadoopIndexTaskWithContextSerde() throws Exception
   {
     final HadoopIndexTask task = new HadoopIndexTask(
         null,
         new HadoopIngestionSpec(
-            new DataSchema(
-                "foo",
-                null,
-                null,
-                new AggregatorFactory[0],
-                new UniformGranularitySpec(
-                    Granularities.DAY,
-                    null, ImmutableList.of(Intervals.of("2010-01-01/P1D"))
-                ),
-                null,
-                null,
-                jsonMapper
-            ), new HadoopIOConfig(ImmutableMap.of("paths", "bar"), null, null), null
+            DataSchema.builder()
+                      .withDataSource("foo")
+                      .withGranularity(
+                          new UniformGranularitySpec(
+                              Granularities.DAY,
+                              null, ImmutableList.of(Intervals.of("2010-01-01/P1D"))
+                          )
+                      )
+                      .withObjectMapper(jsonMapper)
+                      .build(),
+            new HadoopIOConfig(ImmutableMap.of("paths", "bar"), null, null),
+            null
         ),
         null,
         null,

@@ -578,54 +578,59 @@ public class GroupByLimitPushDownMultiNodeMergeTest extends InitializedNullHandl
     };
 
     final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
-    GroupByResourcesReservationPool groupByResourcesReservationPoolBroker =
+    final GroupByStatsProvider groupByStatsProvider = new GroupByStatsProvider();
+
+    final GroupByResourcesReservationPool groupByResourcesReservationPoolBroker =
         new GroupByResourcesReservationPool(mergePoolBroker, config);
-    GroupByResourcesReservationPool groupByResourcesReservationPoolHistorical =
+    final GroupByResourcesReservationPool groupByResourcesReservationPoolHistorical =
         new GroupByResourcesReservationPool(mergePoolHistorical, config);
-    GroupByResourcesReservationPool groupByResourcesReservationPoolHistorical2 =
+    final GroupByResourcesReservationPool groupByResourcesReservationPoolHistorical2 =
         new GroupByResourcesReservationPool(mergePoolHistorical2, config);
 
     final GroupingEngine groupingEngineBroker = new GroupingEngine(
         druidProcessingConfig,
         configSupplier,
-        bufferPool,
         groupByResourcesReservationPoolBroker,
         TestHelper.makeJsonMapper(),
         new ObjectMapper(new SmileFactory()),
-        NOOP_QUERYWATCHER
+        NOOP_QUERYWATCHER,
+        groupByStatsProvider
     );
     final GroupingEngine groupingEngineHistorical = new GroupingEngine(
         druidProcessingConfig,
         configSupplier,
-        bufferPool,
         groupByResourcesReservationPoolHistorical,
         TestHelper.makeJsonMapper(),
         new ObjectMapper(new SmileFactory()),
-        NOOP_QUERYWATCHER
+        NOOP_QUERYWATCHER,
+        groupByStatsProvider
     );
     final GroupingEngine groupingEngineHistorical2 = new GroupingEngine(
         druidProcessingConfig,
         configSupplier,
-        bufferPool,
         groupByResourcesReservationPoolHistorical2,
         TestHelper.makeJsonMapper(),
         new ObjectMapper(new SmileFactory()),
-        NOOP_QUERYWATCHER
+        NOOP_QUERYWATCHER,
+        groupByStatsProvider
     );
 
     groupByFactoryBroker = new GroupByQueryRunnerFactory(
         groupingEngineBroker,
-        new GroupByQueryQueryToolChest(groupingEngineBroker, groupByResourcesReservationPoolBroker)
+        new GroupByQueryQueryToolChest(groupingEngineBroker, groupByResourcesReservationPoolBroker),
+        bufferPool
     );
 
     groupByFactoryHistorical = new GroupByQueryRunnerFactory(
         groupingEngineHistorical,
-        new GroupByQueryQueryToolChest(groupingEngineHistorical, groupByResourcesReservationPoolHistorical)
+        new GroupByQueryQueryToolChest(groupingEngineHistorical, groupByResourcesReservationPoolHistorical),
+        bufferPool
     );
 
     groupByFactoryHistorical2 = new GroupByQueryRunnerFactory(
         groupingEngineHistorical2,
-        new GroupByQueryQueryToolChest(groupingEngineHistorical2, groupByResourcesReservationPoolHistorical2)
+        new GroupByQueryQueryToolChest(groupingEngineHistorical2, groupByResourcesReservationPoolHistorical2),
+        bufferPool
     );
   }
 
@@ -672,7 +677,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest extends InitializedNullHandl
 
     QueryRunner<ResultRow> finalRunner = new FinalizeResultsQueryRunner<>(
         toolChestBroker.mergeResults(
-            new QueryRunner<ResultRow>()
+            new QueryRunner<>()
             {
               @Override
               public Sequence<ResultRow> run(QueryPlus<ResultRow> queryPlus, ResponseContext responseContext)
@@ -818,7 +823,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest extends InitializedNullHandl
 
     QueryRunner<ResultRow> finalRunner = new FinalizeResultsQueryRunner<>(
         toolchestBroker.mergeResults(
-            new QueryRunner<ResultRow>()
+            new QueryRunner<>()
             {
               @Override
               public Sequence<ResultRow> run(QueryPlus<ResultRow> queryPlus, ResponseContext responseContext)
@@ -967,7 +972,7 @@ public class GroupByLimitPushDownMultiNodeMergeTest extends InitializedNullHandl
     QueryToolChest<ResultRow, GroupByQuery> toolchestBroker = groupByFactoryBroker.getToolchest();
     QueryRunner<ResultRow> finalRunner = new FinalizeResultsQueryRunner<>(
         toolchestBroker.mergeResults(
-            new QueryRunner<ResultRow>()
+            new QueryRunner<>()
             {
               @Override
               public Sequence<ResultRow> run(QueryPlus<ResultRow> queryPlus, ResponseContext responseContext)

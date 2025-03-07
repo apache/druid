@@ -108,4 +108,14 @@ public class CounterSnapshotsTree
       }
     }
   }
+
+  @Override
+  public String toString()
+  {
+    synchronized (snapshotsMap) {
+      return "CounterSnapshotsTree{" +
+             "snapshotsMap=" + snapshotsMap +
+             '}';
+    }
+  }
 }

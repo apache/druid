@@ -28,7 +28,7 @@
 # This Dockerfile prefers to use the COPY command over ADD.
 # See: https://phoenixnap.com/kb/docker-add-vs-copy
 
-ARG JDK_VERSION=8-slim-buster
+ARG JDK_VERSION=17-slim-buster
 
 # The FROM image provides Java on top of Debian, and
 # thus provides bash, apt-get, etc.
@@ -46,19 +46,22 @@ ARG MARIADB_VERSION
 ENV MARIADB_VERSION=$MARIADB_VERSION
 ARG MYSQL_DRIVER_CLASSNAME=com.mysql.jdbc.Driver
 ENV MYSQL_DRIVER_CLASSNAME=$MYSQL_DRIVER_CLASSNAME
+ARG DRUID_TESTING_TOOLS_VERSION
 
 ENV DRUID_HOME=/usr/local/druid
 
 # Populate build artifacts
 
 COPY apache-druid-${DRUID_VERSION}-bin.tar.gz /usr/local/
-COPY druid-it-tools-${DRUID_VERSION}.jar /tmp/druid/extensions/druid-it-tools/
+COPY druid-it-tools-${DRUID_TESTING_TOOLS_VERSION}.jar /tmp/druid/extensions/druid-it-tools/
+
 COPY kafka-protobuf-provider-${CONFLUENT_VERSION}.jar /tmp/druid/lib/
 COPY mysql-connector-j-${MYSQL_VERSION}.jar /tmp/druid/lib/
 COPY mariadb-java-client-${MARIADB_VERSION}.jar /tmp/druid/lib/
 COPY test-setup.sh /
 COPY druid.sh /
 COPY launch.sh /
+
 
 # Do the setup tasks. The tasks are done within a script, rather than
 # here, so they are easier to describe and debug. Turn on the "-x" flag
