@@ -205,12 +205,8 @@ public class CoordinatorDynamicConfig
     }
   }
 
-  public static SegmentLoadingMode getLoadingModeForServer(
-      CoordinatorDynamicConfig coordinatorDynamicConfig,
-      String serverName
-  )
+  public SegmentLoadingMode getLoadingModeForServer(String serverName)
   {
-    final Set<String> turboLoadingNodes = coordinatorDynamicConfig.getTurboLoadingNodes();
     return turboLoadingNodes.contains(serverName) ?
            SegmentLoadingMode.TURBO :
            SegmentLoadingMode.NORMAL;

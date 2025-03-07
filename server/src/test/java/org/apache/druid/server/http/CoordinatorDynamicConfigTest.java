@@ -51,7 +51,8 @@ public class CoordinatorDynamicConfigTest
                      + "  \"maxSegmentsInNodeLoadingQueue\": 1,\n"
                      + "  \"decommissioningNodes\": [\"host1\", \"host2\"],\n"
                      + "  \"pauseCoordination\": false,\n"
-                     + "  \"replicateAfterLoadTimeout\": false\n"
+                     + "  \"replicateAfterLoadTimeout\": false,\n"
+                     + "  \"turboLoadingNodes\":[\"host1\", \"host3\"]\n"
                      + "}\n";
 
     CoordinatorDynamicConfig actual = mapper.readValue(
@@ -65,6 +66,7 @@ public class CoordinatorDynamicConfigTest
     );
     ImmutableSet<String> decommissioning = ImmutableSet.of("host1", "host2");
     ImmutableSet<String> whitelist = ImmutableSet.of("test1", "test2");
+    ImmutableSet<String> turboLoading = ImmutableSet.of("host1", "host3");
     assertConfig(
         actual,
         1,
@@ -78,7 +80,8 @@ public class CoordinatorDynamicConfigTest
         1,
         decommissioning,
         false,
-        false
+        false,
+        turboLoading
     );
 
     actual = CoordinatorDynamicConfig.builder().withDecommissioningNodes(ImmutableSet.of("host1")).build(actual);
@@ -95,7 +98,8 @@ public class CoordinatorDynamicConfigTest
         1,
         ImmutableSet.of("host1"),
         false,
-        false
+        false,
+        turboLoading
     );
 
     actual = CoordinatorDynamicConfig.builder().build(actual);
@@ -112,7 +116,8 @@ public class CoordinatorDynamicConfigTest
         1,
         ImmutableSet.of("host1"),
         false,
-        false
+        false,
+        turboLoading
     );
 
     actual = CoordinatorDynamicConfig.builder().withPauseCoordination(true).build(actual);
@@ -129,7 +134,8 @@ public class CoordinatorDynamicConfigTest
         1,
         ImmutableSet.of("host1"),
         true,
-        false
+        false,
+        turboLoading
     );
 
     actual = CoordinatorDynamicConfig.builder().withReplicateAfterLoadTimeout(true).build(actual);
@@ -146,7 +152,8 @@ public class CoordinatorDynamicConfigTest
         1,
         ImmutableSet.of("host1"),
         true,
-        true
+        true,
+        turboLoading
     );
 
     actual = CoordinatorDynamicConfig.builder().build(actual);
@@ -163,7 +170,8 @@ public class CoordinatorDynamicConfigTest
         1,
         ImmutableSet.of("host1"),
         true,
-        true
+        true,
+        turboLoading
     );
 
     actual = CoordinatorDynamicConfig.builder().withKillTaskSlotRatio(0.1).build(actual);
@@ -180,7 +188,8 @@ public class CoordinatorDynamicConfigTest
         1,
         ImmutableSet.of("host1"),
         true,
-        true
+        true,
+        turboLoading
     );
 
     actual = CoordinatorDynamicConfig.builder().withMaxKillTaskSlots(5).build(actual);
@@ -197,7 +206,8 @@ public class CoordinatorDynamicConfigTest
         1,
         ImmutableSet.of("host1"),
         true,
-        true
+        true,
+        turboLoading
     );
   }
 
@@ -274,7 +284,8 @@ public class CoordinatorDynamicConfigTest
                      + "  \"replicationThrottleLimit\": 1,\n"
                      + "  \"balancerComputeThreads\": 2, \n"
                      + "  \"killDataSourceWhitelist\": [\"test1\",\"test2\"],\n"
-                     + "  \"maxSegmentsInNodeLoadingQueue\": 1\n"
+                     + "  \"maxSegmentsInNodeLoadingQueue\": 1,\n"
+                     + "  \"turboLoadingNodes\": [\"host3\",\"host4\"]\n"
                      + "}\n";
 
     CoordinatorDynamicConfig actual = mapper.readValue(
@@ -288,6 +299,7 @@ public class CoordinatorDynamicConfigTest
     );
     ImmutableSet<String> decommissioning = ImmutableSet.of();
     ImmutableSet<String> whitelist = ImmutableSet.of("test1", "test2");
+    ImmutableSet<String> turboLoading = ImmutableSet.of("host3", "host4");
     assertConfig(
         actual,
         1,
@@ -301,7 +313,8 @@ public class CoordinatorDynamicConfigTest
         1,
         decommissioning,
         false,
-        false
+        false,
+        turboLoading
     );
 
     actual = CoordinatorDynamicConfig.builder().withDecommissioningNodes(ImmutableSet.of("host1")).build(actual);
@@ -318,7 +331,8 @@ public class CoordinatorDynamicConfigTest
         1,
         ImmutableSet.of("host1"),
         false,
-        false
+        false,
+        turboLoading
     );
 
     actual = CoordinatorDynamicConfig.builder().build(actual);
@@ -335,7 +349,8 @@ public class CoordinatorDynamicConfigTest
         1,
         ImmutableSet.of("host1"),
         false,
-        false
+        false,
+        turboLoading
     );
   }
 
@@ -374,7 +389,8 @@ public class CoordinatorDynamicConfigTest
         1,
         ImmutableSet.of(),
         false,
-        false
+        false,
+        ImmutableSet.of()
     );
   }
 
@@ -413,7 +429,8 @@ public class CoordinatorDynamicConfigTest
         1,
         decommissioning,
         false,
-        false
+        false,
+        ImmutableSet.of()
     );
   }
 
@@ -448,7 +465,8 @@ public class CoordinatorDynamicConfigTest
         EXPECTED_DEFAULT_MAX_SEGMENTS_IN_NODE_LOADING_QUEUE,
         ImmutableSet.of(),
         false,
-        false
+        false,
+        ImmutableSet.of()
     );
   }
 
@@ -470,7 +488,8 @@ public class CoordinatorDynamicConfigTest
         EXPECTED_DEFAULT_MAX_SEGMENTS_IN_NODE_LOADING_QUEUE,
         emptyList,
         false,
-        false
+        false,
+        ImmutableSet.of()
     );
   }
 
@@ -495,7 +514,8 @@ public class CoordinatorDynamicConfigTest
         EXPECTED_DEFAULT_MAX_SEGMENTS_IN_NODE_LOADING_QUEUE,
         ImmutableSet.of(),
         false,
-        false
+        false,
+        ImmutableSet.of()
     );
   }
 
@@ -511,6 +531,18 @@ public class CoordinatorDynamicConfigTest
         current,
         CoordinatorDynamicConfig.builder().build(current)
     );
+  }
+
+  @Test
+  public void testTurboLoadingNodes()
+  {
+    CoordinatorDynamicConfig config = CoordinatorDynamicConfig
+        .builder()
+        .withTurboLoadingNodes(ImmutableSet.of("localhost:8083"))
+        .build();
+
+    Assert.assertEquals(SegmentLoadingMode.NORMAL, config.getLoadingModeForServer("localhost:8082"));
+    Assert.assertEquals(SegmentLoadingMode.TURBO, config.getLoadingModeForServer("localhost:8083"));
   }
 
   @Test
@@ -535,7 +567,8 @@ public class CoordinatorDynamicConfigTest
       int expectedMaxSegmentsInNodeLoadingQueue,
       Set<String> decommissioningNodes,
       boolean pauseCoordination,
-      boolean replicateAfterLoadTimeout
+      boolean replicateAfterLoadTimeout,
+      Set<String> turboLoadingNodes
   )
   {
     Assert.assertEquals(
@@ -556,6 +589,7 @@ public class CoordinatorDynamicConfigTest
     Assert.assertEquals(decommissioningNodes, config.getDecommissioningNodes());
     Assert.assertEquals(pauseCoordination, config.getPauseCoordination());
     Assert.assertEquals(replicateAfterLoadTimeout, config.getReplicateAfterLoadTimeout());
+    Assert.assertEquals(turboLoadingNodes, config.getTurboLoadingNodes());
   }
 
   private static int getDefaultNumBalancerThreads()

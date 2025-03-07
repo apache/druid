@@ -82,7 +82,7 @@ public class LoadQueueTaskMaster
         config,
         peonExec,
         callbackExec,
-        () -> CoordinatorDynamicConfig.getLoadingModeForServer(coordinatorDynamicConfigSupplier.get(), server.getName())
+        () -> coordinatorDynamicConfigSupplier.get().getLoadingModeForServer(server.getName())
     );
   }
 
