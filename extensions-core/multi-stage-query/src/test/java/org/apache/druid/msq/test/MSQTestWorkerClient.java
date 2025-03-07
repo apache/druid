@@ -51,7 +51,6 @@ public class MSQTestWorkerClient implements WorkerClient
   public ListenableFuture<Void> postWorkOrder(String workerTaskId, WorkOrder workOrder)
   {
     getWorkerFor(workerTaskId).postWorkOrder(workOrder);
-
     return Futures.immediateFuture(null);
   }
 
@@ -62,7 +61,7 @@ public class MSQTestWorkerClient implements WorkerClient
 
   protected Worker newWorker(String workerId)
   {
-    throw new RuntimeException("FIXME: Unimplemented!");
+    throw new RuntimeException("Not implemented!");
   }
 
   @Override

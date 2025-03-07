@@ -1077,21 +1077,9 @@ public class SqlTestFramework
       return new TestSegmentsBroker();
     }
 
-    @LazySingleton
-    public TimelineServerView makeTimelines1(ObjectMapper objectMapper, QueryRunnerFactoryConglomerate conglomerate,
-        HttpClient httpClient)
-    {
-      //FIXME connect TSB with this
-///.      return new SimpleServerView(conglomerate, objectMapper, httpClient);
-
-
-      SimpleServerView simpleServerView = new SimpleServerView(conglomerate, objectMapper, httpClient);
-      return simpleServerView;
-    }
-
     @Provides
     @LazySingleton
-    private HttpClient extracted(ObjectMapper objectMapper)
+    private HttpClient makeHttpClient(ObjectMapper objectMapper)
     {
       return new TestHttpClient(objectMapper);
     }
