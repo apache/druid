@@ -36,6 +36,7 @@ import org.apache.druid.msq.dart.Dart;
 import org.apache.druid.msq.dart.controller.DartControllerContextFactory;
 import org.apache.druid.msq.dart.controller.sql.DartSqlEngine;
 import org.apache.druid.msq.dart.guice.DartControllerModule;
+import org.apache.druid.msq.dart.guice.DartModules;
 import org.apache.druid.msq.dart.guice.DartWorkerMemoryManagementModule;
 import org.apache.druid.msq.dart.guice.DartWorkerModule;
 import org.apache.druid.msq.exec.Worker;
@@ -52,12 +53,20 @@ import org.apache.druid.sql.calcite.util.SqlTestFramework.StandardComponentSuppl
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Properties;
 
 public class DartComponentSupplier extends AbstractMSQComponentSupplierDelegate
 {
   public DartComponentSupplier(TempDirProducer tempFolderProducer)
   {
     super(new StandardComponentSupplier(tempFolderProducer));
+  }
+
+  @Override
+  public void gatherProperties(Properties properties)
+  {
+    super.gatherProperties(properties);
+    properties.put(DartModules.DART_ENABLED_PROPERTY, "true");
   }
 
   @Override

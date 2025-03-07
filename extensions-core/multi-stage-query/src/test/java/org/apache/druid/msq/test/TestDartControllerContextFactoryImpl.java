@@ -51,6 +51,7 @@ import java.util.concurrent.Executors;
 public class TestDartControllerContextFactoryImpl extends DartControllerContextFactoryImpl
 {
   private Map<String, Worker> workerMap;
+  public Controller theController1;
 
   @Inject
   public TestDartControllerContextFactoryImpl(
@@ -81,10 +82,16 @@ public class TestDartControllerContextFactoryImpl extends DartControllerContextF
         memoryIntrospector,
         serverView,
         emitter
-    );
-    wc.controllerCtx = ctx;
+    ) {
+      public void registerController(Controller controller, org.apache.druid.java.util.common.io.Closer closer) {
+        super.registerController(controller, closer);
+        theController1=controller;
+
+      };
+    };
     return ctx;
   }
+
 
   @Override
   protected DartWorkerClient makeWorkerClient(String queryId)
@@ -97,7 +104,6 @@ public class TestDartControllerContextFactoryImpl extends DartControllerContextF
   public class DartTestWorkerClient extends MSQTestWorkerClient implements DartWorkerClient
   {
     private final ExecutorService EXECUTOR = Executors.newCachedThreadPool();
-    public DartControllerContext controllerCtx;
 
     public DartTestWorkerClient(
         String queryId,
@@ -112,13 +118,12 @@ public class TestDartControllerContextFactoryImpl extends DartControllerContextF
     protected Worker newWorker(String workerId)
     {
       String queryId = workerId;
-      Controller controller = controllerCtx.theController;
       Worker worker = new WorkerImpl(
           null,
           new MSQTestWorkerContext(
               queryId,
               inMemoryWorkers,
-              controller,
+              theController1,
               jsonMapper,
               injector,
               MSQTestBase.makeTestWorkerMemoryParameters(),
