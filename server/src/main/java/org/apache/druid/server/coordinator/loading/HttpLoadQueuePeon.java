@@ -116,7 +116,6 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
 
   private final ObjectMapper jsonMapper;
   private final HttpClient httpClient;
-  private final URL changeRequestURL;
   private final String serverId;
 
   private final AtomicBoolean mainLoopInProgress = new AtomicBoolean(false);
@@ -144,18 +143,6 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
 
     this.serverId = baseUrl;
     this.loadingModeSupplier = loadingModeSupplier;
-    try {
-      this.changeRequestURL = new URL(
-          new URL(baseUrl),
-          StringUtils.nonStrictFormat(
-              "druid-internal/v1/segments/changeRequests?timeout=%d",
-              config.getHostTimeout().getMillis()
-          )
-      );
-    }
-    catch (MalformedURLException ex) {
-      throw new RuntimeException(ex);
-    }
   }
 
   private void doSegmentManagement()
@@ -213,6 +200,15 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
       if (hasLoadRequests && !loadingRateTracker.isLoadingBatch()) {
         loadingRateTracker.markBatchLoadingStarted();
       }
+
+      final URL changeRequestURL = new URL(
+          new URL(serverId),
+          StringUtils.nonStrictFormat(
+              "druid-internal/v1/segments/changeRequests?timeout=%d&loadingMode=%s",
+              config.getHostTimeout().getMillis(),
+              loadingMode
+          )
+      );
 
       BytesAccumulatingResponseHandler responseHandler = new BytesAccumulatingResponseHandler();
       ListenableFuture<InputStream> future = httpClient.go(
@@ -314,6 +310,9 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
           },
           processingExecutor
       );
+    }
+    catch (MalformedURLException ex) {
+      throw new RuntimeException(ex);
     }
     catch (Throwable th) {
       log.error(th, "Error sending load/drop request to [%s].", serverId);
