@@ -474,7 +474,7 @@ public class TaskLockbox
       boolean reduceMetadataIO
   )
   {
-    log.info("Allocating [%d] segments for datasource [%s], interval [%s]", requests.size(), dataSource, interval);
+    log.debug("Allocating [%d] segments for datasource[%s], interval[%s]", requests.size(), dataSource, interval);
     final boolean isTimeChunkLock = lockGranularity == LockGranularity.TIME_CHUNK;
 
     final AllocationHolderList holderList = new AllocationHolderList(requests, interval);
@@ -1132,11 +1132,11 @@ public class TaskLockbox
 
         if (match) {
           // Remove task from live list
-          log.info("Removing task[%s] from TaskLock[%s]", task.getId(), taskLock);
+          log.debug("Removing task[%s] from TaskLock[%s]", task.getId(), taskLock);
           final boolean removed = taskLockPosse.removeTask(task);
 
           if (taskLockPosse.isTasksEmpty()) {
-            log.info("TaskLock[%s] is now empty.", taskLock);
+            log.debug("TaskLock[%s] is now empty.", taskLock);
             possesHolder.remove(taskLockPosse);
           }
           if (possesHolder.isEmpty()) {
