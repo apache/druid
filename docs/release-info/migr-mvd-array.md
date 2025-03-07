@@ -34,7 +34,7 @@ For specific query differences between arrays and MVDs, see [Querying arrays and
 
 |  | Array| MVD |
 |---|---|---|
-| Data types | Supports VARCHAR, BIGINT, and DOUBLE types (ARRAY<STRING\>, ARRAY<LONG\>, ARRAY<DOUBLE\>) | Only supports arrays of strings (VARCHAR) |
+| Data types | Supports VARCHAR, BIGINT, and DOUBLE types (Array\<String\>, ARRAY\<LONG\>, ARRAY\<DOUBLE\>) | Only supports arrays of strings (VARCHAR) |
 | SQL compliance | Behaves like standard SQL arrays with SQL-compliant behavior | Behaves like SQL VARCHAR rather than standard SQL arrays and requires special SQL functions to achieve array-like behavior. See the [examples](#examples). |
 | Ingestion | <ul><li>JSON arrays are ingested as Druid arrays</li><li>Managed through the query context parameter `arrayIngestMode` in SQL-based ingestion. Supported options are `array`, `mvd`, and `none`. Note that if you set this mode to `none`, Druid raises an exception if you try to store any type of array.</li></ul> | <ul><li>JSON arrays are ingested as MVDs</li><li>Managed using functions like [ARRAY_TO_MV](../querying/sql-functions.md#array_to_mv) in SQL-based ingestion</li></ul> |
 | Filtering and grouping | <ul><li>Filters and groupings match the entire array value</li><li>Can be used as GROUP BY keys, grouping based on the entire array value</li><li>Use the [UNNEST operator](#group-by-array-elements) to group based on individual array elements</li></ul> | <ul><li>Filters match any value within the array</li><li>Grouping generates a group for each individual value, similar to an implicit UNNEST</li></ul> |
