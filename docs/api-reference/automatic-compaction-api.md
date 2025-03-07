@@ -258,6 +258,88 @@ Host: http://ROUTER_IP:ROUTER_PORT
 
 A successful request returns an HTTP `200 OK` message code and an empty response body.
 
+### Update cluster-level compaction config
+
+Updates cluster-level configuration for compaction tasks which applies to all datasources, unless explicitly overridden in the datasource compaction config.
+This includes the following fields:
+
+|Config|Description|Default value|
+|------|-----------|-------------|
+|compactionTaskSlotRatio|Ratio of number of slots taken up by compaction tasks to the number of total task slots across all workers.|0.1|
+|maxCompactionTaskSlots|Maximum number of task slots that can be taken up by compaction tasks.|2147483647 (i.e. total task slots)|
+|compactionPolicy|Policy to prioritize intervals for compaction|`newestSegmentFirst`|
+|useSupervisors|Whether compaction should be run on Overlord using supervisors instead of Coordinator duties.|false|
+|engine|Engine to use for running compaction tasks, native or MSQ.|Native|
+
+#### URL
+
+`POST` `/druid/coordinator/v1/config/compaction/cluster`
+
+#### Responses
+
+<Tabs>
+
+<TabItem value="8" label="200 SUCCESS">
+
+
+*Successfully updated compaction configuration*
+
+</TabItem>
+<TabItem value="9" label="404 NOT FOUND">
+
+
+*Invalid `max` value*
+
+</TabItem>
+</Tabs>
+
+---
+
+#### Sample request
+
+<Tabs>
+
+<TabItem value="10" label="cURL">
+
+
+```shell
+curl --request POST "http://ROUTER_IP:ROUTER_PORT/druid/coordinator/v1/config/compaction/cluster" \
+--header 'Content-Type: application/json' \
+--data '{
+    "compactionTaskSlotRatio": 0.5,
+    "maxCompactionTaskSlots": 1500,
+    "compactionPolicy": "newestSegmentFirst",
+    "useSupervisors": true,
+    "engine": "MSQ"
+}'
+
+```
+
+</TabItem>
+<TabItem value="11" label="HTTP">
+
+
+```HTTP
+POST /druid/coordinator/v1/config/compaction/taskslots?ratio=0.2&max=250000 HTTP/1.1
+Host: http://ROUTER_IP:ROUTER_PORT
+Content-Type: application/json
+
+{
+    "compactionTaskSlotRatio": 0.5,
+    "maxCompactionTaskSlots": 1500,
+    "compactionPolicy": "newestSegmentFirst",
+    "useSupervisors": true,
+    "engine": "MSQ"
+}
+```
+
+</TabItem>
+</Tabs>
+
+#### Sample response
+
+A successful request returns an HTTP `200 OK` message code and an empty response body.
+
 ## View automatic compaction configuration
 
 ### Get all automatic compaction configurations

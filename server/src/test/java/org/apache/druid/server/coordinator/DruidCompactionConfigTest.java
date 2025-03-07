@@ -64,6 +64,7 @@ public class DruidCompactionConfigTest
         null,
         null,
         null,
+        null,
         null
     );
 
@@ -80,8 +81,9 @@ public class DruidCompactionConfigTest
     final ClusterCompactionConfig clusterConfig = new ClusterCompactionConfig(
         0.5,
         10,
-        false,
-        new NewestSegmentFirstPolicy(null)
+        new NewestSegmentFirstPolicy(null),
+        true,
+        CompactionEngine.MSQ
     );
     final DruidCompactionConfig copy = config.withClusterConfig(clusterConfig);
 
