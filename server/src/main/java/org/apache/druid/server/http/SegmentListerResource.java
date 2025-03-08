@@ -31,6 +31,7 @@ import org.apache.druid.client.HttpServerInventoryView;
 import org.apache.druid.guice.annotations.Json;
 import org.apache.druid.guice.annotations.Smile;
 import org.apache.druid.java.util.emitter.EmittingLogger;
+import org.apache.druid.segment.loading.SegmentLoaderConfig;
 import org.apache.druid.server.coordination.BatchDataSegmentAnnouncer;
 import org.apache.druid.server.coordination.ChangeRequestHistory;
 import org.apache.druid.server.coordination.ChangeRequestsSnapshot;
@@ -54,6 +55,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.util.List;
 
@@ -326,6 +328,25 @@ public class SegmentListerResource
     );
 
     asyncContext.setTimeout(timeout);
+  }
+
+  @GET
+  @Path("/segmentLoadingCapabilities")
+  @Produces({MediaType.APPLICATION_JSON, SmileMediaTypes.APPLICATION_JACKSON_SMILE})
+  public Response getSegmentLoadingCapabilities(
+      @Context final HttpServletRequest req
+  ) throws IOException
+  {
+    if (loadDropRequestHandler == null) {
+      sendErrorResponse(req, HttpServletResponse.SC_NOT_FOUND, "load/drop handler is not available.");
+      return Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
+    }
+
+    SegmentLoaderConfig config = loadDropRequestHandler.getSegmentLoaderConfig();
+    HistoricalLoadingCapabilities capabilitiesResponse =
+        new HistoricalLoadingCapabilities(config.getNumLoadingThreads(), config.getNumBootstrapThreads());
+
+    return Response.status(Response.Status.OK).entity(capabilitiesResponse).build();
   }
 
   private void sendErrorResponse(HttpServletRequest req, int code, String error) throws IOException

@@ -427,5 +427,10 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
         throw DruidException.defensive("Unknown execution mode [%s]", loadingMode);
     }
   }
+
+  public SegmentLoaderConfig getSegmentLoaderConfig()
+  {
+    return config;
+  }
 }
 

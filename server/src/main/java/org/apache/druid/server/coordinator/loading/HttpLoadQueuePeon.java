@@ -25,6 +25,7 @@ import com.fasterxml.jackson.databind.ObjectWriter;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import org.apache.druid.error.DruidException;
 import org.apache.druid.java.util.common.ISE;
 import org.apache.druid.java.util.common.RE;
 import org.apache.druid.java.util.common.StringUtils;
@@ -45,6 +46,7 @@ import org.apache.druid.server.coordinator.stats.CoordinatorStat;
 import org.apache.druid.server.coordinator.stats.Dimension;
 import org.apache.druid.server.coordinator.stats.RowKey;
 import org.apache.druid.server.coordinator.stats.Stats;
+import org.apache.druid.server.http.HistoricalLoadingCapabilities;
 import org.apache.druid.server.http.SegmentLoadingMode;
 import org.apache.druid.timeline.DataSegment;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
@@ -123,6 +125,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
   private final Supplier<SegmentLoadingMode> loadingModeSupplier;
 
   private final ObjectWriter requestBodyWriter;
+  private final HistoricalLoadingCapabilities serverCapabilities;
 
   public HttpLoadQueuePeon(
       String baseUrl,
@@ -143,6 +146,39 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
 
     this.serverId = baseUrl;
     this.loadingModeSupplier = loadingModeSupplier;
+    this.serverCapabilities = fetchSegmentLoadingCapabilities();
+  }
+
+  private HistoricalLoadingCapabilities fetchSegmentLoadingCapabilities()
+  {
+    try {
+      log.trace("Fetching historical capabilities from Server[%s].", new URL(serverId));
+      final URL segmentLoadingCapabilitiesURL = new URL(
+          new URL(serverId),
+          "druid-internal/v1/segments/segmentLoadingCapabilities"
+      );
+
+      BytesAccumulatingResponseHandler responseHandler = new BytesAccumulatingResponseHandler();
+      ListenableFuture<InputStream> future = httpClient.go(
+          new Request(HttpMethod.GET, segmentLoadingCapabilitiesURL)
+              .addHeader(HttpHeaders.Names.ACCEPT, MediaType.APPLICATION_JSON),
+          responseHandler,
+          new Duration(10000)
+      );
+
+      if (HttpServletResponse.SC_OK != responseHandler.getStatus()) {
+        throw new RuntimeException();
+      }
+
+      return jsonMapper.readValue(
+          future.get(),
+          HistoricalLoadingCapabilities.class
+      );
+    }
+    catch (Throwable th) {
+      log.error("Received error while fetching historical capabilities from Server[%s].", serverId);
+      throw new RuntimeException(th);
+    }
   }
 
   private void doSegmentManagement()
@@ -152,7 +188,17 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
       return;
     }
 
-    final int batchSize = config.getBatchSize();
+    final SegmentLoadingMode loadingMode = loadingModeSupplier.get();
+    int batchSize;
+    if (config.getBatchSize() != null) {
+      batchSize = config.getBatchSize();
+    } else if (SegmentLoadingMode.TURBO.equals(loadingMode)) {
+      batchSize = serverCapabilities.getNumTurboLoadingThreads();
+    } else if (SegmentLoadingMode.NORMAL.equals(loadingMode)) {
+      batchSize = serverCapabilities.getNumLoadingThreads();
+    } else {
+      throw DruidException.defensive().build("unsupported loading mode");
+    }
 
     final List<DataSegmentChangeRequest> newRequests = new ArrayList<>(batchSize);
 
@@ -186,13 +232,11 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
     if (newRequests.isEmpty()) {
       log.trace(
           "[%s]Found no load/drop requests. SegmentsToLoad[%d], SegmentsToDrop[%d], batchSize[%d].",
-          serverId, segmentsToLoad.size(), segmentsToDrop.size(), config.getBatchSize()
+          serverId, segmentsToLoad.size(), segmentsToDrop.size(), batchSize
       );
       mainLoopInProgress.set(false);
       return;
     }
-
-    SegmentLoadingMode loadingMode = loadingModeSupplier.get();
 
     try {
       log.trace("Sending [%d] load/drop requests to Server[%s] in loadingMode [%s].", newRequests.size(), serverId, loadingMode);
