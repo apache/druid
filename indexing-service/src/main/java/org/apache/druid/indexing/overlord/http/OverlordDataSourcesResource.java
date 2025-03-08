@@ -27,6 +27,7 @@ import org.apache.druid.audit.AuditEntry;
 import org.apache.druid.audit.AuditManager;
 import org.apache.druid.error.DruidException;
 import org.apache.druid.error.InvalidInput;
+import org.apache.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import org.apache.druid.indexing.overlord.TaskMaster;
 import org.apache.druid.java.util.common.StringUtils;
 import org.apache.druid.java.util.common.logger.Logger;
@@ -66,6 +67,7 @@ public class OverlordDataSourcesResource
   private static final Logger log = new Logger(OverlordDataSourcesResource.class);
 
   private final SegmentsMetadataManager segmentsMetadataManager;
+  private final IndexerMetadataStorageCoordinator metadataStorageCoordinator;
   private final TaskMaster taskMaster;
   private final AuditManager auditManager;
 
@@ -73,12 +75,14 @@ public class OverlordDataSourcesResource
   public OverlordDataSourcesResource(
       TaskMaster taskMaster,
       SegmentsMetadataManager segmentsMetadataManager,
+      IndexerMetadataStorageCoordinator metadataStorageCoordinator,
       AuditManager auditManager
   )
   {
     this.taskMaster = taskMaster;
     this.auditManager = auditManager;
     this.segmentsMetadataManager = segmentsMetadataManager;
+    this.metadataStorageCoordinator = metadataStorageCoordinator;
   }
 
   private interface SegmentUpdateOperation
@@ -109,8 +113,8 @@ public class OverlordDataSourcesResource
       @Context HttpServletRequest req
   )
   {
-    SegmentUpdateOperation operation = () -> segmentsMetadataManager
-        .markAsUnusedAllSegmentsInDataSource(dataSourceName);
+    SegmentUpdateOperation operation =
+        () -> metadataStorageCoordinator.markAllSegmentsAsUnused(dataSourceName);
     final Response response = performSegmentUpdate(dataSourceName, operation);
 
     final int responseCode = response.getStatus();
@@ -188,7 +192,8 @@ public class OverlordDataSourcesResource
         final List<String> versions = payload.getVersions();
         final int numUpdatedSegments;
         if (interval != null) {
-          numUpdatedSegments = segmentsMetadataManager.markAsUnusedSegmentsInInterval(dataSourceName, interval, versions);
+          numUpdatedSegments = metadataStorageCoordinator
+              .markSegmentsWithinIntervalAsUnused(dataSourceName, interval, versions);
         } else {
           final Set<SegmentId> segmentIds = payload.getSegmentIds()
                                                    .stream()
@@ -197,7 +202,8 @@ public class OverlordDataSourcesResource
                                                    .collect(Collectors.toSet());
 
           // Filter out segmentIds that do not belong to this datasource
-          numUpdatedSegments = segmentsMetadataManager.markSegmentsAsUnused(
+          numUpdatedSegments = metadataStorageCoordinator.markSegmentsAsUnused(
+              dataSourceName,
               segmentIds.stream()
                   .filter(segmentId -> segmentId.getDataSource().equals(dataSourceName))
                   .collect(Collectors.toSet())
@@ -240,7 +246,7 @@ public class OverlordDataSourcesResource
     }
 
     SegmentUpdateOperation operation =
-        () -> segmentsMetadataManager.markSegmentAsUnused(segmentId) ? 1 : 0;
+        () -> metadataStorageCoordinator.markSegmentAsUnused(segmentId) ? 1 : 0;
     return performSegmentUpdate(dataSourceName, operation);
   }
 

@@ -265,10 +265,38 @@ class CachedSegmentMetadataTransaction implements SegmentMetadataTransaction
   }
 
   @Override
-  public int markSegmentsWithinIntervalAsUnused(Interval interval, DateTime updateTime)
+  public boolean markSegmentAsUnused(SegmentId segmentId, DateTime updateTime)
   {
     return performWriteAction(
-        writer -> writer.markSegmentsWithinIntervalAsUnused(interval, updateTime)
+        writer -> writer.markSegmentAsUnused(segmentId, updateTime)
+    );
+  }
+
+  @Override
+  public int markSegmentsAsUnused(Set<SegmentId> segmentIds, DateTime updateTime)
+  {
+    return performWriteAction(
+        writer -> writer.markSegmentsAsUnused(segmentIds, updateTime)
+    );
+  }
+
+  @Override
+  public int markAllSegmentsAsUnused(DateTime updateTime)
+  {
+    return performWriteAction(
+        writer -> writer.markAllSegmentsAsUnused(updateTime)
+    );
+  }
+
+  @Override
+  public int markSegmentsWithinIntervalAsUnused(
+      Interval interval,
+      @Nullable List<String> versions,
+      DateTime updateTime
+  )
+  {
+    return performWriteAction(
+        writer -> writer.markSegmentsWithinIntervalAsUnused(interval, versions, updateTime)
     );
   }
 

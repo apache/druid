@@ -791,6 +791,7 @@ public class HeapMemoryDatasourceSegmentCacheTest
         2,
         cache.markSegmentsWithinIntervalAsUnused(
             firstDayOfJan.withDurationAfterStart(Duration.standardDays(2)),
+            null,
             DateTimes.nowUtc()
         )
     );
