@@ -320,6 +320,13 @@ public class CoordinatorDynamicConfig
     return replicateAfterLoadTimeout;
   }
 
+  /**
+   * List of historical servers to put into turboloading mode. These historicals will use a larger thread pool to load
+   * segments. This causes decreases the average time taken to load segments. However, this also means less resources
+   * given to query threads which causes a drop in query performance.
+   *
+   * @return Set of host:port entries
+   */
   @JsonProperty
   public Set<String> getTurboLoadingNodes()
   {

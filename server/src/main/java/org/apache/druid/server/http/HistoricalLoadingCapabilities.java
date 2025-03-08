@@ -26,19 +26,21 @@ import org.apache.druid.error.DruidException;
 public class HistoricalLoadingCapabilities
 {
   private final int numLoadingThreads;
-  private final int numTurboThreads;
+  private final int numTurboLoadingThreads;
 
   @JsonCreator
   public HistoricalLoadingCapabilities(
       @JsonProperty("numLoadingThreads") int numLoadingThreads,
-      @JsonProperty("numTurboThreads") int numTurboThreads
+      @JsonProperty("numTurboLoadingThreads") int numTurboLoadingThreads
   )
   {
-    if (numLoadingThreads < 1 || numTurboThreads < 1) {
-      throw DruidException.defensive().build("numLoadingThreads and numTurboThreads must be greater than 0");
+    if (numLoadingThreads < 1 || numTurboLoadingThreads < 1) {
+      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                          .ofCategory(DruidException.Category.INVALID_INPUT)
+                          .build("numLoadingThreads and numTurboLoadingThreads must be greater than 0.");
     }
     this.numLoadingThreads = numLoadingThreads;
-    this.numTurboThreads = numTurboThreads;
+    this.numTurboLoadingThreads = numTurboLoadingThreads;
   }
 
   @JsonProperty("numLoadingThreads")
@@ -47,9 +49,9 @@ public class HistoricalLoadingCapabilities
     return numLoadingThreads;
   }
 
-  @JsonProperty("numTurboThreads")
+  @JsonProperty("numTurboLoadingThreads")
   public int getNumTurboLoadingThreads()
   {
-    return numTurboThreads;
+    return numTurboLoadingThreads;
   }
 }

@@ -265,7 +265,15 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     return ImmutableList.copyOf(segmentsToDelete);
   }
 
-  public ListenableFuture<List<DataSegmentChangeResponse>> processBatch(List<DataSegmentChangeRequest> changeRequests, SegmentLoadingMode segmentLoadingMode)
+  /**
+   * Process a list of {@link DataSegmentChangeRequest}, invoking
+   * {@link #processRequest(DataSegmentChangeRequest, SegmentLoadingMode)} for each one. Handles the computation
+   * asynchronously and returns a future to the result.
+   */
+  public ListenableFuture<List<DataSegmentChangeResponse>> processBatch(
+      List<DataSegmentChangeRequest> changeRequests,
+      SegmentLoadingMode segmentLoadingMode
+  )
   {
     boolean isAnyRequestDone = false;
 
@@ -292,7 +300,16 @@ public class SegmentLoadDropHandler implements DataSegmentChangeHandler
     return future;
   }
 
-  private AtomicReference<SegmentChangeStatus> processRequest(DataSegmentChangeRequest changeRequest, SegmentLoadingMode segmentLoadingMode)
+  /**
+   * Process a {@link DataSegmentChangeRequest}, invoking the request's
+   * {@link DataSegmentChangeRequest#go(DataSegmentChangeHandler, DataSegmentChangeCallback)}.
+   * The segmentLoadingMode parameter determines the thread pool to use.
+   * Returns an atomic reference to the segment status.
+   */
+  private AtomicReference<SegmentChangeStatus> processRequest(
+      DataSegmentChangeRequest changeRequest,
+      SegmentLoadingMode segmentLoadingMode
+  )
   {
     synchronized (requestStatusesLock) {
       AtomicReference<SegmentChangeStatus> status = requestStatuses.getIfPresent(changeRequest);
