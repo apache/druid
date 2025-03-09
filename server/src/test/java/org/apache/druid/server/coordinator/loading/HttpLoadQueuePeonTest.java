@@ -103,7 +103,7 @@ public class HttpLoadQueuePeonTest
         ),
         httpClient.callbackExecutor,
         () -> SegmentLoadingMode.NORMAL,
-        new HistoricalLoadingCapabilities(1, 1)
+        new HistoricalLoadingCapabilities(1, 3)
     );
     httpLoadQueuePeon.start();
   }
@@ -331,6 +331,30 @@ public class HttpLoadQueuePeonTest
         observedRateKbps > expectedRateKbps / 2
         && observedRateKbps <= expectedRateKbps
     );
+  }
+
+  @Test
+  public void testBatchSize()
+  {
+    Assert.assertEquals(10, httpLoadQueuePeon.calculateBatchSize(SegmentLoadingMode.NORMAL));
+
+    httpLoadQueuePeon = new HttpLoadQueuePeon(
+        "http://dummy:4000",
+        MAPPER,
+        httpClient,
+        new HttpLoadQueuePeonConfig(null, null, null),
+        new WrappingScheduledExecutorService(
+            "HttpLoadQueuePeonTest-%s",
+            httpClient.processingExecutor,
+            true
+        ),
+        httpClient.callbackExecutor,
+        () -> SegmentLoadingMode.NORMAL,
+        new HistoricalLoadingCapabilities(1, 3)
+    );
+
+    Assert.assertEquals(1, httpLoadQueuePeon.calculateBatchSize(SegmentLoadingMode.NORMAL));
+    Assert.assertEquals(3, httpLoadQueuePeon.calculateBatchSize(SegmentLoadingMode.TURBO));
   }
 
   private LoadPeonCallback markSegmentProcessed(DataSegment segment)

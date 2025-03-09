@@ -245,7 +245,7 @@ public class SegmentLoadDropHandlerTest
       runnable.run();
     }
 
-    result = handler.processBatch(ImmutableList.of(new SegmentChangeRequestLoad(segment1)), SegmentLoadingMode.NORMAL).get();
+    result = handler.processBatch(ImmutableList.of(new SegmentChangeRequestLoad(segment1)), SegmentLoadingMode.TURBO).get();
     Assert.assertEquals(SegmentChangeStatus.SUCCESS, result.get(0).getStatus());
 
     Assert.assertEquals(ImmutableList.of(segment1), segmentAnnouncer.getObservedSegments());

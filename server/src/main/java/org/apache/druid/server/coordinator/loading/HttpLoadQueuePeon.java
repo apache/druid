@@ -201,10 +201,9 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
       );
     }
     catch (Throwable th) {
-      log.error("Received error while fetching historical capabilities from Server[%s].", serverId);
       throw DruidException.forPersona(DruidException.Persona.OPERATOR)
                           .ofCategory(DruidException.Category.RUNTIME_FAILURE)
-                          .build(th, "Failed to fetch historical capabilities");
+                          .build(th, "Received error while fetching historical capabilities from Server[%s].", serverId);
     }
   }
 
@@ -216,16 +215,7 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
     }
 
     final SegmentLoadingMode loadingMode = loadingModeSupplier.get();
-    int batchSize;
-    if (config.getBatchSize() != null) {
-      batchSize = config.getBatchSize();
-    } else if (SegmentLoadingMode.TURBO.equals(loadingMode)) {
-      batchSize = serverCapabilities.getNumTurboLoadingThreads();
-    } else if (SegmentLoadingMode.NORMAL.equals(loadingMode)) {
-      batchSize = serverCapabilities.getNumLoadingThreads();
-    } else {
-      throw DruidException.defensive().build("unsupported loading mode");
-    }
+    int batchSize = calculateBatchSize(loadingMode);
 
     final List<DataSegmentChangeRequest> newRequests = new ArrayList<>(batchSize);
 
@@ -388,6 +378,20 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
     catch (Throwable th) {
       log.error(th, "Error sending load/drop request to [%s].", serverId);
       mainLoopInProgress.set(false);
+    }
+  }
+
+  @VisibleForTesting
+  int calculateBatchSize(SegmentLoadingMode loadingMode)
+  {
+    if (config.getBatchSize() != null) {
+      return config.getBatchSize();
+    } else if (SegmentLoadingMode.TURBO.equals(loadingMode)) {
+      return serverCapabilities.getNumTurboLoadingThreads();
+    } else if (SegmentLoadingMode.NORMAL.equals(loadingMode)) {
+      return serverCapabilities.getNumLoadingThreads();
+    } else {
+      throw DruidException.defensive().build("unsupported loading mode");
     }
   }
 

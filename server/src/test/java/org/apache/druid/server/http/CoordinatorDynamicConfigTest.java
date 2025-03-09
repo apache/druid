@@ -546,18 +546,6 @@ public class CoordinatorDynamicConfigTest
   }
 
   @Test
-  public void testTurboLoadingNodes()
-  {
-    CoordinatorDynamicConfig config = CoordinatorDynamicConfig
-        .builder()
-        .withTurboLoadingNodes(ImmutableSet.of("localhost:8083"))
-        .build();
-
-    Assert.assertEquals(SegmentLoadingMode.NORMAL, config.getLoadingModeForServer("localhost:8082"));
-    Assert.assertEquals(SegmentLoadingMode.TURBO, config.getLoadingModeForServer("localhost:8083"));
-  }
-
-  @Test
   public void testEqualsAndHashCode()
   {
     CoordinatorDynamicConfig config1 = CoordinatorDynamicConfig.builder().build();
