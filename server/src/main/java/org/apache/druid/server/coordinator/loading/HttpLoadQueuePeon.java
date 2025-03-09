@@ -22,6 +22,7 @@ package org.apache.druid.server.coordinator.loading;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -149,6 +150,30 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
     this.serverCapabilities = fetchSegmentLoadingCapabilities();
   }
 
+  @VisibleForTesting
+  HttpLoadQueuePeon(
+      String baseUrl,
+      ObjectMapper jsonMapper,
+      HttpClient httpClient,
+      HttpLoadQueuePeonConfig config,
+      ScheduledExecutorService processingExecutor,
+      ExecutorService callBackExecutor,
+      Supplier<SegmentLoadingMode> loadingModeSupplier,
+      HistoricalLoadingCapabilities serverCapabilities
+  )
+  {
+    this.jsonMapper = jsonMapper;
+    this.requestBodyWriter = jsonMapper.writerFor(REQUEST_ENTITY_TYPE_REF);
+    this.httpClient = httpClient;
+    this.config = config;
+    this.processingExecutor = processingExecutor;
+    this.callBackExecutor = callBackExecutor;
+
+    this.serverId = baseUrl;
+    this.loadingModeSupplier = loadingModeSupplier;
+    this.serverCapabilities = serverCapabilities;
+  }
+
   private HistoricalLoadingCapabilities fetchSegmentLoadingCapabilities()
   {
     try {
@@ -177,7 +202,9 @@ public class HttpLoadQueuePeon implements LoadQueuePeon
     }
     catch (Throwable th) {
       log.error("Received error while fetching historical capabilities from Server[%s].", serverId);
-      throw new RuntimeException(th);
+      throw DruidException.forPersona(DruidException.Persona.OPERATOR)
+                          .ofCategory(DruidException.Category.RUNTIME_FAILURE)
+                          .build(th, "Failed to fetch historical capabilities");
     }
   }
 

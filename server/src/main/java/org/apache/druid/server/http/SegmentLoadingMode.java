@@ -19,6 +19,9 @@
 
 package org.apache.druid.server.http;
 
+/**
+ * Determines the threadpool used by the historical to load segments.
+ */
 public enum SegmentLoadingMode
 {
   NORMAL,

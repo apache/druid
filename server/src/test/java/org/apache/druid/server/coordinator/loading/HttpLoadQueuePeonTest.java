@@ -39,6 +39,7 @@ import org.apache.druid.server.coordinator.CreateDataSegments;
 import org.apache.druid.server.coordinator.config.HttpLoadQueuePeonConfig;
 import org.apache.druid.server.coordinator.simulate.BlockingExecutorService;
 import org.apache.druid.server.coordinator.simulate.WrappingScheduledExecutorService;
+import org.apache.druid.server.http.HistoricalLoadingCapabilities;
 import org.apache.druid.server.http.SegmentLoadingMode;
 import org.apache.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
@@ -101,7 +102,8 @@ public class HttpLoadQueuePeonTest
             true
         ),
         httpClient.callbackExecutor,
-        () -> SegmentLoadingMode.NORMAL
+        () -> SegmentLoadingMode.NORMAL,
+        new HistoricalLoadingCapabilities(1, 1)
     );
     httpLoadQueuePeon.start();
   }
