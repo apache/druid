@@ -43,6 +43,14 @@ public class HeapMemoryDatasourceSegmentCacheTest
 {
   private static final String WIKI = "wiki";
   private static final Interval FIRST_WEEK_OF_JAN = Intervals.of("2024-01-01/P1W");
+  private static final Interval FIRST_DAY_OF_JAN
+      = FIRST_WEEK_OF_JAN.withDurationAfterStart(Duration.standardDays(1));
+  private static final DataSegmentPlus JAN_1_SEGMENT
+      = createUsedSegment().startingAt(FIRST_DAY_OF_JAN.getStart()).withVersion("v1").asPlus();
+  private static final DataSegmentPlus JAN_2_SEGMENT
+      = createUsedSegment().startingAt(FIRST_DAY_OF_JAN.getEnd()).withVersion("v2").asPlus();
+  private static final DataSegmentPlus JAN_3_SEGMENT
+      = createUsedSegment().startingAt(FIRST_DAY_OF_JAN.getEnd().plusDays(1)).withVersion("v3").asPlus();
 
   private HeapMemoryDatasourceSegmentCache cache;
 
@@ -772,26 +780,28 @@ public class HeapMemoryDatasourceSegmentCacheTest
   @Test
   public void testMarkSegmentsWithinIntervalAsUnused()
   {
-    final Interval firstDayOfJan = FIRST_WEEK_OF_JAN.withDurationAfterStart(Duration.standardDays(1));
-    final DataSegmentPlus jan1Segment
-        = createUsedSegment().startingAt(firstDayOfJan.getStart()).asPlus();
-    final DataSegmentPlus jan2Segment
-        = createUsedSegment().startingAt(firstDayOfJan.getEnd()).asPlus();
-    final DataSegmentPlus jan3Segment
-        = createUsedSegment().startingAt(firstDayOfJan.getEnd().plusDays(1)).asPlus();
-
-    cache.insertSegments(Set.of(jan1Segment, jan2Segment, jan3Segment));
+    cache.insertSegments(Set.of(JAN_1_SEGMENT, JAN_2_SEGMENT, JAN_3_SEGMENT));
     Assert.assertEquals(
-        Set.of(jan1Segment, jan2Segment, jan3Segment),
+        Set.of(JAN_1_SEGMENT, JAN_2_SEGMENT, JAN_3_SEGMENT),
         cache.findUsedSegmentsPlusOverlappingAnyOf(List.of(FIRST_WEEK_OF_JAN))
     );
 
-    // Mark segments as unused
+    // Mark segments as unused by interval
     Assert.assertEquals(
-        2,
+        1,
         cache.markSegmentsWithinIntervalAsUnused(
-            firstDayOfJan.withDurationAfterStart(Duration.standardDays(2)),
+            FIRST_DAY_OF_JAN.withDurationAfterStart(Duration.standardDays(1)),
             null,
+            DateTimes.nowUtc()
+        )
+    );
+
+    // Mark segment as unused by version
+    Assert.assertEquals(
+        1,
+        cache.markSegmentsWithinIntervalAsUnused(
+            Intervals.ETERNITY,
+            List.of(JAN_2_SEGMENT.getDataSegment().getVersion()),
             DateTimes.nowUtc()
         )
     );
@@ -799,22 +809,60 @@ public class HeapMemoryDatasourceSegmentCacheTest
     // Verify that all the segment IDs are still present in cache but 2 have
     // been marked as unused
     Assert.assertEquals(
-        Set.of(jan3Segment),
+        Set.of(JAN_3_SEGMENT),
         cache.findUsedSegmentsPlusOverlappingAnyOf(List.of(FIRST_WEEK_OF_JAN))
     );
     Assert.assertEquals(
         Set.of(
-            jan1Segment.getDataSegment().getId().toString(),
-            jan2Segment.getDataSegment().getId().toString(),
-            jan3Segment.getDataSegment().getId().toString()
+            JAN_1_SEGMENT.getDataSegment().getId().toString(),
+            JAN_2_SEGMENT.getDataSegment().getId().toString(),
+            JAN_3_SEGMENT.getDataSegment().getId().toString()
         ),
         cache.findExistingSegmentIds(
             Set.of(
-                jan1Segment.getDataSegment(),
-                jan2Segment.getDataSegment(),
-                jan3Segment.getDataSegment()
+                JAN_1_SEGMENT.getDataSegment(),
+                JAN_2_SEGMENT.getDataSegment(),
+                JAN_3_SEGMENT.getDataSegment()
             )
         )
+    );
+  }
+
+  @Test
+  public void testMarkSegmentAsUnused()
+  {
+    cache.insertSegments(Set.of(JAN_1_SEGMENT, JAN_2_SEGMENT, JAN_3_SEGMENT));
+
+    cache.markSegmentAsUnused(JAN_1_SEGMENT.getDataSegment().getId(), DateTimes.nowUtc());
+    Assert.assertEquals(
+        Set.of(JAN_2_SEGMENT, JAN_3_SEGMENT),
+        cache.findUsedSegmentsPlusOverlappingAnyOf(List.of(FIRST_WEEK_OF_JAN))
+    );
+  }
+
+  @Test
+  public void testMarkSegmentsAsUnused()
+  {
+    cache.insertSegments(Set.of(JAN_1_SEGMENT, JAN_2_SEGMENT, JAN_3_SEGMENT));
+
+    cache.markSegmentsAsUnused(
+        Set.of(JAN_1_SEGMENT.getDataSegment().getId(), JAN_2_SEGMENT.getDataSegment().getId()),
+        DateTimes.nowUtc()
+    );
+    Assert.assertEquals(
+        Set.of(JAN_3_SEGMENT),
+        cache.findUsedSegmentsPlusOverlappingAnyOf(List.of(FIRST_WEEK_OF_JAN))
+    );
+  }
+
+  @Test
+  public void testMarkAllSegmentsAsUnused()
+  {
+    cache.insertSegments(Set.of(JAN_1_SEGMENT, JAN_2_SEGMENT, JAN_3_SEGMENT));
+    cache.markAllSegmentsAsUnused(DateTimes.nowUtc());
+    Assert.assertTrue(
+        cache.findUsedSegmentsPlusOverlappingAnyOf(List.of(FIRST_WEEK_OF_JAN))
+            .isEmpty()
     );
   }
 
